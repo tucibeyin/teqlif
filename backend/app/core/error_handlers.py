@@ -48,7 +48,7 @@ def setup_exception_handlers(app: FastAPI):
             resolve_kwargs["seconds_remaining"] = seconds_remaining
 
         localized = I18nService.resolve(exc.error_code, lang, **resolve_kwargs)
-        message = localized if localized is not None else exc.message
+        message = localized if localized is not None else (exc.message or "")
 
         localized_hint = I18nService.resolve_hint(exc.error_code, lang)
         raw_hint = getattr(exc, "hint", None)

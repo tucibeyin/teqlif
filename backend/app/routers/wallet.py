@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.core.exceptions import NotFoundException, BadRequestException, InsufficientFundsException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, text as sql_text
@@ -121,7 +122,7 @@ async def get_transaction_detail(
         )
     )
     if txn is None:
-        raise HTTPException(status_code=404, detail="İşlem bulunamadı.")
+        raise NotFoundException()
 
     detail = _txn_dict(txn)
 
@@ -193,9 +194,9 @@ async def send_gift(
     result = await db.execute(select(User).where(User.username == body.receiver_username))
     receiver = result.scalar_one_or_none()
     if receiver is None:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+        raise NotFoundException()
     if receiver.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendinize hediye gönderemezsiniz.")
+        raise BadRequestException()
 
     # Platform komisyonu: Pro yayıncı %95, Standart %70 alır
     commission_rate = 0.95 if receiver.is_premium else 0.70
@@ -216,10 +217,7 @@ async def send_gift(
         logger.warning("TUCi transaction failed: insufficient balance", extra={
             "user_id": current_user.id, "required": body.cost,
         })
-        raise HTTPException(
-            status_code=402,
-            detail=f"Yetersiz TUCi bakiyesi. Gerekli: {body.cost} TUCi",
-        )
+        raise InsufficientFundsException()
 
     await db.execute(
         sql_text("UPDATE users SET tuci_balance = tuci_balance + :share WHERE id = :uid"),

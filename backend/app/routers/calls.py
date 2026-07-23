@@ -15,7 +15,7 @@ import secrets
 import time
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, text
 
@@ -37,7 +37,7 @@ from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
 from app.core.task_queue import get_pool
 from app.config import settings
-from app.core.exceptions import AppException
+from app.core.exceptions import AppException, NotFoundException, BadRequestException, ForbiddenException, ConflictException
 from app.services.apns_service import send_voip_push
 from app.services.firebase_service import send_push
 
@@ -95,13 +95,13 @@ async def get_callee_token(
     """
     call = await db.get(Call, call_id)
     if not call or call.callee_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Call not found")
+        raise NotFoundException()
     if call.status not in ("calling", "active"):
         logger.warning(
             "[CALL_PROCESS][IN] callee-token rejected — call not active | call_id=%d status=%s",
             call_id, call.status,
         )
-        raise HTTPException(status_code=409, detail="Call not active")
+        raise ConflictException()
 
     token = _make_livekit_token(call.room_name, current_user)
     logger.info(
@@ -125,7 +125,7 @@ async def get_call_status(
     result = await db.execute(stmt)
     call = result.scalars().first()
     if not call:
-        raise HTTPException(status_code=404, detail="Call not found")
+        raise NotFoundException()
 
     return {
         "status": call.status,
@@ -356,12 +356,12 @@ async def start_call(
     logger.info("[CALL_PROCESS][OUT] start_call ENTER | caller=%d callee_id=%s", current_user.id, callee_id)
     if not callee_id or callee_id == current_user.id:
         logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=invalid_callee_id caller=%d callee_id=%s", current_user.id, callee_id)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid callee_id")
+        raise BadRequestException()
 
     callee = await db.get(User, callee_id)
     if not callee:
         logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=callee_not_found caller=%d callee_id=%d", current_user.id, callee_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise NotFoundException()
 
     # Check if caller is already in an active call
     caller_busy = await db.scalar(
@@ -516,10 +516,10 @@ async def accept_call(
     call = result.scalar_one_or_none()
     if not call or call.callee_id != current_user.id:
         logger.warning("[CALL_PROCESS][IN] accept_call NOT FOUND | call_id=%d callee=%d", call_id, current_user.id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        raise NotFoundException()
     if call.status != "calling":
         logger.warning("[CALL_PROCESS][IN] accept_call CONFLICT | call_id=%d current_status=%s", call_id, call.status)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Call is no longer active")
+        raise ConflictException()
 
     # Yerel değişkenlere al — commit sonrası SQLAlchemy attribute expire olmaz
     accepted_at = datetime.now(timezone.utc)
@@ -608,7 +608,7 @@ async def reject_call(
     call = result.scalar_one_or_none()
     if not call or call.callee_id != current_user.id:
         logger.warning("[CALL_PROCESS][IN] reject_call NOT FOUND | call_id=%d callee=%d", call_id, current_user.id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        raise NotFoundException()
 
     if call.status in ("ended", "missed", "rejected"):
         logger.info("[CALL_PROCESS][IN] reject_call ALREADY TERMINAL | call_id=%d status=%s callee=%d", call_id, call.status, current_user.id)
@@ -665,7 +665,7 @@ async def end_call(
     call = result.scalar_one_or_none()
     if not call or current_user.id not in (call.caller_id, call.callee_id):
         logger.warning("[CALL_PROCESS][END] end_call NOT FOUND | call_id=%d by=%d", call_id, current_user.id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        raise NotFoundException()
 
     # Idempotency: zaten bitmişse tekrar işleme, duplicate WS/FCM gönderme
     if call.status in ("ended", "rejected", "missed"):
@@ -765,7 +765,7 @@ async def missed_call(
     call = result.scalar_one_or_none()
     if not call or call.caller_id != current_user.id:
         logger.warning("[CALL_PROCESS][END] missed_call NOT FOUND | call_id=%d caller=%d", call_id, current_user.id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        raise NotFoundException()
 
     if call.status == "calling":
         call.status = "missed"
@@ -831,9 +831,9 @@ async def get_call_history(
       outgoing — user was caller (any status)
     """
     if per_page < 1 or per_page > 100:
-        raise HTTPException(status_code=400, detail="per_page must be 1-100")
+        raise BadRequestException()
     if page < 1:
-        raise HTTPException(status_code=400, detail="page must be >= 1")
+        raise BadRequestException()
 
     uid = current_user.id
 
@@ -943,11 +943,11 @@ async def invite_to_call(
     invitee_id: int = body.get("invitee_id")
     logger.info("[CALL_GROUP][INVITE] invite_to_call ENTER | call_id=%d by=%d invitee=%s", call_id, current_user.id, invitee_id)
     if not invitee_id or invitee_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Invalid invitee_id")
+        raise BadRequestException()
 
     call = await db.get(Call, call_id)
     if not call or call.status != "active":
-        raise HTTPException(status_code=404, detail="Active call not found")
+        raise NotFoundException()
 
     # Requester must be a current participant (caller, callee, or joined guest)
     is_in_call = (
@@ -955,7 +955,7 @@ async def invite_to_call(
         or await is_participant_redis(call_id, current_user.id)
     )
     if not is_in_call:
-        raise HTTPException(status_code=403, detail="Not in this call")
+        raise ForbiddenException()
 
     # Requester must follow invitee
     follows = await db.scalar(
@@ -966,16 +966,16 @@ async def invite_to_call(
         )
     )
     if not follows:
-        raise HTTPException(status_code=403, detail="You must follow this user to invite them")
+        raise ForbiddenException()
 
     invitee = await db.get(User, invitee_id)
     if not invitee:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise NotFoundException()
 
     # Check max participants
     current_count = len(await get_participants_redis(call_id))
     if current_count >= call.max_participants:
-        raise HTTPException(status_code=409, detail="Call is full")
+        raise ConflictException()
 
     # Invitee must not already be in another active call
     invitee_busy = await db.scalar(
@@ -985,7 +985,7 @@ async def invite_to_call(
         )
     )
     if invitee_busy:
-        raise HTTPException(status_code=409, detail="User is busy in another call")
+        raise ConflictException()
 
     # Invitee must not already be a participant of THIS call
     existing = await db.scalar(
@@ -996,11 +996,11 @@ async def invite_to_call(
         )
     )
     if existing:
-        raise HTTPException(status_code=409, detail="User already invited or in call")
+        raise ConflictException()
 
     # Race condition guard: only one in-flight invite per user+call
     if not await acquire_invite_lock(call_id, invitee_id):
-        raise HTTPException(status_code=409, detail="Invite already pending for this user")
+        raise ConflictException()
 
     now = datetime.now(timezone.utc)
     livekit_token = _make_livekit_token(call.room_name, invitee)
@@ -1092,13 +1092,13 @@ async def accept_group_invite(
     db: AsyncSession = Depends(get_db),
 ):
     if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise ForbiddenException()
 
     logger.info("[CALL_GROUP][ACCEPT] accept_group_invite ENTER | call_id=%d user=%d", call_id, user_id)
 
     call = await db.get(Call, call_id)
     if not call or call.status != "active":
-        raise HTTPException(status_code=404, detail="Active call not found")
+        raise NotFoundException()
 
     result = await db.execute(
         select(CallParticipant).where(
@@ -1109,7 +1109,7 @@ async def accept_group_invite(
     )
     cp = result.scalar_one_or_none()
     if not cp:
-        raise HTTPException(status_code=404, detail="Invite not found or already responded")
+        raise NotFoundException()
 
     now = datetime.now(timezone.utc)
     cp.status = "joined"
@@ -1160,7 +1160,7 @@ async def reject_group_invite(
     db: AsyncSession = Depends(get_db),
 ):
     if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise ForbiddenException()
 
     logger.info("[CALL_GROUP][REJECT] reject_group_invite ENTER | call_id=%d user=%d", call_id, user_id)
 
@@ -1216,11 +1216,11 @@ async def remove_participant(
 
     call = await db.get(Call, call_id)
     if not call or call.status != "active":
-        raise HTTPException(status_code=404, detail="Active call not found")
+        raise NotFoundException()
 
     # Only the initiator (original caller) can remove participants
     if current_user.id != call.caller_id:
-        raise HTTPException(status_code=403, detail="Only the call initiator can remove participants")
+        raise ForbiddenException()
 
     result = await db.execute(
         select(CallParticipant).where(
@@ -1231,7 +1231,7 @@ async def remove_participant(
     )
     cp = result.scalar_one_or_none()
     if not cp:
-        raise HTTPException(status_code=404, detail="Participant not found")
+        raise NotFoundException()
 
     now = datetime.now(timezone.utc)
     cp.status = "removed"
@@ -1275,7 +1275,7 @@ async def get_call_participants(
 ):
     call = await db.get(Call, call_id)
     if not call:
-        raise HTTPException(status_code=404, detail="Call not found")
+        raise NotFoundException()
 
     # Must be a participant or the call's original caller/callee
     is_authorized = (
@@ -1283,7 +1283,7 @@ async def get_call_participants(
         or await is_participant_redis(call_id, current_user.id)
     )
     if not is_authorized:
-        raise HTTPException(status_code=403, detail="Not a participant of this call")
+        raise ForbiddenException()
 
     participants = await _participant_list_payload(call_id, db)
     logger.debug("[CALL_GROUP][PARTICIPANTS] get | call_id=%d user=%d count=%d", call_id, current_user.id, len(participants))

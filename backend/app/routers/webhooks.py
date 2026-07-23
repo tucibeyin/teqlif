@@ -4,7 +4,8 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Request, BackgroundTasks
+from app.core.exceptions import UnauthorizedException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from livekit.api import WebhookReceiver, TokenVerifier
@@ -35,7 +36,7 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
         event = _receiver.receive(body.decode(), auth_header)
     except Exception:
         logger.error("LiveKit webhook imza doğrulaması başarısız | method=%s", request.method, exc_info=True)
-        raise HTTPException(status_code=401, detail="Geçersiz webhook imzası")
+        raise UnauthorizedException()
 
     event_type = event.event
     room_name = event.room.name if event.room else None

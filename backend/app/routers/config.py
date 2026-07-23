@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+from app.core.exceptions import ForbiddenException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
@@ -72,7 +73,7 @@ async def update_version_config(
     Versiyon ayarlarını günceller. Sadece yetkili adminler kullanabilir.
     """
     if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Sadece adminler bu ayarı değiştirebilir.")
+        raise ForbiddenException()
         
     updates = {
         "ios_min_version": payload.ios_min_version,

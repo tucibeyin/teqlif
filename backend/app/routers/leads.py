@@ -12,7 +12,8 @@ import calendar
 import logging
 from datetime import datetime, date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+from app.core.exceptions import NotFoundException, ForbiddenException, InsufficientFundsException
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -441,13 +442,13 @@ async def retargeting_audience(
     ClickHouse feed_analytics + user_events tablosundan çekilir.
     """
     if not current_user.is_premium:
-        raise HTTPException(403, "Bu özellik yalnızca PRO kullanıcılara açıktır")
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
     if not listing:
-        raise HTTPException(404, "İlan bulunamadı")
+        raise NotFoundException()
 
     try:
         from app.database_clickhouse import get_clickhouse_client
@@ -545,13 +546,13 @@ async def send_retargeting(
     1 TUCi per kişi (blast kredi sayımına dahil edilmez — ayrı bir işlem).
     """
     if not current_user.is_premium:
-        raise HTTPException(403, "Bu özellik yalnızca PRO kullanıcılara açıktır")
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     listing = await db.scalar(
         select(Listing).where(Listing.id == body.listing_id, Listing.user_id == current_user.id)
     )
     if not listing:
-        raise HTTPException(404, "İlan bulunamadı")
+        raise NotFoundException()
 
     # Karma model: kredi ücretsiz, kalan × 10 TUCi
     cap   = _PER_BLAST_CAP_PRO
@@ -569,7 +570,7 @@ async def send_retargeting(
     tuci_cost    = paid_count * COST_PER_PERSON
 
     if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
-        raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi")
+        raise InsufficientFundsException()
 
     # ClickHouse'dan viewer user_id'lerini çek
     viewer_ids: list[int] = []

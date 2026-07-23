@@ -2,7 +2,7 @@ import json
 import logging
 import math
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, Request, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,7 @@ from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEventCreate
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
-from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException
+from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
 from app.services.ml.ner_service import extract_ner
@@ -234,13 +234,11 @@ async def get_seller_report(
       - recommendation: kural tabanlı öneri metni
     """
     # ── 1. Yayını getir ve host doğrula ──────────────────────────────────────
-    t = _get_t(get_locale(current_user, request))
-    
     stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
     if stream is None:
-        raise HTTPException(status_code=404, detail=t.get("errStreamNotFound", "Yayın bulunamadı"))
+        raise NotFoundException()
     if stream.host_id != current_user.id:
-        raise HTTPException(status_code=403, detail=t.get("errAccessDenied", "Bu rapora erişim yetkiniz yok"))
+        raise ForbiddenException()
 
     # Yayın süresi (dakika)
     from datetime import datetime, timezone
@@ -1729,9 +1727,8 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
-    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     # Kullanıcının aktif ilan ID'lerini al
     result = await db.execute(
@@ -1899,9 +1896,8 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
-    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
     _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
@@ -2005,9 +2001,8 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
-    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
     _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
@@ -2092,9 +2087,8 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
-    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
     _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
@@ -2163,9 +2157,8 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
-    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     try:
         redis = await get_redis()
@@ -2252,9 +2245,8 @@ async def get_pro_metrics(
     - best_posting_hour: kullanıcının en yüksek CTR'a sahip ilan paylaşım saati
     - return_viewer_rate: en az 2 kez yayınını izleyen kullanıcı oranı
     """
-    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail=t.get("errProRequired", "PRO üyelik gerekli"))
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
 
@@ -2395,9 +2387,8 @@ async def competitor_radar(
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
-    t = _get_t(get_locale(current_user, request))
     if not listing:
-        raise HTTPException(404, t.get("errListingNotFound", "İlan bulunamadı"))
+        raise NotFoundException()
 
     if listing.price is None:
         return {"signal": "no_price", "competitors": [], "stats": {}}

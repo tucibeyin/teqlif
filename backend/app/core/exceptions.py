@@ -10,12 +10,12 @@ Kullanım:
     from app.core.exceptions import NotFoundException, DatabaseException
 
     # 404
-    raise NotFoundException("İlan bulunamadı")
+    raise NotFoundException()
 
     # 500 (DB hatası yakalandıktan sonra)
     raise DatabaseException()
 
-    # Özel mesajlı 403
+    # Özel mesajlı 403 (migration tamamlanana kadar desteklenir)
     raise ForbiddenException("Bu ilanı düzenleme yetkiniz yok")
 """
 from fastapi import HTTPException
@@ -28,8 +28,8 @@ class AppException(HTTPException):
     Doğrudan kullanmak yerine alt sınıfları tercih edin.
     """
 
-    def __init__(self, status_code: int, message: str, code: str | None = None):
-        super().__init__(status_code=status_code, detail=message)
+    def __init__(self, status_code: int, message: str | None = None, code: str | None = None):
+        super().__init__(status_code=status_code, detail=message or "")
         self.message = message
         self.error_code = code or f"ERR_{status_code}"
 
@@ -37,21 +37,21 @@ class AppException(HTTPException):
 class NotFoundException(AppException):
     """404 — İstenen kayıt bulunamadı."""
 
-    def __init__(self, message: str = "Kayıt bulunamadı"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=404, message=message, code="NOT_FOUND")
 
 
 class ForbiddenException(AppException):
     """403 — Yetki hatası."""
 
-    def __init__(self, message: str = "Bu işlem için yetkiniz yok", code: str = "FORBIDDEN"):
+    def __init__(self, message: str | None = None, code: str = "FORBIDDEN"):
         super().__init__(status_code=403, message=message, code=code)
 
 
 class EmailNotVerifiedException(AppException):
     """403 — E-posta adresi henüz doğrulanmamış."""
 
-    def __init__(self, message: str = "E-posta adresinizi doğrulamanız gerekiyor", email: str | None = None):
+    def __init__(self, message: str | None = None, email: str | None = None):
         super().__init__(status_code=403, message=message, code="EMAIL_NOT_VERIFIED")
         self.email = email
 
@@ -59,28 +59,28 @@ class EmailNotVerifiedException(AppException):
 class UnauthorizedException(AppException):
     """401 — Kimlik doğrulama hatası (yanlış şifre, geçersiz token vb.)."""
 
-    def __init__(self, message: str = "Kimlik doğrulama başarısız"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=401, message=message, code="UNAUTHORIZED")
 
 
 class BadRequestException(AppException):
     """400 — Geçersiz istek / iş kuralı ihlali."""
 
-    def __init__(self, message: str = "Geçersiz istek"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=400, message=message, code="BAD_REQUEST")
 
 
 class ContentPolicyException(AppException):
     """400 — İçerik politikası ihlali (profanity, NSFW vb.)."""
 
-    def __init__(self, message: str = "İçerik topluluk kurallarına aykırı"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=400, message=message, code="CONTENT_POLICY_VIOLATION")
 
 
 class ConflictException(AppException):
     """409 — Çakışma (zaten mevcut kayıt vb.)."""
 
-    def __init__(self, message: str = "Kayıt zaten mevcut"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=409, message=message, code="CONFLICT")
 
 
@@ -93,7 +93,7 @@ class DatabaseException(AppException):
       - capture_exception(orijinal_hata) ile Sentry'e gönderin
     """
 
-    def __init__(self, message: str = "Veritabanı hatası oluştu"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=500, message=message, code="DB_ERROR")
 
 
@@ -103,7 +103,7 @@ class ServiceException(AppException):
     DatabaseException ile aynı kurallar geçerli.
     """
 
-    def __init__(self, message: str = "Servis hatası oluştu"):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=500, message=message, code="SERVICE_ERROR")
 
 
@@ -113,25 +113,18 @@ class TooManyRequestsException(AppException):
     retry_after: İstemcinin kaç saniye beklemesi gerektiği.
     """
 
-    def __init__(self, message: str = "Çok fazla istek gönderildi. Lütfen bekleyin.", retry_after: int = 60):
+    def __init__(self, message: str | None = None, retry_after: int = 60):
         super().__init__(status_code=429, message=message, code="RATE_LIMIT_EXCEEDED")
         self.retry_after = retry_after
 
 
 class CooldownException(AppException):
-    """429 — Belirli bir aksiyon için bekleme süresi dolmadı (blast, mesaj vb.)."""
+    """429 — Belirli bir aksiyon için bekleme süresi dolmadı (blast, mesaj vb.).
+    I18nService seconds_remaining'i okuyarak dile özel süre mesajı üretir.
+    """
 
     def __init__(self, seconds_remaining: int):
-        minutes, secs = divmod(seconds_remaining, 60)
-        if minutes > 0:
-            readable = f"{minutes} dakika {secs} saniye" if secs else f"{minutes} dakika"
-        else:
-            readable = f"{secs} saniye"
-        super().__init__(
-            status_code=429,
-            message=f"Tekrar göndermek için {readable} beklemeniz gerekiyor.",
-            code="COOLDOWN",
-        )
+        super().__init__(status_code=429, message=None, code="COOLDOWN")
         self.seconds_remaining = seconds_remaining
         self.retry_after = seconds_remaining
 
@@ -139,13 +132,14 @@ class CooldownException(AppException):
 class ListingNotActiveException(AppException):
     """409 — İlan aktif değil, işlem yapılamaz."""
 
-    def __init__(self, message: str = "İlan şu an aktif değil."):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=409, message=message, code="LISTING_NOT_ACTIVE")
 
 
 class InsufficientFundsException(AppException):
-    """402 — Yetersiz TUCi bakiyesi."""
+    """402 — Yetersiz TUCi bakiyesi.
+    Hint metni I18nService üzerinden INSUFFICIENT_FUNDS_hint kodu ile gelir.
+    """
 
-    def __init__(self, message: str = "Bu işlem için yeterli TUCi bakiyeniz yok."):
+    def __init__(self, message: str | None = None):
         super().__init__(status_code=402, message=message, code="INSUFFICIENT_FUNDS")
-        self.hint = "TUCi Cüzdan sayfasından bakiye yükleyebilirsiniz."
