@@ -1,6 +1,6 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import BadRequestException
+from app.core.exceptions import BadRequestException, ForbiddenException
 from app.models.tuci_transaction import TuciTransaction
 
 logger = get_logger(__name__)
@@ -15,11 +15,11 @@ class TransferTuciCommand:
 
         if amount <= 0:
             logger.warning("[TransferTuciCommand] Geçersiz miktar | amount=%s", amount)
-            raise BadRequestException("Transfer miktarı sıfırdan büyük olmalıdır")
+            raise BadRequestException(code="TRANSFER_AMOUNT_POSITIVE")
 
         if sender_id == receiver_id:
             logger.warning("[TransferTuciCommand] Kendine transfer hatası | sender=%s", sender_id)
-            raise BadRequestException("Kendinize transfer yapamazsınız")
+            raise ForbiddenException(code="SELF_TRANSFER_FORBIDDEN")
 
         async with self.uow:
             # 1. Gönderenin bakiyesi kontrol edilir (Gerçekte Aggregate Root'tan veya Query'den yapılır)

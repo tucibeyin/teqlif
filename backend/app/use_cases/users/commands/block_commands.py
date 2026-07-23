@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.models.user import User
 from app.models.block import UserBlock
 from app.schemas.block import BlockStatusOut
@@ -16,9 +16,9 @@ class BlockUserCommand:
         async with self.uow:
             target = await self.uow.session.scalar(select(User).where(User.username == username))
             if not target:
-                raise NotFoundException("Kullanıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
             if target.id == current_user.id:
-                raise BadRequestException("Kendinizi engelleyemezsiniz")
+                raise ForbiddenException(code="SELF_BLOCK_FORBIDDEN")
 
             existing = await self.uow.session.scalar(
                 select(UserBlock).where(
@@ -50,7 +50,7 @@ class UnblockUserCommand:
         async with self.uow:
             target = await self.uow.session.scalar(select(User).where(User.username == username))
             if not target:
-                raise NotFoundException("Kullanıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
 
             existing = await self.uow.session.scalar(
                 select(UserBlock).where(

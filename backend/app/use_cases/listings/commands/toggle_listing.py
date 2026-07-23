@@ -37,7 +37,7 @@ class ToggleListingCommand:
             listing = result.scalar_one_or_none()
             
             if not listing:
-                raise NotFoundException("İlan bulunamadı")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
 
             reactivating = listing.status != ListingStatus.ACTIVE
             is_free = False

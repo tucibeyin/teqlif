@@ -1,6 +1,6 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from app.models.follow import Follow
 
 logger = get_logger(__name__)
@@ -15,13 +15,13 @@ class FollowUserCommand:
 
         if follower_id == followed_id:
             logger.warning("[FollowUserCommand] Kendini takip etme hatası | user_id=%s", follower_id)
-            raise BadRequestException("Kendinizi takip edemezsiniz")
+            raise ForbiddenException(code="SELF_FOLLOW_FORBIDDEN")
 
         async with self.uow:
             target_user = await self.uow.users.get(followed_id)
             if not target_user:
                 logger.warning("[FollowUserCommand] Hedef kullanıcı bulunamadı | followed_id=%s", followed_id)
-                raise NotFoundException("Kullanıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
 
             # Mevcut takip durumu
             from sqlalchemy import select

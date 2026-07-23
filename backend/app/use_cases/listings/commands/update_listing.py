@@ -1,7 +1,7 @@
 from typing import Optional
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import NotFoundException, BadRequestException, ContentPolicyException
+from app.core.exceptions import NotFoundException, BadRequestException, ContentPolicyException, ForbiddenException
 from app.core.auto_mod import analyze_listing_text
 
 logger = get_logger(__name__)
@@ -23,22 +23,22 @@ class UpdateListingCommand:
 
         if title is not None and not title.strip():
             logger.warning("[UpdateListingCommand] Boş başlık hatası | listing_id=%s", listing_id)
-            raise BadRequestException("İlan başlığı boş olamaz")
+            raise BadRequestException(code="LISTING_TITLE_REQUIRED")
 
         if title or description:
             if analyze_listing_text(title or "", description or ""):
                 logger.warning("[UpdateListingCommand] Uygunsuz içerik | listing_id=%s", listing_id)
-                raise ContentPolicyException("Uygunsuz içerik tespit edildi")
+                raise ContentPolicyException()
 
         async with self.uow:
             listing = await self.uow.listings.get(listing_id)
             if not listing:
                 logger.warning("[UpdateListingCommand] İlan bulunamadı | listing_id=%s", listing_id)
-                raise NotFoundException("İlan bulunamadı")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
 
             if listing.user_id != user_id:
                 logger.warning("[UpdateListingCommand] Yetkisiz erişim | listing_id=%s user_id=%s", listing_id, user_id)
-                raise BadRequestException("Bu ilanı güncelleme yetkiniz yok")
+                raise ForbiddenException(code="LISTING_UPDATE_FORBIDDEN")
 
             if title is not None:
                 listing.title = title.strip()

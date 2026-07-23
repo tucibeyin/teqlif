@@ -15,7 +15,7 @@ class GetUserProfileQuery:
     async def execute(self, username: str, current_user: Optional[User]) -> dict:
         target = await self.uow.session.scalar(select(User).where(User.username == username))
         if not target:
-            raise NotFoundException("Kullanıcı bulunamadı")
+            raise NotFoundException(code="USER_NOT_FOUND")
 
         badge_map, _, _, trust_map, influence_map = await _fetch_seller_meta([target.id])
 
@@ -74,7 +74,7 @@ class GetUserProfileQuery:
                     select(UserBlock).where(UserBlock.blocker_id == target.id, UserBlock.blocked_id == current_user.id)
                 )
                 if is_blocked_by:
-                    raise NotFoundException("Kullanıcı bulunamadı")
+                    raise NotFoundException(code="USER_NOT_FOUND")
 
         from sqlalchemy import func
         from app.models.follow import Follow

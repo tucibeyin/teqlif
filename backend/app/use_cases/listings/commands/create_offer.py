@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger, capture_exception
-from app.core.exceptions import NotFoundException, BadRequestException, DatabaseException
+from app.core.exceptions import NotFoundException, BadRequestException, DatabaseException, ForbiddenException
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.listing_offer import ListingOffer
@@ -24,10 +24,10 @@ class CreateListingOfferCommand:
             )
             listing = result.scalar_one_or_none()
             if not listing:
-                raise NotFoundException("İlan bulunamadı")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
 
             if listing.user_id == current_user.id:
-                raise BadRequestException("Kendi ilanınıza teklif veremezsiniz")
+                raise ForbiddenException(code="SELF_BID_FORBIDDEN")
 
             offer = ListingOffer(
                 listing_id=listing_id,

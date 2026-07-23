@@ -145,9 +145,9 @@ async def audience_insights(
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream:
-        raise NotFoundException("Yayın bulunamadı")
+        raise NotFoundException(code="STREAM_NOT_FOUND")
     if stream.host_id != current_user.id:
-        raise ForbiddenException("Bu yayının istatistiklerine erişim yetkiniz yok")
+        raise ForbiddenException(code="STREAM_STATS_FORBIDDEN")
 
     redis = await get_redis()
     # viewer_set kullanıcı adı ile, pip_viewer_set user_id ile saklar; her ikisini de çek

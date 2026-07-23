@@ -1,7 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
-from fastapi import HTTPException
-
+from app.core.exceptions import NotFoundException
 from app.models.listing import Listing
 from app.models.user import User
 from app.services import credit_service
@@ -14,7 +13,7 @@ class GetReactivationCostQuery:
     async def execute(self, listing_id: int, current_user: User) -> dict:
         listing = await self.uow.session.scalar(select(Listing).where(Listing.id == listing_id))
         if not listing:
-            raise HTTPException(status_code=404, detail="İlan bulunamadı")
+            raise NotFoundException(code="LISTING_NOT_FOUND")
 
         created_at = listing.created_at
         if created_at.tzinfo is None:

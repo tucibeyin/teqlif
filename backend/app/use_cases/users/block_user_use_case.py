@@ -4,7 +4,7 @@ from app.core.uow import AbstractUnitOfWork
 from app.models.user import User
 from app.models.enums import UserStatus
 from app.schemas.block import BlockStatusOut
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -28,11 +28,11 @@ class BlockUserUseCase:
                 
                 if not target or target.status != UserStatus.ACTIVE:
                     logger.warning("[BlockUserUseCase] Kullanıcı bulunamadı | target_username=%s", username)
-                    raise NotFoundException("Kullanıcı bulunamadı")
+                    raise NotFoundException(code="USER_NOT_FOUND")
                     
                 if target.id == current_user.id:
                     logger.warning("[BlockUserUseCase] Kendini engelleme teşebbüsü | user_id=%s", current_user.id)
-                    raise BadRequestException("Kendinizi engelleyemezsiniz")
+                    raise ForbiddenException(code="SELF_BLOCK_FORBIDDEN")
 
                 await self.uow.users.add_block(current_user.id, target.id)
 

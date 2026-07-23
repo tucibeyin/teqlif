@@ -20,9 +20,9 @@ class EndStreamCommand:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream:
-                raise NotFoundException("Yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
             if stream.host_id != user.id:
-                raise ForbiddenException("Bu yayını sonlandırma yetkiniz yok")
+                raise ForbiddenException(code="STREAM_END_FORBIDDEN")
 
             if stream.is_live:
                 from datetime import datetime, timezone
@@ -57,19 +57,19 @@ class UpdateThumbnailCommand:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream:
-                raise NotFoundException("Yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
             if stream.host_id != user.id:
-                raise ForbiddenException("Bu yayını düzenleme yetkiniz yok")
+                raise ForbiddenException(code="STREAM_UPDATE_FORBIDDEN")
             if not stream.is_live:
-                raise BadRequestException("Yayın aktif değil")
+                raise BadRequestException(code="LISTING_NOT_ACTIVE")
 
             data = await file.read()
             if len(data) > 10 * 1024 * 1024:
-                raise BadRequestException("Dosya 10 MB'ı geçemez")
+                raise BadRequestException(code="FILE_TOO_LARGE")
 
             ext = _detect_image_type(data)
             if ext is None:
-                raise BadRequestException("Sadece JPEG, PNG veya WebP yüklenebilir")
+                raise BadRequestException(code="INVALID_IMAGE_FORMAT")
 
             import uuid
             from app.services import storage_service as storage

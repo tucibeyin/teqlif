@@ -23,14 +23,14 @@ class JoinStreamCommand:
             stream = result.scalar_one_or_none()
 
             if not stream or not stream.is_live:
-                raise NotFoundException("Aktif yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
 
             if stream.host_id == user.id:
-                raise BadRequestException("Kendi yayınınıza izleyici olarak katılamazsınız")
+                raise ForbiddenException(code="SELF_STREAM_JOIN_FORBIDDEN")
 
             redis = await get_redis()
             if await redis.sismember(kick_key(stream_id), str(user.id)):
-                raise ForbiddenException("Bu yayına erişiminiz kısıtlanmıştır")
+                raise ForbiddenException(code="STREAM_ACCESS_FORBIDDEN")
 
             token = make_livekit_token(stream.room_name, user, can_publish=False)
 

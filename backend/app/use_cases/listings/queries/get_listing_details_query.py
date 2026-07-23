@@ -20,7 +20,7 @@ class GetListingDetailsQuery:
             listing = await uow.listings.get(listing_id)
             if not listing:
                 logger.warning("[GetListingDetailsQuery] İlan bulunamadı | listing_id=%s", listing_id)
-                raise NotFoundException("İlan bulunamadı")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
                 
             # TODO: Return full mapped dict for ReadModel
             return {"id": listing.id, "title": listing.title, "price": listing.price}

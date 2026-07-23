@@ -41,25 +41,25 @@ class CreateListingCommand:
         _desc = (description or "").strip()
         
         if not _title:
-            raise BadRequestException("İlan başlığı boş olamaz")
+            raise BadRequestException(code="LISTING_TITLE_REQUIRED")
 
         if price is None or price <= 0:
-            raise BadRequestException("Geçerli bir fiyat girilmelidir")
+            raise BadRequestException(code="INVALID_PRICE")
 
         _loc = (location or "").strip()
         if not _loc:
-            raise BadRequestException("Konum bilgisi zorunludur")
+            raise BadRequestException(code="LOCATION_REQUIRED")
 
         if analyze_listing_text(_title, _desc):
-            raise ContentPolicyException("Uygunsuz içerik tespit edildi")
+            raise ContentPolicyException()
 
         cat = category.strip().lower()
         if cat not in VALID_CATEGORIES:
-            raise BadRequestException(f"Geçersiz kategori: {cat}")
+            raise BadRequestException(code="INVALID_CATEGORY")
 
         cond = condition.strip().lower() if condition else ""
         if not cond or cond not in VALID_CONDITIONS:
-            raise BadRequestException(f"Geçersiz ürün durumu: {cond}")
+            raise BadRequestException(code="INVALID_CONDITION")
 
         # 2. Veritabanı İşlemi (Write Model)
         from app.core.event_bus import event_bus

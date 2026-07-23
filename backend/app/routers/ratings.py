@@ -128,14 +128,14 @@ async def upsert_rating(
 ):
     """Hedef kullanıcıya puan ver (veya güncelle). Takip etmek zorunlu."""
     if user_id == current_user.id:
-        raise BadRequestException("Kendinizi puanlayamazsınız")
+        raise ForbiddenException(code="SELF_RATING_FORBIDDEN")
 
     # Hedef kullanıcı var mı?
     target = await db.scalar(
         select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
     )
     if not target:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
 
     # Takip kontrolü
     is_following = await db.scalar(
@@ -145,15 +145,15 @@ async def upsert_rating(
         )
     )
     if not is_following:
-        raise ForbiddenException("Puan vermek için bu kullanıcıyı takip etmelisiniz")
+        raise ForbiddenException(code="RATING_REQUIRES_FOLLOW")
 
     score = payload.get("score")
     if not isinstance(score, int) or score < 1 or score > 5:
-        raise BadRequestException("Puan 1 ile 5 arasında olmalıdır")
+        raise BadRequestException(code="INVALID_RATING_RANGE")
 
     comment = (payload.get("comment") or "").strip() or None
     if comment and len(comment) > 500:
-        raise BadRequestException("Yorum 500 karakteri geçemez")
+        raise BadRequestException(code="COMMENT_TOO_LONG")
 
     # Upsert: var olan puanı güncelle, yoksa oluştur
     existing = await db.scalar(
@@ -239,7 +239,7 @@ async def delete_rating(
         select(Rating).where(Rating.rater_id == current_user.id, Rating.rated_id == user_id)
     )
     if not rating:
-        raise NotFoundException("Puan bulunamadı")
+        raise NotFoundException(code="RATING_NOT_FOUND")
     await db.delete(rating)
     await db.commit()
     return {"ok": True}

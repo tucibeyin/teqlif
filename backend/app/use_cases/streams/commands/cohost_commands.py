@@ -18,15 +18,15 @@ class InviteCohostCommand:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream or not stream.is_live:
-                raise NotFoundException("Aktif yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
             if stream.host_id != host.id:
-                raise ForbiddenException("Sadece yayın sahibi davet gönderebilir")
+                raise ForbiddenException(code="STREAM_HOST_ONLY_INVITE")
 
             target = await self.uow.session.scalar(select(User).where(User.username == target_username))
             if not target:
-                raise NotFoundException("Kullanıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
             if target.id == host.id:
-                raise BadRequestException("Kendinizi davet edemezsiniz")
+                raise ForbiddenException(code="SELF_INVITE_FORBIDDEN")
 
             redis = await get_redis()
             invite_key = f"cohost_invite:{stream_id}:{target.id}"
@@ -42,17 +42,17 @@ class InviteCohostCommand:
 class AcceptCohostInviteCommand:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
-        
+
     async def execute(self, stream_id: int, current_user: User):
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream or not stream.is_live:
-                raise NotFoundException("Aktif yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
 
             redis = await get_redis()
             invite_key = f"cohost_invite:{stream_id}:{current_user.id}"
             if not await redis.get(invite_key):
-                raise ForbiddenException("Geçerli bir sahne davetiniz yok")
+                raise ForbiddenException(code="NO_STAGE_INVITATION")
 
             await redis.delete(invite_key)
 
@@ -60,7 +60,7 @@ class AcceptCohostInviteCommand:
             from app.config import settings
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
-            
+
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
@@ -86,10 +86,10 @@ class AcceptCohostInviteCommand:
                 "type": WS.COHOST_ACCEPTED,
                 "username": current_user.username,
             })
-            
+
             from app.use_cases.streams.stream_utils import make_livekit_token
             from app.schemas.stream import StreamTokenOut
-            
+
             token = make_livekit_token(stream.room_name, current_user, can_publish=True)
             return StreamTokenOut(
                 stream_id=stream.id,
@@ -107,19 +107,19 @@ class RemoveCohostCommand:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream or not stream.is_live:
-                raise NotFoundException("Aktif yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
             if stream.host_id != host.id:
-                raise ForbiddenException("Sadece yayın sahibi yetkileri alabilir")
+                raise ForbiddenException(code="STREAM_HOST_ONLY_PERMISSIONS")
 
             target = await self.uow.session.scalar(select(User).where(User.username == target_username))
             if not target:
-                raise NotFoundException("Kullanıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
 
             import aiohttp
             from app.config import settings
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
-            
+
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
@@ -156,13 +156,13 @@ class LeaveCohostCommand:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream or not stream.is_live:
-                raise NotFoundException("Aktif yayın bulunamadı")
+                raise NotFoundException(code="STREAM_NOT_FOUND")
 
             import aiohttp
             from app.config import settings
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
-            
+
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,

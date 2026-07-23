@@ -23,7 +23,7 @@ class ConfirmLiveCommand:
                 )
             )
             if not stream:
-                raise NotFoundException("Beklemedeki yayın bulunamadı")
+                raise NotFoundException(code="PENDING_STREAM_NOT_FOUND")
 
             stream.is_live = True
 
@@ -51,7 +51,7 @@ class CancelPendingStreamCommand:
                 )
             )
             if not stream:
-                raise NotFoundException("İptal edilecek beklemede yayın bulunamadı")
+                raise NotFoundException(code="PENDING_STREAM_NOT_FOUND")
 
             from app.use_cases.streams.stream_utils import delete_livekit_room
             await delete_livekit_room(stream.room_name)

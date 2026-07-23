@@ -1,6 +1,6 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import BadRequestException
+from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.enums import StreamStatus
 
 logger = get_logger(__name__)
@@ -19,12 +19,12 @@ class StartStreamCommand:
         
         if not title.strip():
             logger.warning("[StartStreamCommand] Boş yayın başlığı | user_id=%s", user_id)
-            raise BadRequestException("Yayın başlığı boş olamaz")
+            raise BadRequestException(code="STREAM_TITLE_REQUIRED")
 
         async with self.uow:
             user = await self.uow.users.get(user_id)
             if not user:
-                raise BadRequestException("Kullanıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
 
             room_name = f"stream_{user_id}_{uuid.uuid4().hex[:8]}"
 

@@ -1,6 +1,6 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.models.enums import ListingStatus
 
 logger = get_logger(__name__)
@@ -17,11 +17,11 @@ class DeleteListingCommand:
             listing = await self.uow.listings.get(listing_id)
             if not listing or listing.status == ListingStatus.DELETED:
                 logger.warning("[DeleteListingCommand] İlan bulunamadı veya silinmiş | listing_id=%s", listing_id)
-                raise NotFoundException("İlan bulunamadı")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
 
             if listing.user_id != user_id:
                 logger.warning("[DeleteListingCommand] Yetkisiz erişim | listing_id=%s user_id=%s", listing_id, user_id)
-                raise BadRequestException("Bu ilanı silme yetkiniz yok")
+                raise ForbiddenException(code="LISTING_DELETE_FORBIDDEN")
 
             listing.status = ListingStatus.DELETED
             # TODO: EventBus publish ListingDeletedEvent

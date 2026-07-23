@@ -118,7 +118,7 @@ async def publish_auction(stream_id: int, payload: dict):
 async def _require_host(uow, stream_id: int, user: User) -> LiveStream:
     stream = await uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
     if not stream:
-        raise NotFoundException("Yayın bulunamadı")
+        raise NotFoundException(code="STREAM_NOT_FOUND")
     if stream.host_id != user.id:
-        raise ForbiddenException("Sadece yayın sahibi işlem yapabilir")
+        raise ForbiddenException(code="STREAM_HOST_ONLY")
     return stream

@@ -176,9 +176,9 @@ async def delete_message(
     result = await db.execute(select(DirectMessage).where(DirectMessage.id == message_id))
     msg = result.scalar_one_or_none()
     if not msg:
-        raise NotFoundException("Mesaj bulunamadı")
+        raise NotFoundException(code="MESSAGE_NOT_FOUND")
     if msg.sender_id != current_user.id:
-        raise ForbiddenException("Bu mesajı silemezsiniz")
+        raise ForbiddenException(code="MESSAGE_DELETE_FORBIDDEN")
 
     other_user_id = msg.receiver_id
     await db.delete(msg)
@@ -221,7 +221,7 @@ async def get_messages(
     other_result = await db.execute(select(User).where(User.id == other_user_id))
     other_user = other_result.scalar_one_or_none()
     if not other_user:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
 
     # Fetch last 100 messages between the two users (newest first, then reverse for chronological order)
     result = await db.execute(
@@ -297,10 +297,10 @@ async def send_message(
     recv_result = await db.execute(select(User).where(User.id == data.receiver_id))
     receiver = recv_result.scalar_one_or_none()
     if not receiver:
-        raise NotFoundException("Alıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
 
     if data.receiver_id == uid:
-        raise BadRequestException("Kendinize mesaj gönderemezsiniz")
+        raise ForbiddenException(code="SELF_MESSAGE_FORBIDDEN")
 
     # Engelleme kontrolü (iki yönlü)
     block_exists = await db.scalar(
@@ -312,7 +312,7 @@ async def send_message(
         )
     )
     if block_exists:
-        raise ForbiddenException("Bu kullanıcıyla mesajlaşamazsınız")
+        raise ForbiddenException(code="MESSAGING_FORBIDDEN")
 
     # Auto-mod: içerik tüm dillerde kontrol edilir (zero-latency, DB öncesi)
     is_shadowbanned = analyze_text_all(data.content)
@@ -468,9 +468,9 @@ async def upload_media_message(
     recv_result = await db.execute(select(User).where(User.id == receiver_id))
     receiver = recv_result.scalar_one_or_none()
     if not receiver:
-        raise NotFoundException("Alıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
     if receiver_id == uid:
-        raise BadRequestException("Kendinize mesaj gönderemezsiniz")
+        raise ForbiddenException(code="SELF_MESSAGE_FORBIDDEN")
 
     block_exists = await db.scalar(
         select(UserBlock).where(
@@ -481,7 +481,7 @@ async def upload_media_message(
         )
     )
     if block_exists:
-        raise ForbiddenException("Bu kullanıcıyla mesajlaşamazsınız")
+        raise ForbiddenException(code="MESSAGING_FORBIDDEN")
 
     data = await file.read()
     file_size = len(data)
@@ -490,7 +490,7 @@ async def upload_media_message(
     max_size = _MAX_VOICE if content_type_field == "voice" else _MAX_MEDIA
     if file_size > max_size:
         mb = max_size // (1024 * 1024)
-        raise BadRequestException(f"Dosya boyutu {mb} MB'ı geçemez" if mb >= 1 else "Ses dosyası çok büyük")
+        raise BadRequestException(code="FILE_TOO_LARGE" if mb >= 1 else "AUDIO_TOO_LARGE")
 
     media_url: str
     thumbnail_url: str | None = None
@@ -504,7 +504,7 @@ async def upload_media_message(
             # Content-type'a fallback yap — desteklenen listede mi?
             client_ct = (file.content_type or "").lower()
             if not any(client_ct.startswith(ct) for ct in _AUDIO_CONTENT_TYPES):
-                raise BadRequestException("Desteklenmeyen ses formatı")
+                raise BadRequestException(code="UNSUPPORTED_AUDIO_FORMAT")
             audio_fmt = "aac"
 
         ext_map = {"aac": "aac", "ogg": "ogg", "m4a": "m4a", "mp3": "mp3"}
@@ -520,7 +520,7 @@ async def upload_media_message(
     elif content_type_field == "image":
         img_ext = _detect_image_type(data)
         if img_ext is None:
-            raise BadRequestException("Sadece JPEG, PNG veya WebP yüklenebilir")
+            raise BadRequestException(code="INVALID_IMAGE_FORMAT")
 
         key = f"messages/img/{uuid.uuid4().hex}.{img_ext}"
         media_url = storage.upload_bytes(key, data, _IMAGE_CONTENT_TYPES[img_ext])
@@ -540,7 +540,7 @@ async def upload_media_message(
     elif content_type_field == "video":
         vid_fmt = _detect_video_type(data)
         if vid_fmt is None:
-            raise BadRequestException("Sadece MP4 veya WebM video yüklenebilir")
+            raise BadRequestException(code="INVALID_VIDEO_FORMAT")
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             src_path = os.path.join(tmp_dir, f"src_{uuid.uuid4().hex}.{vid_fmt}")
@@ -550,7 +550,7 @@ async def upload_media_message(
             # Süre kontrolü
             detected_dur = await _get_video_duration(src_path)
             if detected_dur is not None and detected_dur > _VIDEO_MAX_SECS:
-                raise BadRequestException(f"Video {_VIDEO_MAX_SECS} saniyeyi geçemez")
+                raise BadRequestException(code="VIDEO_TOO_LONG")
             if detected_dur is not None:
                 resolved_duration = int(detected_dur)
 
@@ -587,7 +587,7 @@ async def upload_media_message(
         if client_ct not in _FILE_CONTENT_TYPES:
             # PDF magic bytes fallback
             if not data[:4] == b"%PDF":
-                raise BadRequestException("Desteklenmeyen dosya türü")
+                raise BadRequestException(code="UNSUPPORTED_FILE_TYPE")
             client_ct = "application/pdf"
 
         original_name = file.filename or f"dosya.{client_ct.split('/')[-1]}"

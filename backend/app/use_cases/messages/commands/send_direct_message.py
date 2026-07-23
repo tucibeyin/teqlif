@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 
 logger = get_logger(__name__)
 
@@ -20,11 +20,11 @@ class SendDirectMessageCommand:
 
         if not content or not content.strip():
             logger.warning("[SendDirectMessageCommand] Boş mesaj | sender=%s", sender_id)
-            raise BadRequestException("Mesaj içeriği boş olamaz")
+            raise BadRequestException(code="MESSAGE_CONTENT_EMPTY")
 
         if sender_id == receiver_id:
             logger.warning("[SendDirectMessageCommand] Kendine mesaj atma | sender=%s", sender_id)
-            raise BadRequestException("Kendinize mesaj gönderemezsiniz")
+            raise ForbiddenException(code="SELF_MESSAGE_FORBIDDEN")
 
         # Gerçekte EventBus'ı da inject edebiliriz
         from app.core.event_bus import event_bus
@@ -34,7 +34,7 @@ class SendDirectMessageCommand:
             # 1. Receiver var mı kontrolü
             receiver = await self.uow.users.get(receiver_id)
             if not receiver:
-                raise NotFoundException("Alıcı bulunamadı")
+                raise NotFoundException(code="USER_NOT_FOUND")
 
             # 2. Mesaj oluştur ve repoya ekle
             msg_data = {

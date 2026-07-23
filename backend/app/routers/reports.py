@@ -7,7 +7,7 @@ from app.models.report import Report
 from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
-from app.core.exceptions import NotFoundException, BadRequestException, ConflictException
+from app.core.exceptions import NotFoundException, BadRequestException, ConflictException, ForbiddenException
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -21,20 +21,20 @@ async def report_listing(
     listing_id = payload.get("listing_id")
     reason = (payload.get("reason") or "").strip()
     if not listing_id or not reason:
-        raise BadRequestException("listing_id ve reason zorunludur")
+        raise BadRequestException(code="VALIDATION_ERROR")
 
     listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.status == ListingStatus.ACTIVE))
     if not listing:
-        raise NotFoundException("İlan bulunamadı")
+        raise NotFoundException(code="LISTING_NOT_FOUND")
     if listing.user_id == current_user.id:
-        raise BadRequestException("Kendi ilanınızı şikayet edemezsiniz")
+        raise ForbiddenException(code="SELF_REPORT_FORBIDDEN")
 
     # Aynı kullanıcı aynı ilanı tekrar şikayet edemez
     existing = await db.scalar(
         select(Report).where(Report.listing_id == listing_id, Report.reporter_id == current_user.id)
     )
     if existing:
-        raise ConflictException("Bu ilanı zaten şikayet ettiniz")
+        raise ConflictException(code="LISTING_ALREADY_REPORTED")
 
     db.add(Report(listing_id=listing_id, reporter_id=current_user.id, reason=reason))
     await db.commit()

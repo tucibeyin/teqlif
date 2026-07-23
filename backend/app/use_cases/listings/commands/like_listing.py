@@ -1,6 +1,6 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.models.enums import ListingStatus
 
 logger = get_logger(__name__)
@@ -19,11 +19,11 @@ class LikeListingCommand:
             listing = await self.uow.listings.get(listing_id)
             if not listing or listing.status != ListingStatus.ACTIVE:
                 logger.warning("[LikeListingCommand] İlan aktif değil veya bulunamadı | listing_id=%s", listing_id)
-                raise NotFoundException("İlan bulunamadı veya aktif değil")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
 
             if listing.user_id == user_id:
                 logger.warning("[LikeListingCommand] Kendi ilanını beğenme engellendi | listing_id=%s", listing_id)
-                raise BadRequestException("Kendi ilanınızı favorilere ekleyemezsiniz")
+                raise ForbiddenException(code="SELF_FAVORITE_FORBIDDEN")
 
             # Mevcut favori kontrolü (Repository üzerinden yapılmalı ancak şimdilik doğrudan)
             # Normalde: await self.uow.favorites.get_by_user_and_listing(user_id, listing_id)

@@ -15,7 +15,7 @@ class CreateStoryCommand:
 
         if not media_url.strip():
             logger.warning("[CreateStoryCommand] Medya URL eksik | user_id=%s", user_id)
-            raise BadRequestException("Hikaye için medya URL'si zorunludur")
+            raise BadRequestException(code="STORY_MEDIA_URL_REQUIRED")
 
         async with self.uow:
             story_data = {

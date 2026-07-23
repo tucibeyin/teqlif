@@ -27,7 +27,7 @@ class GetListingQuery:
         row = result.first()
 
         if not row:
-            raise NotFoundException("İlan bulunamadı")
+            raise NotFoundException(code="LISTING_NOT_FOUND")
 
         listing, seller = row
 
