@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_exception.dart';
+import '../../core/error_display.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -85,11 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
         }
       } else if (mounted) {
-        TeqSnackBar.show(
-          context,
-          message: e.toString(),
-          type: TeqSnackBarType.error,
-        );
+        ErrorDisplay.fromException(context, e);
       }
     } finally {
       if (mounted)

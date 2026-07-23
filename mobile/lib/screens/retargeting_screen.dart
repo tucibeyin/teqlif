@@ -10,6 +10,7 @@ import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 
 class RetargetingScreen extends StatefulWidget {
   final int initialIndex;
@@ -605,24 +606,10 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       final sent = result['sent'] as int? ?? actualCount;
       setState(() { _sent = true; _sentCount = sent; _blastCooldownSeconds = 86400; });
       _startCountdown();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.retargetingBlastSuccess),
-          backgroundColor: const Color(0xFF22C55E),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      TeqToast.success(context, AppLocalizations.of(context)!.retargetingBlastSuccess);
     } else {
       final errMsg = result?['error'] as String? ?? 'Bir sorun oluştu, lütfen tekrar dene.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errMsg),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      TeqToast.error(context, errMsg);
     }
   }
 

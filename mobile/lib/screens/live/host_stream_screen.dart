@@ -26,6 +26,9 @@ import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/hype_meter_widget.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../core/logger_service.dart';
+import '../../core/app_exception.dart';
+import '../../core/error_display.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../services/client_logger.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -191,23 +194,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         final msg = sent > 0
             ? l.blastSent(sent)
             : l.blastStarted;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: const Color(0xFF22C55E),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        TeqToast.success(context, msg);
         setState(() { _audienceSize = 0; _audienceCost = 0.0; });
       } else {
         final errMsg = result?['error'] as String? ?? l.blastError;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errMsg),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        TeqToast.error(context, errMsg);
       }
     } finally {
       if (mounted) setState(() => _blastSending = false);
@@ -315,26 +306,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   void _showHypeAlert(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Text('🔥 ', style: TextStyle(fontSize: 18)),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFFEF4444),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    TeqToast.warning(context, '🔥 $message', duration: const Duration(seconds: 5));
   }
 
   @override
@@ -456,7 +428,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       );
       if (mounted) {
         setState(() {
-          _error = 'Bağlantı hatası: ${e.toString()}';
+          _error = 'Yayına bağlanılamadı. Lütfen tekrar deneyin.';
         });
       }
     }
@@ -579,24 +551,15 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     try {
       await StreamService.inviteCoHost(widget.streamToken.streamId, username);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.hostInvitedToStage),
-            backgroundColor: const Color(0xFF6366F1),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        TeqToast.info(context, AppLocalizations.of(context)!.hostInvitedToStage);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.hostInviteError(e.toString())),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (e is AppException) {
+          ErrorDisplay.fromException(context, e);
+        } else {
+          TeqToast.error(context, AppLocalizations.of(context)!.hostInviteError(''));
+        }
       }
     }
   }
@@ -1724,7 +1687,8 @@ class _ModerationSheetState extends State<_ModerationSheet> {
       await Future.delayed(const Duration(milliseconds: 900));
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) setState(() { _loading = false; _msg = e.toString(); _isError = true; });
+      final msg = e is AppException ? e.message : 'İşlem gerçekleştirilemedi.';
+      if (mounted) setState(() { _loading = false; _msg = msg; _isError = true; });
     }
   }
 

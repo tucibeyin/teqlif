@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../core/app_exception.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
@@ -553,9 +554,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       }
       await Sentry.captureException(e, stackTrace: st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.storyDeleteFailed)),
-        );
+        TeqToast.error(context, l.storyDeleteFailed);
         _videoCtrl?.play();
       }
     }

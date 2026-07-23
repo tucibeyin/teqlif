@@ -7,6 +7,9 @@ import 'package:video_player/video_player.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
+import '../../core/app_exception.dart';
+import '../../core/error_display.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -897,26 +900,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted) return;
     setState(() => _selfMuted = true);
     if (!widget.isActive) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.swipeMutedInStream),
-        backgroundColor: Color(0xFFD97706),
-        duration: Duration(seconds: 4),
-      ),
-    );
+    TeqToast.warning(context, AppLocalizations.of(context)!.swipeMutedInStream, duration: const Duration(seconds: 4));
   }
 
   void _handleUnmuted() {
     if (!mounted) return;
     setState(() => _selfMuted = false);
     if (!widget.isActive) return;
-    final l = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('🔊 ${l.modUnmutedMsg}'),
-        backgroundColor: const Color(0xFF16A34A),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    TeqToast.success(context, AppLocalizations.of(context)!.modUnmutedMsg);
   }
 
   void _handleKicked() {
@@ -924,13 +915,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     _kicked = true;
     widget.session.room?.disconnect();
     if (!widget.isActive) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.kickedFromStream),
-        backgroundColor: Color(0xFFEF4444),
-        duration: Duration(seconds: 4),
-      ),
-    );
+    TeqToast.error(context, AppLocalizations.of(context)!.kickedFromStream, duration: const Duration(seconds: 4));
     Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
@@ -938,27 +923,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted || _isCoHost) return;
     setState(() => _isCoHost = true);
     if (!widget.isActive) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.swipeMadeModeratorBy),
-        backgroundColor: const Color(0xFF16A34A),
-        duration: const Duration(seconds: 5),
-      ),
-    );
+    TeqToast.success(context, AppLocalizations.of(context)!.swipeMadeModeratorBy, duration: const Duration(seconds: 5));
   }
 
   void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
     setState(() => _isCoHost = false);
     if (!widget.isActive) return;
-    final l = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l.liveModDemotedSelf(demotedBy)),
-        backgroundColor: const Color(0xFF475569),
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    TeqToast.info(context, AppLocalizations.of(context)!.liveModDemotedSelf(demotedBy), duration: const Duration(seconds: 4));
   }
 
   void _showCoHostInviteDialog(String hostUsername) {
@@ -1010,12 +982,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       _isSelfCoHost = false;
       _localVideoTrack = null;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.swipeRemovedFromStage),
-        backgroundColor: Color(0xFF475569),
-        duration: Duration(seconds: 3),
-      ),
-    );
+    TeqToast.info(context, AppLocalizations.of(context)!.swipeRemovedFromStage);
   }
 
   Future<void> _acceptCoHostInvite() async {
@@ -1030,7 +997,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       }
     } catch (e) {
       if (mounted) {
-        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.genericErrorDetail(e.toString()));
+        if (e is AppException) {
+          ErrorDisplay.fromException(context, e);
+        } else {
+          TeqToast.error(context, 'İşlem gerçekleştirilemedi.');
+        }
       }
     }
   }
@@ -1388,13 +1359,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       if (targetUsername == _myUsername) {
                         if (CallService.instance.hasActiveCall) {
                           debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] User invited to co-host but has active call. Auto-rejecting locally.');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('@$hostUsername sizi sahneye davet etti, ancak görüşmede olduğunuz için otomatik reddedildi.'),
-                              backgroundColor: Colors.orange,
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
+                          TeqToast.warning(context, '@$hostUsername sizi sahneye davet etti, ancak görüşmede olduğunuz için reddedildi.', duration: const Duration(seconds: 4));
                         } else {
                           _showCoHostInviteDialog(hostUsername);
                         }
@@ -1556,27 +1521,15 @@ class _GiftSheetState extends State<_GiftSheet> {
         metadata: {'gift_name': giftName},
       );
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.swipeGiftSent),
-          backgroundColor: const Color(0xFF6D28D9),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      TeqToast.success(context, AppLocalizations.of(context)!.swipeGiftSent);
     } else {
-      final isInsufficient = result['status_code'] == 402 || 
+      final isInsufficient = result['status_code'] == 402 ||
           (result['error']?.toString().toLowerCase().contains('yetersiz') ?? false);
-          
+
       if (isInsufficient) {
         setState(() => _insufficientBalance = true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['error'] as String? ?? AppLocalizations.of(context)!.giftErrorGeneric),
-            backgroundColor: Colors.red.shade700,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        TeqToast.error(context, result['error'] as String? ?? AppLocalizations.of(context)!.giftErrorGeneric);
       }
     }
   }

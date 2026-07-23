@@ -11,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class CompetitorRadarScreen extends StatefulWidget {
@@ -546,12 +547,7 @@ class _RadarSection extends StatelessWidget {
               onTap: () {
                 final l = AppLocalizations.of(context)!;
                 Clipboard.setData(ClipboardData(text: suggestedPrice.toStringAsFixed(0)));
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(l.radarSuggestedCopied(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice))),
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ));
+                TeqToast.info(context, l.radarSuggestedCopied(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)));
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

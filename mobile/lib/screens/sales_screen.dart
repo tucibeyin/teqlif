@@ -10,6 +10,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
 import '../../ui_library/components/cards/teq_card.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import 'sale_detail_screen.dart';
 
@@ -98,13 +99,7 @@ class _SalesScreenState extends State<SalesScreen> {
         setState(() {
           _loading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.saleLoadError),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        TeqToast.error(context, AppLocalizations.of(context)!.saleLoadError, duration: const Duration(seconds: 4));
       }
     }
   }

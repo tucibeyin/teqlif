@@ -43,6 +43,7 @@ import '../widgets/stale_data_banner.dart';
 import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -837,12 +838,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           if (!mounted) return;
           if (!active) {
             final l = AppLocalizations.of(context)!;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l.liveEnded),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            TeqToast.info(context, l.liveEnded);
             return;
           }
           if (PipService.isVisible) {
@@ -1457,19 +1453,13 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       return;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l.attachVideoProcessing),
-        duration: const Duration(seconds: 10),
-      ),
-    );
+    TeqToast.info(context, l.attachVideoProcessing, duration: const Duration(seconds: 10));
     final result = await VideoCompress.compressVideo(
       picked.path,
       quality: VideoQuality.MediumQuality,
       deleteOrigin: false,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
     final file = result?.file;
     if (file == null) {
       TeqSnackBar.show(context, message: l.attachSendFailed);

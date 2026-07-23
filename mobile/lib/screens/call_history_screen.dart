@@ -160,14 +160,14 @@ class _CallHistoryScreenState extends State<CallHistoryScreen>
       } else {
         setState(() {
           _loading[filter] = false;
-          _errorMessage = 'HTTP ${resp.statusCode}';
+          _errorMessage = 'Çağrı geçmişi yüklenemedi. Lütfen tekrar deneyin.';
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading[filter] = false;
-        _errorMessage = e.toString();
+        _errorMessage = 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
       });
     }
   }

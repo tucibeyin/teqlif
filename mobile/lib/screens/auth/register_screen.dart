@@ -13,6 +13,8 @@ import 'verify_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../core/app_exception.dart';
+import '../../core/error_display.dart';
 import '../../ui_library/components/overlays/teq_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -143,12 +145,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
-      if (mounted)
-        TeqSnackBar.show(
-          context,
-          message: e.toString().replaceAll('Exception: ', ''),
-          type: TeqSnackBarType.error,
-        );
+      if (mounted) {
+        if (e is AppException) {
+          ErrorDisplay.fromException(context, e);
+        } else {
+          ErrorDisplay.fromException(context, AppException('Kayıt sırasında bir hata oluştu.', code: 'ERR_UNKNOWN'));
+        }
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

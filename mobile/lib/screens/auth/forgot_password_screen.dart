@@ -7,6 +7,8 @@ import 'reset_password_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../core/app_exception.dart';
+import '../../core/error_display.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -41,12 +43,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: email)),
       );
     } catch (e) {
-      if (mounted)
-        TeqSnackBar.show(
-          context,
-          message: e.toString(),
-          type: TeqSnackBarType.error,
-        );
+      if (mounted) {
+        if (e is AppException) {
+          ErrorDisplay.fromException(context, e);
+        } else {
+          ErrorDisplay.fromException(context, AppException('Bir hata oluştu.', code: 'ERR_UNKNOWN'));
+        }
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
