@@ -88,7 +88,7 @@ async def rate_limit_exceeded_handler(
             "success": false,
             "error": {
                 "code": "RATE_LIMIT_EXCEEDED",
-                "message": "Çok fazla istek gönderildi. ..."
+                "message": "Too many requests. ..."
             }
         }
     """
@@ -106,7 +106,7 @@ async def rate_limit_exceeded_handler(
             "success": False,
             "error": {
                 "code": "RATE_LIMIT_EXCEEDED",
-                "message": "Çok fazla istek gönderildi. Lütfen biraz bekleyin.",
+                "message": "Too many requests. Please wait a moment.",
             },
         },
         headers={"Retry-After": "60"},

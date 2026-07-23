@@ -9,7 +9,7 @@ from app.models.like import ListingLike
 from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 
 router = APIRouter(prefix="/api/favorites", tags=["favorites"])
 
@@ -80,9 +80,9 @@ async def check_favorite(listing_id: int, current_user: User = Depends(get_curre
 async def add_favorite(listing_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.status != ListingStatus.DELETED))  # noqa: E712
     if not listing:
-        raise NotFoundException("İlan bulunamadı")
+        raise NotFoundException(code="LISTING_NOT_FOUND")
     if listing.user_id == current_user.id:
-        raise BadRequestException("Kendi ilanınızı favorileyemezsiniz")
+        raise ForbiddenException(code="SELF_FAVORITE_FORBIDDEN")
     existing = await db.scalar(
         select(Favorite).where(Favorite.user_id == current_user.id, Favorite.listing_id == listing_id)
     )

@@ -420,7 +420,7 @@ async def audience_estimate(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
     if not listing:
-        raise NotFoundException("İlan bulunamadı.")
+        raise NotFoundException(code="LISTING_NOT_FOUND")
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
@@ -514,7 +514,7 @@ async def generate_description(
         ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
         if ai_used >= _ai_desc_limit and current_user.tuci_balance < _ai_desc_cost:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi (PRO limit reached).")
-            raise InsufficientFundsException("Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
+            raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
     else:
         if current_user.tuci_balance < _ai_desc_cost:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi.")
@@ -650,7 +650,7 @@ async def send_mass_notification(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
     if not listing:
-        raise NotFoundException("İlan bulunamadı.")
+        raise NotFoundException(code="LISTING_NOT_FOUND")
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
@@ -679,7 +679,7 @@ async def send_mass_notification(
     )
 
     if not candidate_ids:
-        return {"sent": 0, "spent": 0, "message": "Henüz yeterli kitle verisi yok."}
+        return {"sent": 0, "spent": 0, "code": "NO_AUDIENCE_DATA"}
 
     token_rows = (await db.execute(text("""
         SELECT fcm_token FROM users
@@ -691,7 +691,7 @@ async def send_mass_notification(
     fcm_tokens = [r[0] for r in token_rows]
 
     if not fcm_tokens:
-        return {"sent": 0, "spent": 0, "message": "Bildirim gönderilebilecek kullanıcı bulunamadı."}
+        return {"sent": 0, "spent": 0, "code": "NO_RECIPIENTS"}
 
     from app.services.firebase_service import send_push, InvalidFCMTokenError
 
@@ -699,8 +699,8 @@ async def send_mass_notification(
         try:
             await send_push(
                 token=token,
-                title="Hâlâ ilgilendin mi? 👀",
-                body=f"{listing.title} — hâlâ satışta!",
+                title="notifRetargetTitle",
+                body=listing.title,
                 data={"type": "new_listing", "listing_id": str(listing_id)},
                 extra_data={"url": f"/listing/{listing_id}"},
             )
@@ -749,4 +749,4 @@ async def send_mass_notification(
         current_user.id, listing_id, sent, free_used, paid_count, tuci_cost,
     )
 
-    return {"sent": sent, "spent": tuci_cost, "message": f"{sent} kişiye bildirim gönderildi."}
+    return {"sent": sent, "spent": tuci_cost}

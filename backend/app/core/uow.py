@@ -24,7 +24,7 @@ class AbstractUnitOfWork(abc.ABC):
             if issubclass(exc_type, SQLAlchemyError):
                 logger.error("[UoW] Database transaction failed: %s", exc_val, exc_info=(exc_type, exc_val, traceback))
                 capture_exception(exc_val)
-                raise DatabaseException("Veritabanı işlemi sırasında beklenmeyen bir hata oluştu")
+                raise DatabaseException(code="DB_OPERATION_FAILED")
             logger.error("[UoW] Unexpected transaction error: %s", exc_val, exc_info=(exc_type, exc_val, traceback))
             capture_exception(exc_val)
             return False

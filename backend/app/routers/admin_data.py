@@ -19,7 +19,7 @@ from app.config import settings
 from app.utils.redis_client import get_redis
 from app.routers.chat import _publish_chat
 from sqlalchemy.exc import IntegrityError
-from app.core.exceptions import ForbiddenException, NotFoundException, BadRequestException
+from app.core.exceptions import ForbiddenException, NotFoundException, BadRequestException, ConflictException
 from app.core.logger import get_logger, capture_exception
 from app.constants import ws_types as WS
 
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/admin-data", tags=["admin-data"])
 # --- GÜVENLİK DUVARI ---
 async def check_admin_access(current_user: User = Depends(get_current_user)):
     if not current_user.is_admin or current_user.email != settings.admin_email:
-        raise ForbiddenException("Admin yetkisi bulunamadı.")
+        raise ForbiddenException(code="ADMIN_FORBIDDEN")
     return current_user
 
 # --- VERİ MODELLERİ (SCHEMAS) ---
@@ -180,12 +180,12 @@ async def get_recent_users(
 async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
     if data.full_name is not None: user.full_name = data.full_name
     if data.email is not None: user.email = data.email
     if data.status is not None: user.status = UserStatus(data.status)
     await db.commit()
-    return {"message": "Bilgiler güncellendi."}
+    return {"message": "Updated successfully."}
 
 class ToggleProRequest(BaseModel):
     plan_type: Optional[str] = None
@@ -199,14 +199,14 @@ async def toggle_pro(
 ):
     user = await db.get(User, user_id)
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
     user.is_premium = not user.is_premium
     if user.is_premium:
         user.plan_type = req.plan_type if req.plan_type else "monthly"
     else:
         user.plan_type = None
     await db.commit()
-    status = "PRO verildi" if user.is_premium else "PRO kaldırıldı"
+    status = "PRO granted" if user.is_premium else "PRO removed"
     logger.info("[ADMIN] %s → %s | admin=%s", user.username, status, admin.email)
     return {"user_id": user_id, "username": user.username, "is_premium": user.is_premium, "plan_type": user.plan_type}
 
@@ -220,7 +220,7 @@ async def toggle_shadowban(
     Aynı zamanda Redis cache'ini geçersiz kılar, etki anında başlar."""
     user = await db.get(User, user_id)
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
     user.is_shadowbanned = not user.is_shadowbanned
     await db.commit()
     # Redis cache'ini temizle — bir sonraki mesajda DB'den taze değer okunur
@@ -237,10 +237,10 @@ async def toggle_shadowban(
 async def reset_user_password(user_id: int, data: AdminPasswordReset, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
     user.hashed_password = hash_password(data.new_password)
     await db.commit()
-    return {"message": "Şifre değiştirildi."}
+    return {"message": "Password changed."}
 
 # ==========================================
 # 2. CANLI YAYIN YÖNETİMİ
@@ -275,7 +275,7 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream or not stream.is_live:
-        raise BadRequestException("Yayın bulunamadı veya zaten kapalı")
+        raise BadRequestException(code="STREAM_ALREADY_CLOSED")
 
     stream.is_live = False
     stream.ended_at = datetime.now(timezone.utc)
@@ -284,10 +284,10 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
     try:
         redis = await get_redis()
         await redis.delete(f"live:viewers:{stream.room_name}")
-        await _publish_chat(stream_id, {"type": WS.STREAM_ENDED, "message": "Yayın sistem yöneticisi tarafından sonlandırıldı."})
+        await _publish_chat(stream_id, {"type": WS.STREAM_ENDED, "message": "Stream terminated by admin."})
     except Exception as exc:
         logger.warning("[ADMIN] Redis temizleme/chat yayını başarısız | stream_id=%s | %s", stream_id, exc)
-    return {"message": "Yayın kapatıldı."}
+    return {"message": "Stream closed."}
 
 # ==========================================
 # 3. İLAN YÖNETİMİ
@@ -310,19 +310,19 @@ async def get_admin_listings(limit: int = 50, db: AsyncSession = Depends(get_db)
 @router.post("/listings/{listing_id}/toggle")
 async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     listing = await db.get(Listing, listing_id)
-    if not listing: raise NotFoundException("İlan bulunamadı")
+    if not listing: raise NotFoundException(code="LISTING_NOT_FOUND")
     listing.status = ListingStatus.PASSIVE if listing.status == ListingStatus.ACTIVE else ListingStatus.ACTIVE
     await db.commit()
-    return {"message": "İlan durumu değiştirildi."}
+    return {"message": "Listing status updated."}
 
 @router.delete("/listings/{listing_id}")
 async def admin_delete_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     listing = await db.get(Listing, listing_id)
-    if not listing: raise NotFoundException("İlan bulunamadı")
+    if not listing: raise NotFoundException(code="LISTING_NOT_FOUND")
     listing.status = ListingStatus.DELETED
     listing.status = ListingStatus.PASSIVE
     await db.commit()
-    return {"message": "İlan silindi."}
+    return {"message": "Listing deleted."}
 
 # ==========================================
 # 4. ŞİKAYET (REPORT) YÖNETİMİ
@@ -341,10 +341,10 @@ async def get_admin_reports(limit: int = 50, db: AsyncSession = Depends(get_db),
 
         if getattr(r, 'reported_id', None):
             u = await db.get(User, r.reported_id)
-            target_text = f"@{u.username}" if u else "Kullanıcı"
+            target_text = f"@{u.username}" if u else "User"
             target_url = f"/profil/{u.username}" if u else "#"
         elif getattr(r, 'listing_id', None):
-            target_text = f"İlan ID: {r.listing_id}"
+            target_text = f"Listing ID: {r.listing_id}"
             target_url = f"/ilan/{r.listing_id}"
 
         data.append({
@@ -362,12 +362,12 @@ async def get_admin_reports(limit: int = 50, db: AsyncSession = Depends(get_db),
 @router.post("/reports/{report_id}/resolve")
 async def admin_resolve_report(report_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     report = await db.get(Report, report_id)
-    if not report: raise NotFoundException("Şikayet bulunamadı")
+    if not report: raise NotFoundException(code="REPORT_NOT_FOUND")
     
     if hasattr(report, 'status'):
         report.status = 'resolved'
         await db.commit()
-    return {"message": "Şikayet çözüldü."}
+    return {"message": "Report resolved."}
 
 @router.post("/users")
 async def create_user(
@@ -380,7 +380,7 @@ async def create_user(
         select(User).where((User.email == data.email) | (User.username == data.username))
     )
     if existing_user.scalar_one_or_none():
-        raise BadRequestException("E-posta veya kullanıcı adı zaten kullanımda.")
+        raise ConflictException(code="EMAIL_OR_USERNAME_TAKEN")
 
     # Yeni kullanıcıyı oluştur
     new_user = User(
@@ -392,7 +392,7 @@ async def create_user(
     )
     db.add(new_user)
     await db.commit()
-    return {"message": f"Kullanıcı @{new_user.username} başarıyla oluşturuldu."}
+    return {"message": f"User @{new_user.username} created."}
 
 
 # Kullanıcı Silme (Soft Delete)
@@ -404,13 +404,13 @@ async def delete_user(
 ):
     user = await db.get(User, user_id)
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı.")
+        raise NotFoundException(code="USER_NOT_FOUND")
 
     if user.email == settings.admin_email:
-        raise BadRequestException("Sistem yöneticisi silinemez.")
+        raise ForbiddenException(code="ADMIN_DELETE_FORBIDDEN")
 
     if user.status == UserStatus.DELETED:
-        raise BadRequestException("Kullanıcı zaten silinmiş.")
+        raise ConflictException(code="USER_ALREADY_DELETED")
 
     now = datetime.now(timezone.utc)
 
@@ -438,7 +438,7 @@ async def delete_user(
     except Exception:
         pass
 
-    return {"message": f"Kullanıcı @{user.username} hesabı kapatıldı (soft delete)."}
+    return {"message": f"User @{user.username} deactivated."}
 
 
 # Kullanıcı Kalıcı Silme (Anonimize)
@@ -452,10 +452,10 @@ async def purge_user(
 ):
     user = await db.get(User, user_id)
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı.")
+        raise NotFoundException(code="USER_NOT_FOUND")
 
     if user.email == settings.admin_email:
-        raise BadRequestException("Sistem yöneticisi silinemez.")
+        raise ForbiddenException(code="ADMIN_DELETE_FORBIDDEN")
 
     old_username = user.username
     now = datetime.now(timezone.utc)
@@ -463,7 +463,7 @@ async def purge_user(
     # Kimlik bilgilerini temizle — FK satırları korunur
     user.email        = f"purged_{user_id}@deleted.invalid"
     user.username     = f"deleted_{user_id}"
-    user.full_name    = "Silinmiş Hesap"
+    user.full_name    = "Deleted Account"
     user.phone        = None
     user.phone_verified = False
     user.hashed_password = ""
@@ -486,7 +486,7 @@ async def purge_user(
     except Exception:
         pass
 
-    return {"message": f"Kullanıcı @{old_username} kalıcı olarak silindi (anonimize)."}
+    return {"message": f"User @{old_username} permanently purged."}
 
 # ==========================================
 # 5. TUCi EKONOMİSİ
@@ -552,7 +552,7 @@ async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depend
     result = await db.execute(select(User).where(User.username == data.username))
     user = result.scalar_one_or_none()
     if not user:
-        raise NotFoundException(f"'{data.username}' kullanıcısı bulunamadı")
+        raise NotFoundException(code="USER_NOT_FOUND")
     # Atomic UPDATE — race condition'a karşı güvenli
     await db.execute(
         text("UPDATE users SET tuci_balance = tuci_balance + :amount WHERE id = :uid"),
@@ -562,7 +562,7 @@ async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depend
     await db.commit()
     await db.refresh(user)
     logger.info("[ADMIN] TUCi airdrop | user=%s | amount=%s | new_balance=%s | admin=%s", user.username, data.amount, user.tuci_balance, admin.email)
-    return {"message": f"{user.username} kullanıcısına {data.amount} TUCi yüklendi.", "new_balance": user.tuci_balance, "username": user.username}
+    return {"message": f"Airdropped {data.amount} TUCi to @{user.username}.", "new_balance": user.tuci_balance, "username": user.username}
 
 
 # ==========================================
@@ -597,7 +597,7 @@ async def get_ad_campaigns(db: AsyncSession = Depends(get_db), admin: User = Dep
 async def admin_pause_campaign(campaign_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     campaign = await db.get(AdCampaign, campaign_id)
     if not campaign:
-        raise NotFoundException("Kampanya bulunamadı")
+        raise NotFoundException(code="CAMPAIGN_NOT_FOUND")
     campaign.status = "paused" if campaign.status == "active" else "active"
     await db.commit()
     return {"message": f"Kampanya durumu → {campaign.status}", "status": campaign.status}
@@ -649,7 +649,7 @@ async def admin_send_push(data: PushRequest, db: AsyncSession = Depends(get_db),
     if data.user_id:
         user = await db.get(User, data.user_id)
         if not user or not user.fcm_token:
-            raise BadRequestException("Kullanıcı bulunamadı veya FCM token yok")
+            raise BadRequestException(code="USER_FCM_NOT_FOUND")
         await send_push(token=user.fcm_token, title=data.title, body=data.body, notif_type="admin_broadcast")
         logger.info("[ADMIN] Push gönderildi | user=%s | admin=%s", user.username, admin.email)
         return {"sent": 1}

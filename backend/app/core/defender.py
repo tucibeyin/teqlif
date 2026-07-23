@@ -164,7 +164,7 @@ class AntiBotMiddleware(BaseHTTPMiddleware):
                     "success": False,
                     "error": {
                         "code": "RATE_LIMIT_EXCEEDED",
-                        "message": "Çok fazla istek gönderildi. Lütfen biraz bekleyin.",
+                        "message": "Too many requests. Please wait a moment.",
                     },
                 },
                 headers={"Retry-After": str(_IP_BLOCK_TTL)},

@@ -171,14 +171,12 @@ async def _handle_chat_message(
         await safe_send_json(websocket, {
             "type": "error",
             "code": "muted",
-            "message": "Bu yayında susturuldunuz",
         })
         return
     if result.get("is_rate_limited"):
         await safe_send_json(websocket, {
             "type": "error",
             "code": "rate_limited",
-            "message": "Çok hızlı mesaj atıyorsun. Lütfen biraz bekle.",
         })
         return
     if result.get("is_hidden"):
@@ -232,7 +230,6 @@ async def _handle_chat_message(
             try:
                 await ws_manager.publish("chat_broadcast", host_topic, {
                     "type": WS.HYPE_ALERT,
-                    "message": "Oda alev alev! Büyük ürünü satmanın tam zamanı!",
                 })
             except Exception as exc:
                 logger.warning("[Hype] Host alert gönderilemedi | stream=%s | %s", stream_id, exc)

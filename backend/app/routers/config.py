@@ -94,4 +94,4 @@ async def update_version_config(
             db.add(cfg)
             
     await db.commit()
-    return {"message": "Versiyon ayarları güncellendi."}
+    return {"message": "Version config updated."}

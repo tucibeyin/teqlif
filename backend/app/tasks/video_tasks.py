@@ -71,7 +71,7 @@ async def _insert_highlight_record(room_id: int, host_id: int, video_path: str) 
             """),
             {
                 "uid": host_id,
-                "title": f"Canlı Yayın Anı — Oda {room_id}",
+                "title": f"Live Stream Highlight — Room {room_id}",
                 "vurl": f"/highlights/highlight_{room_id}.mp4",
                 "rid": room_id,
                 "exp": expires,

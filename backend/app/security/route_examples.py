@@ -84,7 +84,7 @@ async def search(
     if SQLInjectionProtection.has_sql(q):
         # Log suspicious activity
         security_logger.injection_attempt(client_ip, q)
-        raise HTTPException(status_code=400, detail="Geçersiz arama")
+        raise HTTPException(status_code=400, detail="INVALID_SEARCH")
     
     # 2. Search query sanitize et
     clean_query = sanitize_search_query(q)

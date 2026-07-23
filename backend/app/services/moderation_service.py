@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException
+from app.core.exceptions import NotFoundException, ForbiddenException
 from app.core.logger import get_logger
 from app.constants import ws_types as WS
 from app.models.stream import LiveStream
@@ -127,28 +127,28 @@ class ModerationService:
         )
         stream = stream_res.scalar_one_or_none()
         if not stream or not stream.is_live:
-            raise NotFoundException("Aktif yayın bulunamadı")
+            raise NotFoundException(code="STREAM_NOT_FOUND")
 
         is_host = stream.host_id == current_user.id
 
         if not is_host:
             if host_only:
-                raise ForbiddenException("Sadece yayın sahibi bu işlemi yapabilir")
+                raise ForbiddenException(code="STREAM_HOST_ONLY")
             # Co-host kontrolü: Redis mods set'inde mi?
             redis = await get_redis()
             is_mod = await redis.sismember(mod_key(stream_id), str(current_user.id))
             if not is_mod:
-                raise ForbiddenException("Bu işlem için yetkiniz yok")
+                raise ForbiddenException(code="HOST_OR_MOD_REQUIRED")
 
         target_res = await self.db.execute(select(User).where(User.username == username))
         target = target_res.scalar_one_or_none()
         if not target:
-            raise NotFoundException("Kullanıcı bulunamadı")
+            raise NotFoundException(code="USER_NOT_FOUND")
         if target.id == current_user.id:
-            raise BadRequestException("Kendinize moderasyon uygulayamazsınız")
+            raise ForbiddenException(code="STREAM_MOD_SELF_FORBIDDEN")
         # Co-host, yayın sahibini hedef alamaz
         if not is_host and target.id == stream.host_id:
-            raise ForbiddenException("Moderatör, yayın sahibine işlem yapamaz")
+            raise ForbiddenException(code="STREAM_MOD_HOST_PROTECTED")
 
         return stream, target
 
@@ -255,7 +255,7 @@ class ModerationService:
             )
         )
         if not stream_res.scalar_one_or_none():
-            raise NotFoundException("Aktif yayın bulunamadı")
+            raise NotFoundException(code="STREAM_NOT_FOUND")
 
         redis = await get_redis()
         mod_ids = await redis.smembers(mod_key(stream_id))
@@ -269,9 +269,9 @@ class ModerationService:
         )
         stream = stream_res.scalar_one_or_none()
         if not stream:
-            raise NotFoundException("Yayın bulunamadı")
+            raise NotFoundException(code="STREAM_NOT_FOUND")
         if stream.host_id != current_user.id:
-            raise ForbiddenException("Sadece yayın sahibi görebilir")
+            raise ForbiddenException(code="STREAM_HOST_ONLY")
 
         redis = await get_redis()
         muted_ids = await redis.smembers(mute_key(stream_id))

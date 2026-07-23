@@ -194,23 +194,23 @@ def _build_recommendation(avg_budget: float | None, hesitation_count: int, uniqu
     """
     if avg_budget is None or avg_budget <= 0:
         if hesitation_count > 5:
-            return t.get("recNoBudgetHighHesitation", "Bugün {count} izleyici teklif vermekle ilgilendi ama tereddüt etti. Bir dahaki yayında daha düşük başlangıç fiyatıyla başlayarak ilgiyi satışa dönüştürebilirsiniz.").format(count=hesitation_count)
-        return t.get("recNoBudgetDefault", "Henüz yeterli bütçe verisi yok. Yayınlarınızı düzenli tutarak kitle profili oluştururken fiyat aralıklarını deneyebilirsiniz.")
+            return t.get("recNoBudgetHighHesitation", "").format(count=hesitation_count)
+        return t.get("recNoBudgetDefault", "")
 
     budget_fmt = f"{int(avg_budget):,}".replace(",", ".")
 
     if hesitation_count >= 10:
         low = int(avg_budget * 0.7)
         low_fmt = f"{low:,}".replace(",", ".")
-        return t.get("recHighHesitation", "İzleyicilerinizin ortalama bütçesi {budget} TL. Bugün {count} kişi teklif vermek istedi ama vazgeçti — bir dahaki yayında {low} TL gibi düşük başlangıç fiyatları deneyerek bu kararsız kitleyi satışa çevirebilirsiniz.").format(budget=budget_fmt, count=hesitation_count, low=low_fmt)
+        return t.get("recHighHesitation", "").format(budget=budget_fmt, count=hesitation_count, low=low_fmt)
     elif hesitation_count >= 3:
-        return t.get("recMedHesitation", "İzleyicilerinizin ortalama bütçesi {budget} TL. {count} izleyici tekliften vazgeçti — ürün açıklamalarını ve fiyat adımlarını netleştirerek dönüşüm oranınızı artırabilirsiniz.").format(budget=budget_fmt, count=hesitation_count)
+        return t.get("recMedHesitation", "").format(budget=budget_fmt, count=hesitation_count)
     elif unique_users >= 10:
         high = int(avg_budget * 1.15)
         high_fmt = f"{high:,}".replace(",", ".")
-        return t.get("recHighReach", "İzleyicilerinizin ortalama bütçesi {budget} TL. Kitle profiliniz güçlü görünüyor. Bir dahaki yayında {high} TL'ye kadar premium ürünler sunarak geliri artırabilirsiniz.").format(budget=budget_fmt, high=high_fmt)
+        return t.get("recHighReach", "").format(budget=budget_fmt, high=high_fmt)
     else:
-        return t.get("recDefault", "İzleyicilerinizin ortalama bütçesi {budget} TL. Bu fiyat bandında ürünler getirerek satışlarınızı artırabilirsiniz.").format(budget=budget_fmt)
+        return t.get("recDefault", "").format(budget=budget_fmt)
 
 
 @router.get("/seller-report/{stream_id}")
@@ -486,7 +486,7 @@ async def price_estimate(
     if current_user.is_premium:
         ai_used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
         if ai_used >= _ai_price_limit and current_user.tuci_balance < _ai_price_cost:
-            raise InsufficientFundsException("Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
+            raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
     else:
         if current_user.tuci_balance < _ai_price_cost:
             raise InsufficientFundsException()
@@ -512,13 +512,13 @@ async def price_estimate(
         # FastAPI'nin bloklanmaması için işlemi ARQ worker'a atıyoruz.
         job = await request.app.state.arq_pool.enqueue_job("generate_embedding_task", combined)
         if not job:
-            raise ServiceException("Yapay zeka servisi şu an meşgul. Lütfen tekrar deneyin.")
+            raise ServiceException(code="AI_SERVICE_BUSY")
 
         try:
             # Worker'dan sonucu en fazla 15 saniye bekliyoruz.
             embedding: list[float] = await job.result(timeout=15.0)
         except Exception:
-            raise ServiceException("Yapay zeka servisi yanıt vermedi. Lütfen tekrar deneyin.")
+            raise ServiceException(code="AI_SERVICE_TIMEOUT")
         
         emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
         await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache
@@ -716,18 +716,18 @@ async def price_estimate(
     signals = []
     if cat_matched > 0:
         signals.append(
-            _t.get("aiAdviceSameCategory", "{count} aynı kategori").replace("{count}", str(cat_matched))
+            _t.get("aiAdviceSameCategory", "").replace("{count}", str(cat_matched))
         )
     if body_city and any(body_city in (r.location or "").lower() for _, r, _ in top):
-        signals.append(_t.get("aiAdviceCityBased", "şehir bazlı"))
+        signals.append(_t.get("aiAdviceCityBased", ""))
     signal_str = f" ({', '.join(signals)})" if signals else ""
 
-    advice = _t.get("aiAdviceSimilarCount", "{count} benzer ürün satış verisi analiz edildi").replace("{count}", str(cnt))
+    advice = _t.get("aiAdviceSimilarCount", "").replace("{count}", str(cnt))
     advice += signal_str + ". "
     if alert_msg:
         advice += alert_msg
     else:
-        advice += _t.get("aiAdviceMarketClose", "Ortalama piyasa kapanışı: {price} ₺.").replace("{price}", close_fmt)
+        advice += _t.get("aiAdviceMarketClose", "").replace("{price}", close_fmt)
 
     # ── TUCi düş + sayaç güncelle (Atomik) ────────────────────────────────────
     tuci_spent = 0
@@ -1297,7 +1297,7 @@ async def pro_insights(
         if overpriced:
             tips.append({
                 "icon": "💰", "type": "price",
-                "title": t.get("proTipPriceDownTitle", "Fiyat Ayarı Önerisi"),
+                "title": t.get("proTipPriceDownTitle", ""),
                 "body": t.get("proTipPriceDownBody", '"{title}" piyasa ortalamasının %{diff} üzerinde. Fiyatı {avg} ₺ civarına çekersen satış hızlanabilir.').format(
                     title=overpriced[0]["title"], diff=abs(overpriced[0]["diff_pct"]), avg=int(overpriced[0]["market_avg"])
                 ),
@@ -1305,7 +1305,7 @@ async def pro_insights(
         if underpriced:
             tips.append({
                 "icon": "🚀", "type": "price_up",
-                "title": t.get("proTipPriceUpTitle", "Fiyat Artırma Fırsatı"),
+                "title": t.get("proTipPriceUpTitle", ""),
                 "body": t.get("proTipPriceUpBody", '"{title}" benzer ilanların %{diff} altında. Piyasa fiyatı {avg} ₺ — artırma fırsatı var.').format(
                     title=underpriced[0]["title"], diff=abs(underpriced[0]["diff_pct"]), avg=int(underpriced[0]["market_avg"])
                 ),
@@ -1314,7 +1314,7 @@ async def pro_insights(
         if hot_leads and hot_leads[0].get("hesitations_30d", 0) > 0:
             tips.append({
                 "icon": "🎯", "type": "lead",
-                "title": t.get("proTipLeadTitle", "Sıcak Alıcı Var"),
+                "title": t.get("proTipLeadTitle", ""),
                 "body": t.get("proTipLeadBody", '"{title}" için son 30 günde {count} kişi inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.').format(
                     title=hot_leads[0]["title"], count=hot_leads[0]["hesitations_30d"]
                 ),
@@ -1348,7 +1348,7 @@ async def pro_insights(
                             suggested = int(round(avg_pp / 50) * 50) or int(avg_pp)
                             tips.append({
                                 "icon": "💡", "type": "hesitation_price",
-                                "title": t.get("proTipHesPriceTitle", "Alıcı Fiyat Sinyali"),
+                                "title": t.get("proTipHesPriceTitle", ""),
                                 "body": t.get(
                                     "proTipHesPriceBody",
                                     '"{title}" için birden fazla kişi ≈{suggested} ₺ yazdı ama teklif göndermedi. Bu fiyata yaklaştırmak dönüşümü artırabilir.'
@@ -1362,8 +1362,8 @@ async def pro_insights(
             best_hour = peak_hours[0]["label"]
             tips.append({
                 "icon": "📡", "type": "stream",
-                "title": t.get("proTipStreamTitle", "En İyi Yayın Saati"),
-                "body": t.get("proTipStreamBody", "Platform genelinde en yoğun saat {hour}. Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.").format(
+                "title": t.get("proTipStreamTitle", ""),
+                "body": t.get("proTipStreamBody", "").format(
                     hour=best_hour
                 ),
             })
@@ -1371,16 +1371,16 @@ async def pro_insights(
         if funnel.get("view_to_bid_pct", 0) < 5 and funnel.get("views", 0) > 10:
             tips.append({
                 "icon": "📸", "type": "listing_quality",
-                "title": t.get("proTipQualityTitle", "Görsel & Açıklama İyileştir"),
-                "body": t.get("proTipQualityBody", "İlanlarının görüntülenme → teklif oranı %{pct}. Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.").format(
+                "title": t.get("proTipQualityTitle", ""),
+                "body": t.get("proTipQualityBody", "").format(
                     pct=funnel["view_to_bid_pct"]
                 ),
             })
         if not tips:
             tips.append({
                 "icon": "✅", "type": "general",
-                "title": t.get("proTipAllGoodTitle", "Her Şey Yolunda"),
-                "body": t.get("proTipAllGoodBody", "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek."),
+                "title": t.get("proTipAllGoodTitle", ""),
+                "body": t.get("proTipAllGoodBody", ""),
             })
     except Exception as exc:
         logger.warning("[ProInsights] tips başarısız: %s", exc)
@@ -1421,9 +1421,9 @@ async def best_stream_time(
     _DAYS = [
         t.get("day0", "Pazar"),
         t.get("day1", "Pazartesi"),
-        t.get("day2", "Salı"),
-        t.get("day3", "Çarşamba"),
-        t.get("day4", "Perşembe"),
+        t.get("day2", ""),
+        t.get("day3", ""),
+        t.get("day4", ""),
         t.get("day5", "Cuma"),
         t.get("day6", "Cumartesi"),
     ]
@@ -1479,7 +1479,7 @@ async def best_stream_time(
             "confidence": "high" if int(r.stream_count) >= 5 else ("medium" if int(r.stream_count) >= 3 else "low"),
         })
     if not slots:
-        return {"slots": [], "recommendation": t.get("proNotEnoughStreamData", "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).")}
+        return {"slots": [], "recommendation": t.get("proNotEnoughStreamData", "")}
 
     best = slots[0]
     return {
@@ -2370,13 +2370,13 @@ async def competitor_radar(
 
     if pct_rank >= 75:
         signal = "pahalı"
-        signal_detail = t.get("radarExpensive", "Rakiplerin %{pct_rank}'inden pahalısın").replace("{pct_rank}", str(pct_rank))
+        signal_detail = t.get("radarExpensive", "").replace("{pct_rank}", str(pct_rank))
     elif pct_rank <= 25:
         signal = "ucuz"
-        signal_detail = t.get("radarCheap", "Rakiplerin %{pct_rank}'inden ucuzsun — fiyat artırabilirsin").replace("{pct_rank}", str(100 - pct_rank))
+        signal_detail = t.get("radarCheap", "").replace("{pct_rank}", str(100 - pct_rank))
     else:
         signal = "uygun"
-        signal_detail = t.get("radarFair", "Fiyatın piyasa ortalamasına yakın")
+        signal_detail = t.get("radarFair", "")
 
     if signal == "pahalı":
         suggested_price = round(avg_price * 0.95)
@@ -2495,7 +2495,7 @@ async def category_velocity(
             if ucuz and pahali and pahali["avg_days"] > 0 and ucuz["avg_days"] > 0:
                 speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
                 if speed_ratio >= 1.5:
-                    tip = t.get("proSalesSpeedTip", "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor").replace("{ratio}", str(speed_ratio))
+                    tip = t.get("proSalesSpeedTip", "").replace("{ratio}", str(speed_ratio))
 
     return {
         "category": t.get(f"cat_{category}", category),
@@ -2524,13 +2524,13 @@ async def demand_trends(
     Döner: kategori, haftalık arama sayısı, trend yönü, momentum, arz açığı oranı.
     """
     if not current_user.is_premium:
-        raise ForbiddenException("Bu özellik PRO üyelere özeldir.", code="PRO_REQUIRED")
+        raise ForbiddenException(code="PRO_REQUIRED")
 
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
         if ch is None:
-            raise ServiceException("Analitik servisi geçici olarak kullanılamıyor.")
+            raise ServiceException(code="ANALYTICS_SERVICE_ERROR")
 
         result = await ch.query(f"""
             SELECT
@@ -2593,4 +2593,4 @@ async def demand_trends(
         raise
     except Exception as exc:
         logger.warning("[DemandTrends] Hata: %s", exc)
-        raise ServiceException("Talep verisi alınamadı.")
+        raise ServiceException(code="ANALYTICS_SERVICE_ERROR")

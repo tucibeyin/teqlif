@@ -51,7 +51,7 @@ class LikeService:
             )
         )
         if not listing_exists:
-            raise NotFoundException("İlan bulunamadı")
+            raise NotFoundException(code="LISTING_NOT_FOUND")
 
         # Mevcut beğeni var mı?
         existing = await self.db.scalar(
@@ -78,7 +78,7 @@ class LikeService:
                 listing_id, user_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Beğeni işlemi gerçekleştirilemedi")
+            raise DatabaseException(code="LIKE_FAILED")
 
         count = await self.db.scalar(
             select(func.count(ListingLike.id)).where(ListingLike.listing_id == listing_id)
@@ -104,7 +104,7 @@ class LikeService:
             )
         )
         if not story_exists:
-            raise NotFoundException("Hikaye bulunamadı veya süresi dolmuş")
+            raise NotFoundException(code="STORY_NOT_FOUND")
 
         existing = await self.db.scalar(
             select(StoryLike).where(
@@ -130,7 +130,7 @@ class LikeService:
                 story_id, user_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Beğeni işlemi gerçekleştirilemedi")
+            raise DatabaseException(code="LIKE_FAILED")
 
         count = await self.db.scalar(
             select(func.count(StoryLike.id)).where(StoryLike.story_id == story_id)
@@ -163,7 +163,7 @@ class LikeService:
             )
         )
         if not stream_exists:
-            raise NotFoundException("Aktif yayın bulunamadı")
+            raise NotFoundException(code="STREAM_NOT_FOUND")
 
         try:
             self.db.add(StreamLike(stream_id=stream_id, user_id=user_id))
@@ -175,7 +175,7 @@ class LikeService:
                 stream_id, user_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Beğeni gönderilemedi")
+            raise DatabaseException(code="LIKE_SEND_FAILED")
 
         # WebSocket broadcast — non-critical (hata yayını engellemesin)
         try:

@@ -238,7 +238,7 @@ async def _send_call_push(
     locale = get_locale(callee)
     t = _get_t(locale)
 
-    title_raw = t.get("callNotifTitle", "@{username} sizi arıyor")
+    title_raw = t.get("callNotifTitle", "")
     body_raw = t.get("callNotifBody", "Gelen Sesli Arama")
 
     try:
@@ -387,8 +387,8 @@ async def start_call(
             stale_callee = await db.get(User, stale_callee_id)
             locale = get_locale(stale_callee) if stale_callee else get_locale(current_user)
             t = _get_t(locale)
-            title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
-            body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+            title_raw = t.get("notifCallMissed", "")
+            body_raw = t.get("notifCallMissedBody", "")
             try:
                 title = title_raw.format_map({"username": current_user.username})
                 body = body_raw.format_map({"username": current_user.username})
@@ -734,8 +734,8 @@ async def _send_missed_call_push(callee: User, caller: User, call_id: int) -> No
     locale = get_locale(callee)
     t = _get_t(locale)
 
-    title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
-    body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+    title_raw = t.get("notifCallMissed", "")
+    body_raw = t.get("notifCallMissedBody", "")
 
     try:
         title = title_raw.format_map({"username": caller.username})
@@ -776,8 +776,8 @@ async def missed_call(
         locale = get_locale(callee) if callee else get_locale(current_user)
         t = _get_t(locale)
 
-        title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
-        body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+        title_raw = t.get("notifCallMissed", "")
+        body_raw = t.get("notifCallMissedBody", "")
 
         try:
             title = title_raw.format_map({"username": current_user.username})

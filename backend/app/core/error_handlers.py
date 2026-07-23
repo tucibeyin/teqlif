@@ -116,7 +116,7 @@ def setup_exception_handlers(app: FastAPI):
         lang = I18nService.parse_accept_language(
             request.headers.get("Accept-Language")
         )
-        val_msg = I18nService.resolve("VALIDATION_ERROR", lang) or "Geçersiz istek verisi"
+        val_msg = I18nService.resolve("VALIDATION_ERROR", lang) or "Invalid request data"
         return JSONResponse(
             status_code=422,
             content={
@@ -150,7 +150,7 @@ def setup_exception_handlers(app: FastAPI):
         )
         srv_msg = (
             I18nService.resolve("INTERNAL_SERVER_ERROR", lang)
-            or "Sunucuda beklenmeyen bir hata oluştu."
+            or "An unexpected server error occurred."
         )
         return JSONResponse(
             status_code=500,

@@ -36,7 +36,7 @@ from app.models.follow import Follow
 from app.models.stream import LiveStream
 from app.schemas.story import StoryAuthorOut, StoryItemOut, UserStoryGroupResponse, StoryViewerOut, StoryViewersResponse, MyStoriesResponse
 from app.services.like_service import LikeService
-from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException
+from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException, ForbiddenException
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
@@ -142,7 +142,7 @@ class StoryService:
                 exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Video hikayeleri yüklenemedi")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         # ── Adım B: Aktif canlı yayınlar ─────────────────────────────────────
         try:
@@ -165,7 +165,7 @@ class StoryService:
                 exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Canlı yayınlar yüklenemedi")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         # ── Adım C: Kullanıcı bazlı gruplama (defaultdict) ───────────────────
         # Yapı: { user_id: { "user": User, "video_stories": [Story,...],
@@ -281,13 +281,13 @@ class StoryService:
         is_image = content_type.startswith("image/")
         is_video = content_type.startswith("video/") or content_type == "application/octet-stream"
         if not (is_image or is_video):
-            raise BadRequestException("Geçersiz dosya formatı (video veya fotoğraf kabul edilir)")
+            raise BadRequestException(code="INVALID_MEDIA_FORMAT")
 
         media_type = "image" if is_image else "video"
 
         raw = await file.read()
         if len(raw) > _MAX_BYTES:
-            raise BadRequestException("Dosya çok büyük (Maks 20 MB)")
+            raise BadRequestException(code="STORY_FILE_TOO_LARGE")
 
         import tempfile
         from app.services import storage_service as storage
@@ -320,7 +320,7 @@ class StoryService:
                     exc_info=True,
                 )
                 capture_exception(exc)
-                raise DatabaseException("Dosya kaydedilemedi")
+                raise DatabaseException(code="STORY_LOAD_FAILED")
 
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
 
@@ -375,7 +375,7 @@ class StoryService:
                 user_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Hikayeler yüklenemedi")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         items = [
             StoryItemOut(
@@ -415,10 +415,10 @@ class StoryService:
                 story_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Görüntüleme kaydedilemedi")
+            raise DatabaseException(code="STORY_VIEW_FAILED")
 
         if row is None:
-            raise NotFoundException("Hikaye bulunamadı")
+            raise NotFoundException(code="STORY_NOT_FOUND")
 
         # Kendi hikayesini görüntüleme → kayıt üretme
         if row == viewer_id:
@@ -441,7 +441,7 @@ class StoryService:
                 story_id, viewer_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Görüntüleme kaydedilemedi")
+            raise DatabaseException(code="STORY_VIEW_FAILED")
 
         logger.info(
             "[STORY VIEW] Kaydedildi | story_id=%s | viewer_id=%s",
@@ -469,14 +469,13 @@ class StoryService:
                 story_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Görüntüleyenler yüklenemedi")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         if row is None:
-            raise NotFoundException("Hikaye bulunamadı")
+            raise NotFoundException(code="STORY_NOT_FOUND")
 
         if row != owner_id:
-            from app.core.exceptions import ForbiddenException
-            raise ForbiddenException("Bu hikayenin görüntüleyenlerini göremezsiniz")
+            raise ForbiddenException(code="STORY_VIEWERS_FORBIDDEN")
 
         # Görüntüleyenleri çek
         try:
@@ -494,7 +493,7 @@ class StoryService:
                 story_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Görüntüleyenler yüklenemedi")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         viewers = [
             StoryViewerOut(
@@ -527,13 +526,12 @@ class StoryService:
         except Exception as exc:
             logger.error("[STORY DELETE] Sorgu hatası | story_id=%d | %s", story_id, exc, exc_info=True)
             capture_exception(exc)
-            raise DatabaseException("Hikaye bulunamadı")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         if story is None:
-            raise NotFoundException("Hikaye bulunamadı")
+            raise NotFoundException(code="STORY_NOT_FOUND")
         if story.user_id != user_id:
-            from app.core.exceptions import ForbiddenException
-            raise ForbiddenException("Bu hikayeyi silme yetkiniz yok")
+            raise ForbiddenException(code="STORY_DELETE_FORBIDDEN")
 
         # Medya dosyalarını sil
         from app.services import storage_service as storage
@@ -588,7 +586,7 @@ class StoryService:
                 exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Temizlik sorgusu başarısız")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         deleted_count = 0
         for story in expired:
@@ -629,7 +627,7 @@ class StoryService:
                 "[STORY CLEANUP] Commit başarısız | %s", exc, exc_info=True
             )
             capture_exception(exc)
-            raise DatabaseException("Temizlik commit başarısız")
+            raise DatabaseException(code="STORY_LOAD_FAILED")
 
         logger.info("[STORY CLEANUP] Tamamlandı | silinen=%d", deleted_count)
         return deleted_count

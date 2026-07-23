@@ -116,7 +116,7 @@ async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | Non
             )
             await asyncio.wait_for(proc.communicate(), timeout=60)
             if proc.returncode != 0 or not os.path.exists(video_path):
-                raise RuntimeError("ffmpeg başarısız")
+                raise RuntimeError("ffmpeg_failed")
         except Exception:
             shutil.copy2(src, video_path)
 
@@ -149,10 +149,10 @@ async def upload_listing_video(
 ):
     data = await file.read()
     if len(data) > MAX_VIDEO_SIZE:
-        raise BadRequestException("Video boyutu 200 MB'ı geçemez")
+        raise BadRequestException(code="VIDEO_TOO_LARGE")
 
     if _detect_video_type(data) is None:
-        raise BadRequestException("Sadece MP4, MOV veya WebM video yüklenebilir")
+        raise BadRequestException(code="INVALID_VIDEO_FORMAT_MOV")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = os.path.join(tmp_dir, f"src_{uuid.uuid4().hex}.mp4")
@@ -161,9 +161,7 @@ async def upload_listing_video(
 
         duration = await _get_video_duration(tmp_path)
         if duration is not None and duration > MAX_VIDEO_DURATION:
-            raise BadRequestException(
-                f"Video süresi {MAX_VIDEO_DURATION:.0f} saniyeyi geçemez (süre: {duration:.1f}s)"
-            )
+            raise BadRequestException(code="VIDEO_TOO_LONG")
 
         video_local, thumb_local = await _process_listing_video(tmp_path, tmp_dir)
 
@@ -188,11 +186,11 @@ async def upload_image(
 ):
     data = await file.read()
     if len(data) > MAX_SIZE:
-        raise BadRequestException("Dosya boyutu 10 MB'ı geçemez")
+        raise BadRequestException(code="FILE_TOO_LARGE")
 
     ext = _detect_image_type(data)
     if ext is None:
-        raise BadRequestException("Sadece JPEG, PNG, WebP veya GIF yüklenebilir")
+        raise BadRequestException(code="INVALID_IMAGE_FORMAT_GIF")
 
     base_name = uuid.uuid4().hex
     filename = f"{base_name}.{ext}"

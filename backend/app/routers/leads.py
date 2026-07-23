@@ -192,7 +192,7 @@ async def send_blast(
     listing_ids = [r[0] for r in listing_result.fetchall()]
 
     if not listing_ids:
-        return {"error": "Hedef kitle bulunamadı."}
+        return {"error": "NO_AUDIENCE_DATA"}
 
     # ── ClickHouse: aktif user_id listesi ────────────────────────────────────
     ids_str = ", ".join(str(i) for i in listing_ids)
@@ -216,7 +216,7 @@ async def send_blast(
         logger.warning("[Leads] ClickHouse user listesi alınamadı: %s", exc)
 
     if not target_user_ids:
-        return {"error": "Bildirim atılabilecek aktif cihaz bulunamadı."}
+        return {"error": "NO_RECIPIENTS"}
 
     # ── PostgreSQL: hedef kullanıcılar + FCM tokenlar ───────────────────────────
     # Opt-out eden PRO kullanıcılar: in-app bildirim alır, push almaz.
@@ -243,7 +243,7 @@ async def send_blast(
     actual_count = len(recipient_ids)
 
     if actual_count == 0:
-        return {"error": "Bildirim atılabilecek aktif cihaz bulunamadı."}
+        return {"error": "NO_RECIPIENTS"}
 
     # ── Kesin Maliyet Hesabı (Sadece Bulunan FCM Sayısına Göre) ─────────────
     free_used  = min(credits_remaining, actual_count)
@@ -291,8 +291,8 @@ async def send_blast(
 
     # ── In-app bildirim kayıtları (tüm alıcılar — push almayacaklar dahil) ─────
     from app.models.notification import Notification
-    notif_title = "🔥 Aradığın ürün şu an satışta!"
-    notif_body  = f'"{body.title}" — Kaçırmadan incele!'
+    notif_title = "lead_blast"
+    notif_body  = body.title
     db.add_all([
         Notification(
             user_id=uid,
@@ -344,7 +344,7 @@ async def send_blast(
         "campaign_id": campaign.id,
         "sent": actual_count,
         "spent": tuci_cost,
-        "message": f"{actual_count} kişiye bildirim gönderildi.",
+        "sent_count": actual_count,
     }
 
 
@@ -511,7 +511,7 @@ async def send_retargeting(
         logger.warning("[Retargeting] ClickHouse viewer query başarısız: %s", exc)
 
     if not viewer_ids:
-        return {"sent": 0, "spent": 0, "message": "Henüz yeterli izleyici verisi yok."}
+        return {"sent": 0, "spent": 0, "code": "NO_AUDIENCE_DATA"}
 
     # FCM token'ları PostgreSQL'den çek — takipçiler hariç, actual_count ile sınırlı
     token_rows = (await db.execute(sql_text("""
@@ -526,7 +526,7 @@ async def send_retargeting(
     fcm_tokens = [r[0] for r in token_rows]
 
     if not fcm_tokens:
-        return {"sent": 0, "spent": 0, "message": "Bildirim gönderilebilecek kullanıcı bulunamadı."}
+        return {"sent": 0, "spent": 0, "code": "NO_RECIPIENTS"}
 
     listing_url = f"/listing/{body.listing_id}"
 
@@ -536,8 +536,8 @@ async def send_retargeting(
         try:
             await send_push(
                 token=token,
-                title="Hâlâ ilgilendin mi? 👀",
-                body=f"{listing.title} — hâlâ satışta!",
+                title="notifRetargetTitle",
+                body=listing.title,
                 data={"type": "new_listing", "listing_id": str(body.listing_id)},
                 extra_data={"url": listing_url},
             )
@@ -576,7 +576,7 @@ async def send_retargeting(
     return {
         "sent": sent,
         "spent": tuci_cost,
-        "message": f"{sent} kişiye geri hedefleme bildirimi gönderildi.",
+        "sent": sent,
     }
 
 

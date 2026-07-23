@@ -21,11 +21,11 @@ Kullanım (router endpoint'lerinde):
     # 1. Hız sınırı kontrolü
     allowed, retry_after = await check_user_action_rate(uid, "listing_create", limit=1, window=60)
     if not allowed:
-        raise TooManyRequestsException("Dakikada en fazla 1 ilan oluşturabilirsiniz.", retry_after=retry_after)
+        raise TooManyRequestsException(code="LISTING_RATE_LIMIT", retry_after=retry_after)
 
     # 2. Idempotency kilidi
     if not await acquire_action_lock(uid, "listing_create", ttl=3):
-        raise ConflictException("İsteğiniz işleniyor, lütfen bekleyin.")
+        raise ConflictException(code="REQUEST_IN_PROGRESS")
 
     # ... işlem ...
     await release_action_lock(uid, "listing_create")

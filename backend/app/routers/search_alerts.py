@@ -60,7 +60,7 @@ async def create_alert(
     db: AsyncSession = Depends(get_db),
 ):
     if not payload.category and not payload.query:
-        raise BadRequestException("Kategori veya arama kelimesi zorunludur")
+        raise BadRequestException(code="CATEGORY_OR_SEARCH_REQUIRED")
 
     count_result = await db.execute(
         select(func.count()).where(
@@ -70,7 +70,7 @@ async def create_alert(
     )
     active_count = count_result.scalar_one()
     if active_count >= _MAX_ALERTS_PER_USER:
-        raise BadRequestException(f"En fazla {_MAX_ALERTS_PER_USER} aktif alarm oluşturabilirsiniz")
+        raise BadRequestException(code="ALARM_LIMIT_EXCEEDED")
 
     alert = SearchAlert(
         user_id=current_user.id,
@@ -82,7 +82,7 @@ async def create_alert(
     await db.commit()
     await db.refresh(alert)
     logger.info("[SearchAlert] Oluşturuldu | user_id=%s id=%s", current_user.id, alert.id)
-    return {"id": alert.id, "message": "Alarm oluşturuldu"}
+    return {"id": alert.id}
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -96,9 +96,9 @@ async def delete_alert(
     )
     alert = result.scalar_one_or_none()
     if not alert:
-        raise NotFoundException("Alarm bulunamadı")
+        raise NotFoundException(code="ALARM_NOT_FOUND")
     if alert.user_id != current_user.id:
-        raise ForbiddenException("Bu alarma erişim yetkiniz yok")
+        raise ForbiddenException(code="ALARM_ACCESS_FORBIDDEN")
 
     alert.status = 'passive'
     await db.commit()

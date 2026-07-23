@@ -81,7 +81,7 @@ async def verify_captcha_token(
         logger.warning(
             "[CAPTCHA] Token eksik | captcha_enabled=%s", captcha_enabled,
         )
-        raise ForbiddenException("Captcha token eksik. Lütfen captcha'yı tamamlayın.")
+        raise ForbiddenException(code="CAPTCHA_MISSING")
 
     # Token mevcut — kısa özet logla (debug)
     logger.debug(
@@ -119,7 +119,7 @@ async def verify_captcha_token(
                 "[CAPTCHA] Doğrulama başarısız | provider=%s | error_codes=%s",
                 provider, error_codes,
             )
-            raise ForbiddenException("Captcha doğrulaması başarısız. Lütfen tekrar deneyin.")
+            raise ForbiddenException(code="CAPTCHA_FAILED")
 
         logger.info("[CAPTCHA] Doğrulama başarılı | provider=%s", provider)
 

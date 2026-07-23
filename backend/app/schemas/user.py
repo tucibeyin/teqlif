@@ -18,7 +18,7 @@ class UserRegister(BaseModel):
     @classmethod
     def username_valid(cls, v: str) -> str:
         if not re.match(r"^[a-z0-9_]{3,50}$", v):
-            raise ValueError("Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi")
+            raise ValueError("USERNAME_INVALID")
         return v
 
     @field_validator("password")

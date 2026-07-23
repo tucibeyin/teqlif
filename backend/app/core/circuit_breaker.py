@@ -115,7 +115,7 @@ class CircuitBreaker:
     async def __aenter__(self):
         state = await self._get_state()
         if state == _STATE_OPEN:
-            raise CircuitOpenError(f"Circuit '{self.name}' açık — çağrı reddedildi")
+            raise CircuitOpenError(f"Circuit '{self.name}' open — call rejected")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

@@ -1881,8 +1881,8 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
                 locale = get_locale(callee)
                 t = _get_t(locale)
 
-                title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
-                body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+                title_raw = t.get("notifCallMissed", "")
+                body_raw = t.get("notifCallMissedBody", "")
 
                 try:
                     title = title_raw.format_map({"username": caller.username})

@@ -33,7 +33,7 @@ class OnboardingPayload(BaseModel):
     def validate_categories(cls, v: list[str]) -> list[str]:
         valid = [c for c in v if c in _VALID_CATEGORIES]
         if not valid:
-            raise ValueError("En az 1 geçerli kategori gereklidir")
+            raise ValueError("INVALID_CATEGORY")
         return valid[:5]
 
 

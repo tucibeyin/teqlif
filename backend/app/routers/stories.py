@@ -130,7 +130,7 @@ async def cleanup_expired_stories(
     """
     if current_user.email != (await _get_admin_email()):
         from app.core.exceptions import ForbiddenException
-        raise ForbiddenException("Bu işlem için yetkiniz yok")
+        raise ForbiddenException()
 
     deleted = await StoryService.cleanup_expired_stories(db)
     logger.info(
@@ -138,7 +138,7 @@ async def cleanup_expired_stories(
         current_user.username,
         deleted,
     )
-    return {"deleted": deleted, "message": f"{deleted} süresi dolmuş hikaye temizlendi"}
+    return {"deleted": deleted}
 
 
 async def _get_admin_email() -> str:

@@ -303,15 +303,15 @@ class AuctionCommands:
         result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
-            raise NotFoundException("Yayın bulunamadı")
+            raise NotFoundException(code="STREAM_NOT_FOUND")
         if stream.host_id != user.id:
             # Moderatör de bu işlemi yapabilir
             redis = await get_redis()
             is_mod = await redis.sismember(mod_key(stream_id), str(user.id))
             if not is_mod:
-                raise ForbiddenException("Sadece host veya moderatör bu işlemi yapabilir")
+                raise ForbiddenException(code="HOST_OR_MOD_REQUIRED")
         if not stream.is_live:
-            raise BadRequestException("Yayın aktif değil")
+            raise BadRequestException(code="LISTING_NOT_ACTIVE")
         return stream
 
     # ── Durum ────────────────────────────────────────────────────────────────
@@ -325,7 +325,7 @@ class AuctionCommands:
 
         existing_status = await redis.hget(key, "status")
         if existing_status == "active":
-            raise BadRequestException("Zaten aktif bir açık artırma var")
+            raise BadRequestException(code="AUCTION_ALREADY_ACTIVE")
 
         listing_id_val = data.listing_id
         start_price = float(data.start_price)
@@ -334,7 +334,7 @@ class AuctionCommands:
                 select(Listing).where(Listing.id == listing_id_val, Listing.status != ListingStatus.DELETED)
             )
             if not listing:
-                raise NotFoundException("İlan bulunamadı")
+                raise NotFoundException(code="LISTING_NOT_FOUND")
             item_name = listing.title
         else:
             item_name = data.item_name
@@ -373,7 +373,7 @@ class AuctionCommands:
         key = auction_key(stream_id)
 
         if await redis.hget(key, "status") != "active":
-            raise BadRequestException("Açık artırma aktif değil")
+            raise BadRequestException(code="AUCTION_NOT_ACTIVE")
 
         await redis.hset(key, "status", "paused")
         state = await GetAuctionStateQuery().execute(stream_id)
@@ -390,7 +390,7 @@ class AuctionCommands:
         key = auction_key(stream_id)
 
         if await redis.hget(key, "status") != "paused":
-            raise BadRequestException("Açık artırma duraklatılmamış")
+            raise BadRequestException(code="AUCTION_NOT_PAUSED")
 
         await redis.hset(key, "status", "active")
         state = await GetAuctionStateQuery().execute(stream_id)
@@ -410,7 +410,7 @@ class AuctionCommands:
         if not data:
             if system_end:
                 return  # Sistem çağırdıysa sessizce dön
-            raise BadRequestException("Aktif açık artırma yok")
+            raise BadRequestException(code="AUCTION_NOT_ACTIVE")
 
         winner_id_str = data.get("current_bidder_id", "")
         final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))
@@ -452,7 +452,7 @@ class AuctionCommands:
                     stream_id, exc, exc_info=True,
                 )
                 capture_exception(exc)
-                raise DatabaseException("Açık artırma sonucu kaydedilemedi")
+                raise DatabaseException(code="AUCTION_RESULT_FAILED")
 
         # Kazananlar listesini Redis'ten al, ardından key'leri temizle
         _bidder_set_key = f"auction:bidders:{stream_id}"
@@ -516,18 +516,18 @@ class AuctionCommands:
         # Hız sınırı: 3 saniyede 1 teklif kuralı (Bot Spam Koruması)
         allowed, _ = await check_user_action_rate(user.id, "place_bid", limit=1, window=3)
         if not allowed:
-            raise TooManyRequestsException("Teklif hızınız çok yüksek. Lütfen bekleyin.")
+            raise TooManyRequestsException(code="BID_RATE_LIMIT")
 
         result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if stream and stream.host_id == user.id:
-            raise BadRequestException("Host kendi açık artırmasına teklif veremez")
+            raise ForbiddenException(code="HOST_CANNOT_BID")
 
         redis = await get_redis()
 
         # Mute kontrolü
         if await redis.sismember(mute_key(stream_id), str(user.id)):
-            raise ForbiddenException("Bu yayında teklif veremiyorsunuz.", code="BID_BLOCKED_MUTE")
+            raise ForbiddenException(code="BID_BLOCKED_MUTE")
 
         # Önceki teklif sahibini kaydet (outbid bildirimi için)
         prev_data = await redis.hgetall(auction_key(stream_id))
@@ -566,7 +566,7 @@ class AuctionCommands:
 
             if shill_score >= _SHILL_THRESHOLD_MUTE:
                 await redis.sadd(mute_key(stream_id), str(user.id))
-                raise ForbiddenException("Bu yayında teklif veremiyorsunuz.", code="BID_BLOCKED_MUTE")
+                raise ForbiddenException(code="BID_BLOCKED_MUTE")
             elif shill_score >= _SHILL_THRESHOLD_WARN:
                 await redis.incr(shill_counter_key)
                 await redis.expire(shill_counter_key, _SHILL_COUNTER_TTL)
@@ -592,18 +592,15 @@ class AuctionCommands:
                 username=user.username,
                 extra={"amount": float(data.amount), "current_bid": current_bid, "is_verified": user.is_verified},
             )
-            raise ForbiddenException(
-                "Bu yayında teklif veremiyorsunuz.",
-                code="BID_BLOCKED_VERIFY",
-            )
+            raise ForbiddenException(code="BID_BLOCKED_VERIFY")
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)
         val = await redis.eval(_VALIDATE_BID_SCRIPT, 1, auction_key(stream_id), str(data.amount))
         ok, msg = int(val[0]), val[1]
         if ok == 0:
             if msg == "not_active":
-                raise BadRequestException("Açık artırma aktif değil")
-            raise BadRequestException("Teklifiniz mevcut tekliften yüksek olmalı")
+                raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+            raise BadRequestException(code="BID_TOO_LOW")
 
         # PostgreSQL'e KESİN YAZ — commit başarılı olana kadar Redis'e dokunma
         new_bid = Bid(
@@ -622,7 +619,7 @@ class AuctionCommands:
                 stream_id, user.username, data.amount, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Teklif kaydedilemedi, lütfen tekrar deneyin")
+            raise DatabaseException(code="BID_SAVE_FAILED")
 
         await redis.sadd(f"auction:bidders:{stream_id}", str(user.id))
 
@@ -640,8 +637,8 @@ class AuctionCommands:
                 stream_id, user.username, data.amount, msg,
             )
             if msg == "not_active":
-                raise BadRequestException("Açık artırma aktif değil")
-            raise BadRequestException("Eş zamanlı teklif: teklifiniz geçildi, lütfen tekrar deneyin")
+                raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+            raise BadRequestException(code="CONCURRENT_BID_OUTBID")
 
         state = await GetAuctionStateQuery().execute(stream_id)
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
@@ -719,11 +716,11 @@ class AuctionCommands:
         result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
-            raise NotFoundException("Yayın bulunamadı")
+            raise NotFoundException(code="STREAM_NOT_FOUND")
         if stream.host_id == user.id:
-            raise ForbiddenException("Host kendi açık artırmasını satın alamaz")
+            raise ForbiddenException(code="HOST_CANNOT_BUY")
         if not stream.is_live:
-            raise BadRequestException("Yayın aktif değil")
+            raise BadRequestException(code="LISTING_NOT_ACTIVE")
 
         from app.core.exceptions import TooManyRequestsException
         
@@ -733,10 +730,10 @@ class AuctionCommands:
         # DoS Koruması: Önceki talebi reddedildiyse 60 saniyelik cooldown bloğu.
         cooldown_key = f"bin_cooldown:{stream_id}:{user.id}"
         if await redis.get(cooldown_key):
-            raise TooManyRequestsException("Hemen Al talebiniz reddedildiği için kısa bir süre yeni istek gönderemezsiniz.")
+            raise TooManyRequestsException(code="BUY_NOW_REJECTED_COOLDOWN")
 
         if await redis.sismember(mute_key(stream_id), str(user.id)):
-            raise ForbiddenException("Bu yayında susturuldunuz. Satın alma yapamazsınız.")
+            raise ForbiddenException(code="STREAM_MUTED_PURCHASE")
 
         val = await redis.eval(
             _BUY_IT_NOW_REQUEST_SCRIPT, 1, key,
@@ -745,12 +742,12 @@ class AuctionCommands:
         ok, msg = int(val[0]), val[1]
         if ok == 0:
             if msg == "not_active":
-                raise BadRequestException("Açık artırma aktif değil")
+                raise BadRequestException(code="AUCTION_NOT_ACTIVE")
             if msg == "no_bin_price":
-                raise BadRequestException("Bu ürün hemen alıma kapalı")
+                raise BadRequestException(code="BUY_NOW_UNAVAILABLE")
             if msg == "bid_exceeds_bin":
-                raise BadRequestException("Teklifler hemen al fiyatını aştığı için artık kullanılamaz")
-            raise BadRequestException("Hemen Al isteği gönderilemedi")
+                raise BadRequestException(code="BIDS_EXCEED_BUY_NOW")
+            raise BadRequestException(code="BUY_NOW_SEND_FAILED")
 
         bin_price = float(msg)
         redis_data = await redis.hgetall(key)
@@ -786,10 +783,10 @@ class AuctionCommands:
         if ok == 0:
             msg = val[1]
             if msg == "not_pending":
-                raise BadRequestException("Bekleyen Hemen Al talebi yok")
+                raise BadRequestException(code="NO_PENDING_BUY_NOW")
             if msg == "no_bin_price":
-                raise BadRequestException("Bu ürün hemen alıma kapalı")
-            raise BadRequestException("Hemen Al kabul edilemedi")
+                raise BadRequestException(code="BUY_NOW_UNAVAILABLE")
+            raise BadRequestException(code="BUY_NOW_ACCEPT_FAILED")
 
         bin_price = float(val[1])
         buyer_id_str = val[2]
@@ -797,7 +794,7 @@ class AuctionCommands:
 
         if not buyer_id_str:
             await redis.hset(key, "status", "active")
-            raise BadRequestException("Alıcı bilgisi bulunamadı")
+            raise NotFoundException(code="BUYER_NOT_FOUND")
 
         buyer_id = int(buyer_id_str)
         redis_data = await redis.hgetall(key)
@@ -870,7 +867,7 @@ class AuctionCommands:
                 stream_id, exc, exc_info=True,
             )
             capture_exception(exc)
-            raise DatabaseException("Satın alma işlemi kaydedilemedi, lütfen tekrar deneyin")
+            raise DatabaseException(code="PURCHASE_SAVE_FAILED")
 
         # DM WS broadcast (satıcı→alıcı mesajı her iki tarafa bildir)
         try:
@@ -990,7 +987,7 @@ class AuctionCommands:
         val = await redis.eval(_BUY_IT_NOW_REJECT_SCRIPT, 1, key)
         ok = int(val[0])
         if ok == 0:
-            raise BadRequestException("Bekleyen Hemen Al talebi yok")
+            raise BadRequestException(code="NO_PENDING_BUY_NOW")
 
         prev_status = val[1]
         buyer_username = val[2]
@@ -1024,11 +1021,11 @@ class AuctionCommands:
 
         data = await redis.hgetall(key)
         if not data or data.get("status") not in ("active", "paused"):
-            raise BadRequestException("Aktif açık artırma yok")
+            raise BadRequestException(code="AUCTION_NOT_ACTIVE")
 
         winner_name = data.get("current_bidder_name", "")
         if not winner_name:
-            raise BadRequestException("Kabul edilecek teklif yok (henüz teklif verilmemiş)")
+            raise BadRequestException(code="NO_BID_TO_ACCEPT")
 
         winner_id_str = data.get("current_bidder_id", "")
         final_price = float(data["current_bid"])
@@ -1140,7 +1137,7 @@ class AuctionCommands:
             await redis.hset(key, "status", original_status)
             logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc, exc_info=True)
             capture_exception(exc)
-            raise DatabaseException("Teklif kabul sonucu kaydedilemedi")
+            raise DatabaseException(code="BID_ACCEPT_FAILED")
 
         winner_dm_content = dm_content + (f"\n📋 teqlif://auction/{auction.id}" if auction else "")
 

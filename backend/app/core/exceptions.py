@@ -15,8 +15,8 @@ Kullanım:
     # 500 (DB hatası yakalandıktan sonra)
     raise DatabaseException()
 
-    # Özel mesajlı 403 (migration tamamlanana kadar desteklenir)
-    raise ForbiddenException("Bu ilanı düzenleme yetkiniz yok")
+    # Forbidden örneği
+    raise ForbiddenException(code="LISTING_UPDATE_FORBIDDEN")
 """
 from fastapi import HTTPException
 
@@ -37,8 +37,8 @@ class AppException(HTTPException):
 class NotFoundException(AppException):
     """404 — İstenen kayıt bulunamadı."""
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=404, message=message, code="NOT_FOUND")
+    def __init__(self, message: str | None = None, code: str = "NOT_FOUND"):
+        super().__init__(status_code=404, message=message, code=code)
 
 
 class ForbiddenException(AppException):
@@ -59,15 +59,15 @@ class EmailNotVerifiedException(AppException):
 class UnauthorizedException(AppException):
     """401 — Kimlik doğrulama hatası (yanlış şifre, geçersiz token vb.)."""
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=401, message=message, code="UNAUTHORIZED")
+    def __init__(self, message: str | None = None, code: str = "UNAUTHORIZED"):
+        super().__init__(status_code=401, message=message, code=code)
 
 
 class BadRequestException(AppException):
     """400 — Geçersiz istek / iş kuralı ihlali."""
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=400, message=message, code="BAD_REQUEST")
+    def __init__(self, message: str | None = None, code: str = "BAD_REQUEST"):
+        super().__init__(status_code=400, message=message, code=code)
 
 
 class ContentPolicyException(AppException):
@@ -80,8 +80,8 @@ class ContentPolicyException(AppException):
 class ConflictException(AppException):
     """409 — Çakışma (zaten mevcut kayıt vb.)."""
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=409, message=message, code="CONFLICT")
+    def __init__(self, message: str | None = None, code: str = "CONFLICT"):
+        super().__init__(status_code=409, message=message, code=code)
 
 
 class DatabaseException(AppException):
@@ -93,8 +93,8 @@ class DatabaseException(AppException):
       - capture_exception(orijinal_hata) ile Sentry'e gönderin
     """
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=500, message=message, code="DB_ERROR")
+    def __init__(self, message: str | None = None, code: str = "DB_ERROR"):
+        super().__init__(status_code=500, message=message, code=code)
 
 
 class ServiceException(AppException):
@@ -103,8 +103,8 @@ class ServiceException(AppException):
     DatabaseException ile aynı kurallar geçerli.
     """
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=500, message=message, code="SERVICE_ERROR")
+    def __init__(self, message: str | None = None, code: str = "SERVICE_ERROR"):
+        super().__init__(status_code=500, message=message, code=code)
 
 
 class TooManyRequestsException(AppException):
@@ -113,8 +113,8 @@ class TooManyRequestsException(AppException):
     retry_after: İstemcinin kaç saniye beklemesi gerektiği.
     """
 
-    def __init__(self, message: str | None = None, retry_after: int = 60):
-        super().__init__(status_code=429, message=message, code="RATE_LIMIT_EXCEEDED")
+    def __init__(self, message: str | None = None, retry_after: int = 60, code: str = "RATE_LIMIT_EXCEEDED"):
+        super().__init__(status_code=429, message=message, code=code)
         self.retry_after = retry_after
 
 
@@ -141,5 +141,5 @@ class InsufficientFundsException(AppException):
     Hint metni I18nService üzerinden INSUFFICIENT_FUNDS_hint kodu ile gelir.
     """
 
-    def __init__(self, message: str | None = None):
-        super().__init__(status_code=402, message=message, code="INSUFFICIENT_FUNDS")
+    def __init__(self, message: str | None = None, code: str = "INSUFFICIENT_FUNDS"):
+        super().__init__(status_code=402, message=message, code=code)

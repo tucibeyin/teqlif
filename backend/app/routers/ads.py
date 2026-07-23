@@ -61,10 +61,7 @@ async def create_campaign(
     # Aylık boost kredi kontrolü
     boost_limit = credit_service.free_limit("boost", current_user.is_premium)
     if boost_limit == 0:
-        raise ForbiddenException(
-            "İlan öne çıkarma yalnızca Pro hesaplara özeldir.",
-            code="PRO_REQUIRED",
-        )
+        raise ForbiddenException(code="PRO_REQUIRED")
     boost_used = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
 
     # Aylık ücretsiz hak kaldı mı?
@@ -73,7 +70,7 @@ async def create_campaign(
     # Ücretli modda: TUCi bakiyesi yeterli mi?
     if not is_free:
         if current_user.tuci_balance < credit_service.cost_tuci("boost"):
-            raise InsufficientFundsException("Bu ay ücretsiz boost hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
+            raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
     listing = await db.scalar(
@@ -84,7 +81,7 @@ async def create_campaign(
         )
     )
     if not listing:
-        raise NotFoundException("İlan bulunamadı veya size ait değil.")
+        raise NotFoundException(code="LISTING_NOT_FOUND")
 
     # Zaten aktif/duraklatılmış bir kampanya varsa ikinci kampanya açılamaz
     existing = await db.scalar(
@@ -94,7 +91,7 @@ async def create_campaign(
         )
     )
     if existing:
-        raise ConflictException("Bu ilan için zaten aktif bir kampanya var.")
+        raise ConflictException(code="ACTIVE_CAMPAIGN_EXISTS")
 
     campaign = AdCampaign(
         listing_id=body.listing_id,
@@ -307,7 +304,7 @@ async def get_campaign_report(
         )
     )
     if not campaign:
-        raise NotFoundException("Kampanya bulunamadı.")
+        raise NotFoundException(code="CAMPAIGN_NOT_FOUND")
 
     # Redis: aktif kampanya için gerçek zamanlı kalan bütçe
     remaining_budget = max(0.0, campaign.total_budget - campaign.spent_budget)

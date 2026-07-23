@@ -68,7 +68,7 @@ async def topup_manual(
 ):
     raise HTTPException(
         status_code=503,
-        detail="Ödeme altyapısı henüz aktif değil. Tüm kullanıcılara başlangıç bakiyesi tanımlandı, yakında satın alma özelliği eklenecek.",
+        detail="PAYMENT_NOT_AVAILABLE",
     )
 
 

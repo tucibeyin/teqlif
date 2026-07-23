@@ -80,20 +80,20 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         select(Referral).where(Referral.referred_id == current_user.id)
     )
     if already:
-        raise BadRequestException(t.get("apiErrReferralUsed", "Daha önce bir davet kodu kullandınız. Her hesap yalnızca bir kez kullanabilir."))
+        raise BadRequestException(code="REFERRAL_ALREADY_USED")
 
     # Kendi kodunu giremez
     if current_user.referral_code and current_user.referral_code.upper() == code:
-        raise BadRequestException(t.get("apiErrReferralSelf", "Kendi davet kodunuzu kullanamazsınız."))
+        raise BadRequestException(code="REFERRAL_SELF_USE")
 
     # Kodu bul
     referrer = await db.scalar(select(User).where(User.referral_code == code))
     if not referrer:
-        raise NotFoundException(t.get("apiErrReferralInvalid", "Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin."))
+        raise NotFoundException(code="REFERRAL_INVALID")
 
     now = datetime.now(timezone.utc)
     if not referrer.referral_code_expires_at or referrer.referral_code_expires_at < now:
-        raise BadRequestException(t.get("apiErrReferralExpired", "Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş)."))
+        raise BadRequestException(code="REFERRAL_EXPIRED")
 
     # Eğer e-posta veya telefon onaylı değilse: kodu pending olarak kaydet ve çık
     if not current_user.is_verified:
@@ -103,7 +103,7 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         return {
             "ok": True,
             "is_pending": True,
-            "message": t.get("apiMsgReferralSavedVerify", "Davet kodunuz kaydedildi! Ödül kazanmak için lütfen E-posta ve Telefon doğrulamanızı tamamlayın.")
+            "message": t.get("apiMsgReferralSavedVerify", "")
         }
 
     # Eğer tam onaylıysa ve kodu başarıyla kullanıyorsa pending'i temizle
@@ -157,8 +157,8 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
             asyncio.create_task(
                 send_push(
                     token=referrer.fcm_token,
-                    title=t_ref.get("notifReferralTitle", "Davet Ödülü!"),
-                    body=t_ref.get("notifReferralBody", "Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} TUCi kazandınız.").format(username=current_user.username, bonus=REFERRER_BONUS),
+                    title=t_ref.get("notifReferralTitle", ""),
+                    body=t_ref.get("notifReferralBody", "").format(username=current_user.username, bonus=REFERRER_BONUS),
                     notif_type="referral_bonus",
                 )
             )
@@ -173,8 +173,8 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
             asyncio.create_task(
                 send_push(
                     token=current_user.fcm_token,
-                    title=t_cur.get("notifReferralTitle", "Davet Ödülü!"),
-                    body=t_cur.get("apiMsgReferralSuccess", "Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
+                    title=t_cur.get("notifReferralTitle", ""),
+                    body=t_cur.get("apiMsgReferralSuccess", "").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
                     notif_type="welcome_bonus",
                 )
             )
@@ -188,5 +188,5 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         "referrer_bonus": REFERRER_BONUS,
         "your_bonus": REFERRED_BONUS,
         "new_balance": current_user.tuci_balance,
-        "message": t.get("apiMsgReferralSuccess", "Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
+        "message": t.get("apiMsgReferralSuccess", "").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
     }
