@@ -64,29 +64,29 @@ class HomeScreenState extends State<HomeScreen> {
 
   List<Map<String, dynamic>> _buildCategories(AppLocalizations l) => [
     {
-      'slug': 'elektronik',
+      'slug': 'electronics',
       'label': l.catElectronics,
       'icon': Icons.devices_outlined,
     },
     {
-      'slug': 'vasita',
+      'slug': 'vehicles',
       'label': l.catVehicles,
       'icon': Icons.directions_car_outlined,
     },
     {
-      'slug': 'emlak',
+      'slug': 'real_estate',
       'label': l.catRealEstate,
       'icon': Icons.home_work_outlined,
     },
-    {'slug': 'giyim', 'label': l.catClothing, 'icon': Icons.checkroom_outlined},
+    {'slug': 'fashion', 'label': l.catClothing, 'icon': Icons.checkroom_outlined},
     {
-      'slug': 'spor',
+      'slug': 'sports',
       'label': l.catSports,
       'icon': Icons.sports_soccer_outlined,
     },
-    {'slug': 'kitap', 'label': l.catBooks, 'icon': Icons.menu_book_outlined},
-    {'slug': 'ev', 'label': l.catHomeLife, 'icon': Icons.home_outlined},
-    {'slug': 'diger', 'label': l.catOther, 'icon': Icons.more_horiz},
+    {'slug': 'books', 'label': l.catBooks, 'icon': Icons.menu_book_outlined},
+    {'slug': 'home', 'label': l.catHomeLife, 'icon': Icons.home_outlined},
+    {'slug': 'other', 'label': l.catOther, 'icon': Icons.more_horiz},
   ];
 
   bool get _hasFilter => _selectedCategory != null || _selectedCity != null || _searchQuery.isNotEmpty;

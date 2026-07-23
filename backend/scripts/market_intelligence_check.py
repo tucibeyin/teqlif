@@ -100,7 +100,7 @@ async def main():
             print(f"  {'─'*50}")
             for r in cat_r:
                 g = f"%{float(r.growth_pct):+.1f}" if r.growth_pct is not None else "yeni"
-                print(f"  {(r.category or 'diger'):<15}  {int(r.recent_cnt):>8}  {int(r.prev_cnt):>10}  {g:>9}")
+                print(f"  {(r.category or 'other'):<15}  {int(r.recent_cnt):>8}  {int(r.prev_cnt):>10}  {g:>9}")
         else:
             print("  ⚠ Trending kategori için yeterli veri yok (min 3 satış/15 gün)")
 

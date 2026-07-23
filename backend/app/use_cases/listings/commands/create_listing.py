@@ -8,7 +8,7 @@ from app.core.auto_mod import analyze_listing_text
 logger = get_logger(__name__)
 
 VALID_CATEGORIES = {
-    "elektronik", "vasita", "emlak", "giyim", "ev", "spor", "kitap", "diger"
+    "electronics", "vehicles", "real_estate", "fashion", "home", "sports", "books", "other"
 }
 
 VALID_CONDITIONS = {"new", "like_new", "used", "damaged", "refurbished"}
@@ -24,7 +24,7 @@ class CreateListingCommand:
         title: str,
         description: Optional[str] = None,
         price: Optional[float] = None,
-        category: str = "diger",
+        category: str = "other",
         subcategory: Optional[str] = None,
         condition: Optional[str] = None,
         province: Optional[str] = None,
@@ -55,7 +55,7 @@ class CreateListingCommand:
 
         cat = category.strip().lower()
         if cat not in VALID_CATEGORIES:
-            cat = "diger"
+            cat = "other"
 
         cond = condition.strip().lower() if condition else ""
         if not cond or cond not in VALID_CONDITIONS:
@@ -63,7 +63,7 @@ class CreateListingCommand:
 
         # brand / model_name: extra_fields'den çıkar, arama indexleri için dedicated kolonlara yaz
         ef = extra_fields or {}
-        brand = ef.get("marka") or ef.get("brand")
+        brand = ef.get("brand")
         model_name = ef.get("model") or ef.get("model_name")
 
         async with self.uow:

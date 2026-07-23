@@ -5,53 +5,53 @@ import '../core/logger_service.dart';
 import '../l10n/app_localizations.dart';
 
 // Categories valid only for live streams, excluded from listing creation
-const _listingExcluded = {'sohbet'};
+const _listingExcluded = {'chat'};
 
 // Locale-aware fallback labels (matching cat_* ARB keys + emojis from backend)
 const _fallbackLabels = <String, Map<String, String>>{
   'tr': {
-    'sohbet':     '🗣 Canlı Sohbet',
-    'elektronik': '📱 Elektronik',
-    'giyim':      '👗 Giyim & Moda',
-    'ev':         '🛋 Ev & Yaşam',
-    'vasita':     '🚗 Vasıta',
-    'spor':       '⚽ Spor & Hobi',
-    'kitap':      '📚 Kitap & Kültür',
-    'emlak':      '🏠 Emlak',
-    'diger':      '📦 Diğer',
+    'chat':       '🗣 Canlı Sohbet',
+    'electronics':'📱 Elektronik',
+    'fashion':    '👗 Giyim & Moda',
+    'home':       '🛋 Ev & Yaşam',
+    'vehicles':   '🚗 Vasıta',
+    'sports':     '⚽ Spor & Hobi',
+    'books':      '📚 Kitap & Kültür',
+    'real_estate':'🏠 Emlak',
+    'other':      '📦 Diğer',
   },
   'en': {
-    'sohbet':     '🗣 Live Chat',
-    'elektronik': '📱 Electronics',
-    'giyim':      '👗 Clothing & Fashion',
-    'ev':         '🛋 Home & Living',
-    'vasita':     '🚗 Vehicles',
-    'spor':       '⚽ Sports & Hobbies',
-    'kitap':      '📚 Books & Culture',
-    'emlak':      '🏠 Real Estate',
-    'diger':      '📦 Other',
+    'chat':       '🗣 Live Chat',
+    'electronics':'📱 Electronics',
+    'fashion':    '👗 Clothing & Fashion',
+    'home':       '🛋 Home & Living',
+    'vehicles':   '🚗 Vehicles',
+    'sports':     '⚽ Sports & Hobbies',
+    'books':      '📚 Books & Culture',
+    'real_estate':'🏠 Real Estate',
+    'other':      '📦 Other',
   },
   'ar': {
-    'sohbet':     '🗣 دردشة مباشرة',
-    'elektronik': '📱 إلكترونيات',
-    'giyim':      '👗 ملابس وموضة',
-    'ev':         '🛋 المنزل والمعيشة',
-    'vasita':     '🚗 مركبات',
-    'spor':       '⚽ رياضة وهوايات',
-    'kitap':      '📚 كتب وثقافة',
-    'emlak':      '🏠 عقارات',
-    'diger':      '📦 أخرى',
+    'chat':       '🗣 دردشة مباشرة',
+    'electronics':'📱 إلكترونيات',
+    'fashion':    '👗 ملابس وموضة',
+    'home':       '🛋 المنزل والمعيشة',
+    'vehicles':   '🚗 مركبات',
+    'sports':     '⚽ رياضة وهوايات',
+    'books':      '📚 كتب وثقافة',
+    'real_estate':'🏠 عقارات',
+    'other':      '📦 أخرى',
   },
   'ru': {
-    'sohbet':     '🗣 Живой чат',
-    'elektronik': '📱 Электроника',
-    'giyim':      '👗 Одежда и мода',
-    'ev':         '🛋 Дом и быт',
-    'vasita':     '🚗 Транспорт',
-    'spor':       '⚽ Спорт и хобби',
-    'kitap':      '📚 Книги и культура',
-    'emlak':      '🏠 Недвижимость',
-    'diger':      '📦 Другое',
+    'chat':       '🗣 Живой чат',
+    'electronics':'📱 Электроника',
+    'fashion':    '👗 Одежда и мода',
+    'home':       '🛋 Дом и быт',
+    'vehicles':   '🚗 Транспорт',
+    'sports':     '⚽ Спорт и хобби',
+    'books':      '📚 Книги и культура',
+    'real_estate':'🏠 Недвижимость',
+    'other':      '📦 Другое',
   },
 };
 
@@ -81,7 +81,7 @@ class CategoryService {
         // Sort: sohbet first for stream contexts
         if (forStream) {
           _cache[cacheKey]!.sort((a, b) =>
-              (a.$1 == 'sohbet' ? 0 : 1).compareTo(b.$1 == 'sohbet' ? 0 : 1));
+              (a.$1 == 'chat' ? 0 : 1).compareTo(b.$1 == 'chat' ? 0 : 1));
         }
         return _cache[cacheKey]!;
       }
@@ -117,16 +117,16 @@ class CategoryService {
   /// Cihaz dilini AppLocalizations üzerinden otomatik yansıtır.
   static String localizedLabelFor(AppLocalizations l, String key) {
     return switch (key) {
-      'elektronik' => l.cat_elektronik,
-      'giyim'      => l.cat_giyim,
-      'ev'         => l.cat_ev,
-      'vasita'     => l.cat_vasita,
-      'spor'       => l.cat_spor,
-      'kitap'      => l.cat_kitap,
-      'emlak'      => l.cat_emlak,
-      'diger'      => l.cat_diger,
-      'sohbet'     => l.cat_sohbet,
-      _            => key,
+      'electronics' => l.cat_electronics,
+      'fashion'     => l.cat_fashion,
+      'home'        => l.cat_home,
+      'vehicles'    => l.cat_vehicles,
+      'sports'      => l.cat_sports,
+      'books'       => l.cat_books,
+      'real_estate' => l.cat_real_estate,
+      'other'       => l.cat_other,
+      'chat'        => l.cat_chat,
+      _             => key,
     };
   }
 }

@@ -163,7 +163,7 @@ async def create_listing(
         title=payload.get("title", ""),
         description=payload.get("description"),
         price=payload.get("price"),
-        category=payload.get("category", "diger"),
+        category=payload.get("category", "other"),
         subcategory=payload.get("subcategory"),
         condition=payload.get("condition"),
         province=payload.get("province"),

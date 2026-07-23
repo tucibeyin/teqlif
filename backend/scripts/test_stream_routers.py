@@ -18,7 +18,7 @@ def test_stream_routers_cqrs():
     
         # 1. POST /api/streams/start (Start Stream)
         print("[*] POST /api/streams/start isteği atılıyor...")
-        response = client.post("/api/streams/start", json={"title": "Test Yayın", "category": "diger"}, headers=headers)
+        response = client.post("/api/streams/start", json={"title": "Test Yayın", "category": "other"}, headers=headers)
         print(f"[*] Sunucu Yanıt Kodu: {response.status_code}")
         
         if response.status_code in [200, 201]:

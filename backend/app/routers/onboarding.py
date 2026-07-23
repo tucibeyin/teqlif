@@ -19,8 +19,8 @@ from app.utils.redis_client import get_redis
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
 _VALID_CATEGORIES = {
-    "elektronik", "vasita", "emlak", "giyim",
-    "spor", "kitap", "ev", "diger",
+    "electronics", "vehicles", "real_estate", "fashion",
+    "sports", "books", "home", "other",
 }
 _ONBOARDING_SCORE = 0.70
 

@@ -1426,7 +1426,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       ],
                     ),
                   ),
-                  if ((widget.session.token?.category ?? widget.stream.category) != 'sohbet')
+                  if ((widget.session.token?.category ?? widget.stream.category) != 'chat')
                     AuctionPanel(
                       streamId: widget.stream.id,
                       isHost: false,

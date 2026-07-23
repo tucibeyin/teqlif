@@ -762,7 +762,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             final v = _extraValues[f.key];
             if (v != null && v.isNotEmpty) {
               // yil is stored as integer for consistency with existing listings
-              final asInt = f.key == 'yil' ? int.tryParse(v) : null;
+              final asInt = f.key == 'year' ? int.tryParse(v) : null;
               extraFields[f.key] = asInt ?? v;
             }
           } else {
@@ -1259,7 +1259,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Widget _buildConditionSection(AppLocalizations l) {
-    final isVasita = _selectedCategory == 'vasita';
+    final isVasita = _selectedCategory == 'vehicles';
     final items = isVasita
         ? [
             DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
@@ -1336,7 +1336,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     switch (f.type) {
       case ExtraFieldType.dropdown:
         // Year field: dynamically generated dropdown (always current)
-        final items = f.key == 'yil'
+        final items = f.key == 'year'
             ? List.generate(
                 DateTime.now().year - 1899,
                 (i) {
@@ -1439,53 +1439,53 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   String _extraFieldLabel(String labelKey, AppLocalizations l) {
     return switch (labelKey) {
-      'extraField_marka' => l.extraField_marka,
+      'extraField_brand' => l.extraField_brand,
       'extraField_model' => l.extraField_model,
-      'extraField_yil' => l.extraField_yil,
-      'extraField_km' => l.extraField_km,
-      'extraField_renk' => l.extraField_renk,
-      'extraField_yakit' => l.extraField_yakit,
-      'extraField_vites' => l.extraField_vites,
-      'extraField_kasa_tipi' => l.extraField_kasa_tipi,
-      'extraField_hasar' => l.extraField_hasar,
-      'extraField_tip' => l.extraField_tip,
-      'extraField_motor_cc' => l.extraField_motor_cc,
-      'extraField_menzil' => l.extraField_menzil,
-      'extraField_depolama' => l.extraField_depolama,
+      'extraField_year' => l.extraField_year,
+      'extraField_mileage' => l.extraField_mileage,
+      'extraField_color' => l.extraField_color,
+      'extraField_fuel_type' => l.extraField_fuel_type,
+      'extraField_transmission' => l.extraField_transmission,
+      'extraField_body_type' => l.extraField_body_type,
+      'extraField_damage_status' => l.extraField_damage_status,
+      'extraField_type' => l.extraField_type,
+      'extraField_engine_cc' => l.extraField_engine_cc,
+      'extraField_range' => l.extraField_range,
+      'extraField_storage' => l.extraField_storage,
       'extraField_ram' => l.extraField_ram,
-      'extraField_islemci' => l.extraField_islemci,
-      'extraField_ekran_boyutu' => l.extraField_ekran_boyutu,
-      'extraField_oda_sayisi' => l.extraField_oda_sayisi,
-      'extraField_brut_m2' => l.extraField_brut_m2,
-      'extraField_net_m2' => l.extraField_net_m2,
-      'extraField_arsa_m2' => l.extraField_arsa_m2,
-      'extraField_m2' => l.extraField_m2,
-      'extraField_bina_yasi' => l.extraField_bina_yasi,
-      'extraField_kat' => l.extraField_kat,
-      'extraField_kat_sayisi' => l.extraField_kat_sayisi,
-      'extraField_daire_sayisi' => l.extraField_daire_sayisi,
-      'extraField_isitma' => l.extraField_isitma,
-      'extraField_esya_durumu' => l.extraField_esya_durumu,
-      'extraField_asansor' => l.extraField_asansor,
-      'extraField_otopark' => l.extraField_otopark,
-      'extraField_tapu_durumu' => l.extraField_tapu_durumu,
-      'extraField_kullanim_durumu' => l.extraField_kullanim_durumu,
-      'extraField_beden' => l.extraField_beden,
-      'extraField_numara' => l.extraField_numara,
-      'extraField_cinsiyet' => l.extraField_cinsiyet,
-      'extraField_malzeme' => l.extraField_malzeme,
-      'extraField_altin_ayar' => l.extraField_altin_ayar,
-      'extraField_gumus_ayar' => l.extraField_gumus_ayar,
-      'extraField_jant_boyutu' => l.extraField_jant_boyutu,
-      'extraField_spor_dali' => l.extraField_spor_dali,
-      'extraField_kitap_ismi' => l.extraField_kitap_ismi,
-      'extraField_yazar' => l.extraField_yazar,
-      'extraField_yayinevi' => l.extraField_yayinevi,
-      'extraField_uzunluk' => l.extraField_uzunluk,
-      'extraField_calisma_saati' => l.extraField_calisma_saati,
-      'extraField_uyumlu_model' => l.extraField_uyumlu_model,
-      'extraField_parca_tipi' => l.extraField_parca_tipi,
-      'extraField_irk' => l.extraField_irk,
+      'extraField_processor' => l.extraField_processor,
+      'extraField_screen_size' => l.extraField_screen_size,
+      'extraField_room_count' => l.extraField_room_count,
+      'extraField_gross_sqm' => l.extraField_gross_sqm,
+      'extraField_net_sqm' => l.extraField_net_sqm,
+      'extraField_land_sqm' => l.extraField_land_sqm,
+      'extraField_sqm' => l.extraField_sqm,
+      'extraField_building_age' => l.extraField_building_age,
+      'extraField_floor' => l.extraField_floor,
+      'extraField_floor_count' => l.extraField_floor_count,
+      'extraField_unit_count' => l.extraField_unit_count,
+      'extraField_heating' => l.extraField_heating,
+      'extraField_furnishing' => l.extraField_furnishing,
+      'extraField_elevator' => l.extraField_elevator,
+      'extraField_parking' => l.extraField_parking,
+      'extraField_title_deed' => l.extraField_title_deed,
+      'extraField_land_use' => l.extraField_land_use,
+      'extraField_size' => l.extraField_size,
+      'extraField_shoe_size' => l.extraField_shoe_size,
+      'extraField_gender' => l.extraField_gender,
+      'extraField_material' => l.extraField_material,
+      'extraField_gold_carat' => l.extraField_gold_carat,
+      'extraField_silver_purity' => l.extraField_silver_purity,
+      'extraField_wheel_size' => l.extraField_wheel_size,
+      'extraField_sport_type' => l.extraField_sport_type,
+      'extraField_book_title' => l.extraField_book_title,
+      'extraField_author' => l.extraField_author,
+      'extraField_publisher' => l.extraField_publisher,
+      'extraField_length' => l.extraField_length,
+      'extraField_working_hours' => l.extraField_working_hours,
+      'extraField_compatible_model' => l.extraField_compatible_model,
+      'extraField_part_type' => l.extraField_part_type,
+      'extraField_breed' => l.extraField_breed,
       _ => labelKey,
     };
   }

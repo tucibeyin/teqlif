@@ -103,7 +103,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
-    if (widget.streamToken.category != 'sohbet') _loadBidHistory();
+    if (widget.streamToken.category != 'chat') _loadBidHistory();
     if (!widget.blastApproved) _loadAudienceSize();
   }
 
@@ -1033,7 +1033,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       ),
                     ),
                     // Açık artırma şeridi — Canlı Sohbet kategorisinde gizle
-                    if (widget.streamToken.category != 'sohbet')
+                    if (widget.streamToken.category != 'chat')
                       AuctionPanel(
                         streamId: widget.streamToken.streamId,
                         isHost: true,
@@ -1115,7 +1115,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             ),
 
           // ── Teklif Listesi — her zaman en üstte (alt panelin üstüne gelince tıklanabilir kalsın) ──
-          if (live && _bidGroups.isNotEmpty && widget.streamToken.category != 'sohbet')
+          if (live && _bidGroups.isNotEmpty && widget.streamToken.category != 'chat')
             Positioned(
               top: _bidsPanelTop!,
               right: 0,

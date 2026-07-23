@@ -34,16 +34,16 @@ _STOP_WORDS = ["TL", "₺", "elden"]
 
 # ── Kategori normalizasyonu ───────────────────────────────────────────────────
 _CAT_NORMALIZE: dict[str, str] = {
-    "telefon": "elektronik", "cep telefonu": "elektronik",
-    "bilgisayar": "elektronik", "laptop": "elektronik", "tablet": "elektronik",
-    "tv": "elektronik", "televizyon": "elektronik", "konsol": "elektronik",
-    "araba": "vasita", "otomobil": "vasita",
-    "motor": "vasita", "motosiklet": "vasita",
-    "daire": "emlak", "konut": "emlak", "işyeri": "emlak",
-    "kıyafet": "giyim", "elbise": "giyim", "ayakkabı": "giyim", "çanta": "giyim",
-    "mobilya": "ev", "beyaz eşya": "ev", "mutfak eşyası": "ev",
-    "roman": "kitap", "ders kitabı": "kitap", "dergi": "kitap",
-    "bisiklet": "spor", "fitness": "spor",
+    "telefon": "electronics", "cep telefonu": "electronics",
+    "bilgisayar": "electronics", "laptop": "electronics", "tablet": "electronics",
+    "tv": "electronics", "televizyon": "electronics", "konsol": "electronics",
+    "araba": "vehicles", "otomobil": "vehicles",
+    "motor": "vehicles", "motosiklet": "vehicles",
+    "daire": "real_estate", "konut": "real_estate", "işyeri": "real_estate",
+    "kıyafet": "fashion", "elbise": "fashion", "ayakkabı": "fashion", "çanta": "fashion",
+    "mobilya": "home", "beyaz eşya": "home", "mutfak eşyası": "home",
+    "roman": "books", "ders kitabı": "books", "dergi": "books",
+    "bisiklet": "sports", "fitness": "sports",
 }
 
 # ── Ürün durumu etiketleri ────────────────────────────────────────────────────

@@ -31,39 +31,39 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ─── MOCK DATA SETS ──────────────────────────────────────────────────────────
 CATEGORIES = {
-    "elektronik": [
+    "electronics": [
         {"brand": "Apple", "models": ["iPhone 13", "iPhone 14 Pro", "iPhone 15", "MacBook Air M1", "MacBook Pro M2"]},
         {"brand": "Samsung", "models": ["Galaxy S22", "Galaxy S23 Ultra", "Galaxy Z Fold 4"]},
         {"brand": "Sony", "models": ["PlayStation 5", "Alpha a7 III"]},
         {"brand": "Nintendo", "models": ["Switch OLED"]},
     ],
-    "vasita": [
+    "vehicles": [
         {"brand": "Mercedes", "models": ["C200", "E250", "GLA"]},
         {"brand": "BMW", "models": ["320i", "520d", "X5"]},
         {"brand": "Audi", "models": ["A3", "A4", "Q5"]},
     ],
-    "emlak": [
+    "real_estate": [
         {"brand": "Satılık Daire", "models": ["3+1", "2+1", "1+1"]},
         {"brand": "Kiralık Daire", "models": ["3+1", "2+1", "Studio"]},
     ],
-    "giyim": [
+    "fashion": [
         {"brand": "Nike", "models": ["Air Force 1", "Air Jordan 1", "Dunk Low"]},
         {"brand": "Adidas", "models": ["Yeezy Boost 350", "Stan Smith", "Superstar"]},
         {"brand": "Zara", "models": ["Deri Ceket", "Kaban"]},
     ],
-    "spor": [
+    "sports": [
         {"brand": "Decathlon", "models": ["Çadır", "Bisiklet", "Dambıl Seti"]},
         {"brand": "Under Armour", "models": ["Koşu Ayakkabısı", "Spor Çantası"]},
     ],
-    "kitap": [
+    "books": [
         {"brand": "Roman", "models": ["Bilim Kurgu", "Klasik", "Polisiye"]},
         {"brand": "Plak", "models": ["Rock", "Caz", "Pop"]},
     ],
-    "ev": [
+    "home": [
         {"brand": "IKEA", "models": ["Koltuk", "Masa", "Kitaplık"]},
         {"brand": "Bosch", "models": ["Buzdolabı", "Çamaşır Makinesi", "Bulaşık Makinesi"]},
     ],
-    "diger": [
+    "other": [
         {"brand": "Rolex", "models": ["Submariner", "Datejust", "Daytona"]},
         {"brand": "Seiko", "models": ["5 Sports", "Prospex"]},
         {"brand": "Casio", "models": ["G-Shock", "Edifice"]},

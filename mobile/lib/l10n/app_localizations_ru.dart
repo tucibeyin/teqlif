@@ -4674,31 +4674,31 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get cat_elektronik => 'Электроника';
+  String get cat_electronics => 'Электроника';
 
   @override
-  String get cat_giyim => 'Одежда и мода';
+  String get cat_fashion => 'Одежда и мода';
 
   @override
-  String get cat_ev => 'Дом и быт';
+  String get cat_home => 'Дом и быт';
 
   @override
-  String get cat_vasita => 'Транспорт';
+  String get cat_vehicles => 'Транспорт';
 
   @override
-  String get cat_spor => 'Спорт и хобби';
+  String get cat_sports => 'Спорт и хобби';
 
   @override
-  String get cat_kitap => 'Книги и культура';
+  String get cat_books => 'Книги и культура';
 
   @override
-  String get cat_emlak => 'Недвижимость';
+  String get cat_real_estate => 'Недвижимость';
 
   @override
-  String get cat_diger => 'Другое';
+  String get cat_other => 'Другое';
 
   @override
-  String get cat_sohbet => 'Чат';
+  String get cat_chat => 'Чат';
 
   @override
   String get day0 => 'Воскресенье';
@@ -5664,143 +5664,143 @@ class AppLocalizationsRu extends AppLocalizations {
       'Пожалуйста, заполните поля заголовка, провинции и состояния.';
 
   @override
-  String get extraField_marka => 'Марка';
+  String get extraField_brand => 'Марка';
 
   @override
   String get extraField_model => 'Модель';
 
   @override
-  String get extraField_yil => 'Год';
+  String get extraField_year => 'Год';
 
   @override
-  String get extraField_km => 'Пробег';
+  String get extraField_mileage => 'Пробег';
 
   @override
-  String get extraField_renk => 'Цвет';
+  String get extraField_color => 'Цвет';
 
   @override
-  String get extraField_yakit => 'Тип топлива';
+  String get extraField_fuel_type => 'Тип топлива';
 
   @override
-  String get extraField_vites => 'Трансмиссия';
+  String get extraField_transmission => 'Трансмиссия';
 
   @override
-  String get extraField_kasa_tipi => 'Тип кузова';
+  String get extraField_body_type => 'Тип кузова';
 
   @override
-  String get extraField_hasar => 'Состояние кузова';
+  String get extraField_damage_status => 'Состояние кузова';
 
   @override
-  String get extraField_tip => 'Тип';
+  String get extraField_type => 'Тип';
 
   @override
-  String get extraField_motor_cc => 'Объём двигателя';
+  String get extraField_engine_cc => 'Объём двигателя';
 
   @override
-  String get extraField_menzil => 'Запас хода';
+  String get extraField_range => 'Запас хода';
 
   @override
-  String get extraField_depolama => 'Память';
+  String get extraField_storage => 'Память';
 
   @override
   String get extraField_ram => 'ОЗУ';
 
   @override
-  String get extraField_islemci => 'Процессор';
+  String get extraField_processor => 'Процессор';
 
   @override
-  String get extraField_ekran_boyutu => 'Размер экрана';
+  String get extraField_screen_size => 'Размер экрана';
 
   @override
-  String get extraField_oda_sayisi => 'Количество комнат';
+  String get extraField_room_count => 'Количество комнат';
 
   @override
-  String get extraField_brut_m2 => 'Общая площадь м²';
+  String get extraField_gross_sqm => 'Общая площадь м²';
 
   @override
-  String get extraField_net_m2 => 'Жилая площадь м²';
+  String get extraField_net_sqm => 'Жилая площадь м²';
 
   @override
-  String get extraField_arsa_m2 => 'Площадь участка м²';
+  String get extraField_land_sqm => 'Площадь участка м²';
 
   @override
-  String get extraField_m2 => 'Площадь (м²)';
+  String get extraField_sqm => 'Площадь (м²)';
 
   @override
-  String get extraField_bina_yasi => 'Возраст здания';
+  String get extraField_building_age => 'Возраст здания';
 
   @override
-  String get extraField_kat => 'Этаж';
+  String get extraField_floor => 'Этаж';
 
   @override
-  String get extraField_kat_sayisi => 'Этажность';
+  String get extraField_floor_count => 'Этажность';
 
   @override
-  String get extraField_daire_sayisi => 'Количество квартир';
+  String get extraField_unit_count => 'Количество квартир';
 
   @override
-  String get extraField_isitma => 'Отопление';
+  String get extraField_heating => 'Отопление';
 
   @override
-  String get extraField_esya_durumu => 'Меблировка';
+  String get extraField_furnishing => 'Меблировка';
 
   @override
-  String get extraField_asansor => 'Лифт';
+  String get extraField_elevator => 'Лифт';
 
   @override
-  String get extraField_otopark => 'Парковка';
+  String get extraField_parking => 'Парковка';
 
   @override
-  String get extraField_tapu_durumu => 'Документ на право собственности';
+  String get extraField_title_deed => 'Документ на право собственности';
 
   @override
-  String get extraField_kullanim_durumu => 'Статус использования';
+  String get extraField_land_use => 'Статус использования';
 
   @override
-  String get extraField_beden => 'Размер';
+  String get extraField_size => 'Размер';
 
   @override
-  String get extraField_numara => 'Размер обуви';
+  String get extraField_shoe_size => 'Размер обуви';
 
   @override
-  String get extraField_cinsiyet => 'Пол';
+  String get extraField_gender => 'Пол';
 
   @override
-  String get extraField_malzeme => 'Материал';
+  String get extraField_material => 'Материал';
 
   @override
-  String get extraField_altin_ayar => 'Проба золота';
+  String get extraField_gold_carat => 'Проба золота';
 
   @override
-  String get extraField_gumus_ayar => 'Проба серебра';
+  String get extraField_silver_purity => 'Проба серебра';
 
   @override
-  String get extraField_jant_boyutu => 'Размер обода';
+  String get extraField_wheel_size => 'Размер обода';
 
   @override
-  String get extraField_spor_dali => 'Вид спорта';
+  String get extraField_sport_type => 'Вид спорта';
 
   @override
-  String get extraField_kitap_ismi => 'Название книги';
+  String get extraField_book_title => 'Название книги';
 
   @override
-  String get extraField_yazar => 'Автор';
+  String get extraField_author => 'Автор';
 
   @override
-  String get extraField_yayinevi => 'Издательство';
+  String get extraField_publisher => 'Издательство';
 
   @override
-  String get extraField_uzunluk => 'Длина';
+  String get extraField_length => 'Длина';
 
   @override
-  String get extraField_calisma_saati => 'Часы работы';
+  String get extraField_working_hours => 'Часы работы';
 
   @override
-  String get extraField_uyumlu_model => 'Совместимая модель';
+  String get extraField_compatible_model => 'Совместимая модель';
 
   @override
-  String get extraField_parca_tipi => 'Тип детали';
+  String get extraField_part_type => 'Тип детали';
 
   @override
-  String get extraField_irk => 'Порода / Тип';
+  String get extraField_breed => 'Порода / Тип';
 }

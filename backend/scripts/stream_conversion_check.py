@@ -99,7 +99,7 @@ async def main():
         sep("2. DÖNÜŞÜM ANALİZİ  (conversion-breakdown, son 90 gün)")
         cb = (await db.execute(text("""
             SELECT
-                COALESCE(l.category, 'diger') AS category,
+                COALESCE(l.category, 'other') AS category,
                 COUNT(a.id) AS total_auctions,
                 COUNT(a.winner_id) AS won_auctions,
                 COALESCE(AVG(a.final_price) FILTER (WHERE a.winner_id IS NOT NULL), 0) AS avg_final_price,
@@ -120,7 +120,7 @@ async def main():
             print(f"  {'─'*60}")
             for r in cb:
                 conv = round(float(r.conv_rate) * 100, 1)
-                print(f"  {(r.category or 'diger'):<15}  {int(r.total_auctions):>7}  {int(r.won_auctions):>10}  {float(r.avg_final_price):>10.0f}₺  {conv:>10.1f}%")
+                print(f"  {(r.category or 'other'):<15}  {int(r.total_auctions):>7}  {int(r.won_auctions):>10}  {float(r.avg_final_price):>10.0f}₺  {conv:>10.1f}%")
         else:
             print("  (Son 90 günde tamamlanmış açık artırma yok)")
 

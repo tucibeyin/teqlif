@@ -83,14 +83,14 @@ if settings.sentry_backend_dsn:
 
 
 _SEED_CATEGORIES = [
-    ("elektronik", "📱 Elektronik", 0),
-    ("vasita", "🚗 Vasıta", 1),
-    ("emlak", "🏠 Emlak", 2),
-    ("giyim", "👗 Giyim", 3),
-    ("spor", "⚽ Spor", 4),
-    ("kitap", "📚 Kitap & Müzik", 5),
-    ("ev", "🛋 Ev & Bahçe", 6),
-    ("diger", "📦 Diğer", 7),
+    ("electronics", "📱 Elektronik", 0),
+    ("vehicles", "🚗 Vasıta", 1),
+    ("real_estate", "🏠 Emlak", 2),
+    ("fashion", "👗 Giyim", 3),
+    ("sports", "⚽ Spor", 4),
+    ("books", "📚 Kitap & Müzik", 5),
+    ("home", "🛋 Ev & Bahçe", 6),
+    ("other", "📦 Diğer", 7),
 ]
 
 

@@ -58,7 +58,7 @@ async def main():
     await run_test("Normal İlan - iPhone 13", token, {
         "title": "Temiz iPhone 13 128GB",
         "description": "Kozmetik olarak çok iyi durumda, pil sağlığı %89. Sadece cihaz verilecektir.",
-        "category": "elektronik",
+        "category": "electronics",
         "city": "istanbul"
     })
 
@@ -66,7 +66,7 @@ async def main():
     await run_test("Normal İlan - Nike Ayakkabı", token, {
         "title": "Orijinal Nike Air Force 42 Numara",
         "description": "Sadece 2 kez giyildi, kutusu duruyor.",
-        "category": "giyim",
+        "category": "fashion",
         "city": "ankara"
     })
 
@@ -74,7 +74,7 @@ async def main():
     await run_test("Edge Case - Kısa Bilgi", token, {
         "title": "Araba",
         "description": "temiz",
-        "category": "diger",
+        "category": "other",
         "city": "izmir"
     })
 

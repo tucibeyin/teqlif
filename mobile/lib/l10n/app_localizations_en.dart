@@ -4624,31 +4624,31 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get cat_elektronik => 'Electronics';
+  String get cat_electronics => 'Electronics';
 
   @override
-  String get cat_giyim => 'Clothing & Fashion';
+  String get cat_fashion => 'Clothing & Fashion';
 
   @override
-  String get cat_ev => 'Home & Living';
+  String get cat_home => 'Home & Living';
 
   @override
-  String get cat_vasita => 'Vehicles';
+  String get cat_vehicles => 'Vehicles';
 
   @override
-  String get cat_spor => 'Sports & Hobbies';
+  String get cat_sports => 'Sports & Hobbies';
 
   @override
-  String get cat_kitap => 'Books & Culture';
+  String get cat_books => 'Books & Culture';
 
   @override
-  String get cat_emlak => 'Real Estate';
+  String get cat_real_estate => 'Real Estate';
 
   @override
-  String get cat_diger => 'Other';
+  String get cat_other => 'Other';
 
   @override
-  String get cat_sohbet => 'Chat';
+  String get cat_chat => 'Chat';
 
   @override
   String get day0 => 'Sunday';
@@ -5614,143 +5614,143 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please fill in title, province and condition fields.';
 
   @override
-  String get extraField_marka => 'Brand';
+  String get extraField_brand => 'Brand';
 
   @override
   String get extraField_model => 'Model';
 
   @override
-  String get extraField_yil => 'Year';
+  String get extraField_year => 'Year';
 
   @override
-  String get extraField_km => 'Mileage';
+  String get extraField_mileage => 'Mileage';
 
   @override
-  String get extraField_renk => 'Color';
+  String get extraField_color => 'Color';
 
   @override
-  String get extraField_yakit => 'Fuel Type';
+  String get extraField_fuel_type => 'Fuel Type';
 
   @override
-  String get extraField_vites => 'Transmission';
+  String get extraField_transmission => 'Transmission';
 
   @override
-  String get extraField_kasa_tipi => 'Body Type';
+  String get extraField_body_type => 'Body Type';
 
   @override
-  String get extraField_hasar => 'Damage Status';
+  String get extraField_damage_status => 'Damage Status';
 
   @override
-  String get extraField_tip => 'Type';
+  String get extraField_type => 'Type';
 
   @override
-  String get extraField_motor_cc => 'Engine Size';
+  String get extraField_engine_cc => 'Engine Size';
 
   @override
-  String get extraField_menzil => 'Range';
+  String get extraField_range => 'Range';
 
   @override
-  String get extraField_depolama => 'Storage';
+  String get extraField_storage => 'Storage';
 
   @override
   String get extraField_ram => 'RAM';
 
   @override
-  String get extraField_islemci => 'Processor';
+  String get extraField_processor => 'Processor';
 
   @override
-  String get extraField_ekran_boyutu => 'Screen Size';
+  String get extraField_screen_size => 'Screen Size';
 
   @override
-  String get extraField_oda_sayisi => 'Room Count';
+  String get extraField_room_count => 'Room Count';
 
   @override
-  String get extraField_brut_m2 => 'Gross m²';
+  String get extraField_gross_sqm => 'Gross m²';
 
   @override
-  String get extraField_net_m2 => 'Net m²';
+  String get extraField_net_sqm => 'Net m²';
 
   @override
-  String get extraField_arsa_m2 => 'Land m²';
+  String get extraField_land_sqm => 'Land m²';
 
   @override
-  String get extraField_m2 => 'Area (m²)';
+  String get extraField_sqm => 'Area (m²)';
 
   @override
-  String get extraField_bina_yasi => 'Building Age';
+  String get extraField_building_age => 'Building Age';
 
   @override
-  String get extraField_kat => 'Floor';
+  String get extraField_floor => 'Floor';
 
   @override
-  String get extraField_kat_sayisi => 'Number of Floors';
+  String get extraField_floor_count => 'Number of Floors';
 
   @override
-  String get extraField_daire_sayisi => 'Number of Units';
+  String get extraField_unit_count => 'Number of Units';
 
   @override
-  String get extraField_isitma => 'Heating';
+  String get extraField_heating => 'Heating';
 
   @override
-  String get extraField_esya_durumu => 'Furnishing';
+  String get extraField_furnishing => 'Furnishing';
 
   @override
-  String get extraField_asansor => 'Elevator';
+  String get extraField_elevator => 'Elevator';
 
   @override
-  String get extraField_otopark => 'Parking';
+  String get extraField_parking => 'Parking';
 
   @override
-  String get extraField_tapu_durumu => 'Title Deed';
+  String get extraField_title_deed => 'Title Deed';
 
   @override
-  String get extraField_kullanim_durumu => 'Usage Status';
+  String get extraField_land_use => 'Usage Status';
 
   @override
-  String get extraField_beden => 'Size';
+  String get extraField_size => 'Size';
 
   @override
-  String get extraField_numara => 'Shoe Size';
+  String get extraField_shoe_size => 'Shoe Size';
 
   @override
-  String get extraField_cinsiyet => 'Gender';
+  String get extraField_gender => 'Gender';
 
   @override
-  String get extraField_malzeme => 'Material';
+  String get extraField_material => 'Material';
 
   @override
-  String get extraField_altin_ayar => 'Gold Carat';
+  String get extraField_gold_carat => 'Gold Carat';
 
   @override
-  String get extraField_gumus_ayar => 'Silver Grade';
+  String get extraField_silver_purity => 'Silver Grade';
 
   @override
-  String get extraField_jant_boyutu => 'Rim Size';
+  String get extraField_wheel_size => 'Rim Size';
 
   @override
-  String get extraField_spor_dali => 'Sport';
+  String get extraField_sport_type => 'Sport';
 
   @override
-  String get extraField_kitap_ismi => 'Book Title';
+  String get extraField_book_title => 'Book Title';
 
   @override
-  String get extraField_yazar => 'Author';
+  String get extraField_author => 'Author';
 
   @override
-  String get extraField_yayinevi => 'Publisher';
+  String get extraField_publisher => 'Publisher';
 
   @override
-  String get extraField_uzunluk => 'Length';
+  String get extraField_length => 'Length';
 
   @override
-  String get extraField_calisma_saati => 'Working Hours';
+  String get extraField_working_hours => 'Working Hours';
 
   @override
-  String get extraField_uyumlu_model => 'Compatible Model';
+  String get extraField_compatible_model => 'Compatible Model';
 
   @override
-  String get extraField_parca_tipi => 'Part Type';
+  String get extraField_part_type => 'Part Type';
 
   @override
-  String get extraField_irk => 'Breed / Type';
+  String get extraField_breed => 'Breed / Type';
 }

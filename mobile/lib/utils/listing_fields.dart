@@ -96,42 +96,42 @@ class ExtraFieldDef {
 // ── Shared option lists ───────────────────────────────────────────────────────
 
 const _renk = [
-  FieldOption('beyaz', 'Beyaz'),
-  FieldOption('gri', 'Gri'),
-  FieldOption('siyah', 'Siyah'),
-  FieldOption('mavi', 'Mavi'),
-  FieldOption('kirmizi', 'Kırmızı'),
-  FieldOption('yesil', 'Yeşil'),
-  FieldOption('sari', 'Sarı'),
-  FieldOption('turuncu', 'Turuncu'),
-  FieldOption('mor', 'Mor'),
-  FieldOption('pembe', 'Pembe'),
-  FieldOption('kahverengi', 'Kahverengi'),
-  FieldOption('bej', 'Bej'),
-  FieldOption('altin', 'Altın'),
-  FieldOption('gumus', 'Gümüş'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('white', 'Beyaz'),
+  FieldOption('gray', 'Gri'),
+  FieldOption('black', 'Siyah'),
+  FieldOption('blue', 'Mavi'),
+  FieldOption('red', 'Kırmızı'),
+  FieldOption('green', 'Yeşil'),
+  FieldOption('yellow', 'Sarı'),
+  FieldOption('orange', 'Turuncu'),
+  FieldOption('purple', 'Mor'),
+  FieldOption('pink', 'Pembe'),
+  FieldOption('brown', 'Kahverengi'),
+  FieldOption('beige', 'Bej'),
+  FieldOption('gold', 'Altın'),
+  FieldOption('silver', 'Gümüş'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _yakitTipi = [
-  FieldOption('benzin', 'Benzin'),
-  FieldOption('dizel', 'Dizel'),
+  FieldOption('gasoline', 'Benzin'),
+  FieldOption('diesel', 'Dizel'),
   FieldOption('lpg', 'LPG'),
-  FieldOption('hibrit', 'Hibrit'),
-  FieldOption('elektrik', 'Elektrik'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('hybrid', 'Hibrit'),
+  FieldOption('electric', 'Elektrik'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _vites = [
-  FieldOption('manuel', 'Manuel'),
-  FieldOption('otomatik', 'Otomatik'),
-  FieldOption('yari_otomatik', 'Yarı Otomatik'),
+  FieldOption('manual', 'Manuel'),
+  FieldOption('automatic', 'Otomatik'),
+  FieldOption('semi_automatic', 'Yarı Otomatik'),
 ];
 
 const _vitesManuelDefault = [
-  FieldOption('manuel', 'Manuel'),
-  FieldOption('otomatik', 'Otomatik'),
-  FieldOption('yari_otomatik', 'Yarı Otomatik'),
+  FieldOption('manual', 'Manuel'),
+  FieldOption('automatic', 'Otomatik'),
+  FieldOption('semi_automatic', 'Yarı Otomatik'),
 ];
 
 const _kasaTipi = [
@@ -144,7 +144,7 @@ const _kasaTipi = [
   FieldOption('pickup', 'Pickup'),
   FieldOption('van', 'Van'),
   FieldOption('minibus', 'Minibüs'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _markaArac = [
@@ -177,7 +177,7 @@ const _markaArac = [
   FieldOption('toyota', 'Toyota'),
   FieldOption('volkswagen', 'Volkswagen'),
   FieldOption('volvo', 'Volvo'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _markaElektrikli = [
@@ -193,7 +193,7 @@ const _markaElektrikli = [
   FieldOption('porsche', 'Porsche'),
   FieldOption('mercedes', 'Mercedes-Benz'),
   FieldOption('peugeot', 'Peugeot'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _markaMoto = [
@@ -208,7 +208,7 @@ const _markaMoto = [
   FieldOption('ktm', 'KTM'),
   FieldOption('triumph', 'Triumph'),
   FieldOption('aprilia', 'Aprilia'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _motoTip = [
@@ -219,16 +219,16 @@ const _motoTip = [
   FieldOption('scooter', 'Scooter'),
   FieldOption('chopper', 'Chopper'),
   FieldOption('adventure', 'Adventure'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _hasar = [
-  FieldOption('boyali',             'Boyalı'),
-  FieldOption('kazali',             'Kazalı'),
-  // 'grp:hasar_seviyesi' → mutually exclusive with each other within this group
-  FieldOption('hasar_kayitli',      'Hasar Kayıtlı',      'grp:hasar_seviyesi'),
-  FieldOption('agir_hasar_kayitli', 'Ağır Hasar Kayıtlı', 'grp:hasar_seviyesi'),
-  FieldOption('hatasiz',            'Hatasız',             null, true), // exclusive: clears all
+  FieldOption('painted',             'Boyalı'),
+  FieldOption('accident',             'Kazalı'),
+  // 'grp:damage_level' → mutually exclusive with each other within this group
+  FieldOption('damage_record',      'Hasar Kayıtlı',      'grp:damage_level'),
+  FieldOption('heavy_damage_record', 'Ağır Hasar Kayıtlı', 'grp:damage_level'),
+  FieldOption('flawless',            'Hatasız',             null, true), // exclusive: clears all
 ];
 
 const _markaKamyon = [
@@ -245,7 +245,7 @@ const _markaKamyon = [
   FieldOption('daf', 'DAF'),
   FieldOption('volvo', 'Volvo'),
   FieldOption('scania', 'Scania'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _markaTaktor = [
@@ -256,25 +256,25 @@ const _markaTaktor = [
   FieldOption('fendt', 'Fendt'),
   FieldOption('case', 'Case'),
   FieldOption('tumosan', 'Tümosan'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _tekneTip = [
-  FieldOption('motor_tekne', 'Motor Tekne'),
-  FieldOption('yelkenli', 'Yelkenli'),
-  FieldOption('surat_teknesi', 'Sürat Teknesi'),
-  FieldOption('kotra', 'Kotra'),
-  FieldOption('kanotaj', 'Kanotaj'),
+  FieldOption('motorboat', 'Motor Tekne'),
+  FieldOption('sailboat', 'Yelkenli'),
+  FieldOption('speedboat', 'Sürat Teknesi'),
+  FieldOption('cutter', 'Kotra'),
+  FieldOption('kayak', 'Kanotaj'),
   FieldOption('jet_ski', 'Jet Ski'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _tekneYakit = [
-  FieldOption('benzin', 'Benzin'),
-  FieldOption('dizel', 'Dizel'),
-  FieldOption('elektrik', 'Elektrik'),
-  FieldOption('yelken', 'Yelken'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('gasoline', 'Benzin'),
+  FieldOption('diesel', 'Dizel'),
+  FieldOption('electric', 'Elektrik'),
+  FieldOption('sail', 'Yelken'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // Elektronik
@@ -289,7 +289,7 @@ const _markaTelefon = [
   FieldOption('realme', 'Realme'),
   FieldOption('nokia', 'Nokia'),
   FieldOption('motorola', 'Motorola'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _depolamaKucuk = [
@@ -326,7 +326,7 @@ const _markaBilgisayar = [
   FieldOption('toshiba', 'Toshiba'),
   FieldOption('samsung', 'Samsung'),
   FieldOption('huawei', 'Huawei'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _islemci = [
@@ -341,7 +341,7 @@ const _islemci = [
   FieldOption('apple_m2', 'Apple M2'),
   FieldOption('apple_m3', 'Apple M3'),
   FieldOption('apple_m4', 'Apple M4'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _ekranBoyutu = [
@@ -354,16 +354,16 @@ const _ekranBoyutu = [
   FieldOption('24', '24"'),
   FieldOption('27', '27"'),
   FieldOption('32', '32"'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _kameraTip = [
   FieldOption('dslr', 'DSLR'),
   FieldOption('mirrorless', 'Mirrorless'),
-  FieldOption('kompakt', 'Kompakt'),
+  FieldOption('compact', 'Kompakt'),
   FieldOption('action', 'Action Kamera'),
   FieldOption('video', 'Video Kamera'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _markaKamera = [
@@ -374,14 +374,14 @@ const _markaKamera = [
   FieldOption('panasonic', 'Panasonic'),
   FieldOption('olympus', 'Olympus'),
   FieldOption('gopro', 'GoPro'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _konsolMarka = [
   FieldOption('playstation', 'PlayStation'),
   FieldOption('xbox', 'Xbox'),
   FieldOption('nintendo', 'Nintendo'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _konsolModel = [
@@ -393,7 +393,7 @@ const _konsolModel = [
   FieldOption('xbox_one', 'Xbox One'),
   FieldOption('nintendo_switch', 'Nintendo Switch'),
   FieldOption('nintendo_switch_lite', 'Nintendo Switch Lite'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // Emlak
@@ -408,7 +408,7 @@ const _odaSayisi = [
 ];
 
 const _binaYasi = [
-  FieldOption('sifir', 'Sıfır (0)'),
+  FieldOption('new_build', 'Sıfır (0)'),
   FieldOption('1_5', '1–5 yıl'),
   FieldOption('6_10', '6–10 yıl'),
   FieldOption('11_15', '11–15 yıl'),
@@ -417,39 +417,39 @@ const _binaYasi = [
 ];
 
 const _isitma = [
-  FieldOption('kombi', 'Kombi'),
-  FieldOption('dogalgaz', 'Doğalgaz (Merkezi)'),
-  FieldOption('soba', 'Soba'),
-  FieldOption('klima', 'Klima'),
-  FieldOption('yerden_isitma', 'Yerden Isıtma'),
-  FieldOption('yok', 'Yok'),
+  FieldOption('combi_boiler', 'Kombi'),
+  FieldOption('central_gas', 'Doğalgaz (Merkezi)'),
+  FieldOption('stove', 'Soba'),
+  FieldOption('air_conditioning', 'Klima'),
+  FieldOption('underfloor_heating', 'Yerden Isıtma'),
+  FieldOption('none', 'Yok'),
 ];
 
 const _esyaDurumu = [
-  FieldOption('esyali', 'Eşyalı'),
-  FieldOption('yari_esyali', 'Yarı Eşyalı'),
-  FieldOption('bos', 'Boş'),
+  FieldOption('furnished', 'Eşyalı'),
+  FieldOption('semi_furnished', 'Yarı Eşyalı'),
+  FieldOption('empty', 'Boş'),
 ];
 
 const _varYok = [
-  FieldOption('var', 'Var'),
-  FieldOption('yok', 'Yok'),
+  FieldOption('yes', 'Var'),
+  FieldOption('no', 'Yok'),
 ];
 
 const _tapuDurumu = [
-  FieldOption('kat_mulkiyeti', 'Kat Mülkiyeti'),
-  FieldOption('kat_irtifaki', 'Kat İrtifakı'),
-  FieldOption('hisseli', 'Hisseli Tapu'),
-  FieldOption('arsa', 'Arsa Tapusu'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('condominium', 'Kat Mülkiyeti'),
+  FieldOption('floor_easement', 'Kat İrtifakı'),
+  FieldOption('shared_ownership', 'Hisseli Tapu'),
+  FieldOption('land_title', 'Arsa Tapusu'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _arsaKullanimDurumu = [
-  FieldOption('konut', 'Konut İmarlı'),
-  FieldOption('ticari', 'Ticari İmarlı'),
-  FieldOption('tarimsal', 'Tarımsal'),
-  FieldOption('sanayi', 'Sanayi'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('residential', 'Konut İmarlı'),
+  FieldOption('commercial', 'Ticari İmarlı'),
+  FieldOption('agricultural', 'Tarımsal'),
+  FieldOption('industrial', 'Sanayi'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // Giyim
@@ -466,16 +466,16 @@ const _bedenKadin = [
 ];
 
 const _bedenCocuk = [
-  FieldOption('0_3ay', '0–3 Ay'),
-  FieldOption('3_6ay', '3–6 Ay'),
-  FieldOption('6_12ay', '6–12 Ay'),
-  FieldOption('1_2yas', '1–2 Yaş'),
-  FieldOption('3_4yas', '3–4 Yaş'),
-  FieldOption('5_6yas', '5–6 Yaş'),
-  FieldOption('7_8yas', '7–8 Yaş'),
-  FieldOption('9_10yas', '9–10 Yaş'),
-  FieldOption('11_12yas', '11–12 Yaş'),
-  FieldOption('13_14yas', '13–14 Yaş'),
+  FieldOption('0_3m', '0–3 Ay'),
+  FieldOption('3_6m', '3–6 Ay'),
+  FieldOption('6_12m', '6–12 Ay'),
+  FieldOption('1_2y', '1–2 Yaş'),
+  FieldOption('3_4y', '3–4 Yaş'),
+  FieldOption('5_6y', '5–6 Yaş'),
+  FieldOption('7_8y', '7–8 Yaş'),
+  FieldOption('9_10y', '9–10 Yaş'),
+  FieldOption('11_12y', '11–12 Yaş'),
+  FieldOption('13_14y', '13–14 Yaş'),
 ];
 
 const _numara = [
@@ -495,30 +495,30 @@ const _numara = [
 ];
 
 const _ayakkabiTip = [
-  FieldOption('spor', 'Spor / Sneaker'),
-  FieldOption('klasik', 'Klasik'),
-  FieldOption('bot', 'Bot'),
-  FieldOption('sandalet', 'Sandalet'),
-  FieldOption('terlik', 'Terlik'),
-  FieldOption('topuklu', 'Topuklu'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('sneaker', 'Spor / Sneaker'),
+  FieldOption('formal', 'Klasik'),
+  FieldOption('boot', 'Bot'),
+  FieldOption('sandal', 'Sandalet'),
+  FieldOption('slipper', 'Terlik'),
+  FieldOption('heeled', 'Topuklu'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _cantaMalzeme = [
-  FieldOption('deri', 'Deri'),
-  FieldOption('suni_deri', 'Suni Deri'),
-  FieldOption('kumas', 'Kumaş'),
-  FieldOption('kanvas', 'Kanvas'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('leather', 'Deri'),
+  FieldOption('faux_leather', 'Suni Deri'),
+  FieldOption('fabric', 'Kumaş'),
+  FieldOption('canvas', 'Kanvas'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _takiMalzeme = [
-  FieldOption('altin', 'Altın'),
-  FieldOption('gumus', 'Gümüş'),
-  FieldOption('platin', 'Platin'),
-  FieldOption('elmas', 'Elmas'),
-  FieldOption('dogal_tas', 'Doğal Taş'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('gold', 'Altın'),
+  FieldOption('silver', 'Gümüş'),
+  FieldOption('platinum', 'Platin'),
+  FieldOption('diamond', 'Elmas'),
+  FieldOption('natural_stone', 'Doğal Taş'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _altinAyar = [
@@ -532,12 +532,12 @@ const _altinAyar = [
 const _gumusAyar = [
   FieldOption('925', '925 Ayar (Sterlin)'),
   FieldOption('800', '800 Ayar'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _saatCinsiyet = [
-  FieldOption('erkek', 'Erkek'),
-  FieldOption('kadin', 'Kadın'),
+  FieldOption('male', 'Erkek'),
+  FieldOption('female', 'Kadın'),
   FieldOption('unisex', 'Unisex'),
 ];
 
@@ -550,59 +550,59 @@ const _markaSaat = [
   FieldOption('tag_heuer', 'TAG Heuer'),
   FieldOption('fossil', 'Fossil'),
   FieldOption('swatch', 'Swatch'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // Ev & Yaşam
 const _mobilyaTip = [
-  FieldOption('koltuk', 'Koltuk / Kanepe'),
-  FieldOption('yatak', 'Yatak'),
-  FieldOption('masa', 'Masa'),
-  FieldOption('sandalye', 'Sandalye'),
-  FieldOption('dolap', 'Dolap / Gardırop'),
-  FieldOption('raf', 'Raf / Kitaplık'),
-  FieldOption('sehpa', 'Sehpa'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('sofa', 'Koltuk / Kanepe'),
+  FieldOption('bed', 'Yatak'),
+  FieldOption('table', 'Masa'),
+  FieldOption('chair', 'Sandalye'),
+  FieldOption('wardrobe', 'Dolap / Gardırop'),
+  FieldOption('shelf', 'Raf / Kitaplık'),
+  FieldOption('coffee_table', 'Sehpa'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _mobilyaMalzeme = [
-  FieldOption('ahsap', 'Ahşap'),
+  FieldOption('wood', 'Ahşap'),
   FieldOption('metal', 'Metal'),
-  FieldOption('plastik', 'Plastik'),
-  FieldOption('cam', 'Cam'),
-  FieldOption('deri', 'Deri'),
-  FieldOption('kumas', 'Kumaş'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('plastic', 'Plastik'),
+  FieldOption('glass', 'Cam'),
+  FieldOption('leather', 'Deri'),
+  FieldOption('fabric', 'Kumaş'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _evTekstilTip = [
-  FieldOption('nevresim', 'Nevresim Takımı'),
-  FieldOption('yorgan', 'Yorgan'),
-  FieldOption('yastik', 'Yastık'),
-  FieldOption('havlu', 'Havlu'),
-  FieldOption('perde', 'Perde'),
-  FieldOption('hali', 'Halı / Kilim'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('bedding_set', 'Nevresim Takımı'),
+  FieldOption('quilt', 'Yorgan'),
+  FieldOption('pillow', 'Yastık'),
+  FieldOption('towel', 'Havlu'),
+  FieldOption('curtain', 'Perde'),
+  FieldOption('rug', 'Halı / Kilim'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _aydinlatmaTip = [
-  FieldOption('avize', 'Avize'),
-  FieldOption('abajur', 'Abajur'),
-  FieldOption('masa_lambasi', 'Masa Lambası'),
-  FieldOption('aplik', 'Aplik'),
-  FieldOption('ayak_lambasi', 'Ayak Lambası'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('chandelier', 'Avize'),
+  FieldOption('lampshade', 'Abajur'),
+  FieldOption('desk_lamp', 'Masa Lambası'),
+  FieldOption('wall_lamp', 'Aplik'),
+  FieldOption('floor_lamp', 'Ayak Lambası'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // Spor
 const _bisikletTip = [
-  FieldOption('dag', 'Dağ Bisikleti'),
-  FieldOption('yol', 'Yol Bisikleti'),
-  FieldOption('sehir', 'Şehir Bisikleti'),
+  FieldOption('mountain', 'Dağ Bisikleti'),
+  FieldOption('road', 'Yol Bisikleti'),
+  FieldOption('city', 'Şehir Bisikleti'),
   FieldOption('bmx', 'BMX'),
-  FieldOption('elektrikli', 'Elektrikli Bisiklet'),
-  FieldOption('katlanan', 'Katlanan Bisiklet'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('electric_bike', 'Elektrikli Bisiklet'),
+  FieldOption('folding', 'Katlanan Bisiklet'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _markaBisiklet = [
@@ -613,7 +613,7 @@ const _markaBisiklet = [
   FieldOption('scott', 'Scott'),
   FieldOption('merida', 'Merida'),
   FieldOption('cannondale', 'Cannondale'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _jantBoyutu = [
@@ -626,46 +626,46 @@ const _jantBoyutu = [
 ];
 
 const _sporDali = [
-  FieldOption('futbol', 'Futbol'),
-  FieldOption('basketbol', 'Basketbol'),
-  FieldOption('voleybol', 'Voleybol'),
-  FieldOption('tenis', 'Tenis'),
-  FieldOption('yuzme', 'Yüzme'),
-  FieldOption('kosu', 'Koşu'),
-  FieldOption('boks', 'Boks / Muay Thai'),
+  FieldOption('football', 'Futbol'),
+  FieldOption('basketball', 'Basketbol'),
+  FieldOption('volleyball', 'Voleybol'),
+  FieldOption('tennis', 'Tenis'),
+  FieldOption('swimming', 'Yüzme'),
+  FieldOption('running', 'Koşu'),
+  FieldOption('boxing', 'Boks / Muay Thai'),
   FieldOption('yoga', 'Yoga / Pilates'),
-  FieldOption('doga_sporlari', 'Doğa Sporları'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('outdoor', 'Doğa Sporları'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // Diğer
 const _evcilHayvanTip = [
-  FieldOption('kopek', 'Köpek'),
-  FieldOption('kedi', 'Kedi'),
-  FieldOption('kus', 'Kuş'),
-  FieldOption('balik', 'Balık'),
+  FieldOption('dog', 'Köpek'),
+  FieldOption('cat', 'Kedi'),
+  FieldOption('bird', 'Kuş'),
+  FieldOption('fish', 'Balık'),
   FieldOption('hamster', 'Hamster'),
-  FieldOption('tavsan', 'Tavşan'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('rabbit', 'Tavşan'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _muzikAletiTip = [
-  FieldOption('gitar', 'Gitar'),
-  FieldOption('piyano', 'Piyano / Klavye'),
-  FieldOption('davul', 'Davul / Perküsyon'),
-  FieldOption('keman', 'Keman'),
+  FieldOption('guitar', 'Gitar'),
+  FieldOption('piano', 'Piyano / Klavye'),
+  FieldOption('drums', 'Davul / Perküsyon'),
+  FieldOption('violin', 'Keman'),
   FieldOption('saz', 'Saz / Bağlama'),
-  FieldOption('flut', 'Flüt'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('flute', 'Flüt'),
+  FieldOption('other', 'Diğer'),
 ];
 
 const _fotoEkipmanTip = [
-  FieldOption('kamera', 'Kamera'),
+  FieldOption('camera', 'Kamera'),
   FieldOption('lens', 'Lens'),
   FieldOption('tripod', 'Tripod'),
   FieldOption('drone', 'Drone'),
-  FieldOption('flas', 'Flaş / Işık'),
-  FieldOption('diger', 'Diğer'),
+  FieldOption('flash', 'Flaş / Işık'),
+  FieldOption('other', 'Diğer'),
 ];
 
 // ── Brand → model maps (conditionalOptions) ───────────────────────────────────
@@ -759,9 +759,9 @@ const _modellerArac = <String, List<FieldOption>>{
     FieldOption('q5', 'Q5'),
   ],
   'bmw': [
-    FieldOption('1_serisi', '1 Serisi'),
-    FieldOption('3_serisi', '3 Serisi'),
-    FieldOption('5_serisi', '5 Serisi'),
+    FieldOption('1_series', '1 Serisi'),
+    FieldOption('3_series', '3 Serisi'),
+    FieldOption('5_series', '5 Serisi'),
     FieldOption('x3', 'X3'),
     FieldOption('x5', 'X5'),
   ],
@@ -843,9 +843,9 @@ const _modellerArac = <String, List<FieldOption>>{
     FieldOption('mx_5', 'MX-5'),
   ],
   'mercedes': [
-    FieldOption('a_serisi', 'A Serisi'),
-    FieldOption('c_serisi', 'C Serisi'),
-    FieldOption('e_serisi', 'E Serisi'),
+    FieldOption('a_series', 'A Serisi'),
+    FieldOption('c_series', 'C Serisi'),
+    FieldOption('e_series', 'E Serisi'),
     FieldOption('glc', 'GLC'),
     FieldOption('gle', 'GLE'),
   ],
@@ -1196,11 +1196,11 @@ const _modellerKamyon = <String, List<FieldOption>>{
     FieldOption('fe', 'FE'),
   ],
   'scania': [
-    FieldOption('r_serisi', 'R Serisi'),
-    FieldOption('s_serisi', 'S Serisi'),
-    FieldOption('p_serisi', 'P Serisi'),
-    FieldOption('g_serisi', 'G Serisi'),
-    FieldOption('l_serisi', 'L Serisi'),
+    FieldOption('r_series', 'R Serisi'),
+    FieldOption('s_series', 'S Serisi'),
+    FieldOption('p_series', 'P Serisi'),
+    FieldOption('g_series', 'G Serisi'),
+    FieldOption('l_series', 'L Serisi'),
   ],
 };
 
@@ -1227,11 +1227,11 @@ const _modellerTraktor = <String, List<FieldOption>>{
     FieldOption('mf8700', '8700 Serisi'),
   ],
   'kubota': [
-    FieldOption('b_serisi', 'B Serisi'),
-    FieldOption('l_serisi', 'L Serisi'),
-    FieldOption('m_serisi', 'M Serisi'),
-    FieldOption('mx_serisi', 'MX Serisi'),
-    FieldOption('st_serisi', 'ST Serisi'),
+    FieldOption('b_series', 'B Serisi'),
+    FieldOption('l_series', 'L Serisi'),
+    FieldOption('m_series', 'M Serisi'),
+    FieldOption('mx_series', 'MX Serisi'),
+    FieldOption('st_series', 'ST Serisi'),
   ],
   'fendt': [
     FieldOption('200_vario', '200 Vario'),
@@ -1482,80 +1482,80 @@ const _modellerBisiklet = <String, List<FieldOption>>{
 
 /// (key, label) pairs per main category key.
 const Map<String, List<(String, String)>> kSubcategories = {
-  'vasita': [
-    ('otomobil', 'Otomobil'),
-    ('motosiklet', 'Motosiklet'),
-    ('elektrikli_arac', 'Elektrikli Araç'),
-    ('kamyonet_minibus', 'Kamyonet & Minibüs'),
-    ('kamyon_tir', 'Kamyon & Tır'),
-    ('traktor', 'Traktör'),
-    ('tekne_su_araci', 'Tekne & Su Aracı'),
-    ('karavan', 'Karavan'),
-    ('yedek_parca', 'Yedek Parça'),
+  'vehicles': [
+    ('automobile', 'Otomobil'),
+    ('motorcycle', 'Motosiklet'),
+    ('electric_vehicle', 'Elektrikli Araç'),
+    ('van_minibus', 'Kamyonet & Minibüs'),
+    ('truck', 'Kamyon & Tır'),
+    ('tractor', 'Traktör'),
+    ('boat', 'Tekne & Su Aracı'),
+    ('caravan', 'Karavan'),
+    ('spare_parts', 'Yedek Parça'),
   ],
-  'elektronik': [
-    ('cep_telefonu', 'Cep Telefonu'),
-    ('bilgisayar_laptop', 'Bilgisayar & Laptop'),
+  'electronics': [
+    ('mobile_phone', 'Cep Telefonu'),
+    ('laptop', 'Bilgisayar & Laptop'),
     ('tablet', 'Tablet'),
     ('tv_monitor', 'TV & Monitör'),
-    ('kamera', 'Kamera'),
-    ('ses_sistemi', 'Ses Sistemi'),
-    ('akilli_saat_bileklik', 'Akıllı Saat & Bileklik'),
-    ('oyun_konsol', 'Oyun Konsol'),
-    ('diger_elektronik', 'Diğer Elektronik'),
+    ('camera', 'Kamera'),
+    ('audio_system', 'Ses Sistemi'),
+    ('smartwatch', 'Akıllı Saat & Bileklik'),
+    ('gaming_console', 'Oyun Konsol'),
+    ('other_electronics', 'Diğer Elektronik'),
   ],
-  'emlak': [
-    ('daire', 'Daire'),
-    ('mustakil_ev_villa', 'Müstakil Ev & Villa'),
-    ('arsa', 'Arsa'),
-    ('tarla_bahce', 'Tarla & Bahçe'),
-    ('is_yeri_ofis', 'İş Yeri & Ofis'),
-    ('depo_fabrika', 'Depo & Fabrika'),
-    ('bina', 'Bina'),
+  'real_estate': [
+    ('apartment', 'Daire'),
+    ('house_villa', 'Müstakil Ev & Villa'),
+    ('land', 'Arsa'),
+    ('field_garden', 'Tarla & Bahçe'),
+    ('office', 'İş Yeri & Ofis'),
+    ('warehouse', 'Depo & Fabrika'),
+    ('building', 'Bina'),
   ],
-  'giyim': [
-    ('kadin_giyim', 'Kadın Giyim'),
-    ('erkek_giyim', 'Erkek Giyim'),
-    ('cocuk_giyim', 'Çocuk Giyim'),
-    ('ayakkabi', 'Ayakkabı'),
-    ('canta', 'Çanta'),
-    ('taki_mucevher', 'Takı & Mücevher'),
-    ('saat_giyim', 'Saat'),
-    ('sapka_kemer_aksesuar', 'Şapka, Kemer & Aksesuar'),
+  'fashion': [
+    ('womens_clothing', 'Kadın Giyim'),
+    ('mens_clothing', 'Erkek Giyim'),
+    ('kids_clothing', 'Çocuk Giyim'),
+    ('shoes', 'Ayakkabı'),
+    ('bag', 'Çanta'),
+    ('jewelry', 'Takı & Mücevher'),
+    ('watch', 'Saat'),
+    ('accessories', 'Şapka, Kemer & Aksesuar'),
   ],
-  'ev': [
-    ('mobilya', 'Mobilya'),
-    ('mutfak_gerecleri', 'Mutfak Gereçleri'),
-    ('temizlik_ekipmani', 'Temizlik Ekipmanı'),
-    ('ev_tekstil', 'Ev Tekstili'),
-    ('aydinlatma', 'Aydınlatma'),
-    ('bahce_dis_mekan', 'Bahçe & Dış Mekan'),
-    ('antika_koleksiyon', 'Antika & Koleksiyon'),
+  'home': [
+    ('furniture', 'Mobilya'),
+    ('kitchen_equipment', 'Mutfak Gereçleri'),
+    ('cleaning_equipment', 'Temizlik Ekipmanı'),
+    ('home_textile', 'Ev Tekstili'),
+    ('lighting', 'Aydınlatma'),
+    ('garden_outdoor', 'Bahçe & Dış Mekan'),
+    ('antique', 'Antika & Koleksiyon'),
   ],
-  'spor': [
-    ('bisiklet', 'Bisiklet'),
-    ('spor_aleti_fitness', 'Spor Aleti & Fitness'),
-    ('outdoor_kamp', 'Outdoor & Kamp'),
-    ('top_takim_sporlari', 'Top & Takım Sporları'),
-    ('doga_sporlari', 'Doğa Sporları'),
-    ('diger_spor', 'Diğer Spor'),
+  'sports': [
+    ('bicycle', 'Bisiklet'),
+    ('fitness_equipment', 'Spor Aleti & Fitness'),
+    ('outdoor_camping', 'Outdoor & Kamp'),
+    ('team_sports', 'Top & Takım Sporları'),
+    ('outdoor_sports', 'Doğa Sporları'),
+    ('other_sports', 'Diğer Spor'),
   ],
-  'kitap': [
-    ('roman_hikaye', 'Roman & Hikaye'),
-    ('bilim_kurgu', 'Bilim Kurgu'),
-    ('kisisel_gelisim', 'Kişisel Gelişim'),
-    ('cocuk_kitaplari', 'Çocuk Kitapları'),
-    ('ders_okul', 'Ders & Okul'),
-    ('muzik_sanat_kitap', 'Müzik & Sanat'),
-    ('koleksiyon_dergi', 'Koleksiyon & Dergi'),
+  'books': [
+    ('fiction', 'Roman & Hikaye'),
+    ('sci_fi', 'Bilim Kurgu'),
+    ('self_development', 'Kişisel Gelişim'),
+    ('kids_books', 'Çocuk Kitapları'),
+    ('school_books', 'Ders & Okul'),
+    ('arts_books', 'Müzik & Sanat'),
+    ('magazine', 'Koleksiyon & Dergi'),
   ],
-  'diger': [
-    ('evcil_hayvan', 'Evcil Hayvan'),
-    ('bebek_oyuncak', 'Bebek & Oyuncak'),
-    ('muzik_aleti', 'Müzik Aleti'),
-    ('foto_video_ekipmani', 'Fotoğraf & Video Ekipmanı'),
-    ('yiyecek_tarim', 'Yiyecek & Tarım Ürünleri'),
-    ('diger_kategori', 'Diğer'),
+  'other': [
+    ('pet', 'Evcil Hayvan'),
+    ('baby_toys', 'Bebek & Oyuncak'),
+    ('musical_instrument', 'Müzik Aleti'),
+    ('photo_video', 'Fotoğraf & Video Ekipmanı'),
+    ('food_agriculture', 'Yiyecek & Tarım Ürünleri'),
+    ('misc', 'Diğer'),
   ],
 };
 
@@ -1563,307 +1563,307 @@ const Map<String, List<(String, String)>> kSubcategories = {
 
 const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   // ── Vasıta ────────────────────────────────────────────────────────────────
-  'otomobil': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaArac),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerArac),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
-    ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vites),
-    ExtraFieldDef(key: 'kasa_tipi', labelKey: 'extraField_kasa_tipi', type: ExtraFieldType.dropdown, options: _kasaTipi),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+  'automobile': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaArac),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerArac),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'fuel_type', labelKey: 'extraField_fuel_type', type: ExtraFieldType.dropdown, options: _yakitTipi),
+    ExtraFieldDef(key: 'transmission', labelKey: 'extraField_transmission', type: ExtraFieldType.dropdown, options: _vites),
+    ExtraFieldDef(key: 'body_type', labelKey: 'extraField_body_type', type: ExtraFieldType.dropdown, options: _kasaTipi),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'motosiklet': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaMoto),
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _motoTip),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerMoto),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'motor_cc', labelKey: 'extraField_motor_cc', type: ExtraFieldType.number, optional: true, unit: 'cc'),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+  'motorcycle': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaMoto),
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _motoTip),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerMoto),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'engine_cc', labelKey: 'extraField_engine_cc', type: ExtraFieldType.number, optional: true, unit: 'cc'),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'elektrikli_arac': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaElektrikli),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerElektrikli),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'menzil_km', labelKey: 'extraField_menzil', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+  'electric_vehicle': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaElektrikli),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerElektrikli),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'range_km', labelKey: 'extraField_menzil', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'kamyonet_minibus': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamyon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerKamyon),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
-    ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vitesManuelDefault),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+  'van_minibus': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaKamyon),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerKamyon),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'fuel_type', labelKey: 'extraField_fuel_type', type: ExtraFieldType.dropdown, options: _yakitTipi),
+    ExtraFieldDef(key: 'transmission', labelKey: 'extraField_transmission', type: ExtraFieldType.dropdown, options: _vitesManuelDefault),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'kamyon_tir': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamyon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerKamyon),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
-    ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vitesManuelDefault),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+  'truck': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaKamyon),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerKamyon),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'fuel_type', labelKey: 'extraField_fuel_type', type: ExtraFieldType.dropdown, options: _yakitTipi),
+    ExtraFieldDef(key: 'transmission', labelKey: 'extraField_transmission', type: ExtraFieldType.dropdown, options: _vitesManuelDefault),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'traktor': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTaktor),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTraktor),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'calisma_saati', labelKey: 'extraField_calisma_saati', type: ExtraFieldType.number, optional: true, unit: 'saat'),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+  'tractor': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaTaktor),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerTraktor),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'working_hours', labelKey: 'extraField_working_hours', type: ExtraFieldType.number, optional: true, unit: 'saat'),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'tekne_su_araci': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _tekneTip),
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'boat': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _tekneTip),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
-    ExtraFieldDef(key: 'uzunluk', labelKey: 'extraField_uzunluk', type: ExtraFieldType.text, unit: 'm'),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown, optional: true),
-    ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _tekneYakit, optional: true),
+    ExtraFieldDef(key: 'length', labelKey: 'extraField_length', type: ExtraFieldType.text, unit: 'm'),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown, optional: true),
+    ExtraFieldDef(key: 'fuel_type', labelKey: 'extraField_fuel_type', type: ExtraFieldType.dropdown, options: _tekneYakit, optional: true),
   ],
-  'karavan': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'caravan': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.dropdown, optional: true),
-    ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.dropdown, optional: true),
+    ExtraFieldDef(key: 'mileage', labelKey: 'extraField_mileage', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'damage_status', labelKey: 'extraField_damage_status', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
-  'yedek_parca': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaArac),
-    ExtraFieldDef(key: 'uyumlu_model', labelKey: 'extraField_uyumlu_model', optional: true),
-    ExtraFieldDef(key: 'parca_tipi', labelKey: 'extraField_parca_tipi', optional: true),
+  'spare_parts': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaArac),
+    ExtraFieldDef(key: 'compatible_model', labelKey: 'extraField_compatible_model', optional: true),
+    ExtraFieldDef(key: 'part_type', labelKey: 'extraField_part_type', optional: true),
   ],
 
   // ── Elektronik ────────────────────────────────────────────────────────────
-  'cep_telefonu': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTelefon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTelefon),
-    ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
+  'mobile_phone': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaTelefon),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerTelefon),
+    ExtraFieldDef(key: 'storage', labelKey: 'extraField_storage', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'bilgisayar_laptop': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaBilgisayar),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerLaptop, optional: true),
-    ExtraFieldDef(key: 'islemci', labelKey: 'extraField_islemci', type: ExtraFieldType.dropdown, options: _islemci),
+  'laptop': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaBilgisayar),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerLaptop, optional: true),
+    ExtraFieldDef(key: 'processor', labelKey: 'extraField_processor', type: ExtraFieldType.dropdown, options: _islemci),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram),
-    ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
-    ExtraFieldDef(key: 'ekran_boyutu', labelKey: 'extraField_ekran_boyutu', type: ExtraFieldType.dropdown, options: _ekranBoyutu, optional: true),
+    ExtraFieldDef(key: 'storage', labelKey: 'extraField_storage', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
+    ExtraFieldDef(key: 'screen_size', labelKey: 'extraField_screen_size', type: ExtraFieldType.dropdown, options: _ekranBoyutu, optional: true),
   ],
   'tablet': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTelefon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTablet),
-    ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaTelefon),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerTablet),
+    ExtraFieldDef(key: 'storage', labelKey: 'extraField_storage', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram, optional: true),
   ],
   'tv_monitor': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text),
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
-    ExtraFieldDef(key: 'ekran_boyutu', labelKey: 'extraField_ekran_boyutu', type: ExtraFieldType.dropdown, options: _ekranBoyutu),
+    ExtraFieldDef(key: 'screen_size', labelKey: 'extraField_screen_size', type: ExtraFieldType.dropdown, options: _ekranBoyutu),
   ],
-  'kamera': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamera),
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _kameraTip),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
-  ],
-  'ses_sistemi': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text),
+  'camera': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaKamera),
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _kameraTip),
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
   ],
-  'akilli_saat_bileklik': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text),
+  'audio_system': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text),
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
   ],
-  'oyun_konsol': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _konsolMarka),
+  'smartwatch': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
+  ],
+  'gaming_console': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _konsolMarka),
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, options: _konsolModel),
   ],
-  'diger_elektronik': [],
+  'other_electronics': [],
 
   // ── Emlak ─────────────────────────────────────────────────────────────────
-  'daire': [
-    ExtraFieldDef(key: 'oda_sayisi', labelKey: 'extraField_oda_sayisi', type: ExtraFieldType.dropdown, options: _odaSayisi),
-    ExtraFieldDef(key: 'brut_m2', labelKey: 'extraField_brut_m2', type: ExtraFieldType.number, unit: 'm²'),
-    ExtraFieldDef(key: 'net_m2', labelKey: 'extraField_net_m2', type: ExtraFieldType.number, optional: true, unit: 'm²'),
-    ExtraFieldDef(key: 'bina_yasi', labelKey: 'extraField_bina_yasi', type: ExtraFieldType.dropdown, options: _binaYasi, optional: true),
-    ExtraFieldDef(key: 'kat', labelKey: 'extraField_kat', type: ExtraFieldType.number, optional: true),
-    ExtraFieldDef(key: 'kat_sayisi', labelKey: 'extraField_kat_sayisi', type: ExtraFieldType.number, optional: true),
-    ExtraFieldDef(key: 'isitma', labelKey: 'extraField_isitma', type: ExtraFieldType.dropdown, options: _isitma, optional: true),
-    ExtraFieldDef(key: 'esya_durumu', labelKey: 'extraField_esya_durumu', type: ExtraFieldType.dropdown, options: _esyaDurumu),
-    ExtraFieldDef(key: 'asansor', labelKey: 'extraField_asansor', type: ExtraFieldType.dropdown, options: _varYok, optional: true),
-    ExtraFieldDef(key: 'otopark', labelKey: 'extraField_otopark', type: ExtraFieldType.dropdown, options: _varYok, optional: true),
+  'apartment': [
+    ExtraFieldDef(key: 'room_count', labelKey: 'extraField_room_count', type: ExtraFieldType.dropdown, options: _odaSayisi),
+    ExtraFieldDef(key: 'gross_sqm', labelKey: 'extraField_gross_sqm', type: ExtraFieldType.number, unit: 'm²'),
+    ExtraFieldDef(key: 'net_sqm', labelKey: 'extraField_net_sqm', type: ExtraFieldType.number, optional: true, unit: 'm²'),
+    ExtraFieldDef(key: 'building_age', labelKey: 'extraField_building_age', type: ExtraFieldType.dropdown, options: _binaYasi, optional: true),
+    ExtraFieldDef(key: 'floor', labelKey: 'extraField_floor', type: ExtraFieldType.number, optional: true),
+    ExtraFieldDef(key: 'floor_count', labelKey: 'extraField_floor_count', type: ExtraFieldType.number, optional: true),
+    ExtraFieldDef(key: 'heating', labelKey: 'extraField_heating', type: ExtraFieldType.dropdown, options: _isitma, optional: true),
+    ExtraFieldDef(key: 'furnishing', labelKey: 'extraField_furnishing', type: ExtraFieldType.dropdown, options: _esyaDurumu),
+    ExtraFieldDef(key: 'elevator', labelKey: 'extraField_elevator', type: ExtraFieldType.dropdown, options: _varYok, optional: true),
+    ExtraFieldDef(key: 'parking', labelKey: 'extraField_parking', type: ExtraFieldType.dropdown, options: _varYok, optional: true),
   ],
-  'mustakil_ev_villa': [
-    ExtraFieldDef(key: 'oda_sayisi', labelKey: 'extraField_oda_sayisi', type: ExtraFieldType.dropdown, options: _odaSayisi),
-    ExtraFieldDef(key: 'brut_m2', labelKey: 'extraField_brut_m2', type: ExtraFieldType.number, unit: 'm²'),
-    ExtraFieldDef(key: 'net_m2', labelKey: 'extraField_net_m2', type: ExtraFieldType.number, optional: true, unit: 'm²'),
-    ExtraFieldDef(key: 'arsa_m2', labelKey: 'extraField_arsa_m2', type: ExtraFieldType.number, optional: true, unit: 'm²'),
-    ExtraFieldDef(key: 'bina_yasi', labelKey: 'extraField_bina_yasi', type: ExtraFieldType.dropdown, options: _binaYasi, optional: true),
-    ExtraFieldDef(key: 'isitma', labelKey: 'extraField_isitma', type: ExtraFieldType.dropdown, options: _isitma, optional: true),
-    ExtraFieldDef(key: 'esya_durumu', labelKey: 'extraField_esya_durumu', type: ExtraFieldType.dropdown, options: _esyaDurumu),
+  'house_villa': [
+    ExtraFieldDef(key: 'room_count', labelKey: 'extraField_room_count', type: ExtraFieldType.dropdown, options: _odaSayisi),
+    ExtraFieldDef(key: 'gross_sqm', labelKey: 'extraField_gross_sqm', type: ExtraFieldType.number, unit: 'm²'),
+    ExtraFieldDef(key: 'net_sqm', labelKey: 'extraField_net_sqm', type: ExtraFieldType.number, optional: true, unit: 'm²'),
+    ExtraFieldDef(key: 'land_sqm', labelKey: 'extraField_land_sqm', type: ExtraFieldType.number, optional: true, unit: 'm²'),
+    ExtraFieldDef(key: 'building_age', labelKey: 'extraField_building_age', type: ExtraFieldType.dropdown, options: _binaYasi, optional: true),
+    ExtraFieldDef(key: 'heating', labelKey: 'extraField_heating', type: ExtraFieldType.dropdown, options: _isitma, optional: true),
+    ExtraFieldDef(key: 'furnishing', labelKey: 'extraField_furnishing', type: ExtraFieldType.dropdown, options: _esyaDurumu),
   ],
-  'arsa': [
-    ExtraFieldDef(key: 'm2', labelKey: 'extraField_m2', type: ExtraFieldType.number, unit: 'm²'),
-    ExtraFieldDef(key: 'tapu_durumu', labelKey: 'extraField_tapu_durumu', type: ExtraFieldType.dropdown, options: _tapuDurumu),
-    ExtraFieldDef(key: 'kullanim_durumu', labelKey: 'extraField_kullanim_durumu', type: ExtraFieldType.dropdown, options: _arsaKullanimDurumu, optional: true),
+  'land': [
+    ExtraFieldDef(key: 'sqm', labelKey: 'extraField_sqm', type: ExtraFieldType.number, unit: 'm²'),
+    ExtraFieldDef(key: 'title_deed', labelKey: 'extraField_title_deed', type: ExtraFieldType.dropdown, options: _tapuDurumu),
+    ExtraFieldDef(key: 'land_use', labelKey: 'extraField_land_use', type: ExtraFieldType.dropdown, options: _arsaKullanimDurumu, optional: true),
   ],
-  'tarla_bahce': [
-    ExtraFieldDef(key: 'm2', labelKey: 'extraField_m2', type: ExtraFieldType.number, unit: 'm²'),
-    ExtraFieldDef(key: 'tapu_durumu', labelKey: 'extraField_tapu_durumu', type: ExtraFieldType.dropdown, options: _tapuDurumu),
-    ExtraFieldDef(key: 'kullanim_durumu', labelKey: 'extraField_kullanim_durumu', type: ExtraFieldType.dropdown, options: _arsaKullanimDurumu, optional: true),
+  'field_garden': [
+    ExtraFieldDef(key: 'sqm', labelKey: 'extraField_sqm', type: ExtraFieldType.number, unit: 'm²'),
+    ExtraFieldDef(key: 'title_deed', labelKey: 'extraField_title_deed', type: ExtraFieldType.dropdown, options: _tapuDurumu),
+    ExtraFieldDef(key: 'land_use', labelKey: 'extraField_land_use', type: ExtraFieldType.dropdown, options: _arsaKullanimDurumu, optional: true),
   ],
-  'is_yeri_ofis': [
-    ExtraFieldDef(key: 'brut_m2', labelKey: 'extraField_brut_m2', type: ExtraFieldType.number, unit: 'm²'),
-    ExtraFieldDef(key: 'net_m2', labelKey: 'extraField_net_m2', type: ExtraFieldType.number, optional: true, unit: 'm²'),
-    ExtraFieldDef(key: 'kat', labelKey: 'extraField_kat', type: ExtraFieldType.number, optional: true),
-    ExtraFieldDef(key: 'isitma', labelKey: 'extraField_isitma', type: ExtraFieldType.dropdown, options: _isitma, optional: true),
-    ExtraFieldDef(key: 'esya_durumu', labelKey: 'extraField_esya_durumu', type: ExtraFieldType.dropdown, options: _esyaDurumu, optional: true),
+  'office': [
+    ExtraFieldDef(key: 'gross_sqm', labelKey: 'extraField_gross_sqm', type: ExtraFieldType.number, unit: 'm²'),
+    ExtraFieldDef(key: 'net_sqm', labelKey: 'extraField_net_sqm', type: ExtraFieldType.number, optional: true, unit: 'm²'),
+    ExtraFieldDef(key: 'floor', labelKey: 'extraField_floor', type: ExtraFieldType.number, optional: true),
+    ExtraFieldDef(key: 'heating', labelKey: 'extraField_heating', type: ExtraFieldType.dropdown, options: _isitma, optional: true),
+    ExtraFieldDef(key: 'furnishing', labelKey: 'extraField_furnishing', type: ExtraFieldType.dropdown, options: _esyaDurumu, optional: true),
   ],
-  'depo_fabrika': [
-    ExtraFieldDef(key: 'brut_m2', labelKey: 'extraField_brut_m2', type: ExtraFieldType.number, unit: 'm²'),
-    ExtraFieldDef(key: 'kat', labelKey: 'extraField_kat', type: ExtraFieldType.number, optional: true),
+  'warehouse': [
+    ExtraFieldDef(key: 'gross_sqm', labelKey: 'extraField_gross_sqm', type: ExtraFieldType.number, unit: 'm²'),
+    ExtraFieldDef(key: 'floor', labelKey: 'extraField_floor', type: ExtraFieldType.number, optional: true),
   ],
-  'bina': [
-    ExtraFieldDef(key: 'kat_sayisi', labelKey: 'extraField_kat_sayisi', type: ExtraFieldType.number),
-    ExtraFieldDef(key: 'daire_sayisi', labelKey: 'extraField_daire_sayisi', type: ExtraFieldType.number),
-    ExtraFieldDef(key: 'brut_m2', labelKey: 'extraField_brut_m2', type: ExtraFieldType.number, optional: true, unit: 'm²'),
+  'building': [
+    ExtraFieldDef(key: 'floor_count', labelKey: 'extraField_floor_count', type: ExtraFieldType.number),
+    ExtraFieldDef(key: 'unit_count', labelKey: 'extraField_unit_count', type: ExtraFieldType.number),
+    ExtraFieldDef(key: 'gross_sqm', labelKey: 'extraField_gross_sqm', type: ExtraFieldType.number, optional: true, unit: 'm²'),
   ],
 
   // ── Giyim ─────────────────────────────────────────────────────────────────
-  'kadin_giyim': [
-    ExtraFieldDef(key: 'beden', labelKey: 'extraField_beden', type: ExtraFieldType.dropdown, options: _bedenKadin),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'womens_clothing': [
+    ExtraFieldDef(key: 'size', labelKey: 'extraField_size', type: ExtraFieldType.dropdown, options: _bedenKadin),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'erkek_giyim': [
-    ExtraFieldDef(key: 'beden', labelKey: 'extraField_beden', type: ExtraFieldType.dropdown, options: _bedenKadin),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'mens_clothing': [
+    ExtraFieldDef(key: 'size', labelKey: 'extraField_size', type: ExtraFieldType.dropdown, options: _bedenKadin),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'cocuk_giyim': [
-    ExtraFieldDef(key: 'beden', labelKey: 'extraField_beden', type: ExtraFieldType.dropdown, options: _bedenCocuk),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'kids_clothing': [
+    ExtraFieldDef(key: 'size', labelKey: 'extraField_size', type: ExtraFieldType.dropdown, options: _bedenCocuk),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'ayakkabi': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _ayakkabiTip),
-    ExtraFieldDef(key: 'numara', labelKey: 'extraField_numara', type: ExtraFieldType.dropdown, options: _numara),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'shoes': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _ayakkabiTip),
+    ExtraFieldDef(key: 'shoe_size', labelKey: 'extraField_shoe_size', type: ExtraFieldType.dropdown, options: _numara),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'canta': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
-    ExtraFieldDef(key: 'malzeme', labelKey: 'extraField_malzeme', type: ExtraFieldType.dropdown, options: _cantaMalzeme, optional: true),
+  'bag': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
+    ExtraFieldDef(key: 'material', labelKey: 'extraField_material', type: ExtraFieldType.dropdown, options: _cantaMalzeme, optional: true),
   ],
-  'taki_mucevher': [
-    ExtraFieldDef(key: 'malzeme', labelKey: 'extraField_malzeme', type: ExtraFieldType.dropdown, options: _takiMalzeme),
-    ExtraFieldDef(key: 'altin_ayar', labelKey: 'extraField_altin_ayar', type: ExtraFieldType.dropdown, options: _altinAyar, optional: true),
-    ExtraFieldDef(key: 'gumus_ayar', labelKey: 'extraField_gumus_ayar', type: ExtraFieldType.dropdown, options: _gumusAyar, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'jewelry': [
+    ExtraFieldDef(key: 'material', labelKey: 'extraField_material', type: ExtraFieldType.dropdown, options: _takiMalzeme),
+    ExtraFieldDef(key: 'gold_carat', labelKey: 'extraField_gold_carat', type: ExtraFieldType.dropdown, options: _altinAyar, optional: true),
+    ExtraFieldDef(key: 'silver_purity', labelKey: 'extraField_silver_purity', type: ExtraFieldType.dropdown, options: _gumusAyar, optional: true),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'saat_giyim': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaSaat),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerSaat, optional: true),
-    ExtraFieldDef(key: 'cinsiyet', labelKey: 'extraField_cinsiyet', type: ExtraFieldType.dropdown, options: _saatCinsiyet),
+  'watch': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaSaat),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerSaat, optional: true),
+    ExtraFieldDef(key: 'gender', labelKey: 'extraField_gender', type: ExtraFieldType.dropdown, options: _saatCinsiyet),
   ],
-  'sapka_kemer_aksesuar': [
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'accessories': [
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
 
   // ── Ev & Yaşam ────────────────────────────────────────────────────────────
-  'mobilya': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _mobilyaTip),
-    ExtraFieldDef(key: 'malzeme', labelKey: 'extraField_malzeme', type: ExtraFieldType.dropdown, options: _mobilyaMalzeme, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'furniture': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _mobilyaTip),
+    ExtraFieldDef(key: 'material', labelKey: 'extraField_material', type: ExtraFieldType.dropdown, options: _mobilyaMalzeme, optional: true),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'mutfak_gerecleri': [],
-  'temizlik_ekipmani': [],
-  'ev_tekstil': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _evTekstilTip),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'kitchen_equipment': [],
+  'cleaning_equipment': [],
+  'home_textile': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _evTekstilTip),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'aydinlatma': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _aydinlatmaTip),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
+  'lighting': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _aydinlatmaTip),
+    ExtraFieldDef(key: 'color', labelKey: 'extraField_color', type: ExtraFieldType.dropdown, options: _renk),
   ],
-  'bahce_dis_mekan': [],
-  'antika_koleksiyon': [
-    ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.text, optional: true),
+  'garden_outdoor': [],
+  'antique': [
+    ExtraFieldDef(key: 'year', labelKey: 'extraField_year', type: ExtraFieldType.text, optional: true),
   ],
 
   // ── Spor ──────────────────────────────────────────────────────────────────
-  'bisiklet': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaBisiklet),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerBisiklet, optional: true),
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _bisikletTip),
-    ExtraFieldDef(key: 'jant_boyutu', labelKey: 'extraField_jant_boyutu', type: ExtraFieldType.dropdown, options: _jantBoyutu, optional: true),
+  'bicycle': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.dropdown, options: _markaBisiklet),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'brand', conditionalOptions: _modellerBisiklet, optional: true),
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _bisikletTip),
+    ExtraFieldDef(key: 'wheel_size', labelKey: 'extraField_wheel_size', type: ExtraFieldType.dropdown, options: _jantBoyutu, optional: true),
   ],
-  'spor_aleti_fitness': [
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'fitness_equipment': [
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
   ],
-  'outdoor_kamp': [],
-  'top_takim_sporlari': [
-    ExtraFieldDef(key: 'spor_dali', labelKey: 'extraField_spor_dali', type: ExtraFieldType.dropdown, options: _sporDali),
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'outdoor_camping': [],
+  'team_sports': [
+    ExtraFieldDef(key: 'sport_type', labelKey: 'extraField_sport_type', type: ExtraFieldType.dropdown, options: _sporDali),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
   ],
-  'doga_sporlari': [
-    ExtraFieldDef(key: 'spor_dali', labelKey: 'extraField_spor_dali', type: ExtraFieldType.dropdown, options: _sporDali, optional: true),
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'outdoor_sports': [
+    ExtraFieldDef(key: 'sport_type', labelKey: 'extraField_sport_type', type: ExtraFieldType.dropdown, options: _sporDali, optional: true),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
   ],
-  'diger_spor': [],
+  'other_sports': [],
 
   // ── Kitap & Hobi ──────────────────────────────────────────────────────────
-  'roman_hikaye': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yazar', labelKey: 'extraField_yazar'),
-    ExtraFieldDef(key: 'yayinevi', labelKey: 'extraField_yayinevi', optional: true),
+  'fiction': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'author', labelKey: 'extraField_author'),
+    ExtraFieldDef(key: 'publisher', labelKey: 'extraField_publisher', optional: true),
   ],
-  'bilim_kurgu': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yazar', labelKey: 'extraField_yazar'),
-    ExtraFieldDef(key: 'yayinevi', labelKey: 'extraField_yayinevi', optional: true),
+  'sci_fi': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'author', labelKey: 'extraField_author'),
+    ExtraFieldDef(key: 'publisher', labelKey: 'extraField_publisher', optional: true),
   ],
-  'kisisel_gelisim': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yazar', labelKey: 'extraField_yazar'),
-    ExtraFieldDef(key: 'yayinevi', labelKey: 'extraField_yayinevi', optional: true),
+  'self_development': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'author', labelKey: 'extraField_author'),
+    ExtraFieldDef(key: 'publisher', labelKey: 'extraField_publisher', optional: true),
   ],
-  'cocuk_kitaplari': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yazar', labelKey: 'extraField_yazar', optional: true),
-    ExtraFieldDef(key: 'yayinevi', labelKey: 'extraField_yayinevi', optional: true),
+  'kids_books': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'author', labelKey: 'extraField_author', optional: true),
+    ExtraFieldDef(key: 'publisher', labelKey: 'extraField_publisher', optional: true),
   ],
-  'ders_okul': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yayinevi', labelKey: 'extraField_yayinevi', optional: true),
-    ExtraFieldDef(key: 'yazar', labelKey: 'extraField_yazar', optional: true),
+  'school_books': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'publisher', labelKey: 'extraField_publisher', optional: true),
+    ExtraFieldDef(key: 'author', labelKey: 'extraField_author', optional: true),
   ],
-  'muzik_sanat_kitap': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yazar', labelKey: 'extraField_yazar', optional: true),
+  'arts_books': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'author', labelKey: 'extraField_author', optional: true),
   ],
-  'koleksiyon_dergi': [
-    ExtraFieldDef(key: 'kitap_ismi', labelKey: 'extraField_kitap_ismi'),
-    ExtraFieldDef(key: 'yayinevi', labelKey: 'extraField_yayinevi', optional: true),
+  'magazine': [
+    ExtraFieldDef(key: 'book_title', labelKey: 'extraField_book_title'),
+    ExtraFieldDef(key: 'publisher', labelKey: 'extraField_publisher', optional: true),
   ],
 
   // ── Diğer ─────────────────────────────────────────────────────────────────
-  'evcil_hayvan': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _evcilHayvanTip),
-    ExtraFieldDef(key: 'irk', labelKey: 'extraField_irk', optional: true),
+  'pet': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _evcilHayvanTip),
+    ExtraFieldDef(key: 'breed', labelKey: 'extraField_breed', optional: true),
   ],
-  'bebek_oyuncak': [],
-  'muzik_aleti': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _muzikAletiTip),
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'baby_toys': [],
+  'musical_instrument': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _muzikAletiTip),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
   ],
-  'foto_video_ekipmani': [
-    ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _fotoEkipmanTip),
-    ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
+  'photo_video': [
+    ExtraFieldDef(key: 'type', labelKey: 'extraField_type', type: ExtraFieldType.dropdown, options: _fotoEkipmanTip),
+    ExtraFieldDef(key: 'brand', labelKey: 'extraField_brand', type: ExtraFieldType.text, optional: true),
   ],
-  'yiyecek_tarim': [],
-  'diger_kategori': [],
+  'food_agriculture': [],
+  'misc': [],
 };

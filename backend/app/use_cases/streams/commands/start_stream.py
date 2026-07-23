@@ -33,7 +33,7 @@ class StartStreamCommand:
                 "host_id": user_id,
                 "title": title.strip(),
                 "is_live": False,
-                "category": category if category else "diger",
+                "category": category if category else "other",
                 "thumbnail_url": thumbnail_url
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
@@ -57,5 +57,5 @@ class StartStreamCommand:
             "room_name": room_name,
             "livekit_url": settings.livekit_url,
             "token": token,
-            "category": category if category else "diger",
+            "category": category if category else "other",
         }

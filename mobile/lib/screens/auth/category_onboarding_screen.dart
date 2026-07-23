@@ -20,26 +20,26 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
   bool _loading = false;
 
   static const _categories = [
-    {'slug': 'elektronik', 'icon': Icons.devices_outlined},
-    {'slug': 'vasita',     'icon': Icons.directions_car_outlined},
-    {'slug': 'emlak',      'icon': Icons.home_work_outlined},
-    {'slug': 'giyim',      'icon': Icons.checkroom_outlined},
-    {'slug': 'spor',       'icon': Icons.sports_soccer_outlined},
-    {'slug': 'kitap',      'icon': Icons.menu_book_outlined},
-    {'slug': 'ev',         'icon': Icons.home_outlined},
-    {'slug': 'diger',      'icon': Icons.more_horiz},
+    {'slug': 'electronics', 'icon': Icons.devices_outlined},
+    {'slug': 'vehicles',    'icon': Icons.directions_car_outlined},
+    {'slug': 'real_estate', 'icon': Icons.home_work_outlined},
+    {'slug': 'fashion',     'icon': Icons.checkroom_outlined},
+    {'slug': 'sports',      'icon': Icons.sports_soccer_outlined},
+    {'slug': 'books',       'icon': Icons.menu_book_outlined},
+    {'slug': 'home',        'icon': Icons.home_outlined},
+    {'slug': 'other',       'icon': Icons.more_horiz},
   ];
 
   String _label(AppLocalizations l, String slug) {
     switch (slug) {
-      case 'elektronik': return l.catElectronics;
-      case 'vasita':     return l.catVehicles;
-      case 'emlak':      return l.catRealEstate;
-      case 'giyim':      return l.catClothing;
-      case 'spor':       return l.catSports;
-      case 'kitap':      return l.catBooks;
-      case 'ev':         return l.catHomeLife;
-      default:           return l.catOther;
+      case 'electronics': return l.catElectronics;
+      case 'vehicles':    return l.catVehicles;
+      case 'real_estate': return l.catRealEstate;
+      case 'fashion':     return l.catClothing;
+      case 'sports':      return l.catSports;
+      case 'books':       return l.catBooks;
+      case 'home':        return l.catHomeLife;
+      default:            return l.catOther;
     }
   }
 

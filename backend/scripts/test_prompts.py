@@ -23,14 +23,14 @@ from app.services.ml.llm_service import (
 
 # ── Gerçek kategori slug'ları (DB + mobile ile eşleşmeli) ─────────────────────
 CATEGORIES: list[tuple[str, str]] = [
-    ("elektronik", "Elektronik"),
-    ("vasita",     "Vasıta"),
-    ("emlak",      "Emlak"),
-    ("giyim",      "Giyim & Moda"),
-    ("spor",       "Spor & Outdoor"),
-    ("kitap",      "Kitap & Hobi"),
-    ("ev",         "Ev & Yaşam"),
-    ("diger",      "Diğer"),
+    ("electronics", "Elektronik"),
+    ("vehicles",     "Vasıta"),
+    ("real_estate",      "Emlak"),
+    ("fashion",      "Giyim & Moda"),
+    ("sports",       "Spor & Outdoor"),
+    ("books",      "Kitap & Hobi"),
+    ("home",         "Ev & Yaşam"),
+    ("other",      "Diğer"),
 ]
 
 CONDITIONS: list[tuple[str, str]] = [
@@ -48,16 +48,16 @@ LOCATIONS = [
 # ── Batch test senaryoları ─────────────────────────────────────────────────────
 BATCH_SCENARIOS = [
     # (başlık, kategori_slug, condition_slug, fiyat, lokasyon)
-    ("iPhone 14 Pro 256GB Space Black",  "elektronik", "like_new", 28000, "İstanbul"),
-    ("2021 Honda Civic 1.5 Turbo Exec",  "vasita",     "used",     480000, "Ankara"),
-    ("Boş arsa 300m² imarlı",            "emlak",      "new",      None,   "Bursa"),
-    ("Nike Air Max 90 Erkek 42 Numara",  "giyim",      "used",     800,    None),
-    ("Canon EOS R50 + 18-45mm Kit Lens", "elektronik", "damaged",  12000,  "İzmir"),
-    ("Çekyat Koltuk Yatak Deri Köşe",   "ev",         "used",     4500,   "İstanbul"),
-    ("Dumbbell Seti 2x20kg",             "spor",       "like_new", 1200,   None),
-    ("Harry Potter Serisi 7 Kitap",      "kitap",      "used",     350,    "Gaziantep"),
-    ("MacBook Pro M3 14 inç 16GB 512GB", "elektronik", "new",      65000,  None),
-    ("Xiaomi Scooter Pro2 Elektrikli",   "vasita",     "damaged",  4200,   "İzmir"),
+    ("iPhone 14 Pro 256GB Space Black",  "electronics", "like_new", 28000, "İstanbul"),
+    ("2021 Honda Civic 1.5 Turbo Exec",  "vehicles",     "used",     480000, "Ankara"),
+    ("Boş arsa 300m² imarlı",            "real_estate",      "new",      None,   "Bursa"),
+    ("Nike Air Max 90 Erkek 42 Numara",  "fashion",      "used",     800,    None),
+    ("Canon EOS R50 + 18-45mm Kit Lens", "electronics", "damaged",  12000,  "İzmir"),
+    ("Çekyat Koltuk Yatak Deri Köşe",   "home",         "used",     4500,   "İstanbul"),
+    ("Dumbbell Seti 2x20kg",             "sports",       "like_new", 1200,   None),
+    ("Harry Potter Serisi 7 Kitap",      "books",      "used",     350,    "Gaziantep"),
+    ("MacBook Pro M3 14 inç 16GB 512GB", "electronics", "new",      65000,  None),
+    ("Xiaomi Scooter Pro2 Elektrikli",   "vehicles",     "damaged",  4200,   "İzmir"),
 ]
 
 

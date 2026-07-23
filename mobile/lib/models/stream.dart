@@ -47,7 +47,7 @@ class StreamOut {
         id: json['id'],
         roomName: json['room_name'],
         title: json['title'],
-        category: json['category'] ?? 'diger',
+        category: json['category'] ?? 'other',
         viewerCount: json['viewer_count'] ?? 0,
         host: StreamHost.fromJson(json['host']),
         thumbnailUrl: json['thumbnail_url'] as String?,
@@ -84,7 +84,7 @@ class StreamTokenOut {
         roomName: json['room_name'],
         livekitUrl: json['livekit_url'],
         token: json['token'],
-        category: json['category'] ?? 'diger',
+        category: json['category'] ?? 'other',
       );
 }
 
@@ -115,7 +115,7 @@ class JoinTokenOut {
         livekitUrl: json['livekit_url'],
         token: json['token'],
         title: json['title'],
-        category: json['category'] ?? 'diger',
+        category: json['category'] ?? 'other',
         hostUsername: json['host_username'],
         hostLivekitIdentity: json['host_livekit_identity'],
       );

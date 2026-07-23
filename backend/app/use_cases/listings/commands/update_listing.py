@@ -70,7 +70,7 @@ class UpdateListingCommand:
             if extra_fields is not None:
                 listing.extra_fields = extra_fields or None
                 # brand / model_name güncelle
-                listing.brand = extra_fields.get("marka") or extra_fields.get("brand")
+                listing.brand = extra_fields.get("brand")
                 listing.model_name = extra_fields.get("model") or extra_fields.get("model_name")
 
         logger.info("[UpdateListingCommand] Başarılı | listing_id=%s", listing_id)

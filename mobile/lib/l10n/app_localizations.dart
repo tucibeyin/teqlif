@@ -8376,59 +8376,59 @@ abstract class AppLocalizations {
   /// **'Hesabına {amount} TUCi hediye yükledik, hemen canlı yayınlara göz at ve harca!'**
   String notifChurnBodyBuyer(int amount);
 
-  /// No description provided for @cat_elektronik.
+  /// No description provided for @cat_electronics.
   ///
   /// In tr, this message translates to:
   /// **'Elektronik'**
-  String get cat_elektronik;
+  String get cat_electronics;
 
-  /// No description provided for @cat_giyim.
+  /// No description provided for @cat_fashion.
   ///
   /// In tr, this message translates to:
   /// **'Giyim & Moda'**
-  String get cat_giyim;
+  String get cat_fashion;
 
-  /// No description provided for @cat_ev.
+  /// No description provided for @cat_home.
   ///
   /// In tr, this message translates to:
   /// **'Ev & Yaşam'**
-  String get cat_ev;
+  String get cat_home;
 
-  /// No description provided for @cat_vasita.
+  /// No description provided for @cat_vehicles.
   ///
   /// In tr, this message translates to:
   /// **'Vasıta'**
-  String get cat_vasita;
+  String get cat_vehicles;
 
-  /// No description provided for @cat_spor.
+  /// No description provided for @cat_sports.
   ///
   /// In tr, this message translates to:
   /// **'Spor & Hobi'**
-  String get cat_spor;
+  String get cat_sports;
 
-  /// No description provided for @cat_kitap.
+  /// No description provided for @cat_books.
   ///
   /// In tr, this message translates to:
   /// **'Kitap & Kültür'**
-  String get cat_kitap;
+  String get cat_books;
 
-  /// No description provided for @cat_emlak.
+  /// No description provided for @cat_real_estate.
   ///
   /// In tr, this message translates to:
   /// **'Emlak'**
-  String get cat_emlak;
+  String get cat_real_estate;
 
-  /// No description provided for @cat_diger.
+  /// No description provided for @cat_other.
   ///
   /// In tr, this message translates to:
   /// **'Diğer'**
-  String get cat_diger;
+  String get cat_other;
 
-  /// No description provided for @cat_sohbet.
+  /// No description provided for @cat_chat.
   ///
   /// In tr, this message translates to:
   /// **'Sohbet'**
-  String get cat_sohbet;
+  String get cat_chat;
 
   /// No description provided for @day0.
   ///
@@ -10104,11 +10104,11 @@ abstract class AppLocalizations {
   /// **'Lütfen başlık, il ve ürün durumu alanlarını doldurun.'**
   String get createNeedAllFieldsNew;
 
-  /// No description provided for @extraField_marka.
+  /// No description provided for @extraField_brand.
   ///
   /// In tr, this message translates to:
   /// **'Marka'**
-  String get extraField_marka;
+  String get extraField_brand;
 
   /// No description provided for @extraField_model.
   ///
@@ -10116,71 +10116,71 @@ abstract class AppLocalizations {
   /// **'Model'**
   String get extraField_model;
 
-  /// No description provided for @extraField_yil.
+  /// No description provided for @extraField_year.
   ///
   /// In tr, this message translates to:
   /// **'Yıl'**
-  String get extraField_yil;
+  String get extraField_year;
 
-  /// No description provided for @extraField_km.
+  /// No description provided for @extraField_mileage.
   ///
   /// In tr, this message translates to:
   /// **'Kilometre'**
-  String get extraField_km;
+  String get extraField_mileage;
 
-  /// No description provided for @extraField_renk.
+  /// No description provided for @extraField_color.
   ///
   /// In tr, this message translates to:
   /// **'Renk'**
-  String get extraField_renk;
+  String get extraField_color;
 
-  /// No description provided for @extraField_yakit.
+  /// No description provided for @extraField_fuel_type.
   ///
   /// In tr, this message translates to:
   /// **'Yakıt Tipi'**
-  String get extraField_yakit;
+  String get extraField_fuel_type;
 
-  /// No description provided for @extraField_vites.
+  /// No description provided for @extraField_transmission.
   ///
   /// In tr, this message translates to:
   /// **'Vites'**
-  String get extraField_vites;
+  String get extraField_transmission;
 
-  /// No description provided for @extraField_kasa_tipi.
+  /// No description provided for @extraField_body_type.
   ///
   /// In tr, this message translates to:
   /// **'Kasa Tipi'**
-  String get extraField_kasa_tipi;
+  String get extraField_body_type;
 
-  /// No description provided for @extraField_hasar.
+  /// No description provided for @extraField_damage_status.
   ///
   /// In tr, this message translates to:
   /// **'Hasar Durumu'**
-  String get extraField_hasar;
+  String get extraField_damage_status;
 
-  /// No description provided for @extraField_tip.
+  /// No description provided for @extraField_type.
   ///
   /// In tr, this message translates to:
   /// **'Tip'**
-  String get extraField_tip;
+  String get extraField_type;
 
-  /// No description provided for @extraField_motor_cc.
+  /// No description provided for @extraField_engine_cc.
   ///
   /// In tr, this message translates to:
   /// **'Motor Hacmi'**
-  String get extraField_motor_cc;
+  String get extraField_engine_cc;
 
-  /// No description provided for @extraField_menzil.
+  /// No description provided for @extraField_range.
   ///
   /// In tr, this message translates to:
   /// **'Menzil'**
-  String get extraField_menzil;
+  String get extraField_range;
 
-  /// No description provided for @extraField_depolama.
+  /// No description provided for @extraField_storage.
   ///
   /// In tr, this message translates to:
   /// **'Depolama'**
-  String get extraField_depolama;
+  String get extraField_storage;
 
   /// No description provided for @extraField_ram.
   ///
@@ -10188,203 +10188,203 @@ abstract class AppLocalizations {
   /// **'RAM'**
   String get extraField_ram;
 
-  /// No description provided for @extraField_islemci.
+  /// No description provided for @extraField_processor.
   ///
   /// In tr, this message translates to:
   /// **'İşlemci'**
-  String get extraField_islemci;
+  String get extraField_processor;
 
-  /// No description provided for @extraField_ekran_boyutu.
+  /// No description provided for @extraField_screen_size.
   ///
   /// In tr, this message translates to:
   /// **'Ekran Boyutu'**
-  String get extraField_ekran_boyutu;
+  String get extraField_screen_size;
 
-  /// No description provided for @extraField_oda_sayisi.
+  /// No description provided for @extraField_room_count.
   ///
   /// In tr, this message translates to:
   /// **'Oda Sayısı'**
-  String get extraField_oda_sayisi;
+  String get extraField_room_count;
 
-  /// No description provided for @extraField_brut_m2.
+  /// No description provided for @extraField_gross_sqm.
   ///
   /// In tr, this message translates to:
   /// **'Brüt m²'**
-  String get extraField_brut_m2;
+  String get extraField_gross_sqm;
 
-  /// No description provided for @extraField_net_m2.
+  /// No description provided for @extraField_net_sqm.
   ///
   /// In tr, this message translates to:
   /// **'Net m²'**
-  String get extraField_net_m2;
+  String get extraField_net_sqm;
 
-  /// No description provided for @extraField_arsa_m2.
+  /// No description provided for @extraField_land_sqm.
   ///
   /// In tr, this message translates to:
   /// **'Arsa m²'**
-  String get extraField_arsa_m2;
+  String get extraField_land_sqm;
 
-  /// No description provided for @extraField_m2.
+  /// No description provided for @extraField_sqm.
   ///
   /// In tr, this message translates to:
   /// **'Alan (m²)'**
-  String get extraField_m2;
+  String get extraField_sqm;
 
-  /// No description provided for @extraField_bina_yasi.
+  /// No description provided for @extraField_building_age.
   ///
   /// In tr, this message translates to:
   /// **'Bina Yaşı'**
-  String get extraField_bina_yasi;
+  String get extraField_building_age;
 
-  /// No description provided for @extraField_kat.
+  /// No description provided for @extraField_floor.
   ///
   /// In tr, this message translates to:
   /// **'Bulunduğu Kat'**
-  String get extraField_kat;
+  String get extraField_floor;
 
-  /// No description provided for @extraField_kat_sayisi.
+  /// No description provided for @extraField_floor_count.
   ///
   /// In tr, this message translates to:
   /// **'Kat Sayısı'**
-  String get extraField_kat_sayisi;
+  String get extraField_floor_count;
 
-  /// No description provided for @extraField_daire_sayisi.
+  /// No description provided for @extraField_unit_count.
   ///
   /// In tr, this message translates to:
   /// **'Daire Sayısı'**
-  String get extraField_daire_sayisi;
+  String get extraField_unit_count;
 
-  /// No description provided for @extraField_isitma.
+  /// No description provided for @extraField_heating.
   ///
   /// In tr, this message translates to:
   /// **'Isınma'**
-  String get extraField_isitma;
+  String get extraField_heating;
 
-  /// No description provided for @extraField_esya_durumu.
+  /// No description provided for @extraField_furnishing.
   ///
   /// In tr, this message translates to:
   /// **'Eşya Durumu'**
-  String get extraField_esya_durumu;
+  String get extraField_furnishing;
 
-  /// No description provided for @extraField_asansor.
+  /// No description provided for @extraField_elevator.
   ///
   /// In tr, this message translates to:
   /// **'Asansör'**
-  String get extraField_asansor;
+  String get extraField_elevator;
 
-  /// No description provided for @extraField_otopark.
+  /// No description provided for @extraField_parking.
   ///
   /// In tr, this message translates to:
   /// **'Otopark'**
-  String get extraField_otopark;
+  String get extraField_parking;
 
-  /// No description provided for @extraField_tapu_durumu.
+  /// No description provided for @extraField_title_deed.
   ///
   /// In tr, this message translates to:
   /// **'Tapu Durumu'**
-  String get extraField_tapu_durumu;
+  String get extraField_title_deed;
 
-  /// No description provided for @extraField_kullanim_durumu.
+  /// No description provided for @extraField_land_use.
   ///
   /// In tr, this message translates to:
   /// **'Kullanım Durumu'**
-  String get extraField_kullanim_durumu;
+  String get extraField_land_use;
 
-  /// No description provided for @extraField_beden.
+  /// No description provided for @extraField_size.
   ///
   /// In tr, this message translates to:
   /// **'Beden'**
-  String get extraField_beden;
+  String get extraField_size;
 
-  /// No description provided for @extraField_numara.
+  /// No description provided for @extraField_shoe_size.
   ///
   /// In tr, this message translates to:
   /// **'Numara'**
-  String get extraField_numara;
+  String get extraField_shoe_size;
 
-  /// No description provided for @extraField_cinsiyet.
+  /// No description provided for @extraField_gender.
   ///
   /// In tr, this message translates to:
   /// **'Cinsiyet'**
-  String get extraField_cinsiyet;
+  String get extraField_gender;
 
-  /// No description provided for @extraField_malzeme.
+  /// No description provided for @extraField_material.
   ///
   /// In tr, this message translates to:
   /// **'Malzeme'**
-  String get extraField_malzeme;
+  String get extraField_material;
 
-  /// No description provided for @extraField_altin_ayar.
+  /// No description provided for @extraField_gold_carat.
   ///
   /// In tr, this message translates to:
   /// **'Altın Ayarı'**
-  String get extraField_altin_ayar;
+  String get extraField_gold_carat;
 
-  /// No description provided for @extraField_gumus_ayar.
+  /// No description provided for @extraField_silver_purity.
   ///
   /// In tr, this message translates to:
   /// **'Gümüş Ayarı'**
-  String get extraField_gumus_ayar;
+  String get extraField_silver_purity;
 
-  /// No description provided for @extraField_jant_boyutu.
+  /// No description provided for @extraField_wheel_size.
   ///
   /// In tr, this message translates to:
   /// **'Jant Boyutu'**
-  String get extraField_jant_boyutu;
+  String get extraField_wheel_size;
 
-  /// No description provided for @extraField_spor_dali.
+  /// No description provided for @extraField_sport_type.
   ///
   /// In tr, this message translates to:
   /// **'Spor Dalı'**
-  String get extraField_spor_dali;
+  String get extraField_sport_type;
 
-  /// No description provided for @extraField_kitap_ismi.
+  /// No description provided for @extraField_book_title.
   ///
   /// In tr, this message translates to:
   /// **'Kitap İsmi'**
-  String get extraField_kitap_ismi;
+  String get extraField_book_title;
 
-  /// No description provided for @extraField_yazar.
+  /// No description provided for @extraField_author.
   ///
   /// In tr, this message translates to:
   /// **'Yazar'**
-  String get extraField_yazar;
+  String get extraField_author;
 
-  /// No description provided for @extraField_yayinevi.
+  /// No description provided for @extraField_publisher.
   ///
   /// In tr, this message translates to:
   /// **'Yayınevi'**
-  String get extraField_yayinevi;
+  String get extraField_publisher;
 
-  /// No description provided for @extraField_uzunluk.
+  /// No description provided for @extraField_length.
   ///
   /// In tr, this message translates to:
   /// **'Uzunluk'**
-  String get extraField_uzunluk;
+  String get extraField_length;
 
-  /// No description provided for @extraField_calisma_saati.
+  /// No description provided for @extraField_working_hours.
   ///
   /// In tr, this message translates to:
   /// **'Çalışma Saati'**
-  String get extraField_calisma_saati;
+  String get extraField_working_hours;
 
-  /// No description provided for @extraField_uyumlu_model.
+  /// No description provided for @extraField_compatible_model.
   ///
   /// In tr, this message translates to:
   /// **'Uyumlu Model'**
-  String get extraField_uyumlu_model;
+  String get extraField_compatible_model;
 
-  /// No description provided for @extraField_parca_tipi.
+  /// No description provided for @extraField_part_type.
   ///
   /// In tr, this message translates to:
   /// **'Parça Tipi'**
-  String get extraField_parca_tipi;
+  String get extraField_part_type;
 
-  /// No description provided for @extraField_irk.
+  /// No description provided for @extraField_breed.
   ///
   /// In tr, this message translates to:
   /// **'Irk / Tür'**
-  String get extraField_irk;
+  String get extraField_breed;
 }
 
 class _AppLocalizationsDelegate

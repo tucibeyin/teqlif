@@ -4598,31 +4598,31 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get cat_elektronik => 'إلكترونيات';
+  String get cat_electronics => 'إلكترونيات';
 
   @override
-  String get cat_giyim => 'ملابس وموضة';
+  String get cat_fashion => 'ملابس وموضة';
 
   @override
-  String get cat_ev => 'المنزل والمعيشة';
+  String get cat_home => 'المنزل والمعيشة';
 
   @override
-  String get cat_vasita => 'مركبات';
+  String get cat_vehicles => 'مركبات';
 
   @override
-  String get cat_spor => 'رياضة وهوايات';
+  String get cat_sports => 'رياضة وهوايات';
 
   @override
-  String get cat_kitap => 'كتب وثقافة';
+  String get cat_books => 'كتب وثقافة';
 
   @override
-  String get cat_emlak => 'عقارات';
+  String get cat_real_estate => 'عقارات';
 
   @override
-  String get cat_diger => 'أخرى';
+  String get cat_other => 'أخرى';
 
   @override
-  String get cat_sohbet => 'محادثة';
+  String get cat_chat => 'محادثة';
 
   @override
   String get day0 => 'الأحد';
@@ -5584,143 +5584,143 @@ class AppLocalizationsAr extends AppLocalizations {
       'يرجى ملء حقول العنوان والمحافظة والحالة.';
 
   @override
-  String get extraField_marka => 'العلامة التجارية';
+  String get extraField_brand => 'العلامة التجارية';
 
   @override
   String get extraField_model => 'الموديل';
 
   @override
-  String get extraField_yil => 'السنة';
+  String get extraField_year => 'السنة';
 
   @override
-  String get extraField_km => 'المسافة المقطوعة';
+  String get extraField_mileage => 'المسافة المقطوعة';
 
   @override
-  String get extraField_renk => 'اللون';
+  String get extraField_color => 'اللون';
 
   @override
-  String get extraField_yakit => 'نوع الوقود';
+  String get extraField_fuel_type => 'نوع الوقود';
 
   @override
-  String get extraField_vites => 'ناقل الحركة';
+  String get extraField_transmission => 'ناقل الحركة';
 
   @override
-  String get extraField_kasa_tipi => 'نوع الهيكل';
+  String get extraField_body_type => 'نوع الهيكل';
 
   @override
-  String get extraField_hasar => 'حالة التلف';
+  String get extraField_damage_status => 'حالة التلف';
 
   @override
-  String get extraField_tip => 'النوع';
+  String get extraField_type => 'النوع';
 
   @override
-  String get extraField_motor_cc => 'حجم المحرك';
+  String get extraField_engine_cc => 'حجم المحرك';
 
   @override
-  String get extraField_menzil => 'المدى';
+  String get extraField_range => 'المدى';
 
   @override
-  String get extraField_depolama => 'التخزين';
+  String get extraField_storage => 'التخزين';
 
   @override
   String get extraField_ram => 'الذاكرة العشوائية';
 
   @override
-  String get extraField_islemci => 'المعالج';
+  String get extraField_processor => 'المعالج';
 
   @override
-  String get extraField_ekran_boyutu => 'حجم الشاشة';
+  String get extraField_screen_size => 'حجم الشاشة';
 
   @override
-  String get extraField_oda_sayisi => 'عدد الغرف';
+  String get extraField_room_count => 'عدد الغرف';
 
   @override
-  String get extraField_brut_m2 => 'المساحة الإجمالية م²';
+  String get extraField_gross_sqm => 'المساحة الإجمالية م²';
 
   @override
-  String get extraField_net_m2 => 'المساحة الصافية م²';
+  String get extraField_net_sqm => 'المساحة الصافية م²';
 
   @override
-  String get extraField_arsa_m2 => 'مساحة الأرض م²';
+  String get extraField_land_sqm => 'مساحة الأرض م²';
 
   @override
-  String get extraField_m2 => 'المساحة (م²)';
+  String get extraField_sqm => 'المساحة (م²)';
 
   @override
-  String get extraField_bina_yasi => 'عمر المبنى';
+  String get extraField_building_age => 'عمر المبنى';
 
   @override
-  String get extraField_kat => 'الطابق';
+  String get extraField_floor => 'الطابق';
 
   @override
-  String get extraField_kat_sayisi => 'عدد الطوابق';
+  String get extraField_floor_count => 'عدد الطوابق';
 
   @override
-  String get extraField_daire_sayisi => 'عدد الشقق';
+  String get extraField_unit_count => 'عدد الشقق';
 
   @override
-  String get extraField_isitma => 'نظام التدفئة';
+  String get extraField_heating => 'نظام التدفئة';
 
   @override
-  String get extraField_esya_durumu => 'حالة الأثاث';
+  String get extraField_furnishing => 'حالة الأثاث';
 
   @override
-  String get extraField_asansor => 'مصعد';
+  String get extraField_elevator => 'مصعد';
 
   @override
-  String get extraField_otopark => 'موقف سيارات';
+  String get extraField_parking => 'موقف سيارات';
 
   @override
-  String get extraField_tapu_durumu => 'سند الملكية';
+  String get extraField_title_deed => 'سند الملكية';
 
   @override
-  String get extraField_kullanim_durumu => 'حالة الاستخدام';
+  String get extraField_land_use => 'حالة الاستخدام';
 
   @override
-  String get extraField_beden => 'المقاس';
+  String get extraField_size => 'المقاس';
 
   @override
-  String get extraField_numara => 'مقاس الحذاء';
+  String get extraField_shoe_size => 'مقاس الحذاء';
 
   @override
-  String get extraField_cinsiyet => 'الجنس';
+  String get extraField_gender => 'الجنس';
 
   @override
-  String get extraField_malzeme => 'المادة';
+  String get extraField_material => 'المادة';
 
   @override
-  String get extraField_altin_ayar => 'عيار الذهب';
+  String get extraField_gold_carat => 'عيار الذهب';
 
   @override
-  String get extraField_gumus_ayar => 'درجة الفضة';
+  String get extraField_silver_purity => 'درجة الفضة';
 
   @override
-  String get extraField_jant_boyutu => 'حجم الجنط';
+  String get extraField_wheel_size => 'حجم الجنط';
 
   @override
-  String get extraField_spor_dali => 'الرياضة';
+  String get extraField_sport_type => 'الرياضة';
 
   @override
-  String get extraField_kitap_ismi => 'عنوان الكتاب';
+  String get extraField_book_title => 'عنوان الكتاب';
 
   @override
-  String get extraField_yazar => 'المؤلف';
+  String get extraField_author => 'المؤلف';
 
   @override
-  String get extraField_yayinevi => 'دار النشر';
+  String get extraField_publisher => 'دار النشر';
 
   @override
-  String get extraField_uzunluk => 'الطول';
+  String get extraField_length => 'الطول';
 
   @override
-  String get extraField_calisma_saati => 'ساعات العمل';
+  String get extraField_working_hours => 'ساعات العمل';
 
   @override
-  String get extraField_uyumlu_model => 'الموديل المتوافق';
+  String get extraField_compatible_model => 'الموديل المتوافق';
 
   @override
-  String get extraField_parca_tipi => 'نوع القطعة';
+  String get extraField_part_type => 'نوع القطعة';
 
   @override
-  String get extraField_irk => 'السلالة / النوع';
+  String get extraField_breed => 'السلالة / النوع';
 }

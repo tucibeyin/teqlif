@@ -29,29 +29,29 @@ class LiveListScreen extends ConsumerStatefulWidget {
 }
 
 const _kCatEmoji = {
-  'sohbet': '🗣',
-  'elektronik': '📱',
-  'giyim': '👗',
-  'ev': '🏠',
-  'vasita': '🚗',
-  'spor': '⚽',
-  'kitap': '📚',
-  'emlak': '🏘️',
-  'diger': '📦',
+  'chat': '🗣',
+  'electronics': '📱',
+  'fashion': '👗',
+  'home': '🏠',
+  'vehicles': '🚗',
+  'sports': '⚽',
+  'books': '📚',
+  'real_estate': '🏘️',
+  'other': '📦',
 };
 
 String _catLabel(String key, AppLocalizations l) {
   final name = switch (key) {
-    'sohbet'     => l.cat_sohbet,
-    'elektronik' => l.cat_elektronik,
-    'giyim'      => l.cat_giyim,
-    'ev'         => l.cat_ev,
-    'vasita'     => l.cat_vasita,
-    'spor'       => l.cat_spor,
-    'kitap'      => l.cat_kitap,
-    'emlak'      => l.cat_emlak,
-    'diger'      => l.cat_diger,
-    _            => key,
+    'chat'        => l.cat_chat,
+    'electronics' => l.cat_electronics,
+    'fashion'     => l.cat_fashion,
+    'home'        => l.cat_home,
+    'vehicles'    => l.cat_vehicles,
+    'sports'      => l.cat_sports,
+    'books'       => l.cat_books,
+    'real_estate' => l.cat_real_estate,
+    'other'       => l.cat_other,
+    _             => key,
   };
   final emoji = _kCatEmoji[key];
   return emoji != null ? '$emoji $name' : name;

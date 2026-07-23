@@ -443,14 +443,14 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
 
 
 _PRICE_CAT_LABELS: dict[str, str] = {
-    "elektronik": "Elektronik ve Teknoloji",
-    "vasita": "Araç ve Taşıt",
-    "emlak": "Emlak ve Konut",
-    "giyim": "Giyim ve Moda",
-    "spor": "Spor ve Outdoor",
-    "kitap": "Kitap ve Eğitim",
-    "ev": "Ev ve Yaşam",
-    "diger": "Diğer",
+    "electronics": "Elektronik ve Teknoloji",
+    "vehicles": "Araç ve Taşıt",
+    "real_estate": "Emlak ve Konut",
+    "fashion": "Giyim ve Moda",
+    "sports": "Spor ve Outdoor",
+    "books": "Kitap ve Eğitim",
+    "home": "Ev ve Yaşam",
+    "other": "Diğer",
 }
 
 
@@ -784,15 +784,15 @@ async def price_estimate(
 # ── Sektörel Pazar Trendleri ──────────────────────────────────────────────────
 
 _CATEGORY_LABELS: dict[str, str] = {
-    "elektronik": "Elektronik",
-    "giyim": "Giyim & Moda",
-    "ev": "Ev & Yaşam",
-    "vasita": "Vasıta",
-    "spor": "Spor & Hobi",
-    "kitap": "Kitap & Kültür",
-    "emlak": "Emlak",
-    "diger": "Diğer",
-    "sohbet": "Sohbet",
+    "electronics": "Elektronik",
+    "fashion": "Giyim & Moda",
+    "home": "Ev & Yaşam",
+    "vehicles": "Vasıta",
+    "sports": "Spor & Hobi",
+    "books": "Kitap & Kültür",
+    "real_estate": "Emlak",
+    "other": "Diğer",
+    "chat": "Sohbet",
 }
 
 
@@ -887,7 +887,7 @@ async def market_trends(
         """)
         cat_result = await db.execute(cat_q)
         for row in cat_result.fetchall():
-            key = row.category or "diger"
+            key = row.category or "other"
             trending_categories.append({
                 "key": key,
                 "label": t.get(f"cat_{key}", _CATEGORY_LABELS.get(key, key.capitalize())),
@@ -937,9 +937,9 @@ async def market_trends(
 
 
 _CAT_LABELS: dict[str, str] = {
-    "elektronik": "📱 Elektronik", "giyim": "👗 Giyim", "ev": "🏠 Ev & Yaşam",
-    "spor": "⚽ Spor", "kitap": "📚 Kitap", "oyun": "🎮 Oyun", "diger": "📦 Diğer",
-    "sohbet": "🗣 Sohbet",
+    "electronics": "📱 Elektronik", "fashion": "👗 Giyim", "home": "🏠 Ev & Yaşam",
+    "sports": "⚽ Spor", "books": "📚 Kitap", "oyun": "🎮 Oyun", "other": "📦 Diğer",
+    "chat": "🗣 Sohbet",
 }
 
 
@@ -1142,7 +1142,7 @@ async def pro_insights(
                     "listing_id": r.id,
                     "title": r.title,
                     "price": r.price,
-                    "category": _t.get(f"cat_{r.category or 'diger'}", _CAT_LABELS.get(r.category or "diger", r.category or "Diğer")),
+                    "category": _t.get(f"cat_{r.category or 'other'}", _CAT_LABELS.get(r.category or "other", r.category or "Diğer")),
                     "views_30d": view_map.get(r.id, 0),
                     "hesitations_30d": hes_map.get(r.id, 0),
                     "heat_score": round(_heat(r.id), 2),
@@ -1505,14 +1505,14 @@ async def conversion_breakdown(
     t = _get_t(get_locale(current_user, request))
 
     _CAT_LABELS_MAP = {
-        "elektronik": "Elektronik", "giyim": "Giyim", "ev": "Ev & Yaşam",
-        "spor": "Spor", "kitap": "Kitap", "oyun": "Oyun",
-        "diger": "Diğer", "sohbet": "Sohbet",
+        "electronics": "Elektronik", "fashion": "Giyim", "home": "Ev & Yaşam",
+        "sports": "Spor", "books": "Kitap", "oyun": "Oyun",
+        "other": "Diğer", "chat": "Sohbet",
     }
 
     result = await db.execute(sql_text("""
         SELECT
-            COALESCE(l.category, 'diger')                                              AS category,
+            COALESCE(l.category, 'other')                                              AS category,
             COUNT(a.id)                                                                AS total_auctions,
             COUNT(a.winner_id)                                                         AS won_auctions,
             COALESCE(AVG(a.final_price) FILTER (WHERE a.winner_id IS NOT NULL), 0)    AS avg_final_price,
