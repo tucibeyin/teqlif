@@ -497,6 +497,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errorListingsLoad => 'İlanlar yüklenemedi';
 
   @override
+  String get errorOperationFailed => 'İşlem gerçekleştirilemedi.';
+
+  @override
+  String errorCoHostDuringCall(String hostUsername) {
+    return '@$hostUsername sizi sahneye davet etti, ancak görüşmede olduğunuz için reddedildi.';
+  }
+
+  @override
+  String get errorCallHistoryLoad =>
+      'Çağrı geçmişi yüklenemedi. Lütfen tekrar deneyin.';
+
+  @override
   String get errorPhotoUpload => 'Fotoğraf yüklenemedi. Tekrar deneyin.';
 
   @override
@@ -5550,4 +5562,197 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get apiErrorAiServiceTimeout =>
       'Yapay zeka servisi zaman aşımına uğradı.';
+
+  @override
+  String get conditionRefurbished => 'Yenilenmiş';
+
+  @override
+  String get fieldSubcategory => 'Alt Kategori';
+
+  @override
+  String get fieldSubcategoryHint => 'Alt kategori seçiniz';
+
+  @override
+  String get fieldProvince => 'İl';
+
+  @override
+  String get fieldProvinceHint => 'İl seçiniz';
+
+  @override
+  String get fieldDistrict => 'İlçe';
+
+  @override
+  String get fieldDistrictHint => 'İlçe giriniz';
+
+  @override
+  String get sectionListingDetails => 'İlan Detayları';
+
+  @override
+  String get extraFieldOptional => '(İsteğe bağlı)';
+
+  @override
+  String get validRequiredSubcategory => 'Lütfen alt kategori seçiniz';
+
+  @override
+  String get validRequiredProvince => 'Lütfen il seçiniz';
+
+  @override
+  String get validRequiredDistrict => 'Lütfen ilçe giriniz';
+
+  @override
+  String get validInvalidPrice => 'Lütfen geçerli bir fiyat giriniz';
+
+  @override
+  String get errProvinceRequired => 'İl seçimi zorunludur.';
+
+  @override
+  String get errInvalidCondition => 'Geçersiz ürün durumu seçildi.';
+
+  @override
+  String get errInvalidPrice => 'Lütfen geçerli bir fiyat giriniz.';
+
+  @override
+  String get createNeedAllFieldsNew =>
+      'Lütfen başlık, il ve ürün durumu alanlarını doldurun.';
+
+  @override
+  String get extraField_marka => 'Marka';
+
+  @override
+  String get extraField_model => 'Model';
+
+  @override
+  String get extraField_yil => 'Yıl';
+
+  @override
+  String get extraField_km => 'Kilometre';
+
+  @override
+  String get extraField_renk => 'Renk';
+
+  @override
+  String get extraField_yakit => 'Yakıt Tipi';
+
+  @override
+  String get extraField_vites => 'Vites';
+
+  @override
+  String get extraField_kasa_tipi => 'Kasa Tipi';
+
+  @override
+  String get extraField_hasar => 'Hasar Durumu';
+
+  @override
+  String get extraField_tip => 'Tip';
+
+  @override
+  String get extraField_motor_cc => 'Motor Hacmi';
+
+  @override
+  String get extraField_menzil => 'Menzil';
+
+  @override
+  String get extraField_depolama => 'Depolama';
+
+  @override
+  String get extraField_ram => 'RAM';
+
+  @override
+  String get extraField_islemci => 'İşlemci';
+
+  @override
+  String get extraField_ekran_boyutu => 'Ekran Boyutu';
+
+  @override
+  String get extraField_oda_sayisi => 'Oda Sayısı';
+
+  @override
+  String get extraField_brut_m2 => 'Brüt m²';
+
+  @override
+  String get extraField_net_m2 => 'Net m²';
+
+  @override
+  String get extraField_arsa_m2 => 'Arsa m²';
+
+  @override
+  String get extraField_m2 => 'Alan (m²)';
+
+  @override
+  String get extraField_bina_yasi => 'Bina Yaşı';
+
+  @override
+  String get extraField_kat => 'Bulunduğu Kat';
+
+  @override
+  String get extraField_kat_sayisi => 'Kat Sayısı';
+
+  @override
+  String get extraField_daire_sayisi => 'Daire Sayısı';
+
+  @override
+  String get extraField_isitma => 'Isınma';
+
+  @override
+  String get extraField_esya_durumu => 'Eşya Durumu';
+
+  @override
+  String get extraField_asansor => 'Asansör';
+
+  @override
+  String get extraField_otopark => 'Otopark';
+
+  @override
+  String get extraField_tapu_durumu => 'Tapu Durumu';
+
+  @override
+  String get extraField_kullanim_durumu => 'Kullanım Durumu';
+
+  @override
+  String get extraField_beden => 'Beden';
+
+  @override
+  String get extraField_numara => 'Numara';
+
+  @override
+  String get extraField_cinsiyet => 'Cinsiyet';
+
+  @override
+  String get extraField_malzeme => 'Malzeme';
+
+  @override
+  String get extraField_altin_ayar => 'Altın Ayarı';
+
+  @override
+  String get extraField_gumus_ayar => 'Gümüş Ayarı';
+
+  @override
+  String get extraField_jant_boyutu => 'Jant Boyutu';
+
+  @override
+  String get extraField_spor_dali => 'Spor Dalı';
+
+  @override
+  String get extraField_kitap_ismi => 'Kitap İsmi';
+
+  @override
+  String get extraField_yazar => 'Yazar';
+
+  @override
+  String get extraField_yayinevi => 'Yayınevi';
+
+  @override
+  String get extraField_uzunluk => 'Uzunluk';
+
+  @override
+  String get extraField_calisma_saati => 'Çalışma Saati';
+
+  @override
+  String get extraField_uyumlu_model => 'Uyumlu Model';
+
+  @override
+  String get extraField_parca_tipi => 'Parça Tipi';
+
+  @override
+  String get extraField_irk => 'Irk / Tür';
 }

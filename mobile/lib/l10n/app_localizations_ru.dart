@@ -502,6 +502,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorListingsLoad => 'Не удалось загрузить объявления';
 
   @override
+  String get errorOperationFailed => 'Операция не выполнена.';
+
+  @override
+  String errorCoHostDuringCall(String hostUsername) {
+    return '@$hostUsername пригласил вас на сцену, но приглашение отклонено — вы в звонке.';
+  }
+
+  @override
+  String get errorCallHistoryLoad =>
+      'Не удалось загрузить историю звонков. Попробуйте ещё раз.';
+
+  @override
   String get errorPhotoUpload =>
       'Не удалось загрузить фотографию. Пожалуйста, попробуйте еще раз.';
 
@@ -5598,4 +5610,197 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get apiErrorAiServiceTimeout => 'Время ожидания службы ИИ истекло.';
+
+  @override
+  String get conditionRefurbished => 'Восстановленный';
+
+  @override
+  String get fieldSubcategory => 'Подкатегория';
+
+  @override
+  String get fieldSubcategoryHint => 'Выберите подкатегорию';
+
+  @override
+  String get fieldProvince => 'Провинция';
+
+  @override
+  String get fieldProvinceHint => 'Выберите провинцию';
+
+  @override
+  String get fieldDistrict => 'Район';
+
+  @override
+  String get fieldDistrictHint => 'Введите район';
+
+  @override
+  String get sectionListingDetails => 'Детали объявления';
+
+  @override
+  String get extraFieldOptional => '(Необязательно)';
+
+  @override
+  String get validRequiredSubcategory => 'Пожалуйста, выберите подкатегорию';
+
+  @override
+  String get validRequiredProvince => 'Пожалуйста, выберите провинцию';
+
+  @override
+  String get validRequiredDistrict => 'Пожалуйста, введите район';
+
+  @override
+  String get validInvalidPrice => 'Пожалуйста, введите корректную цену';
+
+  @override
+  String get errProvinceRequired => 'Провинция обязательна.';
+
+  @override
+  String get errInvalidCondition => 'Недопустимое состояние товара.';
+
+  @override
+  String get errInvalidPrice => 'Пожалуйста, введите корректную цену.';
+
+  @override
+  String get createNeedAllFieldsNew =>
+      'Пожалуйста, заполните поля заголовка, провинции и состояния.';
+
+  @override
+  String get extraField_marka => 'Марка';
+
+  @override
+  String get extraField_model => 'Модель';
+
+  @override
+  String get extraField_yil => 'Год';
+
+  @override
+  String get extraField_km => 'Пробег';
+
+  @override
+  String get extraField_renk => 'Цвет';
+
+  @override
+  String get extraField_yakit => 'Тип топлива';
+
+  @override
+  String get extraField_vites => 'Трансмиссия';
+
+  @override
+  String get extraField_kasa_tipi => 'Тип кузова';
+
+  @override
+  String get extraField_hasar => 'Состояние кузова';
+
+  @override
+  String get extraField_tip => 'Тип';
+
+  @override
+  String get extraField_motor_cc => 'Объём двигателя';
+
+  @override
+  String get extraField_menzil => 'Запас хода';
+
+  @override
+  String get extraField_depolama => 'Память';
+
+  @override
+  String get extraField_ram => 'ОЗУ';
+
+  @override
+  String get extraField_islemci => 'Процессор';
+
+  @override
+  String get extraField_ekran_boyutu => 'Размер экрана';
+
+  @override
+  String get extraField_oda_sayisi => 'Количество комнат';
+
+  @override
+  String get extraField_brut_m2 => 'Общая площадь м²';
+
+  @override
+  String get extraField_net_m2 => 'Жилая площадь м²';
+
+  @override
+  String get extraField_arsa_m2 => 'Площадь участка м²';
+
+  @override
+  String get extraField_m2 => 'Площадь (м²)';
+
+  @override
+  String get extraField_bina_yasi => 'Возраст здания';
+
+  @override
+  String get extraField_kat => 'Этаж';
+
+  @override
+  String get extraField_kat_sayisi => 'Этажность';
+
+  @override
+  String get extraField_daire_sayisi => 'Количество квартир';
+
+  @override
+  String get extraField_isitma => 'Отопление';
+
+  @override
+  String get extraField_esya_durumu => 'Меблировка';
+
+  @override
+  String get extraField_asansor => 'Лифт';
+
+  @override
+  String get extraField_otopark => 'Парковка';
+
+  @override
+  String get extraField_tapu_durumu => 'Документ на право собственности';
+
+  @override
+  String get extraField_kullanim_durumu => 'Статус использования';
+
+  @override
+  String get extraField_beden => 'Размер';
+
+  @override
+  String get extraField_numara => 'Размер обуви';
+
+  @override
+  String get extraField_cinsiyet => 'Пол';
+
+  @override
+  String get extraField_malzeme => 'Материал';
+
+  @override
+  String get extraField_altin_ayar => 'Проба золота';
+
+  @override
+  String get extraField_gumus_ayar => 'Проба серебра';
+
+  @override
+  String get extraField_jant_boyutu => 'Размер обода';
+
+  @override
+  String get extraField_spor_dali => 'Вид спорта';
+
+  @override
+  String get extraField_kitap_ismi => 'Название книги';
+
+  @override
+  String get extraField_yazar => 'Автор';
+
+  @override
+  String get extraField_yayinevi => 'Издательство';
+
+  @override
+  String get extraField_uzunluk => 'Длина';
+
+  @override
+  String get extraField_calisma_saati => 'Часы работы';
+
+  @override
+  String get extraField_uyumlu_model => 'Совместимая модель';
+
+  @override
+  String get extraField_parca_tipi => 'Тип детали';
+
+  @override
+  String get extraField_irk => 'Порода / Тип';
 }

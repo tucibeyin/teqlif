@@ -497,6 +497,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorListingsLoad => 'Failed to load listings';
 
   @override
+  String get errorOperationFailed => 'Operation could not be completed.';
+
+  @override
+  String errorCoHostDuringCall(String hostUsername) {
+    return '@$hostUsername invited you to the stage, but it was declined because you\'re in a call.';
+  }
+
+  @override
+  String get errorCallHistoryLoad =>
+      'Call history could not be loaded. Please try again.';
+
+  @override
   String get errorPhotoUpload => 'Failed to upload photo. Please try again.';
 
   @override
@@ -5548,4 +5560,197 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apiErrorAiServiceTimeout => 'AI service timed out.';
+
+  @override
+  String get conditionRefurbished => 'Refurbished';
+
+  @override
+  String get fieldSubcategory => 'Subcategory';
+
+  @override
+  String get fieldSubcategoryHint => 'Select subcategory';
+
+  @override
+  String get fieldProvince => 'Province';
+
+  @override
+  String get fieldProvinceHint => 'Select province';
+
+  @override
+  String get fieldDistrict => 'District';
+
+  @override
+  String get fieldDistrictHint => 'Enter district';
+
+  @override
+  String get sectionListingDetails => 'Listing Details';
+
+  @override
+  String get extraFieldOptional => '(Optional)';
+
+  @override
+  String get validRequiredSubcategory => 'Please select a subcategory';
+
+  @override
+  String get validRequiredProvince => 'Please select a province';
+
+  @override
+  String get validRequiredDistrict => 'Please enter a district';
+
+  @override
+  String get validInvalidPrice => 'Please enter a valid price';
+
+  @override
+  String get errProvinceRequired => 'Province is required.';
+
+  @override
+  String get errInvalidCondition => 'Invalid item condition selected.';
+
+  @override
+  String get errInvalidPrice => 'Please enter a valid price.';
+
+  @override
+  String get createNeedAllFieldsNew =>
+      'Please fill in title, province and condition fields.';
+
+  @override
+  String get extraField_marka => 'Brand';
+
+  @override
+  String get extraField_model => 'Model';
+
+  @override
+  String get extraField_yil => 'Year';
+
+  @override
+  String get extraField_km => 'Mileage';
+
+  @override
+  String get extraField_renk => 'Color';
+
+  @override
+  String get extraField_yakit => 'Fuel Type';
+
+  @override
+  String get extraField_vites => 'Transmission';
+
+  @override
+  String get extraField_kasa_tipi => 'Body Type';
+
+  @override
+  String get extraField_hasar => 'Damage Status';
+
+  @override
+  String get extraField_tip => 'Type';
+
+  @override
+  String get extraField_motor_cc => 'Engine Size';
+
+  @override
+  String get extraField_menzil => 'Range';
+
+  @override
+  String get extraField_depolama => 'Storage';
+
+  @override
+  String get extraField_ram => 'RAM';
+
+  @override
+  String get extraField_islemci => 'Processor';
+
+  @override
+  String get extraField_ekran_boyutu => 'Screen Size';
+
+  @override
+  String get extraField_oda_sayisi => 'Room Count';
+
+  @override
+  String get extraField_brut_m2 => 'Gross m²';
+
+  @override
+  String get extraField_net_m2 => 'Net m²';
+
+  @override
+  String get extraField_arsa_m2 => 'Land m²';
+
+  @override
+  String get extraField_m2 => 'Area (m²)';
+
+  @override
+  String get extraField_bina_yasi => 'Building Age';
+
+  @override
+  String get extraField_kat => 'Floor';
+
+  @override
+  String get extraField_kat_sayisi => 'Number of Floors';
+
+  @override
+  String get extraField_daire_sayisi => 'Number of Units';
+
+  @override
+  String get extraField_isitma => 'Heating';
+
+  @override
+  String get extraField_esya_durumu => 'Furnishing';
+
+  @override
+  String get extraField_asansor => 'Elevator';
+
+  @override
+  String get extraField_otopark => 'Parking';
+
+  @override
+  String get extraField_tapu_durumu => 'Title Deed';
+
+  @override
+  String get extraField_kullanim_durumu => 'Usage Status';
+
+  @override
+  String get extraField_beden => 'Size';
+
+  @override
+  String get extraField_numara => 'Shoe Size';
+
+  @override
+  String get extraField_cinsiyet => 'Gender';
+
+  @override
+  String get extraField_malzeme => 'Material';
+
+  @override
+  String get extraField_altin_ayar => 'Gold Carat';
+
+  @override
+  String get extraField_gumus_ayar => 'Silver Grade';
+
+  @override
+  String get extraField_jant_boyutu => 'Rim Size';
+
+  @override
+  String get extraField_spor_dali => 'Sport';
+
+  @override
+  String get extraField_kitap_ismi => 'Book Title';
+
+  @override
+  String get extraField_yazar => 'Author';
+
+  @override
+  String get extraField_yayinevi => 'Publisher';
+
+  @override
+  String get extraField_uzunluk => 'Length';
+
+  @override
+  String get extraField_calisma_saati => 'Working Hours';
+
+  @override
+  String get extraField_uyumlu_model => 'Compatible Model';
+
+  @override
+  String get extraField_parca_tipi => 'Part Type';
+
+  @override
+  String get extraField_irk => 'Breed / Type';
 }

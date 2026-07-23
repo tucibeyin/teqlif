@@ -20,6 +20,7 @@ import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/error_helper.dart';
+import '../utils/listing_fields.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
@@ -38,46 +39,99 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _districtCtrl = TextEditingController();
+
+  // Category / subcategory
   String? _selectedCategory;
-  String? _selectedCity;
+  String? _selectedSubcategory;
   List<(String, String)> _categories = [];
-  List<String> _cities = [];
-  bool _submitting = false;
+  List<(String, String)> _subcategories = [];
+
+  // Location
+  String? _selectedProvince;
+  List<String> _provinces = [];
+
+  // Condition
+  String? _selectedCondition;
+
+  // Extra fields: key → value (String for all, since JSONB accepts it; numbers stored as strings and parsed on send)
+  final Map<String, String> _extraValues = {};
+
+  // Controllers for number/text extra fields
+  final Map<String, TextEditingController> _extraCtrlMap = {};
+
+  // AI / Pro
+  bool _isPro = false;
   bool _aiLoading = false;
   bool _aiDescLoading = false;
-  bool _isPro = false;
-  String? _selectedCondition;
   int? _aiCreditsRemaining;
   int? _aiDescCreditsRemaining;
+
+  // Media
   final List<File> _images = [];
   final _picker = ImagePicker();
   File? _video;
   String? _videoUploadUrl;
   bool _videoUploading = false;
 
+  bool _submitting = false;
+
   static const int _maxImages = 10;
   static const int _maxVideoDurationSecs = 15;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
     _titleCtrl.addListener(() => setState(() {}));
     AnalyticsService.trackEvent('listing_create_start', {});
-    SharedPreferences.getInstance().then((prefs) {
-      final locale = prefs.getString('app_locale_language_code') ?? 'tr';
-      CategoryService.getCategories(locale: locale).then((cats) {
-        if (mounted) {
-          setState(() {
-            _categories = cats;
-            if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
-          });
-        }
-      });
-    });
+    _loadCategories();
     CityService.getCities().then((c) {
-      if (mounted) setState(() => _cities = c);
+      if (mounted) setState(() => _provinces = c);
     });
     _loadProStatus();
+  }
+
+  Future<void> _loadCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final locale = prefs.getString('app_locale_language_code') ?? 'tr';
+    final cats = await CategoryService.getCategories(locale: locale);
+    if (!mounted) return;
+    setState(() {
+      _categories = cats;
+      if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
+      _updateSubcategories(cats.first.$1);
+    });
+  }
+
+  void _updateSubcategories(String categoryKey) {
+    final subs = kSubcategories[categoryKey] ?? [];
+    setState(() {
+      _subcategories = subs;
+      _selectedSubcategory = null;
+      _extraValues.clear();
+      _disposeExtraCtrls();
+    });
+  }
+
+  void _updateExtraFields(String subcategoryKey) {
+    _disposeExtraCtrls();
+    _extraValues.clear();
+    final fields = kSubcategoryFields[subcategoryKey] ?? [];
+    for (final f in fields) {
+      if (f.type == ExtraFieldType.text || f.type == ExtraFieldType.number) {
+        _extraCtrlMap[f.key] = TextEditingController();
+      }
+    }
+    setState(() {});
+  }
+
+  void _disposeExtraCtrls() {
+    for (final c in _extraCtrlMap.values) {
+      c.dispose();
+    }
+    _extraCtrlMap.clear();
   }
 
   Future<void> _loadProStatus() async {
@@ -85,10 +139,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (token == null) return;
     try {
       final resp = await http
-          .get(
-            Uri.parse('$kBaseUrl/auth/me'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
+          .get(Uri.parse('$kBaseUrl/auth/me'),
+              headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 5));
       if (!mounted) return;
       if (resp.statusCode == 200) {
@@ -100,21 +152,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           _loadAiDescCredits();
         }
       }
-    } catch (e) {
-      debugPrint('[CreateListing] _loadProStatus failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadAiCredits() async {
-    final credits = await AnalyticsService.getAiPriceCredits();
+    final c = await AnalyticsService.getAiPriceCredits();
     if (!mounted) return;
-    setState(() => _aiCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 20);
+    setState(() => _aiCreditsRemaining = (c?['remaining'] as num?)?.toInt() ?? 20);
   }
 
   Future<void> _loadAiDescCredits() async {
-    final credits = await AnalyticsService.getAiDescCredits();
+    final c = await AnalyticsService.getAiDescCredits();
     if (!mounted) return;
-    setState(() => _aiDescCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 6);
+    setState(() => _aiDescCreditsRemaining = (c?['remaining'] as num?)?.toInt() ?? 6);
   }
 
   @override
@@ -122,75 +172,64 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
+    _districtCtrl.dispose();
+    _disposeExtraCtrls();
     super.dispose();
   }
 
-  Future<void> _fetchAiPriceEstimate() async {
-    final title = _titleCtrl.text.trim();
-    final desc = _descCtrl.text.trim();
-    final l = AppLocalizations.of(context)!;
-    
-    debugPrint('[AI Price Estimate] Checking validation...');
-    debugPrint(' - Title: "$title"');
-    debugPrint(' - Category: $_selectedCategory');
-    debugPrint(' - City: $_selectedCity');
-    debugPrint(' - Condition: $_selectedCondition');
+  // ── AI helpers ─────────────────────────────────────────────────────────────
 
-    if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null) {
-      debugPrint('[AI Price Estimate] Validation Failed.');
-      TeqSnackBar.show(
-        context,
-        message: l.createNeedAllFields,
-        type: TeqSnackBarType.warning,
-      );
+  bool get _aiReady =>
+      _titleCtrl.text.trim().isNotEmpty &&
+      _selectedCategory != null &&
+      _selectedProvince != null &&
+      _selectedCondition != null;
+
+  Future<void> _fetchAiPriceEstimate() async {
+    final l = AppLocalizations.of(context)!;
+    if (!_aiReady) {
+      TeqSnackBar.show(context,
+          message: l.createNeedAllFieldsNew, type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _aiLoading = true);
     try {
       final result = await AnalyticsService.getPriceEstimate(
-        title: title,
-        description: desc,
+        title: _titleCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
         category: _selectedCategory ?? '',
-        city: _selectedCity ?? '',
+        city: _selectedProvince ?? '',
         condition: _selectedCondition ?? '',
       );
       if (!mounted) return;
       if (result == null) {
-        TeqSnackBar.show(
-          context,
-          message: l.aiPriceError,
-          type: TeqSnackBarType.error,
-        );
+        TeqSnackBar.show(context,
+            message: l.aiPriceError, type: TeqSnackBarType.error);
         return;
       }
       final tuciSpent = (result['tuci_spent'] as num?)?.toInt() ?? 0;
       if (tuciSpent > 0) {
-        // TUCi harcandı — badge'i serverdan taze al
         CacheService.clearData('user_wallet_data');
         _loadAiCredits();
-        TeqSnackBar.show(
-          context,
-          message: l.tuciSpent(tuciSpent),
-          type: TeqSnackBarType.success,
-        );
+        TeqSnackBar.show(context,
+            message: l.tuciSpent(tuciSpent), type: TeqSnackBarType.success);
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
         setState(() => _aiCreditsRemaining = _aiCreditsRemaining! - 1);
       }
       _showPriceEstimateSheet(result);
     } on AiInsufficientTuciException catch (e) {
       if (!mounted) return;
-      final l = AppLocalizations.of(context)!;
       String msg = e.detail;
       if (msg == 'INSUFFICIENT_FUNDS_PRO') {
-         msg = l.apiErrorInsufficientFundsPro(5);
+        msg = l.apiErrorInsufficientFundsPro(5);
       } else if (msg == 'INSUFFICIENT_FUNDS_STD') {
-         msg = l.apiErrorInsufficientFundsStd(5);
+        msg = l.apiErrorInsufficientFundsStd(5);
       } else if (msg == 'AI_SERVICE_BUSY') {
-         msg = l.apiErrorAiServiceBusy;
+        msg = l.apiErrorAiServiceBusy;
       } else if (msg == 'AI_SERVICE_TIMEOUT') {
-         msg = l.apiErrorAiServiceTimeout;
+        msg = l.apiErrorAiServiceTimeout;
       } else if (msg == 'VALIDATION_ERROR') {
-         msg = l.createNeedAllFields;
+        msg = l.createNeedAllFieldsNew;
       }
       TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
     } finally {
@@ -199,128 +238,127 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Future<void> _fetchAiDescription() async {
-    final title = _titleCtrl.text.trim();
     final l = AppLocalizations.of(context)!;
-    
-    debugPrint('[AI Description] Checking validation...');
-    debugPrint(' - Title: "$title"');
-    debugPrint(' - Category: $_selectedCategory');
-    debugPrint(' - City: $_selectedCity');
-    debugPrint(' - Condition: $_selectedCondition');
-
-    if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null) {
-      debugPrint('[AI Description] Validation Failed.');
-      TeqSnackBar.show(context, message: l.createNeedAllFields, type: TeqSnackBarType.warning);
+    if (!_aiReady) {
+      TeqSnackBar.show(context,
+          message: l.createNeedAllFieldsNew, type: TeqSnackBarType.warning);
       return;
     }
     setState(() {
       _aiDescLoading = true;
-      _descCtrl.text = ''; // Clear text before stream
+      _descCtrl.text = '';
     });
 
     http.Client? client;
     try {
       final token = await StorageService.getToken();
-      final priceRaw = _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
+      final priceRaw =
+          _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
       final price = double.tryParse(priceRaw);
 
-      debugPrint('[AI Description] Preparing request to backend...');
-      final req = http.Request('POST', Uri.parse('$kBaseUrl/listings/generate-description'));
+      final req = http.Request(
+          'POST', Uri.parse('$kBaseUrl/listings/generate-description'));
       req.headers['Content-Type'] = 'application/json';
       if (token != null) req.headers['Authorization'] = 'Bearer $token';
       req.body = jsonEncode({
-        'title': title,
+        'title': _titleCtrl.text.trim(),
         'category': _selectedCategory,
         'condition': _selectedCondition,
         if (price != null && price > 0) 'price': price,
-        if (_selectedCity != null && _selectedCity!.isNotEmpty) 'location': _selectedCity,
+        if (_selectedProvince != null) 'location': _selectedProvince,
       });
 
-      debugPrint('[AI Description] Sending request (Timeout: 60s)...');
       client = http.Client();
-      final resp = await client.send(req).timeout(const Duration(seconds: 60));
-
+      final resp =
+          await client.send(req).timeout(const Duration(seconds: 60));
       if (!mounted) return;
 
-      debugPrint('[AI Description] Got response. Status code: ${resp.statusCode}');
       if (resp.statusCode == 200) {
-        debugPrint('[AI Description] Stream started, waiting for chunks...');
-        final stream = resp.stream.transform(utf8.decoder).transform(const LineSplitter());
+        final stream = resp.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter());
         await for (final line in stream) {
           if (!mounted) break;
           if (line.startsWith('data: ')) {
             final dataStr = line.substring(6);
-            debugPrint('[AI Description] Received chunk: $dataStr');
             try {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
               if (json.containsKey('error')) {
-                final rawErr = json['error'] as String? ?? '';
-                debugPrint('[AI Description] Error in stream payload: $rawErr');
-                TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+                TeqSnackBar.show(context,
+                    message: l.aiDescError, type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {
-                final textChunk = json['text'] as String;
-                final newText = _descCtrl.text + textChunk;
+                final newText = _descCtrl.text + (json['text'] as String);
                 _descCtrl.value = _descCtrl.value.copyWith(
                   text: newText,
                   selection: TextSelection.collapsed(offset: newText.length),
                   composing: TextRange.empty,
                 );
-                
-                // [CRITICAL FIX]: Eğer Nginx/Cloudflare veya TCP Nagle algoritması birden fazla
-                // chunk'ı aynı anda gönderirse, Dart bunları tek bir Event Loop frame'inde işler.
-                // UI'ın (TextField'ın) ekrana kelimeleri çizebilmesi için rendering thread'e 
-                // nefes alma süresi (yield) vermemiz gerekiyor. Bu sayede daktilo efekti kesinlikle çalışır!
                 await Future.delayed(const Duration(milliseconds: 30));
-              } else if (json.containsKey('done') && json['done'] == true) {
-                debugPrint('[AI Description] Stream FINISHED.');
+              } else if (json['done'] == true) {
                 final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
                 if (tuciSpent > 0) {
                   CacheService.clearData('user_wallet_data');
                   _loadAiDescCredits();
-                  TeqSnackBar.show(context, message: l.tuciSpent(tuciSpent), type: TeqSnackBarType.success);
-                } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
-                  setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
+                  TeqSnackBar.show(context,
+                      message: l.tuciSpent(tuciSpent),
+                      type: TeqSnackBarType.success);
+                } else if (_aiDescCreditsRemaining != null &&
+                    _aiDescCreditsRemaining! > 0) {
+                  setState(
+                      () => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
                 }
               }
-            } catch (jsonErr) {
-               debugPrint('[AI Description] JSON Parse error on chunk: $jsonErr');
-            }
+            } catch (_) {}
           }
         }
-        debugPrint('[AI Description] Stream loop exited.');
       } else {
-        final errBody = await resp.stream.bytesToString();
-        debugPrint('[AI Description] Server returned HTTP ${resp.statusCode}. Body: $errBody');
         if (!mounted) return;
+        // ignore: use_build_context_synchronously
+        final ll = AppLocalizations.of(context)!;
+        final errBody = await resp.stream.bytesToString();
         if (resp.statusCode == 402) {
+          String msg;
           try {
-             final detail = (jsonDecode(errBody) as Map<String, dynamic>)['detail'] as String? ?? l.aiDescError;
-             String msg = detail;
-             if (detail == 'INSUFFICIENT_FUNDS_PRO') {
-                msg = l.apiErrorInsufficientFundsPro(5);
-             } else if (detail == 'INSUFFICIENT_FUNDS_STD') {
-                msg = l.apiErrorInsufficientFundsStd(5);
-             }
-             TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
+            final detail =
+                (jsonDecode(errBody) as Map<String, dynamic>)['detail']
+                    as String? ??
+                    ll.aiDescError;
+            if (detail == 'INSUFFICIENT_FUNDS_PRO') {
+              msg = ll.apiErrorInsufficientFundsPro(5);
+            } else if (detail == 'INSUFFICIENT_FUNDS_STD') {
+              msg = ll.apiErrorInsufficientFundsStd(5);
+            } else {
+              msg = detail;
+            }
           } catch (_) {
-             TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+            msg = ll.aiDescError;
           }
+          // ignore: use_build_context_synchronously
+          TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
         } else if (resp.statusCode == 503) {
-          TeqSnackBar.show(context, message: l.aiDescUnavailable, type: TeqSnackBarType.warning);
+          // ignore: use_build_context_synchronously
+          TeqSnackBar.show(context,
+              message: ll.aiDescUnavailable, type: TeqSnackBarType.warning);
         } else {
-          TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+          // ignore: use_build_context_synchronously
+          TeqSnackBar.show(context,
+              message: ll.aiDescError, type: TeqSnackBarType.error);
         }
       }
-    } catch (e, stack) {
-      debugPrint('[AI Description] FATAL EXCEPTION: $e\n$stack');
-      if (!mounted) return;
-      TeqSnackBar.show(context, message: l.aiDescStreamError, type: TeqSnackBarType.error);
+    } catch (_) {
+      if (mounted) {
+        TeqSnackBar.show(context,
+            message: AppLocalizations.of(context)!.aiDescStreamError,
+            type: TeqSnackBarType.error);
+      }
     } finally {
       client?.close();
       if (mounted) setState(() => _aiDescLoading = false);
     }
   }
+
+  // ── Price sheet ────────────────────────────────────────────────────────────
 
   void _showPriceEstimateSheet(Map<String, dynamic> data) {
     final suggested = data['suggested_start_price'] as double?;
@@ -336,18 +374,18 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       return '${v.toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₺';
     }
 
-    Color confidenceColor = confidence == 'high'
+    final Color confidenceColor = confidence == 'high'
         ? const Color(0xFF22C55E)
         : confidence == 'medium'
-        ? const Color(0xFFF59E0B)
-        : const Color(0xFF64748B);
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF64748B);
 
     final l10n = AppLocalizations.of(context)!;
-    String confidenceLabel = confidence == 'high'
+    final String confidenceLabel = confidence == 'high'
         ? l10n.confidenceHigh
         : confidence == 'medium'
-        ? l10n.confidenceMedium
-        : l10n.confidenceLow;
+            ? l10n.confidenceMedium
+            : l10n.confidenceLow;
 
     showModalBottomSheet(
       context: context,
@@ -366,7 +404,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             controller: controller,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
             children: [
-              // Handle
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(top: 12, bottom: 20),
@@ -378,15 +415,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   ),
                 ),
               ),
-              // Header
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                      ),
+                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text('✨', style: TextStyle(fontSize: 20)),
@@ -396,76 +431,56 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          l10n.aiPriceTitle,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          l10n.aiPriceSimilar(foundSimilar),
-                          style: const TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 12,
-                          ),
-                        ),
+                        Text(l10n.aiPriceTitle,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800)),
+                        Text(l10n.aiPriceSimilar(foundSimilar),
+                            style: const TextStyle(
+                                color: Color(0xFF64748B), fontSize: 12)),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: confidenceColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      confidenceLabel,
-                      style: TextStyle(
-                        color: confidenceColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    child: Text(confidenceLabel,
+                        style: TextStyle(
+                            color: confidenceColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              // Metrik kartları
               Row(
                 children: [
                   Expanded(
                     child: _PriceMetricCard(
-                      icon: '🎯',
-                      label: AppLocalizations.of(
-                        context,
-                      )!.listingSuggestedStart,
-                      value: fmt(suggested),
-                      accent: const Color(0xFF6366F1),
-                    ),
+                        icon: '🎯',
+                        label: l10n.listingSuggestedStart,
+                        value: fmt(suggested),
+                        accent: const Color(0xFF6366F1)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _PriceMetricCard(
-                      icon: '🏆',
-                      label: AppLocalizations.of(context)!.listingExpectedClose,
-                      value: fmt(estimated),
-                      accent: const Color(0xFF22C55E),
-                    ),
+                        icon: '🏆',
+                        label: l10n.listingExpectedClose,
+                        value: fmt(estimated),
+                        accent: const Color(0xFF22C55E)),
                   ),
                 ],
               ),
               if (minClose != null && maxClose != null) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(12),
@@ -474,44 +489,31 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _MiniStat(
-                        label: AppLocalizations.of(context)!.listingLowest,
-                        value: fmt(minClose),
-                        color: const Color(0xFFEF4444),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 32,
-                        color: const Color(0xFF334155),
-                      ),
+                          label: l10n.listingLowest,
+                          value: fmt(minClose),
+                          color: const Color(0xFFEF4444)),
+                      Container(width: 1, height: 32, color: const Color(0xFF334155)),
                       _MiniStat(
-                        label: AppLocalizations.of(context)!.listingAverage,
-                        value: fmt(estimated),
-                        color: const Color(0xFF94A3B8),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 32,
-                        color: const Color(0xFF334155),
-                      ),
+                          label: l10n.listingAverage,
+                          value: fmt(estimated),
+                          color: const Color(0xFF94A3B8)),
+                      Container(width: 1, height: 32, color: const Color(0xFF334155)),
                       _MiniStat(
-                        label: AppLocalizations.of(context)!.listingHighest,
-                        value: fmt(maxClose),
-                        color: const Color(0xFF22C55E),
-                      ),
+                          label: l10n.listingHighest,
+                          value: fmt(maxClose),
+                          color: const Color(0xFF22C55E)),
                     ],
                   ),
                 ),
               ],
               const SizedBox(height: 14),
-              // Tavsiye metni
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: const Color(0xFF6366F1).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.2),
-                  ),
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,47 +521,36 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     const Text('💡', style: TextStyle(fontSize: 16)),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        advice,
-                        style: const TextStyle(
-                          color: Color(0xFFCBD5E1),
-                          fontSize: 13,
-                          height: 1.55,
-                        ),
-                      ),
-                    ),
+                        child: Text(advice,
+                            style: const TextStyle(
+                                color: Color(0xFFCBD5E1),
+                                fontSize: 13,
+                                height: 1.55))),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              // Uygula butonu
               if (suggested != null && suggested > 0)
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () {
                       final intVal = suggested.toInt();
-                      final formatted = intVal.toString().replaceAllMapped(
-                        RegExp(r'(\d)(?=(\d{3})+$)'),
-                        (m) => '${m[1]}.',
-                      );
-                      _priceCtrl.text = formatted;
+                      _priceCtrl.text = intVal
+                          .toString()
+                          .replaceAllMapped(
+                              RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
                       Navigator.pop(context);
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF6366F1),
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(
-                      l10n.aiPriceApply,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
+                    child: Text(l10n.aiPriceApply,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
                   ),
                 ),
             ],
@@ -569,21 +560,20 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
+  // ── Media helpers ──────────────────────────────────────────────────────────
+
   Future<void> _pickVideo(ImageSource source) async {
     XFile? picked;
     if (source == ImageSource.camera) {
       picked = await _picker.pickVideo(
-        source: ImageSource.camera,
-        maxDuration: const Duration(seconds: _maxVideoDurationSecs),
-      );
+          source: ImageSource.camera,
+          maxDuration: const Duration(seconds: _maxVideoDurationSecs));
     } else {
       picked = await _picker.pickVideo(source: ImageSource.gallery);
     }
     if (picked == null || !mounted) return;
 
     final file = File(picked.path);
-
-    // Galeri seçiminde süre kontrolü
     if (source == ImageSource.gallery) {
       final ctrl = VideoPlayerController.file(file);
       await ctrl.initialize();
@@ -591,108 +581,87 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       await ctrl.dispose();
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
-          TeqSnackBar.show(
-            context,
-            message: AppLocalizations.of(
-              context,
-            )!.videoTooLong(_maxVideoDurationSecs, dur.inSeconds),
-            type: TeqSnackBarType.warning,
-          );
+          TeqSnackBar.show(context,
+              message: AppLocalizations.of(context)!
+                  .videoTooLong(_maxVideoDurationSecs, dur.inSeconds),
+              type: TeqSnackBarType.warning);
         }
         return;
       }
     }
-
     setState(() {
       _video = file;
       _videoUploadUrl = null;
+      _videoUploading = true;
     });
-
-    // Arka planda yükle
-    setState(() => _videoUploading = true);
     try {
       final result = await UploadService.uploadVideo(file);
       if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
-    } catch (e, st) {
-      debugPrint('[CreateListing] Video upload HATA: $e\n$st');
+    } catch (e) {
       if (mounted) {
         showErrorSnackbar(context, _uploadError(e));
         _removeVideo();
-        return;
       }
     } finally {
       if (mounted) setState(() => _videoUploading = false);
     }
   }
 
-  void _removeVideo() {
-    setState(() {
-      _video = null;
-      _videoUploadUrl = null;
-      _videoUploading = false;
-    });
-  }
+  void _removeVideo() => setState(() {
+        _video = null;
+        _videoUploadUrl = null;
+        _videoUploading = false;
+      });
 
   void _showVideoSourceSheet() {
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(AppLocalizations.of(context)!.profilePickGallery),
-              onTap: () {
-                Navigator.pop(context);
-                _pickVideo(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam_outlined),
-              title: Text(
-                AppLocalizations.of(
-                  context,
-                )!.createPickCamera(_maxVideoDurationSecs),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickVideo(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: Text(AppLocalizations.of(context)!.profilePickGallery),
+            onTap: () {
+              Navigator.pop(context);
+              _pickVideo(ImageSource.gallery);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam_outlined),
+            title: Text(AppLocalizations.of(context)!
+                .createPickCamera(_maxVideoDurationSecs)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickVideo(ImageSource.camera);
+            },
+          ),
+        ]),
       ),
     );
   }
 
   Future<void> _pickImages(ImageSource source) async {
+    final l = AppLocalizations.of(context)!;
     if (_images.length >= _maxImages) {
-      final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(
-        context,
-        message: l.listingMaxPhotos,
-        type: TeqSnackBarType.warning,
-      );
+      TeqSnackBar.show(context,
+          message: l.listingMaxPhotos, type: TeqSnackBarType.warning);
       return;
     }
     if (source == ImageSource.gallery) {
       final picked = await _picker.pickMultiImage(
-        imageQuality: 85,
-        maxWidth: 1200,
-        maxHeight: 1200,
-      );
+          imageQuality: 85, maxWidth: 1200, maxHeight: 1200);
       if (picked.isEmpty) return;
-      final remaining = _maxImages - _images.length;
-      final toAdd = picked.take(remaining).map((x) => File(x.path)).toList();
+      final toAdd = picked
+          .take(_maxImages - _images.length)
+          .map((x) => File(x.path))
+          .toList();
       setState(() => _images.addAll(toAdd));
     } else {
       final picked = await _picker.pickImage(
-        source: source,
-        imageQuality: 85,
-        maxWidth: 1200,
-        maxHeight: 1200,
-      );
+          source: source,
+          imageQuality: 85,
+          maxWidth: 1200,
+          maxHeight: 1200);
       if (picked == null) return;
       setState(() => _images.add(File(picked.path)));
     }
@@ -703,70 +672,83 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l.btnPickGallery),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImages(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(l.btnCamera),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImages(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: Text(l.btnPickGallery),
+            onTap: () {
+              Navigator.pop(context);
+              _pickImages(ImageSource.gallery);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_outlined),
+            title: Text(l.btnCamera),
+            onTap: () {
+              Navigator.pop(context);
+              _pickImages(ImageSource.camera);
+            },
+          ),
+        ]),
       ),
     );
   }
 
+  // ── Submit ─────────────────────────────────────────────────────────────────
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
-      TeqSnackBar.show(
-        context,
-        message: AppLocalizations.of(context)!.videoUploading,
-        type: TeqSnackBarType.warning,
-      );
+      TeqSnackBar.show(context,
+          message: AppLocalizations.of(context)!.videoUploading,
+          type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _submitting = true);
     try {
       final token = await StorageService.getToken();
 
-      // Upload images and collect URLs + first thumbnail
       final List<String> imageUrls = [];
       String? thumbnailUrl;
       for (final img in _images) {
         try {
           final result = await UploadService.uploadFile(img);
           imageUrls.add(result.url);
-          // İlk fotoğrafın thumb'ını thumbnail olarak kullan
           thumbnailUrl ??= result.thumbUrl;
         } catch (e) {
-          debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
-            TeqSnackBar.show(
-              context,
-              message: _uploadError(e),
-              type: TeqSnackBarType.error,
-            );
+            TeqSnackBar.show(context,
+                message: _uploadError(e), type: TeqSnackBarType.error);
           }
         }
       }
 
-      // Güvenlik doğrulaması: görünmez Turnstile challenge
       if (!mounted) return;
       final captchaToken = await CaptchaService.getToken();
       if (!mounted) return;
+
+      // Build extra_fields: merge controller values + dropdown values, skip blanks
+      final Map<String, dynamic> extraFields = {};
+      if (_selectedSubcategory != null) {
+        final fields = kSubcategoryFields[_selectedSubcategory!] ?? [];
+        for (final f in fields) {
+          if (f.type == ExtraFieldType.dropdown) {
+            final v = _extraValues[f.key];
+            if (v != null && v.isNotEmpty) extraFields[f.key] = v;
+          } else {
+            final ctrl = _extraCtrlMap[f.key];
+            final v = ctrl?.text.trim() ?? '';
+            if (v.isNotEmpty) {
+              if (f.type == ExtraFieldType.number) {
+                final n = num.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
+                if (n != null) extraFields[f.key] = n;
+              } else {
+                extraFields[f.key] = v;
+              }
+            }
+          }
+        }
+      }
 
       await apiCall(
         () async => http.post(
@@ -784,9 +766,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
             ),
             'category': _selectedCategory,
+            if (_selectedSubcategory != null)
+              'subcategory': _selectedSubcategory,
             if (_selectedCondition != null) 'condition': _selectedCondition,
-            if (_selectedCity != null && _selectedCity!.isNotEmpty)
-              'location': _selectedCity,
+            if (_selectedProvince != null) 'province': _selectedProvince,
+            if (_districtCtrl.text.trim().isNotEmpty)
+              'district': _districtCtrl.text.trim(),
+            if (extraFields.isNotEmpty) 'extra_fields': extraFields,
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
             'thumbnail_url': ?thumbnailUrl,
@@ -798,70 +784,60 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (!mounted) return;
       AnalyticsService.trackEvent('listing_create_complete', {
         'category': _selectedCategory,
+        'subcategory': _selectedSubcategory,
         'has_video': _videoUploadUrl != null,
         'photo_count': _images.length,
+        'extra_field_count': extraFields.length,
       });
-      final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(
-        context,
-        message: l.msgListingPublished,
-        type: TeqSnackBarType.success,
-      );
+      TeqSnackBar.show(context,
+          message: AppLocalizations.of(context)!.msgListingPublished,
+          type: TeqSnackBarType.success);
       Navigator.pop(context, true);
     } on AppException catch (e) {
       if (!mounted) return;
-      TeqSnackBar.show(
-        context,
-        message: _mapError(e),
-        type: TeqSnackBarType.error,
-      );
+      TeqSnackBar.show(context,
+          message: _mapError(e), type: TeqSnackBarType.error);
     } catch (_) {
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(
-          context,
-          message: l.createListingConnError,
-          type: TeqSnackBarType.error,
-        );
+        TeqSnackBar.show(context,
+            message:
+                AppLocalizations.of(context)!.createListingConnError,
+            type: TeqSnackBarType.error);
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
-  /// Upload hatalarını kullanıcı dostu ARB mesajına çevirir.
+  // ── Error helpers ──────────────────────────────────────────────────────────
+
   String _uploadError(Object e) {
     final s = e.toString();
     final l = AppLocalizations.of(context)!;
     if (s.contains('HTTP 413')) return l.uploadErrorTooLarge;
-    if (s.contains('HTTP 502') ||
-        s.contains('HTTP 503') ||
-        s.contains('HTTP 504')) {
+    if (s.contains('HTTP 502') || s.contains('HTTP 503') || s.contains('HTTP 504')) {
       return l.uploadErrorServerBusy;
     }
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
       return l.uploadErrorAuthExpired;
     }
-    if (e is NetworkException) {
-      return l.errorNetworkMessage;
-    }
+    if (e is NetworkException) { return l.errorNetworkMessage; }
     return l.uploadErrorGeneric;
   }
 
-  /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
   String _mapError(AppException e) {
     final l = AppLocalizations.of(context)!;
-    if (e.statusCode == 403 || e.code == 'FORBIDDEN') {
-      return l.errorCaptchaFailed;
-    }
-    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
-      return l.errorTooFast;
-    }
-    if (e.code == 'CONTENT_POLICY_VIOLATION') {
-      return l.errorContentPolicy;
-    }
+    if (e.statusCode == 403 || e.code == 'FORBIDDEN') return l.errorCaptchaFailed;
+    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return l.errorTooFast;
+    if (e.code == 'CONTENT_POLICY_VIOLATION') return l.errorContentPolicy;
+    if (e.code == 'PROVINCE_REQUIRED') return l.errProvinceRequired;
+    if (e.code == 'INVALID_CONDITION') return l.errInvalidCondition;
+    if (e.code == 'INVALID_PRICE') return l.errInvalidPrice;
+    if (e.code == 'LISTING_TITLE_REQUIRED') return l.fieldListingTitleHint;
     return e.message;
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -875,363 +851,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Photo picker section
-              TeqCard(
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          l.createListingPhotoCount(_images.length, _maxImages),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                        if (_images.length < _maxImages)
-                          TeqButton(
-                            key: const Key('create_listing_btn_fotograf_ekle'),
-                            onPressed: _showImageSourceSheet,
-                            icon: Icons.add_photo_alternate_outlined,
-                            text: l.btnAdd,
-                            type: TeqButtonType.text,
-                            isExpanded: false,
-                          ),
-                      ],
-                    ),
-                    if (_images.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 90,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount:
-                              _images.length +
-                              (_images.length < _maxImages ? 1 : 0),
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                          itemBuilder: (ctx, i) {
-                            if (i == _images.length) {
-                              // Add button at end
-                              return Builder(
-                                builder: (context) => GestureDetector(
-                                  onTap: _showImageSourceSheet,
-                                  child: Container(
-                                    width: 90,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: AppColors.border(context),
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.add,
-                                      color: AppColors.textSecondary(context),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            return Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    _images[i],
-                                    width: 90,
-                                    height: 90,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 2,
-                                  right: 2,
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        setState(() => _images.removeAt(i)),
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.black54,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      padding: const EdgeInsets.all(2),
-                                      child: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                if (i == 0)
-                                  Positioned(
-                                    bottom: 2,
-                                    left: 2,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: kPrimary,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        l.photoCover,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ] else ...[
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        key: const Key(
-                          'create_listing_gesture_fotograf_ekle_bos',
-                        ),
-                        onTap: _showImageSourceSheet,
-                        child: Builder(
-                          builder: (context) => Container(
-                            height: 90,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: AppColors.border(context),
-                                style: BorderStyle.solid,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              color: AppColors.surfaceVariant(context),
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.add_photo_alternate_outlined,
-                                    color: AppColors.textSecondary(context),
-                                    size: 28,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    l.btnAddPhoto,
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary(context),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              _buildPhotoSection(l),
               const SizedBox(height: 12),
-              // Video section
-              TeqCard(
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          l.videoLabel(_maxVideoDurationSecs),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                        if (_video == null && !_videoUploading)
-                          TeqButton(
-                            onPressed: _showVideoSourceSheet,
-                            icon: Icons.videocam_outlined,
-                            text: l.btnAdd,
-                            type: TeqButtonType.text,
-                            isExpanded: false,
-                          ),
-                      ],
-                    ),
-                    if (_video != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: _videoUploading
-                                ? const Padding(
-                                    padding: EdgeInsets.all(8),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _videoUploading ? l.lblLoading : l.lblVideoReady,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _removeVideo,
-                            child: const Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              _buildVideoSection(l),
               const SizedBox(height: 12),
-              TeqCard(
-                child: Column(
-                  children: [
-                    TeqTextField(
-                      key: const Key('create_listing_input_baslik'),
-                      controller: _titleCtrl,
-                      labelText: l.fieldListingTitle,
-                      hintText: l.fieldListingTitleHint,
-                      validator: (v) => v == null || v.isEmpty
-                          ? l.fieldListingTitleHint
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      key: const Key('create_listing_select_kategori'),
-                      // ignore: deprecated_member_use
-                      value: _selectedCategory,
-                      decoration: InputDecoration(
-                        labelText: l.fieldCategory,
-                        hintText: l.fieldCategoryHint,
-                      ),
-                      items: _categories
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c.$1,
-                              child: Text(c.$2),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(
-                        () => _selectedCategory = v ?? _selectedCategory,
-                      ),
-                      validator: (v) => v == null ? l.fieldCategoryHint : null,
-                    ),
-                    const SizedBox(height: 14),
-
-                    DropdownButtonFormField<String>(
-                      key: const Key('create_listing_select_konum'),
-                      // ignore: deprecated_member_use
-                      value: _selectedCity,
-                      decoration: InputDecoration(labelText: l.fieldLocation),
-                      hint: Text(l.fieldLocationHint),
-                      items: [
-                        DropdownMenuItem(
-                          value: null,
-                          child: Text('-- ${l.fieldLocationHint} --'),
-                        ),
-                        ..._cities.map(
-                          (c) => DropdownMenuItem(value: c, child: Text(c)),
-                        ),
-                      ],
-                      validator: (v) => v == null || v.isEmpty ? l.validRequiredLocation : null,
-                      onChanged: (v) => setState(() => _selectedCity = v),
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      key: const Key('create_listing_select_durum'),
-                      // ignore: deprecated_member_use
-                      value: _selectedCondition,
-                      decoration: InputDecoration(labelText: l.fieldCondition),
-                      hint: Text(l.fieldConditionHint),
-                      items: [
-                        DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
-                        DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
-                        DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
-                        DropdownMenuItem(value: 'damaged', child: Text(l.conditionDamaged)),
-                      ],
-                      validator: (v) => v == null ? l.validRequiredCondition : null,
-                      onChanged: (v) => setState(() => _selectedCondition = v),
-                    ),
-                  ],
-                ),
-              ),
+              _buildMainInfoSection(l),
               const SizedBox(height: 12),
-              TeqCard(
-                child: Column(
-                  children: [
-                    TeqTextField(
-                      key: const Key('create_listing_input_aciklama'),
-                      controller: _descCtrl,
-                      maxLines: 5,
-                      keyboardType: TextInputType.multiline,
-                      textInputAction: TextInputAction.newline,
-                      labelText: l.fieldDescription,
-                      hintText: l.fieldDescriptionHint,
-                      validator: (v) => v == null || v.isEmpty
-                          ? l.fieldDescriptionHint
-                          : null,
-                    ),
-                    const SizedBox(height: 10),
-                    _AiDescButton(
-                      loading: _aiDescLoading,
-                      enabled: _titleCtrl.text.trim().isNotEmpty && _selectedCategory != null && _selectedCity != null && _selectedCondition != null,
-                      isPro: _isPro,
-                      creditsRemaining: _aiDescCreditsRemaining,
-                      onTap: _fetchAiDescription,
-                    ),
-                  ],
-                ),
-              ),
+              _buildLocationSection(l),
               const SizedBox(height: 12),
-              TeqCard(
-                child: Column(
-                  children: [
-                    TeqTextField(
-                      key: const Key('create_listing_input_fiyat'),
-                      controller: _priceCtrl,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [_ThousandSeparatorFormatter()],
-                      labelText: l.fieldPrice,
-                      hintText: l.fieldPriceHint,
-                      prefixText: '₺ ',
-                      validator: (v) =>
-                          v == null || v.isEmpty ? l.validRequiredPrice : null,
-                    ),
-                    const SizedBox(height: 10),
-                    _AiPriceButton(
-                      loading: _aiLoading,
-                      isPro: _isPro,
-                      creditsRemaining: _aiCreditsRemaining,
-                      onTap: _fetchAiPriceEstimate,
-                    ),
-                  ],
-                ),
-              ),
+              _buildConditionSection(l),
+              const SizedBox(height: 12),
+              _buildExtraFieldsSection(l),
+              const SizedBox(height: 12),
+              _buildDescriptionSection(l),
+              const SizedBox(height: 12),
+              _buildPriceSection(l),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -1249,21 +883,537 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       ),
     );
   }
+
+  // ── Section builders ───────────────────────────────────────────────────────
+
+  Widget _buildPhotoSection(AppLocalizations l) {
+    return TeqCard(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l.createListingPhotoCount(_images.length, _maxImages),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              if (_images.length < _maxImages)
+                TeqButton(
+                  key: const Key('create_listing_btn_fotograf_ekle'),
+                  onPressed: _showImageSourceSheet,
+                  icon: Icons.add_photo_alternate_outlined,
+                  text: l.btnAdd,
+                  type: TeqButtonType.text,
+                  isExpanded: false,
+                ),
+            ],
+          ),
+          if (_images.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 90,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount:
+                    _images.length + (_images.length < _maxImages ? 1 : 0),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (ctx, i) {
+                  if (i == _images.length) {
+                    return GestureDetector(
+                      onTap: _showImageSourceSheet,
+                      child: Builder(
+                        builder: (context) => Container(
+                          width: 90,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border(context)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.add,
+                              color: AppColors.textSecondary(context)),
+                        ),
+                      ),
+                    );
+                  }
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_images[i],
+                            width: 90, height: 90, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: 2,
+                        right: 2,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _images.removeAt(i)),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                                color: Colors.black54, shape: BoxShape.circle),
+                            padding: const EdgeInsets.all(2),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ),
+                      if (i == 0)
+                        Positioned(
+                          bottom: 2,
+                          left: 2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: kPrimary,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(l.photoCover,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 10)),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              key: const Key('create_listing_gesture_fotograf_ekle_bos'),
+              onTap: _showImageSourceSheet,
+              child: Builder(
+                builder: (context) => Container(
+                  height: 90,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border(context)),
+                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.surfaceVariant(context),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined,
+                            color: AppColors.textSecondary(context), size: 28),
+                        const SizedBox(height: 4),
+                        Text(l.btnAddPhoto,
+                            style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoSection(AppLocalizations l) {
+    return TeqCard(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(l.videoLabel(_maxVideoDurationSecs),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+              if (_video == null && !_videoUploading)
+                TeqButton(
+                  onPressed: _showVideoSourceSheet,
+                  icon: Icons.videocam_outlined,
+                  text: l.btnAdd,
+                  type: TeqButtonType.text,
+                  isExpanded: false,
+                ),
+            ],
+          ),
+          if (_video != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(6)),
+                  child: _videoUploading
+                      ? const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.play_arrow_rounded,
+                          color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(_videoUploading ? l.lblLoading : l.lblVideoReady,
+                        style: const TextStyle(fontSize: 13))),
+                GestureDetector(
+                  onTap: _removeVideo,
+                  child: const Icon(Icons.close, size: 18, color: Colors.grey),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainInfoSection(AppLocalizations l) {
+    return TeqCard(
+      child: Column(
+        children: [
+          // Başlık
+          TeqTextField(
+            key: const Key('create_listing_input_baslik'),
+            controller: _titleCtrl,
+            labelText: l.fieldListingTitle,
+            hintText: l.fieldListingTitleHint,
+            validator: (v) =>
+                v == null || v.isEmpty ? l.fieldListingTitleHint : null,
+          ),
+          const SizedBox(height: 14),
+
+          // Kategori
+          DropdownButtonFormField<String>(
+            key: const Key('create_listing_select_kategori'),
+            // ignore: deprecated_member_use
+            value: _selectedCategory,
+            decoration: InputDecoration(
+                labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
+            items: _categories
+                .map((c) =>
+                    DropdownMenuItem(value: c.$1, child: Text(c.$2)))
+                .toList(),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() => _selectedCategory = v);
+              _updateSubcategories(v);
+            },
+            validator: (v) => v == null ? l.fieldCategoryHint : null,
+          ),
+
+          // Alt Kategori — görünür sadece kategori seçilince ve subcategory listesi doluysa
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: _subcategories.isEmpty
+                ? const SizedBox.shrink()
+                : Column(
+                    children: [
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        key: const Key('create_listing_select_alt_kategori'),
+                        // ignore: deprecated_member_use
+                        value: _selectedSubcategory,
+                        decoration: InputDecoration(
+                            labelText: l.fieldSubcategory,
+                            hintText: l.fieldSubcategoryHint),
+                        hint: Text(l.fieldSubcategoryHint),
+                        items: _subcategories
+                            .map((s) => DropdownMenuItem(
+                                value: s.$1, child: Text(s.$2)))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() => _selectedSubcategory = v);
+                          _updateExtraFields(v);
+                        },
+                        validator: (v) =>
+                            v == null ? l.validRequiredSubcategory : null,
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection(AppLocalizations l) {
+    return TeqCard(
+      child: Column(
+        children: [
+          // İl
+          DropdownButtonFormField<String>(
+            key: const Key('create_listing_select_il'),
+            // ignore: deprecated_member_use
+            value: _selectedProvince,
+            decoration: InputDecoration(
+                labelText: l.fieldProvince, hintText: l.fieldProvinceHint),
+            hint: Text(l.fieldProvinceHint),
+            items: [
+              DropdownMenuItem(
+                  value: null,
+                  child: Text('-- ${l.fieldProvinceHint} --')),
+              ..._provinces.map(
+                  (p) => DropdownMenuItem(value: p, child: Text(p))),
+            ],
+            validator: (v) =>
+                v == null || v.isEmpty ? l.validRequiredProvince : null,
+            onChanged: (v) => setState(() => _selectedProvince = v),
+          ),
+          const SizedBox(height: 14),
+
+          // İlçe
+          TeqTextField(
+            key: const Key('create_listing_input_ilce'),
+            controller: _districtCtrl,
+            labelText: l.fieldDistrict,
+            hintText: l.fieldDistrictHint,
+            helperText: l.extraFieldOptional,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConditionSection(AppLocalizations l) {
+    return TeqCard(
+      child: DropdownButtonFormField<String>(
+        key: const Key('create_listing_select_durum'),
+        // ignore: deprecated_member_use
+        value: _selectedCondition,
+        decoration: InputDecoration(
+            labelText: l.fieldCondition, hintText: l.fieldConditionHint),
+        hint: Text(l.fieldConditionHint),
+        items: [
+          DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
+          DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
+          DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
+          DropdownMenuItem(
+              value: 'refurbished', child: Text(l.conditionRefurbished)),
+          DropdownMenuItem(
+              value: 'damaged', child: Text(l.conditionDamaged)),
+        ],
+        validator: (v) => v == null ? l.validRequiredCondition : null,
+        onChanged: (v) => setState(() => _selectedCondition = v),
+      ),
+    );
+  }
+
+  Widget _buildExtraFieldsSection(AppLocalizations l) {
+    if (_selectedSubcategory == null) return const SizedBox.shrink();
+    final fields = kSubcategoryFields[_selectedSubcategory!] ?? [];
+    if (fields.isEmpty) return const SizedBox.shrink();
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeInOut,
+      child: TeqCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.sectionListingDetails,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+            const SizedBox(height: 14),
+            ...fields.map((f) => _buildExtraField(f, l)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExtraField(ExtraFieldDef f, AppLocalizations l) {
+    final label = _extraFieldLabel(f.labelKey, l);
+    final optionalSuffix = f.optional ? '  ${l.extraFieldOptional}' : '';
+    final displayLabel = '$label$optionalSuffix';
+
+    Widget field;
+    switch (f.type) {
+      case ExtraFieldType.dropdown:
+        field = DropdownButtonFormField<String>(
+          // ignore: deprecated_member_use
+          value: _extraValues[f.key],
+          decoration: InputDecoration(
+              labelText: displayLabel,
+              hintText: displayLabel,
+              suffixText: f.unit),
+          hint: Text(displayLabel),
+          items: f.options
+              .map((o) => DropdownMenuItem(value: o.value, child: Text(o.label)))
+              .toList(),
+          onChanged: (v) => setState(() {
+            if (v != null) _extraValues[f.key] = v;
+          }),
+          validator: f.optional
+              ? null
+              : (v) => v == null || v.isEmpty ? displayLabel : null,
+        );
+        break;
+
+      case ExtraFieldType.number:
+        field = TeqTextField(
+          controller: _extraCtrlMap[f.key],
+          labelText: displayLabel,
+          hintText: displayLabel,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          suffixIcon: f.unit != null
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(f.unit!,
+                      style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 13)),
+                )
+              : null,
+          validator: f.optional
+              ? null
+              : (v) => (v == null || v.isEmpty) ? displayLabel : null,
+        );
+        break;
+
+      case ExtraFieldType.text:
+        field = TeqTextField(
+          controller: _extraCtrlMap[f.key],
+          labelText: displayLabel,
+          hintText: displayLabel,
+          validator: f.optional
+              ? null
+              : (v) => (v == null || v.isEmpty) ? displayLabel : null,
+        );
+        break;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: field,
+    );
+  }
+
+  String _extraFieldLabel(String labelKey, AppLocalizations l) {
+    return switch (labelKey) {
+      'extraField_marka' => l.extraField_marka,
+      'extraField_model' => l.extraField_model,
+      'extraField_yil' => l.extraField_yil,
+      'extraField_km' => l.extraField_km,
+      'extraField_renk' => l.extraField_renk,
+      'extraField_yakit' => l.extraField_yakit,
+      'extraField_vites' => l.extraField_vites,
+      'extraField_kasa_tipi' => l.extraField_kasa_tipi,
+      'extraField_hasar' => l.extraField_hasar,
+      'extraField_tip' => l.extraField_tip,
+      'extraField_motor_cc' => l.extraField_motor_cc,
+      'extraField_menzil' => l.extraField_menzil,
+      'extraField_depolama' => l.extraField_depolama,
+      'extraField_ram' => l.extraField_ram,
+      'extraField_islemci' => l.extraField_islemci,
+      'extraField_ekran_boyutu' => l.extraField_ekran_boyutu,
+      'extraField_oda_sayisi' => l.extraField_oda_sayisi,
+      'extraField_brut_m2' => l.extraField_brut_m2,
+      'extraField_net_m2' => l.extraField_net_m2,
+      'extraField_arsa_m2' => l.extraField_arsa_m2,
+      'extraField_m2' => l.extraField_m2,
+      'extraField_bina_yasi' => l.extraField_bina_yasi,
+      'extraField_kat' => l.extraField_kat,
+      'extraField_kat_sayisi' => l.extraField_kat_sayisi,
+      'extraField_daire_sayisi' => l.extraField_daire_sayisi,
+      'extraField_isitma' => l.extraField_isitma,
+      'extraField_esya_durumu' => l.extraField_esya_durumu,
+      'extraField_asansor' => l.extraField_asansor,
+      'extraField_otopark' => l.extraField_otopark,
+      'extraField_tapu_durumu' => l.extraField_tapu_durumu,
+      'extraField_kullanim_durumu' => l.extraField_kullanim_durumu,
+      'extraField_beden' => l.extraField_beden,
+      'extraField_numara' => l.extraField_numara,
+      'extraField_cinsiyet' => l.extraField_cinsiyet,
+      'extraField_malzeme' => l.extraField_malzeme,
+      'extraField_altin_ayar' => l.extraField_altin_ayar,
+      'extraField_gumus_ayar' => l.extraField_gumus_ayar,
+      'extraField_jant_boyutu' => l.extraField_jant_boyutu,
+      'extraField_spor_dali' => l.extraField_spor_dali,
+      'extraField_kitap_ismi' => l.extraField_kitap_ismi,
+      'extraField_yazar' => l.extraField_yazar,
+      'extraField_yayinevi' => l.extraField_yayinevi,
+      'extraField_uzunluk' => l.extraField_uzunluk,
+      'extraField_calisma_saati' => l.extraField_calisma_saati,
+      'extraField_uyumlu_model' => l.extraField_uyumlu_model,
+      'extraField_parca_tipi' => l.extraField_parca_tipi,
+      'extraField_irk' => l.extraField_irk,
+      _ => labelKey,
+    };
+  }
+
+  Widget _buildDescriptionSection(AppLocalizations l) {
+    return TeqCard(
+      child: Column(
+        children: [
+          TeqTextField(
+            key: const Key('create_listing_input_aciklama'),
+            controller: _descCtrl,
+            maxLines: 5,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            labelText: l.fieldDescription,
+            hintText: l.fieldDescriptionHint,
+            validator: (v) =>
+                v == null || v.isEmpty ? l.fieldDescriptionHint : null,
+          ),
+          const SizedBox(height: 10),
+          _AiDescButton(
+            loading: _aiDescLoading,
+            enabled: _aiReady,
+            isPro: _isPro,
+            creditsRemaining: _aiDescCreditsRemaining,
+            onTap: _fetchAiDescription,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceSection(AppLocalizations l) {
+    return TeqCard(
+      child: Column(
+        children: [
+          TeqTextField(
+            key: const Key('create_listing_input_fiyat'),
+            controller: _priceCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [_ThousandSeparatorFormatter()],
+            labelText: l.fieldPrice,
+            hintText: l.fieldPriceHint,
+            prefixText: '₺ ',
+            validator: (v) =>
+                v == null || v.isEmpty ? l.validRequiredPrice : null,
+          ),
+          const SizedBox(height: 10),
+          _AiPriceButton(
+            loading: _aiLoading,
+            isPro: _isPro,
+            creditsRemaining: _aiCreditsRemaining,
+            onTap: _fetchAiPriceEstimate,
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+// ── Formatters & sub-widgets ──────────────────────────────────────────────────
 
 class _ThousandSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
+      TextEditingValue oldValue, TextEditingValue newValue) {
     final digits = newValue.text.replaceAll('.', '');
     if (digits.isEmpty) return newValue.copyWith(text: '');
     final formatted = _addDots(digits);
     return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length));
   }
 
   String _addDots(String digits) {
@@ -1276,19 +1426,16 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
   }
 }
 
-// ── AI Fiyat Butonu ──────────────────────────────────────────────────────────
-
 class _AiPriceButton extends StatelessWidget {
   final bool loading;
   final bool isPro;
   final int? creditsRemaining;
   final VoidCallback onTap;
-  const _AiPriceButton({
-    required this.loading,
-    required this.isPro,
-    required this.onTap,
-    this.creditsRemaining,
-  });
+  const _AiPriceButton(
+      {required this.loading,
+      required this.isPro,
+      required this.onTap,
+      this.creditsRemaining});
 
   @override
   Widget build(BuildContext context) {
@@ -1303,109 +1450,57 @@ class _AiPriceButton extends StatelessWidget {
               : const LinearGradient(
                   colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
                   begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+                  end: Alignment.centerRight),
           color: loading ? const Color(0xFF1E293B) : null,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: loading
-                ? const Color(0xFF334155)
-                : const Color(0xFF6366F1).withValues(alpha: 0.5),
-          ),
+              color: loading
+                  ? const Color(0xFF334155)
+                  : const Color(0xFF6366F1).withValues(alpha: 0.5)),
         ),
-        child: Builder(
-          builder: (context) {
-            final l = AppLocalizations.of(context)!;
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: loading
-                  ? [
-                      const SizedBox(
+        child: Builder(builder: (context) {
+          final l = AppLocalizations.of(context)!;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: loading
+                ? [
+                    const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        l.aiPriceAnalyzing,
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                                Color(0xFF6366F1)))),
+                    const SizedBox(width: 10),
+                    Text(l.aiPriceAnalyzing,
                         style: const TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ]
-                  : [
-                      const Text('✨', style: TextStyle(fontSize: 15)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          l.aiPriceButton,
-                          style: const TextStyle(
-                            color: Colors.white,
+                            color: Color(0xFF64748B),
                             fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isPro) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FaIcon(
-                                FontAwesomeIcons.crown,
-                                size: 10,
-                                color:
-                                    (creditsRemaining == null ||
-                                        creditsRemaining! > 0)
-                                    ? const Color(0xFF34D399)
-                                    : const Color(0xFFF59E0B),
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                creditsRemaining == null ||
-                                        creditsRemaining! > 0
-                                    ? '${creditsRemaining ?? '…'} ${l.aiCreditsLeftSuffix}'
-                                    : '5 TUCi',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color:
-                                      (creditsRemaining == null ||
-                                          creditsRemaining! > 0)
-                                      ? const Color(0xFF34D399)
-                                      : const Color(0xFFF59E0B),
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                            fontWeight: FontWeight.w600)),
+                  ]
+                : [
+                    const Text('✨', style: TextStyle(fontSize: 15)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                        child: Text(l.aiPriceButton,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis)),
+                    if (isPro) ...[
+                      const SizedBox(width: 8),
+                      _CreditBadge(
+                          remaining: creditsRemaining,
+                          suffix: l.aiCreditsLeftSuffix),
                     ],
-            );
-          },
-        ),
+                  ],
+          );
+        }),
       ),
     );
   }
 }
-
-// ── AI Açıklama Butonu ───────────────────────────────────────────────────────
 
 class _AiDescButton extends StatelessWidget {
   final bool loading;
@@ -1413,13 +1508,12 @@ class _AiDescButton extends StatelessWidget {
   final bool isPro;
   final int? creditsRemaining;
   final VoidCallback onTap;
-  const _AiDescButton({
-    required this.loading,
-    required this.enabled,
-    required this.onTap,
-    this.isPro = false,
-    this.creditsRemaining,
-  });
+  const _AiDescButton(
+      {required this.loading,
+      required this.enabled,
+      required this.onTap,
+      this.isPro = false,
+      this.creditsRemaining});
 
   @override
   Widget build(BuildContext context) {
@@ -1435,148 +1529,124 @@ class _AiDescButton extends StatelessWidget {
               ? const LinearGradient(
                   colors: [Color(0xFF0EA5E9), Color(0xFF6366F1)],
                   begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
+                  end: Alignment.centerRight)
               : null,
           color: active ? null : const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: active
-                ? const Color(0xFF6366F1).withValues(alpha: 0.5)
-                : const Color(0xFF334155),
-          ),
+              color: active
+                  ? const Color(0xFF6366F1).withValues(alpha: 0.5)
+                  : const Color(0xFF334155)),
         ),
-        child: Builder(
-          builder: (context) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: loading
-                  ? [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: loading
+              ? [
+                  const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        l.aiDescGenerating,
-                        style: const TextStyle(
+                          valueColor:
+                              AlwaysStoppedAnimation(Color(0xFF6366F1)))),
+                  const SizedBox(width: 10),
+                  Text(l.aiDescGenerating,
+                      style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ]
-                  : [
-                      const Text('✍️', style: TextStyle(fontSize: 15)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          l.aiDescButton,
+                          fontWeight: FontWeight.w600)),
+                ]
+              : [
+                  const Text('✍️', style: TextStyle(fontSize: 15)),
+                  const SizedBox(width: 8),
+                  Flexible(
+                      child: Text(l.aiDescButton,
                           style: TextStyle(
-                            color: active ? Colors.white : const Color(0xFF475569),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isPro) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FaIcon(
-                                FontAwesomeIcons.crown,
-                                size: 10,
-                                color: (creditsRemaining == null || creditsRemaining! > 0)
-                                    ? const Color(0xFF34D399)
-                                    : const Color(0xFFF59E0B),
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                creditsRemaining == null || creditsRemaining! > 0
-                                    ? '${creditsRemaining ?? '…'} ${l.aiCreditsLeftSuffix}'
-                                    : '5 TUCi',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: (creditsRemaining == null || creditsRemaining! > 0)
-                                      ? const Color(0xFF34D399)
-                                      : const Color(0xFFF59E0B),
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-            );
-          },
+                              color: active
+                                  ? Colors.white
+                                  : const Color(0xFF475569),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis)),
+                  if (isPro) ...[
+                    const SizedBox(width: 8),
+                    _CreditBadge(
+                        remaining: creditsRemaining,
+                        suffix: l.aiCreditsLeftSuffix),
+                  ],
+                ],
         ),
       ),
     );
   }
 }
 
-// ── AI Fiyat Metrik Kartı ─────────────────────────────────────────────────────
+class _CreditBadge extends StatelessWidget {
+  final int? remaining;
+  final String suffix;
+  const _CreditBadge({required this.remaining, required this.suffix});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCredits = remaining == null || remaining! > 0;
+    final color =
+        hasCredits ? const Color(0xFF34D399) : const Color(0xFFF59E0B);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        FaIcon(FontAwesomeIcons.crown, size: 10, color: color),
+        const SizedBox(width: 3),
+        Text(
+          hasCredits ? '${remaining ?? '…'} $suffix' : '5 TUCi',
+          style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 0.3),
+        ),
+      ]),
+    );
+  }
+}
 
 class _PriceMetricCard extends StatelessWidget {
   final String icon;
   final String label;
   final String value;
   final Color accent;
-  const _PriceMetricCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.accent,
-  });
+  const _PriceMetricCard(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      required this.accent});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withValues(alpha: 0.25)),
-      ),
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withValues(alpha: 0.25))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 18)),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-              ),
-            ],
-          ),
+          Row(children: [
+            Text(icon, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 6),
+            Text(label,
+                style:
+                    const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+          ]),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              color: accent,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          Text(value,
+              style: TextStyle(
+                  color: accent,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -1587,32 +1657,18 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _MiniStat({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _MiniStat(
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          value,
+    return Column(children: [
+      Text(label,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+      const SizedBox(height: 3),
+      Text(value,
           style: TextStyle(
-            color: color,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
+              color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+    ]);
   }
 }
-
-// ── Section Card ──────────────────────────────────────────────────────────────

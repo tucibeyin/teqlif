@@ -498,6 +498,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorListingsLoad => 'تعذّر تحميل الإعلانات';
 
   @override
+  String get errorOperationFailed => 'تعذّر إتمام العملية.';
+
+  @override
+  String errorCoHostDuringCall(String hostUsername) {
+    return 'دعاك @$hostUsername إلى المسرح، لكن تم الرفض لأنك في مكالمة.';
+  }
+
+  @override
+  String get errorCallHistoryLoad =>
+      'تعذّر تحميل سجل المكالمات. يرجى المحاولة مرة أخرى.';
+
+  @override
   String get errorPhotoUpload => 'تعذّر رفع الصورة. حاول مجدداً.';
 
   @override
@@ -5518,4 +5530,197 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get apiErrorAiServiceTimeout => 'انتهت مهلة خدمة الذكاء الاصطناعي.';
+
+  @override
+  String get conditionRefurbished => 'مجدد';
+
+  @override
+  String get fieldSubcategory => 'الفئة الفرعية';
+
+  @override
+  String get fieldSubcategoryHint => 'اختر الفئة الفرعية';
+
+  @override
+  String get fieldProvince => 'المحافظة';
+
+  @override
+  String get fieldProvinceHint => 'اختر المحافظة';
+
+  @override
+  String get fieldDistrict => 'المنطقة';
+
+  @override
+  String get fieldDistrictHint => 'أدخل المنطقة';
+
+  @override
+  String get sectionListingDetails => 'تفاصيل الإعلان';
+
+  @override
+  String get extraFieldOptional => '(اختياري)';
+
+  @override
+  String get validRequiredSubcategory => 'الرجاء اختيار الفئة الفرعية';
+
+  @override
+  String get validRequiredProvince => 'الرجاء اختيار المحافظة';
+
+  @override
+  String get validRequiredDistrict => 'الرجاء إدخال المنطقة';
+
+  @override
+  String get validInvalidPrice => 'الرجاء إدخال سعر صحيح';
+
+  @override
+  String get errProvinceRequired => 'المحافظة مطلوبة.';
+
+  @override
+  String get errInvalidCondition => 'حالة المنتج غير صالحة.';
+
+  @override
+  String get errInvalidPrice => 'الرجاء إدخال سعر صحيح.';
+
+  @override
+  String get createNeedAllFieldsNew =>
+      'يرجى ملء حقول العنوان والمحافظة والحالة.';
+
+  @override
+  String get extraField_marka => 'العلامة التجارية';
+
+  @override
+  String get extraField_model => 'الموديل';
+
+  @override
+  String get extraField_yil => 'السنة';
+
+  @override
+  String get extraField_km => 'المسافة المقطوعة';
+
+  @override
+  String get extraField_renk => 'اللون';
+
+  @override
+  String get extraField_yakit => 'نوع الوقود';
+
+  @override
+  String get extraField_vites => 'ناقل الحركة';
+
+  @override
+  String get extraField_kasa_tipi => 'نوع الهيكل';
+
+  @override
+  String get extraField_hasar => 'حالة التلف';
+
+  @override
+  String get extraField_tip => 'النوع';
+
+  @override
+  String get extraField_motor_cc => 'حجم المحرك';
+
+  @override
+  String get extraField_menzil => 'المدى';
+
+  @override
+  String get extraField_depolama => 'التخزين';
+
+  @override
+  String get extraField_ram => 'الذاكرة العشوائية';
+
+  @override
+  String get extraField_islemci => 'المعالج';
+
+  @override
+  String get extraField_ekran_boyutu => 'حجم الشاشة';
+
+  @override
+  String get extraField_oda_sayisi => 'عدد الغرف';
+
+  @override
+  String get extraField_brut_m2 => 'المساحة الإجمالية م²';
+
+  @override
+  String get extraField_net_m2 => 'المساحة الصافية م²';
+
+  @override
+  String get extraField_arsa_m2 => 'مساحة الأرض م²';
+
+  @override
+  String get extraField_m2 => 'المساحة (م²)';
+
+  @override
+  String get extraField_bina_yasi => 'عمر المبنى';
+
+  @override
+  String get extraField_kat => 'الطابق';
+
+  @override
+  String get extraField_kat_sayisi => 'عدد الطوابق';
+
+  @override
+  String get extraField_daire_sayisi => 'عدد الشقق';
+
+  @override
+  String get extraField_isitma => 'نظام التدفئة';
+
+  @override
+  String get extraField_esya_durumu => 'حالة الأثاث';
+
+  @override
+  String get extraField_asansor => 'مصعد';
+
+  @override
+  String get extraField_otopark => 'موقف سيارات';
+
+  @override
+  String get extraField_tapu_durumu => 'سند الملكية';
+
+  @override
+  String get extraField_kullanim_durumu => 'حالة الاستخدام';
+
+  @override
+  String get extraField_beden => 'المقاس';
+
+  @override
+  String get extraField_numara => 'مقاس الحذاء';
+
+  @override
+  String get extraField_cinsiyet => 'الجنس';
+
+  @override
+  String get extraField_malzeme => 'المادة';
+
+  @override
+  String get extraField_altin_ayar => 'عيار الذهب';
+
+  @override
+  String get extraField_gumus_ayar => 'درجة الفضة';
+
+  @override
+  String get extraField_jant_boyutu => 'حجم الجنط';
+
+  @override
+  String get extraField_spor_dali => 'الرياضة';
+
+  @override
+  String get extraField_kitap_ismi => 'عنوان الكتاب';
+
+  @override
+  String get extraField_yazar => 'المؤلف';
+
+  @override
+  String get extraField_yayinevi => 'دار النشر';
+
+  @override
+  String get extraField_uzunluk => 'الطول';
+
+  @override
+  String get extraField_calisma_saati => 'ساعات العمل';
+
+  @override
+  String get extraField_uyumlu_model => 'الموديل المتوافق';
+
+  @override
+  String get extraField_parca_tipi => 'نوع القطعة';
+
+  @override
+  String get extraField_irk => 'السلالة / النوع';
 }
