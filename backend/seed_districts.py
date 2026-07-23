@@ -8,8 +8,16 @@ sys.path.insert(0, os.path.dirname(__file__))
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+import importlib.util, pathlib
 from app.config import settings
-from alembic.versions.zt_districts import _DATA
+
+_spec = importlib.util.spec_from_file_location(
+    "zt_districts",
+    pathlib.Path(__file__).parent / "alembic" / "versions" / "zt_districts.py",
+)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+_DATA = _mod._DATA
 
 
 async def seed():
