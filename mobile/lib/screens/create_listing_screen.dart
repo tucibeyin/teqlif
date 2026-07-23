@@ -1232,23 +1232,33 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Widget _buildConditionSection(AppLocalizations l) {
+    final isVasita = _selectedCategory == 'vasita';
+    final items = isVasita
+        ? [
+            DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
+            DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
+          ]
+        : [
+            DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
+            DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
+            DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
+            DropdownMenuItem(value: 'refurbished', child: Text(l.conditionRefurbished)),
+            DropdownMenuItem(value: 'damaged', child: Text(l.conditionDamaged)),
+          ];
+
+    final validCondition = items.any((i) => i.value == _selectedCondition)
+        ? _selectedCondition
+        : null;
+
     return TeqCard(
       child: DropdownButtonFormField<String>(
         key: const Key('create_listing_select_durum'),
         // ignore: deprecated_member_use
-        value: _selectedCondition,
+        value: validCondition,
         decoration: InputDecoration(
             labelText: l.fieldCondition, hintText: l.fieldConditionHint),
         hint: Text(l.fieldConditionHint),
-        items: [
-          DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
-          DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
-          DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
-          DropdownMenuItem(
-              value: 'refurbished', child: Text(l.conditionRefurbished)),
-          DropdownMenuItem(
-              value: 'damaged', child: Text(l.conditionDamaged)),
-        ],
+        items: items,
         validator: (v) => v == null ? l.validRequiredCondition : null,
         onChanged: (v) => setState(() => _selectedCondition = v),
       ),
