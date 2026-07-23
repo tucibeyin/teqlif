@@ -164,8 +164,11 @@ async def create_listing(
         description=payload.get("description"),
         price=payload.get("price"),
         category=payload.get("category", "diger"),
+        subcategory=payload.get("subcategory"),
         condition=payload.get("condition"),
-        location=payload.get("location"),
+        province=payload.get("province"),
+        district=payload.get("district"),
+        extra_fields=payload.get("extra_fields"),
         image_url=payload.get("image_url"),
         image_urls=payload.get("image_urls"),
         thumbnail_url=payload.get("thumbnail_url"),
@@ -192,6 +195,12 @@ async def update_listing(
         title=payload.get("title"),
         description=payload.get("description"),
         price=payload.get("price"),
+        category=payload.get("category"),
+        subcategory=payload.get("subcategory"),
+        condition=payload.get("condition"),
+        province=payload.get("province"),
+        district=payload.get("district"),
+        extra_fields=payload.get("extra_fields"),
     )
     await invalidate_cache("listings:search")
     return result

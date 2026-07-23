@@ -7,16 +7,14 @@ from app.core.auto_mod import analyze_listing_text
 
 logger = get_logger(__name__)
 
-VALID_CATEGORIES = {"elektronik", "moda", "ev_yasam", "diger"}
-VALID_CONDITIONS = {"new", "like_new", "used", "damaged"}
+VALID_CATEGORIES = {
+    "elektronik", "vasita", "emlak", "giyim", "ev", "spor", "kitap", "diger"
+}
+
+VALID_CONDITIONS = {"new", "like_new", "used", "damaged", "refurbished"}
+
 
 class CreateListingCommand:
-    """
-    CQRS Command: İlan Oluşturma.
-    Yalnızca UoW kullanarak veritabanına kayıt yapar ve EventBus'a ListingCreatedEvent fırlatır.
-    Rate limit, lock, profanity check gibi iş kurallarını işletir.
-    Eski sistemdeki search_alert, FTS update gibi yan etkiler Event üzerinden dinlenir.
-    """
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
@@ -27,8 +25,11 @@ class CreateListingCommand:
         description: Optional[str] = None,
         price: Optional[float] = None,
         category: str = "diger",
+        subcategory: Optional[str] = None,
         condition: Optional[str] = None,
-        location: Optional[str] = None,
+        province: Optional[str] = None,
+        district: Optional[str] = None,
+        extra_fields: Optional[dict] = None,
         image_url: Optional[str] = None,
         image_urls: list = None,
         thumbnail_url: Optional[str] = None,
@@ -36,34 +37,34 @@ class CreateListingCommand:
     ) -> dict:
         logger.info("[CreateListingCommand] İşlem başlatıldı | user_id=%s", user_id)
 
-        # 1. İş Kuralları (Validasyon & Profanity)
         _title = (title or "").strip()
         _desc = (description or "").strip()
-        
+
         if not _title:
             raise BadRequestException(code="LISTING_TITLE_REQUIRED")
 
         if price is None or price <= 0:
             raise BadRequestException(code="INVALID_PRICE")
 
-        _loc = (location or "").strip()
-        if not _loc:
-            raise BadRequestException(code="LOCATION_REQUIRED")
+        _province = (province or "").strip()
+        if not _province:
+            raise BadRequestException(code="PROVINCE_REQUIRED")
 
         if analyze_listing_text(_title, _desc):
             raise ContentPolicyException()
 
         cat = category.strip().lower()
         if cat not in VALID_CATEGORIES:
-            raise BadRequestException(code="INVALID_CATEGORY")
+            cat = "diger"
 
         cond = condition.strip().lower() if condition else ""
         if not cond or cond not in VALID_CONDITIONS:
             raise BadRequestException(code="INVALID_CONDITION")
 
-        # 2. Veritabanı İşlemi (Write Model)
-        from app.core.event_bus import event_bus
-        from app.core.events import ListingCreatedEvent
+        # brand / model_name: extra_fields'den çıkar, arama indexleri için dedicated kolonlara yaz
+        ef = extra_fields or {}
+        brand = ef.get("marka") or ef.get("brand")
+        model_name = ef.get("model") or ef.get("model_name")
 
         async with self.uow:
             listing_data = {
@@ -72,8 +73,14 @@ class CreateListingCommand:
                 "description": _desc,
                 "price": price,
                 "category": cat,
+                "subcategory": (subcategory or "").strip().lower() or None,
                 "condition": cond,
-                "location": location,
+                "province": _province,
+                "district": (district or "").strip() or None,
+                "location": _province,  # backward compat: feed/search sorgularında hâlâ okunuyor
+                "extra_fields": ef or None,
+                "brand": brand,
+                "model_name": model_name,
                 "image_url": image_url,
                 "image_urls": json.dumps(image_urls or []),
                 "thumbnail_url": thumbnail_url,
@@ -82,14 +89,16 @@ class CreateListingCommand:
 
             new_listing = await self.uow.listings.create(obj_in=listing_data)
 
-        # 3. CQRS: Diğer sistemlere (Projector, Notifier) haber ver — commit'ten sonra
+        from app.core.event_bus import event_bus
+        from app.core.events import ListingCreatedEvent
+
         event_bus.publish(
             ListingCreatedEvent(
                 listing_id=new_listing.id,
                 user_id=user_id,
                 title=_title,
                 category=cat,
-                price=price
+                price=price,
             )
         )
 
