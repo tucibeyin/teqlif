@@ -223,11 +223,11 @@ async def test_groq(key: str) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 GEMINI_BASE  = "https://generativelanguage.googleapis.com/v1beta"
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-3.1-flash-lite"
 
 async def test_gemini(key: str) -> bool:
     """Gemini API testlerini çalıştırır. True → tüm testler geçti."""
-    header("GEMINI — gemini-2.0-flash")
+    header("GEMINI — gemini-3.1-flash-lite")
     all_passed = True
 
     # ── Test 1: API key format ────────────────────────────────────────────────
