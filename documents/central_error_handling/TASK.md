@@ -13,15 +13,14 @@
   - `translations` tablosuna `UPSERT` eder (key, lang, value)
   - Çalıştırıldığında kaç key sync'lendi yazar
 
-- [ ] **T02** — VPS deploy komutunu güncelle
-  - Eski: `git pull && sudo systemctl restart teqlif`
-  - Yeni: `git pull && python3 backend/scripts/sync_translations.py && sudo systemctl restart teqlif`
-  - `project_vps_deploy.md` memory'sini güncelle
+- [x] **T02** — VPS deploy komutunu güncelle ✅
+  - Yeni: `git pull && python3 scripts/sync_translations.py && sudo systemctl restart teqlif`
+  - Migration varsa: `alembic upgrade head` öncesine eklenir
+  - `project_vps_deploy.md` memory güncellendi
 
-- [ ] **T03** — VPS'te pipeline testi
-  - ARB'a geçici test key ekle
-  - Deploy et, `GET /api/i18n/tr` den key'in geldiğini doğrula
-  - Test key'i geri al
+- [x] **T03** — VPS'te pipeline testi ✅
+  - 7104 satır upsert edildi (tr:1775, en:1776, ar:1776, ru:1777)
+  - `GET /api/i18n/tr` → `errorServerBusy` key'i doğrulandı
 
 ---
 
