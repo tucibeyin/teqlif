@@ -1,10 +1,11 @@
 import hashlib
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BadRequestException
 from app.database import get_db
 from app.utils.redis_client import get_redis
 
@@ -32,7 +33,7 @@ async def get_language_pack(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     if lang not in _SUPPORTED_LANGS:
-        raise HTTPException(status_code=400, detail="unsupported_language")
+        raise BadRequestException(code="UNSUPPORTED_LANGUAGE")
 
     redis = await get_redis()
     cached = await redis.get(_cache_key(lang))
@@ -50,7 +51,7 @@ async def get_language_version(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     if lang not in _SUPPORTED_LANGS:
-        raise HTTPException(status_code=400, detail="unsupported_language")
+        raise BadRequestException(code="UNSUPPORTED_LANGUAGE")
 
     redis = await get_redis()
     version_key = f"i18n:{lang}:version"

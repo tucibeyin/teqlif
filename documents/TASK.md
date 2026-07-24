@@ -38,5 +38,10 @@
 
 ## FAZ 5 — Backend Format Review
 
-- [ ] **T14** — Backend error response formatını kontrol et, tutarsız endpoint var mı?
-- [ ] **T15** — Eksik error loc key'lerini translations tablosuna ekle
+- [x] **T14** — Backend error response formatını kontrol et, tutarsız endpoint var mı? ✅
+  - `field_config.py`: `HTTPException(404)` → `NotFoundException(code="SUBCATEGORY_NOT_FOUND")`
+  - `i18n.py` (2 yer): `HTTPException(400)` → `BadRequestException(code="UNSUPPORTED_LANGUAGE")`
+  - `wallet.py`: zaten `AppException` subclass'ları kullanıyor; tek kalan `HTTPException` `topup_manual`'da (503, kasıtlı devre dışı endpoint)
+- [x] **T15** — Eksik error loc key'lerini translations tablosuna ekle ✅
+  - `errorServerBusy` ve `errorSessionExpired` 4 dilde ARB dosyalarına eklendi
+  - `alembic/versions/aaa_error_loc_keys.py` migration'ı oluşturuldu (VPS'te çalıştırılacak)

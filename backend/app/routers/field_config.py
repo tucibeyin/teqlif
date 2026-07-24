@@ -1,10 +1,11 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_cache.decorator import cache
 
+from app.core.exceptions import NotFoundException
 from app.database import get_db
 from app.models.category_field import CategoryField, FieldOption
 from app.schemas.field_config import ExtraFieldSchema, FieldConfigResponse, FieldOptionSchema
@@ -29,7 +30,7 @@ async def get_field_config(
     fields: list[CategoryField] = list(result.scalars().all())
 
     if not fields:
-        raise HTTPException(status_code=404, detail="subcategory_not_found")
+        raise NotFoundException(code="SUBCATEGORY_NOT_FOUND")
 
     field_ids = [f.id for f in fields]
     opts_result = await db.execute(

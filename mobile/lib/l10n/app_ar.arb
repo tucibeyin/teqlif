@@ -3004,6 +3004,8 @@
   },
   "apiErrorAiServiceBusy": "خدمة الذكاء الاصطناعي مشغولة حالياً. يرجى المحاولة مرة أخرى.",
   "apiErrorAiServiceTimeout": "انتهت مهلة خدمة الذكاء الاصطناعي.",
+  "errorServerBusy": "الخادم مشغول حالياً، يرجى المحاولة لاحقاً.",
+  "errorSessionExpired": "انتهت جلستك، يرجى تسجيل الدخول مرة أخرى."
   "conditionRefurbished": "مجدد",
   "fieldSubcategory": "الفئة الفرعية",
   "fieldSubcategoryHint": "اختر الفئة الفرعية",

@@ -3040,6 +3040,8 @@
   },
   "apiErrorAiServiceBusy": "AI service is currently busy. Please try again.",
   "apiErrorAiServiceTimeout": "AI service timed out.",
+  "errorServerBusy": "Server is busy, please try again later.",
+  "errorSessionExpired": "Your session has expired, please log in again."
   "conditionRefurbished": "Refurbished",
   "fieldSubcategory": "Subcategory",
   "fieldSubcategoryHint": "Select subcategory",
