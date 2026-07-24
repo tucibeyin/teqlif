@@ -197,9 +197,21 @@ t('ui_save')  →  "Save"
 
 - [x] **T29** — Commit + push + VPS deploy ✅
 
-- [ ] **T30** — `create_listing_screen.dart` için kullanılmayan ARB key'lerini tespit et
-  - Bu ekrana ait key'ler artık sadece DB'de yaşıyor
-  - ARB'den silmek için liste hazırla (diğer ekranlar hâlâ ARB kullanıyor, dikkatli ol)
+- [x] **T30** — `create_listing_screen.dart` için kullanılmayan ARB key'lerini tespit et ✅
+  - 77 key'den **49'u yalnızca bu ekranda** → diğer ekranlar migrate olunca ARB'den silinebilir
+  - **28 key** başka ekranlarda da kullanılıyor (edit_listing, listing_detail, error_helper vb.) → ARB'de kalacak
+  - Silinebilecek 49 key (create_listing_screen migrate sonrası dead code):
+    `aiCreditsLeftSuffix`, `aiDescButton`, `aiDescError`, `aiDescGenerating`, `aiDescUnavailable`,
+    `aiPriceAnalyzing`, `aiPriceApply`, `aiPriceButton`, `aiPriceError`, `aiPriceSimilar`, `aiPriceTitle`,
+    `apiErrorAiServiceBusy`, `apiErrorAiServiceTimeout`, `apiErrorInsufficientFundsPro`, `apiErrorInsufficientFundsStd`,
+    `btnPublishListing`, `confidenceHigh`, `confidenceLow`, `confidenceMedium`,
+    `createNeedAllFieldsNew`, `createPickCamera`, `errInvalidCondition`, `errInvalidPrice`, `errProvinceRequired`,
+    `extraFieldOptional`, `fieldConditionHint`, `fieldDistrict`, `fieldDistrictHint`,
+    `fieldProvince`, `fieldProvinceHint`, `fieldSubcategory`, `fieldSubcategoryHint`,
+    `listingAverage`, `listingExpectedClose`, `listingHighest`, `listingLowest`, `listingSuggestedStart`,
+    `profilePickGallery`, `sectionListingDetails`, `tuciSpent`,
+    `uploadErrorAuthExpired`, `uploadErrorGeneric`, `uploadErrorServerBusy`, `uploadErrorTooLarge`,
+    `validRequiredCondition`, `validRequiredPrice`, `validRequiredProvince`, `validRequiredSubcategory`, `videoTooLong`
 
 ---
 
