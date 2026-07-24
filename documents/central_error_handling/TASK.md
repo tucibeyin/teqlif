@@ -7,7 +7,7 @@
 
 ## FAZ 1 — Backend: ARB → DB Deploy Pipeline
 
-- [ ] **T01** — `backend/scripts/sync_translations.py` yaz
+- [x] **T01** — `backend/scripts/sync_translations.py` yaz ✅
   - 4 ARB dosyasını (`app_tr`, `en`, `ar`, `ru`) okur
   - @-annotasyon satırlarını atlar
   - `translations` tablosuna `UPSERT` eder (key, lang, value)
@@ -27,29 +27,30 @@
 
 ## FAZ 2 — Flutter Core: handleError Tamamlama
 
-- [ ] **T04** — `handleError` a 401/auth routing ekle (`lib/utils/error_helper.dart`)
-  - `error is AppException && error.statusCode == 401` → `AuthService.logout()` + `TeqlifApp.navigatorKey` ile `/login`
-  - Toast gösterme (yönlendirme mesaj yeterli)
+- [x] **T04** — `handleError` a 401/auth routing ekle (`lib/utils/error_helper.dart`) ✅
+  - 401 geldiğinde `AuthService.authFailedStream.add(null)` sinyali verilir, `return` edilir
+  - Toast gösterilmez — `main_screen._handleAuthFailed()` zaten logout + /login yapar
+  - Çift navigation önlendi (ErrorDisplay'in eski yaklaşımı çift navigate ediyordu)
 
-- [ ] **T05** — `Result<T>` error type değiştir (`lib/core/result.dart` + `lib/config/api.dart`)
+- [x] **T05** — `Result<T>` error type değiştir (`lib/core/result.dart` + `lib/config/api.dart`) ✅
   - `Err<T>` içindeki `final AppError error` → `final Object error`
-  - `api.dart` deki `AppError.from(e)` çağrıları → doğrudan `e`
+  - `api.dart` deki `AppError.from(e)` → `e`, `app_error.dart` import'u kaldırıldı
 
 - [ ] **T06** — `ErrorDisplay` sınıfını sil (`lib/core/error_display.dart`)
-  - Dosyayı sil
-  - İmport eden dosyaları bul ve import'u kaldır
+  - ⚠️ BLOKE: 5 ekran hâlâ `ErrorDisplay` kullanıyor (forgot_password, login, register, host_stream, swipe_live)
+  - FAZ 4 — T10–T20 tamamlandıktan sonra yapılacak
 
 - [ ] **T07** — `AppError` sealed class sil (`lib/core/app_error.dart`)
-  - Dosyayı sil
-  - Import eden dosyaları bul ve kaldır
+  - ⚠️ BLOKE: `ErrorDisplay` silinene kadar bekliyor
+  - FAZ 4 sonrası yapılacak
 
-- [ ] **T08** — `dart analyze` — sıfır hata (core refactor sonrası kontrol)
+- [x] **T08** — `dart analyze` — sıfır hata ✅ (46 info, tümü önceden vardı)
 
 ---
 
 ## FAZ 3 — Pilot Ekran Doğrulaması
 
-- [ ] **T09** — `create_listing_screen.dart` review
+- [x] **T09** — `create_listing_screen.dart` review ✅ (pilot tamam, tüm pattern'lar uygulandı)
   - `AppLocalizations`, `showErrorSnackbar`, `ErrorDisplay` kalmış mı kontrol et
   - `handleError` doğru şekilde kullanılıyor mu doğrula
 

@@ -1,13 +1,11 @@
-import 'package:teqlif/core/app_error.dart';
-
 /// Başarı veya hata sonucunu taşıyan tip.
 ///
 /// Kullanım:
 /// ```dart
 /// final result = await listingService.create(data);
 /// switch (result) {
-///   case Ok(:final value): // başarı
-///   case Err(:final error): ErrorDisplay.show(context, error);
+///   case Ok(:final value): ...
+///   case Err(:final error): handleError(error, loc);
 /// }
 /// ```
 sealed class Result<T> {
@@ -20,6 +18,6 @@ final class Ok<T> extends Result<T> {
 }
 
 final class Err<T> extends Result<T> {
-  final AppError error;
+  final Object error;
   const Err(this.error);
 }

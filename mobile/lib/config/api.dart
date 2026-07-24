@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/app_error.dart';
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../core/result.dart';
@@ -188,7 +187,7 @@ Future<Map<String, dynamic>> apiCall(
 /// final result = await apiCallResult(() => http.post(...));
 /// switch (result) {
 ///   case Ok(:final value): ...
-///   case Err(:final error): ErrorDisplay.show(context, error);
+///   case Err(:final error): handleError(error, loc);
 /// }
 /// ```
 Future<Result<Map<String, dynamic>>> apiCallResult(
@@ -197,7 +196,7 @@ Future<Result<Map<String, dynamic>>> apiCallResult(
   try {
     return Ok(await apiCall(request));
   } on AppException catch (e) {
-    return Err(AppError.from(e));
+    return Err(e);
   }
 }
 
@@ -208,7 +207,7 @@ Future<Result<List<dynamic>>> apiCallListResult(
   try {
     return Ok(await apiCallList(request));
   } on AppException catch (e) {
-    return Err(AppError.from(e));
+    return Err(e);
   }
 }
 
