@@ -25,6 +25,7 @@ sys.path.append(backend_dir)
 load_dotenv(os.path.join(backend_dir, ".env"))
 
 import sqlalchemy as sa
+from sqlalchemy import ARRAY, Text, bindparam
 
 from app.database import AsyncSessionLocal
 from app.utils.redis_client import get_redis
@@ -57,8 +58,11 @@ async def sync() -> None:
             await session.execute(
                 sa.text(
                     "INSERT INTO translations (key, lang, value) "
-                    "SELECT unnest(:keys::text[]), :lang, unnest(:values::text[]) "
+                    "SELECT unnest(:keys), :lang, unnest(:values) "
                     "ON CONFLICT (key, lang) DO UPDATE SET value = EXCLUDED.value"
+                ).bindparams(
+                    bindparam("keys", type_=ARRAY(Text)),
+                    bindparam("values", type_=ARRAY(Text)),
                 ),
                 {
                     "keys": list(pack.keys()),
