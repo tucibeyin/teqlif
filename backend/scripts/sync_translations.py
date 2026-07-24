@@ -57,7 +57,7 @@ async def sync() -> None:
             await session.execute(
                 sa.text(
                     "INSERT INTO translations (key, lang, value) "
-                    "SELECT unnest(:keys), :lang, unnest(:values) "
+                    "SELECT unnest(:keys::text[]), :lang, unnest(:values::text[]) "
                     "ON CONFLICT (key, lang) DO UPDATE SET value = EXCLUDED.value"
                 ),
                 {
