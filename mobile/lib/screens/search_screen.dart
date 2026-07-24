@@ -155,14 +155,14 @@ class SearchScreenState extends State<SearchScreen> {
       );
       if (mounted) {
         if (resp.statusCode == 201) {
-          TeqSnackBar.show(context, message: l.searchAlertCreated, type: TeqSnackBarType.success);
+          TeqSnackBar.show(message: l.searchAlertCreated, type: TeqSnackBarType.success);
         } else {
-          TeqSnackBar.show(context, message: l.searchAlertFailed, type: TeqSnackBarType.error);
+          TeqSnackBar.show(message: l.searchAlertFailed, type: TeqSnackBarType.error);
         }
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context, message: l.searchAlertFailed, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: l.searchAlertFailed, type: TeqSnackBarType.error);
       }
     } finally {
       if (mounted) setState(() => _alertCreating = false);
@@ -221,7 +221,7 @@ class SearchScreenState extends State<SearchScreen> {
           }
         });
         final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(context, message: l.notInterestedConfirmed, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: l.notInterestedConfirmed, type: TeqSnackBarType.info);
       }
     } catch (_) {}
   }

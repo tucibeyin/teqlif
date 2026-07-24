@@ -120,9 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (!_eulaAccepted) {
       final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(
-        context,
-        message: l.validTermsRequired,
+      TeqSnackBar.show(message: l.validTermsRequired,
         type: TeqSnackBarType.error,
       );
       return;
@@ -150,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          TeqToast.error(context, AppLocalizations.of(context)!.errorGenericRetry);
+          TeqToast.error(AppLocalizations.of(context)!.errorGenericRetry);
         }
       }
     } finally {

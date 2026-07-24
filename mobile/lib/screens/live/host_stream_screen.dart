@@ -194,11 +194,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         final msg = sent > 0
             ? l.blastSent(sent)
             : l.blastStarted;
-        TeqToast.success(context, msg);
+        TeqToast.success(msg);
         setState(() { _audienceSize = 0; _audienceCost = 0.0; });
       } else {
         final errMsg = result?['error'] as String? ?? l.blastError;
-        TeqToast.error(context, errMsg);
+        TeqToast.error(errMsg);
       }
     } finally {
       if (mounted) setState(() => _blastSending = false);
@@ -306,7 +306,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   void _showHypeAlert(String message) {
     if (!mounted) return;
-    TeqToast.warning(context, '🔥 $message', duration: const Duration(seconds: 5));
+    TeqToast.warning('🔥 $message', duration: const Duration(seconds: 5));
   }
 
   @override
@@ -551,14 +551,14 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     try {
       await StreamService.inviteCoHost(widget.streamToken.streamId, username);
       if (mounted) {
-        TeqToast.info(context, AppLocalizations.of(context)!.hostInvitedToStage);
+        TeqToast.info(AppLocalizations.of(context)!.hostInvitedToStage);
       }
     } catch (e) {
       if (mounted) {
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          TeqToast.error(context, AppLocalizations.of(context)!.hostInviteError(''));
+          TeqToast.error(AppLocalizations.of(context)!.hostInviteError(''));
         }
       }
     }

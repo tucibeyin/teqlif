@@ -251,7 +251,7 @@ class PurchaseDetailScreen extends StatelessWidget {
                         ),
                       );
                     } else {
-                      TeqSnackBar.show(context, message: l.purchaseListingNotFound);
+                      TeqSnackBar.show(message: l.purchaseListingNotFound);
                     }
                   },
                   text: l.purchaseViewListing,

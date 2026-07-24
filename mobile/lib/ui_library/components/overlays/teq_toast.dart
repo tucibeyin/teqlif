@@ -5,23 +5,29 @@ import '../../foundation/teq_typography.dart';
 
 enum TeqToastType { error, success, warning, info }
 
-/// Overlay tabanlı tek satırlık bildirim widget'ı.
+/// Context-free overlay bildirimi.
 ///
-/// ScaffoldMessenger'a bağımlı değildir — canlı yayın ekranları dahil
-/// her context'te çalışır. Aynı anda yalnızca bir toast görünür;
-/// yeni bir çağrı mevcut toast'u hemen kaldırır.
+/// Kullanım öncesi [TeqToast.init] ile navigatorKey set edilmeli (main.dart).
+/// Aynı anda yalnızca bir toast görünür; yeni çağrı eskiyi hemen kaldırır.
+/// Aşağı kaydırarak erken kapatılabilir.
 class TeqToast {
   TeqToast._();
 
+  static GlobalKey<NavigatorState>? _navigatorKey;
   static OverlayEntry? _current;
 
-  static void show(
-    BuildContext context, {
+  /// App başlangıcında bir kez çağrılır.
+  static void init(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
+
+  static void show({
     required String message,
     TeqToastType type = TeqToastType.error,
     Duration duration = const Duration(seconds: 3),
   }) {
-    final overlay = Overlay.of(context, rootOverlay: true);
+    final overlay = _navigatorKey?.currentState?.overlay;
+    if (overlay == null) return;
 
     _current?.remove();
     _current = null;
@@ -43,17 +49,21 @@ class TeqToast {
     overlay.insert(entry);
   }
 
-  static void error(BuildContext context, String message, {Duration? duration}) =>
-      show(context, message: message, type: TeqToastType.error, duration: duration ?? const Duration(seconds: 3));
+  static void error(String message, {Duration? duration}) =>
+      show(message: message, type: TeqToastType.error,
+          duration: duration ?? const Duration(seconds: 3));
 
-  static void success(BuildContext context, String message, {Duration? duration}) =>
-      show(context, message: message, type: TeqToastType.success, duration: duration ?? const Duration(seconds: 3));
+  static void success(String message, {Duration? duration}) =>
+      show(message: message, type: TeqToastType.success,
+          duration: duration ?? const Duration(seconds: 3));
 
-  static void warning(BuildContext context, String message, {Duration? duration}) =>
-      show(context, message: message, type: TeqToastType.warning, duration: duration ?? const Duration(seconds: 4));
+  static void warning(String message, {Duration? duration}) =>
+      show(message: message, type: TeqToastType.warning,
+          duration: duration ?? const Duration(seconds: 4));
 
-  static void info(BuildContext context, String message, {Duration? duration}) =>
-      show(context, message: message, type: TeqToastType.info, duration: duration ?? const Duration(seconds: 4));
+  static void info(String message, {Duration? duration}) =>
+      show(message: message, type: TeqToastType.info,
+          duration: duration ?? const Duration(seconds: 4));
 }
 
 class _TeqToastWidget extends StatefulWidget {
@@ -78,6 +88,7 @@ class _TeqToastWidgetState extends State<_TeqToastWidget>
   late final AnimationController _ctrl;
   late final Animation<double> _opacity;
   late final Animation<Offset> _slide;
+  bool _dismissed = false;
 
   @override
   void initState() {
@@ -89,17 +100,17 @@ class _TeqToastWidgetState extends State<_TeqToastWidget>
 
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 1.0),
+      begin: const Offset(0, 1.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
 
     _ctrl.forward();
-
     Future.delayed(widget.duration, _dismiss);
   }
 
   Future<void> _dismiss() async {
-    if (!mounted) return;
+    if (!mounted || _dismissed) return;
+    _dismissed = true;
     await _ctrl.reverse();
     widget.onDone();
   }
@@ -132,41 +143,46 @@ class _TeqToastWidgetState extends State<_TeqToastWidget>
         opacity: _opacity,
         child: SlideTransition(
           position: _slide,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: TeqSpacing.m,
-                vertical: TeqSpacing.s,
-              ),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(TeqSpacing.radiusL),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, color: Colors.white, size: 20),
-                  const SizedBox(width: TeqSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      widget.message,
-                      style: TeqTypography.bodyMedium.copyWith(
-                        color: Colors.white,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+          child: GestureDetector(
+            onVerticalDragEnd: (d) {
+              if ((d.primaryVelocity ?? 0) > 200) _dismiss();
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TeqSpacing.m,
+                  vertical: TeqSpacing.s,
+                ),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(TeqSpacing.radiusL),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 20),
+                    const SizedBox(width: TeqSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        widget.message,
+                        style: TeqTypography.bodyMedium.copyWith(
+                          color: Colors.white,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

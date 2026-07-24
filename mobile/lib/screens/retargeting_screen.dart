@@ -606,10 +606,10 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       final sent = result['sent'] as int? ?? actualCount;
       setState(() { _sent = true; _sentCount = sent; _blastCooldownSeconds = 86400; });
       _startCountdown();
-      TeqToast.success(context, AppLocalizations.of(context)!.retargetingBlastSuccess);
+      TeqToast.success(AppLocalizations.of(context)!.retargetingBlastSuccess);
     } else {
       final errMsg = result?['error'] as String? ?? 'Bir sorun oluştu, lütfen tekrar dene.';
-      TeqToast.error(context, errMsg);
+      TeqToast.error(errMsg);
     }
   }
 

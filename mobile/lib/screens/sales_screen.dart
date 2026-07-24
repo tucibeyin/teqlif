@@ -99,7 +99,7 @@ class _SalesScreenState extends State<SalesScreen> {
         setState(() {
           _loading = false;
         });
-        TeqToast.error(context, AppLocalizations.of(context)!.saleLoadError, duration: const Duration(seconds: 4));
+        TeqToast.error(AppLocalizations.of(context)!.saleLoadError, duration: const Duration(seconds: 4));
       }
     }
   }

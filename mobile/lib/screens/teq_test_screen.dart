@@ -74,9 +74,7 @@ class TeqTestScreen extends StatelessWidget {
             TeqButton(
               text: 'Show SnackBar',
               onPressed: () {
-                TeqSnackBar.show(
-                  context,
-                  message: 'Bu bir başarılı işlemdir!',
+                TeqSnackBar.show(message: 'Bu bir başarılı işlemdir!',
                   type: TeqSnackBarType.success,
                 );
               },

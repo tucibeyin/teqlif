@@ -22,6 +22,7 @@ import 'services/offline_queue_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'services/localization_service.dart';
+import 'ui_library/components/overlays/teq_toast.dart';
 import 'widgets/global_keyboard_accessory.dart';
 import 'widgets/global_call_overlay.dart';
 import 'widgets/incoming_call_overlay.dart';
@@ -72,6 +73,7 @@ void main() async {
 
       await CacheService.init();
       await LocalizationService.initBox();
+      TeqToast.init(TeqlifApp.navigatorKey);
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] CacheService.init done | ${_sw.elapsedMilliseconds}ms');
       // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
       CacheService.clearExpired().ignore();

@@ -247,7 +247,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(context, message: l.pubProfileActionFailed, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: l.pubProfileActionFailed, type: TeqSnackBarType.error);
       }
     } finally {}
   }
@@ -551,9 +551,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     label: l.publicProfileEditProfile,
                     icon: Icons.edit_outlined,
                     primary: false,
-                    onPressed: () => TeqSnackBar.show(
-                      context,
-                      message: l.pubProfileEditComingSoon,
+                    onPressed: () => TeqSnackBar.show(message: l.pubProfileEditComingSoon,
                       type: TeqSnackBarType.info,
                     ),
                   ),
@@ -1199,14 +1197,14 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
       } else {
         if (mounted) {
           final l = AppLocalizations.of(context)!;
-          TeqSnackBar.show(context, message: l.ratingSaveFailed, type: TeqSnackBarType.error);
+          TeqSnackBar.show(message: l.ratingSaveFailed, type: TeqSnackBarType.error);
           setState(() => _saving = false);
         }
       }
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(context, message: l.errorConnection, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: l.errorConnection, type: TeqSnackBarType.error);
         setState(() => _saving = false);
       }
     }

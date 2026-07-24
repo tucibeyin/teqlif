@@ -66,7 +66,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.blockedActionFailed, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: AppLocalizations.of(context)!.blockedActionFailed, type: TeqSnackBarType.info);
       }
     }
   }

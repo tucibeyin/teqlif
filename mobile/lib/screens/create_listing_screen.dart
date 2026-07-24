@@ -212,8 +212,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Future<void> _fetchAiPriceEstimate() async {
     final loc = ref.read(localizationProvider);
     if (!_aiReady) {
-      TeqSnackBar.show(context,
-          message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _aiLoading = true);
@@ -227,16 +226,14 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       );
       if (!mounted) return;
       if (result == null) {
-        TeqSnackBar.show(context,
-            message: loc.t('aiPriceError'), type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: loc.t('aiPriceError'), type: TeqSnackBarType.error);
         return;
       }
       final tuciSpent = (result['tuci_spent'] as num?)?.toInt() ?? 0;
       if (tuciSpent > 0) {
         CacheService.clearData('user_wallet_data');
         _loadAiCredits();
-        TeqSnackBar.show(context,
-            message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
+        TeqSnackBar.show(message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
             type: TeqSnackBarType.success);
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
         setState(() => _aiCreditsRemaining = _aiCreditsRemaining! - 1);
@@ -256,7 +253,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       } else if (msg == 'VALIDATION_ERROR') {
         msg = loc.t('createNeedAllFieldsNew');
       }
-      TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: msg, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiLoading = false);
     }
@@ -265,8 +262,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Future<void> _fetchAiDescription() async {
     final loc = ref.read(localizationProvider);
     if (!_aiReady) {
-      TeqSnackBar.show(context,
-          message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
       return;
     }
     setState(() {
@@ -309,8 +305,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             try {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
               if (json.containsKey('error')) {
-                TeqSnackBar.show(context,
-                    message: loc.t('aiDescError'), type: TeqSnackBarType.error);
+                TeqSnackBar.show(message: loc.t('aiDescError'), type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {
                 final newText = _descCtrl.text + (json['text'] as String);
@@ -325,8 +320,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 if (tuciSpent > 0) {
                   CacheService.clearData('user_wallet_data');
                   _loadAiDescCredits();
-                  TeqSnackBar.show(context,
-                      message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
+                  TeqSnackBar.show(message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
                       type: TeqSnackBarType.success);
                 } else if (_aiDescCreditsRemaining != null &&
                     _aiDescCreditsRemaining! > 0) {
@@ -358,21 +352,18 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             msg = loc.t('aiDescError');
           }
           // ignore: use_build_context_synchronously
-          TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
+          TeqSnackBar.show(message: msg, type: TeqSnackBarType.error);
         } else if (resp.statusCode == 503) {
           // ignore: use_build_context_synchronously
-          TeqSnackBar.show(context,
-              message: loc.t('aiDescUnavailable'), type: TeqSnackBarType.warning);
+          TeqSnackBar.show(message: loc.t('aiDescUnavailable'), type: TeqSnackBarType.warning);
         } else {
           // ignore: use_build_context_synchronously
-          TeqSnackBar.show(context,
-              message: loc.t('aiDescError'), type: TeqSnackBarType.error);
+          TeqSnackBar.show(message: loc.t('aiDescError'), type: TeqSnackBarType.error);
         }
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context,
-            message: ref.read(localizationProvider).t('aiDescStreamError'),
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('aiDescStreamError'),
             type: TeqSnackBarType.error);
       }
     } finally {
@@ -605,8 +596,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
           final loc = ref.read(localizationProvider);
-          TeqSnackBar.show(context,
-              message: loc.t('videoTooLong', {
+          TeqSnackBar.show(message: loc.t('videoTooLong', {
                 'max': _maxVideoDurationSecs.toString(),
                 'actual': dur.inSeconds.toString()
               }),
@@ -625,7 +615,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
     } catch (e) {
       if (mounted) {
-        showErrorSnackbar(context, _uploadError(e));
+        handleError(e, ref.read(localizationProvider));
         _removeVideo();
       }
     } finally {
@@ -669,8 +659,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   Future<void> _pickImages(ImageSource source) async {
     if (_images.length >= _maxImages) {
-      TeqSnackBar.show(context,
-          message: ref.read(localizationProvider).t('listingMaxPhotos'), type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('listingMaxPhotos'), type: TeqSnackBarType.warning);
       return;
     }
     if (source == ImageSource.gallery) {
@@ -725,8 +714,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
-      TeqSnackBar.show(context,
-          message: ref.read(localizationProvider).t('videoUploading'),
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('videoUploading'),
           type: TeqSnackBarType.warning);
       return;
     }
@@ -742,10 +730,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           imageUrls.add(result.url);
           thumbnailUrl ??= result.thumbUrl;
         } catch (e) {
-          if (mounted) {
-            TeqSnackBar.show(context,
-                message: _uploadError(e), type: TeqSnackBarType.error);
-          }
+          if (mounted) handleError(e, ref.read(localizationProvider));
         }
       }
 
@@ -821,51 +806,20 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         'photo_count': _images.length,
         'extra_field_count': extraFields.length,
       });
-      TeqSnackBar.show(context,
-          message: ref.read(localizationProvider).t('msgListingPublished'),
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('msgListingPublished'),
           type: TeqSnackBarType.success);
       Navigator.pop(context, true);
     } on AppException catch (e) {
       if (!mounted) return;
-      TeqSnackBar.show(context,
-          message: _mapError(e), type: TeqSnackBarType.error);
+      handleError(e, ref.read(localizationProvider));
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context,
-            message: ref.read(localizationProvider).t('createListingConnError'),
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('createListingConnError'),
             type: TeqSnackBarType.error);
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-  }
-
-  // ── Error helpers ──────────────────────────────────────────────────────────
-
-  String _uploadError(Object e) {
-    final s = e.toString();
-    final loc = ref.read(localizationProvider);
-    if (s.contains('HTTP 413')) return loc.t('uploadErrorTooLarge');
-    if (s.contains('HTTP 502') || s.contains('HTTP 503') || s.contains('HTTP 504')) {
-      return loc.t('uploadErrorServerBusy');
-    }
-    if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
-      return loc.t('uploadErrorAuthExpired');
-    }
-    if (e is NetworkException) { return loc.t('errorNetworkMessage'); }
-    return loc.t('uploadErrorGeneric');
-  }
-
-  String _mapError(AppException e) {
-    final loc = ref.read(localizationProvider);
-    if (e.statusCode == 403 || e.code == 'FORBIDDEN') return loc.t('errorCaptchaFailed');
-    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return loc.t('errorTooFast');
-    if (e.code == 'CONTENT_POLICY_VIOLATION') return loc.t('errorContentPolicy');
-    if (e.code == 'PROVINCE_REQUIRED') return loc.t('errProvinceRequired');
-    if (e.code == 'INVALID_CONDITION') return loc.t('errInvalidCondition');
-    if (e.code == 'INVALID_PRICE') return loc.t('errInvalidPrice');
-    if (e.code == 'LISTING_TITLE_REQUIRED') return loc.t('fieldListingTitleHint');
-    return e.message;
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────

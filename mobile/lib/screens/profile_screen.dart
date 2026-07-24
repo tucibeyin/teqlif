@@ -1398,13 +1398,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       } else {
         setState(() => _isPrivate = !val);
         if (mounted) {
-          TeqSnackBar.show(context, message: AppLocalizations.of(context)!.errorGenericRetry, type: TeqSnackBarType.info);
+          TeqSnackBar.show(message: AppLocalizations.of(context)!.errorGenericRetry, type: TeqSnackBarType.info);
         }
       }
     } catch (_) {
       setState(() => _isPrivate = !val);
       if (mounted) {
-        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.errNetworkRetry, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: AppLocalizations.of(context)!.errNetworkRetry, type: TeqSnackBarType.info);
       }
     }
   }
@@ -1438,7 +1438,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     if (!mounted) return;
     setState(() => _shareLoading = false);
     if (code == null) {
-      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.profileInviteCodeError, type: TeqSnackBarType.info);
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.profileInviteCodeError, type: TeqSnackBarType.info);
       return;
     }
 
@@ -1844,9 +1844,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           );
                           if (ctx.mounted) Navigator.pop(ctx);
                           if (mounted) {
-                            TeqSnackBar.show(
-                              context,
-                              message: l.msgPasswordChanged,
+                            TeqSnackBar.show(message: l.msgPasswordChanged,
                               type: TeqSnackBarType.success,
                             );
                           }
@@ -2777,7 +2775,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         'Avatar yüklenemedi: $e',
       );
       if (!mounted) return;
-      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.profilePhotoUploadError, type: TeqSnackBarType.info);
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.profilePhotoUploadError, type: TeqSnackBarType.info);
     } finally {
       if (mounted)
         setState(() {
@@ -2820,9 +2818,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       if (link.isNotEmpty &&
           !link.startsWith('http://') &&
           !link.startsWith('https://')) {
-        TeqSnackBar.show(
-          context,
-          message: linkErrorMsg,
+        TeqSnackBar.show(message: linkErrorMsg,
           type: TeqSnackBarType.error,
         );
         setState(() => _saving = false);
@@ -3318,7 +3314,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         await _load();
       } else if (resp.statusCode == 402 && mounted) {
         final l2 = AppLocalizations.of(context)!;
-        TeqSnackBar.show(context, message: l2.listingReactivateInsufficientBalance, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: l2.listingReactivateInsufficientBalance, type: TeqSnackBarType.info);
       }
     } catch (e) {
       LoggerService.instance.warning(

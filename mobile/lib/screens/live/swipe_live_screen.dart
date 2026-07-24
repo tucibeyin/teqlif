@@ -900,14 +900,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted) return;
     setState(() => _selfMuted = true);
     if (!widget.isActive) return;
-    TeqToast.warning(context, AppLocalizations.of(context)!.swipeMutedInStream, duration: const Duration(seconds: 4));
+    TeqToast.warning(AppLocalizations.of(context)!.swipeMutedInStream, duration: const Duration(seconds: 4));
   }
 
   void _handleUnmuted() {
     if (!mounted) return;
     setState(() => _selfMuted = false);
     if (!widget.isActive) return;
-    TeqToast.success(context, AppLocalizations.of(context)!.modUnmutedMsg);
+    TeqToast.success(AppLocalizations.of(context)!.modUnmutedMsg);
   }
 
   void _handleKicked() {
@@ -915,7 +915,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     _kicked = true;
     widget.session.room?.disconnect();
     if (!widget.isActive) return;
-    TeqToast.error(context, AppLocalizations.of(context)!.kickedFromStream, duration: const Duration(seconds: 4));
+    TeqToast.error(AppLocalizations.of(context)!.kickedFromStream, duration: const Duration(seconds: 4));
     Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
@@ -923,14 +923,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted || _isCoHost) return;
     setState(() => _isCoHost = true);
     if (!widget.isActive) return;
-    TeqToast.success(context, AppLocalizations.of(context)!.swipeMadeModeratorBy, duration: const Duration(seconds: 5));
+    TeqToast.success(AppLocalizations.of(context)!.swipeMadeModeratorBy, duration: const Duration(seconds: 5));
   }
 
   void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
     setState(() => _isCoHost = false);
     if (!widget.isActive) return;
-    TeqToast.info(context, AppLocalizations.of(context)!.liveModDemotedSelf(demotedBy), duration: const Duration(seconds: 4));
+    TeqToast.info(AppLocalizations.of(context)!.liveModDemotedSelf(demotedBy), duration: const Duration(seconds: 4));
   }
 
   void _showCoHostInviteDialog(String hostUsername) {
@@ -982,7 +982,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       _isSelfCoHost = false;
       _localVideoTrack = null;
     });
-    TeqToast.info(context, AppLocalizations.of(context)!.swipeRemovedFromStage);
+    TeqToast.info(AppLocalizations.of(context)!.swipeRemovedFromStage);
   }
 
   Future<void> _acceptCoHostInvite() async {
@@ -1000,7 +1000,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          TeqToast.error(context, AppLocalizations.of(context)!.errorOperationFailed);
+          TeqToast.error(AppLocalizations.of(context)!.errorOperationFailed);
         }
       }
     }
@@ -1359,7 +1359,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       if (targetUsername == _myUsername) {
                         if (CallService.instance.hasActiveCall) {
                           debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] User invited to co-host but has active call. Auto-rejecting locally.');
-                          TeqToast.warning(context, AppLocalizations.of(context)!.errorCoHostDuringCall(hostUsername), duration: const Duration(seconds: 4));
+                          TeqToast.warning(AppLocalizations.of(context)!.errorCoHostDuringCall(hostUsername), duration: const Duration(seconds: 4));
                         } else {
                           _showCoHostInviteDialog(hostUsername);
                         }
@@ -1521,7 +1521,7 @@ class _GiftSheetState extends State<_GiftSheet> {
         metadata: {'gift_name': giftName},
       );
       Navigator.pop(context);
-      TeqToast.success(context, AppLocalizations.of(context)!.swipeGiftSent);
+      TeqToast.success(AppLocalizations.of(context)!.swipeGiftSent);
     } else {
       final isInsufficient = result['status_code'] == 402 ||
           (result['error']?.toString().toLowerCase().contains('yetersiz') ?? false);
@@ -1529,7 +1529,7 @@ class _GiftSheetState extends State<_GiftSheet> {
       if (isInsufficient) {
         setState(() => _insufficientBalance = true);
       } else {
-        TeqToast.error(context, result['error'] as String? ?? AppLocalizations.of(context)!.giftErrorGeneric);
+        TeqToast.error(result['error'] as String? ?? AppLocalizations.of(context)!.giftErrorGeneric);
       }
     }
   }

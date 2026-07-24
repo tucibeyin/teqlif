@@ -497,14 +497,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             .setStatus(
               newActive ? ListingStatus.active : ListingStatus.passive,
             );
-        TeqSnackBar.show(
-          context,
-          message: newActive ? l.listingActivated : l.listingDeactivated,
+        TeqSnackBar.show(message: newActive ? l.listingActivated : l.listingDeactivated,
           type: TeqSnackBarType.success,
         );
         if (newActive) eventBus.fire(const CreditsChangedEvent());
       } else if (resp['statusCode'] == 402 && mounted) {
-        TeqSnackBar.show(context, message: l.listingReactivateInsufficientBalance, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: l.listingReactivateInsufficientBalance, type: TeqSnackBarType.error);
       }
     } catch (_) {}
   }
@@ -640,7 +638,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final l = AppLocalizations.of(context)!;
     final amount = _parseFormattedPrice(_offerCtrl.text);
     if (amount == null || amount <= 0) {
-      TeqSnackBar.show(context, message: l.offerInvalidAmount, type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: l.offerInvalidAmount, type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _offerSubmitting = true);
@@ -657,13 +655,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         interactionType: 'listing_offer_submit',
         pricePoint: amount.toDouble(),
       );
-      TeqSnackBar.show(context, message: l.offerSuccess, type: TeqSnackBarType.success);
+      TeqSnackBar.show(message: l.offerSuccess, type: TeqSnackBarType.success);
       final offers = await ListingService.getOffers(id);
       if (mounted && context.mounted) _offersNotifier.value = offers;
     } catch (e) {
       if (!mounted || !context.mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      TeqSnackBar.show(context, message: msg.isNotEmpty ? msg : l.offerError, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: msg.isNotEmpty ? msg : l.offerError, type: TeqSnackBarType.error);
     } finally {
       if (mounted && context.mounted) setState(() => _offerSubmitting = false);
     }
@@ -717,11 +715,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final l = AppLocalizations.of(context)!;
 
     if (_myUserId == null) {
-      TeqSnackBar.show(context, message: l.listingMsgLoginRequired, type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: l.listingMsgLoginRequired, type: TeqSnackBarType.warning);
       return;
     }
     if (_myUserId == otherId) {
-      TeqSnackBar.show(context, message: l.listingMsgOwnListing, type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: l.listingMsgOwnListing, type: TeqSnackBarType.warning);
       return;
     }
 
@@ -782,11 +780,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             jsonDecode(resp.body)['detail'] ??
             AppLocalizations.of(context)?.errSomethingWentWrong ??
             'Error';
-        TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: detail, type: TeqSnackBarType.error);
       }
     } catch (_) {
       if (mounted && context.mounted) {
-        TeqSnackBar.show(context, message: connErr, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: connErr, type: TeqSnackBarType.error);
       }
     }
   }
@@ -861,17 +859,17 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (apiResult != null && apiResult['cooldown'] == true) {
       final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
       notifier.startCooldown(secs);
-      TeqSnackBar.show(context, message: _formatCooldown(secs), type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: _formatCooldown(secs), type: TeqSnackBarType.warning);
     } else if (apiResult != null && apiResult.containsKey('error')) {
       notifier.setSending(false);
-      TeqSnackBar.show(context, message: apiResult['error'] as String, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: apiResult['error'] as String, type: TeqSnackBarType.error);
     } else if (apiResult != null) {
       CacheService.clearData('user_wallet_data');
       notifier.startCooldown(86400);
-      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.audienceMassSendSuccess, type: TeqSnackBarType.success);
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.audienceMassSendSuccess, type: TeqSnackBarType.success);
     } else {
       notifier.setSending(false);
-      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.audienceMassSendError, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.audienceMassSendError, type: TeqSnackBarType.error);
     }
   }
 
@@ -971,17 +969,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 widget.listing['campaign_id'] = _campaignId;
                 widget.listing['is_sponsored'] = true;
               });
-              TeqSnackBar.show(
-                context,
-                message: wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid,
+              TeqSnackBar.show(message: wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid,
                 type: TeqSnackBarType.success,
               );
             } else {
               final body = jsonDecode(resp.body) as Map<String, dynamic>;
               final msg = body['detail'] ?? ll.boostErrorDefault;
-              TeqSnackBar.show(
-                context,
-                message: msg.toString(),
+              TeqSnackBar.show(message: msg.toString(),
                 type: TeqSnackBarType.error,
               );
             }
@@ -989,7 +983,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             if (mounted && context.mounted) {
               final ll = AppLocalizations.of(ctx)!;
               Navigator.pop(dlgCtx);
-              TeqSnackBar.show(context, message: ll.boostErrorConnection, type: TeqSnackBarType.error);
+              TeqSnackBar.show(message: ll.boostErrorConnection, type: TeqSnackBarType.error);
             }
           }
         }
@@ -1234,7 +1228,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   key: const Key('listing_detail_report_btn_gonder'),
                   onPressed: () async {
                     if (selectedReason == null) {
-                      TeqSnackBar.show(context, message: l.listingReportSelectRequired, type: TeqSnackBarType.warning);
+                      TeqSnackBar.show(message: l.listingReportSelectRequired, type: TeqSnackBarType.warning);
                       return;
                     }
                     final note = noteCtrl.text.trim();
@@ -1270,18 +1264,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       if (!mounted || !context.mounted) return;
       final l = AppLocalizations.of(context)!;
       if (resp.statusCode == 200) {
-        TeqSnackBar.show(context, message: l.listingReportSuccess, type: TeqSnackBarType.success);
+        TeqSnackBar.show(message: l.listingReportSuccess, type: TeqSnackBarType.success);
       } else {
         final detail =
             jsonDecode(resp.body)['detail'] ??
             AppLocalizations.of(context)?.errSomethingWentWrong ??
             'Error';
-        TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: detail, type: TeqSnackBarType.error);
       }
     } catch (_) {
       if (mounted && context.mounted) {
         final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(context, message: l.errorConnection, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: l.errorConnection, type: TeqSnackBarType.error);
       }
     }
   }

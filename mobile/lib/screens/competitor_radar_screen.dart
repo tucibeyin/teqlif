@@ -547,7 +547,7 @@ class _RadarSection extends StatelessWidget {
               onTap: () {
                 final l = AppLocalizations.of(context)!;
                 Clipboard.setData(ClipboardData(text: suggestedPrice.toStringAsFixed(0)));
-                TeqToast.info(context, l.radarSuggestedCopied(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)));
+                TeqToast.info(l.radarSuggestedCopied(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)));
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -554,7 +554,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       }
       await Sentry.captureException(e, stackTrace: st);
       if (mounted) {
-        TeqToast.error(context, l.storyDeleteFailed);
+        TeqToast.error(l.storyDeleteFailed);
         _videoCtrl?.play();
       }
     }

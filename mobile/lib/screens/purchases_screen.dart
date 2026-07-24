@@ -94,7 +94,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         setState(() {
           _loading = false;
         });
-        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.purchaseLoadError, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: AppLocalizations.of(context)!.purchaseLoadError, type: TeqSnackBarType.error);
       }
     }
   }

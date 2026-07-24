@@ -50,7 +50,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       
       if (!mounted) return;
       
-      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.passwordResetSuccess, type: TeqSnackBarType.info);
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.passwordResetSuccess, type: TeqSnackBarType.info);
       
       // Başarılı olunca Login ekranına dön
       Navigator.of(context).pop();

@@ -1,40 +1,45 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../core/app_exception.dart';
+import '../core/error_mapper.dart';
+import '../core/logger_service.dart';
 import '../l10n/app_localizations.dart';
-import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../services/localization_service.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 
-/// Merkezi UI hata gösterme helper'ı.
+/// OTA-localized ekranlar için: hata yakala → lokalize et → göster → logla.
 ///
-/// Gelen hatanın türüne göre kullanıcıya uygun mesajı
-/// projenin tema standartlarına uygun kırmızı bir Snackbar ile gösterir.
-///
-/// Kullanım:
 /// ```dart
-/// try {
-///   await SomeService.doSomething();
 /// } catch (e) {
-///   if (mounted) showErrorSnackbar(context, e);
+///   handleError(e, ref.read(localizationProvider));
 /// }
 /// ```
-void showErrorSnackbar(BuildContext context, dynamic error) {
-  final message = _extractMessage(context, error);
-
-  TeqSnackBar.show(
-    context,
-    message: message,
-    type: TeqSnackBarType.error,
-  );
+void handleError(Object error, TranslationPack loc) {
+  final message = ErrorMapper.toMessage(error, loc);
+  TeqToast.error(message);
+  if (ErrorMapper.shouldLog(error)) {
+    LoggerService.instance.captureException(error);
+  }
 }
 
-String _extractMessage(BuildContext context, dynamic error) {
-  final l = AppLocalizations.of(context)!;
-  if (error is NetworkException) return l.errorNetworkMessage;
-  if (error is AppException) return error.message;
-  if (error is String) return error;
-  if (error is Exception) {
-    final msg = error.toString();
-    if (msg.startsWith('Exception: ')) return msg.substring(11);
-    return msg;
+/// Compat shim — AppLocalizations kullanan (henüz OTA'ya geçmemiş) ekranlar için.
+/// context sadece AppLocalizations lookup'ı için kullanılır; TeqToast artık context-free.
+void showErrorSnackbar(BuildContext context, Object error) {
+  final l = AppLocalizations.of(context);
+  final String message;
+
+  if (error is NetworkException || (error is AppException && error.statusCode == 0)) {
+    message = l?.errorNetworkMessage ?? 'Bağlantı hatası';
+  } else if (error is AppException) {
+    message = error.message.isNotEmpty ? error.message : (l?.errorGenericRetry ?? 'Bir hata oluştu');
+  } else if (error is String) {
+    message = error;
+  } else {
+    message = l?.errorGenericRetry ?? 'Bir hata oluştu';
   }
-  return l.errorGenericRetry;
+
+  TeqToast.error(message);
+
+  if (error is AppException && error.shouldCapture) {
+    LoggerService.instance.captureException(error);
+  }
 }

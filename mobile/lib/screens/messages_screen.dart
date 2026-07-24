@@ -340,9 +340,9 @@ class _MessagesTabState extends State<_MessagesTab> {
           (c) => (c['user_id'] as int?) == otherId,
         ),
       );
-      TeqSnackBar.show(context, message: l.msgDeleteConversationSuccess);
+      TeqSnackBar.show(message: l.msgDeleteConversationSuccess);
     } else {
-      TeqSnackBar.show(context, message: l.msgDeleteConversationFailed);
+      TeqSnackBar.show(message: l.msgDeleteConversationFailed);
     }
   }
 
@@ -838,7 +838,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           if (!mounted) return;
           if (!active) {
             final l = AppLocalizations.of(context)!;
-            TeqToast.info(context, l.liveEnded);
+            TeqToast.info(l.liveEnded);
             return;
           }
           if (PipService.isVisible) {
@@ -1322,12 +1322,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           if (detail != null && detail.isNotEmpty) errMsg = detail;
         } catch (_) {}
         if (mounted) {
-          TeqSnackBar.show(context, message: errMsg);
+          TeqSnackBar.show(message: errMsg);
         }
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context, message: l.attachSendFailed);
+        TeqSnackBar.show(message: l.attachSendFailed);
       }
     } finally {
       if (mounted) setState(() => _uploadingMedia = false);
@@ -1421,7 +1421,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final raw = await picked.readAsBytes();
     if (raw.length > 5 * 1024 * 1024) {
       if (!mounted) return;
-      TeqSnackBar.show(context, message: l.attachFileTooLarge);
+      TeqSnackBar.show(message: l.attachFileTooLarge);
       return;
     }
     final compressed = await FlutterImageCompress.compressWithList(
@@ -1449,11 +1449,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final info = await VideoCompress.getMediaInfo(picked.path);
     if ((info.duration ?? 0) / 1000 > 15) {
       if (!mounted) return;
-      TeqSnackBar.show(context, message: l.attachVideoTooLong);
+      TeqSnackBar.show(message: l.attachVideoTooLong);
       return;
     }
     if (!mounted) return;
-    TeqToast.info(context, l.attachVideoProcessing, duration: const Duration(seconds: 10));
+    TeqToast.info(l.attachVideoProcessing, duration: const Duration(seconds: 10));
     final result = await VideoCompress.compressVideo(
       picked.path,
       quality: VideoQuality.MediumQuality,
@@ -1462,7 +1462,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     if (!mounted) return;
     final file = result?.file;
     if (file == null) {
-      TeqSnackBar.show(context, message: l.attachSendFailed);
+      TeqSnackBar.show(message: l.attachSendFailed);
       return;
     }
     final bytes = await file.readAsBytes();
@@ -1499,7 +1499,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final bytes = f.bytes;
     if (bytes == null) return;
     if (bytes.length > 5 * 1024 * 1024) {
-      TeqSnackBar.show(context, message: l.attachFileTooLarge);
+      TeqSnackBar.show(message: l.attachFileTooLarge);
       return;
     }
     final ext = f.extension?.toLowerCase() ?? '';
@@ -1552,7 +1552,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (micStatus.isPermanentlyDenied) {
         await openAppSettings();
       } else {
-        TeqSnackBar.show(context, message: l.voiceRecordFailed);
+        TeqSnackBar.show(message: l.voiceRecordFailed);
       }
     }
   }
@@ -1608,7 +1608,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (mounted) setState(() => _audioPlaying = true);
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context, message: l.voicePlayFailed);
+        TeqSnackBar.show(message: l.voicePlayFailed);
       }
     }
   }
@@ -1626,7 +1626,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       await OpenFilex.open(file.path);
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(context, message: l.attachOpenFailed);
+        TeqSnackBar.show(message: l.attachOpenFailed);
       }
     }
   }
@@ -1886,11 +1886,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final ok = await NotificationService.deleteMessage(messageId);
     if (!mounted) return;
     if (!ok) {
-      TeqSnackBar.show(context, message: l.msgDeleteMessageFailed);
+      TeqSnackBar.show(message: l.msgDeleteMessageFailed);
       // Başarısız olursa listeyi yeniden yükle
       _loadMessages();
     } else {
-      TeqSnackBar.show(context, message: l.msgDeleteMessageSuccess);
+      TeqSnackBar.show(message: l.msgDeleteMessageSuccess);
     }
   }
 

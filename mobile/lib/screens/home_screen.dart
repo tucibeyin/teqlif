@@ -1116,9 +1116,7 @@ class _GridItemState extends State<_GridItem> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 204 && mounted) {
-        TeqSnackBar.show(
-          context,
-          message: l.notInterestedConfirmed,
+        TeqSnackBar.show(message: l.notInterestedConfirmed,
           type: TeqSnackBarType.info,
         );
         widget.onRemove?.call();

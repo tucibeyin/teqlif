@@ -1,34 +1,24 @@
-import 'package:flutter/material.dart';
 import 'teq_toast.dart';
-
-// TeqSnackBar is a backward-compatible alias for TeqToast.
-// All calls are delegated to the overlay-based TeqToast widget.
-// Use TeqToast directly in new code.
 
 enum TeqSnackBarType { success, error, info, warning }
 
 class TeqSnackBar {
   TeqSnackBar._();
 
-  static void show(
-    BuildContext context, {
+  static void show({
     required String message,
     TeqSnackBarType type = TeqSnackBarType.info,
     Duration duration = const Duration(seconds: 3),
   }) {
     switch (type) {
       case TeqSnackBarType.success:
-        TeqToast.success(context, message, duration: duration);
-        break;
+        TeqToast.success(message, duration: duration);
       case TeqSnackBarType.error:
-        TeqToast.error(context, message, duration: duration);
-        break;
+        TeqToast.error(message, duration: duration);
       case TeqSnackBarType.warning:
-        TeqToast.warning(context, message, duration: duration);
-        break;
+        TeqToast.warning(message, duration: duration);
       case TeqSnackBarType.info:
-        TeqToast.info(context, message, duration: duration);
-        break;
+        TeqToast.info(message, duration: duration);
     }
   }
 }

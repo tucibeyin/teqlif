@@ -48,7 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          TeqToast.error(context, AppLocalizations.of(context)!.errorGenericRetry);
+          TeqToast.error(AppLocalizations.of(context)!.errorGenericRetry);
         }
       }
     } finally {

@@ -211,7 +211,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                         MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
                       );
                     } else {
-                      TeqSnackBar.show(context, message: l.purchaseListingNotFound, type: TeqSnackBarType.error);
+                      TeqSnackBar.show(message: l.purchaseListingNotFound, type: TeqSnackBarType.error);
                     }
                   },
                   text: l.purchaseViewListing,

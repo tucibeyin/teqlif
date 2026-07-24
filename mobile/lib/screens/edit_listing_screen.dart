@@ -142,9 +142,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
     final title = _titleCtrl.text.trim();
     final desc = _descCtrl.text.trim();
     if (title.isEmpty) {
-      TeqSnackBar.show(
-        context,
-        message: AppLocalizations.of(context)!.createNeedTitle,
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.createNeedTitle,
         type: TeqSnackBarType.warning,
       );
       return;
@@ -160,9 +158,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
       );
       if (!mounted) return;
       if (result == null) {
-        TeqSnackBar.show(
-          context,
-          message: AppLocalizations.of(context)!.aiPriceError,
+        TeqSnackBar.show(message: AppLocalizations.of(context)!.aiPriceError,
           type: TeqSnackBarType.error,
         );
         return;
@@ -172,9 +168,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
         // TUCi harcandı — badge'i serverdan taze al
         CacheService.clearData('user_wallet_data');
         _loadAiCredits();
-        TeqSnackBar.show(
-          context,
-          message: AppLocalizations.of(context)!.tuciSpent(tuciSpent),
+        TeqSnackBar.show(message: AppLocalizations.of(context)!.tuciSpent(tuciSpent),
           type: TeqSnackBarType.info,
         );
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
@@ -183,7 +177,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
       _showPriceEstimateSheet(result);
     } on AiInsufficientTuciException catch (e) {
       if (!mounted) return;
-      TeqSnackBar.show(context, message: e.detail, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: e.detail, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiLoading = false);
     }
@@ -457,9 +451,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
       await ctrl.dispose();
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
-          TeqSnackBar.show(
-            context,
-            message: AppLocalizations.of(
+          TeqSnackBar.show(message: AppLocalizations.of(
               context,
             )!.videoTooLong(_maxVideoDurationSecs, dur.inSeconds),
             type: TeqSnackBarType.warning,
@@ -482,9 +474,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
     } catch (e, st) {
       debugPrint('[CreateListing] Video upload HATA: $e\n$st');
       if (mounted) {
-        TeqSnackBar.show(
-          context,
-          message: _uploadError(e),
+        TeqSnackBar.show(message: _uploadError(e),
           type: TeqSnackBarType.error,
         );
         _removeVideo();
@@ -539,9 +529,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
   Future<void> _pickImages(ImageSource source) async {
     if (_images.length >= _maxImages) {
       final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(
-        context,
-        message: l.listingMaxPhotos,
+      TeqSnackBar.show(message: l.listingMaxPhotos,
         type: TeqSnackBarType.warning,
       );
       return;
@@ -601,9 +589,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
-      TeqSnackBar.show(
-        context,
-        message: AppLocalizations.of(context)!.videoUploading,
+      TeqSnackBar.show(message: AppLocalizations.of(context)!.videoUploading,
         type: TeqSnackBarType.info,
       );
       return;
@@ -628,9 +614,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
           debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
             final l = AppLocalizations.of(context)!;
-            TeqSnackBar.show(
-              context,
-              message: l.createListingPhotoUploadFailed(e.toString()),
+            TeqSnackBar.show(message: l.createListingPhotoUploadFailed(e.toString()),
               type: TeqSnackBarType.error,
             );
           }
@@ -670,25 +654,19 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(
-        context,
-        message: l.msgListingPublished,
+      TeqSnackBar.show(message: l.msgListingPublished,
         type: TeqSnackBarType.success,
       );
       Navigator.pop(context, true);
     } on AppException catch (e) {
       if (!mounted) return;
-      TeqSnackBar.show(
-        context,
-        message: _mapError(e),
+      TeqSnackBar.show(message: _mapError(e),
         type: TeqSnackBarType.error,
       );
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(
-          context,
-          message: l.createListingConnError,
+        TeqSnackBar.show(message: l.createListingConnError,
           type: TeqSnackBarType.error,
         );
       }

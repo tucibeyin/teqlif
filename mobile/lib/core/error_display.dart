@@ -21,9 +21,7 @@ class ErrorDisplay {
   static void show(BuildContext context, AppError error) {
     switch (error) {
       case NetworkError():
-        TeqToast.warning(
-          context,
-          AppLocalizations.of(context)!.errorNetworkMessage,
+        TeqToast.warning(AppLocalizations.of(context)!.errorNetworkMessage,
         );
 
       case AuthError():
@@ -33,10 +31,10 @@ class ErrorDisplay {
         final msg = error.hint != null
             ? '${error.message} ${error.hint}'
             : error.message;
-        TeqToast.error(context, msg);
+        TeqToast.error(msg);
 
       case ServerError():
-        TeqToast.error(context, error.message);
+        TeqToast.error(error.message);
     }
   }
 

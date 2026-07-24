@@ -64,9 +64,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
-        TeqSnackBar.show(
-          context,
-          message: AppLocalizations.of(context)!.errorGenericRetry,
+        TeqSnackBar.show(message: AppLocalizations.of(context)!.errorGenericRetry,
           type: TeqSnackBarType.error,
         );
       }
@@ -315,9 +313,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
       if (resp.statusCode == 200) {
         Navigator.pop(context);
         widget.onChanged();
-        TeqSnackBar.show(
-          context,
-          message: l.accountInfoEmailUpdated,
+        TeqSnackBar.show(message: l.accountInfoEmailUpdated,
           type: TeqSnackBarType.success,
         );
       } else {
