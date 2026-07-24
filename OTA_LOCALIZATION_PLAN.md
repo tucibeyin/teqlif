@@ -57,9 +57,9 @@ t('ui_save')  →  "Save"
 - [x] **T05** — Subcategory label'larını 4 dilde translations tablosuna ekle ✅
   - `subcat_automobile` vb. 59 key — ARB'den otomatik geldi (T02 içinde)
 
-- [ ] **T06** — VPS'te migration çalıştır ve verify et
-  - `alembic upgrade head`
-  - `SELECT COUNT(*) FROM translations GROUP BY lang;` → her dil için satır sayısı eşit olmalı
+- [x] **T06** — VPS'te migration çalıştır ve verify et ✅
+  - `alembic upgrade head` → başarılı
+  - Verify: `SELECT lang, COUNT(*) FROM translations GROUP BY lang;`
   - `redis-cli FLUSHALL` (sonraki fazda cache'i temiz başlat)
 
 ---
@@ -70,24 +70,21 @@ t('ui_save')  →  "Save"
 
 ---
 
-- [ ] **T07** — `GET /api/i18n/{lang}` endpoint yaz
+- [x] **T07** — `GET /api/i18n/{lang}` endpoint yaz ✅
   - DB'den `WHERE lang = :lang` ile tüm key-value'ları çek
-  - Flat JSON döndür: `{ "ui_save": "Kaydet", "subcat_automobile": "Otomobil", ... }`
+  - Flat JSON döndür: `{ "acceptRequest": "Onayla", "subcat_automobile": "Otomobil", ... }`
   - Geçersiz lang → 400 Bad Request
-  - Desteklenen diller: `tr`, `en`, `ar`, `ru`
+  - Dosya: `backend/app/routers/i18n.py`
 
-- [ ] **T08** — Redis cache ekle
-  - Cache key: `i18n:{lang}` (örn. `i18n:en`)
-  - TTL: 1 saat
-  - Cache miss → DB'den çek, Redis'e yaz, döndür
-  - Cache hit → direkt döndür (DB'ye gitme)
+- [x] **T08** — Redis cache ekle ✅
+  - Cache key: `i18n:{lang}` (örn. `i18n:en`), TTL: 3600s
+  - Version cache: `i18n:{lang}:version`, TTL: 3600s
 
-- [ ] **T09** — `GET /api/i18n/{lang}/version` endpoint yaz
-  - O dilin tüm value'larından MD5/SHA256 hash üret
-  - `{ "version": "a3f8c2..." }` döndür
-  - Client bu hash'i saklayıp değişim olup olmadığını kontrol eder (stale check)
+- [x] **T09** — `GET /api/i18n/{lang}/version` endpoint yaz ✅
+  - MD5 hash of sorted key-value JSON
+  - `{ "version": "a3f8c2..." }` döndürür
 
-- [ ] **T10** — `main.py`'a i18n router kaydını ekle
+- [x] **T10** — `main.py`'a i18n router kaydını ekle ✅
 
 - [ ] **T11** — Deploy + 4 dil için API test
   - `curl /api/i18n/tr` → TR paketi geldi mi?
