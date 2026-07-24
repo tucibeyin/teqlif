@@ -3004,7 +3004,7 @@
   "apiErrorAiServiceBusy": "Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.",
   "apiErrorAiServiceTimeout": "Yapay zeka servisi zaman aşımına uğradı.",
   "errorServerBusy": "Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.",
-  "errorSessionExpired": "Oturumunuzun süresi doldu, lütfen tekrar giriş yapın."
+  "errorSessionExpired": "Oturumunuzun süresi doldu, lütfen tekrar giriş yapın.",
   "conditionRefurbished": "Yenilenmiş",
   "fieldSubcategory": "Alt Kategori",
   "fieldSubcategoryHint": "Alt kategori seçiniz",

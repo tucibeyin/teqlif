@@ -3006,7 +3006,7 @@
   "apiErrorAiServiceBusy": "Служба ИИ в настоящее время занята. Пожалуйста, повторите попытку.",
   "apiErrorAiServiceTimeout": "Время ожидания службы ИИ истекло.",
   "errorServerBusy": "Сервер занят, попробуйте позже.",
-  "errorSessionExpired": "Ваш сеанс истёк, пожалуйста, войдите снова."
+  "errorSessionExpired": "Ваш сеанс истёк, пожалуйста, войдите снова.",
   "conditionRefurbished": "Восстановленный",
   "fieldSubcategory": "Подкатегория",
   "fieldSubcategoryHint": "Выберите подкатегорию",
