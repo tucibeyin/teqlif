@@ -189,13 +189,13 @@ t('ui_save')  →  "Save"
 
 - [x] **T27** — `dart analyze` — sıfır hata/warning ✅
 
-- [ ] **T28** — OTA doğrulama testi
-  - DB'de bir çeviriyi elle değiştir (örn. `opt_white` TR: "Beyaz" → "Bembeyaz")
-  - Redis cache temizle: `redis-cli DEL i18n:tr`
-  - Flutter'da dili TR'ye geç (veya force refresh)
-  - "Bembeyaz" göründü mü? → OTA çalışıyor ✅
+- [x] **T28** — OTA doğrulama testi ✅
+  - `opt_white` TR: "Beyaz" → "Bembeyaz" yapıldı
+  - `redis-cli DEL i18n:tr i18n:tr:version` ile cache temizlendi
+  - Flutter'da "Bembeyaz" göründü → OTA çalışıyor ✅
+  - Değer geri alındı: "Bembeyaz" → "Beyaz"
 
-- [ ] **T29** — Commit + push + VPS deploy
+- [x] **T29** — Commit + push + VPS deploy ✅
 
 - [ ] **T30** — `create_listing_screen.dart` için kullanılmayan ARB key'lerini tespit et
   - Bu ekrana ait key'ler artık sadece DB'de yaşıyor
