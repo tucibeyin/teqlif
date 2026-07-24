@@ -173,11 +173,8 @@ t('ui_save')  →  "Save"
   - `_extraFieldLabel()` switch (47 case) silindi
   - `loc.t(f.labelKey)` ile değiştirildi
 
-- [ ] **T26** — 4 dilde manuel test
-  - TR: Tüm label'lar Türkçe mi?
-  - EN: Tüm label'lar İngilizce mi?
-  - AR: Tüm label'lar Arapça mı? RTL doğru mu?
-  - RU: Tüm label'lar Rusça mı?
+- [x] **T26** — 4 dilde manuel test ✅
+  - TR / EN / AR / RU — tüm label'lar doğru çevrildi, ekran çalışıyor
 
 ---
 
