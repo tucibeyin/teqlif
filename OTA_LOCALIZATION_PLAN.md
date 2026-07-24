@@ -86,7 +86,7 @@ t('ui_save')  →  "Save"
 
 - [x] **T10** — `main.py`'a i18n router kaydını ekle ✅
 
-- [ ] **T11** — Deploy + 4 dil için API test
+- [x] **T11** — Deploy + 4 dil için API test ✅
   - `curl /api/i18n/tr` → TR paketi geldi mi?
   - `curl /api/i18n/en` → EN paketi geldi mi?
   - `curl /api/i18n/ar` → AR paketi geldi mi?
@@ -101,52 +101,29 @@ t('ui_save')  →  "Save"
 
 ---
 
-- [ ] **T12** — Hive box tanımla ve `main.dart`'a init ekle
-  - Box adı: `i18n_cache`
-  - Her dil için ayrı key: `pack_tr`, `pack_en`, `pack_ar`, `pack_ru`
-  - Version için ayrı key: `version_tr`, `version_en` vb.
+- [x] **T12** — Hive box tanımla ve `main.dart`'a init ekle ✅
+  - Box adı: `i18n_cache`, `LocalizationService.initBox()` → `main.dart`'ta `CacheService.init()` sonrası
 
-- [ ] **T13** — `LocalizationService` sınıfı yaz
-  ```dart
-  class LocalizationService extends ChangeNotifier {
-    String _lang = 'tr';
-    Map<String, String> _strings = {};
+- [x] **T13** — `LocalizationService` sınıfı yaz ✅
+  - `StateNotifier<TranslationPack>` (Riverpod ile uyumlu)
+  - `TranslationPack.t(key, params?)` — immutable, widget rebuild tetikler
+  - `load()`, `clearCache()`, `_fetchAndCache()` implementasyonları
+  - Dosya: `mobile/lib/services/localization_service.dart`
 
-    String get currentLang => _lang;
+- [x] **T14** — `t()` fonksiyonuna param interpolation ekle ✅
+  - `t('key', {'name': 'Ahmet'})` → `"Merhaba Ahmet"` (`{name}` replace)
 
-    Future<void> load(String lang) async { ... }
-    String t(String key, [Map<String, String>? params]) { ... }
-    void clearCache() { ... }
-  }
-  ```
-  - `load()`: Hive'dan oku → varsa kullan + arka planda stale check → yoksa API'den fetch et
-  - `t()`: `_strings[key] ?? key` (key bulunamazsa key'in kendini döndür — görünür fallback)
-  - `notifyListeners()` → load tamamlandığında tüm widget tree rebuild olur
+- [x] **T15** — Stale check mekanizması yaz ✅
+  - 24h TTL: `cached_at_{lang}` Hive key'i
+  - Background: version hash karşılaştırması → farklıysa re-fetch
 
-- [ ] **T14** — `t()` fonksiyonuna param interpolation ekle
-  ```dart
-  t('ui_greeting', {'name': 'Ahmet'})  →  "Merhaba Ahmet"
-  // DB'de: "ui_greeting" → "Merhaba {name}"
-  ```
-  - `params?.forEach((k, v) => val = val.replaceAll('{$k}', v));`
+- [x] **T16** — Riverpod `StateNotifierProvider` ile provide et ✅
+  - `localizationProvider` → `ProviderScope` altında otomatik available
+  - Widgets: `ref.watch(localizationProvider).t('key')`
 
-- [ ] **T15** — Stale check mekanizması yaz
-  - App açıldığında: cached version hash'i `/api/i18n/{lang}/version` ile karşılaştır
-  - Farklıysa: arka planda yeni paketi çek, Hive'ı güncelle, `notifyListeners()`
-  - Aynıysa: sessiz kal
-  - Hive yoksa (ilk açılış): fetch et, göster
-
-- [ ] **T16** — `main.dart` — root'ta `ChangeNotifierProvider` ile provide et
-  ```dart
-  ChangeNotifierProvider(
-    create: (_) => LocalizationService(),
-    child: MyApp(),
-  )
-  ```
-
-- [ ] **T17** — `MaterialApp.locale` — `LocalizationService.currentLang`'a reaktif bağla
-  - RTL layout (Arapça) için gerekli
-  - `locale: Locale(locService.currentLang)` — çeviri sisteminden bağımsız, sadece layout yönü
+- [x] **T17** — `localeProvider` değişiminde otomatik dil paketi yükleme ✅
+  - `ref.listen<Locale>(localeProvider, ...)` → `load()` otomatik tetiklenir
+  - RTL layout `localeProvider` üzerinden zaten çalışıyor (main.dart)
 
 ---
 
@@ -156,21 +133,17 @@ t('ui_save')  →  "Save"
 
 ---
 
-- [ ] **T18** — Uygulama açılışı akışı
-  - `SharedPreferences`'tan `selected_lang` oku
-  - `LocalizationService.load(savedLang)` çağır
-  - Hive'da cache varsa → anında UI hazır (loading yok)
-  - Hive'da yoksa → loading göster, fetch et, UI aç
+- [x] **T18** — Uygulama açılışı akışı ✅
+  - `LocalizationService` constructor'ı `localeProvider`'dan mevcut dili okuyup `load()` çağırıyor
+  - Hive'da cache varsa anında yüklenir, yoksa API'den çeker
 
-- [ ] **T19** — Login ekranı — dil seçimi entegrasyonu
-  - Kullanıcı dil seçti → `LocalizationService.load(lang)` çağır
-  - `SharedPreferences`'a `selected_lang` kaydet
-  - Login flow devam eder
+- [x] **T19** — Login ekranı — dil seçimi entegrasyonu ✅
+  - `login_screen.dart`: `localeProvider.notifier.setLocale(Locale(x))` → `ref.listen` tetiklenir → `load()` otomatik
+  - Ayrıca değişiklik gerekmedi
 
-- [ ] **T20** — Settings ekranı — dil değişimi entegrasyonu
-  - Kullanıcı dili değiştirdi → `LocalizationService.load(newLang)`
-  - Cache varsa anında, yoksa kısa loading
-  - Tüm UI anında yeni dile geçer (`notifyListeners()` sayesinde)
+- [x] **T20** — Settings ekranı — dil değişimi entegrasyonu ✅
+  - `profile_screen.dart`: `localeProvider.notifier.setLocale(Locale(x))` → aynı mekanizma
+  - Ayrıca değişiklik gerekmedi
 
 ---
 
