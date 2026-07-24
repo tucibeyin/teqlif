@@ -153,27 +153,25 @@ t('ui_save')  →  "Save"
 
 ---
 
-- [ ] **T21** — `AppLocalizations` import ve `l` değişkenini kaldır
-  - `final l = AppLocalizations.of(context)!;` satırını sil
-  - Yerine: `final loc = context.watch<LocalizationService>();`
-  - Ya da global `t()` helper kullanımı (tercih edilirse)
+- [x] **T21** — `AppLocalizations` import ve `l` değişkenini kaldır ✅
+  - `app_localizations.dart` ve `field_labels.dart` importları kaldırıldı
+  - `StatefulWidget` → `ConsumerStatefulWidget`, `State<>` → `ConsumerState<>` dönüşümü
+  - `final loc = ref.watch(localizationProvider)` pattern'i oturtuldu
 
-- [ ] **T22** — Tüm `l.xxx` → `t('xxx')` dönüşümü
-  - `l.fieldSubcategory` → `t('ui_fieldSubcategory')`
-  - `l.validRequiredSubcategory` → `t('ui_validRequiredSubcategory')`
-  - `l.fieldCategory` → `t('ui_fieldCategory')`
-  - vb. — ekrandaki tüm `l.` referansları
+- [x] **T22** — Tüm `l.xxx` / `l10n.xxx` → `loc.t('xxx')` dönüşümü ✅
+  - Tüm basit property access'ler bulk Python regex ile dönüştürüldü
+  - Parametre alan metodlar elle (`{'param': value.toString()}`) dönüştürüldü
+  - `_AiPriceButton` ve `_AiDescButton`: `StatelessWidget` → `ConsumerWidget` yapıldı
 
-- [ ] **T23** — `subcatLabel()` fonksiyonunu `t()` kullanacak şekilde güncelle
-  - `field_labels.dart`'taki `subcatLabel(key, l)` → `subcatLabel(key)` (AppLocalizations parametresi düşer)
-  - İçeride `t('subcat_$key')` kullanır
+- [x] **T23** — `subcatLabel(s.$1, l, fallback: s.$2)` → `loc.tOr('subcat_${s.$1}', s.$2)` ✅
+  - `field_labels.dart` import'u tamamen kaldırıldı
 
-- [ ] **T24** — Option label pattern uygula
-  - `o.label` (DB'den gelen Türkçe) yerine `t('opt_${o.value}')`
-  - Tüm dropdown ve multiselect render'larında uygulanır
+- [x] **T24** — Option label pattern uygulandı ✅
+  - Dropdown, conditional dropdown ve multiselect: `loc.tOr('opt_${o.value}', o.label)`
 
-- [ ] **T25** — Field label pattern uygula
-  - `t(field.labelKey)` — field_config API'sinin döndürdüğü `label_key` direkt translation key olarak kullanılır
+- [x] **T25** — Field label pattern uygulandı ✅
+  - `_extraFieldLabel()` switch (47 case) silindi
+  - `loc.t(f.labelKey)` ile değiştirildi
 
 - [ ] **T26** — 4 dilde manuel test
   - TR: Tüm label'lar Türkçe mi?
@@ -189,7 +187,7 @@ t('ui_save')  →  "Save"
 
 ---
 
-- [ ] **T27** — `dart analyze` — sıfır hata/warning
+- [x] **T27** — `dart analyze` — sıfır hata/warning ✅
 
 - [ ] **T28** — OTA doğrulama testi
   - DB'de bir çeviriyi elle değiştir (örn. `opt_white` TR: "Beyaz" → "Bembeyaz")

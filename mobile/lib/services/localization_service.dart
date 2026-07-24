@@ -30,6 +30,10 @@ class TranslationPack {
     return val;
   }
 
+  /// Like [t] but uses [fallback] instead of the key when not found.
+  /// Used for option labels that have a DB-stored display value.
+  String tOr(String key, String fallback) => _strings[key] ?? fallback;
+
   bool get isEmpty => _strings.isEmpty;
 }
 

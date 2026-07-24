@@ -19,9 +19,9 @@ import '../services/city_service.dart';
 import '../services/field_config_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../utils/error_helper.dart';
-import '../utils/field_labels.dart';
 import '../utils/listing_fields.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
@@ -30,14 +30,14 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/cards/teq_card.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 
-class CreateListingScreen extends StatefulWidget {
+class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
 
   @override
-  State<CreateListingScreen> createState() => _CreateListingScreenState();
+  ConsumerState<CreateListingScreen> createState() => _CreateListingScreenState();
 }
 
-class _CreateListingScreenState extends State<CreateListingScreen> {
+class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -210,10 +210,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       _selectedCondition != null;
 
   Future<void> _fetchAiPriceEstimate() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (!_aiReady) {
       TeqSnackBar.show(context,
-          message: l.createNeedAllFieldsNew, type: TeqSnackBarType.warning);
+          message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _aiLoading = true);
@@ -228,7 +228,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (!mounted) return;
       if (result == null) {
         TeqSnackBar.show(context,
-            message: l.aiPriceError, type: TeqSnackBarType.error);
+            message: loc.t('aiPriceError'), type: TeqSnackBarType.error);
         return;
       }
       final tuciSpent = (result['tuci_spent'] as num?)?.toInt() ?? 0;
@@ -236,7 +236,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         CacheService.clearData('user_wallet_data');
         _loadAiCredits();
         TeqSnackBar.show(context,
-            message: l.tuciSpent(tuciSpent), type: TeqSnackBarType.success);
+            message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
+            type: TeqSnackBarType.success);
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
         setState(() => _aiCreditsRemaining = _aiCreditsRemaining! - 1);
       }
@@ -245,15 +246,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (!mounted) return;
       String msg = e.detail;
       if (msg == 'INSUFFICIENT_FUNDS_PRO') {
-        msg = l.apiErrorInsufficientFundsPro(5);
+        msg = loc.t('apiErrorInsufficientFundsPro', {'cost': '5'});
       } else if (msg == 'INSUFFICIENT_FUNDS_STD') {
-        msg = l.apiErrorInsufficientFundsStd(5);
+        msg = loc.t('apiErrorInsufficientFundsStd', {'cost': '5'});
       } else if (msg == 'AI_SERVICE_BUSY') {
-        msg = l.apiErrorAiServiceBusy;
+        msg = loc.t('apiErrorAiServiceBusy');
       } else if (msg == 'AI_SERVICE_TIMEOUT') {
-        msg = l.apiErrorAiServiceTimeout;
+        msg = loc.t('apiErrorAiServiceTimeout');
       } else if (msg == 'VALIDATION_ERROR') {
-        msg = l.createNeedAllFieldsNew;
+        msg = loc.t('createNeedAllFieldsNew');
       }
       TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
     } finally {
@@ -262,10 +263,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Future<void> _fetchAiDescription() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (!_aiReady) {
       TeqSnackBar.show(context,
-          message: l.createNeedAllFieldsNew, type: TeqSnackBarType.warning);
+          message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
       return;
     }
     setState(() {
@@ -309,7 +310,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
               if (json.containsKey('error')) {
                 TeqSnackBar.show(context,
-                    message: l.aiDescError, type: TeqSnackBarType.error);
+                    message: loc.t('aiDescError'), type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {
                 final newText = _descCtrl.text + (json['text'] as String);
@@ -325,7 +326,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   CacheService.clearData('user_wallet_data');
                   _loadAiDescCredits();
                   TeqSnackBar.show(context,
-                      message: l.tuciSpent(tuciSpent),
+                      message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
                       type: TeqSnackBarType.success);
                 } else if (_aiDescCreditsRemaining != null &&
                     _aiDescCreditsRemaining! > 0) {
@@ -338,8 +339,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         }
       } else {
         if (!mounted) return;
-        // ignore: use_build_context_synchronously
-        final ll = AppLocalizations.of(context)!;
         final errBody = await resp.stream.bytesToString();
         if (resp.statusCode == 402) {
           String msg;
@@ -347,33 +346,33 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             final detail =
                 (jsonDecode(errBody) as Map<String, dynamic>)['detail']
                     as String? ??
-                    ll.aiDescError;
+                    loc.t('aiDescError');
             if (detail == 'INSUFFICIENT_FUNDS_PRO') {
-              msg = ll.apiErrorInsufficientFundsPro(5);
+              msg = loc.t('apiErrorInsufficientFundsPro', {'cost': '5'});
             } else if (detail == 'INSUFFICIENT_FUNDS_STD') {
-              msg = ll.apiErrorInsufficientFundsStd(5);
+              msg = loc.t('apiErrorInsufficientFundsStd', {'cost': '5'});
             } else {
               msg = detail;
             }
           } catch (_) {
-            msg = ll.aiDescError;
+            msg = loc.t('aiDescError');
           }
           // ignore: use_build_context_synchronously
           TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
         } else if (resp.statusCode == 503) {
           // ignore: use_build_context_synchronously
           TeqSnackBar.show(context,
-              message: ll.aiDescUnavailable, type: TeqSnackBarType.warning);
+              message: loc.t('aiDescUnavailable'), type: TeqSnackBarType.warning);
         } else {
           // ignore: use_build_context_synchronously
           TeqSnackBar.show(context,
-              message: ll.aiDescError, type: TeqSnackBarType.error);
+              message: loc.t('aiDescError'), type: TeqSnackBarType.error);
         }
       }
     } catch (_) {
       if (mounted) {
         TeqSnackBar.show(context,
-            message: AppLocalizations.of(context)!.aiDescStreamError,
+            message: ref.read(localizationProvider).t('aiDescStreamError'),
             type: TeqSnackBarType.error);
       }
     } finally {
@@ -404,12 +403,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             ? const Color(0xFFF59E0B)
             : const Color(0xFF64748B);
 
-    final l10n = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final String confidenceLabel = confidence == 'high'
-        ? l10n.confidenceHigh
+        ? loc.t('confidenceHigh')
         : confidence == 'medium'
-            ? l10n.confidenceMedium
-            : l10n.confidenceLow;
+            ? loc.t('confidenceMedium')
+            : loc.t('confidenceLow');
 
     showModalBottomSheet(
       context: context,
@@ -455,12 +454,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(l10n.aiPriceTitle,
+                        Text(loc.t('aiPriceTitle'),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800)),
-                        Text(l10n.aiPriceSimilar(foundSimilar),
+                        Text(loc.t('aiPriceSimilar', {'count': foundSimilar.toString()}),
                             style: const TextStyle(
                                 color: Color(0xFF64748B), fontSize: 12)),
                       ],
@@ -486,7 +485,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                         icon: '🎯',
-                        label: l10n.listingSuggestedStart,
+                        label: loc.t('listingSuggestedStart'),
                         value: fmt(suggested),
                         accent: const Color(0xFF6366F1)),
                   ),
@@ -494,7 +493,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                         icon: '🏆',
-                        label: l10n.listingExpectedClose,
+                        label: loc.t('listingExpectedClose'),
                         value: fmt(estimated),
                         accent: const Color(0xFF22C55E)),
                   ),
@@ -513,17 +512,17 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _MiniStat(
-                          label: l10n.listingLowest,
+                          label: loc.t('listingLowest'),
                           value: fmt(minClose),
                           color: const Color(0xFFEF4444)),
                       Container(width: 1, height: 32, color: const Color(0xFF334155)),
                       _MiniStat(
-                          label: l10n.listingAverage,
+                          label: loc.t('listingAverage'),
                           value: fmt(estimated),
                           color: const Color(0xFF94A3B8)),
                       Container(width: 1, height: 32, color: const Color(0xFF334155)),
                       _MiniStat(
-                          label: l10n.listingHighest,
+                          label: loc.t('listingHighest'),
                           value: fmt(maxClose),
                           color: const Color(0xFF22C55E)),
                     ],
@@ -572,7 +571,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(l10n.aiPriceApply,
+                    child: Text(loc.t('aiPriceApply'),
                         style: const TextStyle(
                             fontWeight: FontWeight.w700, fontSize: 15)),
                   ),
@@ -605,9 +604,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       await ctrl.dispose();
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
+          final loc = ref.read(localizationProvider);
           TeqSnackBar.show(context,
-              message: AppLocalizations.of(context)!
-                  .videoTooLong(_maxVideoDurationSecs, dur.inSeconds),
+              message: loc.t('videoTooLong', {
+                'max': _maxVideoDurationSecs.toString(),
+                'actual': dur.inSeconds.toString()
+              }),
               type: TeqSnackBarType.warning);
         }
         return;
@@ -638,13 +640,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       });
 
   void _showVideoSourceSheet() {
+    final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
             leading: const Icon(Icons.photo_library_outlined),
-            title: Text(AppLocalizations.of(context)!.profilePickGallery),
+            title: Text(loc.t('profilePickGallery')),
             onTap: () {
               Navigator.pop(context);
               _pickVideo(ImageSource.gallery);
@@ -652,8 +655,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.videocam_outlined),
-            title: Text(AppLocalizations.of(context)!
-                .createPickCamera(_maxVideoDurationSecs)),
+            title: Text(loc.t('createPickCamera',
+                {'sec': _maxVideoDurationSecs.toString()})),
             onTap: () {
               Navigator.pop(context);
               _pickVideo(ImageSource.camera);
@@ -665,10 +668,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Future<void> _pickImages(ImageSource source) async {
-    final l = AppLocalizations.of(context)!;
     if (_images.length >= _maxImages) {
       TeqSnackBar.show(context,
-          message: l.listingMaxPhotos, type: TeqSnackBarType.warning);
+          message: ref.read(localizationProvider).t('listingMaxPhotos'), type: TeqSnackBarType.warning);
       return;
     }
     if (source == ImageSource.gallery) {
@@ -692,14 +694,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   void _showImageSourceSheet() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
             leading: const Icon(Icons.photo_library_outlined),
-            title: Text(l.btnPickGallery),
+            title: Text(loc.t('btnPickGallery')),
             onTap: () {
               Navigator.pop(context);
               _pickImages(ImageSource.gallery);
@@ -707,7 +709,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.camera_alt_outlined),
-            title: Text(l.btnCamera),
+            title: Text(loc.t('btnCamera')),
             onTap: () {
               Navigator.pop(context);
               _pickImages(ImageSource.camera);
@@ -724,7 +726,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
       TeqSnackBar.show(context,
-          message: AppLocalizations.of(context)!.videoUploading,
+          message: ref.read(localizationProvider).t('videoUploading'),
           type: TeqSnackBarType.warning);
       return;
     }
@@ -820,7 +822,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         'extra_field_count': extraFields.length,
       });
       TeqSnackBar.show(context,
-          message: AppLocalizations.of(context)!.msgListingPublished,
+          message: ref.read(localizationProvider).t('msgListingPublished'),
           type: TeqSnackBarType.success);
       Navigator.pop(context, true);
     } on AppException catch (e) {
@@ -830,8 +832,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     } catch (_) {
       if (mounted) {
         TeqSnackBar.show(context,
-            message:
-                AppLocalizations.of(context)!.createListingConnError,
+            message: ref.read(localizationProvider).t('createListingConnError'),
             type: TeqSnackBarType.error);
       }
     } finally {
@@ -843,27 +844,27 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   String _uploadError(Object e) {
     final s = e.toString();
-    final l = AppLocalizations.of(context)!;
-    if (s.contains('HTTP 413')) return l.uploadErrorTooLarge;
+    final loc = ref.read(localizationProvider);
+    if (s.contains('HTTP 413')) return loc.t('uploadErrorTooLarge');
     if (s.contains('HTTP 502') || s.contains('HTTP 503') || s.contains('HTTP 504')) {
-      return l.uploadErrorServerBusy;
+      return loc.t('uploadErrorServerBusy');
     }
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
-      return l.uploadErrorAuthExpired;
+      return loc.t('uploadErrorAuthExpired');
     }
-    if (e is NetworkException) { return l.errorNetworkMessage; }
-    return l.uploadErrorGeneric;
+    if (e is NetworkException) { return loc.t('errorNetworkMessage'); }
+    return loc.t('uploadErrorGeneric');
   }
 
   String _mapError(AppException e) {
-    final l = AppLocalizations.of(context)!;
-    if (e.statusCode == 403 || e.code == 'FORBIDDEN') return l.errorCaptchaFailed;
-    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return l.errorTooFast;
-    if (e.code == 'CONTENT_POLICY_VIOLATION') return l.errorContentPolicy;
-    if (e.code == 'PROVINCE_REQUIRED') return l.errProvinceRequired;
-    if (e.code == 'INVALID_CONDITION') return l.errInvalidCondition;
-    if (e.code == 'INVALID_PRICE') return l.errInvalidPrice;
-    if (e.code == 'LISTING_TITLE_REQUIRED') return l.fieldListingTitleHint;
+    final loc = ref.read(localizationProvider);
+    if (e.statusCode == 403 || e.code == 'FORBIDDEN') return loc.t('errorCaptchaFailed');
+    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return loc.t('errorTooFast');
+    if (e.code == 'CONTENT_POLICY_VIOLATION') return loc.t('errorContentPolicy');
+    if (e.code == 'PROVINCE_REQUIRED') return loc.t('errProvinceRequired');
+    if (e.code == 'INVALID_CONDITION') return loc.t('errInvalidCondition');
+    if (e.code == 'INVALID_PRICE') return loc.t('errInvalidPrice');
+    if (e.code == 'LISTING_TITLE_REQUIRED') return loc.t('fieldListingTitleHint');
     return e.message;
   }
 
@@ -871,9 +872,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l.btnCreateListing)),
+      appBar: AppBar(title: Text(loc.t('btnCreateListing'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -881,26 +882,26 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPhotoSection(l),
+              _buildPhotoSection(loc),
               const SizedBox(height: 12),
-              _buildVideoSection(l),
+              _buildVideoSection(loc),
               const SizedBox(height: 12),
-              _buildMainInfoSection(l),
+              _buildMainInfoSection(loc),
               const SizedBox(height: 12),
-              _buildConditionSection(l),
+              _buildConditionSection(loc),
               const SizedBox(height: 12),
-              _buildLocationSection(l),
+              _buildLocationSection(loc),
               const SizedBox(height: 12),
-              _buildDescriptionSection(l),
+              _buildDescriptionSection(loc),
               const SizedBox(height: 12),
-              _buildPriceSection(l),
+              _buildPriceSection(loc),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: TeqButton(
                   key: const Key('create_listing_btn_yayinla'),
                   onPressed: _submitting ? null : _submit,
-                  text: l.btnPublishListing,
+                  text: loc.t('btnPublishListing'),
                   isLoading: _submitting,
                 ),
               ),
@@ -914,7 +915,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   // ── Section builders ───────────────────────────────────────────────────────
 
-  Widget _buildPhotoSection(AppLocalizations l) {
+  Widget _buildPhotoSection(TranslationPack loc) {
     return TeqCard(
       child: Column(
         children: [
@@ -922,7 +923,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                l.createListingPhotoCount(_images.length, _maxImages),
+                loc.t('createListingPhotoCount', {'count': _images.length.toString(), 'max': _maxImages.toString()}),
                 style:
                     const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
@@ -931,7 +932,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   key: const Key('create_listing_btn_fotograf_ekle'),
                   onPressed: _showImageSourceSheet,
                   icon: Icons.add_photo_alternate_outlined,
-                  text: l.btnAdd,
+                  text: loc.t('btnAdd'),
                   type: TeqButtonType.text,
                   isExpanded: false,
                 ),
@@ -995,7 +996,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                               color: kPrimary,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(l.photoCover,
+                            child: Text(loc.t('photoCover'),
                                 style: const TextStyle(
                                     color: Colors.white, fontSize: 10)),
                           ),
@@ -1025,7 +1026,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         Icon(Icons.add_photo_alternate_outlined,
                             color: AppColors.textSecondary(context), size: 28),
                         const SizedBox(height: 4),
-                        Text(l.btnAddPhoto,
+                        Text(loc.t('btnAddPhoto'),
                             style: TextStyle(
                                 color: AppColors.textSecondary(context),
                                 fontSize: 12)),
@@ -1041,21 +1042,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildVideoSection(AppLocalizations l) {
+  Widget _buildVideoSection(TranslationPack loc) {
     return TeqCard(
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l.videoLabel(_maxVideoDurationSecs),
+              Text(loc.t('videoLabel', {'sec': _maxVideoDurationSecs.toString()}),
                   style: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 13)),
               if (_video == null && !_videoUploading)
                 TeqButton(
                   onPressed: _showVideoSourceSheet,
                   icon: Icons.videocam_outlined,
-                  text: l.btnAdd,
+                  text: loc.t('btnAdd'),
                   type: TeqButtonType.text,
                   isExpanded: false,
                 ),
@@ -1081,7 +1082,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                    child: Text(_videoUploading ? l.lblLoading : l.lblVideoReady,
+                    child: Text(_videoUploading ? loc.t('lblLoading') : loc.t('lblVideoReady'),
                         style: const TextStyle(fontSize: 13))),
                 GestureDetector(
                   onTap: _removeVideo,
@@ -1095,7 +1096,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildMainInfoSection(AppLocalizations l) {
+  Widget _buildMainInfoSection(TranslationPack loc) {
     final extraFields = _currentFields;
 
     return TeqCard(
@@ -1103,7 +1104,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.sectionListingDetails,
+            loc.t('sectionListingDetails'),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
           const SizedBox(height: 14),
@@ -1112,11 +1113,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           TeqTextField(
             key: const Key('create_listing_input_baslik'),
             controller: _titleCtrl,
-            labelText: l.fieldListingTitle,
-            hintText: l.fieldListingTitleHint,
+            labelText: loc.t('fieldListingTitle'),
+            hintText: loc.t('fieldListingTitleHint'),
             floatingLabel: true,
             validator: (v) =>
-                v == null || v.isEmpty ? l.fieldListingTitleHint : null,
+                v == null || v.isEmpty ? loc.t('fieldListingTitleHint') : null,
           ),
           const SizedBox(height: 14),
 
@@ -1126,8 +1127,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             // ignore: deprecated_member_use
             value: _selectedCategory,
             decoration: InputDecoration(
-                labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
-            hint: Text(l.fieldCategoryHint),
+                labelText: loc.t('fieldCategory'), hintText: loc.t('fieldCategoryHint')),
+            hint: Text(loc.t('fieldCategoryHint')),
             items: _categories
                 .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                 .toList(),
@@ -1136,7 +1137,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               setState(() => _selectedCategory = v);
               _updateSubcategories(v);
             },
-            validator: (v) => v == null ? l.fieldCategoryHint : null,
+            validator: (v) => v == null ? loc.t('fieldCategoryHint') : null,
           ),
 
           // Subcategory (revealed after category selection)
@@ -1153,12 +1154,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         // ignore: deprecated_member_use
                         value: _selectedSubcategory,
                         decoration: InputDecoration(
-                            labelText: l.fieldSubcategory,
-                            hintText: l.fieldSubcategoryHint),
-                        hint: Text(l.fieldSubcategoryHint),
+                            labelText: loc.t('fieldSubcategory'),
+                            hintText: loc.t('fieldSubcategoryHint')),
+                        hint: Text(loc.t('fieldSubcategoryHint')),
                         items: _subcategories
                             .map((s) => DropdownMenuItem(
-                                value: s.$1, child: Text(subcatLabel(s.$1, l, fallback: s.$2))))
+                                value: s.$1, child: Text(loc.tOr('subcat_${s.$1}', s.$2))))
                             .toList(),
                         onChanged: (v) {
                           if (v == null) return;
@@ -1166,7 +1167,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           _updateExtraFields(v);
                         },
                         validator: (v) =>
-                            v == null ? l.validRequiredSubcategory : null,
+                            v == null ? loc.t('validRequiredSubcategory') : null,
                       ),
                     ],
                   ),
@@ -1187,7 +1188,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 14),
-                          ...extraFields.map((f) => _buildExtraField(f, l)),
+                          ...extraFields.map((f) => _buildExtraField(f, loc)),
                         ],
                       ),
           ),
@@ -1196,7 +1197,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildLocationSection(AppLocalizations l) {
+  Widget _buildLocationSection(TranslationPack loc) {
     return TeqCard(
       child: Column(
         children: [
@@ -1206,17 +1207,17 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             // ignore: deprecated_member_use
             value: _selectedProvince,
             decoration: InputDecoration(
-                labelText: l.fieldProvince, hintText: l.fieldProvinceHint),
-            hint: Text(l.fieldProvinceHint),
+                labelText: loc.t('fieldProvince'), hintText: loc.t('fieldProvinceHint')),
+            hint: Text(loc.t('fieldProvinceHint')),
             items: [
               DropdownMenuItem(
                   value: null,
-                  child: Text('-- ${l.fieldProvinceHint} --')),
+                  child: Text('-- ${loc.t('fieldProvinceHint')} --')),
               ..._provinces.map(
                   (p) => DropdownMenuItem(value: p, child: Text(p))),
             ],
             validator: (v) =>
-                v == null || v.isEmpty ? l.validRequiredProvince : null,
+                v == null || v.isEmpty ? loc.t('validRequiredProvince') : null,
             onChanged: (v) {
               setState(() {
                 _selectedProvince = v;
@@ -1241,9 +1242,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         // ignore: deprecated_member_use
                         value: _selectedDistrict,
                         decoration: InputDecoration(
-                            labelText: l.fieldDistrict,
-                            hintText: l.fieldDistrictHint),
-                        hint: Text(l.fieldDistrictHint),
+                            labelText: loc.t('fieldDistrict'),
+                            hintText: loc.t('fieldDistrictHint')),
+                        hint: Text(loc.t('fieldDistrictHint')),
                         items: _districts
                             .map((d) =>
                                 DropdownMenuItem(value: d, child: Text(d)))
@@ -1259,19 +1260,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildConditionSection(AppLocalizations l) {
+  Widget _buildConditionSection(TranslationPack loc) {
     final isVasita = _selectedCategory == 'vehicles';
     final items = isVasita
         ? [
-            DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
-            DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
+            DropdownMenuItem(value: 'new', child: Text(loc.t('conditionNew'))),
+            DropdownMenuItem(value: 'used', child: Text(loc.t('conditionUsed'))),
           ]
         : [
-            DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
-            DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
-            DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
-            DropdownMenuItem(value: 'refurbished', child: Text(l.conditionRefurbished)),
-            DropdownMenuItem(value: 'damaged', child: Text(l.conditionDamaged)),
+            DropdownMenuItem(value: 'new', child: Text(loc.t('conditionNew'))),
+            DropdownMenuItem(value: 'like_new', child: Text(loc.t('conditionLikeNew'))),
+            DropdownMenuItem(value: 'used', child: Text(loc.t('conditionUsed'))),
+            DropdownMenuItem(value: 'refurbished', child: Text(loc.t('conditionRefurbished'))),
+            DropdownMenuItem(value: 'damaged', child: Text(loc.t('conditionDamaged'))),
           ];
 
     final validCondition = items.any((i) => i.value == _selectedCondition)
@@ -1284,19 +1285,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         // ignore: deprecated_member_use
         value: validCondition,
         decoration: InputDecoration(
-            labelText: l.fieldCondition, hintText: l.fieldConditionHint),
-        hint: Text(l.fieldConditionHint),
+            labelText: loc.t('fieldCondition'), hintText: loc.t('fieldConditionHint')),
+        hint: Text(loc.t('fieldConditionHint')),
         items: items,
-        validator: (v) => v == null ? l.validRequiredCondition : null,
+        validator: (v) => v == null ? loc.t('validRequiredCondition') : null,
         onChanged: (v) => setState(() => _selectedCondition = v),
       ),
     );
   }
 
 
-  Widget _buildExtraField(ExtraFieldDef f, AppLocalizations l) {
-    final label = _extraFieldLabel(f.labelKey, l);
-    final optionalSuffix = f.optional ? '  ${l.extraFieldOptional}' : '';
+  Widget _buildExtraField(ExtraFieldDef f, TranslationPack loc) {
+    final label = loc.t(f.labelKey);
+    final optionalSuffix = f.optional ? '  ${loc.t('extraFieldOptional')}' : '';
     final displayLabel = '$label$optionalSuffix';
 
     // Brand-dependent conditional dropdown (model fields)
@@ -1320,7 +1321,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   hint: Text(displayLabel),
                   items: options
                       .map((o) =>
-                          DropdownMenuItem(value: o.value, child: Text(o.label)))
+                          DropdownMenuItem(value: o.value, child: Text(loc.tOr('opt_${o.value}', o.label))))
                       .toList(),
                   onChanged: (v) => setState(() {
                     if (v != null) _extraValues[f.key] = v;
@@ -1346,7 +1347,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 },
               )
             : f.options
-                .map((o) => DropdownMenuItem(value: o.value, child: Text(o.label)))
+                .map((o) => DropdownMenuItem(value: o.value, child: Text(loc.tOr('opt_${o.value}', o.label))))
                 .toList();
 
         field = DropdownButtonFormField<String>(
@@ -1415,7 +1416,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   final pov = o.parentOptionValue;
                   return TeqMultiSelectOption(
                     value: o.value,
-                    label: o.label,
+                    label: loc.tOr('opt_${o.value}', o.label),
                     isExclusive: o.isExclusive,
                     exclusionGroup: (pov != null && pov.startsWith('grp:'))
                         ? pov.substring(4)
@@ -1438,60 +1439,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  String _extraFieldLabel(String labelKey, AppLocalizations l) {
-    return switch (labelKey) {
-      'extraField_brand' => l.extraField_brand,
-      'extraField_model' => l.extraField_model,
-      'extraField_year' => l.extraField_year,
-      'extraField_mileage' => l.extraField_mileage,
-      'extraField_color' => l.extraField_color,
-      'extraField_fuel_type' => l.extraField_fuel_type,
-      'extraField_transmission' => l.extraField_transmission,
-      'extraField_body_type' => l.extraField_body_type,
-      'extraField_damage_status' => l.extraField_damage_status,
-      'extraField_type' => l.extraField_type,
-      'extraField_engine_cc' => l.extraField_engine_cc,
-      'extraField_range' => l.extraField_range,
-      'extraField_storage' => l.extraField_storage,
-      'extraField_ram' => l.extraField_ram,
-      'extraField_processor' => l.extraField_processor,
-      'extraField_screen_size' => l.extraField_screen_size,
-      'extraField_room_count' => l.extraField_room_count,
-      'extraField_gross_sqm' => l.extraField_gross_sqm,
-      'extraField_net_sqm' => l.extraField_net_sqm,
-      'extraField_land_sqm' => l.extraField_land_sqm,
-      'extraField_sqm' => l.extraField_sqm,
-      'extraField_building_age' => l.extraField_building_age,
-      'extraField_floor' => l.extraField_floor,
-      'extraField_floor_count' => l.extraField_floor_count,
-      'extraField_unit_count' => l.extraField_unit_count,
-      'extraField_heating' => l.extraField_heating,
-      'extraField_furnishing' => l.extraField_furnishing,
-      'extraField_elevator' => l.extraField_elevator,
-      'extraField_parking' => l.extraField_parking,
-      'extraField_title_deed' => l.extraField_title_deed,
-      'extraField_land_use' => l.extraField_land_use,
-      'extraField_size' => l.extraField_size,
-      'extraField_shoe_size' => l.extraField_shoe_size,
-      'extraField_gender' => l.extraField_gender,
-      'extraField_material' => l.extraField_material,
-      'extraField_gold_carat' => l.extraField_gold_carat,
-      'extraField_silver_purity' => l.extraField_silver_purity,
-      'extraField_wheel_size' => l.extraField_wheel_size,
-      'extraField_sport_type' => l.extraField_sport_type,
-      'extraField_book_title' => l.extraField_book_title,
-      'extraField_author' => l.extraField_author,
-      'extraField_publisher' => l.extraField_publisher,
-      'extraField_length' => l.extraField_length,
-      'extraField_working_hours' => l.extraField_working_hours,
-      'extraField_compatible_model' => l.extraField_compatible_model,
-      'extraField_part_type' => l.extraField_part_type,
-      'extraField_breed' => l.extraField_breed,
-      _ => labelKey,
-    };
-  }
 
-  Widget _buildDescriptionSection(AppLocalizations l) {
+  Widget _buildDescriptionSection(TranslationPack loc) {
     return TeqCard(
       child: Column(
         children: [
@@ -1501,10 +1450,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             maxLines: 5,
             keyboardType: TextInputType.multiline,
             textInputAction: TextInputAction.newline,
-            labelText: l.fieldDescription,
-            hintText: l.fieldDescriptionHint,
+            labelText: loc.t('fieldDescription'),
+            hintText: loc.t('fieldDescriptionHint'),
             validator: (v) =>
-                v == null || v.isEmpty ? l.fieldDescriptionHint : null,
+                v == null || v.isEmpty ? loc.t('fieldDescriptionHint') : null,
           ),
           const SizedBox(height: 10),
           _AiDescButton(
@@ -1519,7 +1468,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildPriceSection(AppLocalizations l) {
+  Widget _buildPriceSection(TranslationPack loc) {
     return TeqCard(
       child: Column(
         children: [
@@ -1528,11 +1477,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             controller: _priceCtrl,
             keyboardType: TextInputType.number,
             inputFormatters: [_ThousandSeparatorFormatter()],
-            labelText: l.fieldPrice,
-            hintText: l.fieldPriceHint,
+            labelText: loc.t('fieldPrice'),
+            hintText: loc.t('fieldPriceHint'),
             prefixText: '₺ ',
             validator: (v) =>
-                v == null || v.isEmpty ? l.validRequiredPrice : null,
+                v == null || v.isEmpty ? loc.t('validRequiredPrice') : null,
           ),
           const SizedBox(height: 10),
           _AiPriceButton(
@@ -1571,7 +1520,7 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
   }
 }
 
-class _AiPriceButton extends StatelessWidget {
+class _AiPriceButton extends ConsumerWidget {
   final bool loading;
   final bool isPro;
   final int? creditsRemaining;
@@ -1583,7 +1532,8 @@ class _AiPriceButton extends StatelessWidget {
       this.creditsRemaining});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return GestureDetector(
       onTap: loading ? null : onTap,
       child: AnimatedContainer(
@@ -1603,9 +1553,7 @@ class _AiPriceButton extends StatelessWidget {
                   ? const Color(0xFF334155)
                   : const Color(0xFF6366F1).withValues(alpha: 0.5)),
         ),
-        child: Builder(builder: (context) {
-          final l = AppLocalizations.of(context)!;
-          return Row(
+        child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: loading
                 ? [
@@ -1617,7 +1565,7 @@ class _AiPriceButton extends StatelessWidget {
                             valueColor: AlwaysStoppedAnimation(
                                 Color(0xFF6366F1)))),
                     const SizedBox(width: 10),
-                    Text(l.aiPriceAnalyzing,
+                    Text(loc.t('aiPriceAnalyzing'),
                         style: const TextStyle(
                             color: Color(0xFF64748B),
                             fontSize: 13,
@@ -1627,7 +1575,7 @@ class _AiPriceButton extends StatelessWidget {
                     const Text('✨', style: TextStyle(fontSize: 15)),
                     const SizedBox(width: 8),
                     Flexible(
-                        child: Text(l.aiPriceButton,
+                        child: Text(loc.t('aiPriceButton'),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -1637,17 +1585,16 @@ class _AiPriceButton extends StatelessWidget {
                       const SizedBox(width: 8),
                       _CreditBadge(
                           remaining: creditsRemaining,
-                          suffix: l.aiCreditsLeftSuffix),
+                          suffix: loc.t('aiCreditsLeftSuffix')),
                     ],
                   ],
-          );
-        }),
+        ),
       ),
     );
   }
 }
 
-class _AiDescButton extends StatelessWidget {
+class _AiDescButton extends ConsumerWidget {
   final bool loading;
   final bool enabled;
   final bool isPro;
@@ -1661,8 +1608,8 @@ class _AiDescButton extends StatelessWidget {
       this.creditsRemaining});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final active = enabled && !loading;
     return GestureDetector(
       onTap: active ? onTap : null,
@@ -1695,7 +1642,7 @@ class _AiDescButton extends StatelessWidget {
                           valueColor:
                               AlwaysStoppedAnimation(Color(0xFF6366F1)))),
                   const SizedBox(width: 10),
-                  Text(l.aiDescGenerating,
+                  Text(loc.t('aiDescGenerating'),
                       style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 13,
@@ -1705,7 +1652,7 @@ class _AiDescButton extends StatelessWidget {
                   const Text('✍️', style: TextStyle(fontSize: 15)),
                   const SizedBox(width: 8),
                   Flexible(
-                      child: Text(l.aiDescButton,
+                      child: Text(loc.t('aiDescButton'),
                           style: TextStyle(
                               color: active
                                   ? Colors.white
@@ -1717,7 +1664,7 @@ class _AiDescButton extends StatelessWidget {
                     const SizedBox(width: 8),
                     _CreditBadge(
                         remaining: creditsRemaining,
-                        suffix: l.aiCreditsLeftSuffix),
+                        suffix: loc.t('aiCreditsLeftSuffix')),
                   ],
                 ],
         ),
