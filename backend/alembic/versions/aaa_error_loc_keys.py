@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "aaa_error_loc_keys"
-down_revision: Union[str, Sequence[str], None] = "zz_hasar_vasita_all"
+down_revision: Union[str, Sequence[str], None] = "aad_translations_table"
 branch_labels = None
 depends_on = None
 
