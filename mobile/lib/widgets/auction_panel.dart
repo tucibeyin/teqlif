@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../models/auction.dart';
@@ -112,15 +112,15 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     if (_quickAuctionLoading) return;
     setState(() => _quickAuctionLoading = true);
     _quickAuctionCount++;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     try {
       final newState = await AuctionService.startAuction(
         widget.streamId,
-        itemName: l.quickAuctionItem(_quickAuctionCount),
+        itemName: loc.t("quickAuctionItem", {"count": _quickAuctionCount.toString()}),
         startPrice: 1.0,
       );
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
-      _setMsg(l.quickAuctionStarted);
+      _setMsg(loc.t("quickAuctionStarted"));
     } catch (e) {
       _quickAuctionCount--;
       _setMsg(_cleanErr(e), error: true);
@@ -169,7 +169,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _acceptBid() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final state = ref.read(auctionProvider(widget.streamId));
     final ok = await showDialog<bool>(
       context: context,
@@ -177,7 +177,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          '✅ ${l.auctionAcceptBidTitle}',
+          '✅ ${loc.t("auctionAcceptBidTitle")}',
           style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
         content: Column(
@@ -193,22 +193,22 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               ),
               child: Column(
                 children: [
-                  _acceptRow(l.auctionItem, state.itemName ?? '—'),
+                  _acceptRow(loc.t("auctionItem"), state.itemName ?? '—'),
                   const SizedBox(height: 10),
                   _acceptRow(
-                    l.auctionWinnerPrice,
+                    loc.t("auctionWinnerPrice"),
                     '₺${_fmt(state.currentBid)}',
                     valueColor: const Color(0xFF4ADE80),
                     valueBold: true,
                   ),
                   const SizedBox(height: 10),
-                  _acceptRow(l.auctionBidder, '@${state.currentBidder ?? '—'}'),
+                  _acceptRow(loc.t("auctionBidder"), '@${state.currentBidder ?? '—'}'),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              l.auctionAcceptConfirm,
+              loc.t("auctionAcceptConfirm"),
               style: const TextStyle(
                 color: Color(0xFF94A3B8),
                 fontSize: 12,
@@ -233,7 +233,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: Text(
-                    l.auctionCancelBtn,
+                    loc.t("auctionCancelBtn"),
                     style: const TextStyle(color: Color(0xFF94A3B8)),
                   ),
                 ),
@@ -250,7 +250,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   ),
                   onPressed: () => Navigator.pop(ctx, true),
                   child: Text(
-                    l.auctionContinueBtn,
+                    loc.t("auctionContinueBtn"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -279,14 +279,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         proofImageUrl: proofUrl,
       );
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
-      _setMsg(l.auctionAccepted);
+      _setMsg(loc.t("auctionAccepted"));
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
   }
 
   Future<String?> _showProofCaptureDialog() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return showModalBottomSheet<String?>(
       context: context,
       isDismissible: false,
@@ -311,7 +311,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '📷 ${l.hostAcceptSaleDialogTitle}',
+                    '📷 ${loc.t("hostAcceptSaleDialogTitle")}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -338,7 +338,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            l.hostAcceptSaleDialogBody,
+                            loc.t("hostAcceptSaleDialogBody"),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -379,11 +379,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                                       Navigator.pop(ctx, url ?? '');
                                   } catch (e) {
                                     setLocalState(() => isLoading = false);
-                                    _setMsg(l.errorPhotoCapture, error: true);
+                                    _setMsg(loc.t("errorPhotoCapture"), error: true);
                                   }
                                 },
                           child: Text(
-                            l.hostAcceptSaleBtnCapture,
+                            loc.t("hostAcceptSaleBtnCapture"),
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -401,7 +401,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                           ),
                           onPressed: () => Navigator.pop(ctx, ''),
                           child: Text(
-                            l.hostAcceptSaleBtnSkip,
+                            loc.t("hostAcceptSaleBtnSkip"),
                             style: const TextStyle(
                               color: Color(0xFF94A3B8),
                               fontWeight: FontWeight.bold,
@@ -420,24 +420,24 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _endAuction() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         title: Text(
-          l.auctionEndTitle,
+          loc.t("auctionEndTitle"),
           style: const TextStyle(color: Colors.white),
         ),
         content: Text(
-          l.auctionEndDesc,
+          loc.t("auctionEndDesc"),
           style: const TextStyle(color: Color(0xFF94A3B8)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              l.btnCancel,
+              loc.t("btnCancel"),
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
           ),
@@ -450,7 +450,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              l.auctionEndBtn,
+              loc.t("auctionEndBtn"),
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -476,7 +476,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final state = ref.watch(auctionProvider(widget.streamId));
 
     // Callback'leri provider değişimine bağla
@@ -510,15 +510,15 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         if (widget.isHost) {
           final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
           final price = _fmt(next.currentBid);
-          _setMsg(l.auctionBuyNowCompleted(buyer, price));
+          _setMsg(loc.t("auctionBuyNowCompleted", {"buyer": buyer, "price": price}));
         } else if ((next.buyerUsername != null &&
                 next.buyerUsername == widget.myUsername) ||
             _iAmBinBuyer) {
-          _setMsg(l.auctionBuyNowCongrats);
+          _setMsg(loc.t("auctionBuyNowCongrats"));
           widget.onWin?.call();
         } else {
           final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
-          _setMsg(l.auctionBuyNowSoldOther(buyer));
+          _setMsg(loc.t("auctionBuyNowSoldOther", {"buyer": buyer}));
         }
         _iAmBinBuyer = false;
       }
@@ -538,9 +538,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             Navigator.of(_binDialogCtx!).pop();
             _binDialogCtx = null;
           }
-          _setMsg(l.auctionBinRejected, error: true);
+          _setMsg(loc.t("auctionBinRejected"), error: true);
         } else {
-          _setMsg(l.auctionBinRejectedOther);
+          _setMsg(loc.t("auctionBinRejectedOther"));
         }
         _iAmBinBuyer = false;
       }
@@ -687,10 +687,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     }
 
     final price = listing['price'];
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final priceStr = price != null
         ? '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}'
-        : l.listingPriceNotSet;
+        : loc.t("listingPriceNotSet");
     final seller = (listing['user'] as Map?)?['username'] ?? '';
 
     showModalBottomSheet(
@@ -844,26 +844,26 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _statusBadge(AuctionState state) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final String label;
     final Color color;
     if (state.status == 'active') {
-      label = l.auctionStatusActive;
+      label = loc.t("auctionStatusActive");
       color = Colors.green;
     } else if (state.status == 'buy_it_now_pending') {
-      label = l.auctionStatusPending;
+      label = loc.t("auctionStatusPending");
       color = Colors.orange;
     } else if (state.status == 'paused') {
-      label = l.auctionStatusPaused;
+      label = loc.t("auctionStatusPaused");
       color = Colors.amber;
     } else if (state.status == 'ended' && state.isBoughtItNow) {
-      label = l.auctionStatusSold;
+      label = loc.t("auctionStatusSold");
       color = Colors.orange;
     } else if (state.status == 'ended') {
-      label = l.auctionStatusEnded;
+      label = loc.t("auctionStatusEnded");
       color = Colors.red;
     } else {
-      label = l.auctionStatusIdle;
+      label = loc.t("auctionStatusIdle");
       color = const Color(0xFF475569);
     }
     return Container(
@@ -884,19 +884,19 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _hostInlineControls(AuctionState state) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     if (state.isIdle || state.isEnded) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _pillIconBtn(
             Icons.bolt_rounded,
-            l.quickAuctionBtn,
+            loc.t("quickAuctionBtn"),
             _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange,
             _quickAuctionLoading ? null : _startQuickAuction,
           ),
           const SizedBox(width: 6),
-          _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
+          _pillBtn(loc.t("auctionStartBtn"), Colors.green, _showStartDialog),
         ],
       );
     }
@@ -932,9 +932,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _pillBtn(l.auctionBuyNowRejectInline, Colors.red, _buyItNowReject),
+          _pillBtn(loc.t("auctionBuyNowRejectInline"), Colors.red, _buyItNowReject),
           const SizedBox(width: 6),
-          _pillBtn(l.auctionBuyNowAcceptInline, Colors.green, _buyItNowAccept),
+          _pillBtn(loc.t("auctionBuyNowAcceptInline"), Colors.green, _buyItNowAccept),
         ],
       );
     }
@@ -942,7 +942,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _viewerBidButton(BuildContext context, AuctionState state) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final enabled = widget.enabled;
     final bin = state.buyItNowPrice;
     final showBin =
@@ -967,7 +967,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              enabled ? l.auctionBidBtn : l.auctionMutedBtn,
+              enabled ? loc.t("auctionBidBtn") : loc.t("auctionMutedBtn"),
               style: TextStyle(
                 color: enabled ? Colors.white : const Color(0xFF64748B),
                 fontSize: 11,
@@ -988,7 +988,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${l.auctionBuyNowBtn}₺${_fmt(bin)}',
+                '${loc.t("auctionBuyNowBtn")}₺${_fmt(bin)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,
@@ -1003,7 +1003,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _buyItNow(AuctionState state) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     var waiting = false;
 
     await showDialog<void>(
@@ -1022,7 +1022,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 title: Text(
-                  '⚡ ${l.auctionBuyNowTitle}',
+                  '⚡ ${loc.t("auctionBuyNowTitle")}',
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 content: Column(
@@ -1032,7 +1032,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     const Text('⏳', style: TextStyle(fontSize: 36)),
                     const SizedBox(height: 12),
                     Text(
-                      l.auctionApprovalWaiting,
+                      loc.t("auctionApprovalWaiting"),
                       style: const TextStyle(
                         color: Colors.orange,
                         fontWeight: FontWeight.w700,
@@ -1042,7 +1042,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      l.auctionApprovalWaitingDesc,
+                      loc.t("auctionApprovalWaitingDesc"),
                       style: const TextStyle(
                         color: Color(0xFF94A3B8),
                         fontSize: 12,
@@ -1062,7 +1062,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 borderRadius: BorderRadius.circular(16),
               ),
               title: Text(
-                '⚡ ${l.auctionBuyNowTitle}',
+                '⚡ ${loc.t("auctionBuyNowTitle")}',
                 style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
               content: Column(
@@ -1077,10 +1077,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     ),
                     child: Column(
                       children: [
-                        _acceptRow(l.auctionItem, state.itemName ?? '—'),
+                        _acceptRow(loc.t("auctionItem"), state.itemName ?? '—'),
                         const SizedBox(height: 10),
                         _acceptRow(
-                          l.auctionBuyNowPrice,
+                          loc.t("auctionBuyNowPrice"),
                           '₺${_fmt(state.buyItNowPrice)}',
                           valueColor: Colors.orange,
                           valueBold: true,
@@ -1090,7 +1090,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    l.auctionBuyNowConfirm,
+                    loc.t("auctionBuyNowConfirm"),
                     style: const TextStyle(
                       color: Color(0xFF94A3B8),
                       fontSize: 12,
@@ -1115,7 +1115,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
-                          l.btnCancel,
+                          loc.t("btnCancel"),
                           style: const TextStyle(color: Color(0xFF94A3B8)),
                         ),
                       ),
@@ -1151,7 +1151,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                           }
                         },
                         child: Text(
-                          l.auctionBuyNowBuyBtn,
+                          loc.t("auctionBuyNowBuyBtn"),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -1175,7 +1175,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     AuctionState state,
   ) async {
     if (!mounted || !context.mounted) return;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final ok = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -1183,7 +1183,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          '⚡ ${l.auctionBuyNowRequest}',
+          '⚡ ${loc.t("auctionBuyNowRequest")}',
           style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
         content: Column(
@@ -1198,22 +1198,22 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               ),
               child: Column(
                 children: [
-                  _acceptRow(l.auctionItem, state.itemName ?? '—'),
+                  _acceptRow(loc.t("auctionItem"), state.itemName ?? '—'),
                   const SizedBox(height: 10),
                   _acceptRow(
-                    l.auctionBuyNowPrice,
+                    loc.t("auctionBuyNowPrice"),
                     '₺${_fmt(state.buyItNowPrice)}',
                     valueColor: Colors.orange,
                     valueBold: true,
                   ),
                   const SizedBox(height: 10),
-                  _acceptRow(l.auctionBuyNowRequester, '@$buyerUsername'),
+                  _acceptRow(loc.t("auctionBuyNowRequester"), '@$buyerUsername'),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              l.auctionBuyNowRequestConfirm,
+              loc.t("auctionBuyNowRequestConfirm"),
               style: const TextStyle(
                 color: Color(0xFF94A3B8),
                 fontSize: 12,
@@ -1238,7 +1238,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: Text(
-                    l.auctionBuyNowReject,
+                    loc.t("auctionBuyNowReject"),
                     style: const TextStyle(color: Color(0xFFF87171)),
                   ),
                 ),
@@ -1255,7 +1255,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   ),
                   onPressed: () => Navigator.pop(ctx, true),
                   child: Text(
-                    l.auctionBuyNowApprove,
+                    loc.t("auctionBuyNowApprove"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -1409,7 +1409,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   Widget _acceptBtn() {
     return Builder(
       builder: (context) {
-        final l = AppLocalizations.of(context)!;
+        final loc = ref.watch(localizationProvider);
         return GestureDetector(
           onTap: _acceptBid,
           child: Container(
@@ -1419,7 +1419,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              l.auctionAcceptBtn,
+              loc.t("auctionAcceptBtn"),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
@@ -1485,10 +1485,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         proofImageUrl: proofUrl,
       );
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
+        final loc = ref.watch(localizationProvider);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(l.buyItNowAccepted)));
+        ).showSnackBar(SnackBar(content: Text(loc.t("buyItNowAccepted"))));
       }
     } on AppException catch (e) {
       if (mounted) {
@@ -1508,6 +1508,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _buyItNowReject() async {
+    final loc = ref.read(localizationProvider);
     if (_binLoading) return;
     setState(() => _binLoading = true);
     try {
@@ -1515,7 +1516,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.auctionBuyNowRejected),
+            content: Text(loc.t("auctionBuyNowRejected")),
           ),
         );
       }
@@ -1591,12 +1592,13 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   Future<void> _placeBid(double amount) async {
     if (_loading) return;
     setState(() => _loading = true);
+    final loc = ref.read(localizationProvider);
     // context'i async öncesi sakla (use_build_context_synchronously için)
     final messenger = ScaffoldMessenger.of(context);
     try {
       await AuctionService.placeBid(widget.streamId, amount);
       _customBidCtrl.clear();
-      _setMsg(AppLocalizations.of(context)!.auctionBidReceived(_fmt(amount)));
+      _setMsg(loc.t("auctionBidReceived", {"amount": _fmt(amount)}));
     } on AppException catch (e) {
       _handleBidError(e, messenger: messenger);
     } catch (e, st) {
@@ -1630,7 +1632,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
   void _showBidBlockedSheet(String code) {
     if (!mounted || !context.mounted) return;
-    final l10n = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final needsVerify = code == 'BID_BLOCKED_VERIFY';
 
     showModalBottomSheet<void>(
@@ -1638,9 +1640,9 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetCtx) => _BidBlockedSheet(
-        title: l10n.bidBlockedTitle,
-        body: needsVerify ? l10n.bidBlockedVerifyBody : l10n.bidBlockedMuteBody,
-        actionLabel: needsVerify ? l10n.bidBlockedVerifyAction : l10n.bidBlockedDismiss,
+        title: loc.t("bidBlockedTitle"),
+        body: needsVerify ? loc.t("bidBlockedVerifyBody") : loc.t("bidBlockedMuteBody"),
+        actionLabel: needsVerify ? loc.t("bidBlockedVerifyAction") : loc.t("bidBlockedDismiss"),
         onAction: () {
           Navigator.pop(sheetCtx);
           if (needsVerify) {
@@ -1650,7 +1652,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
           }
         },
         showDismiss: needsVerify,
-        dismissLabel: l10n.bidBlockedDismiss,
+        dismissLabel: loc.t("bidBlockedDismiss"),
       ),
     );
   }
@@ -1680,13 +1682,14 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   Future<void> _buyItNow() async {
     if (_loading) return;
     setState(() => _loading = true);
+    final loc = ref.read(localizationProvider);
     try {
       await AuctionService.buyItNow(widget.streamId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context)!.auctionBuyNowRequestSent,
+              loc.t("auctionBuyNowRequestSent"),
             ),
             duration: const Duration(seconds: 4),
           ),
@@ -1716,7 +1719,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final liveState = ref.watch(auctionProvider(widget.streamId));
     final base = liveState.currentBid ?? liveState.startPrice ?? 0;
 
@@ -1756,7 +1759,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   ? Column(
                       children: [
                         Text(
-                          '⚡ ${l.auctionApprovalWaiting}',
+                          '⚡ ${loc.t("auctionApprovalWaiting")}',
                           style: const TextStyle(
                             color: Colors.orange,
                             fontSize: 18,
@@ -1765,7 +1768,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          l.auctionApprovalWaitingDesc,
+                          loc.t("auctionApprovalWaitingDesc"),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Color(0xFF94A3B8),
@@ -1777,7 +1780,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   : Column(
                       children: [
                         Text(
-                          '⏳ ${l.auctionInProgress}',
+                          '⏳ ${loc.t("auctionInProgress")}',
                           style: const TextStyle(
                             color: Colors.orange,
                             fontSize: 18,
@@ -1786,9 +1789,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          l.auctionInProgressDesc(
-                            liveState.pendingBuyerUsername ?? '?',
-                          ),
+                          loc.t("auctionInProgressDesc", {"username": liveState.pendingBuyerUsername ?? '?'}),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Color(0xFF94A3B8),
@@ -1797,7 +1798,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          l.auctionInProgressNoBid,
+                          loc.t("auctionInProgressNoBid"),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Color(0xFF64748B),
@@ -1847,7 +1848,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
               child: Column(
                 children: [
                   Text(
-                    '🛒 ${l.auctionSold}',
+                    '🛒 ${loc.t("auctionSold")}',
                     style: const TextStyle(
                       color: Colors.orange,
                       fontSize: 22,
@@ -1875,7 +1876,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    l.auctionBoughtBy(liveState.buyerUsername ?? '?'),
+                    loc.t("auctionBoughtBy", {"username": liveState.buyerUsername ?? '?'}),
                     style: const TextStyle(
                       color: Color(0xFF94A3B8),
                       fontSize: 13,
@@ -1924,7 +1925,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      liveState.itemName ?? l.auctionBidBtn,
+                      liveState.itemName ?? loc.t("auctionBidBtn"),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -1933,7 +1934,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                     ),
                     if (liveState.currentBidder != null)
                       Text(
-                        l.auctionHighestBidder(liveState.currentBidder!),
+                        loc.t("auctionHighestBidder", {"username": liveState.currentBidder!}),
                         style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 12,
@@ -1941,7 +1942,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                       )
                     else
                       Text(
-                        l.auctionFirstBid,
+                        loc.t("auctionFirstBid"),
                         style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 12,
@@ -1963,7 +1964,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   ),
                   if (liveState.bidCount > 0)
                     Text(
-                      l.auctionBidCount(liveState.bidCount),
+                      loc.t("auctionBidCount", {"count": liveState.bidCount.toString()}),
                       style: const TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 11,
@@ -1990,8 +1991,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
           const SizedBox(height: 14),
           SwipeToBidButton(
             text: _selectedBid > 0
-                ? l.auctionSwipeToBid('₺${_fmt(_selectedBid.toDouble())}')
-                : l.auctionSwipeToBidNoPrice,
+                ? loc.t("auctionSwipeToBid", {"price": '₺${_fmt(_selectedBid.toDouble())}'})
+                : loc.t("auctionSwipeToBidNoPrice"),
             isLoading: _loading,
             isInvalid: false,
             itemId: liveState.listingId,
@@ -2045,7 +2046,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                           )
                         else ...[
                           Text(
-                            l.auctionBuyNowBtn,
+                            loc.t("auctionBuyNowBtn"),
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -2080,7 +2081,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   inputFormatters: [ThousandsSeparatorInputFormatter()],
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: l.auctionCustomAmountHint,
+                    hintText: loc.t("auctionCustomAmountHint"),
                     hintStyle: const TextStyle(
                       color: Color(0xFF475569),
                       fontSize: 13,
@@ -2117,7 +2118,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                           final raw = _customBidCtrl.text.replaceAll('.', '');
                           final v = double.tryParse(raw);
                           if (v == null || v <= 0) {
-                            _setMsg(l.auctionValidAmount, error: true);
+                            _setMsg(loc.t("auctionValidAmount"), error: true);
                             return;
                           }
                           _placeBid(v);
@@ -2141,7 +2142,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                           ),
                         )
                       : Text(
-                          l.auctionBidBtn,
+                          loc.t("auctionBidBtn"),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -2206,14 +2207,14 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
 // ── Açık artırma başlatma dialogu ─────────────────────────────────────────────
 
-class _StartAuctionDialog extends StatefulWidget {
+class _StartAuctionDialog extends ConsumerStatefulWidget {
   final int? hostUserId;
   const _StartAuctionDialog({this.hostUserId});
   @override
-  State<_StartAuctionDialog> createState() => _StartAuctionDialogState();
+  ConsumerState<_StartAuctionDialog> createState() => _StartAuctionDialogState();
 }
 
-class _StartAuctionDialogState extends State<_StartAuctionDialog> {
+class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
   bool _fromListing = false;
   final _itemCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
@@ -2258,12 +2259,12 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
       scrollable: true,
       title: Text(
-        l.auctionStartTitle,
+        loc.t("auctionStartTitle"),
         style: const TextStyle(color: Colors.white, fontSize: 16),
       ),
       contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -2277,7 +2278,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               children: [
                 Expanded(
                   child: _modeBtn(
-                    l.auctionManualEntry,
+                    loc.t("auctionManualEntry"),
                     !_fromListing,
                     () => setState(() {
                       _fromListing = false;
@@ -2288,7 +2289,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _modeBtn(
-                    l.auctionFromListings,
+                    loc.t("auctionFromListings"),
                     _fromListing,
                     () => setState(() => _fromListing = true),
                   ),
@@ -2298,11 +2299,11 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
             const SizedBox(height: 14),
             // İçerik
             if (!_fromListing) ...[
-              _inputField(_itemCtrl, l.auctionItemName),
+              _inputField(_itemCtrl, loc.t("auctionItemName")),
               const SizedBox(height: 10),
-              _inputField(_priceCtrl, l.auctionStartPrice, isNumber: true),
+              _inputField(_priceCtrl, loc.t("auctionStartPrice"), isNumber: true),
               const SizedBox(height: 10),
-              _inputField(_binCtrl, l.auctionBuyNowPriceHint, isNumber: true),
+              _inputField(_binCtrl, loc.t("auctionBuyNowPriceHint"), isNumber: true),
             ] else ...[
               SwipePaginatedList<Map<String, dynamic>>(
                 fetchPage: _fetchPage,
@@ -2311,7 +2312,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                 emptyWidget: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Text(
-                    l.auctionNoActiveListings,
+                    loc.t("auctionNoActiveListings"),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Color(0xFF64748B),
@@ -2416,9 +2417,9 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               ),
               if (_fromListing) ...[
                 const SizedBox(height: 10),
-                _inputField(_priceCtrl, l.auctionStartPrice, isNumber: true),
+                _inputField(_priceCtrl, loc.t("auctionStartPrice"), isNumber: true),
                 const SizedBox(height: 10),
-                _inputField(_binCtrl, l.auctionBuyNowPriceHint, isNumber: true),
+                _inputField(_binCtrl, loc.t("auctionBuyNowPriceHint"), isNumber: true),
               ],
             ],
           ],
@@ -2429,7 +2430,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            l.btnCancel,
+            loc.t("btnCancel"),
             style: const TextStyle(color: Color(0xFF64748B)),
           ),
         ),
@@ -2472,7 +2473,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
             }
           },
           child: Text(
-            l.liveStartBtn,
+            loc.t("liveStartBtn"),
             style: const TextStyle(color: Colors.white),
           ),
         ),
@@ -2556,36 +2557,36 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
 
 // ── Açık artırma durum rozeti ──────────────────────────────────────────────
 
-class _AuctionStatusBadge extends StatelessWidget {
+class _AuctionStatusBadge extends ConsumerWidget {
   final AuctionState state;
   const _AuctionStatusBadge({required this.state});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final (label, color, icon) = switch (state.status) {
       'active' => (
-        l.auctionStatusActive,
+        loc.t("auctionStatusActive"),
         const Color(0xFF16A34A),
         Icons.circle,
       ),
       'paused' => (
-        l.auctionStatusPaused,
+        loc.t("auctionStatusPaused"),
         const Color(0xFFF59E0B),
         Icons.pause_circle,
       ),
       'ended' => (
-        l.auctionStatusEnded,
+        loc.t("auctionStatusEnded"),
         const Color(0xFFEF4444),
         Icons.stop_circle_outlined,
       ),
       'buy_it_now_pending' => (
-        l.auctionStatusPending,
+        loc.t("auctionStatusPending"),
         const Color(0xFFF97316),
         Icons.hourglass_top,
       ),
       _ => (
-        l.auctionStatusIdle,
+        loc.t("auctionStatusIdle"),
         const Color(0xFF475569),
         Icons.radio_button_unchecked,
       ),
@@ -2614,17 +2615,17 @@ class _AuctionStatusBadge extends StatelessWidget {
 // Phone verification bottom sheet
 // ---------------------------------------------------------------------------
 
-class _PhoneVerifySheet extends StatefulWidget {
+class _PhoneVerifySheet extends ConsumerStatefulWidget {
   final VoidCallback onClose;
   final String? existingPhone;
   const _PhoneVerifySheet({required this.onClose, this.existingPhone});
 
   @override
-  State<_PhoneVerifySheet> createState() => _PhoneVerifySheetState();
+  ConsumerState<_PhoneVerifySheet> createState() => _PhoneVerifySheetState();
 }
 
 // ── Bid Blocked Bottom Sheet ───────────────────────────────────────────────
-class _BidBlockedSheet extends StatelessWidget {
+class _BidBlockedSheet extends ConsumerWidget {
   final String title;
   final String body;
   final String actionLabel;
@@ -2642,7 +2643,7 @@ class _BidBlockedSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -2743,7 +2744,7 @@ class _BidBlockedSheet extends StatelessWidget {
   }
 }
 
-class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
+class _PhoneVerifySheetState extends ConsumerState<_PhoneVerifySheet> {
   late String? _phoneE164;
   bool _loading = false;
   bool _sent = false;
@@ -2756,10 +2757,10 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
   }
 
   Future<void> _sendVerification() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final phone = _phoneE164;
     if (phone == null || phone.length < 8) {
-      setState(() => _error = l.phoneVerifyInvalidPhone);
+      setState(() => _error = loc.t("phoneVerifyInvalidPhone"));
       return;
     }
     setState(() {
@@ -2785,7 +2786,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
         final msg =
             (jsonDecode(resp.body) as Map<String, dynamic>)['detail']
                 as String? ??
-            l.phoneVerifyError;
+            loc.t("phoneVerifyError");
         setState(() {
           _error = msg;
           _loading = false;
@@ -2793,7 +2794,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
       }
     } catch (_) {
       setState(() {
-        _error = l.phoneVerifyConnectionError;
+        _error = loc.t("phoneVerifyConnectionError");
         _loading = false;
       });
     }
@@ -2801,7 +2802,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         24,
@@ -2847,7 +2848,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             ),
             const SizedBox(height: 14),
             Text(
-              l.phoneVerifyEmailSentTitle,
+              loc.t("phoneVerifyEmailSentTitle"),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -2856,7 +2857,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             ),
             const SizedBox(height: 10),
             Text(
-              l.phoneVerifyEmailSentDesc,
+              loc.t("phoneVerifyEmailSentDesc"),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFF94A3B8),
@@ -2878,7 +2879,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                   ),
                 ),
                 child: Text(
-                  l.btnOk,
+                  loc.t("btnOk"),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
@@ -2888,7 +2889,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             ),
           ] else ...[
             Text(
-              l.phoneVerifyTitle,
+              loc.t("phoneVerifyTitle"),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -2897,7 +2898,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             ),
             const SizedBox(height: 10),
             Text(
-              l.phoneVerifyDesc,
+              loc.t("phoneVerifyDesc"),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFF94A3B8),
@@ -2938,7 +2939,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                         ),
                       )
                     : Text(
-                        l.auctionSendVerificationEmail,
+                        loc.t("auctionSendVerificationEmail"),
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
@@ -2950,7 +2951,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             TextButton(
               onPressed: widget.onClose,
               child: Text(
-                l.btnCancel,
+                loc.t("btnCancel"),
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),

@@ -5,19 +5,20 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../config/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
-import '../l10n/app_localizations.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 
-class BlockedUsersScreen extends StatefulWidget {
+class BlockedUsersScreen extends ConsumerStatefulWidget {
   const BlockedUsersScreen({super.key});
 
   @override
-  State<BlockedUsersScreen> createState() => _BlockedUsersScreenState();
+  ConsumerState<BlockedUsersScreen> createState() => _BlockedUsersScreenState();
 }
 
-class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
+class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
   List<dynamic> _blocked = [];
   bool _loading = true;
 
@@ -66,18 +67,18 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(message: AppLocalizations.of(context)!.blockedActionFailed, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('blockedActionFailed'), type: TeqSnackBarType.info);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.blockedUsersTitle),
+        title: Text(loc.t('blockedUsersTitle')),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
@@ -90,7 +91,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                           size: 52, color: AppColors.textTertiary(context)),
                       const SizedBox(height: 12),
                       Text(
-                        l.blockedNone,
+                        loc.t('blockedNone'),
                         style: TextStyle(
                           fontSize: 15,
                           color: AppColors.textSecondary(context),
@@ -163,7 +164,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                       trailing: TeqButton.outline(
                         key: Key('blocked_btn_engel_kaldir_${u['id']}'),
                         onPressed: () => _unblock(username, u['id'] as int),
-                        text: l.blockedUnblock,
+                        text: loc.t('blockedUnblock'),
                         size: TeqButtonSize.small,
                         customColor: const Color(0xFFEF4444),
                       ),

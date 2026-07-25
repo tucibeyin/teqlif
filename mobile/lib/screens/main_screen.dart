@@ -21,7 +21,8 @@ import 'search_screen.dart';
 import 'follow_requests_screen.dart';
 import 'live/live_list_screen.dart';
 import 'live/swipe_live_screen.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../widgets/offline_banner.dart';
 
 import '../services/call_service.dart';
@@ -30,14 +31,14 @@ import '../services/call_service.dart';
 /// Prevents background ghost joining of streams when the user is on other tabs.
 final ValueNotifier<bool> globalIsLiveTabVisible = ValueNotifier<bool>(true);
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
+class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
   int _unreadMessages = 0;
@@ -559,7 +560,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       body: Column(
         children: [
@@ -580,27 +581,27 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           BottomNavigationBarItem(
             icon: const Icon(Icons.videocam_outlined, color: Colors.red),
             activeIcon: const Icon(Icons.videocam, color: kPrimary),
-            label: l.navLive,
+            label: loc.t('navLive'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.grid_view_outlined),
             activeIcon: const Icon(Icons.grid_view),
-            label: l.navListings,
+            label: loc.t('navListings'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.search_outlined),
             activeIcon: const Icon(Icons.search),
-            label: l.navSearch,
+            label: loc.t('navSearch'),
           ),
           BottomNavigationBarItem(
             icon: _buildMessageIcon(),
             activeIcon: _buildMessageActiveIcon(),
-            label: l.navMessages,
+            label: loc.t('navMessages'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),
             activeIcon: const Icon(Icons.person),
-            label: l.navProfile,
+            label: loc.t('navProfile'),
           ),
         ],
       ),

@@ -1,7 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
@@ -14,7 +15,7 @@ import 'messages_screen.dart';
 import '../../ui_library/components/cards/teq_card.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 
-class PurchaseDetailScreen extends StatelessWidget {
+class PurchaseDetailScreen extends ConsumerWidget {
   final Map<String, dynamic> purchase;
 
   const PurchaseDetailScreen({super.key, required this.purchase});
@@ -31,11 +32,11 @@ class PurchaseDetailScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final itemName = purchase['item_name'] as String? ?? l.purchaseUnknownItem;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final itemName = purchase['item_name'] as String? ?? loc.t('purchaseUnknownItem');
     final sellerUsername =
-        purchase['seller_username'] as String? ?? l.purchaseUnknownSeller;
+        purchase['seller_username'] as String? ?? loc.t('purchaseUnknownSeller');
     final sellerId = purchase['seller_id'] as int?;
     final finalPrice = (purchase['final_price'] as num?)?.toDouble() ?? 0.0;
     final startPrice = (purchase['start_price'] as num?)?.toDouble();
@@ -53,7 +54,7 @@ class PurchaseDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.purchaseDetailTitle),
+        title: Text(loc.t('purchaseDetailTitle')),
         backgroundColor: AppColors.surface(context),
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
@@ -87,7 +88,7 @@ class PurchaseDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    l.noListingPhoto,
+                    loc.t('noListingPhoto'),
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF9CA3AF),
@@ -149,7 +150,7 @@ class PurchaseDetailScreen extends StatelessWidget {
                       },
                     ),
                   Text(
-                    '${l.purchaseSeller}: @$sellerUsername',
+                    '${loc.t('purchaseSeller')}: @$sellerUsername',
                     style: TextStyle(
                       color: AppColors.textSecondary(context),
                       fontSize: 15,
@@ -158,32 +159,32 @@ class PurchaseDetailScreen extends StatelessWidget {
                   const Divider(height: 24),
                   _infoRow(
                     context,
-                    AppLocalizations.of(context)!.competitorRadarSalePrice,
+                    ref.read(localizationProvider).t('competitorRadarSalePrice'),
                     fmtPrice(finalPrice),
                     valueColor: const Color(0xFF4ADE80),
                   ),
                   if (startPrice != null)
-                    _infoRow(context, l.saleStartPrice, fmtPrice(startPrice)),
+                    _infoRow(context, loc.t('saleStartPrice'), fmtPrice(startPrice)),
                   _infoRow(
                     context,
-                    l.saleType,
-                    isBuyItNow ? l.saleTypeBuyNow : l.saleTypeAuction,
+                    loc.t('saleType'),
+                    isBuyItNow ? loc.t('saleTypeBuyNow') : loc.t('saleTypeAuction'),
                     valueColor: isBuyItNow
                         ? const Color(0xFF16A34A)
                         : const Color(0xFFF97316),
                   ),
                   if (!isBuyItNow && bidCount != null)
-                    _infoRow(context, l.saleBidCount, '$bidCount'),
+                    _infoRow(context, loc.t('saleBidCount'), '$bidCount'),
                   if (startedAt != null)
                     _infoRow(
                       context,
-                      AppLocalizations.of(context)!.notificationStart,
+                      ref.read(localizationProvider).t('notificationStart'),
                       _formatDate(startedAt),
                     ),
                   if (endedAt != null)
                     _infoRow(
                       context,
-                      AppLocalizations.of(context)!.notificationEnd,
+                      ref.read(localizationProvider).t('notificationEnd'),
                       _formatDate(endedAt),
                     ),
                 ],
@@ -195,7 +196,7 @@ class PurchaseDetailScreen extends StatelessWidget {
             // Satıcı Profiline Git
             TeqButton(
               icon: Icons.person,
-              text: l.purchaseViewSeller,
+              text: loc.t('purchaseViewSeller'),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -212,7 +213,7 @@ class PurchaseDetailScreen extends StatelessWidget {
             if (sellerId != null)
               TeqButton(
                 icon: Icons.message_rounded,
-                text: AppLocalizations.of(context)!.actionSendMessageToSeller,
+                text: ref.read(localizationProvider).t('actionSendMessageToSeller'),
                 customColor: const Color(0xFF6B21A8),
                 onPressed: () {
                   Navigator.push(
@@ -251,10 +252,10 @@ class PurchaseDetailScreen extends StatelessWidget {
                         ),
                       );
                     } else {
-                      TeqSnackBar.show(message: l.purchaseListingNotFound);
+                      TeqSnackBar.show(message: loc.t('purchaseListingNotFound'));
                     }
                   },
-                  text: l.purchaseViewListing,
+                  text: loc.t('purchaseViewListing'),
                   icon: Icons.article,
                 ),
               ),
@@ -264,7 +265,7 @@ class PurchaseDetailScreen extends StatelessWidget {
             // Satış Kanıt Görseli
             if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
               Text(
-                l.purchaseProofImage,
+                loc.t('purchaseProofImage'),
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontSize: 16,

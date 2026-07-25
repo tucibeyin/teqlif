@@ -1,8 +1,9 @@
 import 'dart:developer';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import '../../services/auth_service.dart';
 import '../../services/category_service.dart';
 import '../../utils/price_formatter.dart';
@@ -15,14 +16,14 @@ import '../../ui_library/components/cards/teq_card.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
 
-class PurchasesScreen extends StatefulWidget {
+class PurchasesScreen extends ConsumerStatefulWidget {
   const PurchasesScreen({super.key});
 
   @override
-  State<PurchasesScreen> createState() => _PurchasesScreenState();
+  ConsumerState<PurchasesScreen> createState() => _PurchasesScreenState();
 }
 
-class _PurchasesScreenState extends State<PurchasesScreen> {
+class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _purchases = [];
   List<(String, String)>? _categories;
@@ -94,7 +95,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         setState(() {
           _loading = false;
         });
-        TeqSnackBar.show(message: AppLocalizations.of(context)!.purchaseLoadError, type: TeqSnackBarType.error);
+        final loc = ref.read(localizationProvider);
+        TeqSnackBar.show(message: loc.t("purchaseLoadError"), type: TeqSnackBarType.error);
       }
     }
   }
@@ -109,7 +111,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     }
   }
 
-  Widget _buildFilterBar(AppLocalizations l) {
+  Widget _buildFilterBar(TranslationPack loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -117,7 +119,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: TeqTextField(
             controller: _searchCtrl,
-            hintText: l.searchHintTextListing,
+            hintText: loc.t("searchHintTextListing"),
             prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
@@ -141,7 +143,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
-                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    label: Text(loc.t("allCategories"), style: const TextStyle(fontSize: 12)),
                     selected: _categoryFilter.isEmpty,
                     onSelected: (_) => setState(() => _categoryFilter = ''),
                     selectedColor: kPrimary.withValues(alpha: 0.15),
@@ -163,7 +165,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
             ),
           ),
         const SizedBox(height: 6),
-        _buildDateRangePicker(l),
+        _buildDateRangePicker(loc),
         const SizedBox(height: 4),
       ],
     );
@@ -172,7 +174,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(AppLocalizations l) {
+  Widget _buildDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
@@ -204,7 +206,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : l.filterSelectDate,
+                      : loc.t("filterSelectDate"),
                   style: TextStyle(fontSize: 13,
                       color: hasRange ? kPrimary : AppColors.textSecondary(context)),
                 ),
@@ -223,13 +225,13 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final filtered = _filteredPurchases;
     final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _dateRange != null;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.settingsMyPurchases),
+        title: Text(loc.t("settingsMyPurchases")),
         backgroundColor: AppColors.surface(context),
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
@@ -240,17 +242,17 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           : _purchases.isEmpty
               ? Center(
                   child: Text(
-                    l.purchaseEmptyState,
+                    loc.t("purchaseEmptyState"),
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
                   ),
                 )
               : Column(
                   children: [
-                    _buildFilterBar(l),
+                    _buildFilterBar(loc),
                     if (hasFilter && filtered.isEmpty)
                       Expanded(
                         child: Center(
-                          child: Text(l.searchNoResults,
+                          child: Text(loc.t("searchNoResults"),
                               style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
                         ),
                       )
@@ -264,9 +266,9 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                             itemCount: filtered.length,
                             itemBuilder: (context, index) {
                               final item = filtered[index];
-                              final itemName = item['item_name'] as String? ?? l.purchaseUnknownItem;
+                              final itemName = item['item_name'] as String? ?? loc.t("purchaseUnknownItem");
                               final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
-                              final seller = item['seller_username'] as String? ?? l.purchaseUnknownSeller;
+                              final seller = item['seller_username'] as String? ?? loc.t("purchaseUnknownSeller");
                               final category = item['category'] as String?;
                               final thumbnailUrl = item['thumbnail_url'] as String? ?? item['image_url'] as String?;
                               final isBuyItNow = (item['is_bought_it_now'] as bool?) ?? false;
@@ -354,7 +356,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                                       borderRadius: BorderRadius.circular(4),
                                                     ),
                                                     child: Text(
-                                                      isBuyItNow ? l.saleTypeBuyNow : l.saleTypeBid,
+                                                      isBuyItNow ? loc.t("saleTypeBuyNow") : loc.t("saleTypeBid"),
                                                       style: TextStyle(
                                                         color: isBuyItNow
                                                             ? const Color(0xFF16A34A)

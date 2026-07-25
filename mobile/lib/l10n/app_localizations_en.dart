@@ -5562,6 +5562,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apiErrorAiServiceTimeout => 'AI service timed out.';
 
   @override
+  String get errorServerBusy => 'Server is busy, please try again later.';
+
+  @override
+  String get errorSessionExpired =>
+      'Your session has expired, please log in again.';
+
+  @override
   String get conditionRefurbished => 'Refurbished';
 
   @override

@@ -1,23 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/error_helper.dart';
 import 'public_profile_screen.dart';
 
-class FollowRequestsScreen extends StatefulWidget {
+class FollowRequestsScreen extends ConsumerStatefulWidget {
   const FollowRequestsScreen({super.key});
 
   @override
-  State<FollowRequestsScreen> createState() => _FollowRequestsScreenState();
+  ConsumerState<FollowRequestsScreen> createState() => _FollowRequestsScreenState();
 }
 
-class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
+class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
   bool _loading = true;
   List<dynamic> _receivedRequests = [];
   List<dynamic> _sentRequests = [];
@@ -57,7 +59,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
         }
       }
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -77,10 +79,10 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
           _receivedRequests.removeWhere((req) => req['id'] == followerId);
         });
       } else {
-        if (mounted) showErrorSnackbar(context, "Hata oluştu.");
+        TeqToast.error("Hata oluştu.");
       }
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     }
   }
 
@@ -98,10 +100,10 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
           _sentRequests.removeWhere((req) => req['id'] == targetUserId);
         });
       } else {
-        if (mounted) showErrorSnackbar(context, "İptal edilemedi.");
+        TeqToast.error("İptal edilemedi.");
       }
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     }
   }
 
@@ -116,25 +118,25 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
-          title: Text(l.followRequests),
+          title: Text(loc.t('followRequests')),
           centerTitle: true,
           elevation: 0,
           backgroundColor: AppColors.surface(context),
           foregroundColor: AppColors.textPrimary(context),
           bottom: TabBar(
-            labelColor: const Color(0xFF6366F1), // or kPrimary
+            labelColor: const Color(0xFF6366F1),
             unselectedLabelColor: AppColors.textSecondary(context),
             indicatorColor: const Color(0xFF6366F1),
             tabs: [
-              Tab(text: l.tabFollowRequestsReceived),
-              Tab(text: l.tabFollowRequestsSent),
+              Tab(text: loc.t('tabFollowRequestsReceived')),
+              Tab(text: loc.t('tabFollowRequestsSent')),
             ],
           ),
         ),
@@ -142,19 +144,19 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  _buildReceivedList(l),
-                  _buildSentList(l),
+                  _buildReceivedList(loc),
+                  _buildSentList(loc),
                 ],
               ),
       ),
     );
   }
 
-  Widget _buildReceivedList(AppLocalizations l) {
+  Widget _buildReceivedList(TranslationPack loc) {
     if (_receivedRequests.isEmpty) {
       return Center(
         child: Text(
-          l.noFollowRequests,
+          loc.t('noFollowRequests'),
           style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
         ),
       );
@@ -184,7 +186,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
-                child: Text(l.acceptRequest, style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(loc.t('acceptRequest'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),
               TextButton(
@@ -195,7 +197,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
-                child: Text(l.rejectRequest, style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(loc.t('rejectRequest'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -204,7 +206,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
     );
   }
 
-  Widget _buildSentList(AppLocalizations l) {
+  Widget _buildSentList(TranslationPack loc) {
     if (_sentRequests.isEmpty) {
       return Center(
         child: Text(
@@ -235,7 +237,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
-            child: Text(l.withdrawRequest, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(loc.t('withdrawRequest'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         );
       },

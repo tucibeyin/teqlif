@@ -1,28 +1,29 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class CompetitorRadarScreen extends StatefulWidget {
+class CompetitorRadarScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
   const CompetitorRadarScreen({super.key, this.isEmbedded = false});
 
   @override
-  State<CompetitorRadarScreen> createState() => _CompetitorRadarScreenState();
+  ConsumerState<CompetitorRadarScreen> createState() => _CompetitorRadarScreenState();
 }
 
-class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
+class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
   Map<String, dynamic>? _selectedListing;
   Map<String, dynamic>? _radarData;
   Map<String, dynamic>? _velocityData;
@@ -78,7 +79,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(AppLocalizations l) {
+  Widget _buildDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return InkWell(
       onTap: () async {
@@ -108,7 +109,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
               child: Text(
                 hasRange
                     ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : l.filterSelectDate,
+                    : loc.t("filterSelectDate"),
                 style: TextStyle(fontSize: 13,
                     color: hasRange ? kPrimary : AppColors.textSecondary(context)),
               ),
@@ -127,13 +128,13 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   Widget _buildCategoryChips() {
     final cats = _categories;
     if (cats == null || cats.isEmpty) return const SizedBox.shrink();
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return SizedBox(
       height: 34,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chip(l.filterAll, _categoryFilter == null, () => setState(() => _categoryFilter = null)),
+          _chip(loc.t("filterAll"), _categoryFilter == null, () => setState(() => _categoryFilter = null)),
           ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
               () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
         ],
@@ -216,7 +217,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final bodyContent = RefreshIndicator(
       onRefresh: _loadData,
       child: ListView(
@@ -229,7 +230,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.searchHintTextListing,
+                hintText: loc.t("searchHintTextListing"),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _listingQuery.isNotEmpty
                     ? IconButton(
@@ -252,11 +253,11 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
               },
             ),
           ),
-          _buildDateRangePicker(l),
+          _buildDateRangePicker(loc),
           const SizedBox(height: 8),
           _buildCategoryChips(),
           const SizedBox(height: 8),
-          _buildHorizontalCarousel(l),
+          _buildHorizontalCarousel(loc),
           const SizedBox(height: 20),
           if (_loadingData)
             const _RadarSkeleton()
@@ -275,7 +276,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 48),
                 child: Center(
                   child: Text(
-                    l.proLoadError,
+                    loc.t("proLoadError"),
                     style: TextStyle(color: AppColors.textSecondary(context)),
                   ),
                 ),
@@ -292,7 +293,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.radarScreenTitle),
+        title: Text(loc.t("radarScreenTitle")),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
         actions: [
@@ -307,7 +308,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
     );
   }
 
-  Widget _buildHorizontalCarousel(AppLocalizations l) {
+  Widget _buildHorizontalCarousel(TranslationPack loc) {
     if (_listingsLoading) {
       return const SizedBox(
         height: 112,
@@ -403,6 +404,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   }
 
   Widget _emptyState() {
+    final loc = ref.read(localizationProvider);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -410,12 +412,12 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
           Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
           Text(
-            AppLocalizations.of(context)!.radarNoActiveListing,
+            loc.t("radarNoActiveListing"),
             style: TextStyle(fontSize: 15, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 6),
           Text(
-            AppLocalizations.of(context)!.radarNeedActiveListing,
+            loc.t("radarNeedActiveListing"),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
@@ -427,29 +429,29 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
 
 // ── Rakip Fiyat Radarı Bölümü ─────────────────────────────────────────────────
 
-class _RadarSection extends StatelessWidget {
+class _RadarSection extends ConsumerWidget {
   final Map<String, dynamic> data;
   final String listingTitle;
 
   const _RadarSection({required this.data, required this.listingTitle});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     final signal = data['signal'] as String? ?? '';
 
     if (signal == 'no_price' || signal == 'no_data') {
       return _SectionCard(
         icon: Icons.radar,
         iconColor: const Color(0xFF6366F1),
-        title: AppLocalizations.of(context)!.competitorRadarTitle,
+        title: loc.t("competitorRadarTitle"),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
             child: Text(
               signal == 'no_price'
-                  ? AppLocalizations.of(context)!.radarNoPriceSet
-                  : AppLocalizations.of(context)!.radarNoCompetitorData,
+                  ? loc.t("radarNoPriceSet")
+                  : loc.t("radarNoCompetitorData"),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
             ),
@@ -476,25 +478,25 @@ class _RadarSection extends StatelessWidget {
       case 'pahalı':
         signalColor = const Color(0xFFEF4444);
         signalIcon = Icons.trending_up;
-        signalLabel = l.radarExpensive;
+        signalLabel = loc.t("radarExpensive");
         break;
       case 'ucuz':
         signalColor = const Color(0xFF06B6D4);
         signalIcon = Icons.trending_down;
-        signalLabel = l.radarCheapLabel;
+        signalLabel = loc.t("radarCheapLabel");
         break;
       case 'uygun':
       default:
         signalColor = const Color(0xFF22C55E);
         signalIcon = Icons.check_circle_outline;
-        signalLabel = l.radarFairLabel;
+        signalLabel = loc.t("radarFairLabel");
         break;
     }
 
     return _SectionCard(
       icon: Icons.radar,
       iconColor: const Color(0xFF6366F1),
-      title: AppLocalizations.of(context)!.competitorRadarTitle,
+      title: loc.t("competitorRadarTitle"),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -534,20 +536,20 @@ class _RadarSection extends StatelessWidget {
           // Fiyat metrikleri
           Row(
             children: [
-              _PriceMetric(label: AppLocalizations.of(context)!.competitorRadarYourPrice, value: myPrice, color: signalColor),
+              _PriceMetric(label: loc.t("competitorRadarYourPrice"), value: myPrice, color: signalColor),
               const SizedBox(width: 10),
-              _PriceMetric(label: AppLocalizations.of(context)!.competitorRadarAvg, value: avgPrice, color: AppColors.textPrimary(context)),
+              _PriceMetric(label: loc.t("competitorRadarAvg"), value: avgPrice, color: AppColors.textPrimary(context)),
               const SizedBox(width: 10),
-              _PriceMetric(label: AppLocalizations.of(context)!.competitorRadarSuggested, value: suggestedPrice, color: const Color(0xFF22C55E)),
+              _PriceMetric(label: loc.t("competitorRadarSuggested"), value: suggestedPrice, color: const Color(0xFF22C55E)),
             ],
           ),
           if (signal != 'uygun' && suggestedPrice > 0) ...[
             const SizedBox(height: 10),
             GestureDetector(
               onTap: () {
-                final l = AppLocalizations.of(context)!;
+                final loc = ref.read(localizationProvider);
                 Clipboard.setData(ClipboardData(text: suggestedPrice.toStringAsFixed(0)));
-                TeqToast.info(l.radarSuggestedCopied(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)));
+                TeqToast.info(loc.t("radarSuggestedCopied", {"price": NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)}));
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -562,7 +564,7 @@ class _RadarSection extends StatelessWidget {
                     const Icon(Icons.content_copy_outlined, size: 14, color: Color(0xFF22C55E)),
                     const SizedBox(width: 6),
                     Text(
-                      AppLocalizations.of(context)!.radarCopyBtn(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)),
+                      loc.t("radarCopyBtn", {"price": NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)}),
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF22C55E)),
                     ),
                   ],
@@ -583,8 +585,8 @@ class _RadarSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l.priceMinLabel(_fmtPrice(minPrice)), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
-              Text(l.priceMaxLabel(_fmtPrice(maxPrice)), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+              Text(loc.t("priceMinLabel", {"price": _fmtPrice(minPrice)}), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+              Text(loc.t("priceMaxLabel", {"price": _fmtPrice(maxPrice)}), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
             ],
           ),
           const SizedBox(height: 14),
@@ -594,26 +596,26 @@ class _RadarSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatChip(
-                  label: AppLocalizations.of(context)!.competitorRadarPercentile,
+                  label: loc.t("competitorRadarPercentile"),
                   value: '%$pctRank',
-                  sub: l.radarExpensiveThanCompetitor,
+                  sub: loc.t("radarExpensiveThanCompetitor"),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _StatChip(
-                  label: AppLocalizations.of(context)!.competitorRadarDifference,
+                  label: loc.t("competitorRadarDifference"),
                   value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
-                  sub: l.radarVsAvgPrice,
+                  sub: loc.t("radarVsAvgPrice"),
                   valueColor: diffPct > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _StatChip(
-                  label: AppLocalizations.of(context)!.competitorRadarCompetitor,
+                  label: loc.t("competitorRadarCompetitor"),
                   value: '$competitorCount',
-                  sub: l.radarActiveListings,
+                  sub: loc.t("radarActiveListings"),
                 ),
               ),
             ],
@@ -623,7 +625,7 @@ class _RadarSection extends StatelessWidget {
           if (competitors.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
-              l.radarCloseCompetitors,
+              loc.t("radarCloseCompetitors"),
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 8),
@@ -678,13 +680,14 @@ class _RadarSection extends StatelessWidget {
 
 // ── Satış Hızı Bölümü ─────────────────────────────────────────────────────────
 
-class _VelocitySection extends StatelessWidget {
+class _VelocitySection extends ConsumerWidget {
   final Map<String, dynamic> data;
 
   const _VelocitySection({required this.data});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     // category isn't used
     final totalSold = data['total_sold_90d'] as int? ?? 0;
     final avgDays = (data['avg_days_to_sell'] as num?)?.toDouble();
@@ -700,7 +703,7 @@ class _VelocitySection extends StatelessWidget {
     return _SectionCard(
       icon: Icons.speed_outlined,
       iconColor: const Color(0xFF10B981),
-      title: AppLocalizations.of(context)!.competitorRadarSalesSpeed,
+      title: loc.t("competitorRadarSalesSpeed"),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -708,7 +711,7 @@ class _VelocitySection extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                AppLocalizations.of(context)!.radarNo90DayData,
+                loc.t("radarNo90DayData"),
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
               ),
             )
@@ -730,7 +733,7 @@ class _VelocitySection extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4, left: 6),
                     child: Text(
-                      AppLocalizations.of(context)!.radarDaysAvg,
+                      loc.t("radarDaysAvg"),
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                     ),
                   ),
@@ -739,7 +742,7 @@ class _VelocitySection extends StatelessWidget {
               const SizedBox(height: 4),
               if (minDays != null && maxDays != null)
                 Text(
-                  AppLocalizations.of(context)!.radarDayRange(minDays.toStringAsFixed(0), maxDays.toStringAsFixed(0)),
+                  loc.t("radarDayRange", {"min": minDays.toStringAsFixed(0), "max": maxDays.toStringAsFixed(0)}),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               const SizedBox(height: 14),
@@ -750,26 +753,26 @@ class _VelocitySection extends StatelessWidget {
               children: [
                 Expanded(
                   child: _StatChip(
-                    label: AppLocalizations.of(context)!.competitorRadarSold,
+                    label: loc.t("competitorRadarSold"),
                     value: '$totalSold',
-                    sub: AppLocalizations.of(context)!.radarIn90Days,
+                    sub: loc.t("radarIn90Days"),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _StatChip(
-                    label: AppLocalizations.of(context)!.competitorRadarActive,
+                    label: loc.t("competitorRadarActive"),
                     value: '$activeCount',
-                    sub: AppLocalizations.of(context)!.radarRightNow,
+                    sub: loc.t("radarRightNow"),
                   ),
                 ),
                 if (avgSoldPrice != null) ...[
                   const SizedBox(width: 8),
                   Expanded(
                     child: _StatChip(
-                      label: AppLocalizations.of(context)!.competitorRadarSalePrice,
+                      label: loc.t("competitorRadarSalePrice"),
                       value: '${_fmtPrice(avgSoldPrice)} ₺',
-                      sub: AppLocalizations.of(context)!.radarAverage,
+                      sub: loc.t("radarAverage"),
                     ),
                   ),
                 ],
@@ -795,7 +798,7 @@ class _VelocitySection extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            AppLocalizations.of(context)!.radarSweetSpotLabel,
+                            loc.t("radarSweetSpotLabel"),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -823,7 +826,7 @@ class _VelocitySection extends StatelessWidget {
             if (sensitivity.length == 2) ...[
               const SizedBox(height: 14),
               Text(
-                AppLocalizations.of(context)!.radarPriceSensitivity,
+                loc.t("radarPriceSensitivity"),
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary(context)),
               ),
               const SizedBox(height: 8),
@@ -842,12 +845,12 @@ class _VelocitySection extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        bucket == 'ucuz' ? AppLocalizations.of(context)!.radarAffordable : AppLocalizations.of(context)!.radarExpensivePrice,
+                        bucket == 'ucuz' ? loc.t("radarAffordable") : loc.t("radarExpensivePrice"),
                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)),
                       ),
                       const Spacer(),
                       Text(
-                        AppLocalizations.of(context)!.radarDaySaleStat(days.toStringAsFixed(1), count),
+                        loc.t("radarDaySaleStat", {"days": days.toStringAsFixed(1), "count": count.toString()}),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
                       ),
                     ],
@@ -892,11 +895,11 @@ class _VelocitySection extends StatelessWidget {
 
 // ── Skeleton Loading ──────────────────────────────────────────────────────────
 
-class _RadarSkeleton extends StatelessWidget {
+class _RadarSkeleton extends ConsumerWidget {
   const _RadarSkeleton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final base = AppColors.border(context);
     box(double h, {double? w, double r = 8}) => Container(
           width: w,
@@ -954,7 +957,7 @@ class _RadarSkeleton extends StatelessWidget {
 
 // ── Ortak Widgets ─────────────────────────────────────────────────────────────
 
-class _SectionCard extends StatelessWidget {
+class _SectionCard extends ConsumerWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
@@ -968,7 +971,7 @@ class _SectionCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1009,7 +1012,7 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _PriceMetric extends StatelessWidget {
+class _PriceMetric extends ConsumerWidget {
   final String label;
   final double value;
   final Color color;
@@ -1017,7 +1020,7 @@ class _PriceMetric extends StatelessWidget {
   const _PriceMetric({required this.label, required this.value, required this.color});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final fmt = '${NumberFormat('#,##0', 'tr_TR').format(value)} ₺';
     return Expanded(
       child: Column(
@@ -1032,7 +1035,7 @@ class _PriceMetric extends StatelessWidget {
   }
 }
 
-class _PriceRangeBar extends StatelessWidget {
+class _PriceRangeBar extends ConsumerWidget {
   final double myPrice, minPrice, maxPrice, avgPrice;
 
   const _PriceRangeBar({
@@ -1043,7 +1046,7 @@ class _PriceRangeBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final range = maxPrice - minPrice;
     if (range <= 0) return const SizedBox.shrink();
     final myPos = ((myPrice - minPrice) / range).clamp(0.0, 1.0);
@@ -1095,7 +1098,7 @@ class _PriceRangeBar extends StatelessWidget {
   }
 }
 
-class _StatChip extends StatelessWidget {
+class _StatChip extends ConsumerWidget {
   final String label;
   final String value;
   final String sub;
@@ -1104,7 +1107,7 @@ class _StatChip extends StatelessWidget {
   const _StatChip({required this.label, required this.value, required this.sub, this.valueColor});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(

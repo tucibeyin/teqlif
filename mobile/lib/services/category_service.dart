@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../core/logger_service.dart';
-import '../l10n/app_localizations.dart';
+import 'localization_service.dart';
 
 // Categories valid only for live streams, excluded from listing creation
 const _listingExcluded = {'chat'};
@@ -115,17 +115,17 @@ class CategoryService {
 
   /// ARB cat_* key'lerini kullanarak emoji içermeyen lokalize kategori adı döner.
   /// Cihaz dilini AppLocalizations üzerinden otomatik yansıtır.
-  static String localizedLabelFor(AppLocalizations l, String key) {
+  static String localizedLabelFor(TranslationPack loc, String key) {
     return switch (key) {
-      'electronics' => l.cat_electronics,
-      'fashion'     => l.cat_fashion,
-      'home'        => l.cat_home,
-      'vehicles'    => l.cat_vehicles,
-      'sports'      => l.cat_sports,
-      'books'       => l.cat_books,
-      'real_estate' => l.cat_real_estate,
-      'other'       => l.cat_other,
-      'chat'        => l.cat_chat,
+      'electronics' => loc.t('cat_electronics'),
+      'fashion'     => loc.t('cat_fashion'),
+      'home'        => loc.t('cat_home'),
+      'vehicles'    => loc.t('cat_vehicles'),
+      'sports'      => loc.t('cat_sports'),
+      'books'       => loc.t('cat_books'),
+      'real_estate' => loc.t('cat_real_estate'),
+      'other'       => loc.t('cat_other'),
+      'chat'        => loc.t('cat_chat'),
       _             => key,
     };
   }

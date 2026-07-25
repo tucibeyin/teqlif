@@ -1,14 +1,13 @@
-import 'package:flutter/material.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 
-void showSuccessSnackbar(BuildContext context, String message) {
+void showSuccessSnackbar(String message) {
   TeqSnackBar.show(message: message, type: TeqSnackBarType.success);
 }
 
-void showInfoSnackbar(BuildContext context, String message) {
+void showInfoSnackbar(String message) {
   TeqSnackBar.show(message: message, type: TeqSnackBarType.info);
 }
 
-void showWarningSnackbar(BuildContext context, String message) {
+void showWarningSnackbar(String message) {
   TeqSnackBar.show(message: message, type: TeqSnackBarType.warning);
 }

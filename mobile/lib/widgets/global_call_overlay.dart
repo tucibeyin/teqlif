@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/call_service.dart';
 import '../screens/call_screen.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../config/api.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -9,7 +10,7 @@ void _uiLog(String component, String event, String detail) {
   debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
 }
 
-class GlobalCallOverlay extends StatefulWidget {
+class GlobalCallOverlay extends ConsumerStatefulWidget {
   final Widget child;
   final GlobalKey<NavigatorState> navigatorKey;
 
@@ -20,10 +21,10 @@ class GlobalCallOverlay extends StatefulWidget {
   });
 
   @override
-  State<GlobalCallOverlay> createState() => _GlobalCallOverlayState();
+  ConsumerState<GlobalCallOverlay> createState() => _GlobalCallOverlayState();
 }
 
-class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
+class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
   final _cs = CallService.instance;
   bool _prevPillVisible = false;
 
@@ -78,6 +79,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     final isVisible = _cs.isCallScreenVisible.value;
     final cs = _cs.state.value;
 
@@ -182,9 +184,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                                     ),
                                   Text(
                                     cs.status == CallStatus.connecting
-                                        ? (AppLocalizations.of(context)
-                                                ?.callConnecting ??
-                                            'Connecting...')
+                                        ? loc.t("callConnecting")
                                         : _formatElapsed(_cs.elapsed.value),
                                     style: const TextStyle(
                                       color: Colors.white70,

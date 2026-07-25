@@ -6,10 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import '../../ui_library/components/overlays/teq_snackbar.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
-import '../../core/app_exception.dart';
-import '../../core/error_display.dart';
+import '../../services/localization_service.dart';
+import '../../utils/error_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -26,7 +25,6 @@ import '../../widgets/live/gift_hud.dart';
 import '../main_screen.dart';
 import '../../widgets/live/hype_meter_widget.dart';
 import '../../widgets/auction_panel.dart';
-import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
 import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
@@ -48,7 +46,7 @@ import '../../services/category_service.dart';
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
-class SwipeLiveScreen extends StatefulWidget {
+class SwipeLiveScreen extends ConsumerStatefulWidget {
   final List<StreamOut> streams;
   final int initialIndex;
   final bool isStandalone;
@@ -89,10 +87,10 @@ class SwipeLiveScreen extends StatefulWidget {
   }
 
   @override
-  State<SwipeLiveScreen> createState() => _SwipeLiveScreenState();
+  ConsumerState<SwipeLiveScreen> createState() => _SwipeLiveScreenState();
 }
 
-class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
+class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
   static int activeScreenCount = 0;
   bool _isCoHostLocked = false;
 
@@ -857,12 +855,12 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       interactionType: 'stream_gift_sheet_open',
     );
 
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     // (backendKey, localizedLabel, cost) — backendKey DB'ye yazılır, label UI'da gösterilir
     final gifts = [
-      ('fire',    l.giftNameFire,    10),
-      ('diamond', l.giftNameDiamond, 50),
-      ('crown',   l.giftNameCrown,  100),
+      ('fire',    loc.t('giftNameFire'),    10),
+      ('diamond', loc.t('giftNameDiamond'), 50),
+      ('crown',   loc.t('giftNameCrown'),  100),
     ];
 
     await showModalBottomSheet<void>(
@@ -900,14 +898,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted) return;
     setState(() => _selfMuted = true);
     if (!widget.isActive) return;
-    TeqToast.warning(AppLocalizations.of(context)!.swipeMutedInStream, duration: const Duration(seconds: 4));
+    TeqToast.warning(ref.read(localizationProvider).t('swipeMutedInStream'), duration: const Duration(seconds: 4));
   }
 
   void _handleUnmuted() {
     if (!mounted) return;
     setState(() => _selfMuted = false);
     if (!widget.isActive) return;
-    TeqToast.success(AppLocalizations.of(context)!.modUnmutedMsg);
+    TeqToast.success(ref.read(localizationProvider).t('modUnmutedMsg'));
   }
 
   void _handleKicked() {
@@ -915,7 +913,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     _kicked = true;
     widget.session.room?.disconnect();
     if (!widget.isActive) return;
-    TeqToast.error(AppLocalizations.of(context)!.kickedFromStream, duration: const Duration(seconds: 4));
+    TeqToast.error(ref.read(localizationProvider).t('kickedFromStream'), duration: const Duration(seconds: 4));
     Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
@@ -923,14 +921,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted || _isCoHost) return;
     setState(() => _isCoHost = true);
     if (!widget.isActive) return;
-    TeqToast.success(AppLocalizations.of(context)!.swipeMadeModeratorBy, duration: const Duration(seconds: 5));
+    TeqToast.success(ref.read(localizationProvider).t('swipeMadeModeratorBy'), duration: const Duration(seconds: 5));
   }
 
   void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
     setState(() => _isCoHost = false);
     if (!widget.isActive) return;
-    TeqToast.info(AppLocalizations.of(context)!.liveModDemotedSelf(demotedBy), duration: const Duration(seconds: 4));
+    TeqToast.info(ref.read(localizationProvider).t('liveModDemotedSelf', {'username': demotedBy}), duration: const Duration(seconds: 4));
   }
 
   void _showCoHostInviteDialog(String hostUsername) {
@@ -958,7 +956,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(ctx)!.auctionBuyNowReject, style: const TextStyle(color: Color(0xFF64748B))),
+            child: Text(ref.read(localizationProvider).t('auctionBuyNowReject'), style: const TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -966,7 +964,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(ctx)!.btnAcceptInvite, style: const TextStyle(color: Colors.white)),
+            child: Text(ref.read(localizationProvider).t('btnAcceptInvite'), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -982,7 +980,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       _isSelfCoHost = false;
       _localVideoTrack = null;
     });
-    TeqToast.info(AppLocalizations.of(context)!.swipeRemovedFromStage);
+    TeqToast.info(ref.read(localizationProvider).t('swipeRemovedFromStage'));
   }
 
   Future<void> _acceptCoHostInvite() async {
@@ -997,11 +995,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       }
     } catch (e) {
       if (mounted) {
-        if (e is AppException) {
-          ErrorDisplay.fromException(context, e);
-        } else {
-          TeqToast.error(AppLocalizations.of(context)!.errorOperationFailed);
-        }
+        handleError(e, ref.read(localizationProvider));
       }
     }
   }
@@ -1093,7 +1087,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   @override
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin için gerekli
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
     final hasThumbnail =
@@ -1308,7 +1302,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                 children: [
                   const Icon(Icons.keyboard_arrow_up_rounded,
                       color: Colors.white30, size: 24),
-                  Text(l.liveNextStream,
+                  Text(loc.t('liveNextStream'),
                       style: const TextStyle(color: Colors.white30, fontSize: 11)),
                 ],
               ),
@@ -1359,7 +1353,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       if (targetUsername == _myUsername) {
                         if (CallService.instance.hasActiveCall) {
                           debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] User invited to co-host but has active call. Auto-rejecting locally.');
-                          TeqToast.warning(AppLocalizations.of(context)!.errorCoHostDuringCall(hostUsername), duration: const Duration(seconds: 4));
+                          TeqToast.warning(ref.read(localizationProvider).t('errorCoHostDuringCall', {'hostUsername': hostUsername}), duration: const Duration(seconds: 4));
                         } else {
                           _showCoHostInviteDialog(hostUsername);
                         }
@@ -1479,7 +1473,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
 // ── Hediye Seçim Paneli ───────────────────────────────────────────────────────
 
-class _GiftSheet extends StatefulWidget {
+class _GiftSheet extends ConsumerStatefulWidget {
   final int streamId;
   final String receiverUsername;
   final List<(String, String, int)> gifts; // (backendKey, localizedLabel, cost)
@@ -1493,10 +1487,10 @@ class _GiftSheet extends StatefulWidget {
   });
 
   @override
-  State<_GiftSheet> createState() => _GiftSheetState();
+  ConsumerState<_GiftSheet> createState() => _GiftSheetState();
 }
 
-class _GiftSheetState extends State<_GiftSheet> {
+class _GiftSheetState extends ConsumerState<_GiftSheet> {
   bool _sending = false;
   bool _insufficientBalance = false;
 
@@ -1521,7 +1515,7 @@ class _GiftSheetState extends State<_GiftSheet> {
         metadata: {'gift_name': giftName},
       );
       Navigator.pop(context);
-      TeqToast.success(AppLocalizations.of(context)!.swipeGiftSent);
+      TeqToast.success(ref.read(localizationProvider).t('swipeGiftSent'));
     } else {
       final isInsufficient = result['status_code'] == 402 ||
           (result['error']?.toString().toLowerCase().contains('yetersiz') ?? false);
@@ -1529,13 +1523,14 @@ class _GiftSheetState extends State<_GiftSheet> {
       if (isInsufficient) {
         setState(() => _insufficientBalance = true);
       } else {
-        TeqToast.error(result['error'] as String? ?? AppLocalizations.of(context)!.giftErrorGeneric);
+        TeqToast.error(result['error'] as String? ?? ref.read(localizationProvider).t('giftErrorGeneric'));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     final botPad = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, botPad + 16),
@@ -1556,7 +1551,7 @@ class _GiftSheetState extends State<_GiftSheet> {
             ),
           ),
           Text(
-            AppLocalizations.of(context)!.giftSheetTitle,
+            loc.t('giftSheetTitle'),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -1582,7 +1577,7 @@ class _GiftSheetState extends State<_GiftSheet> {
                   const Icon(Icons.error_outline, color: Colors.red, size: 32),
                   const SizedBox(height: 8),
                   Text(
-                    AppLocalizations.of(context)?.giftInsufficientBalance ?? 'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.',
+                    loc.t('giftInsufficientBalance'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                   ),
@@ -1596,7 +1591,7 @@ class _GiftSheetState extends State<_GiftSheet> {
                       minimumSize: const Size(double.infinity, 44),
                     ),
                     child: Text(
-                      AppLocalizations.of(context)?.giftLoadBalanceButton ?? 'Bakiye Yükle',
+                      loc.t('giftLoadBalanceButton'),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -1663,7 +1658,7 @@ class _GiftSheetState extends State<_GiftSheet> {
 
 // ── İlan Video Sayfası ───────────────────────────────────────────────────────
 
-class _ListingVideoPage extends StatefulWidget {
+class _ListingVideoPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
   final bool isActive;
   final int slotIndex;
@@ -1681,10 +1676,10 @@ class _ListingVideoPage extends StatefulWidget {
   });
 
   @override
-  State<_ListingVideoPage> createState() => _ListingVideoPageState();
+  ConsumerState<_ListingVideoPage> createState() => _ListingVideoPageState();
 }
 
-class _ListingVideoPageState extends State<_ListingVideoPage> {
+class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
   VideoPlayerController? _ctrl;
   bool _initialized = false;
 
@@ -1871,6 +1866,7 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     final listing = widget.listing;
     final title = listing['title']?.toString() ?? '';
     final price = listing['price'];
@@ -1930,7 +1926,7 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                AppLocalizations.of(context)?.lblListingUpper ?? 'İLAN',
+                loc.t('lblListingUpper'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11,
@@ -2032,7 +2028,7 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            AppLocalizations.of(context)?.btnGoToListing ?? 'İlana Git',
+                            loc.t('btnGoToListing'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,

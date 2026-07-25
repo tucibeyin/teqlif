@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 
 /// Sayfa yüklemesi başarısız olduğunda gösterilen standart "bağlantı yok" widget'ı.
 ///
@@ -11,7 +12,7 @@ import '../l10n/app_localizations.dart';
 /// if (_hasNetworkError)
 ///   NetworkErrorWidget(onRetry: _load)
 /// ```
-class NetworkErrorWidget extends StatelessWidget {
+class NetworkErrorWidget extends ConsumerWidget {
   final VoidCallback onRetry;
   final bool scrollable;
 
@@ -22,15 +23,15 @@ class NetworkErrorWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.wifi_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
         const SizedBox(height: 14),
         Text(
-          l.errorNetworkTitle,
+          loc.t("errorNetworkTitle"),
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -39,7 +40,7 @@ class NetworkErrorWidget extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          l.errorNetworkMessage,
+          loc.t("errorNetworkMessage"),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
         ),
@@ -47,7 +48,7 @@ class NetworkErrorWidget extends StatelessWidget {
         FilledButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: Text(l.btnRetry),
+          label: Text(loc.t("btnRetry")),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF2563EB),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

@@ -25,12 +25,13 @@ import '../../widgets/live/gift_hud.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/hype_meter_widget.dart';
 import '../../widgets/live/live_video_player.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/logger_service.dart';
 import '../../core/app_exception.dart';
-import '../../core/error_display.dart';
+import '../../services/localization_service.dart';
+import '../../utils/error_helper.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../services/client_logger.dart';
-import '../../l10n/app_localizations.dart';
 
 final _log = LoggerService.instance;
 
@@ -40,7 +41,7 @@ const _kThumbnailRefreshSeconds       = 60;   // thumbnail yenileme aralığı
 const _kTrackPollIntervalMs           = 100;  // video track kontrol aralığı (ms)
 const _kTrackPollMaxAttempts          = 50;   // max kontrol sayısı (= 5 saniye)
 
-class HostStreamScreen extends StatefulWidget {
+class HostStreamScreen extends ConsumerStatefulWidget {
   final StreamTokenOut streamToken;
   final String title;
   /// Kullanıcı blast özelliğini onayladı ama henüz gönderilmedi.
@@ -57,10 +58,10 @@ class HostStreamScreen extends StatefulWidget {
   });
 
   @override
-  State<HostStreamScreen> createState() => _HostStreamScreenState();
+  ConsumerState<HostStreamScreen> createState() => _HostStreamScreenState();
 }
 
-class _HostStreamScreenState extends State<HostStreamScreen> {
+class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
   Room? _room;
   EventsListener<RoomEvent>? _listener;
   LocalVideoTrack? _localVideoTrack;
@@ -152,28 +153,28 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   }
 
   Future<void> _sendLeadBlast() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(l.hostNotifDialogTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        title: Text(loc.t('hostNotifDialogTitle'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
         content: Text(
           _audienceCost == 0
-              ? l.blastConfirmBodyFree(_audienceSize)
-              : l.blastConfirmBodyPaid(_audienceSize, _audienceCost.toInt()),
+              ? loc.t('blastConfirmBodyFree', {'count': _audienceSize.toString()})
+              : loc.t('blastConfirmBodyPaid', {'count': _audienceSize.toString(), 'cost': _audienceCost.toInt().toString()}),
           style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(l.btnDismiss, style: const TextStyle(color: Color(0xFF64748B))),
+            child: Text(loc.t('btnDismiss'), style: const TextStyle(color: Color(0xFF64748B))),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
-            child: Text(l.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(loc.t('btnSend'), style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -192,12 +193,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         CacheService.clearData('user_wallet_data');
         final sent = result['sent'] as int? ?? _audienceSize;
         final msg = sent > 0
-            ? l.blastSent(sent)
-            : l.blastStarted;
+            ? loc.t('blastSent', {'count': sent.toString()})
+            : loc.t('blastStarted');
         TeqToast.success(msg);
         setState(() { _audienceSize = 0; _audienceCost = 0.0; });
       } else {
-        final errMsg = result?['error'] as String? ?? l.blastError;
+        final errMsg = result?['error'] as String? ?? loc.t('blastError');
         TeqToast.error(errMsg);
       }
     } finally {
@@ -207,7 +208,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   Future<void> _showAudienceInsights(BuildContext ctx) async {
     final streamId = widget.streamToken.streamId;
-    final l = AppLocalizations.of(ctx)!;
+    final loc = ref.read(localizationProvider);
     Map<String, dynamic>? data;
     bool loading = true;
 
@@ -242,7 +243,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   : data == null
                       ? SizedBox(
                           height: 120,
-                          child: Center(child: Text(l.hostStreamDataError, style: const TextStyle(color: Colors.white60))),
+                          child: Center(child: Text(loc.t('hostStreamDataError'), style: const TextStyle(color: Colors.white60))),
                         )
                       : Column(
                           mainAxisSize: MainAxisSize.min,
@@ -251,15 +252,15 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             Row(children: [
                               const Icon(Icons.people, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
-                              Text(l.audienceInsightsTitle, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                              Text(loc.t('audienceInsightsTitle'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
                               const Spacer(),
-                              Text(l.audienceInsightsViewers(data!['viewer_count'] as int? ?? 0), style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                              Text(loc.t('audienceInsightsViewers', {'count': (data!['viewer_count'] as int? ?? 0).toString()}), style: const TextStyle(color: Colors.white54, fontSize: 12)),
                             ]),
                             const SizedBox(height: 16),
                             if (data!['avg_budget'] != null)
                               _InsightTile(
                                 icon: '💰',
-                                label: l.audienceAvgBudget,
+                                label: loc.t('audienceAvgBudget'),
                                 value: '${(data!['avg_budget'] as num).toStringAsFixed(0)} ₺',
                                 color: const Color(0xFF10B981),
                               ),
@@ -282,7 +283,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                               const SizedBox(height: 8),
                               _InsightTile(
                                 icon: '🎯',
-                                label: l.audienceProViewers,
+                                label: loc.t('audienceProViewers'),
                                 value: '${data!['ready_buyers_count']}',
                                 color: const Color(0xFF3B82F6),
                               ),
@@ -333,9 +334,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       // Kamera/mikrofon izni yok — pending yayın kaydını temizle
       StreamService.cancelStream(widget.streamToken.streamId).ignore();
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
+        final loc = ref.read(localizationProvider);
         setState(() {
-          _error = l.livePermissionRequired;
+          _error = loc.t('livePermissionRequired');
         });
       }
       return;
@@ -511,13 +512,13 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       _log.captureException(e, stackTrace: st, tag: 'HostStream.showViewers');
     }
     if (!mounted) return;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _ViewersBottomSheet(
         viewers: viewers,
-        noViewersText: l.liveNoViewers,
+        noViewersText: loc.t('liveNoViewers'),
       ),
     );
   }
@@ -551,15 +552,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     try {
       await StreamService.inviteCoHost(widget.streamToken.streamId, username);
       if (mounted) {
-        TeqToast.info(AppLocalizations.of(context)!.hostInvitedToStage);
+        TeqToast.info(ref.read(localizationProvider).t('hostInvitedToStage'));
       }
     } catch (e) {
       if (mounted) {
-        if (e is AppException) {
-          ErrorDisplay.fromException(context, e);
-        } else {
-          TeqToast.error(AppLocalizations.of(context)!.hostInviteError(''));
-        }
+        handleError(e, ref.read(localizationProvider));
       }
     }
   }
@@ -592,19 +589,19 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   }
 
   Future<void> _endStream() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: Text(l.liveEndStreamTitle,
+        title: Text(loc.t('liveEndStreamTitle'),
             style: const TextStyle(color: Colors.white, fontSize: 16)),
-        content: Text(l.liveEndStreamConfirm,
+        content: Text(loc.t('liveEndStreamConfirm'),
             style: const TextStyle(color: Color(0xFF94A3B8))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.btnCancel,
+            child: Text(loc.t('btnCancel'),
                 style: const TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
@@ -614,7 +611,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l.liveEndStreamBtn,
+            child: Text(loc.t('liveEndStreamBtn'),
                 style: const TextStyle(color: Colors.white)),
           ),
         ],
@@ -697,7 +694,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
     final screenH = MediaQuery.of(context).size.height;
@@ -741,7 +738,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     children: [
                       const CircularProgressIndicator(color: kPrimary),
                       const SizedBox(height: 16),
-                      Text(AppLocalizations.of(context)!.liveConnecting,
+                      Text(ref.read(localizationProvider).t('liveConnecting'),
                           style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
@@ -771,7 +768,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         ElevatedButton(
                           onPressed: () => Navigator.pushNamedAndRemoveUntil(
                               context, '/home', (route) => false),
-                          child: Text(AppLocalizations.of(context)!.btnGoBack),
+                          child: Text(ref.read(localizationProvider).t('btnGoBack')),
                         ),
                       ],
                     ),
@@ -874,7 +871,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                   const Icon(Icons.push_pin_rounded,
                                       size: 13, color: Colors.amber),
                                   const SizedBox(width: 4),
-                                  Text(AppLocalizations.of(context)!.btnPin,
+                                  Text(ref.read(localizationProvider).t('btnPin'),
                                       style: const TextStyle(
                                           color: Colors.white70,
                                           fontSize: 11,
@@ -898,7 +895,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                     Border.all(color: Colors.white24),
                               ),
                               child: Text(
-                                l.btnRemovePin,
+                                loc.t('btnRemovePin'),
                                 style: const TextStyle(
                                     color: Colors.white38,
                                     fontSize: 10,
@@ -959,7 +956,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        l.blastSending,
+                                        loc.t('blastSending'),
                                         style: const TextStyle(
                                           color: Colors.white54,
                                           fontSize: 12,
@@ -973,8 +970,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                       const SizedBox(width: 6),
                                       Text(
                                         _audienceCost == 0
-                                            ? l.blastBtnFree(_audienceSize)
-                                            : l.blastBtnPaid(_audienceSize, _audienceCost.toInt()),
+                                            ? loc.t('blastBtnFree', {'count': _audienceSize.toString()})
+                                            : loc.t('blastBtnPaid', {'count': _audienceSize.toString(), 'cost': _audienceCost.toInt().toString()}),
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
@@ -1024,7 +1021,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             children: [
                               const Icon(Icons.people_outline, color: Colors.white, size: 15),
                               const SizedBox(width: 6),
-                              Text(AppLocalizations.of(context)!.audienceInsightsTitle, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                              Text(ref.read(localizationProvider).t('audienceInsightsTitle'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
                               const Spacer(),
                               const Icon(Icons.chevron_right, color: Colors.white54, size: 15),
                             ],
@@ -1097,7 +1094,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 5),
                             alignment: Alignment.center,
                             child: Text(
-                              l.hostRemoveFromStageBtn,
+                              loc.t('hostRemoveFromStageBtn'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -1175,7 +1172,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
 // ── İzleyiciler BottomSheet ────────────────────────────────────────────────
 
-class _ViewersBottomSheet extends StatelessWidget {
+class _ViewersBottomSheet extends ConsumerWidget {
   final List<String> viewers;
   final String noViewersText;
 
@@ -1185,7 +1182,7 @@ class _ViewersBottomSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF1E293B),
@@ -1208,7 +1205,7 @@ class _ViewersBottomSheet extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            AppLocalizations.of(context)!.hostViewersTitle(viewers.length),
+            ref.read(localizationProvider).t('hostViewersTitle', {'count': viewers.length.toString()}),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -1274,7 +1271,7 @@ class _ViewersBottomSheet extends StatelessWidget {
 // GestureDetector yerine Listener kullanılır; bu sayede ScaleGestureRecognizer
 // gesture arena'ya girmez ve tek parmak tıklamalar alt widget'lara geçer.
 // İki parmak algılandığında parmaklar arası mesafe değişimi ile zoom hesaplanır.
-class _PinchZoomListener extends StatefulWidget {
+class _PinchZoomListener extends ConsumerStatefulWidget {
   final double Function() getCurrentZoom;
   final double maxZoom;
   final void Function(double zoom) onZoomChanged;
@@ -1286,10 +1283,10 @@ class _PinchZoomListener extends StatefulWidget {
   });
 
   @override
-  State<_PinchZoomListener> createState() => _PinchZoomListenerState();
+  ConsumerState<_PinchZoomListener> createState() => _PinchZoomListenerState();
 }
 
-class _PinchZoomListenerState extends State<_PinchZoomListener> {
+class _PinchZoomListenerState extends ConsumerState<_PinchZoomListener> {
   final Map<int, Offset> _pointers = {};
   // _startDistance, onDown'da DEĞİL ilk onMove'da set edilir.
   // Böylece parmakların "oturma" hareketi zoom'u etkilemez.
@@ -1368,14 +1365,14 @@ class _BidGroup {
 
 // ── Yardımcı widget'lar ────────────────────────────────────────────────────
 
-class _BidsOverlay extends StatelessWidget {
+class _BidsOverlay extends ConsumerWidget {
   final List<_BidGroup> groups;
   final void Function(String username)? onUsernameTap;
 
   const _BidsOverlay({required this.groups, this.onUsernameTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final totalCount = groups.fold<int>(0, (s, g) => s + g.bids.length);
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -1396,7 +1393,7 @@ class _BidsOverlay extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      AppLocalizations.of(context)?.lblBidsUpper ?? 'TEKLİFLER',
+                      ref.read(localizationProvider).t('lblBidsUpper'),
                       style: TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 9,
@@ -1442,7 +1439,7 @@ class _BidsOverlay extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           color: Colors.white.withValues(alpha: 0.04),
                           child: Text(
-                            g.title ?? AppLocalizations.of(context)!.auctionGroupFallback,
+                            g.title ?? ref.read(localizationProvider).t('auctionGroupFallback'),
                             style: const TextStyle(
                               color: Color(0xFF06B6D4),
                               fontSize: 8.5,
@@ -1523,7 +1520,7 @@ class _BidsOverlay extends StatelessWidget {
   }
 }
 
-class _BidsToggleTab extends StatelessWidget {
+class _BidsToggleTab extends ConsumerWidget {
   final bool isOpen;
   final int count;
   final VoidCallback onToggle;
@@ -1535,7 +1532,7 @@ class _BidsToggleTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Toggle listenin solunda, sol kenarı yuvarlak; sağ kenarı listeye yapışık
     const radius = BorderRadius.horizontal(left: Radius.circular(12));
     final borderColor = Colors.white.withValues(alpha: isOpen ? 0.10 : 0.15);
@@ -1562,7 +1559,7 @@ class _BidsToggleTab extends StatelessWidget {
                 bottom: BorderSide(color: borderColor),
               ),
             ),
-            child: isOpen ? _openChild() : _closedChild(context),
+            child: isOpen ? _openChild() : _closedChild(context, ref.read(localizationProvider)),
           ),
         ),
       ),
@@ -1581,7 +1578,7 @@ class _BidsToggleTab extends StatelessWidget {
   }
 
   // Kapalıyken: sayı + dikey metin + ‹ (listeyi aç)
-  Widget _closedChild(BuildContext context) {
+  Widget _closedChild(BuildContext context, TranslationPack loc) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1608,7 +1605,7 @@ class _BidsToggleTab extends StatelessWidget {
         RotatedBox(
           quarterTurns: 3,
           child: Text(
-            AppLocalizations.of(context)?.lblBidsUpper ?? 'TEKLİFLER',
+            loc.t('lblBidsUpper'),
             style: TextStyle(
               color: Color(0xFF475569),
               fontSize: 7.5,
@@ -1631,7 +1628,7 @@ class _BidsToggleTab extends StatelessWidget {
 
 // ── Moderasyon BottomSheet ──────────────────────────────────────────────────
 
-class _ModerationSheet extends StatefulWidget {
+class _ModerationSheet extends ConsumerStatefulWidget {
   final int streamId;
   final String username;
   final bool isMuted;
@@ -1660,10 +1657,10 @@ class _ModerationSheet extends StatefulWidget {
   });
 
   @override
-  State<_ModerationSheet> createState() => _ModerationSheetState();
+  ConsumerState<_ModerationSheet> createState() => _ModerationSheetState();
 }
 
-class _ModerationSheetState extends State<_ModerationSheet> {
+class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
   bool _loading = false;
   String? _msg;
   bool _isError = false;
@@ -1718,7 +1715,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           // Başlık
           Row(
             children: [
-              Text(AppLocalizations.of(context)!.hostModeration,
+              Text(ref.read(localizationProvider).t('hostModeration'),
                   style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
               const Spacer(),
               Text('@${widget.username}',
@@ -1733,24 +1730,24 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           if (!_isMuted)
             _ModBtn(
               icon: '🔇',
-              label: AppLocalizations.of(context)!.hostMute,
+              label: ref.read(localizationProvider).t('hostMute'),
               color: const Color(0xFFD97706),
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.mute(widget.streamId, widget.username),
-                successMsg: AppLocalizations.of(context)!.hostMuteSuccess(widget.username),
+                successMsg: ref.read(localizationProvider).t('hostMuteSuccess', {'username': widget.username}),
                 onSuccess: () { widget.onMuted(); setState(() => _isMuted = true); },
               ),
             )
           else
             _ModBtn(
               icon: '🔊',
-              label: AppLocalizations.of(context)!.hostUnmute,
+              label: ref.read(localizationProvider).t('hostUnmute'),
               color: const Color(0xFF16A34A),
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: AppLocalizations.of(context)!.hostUnmuteSuccess,
+                successMsg: ref.read(localizationProvider).t('hostUnmuteSuccess'),
                 onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
               ),
             ),
@@ -1760,17 +1757,17 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           if (!widget.isMod)
             _ModBtn(
               icon: '⭐',
-              label: AppLocalizations.of(context)!.hostMakeModerator,
+              label: ref.read(localizationProvider).t('hostMakeModerator'),
               color: const Color(0xFFF59E0B),
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.promoteUser(widget.streamId, widget.username),
-                successMsg: AppLocalizations.of(context)!.hostPromoteSuccess(widget.username),
+                successMsg: ref.read(localizationProvider).t('hostPromoteSuccess', {'username': widget.username}),
                 onSuccess: () {
                   widget.onPromoted();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(AppLocalizations.of(context)!.hostMadeModeratorMsg),
+                      content: Text(ref.read(localizationProvider).t('hostMadeModeratorMsg')),
                       backgroundColor: const Color(0xFF16A34A),
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -1782,17 +1779,17 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           else
             _ModBtn(
               icon: '✖',
-              label: AppLocalizations.of(context)!.hostRemoveModerator,
+              label: ref.read(localizationProvider).t('hostRemoveModerator'),
               color: const Color(0xFF475569),
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.demoteUser(widget.streamId, widget.username),
-                successMsg: AppLocalizations.of(context)!.hostDemoteSuccess(widget.username),
+                successMsg: ref.read(localizationProvider).t('hostDemoteSuccess', {'username': widget.username}),
                 onSuccess: () {
                   widget.onDemoted();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(AppLocalizations.of(context)!.hostModRemoved(widget.username)),
+                      content: Text(ref.read(localizationProvider).t('hostModRemoved', {'username': widget.username})),
                       backgroundColor: const Color(0xFF475569),
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -1807,7 +1804,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           if (widget.currentCoHostUsername == null && widget.onInviteCoHost != null) ...[
             _ModBtn(
               icon: '🎬',
-              label: AppLocalizations.of(context)!.hostInviteToStage,
+              label: ref.read(localizationProvider).t('hostInviteToStage'),
               color: const Color(0xFF6366F1),
               loading: _loading,
               onTap: () {
@@ -1819,7 +1816,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           ] else if (widget.currentCoHostUsername == widget.username && widget.onRemoveCoHost != null) ...[
             _ModBtn(
               icon: '📵',
-              label: AppLocalizations.of(context)!.hostRemoveFromStage,
+              label: ref.read(localizationProvider).t('hostRemoveFromStage'),
               color: const Color(0xFFEF4444),
               loading: _loading,
               onTap: () {
@@ -1833,12 +1830,12 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           // Yayından At
           _ModBtn(
             icon: '🚫',
-            label: AppLocalizations.of(context)!.hostKickFromStream,
+            label: ref.read(localizationProvider).t('hostKickFromStream'),
             color: const Color(0xFFEF4444),
             loading: _loading,
             onTap: () => _act(
               () => ModerationService.kick(widget.streamId, widget.username),
-              successMsg: AppLocalizations.of(context)!.hostKickSuccess(widget.username),
+              successMsg: ref.read(localizationProvider).t('hostKickSuccess', {'username': widget.username}),
             ),
           ),
           const SizedBox(height: 10),
@@ -1855,7 +1852,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
                   side: const BorderSide(color: Colors.white12),
                 ),
               ),
-              child: Text(AppLocalizations.of(context)!.btnCancel,
+              child: Text(ref.read(localizationProvider).t('btnCancel'),
                   style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
             ),
           ),
@@ -1916,17 +1913,17 @@ class _ModBtn extends StatelessWidget {
 }
 
 // ── Pin giriş sheet'i — kendi state'inde ctrl tutar, parent rebuild'dan etkilenmez ──
-class _PinInputSheet extends StatefulWidget {
+class _PinInputSheet extends ConsumerStatefulWidget {
   final void Function(String content) onPin;
   final VoidCallback onCancel;
 
   const _PinInputSheet({required this.onPin, required this.onCancel});
 
   @override
-  State<_PinInputSheet> createState() => _PinInputSheetState();
+  ConsumerState<_PinInputSheet> createState() => _PinInputSheetState();
 }
 
-class _PinInputSheetState extends State<_PinInputSheet> {
+class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
   final _ctrl = TextEditingController();
 
   @override
@@ -1957,7 +1954,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                 children: [
                   const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 16),
                   const SizedBox(width: 8),
-                  Text(AppLocalizations.of(context)!.btnPin,
+                  Text(ref.read(localizationProvider).t('btnPin'),
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -1973,7 +1970,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                 maxLength: 120,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context)!.hostShowToAllViewersHint,
+                  hintText: ref.read(localizationProvider).t('hostShowToAllViewersHint'),
                   hintStyle:
                       const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                   filled: true,
@@ -2002,7 +1999,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                 children: [
                   TextButton(
                     onPressed: widget.onCancel,
-                    child: Text(AppLocalizations.of(context)!.btnCancel,
+                    child: Text(ref.read(localizationProvider).t('btnCancel'),
                         style: const TextStyle(color: Colors.white38)),
                   ),
                   const SizedBox(width: 8),
@@ -2025,7 +2022,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                       children: [
                         const Icon(Icons.push_pin_rounded, size: 14),
                         const SizedBox(width: 4),
-                        Text(AppLocalizations.of(context)!.btnPin, style: const TextStyle(fontSize: 13)),
+                        Text(ref.read(localizationProvider).t('btnPin'), style: const TextStyle(fontSize: 13)),
                       ],
                     ),
                   ),
@@ -2040,17 +2037,17 @@ class _PinInputSheetState extends State<_PinInputSheet> {
 }
 
 // ── Balina Radarı HUD ─────────────────────────────────────────────────────────
-class _WhaleHud extends StatefulWidget {
+class _WhaleHud extends ConsumerStatefulWidget {
   final String username;
   final String tier;
 
   const _WhaleHud({required this.username, required this.tier});
 
   @override
-  State<_WhaleHud> createState() => _WhaleHudState();
+  ConsumerState<_WhaleHud> createState() => _WhaleHudState();
 }
 
-class _WhaleHudState extends State<_WhaleHud>
+class _WhaleHudState extends ConsumerState<_WhaleHud>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _opacity;
@@ -2122,7 +2119,7 @@ class _WhaleHudState extends State<_WhaleHud>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          AppLocalizations.of(context)!.whaleInRoom(widget.tier),
+                          ref.read(localizationProvider).t('whaleInRoom', {'tier': widget.tier}),
                           style: const TextStyle(
                             color: Color(0xFF3B2A00),
                             fontSize: 11,
@@ -2141,7 +2138,7 @@ class _WhaleHudState extends State<_WhaleHud>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          AppLocalizations.of(context)!.whaleShowBestItems,
+                          ref.read(localizationProvider).t('whaleShowBestItems'),
                           style: const TextStyle(
                             color: Color(0xFF3B2A00),
                             fontSize: 11,

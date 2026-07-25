@@ -5,8 +5,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:livekit_client/livekit_client.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api.dart';
+import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import '../services/call_service.dart';
 import '../models/call_participant.dart';
@@ -20,14 +21,14 @@ void _uiLog(String component, String event, String detail) {
   debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
 }
 
-class CallScreen extends StatefulWidget {
+class CallScreen extends ConsumerStatefulWidget {
   const CallScreen({super.key});
 
   @override
-  State<CallScreen> createState() => _CallScreenState();
+  ConsumerState<CallScreen> createState() => _CallScreenState();
 }
 
-class _CallScreenState extends State<CallScreen> {
+class _CallScreenState extends ConsumerState<CallScreen> {
   bool _isNear = false;
   bool _hasPopped = false;
   late StreamSubscription<int> _proximitySubscription;
@@ -272,7 +273,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   Widget build(BuildContext context) {
     _cpLog('UI', 'CallScreen build | status=${CallService.instance.state.value.status.name}');
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return ValueListenableBuilder<CallState>(
       valueListenable: CallService.instance.state,
       builder: (context, cs, _) {
@@ -379,7 +380,7 @@ class _CallScreenState extends State<CallScreen> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  l.callAudioQualityPoor,
+                                  loc.t('callAudioQualityPoor'),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
@@ -446,7 +447,7 @@ class _CallScreenState extends State<CallScreen> {
                             valueListenable: CallService.instance.elapsed,
                             builder: (context, elapsedDuration, _) {
                               return Text(
-                                _statusText(cs.status, l, elapsedDuration),
+                                _statusText(cs.status, loc, elapsedDuration),
                                 style: TextStyle(
                                   color: AppColors.textSecondary(context),
                                   fontSize: 16,
@@ -476,7 +477,7 @@ class _CallScreenState extends State<CallScreen> {
                                       ValueListenableBuilder<Duration>(
                                         valueListenable: CallService.instance.elapsed,
                                         builder: (context, elapsed, _) => Text(
-                                          _statusText(cs.status, l, elapsed),
+                                          _statusText(cs.status, loc, elapsed),
                                           style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 13,
@@ -558,8 +559,8 @@ class _CallScreenState extends State<CallScreen> {
                                                     ? FontAwesomeIcons.microphoneSlash
                                                     : FontAwesomeIcons.microphone,
                                                 label: cs.isMuted
-                                                    ? l.callUnmute
-                                                    : l.callMute,
+                                                    ? loc.t('callUnmute')
+                                                    : loc.t('callMute'),
                                                 color: AppColors.isDark(context)
                                                     ? Colors.white.withValues(alpha: 0.2)
                                                     : Colors.black.withValues(alpha: 0.05),
@@ -571,8 +572,8 @@ class _CallScreenState extends State<CallScreen> {
                                                     ? FontAwesomeIcons.videoSlash
                                                     : FontAwesomeIcons.video,
                                                 label: cs.localVideoEnabled
-                                                    ? l.callCameraOff
-                                                    : l.callCameraOn,
+                                                    ? loc.t('callCameraOff')
+                                                    : loc.t('callCameraOn'),
                                                 color: cs.localVideoEnabled
                                                     ? const Color(0xFF22C55E).withValues(alpha: 0.25)
                                                     : AppColors.isDark(context)
@@ -583,7 +584,7 @@ class _CallScreenState extends State<CallScreen> {
                                               ),
                                               _ControlButton(
                                                 icon: FontAwesomeIcons.volumeHigh,
-                                                label: l.callSpeaker,
+                                                label: loc.t('callSpeaker'),
                                                 color: cs.isSpeaker
                                                     ? const Color(0xFF22C55E).withValues(alpha: 0.25)
                                                     : AppColors.isDark(context)
@@ -608,7 +609,7 @@ class _CallScreenState extends State<CallScreen> {
                                   if (cs.status == CallStatus.connected)
                                     _ControlButton(
                                       icon: FontAwesomeIcons.message,
-                                      label: l.callChat,
+                                      label: loc.t('callChat'),
                                       color: AppColors.isDark(context)
                                           ? Colors.white.withValues(alpha: 0.2)
                                           : Colors.black.withValues(
@@ -679,7 +680,7 @@ class _CallScreenState extends State<CallScreen> {
                                   if (cs.status == CallStatus.connected)
                                     _ControlButton(
                                       icon: FontAwesomeIcons.userPlus,
-                                      label: l.callAddPerson,
+                                      label: loc.t('callAddPerson'),
                                       color: AppColors.isDark(context)
                                           ? Colors.white.withValues(alpha: 0.2)
                                           : Colors.black.withValues(alpha: 0.05),
@@ -810,7 +811,7 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  String _statusText(CallStatus s, AppLocalizations l, Duration elapsed) {
+  String _statusText(CallStatus s, TranslationPack loc, Duration elapsed) {
     if (s == CallStatus.connected) {
       final formatted = _formatElapsed(elapsed);
       if (elapsed.inSeconds <= 5) {
@@ -819,15 +820,15 @@ class _CallScreenState extends State<CallScreen> {
       return formatted;
     }
     return switch (s) {
-      CallStatus.calling => l.callCalling,
-      CallStatus.connecting => l.callConnecting,
-      CallStatus.ended => l.callEnded,
-      CallStatus.rejected => l.callRejected,
-      CallStatus.missed => l.callMissed,
-      CallStatus.noAnswer => l.callNoAnswer,
-      CallStatus.busy => l.callBusy,
-      CallStatus.reconnecting => l.callReconnecting,
-      _ => l.callConnecting,
+      CallStatus.calling => loc.t('callCalling'),
+      CallStatus.connecting => loc.t('callConnecting'),
+      CallStatus.ended => loc.t('callEnded'),
+      CallStatus.rejected => loc.t('callRejected'),
+      CallStatus.missed => loc.t('callMissed'),
+      CallStatus.noAnswer => loc.t('callNoAnswer'),
+      CallStatus.busy => loc.t('callBusy'),
+      CallStatus.reconnecting => loc.t('callReconnecting'),
+      _ => loc.t('callConnecting'),
     };
   }
 }

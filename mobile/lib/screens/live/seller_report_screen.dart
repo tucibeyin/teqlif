@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 import '../../services/analytics_service.dart';
 
-class SellerReportScreen extends StatefulWidget {
+class SellerReportScreen extends ConsumerStatefulWidget {
   final int streamId;
   final String streamTitle;
 
@@ -14,10 +15,10 @@ class SellerReportScreen extends StatefulWidget {
   });
 
   @override
-  State<SellerReportScreen> createState() => _SellerReportScreenState();
+  ConsumerState<SellerReportScreen> createState() => _SellerReportScreenState();
 }
 
-class _SellerReportScreenState extends State<SellerReportScreen>
+class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
     with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _report;
   bool _loading = true;
@@ -69,12 +70,12 @@ class _SellerReportScreenState extends State<SellerReportScreen>
     return '${buf.toString()} ₺';
   }
 
-  String _fmtDuration(int minutes, AppLocalizations l) {
-    if (minutes < 1) return l.reportDurationLess;
+  String _fmtDuration(int minutes, TranslationPack loc) {
+    if (minutes < 1) return loc.t("reportDurationLess");
     final h = minutes ~/ 60;
     final m = minutes % 60;
-    if (h > 0) return '$h${l.reportDurationHour} $m${l.reportDurationMin}';
-    return '$m ${l.reportDurationMin}';
+    if (h > 0) return '$h${loc.t("reportDurationHour")} $m${loc.t("reportDurationMin")}';
+    return '$m ${loc.t("reportDurationMin")}';
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   }
 
   Widget _buildLoading() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -102,7 +103,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
           const CircularProgressIndicator(color: kPrimary),
           const SizedBox(height: 16),
           Text(
-            l.reportLoading,
+            loc.t("reportLoading"),
             style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
           ),
         ],
@@ -111,7 +112,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   }
 
   Widget _buildError() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -121,13 +122,13 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             const Icon(Icons.wifi_off_rounded, color: Color(0xFF475569), size: 52),
             const SizedBox(height: 16),
             Text(
-              l.reportLoadFailed,
+              loc.t("reportLoadFailed"),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 15),
             ),
             const SizedBox(height: 24),
             _PrimaryButton(
-              label: l.reportRetry,
+              label: loc.t("reportRetry"),
               onTap: () {
                 setState(() { _loading = true; _hasError = false; });
                 _loadReport();
@@ -135,7 +136,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             ),
             const SizedBox(height: 12),
             _SecondaryButton(
-              label: l.reportGoHome,
+              label: loc.t("reportGoHome"),
               onTap: _goHome,
             ),
           ],
@@ -145,7 +146,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   }
 
   Widget _buildReport() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final r = _report!;
     final uniqueViewers = r['unique_viewers'] as int? ?? 0;
     final peakViewers = r['peak_viewers'] as int? ?? 0;
@@ -170,9 +171,9 @@ class _SellerReportScreenState extends State<SellerReportScreen>
           SliverToBoxAdapter(
             child: _Header(
               title: widget.streamTitle,
-              duration: _fmtDuration(duration, l),
-              badge: l.reportBadge,
-              subtitle: l.reportStreamEndedDesc,
+              duration: _fmtDuration(duration, loc),
+              badge: loc.t("reportBadge"),
+              subtitle: loc.t("reportStreamEndedDesc"),
             ),
           ),
 
@@ -183,26 +184,26 @@ class _SellerReportScreenState extends State<SellerReportScreen>
               delegate: SliverChildListDelegate([
                 _MetricCard(
                   icon: Icons.visibility_outlined,
-                  label: l.reportMetricPeakViewers,
+                  label: loc.t("reportMetricPeakViewers"),
                   value: '$peakViewers',
                   color: const Color(0xFF6366F1),
                 ),
                 _MetricCard(
                   icon: Icons.people_outline_rounded,
-                  label: l.reportMetricEngagedViewers,
+                  label: loc.t("reportMetricEngagedViewers"),
                   value: '$uniqueViewers',
                   color: const Color(0xFF8B5CF6),
                 ),
                 _MetricCard(
                   icon: Icons.account_balance_wallet_outlined,
-                  label: l.reportMetricAvgBudget,
+                  label: loc.t("reportMetricAvgBudget"),
                   value: _fmtBudget(avgBudget),
                   color: const Color(0xFF10B981),
                 ),
                 _MetricCard(
                   icon: Icons.timer_outlined,
-                  label: l.reportMetricDuration,
-                  value: _fmtDuration(duration, l),
+                  label: loc.t("reportMetricDuration"),
+                  value: _fmtDuration(duration, loc),
                   color: const Color(0xFF3B82F6),
                 ),
               ]),
@@ -222,7 +223,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 child: _SectionHeader(
                   icon: Icons.swipe_rounded,
-                  label: l.reportSectionSwipeFeed,
+                  label: loc.t("reportSectionSwipeFeed"),
                   color: const Color(0xFF06B6D4),
                 ),
               ),
@@ -233,13 +234,13 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 delegate: SliverChildListDelegate([
                   _MetricCard(
                     icon: Icons.play_circle_outline_rounded,
-                    label: l.reportMetricSwipeImpressions,
+                    label: loc.t("reportMetricSwipeImpressions"),
                     value: '$swipeImpressions',
                     color: const Color(0xFF06B6D4),
                   ),
                   _MetricCard(
                     icon: Icons.person_search_rounded,
-                    label: l.reportMetricSwipeReach,
+                    label: loc.t("reportMetricSwipeReach"),
                     value: '$swipeReach',
                     color: const Color(0xFF0EA5E9),
                   ),
@@ -261,7 +262,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 child: _SectionHeader(
                   icon: Icons.gavel_rounded,
-                  label: l.reportSectionAuction,
+                  label: loc.t("reportSectionAuction"),
                   color: const Color(0xFFF97316),
                 ),
               ),
@@ -272,25 +273,25 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 delegate: SliverChildListDelegate([
                   _MetricCard(
                     icon: Icons.gavel_rounded,
-                    label: l.reportMetricTotalAuctions,
+                    label: loc.t("reportMetricTotalAuctions"),
                     value: '$totalAuctions',
                     color: const Color(0xFFF97316),
                   ),
                   _MetricCard(
                     icon: Icons.check_circle_outline_rounded,
-                    label: l.reportMetricSoldItems,
+                    label: loc.t("reportMetricSoldItems"),
                     value: '$successfulAuctions',
                     color: const Color(0xFF22C55E),
                   ),
                   _MetricCard(
                     icon: Icons.price_change_outlined,
-                    label: l.reportMetricTotalBids,
+                    label: loc.t("reportMetricTotalBids"),
                     value: '$totalBids',
                     color: const Color(0xFF06B6D4),
                   ),
                   _MetricCard(
                     icon: Icons.payments_outlined,
-                    label: l.reportMetricRevenue,
+                    label: loc.t("reportMetricRevenue"),
                     value: _fmtBudget(totalRevenue > 0 ? totalRevenue : null),
                     color: const Color(0xFF10B981),
                   ),
@@ -331,7 +332,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _HesitationHint(count: hesitations, l: l),
+                child: _HesitationHint(count: hesitations, loc: loc),
               ),
             ),
 
@@ -340,7 +341,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _InsightCard(text: recommendation, insightLabel: l.reportSmartInsight),
+                child: _InsightCard(text: recommendation, insightLabel: loc.t("reportSmartInsight")),
               ),
             ),
 
@@ -348,7 +349,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-              child: _PrimaryButton(label: l.reportGoHome, onTap: _goHome),
+              child: _PrimaryButton(label: loc.t("reportGoHome"), onTap: _goHome),
             ),
           ),
         ],
@@ -363,7 +364,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
 
 // ── Header ──────────────────────────────────────────────────────────────────
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   final String title;
   final String duration;
   final String badge;
@@ -376,7 +377,7 @@ class _Header extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       decoration: const BoxDecoration(
@@ -445,7 +446,7 @@ class _Header extends StatelessWidget {
 
 // ── Metric Card ─────────────────────────────────────────────────────────────
 
-class _MetricCard extends StatelessWidget {
+class _MetricCard extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String value;
@@ -458,7 +459,7 @@ class _MetricCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -512,13 +513,13 @@ class _MetricCard extends StatelessWidget {
 
 // ── Insight Card ─────────────────────────────────────────────────────────────
 
-class _InsightCard extends StatelessWidget {
+class _InsightCard extends ConsumerWidget {
   final String text;
   final String insightLabel;
   const _InsightCard({required this.text, required this.insightLabel});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -575,14 +576,14 @@ class _InsightCard extends StatelessWidget {
 
 // ── Section Header ───────────────────────────────────────────────────────────
 
-class _SectionHeader extends StatelessWidget {
+class _SectionHeader extends ConsumerWidget {
   final IconData icon;
   final String label;
   final Color color;
   const _SectionHeader({required this.icon, required this.label, required this.color});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         Container(
@@ -610,7 +611,7 @@ class _SectionHeader extends StatelessWidget {
 
 // ── Auction Item Row ──────────────────────────────────────────────────────────
 
-class _AuctionItemRow extends StatelessWidget {
+class _AuctionItemRow extends ConsumerWidget {
   final String itemName;
   final double startPrice;
   final double? finalPrice;
@@ -641,7 +642,8 @@ class _AuctionItemRow extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final sold = winner != null;
     final accent = sold ? const Color(0xFF22C55E) : const Color(0xFF475569);
 
@@ -680,9 +682,9 @@ class _AuctionItemRow extends StatelessWidget {
                 child: Text(
                   sold
                       ? (isBoughtItNow
-                          ? AppLocalizations.of(context)!.reportItemBuyNow
-                          : AppLocalizations.of(context)!.reportItemSold)
-                      : AppLocalizations.of(context)!.reportItemNotSold,
+                          ? loc.t("reportItemBuyNow")
+                          : loc.t("reportItemSold"))
+                      : loc.t("reportItemNotSold"),
                   style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -691,11 +693,11 @@ class _AuctionItemRow extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _InfoChip(label: AppLocalizations.of(context)!.reportChipStart, value: _fmt(startPrice), color: const Color(0xFF64748B)),
+              _InfoChip(label: loc.t("reportChipStart"), value: _fmt(startPrice), color: const Color(0xFF64748B)),
               const SizedBox(width: 8),
-              if (sold) _InfoChip(label: AppLocalizations.of(context)!.reportChipSale, value: _fmt(finalPrice), color: const Color(0xFF22C55E)),
+              if (sold) _InfoChip(label: loc.t("reportChipSale"), value: _fmt(finalPrice), color: const Color(0xFF22C55E)),
               const SizedBox(width: 8),
-              _InfoChip(label: AppLocalizations.of(context)!.reportChipBids, value: '$bidCount', color: const Color(0xFF06B6D4)),
+              _InfoChip(label: loc.t("reportChipBids"), value: '$bidCount', color: const Color(0xFF06B6D4)),
               const Spacer(),
               if (durationMinutes > 0)
                 Text(
@@ -727,14 +729,14 @@ class _AuctionItemRow extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
+class _InfoChip extends ConsumerWidget {
   final String label;
   final String value;
   final Color color;
   const _InfoChip({required this.label, required this.value, required this.color});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -747,13 +749,13 @@ class _InfoChip extends StatelessWidget {
 
 // ── Hesitation Hint ───────────────────────────────────────────────────────────
 
-class _HesitationHint extends StatelessWidget {
+class _HesitationHint extends ConsumerWidget {
   final int count;
-  final AppLocalizations l;
-  const _HesitationHint({required this.count, required this.l});
+  final TranslationPack loc;
+  const _HesitationHint({required this.count, required this.loc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -767,7 +769,7 @@ class _HesitationHint extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              l.reportHesitation(count),
+              loc.t("reportHesitation", {"count": count.toString()}),
               style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 12, height: 1.4),
             ),
           ),
@@ -779,13 +781,13 @@ class _HesitationHint extends StatelessWidget {
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
-class _PrimaryButton extends StatelessWidget {
+class _PrimaryButton extends ConsumerWidget {
   final String label;
   final VoidCallback onTap;
   const _PrimaryButton({required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
       height: 50,
@@ -806,13 +808,13 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-class _SecondaryButton extends StatelessWidget {
+class _SecondaryButton extends ConsumerWidget {
   final String label;
   final VoidCallback onTap;
   const _SecondaryButton({required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
       height: 50,

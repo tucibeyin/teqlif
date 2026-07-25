@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/localization_service.dart';
 import '../../services/push_notification_service.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../utils/error_helper.dart';
-import '../../l10n/app_localizations.dart';
 import 'category_onboarding_screen.dart';
 
-class VerifyScreen extends StatefulWidget {
+class VerifyScreen extends ConsumerStatefulWidget {
   final String email;
   final bool resent;
   const VerifyScreen({super.key, required this.email, this.resent = false});
 
   @override
-  State<VerifyScreen> createState() => _VerifyScreenState();
+  ConsumerState<VerifyScreen> createState() => _VerifyScreenState();
 }
 
-class _VerifyScreenState extends State<VerifyScreen> {
+class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   final _codeCtrl = TextEditingController();
   bool _loading = false;
   bool _resending = false;
@@ -33,8 +35,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.resent && _success == null) {
-      final l = AppLocalizations.of(context)!;
-      _success = l.authVerifyCodeSentMsg(widget.email);
+      final loc = ref.read(localizationProvider);
+      _success = loc.t('authVerifyCodeSentMsg', {'email': widget.email});
     }
   }
 
@@ -46,7 +48,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
   Future<void> _verify() async {
     if (_codeCtrl.text.length != 6) {
-      showErrorSnackbar(context, Exception(AppLocalizations.of(context)!.validVerificationCode));
+      final loc = ref.read(localizationProvider);
+      TeqToast.error(loc.t('validVerificationCode'));
       return;
     }
     setState(() { _loading = true; _success = null; });
@@ -64,7 +67,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
         );
       }
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -73,11 +76,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
   Future<void> _resend() async {
     setState(() { _resending = true; _success = null; });
     try {
-      final lang = AppLocalizations.of(context)!.localeName;
+      final lang = ref.read(localizationProvider).lang;
       final msg = await AuthService.resendCode(widget.email, lang: lang);
       if (mounted) setState(() => _success = msg);
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _resending = false);
     }
@@ -85,9 +88,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l.verifyEmailTitle)),
+      appBar: AppBar(title: Text(loc.t('verifyEmailTitle'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -96,12 +99,12 @@ class _VerifyScreenState extends State<VerifyScreen> {
             const Icon(Icons.mark_email_read_outlined, size: 48, color: kPrimary),
             const SizedBox(height: 16),
             Text(
-              l.authEnterCodeTitle,
+              loc.t('authEnterCodeTitle'),
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              l.authVerifyCodeSentDesc(widget.email),
+              loc.t('authVerifyCodeSentDesc', {'email': widget.email}),
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 28),
@@ -158,7 +161,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : Text(l.btnVerify),
+                  : Text(loc.t('btnVerify')),
             ),
             const SizedBox(height: 16),
             Center(
@@ -172,7 +175,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       key: const Key('verify_btn_kodu_tekrar_gonder'),
                       onPressed: _resend,
                       child: Text(
-                        l.authResendCode,
+                        loc.t('authResendCode'),
                         style: const TextStyle(color: kPrimary),
                       ),
                     ),

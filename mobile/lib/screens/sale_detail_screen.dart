@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
@@ -15,16 +16,16 @@ import '../../ui_library/components/cards/teq_card.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
 
-class SaleDetailScreen extends StatefulWidget {
+class SaleDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> sale;
 
   const SaleDetailScreen({super.key, required this.sale});
 
   @override
-  State<SaleDetailScreen> createState() => _SaleDetailScreenState();
+  ConsumerState<SaleDetailScreen> createState() => _SaleDetailScreenState();
 }
 
-class _SaleDetailScreenState extends State<SaleDetailScreen> {
+class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
   bool _isListingLoading = false;
 
   String _formatDate(String? iso) {
@@ -41,9 +42,9 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final sale = widget.sale;
-    final l = AppLocalizations.of(context)!;
-    final itemName = sale['item_name'] as String? ?? l.purchaseUnknownItem;
-    final buyerUsername = sale['buyer_username'] as String? ?? l.saleUnknownBuyer;
+    final loc = ref.watch(localizationProvider);
+    final itemName = sale['item_name'] as String? ?? loc.t('purchaseUnknownItem');
+    final buyerUsername = sale['buyer_username'] as String? ?? loc.t('saleUnknownBuyer');
     final buyerId = sale['buyer_id'] as int?;
     final finalPrice = (sale['final_price'] as num?)?.toDouble() ?? 0.0;
     final startPrice = (sale['start_price'] as num?)?.toDouble();
@@ -59,7 +60,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.saleDetailTitle),
+        title: Text(loc.t('saleDetailTitle')),
         backgroundColor: AppColors.surface(context),
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
@@ -88,7 +89,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                 children: [
                   const Icon(Icons.hide_image_outlined, size: 16, color: Color(0xFF9CA3AF)),
                   const SizedBox(width: 6),
-                  Text(l.noListingPhoto, style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
+                  Text(loc.t('noListingPhoto'), style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
                 ],
               ),
               const SizedBox(height: 12),
@@ -129,27 +130,27 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                       },
                     ),
                   Text(
-                    '${l.saleBuyerLabel}: @$buyerUsername',
+                    '${loc.t('saleBuyerLabel')}: @$buyerUsername',
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                   ),
                   const Divider(height: 24),
-                  _infoRow(context, AppLocalizations.of(context)!.competitorRadarSalePrice, fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
+                  _infoRow(context, ref.read(localizationProvider).t('competitorRadarSalePrice'), fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
                   if (startPrice != null)
-                    _infoRow(context, l.saleStartPrice, fmtPrice(startPrice)),
+                    _infoRow(context, loc.t('saleStartPrice'), fmtPrice(startPrice)),
                   _infoRow(
                     context,
-                    l.saleType,
-                    isBuyItNow ? l.saleTypeBuyNow : l.saleTypeAuction,
+                    loc.t('saleType'),
+                    isBuyItNow ? loc.t('saleTypeBuyNow') : loc.t('saleTypeAuction'),
                     valueColor: isBuyItNow
                         ? const Color(0xFF16A34A)
                         : const Color(0xFFF97316),
                   ),
                   if (!isBuyItNow && bidCount != null)
-                    _infoRow(context, l.saleBidCount, '$bidCount'),
+                    _infoRow(context, loc.t('saleBidCount'), '$bidCount'),
                   if (startedAt != null)
-                    _infoRow(context, AppLocalizations.of(context)!.notificationStart, _formatDate(startedAt)),
+                    _infoRow(context, ref.read(localizationProvider).t('notificationStart'), _formatDate(startedAt)),
                   if (endedAt != null)
-                    _infoRow(context, AppLocalizations.of(context)!.notificationEnd, _formatDate(endedAt)),
+                    _infoRow(context, ref.read(localizationProvider).t('notificationEnd'), _formatDate(endedAt)),
                 ],
               ),
             ),
@@ -164,7 +165,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                   MaterialPageRoute(builder: (_) => PublicProfileScreen(username: buyerUsername)),
                 );
               },
-              text: AppLocalizations.of(context)!.saleDetailGoToBuyer,
+              text: ref.read(localizationProvider).t('saleDetailGoToBuyer'),
               icon: Icons.person,
               type: TeqButtonType.primary,
             ),
@@ -187,7 +188,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                     ),
                   );
                 },
-                text: l.saleMessageBuyer,
+                text: loc.t('saleMessageBuyer'),
                 icon: Icons.message_rounded,
                 type: TeqButtonType.primary,
                 customColor: const Color(0xFF6B21A8),
@@ -211,10 +212,10 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                         MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
                       );
                     } else {
-                      TeqSnackBar.show(message: l.purchaseListingNotFound, type: TeqSnackBarType.error);
+                      TeqSnackBar.show(message: loc.t('purchaseListingNotFound'), type: TeqSnackBarType.error);
                     }
                   },
-                  text: l.purchaseViewListing,
+                  text: loc.t('purchaseViewListing'),
                   icon: Icons.article,
                   type: TeqButtonType.outline,
                   isLoading: _isListingLoading,
@@ -226,7 +227,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
             // Satış Kanıt Görseli
             if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
               Text(
-                l.purchaseProofImage,
+                loc.t('purchaseProofImage'),
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontSize: 16,

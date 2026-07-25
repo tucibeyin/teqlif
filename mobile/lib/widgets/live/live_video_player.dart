@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 
 /// Canlı yayın — video render katmanı (host & viewer ortak).
 ///
@@ -21,7 +22,7 @@ import '../../l10n/app_localizations.dart';
 ///
 /// Bu widget tamamen stateless'tır; LiveKit bağlantı mantığı
 /// çağıran ekranda kalmaktadır.
-class LiveVideoPlayer extends StatelessWidget {
+class LiveVideoPlayer extends ConsumerWidget {
   final VideoTrack? track;
   final bool cameraEnabled;
   final GlobalKey? repaintKey;
@@ -44,7 +45,7 @@ class LiveVideoPlayer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // ── Durum 1: Aktif video track ──────────────────────────────────────────
     if (track != null) {
       final renderer = VideoTrackRenderer(
@@ -70,7 +71,7 @@ class LiveVideoPlayer extends StatelessWidget {
 
     // ── Durum 2: Kamera kasıtlı olarak kapatıldı (host) ────────────────────
     if (!cameraEnabled) {
-      final l = AppLocalizations.of(context)!;
+      final loc = ref.watch(localizationProvider);
       return ColoredBox(
         color: Colors.black,
         child: Center(
@@ -84,7 +85,7 @@ class LiveVideoPlayer extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                l.liveCameraClosed,
+                loc.t("liveCameraClosed"),
                 style: const TextStyle(
                   color: Colors.white30,
                   fontSize: 14,

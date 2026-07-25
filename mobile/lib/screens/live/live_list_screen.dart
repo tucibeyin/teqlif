@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../../services/localization_service.dart";
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
@@ -19,7 +20,6 @@ import '../../widgets/offline_banner.dart';
 import '../../widgets/stale_data_banner.dart';
 import 'swipe_live_screen.dart';
 import '../public_profile_screen.dart';
-import '../../l10n/app_localizations.dart';
 
 class LiveListScreen extends ConsumerStatefulWidget {
   const LiveListScreen({super.key});
@@ -40,17 +40,17 @@ const _kCatEmoji = {
   'other': '📦',
 };
 
-String _catLabel(String key, AppLocalizations l) {
+String _catLabel(String key, TranslationPack loc) {
   final name = switch (key) {
-    'chat'        => l.cat_chat,
-    'electronics' => l.cat_electronics,
-    'fashion'     => l.cat_fashion,
-    'home'        => l.cat_home,
-    'vehicles'    => l.cat_vehicles,
-    'sports'      => l.cat_sports,
-    'books'       => l.cat_books,
-    'real_estate' => l.cat_real_estate,
-    'other'       => l.cat_other,
+    'chat'        => loc.t("cat_chat"),
+    'electronics' => loc.t("cat_electronics"),
+    'fashion'     => loc.t("cat_fashion"),
+    'home'        => loc.t("cat_home"),
+    'vehicles'    => loc.t("cat_vehicles"),
+    'sports'      => loc.t("cat_sports"),
+    'books'       => loc.t("cat_books"),
+    'real_estate' => loc.t("cat_real_estate"),
+    'other'       => loc.t("cat_other"),
     _             => key,
   };
   final emoji = _kCatEmoji[key];
@@ -199,7 +199,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final cats = _categories;
     final showFilter = !_loading && cats.isNotEmpty;
     final filtered = _filtered;
@@ -219,7 +219,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              l.liveStreamsTitle,
+              loc.t("liveStreamsTitle"),
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ],
@@ -234,7 +234,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               color: Colors.red,
             ),
             label: Text(
-              l.liveStartStream,
+              loc.t("liveStartStream"),
               style: const TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.w600,
@@ -265,14 +265,14 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 children: [
                   _CategoryChip(
                     key: const Key('live_list_chip_tumü'),
-                    label: l.liveAllCategory,
+                    label: loc.t("liveAllCategory"),
                     active: _selectedCategory == null,
                     onTap: () => setState(() => _selectedCategory = null),
                   ),
                   ...cats.map(
                     (c) => _CategoryChip(
                       key: Key('live_list_chip_$c'),
-                      label: _catLabel(c, l),
+                      label: _catLabel(c, loc),
                       active: _selectedCategory == c,
                       onTap: () => setState(() => _selectedCategory = c),
                     ),
@@ -295,7 +295,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   ? NetworkErrorWidget(onRetry: _load, scrollable: true)
                   : filtered.isEmpty
                   ? const _EmptyState()
-                  : _buildContent(l, filtered),
+                  : _buildContent(loc, filtered),
             ),
           ),
         ],
@@ -303,7 +303,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     );
   }
 
-  Widget _buildContent(AppLocalizations l, List<StreamOut> filtered) {
+  Widget _buildContent(TranslationPack loc, List<StreamOut> filtered) {
     final rec = _filteredRecommended;
     final hasRec = _isLoggedIn && rec.isNotEmpty;
     final hasSuggestedStreamers = _isLoggedIn && _suggestedStreamers.isNotEmpty;
@@ -326,7 +326,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    l.suggestedStreamers,
+                    loc.t("suggestedStreamers"),
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 ],
@@ -371,7 +371,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
                   const SizedBox(width: 6),
                   Text(
-                    l.forYouStreams,
+                    loc.t("forYouStreams"),
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -423,8 +423,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 const SizedBox(width: 6),
                 Text(
                   _selectedCategory != null
-                      ? l.categoryStreams(_catLabel(_selectedCategory!, l))
-                      : l.latestLiveStreams,
+                      ? loc.t("categoryStreams", {"category": _catLabel(_selectedCategory!, loc)})
+                      : loc.t("latestLiveStreams"),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -456,12 +456,12 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             ),
           )
         else
-          ..._buildSectionedSlivers(cats, filtered, l),
+          ..._buildSectionedSlivers(cats, filtered, loc),
       ],
     );
   }
 
-  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all, AppLocalizations l) {
+  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all, TranslationPack loc) {
     final groups = {
       for (var c in cats) c: all.where((s) => s.category == c).toList(),
     };
@@ -472,7 +472,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
               child: Text(
-                _catLabel(c, l),
+                _catLabel(c, loc),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -505,7 +505,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+class _CategoryChip extends ConsumerWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -518,7 +518,7 @@ class _CategoryChip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -546,12 +546,12 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     return ListView(
       children: [
         const SizedBox(height: 120),
@@ -564,12 +564,12 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              l.liveNoStreams,
+              loc.t("liveNoStreams"),
               style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
             ),
             const SizedBox(height: 4),
             Text(
-              l.liveBeFirst,
+              loc.t("liveBeFirst"),
               style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
             ),
           ],
@@ -579,13 +579,14 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _StreamerAvatarCard extends StatelessWidget {
+class _StreamerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> streamer;
   final VoidCallback? onTap;
   const _StreamerAvatarCard({required this.streamer, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
@@ -711,7 +712,7 @@ class _StreamerAvatarCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          AppLocalizations.of(context)!.liveBadgeLabel,
+                          loc.t("liveBadgeLabel"),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 7,
@@ -743,13 +744,13 @@ class _StreamerAvatarCard extends StatelessWidget {
   }
 }
 
-class _AvatarInitial extends StatelessWidget {
+class _AvatarInitial extends ConsumerWidget {
   final String initial;
   final BuildContext context;
   const _AvatarInitial({required this.initial, required this.context});
 
   @override
-  Widget build(BuildContext _) {
+  Widget build(BuildContext _, WidgetRef ref) {
     return Container(
       color: AppColors.primaryBg(context),
       alignment: Alignment.center,
@@ -765,14 +766,15 @@ class _AvatarInitial extends StatelessWidget {
   }
 }
 
-class _StreamGridTile extends StatelessWidget {
+class _StreamGridTile extends ConsumerWidget {
   final StreamOut stream;
   final VoidCallback onTap;
 
   const _StreamGridTile({required this.stream, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final hasThumbnail =
         stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
 
@@ -826,7 +828,7 @@ class _StreamGridTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          AppLocalizations.of(context)!.liveBadgeLabel,
+                          loc.t("liveBadgeLabel"),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 9,

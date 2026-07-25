@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -25,16 +27,15 @@ import '../widgets/seller_avatar_card.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
-import '../l10n/app_localizations.dart';
 
-class SearchScreen extends StatefulWidget {
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  State<SearchScreen> createState() => SearchScreenState();
+  ConsumerState<SearchScreen> createState() => SearchScreenState();
 }
 
-class SearchScreenState extends State<SearchScreen> {
+class SearchScreenState extends ConsumerState<SearchScreen> {
   void refresh({bool bypassCache = true}) =>
       _loadExplore(bypassCache: bypassCache);
   final _controller = TextEditingController();
@@ -97,7 +98,7 @@ class SearchScreenState extends State<SearchScreen> {
 
   Future<void> _showAlertSheet(BuildContext context) async {
     final query = _controller.text.trim();
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -111,12 +112,12 @@ class SearchScreenState extends State<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l.searchAlertTitle,
+              loc.t("searchAlertTitle"),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              l.searchAlertBody(query),
+              loc.t("searchAlertBody", {"query": query}),
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 20),
@@ -132,7 +133,7 @@ class SearchScreenState extends State<SearchScreen> {
                 Expanded(
                   child: TeqButton(
                     onPressed: () => Navigator.pop(context, true),
-                    text: l.searchAlertCreate,
+                    text: loc.t("searchAlertCreate"),
                   ),
                 ),
               ],
@@ -155,14 +156,14 @@ class SearchScreenState extends State<SearchScreen> {
       );
       if (mounted) {
         if (resp.statusCode == 201) {
-          TeqSnackBar.show(message: l.searchAlertCreated, type: TeqSnackBarType.success);
+          TeqSnackBar.show(message: loc.t("searchAlertCreated"), type: TeqSnackBarType.success);
         } else {
-          TeqSnackBar.show(message: l.searchAlertFailed, type: TeqSnackBarType.error);
+          TeqSnackBar.show(message: loc.t("searchAlertFailed"), type: TeqSnackBarType.error);
         }
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(message: l.searchAlertFailed, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: loc.t("searchAlertFailed"), type: TeqSnackBarType.error);
       }
     } finally {
       if (mounted) setState(() => _alertCreating = false);
@@ -220,14 +221,14 @@ class SearchScreenState extends State<SearchScreen> {
             _recentListings.removeWhere((e) => (e as Map)['id'] == listingId);
           }
         });
-        final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(message: l.notInterestedConfirmed, type: TeqSnackBarType.info);
+        final loc = ref.read(localizationProvider);
+        TeqSnackBar.show(message: loc.t("notInterestedConfirmed"), type: TeqSnackBarType.info);
       }
     } catch (_) {}
   }
 
   Future<void> _showNotInterestedMenu(int listingId, String section) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     await showModalBottomSheet<void>(
       context: context,
       builder: (_) => SafeArea(
@@ -236,7 +237,7 @@ class SearchScreenState extends State<SearchScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.thumb_down_alt_outlined),
-              title: Text(l.notInterested),
+              title: Text(loc.t("notInterested")),
               onTap: () {
                 Navigator.pop(context);
                 _markNotInterested(listingId, section);
@@ -546,7 +547,7 @@ class SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       body: SafeArea(
@@ -558,7 +559,7 @@ class SearchScreenState extends State<SearchScreen> {
               child: TeqTextField(
                 key: const Key('search_input_arama'),
                 controller: _controller,
-                hintText: l.searchAiHint,
+                hintText: loc.t("searchAiHint"),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _hasQuery
                     ? Row(
@@ -577,9 +578,7 @@ class SearchScreenState extends State<SearchScreen> {
                                     Icons.notifications_none,
                                     size: 20,
                                   ),
-                            tooltip: AppLocalizations.of(
-                              context,
-                            )!.searchAlertTooltip,
+                            tooltip: loc.t("searchAlertTooltip"),
                             onPressed: _alertCreating
                                 ? null
                                 : () => _showAlertSheet(context),
@@ -596,7 +595,7 @@ class SearchScreenState extends State<SearchScreen> {
             ),
             // ── İçerik ───────────────────────────────────────────────
             Expanded(
-              child: _hasQuery ? _buildSearchResults(l) : _buildExplore(l),
+              child: _hasQuery ? _buildSearchResults(loc) : _buildExplore(loc),
             ),
           ],
         ),
@@ -604,7 +603,7 @@ class SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildSearchResults(AppLocalizations l) {
+  Widget _buildSearchResults(TranslationPack loc) {
     if (_searching) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -625,14 +624,14 @@ class SearchScreenState extends State<SearchScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              l.searchNoResults,
+              loc.t("searchNoResults"),
               style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
             ),
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                l.searchNoSupplyHint,
+                loc.t("searchNoSupplyHint"),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textTertiary(context),
@@ -650,7 +649,7 @@ class SearchScreenState extends State<SearchScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.notifications_none_outlined, size: 16),
-              label: Text(l.searchCreateAlertBtn),
+              label: Text(loc.t("searchCreateAlertBtn")),
             ),
           ],
         ),
@@ -694,7 +693,7 @@ class SearchScreenState extends State<SearchScreen> {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          l.searchSmartResultsLabel,
+                          loc.t("searchSmartResultsLabel"),
                           style: TextStyle(
                             color: kPrimary,
                             fontSize: 12,
@@ -714,7 +713,7 @@ class SearchScreenState extends State<SearchScreen> {
           SliverToBoxAdapter(
             child: _SectionHeader(
               icon: Icons.person_outline_rounded,
-              label: l.searchFilterUsers,
+              label: loc.t("searchFilterUsers"),
             ),
           ),
           SliverList(
@@ -779,7 +778,7 @@ class SearchScreenState extends State<SearchScreen> {
                   child: Row(
                     children: [
                       Text(
-                        l.searchShowAllAccounts(_userResults.length),
+                        loc.t("searchShowAllAccounts", {"count": _userResults.length.toString()}),
                         style: TextStyle(
                           color: kPrimary,
                           fontSize: 13,
@@ -806,7 +805,7 @@ class SearchScreenState extends State<SearchScreen> {
               icon: _isSemanticSearch
                   ? Icons.auto_awesome_rounded
                   : Icons.grid_view_rounded,
-              label: l.searchFilterListings,
+              label: loc.t("searchFilterListings"),
               iconColor: _isSemanticSearch ? kPrimary : null,
             ),
           ),
@@ -851,7 +850,7 @@ class SearchScreenState extends State<SearchScreen> {
           SliverToBoxAdapter(
             child: _SectionHeader(
               icon: Icons.fiber_manual_record,
-              label: l.searchFilterStreams,
+              label: loc.t("searchFilterStreams"),
               iconColor: Colors.red,
             ),
           ),
@@ -883,7 +882,7 @@ class SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildExplore(AppLocalizations l) {
+  Widget _buildExplore(TranslationPack loc) {
     if (_exploreLoading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -908,7 +907,7 @@ class SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      l.searchLiveStreams,
+                      loc.t("searchLiveStreams"),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
@@ -954,7 +953,7 @@ class SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      l.suggestedStreamers,
+                      loc.t("suggestedStreamers"),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -1000,7 +999,7 @@ class SearchScreenState extends State<SearchScreen> {
                     const Icon(Icons.store_rounded, color: kPrimary, size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      l.suggestedSellers,
+                      loc.t("suggestedSellers"),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -1046,7 +1045,7 @@ class SearchScreenState extends State<SearchScreen> {
                     const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      _isLoggedIn ? l.forYouLabel : l.listingsSelectedForYou,
+                      _isLoggedIn ? loc.t("forYouLabel") : loc.t("listingsSelectedForYou"),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -1179,7 +1178,7 @@ class SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      l.listingsSelectedForYou,
+                      loc.t("listingsSelectedForYou"),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -1257,8 +1256,8 @@ class SearchScreenState extends State<SearchScreen> {
                             const SizedBox(height: 12),
                             Text(
                               _isLoggedIn
-                                  ? l.explorePersonalizedHint
-                                  : l.searchNoContent,
+                                  ? loc.t("explorePersonalizedHint")
+                                  : loc.t("searchNoContent"),
                               textAlign: TextAlign.center,
                               style: const TextStyle(color: Color(0xFF6B7280)),
                             ),
@@ -1277,7 +1276,7 @@ class SearchScreenState extends State<SearchScreen> {
 }
 
 // ── Bölüm başlığı ──────────────────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
+class _SectionHeader extends ConsumerWidget {
   final IconData icon;
   final String label;
   final Color? iconColor;
@@ -1288,7 +1287,7 @@ class _SectionHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
       child: Row(
@@ -1310,14 +1309,15 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // ── Yatay stream kartı ──────────────────────────────────────────────────────
-class _StreamCard extends StatelessWidget {
+class _StreamCard extends ConsumerWidget {
   final StreamOut stream;
   final VoidCallback onTap;
 
   const _StreamCard({required this.stream, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final hasThumbnail =
         stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
     return GestureDetector(
@@ -1363,7 +1363,7 @@ class _StreamCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  AppLocalizations.of(context)!.liveBadgeLabel,
+                  loc.t("liveBadgeLabel"),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
@@ -1431,7 +1431,7 @@ class _StreamCard extends StatelessWidget {
 }
 
 // ── Yatay ilan kartı (Sana Özel) ────────────────────────────────────────────
-class _HorizontalListingCard extends StatefulWidget {
+class _HorizontalListingCard extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -1439,10 +1439,10 @@ class _HorizontalListingCard extends StatefulWidget {
   const _HorizontalListingCard({required this.listing, required this.onTap, this.onLongPress});
 
   @override
-  State<_HorizontalListingCard> createState() => _HorizontalListingCardState();
+  ConsumerState<_HorizontalListingCard> createState() => _HorizontalListingCardState();
 }
 
-class _HorizontalListingCardState extends State<_HorizontalListingCard>
+class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
     with SingleTickerProviderStateMixin {
   AnimationController? _pulseCtrl;
   Animation<double>? _pulseAnim;
@@ -1498,7 +1498,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final imgs = widget.listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
@@ -1576,7 +1576,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: Text(
-                          AppLocalizations.of(context)!.badgeSponsored,
+                          loc.t("badgeSponsored"),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 9,
@@ -1646,7 +1646,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 color: Colors.red,
                 child: Text(
-                  l.joinLiveStreamBanner,
+                  loc.t("joinLiveStreamBanner"),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
@@ -1693,7 +1693,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
 }
 
 // ── İlan grid tile ──────────────────────────────────────────────────────────
-class _ListingTile extends StatelessWidget {
+class _ListingTile extends ConsumerWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -1712,7 +1712,8 @@ class _ListingTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final imgs = listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
@@ -1779,7 +1780,7 @@ class _ListingTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)!.badgeSponsored,
+                    loc.t("badgeSponsored"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 8,

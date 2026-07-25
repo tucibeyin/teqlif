@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -321,7 +322,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 }
 
-class _MinimizedCallBar extends StatelessWidget {
+class _MinimizedCallBar extends ConsumerWidget {
   final VoidCallback onRestore;
   final String callerUsername;
   final int? callId;
@@ -333,8 +334,8 @@ class _MinimizedCallBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     _cpLog('UI', 'MinimizedCallBar BUILD | caller=$callerUsername callId=$callId');
 
     return Dismissible(
@@ -371,7 +372,7 @@ class _MinimizedCallBar extends StatelessWidget {
                 const Icon(Icons.call, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  l.callIncomingTitle,
+                  loc.t("callIncomingTitle"),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -394,7 +395,7 @@ class _MinimizedCallBar extends StatelessWidget {
   }
 }
 
-class _IncomingCallBar extends StatelessWidget {
+class _IncomingCallBar extends ConsumerWidget {
   final String username;
   final String? avatarUrl;
   final VoidCallback onTap;
@@ -412,9 +413,9 @@ class _IncomingCallBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final title = l.callIncomingBody(username);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final title = loc.t("callIncomingBody", {"username": username});
     _cpLog('UI', 'IncomingCallBar BUILD | caller=$username avatarUrl=${avatarUrl != null ? "EXISTS" : "NULL"}');
 
     return Dismissible(
@@ -488,7 +489,7 @@ class _IncomingCallBar extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            l.callVoiceCall,
+                            loc.t("callVoiceCall"),
                             style: TextStyle(
                               color: AppColors.textSecondary(context),
                               fontSize: 14,
@@ -508,7 +509,7 @@ class _IncomingCallBar extends StatelessWidget {
                       child: _BarButton(
                         icon: Icons.call_end,
                         color: const Color(0xFFEF4444),
-                        label: l.callDecline,
+                        label: loc.t("callDecline"),
                         onTap: onReject,
                         logLabel: 'REJECT',
                       ),
@@ -518,7 +519,7 @@ class _IncomingCallBar extends StatelessWidget {
                       child: _BarButton(
                         icon: Icons.call,
                         color: const Color(0xFF22C55E),
-                        label: l.callAccept,
+                        label: loc.t("callAccept"),
                         onTap: onAccept,
                         logLabel: 'ACCEPT',
                       ),

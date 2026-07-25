@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import '../services/localization_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -79,12 +80,13 @@ class ShareService {
     }
   }
 
-  static Future<void> copyLink(BuildContext context, String url) async {
+  static Future<void> copyLink(BuildContext context, String url, {String copiedLabel = ''}) async {
     await Clipboard.setData(ClipboardData(text: url));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.shareLinkCopied),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(copiedLabel),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -137,7 +139,7 @@ class ShareService {
 
 // ── Bottom Sheet Widget ──────────────────────────────────────────────────────
 
-class _ShareSheet extends StatelessWidget {
+class _ShareSheet extends ConsumerWidget {
   final String url;
   final String text;
   final String? imageUrl;
@@ -151,7 +153,8 @@ class _ShareSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -171,7 +174,7 @@ class _ShareSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(AppLocalizations.of(context)!.shareTitle,
+          Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(loc.t("shareTitle"),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
           ),
@@ -179,8 +182,8 @@ class _ShareSheet extends StatelessWidget {
           // Seçenekler
           _ShareOption(
             icon: _instagramIcon(),
-            label: AppLocalizations.of(context)!.shareInstagramLabel,
-            subtitle: AppLocalizations.of(context)!.shareInstagramSubtitle,
+            label: loc.t("shareInstagramLabel"),
+            subtitle: loc.t("shareInstagramSubtitle"),
             onTap: () async {
               Navigator.of(context).pop();
               await ShareService.shareToInstagramStory(
@@ -194,8 +197,8 @@ class _ShareSheet extends StatelessWidget {
           ),
           _ShareOption(
             icon: const _WhatsAppIcon(),
-            label: AppLocalizations.of(context)!.shareWhatsAppLabel,
-            subtitle: AppLocalizations.of(context)!.shareWhatsAppSubtitle,
+            label: loc.t("shareWhatsAppLabel"),
+            subtitle: loc.t("shareWhatsAppSubtitle"),
             onTap: () async {
               Navigator.of(context).pop();
               await ShareService.shareToWhatsApp(context, url: url, text: text, origin: origin);
@@ -204,17 +207,17 @@ class _ShareSheet extends StatelessWidget {
           if (url.isNotEmpty)
             _ShareOption(
               icon: const Icon(Icons.copy_rounded, size: 28, color: Color(0xFF6B7280)),
-              label: AppLocalizations.of(context)!.shareCopyLabel,
+              label: loc.t("shareCopyLabel"),
               subtitle: url,
               onTap: () async {
                 Navigator.of(context).pop();
-                await ShareService.copyLink(context, url);
+                await ShareService.copyLink(context, url, copiedLabel: loc.t("shareLinkCopied"));
               },
             ),
           _ShareOption(
             icon: const Icon(Icons.ios_share_rounded, size: 28, color: Color(0xFF6B7280)),
-            label: AppLocalizations.of(context)!.shareOtherLabel,
-            subtitle: AppLocalizations.of(context)!.shareOtherSubtitle,
+            label: loc.t("shareOtherLabel"),
+            subtitle: loc.t("shareOtherSubtitle"),
             onTap: () async {
               Navigator.of(context).pop();
               await ShareService.shareOther(context, url: url, text: text, origin: origin);

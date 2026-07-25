@@ -1,25 +1,27 @@
-import '../../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
+import '../../services/localization_service.dart';
+import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../utils/error_helper.dart';
 
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String email;
   const ResetPasswordScreen({super.key, required this.email});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _codeCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _passConfirmCtrl = TextEditingController();
-  
+
   bool _loading = false;
   bool _obscure1 = true;
   bool _obscure2 = true;
@@ -34,9 +36,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_passCtrl.text != _passConfirmCtrl.text) {
-      showErrorSnackbar(context, Exception('Şifreler eşleşmiyor'));
+      TeqToast.error(ref.read(localizationProvider).t('validPasswordMismatch'));
       return;
     }
 
@@ -47,15 +49,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         code: _codeCtrl.text.trim(),
         newPassword: _passCtrl.text,
       );
-      
+
       if (!mounted) return;
-      
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.passwordResetSuccess, type: TeqSnackBarType.info);
-      
-      // Başarılı olunca Login ekranına dön
+
+      TeqSnackBar.show(
+        message: ref.read(localizationProvider).t('passwordResetSuccess'),
+        type: TeqSnackBarType.info,
+      );
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -63,8 +66,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    
+    final loc = ref.watch(localizationProvider);
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -94,7 +97,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    l.newPassword,
+                    loc.t('newPassword'),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -103,7 +106,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    l.authVerifyCodeSentDesc(widget.email),
+                    loc.t('authVerifyCodeSentDesc', {'email': widget.email}),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -123,12 +126,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
-                      labelText: l.fieldVerifyCode,
+                      labelText: loc.t('fieldVerifyCode'),
                       hintText: '123456',
                       prefixIcon: const Icon(Icons.numbers),
                     ),
                     validator: (v) {
-                      if (v == null || v.length != 6) return l.validVerificationCode;
+                      if (v == null || v.length != 6) return loc.t('validVerificationCode');
                       return null;
                     },
                   ),
@@ -139,7 +142,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     textInputAction: TextInputAction.next,
                     style: TextStyle(color: AppColors.textPrimary(context)),
                     decoration: InputDecoration(
-                      labelText: l.newPassword,
+                      labelText: loc.t('newPassword'),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(_obscure1 ? Icons.visibility_off_outlined : Icons.visibility_outlined),
@@ -147,8 +150,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return l.validPasswordEmpty;
-                      if (v.length < 8) return l.validPasswordMin;
+                      if (v == null || v.isEmpty) return loc.t('validPasswordEmpty');
+                      if (v.length < 8) return loc.t('validPasswordMin');
                       return null;
                     },
                   ),
@@ -160,7 +163,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     onFieldSubmitted: (_) => _submit(),
                     style: TextStyle(color: AppColors.textPrimary(context)),
                     decoration: InputDecoration(
-                      labelText: l.newPasswordConfirm,
+                      labelText: loc.t('newPasswordConfirm'),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(_obscure2 ? Icons.visibility_off_outlined : Icons.visibility_outlined),
@@ -168,8 +171,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return l.validPasswordConfirmEmpty;
-                      if (v != _passCtrl.text) return l.validPasswordMismatch;
+                      if (v == null || v.isEmpty) return loc.t('validPasswordConfirmEmpty');
+                      if (v != _passCtrl.text) return loc.t('validPasswordMismatch');
                       return null;
                     },
                   ),
@@ -187,7 +190,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(l.btnResetPassword),
+                          : Text(loc.t('btnResetPassword')),
                     ),
                   ),
                 ],

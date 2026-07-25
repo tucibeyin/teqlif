@@ -1,20 +1,21 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
-class MarketIntelligenceScreen extends StatefulWidget {
+class MarketIntelligenceScreen extends ConsumerStatefulWidget {
   final bool isPremium;
   final bool isEmbedded;
   const MarketIntelligenceScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
-  State<MarketIntelligenceScreen> createState() => _MarketIntelligenceScreenState();
+  ConsumerState<MarketIntelligenceScreen> createState() => _MarketIntelligenceScreenState();
 }
 
-class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
+class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScreen> {
   int _searchDays = 7;
   bool _loading = true;
   bool _hasError = false;
@@ -60,15 +61,15 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final bodyContent = _loading
         ? const Center(child: CircularProgressIndicator())
         : _hasError
-            ? _buildError(l)
+            ? _buildError(loc)
             : Stack(
                 children: [
-                  _buildContent(l),
-                  if (!widget.isPremium) _buildPaywall(context, l),
+                  _buildContent(loc),
+                  if (!widget.isPremium) _buildPaywall(context, loc),
                 ],
               );
 
@@ -79,7 +80,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.proToolMarketTitle),
+        title: Text(loc.t("proToolMarketTitle")),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -87,22 +88,22 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
     );
   }
 
-  Widget _buildError(AppLocalizations l) {
+  Widget _buildError(TranslationPack loc) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
-          Text(l.proLoadFailed, style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(loc.t("proLoadFailed"), style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          TextButton(onPressed: _load, child: Text(l.btnRetry)),
+          TextButton(onPressed: _load, child: Text(loc.t("btnRetry"))),
         ],
       ),
     );
   }
 
-  Widget _buildContent(AppLocalizations l) {
+  Widget _buildContent(TranslationPack loc) {
     final queries     = (_demand?['top_queries']          as List? ?? []).cast<Map<String, dynamic>>();
     final catSearch   = (_demand?['by_category']          as List? ?? []).cast<Map<String, dynamic>>();
     final peakHours   = (_trends?['peak_hours']           as List? ?? []).cast<Map<String, dynamic>>();
@@ -118,18 +119,18 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           if (growth != null)
-            _GrowthBanner(growth: growth, l: l),
+            _GrowthBanner(growth: growth, loc: loc),
           if (growth != null) const SizedBox(height: 16),
 
           Row(
             children: [
               Expanded(
                 child: Text(
-                  l.marketSearchTitle,
+                  loc.t("marketSearchTitle"),
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
                 ),
               ),
-              _SmallDayFilter(days: _searchDays, l: l, onChanged: (d) {
+              _SmallDayFilter(days: _searchDays, loc: loc, onChanged: (d) {
                 setState(() => _searchDays = d);
                 _reloadDemand();
               }),
@@ -138,7 +139,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
           const SizedBox(height: 10),
 
           if (queries.isEmpty)
-            _EmptyHint(text: l.marketNoSearchData)
+            _EmptyHint(text: loc.t("marketNoSearchData"))
           else
             SizedBox(
               height: 110,
@@ -211,14 +212,14 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
           if (catSearch.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text(
-              l.marketCategoryTitle,
+              loc.t("marketCategoryTitle"),
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8, runSpacing: 8,
               children: catSearch.map((c) {
-                final cat = c['category'] as String? ?? l.lblOther;
+                final cat = c['category'] as String? ?? loc.t("lblOther");
                 final cnt = c['count'] as int? ?? 0;
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -251,18 +252,18 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
 
           const SizedBox(height: 24),
           Text(
-            l.marketPeakHoursTitle,
+            loc.t("marketPeakHoursTitle"),
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
           ),
           const SizedBox(height: 4),
           Text(
-            l.marketPeakHoursDesc,
+            loc.t("marketPeakHoursDesc"),
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 12),
 
           if (peakHours.isEmpty)
-            _EmptyHint(text: l.marketNoActivityData)
+            _EmptyHint(text: loc.t("marketNoActivityData"))
           else
             Container(
               decoration: BoxDecoration(
@@ -318,12 +319,12 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
           if (trendCats.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text(
-              l.marketTrendingTitle,
+              loc.t("marketTrendingTitle"),
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 4),
             Text(
-              l.marketTrendingDesc,
+              loc.t("marketTrendingDesc"),
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 12),
@@ -373,7 +374,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
     );
   }
 
-  Widget _buildPaywall(BuildContext context, AppLocalizations l) {
+  Widget _buildPaywall(BuildContext context, TranslationPack loc) {
     return Positioned.fill(
       child: ClipRect(
         child: BackdropFilter(
@@ -401,12 +402,12 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
                       child: const Icon(Icons.insights_outlined, color: Colors.white, size: 32),
                     ),
                     const SizedBox(height: 20),
-                    Text(l.proUpgradeTitle,
+                    Text(loc.t("proUpgradeTitle"),
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary(context))),
                     const SizedBox(height: 10),
                     Text(
-                      l.marketPaywallDesc,
+                      loc.t("marketPaywallDesc"),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
                     ),
@@ -426,7 +427,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: Text(l.proUpgradeBtn,
+                          child: Text(loc.t("proUpgradeBtn"),
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
                         ),
                       ),
@@ -444,13 +445,13 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
 
 // ── Alt Widgetlar ─────────────────────────────────────────────────────────────
 
-class _GrowthBanner extends StatelessWidget {
+class _GrowthBanner extends ConsumerWidget {
   final double growth;
-  final AppLocalizations l;
-  const _GrowthBanner({required this.growth, required this.l});
+  final TranslationPack loc;
+  const _GrowthBanner({required this.growth, required this.loc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isPos = growth >= 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -475,8 +476,8 @@ class _GrowthBanner extends StatelessWidget {
               children: [
                 Text(
                   isPos
-                      ? l.marketGrowthPos(growth.toStringAsFixed(1))
-                      : l.marketGrowthNeg(growth.toStringAsFixed(1)),
+                      ? loc.t("marketGrowthPos", {"pct": growth.toStringAsFixed(1)})
+                      : loc.t("marketGrowthNeg", {"pct": growth.toStringAsFixed(1)}),
                   style: TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w700,
                     color: isPos ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
@@ -484,7 +485,7 @@ class _GrowthBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  l.marketGrowthSub,
+                  loc.t("marketGrowthSub"),
                   style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -496,14 +497,14 @@ class _GrowthBanner extends StatelessWidget {
   }
 }
 
-class _SmallDayFilter extends StatelessWidget {
+class _SmallDayFilter extends ConsumerWidget {
   final int days;
-  final AppLocalizations l;
+  final TranslationPack loc;
   final ValueChanged<int> onChanged;
-  const _SmallDayFilter({required this.days, required this.l, required this.onChanged});
+  const _SmallDayFilter({required this.days, required this.loc, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [7, 30].map((d) {
         final active = days == d;
@@ -518,7 +519,7 @@ class _SmallDayFilter extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: active ? const Color(0xFFF59E0B) : AppColors.border(context)),
             ),
-            child: Text(l.marketDayFilter(d),
+            child: Text(loc.t("marketDayFilter", {"days": d.toString()}),
                 style: TextStyle(
                     fontSize: 11, fontWeight: FontWeight.w700,
                     color: active ? Colors.white : AppColors.textSecondary(context))),
@@ -529,12 +530,12 @@ class _SmallDayFilter extends StatelessWidget {
   }
 }
 
-class _EmptyHint extends StatelessWidget {
+class _EmptyHint extends ConsumerWidget {
   final String text;
   const _EmptyHint({required this.text});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

@@ -20,17 +20,18 @@ import '../services/category_service.dart';
 import '../services/city_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 
-class EditListingScreen extends StatefulWidget {
+class EditListingScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
   const EditListingScreen({super.key, required this.listing});
 
   @override
-  State<EditListingScreen> createState() => _EditListingScreenState();
+  ConsumerState<EditListingScreen> createState() => _EditListingScreenState();
 }
 
-class _EditListingScreenState extends State<EditListingScreen> {
+class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -142,7 +143,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
     final title = _titleCtrl.text.trim();
     final desc = _descCtrl.text.trim();
     if (title.isEmpty) {
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.createNeedTitle,
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('createNeedTitle'),
         type: TeqSnackBarType.warning,
       );
       return;
@@ -158,7 +159,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
       );
       if (!mounted) return;
       if (result == null) {
-        TeqSnackBar.show(message: AppLocalizations.of(context)!.aiPriceError,
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('aiPriceError'),
           type: TeqSnackBarType.error,
         );
         return;
@@ -168,7 +169,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
         // TUCi harcandı — badge'i serverdan taze al
         CacheService.clearData('user_wallet_data');
         _loadAiCredits();
-        TeqSnackBar.show(message: AppLocalizations.of(context)!.tuciSpent(tuciSpent),
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('tuciSpent', {'count': tuciSpent.toString()}),
           type: TeqSnackBarType.info,
         );
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
@@ -301,9 +302,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                       icon: '🎯',
-                      label: AppLocalizations.of(
-                        context,
-                      )!.listingSuggestedStart,
+                      label: ref.read(localizationProvider).t('listingSuggestedStart'),
                       value: fmt(suggested),
                       accent: const Color(0xFF6366F1),
                     ),
@@ -312,7 +311,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                       icon: '🏆',
-                      label: AppLocalizations.of(context)!.listingExpectedClose,
+                      label: ref.read(localizationProvider).t('listingExpectedClose'),
                       value: fmt(estimated),
                       accent: const Color(0xFF22C55E),
                     ),
@@ -334,7 +333,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _MiniStat(
-                        label: AppLocalizations.of(context)!.listingLowest,
+                        label: ref.read(localizationProvider).t('listingLowest'),
                         value: fmt(minClose),
                         color: const Color(0xFFEF4444),
                       ),
@@ -344,7 +343,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                         color: const Color(0xFF334155),
                       ),
                       _MiniStat(
-                        label: AppLocalizations.of(context)!.listingAverage,
+                        label: ref.read(localizationProvider).t('listingAverage'),
                         value: fmt(estimated),
                         color: const Color(0xFF94A3B8),
                       ),
@@ -354,7 +353,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                         color: const Color(0xFF334155),
                       ),
                       _MiniStat(
-                        label: AppLocalizations.of(context)!.listingHighest,
+                        label: ref.read(localizationProvider).t('listingHighest'),
                         value: fmt(maxClose),
                         color: const Color(0xFF22C55E),
                       ),
@@ -451,9 +450,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
       await ctrl.dispose();
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
-          TeqSnackBar.show(message: AppLocalizations.of(
-              context,
-            )!.videoTooLong(_maxVideoDurationSecs, dur.inSeconds),
+          TeqSnackBar.show(message: ref.read(localizationProvider).t('videoTooLong', {'max': _maxVideoDurationSecs.toString(), 'actual': dur.inSeconds.toString()}),
             type: TeqSnackBarType.warning,
           );
         }
@@ -502,7 +499,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(AppLocalizations.of(context)!.profilePickGallery),
+              title: Text(ref.read(localizationProvider).t('profilePickGallery')),
               onTap: () {
                 Navigator.pop(context);
                 _pickVideo(ImageSource.gallery);
@@ -510,11 +507,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: Text(
-                AppLocalizations.of(
-                  context,
-                )!.createPickCamera(_maxVideoDurationSecs),
-              ),
+              title: Text(ref.read(localizationProvider).t('createPickCamera', {'sec': _maxVideoDurationSecs.toString()})),
               onTap: () {
                 Navigator.pop(context);
                 _pickVideo(ImageSource.camera);
@@ -528,8 +521,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
   Future<void> _pickImages(ImageSource source) async {
     if (_images.length >= _maxImages) {
-      final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(message: l.listingMaxPhotos,
+      final loc = ref.read(localizationProvider);
+      TeqSnackBar.show(message: loc.t('listingMaxPhotos'),
         type: TeqSnackBarType.warning,
       );
       return;
@@ -557,7 +550,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
   }
 
   void _showImageSourceSheet() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
@@ -566,7 +559,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l.btnPickGallery),
+              title: Text(loc.t('btnPickGallery')),
               onTap: () {
                 Navigator.pop(context);
                 _pickImages(ImageSource.gallery);
@@ -574,7 +567,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(l.btnCamera),
+              title: Text(loc.t('btnCamera')),
               onTap: () {
                 Navigator.pop(context);
                 _pickImages(ImageSource.camera);
@@ -589,7 +582,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.videoUploading,
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('videoUploading'),
         type: TeqSnackBarType.info,
       );
       return;
@@ -613,8 +606,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
         } catch (e) {
           debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
-            final l = AppLocalizations.of(context)!;
-            TeqSnackBar.show(message: l.createListingPhotoUploadFailed(e.toString()),
+            final loc = ref.read(localizationProvider);
+            TeqSnackBar.show(message: loc.t('createListingPhotoUploadFailed', {'error': e.toString()}),
               type: TeqSnackBarType.error,
             );
           }
@@ -653,8 +646,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
       );
 
       if (!mounted) return;
-      final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(message: l.msgListingPublished,
+      final loc = ref.read(localizationProvider);
+      TeqSnackBar.show(message: loc.t('msgListingPublished'),
         type: TeqSnackBarType.success,
       );
       Navigator.pop(context, true);
@@ -665,8 +658,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
       );
     } catch (_) {
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(message: l.createListingConnError,
+        final loc = ref.read(localizationProvider);
+        TeqSnackBar.show(message: loc.t('createListingConnError'),
           type: TeqSnackBarType.error,
         );
       }
@@ -689,31 +682,31 @@ class _EditListingScreenState extends State<EditListingScreen> {
       return 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın.';
     }
     if (e is NetworkException) {
-      return AppLocalizations.of(context)!.errorNetworkMessage;
+      return ref.read(localizationProvider).t('errorNetworkMessage');
     }
     return 'Video yüklenemedi, lütfen tekrar deneyin.';
   }
 
   /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
   String _mapError(AppException e) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (e.statusCode == 403 || e.code == 'FORBIDDEN') {
-      return l.errorCaptchaFailed;
+      return loc.t('errorCaptchaFailed');
     }
     if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
-      return l.errorTooFast;
+      return loc.t('errorTooFast');
     }
     if (e.code == 'CONTENT_POLICY_VIOLATION') {
-      return l.errorContentPolicy;
+      return loc.t('errorContentPolicy');
     }
     return e.message;
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l.btnUpdate)),
+      appBar: AppBar(title: Text(loc.t('btnUpdate'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -729,7 +722,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          l.createListingPhotoCount(_images.length, _maxImages),
+                          loc.t('createListingPhotoCount', {'count': _images.length.toString(), 'max': _maxImages.toString()}),
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
@@ -743,7 +736,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                               Icons.add_photo_alternate_outlined,
                               size: 18,
                             ),
-                            label: Text(l.btnAdd),
+                            label: Text(loc.t('btnAdd')),
                           ),
                       ],
                     ),
@@ -831,7 +824,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        l.photoCover,
+                                        loc.t('photoCover'),
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
@@ -873,7 +866,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    l.btnAddPhoto,
+                                    loc.t('btnAddPhoto'),
                                     style: TextStyle(
                                       color: AppColors.textSecondary(context),
                                       fontSize: 12,
@@ -898,7 +891,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          l.videoLabel(_maxVideoDurationSecs),
+                          loc.t('videoLabel', {'sec': _maxVideoDurationSecs.toString()}),
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
@@ -910,7 +903,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                           TextButton.icon(
                             onPressed: _showVideoSourceSheet,
                             icon: const Icon(Icons.videocam_outlined, size: 18),
-                            label: Text(l.btnAdd),
+                            label: Text(loc.t('btnAdd')),
                           ),
                       ],
                     ),
@@ -942,7 +935,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              _videoUploading ? l.lblLoading : l.lblVideoReady,
+                              _videoUploading ? loc.t('lblLoading') : loc.t('lblVideoReady'),
                               style: const TextStyle(fontSize: 13),
                             ),
                           ),
@@ -967,10 +960,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
                     TeqTextField(
                       key: const Key('create_listing_input_baslik'),
                       controller: _titleCtrl,
-                      labelText: l.fieldListingTitle,
-                      hintText: l.fieldListingTitleHint,
+                      labelText: loc.t('fieldListingTitle'),
+                      hintText: loc.t('fieldListingTitleHint'),
                       validator: (v) => v == null || v.isEmpty
-                          ? l.fieldListingTitleHint
+                          ? loc.t('fieldListingTitleHint')
                           : null,
                     ),
                     const SizedBox(height: 14),
@@ -979,8 +972,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       // ignore: deprecated_member_use
                       value: _selectedCategory,
                       decoration: InputDecoration(
-                        labelText: l.fieldCategory,
-                        hintText: l.fieldCategoryHint,
+                        labelText: loc.t('fieldCategory'),
+                        hintText: loc.t('fieldCategoryHint'),
                       ),
                       items: _categories
                           .map(
@@ -993,7 +986,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       onChanged: (v) => setState(
                         () => _selectedCategory = v ?? _selectedCategory,
                       ),
-                      validator: (v) => v == null ? l.fieldCategoryHint : null,
+                      validator: (v) => v == null ? loc.t('fieldCategoryHint') : null,
                     ),
                     const SizedBox(height: 14),
                     TeqTextField(
@@ -1001,11 +994,11 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       controller: _priceCtrl,
                       keyboardType: TextInputType.number,
                       inputFormatters: [_ThousandSeparatorFormatter()],
-                      labelText: l.fieldPrice,
-                      hintText: l.fieldPriceHint,
+                      labelText: loc.t('fieldPrice'),
+                      hintText: loc.t('fieldPriceHint'),
                       prefixText: '₺ ',
                       validator: (v) =>
-                          v == null || v.isEmpty ? l.fieldPriceHint : null,
+                          v == null || v.isEmpty ? loc.t('fieldPriceHint') : null,
                     ),
                     const SizedBox(height: 10),
                     _AiPriceButton(
@@ -1019,12 +1012,12 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       key: const Key('create_listing_select_konum'),
                       // ignore: deprecated_member_use
                       value: _selectedCity,
-                      decoration: InputDecoration(labelText: l.fieldLocation),
-                      hint: Text(l.fieldLocationHint),
+                      decoration: InputDecoration(labelText: loc.t('fieldLocation')),
+                      hint: Text(loc.t('fieldLocationHint')),
                       items: [
                         DropdownMenuItem(
                           value: null,
-                          child: Text('-- ${l.fieldLocationHint} --'),
+                          child: Text('-- ${loc.t('fieldLocationHint')} --'),
                         ),
                         ..._cities.map(
                           (c) => DropdownMenuItem(value: c, child: Text(c)),
@@ -1045,10 +1038,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
                       maxLines: 5,
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.newline,
-                      labelText: l.fieldDescription,
-                      hintText: l.fieldDescriptionHint,
+                      labelText: loc.t('fieldDescription'),
+                      hintText: loc.t('fieldDescriptionHint'),
                       validator: (v) => v == null || v.isEmpty
-                          ? l.fieldDescriptionHint
+                          ? loc.t('fieldDescriptionHint')
                           : null,
                     ),
                   ],
@@ -1060,7 +1053,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                 child: TeqButton(
                   key: const Key('create_listing_btn_yayinla'),
                   onPressed: _submitting ? null : _submit,
-                  text: l.btnUpdateListing,
+                  text: loc.t('btnUpdateListing'),
                   isLoading: _submitting,
                 ),
               ),

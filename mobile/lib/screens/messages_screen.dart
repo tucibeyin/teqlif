@@ -5,7 +5,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -32,12 +34,10 @@ import 'follow_requests_screen.dart';
 import 'listing_detail_screen.dart';
 import 'purchase_detail_screen.dart';
 import 'sale_detail_screen.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'live/swipe_live_screen.dart';
 import '../services/stream_service.dart';
 import '../services/pip_service.dart';
 import '../providers/pip_provider.dart';
-import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import '../services/call_service.dart';
@@ -45,14 +45,14 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 
-class MessagesScreen extends StatefulWidget {
+class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
 
   @override
-  State<MessagesScreen> createState() => MessagesScreenState();
+  ConsumerState<MessagesScreen> createState() => MessagesScreenState();
 }
 
-class MessagesScreenState extends State<MessagesScreen>
+class MessagesScreenState extends ConsumerState<MessagesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _unreadNotifs = 0;
@@ -110,22 +110,22 @@ class MessagesScreenState extends State<MessagesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.msgTabMessages),
+        title: Text(loc.t("msgTabMessages")),
         bottom: TabBar(
           controller: _tabController,
           labelColor: kPrimary,
           unselectedLabelColor: const Color(0xFF9CA3AF),
           indicatorColor: kPrimary,
           tabs: [
-            Tab(text: l.msgTabMessages),
+            Tab(text: loc.t("msgTabMessages")),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(l.msgTabNotifications),
+                  Text(loc.t("msgTabNotifications")),
                   if (_unreadNotifs > 0) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -153,14 +153,14 @@ class MessagesScreenState extends State<MessagesScreen>
 
 // ── Mesajlar Tab ──────────────────────────────────────────────────────────────
 
-class _MessagesTab extends StatefulWidget {
+class _MessagesTab extends ConsumerStatefulWidget {
   const _MessagesTab();
 
   @override
-  State<_MessagesTab> createState() => _MessagesTabState();
+  ConsumerState<_MessagesTab> createState() => _MessagesTabState();
 }
 
-class _MessagesTabState extends State<_MessagesTab> {
+class _MessagesTabState extends ConsumerState<_MessagesTab> {
   List<dynamic> _conversations = [];
   bool _loading = true;
   bool _loadInProgress = false;
@@ -239,15 +239,15 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   /// WS üzerinden gelen mesajı HTTP isteği atmadan anında listeye yansıtır.
   /// Bilinmeyen gönderici (yeni konuşma) varsa API'ya fallback yapar.
-  String _lastMsgPreview(Map<String, dynamic> data, AppLocalizations l) {
+  String _lastMsgPreview(Map<String, dynamic> data, TranslationPack loc) {
     final ct = data['content_type'] as String? ?? 'text';
     if (ct != 'text') {
       return switch (ct) {
-        'image' => l.msgLastPhoto,
-        'video' => l.msgLastVideo,
-        'voice' => l.msgLastVoice,
-        'file' => l.msgLastFile,
-        _ => l.msgLastFile,
+        'image' => loc.t("msgLastPhoto"),
+        'video' => loc.t("msgLastVideo"),
+        'voice' => loc.t("msgLastVoice"),
+        'file' => loc.t("msgLastFile"),
+        _ => loc.t("msgLastFile"),
       };
     }
     return (data['content'] as String?) ?? '';
@@ -258,7 +258,7 @@ class _MessagesTabState extends State<_MessagesTab> {
     final receiverId = data['receiver_id'] as int?;
     final createdAt = data['created_at'] as String?;
     final otherId = senderId == _myUserId ? receiverId : senderId;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
 
     if (otherId == null || _myUserId == null) {
       _load(silent: true);
@@ -276,7 +276,7 @@ class _MessagesTabState extends State<_MessagesTab> {
 
     final updated = List<dynamic>.from(_conversations);
     final conv = Map<String, dynamic>.from(updated[idx] as Map);
-    conv['last_message'] = _lastMsgPreview(data, l);
+    conv['last_message'] = _lastMsgPreview(data, loc);
     conv['last_at'] = createdAt;
     if (senderId != _myUserId) {
       conv['unread_count'] = ((conv['unread_count'] as int?) ?? 0) + 1;
@@ -288,7 +288,7 @@ class _MessagesTabState extends State<_MessagesTab> {
   }
 
   Future<void> _deleteConversation(int otherId) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -308,7 +308,7 @@ class _MessagesTabState extends State<_MessagesTab> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                l.msgDeleteConversationConfirm,
+                loc.t("msgDeleteConversationConfirm"),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -316,14 +316,14 @@ class _MessagesTabState extends State<_MessagesTab> {
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
               title: Text(
-                l.msgDeleteConversation,
+                loc.t("msgDeleteConversation"),
                 style: const TextStyle(color: Colors.red),
               ),
               onTap: () => Navigator.pop(ctx, true),
             ),
             ListTile(
               leading: const Icon(Icons.close),
-              title: Text(l.btnCancel),
+              title: Text(loc.t("btnCancel")),
               onTap: () => Navigator.pop(ctx, false),
             ),
             const SizedBox(height: 8),
@@ -340,22 +340,22 @@ class _MessagesTabState extends State<_MessagesTab> {
           (c) => (c['user_id'] as int?) == otherId,
         ),
       );
-      TeqSnackBar.show(message: l.msgDeleteConversationSuccess);
+      TeqSnackBar.show(message: loc.t("msgDeleteConversationSuccess"));
     } else {
-      TeqSnackBar.show(message: l.msgDeleteConversationFailed);
+      TeqSnackBar.show(message: loc.t("msgDeleteConversationFailed"));
     }
   }
 
   String _timeAgo(String? isoStr) {
     if (isoStr == null) return '';
     try {
-      final l = AppLocalizations.of(context)!;
+      final loc = ref.read(localizationProvider);
       final dt = DateTime.parse(isoStr).toLocal();
       final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return l.timeNow;
-      if (diff.inMinutes < 60) return l.timeMinAgo(diff.inMinutes);
-      if (diff.inHours < 24) return l.timeHoursAgo(diff.inHours);
-      return l.timeDaysAgo(diff.inDays);
+      if (diff.inMinutes < 1) return loc.t("timeNow");
+      if (diff.inMinutes < 60) return loc.t("timeMinAgo", {"n": diff.inMinutes.toString()});
+      if (diff.inHours < 24) return loc.t("timeHoursAgo", {"n": diff.inHours.toString()});
+      return loc.t("timeDaysAgo", {"n": diff.inDays.toString()});
     } catch (_) {
       return '';
     }
@@ -363,7 +363,7 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -382,11 +382,11 @@ class _MessagesTabState extends State<_MessagesTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              l.msgNoMessages,
+              loc.t("msgNoMessages"),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            Text(l.msgNoMessagesDesc, textAlign: TextAlign.center),
+            Text(loc.t("msgNoMessagesDesc"), textAlign: TextAlign.center),
           ],
         ),
       );
@@ -405,11 +405,11 @@ class _MessagesTabState extends State<_MessagesTab> {
                 final conv = _conversations[i];
                 final username = conv['username'] as String? ?? '';
                 final fullName = conv['full_name'] as String? ?? username;
-                final l = AppLocalizations.of(context)!;
+                final loc = ref.read(localizationProvider);
                 final lastMsg = _lastMsgPreview({
                   'content_type': conv['last_message_type'] ?? 'text',
                   'content': conv['last_message'] ?? '',
-                }, l);
+                }, loc);
                 final lastAt = conv['last_at'] as String?;
                 final unread = (conv['unread_count'] as int?) ?? 0;
                 final otherId = (conv['user_id'] as int?) ?? 0;
@@ -522,6 +522,7 @@ class _MessagesTabState extends State<_MessagesTab> {
   }
 
   Widget _buildErrorBanner() {
+    final loc = ref.read(localizationProvider);
     return Material(
       color: Colors.orange.withValues(alpha: 0.12),
       child: Padding(
@@ -536,7 +537,7 @@ class _MessagesTabState extends State<_MessagesTab> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                AppLocalizations.of(context)!.messagesUpdateFailed,
+                loc.t("messagesUpdateFailed"),
                 style: const TextStyle(fontSize: 12, color: Colors.orange),
               ),
             ),
@@ -548,7 +549,7 @@ class _MessagesTabState extends State<_MessagesTab> {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
-                AppLocalizations.of(context)!.btnRefresh,
+                loc.t("btnRefresh"),
                 style: const TextStyle(fontSize: 12),
               ),
             ),
@@ -561,14 +562,14 @@ class _MessagesTabState extends State<_MessagesTab> {
 
 // ── Bildirimler Tab ───────────────────────────────────────────────────────────
 
-class _NotificationsTab extends StatefulWidget {
+class _NotificationsTab extends ConsumerStatefulWidget {
   const _NotificationsTab();
 
   @override
-  State<_NotificationsTab> createState() => _NotificationsTabState();
+  ConsumerState<_NotificationsTab> createState() => _NotificationsTabState();
 }
 
-class _NotificationsTabState extends State<_NotificationsTab> {
+class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
   List<dynamic> _notifications = [];
   bool _loading = true;
   bool _notifHasError = false;
@@ -628,79 +629,77 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   String _timeAgo(String? isoStr) {
     if (isoStr == null) return '';
     try {
-      final l = AppLocalizations.of(context)!;
+      final loc = ref.read(localizationProvider);
       final dt = DateTime.parse(isoStr).toLocal();
       final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return l.timeNow;
-      if (diff.inMinutes < 60) return l.timeMinAgo(diff.inMinutes);
-      if (diff.inHours < 24) return l.timeHoursAgo(diff.inHours);
-      return l.timeDaysAgo(diff.inDays);
+      if (diff.inMinutes < 1) return loc.t("timeNow");
+      if (diff.inMinutes < 60) return loc.t("timeMinAgo", {"n": diff.inMinutes.toString()});
+      if (diff.inHours < 24) return loc.t("timeHoursAgo", {"n": diff.inHours.toString()});
+      return loc.t("timeDaysAgo", {"n": diff.inDays.toString()});
     } catch (_) {
       return '';
     }
   }
 
-  String _localizeTitle(String? type, String title, AppLocalizations l) {
+  String _localizeTitle(String? type, String title, TranslationPack loc) {
     final username = RegExp(r'@(\w+)').firstMatch(title)?.group(1) ?? '';
     return switch (type) {
-      'message' => username.isNotEmpty ? l.notifMessage(username) : title,
-      'follow' => username.isNotEmpty ? l.notifFollow(username) : title,
+      'message' => username.isNotEmpty ? loc.t("notifMessage", {"username": username}) : title,
+      'follow' => username.isNotEmpty ? loc.t("notifFollow", {"username": username}) : title,
       'follow_request' =>
-        username.isNotEmpty ? l.notifFollowRequestTitle(username) : title,
+        username.isNotEmpty ? loc.t("notifFollowRequestTitle", {"username": username}) : title,
       'follow_accepted' =>
-        username.isNotEmpty ? l.notifFollowAcceptedTitle(username) : title,
+        username.isNotEmpty ? loc.t("notifFollowAcceptedTitle", {"username": username}) : title,
       'stream_started' =>
-        username.isNotEmpty ? l.notifStreamStarted(username) : title,
-      'new_bid' => username.isNotEmpty ? l.notifNewBid(username) : title,
+        username.isNotEmpty ? loc.t("notifStreamStarted", {"username": username}) : title,
+      'new_bid' => username.isNotEmpty ? loc.t("notifNewBid", {"username": username}) : title,
       'new_listing' =>
-        username.isNotEmpty ? l.notifNewListing(username) : title,
-      'outbid' => l.notifOutbid,
-      'smart_auction_alert' => l.notifSmartAuctionAlert,
-      'budget_match' => l.notifBudgetMatch,
-      'auction_won' => l.notifAuctionWon,
-      'buy_it_now' => l.notifBuyItNow,
+        username.isNotEmpty ? loc.t("notifNewListing", {"username": username}) : title,
+      'outbid' => loc.t("notifOutbid"),
+      'smart_auction_alert' => loc.t("notifSmartAuctionAlert"),
+      'budget_match' => loc.t("notifBudgetMatch"),
+      'auction_won' => loc.t("notifAuctionWon"),
+      'buy_it_now' => loc.t("notifBuyItNow"),
       'call_missed' =>
-        username.isNotEmpty ? l.notifCallMissed(username) : title,
-      'listing_deactivated' => l.notifListingDeactivated,
-      'listing_deleted' => l.notifListingDeleted,
-      'listing_removed' => l.notifListingRemoved,
-      'price_drop_alert' => l.notifPriceDrop,
-      'search_alert' => l.notifSearchAlert,
-      'auction_ended' => l.notifAuctionEnded,
-      'auction_cancelled' => l.notifAuctionCancelled,
-      'referral' => l.notifReferralTitle,
-      'churn_airdrop' => l.notifChurnAirdropBuyer,
-      'churn_airdrop_buyer' => l.notifChurnAirdropBuyer,
-      'churn_airdrop_seller' => l.notifChurnAirdropSeller,
+        username.isNotEmpty ? loc.t("notifCallMissed", {"username": username}) : title,
+      'listing_deactivated' => loc.t("notifListingDeactivated"),
+      'listing_deleted' => loc.t("notifListingDeleted"),
+      'listing_removed' => loc.t("notifListingRemoved"),
+      'price_drop_alert' => loc.t("notifPriceDrop"),
+      'search_alert' => loc.t("notifSearchAlert"),
+      'auction_ended' => loc.t("notifAuctionEnded"),
+      'auction_cancelled' => loc.t("notifAuctionCancelled"),
+      'referral' => loc.t("notifReferralTitle"),
+      'churn_airdrop' => loc.t("notifChurnAirdropBuyer"),
+      'churn_airdrop_buyer' => loc.t("notifChurnAirdropBuyer"),
+      'churn_airdrop_seller' => loc.t("notifChurnAirdropSeller"),
       _ => title,
     };
   }
 
-  String? _localizeBody(String? type, String? body, AppLocalizations l) {
+  String? _localizeBody(String? type, String? body, TranslationPack loc) {
     if (body == null || body.isEmpty) return body;
     switch (type) {
       case 'listing_removed':
-        return l.notifListingRemovedBody;
+        return loc.t("notifListingRemovedBody");
       case 'listing_deactivated':
         final qMatch = RegExp(r'"(.+?)"').firstMatch(body);
         if (qMatch != null) {
-          return l.notifListingDeactivatedBodySingle(qMatch.group(1)!);
+          return loc.t("notifListingDeactivatedBodySingle", {"title": qMatch.group(1)!});
         }
         final nMatch = RegExp(r'^(\d+)').firstMatch(body);
         if (nMatch != null) {
-          return l.notifListingDeactivatedBodyMultiple(
-            int.parse(nMatch.group(1)!),
-          );
+          return loc.t("notifListingDeactivatedBodyMultiple", {"count": int.parse(nMatch.group(1)!).toString()});
         }
         return body;
       case 'listing_deleted':
         final qMatch = RegExp(r'"(.+?)"').firstMatch(body);
         if (qMatch != null) {
-          return l.notifListingDeletedBodySingle(qMatch.group(1)!);
+          return loc.t("notifListingDeletedBodySingle", {"title": qMatch.group(1)!});
         }
         final nMatch = RegExp(r'^(\d+)').firstMatch(body);
         if (nMatch != null) {
-          return l.notifListingDeletedBodyMultiple(int.parse(nMatch.group(1)!));
+          return loc.t("notifListingDeletedBodyMultiple", {"count": int.parse(nMatch.group(1)!).toString()});
         }
         return body;
       case 'outbid':
@@ -710,11 +709,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           final rest = body.substring(dash + 3);
           final colon = rest.lastIndexOf(': ');
           final price = colon >= 0 ? rest.substring(colon + 2) : rest;
-          return l.notifOutbidBody(item, price);
+          return loc.t("notifOutbidBody", {"item": item, "price": price});
         } else {
           final colon = body.lastIndexOf(': ');
           if (colon >= 0) {
-            return l.notifOutbidBodyNoItem(body.substring(colon + 2));
+            return loc.t("notifOutbidBodyNoItem", {"price": body.substring(colon + 2)});
           }
         }
         return body;
@@ -725,20 +724,20 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           final rest = body.substring(dash + 3);
           final colon = rest.lastIndexOf(': ');
           final price = colon >= 0 ? rest.substring(colon + 2) : rest;
-          return l.notifAuctionEndedBody(item, price);
+          return loc.t("notifAuctionEndedBody", {"item": item, "price": price});
         } else {
           final colon = body.lastIndexOf(': ');
           if (colon >= 0) {
-            return l.notifAuctionEndedBodyNoItem(body.substring(colon + 2));
+            return loc.t("notifAuctionEndedBodyNoItem", {"price": body.substring(colon + 2)});
           }
         }
         return body;
       case 'auction_cancelled':
         if (body.contains(' — ')) {
           final dash = body.lastIndexOf(' — ');
-          return l.notifAuctionCancelledBody(body.substring(0, dash));
+          return loc.t("notifAuctionCancelledBody", {"item": body.substring(0, dash)});
         }
-        return l.notifAuctionCancelledBodyNoItem;
+        return loc.t("notifAuctionCancelledBodyNoItem");
       case 'price_drop_alert':
         if (body.contains(' — ')) {
           final dash = body.lastIndexOf(' — ');
@@ -747,18 +746,18 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           // "artık 750 ₺" or "now 750 ₺" — price starts at first digit
           final priceMatch = RegExp(r'(\d[\d.,\s]*[^\s].*)$').firstMatch(rest);
           final price = priceMatch != null ? priceMatch.group(1)!.trim() : rest;
-          return l.notifPriceDropBody(item, price);
+          return loc.t("notifPriceDropBody", {"item": item, "price": price});
         }
         return body;
       case 'call_missed':
-        return l.notifCallMissedBody;
+        return loc.t("notifCallMissedBody");
       case 'churn_airdrop':
       case 'churn_airdrop_buyer':
         final amountB = int.tryParse(RegExp(r'\d+').firstMatch(body)?.group(0) ?? '');
-        return amountB != null ? l.notifChurnBodyBuyer(amountB) : body;
+        return amountB != null ? loc.t("notifChurnBodyBuyer", {"amount": amountB.toString()}) : body;
       case 'churn_airdrop_seller':
         final amountS = int.tryParse(RegExp(r'\d+').firstMatch(body)?.group(0) ?? '');
-        return amountS != null ? l.notifChurnBodySeller(amountS) : body;
+        return amountS != null ? loc.t("notifChurnBodySeller", {"amount": amountS.toString()}) : body;
       default:
         return body;
     }
@@ -837,8 +836,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           final active = await StreamService.isStreamActive(relatedId);
           if (!mounted) return;
           if (!active) {
-            final l = AppLocalizations.of(context)!;
-            TeqToast.info(l.liveEnded);
+            final loc = ref.read(localizationProvider);
+            TeqToast.info(loc.t("liveEnded"));
             return;
           }
           if (PipService.isVisible) {
@@ -872,13 +871,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       case 'message':
         if (relatedId != null) {
           final username = extractHandle(title);
-          final l = AppLocalizations.of(context)!;
+          final loc = ref.read(localizationProvider);
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => DirectChatScreen(
                 otherUserId: relatedId,
-                displayName: username.isNotEmpty ? username : l.msgUserFallback,
+                displayName: username.isNotEmpty ? username : loc.t("msgUserFallback"),
                 otherHandle: username,
               ),
             ),
@@ -889,7 +888,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -908,11 +907,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              l.notifNone,
+              loc.t("notifNone"),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            Text(l.notifNoneDesc),
+            Text(loc.t("notifNoneDesc")),
           ],
         ),
       );
@@ -939,8 +938,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                 // follow: body = username (navigasyon için), görüntüleme için kullanılmaz
                 final displayBody = type == 'follow'
                     ? null
-                    : _localizeBody(type, body, l);
-                final displayTitle = _localizeTitle(type, title, l);
+                    : _localizeBody(type, body, loc);
+                final displayTitle = _localizeTitle(type, title, loc);
                 return ListTile(
                   onTap: () {
                     setState(
@@ -1017,7 +1016,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
 // ── Chat Screen ───────────────────────────────────────────────────────────────
 
-class DirectChatScreen extends StatefulWidget {
+class DirectChatScreen extends ConsumerStatefulWidget {
   final int otherUserId;
   final String displayName;
   final String otherHandle;
@@ -1038,10 +1037,10 @@ class DirectChatScreen extends StatefulWidget {
   });
 
   @override
-  State<DirectChatScreen> createState() => _DirectChatScreenState();
+  ConsumerState<DirectChatScreen> createState() => _DirectChatScreenState();
 }
 
-class _DirectChatScreenState extends State<DirectChatScreen>
+class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     with WidgetsBindingObserver {
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
@@ -1282,7 +1281,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     required String mimeType,
     int? durationSecs,
   }) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final token = await StorageService.getToken();
     if (token == null || !mounted) return;
     setState(() => _uploadingMedia = true);
@@ -1315,7 +1314,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         }
         _scrollToBottom();
       } else {
-        String errMsg = l.attachSendFailed;
+        String errMsg = loc.t("attachSendFailed");
         try {
           final errBody = jsonDecode(body) as Map<String, dynamic>?;
           final detail = errBody?['detail'] as String?;
@@ -1327,7 +1326,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(message: l.attachSendFailed);
+        TeqSnackBar.show(message: loc.t("attachSendFailed"));
       }
     } finally {
       if (mounted) setState(() => _uploadingMedia = false);
@@ -1335,7 +1334,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   }
 
   Future<void> _showAttachSheet() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     await showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -1354,7 +1353,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l.attachPickGallery),
+              title: Text(loc.t("attachPickGallery")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendImage(source: ImageSource.gallery);
@@ -1362,7 +1361,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(l.attachPickCamera),
+              title: Text(loc.t("attachPickCamera")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendImage(source: ImageSource.camera);
@@ -1370,7 +1369,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: Text(l.attachPickVideo),
+              title: Text(loc.t("attachPickVideo")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendVideo(source: ImageSource.gallery);
@@ -1378,7 +1377,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
             ListTile(
               leading: const Icon(Icons.video_camera_back_outlined),
-              title: Text(l.attachRecordVideo),
+              title: Text(loc.t("attachRecordVideo")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendVideo(source: ImageSource.camera);
@@ -1386,7 +1385,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
             ListTile(
               leading: const Icon(Icons.attach_file_outlined),
-              title: Text(l.attachPickFile),
+              title: Text(loc.t("attachPickFile")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendFile();
@@ -1400,7 +1399,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   }
 
   Future<void> _pickAndSendImage({required ImageSource source}) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     // iOS permission dialog'unu native paket tetikler (stream/LiveKit gibi).
     // Pre-check yapmak dialog'u bloke edebilir — null dönünce status'u kontrol et.
     final picked = await ImagePicker().pickImage(
@@ -1421,7 +1420,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final raw = await picked.readAsBytes();
     if (raw.length > 5 * 1024 * 1024) {
       if (!mounted) return;
-      TeqSnackBar.show(message: l.attachFileTooLarge);
+      TeqSnackBar.show(message: loc.t("attachFileTooLarge"));
       return;
     }
     final compressed = await FlutterImageCompress.compressWithList(
@@ -1440,7 +1439,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   Future<void> _pickAndSendVideo({
     ImageSource source = ImageSource.gallery,
   }) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final picked = await ImagePicker().pickVideo(
       source: source,
       maxDuration: const Duration(seconds: 15),
@@ -1449,11 +1448,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final info = await VideoCompress.getMediaInfo(picked.path);
     if ((info.duration ?? 0) / 1000 > 15) {
       if (!mounted) return;
-      TeqSnackBar.show(message: l.attachVideoTooLong);
+      TeqSnackBar.show(message: loc.t("attachVideoTooLong"));
       return;
     }
     if (!mounted) return;
-    TeqToast.info(l.attachVideoProcessing, duration: const Duration(seconds: 10));
+    TeqToast.info(loc.t("attachVideoProcessing"), duration: const Duration(seconds: 10));
     final result = await VideoCompress.compressVideo(
       picked.path,
       quality: VideoQuality.MediumQuality,
@@ -1462,7 +1461,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     if (!mounted) return;
     final file = result?.file;
     if (file == null) {
-      TeqSnackBar.show(message: l.attachSendFailed);
+      TeqSnackBar.show(message: loc.t("attachSendFailed"));
       return;
     }
     final bytes = await file.readAsBytes();
@@ -1488,7 +1487,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   };
 
   Future<void> _pickAndSendFile() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final result = await FilePicker.platform.pickFiles(
       withData: true,
       type: FileType.custom,
@@ -1499,7 +1498,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final bytes = f.bytes;
     if (bytes == null) return;
     if (bytes.length > 5 * 1024 * 1024) {
-      TeqSnackBar.show(message: l.attachFileTooLarge);
+      TeqSnackBar.show(message: loc.t("attachFileTooLarge"));
       return;
     }
     final ext = f.extension?.toLowerCase() ?? '';
@@ -1515,7 +1514,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   // ─── Voice recording ─────────────────────────────────────────────────
 
   Future<void> _startRecording() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     // iOS permission dialog'unu record paketi tetikler — pre-check yapmıyoruz.
     try {
       final tmpDir = await getTemporaryDirectory();
@@ -1552,7 +1551,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (micStatus.isPermanentlyDenied) {
         await openAppSettings();
       } else {
-        TeqSnackBar.show(message: l.voiceRecordFailed);
+        TeqSnackBar.show(message: loc.t("voiceRecordFailed"));
       }
     }
   }
@@ -1588,7 +1587,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     String url,
     int? durationSecs,
   ) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (_playingMsgId == msgId && _audioPlaying) {
       await _audioPlayer.pause();
       setState(() => _audioPlaying = false);
@@ -1608,7 +1607,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (mounted) setState(() => _audioPlaying = true);
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(message: l.voicePlayFailed);
+        TeqSnackBar.show(message: loc.t("voicePlayFailed"));
       }
     }
   }
@@ -1616,7 +1615,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   // ─── File download/open ──────────────────────────────────────────────
 
   Future<void> _downloadAndOpen(String url, String? fileName) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     try {
       final response = await http.get(Uri.parse(imgUrl(url)));
       final dir = await getTemporaryDirectory();
@@ -1626,7 +1625,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       await OpenFilex.open(file.path);
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(message: l.attachOpenFailed);
+        TeqSnackBar.show(message: loc.t("attachOpenFailed"));
       }
     }
   }
@@ -1634,7 +1633,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   // ─── Message content builder ─────────────────────────────────────────
 
   Widget _buildMsgContent(Map<String, dynamic> msg, bool isMe) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final ct = msg['content_type'] as String? ?? 'text';
     final mediaUrl = msg['media_url'] as String?;
     final thumbUrl = msg['thumbnail_url'] as String?;
@@ -1805,7 +1804,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      fileName ?? l.attachPickFile,
+                      fileName ?? loc.t("attachPickFile"),
                       style: TextStyle(
                         color: isMe ? Colors.white : Colors.black87,
                         fontWeight: FontWeight.w500,
@@ -1837,7 +1836,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   }
 
   Future<void> _deleteMessage(int messageId) async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -1857,7 +1856,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                l.msgDeleteMessageConfirm,
+                loc.t("msgDeleteMessageConfirm"),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -1865,14 +1864,14 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
               title: Text(
-                l.msgDeleteMessage,
+                loc.t("msgDeleteMessage"),
                 style: const TextStyle(color: Colors.red),
               ),
               onTap: () => Navigator.pop(ctx, true),
             ),
             ListTile(
               leading: const Icon(Icons.close),
-              title: Text(l.btnCancel),
+              title: Text(loc.t("btnCancel")),
               onTap: () => Navigator.pop(ctx, false),
             ),
             const SizedBox(height: 8),
@@ -1886,11 +1885,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final ok = await NotificationService.deleteMessage(messageId);
     if (!mounted) return;
     if (!ok) {
-      TeqSnackBar.show(message: l.msgDeleteMessageFailed);
+      TeqSnackBar.show(message: loc.t("msgDeleteMessageFailed"));
       // Başarısız olursa listeyi yeniden yükle
       _loadMessages();
     } else {
-      TeqSnackBar.show(message: l.msgDeleteMessageSuccess);
+      TeqSnackBar.show(message: loc.t("msgDeleteMessageSuccess"));
     }
   }
 
@@ -1997,7 +1996,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -2018,7 +2017,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.call, size: 22),
-            tooltip: l.callVoiceCall,
+            tooltip: loc.t("callVoiceCall"),
             onPressed: () {
               debugPrint(
                 '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
@@ -2067,7 +2066,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                             : _messages.isEmpty
                             ? Center(
                                 child: Text(
-                                  l.msgNoChat,
+                                  loc.t("msgNoChat"),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     color: Color(0xFF9CA3AF),
@@ -2211,7 +2210,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                   const _TypingIndicator(),
                   const SizedBox(width: 8),
                   Text(
-                    l.msgTyping,
+                    loc.t("msgTyping"),
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary(context),
@@ -2229,7 +2228,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
             child: SafeArea(
               top: false,
-              child: _isRecording ? _buildRecordingBar(l) : _buildNormalBar(l),
+              child: _isRecording ? _buildRecordingBar(loc) : _buildNormalBar(loc),
             ),
           ),
         ],
@@ -2237,7 +2236,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     );
   }
 
-  Widget _buildNormalBar(AppLocalizations l) {
+  Widget _buildNormalBar(TranslationPack loc) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -2273,7 +2272,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             maxLines: null,
             minLines: 1,
             onChanged: _onTextChanged,
-            hintText: l.msgWriteHint,
+            hintText: loc.t("msgWriteHint"),
           ),
         ),
         const SizedBox(width: 6),
@@ -2336,7 +2335,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     );
   }
 
-  Widget _buildRecordingBar(AppLocalizations l) {
+  Widget _buildRecordingBar(TranslationPack loc) {
     final mins = _recordSecs ~/ 60;
     final secs = _recordSecs % 60;
     final timer =
@@ -2365,7 +2364,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             children: [
               const Icon(Icons.chevron_left, size: 18, color: Colors.grey),
               Text(
-                l.voiceSwipeToCancel,
+                loc.t("voiceSwipeToCancel"),
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
@@ -2413,22 +2412,22 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
 // ── Alışveriş/Satış bağlam bandı ─────────────────────────────────────────────
 
-class _ContextBanner extends StatelessWidget {
+class _ContextBanner extends ConsumerWidget {
   final Map<String, dynamic>? purchase;
   final Map<String, dynamic>? sale;
 
   const _ContextBanner({this.purchase, this.sale});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     final item = purchase ?? sale!;
     final isPurchase = purchase != null;
-    final itemName = item['item_name'] as String? ?? l.msgItemFallback;
+    final itemName = item['item_name'] as String? ?? loc.t("msgItemFallback");
     final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
     final thumbnailUrl =
         item['thumbnail_url'] as String? ?? item['image_url'] as String?;
-    final label = isPurchase ? l.msgContextPurchase : l.msgContextSale;
+    final label = isPurchase ? loc.t("msgContextPurchase") : loc.t("msgContextSale");
 
     return InkWell(
       onTap: () {
@@ -2535,7 +2534,7 @@ class _ContextBanner extends StatelessWidget {
 
 // ── Tıklanabilir URL'li mesaj metni ──────────────────────────────────────────
 
-class _MessageText extends StatelessWidget {
+class _MessageText extends ConsumerWidget {
   final String content;
   final bool isMe;
 
@@ -2591,8 +2590,8 @@ class _MessageText extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     final normalColor = isMe ? Colors.white : AppColors.textPrimary(context);
     const linkColor = Color(0xFF38BDF8);
     const auctionLinkColor = Color(0xFF4ADE80);
@@ -2623,7 +2622,7 @@ class _MessageText extends StatelessWidget {
         final listingId = int.parse(match.group(2)!);
         spans.add(
           TextSpan(
-            text: l.msgGoToListing,
+            text: loc.t("msgGoToListing"),
             style: const TextStyle(
               color: linkColor,
               fontSize: 14.5,
@@ -2640,7 +2639,7 @@ class _MessageText extends StatelessWidget {
         final auctionId = int.parse(match.group(3)!);
         spans.add(
           TextSpan(
-            text: l.msgGoToAuctionDetail,
+            text: loc.t("msgGoToAuctionDetail"),
             style: const TextStyle(
               color: auctionLinkColor,
               fontSize: 14.5,
@@ -2671,13 +2670,13 @@ class _MessageText extends StatelessWidget {
 
 // ── Yazıyor animasyonu ────────────────────────────────────────────────────────
 
-class _TypingIndicator extends StatefulWidget {
+class _TypingIndicator extends ConsumerStatefulWidget {
   const _TypingIndicator();
   @override
-  State<_TypingIndicator> createState() => _TypingIndicatorState();
+  ConsumerState<_TypingIndicator> createState() => _TypingIndicatorState();
 }
 
-class _TypingIndicatorState extends State<_TypingIndicator>
+class _TypingIndicatorState extends ConsumerState<_TypingIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
@@ -2727,12 +2726,12 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
 // ── Tam ekran resim görüntüleyici ─────────────────────────────────────────────
 
-class _FullScreenImagePage extends StatelessWidget {
+class _FullScreenImagePage extends ConsumerWidget {
   final String url;
   const _FullScreenImagePage({required this.url});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -2757,15 +2756,15 @@ class _FullScreenImagePage extends StatelessWidget {
 
 // ── Tam ekran video oynatıcı ──────────────────────────────────────────────────
 
-class _FullScreenVideoPage extends StatefulWidget {
+class _FullScreenVideoPage extends ConsumerStatefulWidget {
   final String url;
   const _FullScreenVideoPage({required this.url});
 
   @override
-  State<_FullScreenVideoPage> createState() => _FullScreenVideoPageState();
+  ConsumerState<_FullScreenVideoPage> createState() => _FullScreenVideoPageState();
 }
 
-class _FullScreenVideoPageState extends State<_FullScreenVideoPage> {
+class _FullScreenVideoPageState extends ConsumerState<_FullScreenVideoPage> {
   late VideoPlayerController _vCtrl;
   bool _initialized = false;
   bool _playing = false;

@@ -4,7 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/phone_input_field.dart';
@@ -12,14 +13,14 @@ import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 
-class AccountInfoScreen extends StatefulWidget {
+class AccountInfoScreen extends ConsumerStatefulWidget {
   const AccountInfoScreen({super.key});
 
   @override
-  State<AccountInfoScreen> createState() => _AccountInfoScreenState();
+  ConsumerState<AccountInfoScreen> createState() => _AccountInfoScreenState();
 }
 
-class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindingObserver {
+class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? _user;
   bool _loading = true;
 
@@ -64,7 +65,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
-        TeqSnackBar.show(message: AppLocalizations.of(context)!.errorGenericRetry,
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('errorGenericRetry'),
           type: TeqSnackBarType.error,
         );
       }
@@ -75,12 +76,12 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         backgroundColor: AppColors.surface(context),
-        title: Text(l.accountInfoTitle, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        title: Text(loc.t('accountInfoTitle'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
         centerTitle: true,
         elevation: 0,
       ),
@@ -93,12 +94,12 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
                 padding: const EdgeInsets.all(16),
                 children: [
                 _SectionCard(
-                  title: l.accountInfoSecuritySection,
+                  title: loc.t('accountInfoSecuritySection'),
                   child: Column(
                     children: [
                       _InfoRow(
                         icon: Icons.email_outlined,
-                        label: l.accountInfoEmail,
+                        label: loc.t('accountInfoEmail'),
                         value: _user?['email'] as String? ?? '',
                         verified: true,
                         onTap: () => _showEmailChangeSheet(),
@@ -106,8 +107,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
                       const Divider(height: 1, indent: 16),
                       _InfoRow(
                         icon: Icons.phone_outlined,
-                        label: l.accountInfoPhone,
-                        value: _user?['phone'] as String? ?? l.accountInfoPhoneEmpty,
+                        label: loc.t('accountInfoPhone'),
+                        value: _user?['phone'] as String? ?? loc.t('accountInfoPhoneEmpty'),
                         verified: _user?['phone_verified'] as bool? ?? false,
                         onTap: () => _showPhoneSheet(),
                       ),
@@ -189,7 +190,7 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _InfoRow extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String value;
@@ -205,7 +206,7 @@ class _InfoRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
       leading: Icon(icon, color: AppColors.iconColor(context), size: 20),
       title: Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
@@ -229,7 +230,7 @@ class _InfoRow extends StatelessWidget {
                 color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text(AppLocalizations.of(context)!.accountInfoUnverified, style: const TextStyle(fontSize: 10, color: Colors.amber, fontWeight: FontWeight.w600)),
+              child: Text(ref.read(localizationProvider).t('accountInfoUnverified'), style: const TextStyle(fontSize: 10, color: Colors.amber, fontWeight: FontWeight.w600)),
             ),
           ],
         ],
@@ -244,16 +245,16 @@ class _InfoRow extends StatelessWidget {
 // Email change sheet
 // ---------------------------------------------------------------------------
 
-class _EmailChangeSheet extends StatefulWidget {
+class _EmailChangeSheet extends ConsumerStatefulWidget {
   final String currentEmail;
   final VoidCallback onChanged;
   const _EmailChangeSheet({required this.currentEmail, required this.onChanged});
 
   @override
-  State<_EmailChangeSheet> createState() => _EmailChangeSheetState();
+  ConsumerState<_EmailChangeSheet> createState() => _EmailChangeSheetState();
 }
 
-class _EmailChangeSheetState extends State<_EmailChangeSheet> {
+class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
   final _emailCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   bool _codeSent = false;
@@ -268,10 +269,10 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
   }
 
   Future<void> _requestCode() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final email = _emailCtrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = l.accountInfoNewEmail);
+      setState(() => _error = loc.t('accountInfoNewEmail'));
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -290,15 +291,15 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
         setState(() { _error = msg; _loading = false; });
       }
     } catch (_) {
-      if (mounted) setState(() { _error = AppLocalizations.of(context)!.accountInfoConnectError; _loading = false; });
+      if (mounted) setState(() { _error = ref.read(localizationProvider).t('accountInfoConnectError'); _loading = false; });
     }
   }
 
   Future<void> _verifyCode() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final code = _codeCtrl.text.trim();
     if (code.length != 6) {
-      setState(() => _error = l.accountInfoVerifyCode);
+      setState(() => _error = loc.t('accountInfoVerifyCode'));
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -313,7 +314,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
       if (resp.statusCode == 200) {
         Navigator.pop(context);
         widget.onChanged();
-        TeqSnackBar.show(message: l.accountInfoEmailUpdated,
+        TeqSnackBar.show(message: loc.t('accountInfoEmailUpdated'),
           type: TeqSnackBarType.success,
         );
       } else {
@@ -321,13 +322,13 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
         setState(() { _error = msg; _loading = false; });
       }
     } catch (_) {
-      if (mounted) setState(() { _error = AppLocalizations.of(context)!.accountInfoConnectError; _loading = false; });
+      if (mounted) setState(() { _error = ref.read(localizationProvider).t('accountInfoConnectError'); _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32),
       child: Column(
@@ -341,10 +342,10 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
               decoration: BoxDecoration(color: AppColors.border(context), borderRadius: BorderRadius.circular(2)),
             ),
           ),
-          Text(l.accountInfoEmailChangeTitle, style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800)),
+          Text(loc.t('accountInfoEmailChangeTitle'), style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           Text(
-            l.accountInfoEmailCurrent(widget.currentEmail),
+            loc.t('accountInfoEmailCurrent', {'email': widget.currentEmail}),
             style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
           ),
           const SizedBox(height: 20),
@@ -352,7 +353,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
             readOnly: _codeSent,
-            labelText: l.accountInfoNewEmail,
+            labelText: loc.t('accountInfoNewEmail'),
             prefixIcon: Icon(Icons.email_outlined, size: 18, color: AppColors.iconColor(context)),
             onChanged: (_) { if (_error != null) setState(() => _error = null); },
           ),
@@ -362,7 +363,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
               controller: _codeCtrl,
               keyboardType: TextInputType.number,
               maxLength: 6,
-              labelText: l.accountInfoVerifyCode,
+              labelText: loc.t('accountInfoVerifyCode'),
               prefixIcon: Icon(Icons.lock_outline, size: 18, color: AppColors.iconColor(context)),
               onChanged: (_) { if (_error != null) setState(() => _error = null); },
             ),
@@ -373,7 +374,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
           ],
           const SizedBox(height: 20),
           TeqButton(
-            text: _codeSent ? l.accountInfoVerifyCodeBtn : l.accountInfoSendCode,
+            text: _codeSent ? loc.t('accountInfoVerifyCodeBtn') : loc.t('accountInfoSendCode'),
             onPressed: _loading ? null : (_codeSent ? _verifyCode : _requestCode),
             isLoading: _loading,
             isExpanded: true,
@@ -382,7 +383,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
             const SizedBox(height: 8),
             Center(
               child: TeqButton.text(
-                text: l.accountInfoDifferentEmail,
+                text: loc.t('accountInfoDifferentEmail'),
                 onPressed: _loading ? null : () => setState(() { _codeSent = false; _codeCtrl.clear(); _error = null; }),
               ),
             ),
@@ -398,17 +399,17 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
 // Phone sheet (reuses the same email-based verification flow)
 // ---------------------------------------------------------------------------
 
-class _PhoneSheet extends StatefulWidget {
+class _PhoneSheet extends ConsumerStatefulWidget {
   final String? currentPhone;
   final VoidCallback onChanged;
   final VoidCallback onClose;
   const _PhoneSheet({this.currentPhone, required this.onChanged, required this.onClose});
 
   @override
-  State<_PhoneSheet> createState() => _PhoneSheetState();
+  ConsumerState<_PhoneSheet> createState() => _PhoneSheetState();
 }
 
-class _PhoneSheetState extends State<_PhoneSheet> {
+class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
   late String? _phoneE164;
   bool _loading = false;
   bool _sent = false;
@@ -423,7 +424,7 @@ class _PhoneSheetState extends State<_PhoneSheet> {
   Future<void> _send() async {
     final phone = _phoneE164;
     if (phone == null || phone.length < 8) {
-      setState(() => _error = AppLocalizations.of(context)!.accountInfoPhone);
+      setState(() => _error = ref.read(localizationProvider).t('accountInfoPhone'));
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -442,13 +443,13 @@ class _PhoneSheetState extends State<_PhoneSheet> {
         setState(() { _error = msg; _loading = false; });
       }
     } catch (_) {
-      if (mounted) setState(() { _error = AppLocalizations.of(context)!.accountInfoConnectError; _loading = false; });
+      if (mounted) setState(() { _error = ref.read(localizationProvider).t('accountInfoConnectError'); _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32),
       child: Column(
@@ -464,16 +465,16 @@ class _PhoneSheetState extends State<_PhoneSheet> {
           if (_sent) ...[
             const Icon(Icons.mark_email_read_outlined, color: Color(0xFF0D9488), size: 48),
             const SizedBox(height: 14),
-            Text(l.accountInfoEmailSent, style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800)),
+            Text(loc.t('accountInfoEmailSent'), style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
             Text(
-              l.accountInfoEmailSentDesc,
+              loc.t('accountInfoEmailSentDesc'),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13, height: 1.55),
             ),
             const SizedBox(height: 28),
             TeqButton(
-              text: l.accountInfoOk,
+              text: loc.t('accountInfoOk'),
               onPressed: () { Navigator.pop(context); widget.onChanged(); },
               isExpanded: true,
             ),
@@ -481,7 +482,7 @@ class _PhoneSheetState extends State<_PhoneSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                widget.currentPhone != null ? l.accountInfoPhoneChangeTitle : l.accountInfoPhoneAddTitle,
+                widget.currentPhone != null ? loc.t('accountInfoPhoneChangeTitle') : loc.t('accountInfoPhoneAddTitle'),
                 style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800),
               ),
             ),
@@ -490,7 +491,7 @@ class _PhoneSheetState extends State<_PhoneSheet> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  l.accountInfoPhoneCurrent(widget.currentPhone!),
+                  loc.t('accountInfoPhoneCurrent', {'phone': widget.currentPhone!}),
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
                 ),
               ),
@@ -504,14 +505,14 @@ class _PhoneSheetState extends State<_PhoneSheet> {
             ),
             const SizedBox(height: 20),
             TeqButton(
-              text: l.accountInfoPhoneSendVerify,
+              text: loc.t('accountInfoPhoneSendVerify'),
               onPressed: _loading ? null : _send,
               isLoading: _loading,
               isExpanded: true,
             ),
             const SizedBox(height: 10),
             TeqButton.text(
-              text: l.accountInfoCancel,
+              text: loc.t('accountInfoCancel'),
               onPressed: widget.onClose,
             ),
           ],

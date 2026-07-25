@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../config/theme.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/analytics_service.dart';
 import '../services/version_service.dart';
 
-class SoftUpdateDialog extends StatefulWidget {
+class SoftUpdateDialog extends ConsumerStatefulWidget {
   const SoftUpdateDialog({super.key});
 
   @override
-  State<SoftUpdateDialog> createState() => _SoftUpdateDialogState();
+  ConsumerState<SoftUpdateDialog> createState() => _SoftUpdateDialogState();
 }
 
-class _SoftUpdateDialogState extends State<SoftUpdateDialog> {
+class _SoftUpdateDialogState extends ConsumerState<SoftUpdateDialog> {
   @override
   void initState() {
     super.initState();
@@ -30,7 +31,7 @@ class _SoftUpdateDialogState extends State<SoftUpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Dialog(
       backgroundColor: AppColors.surface(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -42,13 +43,13 @@ class _SoftUpdateDialogState extends State<SoftUpdateDialog> {
             const Icon(Icons.system_update_rounded, size: 48, color: kPrimary),
             const SizedBox(height: 16),
             Text(
-              l.softUpdateTitle,
+              loc.t("softUpdateTitle"),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              l.softUpdateMessage,
+              loc.t("softUpdateMessage"),
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
               textAlign: TextAlign.center,
             ),
@@ -62,7 +63,7 @@ class _SoftUpdateDialogState extends State<SoftUpdateDialog> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                child: Text(l.softUpdateUpdateNow),
+                child: Text(loc.t("softUpdateUpdateNow")),
               ),
             ),
             const SizedBox(height: 8),
@@ -72,7 +73,7 @@ class _SoftUpdateDialogState extends State<SoftUpdateDialog> {
                 Navigator.pop(context);
               },
               child: Text(
-                l.softUpdateLater,
+                loc.t("softUpdateLater"),
                 style: TextStyle(color: AppColors.textSecondary(context)),
               ),
             ),

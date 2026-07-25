@@ -1,8 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api.dart';
+import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/call_service.dart';
@@ -16,15 +17,15 @@ void _uiLog(String component, String event, String detail) {
   debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
 }
 
-class IncomingCallScreen extends StatefulWidget {
+class IncomingCallScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> callData;
   const IncomingCallScreen({super.key, required this.callData});
 
   @override
-  State<IncomingCallScreen> createState() => _IncomingCallScreenState();
+  ConsumerState<IncomingCallScreen> createState() => _IncomingCallScreenState();
 }
 
-class _IncomingCallScreenState extends State<IncomingCallScreen>
+class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseCtrl;
   late Animation<double> _pulse;
@@ -84,19 +85,19 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           await showDialog<void>(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: Text(AppLocalizations.of(ctx)!.callPermissionDenied),
-              content: Text(AppLocalizations.of(ctx)!.voicePermissionDenied),
+              title: Text(ref.read(localizationProvider).t('callPermissionDenied')),
+              content: Text(ref.read(localizationProvider).t('voicePermissionDenied')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text(AppLocalizations.of(ctx)!.btnCancel),
+                  child: Text(ref.read(localizationProvider).t('btnCancel')),
                 ),
                 TextButton(
                   onPressed: () async {
                     Navigator.pop(ctx);
                     await openAppSettings();
                   },
-                  child: Text(AppLocalizations.of(ctx)!.navSettings),
+                  child: Text(ref.read(localizationProvider).t('navSettings')),
                 ),
               ],
             ),
@@ -137,7 +138,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final username = widget.callData['caller_username'] as String? ?? '';
     final avatarRaw = widget.callData['caller_avatar'] as String? ?? '';
     final avatarUrl = avatarRaw.isNotEmpty ? imgUrl(avatarRaw) : null;
@@ -179,7 +180,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
                 // Title
                 Text(
-                  l.callIncomingTitle,
+                  loc.t('callIncomingTitle'),
                   style: TextStyle(
                     color: AppColors.textSecondary(context),
                     fontSize: 16,
@@ -234,7 +235,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  l.callVoiceCall,
+                  loc.t('callVoiceCall'),
                   style: TextStyle(
                     color: AppColors.textSecondary(context),
                     fontSize: 15,
@@ -253,7 +254,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       _CallActionButton(
                         color: const Color(0xFFEF4444),
                         icon: Icons.call_end,
-                        label: l.callDecline,
+                        label: loc.t('callDecline'),
                         onTap: _decline,
                       ),
 
@@ -261,7 +262,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       _CallActionButton(
                         color: const Color(0xFF22C55E),
                         icon: Icons.call,
-                        label: l.callAccept,
+                        label: loc.t('callAccept'),
                         onTap: _accept,
                       ),
                     ],

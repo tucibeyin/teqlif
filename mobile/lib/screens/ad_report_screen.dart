@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 
-class AdReportScreen extends StatefulWidget {
+class AdReportScreen extends ConsumerStatefulWidget {
   final int campaignId;
   final String listingTitle;
 
@@ -15,10 +16,10 @@ class AdReportScreen extends StatefulWidget {
   });
 
   @override
-  State<AdReportScreen> createState() => _AdReportScreenState();
+  ConsumerState<AdReportScreen> createState() => _AdReportScreenState();
 }
 
-class _AdReportScreenState extends State<AdReportScreen>
+class _AdReportScreenState extends ConsumerState<AdReportScreen>
     with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _report;
   bool _loading = true;
@@ -63,16 +64,16 @@ class _AdReportScreenState extends State<AdReportScreen>
     return '%${v.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
-  String _statusLabel(String? s, AppLocalizations l) {
+  String _statusLabel(String? s, TranslationPack loc) {
     switch (s) {
       case 'active':
-        return l.adReportStatusActive;
+        return loc.t("adReportStatusActive");
       case 'completed':
-        return l.adReportStatusCompleted;
+        return loc.t("adReportStatusCompleted");
       case 'paused':
-        return l.adReportStatusPaused;
+        return loc.t("adReportStatusPaused");
       case 'cancelled':
-        return l.adReportStatusCancelled;
+        return loc.t("adReportStatusCancelled");
       default:
         return s ?? '—';
     }
@@ -118,7 +119,7 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Widget _buildLoading() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -126,7 +127,7 @@ class _AdReportScreenState extends State<AdReportScreen>
           const CircularProgressIndicator(color: kPrimary),
           const SizedBox(height: 16),
           Text(
-            l.adReportLoading,
+            loc.t("adReportLoading"),
             style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
           ),
         ],
@@ -135,7 +136,7 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Widget _buildError() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -149,13 +150,13 @@ class _AdReportScreenState extends State<AdReportScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              l.adReportLoadError,
+              loc.t("adReportLoadError"),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 15),
             ),
             const SizedBox(height: 24),
             _AdButton(
-              label: l.btnRetry,
+              label: loc.t("btnRetry"),
               color: kPrimary,
               onTap: () {
                 setState(() {
@@ -167,7 +168,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             ),
             const SizedBox(height: 12),
             _AdButton(
-              label: l.btnGoBack,
+              label: loc.t("btnGoBack"),
               color: const Color(0xFF1E293B),
               onTap: () => Navigator.pop(context),
             ),
@@ -178,7 +179,7 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Widget _buildReport() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final r = _report!;
     final status = r['status'] as String?;
     final impressions = r['impressions'] as int? ?? 0;
@@ -195,8 +196,8 @@ class _AdReportScreenState extends State<AdReportScreen>
           SliverToBoxAdapter(
             child: _AdHeader(
               title: widget.listingTitle,
-              tagLabel: l.adReportTitle,
-              subtitle: l.adReportSubtitle,
+              tagLabel: loc.t("adReportTitle"),
+              subtitle: loc.t("adReportSubtitle"),
             ),
           ),
 
@@ -231,7 +232,7 @@ class _AdReportScreenState extends State<AdReportScreen>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _statusLabel(status, l),
+                          _statusLabel(status, loc),
                           style: TextStyle(
                             color: _statusColor(status),
                             fontSize: 12,
@@ -255,31 +256,31 @@ class _AdReportScreenState extends State<AdReportScreen>
               delegate: SliverChildListDelegate([
                 _MetricCard(
                   icon: Icons.visibility_outlined,
-                  label: l.adReportMetricImpressions,
+                  label: loc.t("adReportMetricImpressions"),
                   value: '$impressions',
                   color: const Color(0xFF6366F1),
                 ),
                 _MetricCard(
                   icon: Icons.ads_click,
-                  label: l.adReportMetricClicks,
+                  label: loc.t("adReportMetricClicks"),
                   value: '$clicks',
                   color: const Color(0xFF10B981),
                 ),
                 _MetricCard(
                   icon: Icons.touch_app_rounded,
-                  label: l.adReportMetricClickRate,
+                  label: loc.t("adReportMetricClickRate"),
                   value: _fmtCtr(ctr),
                   color: const Color(0xFFF59E0B),
                   hint: clicks > 0 && impressions > 0
-                      ? l.adReportMetricClickRateHint(clicks, impressions)
+                      ? loc.t("adReportMetricClickRateHint", {"clicks": clicks.toString(), "impressions": impressions.toString()})
                       : null,
                 ),
                 _MetricCard(
                   icon: Icons.calendar_today_rounded,
-                  label: l.adReportMetricActiveDays,
+                  label: loc.t("adReportMetricActiveDays"),
                   value: activeDays == 0
-                      ? l.adReportMetricActiveDaysLessThan1
-                      : l.adReportMetricActiveDaysValue(activeDays),
+                      ? loc.t("adReportMetricActiveDaysLessThan1")
+                      : loc.t("adReportMetricActiveDaysValue", {"days": activeDays.toString()}),
                   color: const Color(0xFF06B6D4),
                 ),
               ]),
@@ -308,7 +309,7 @@ class _AdReportScreenState extends State<AdReportScreen>
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: _AdvancedMetrics(report: r, l: l),
+              child: _AdvancedMetrics(report: r, loc: loc),
             ),
           ),
 
@@ -317,7 +318,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
               child: _AdButton(
-                label: l.btnGoBack,
+                label: loc.t("btnGoBack"),
                 color: const Color(0xFF1E293B),
                 onTap: () => Navigator.pop(context),
               ),
@@ -331,7 +332,7 @@ class _AdReportScreenState extends State<AdReportScreen>
 
 // ── Header ───────────────────────────────────────────────────────────────────
 
-class _AdHeader extends StatelessWidget {
+class _AdHeader extends ConsumerWidget {
   final String title;
   final String tagLabel;
   final String subtitle;
@@ -343,7 +344,7 @@ class _AdHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       decoration: const BoxDecoration(
@@ -419,7 +420,7 @@ class _AdHeader extends StatelessWidget {
 
 // ── Metric Card ──────────────────────────────────────────────────────────────
 
-class _MetricCard extends StatelessWidget {
+class _MetricCard extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String value;
@@ -435,7 +436,7 @@ class _MetricCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -505,7 +506,7 @@ class _MetricCard extends StatelessWidget {
 
 // ── CTR Insight ──────────────────────────────────────────────────────────────
 
-class _CtrInsight extends StatelessWidget {
+class _CtrInsight extends ConsumerWidget {
   final double ctr;
   final int clicks;
   final int impressions;
@@ -516,17 +517,17 @@ class _CtrInsight extends StatelessWidget {
     required this.impressions,
   });
 
-  String _insight(AppLocalizations l) {
-    if (impressions == 0) return l.adReportInsightNoImpressions;
-    if (ctr >= 5) return l.adReportInsightGreat(ctr.round());
-    if (ctr >= 2) return l.adReportInsightGood(clicks, impressions);
-    if (ctr >= 0.5) return l.adReportInsightLow(clicks, impressions);
-    return l.adReportInsightVeryLow(clicks, impressions);
+  String _insight(TranslationPack loc) {
+    if (impressions == 0) return loc.t("adReportInsightNoImpressions");
+    if (ctr >= 5) return loc.t("adReportInsightGreat", {"clicks": ctr.round().toString()});
+    if (ctr >= 2) return loc.t("adReportInsightGood", {"clicks": clicks.toString(), "impressions": impressions.toString()});
+    if (ctr >= 0.5) return loc.t("adReportInsightLow", {"clicks": clicks.toString(), "impressions": impressions.toString()});
+    return loc.t("adReportInsightVeryLow", {"clicks": clicks.toString(), "impressions": impressions.toString()});
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -561,7 +562,7 @@ class _CtrInsight extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                l.adReportSmartAnalysis,
+                loc.t("adReportSmartAnalysis"),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,
@@ -572,7 +573,7 @@ class _CtrInsight extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            _insight(l),
+            _insight(loc),
             style: const TextStyle(
               color: Color(0xFFCBD5E1),
               fontSize: 13,
@@ -587,7 +588,7 @@ class _CtrInsight extends StatelessWidget {
 
 // ── Button ────────────────────────────────────────────────────────────────────
 
-class _AdButton extends StatelessWidget {
+class _AdButton extends ConsumerWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
@@ -598,7 +599,7 @@ class _AdButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return TeqButton(
       text: label,
       onPressed: onTap,
@@ -610,13 +611,13 @@ class _AdButton extends StatelessWidget {
 
 // ── Gelişmiş Reklam Metrikleri ────────────────────────────────────────────────
 
-class _AdvancedMetrics extends StatelessWidget {
+class _AdvancedMetrics extends ConsumerWidget {
   final Map<String, dynamic> report;
-  final AppLocalizations l;
-  const _AdvancedMetrics({required this.report, required this.l});
+  final TranslationPack loc;
+  const _AdvancedMetrics({required this.report, required this.loc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bestHour = report['best_hour'] as int?;
     final catAvgCtr = report['category_avg_ctr'];
 
@@ -637,7 +638,7 @@ class _AdvancedMetrics extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.adReportSmartAnalysis,
+            loc.t("adReportSmartAnalysis"),
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 12,
@@ -651,7 +652,7 @@ class _AdvancedMetrics extends StatelessWidget {
                 Expanded(
                   child: _MiniStat(
                     icon: Icons.schedule,
-                    label: l.adMetricBestHour,
+                    label: loc.t("adMetricBestHour"),
                     value: '$bestHour:00',
                   ),
                 ),
@@ -659,7 +660,7 @@ class _AdvancedMetrics extends StatelessWidget {
                 Expanded(
                   child: _MiniStat(
                     icon: Icons.bar_chart,
-                    label: l.adMetricCategoryAvgCtr,
+                    label: loc.t("adMetricCategoryAvgCtr"),
                     value: '%${(catAvgCtr as num).toStringAsFixed(1)}',
                   ),
                 ),
@@ -671,7 +672,7 @@ class _AdvancedMetrics extends StatelessWidget {
   }
 }
 
-class _MiniStat extends StatelessWidget {
+class _MiniStat extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String value;
@@ -682,7 +683,7 @@ class _MiniStat extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         Icon(icon, size: 18, color: const Color(0xFF818CF8)),

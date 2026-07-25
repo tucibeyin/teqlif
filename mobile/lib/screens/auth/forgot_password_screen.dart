@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
+import '../../services/localization_service.dart';
 import 'reset_password_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
-import '../../ui_library/components/overlays/teq_snackbar.dart';
-import '../../ui_library/components/overlays/teq_toast.dart';
-import '../../core/app_exception.dart';
-import '../../core/error_display.dart';
+import '../../utils/error_helper.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
@@ -36,7 +34,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailCtrl.text.trim();
 
     try {
-      final lang = AppLocalizations.of(context)!.localeName;
+      final lang = ref.read(localizationProvider).lang;
       await AuthService.requestPasswordReset(email, lang: lang);
       if (!mounted) return;
 
@@ -44,13 +42,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: email)),
       );
     } catch (e) {
-      if (mounted) {
-        if (e is AppException) {
-          ErrorDisplay.fromException(context, e);
-        } else {
-          TeqToast.error(AppLocalizations.of(context)!.errorGenericRetry);
-        }
-      }
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -58,7 +50,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bg(context),
@@ -93,7 +85,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    l.forgotPassword,
+                    loc.t('forgotPassword'),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -102,7 +94,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    l.resetPasswordDescription,
+                    loc.t('resetPasswordDescription'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -113,7 +105,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   TeqTextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    hintText: AppLocalizations.of(context)!.hintExampleEmail,
+                    hintText: loc.t('hintExampleEmail'),
                     prefixIcon: const Icon(Icons.email_outlined),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'E-posta boş olamaz';
@@ -123,7 +115,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 24),
                   TeqButton(
-                    text: l.sendResetCode,
+                    text: loc.t('sendResetCode'),
                     isLoading: _loading,
                     onPressed: _submit,
                   ),

@@ -15,7 +15,8 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
 import '../services/notification_service.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import 'messages_screen.dart';
 import '../services/call_service.dart';
 import 'follow_list_screen.dart';
@@ -27,16 +28,16 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 const _starColor = Color(0xFFF59E0B);
 
-class PublicProfileScreen extends StatefulWidget {
+class PublicProfileScreen extends ConsumerStatefulWidget {
   final String username;
   final int? userId;
   const PublicProfileScreen({super.key, required this.username, this.userId});
 
   @override
-  State<PublicProfileScreen> createState() => _PublicProfileScreenState();
+  ConsumerState<PublicProfileScreen> createState() => _PublicProfileScreenState();
 }
 
-class _PublicProfileScreenState extends State<PublicProfileScreen> {
+class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
   bool _loading = true;
@@ -246,8 +247,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       }
     } catch (_) {
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(message: l.pubProfileActionFailed, type: TeqSnackBarType.error);
+        final loc = ref.read(localizationProvider);
+        TeqSnackBar.show(message: loc.t('pubProfileActionFailed'), type: TeqSnackBarType.error);
       }
     } finally {}
   }
@@ -298,7 +299,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -339,7 +340,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           Builder(
             builder: (btnCtx) => IconButton(
               icon: const Icon(Icons.share_outlined),
-              tooltip: l.btnShareProfile,
+              tooltip: loc.t('btnShareProfile'),
               onPressed: () {
                 final box = btnCtx.findRenderObject() as RenderBox?;
                 final origin = box == null
@@ -361,13 +362,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _user == null
-          ? Center(child: Text(l.pubProfileUserNotFound))
+          ? Center(child: Text(loc.t('pubProfileUserNotFound')))
           : _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final fullName = (_user!['full_name'] as String?) ?? widget.username;
     final userId = (_user!['id'] as int?) ?? widget.userId ?? 0;
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
@@ -408,7 +409,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           TeqDialog.show(
                             context: context,
                             title: 'Verified',
-                            message: AppLocalizations.of(context)!.badgeVerifiedHint,
+                            message: ref.read(localizationProvider).t('badgeVerifiedHint'),
                             primaryButtonText: 'Tamam',
                             onPrimaryPressed: () => Navigator.pop(context),
                           );
@@ -433,7 +434,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                AppLocalizations.of(context)!.badgeVerified,
+                                ref.read(localizationProvider).t('badgeVerified'),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -447,25 +448,25 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0)
                       _ProfileBadge(
                         icon: FontAwesomeIcons.rankingStar,
-                        title: AppLocalizations.of(context)!.influenceRankLabel,
+                        title: ref.read(localizationProvider).t('influenceRankLabel'),
                         value: '${_user!['influence_rank']}',
                         color: const Color(0xFF8B5CF6),
-                        hint: AppLocalizations.of(context)!.influenceRankHint,
+                        hint: ref.read(localizationProvider).t('influenceRankHint'),
                       ),
                     if (_user?['trust_score'] != null)
-                      Builder(builder: (ctx) {
+                      Builder(builder: (_) {
                         final ts = (_user!['trust_score'] as num).toInt();
-                        final loc = AppLocalizations.of(ctx)!;
+                        final loc = ref.read(localizationProvider);
                         return _ProfileBadge(
                           icon: FontAwesomeIcons.shieldHalved,
-                          title: loc.trustScoreLabel,
+                          title: loc.t('trustScoreLabel'),
                           value: '$ts / 100',
                           color: ts >= 70
                               ? const Color(0xFF10B981)
                               : ts >= 35
                                   ? const Color(0xFF3B82F6)
                                   : const Color(0xFF9CA3AF),
-                          hint: loc.trustScoreHint,
+                          hint: loc.t('trustScoreHint'),
                         );
                       }),
                   ],
@@ -495,7 +496,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     children: [
                       Expanded(
                         child: _statCell(
-                          l.pubProfileStatListings,
+                          loc.t('pubProfileStatListings'),
                           listingCount,
                         ),
                       ),
@@ -509,12 +510,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               builder: (_) => FollowListScreen(
                                 userId: userId,
                                 type: FollowListType.followers,
-                                title: l.publicProfileFollowers,
+                                title: loc.t('publicProfileFollowers'),
                               ),
                             ),
                           ),
                           child: _statCell(
-                            l.pubProfileStatFollowers,
+                            loc.t('pubProfileStatFollowers'),
                             followerCount,
                           ),
                         ),
@@ -529,12 +530,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               builder: (_) => FollowListScreen(
                                 userId: userId,
                                 type: FollowListType.following,
-                                title: l.publicProfileFollowing,
+                                title: loc.t('publicProfileFollowing'),
                               ),
                             ),
                           ),
                           child: _statCell(
-                            l.pubProfileStatFollowing,
+                            loc.t('pubProfileStatFollowing'),
                             followingCount,
                           ),
                         ),
@@ -548,10 +549,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 if (_isOwnProfile) ...[
                   _actionButton(
                     key: const Key('pub_profile_btn_profil_duzenle'),
-                    label: l.publicProfileEditProfile,
+                    label: loc.t('publicProfileEditProfile'),
                     icon: Icons.edit_outlined,
                     primary: false,
-                    onPressed: () => TeqSnackBar.show(message: l.pubProfileEditComingSoon,
+                    onPressed: () => TeqSnackBar.show(message: loc.t('pubProfileEditComingSoon'),
                       type: TeqSnackBarType.info,
                     ),
                   ),
@@ -592,8 +593,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                   const SizedBox(width: 10),
                                   Text(
                                     hasMyRating
-                                        ? l.pubProfileUpdateRating
-                                        : l.pubProfileGiveRating,
+                                        ? loc.t('pubProfileUpdateRating')
+                                        : loc.t('pubProfileGiveRating'),
                                   ),
                                 ],
                               ),
@@ -611,8 +612,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                 const SizedBox(width: 10),
                                 Text(
                                   _isBlocked
-                                      ? l.pubProfileUnblock
-                                      : l.pubProfileBlock,
+                                      ? loc.t('pubProfileUnblock')
+                                      : loc.t('pubProfileBlock'),
                                   style: const TextStyle(
                                     color: Color(0xFFEF4444),
                                   ),
@@ -634,7 +635,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                AppLocalizations.of(context)!.titleActions,
+                                ref.read(localizationProvider).t('titleActions'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
@@ -689,10 +690,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                     const SizedBox(width: 6),
                                     Text(
                                       _followStatus == 'accepted'
-                                          ? l.pubProfileFollowingLabel
+                                          ? loc.t('pubProfileFollowingLabel')
                                           : _followStatus == 'pending'
-                                              ? l.requested
-                                              : l.pubProfileFollowLabel,
+                                              ? loc.t('requested')
+                                              : loc.t('pubProfileFollowLabel'),
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -712,7 +713,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    l.pubProfileListingsCount(_listings.length),
+                    loc.t('pubProfileListingsCount', {'count': _listings.length.toString()}),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -741,7 +742,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      l.thisAccountIsPrivate,
+                      loc.t('thisAccountIsPrivate'),
                       style: TextStyle(
                         color: AppColors.textPrimary(context),
                         fontSize: 18,
@@ -750,7 +751,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      l.thisAccountIsPrivateDesc,
+                      loc.t('thisAccountIsPrivateDesc'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textSecondary(context),
@@ -787,7 +788,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  l.lblNoListingsYet,
+                  loc.t('lblNoListingsYet'),
                   style: TextStyle(
                     color: AppColors.textTertiary(context),
                     fontSize: 14,
@@ -993,10 +994,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _buildRatingBadge(bool hasRating, dynamic avgRaw) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (!hasRating) {
       return Text(
-        l.pubProfileNoReview,
+        loc.t('pubProfileNoReview'),
         style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
       );
     }
@@ -1129,7 +1130,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
 // ── Rating form bottom sheet ─────────────────────────────────────────────────
 
-class _RatingFormSheet extends StatefulWidget {
+class _RatingFormSheet extends ConsumerStatefulWidget {
   final int userId;
   final Future<Map<String, String>> Function() authHeaders;
   final int? existingScore;
@@ -1145,23 +1146,23 @@ class _RatingFormSheet extends StatefulWidget {
   });
 
   @override
-  State<_RatingFormSheet> createState() => _RatingFormSheetState();
+  ConsumerState<_RatingFormSheet> createState() => _RatingFormSheetState();
 }
 
-class _RatingFormSheetState extends State<_RatingFormSheet> {
+class _RatingFormSheetState extends ConsumerState<_RatingFormSheet> {
   int _selected = 0;
   bool _saving = false;
   late final TextEditingController _commentCtrl;
 
   List<String> _getLabels(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return [
       '',
-      l.ratingVeryBad,
-      l.ratingBad,
-      l.ratingMedium,
-      l.ratingGood,
-      l.ratingExcellent,
+      loc.t('ratingVeryBad'),
+      loc.t('ratingBad'),
+      loc.t('ratingMedium'),
+      loc.t('ratingGood'),
+      loc.t('ratingExcellent'),
     ];
   }
 
@@ -1196,15 +1197,15 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
         widget.onSaved();
       } else {
         if (mounted) {
-          final l = AppLocalizations.of(context)!;
-          TeqSnackBar.show(message: l.ratingSaveFailed, type: TeqSnackBarType.error);
+          final loc = ref.read(localizationProvider);
+          TeqSnackBar.show(message: loc.t('ratingSaveFailed'), type: TeqSnackBarType.error);
           setState(() => _saving = false);
         }
       }
     } catch (_) {
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(message: l.errorConnection, type: TeqSnackBarType.error);
+        final loc = ref.read(localizationProvider);
+        TeqSnackBar.show(message: loc.t('errorConnection'), type: TeqSnackBarType.error);
         setState(() => _saving = false);
       }
     }
@@ -1212,7 +1213,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final labels = _getLabels(context);
     final isUpdate = widget.existingScore != null;
     return Padding(
@@ -1235,7 +1236,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Text(
-              isUpdate ? l.pubProfileUpdateRating : l.pubProfileGiveRating,
+              isUpdate ? loc.t('pubProfileUpdateRating') : loc.t('pubProfileGiveRating'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
@@ -1263,7 +1264,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
           ),
           const SizedBox(height: 10),
           Text(
-            _selected > 0 ? labels[_selected] : l.ratingSelectStar,
+            _selected > 0 ? labels[_selected] : loc.t('ratingSelectStar'),
             style: TextStyle(
               fontSize: 13,
               fontWeight: _selected > 0 ? FontWeight.w600 : FontWeight.normal,
@@ -1281,7 +1282,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
               controller: _commentCtrl,
               maxLines: 3,
               maxLength: 500,
-              hintText: l.ratingCommentHint,
+              hintText: loc.t('ratingCommentHint'),
             ),
           ),
           const SizedBox(height: 16),
@@ -1294,7 +1295,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                 Expanded(
                   child: TeqButton.outline(
                     onPressed: () => Navigator.pop(context),
-                    text: l.btnCancel,
+                    text: loc.t('btnCancel'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1302,7 +1303,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                   flex: 2,
                   child: TeqButton(
                     onPressed: (_selected == 0 || _saving) ? null : _save,
-                    text: isUpdate ? l.btnUpdate : l.btnSave,
+                    text: isUpdate ? loc.t('btnUpdate') : loc.t('btnSave'),
                     isLoading: _saving,
                   ),
                 ),
@@ -1317,7 +1318,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
 
 // ── Ratings list bottom sheet ────────────────────────────────────────────────
 
-class _RatingsListSheet extends StatefulWidget {
+class _RatingsListSheet extends ConsumerStatefulWidget {
   final int userId;
   final Map<String, dynamic>? summary;
   final Future<Map<String, String>> Function() authHeaders;
@@ -1329,10 +1330,10 @@ class _RatingsListSheet extends StatefulWidget {
   });
 
   @override
-  State<_RatingsListSheet> createState() => _RatingsListSheetState();
+  ConsumerState<_RatingsListSheet> createState() => _RatingsListSheetState();
 }
 
-class _RatingsListSheetState extends State<_RatingsListSheet> {
+class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
   List<dynamic>? _ratings;
   bool _loading = true;
 
@@ -1366,7 +1367,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
     try {
       final d = DateTime.parse(iso).toLocal();
       return DateFormat.yMMMd(
-        AppLocalizations.of(context)!.localeName,
+        ref.read(localizationProvider).lang,
       ).format(d);
     } catch (_) {
       return '';
@@ -1375,7 +1376,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final avgRaw = widget.summary?['average'];
     final count = widget.summary?['count'] as int? ?? 0;
     final avg = avgRaw != null ? (avgRaw as num).toDouble() : null;
@@ -1401,7 +1402,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
             child: Text(
-              l.ratingReviews,
+              loc.t('ratingReviews'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
@@ -1440,7 +1441,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        l.ratingCount(count),
+                        loc.t('ratingCount', {'count': count.toString()}),
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary(context),
@@ -1466,7 +1467,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Text(
-                        l.pubProfileNoReview,
+                        loc.t('pubProfileNoReview'),
                         style: TextStyle(
                           color: AppColors.textTertiary(context),
                         ),
@@ -1585,17 +1586,17 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
 
 // ── Canlı Yayın Halka Widget'ı ──────────────────────────────────────────────
 
-class _LiveAvatarRing extends StatefulWidget {
+class _LiveAvatarRing extends ConsumerStatefulWidget {
   final Widget child;
   final VoidCallback onTap;
 
   const _LiveAvatarRing({required this.child, required this.onTap});
 
   @override
-  State<_LiveAvatarRing> createState() => _LiveAvatarRingState();
+  ConsumerState<_LiveAvatarRing> createState() => _LiveAvatarRingState();
 }
 
-class _LiveAvatarRingState extends State<_LiveAvatarRing>
+class _LiveAvatarRingState extends ConsumerState<_LiveAvatarRing>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _glow;
@@ -1698,7 +1699,7 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
                   ],
                 ),
                 child: Text(
-                  '● ${AppLocalizations.of(context)!.liveBadgeLabel}',
+                  '● ${ref.read(localizationProvider).t('liveBadgeLabel')}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,

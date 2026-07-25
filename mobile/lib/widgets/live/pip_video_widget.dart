@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../../providers/pip_provider.dart';
 import '../../screens/live/swipe_live_screen.dart';
 import '../../services/stream_service.dart';
 import '../../services/stream_connection_manager.dart';
+import '../../services/localization_service.dart';
 
 class PipVideoWidget extends ConsumerStatefulWidget {
   const PipVideoWidget({super.key});
@@ -20,6 +20,7 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
   @override
   Widget build(BuildContext context) {
     final pip = ref.watch(pipProvider);
+    final loc = ref.watch(localizationProvider);
     if (!pip.isActive || pip.currentStreamId == null) return const SizedBox.shrink();
 
     final session = StreamConnectionManager.instance.getSession(pip.currentStreamId!);
@@ -85,7 +86,7 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)!.liveBadgeLabel,
+                    loc.t("liveBadgeLabel"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 8,

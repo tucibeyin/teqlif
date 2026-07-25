@@ -4,13 +4,14 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
-import '../l10n/app_localizations.dart';
 
 enum FollowListType { followers, following }
 
-class FollowListScreen extends StatefulWidget {
+class FollowListScreen extends ConsumerStatefulWidget {
   final int userId;
   final FollowListType type;
   final String title;
@@ -23,10 +24,10 @@ class FollowListScreen extends StatefulWidget {
   });
 
   @override
-  State<FollowListScreen> createState() => _FollowListScreenState();
+  ConsumerState<FollowListScreen> createState() => _FollowListScreenState();
 }
 
-class _FollowListScreenState extends State<FollowListScreen> {
+class _FollowListScreenState extends ConsumerState<FollowListScreen> {
   List<dynamic> _users = [];
   bool _loading = true;
 
@@ -98,7 +99,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: _loading
@@ -112,8 +113,8 @@ class _FollowListScreenState extends State<FollowListScreen> {
                       const SizedBox(height: 12),
                       Text(
                         widget.type == FollowListType.followers
-                            ? l.followNoFollowers
-                            : l.followNoFollowing,
+                            ? loc.t('followNoFollowers')
+                            : loc.t('followNoFollowing'),
                         style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                       ),
                     ],
@@ -192,7 +193,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                child: Text(isFollowing ? l.followBtnFollowing : l.followBtnFollow),
+                                child: Text(isFollowing ? loc.t('followBtnFollowing') : loc.t('followBtnFollow')),
                               ),
                             ),
                     );

@@ -1,154 +1,155 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../ui_library/components/cards/teq_card.dart';
 
-class FaqScreen extends StatelessWidget {
+class FaqScreen extends ConsumerWidget {
   const FaqScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
 
     // Web versiyonundaki 5 ana kategoriye göre listeler hazırlıyoruz
     final categories = [
       _FaqCategory(
-        title: l.faqCatAccount,
+        title: loc.t('faqCatAccount'),
         icon: const Icon(Icons.person_outline),
         items: [
-          _FaqItem(question: l.faqQAccountSignup, answer: l.faqAAccountSignup),
-          _FaqItem(question: l.faqQAccountEmail, answer: l.faqAAccountEmail),
+          _FaqItem(question: loc.t('faqQAccountSignup'), answer: loc.t('faqAAccountSignup')),
+          _FaqItem(question: loc.t('faqQAccountEmail'), answer: loc.t('faqAAccountEmail')),
           _FaqItem(
-            question: l.faqQAccountProfile,
-            answer: l.faqAAccountProfile,
+            question: loc.t('faqQAccountProfile'),
+            answer: loc.t('faqAAccountProfile'),
           ),
           _FaqItem(
-            question: l.faqQAccountPassword,
-            answer: l.faqAAccountPassword,
+            question: loc.t('faqQAccountPassword'),
+            answer: loc.t('faqAAccountPassword'),
           ),
-          _FaqItem(question: l.faqQAccountDelete, answer: l.faqAAccountDelete),
+          _FaqItem(question: loc.t('faqQAccountDelete'), answer: loc.t('faqAAccountDelete')),
         ],
       ),
       _FaqCategory(
-        title: l.faqCatExplore,
+        title: loc.t('faqCatExplore'),
         icon: const Icon(Icons.explore_outlined),
         items: [
           _FaqItem(
-            question: l.faqQExploreSellers,
-            answer: l.faqAExploreSellers,
+            question: loc.t('faqQExploreSellers'),
+            answer: loc.t('faqAExploreSellers'),
           ),
           _FaqItem(
-            question: l.faqQExploreStreamers,
-            answer: l.faqAExploreStreamers,
+            question: loc.t('faqQExploreStreamers'),
+            answer: loc.t('faqAExploreStreamers'),
           ),
           _FaqItem(
-            question: l.faqQExploreListings,
-            answer: l.faqAExploreListings,
+            question: loc.t('faqQExploreListings'),
+            answer: loc.t('faqAExploreListings'),
           ),
           _FaqItem(
-            question: l.faqQExploreLiveMessages,
-            answer: l.faqAExploreLiveMessages,
+            question: loc.t('faqQExploreLiveMessages'),
+            answer: loc.t('faqAExploreLiveMessages'),
           ),
         ],
       ),
       _FaqCategory(
-        title: l.faqCatBadges,
+        title: loc.t('faqCatBadges'),
         icon: const FaIcon(FontAwesomeIcons.shieldHalved),
         items: [
           _FaqItem(
-            question: l.faqQBadgesVerified,
-            answer: l.faqABadgesVerified,
+            question: loc.t('faqQBadgesVerified'),
+            answer: loc.t('faqABadgesVerified'),
           ),
-          _FaqItem(question: l.faqQBadgesPro, answer: l.faqABadgesPro),
-          _FaqItem(question: l.faqQBadgesTrusted, answer: l.faqABadgesTrusted),
+          _FaqItem(question: loc.t('faqQBadgesPro'), answer: loc.t('faqABadgesPro')),
+          _FaqItem(question: loc.t('faqQBadgesTrusted'), answer: loc.t('faqABadgesTrusted')),
           _FaqItem(
-            question: l.faqQBadgesSponsored,
-            answer: l.faqABadgesSponsored,
+            question: loc.t('faqQBadgesSponsored'),
+            answer: loc.t('faqABadgesSponsored'),
           ),
-          _FaqItem(question: l.faqQBadgesTuci, answer: l.faqABadgesTuci),
+          _FaqItem(question: loc.t('faqQBadgesTuci'), answer: loc.t('faqABadgesTuci')),
         ],
       ),
       _FaqCategory(
-        title: l.faqCatLive,
+        title: loc.t('faqCatLive'),
         icon: const Icon(Icons.sensors),
         items: [
-          _FaqItem(question: l.faqQLiveHost, answer: l.faqALiveHost),
-          _FaqItem(question: l.faqQLiveViewer, answer: l.faqALiveViewer),
-          _FaqItem(question: l.faqQLiveHype, answer: l.faqALiveHype),
+          _FaqItem(question: loc.t('faqQLiveHost'), answer: loc.t('faqALiveHost')),
+          _FaqItem(question: loc.t('faqQLiveViewer'), answer: loc.t('faqALiveViewer')),
+          _FaqItem(question: loc.t('faqQLiveHype'), answer: loc.t('faqALiveHype')),
         ],
       ),
       _FaqCategory(
-        title: l.faqCatAI,
+        title: loc.t('faqCatAI'),
         icon: const Icon(Icons.auto_awesome),
         items: [
-          _FaqItem(question: l.faqQAIInsights, answer: l.faqAAIInsights),
-          _FaqItem(question: l.faqQAIPrice, answer: l.faqAAIPrice),
-          _FaqItem(question: l.faqQAILead, answer: l.faqAAILead),
-          _FaqItem(question: l.faqQAIRadar, answer: l.faqAAIRadar),
+          _FaqItem(question: loc.t('faqQAIInsights'), answer: loc.t('faqAAIInsights')),
+          _FaqItem(question: loc.t('faqQAIPrice'), answer: loc.t('faqAAIPrice')),
+          _FaqItem(question: loc.t('faqQAILead'), answer: loc.t('faqAAILead')),
+          _FaqItem(question: loc.t('faqQAIRadar'), answer: loc.t('faqAAIRadar')),
         ],
       ),
       _FaqCategory(
-        title: l.faqCatIcons,
+        title: loc.t('faqCatIcons'),
         icon: const Icon(Icons.grid_view_rounded),
         items: [
           _FaqItem(
-            question: l.faqIconNameVerified,
-            answer: l.faqIconVerified,
+            question: loc.t('faqIconNameVerified'),
+            answer: loc.t('faqIconVerified'),
             icon: const FaIcon(FontAwesomeIcons.circleCheck, size: 20),
           ),
           _FaqItem(
-            question: l.faqIconNamePro,
-            answer: l.faqIconPro,
+            question: loc.t('faqIconNamePro'),
+            answer: loc.t('faqIconPro'),
             icon: const FaIcon(FontAwesomeIcons.crown, size: 20),
           ),
           _FaqItem(
-            question: l.faqIconNameTuci,
-            answer: l.faqIconTuci,
+            question: loc.t('faqIconNameTuci'),
+            answer: loc.t('faqIconTuci'),
             icon: const Icon(Icons.monetization_on),
           ),
           _FaqItem(
-            question: l.faqIconNameBlast,
-            answer: l.faqIconBlast,
+            question: loc.t('faqIconNameBlast'),
+            answer: loc.t('faqIconBlast'),
             icon: const Icon(Icons.rocket_launch),
           ),
           _FaqItem(
-            question: l.faqIconNameAutoBid,
-            answer: l.faqIconAutoBid,
+            question: loc.t('faqIconNameAutoBid'),
+            answer: loc.t('faqIconAutoBid'),
             icon: const Icon(Icons.gavel),
           ),
           _FaqItem(
-            question: l.faqIconNameSales,
-            answer: l.faqIconSales,
+            question: loc.t('faqIconNameSales'),
+            answer: loc.t('faqIconSales'),
             icon: const Icon(Icons.auto_graph_outlined),
           ),
           _FaqItem(
-            question: l.faqIconNameListings,
-            answer: l.faqIconListings,
+            question: loc.t('faqIconNameListings'),
+            answer: loc.t('faqIconListings'),
             icon: const Icon(Icons.bar_chart_outlined),
           ),
           _FaqItem(
-            question: l.faqIconNameMarket,
-            answer: l.faqIconMarket,
+            question: loc.t('faqIconNameMarket'),
+            answer: loc.t('faqIconMarket'),
             icon: const Icon(Icons.insights_outlined),
           ),
           _FaqItem(
-            question: l.faqIconNameTime,
-            answer: l.faqIconTime,
+            question: loc.t('faqIconNameTime'),
+            answer: loc.t('faqIconTime'),
             icon: const Icon(Icons.schedule_outlined),
           ),
           _FaqItem(
-            question: l.faqIconNameConversion,
-            answer: l.faqIconConversion,
+            question: loc.t('faqIconNameConversion'),
+            answer: loc.t('faqIconConversion'),
             icon: const Icon(Icons.pie_chart_outline),
           ),
           _FaqItem(
-            question: l.faqIconNameRadar,
-            answer: l.faqIconRadar,
+            question: loc.t('faqIconNameRadar'),
+            answer: loc.t('faqIconRadar'),
             icon: const Icon(Icons.radar),
           ),
           _FaqItem(
-            question: l.faqIconNameRetargeting,
-            answer: l.faqIconRetargeting,
+            question: loc.t('faqIconNameRetargeting'),
+            answer: loc.t('faqIconRetargeting'),
             icon: const Icon(Icons.mark_email_unread_outlined),
           ),
         ],
@@ -156,7 +157,7 @@ class FaqScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.profileFaq)),
+      appBar: AppBar(title: Text(loc.t('profileFaq'))),
       body: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 12),
         itemCount: categories.length,

@@ -6,7 +6,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -19,16 +20,16 @@ import 'pro_stream_analytics_screen.dart';
 import 'retargeting_screen.dart';
 import 'live_stream_history_screen.dart';
 
-class ProHubScreen extends StatefulWidget {
+class ProHubScreen extends ConsumerStatefulWidget {
   final bool isPremium;
 
   const ProHubScreen({super.key, required this.isPremium});
 
   @override
-  State<ProHubScreen> createState() => _ProHubScreenState();
+  ConsumerState<ProHubScreen> createState() => _ProHubScreenState();
 }
 
-class _ProHubScreenState extends State<ProHubScreen> {
+class _ProHubScreenState extends ConsumerState<ProHubScreen> {
   Map<String, dynamic>? _credits;
   Map<String, dynamic>? _boostCredits;
   Map<String, dynamic>? _aiCredits;
@@ -113,12 +114,12 @@ class _ProHubScreenState extends State<ProHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final isPremium = _isPremium;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.proHubTitle),
+        title: Text(loc.t('proHubTitle')),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -144,7 +145,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 12),
             child: Text(
-              l.proHubTitle,
+              loc.t('proHubTitle'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -157,15 +158,15 @@ class _ProHubScreenState extends State<ProHubScreen> {
           // ── 1. Satış & Performans ──────────────────────────────────────────
           _buildAccordion(
             context: context,
-            title: l.proHubTabSales,
+            title: loc.t('proHubTabSales'),
             icon: Icons.trending_up,
             iconColor: const Color(0xFF6366F1),
             children: [
               _ToolCard(
                 icon: Icons.auto_graph_outlined,
                 iconColor: const Color(0xFF6366F1),
-                title: l.proToolSalesTitle,
-                description: l.proToolSalesDesc,
+                title: loc.t('proToolSalesTitle'),
+                description: loc.t('proToolSalesDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
@@ -175,8 +176,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.bar_chart_outlined,
                 iconColor: const Color(0xFF10B981),
-                title: l.proToolListingsTitle,
-                description: l.proToolListingsDesc,
+                title: loc.t('proToolListingsTitle'),
+                description: loc.t('proToolListingsDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
@@ -186,8 +187,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.pie_chart_outline,
                 iconColor: const Color(0xFFEC4899),
-                title: l.proToolConversionTitle,
-                description: l.proToolConversionDesc,
+                title: loc.t('proToolConversionTitle'),
+                description: loc.t('proToolConversionDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
@@ -200,7 +201,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           // ── 2. Piyasa & Rekabet ────────────────────────────────────────────
           _buildAccordion(
             context: context,
-            title: l.proHubTabMarket,
+            title: loc.t('proHubTabMarket'),
             icon: Icons.public,
             iconColor: const Color(0xFFF59E0B),
             initiallyExpanded: false,
@@ -208,8 +209,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.insights_outlined,
                 iconColor: const Color(0xFFF59E0B),
-                title: l.proToolMarketTitle,
-                description: l.proToolMarketDesc,
+                title: loc.t('proToolMarketTitle'),
+                description: loc.t('proToolMarketDesc'),
                 isPremium: isPremium,
                 onTap: () => Navigator.push(
                   context,
@@ -220,8 +221,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.trending_up_outlined,
                 iconColor: const Color(0xFF10B981),
-                title: l.proToolDemandTrendsTitle,
-                description: l.proToolDemandTrendsDesc,
+                title: loc.t('proToolDemandTrendsTitle'),
+                description: loc.t('proToolDemandTrendsDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemandTrendsScreen()))
@@ -231,8 +232,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.radar,
                 iconColor: const Color(0xFF6366F1),
-                title: l.proToolCompetitorRadarTitle,
-                description: l.proToolCompetitorRadarDesc,
+                title: loc.t('proToolCompetitorRadarTitle'),
+                description: loc.t('proToolCompetitorRadarDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompetitorRadarScreen()))
@@ -245,15 +246,15 @@ class _ProHubScreenState extends State<ProHubScreen> {
           // ── 3. Canlı Yayın & Kitle ─────────────────────────────────────────
           _buildAccordion(
             context: context,
-            title: l.proHubTabAudience,
+            title: loc.t('proHubTabAudience'),
             icon: Icons.stream,
             iconColor: const Color(0xFF14B8A6),
             children: [
               _ToolCard(
                 icon: Icons.schedule_outlined,
                 iconColor: const Color(0xFF8B5CF6),
-                title: l.proToolBestTimeTitle,
-                description: l.proToolBestTimeDesc,
+                title: loc.t('proToolBestTimeTitle'),
+                description: loc.t('proToolBestTimeDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
@@ -263,8 +264,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.stream_outlined,
                 iconColor: const Color(0xFF14B8A6),
-                title: l.proToolStreamAnalyticsTitle,
-                description: l.proToolStreamAnalyticsDesc,
+                title: loc.t('proToolStreamAnalyticsTitle'),
+                description: loc.t('proToolStreamAnalyticsDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
@@ -274,8 +275,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
               _ToolCard(
                 icon: Icons.mark_email_unread_outlined,
                 iconColor: const Color(0xFF0EA5E9),
-                title: l.proToolRetargetingTitle,
-                description: l.proToolRetargetingDesc,
+                title: loc.t('proToolRetargetingTitle'),
+                description: loc.t('proToolRetargetingDesc'),
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
@@ -291,7 +292,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 2, bottom: 12),
               child: Text(
-                l.proBenefitsTitle,
+                loc.t('proBenefitsTitle'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -300,10 +301,10 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 ),
               ),
             ),
-            _BenefitRow(icon: Icons.insights_outlined,      text: l.proBenefit1),
-            _BenefitRow(icon: Icons.bar_chart_outlined,     text: l.proBenefit2),
-            _BenefitRow(icon: Icons.schedule_outlined,      text: l.proBenefit3),
-            _BenefitRow(icon: Icons.search_outlined,        text: l.proBenefit4),
+            _BenefitRow(icon: Icons.insights_outlined,      text: loc.t('proBenefit1')),
+            _BenefitRow(icon: Icons.bar_chart_outlined,     text: loc.t('proBenefit2')),
+            _BenefitRow(icon: Icons.schedule_outlined,      text: loc.t('proBenefit3')),
+            _BenefitRow(icon: Icons.search_outlined,        text: loc.t('proBenefit4')),
           ],
         ],
         ),
@@ -367,22 +368,22 @@ class _ProHubScreenState extends State<ProHubScreen> {
 
 // ── Durum Kartları ─────────────────────────────────────────────────────────────
 
-class _ProStatusCard extends StatelessWidget {
+class _ProStatusCard extends ConsumerWidget {
   final String? renewalDate;
   final String? planType;
   const _ProStatusCard({this.renewalDate, this.planType});
 
-  String _getPlanName(AppLocalizations l, String? type) {
+  String _getPlanName(TranslationPack loc, String? type) {
     switch (type) {
-      case 'yearly': return l.planYearly;
-      case 'lifetime': return l.planLifetime;
-      default: return l.planMonthly;
+      case 'yearly': return loc.t('planYearly');
+      case 'lifetime': return loc.t('planLifetime');
+      default: return loc.t('planMonthly');
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -415,7 +416,7 @@ class _ProStatusCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        l.proStatusTitle,
+                        loc.t('proStatusTitle'),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -433,7 +434,7 @@ class _ProStatusCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          _getPlanName(l, planType),
+                          _getPlanName(loc, planType),
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -447,7 +448,7 @@ class _ProStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  l.proStatusDesc,
+                  loc.t('proStatusDesc'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.75),
@@ -460,7 +461,7 @@ class _ProStatusCard extends StatelessWidget {
                       Icon(Icons.event_repeat_outlined, size: 11, color: Colors.white.withValues(alpha: 0.55)),
                       const SizedBox(width: 4),
                       Text(
-                        l.proRenewalDate(_fmtRenewal(context, renewalDate)),
+                        loc.t('proRenewalDate', {'date': _fmtRenewal(context, renewalDate)}),
                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.55)),
                       ),
                     ],
@@ -475,10 +476,10 @@ class _ProStatusCard extends StatelessWidget {
   }
 }
 
-class _UpgradeBanner extends StatelessWidget {
+class _UpgradeBanner extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -507,12 +508,12 @@ class _UpgradeBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l.proUnlockTitle,
+                  loc.t('proUnlockTitle'),
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  l.proUnlockDesc,
+                  loc.t('proUnlockDesc'),
                   style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
                 ),
               ],
@@ -531,7 +532,7 @@ class _UpgradeBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                l.proUnlockBtn,
+                loc.t('proUnlockBtn'),
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black),
               ),
             ),
@@ -544,7 +545,7 @@ class _UpgradeBanner extends StatelessWidget {
 
 // ── Araç Kartı ─────────────────────────────────────────────────────────────────
 
-class _ToolCard extends StatelessWidget {
+class _ToolCard extends ConsumerWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
@@ -562,7 +563,7 @@ class _ToolCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -613,7 +614,7 @@ class _ToolCard extends StatelessWidget {
                   color: const Color(0xFFFFB800),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(AppLocalizations.of(context)!.pro, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                child: Text(ref.read(localizationProvider).t('pro'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
               )
             else
               Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),
@@ -626,13 +627,13 @@ class _ToolCard extends StatelessWidget {
 
 // ── Benefit Row ────────────────────────────────────────────────────────────────
 
-class _BenefitRow extends StatelessWidget {
+class _BenefitRow extends ConsumerWidget {
   final IconData icon;
   final String text;
   const _BenefitRow({required this.icon, required this.text});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -653,12 +654,12 @@ class _BenefitRow extends StatelessWidget {
 
 // ── Yükseltme Bottom Sheet ─────────────────────────────────────────────────────
 
-class _UpgradeSheet extends StatelessWidget {
+class _UpgradeSheet extends ConsumerWidget {
   const _UpgradeSheet();
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card(context),
@@ -680,7 +681,7 @@ class _UpgradeSheet extends StatelessWidget {
           const FaIcon(FontAwesomeIcons.crown, size: 48, color: Color(0xFFFFB800)),
           const SizedBox(height: 12),
           Text(
-            l.proUpgradeTitle,
+            loc.t('proUpgradeTitle'),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -689,7 +690,7 @@ class _UpgradeSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            l.proUpgradeSheetDesc,
+            loc.t('proUpgradeSheetDesc'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
           ),
@@ -709,7 +710,7 @@ class _UpgradeSheet extends StatelessWidget {
                     mode: LaunchMode.inAppWebView,
                   );
                 },
-                text: l.proUpgradeBtn,
+                text: loc.t('proUpgradeBtn'),
                 customColor: Colors.transparent,
                 isExpanded: true,
               ),
@@ -718,7 +719,7 @@ class _UpgradeSheet extends StatelessWidget {
           const SizedBox(height: 10),
           TeqButton.text(
             onPressed: () => Navigator.pop(context),
-            text: l.btnDismiss,
+            text: loc.t('btnDismiss'),
             customColor: AppColors.textSecondary(context),
             isExpanded: false,
           ),
@@ -732,8 +733,8 @@ class _UpgradeSheet extends StatelessWidget {
 class CreditItemModel {
   final IconData icon;
   final Color iconColor;
-  final String Function(AppLocalizations) titleBuilder;
-  final String Function(AppLocalizations) descBuilder;
+  final String Function(TranslationPack) titleBuilder;
+  final String Function(TranslationPack) descBuilder;
   final Map<String, dynamic>? data;
   final int defaultPremiumLimit;
   final int defaultFreeLimit;
@@ -750,7 +751,7 @@ class CreditItemModel {
 }
 
 // ── Konsolide Krediler Özeti ────────────────────────────────────────────────
-class _CreditsSummaryCard extends StatelessWidget {
+class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
   final Map<String, dynamic>? aiCredits;
@@ -769,7 +770,7 @@ class _CreditsSummaryCard extends StatelessWidget {
     required this.isLoading,
   });
 
-  void _showInfoSheet(BuildContext context, String title, String desc) {
+  void _showInfoSheet(BuildContext context, TranslationPack loc, String title, String desc) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bg(context),
@@ -789,7 +790,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                 width: double.infinity,
                 child: TeqButton(
                   onPressed: () => Navigator.pop(context),
-                  text: AppLocalizations.of(context)!.proHubGotIt,
+                  text: loc.t('proHubGotIt'),
                   customColor: const Color(0xFF6366F1),
                   isExpanded: true,
                 ),
@@ -802,15 +803,15 @@ class _CreditsSummaryCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     
     final items = [
       CreditItemModel(
         icon: Icons.campaign_outlined,
         iconColor: const Color(0xFF8B5CF6),
-        titleBuilder: (l) => l.proCreditsBlastName,
-        descBuilder: (l) => l.proCreditsBlastDesc,
+        titleBuilder: (l) => loc.t('proCreditsBlastName'),
+        descBuilder: (l) => loc.t('proCreditsBlastDesc'),
         data: blastCredits,
         defaultPremiumLimit: 6,
         defaultFreeLimit: 3,
@@ -818,8 +819,8 @@ class _CreditsSummaryCard extends StatelessWidget {
       CreditItemModel(
         icon: Icons.rocket_launch_outlined,
         iconColor: const Color(0xFF0EA5E9),
-        titleBuilder: (l) => l.proCreditsBoostName,
-        descBuilder: (l) => l.proCreditsBoostDesc,
+        titleBuilder: (l) => loc.t('proCreditsBoostName'),
+        descBuilder: (l) => loc.t('proCreditsBoostDesc'),
         data: boostCredits,
         defaultPremiumLimit: 5,
         defaultFreeLimit: 1,
@@ -827,8 +828,8 @@ class _CreditsSummaryCard extends StatelessWidget {
       CreditItemModel(
         icon: Icons.psychology_outlined,
         iconColor: const Color(0xFFF59E0B),
-        titleBuilder: (l) => l.proCreditsAiName,
-        descBuilder: (l) => l.proCreditsAiDesc,
+        titleBuilder: (l) => loc.t('proCreditsAiName'),
+        descBuilder: (l) => loc.t('proCreditsAiDesc'),
         data: aiCredits,
         defaultPremiumLimit: 20,
         defaultFreeLimit: 0,
@@ -836,8 +837,8 @@ class _CreditsSummaryCard extends StatelessWidget {
       CreditItemModel(
         icon: Icons.edit_note_outlined,
         iconColor: const Color(0xFF8B5CF6),
-        titleBuilder: (l) => l.proCreditsAiDescName,
-        descBuilder: (l) => l.proCreditsAiDescDesc,
+        titleBuilder: (l) => loc.t('proCreditsAiDescName'),
+        descBuilder: (l) => loc.t('proCreditsAiDescDesc'),
         data: aiDescCredits,
         defaultPremiumLimit: 6,
         defaultFreeLimit: 0,
@@ -845,8 +846,8 @@ class _CreditsSummaryCard extends StatelessWidget {
       CreditItemModel(
         icon: Icons.replay_outlined,
         iconColor: const Color(0xFF10B981),
-        titleBuilder: (l) => l.proCreditsReactivationName,
-        descBuilder: (l) => l.proCreditsReactivationDesc,
+        titleBuilder: (l) => loc.t('proCreditsReactivationName'),
+        descBuilder: (l) => loc.t('proCreditsReactivationDesc'),
         data: reactivationCredits,
         defaultPremiumLimit: 5,
         defaultFreeLimit: 0,
@@ -865,7 +866,7 @@ class _CreditsSummaryCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              l.proCreditsSummaryTitle,
+              loc.t('proCreditsSummaryTitle'),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
           ),
@@ -889,7 +890,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                 AbsorbPointer(
                   absorbing: isLoading,
                   child: InkWell(
-                    onTap: () => _showInfoSheet(context, item.titleBuilder(l), item.descBuilder(l)),
+                    onTap: () => _showInfoSheet(context, loc, item.titleBuilder(loc), item.descBuilder(loc)),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                     child: Row(
@@ -912,7 +913,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                                 children: [
                                   Flexible(
                                     child: Text(
-                                      item.titleBuilder(l),
+                                      item.titleBuilder(loc),
                                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -923,7 +924,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                l.proCreditsUsedFormat(limit - remaining, remaining),
+                                loc.t('proCreditsUsedFormat', {'used': (limit - remaining).toString(), 'remaining': remaining.toString()}),
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                               ),
                             ],
@@ -944,7 +945,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                               )
                             else ...[
                               Text(
-                                l.proCreditsLimitFormat(remaining, limit),
+                                loc.t('proCreditsLimitFormat', {'remaining': remaining.toString(), 'limit': limit.toString()}),
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor),
                               ),
                               const SizedBox(height: 4),

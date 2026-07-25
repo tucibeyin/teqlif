@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import '../config/theme.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 
-class RetargetingScreen extends StatefulWidget {
+class RetargetingScreen extends ConsumerStatefulWidget {
   final int initialIndex;
   final bool isEmbedded;
   final int? listingId;
@@ -20,10 +21,10 @@ class RetargetingScreen extends StatefulWidget {
   const RetargetingScreen({super.key, this.initialIndex = 0, this.isEmbedded = false, this.listingId});
 
   @override
-  State<RetargetingScreen> createState() => _RetargetingScreenState();
+  ConsumerState<RetargetingScreen> createState() => _RetargetingScreenState();
 }
 
-class _RetargetingScreenState extends State<RetargetingScreen> {
+class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   Map<String, dynamic>? _selectedListing;
   Map<String, dynamic>? _audienceData;
   bool _loadingAudience = false;
@@ -209,7 +210,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
   Widget _buildListingCarousel() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final filtered = _filteredReportListings;
     final hasRange = _dateRange != null;
     return Column(
@@ -220,7 +221,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           child: TextField(
             controller: _reportSearchCtrl,
             decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
+              hintText: loc.t("searchHintTextListing"),
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _reportQuery.isNotEmpty
                   ? IconButton(
@@ -268,7 +269,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                     child: Text(
                       hasRange
                           ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                          : l.filterSelectDate,
+                          : loc.t("filterSelectDate"),
                       style: TextStyle(fontSize: 13,
                           color: hasRange ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
                     ),
@@ -292,7 +293,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _catChip(l.filterAll, _reportCategoryFilter == null,
+                  _catChip(loc.t("filterAll"), _reportCategoryFilter == null,
                       () => setState(() => _reportCategoryFilter = null)),
                   ..._categories!.map((c) => _catChip(c.$2, _reportCategoryFilter == c.$1,
                       () => setState(() => _reportCategoryFilter = _reportCategoryFilter == c.$1 ? null : c.$1))),
@@ -326,7 +327,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   children: [
                     Icon(Icons.apps_rounded, size: 26, color: sel ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
                     const SizedBox(height: 6),
-                    Text(AppLocalizations.of(context)!.reportAll,
+                    Text(loc.t("reportAll"),
                       style: TextStyle(color: sel ? const Color(0xFF14B8A6) : AppColors.textSecondary(context),
                         fontWeight: sel ? FontWeight.bold : FontWeight.normal, fontSize: 13)),
                   ],
@@ -394,7 +395,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
   // ── Rapor: İçerik (özet + kampanya geçmişi) ──────────────────────────────
   Widget _buildReportContent(Map<String, dynamic> data) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final target = data['total_target'] as int? ?? 0;
     final sent = data['total_sent'] as int? ?? 0;
     final clicks = data['total_clicks'] as int? ?? 0;
@@ -406,7 +407,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     if (target == 0 && (campaigns == null || campaigns.isEmpty)) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
-        child: Center(child: Text(l.reportNoNotificationYet, style: TextStyle(color: AppColors.textSecondary(context)))),
+        child: Center(child: Text(loc.t("reportNoNotificationYet"), style: TextStyle(color: AppColors.textSecondary(context)))),
       );
     }
     return Padding(
@@ -414,13 +415,13 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFunnelCard(l.reportConversionFunnel, [
-            {'label': '📢 ${l.reportTargetAudience}', 'value': '$target'},
-            {'label': '📩 ${l.reportSuccessfullyDelivered}', 'value': '$sent'},
-            {'label': '👆 ${l.reportClickOpen}', 'value': '$clicks  (%$clickRate)'},
+          _buildFunnelCard(loc.t("reportConversionFunnel"), [
+            {'label': '📢 ${loc.t("reportTargetAudience")}', 'value': '$target'},
+            {'label': '📩 ${loc.t("reportSuccessfullyDelivered")}', 'value': '$sent'},
+            {'label': '👆 ${loc.t("reportClickOpen")}', 'value': '$clicks  (%$clickRate)'},
           ]),
           const SizedBox(height: 16),
-          _buildROICard(l.reportROI, '$spent TUCi', '$costPerClick TUCi / ${l.adReportMetricClicks}'),
+          _buildROICard(loc.t("reportROI"), '$spent TUCi', '$costPerClick TUCi / ${loc.t("adReportMetricClicks")}'),
           if (campaigns != null && campaigns.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Gönderim Geçmişi',
@@ -434,7 +435,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _buildCampaignCard(Map<String, dynamic> campaign) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final targetCount = campaign['target_count'] as int? ?? 0;
     final sentCount   = campaign['sent_count']   as int? ?? 0;
     final clickCount  = campaign['click_count']  as int? ?? 0;
@@ -465,20 +466,20 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           ]),
           const SizedBox(height: 10),
           Row(children: [
-            Expanded(child: _statChip('📢', '$targetCount', l.reportTargetAudience)),
-            Expanded(child: _statChip('📩', '$sentCount', l.reportSuccessfullyDelivered)),
-            Expanded(child: _statChip('👆', '$clickCount (%$clickRate)', l.reportClickOpen)),
+            Expanded(child: _statChip('📢', '$targetCount', loc.t("reportTargetAudience"))),
+            Expanded(child: _statChip('📩', '$sentCount', loc.t("reportSuccessfullyDelivered"))),
+            Expanded(child: _statChip('👆', '$clickCount (%$clickRate)', loc.t("reportClickOpen"))),
           ]),
           if (spentTuci > 0 || freeCredits > 0) ...[
             const SizedBox(height: 8),
             Row(children: [
               if (freeCredits > 0)
-                Text('$freeCredits ${l.reportFreeCreditsUsed}',
+                Text('$freeCredits ${loc.t("reportFreeCreditsUsed")}',
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
               if (freeCredits > 0 && spentTuci > 0)
                 Text('  •  ', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
               if (spentTuci > 0)
-                Text('$spentTuci TUCi ${l.reportTotalSpent}',
+                Text('$spentTuci TUCi ${loc.t("reportTotalSpent")}',
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
             ]),
           ],
@@ -504,7 +505,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Future<void> _sendBlast() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final listing = _selectedListing;
     final audience = _audienceData;
     if (listing == null || audience == null) return;
@@ -526,10 +527,10 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.card(context),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(l.retargetingDialogTitle,
+          title: Text(loc.t("retargetingDialogTitle"),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context))),
           content: Text(
-            l.retargetingDialogBodyInsufficient(tuciCost, tuciBalance),
+            loc.t("retargetingDialogBodyInsufficient", {"cost": tuciCost.toString(), "balance": tuciBalance.toString()}),
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context), height: 1.5),
           ),
           actions: [
@@ -540,7 +541,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: Text(l.btnDismiss, style: const TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(loc.t("btnDismiss"), style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -551,11 +552,11 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     // Senaryo 1/2/3: Onay dialogu
     final String dialogBody;
     if (freeUsed > 0 && paidCount == 0) {
-      dialogBody = l.retargetingDialogBodyFree(actualCount, freeUsed);
+      dialogBody = loc.t("retargetingDialogBodyFree", {"count": actualCount.toString(), "credits": freeUsed.toString()});
     } else if (freeUsed > 0 && paidCount > 0) {
-      dialogBody = l.retargetingDialogBodyKarma(actualCount, freeUsed, tuciCost);
+      dialogBody = loc.t("retargetingDialogBodyKarma", {"count": actualCount.toString(), "free": freeUsed.toString(), "cost": tuciCost.toString()});
     } else {
-      dialogBody = l.retargetingDialogBodyPaid(actualCount, tuciCost);
+      dialogBody = loc.t("retargetingDialogBodyPaid", {"count": actualCount.toString(), "cost": tuciCost.toString()});
     }
 
     final confirmed = await showDialog<bool>(
@@ -564,7 +565,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         backgroundColor: AppColors.card(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          l.retargetingDialogTitle,
+          loc.t("retargetingDialogTitle"),
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context)),
         ),
         content: Text(
@@ -574,7 +575,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.btnDismiss, style: TextStyle(color: AppColors.textSecondary(context))),
+            child: Text(loc.t("btnDismiss"), style: TextStyle(color: AppColors.textSecondary(context))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -583,7 +584,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(l.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(loc.t("btnSend"), style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -606,7 +607,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       final sent = result['sent'] as int? ?? actualCount;
       setState(() { _sent = true; _sentCount = sent; _blastCooldownSeconds = 86400; });
       _startCountdown();
-      TeqToast.success(AppLocalizations.of(context)!.retargetingBlastSuccess);
+      TeqToast.success(loc.t("retargetingBlastSuccess"));
     } else {
       final errMsg = result?['error'] as String? ?? 'Bir sorun oluştu, lütfen tekrar dene.';
       TeqToast.error(errMsg);
@@ -615,11 +616,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.read(localizationProvider);
     // Bildirim Raporu Sekmesi
     final Widget reportTab = FutureBuilder<Map<String, dynamic>>(
       future: _reportFuture,
       builder: (context, snapshot) {
-        final l = AppLocalizations.of(context)!;
+        final loc = ref.read(localizationProvider);
         return ListView(
           shrinkWrap: widget.isEmbedded,
           physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
@@ -627,12 +629,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text(l.reportMassNotificationTitle,
+              child: Text(loc.t("reportMassNotificationTitle"),
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(l.reportMassNotificationDesc,
+              child: Text(loc.t("reportMassNotificationDesc"),
                 style: TextStyle(color: AppColors.textSecondary(context))),
             ),
             _buildListingCarousel(),
@@ -645,7 +647,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             else if (snapshot.hasError)
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('${l.reportLoadError}${snapshot.error}',
+                child: Text('${loc.t("reportLoadError")}${snapshot.error}',
                   style: TextStyle(color: AppColors.textSecondary(context))),
               )
             else
@@ -683,7 +685,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               unselectedLabelColor: Colors.grey,
               tabs: [
                 const Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-                Tab(icon: const Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
+                Tab(icon: const Icon(Icons.auto_graph), text: loc.t("tabReports")),
               ],
             ),
             Expanded(
@@ -705,7 +707,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       child: Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.centerNotificationAudience),
+          title: Text(loc.t("centerNotificationAudience")),
           backgroundColor: AppColors.bg(context),
           elevation: 0,
           bottom: TabBar(
@@ -714,7 +716,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             unselectedLabelColor: Colors.grey,
             tabs: [
               const Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-              Tab(icon: const Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
+              Tab(icon: const Icon(Icons.auto_graph), text: loc.t("tabReports")),
             ],
           ),
         ),
@@ -757,6 +759,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _buildROICard(String title, String totalSpend, String costPerClick) {
+    final loc = ref.read(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -772,7 +775,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(AppLocalizations.of(context)!.reportTotalSpent, style: TextStyle(color: Colors.white70)),
+              Text(loc.t("reportTotalSpent"), style: TextStyle(color: Colors.white70)),
               Text(totalSpend, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -780,7 +783,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(AppLocalizations.of(context)!.reportCostPerClick, style: TextStyle(color: Colors.white70)),
+              Text(loc.t("reportCostPerClick"), style: TextStyle(color: Colors.white70)),
               Text(costPerClick, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -790,7 +793,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _infoCard() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -805,7 +808,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              l.retargetingInfoText,
+              loc.t("retargetingInfoText"),
               style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context), height: 1.5),
             ),
           ),
@@ -815,7 +818,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _audienceCard() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final audience = _audienceData!;
     final error = audience['error'] as String?;
 
@@ -871,7 +874,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    l.retargetingLast30Days,
+                    loc.t("retargetingLast30Days"),
                     style: TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary(context),
@@ -884,19 +887,19 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 children: [
                   _AudienceStat(
                     value: '$totalViewers',
-                    label: l.retargetingViewerLabel,
+                    label: loc.t("retargetingViewerLabel"),
                     color: AppColors.textPrimary(context),
                   ),
                   const SizedBox(width: 8),
                   _AudienceStat(
                     value: '$alreadyBought',
-                    label: l.retargetingBoughtLabel,
+                    label: loc.t("retargetingBoughtLabel"),
                     color: const Color(0xFF22C55E),
                   ),
                   const SizedBox(width: 8),
                   _AudienceStat(
                     value: '$reachable',
-                    label: l.retargetingReachableLabel,
+                    label: loc.t("retargetingReachableLabel"),
                     color: const Color(0xFF6366F1),
                   ),
                 ],
@@ -927,12 +930,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                         Icon(Icons.search_off_outlined, size: 40, color: AppColors.textSecondary(context)),
                         const SizedBox(height: 10),
                         Text(
-                          l.retargetingNoAudience,
+                          loc.t("retargetingNoAudience"),
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          l.retargetingNoAudienceDesc,
+                          loc.t("retargetingNoAudienceDesc"),
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context), height: 1.4),
                         ),
@@ -948,7 +951,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            l.retargetingEstimatedCost,
+                            loc.t("retargetingEstimatedCost"),
                             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                           ),
                           const SizedBox(height: 4),
@@ -957,7 +960,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  l.retargetingCostFree,
+                                  loc.t("retargetingCostFree"),
                                   style: TextStyle(
                                     fontSize: 28, fontWeight: FontWeight.w900,
                                     color: const Color(0xFF22C55E),
@@ -974,7 +977,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                                       border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
                                     ),
                                     child: Text(
-                                      l.retargetingCreditsLeft(creditsLeft),
+                                      loc.t("retargetingCreditsLeft", {"count": creditsLeft.toString()}),
                                       style: const TextStyle(
                                         fontSize: 11, fontWeight: FontWeight.w700,
                                         color: Color(0xFF22C55E),
@@ -1008,8 +1011,8 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                           const SizedBox(height: 2),
                           Text(
                             isFree
-                                ? l.retargetingFreeSubtitle(actualCount)
-                                : l.retargetingPaidSubtitle(actualCount),
+                                ? loc.t("retargetingFreeSubtitle", {"count": actualCount.toString()})
+                                : loc.t("retargetingPaidSubtitle", {"count": actualCount.toString()}),
                             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                           ),
                         ],
@@ -1022,8 +1025,8 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   width: double.infinity,
                   child: (_sent || _blastCooldownSeconds > 0)
                       ? _sent
-                          ? _sentCard(l)
-                          : _cooldownCard(l)
+                          ? _sentCard(loc)
+                          : _cooldownCard(loc)
                       : Column(
                           children: [
                             ElevatedButton.icon(
@@ -1037,7 +1040,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                                     )
                                   : const Icon(Icons.send_outlined, size: 18),
                               label: Text(
-                                _sending ? l.retargetingSending : l.retargetingSendBtnLabel(reachable),
+                                _sending ? loc.t("retargetingSending") : loc.t("retargetingSendBtnLabel", {"count": reachable.toString()}),
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -1060,8 +1063,8 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                                 const SizedBox(width: 4),
                                 Text(
                                   isFree
-                                      ? l.retargetingCreditsBadge(creditsLeft)
-                                      : l.retargetingCostBadge(cost),
+                                      ? loc.t("retargetingCreditsBadge", {"count": creditsLeft.toString()})
+                                      : loc.t("retargetingCostBadge", {"cost": cost.toString()}),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isFree ? const Color(0xFF22C55E) : AppColors.textSecondary(context),
@@ -1075,7 +1078,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  l.retargetingFootnote,
+                  loc.t("retargetingFootnote"),
                   style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context), height: 1.4),
                   textAlign: TextAlign.center,
                 ),
@@ -1087,7 +1090,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     );
   }
 
-  Widget _sentCard(AppLocalizations l) {
+  Widget _sentCard(TranslationPack loc) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1104,7 +1107,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  l.retargetingBlastSent(_sentCount),
+                  loc.t("retargetingBlastSent", {"count": _sentCount.toString()}),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
                 ),
@@ -1113,7 +1116,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            l.retargetingCooldownLabel,
+            loc.t("retargetingCooldownLabel"),
             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
             textAlign: TextAlign.center,
           ),
@@ -1127,7 +1130,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     );
   }
 
-  Widget _cooldownCard(AppLocalizations l) {
+  Widget _cooldownCard(TranslationPack loc) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1144,7 +1147,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  l.retargetingBlastCooldown,
+                  loc.t("retargetingBlastCooldown"),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)),
                 ),
@@ -1153,7 +1156,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            l.retargetingCooldownLabel,
+            loc.t("retargetingCooldownLabel"),
             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 4),
@@ -1191,7 +1194,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _buildCampaignListingCarousel() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (_reportListings.isEmpty) return _emptyState();
     final filtered = _filteredCampaignListings;
     return Column(
@@ -1202,7 +1205,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           child: TextField(
             controller: _retargetSearchCtrl,
             decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
+              hintText: loc.t("searchHintTextListing"),
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _retargetQuery.isNotEmpty
                   ? IconButton(
@@ -1247,7 +1250,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                     child: Text(
                       _retargetDateRange != null
                           ? '${_fmtDate(_retargetDateRange!.start)} – ${_fmtDate(_retargetDateRange!.end)}'
-                          : l.filterSelectDate,
+                          : loc.t("filterSelectDate"),
                       style: TextStyle(fontSize: 13,
                           color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
                     ),
@@ -1270,7 +1273,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _catChip(l.filterAll, _retargetCategoryFilter == null,
+                  _catChip(loc.t("filterAll"), _retargetCategoryFilter == null,
                       () => setState(() => _retargetCategoryFilter = null)),
                   ..._categories!.map((c) => _catChip(c.$2, _retargetCategoryFilter == c.$1,
                       () => setState(() => _retargetCategoryFilter = _retargetCategoryFilter == c.$1 ? null : c.$1))),
@@ -1364,7 +1367,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _emptyState() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1372,12 +1375,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
           Text(
-            l.retargetingNoListings,
+            loc.t("retargetingNoListings"),
             style: TextStyle(fontSize: 15, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 6),
           Text(
-            l.retargetingNoListingsDesc,
+            loc.t("retargetingNoListingsDesc"),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
@@ -1389,11 +1392,11 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
 // ── Audience Skeleton ─────────────────────────────────────────────────────────
 
-class _AudienceSkeleton extends StatelessWidget {
+class _AudienceSkeleton extends ConsumerWidget {
   const _AudienceSkeleton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final base = AppColors.border(context);
     box(double h, {double? w, double r = 8}) => Container(
           width: w,
@@ -1427,7 +1430,7 @@ class _AudienceSkeleton extends StatelessWidget {
 
 // ── Kitle İstatistik Kutusu ───────────────────────────────────────────────────
 
-class _AudienceStat extends StatelessWidget {
+class _AudienceStat extends ConsumerWidget {
   final String value;
   final String label;
   final Color color;
@@ -1435,7 +1438,7 @@ class _AudienceStat extends StatelessWidget {
   const _AudienceStat({required this.value, required this.label, required this.color});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

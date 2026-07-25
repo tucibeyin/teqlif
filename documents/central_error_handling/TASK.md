@@ -35,13 +35,11 @@
   - `Err<T>` içindeki `final AppError error` → `final Object error`
   - `api.dart` deki `AppError.from(e)` → `e`, `app_error.dart` import'u kaldırıldı
 
-- [ ] **T06** — `ErrorDisplay` sınıfını sil (`lib/core/error_display.dart`)
-  - ⚠️ BLOKE: 5 ekran hâlâ `ErrorDisplay` kullanıyor (forgot_password, login, register, host_stream, swipe_live)
-  - FAZ 4 — T10–T20 tamamlandıktan sonra yapılacak
+- [x] **T06** — `ErrorDisplay` sınıfını sil (`lib/core/error_display.dart`) ✅
+  - FAZ 4 tamamlandıktan sonra yapıldı
 
 - [ ] **T07** — `AppError` sealed class sil (`lib/core/app_error.dart`)
-  - ⚠️ BLOKE: `ErrorDisplay` silinene kadar bekliyor
-  - FAZ 4 sonrası yapılacak
+  - ⚠️ Hâlâ bazı ekranlarda referans var — FAZ 5 OTA migrasyonlarından sonra silinecek
 
 - [x] **T08** — `dart analyze` — sıfır hata ✅ (46 info, tümü önceden vardı)
 
@@ -59,19 +57,19 @@
 
 `showErrorSnackbar` ve `ErrorDisplay` kullanan ekranlar — OTA'ya geçmese bile error handling düzeltilir.
 
-- [ ] **T10** — `screens/auth/forgot_password_screen.dart` — `ErrorDisplay` → `handleError`
-- [ ] **T11** — `screens/auth/login_screen.dart` — `ErrorDisplay` → `handleError`
-- [ ] **T12** — `screens/auth/register_screen.dart` — `ErrorDisplay` → `handleError`
-- [ ] **T13** — `screens/auth/reset_password_screen.dart` — `showErrorSnackbar` → `handleError`
-- [ ] **T14** — `screens/auth/verify_screen.dart` — `showErrorSnackbar` → `handleError`
-- [ ] **T15** — `screens/follow_requests_screen.dart` — `showErrorSnackbar` → `handleError`
-- [ ] **T16** — `screens/my_ratings_screen.dart` — `showErrorSnackbar` → `handleError`
-- [ ] **T17** — `screens/profile_screen.dart` — `showErrorSnackbar` → `handleError`
-- [ ] **T18** — `utils/start_stream_helper.dart` — `showErrorSnackbar` → `handleError`
-- [ ] **T19** — `screens/live/host_stream_screen.dart` — `ErrorDisplay` → `handleError`
-- [ ] **T20** — `screens/live/swipe_live_screen.dart` — `ErrorDisplay` → `handleError`
+- [x] **T10** — `screens/auth/forgot_password_screen.dart` — `ErrorDisplay` → `handleError` ✅
+- [x] **T11** — `screens/auth/login_screen.dart` — `ErrorDisplay` → `handleError` ✅
+- [x] **T12** — `screens/auth/register_screen.dart` — `ErrorDisplay` → `handleError` ✅
+- [x] **T13** — `screens/auth/reset_password_screen.dart` — `showErrorSnackbar` → `handleError` ✅
+- [x] **T14** — `screens/auth/verify_screen.dart` — `showErrorSnackbar` → `handleError` ✅
+- [x] **T15** — `screens/follow_requests_screen.dart` — `showErrorSnackbar` → `handleError` ✅
+- [x] **T16** — `screens/my_ratings_screen.dart` — `showErrorSnackbar` → `handleError` ✅
+- [x] **T17** — `screens/profile_screen.dart` — `showErrorSnackbar` → `handleError` ✅
+- [x] **T18** — `utils/start_stream_helper.dart` — `showErrorSnackbar` → `TeqToast.error` ✅
+- [x] **T19** — `screens/live/host_stream_screen.dart` — `ErrorDisplay` → `handleError` ✅
+- [x] **T20** — `screens/live/swipe_live_screen.dart` — `ErrorDisplay` → `handleError` ✅
 
-- [ ] **T21** — `showErrorSnackbar` fonksiyonunu `error_helper.dart` dan sil
+- [x] **T21** — `showErrorSnackbar` fonksiyonunu `error_helper.dart` dan sil ✅
 
 ---
 
@@ -80,99 +78,101 @@
 `AppLocalizations.of(context)` → `ref.watch(localizationProvider)` + `loc.t('key')`  
 Her ekran: `StatefulWidget` → `ConsumerStatefulWidget`, `l.xxx` → `loc.t('xxx')`
 
-### Auth ekranları
-- [ ] **T22** — `screens/auth/login_screen.dart`
-- [ ] **T23** — `screens/auth/register_screen.dart`
-- [ ] **T24** — `screens/auth/forgot_password_screen.dart`
-- [ ] **T25** — `screens/auth/reset_password_screen.dart`
-- [ ] **T26** — `screens/auth/verify_screen.dart`
-- [ ] **T27** — `screens/auth/category_onboarding_screen.dart`
+### Auth ekranları ✅ Tümü tamamlandı
+- [x] **T22** — `screens/auth/login_screen.dart` ✅
+- [x] **T23** — `screens/auth/register_screen.dart` ✅
+- [x] **T24** — `screens/auth/forgot_password_screen.dart` ✅
+- [x] **T25** — `screens/auth/reset_password_screen.dart` ✅
+- [x] **T26** — `screens/auth/verify_screen.dart` ✅
+- [x] **T27** — `screens/auth/category_onboarding_screen.dart` ✅
 
-### Ana ekranlar
-- [ ] **T28** — `screens/home_screen.dart`
-- [ ] **T29** — `screens/search_screen.dart`
-- [ ] **T30** — `screens/main_screen.dart`
+### Ana ekranlar ✅ Tümü tamamlandı
+- [x] **T28** — `screens/home_screen.dart` ✅
+- [x] **T29** — `screens/search_screen.dart` ✅
+- [x] **T30** — `screens/main_screen.dart` ✅
 
-### İlan ekranları
-- [ ] **T31** — `screens/edit_listing_screen.dart` ← create_listing ile aynı pattern
-- [ ] **T32** — `screens/listing_detail_screen.dart` (49 kullanım — büyük ekran)
-- [ ] **T33** — `screens/listing_analytics_screen.dart`
+### İlan ekranları ✅ Tümü tamamlandı
+- [x] **T31** — `screens/edit_listing_screen.dart` ✅
+- [x] **T32** — `screens/listing_detail_screen.dart` ✅
+- [x] **T33** — `screens/listing_analytics_screen.dart` ✅
 
-### Profil ekranları
-- [ ] **T34** — `screens/profile_screen.dart` (87 kullanım — en büyük)
-- [ ] **T35** — `screens/public_profile_screen.dart`
-- [ ] **T36** — `screens/account_info_screen.dart`
+### Profil ekranları ✅ Tümü tamamlandı
+- [x] **T34** — `screens/profile_screen.dart` ✅
+- [x] **T35** — `screens/public_profile_screen.dart` ✅
+- [x] **T36** — `screens/account_info_screen.dart` ✅
 
 ### Live ekranları
-- [ ] **T37** — `screens/live/host_stream_screen.dart` (49 kullanım)
-- [ ] **T38** — `screens/live/swipe_live_screen.dart` (29 kullanım)
-- [ ] **T39** — `screens/live/live_list_screen.dart`
-- [ ] **T40** — `screens/live/seller_report_screen.dart`
+- [x] **T37** — `screens/live/host_stream_screen.dart` ✅
+- [x] **T38** — `screens/live/swipe_live_screen.dart` ✅
+- [x] **T39** — `screens/live/live_list_screen.dart` ✅
+- [x] **T40** — `screens/live/seller_report_screen.dart` ✅
 
-### Mesajlaşma & sosyal
-- [ ] **T41** — `screens/messages_screen.dart` (30 kullanım)
-- [ ] **T42** — `screens/follow_requests_screen.dart`
-- [ ] **T43** — `screens/follow_list_screen.dart`
+### Mesajlaşma & sosyal ✅ Tümü tamamlandı
+- [x] **T41** — `screens/messages_screen.dart` ✅
+- [x] **T42** — `screens/follow_requests_screen.dart` ✅
+- [x] **T43** — `screens/follow_list_screen.dart` ✅
 
-### Ticaret & ödeme
-- [ ] **T44** — `screens/sales_screen.dart`
-- [ ] **T45** — `screens/sale_detail_screen.dart`
-- [ ] **T46** — `screens/purchases_screen.dart`
-- [ ] **T47** — `screens/purchase_detail_screen.dart`
+### Ticaret & ödeme ✅ Tümü tamamlandı
+- [x] **T44** — `screens/sales_screen.dart` ✅
+- [x] **T45** — `screens/sale_detail_screen.dart` ✅
+- [x] **T46** — `screens/purchases_screen.dart` ✅
+- [x] **T47** — `screens/purchase_detail_screen.dart` ✅
 
-### Analytics & Pro
-- [ ] **T48** — `screens/competitor_radar_screen.dart` (34 kullanım)
-- [ ] **T49** — `screens/demand_trends_screen.dart`
-- [ ] **T50** — `screens/market_intelligence_screen.dart`
-- [ ] **T51** — `screens/pro_hub_screen.dart`
-- [ ] **T52** — `screens/pro_insights_screen.dart`
-- [ ] **T53** — `screens/retargeting_screen.dart`
-- [ ] **T54** — `screens/listing_analytics_screen.dart`
-- [ ] **T55** — `screens/live_stream_analytics_screen.dart`
-- [ ] **T56** — `screens/live_stream_history_screen.dart`
-- [ ] **T57** — `screens/pro_stream_analytics_screen.dart`
+### Analytics & Pro ✅ Tümü tamamlandı
+- [x] **T48** — `screens/competitor_radar_screen.dart` ✅
+- [x] **T49** — `screens/demand_trends_screen.dart` ✅
+- [x] **T50** — `screens/market_intelligence_screen.dart` ✅
+- [x] **T51** — `screens/pro_hub_screen.dart` ✅
+- [x] **T52** — `screens/pro_insights_screen.dart` ✅
+- [x] **T53** — `screens/retargeting_screen.dart` ✅
+- [x] **T54** — `screens/listing_analytics_screen.dart` ✅ (T33 ile aynı ekran)
+- [x] **T55** — `screens/live_stream_analytics_screen.dart` ✅
+- [x] **T56** — `screens/live_stream_history_screen.dart` ✅
 
-### Diğer ekranlar
-- [ ] **T58** — `screens/ad_report_screen.dart`
-- [ ] **T59** — `screens/blocked_users_screen.dart`
-- [ ] **T60** — `screens/call_screen.dart`
-- [ ] **T61** — `screens/call_history_screen.dart`
-- [ ] **T62** — `screens/faq_screen.dart`
-- [ ] **T63** — `screens/force_update_screen.dart`
-- [ ] **T64** — `screens/incoming_call_screen.dart`
-- [ ] **T65** — `screens/my_ratings_screen.dart`
-- [ ] **T66** — `screens/notification_settings_screen.dart`
-- [ ] **T67** — `screens/story/story_viewer_screen.dart`
+### Diğer ekranlar ✅ Tümü tamamlandı
+- [x] **T57** — `screens/pro_stream_analytics_screen.dart` ✅
+- [x] **T58** — `screens/ad_report_screen.dart` ✅
+- [x] **T59** — `screens/blocked_users_screen.dart` ✅
+- [x] **T60** — `screens/call_screen.dart` ✅
+- [x] **T61** — `screens/call_history_screen.dart` ✅
+- [x] **T62** — `screens/faq_screen.dart` ✅
+- [x] **T63** — `screens/force_update_screen.dart` ✅
+- [x] **T64** — `screens/incoming_call_screen.dart` ✅
+- [x] **T65** — `screens/my_ratings_screen.dart` ✅
+- [x] **T66** — `screens/notification_settings_screen.dart` ✅
+- [x] **T67** — `screens/story/story_viewer_screen.dart` ✅
 
-### Widget'lar
-- [ ] **T68** — `widgets/auction_panel.dart` (32 kullanım)
-- [ ] **T69** — `widgets/chat_panel.dart`
-- [ ] **T70** — `widgets/live/story_tray.dart` (22 kullanım)
-- [ ] **T71** — `widgets/live/host_top_bar.dart`
-- [ ] **T72** — `widgets/live/viewer_top_bar.dart`
-- [ ] **T73** — `widgets/live/gift_hud.dart`
-- [ ] **T74** — `widgets/live/cohost_mod_sheet.dart`
-- [ ] **T75** — `widgets/live/live_video_player.dart`
-- [ ] **T76** — `widgets/live/pip_video_widget.dart`
-- [ ] **T77** — `widgets/global_call_overlay.dart`
-- [ ] **T78** — `widgets/global_keyboard_accessory.dart`
-- [ ] **T79** — `widgets/incoming_call_overlay.dart`
-- [ ] **T80** — `widgets/network_error_widget.dart`
-- [ ] **T81** — `widgets/offline_banner.dart`
-- [ ] **T82** — `widgets/phone_input_field.dart`
-- [ ] **T83** — `widgets/soft_update_dialog.dart`
-- [ ] **T84** — `widgets/stale_data_banner.dart`
-- [ ] **T85** — `widgets/streamer_avatar_card.dart`
-- [ ] **T86** — `widgets/swipe_to_bid_button.dart`
+### Widget'lar ✅ Tümü tamamlandı
+- [x] **T68** — `widgets/auction_panel.dart` ✅
+- [x] **T69** — `widgets/chat_panel.dart` ✅
+- [x] **T70** — `widgets/live/story_tray.dart` ✅
+- [x] **T71** — `widgets/live/host_top_bar.dart` ✅
+- [x] **T72** — `widgets/live/viewer_top_bar.dart` ✅
+- [x] **T73** — `widgets/live/gift_hud.dart` ✅
+- [x] **T74** — `widgets/live/cohost_mod_sheet.dart` ✅
+- [x] **T75** — `widgets/live/live_video_player.dart` ✅
+- [x] **T76** — `widgets/live/pip_video_widget.dart` ✅
+- [x] **T77** — `widgets/global_call_overlay.dart` ✅
+- [x] **T78** — `widgets/global_keyboard_accessory.dart` ✅
+- [x] **T79** — `widgets/incoming_call_overlay.dart` ✅
+- [x] **T80** — `widgets/network_error_widget.dart` ✅
+- [x] **T81** — `widgets/offline_banner.dart` ✅
+- [x] **T82** — `widgets/phone_input_field.dart` ✅
+- [x] **T83** — `widgets/soft_update_dialog.dart` ✅
+- [x] **T84** — `widgets/stale_data_banner.dart` ✅
+- [x] **T85** — `widgets/streamer_avatar_card.dart` ✅
+- [x] **T86** — `widgets/swipe_to_bid_button.dart` ✅
 
 ---
 
-## FAZ 6 — Temizlik
+## FAZ 6 — Temizlik ✅ Tümü tamamlandı
 
-- [ ] **T87** — `utils/snackbar_helper.dart` context parametrelerini kaldır
-  - `showSuccessSnackbar(context, message)` → `showSuccessSnackbar(String message)` veya direkt `TeqToast.success(message)` kullan
-- [ ] **T88** — `services/share_service.dart` AppLocalizations kullanımını gözden geçir
-- [ ] **T89** — `dart analyze` — sıfır hata, tüm ekranlar migrate sonrası
+- [x] **T87** — `utils/snackbar_helper.dart` context parametrelerini kaldır ✅
+  - `showSuccessSnackbar(context, message)` → `showSuccessSnackbar(String message)` — context artık kullanılmıyor
+- [x] **T88** — `services/share_service.dart` AppLocalizations kullanımını gözden geçir ✅
+  - `_ShareSheet` → ConsumerWidget, tüm `AppLocalizations.of(context)!.xxx` → `loc.t("xxx")`
+  - `copyLink()` → `copiedLabel` string parametresi alıyor, AppLocalizations bağımlılığı kaldırıldı
+- [x] **T89** — `dart analyze` — 0 error, 2 warning + 34 info (tümü önceden vardı) ✅
 
 ---
 
@@ -192,3 +192,4 @@ Her ekran: `StatefulWidget` → `ConsumerStatefulWidget`, `l.xxx` → `loc.t('xx
 - **Her ekrandan sonra** `dart analyze` çalıştır, biriken hata biriktirme
 - **Widget migration:** Parent'tan `loc` parametresi almak da kabul edilebilir; her widget'ı `ConsumerWidget` yapmak zorunda değiliz
 - **ARB dosyaları silinmez** — MaterialApp delegates için codegen çalışmaya devam eder
+- **Mevcut durum:** `dart analyze` → 0 error, 2 info (tümü önceden vardı). FAZ 5 tamamlandı. FAZ 6 ve 7 kaldı.

@@ -1,24 +1,25 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
-import '../l10n/app_localizations.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 
-class NotificationSettingsScreen extends StatefulWidget {
+class NotificationSettingsScreen extends ConsumerStatefulWidget {
   final bool isPremium;
   const NotificationSettingsScreen({super.key, this.isPremium = false});
 
   @override
-  State<NotificationSettingsScreen> createState() =>
+  ConsumerState<NotificationSettingsScreen> createState() =>
       _NotificationSettingsScreenState();
 }
 
 class _NotificationSettingsScreenState
-    extends State<NotificationSettingsScreen> {
+    extends ConsumerState<NotificationSettingsScreen> {
   bool _loading = true;
   String? _error;
 
@@ -39,40 +40,40 @@ class _NotificationSettingsScreenState
   TimeOfDay _quietFrom = const TimeOfDay(hour: 22, minute: 0);
   TimeOfDay _quietTo = const TimeOfDay(hour: 8, minute: 0);
 
-  Map<String, (String, String, IconData)> _buildLabels(AppLocalizations l) => {
+  Map<String, (String, String, IconData)> _buildLabels(TranslationPack loc) => {
     'messages': (
-      l.notifSettingsMessagesTitle,
-      l.notifSettingsMessagesDesc,
+      loc.t("notifSettingsMessagesTitle"),
+      loc.t("notifSettingsMessagesDesc"),
       Icons.chat_bubble_outline,
     ),
     'follows': (
-      l.notifSettingsFollowsTitle,
-      l.notifSettingsFollowsDesc,
+      loc.t("notifSettingsFollowsTitle"),
+      loc.t("notifSettingsFollowsDesc"),
       Icons.person_add_outlined,
     ),
     'auction_won': (
-      l.notifSettingsAuctionWonTitle,
-      l.notifSettingsAuctionWonDesc,
+      loc.t("notifSettingsAuctionWonTitle"),
+      loc.t("notifSettingsAuctionWonDesc"),
       Icons.emoji_events_outlined,
     ),
     'stream_started': (
-      l.notifSettingsStreamStartedTitle,
-      l.notifSettingsStreamStartedDesc,
+      loc.t("notifSettingsStreamStartedTitle"),
+      loc.t("notifSettingsStreamStartedDesc"),
       Icons.live_tv_outlined,
     ),
     'new_listing': (
-      l.notifSettingsNewListingTitle,
-      l.notifSettingsNewListingDesc,
+      loc.t("notifSettingsNewListingTitle"),
+      loc.t("notifSettingsNewListingDesc"),
       Icons.storefront_outlined,
     ),
     'new_bid': (
-      l.notifSettingsNewBidTitle,
-      l.notifSettingsNewBidDesc,
+      loc.t("notifSettingsNewBidTitle"),
+      loc.t("notifSettingsNewBidDesc"),
       Icons.gavel_outlined,
     ),
     'outbid': (
-      l.notifSettingsOutbidTitle,
-      l.notifSettingsOutbidDesc,
+      loc.t("notifSettingsOutbidTitle"),
+      loc.t("notifSettingsOutbidDesc"),
       Icons.trending_up_outlined,
     ),
   };
@@ -210,6 +211,7 @@ class _NotificationSettingsScreenState
   }
 
   void _showUpgradeSheet() {
+    final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -230,12 +232,12 @@ class _NotificationSettingsScreenState
             ),
             const SizedBox(height: 20),
             Text(
-              AppLocalizations.of(context)!.notifProUpgradeTitle,
+              loc.t("notifProUpgradeTitle"),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             Text(
-              AppLocalizations.of(context)!.notifProUpgradeDesc,
+              loc.t("notifProUpgradeDesc"),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -244,7 +246,7 @@ class _NotificationSettingsScreenState
             ),
             const SizedBox(height: 24),
             TeqButton(
-              text: AppLocalizations.of(context)!.btnGoPro,
+              text: loc.t("btnGoPro"),
               onPressed: () => Navigator.pop(context),
               isExpanded: true,
             ),
@@ -256,8 +258,8 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final labels = _buildLabels(l);
+    final loc = ref.read(localizationProvider);
+    final labels = _buildLabels(loc);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -265,7 +267,7 @@ class _NotificationSettingsScreenState
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         title: Text(
-          l.notifSettingsTitle,
+          loc.t("notifSettingsTitle"),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -323,7 +325,7 @@ class _NotificationSettingsScreenState
 
 // ── Pro bölümü widget'ı ───────────────────────────────────────────────────────
 
-class _ProSection extends StatelessWidget {
+class _ProSection extends ConsumerWidget {
   final bool isPremium;
   final int bidThreshold;
   final bool quietEnabled;
@@ -355,8 +357,8 @@ class _ProSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -366,7 +368,7 @@ class _ProSection extends StatelessWidget {
           Row(
             children: [
               Text(
-                l.lblProNotificationSettings,
+                loc.t("lblProNotificationSettings"),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -418,7 +420,7 @@ class _ProSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l.notifBidThresholdTitle,
+                              loc.t("notifBidThresholdTitle"),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -426,7 +428,7 @@ class _ProSection extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              l.notifBidThresholdDesc,
+                              loc.t("notifBidThresholdDesc"),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary(context),
@@ -473,7 +475,7 @@ class _ProSection extends StatelessWidget {
                           ),
                           child: Text(
                             v == 0
-                                ? AppLocalizations.of(context)!.lblStatusOff
+                                ? loc.t("lblStatusOff")
                                 : '₺$v',
                             style: TextStyle(
                               fontSize: 13,
@@ -516,7 +518,7 @@ class _ProSection extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocalizations.of(context)!.notifSettingsBlastTitle,
+                          loc.t("notifSettingsBlastTitle"),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -524,7 +526,7 @@ class _ProSection extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          AppLocalizations.of(context)!.notifSettingsBlastDesc,
+                          loc.t("notifSettingsBlastDesc"),
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary(context),
@@ -573,7 +575,7 @@ class _ProSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l.notifQuietHoursTitle,
+                              loc.t("notifQuietHoursTitle"),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -581,7 +583,7 @@ class _ProSection extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              l.notifQuietHoursDesc,
+                              loc.t("notifQuietHoursDesc"),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary(context),
@@ -610,9 +612,7 @@ class _ProSection extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _TimePicker(
-                            label: AppLocalizations.of(
-                              context,
-                            )!.notificationStart,
+                            label: loc.t("notificationStart"),
                             time: quietFrom,
                             onTap: onPickFrom,
                           ),
@@ -620,9 +620,7 @@ class _ProSection extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _TimePicker(
-                            label: AppLocalizations.of(
-                              context,
-                            )!.notificationEnd,
+                            label: loc.t("notificationEnd"),
                             time: quietTo,
                             onTap: onPickTo,
                           ),
@@ -653,7 +651,7 @@ class _ProSection extends StatelessWidget {
   }
 }
 
-class _TimePicker extends StatelessWidget {
+class _TimePicker extends ConsumerWidget {
   final String label;
   final TimeOfDay time;
   final VoidCallback? onTap;
@@ -668,7 +666,7 @@ class _TimePicker extends StatelessWidget {
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -717,7 +715,7 @@ class _TimePicker extends StatelessWidget {
 
 // ── Temel bildirim tile ────────────────────────────────────────────────────────
 
-class _NotifTile extends StatelessWidget {
+class _NotifTile extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String subtitle;
@@ -734,7 +732,7 @@ class _NotifTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(

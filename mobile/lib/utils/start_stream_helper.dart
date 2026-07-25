@@ -9,7 +9,7 @@ import '../services/category_service.dart';
 import '../services/client_logger.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
-import '../utils/error_helper.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
 
 /// Canlı yayın başlatma dialog'unu gösterir.
@@ -325,7 +325,7 @@ Future<void> showStartStreamDialog(
       stackTrace: st,
       details: {'title': title, 'category': category},
     );
-    if (context.mounted) showErrorSnackbar(context, e);
+    TeqToast.error(AppLocalizations.of(context)?.errorGenericRetry ?? 'Bir hata oluştu');
   }
 }
 

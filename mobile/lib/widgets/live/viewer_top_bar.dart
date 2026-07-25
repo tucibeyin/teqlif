@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 import '../../services/share_service.dart';
 
 /// Canlı yayın izleyici ekranı — üst bilgi çubuğu.
 ///
 /// Satır 1: Geri butonu, CANLI rozeti, izleyici sayacı, MOD rozeti, Ayrıl butonu.
 /// Satır 2: Kayar yayın başlığı (host kullanıcı adı ile birlikte).
-class ViewerTopBar extends StatelessWidget {
+class ViewerTopBar extends ConsumerWidget {
   final double topPad;
   final int viewerCount;
   final String title;
@@ -33,8 +34,8 @@ class ViewerTopBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       padding: EdgeInsets.only(
         top: topPad + 14,
@@ -85,7 +86,7 @@ class ViewerTopBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
-                  streamEnded ? l.liveEndedBadge : l.liveBadgeLabel,
+                  streamEnded ? loc.t("liveEndedBadge") : loc.t("liveBadgeLabel"),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -124,7 +125,7 @@ class ViewerTopBar extends StatelessWidget {
                       ShareService.show(
                         btnCtx,
                         url: 'https://www.teqlif.com/yayin/$streamId',
-                        text: AppLocalizations.of(context)!.shareLiveText(title),
+                        text: loc.t("shareLiveText", {"title": title}),
                         imageUrl: thumbnailUrl,
                         origin: origin,
                       );
@@ -177,7 +178,7 @@ class ViewerTopBar extends StatelessWidget {
                     border: Border.all(color: Colors.white24),
                   ),
                   child: Text(
-                    l.liveLeaveBtn,
+                    loc.t("liveLeaveBtn"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,

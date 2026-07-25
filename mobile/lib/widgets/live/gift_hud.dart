@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 
-class GiftHud extends StatefulWidget {
+class GiftHud extends ConsumerStatefulWidget {
   final String sender;
   final String giftName;
   final int cost;
@@ -15,10 +16,10 @@ class GiftHud extends StatefulWidget {
   });
 
   @override
-  State<GiftHud> createState() => _GiftHudState();
+  ConsumerState<GiftHud> createState() => _GiftHudState();
 }
 
-class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
+class _GiftHudState extends ConsumerState<GiftHud> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _opacity;
   late Animation<double> _scale;
@@ -51,16 +52,16 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
   String get _emoji =>
       _keyEmoji[widget.giftName] ?? widget.giftName.split(' ').first;
 
-  String _displayName(AppLocalizations l) => switch (widget.giftName) {
-        'fire'    => l.giftNameFire,
-        'diamond' => l.giftNameDiamond,
-        'crown'   => l.giftNameCrown,
+  String _displayName(TranslationPack loc) => switch (widget.giftName) {
+        'fire'    => loc.t("giftNameFire"),
+        'diamond' => loc.t("giftNameDiamond"),
+        'crown'   => loc.t("giftNameCrown"),
         _         => widget.giftName, // eski Türkçe keyler için geriye uyumlu
       };
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Positioned(
       top: MediaQuery.of(context).padding.top + 72,
       left: 20,
@@ -98,7 +99,7 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          l.giftSentHud(widget.sender),
+                          loc.t("giftSentHud", {"sender": widget.sender}),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
@@ -109,7 +110,7 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${_displayName(l)}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} TUCi',
+                          '${_displayName(loc)}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} TUCi',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,

@@ -10002,6 +10002,18 @@ abstract class AppLocalizations {
   /// **'Yapay zeka servisi zaman aşımına uğradı.'**
   String get apiErrorAiServiceTimeout;
 
+  /// No description provided for @errorServerBusy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.'**
+  String get errorServerBusy;
+
+  /// No description provided for @errorSessionExpired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Oturumunuzun süresi doldu, lütfen tekrar giriş yapın.'**
+  String get errorSessionExpired;
+
   /// No description provided for @conditionRefurbished.
   ///
   /// In tr, this message translates to:

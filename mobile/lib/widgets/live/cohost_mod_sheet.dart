@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 import '../../services/moderation_service.dart';
 
 /// Co-Host moderasyon bottom sheet'i.
 /// Sadece Sustur / Susturmayı Kaldır / Yayından At — "Moderatör Yap" YOK.
-class CoHostModSheet extends StatefulWidget {
+class CoHostModSheet extends ConsumerStatefulWidget {
   final int streamId;
   final String username;
   final bool isMuted;
@@ -21,10 +22,10 @@ class CoHostModSheet extends StatefulWidget {
   });
 
   @override
-  State<CoHostModSheet> createState() => _CoHostModSheetState();
+  ConsumerState<CoHostModSheet> createState() => _CoHostModSheetState();
 }
 
-class _CoHostModSheetState extends State<CoHostModSheet> {
+class _CoHostModSheetState extends ConsumerState<CoHostModSheet> {
   bool _loading = false;
   String? _msg;
   bool _isError = false;
@@ -70,7 +71,7 @@ class _CoHostModSheetState extends State<CoHostModSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF1E293B),
@@ -95,7 +96,7 @@ class _CoHostModSheetState extends State<CoHostModSheet> {
           Row(
             children: [
               Text(
-                '🛡 ${l.modTitle}',
+                '🛡 ${loc.t("modTitle")}',
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -119,7 +120,7 @@ class _CoHostModSheetState extends State<CoHostModSheet> {
           if (!_isMuted)
             CoHostModBtn(
               icon: '🔇',
-              label: l.modMute,
+              label: loc.t("modMute"),
               color: const Color(0xFFD97706),
               loading: _loading,
               onTap: () => _act(
@@ -134,13 +135,13 @@ class _CoHostModSheetState extends State<CoHostModSheet> {
           else
             CoHostModBtn(
               icon: '🔊',
-              label: l.modUnmute,
+              label: loc.t("modUnmute"),
               color: const Color(0xFF16A34A),
               loading: _loading,
               onTap: () => _act(
                 () =>
                     ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: l.modUnmutedMsg,
+                successMsg: loc.t("modUnmutedMsg"),
                 onSuccess: () {
                   widget.onUnmuted();
                   setState(() => _isMuted = false);
@@ -152,7 +153,7 @@ class _CoHostModSheetState extends State<CoHostModSheet> {
           // Yayından At
           CoHostModBtn(
             icon: '🚫',
-            label: l.modKick,
+            label: loc.t("modKick"),
             color: const Color(0xFFEF4444),
             loading: _loading,
             onTap: () => _act(
@@ -175,7 +176,7 @@ class _CoHostModSheetState extends State<CoHostModSheet> {
                 ),
               ),
               child: Text(
-                l.btnCancel,
+                loc.t("btnCancel"),
                 style: const TextStyle(
                     color: Color(0xFF94A3B8), fontSize: 14),
               ),

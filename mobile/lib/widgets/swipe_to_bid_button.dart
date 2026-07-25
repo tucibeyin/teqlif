@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/analytics_service.dart';
 
-class SwipeToBidButton extends StatefulWidget {
+class SwipeToBidButton extends ConsumerStatefulWidget {
   final String text;
   final VoidCallback onSwipeComplete;
   final bool isLoading;
@@ -26,10 +27,10 @@ class SwipeToBidButton extends StatefulWidget {
   });
 
   @override
-  State<SwipeToBidButton> createState() => _SwipeToBidButtonState();
+  ConsumerState<SwipeToBidButton> createState() => _SwipeToBidButtonState();
 }
 
-class _SwipeToBidButtonState extends State<SwipeToBidButton>
+class _SwipeToBidButtonState extends ConsumerState<SwipeToBidButton>
     with TickerProviderStateMixin {
   static const double _trackHeight = 56.0;
   static const double _thumbSize = 48.0;
@@ -173,6 +174,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
         _maxDrag = constraints.maxWidth - _thumbSize - _trackPadding * 2;
@@ -239,7 +241,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
                                     ),
                                   )
                                 : _ShimmerText(
-                                    text: widget.isInvalid ? AppLocalizations.of(context)!.fraudInvalidBid : widget.text,
+                                    text: widget.isInvalid ? loc.t("fraudInvalidBid") : widget.text,
                                     shimmerAnim: _shimmerAnim,
                                   ),
                           ),

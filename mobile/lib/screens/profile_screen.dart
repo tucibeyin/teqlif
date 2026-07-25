@@ -1,11 +1,12 @@
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
+import '../services/localization_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -58,14 +59,14 @@ import 'faq_screen.dart';
 import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
   bool _loading = true;
@@ -345,10 +346,11 @@ class ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
+    final loc = ref.watch(localizationProvider);
     final fullName =
         _user?['full_name'] ??
         _user?['username'] ??
-        AppLocalizations.of(context)!.defaultUserFallback;
+        loc.t('defaultUserFallback');
     final username = _user?['username'] ?? '';
     final email = _user?['email'] ?? '';
     final isVerified = _user?['is_verified'] == true;
@@ -399,7 +401,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    AppLocalizations.of(context)!.btnAddListing,
+                    ref.read(localizationProvider).t('btnAddListing'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -427,7 +429,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    AppLocalizations.of(context)!.startLiveStreamOption,
+                    ref.read(localizationProvider).t('startLiveStreamOption'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -598,9 +600,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               _StatItem(
                                 count: _listings.length,
-                                label: AppLocalizations.of(
-                                  context,
-                                )!.profileListingCount,
+                                label: loc.t("profileListingCount"),
                               ),
                               GestureDetector(
                                 key: const Key('profile_stat_takipci'),
@@ -611,9 +611,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                           builder: (_) => FollowListScreen(
                                             userId: _user!['id'] as int,
                                             type: FollowListType.followers,
-                                            title: AppLocalizations.of(
-                                              context,
-                                            )!.profileFollowersList,
+                                            title: loc.t("profileFollowersList"),
                                           ),
                                         ),
                                       )
@@ -621,9 +619,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 child: _StatItem(
                                   count:
                                       (_user?['follower_count'] as int?) ?? 0,
-                                  label: AppLocalizations.of(
-                                    context,
-                                  )!.profileFollowers,
+                                  label: loc.t("profileFollowers"),
                                 ),
                               ),
                               GestureDetector(
@@ -635,9 +631,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                           builder: (_) => FollowListScreen(
                                             userId: _user!['id'] as int,
                                             type: FollowListType.following,
-                                            title: AppLocalizations.of(
-                                              context,
-                                            )!.profileFollowingList,
+                                            title: loc.t("profileFollowingList"),
                                           ),
                                         ),
                                       )
@@ -645,9 +639,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 child: _StatItem(
                                   count:
                                       (_user?['following_count'] as int?) ?? 0,
-                                  label: AppLocalizations.of(
-                                    context,
-                                  )!.profileFollowing,
+                                  label: loc.t("profileFollowing"),
                                 ),
                               ),
                             ],
@@ -676,13 +668,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                               const SizedBox(width: 6),
                               _ScoreBadge(
                                 icon: FontAwesomeIcons.rankingStar,
-                                title: AppLocalizations.of(
-                                  context,
-                                )!.influenceRankLabel,
+                                title: loc.t("influenceRankLabel"),
                                 value: '${_user!['influence_rank']}',
-                                hint: AppLocalizations.of(
-                                  context,
-                                )!.influenceRankHint,
+                                hint: loc.t("influenceRankHint"),
                                 color: const Color(0xFF8B5CF6),
                               ),
                             ],
@@ -692,12 +680,11 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 builder: (ctx) {
                                   final ts = (_user!['trust_score'] as num)
                                       .toInt();
-                                  final l = AppLocalizations.of(ctx)!;
                                   return _ScoreBadge(
                                     icon: FontAwesomeIcons.shieldHalved,
-                                    title: l.trustScoreLabel,
+                                    title: loc.t('trustScoreLabel'),
                                     value: '$ts / 100',
-                                    hint: l.trustScoreHint,
+                                    hint: loc.t('trustScoreHint'),
                                     color: ts >= 70
                                         ? const Color(0xFF10B981)
                                         : ts >= 35
@@ -783,7 +770,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: TeqButton.outline(
                       key: const Key('profile_btn_profil_duzenle'),
-                      text: AppLocalizations.of(context)!.btnEditProfile,
+                      text: ref.read(localizationProvider).t('btnEditProfile'),
                       size: TeqButtonSize.small,
                       onPressed: () => Navigator.push(
                         context,
@@ -854,7 +841,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                 hasScrollBody: false,
                 child: Builder(
                   builder: (context) {
-                    final l = AppLocalizations.of(context)!;
+                    final loc = ref.read(localizationProvider);
                     return Center(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -869,7 +856,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              l.emptyListings,
+                              loc.t('emptyListings'),
                               style: const TextStyle(
                                 color: Color(0xFF6B7280),
                                 fontSize: 15,
@@ -878,7 +865,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              l.profileFirstListing,
+                              loc.t('profileFirstListing'),
                               style: const TextStyle(
                                 color: Color(0xFF9CA3AF),
                                 fontSize: 13,
@@ -909,7 +896,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            AppLocalizations.of(ctx)!.noResultsFound,
+                            loc.t("noResultsFound"),
                             style: const TextStyle(
                               color: Color(0xFF6B7280),
                               fontSize: 15,
@@ -946,7 +933,7 @@ class ProfileScreenState extends State<ProfileScreen> {
 
 // ── Arama + Kategori filtresi widget'ı (ProfileScreen & PublicProfileScreen) ──
 
-class ListingFilter extends StatefulWidget {
+class ListingFilter extends ConsumerStatefulWidget {
   final TextEditingController searchCtrl;
   final String searchQuery;
   final String? selectedCategory;
@@ -967,14 +954,15 @@ class ListingFilter extends StatefulWidget {
   });
 
   @override
-  State<ListingFilter> createState() => _ListingFilterState();
+  ConsumerState<ListingFilter> createState() => _ListingFilterState();
 }
 
-class _ListingFilterState extends State<ListingFilter> {
+class _ListingFilterState extends ConsumerState<ListingFilter> {
   bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -991,7 +979,7 @@ class _ListingFilterState extends State<ListingFilter> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  AppLocalizations.of(context)!.filterTitle,
+                  ref.read(localizationProvider).t('filterTitle'),
                   style: TextStyle(
                     color: AppColors.textSecondary(context),
                     fontSize: 15,
@@ -1019,9 +1007,7 @@ class _ListingFilterState extends State<ListingFilter> {
                 child: TeqTextField(
                   controller: widget.searchCtrl,
                   onChanged: widget.onSearchChanged,
-                  hintText: AppLocalizations.of(
-                    context,
-                  )!.profileSearchListingHint,
+                  hintText: loc.t("profileSearchListingHint"),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: widget.searchQuery.isNotEmpty
                       ? IconButton(
@@ -1039,7 +1025,7 @@ class _ListingFilterState extends State<ListingFilter> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       _CategoryChip(
-                        label: AppLocalizations.of(context)!.profileFilterAll,
+                        label: ref.read(localizationProvider).t('profileFilterAll'),
                         selected: widget.selectedCategory == null,
                         onTap: () => widget.onCategorySelected(null),
                       ),
@@ -1136,7 +1122,7 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-class _ListingGridItem extends StatelessWidget {
+class _ListingGridItem extends ConsumerWidget {
   final dynamic listing;
   const _ListingGridItem({super.key, required this.listing});
 
@@ -1152,7 +1138,7 @@ class _ListingGridItem extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final imgs = listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
@@ -1229,7 +1215,7 @@ class _ListingGridItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  AppLocalizations.of(context)!.badgePassive,
+                  ref.read(localizationProvider).t('badgePassive'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
@@ -1250,7 +1236,7 @@ class _ListingGridItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  AppLocalizations.of(context)!.badgeSponsored,
+                  ref.read(localizationProvider).t('badgeSponsored'),
                   style: const TextStyle(
                     color: Color(0xFF7c5700),
                     fontSize: 9,
@@ -1398,13 +1384,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       } else {
         setState(() => _isPrivate = !val);
         if (mounted) {
-          TeqSnackBar.show(message: AppLocalizations.of(context)!.errorGenericRetry, type: TeqSnackBarType.info);
+          TeqSnackBar.show(message: ref.read(localizationProvider).t('errorGenericRetry'), type: TeqSnackBarType.info);
         }
       }
     } catch (_) {
       setState(() => _isPrivate = !val);
       if (mounted) {
-        TeqSnackBar.show(message: AppLocalizations.of(context)!.errNetworkRetry, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('errNetworkRetry'), type: TeqSnackBarType.info);
       }
     }
   }
@@ -1438,28 +1424,28 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     if (!mounted) return;
     setState(() => _shareLoading = false);
     if (code == null) {
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.profileInviteCodeError, type: TeqSnackBarType.info);
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('profileInviteCodeError'), type: TeqSnackBarType.info);
       return;
     }
 
     // Kalan süreyi hesapla
-    final l = AppLocalizations.of(context)!;
-    String expiryText = l.profileInviteExpiryDays(3);
+    final loc = ref.read(localizationProvider);
+    String expiryText = loc.t('profileInviteExpiryDays', {'days': '3'});
     if (expiresAt != null) {
       try {
         final expiry = DateTime.parse(expiresAt);
         final diff = expiry.difference(DateTime.now().toUtc());
         if (diff.inHours >= 24) {
-          expiryText = l.profileInviteExpiryDays(diff.inDays);
+          expiryText = loc.t('profileInviteExpiryDays', {'days': diff.inDays.toString()});
         } else if (diff.inHours > 0) {
-          expiryText = l.profileInviteExpiryHours(diff.inHours);
+          expiryText = loc.t('profileInviteExpiryHours', {'hours': diff.inHours.toString()});
         } else {
-          expiryText = l.profileInviteExpirySoon;
+          expiryText = loc.t('profileInviteExpirySoon');
         }
       } catch (_) {}
     }
 
-    final shareText = l.profileInviteShareText(code, expiryText);
+    final shareText = loc.t('profileInviteShareText', {'code': code, 'expiry': expiryText});
 
     // iOS 26+ sharePositionOrigin zorunlu — tile'ın ekran konumunu kullan
     final box = _shareTileKey.currentContext?.findRenderObject() as RenderBox?;
@@ -1509,7 +1495,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                l.profileInviteTitle,
+                loc.t('profileInviteTitle'),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -1519,7 +1505,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                l.profileInviteSubtitle,
+                loc.t('profileInviteSubtitle'),
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(
@@ -1592,7 +1578,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                                   ],
                                 ),
                                 child: Text(
-                                  l.profileInviteCodeCopied,
+                                  loc.t('profileInviteCodeCopied'),
                                   style: TextStyle(
                                     color: Theme.of(
                                       context,
@@ -1630,7 +1616,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                l.profileInviteModalExpiry(expiryText),
+                loc.t('profileInviteModalExpiry', {'expiry': expiryText}),
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.red.shade400,
@@ -1642,7 +1628,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 width: double.infinity,
                 height: 54,
                 child: TeqButton(
-                  text: l.profileInviteShareBtn,
+                  text: loc.t('profileInviteShareBtn'),
                   icon: Icons.share_rounded,
                   size: TeqButtonSize.large,
                   onPressed: () {
@@ -1680,8 +1666,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     bool loading = false;
     String? error;
 
-    final l = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
+    final loc = ref.read(localizationProvider);
     final token = await StorageService.getToken();
     if (token == null || !mounted) return;
 
@@ -1693,7 +1678,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         builder: (ctx, setS) => AlertDialog(
           backgroundColor: AppColors.card(ctx),
           title: Text(
-            l.profileChangePassword,
+            loc.t('profileChangePassword'),
             style: TextStyle(
               color: AppColors.textPrimary(ctx),
               fontSize: 16,
@@ -1708,19 +1693,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 TeqTextField(
                   controller: currentPassCtrl,
                   obscureText: true,
-                  labelText: l.fieldCurrentPassword,
+                  labelText: loc.t('fieldCurrentPassword'),
                 ),
                 const SizedBox(height: 10),
                 TeqTextField(
                   controller: newPassCtrl,
                   obscureText: true,
-                  labelText: l.fieldNewPassword,
+                  labelText: loc.t('fieldNewPassword'),
                 ),
                 const SizedBox(height: 10),
                 TeqTextField(
                   controller: confirmPassCtrl,
                   obscureText: true,
-                  labelText: l.fieldNewPasswordConfirm,
+                  labelText: loc.t('fieldNewPasswordConfirm'),
                 ),
                 if (codeSent) ...[
                   const SizedBox(height: 10),
@@ -1728,7 +1713,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     controller: codeCtrl,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
-                    labelText: l.fieldEmailCode,
+                    labelText: loc.t('fieldEmailCode'),
                   ),
                 ],
                 if (error != null) ...[
@@ -1746,11 +1731,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           actions: [
             TeqButton.text(
-              text: l.btnCancel,
+              text: loc.t('btnCancel'),
               onPressed: loading ? null : () => Navigator.pop(ctx),
             ),
             TeqButton(
-              text: codeSent ? l.btnChangePassword : l.btnSendCode,
+              text: codeSent ? loc.t('btnChangePassword') : loc.t('btnSendCode'),
               isLoading: loading,
               isExpanded: false,
               onPressed: loading
@@ -1766,21 +1751,21 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           newPassCtrl.text.isEmpty ||
                           confirmPassCtrl.text.isEmpty) {
                         setS(() {
-                          error = l.validAllFields;
+                          error = loc.t('validAllFields');
                           loading = false;
                         });
                         return;
                       }
                       if (newPassCtrl.text.length < 8) {
                         setS(() {
-                          error = l.validNewPasswordMin;
+                          error = loc.t('validNewPasswordMin');
                           loading = false;
                         });
                         return;
                       }
                       if (newPassCtrl.text != confirmPassCtrl.text) {
                         setS(() {
-                          error = l.validPasswordsMatch;
+                          error = loc.t('validPasswordsMatch');
                           loading = false;
                         });
                         return;
@@ -1812,7 +1797,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                             'Şifre kodu gönderilemedi: $e',
                           );
                           setS(() {
-                            error = l.errorNetworkMessage;
+                            error = loc.t('errorNetworkMessage');
                             loading = false;
                           });
                         }
@@ -1820,7 +1805,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         // Kodu doğrula ve şifreyi değiştir
                         if (codeCtrl.text.trim().length != 6) {
                           setS(() {
-                            error = l.validVerificationCode;
+                            error = loc.t('validVerificationCode');
                             loading = false;
                           });
                           return;
@@ -1844,7 +1829,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           );
                           if (ctx.mounted) Navigator.pop(ctx);
                           if (mounted) {
-                            TeqSnackBar.show(message: l.msgPasswordChanged,
+                            TeqSnackBar.show(message: loc.t('msgPasswordChanged'),
                               type: TeqSnackBarType.success,
                             );
                           }
@@ -1859,7 +1844,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                             'Şifre değiştirme başarısız: $e',
                           );
                           setS(() {
-                            error = l.errorNetworkMessage;
+                            error = loc.t('errorNetworkMessage');
                             loading = false;
                           });
                         }
@@ -1876,7 +1861,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     final passCtrl = TextEditingController();
     String? error;
 
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
 
     await showDialog(
       context: context,
@@ -1885,7 +1870,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         builder: (ctx, setS) => AlertDialog(
           backgroundColor: Colors.white,
           title: Text(
-            l.profileDeleteAccount,
+            loc.t('profileDeleteAccount'),
             style: const TextStyle(color: Color(0xFFEF4444), fontSize: 16),
           ),
           content: Column(
@@ -1893,14 +1878,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l.profileDeleteAccountDesc,
+                loc.t('profileDeleteAccountDesc'),
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
               ),
               const SizedBox(height: 16),
               TeqTextField(
                 controller: passCtrl,
                 obscureText: true,
-                labelText: l.fieldPassword,
+                labelText: loc.t('fieldPassword'),
               ),
               if (error != null) ...[
                 const SizedBox(height: 8),
@@ -1916,16 +1901,16 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           actions: [
             TeqButton.text(
-              text: l.btnCancel,
+              text: loc.t('btnCancel'),
               onPressed: () => Navigator.pop(ctx),
             ),
             TeqButton(
-              text: l.btnDeleteAccount,
+              text: loc.t('btnDeleteAccount'),
               customColor: const Color(0xFFEF4444),
               isExpanded: false,
               onPressed: () async {
                 if (passCtrl.text.isEmpty) {
-                  setS(() => error = l.fieldPassword);
+                  setS(() => error = loc.t('fieldPassword'));
                   return;
                 }
                 try {
@@ -1943,7 +1928,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     'ProfileScreen',
                     'Hesap silinemedi: $e',
                   );
-                  setS(() => error = l.errorNetworkMessage);
+                  setS(() => error = loc.t('errorNetworkMessage'));
                 }
               },
             ),
@@ -1956,11 +1941,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final currentLocale = ref.watch(localeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.navSettings)),
+      appBar: AppBar(title: Text(loc.t('navSettings'))),
       backgroundColor: AppColors.bg(context),
       body: ListView(
         children: [
@@ -1968,7 +1953,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
 
           // ── Pro Araçlar ───────────────────────────────────────────────────
           _SettingsSection(
-            title: l.settingsProTools,
+            title: loc.t('settingsProTools'),
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
@@ -1978,7 +1963,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   size: 22,
                 ),
                 iconColor: const Color(0xFF06B6D4),
-                label: l.proHubTitle,
+                label: loc.t('proHubTitle'),
                 trailing: _isPremium
                     ? Container(
                         padding: const EdgeInsets.symmetric(
@@ -1992,7 +1977,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          l.settingsProActive,
+                          loc.t('settingsProActive'),
                           style: const TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
@@ -2012,7 +1997,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: Text(
-                          AppLocalizations.of(context)!.pro,
+                          ref.read(localizationProvider).t('pro'),
                           style: const TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w900,
@@ -2038,7 +2023,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profileInviteAndEarn,
+            title: loc.t('profileInviteAndEarn'),
             items: [
               ListTile(
                 key: _shareTileKey,
@@ -2047,14 +2032,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   color: Color(0xFF16A34A),
                 ),
                 title: Text(
-                  AppLocalizations.of(context)!.profileInviteTitle,
+                  ref.read(localizationProvider).t('profileInviteTitle'),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 subtitle: Text(
-                  AppLocalizations.of(context)!.profileInviteSubtitle,
+                  ref.read(localizationProvider).t('profileInviteSubtitle'),
                   style: const TextStyle(fontSize: 12),
                 ),
                 trailing: _shareLoading
@@ -2074,11 +2059,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profileMyListings,
+            title: loc.t('profileMyListings'),
             items: [
               _SettingsTile(
                 icon: Icons.list_alt_outlined,
-                label: l.profileActiveListings,
+                label: loc.t('profileActiveListings'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -2088,7 +2073,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.archive_outlined,
-                label: l.profilePassiveListings,
+                label: loc.t('profilePassiveListings'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -2098,7 +2083,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.favorite_outline,
-                label: l.profileFavorites,
+                label: loc.t('profileFavorites'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const _FavoritesScreen()),
@@ -2106,7 +2091,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.shopping_bag_outlined,
-                label: l.settingsMyPurchases,
+                label: loc.t('settingsMyPurchases'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PurchasesScreen()),
@@ -2114,7 +2099,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.sell_outlined,
-                label: l.settingsMySales,
+                label: loc.t('settingsMySales'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const SalesScreen()),
@@ -2124,11 +2109,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profileActivitySection,
+            title: loc.t('profileActivitySection'),
             items: [
               _SettingsTile(
                 icon: Icons.person_add_outlined,
-                label: l.followRequests,
+                label: loc.t('followRequests'),
                 trailing: _pendingRequestCount > 0
                     ? Container(
                         padding: const EdgeInsets.all(6),
@@ -2155,7 +2140,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.call_outlined,
-                label: l.callHistoryTitle,
+                label: loc.t('callHistoryTitle'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
@@ -2163,7 +2148,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.star_outline,
-                label: l.settingsMyRatings,
+                label: loc.t('settingsMyRatings'),
                 trailing: _unreadRatingCount > 0
                     ? Container(
                         padding: const EdgeInsets.all(6),
@@ -2194,7 +2179,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profilePrivacySection,
+            title: loc.t('profilePrivacySection'),
             items: [
               ListTile(
                 leading: Icon(
@@ -2204,7 +2189,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 title: Row(
                   children: [
                     Text(
-                      l.privateAccount,
+                      loc.t('privateAccount'),
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textPrimary(context),
@@ -2218,21 +2203,21 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           builder: (_) => AlertDialog(
                             backgroundColor: AppColors.surface(context),
                             title: Text(
-                              l.privateAccount,
+                              loc.t('privateAccount'),
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary(context),
                               ),
                             ),
                             content: Text(
-                              l.privateAccountDesc,
+                              loc.t('privateAccountDesc'),
                               style: TextStyle(
                                 color: AppColors.textSecondary(context),
                               ),
                             ),
                             actions: [
                               TeqButton.text(
-                                text: l.btnOk,
+                                text: loc.t('btnOk'),
                                 onPressed: () => Navigator.pop(context),
                               ),
                             ],
@@ -2255,7 +2240,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.block_outlined,
-                label: l.profileBlockedUsers,
+                label: loc.t('profileBlockedUsers'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
@@ -2265,11 +2250,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profileAccountSection,
+            title: loc.t('profileAccountSection'),
             items: [
               _SettingsTile(
                 icon: Icons.manage_accounts_outlined,
-                label: l.accountInfoMenuLabel,
+                label: loc.t('accountInfoMenuLabel'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AccountInfoScreen()),
@@ -2277,7 +2262,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.lock_outline,
-                label: l.profileChangePassword,
+                label: loc.t('profileChangePassword'),
                 onTap: () => _showChangePasswordDialog(context),
               ),
               if (_biometricAvailable)
@@ -2288,14 +2273,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     color: AppColors.iconColor(context),
                   ),
                   title: Text(
-                    l.profileFaceId,
+                    loc.t('profileFaceId'),
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textPrimary(context),
                     ),
                   ),
                   subtitle: Text(
-                    _biometricEnabled ? l.statusOn : l.statusOff,
+                    _biometricEnabled ? loc.t('statusOn') : loc.t('statusOff'),
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary(context),
@@ -2309,7 +2294,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 ),
               _SettingsTile(
                 icon: Icons.notifications_outlined,
-                label: l.profileNotificationSettings,
+                label: loc.t('profileNotificationSettings'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -2325,14 +2310,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   color: AppColors.iconColor(context),
                 ),
                 title: Text(
-                  l.profileDarkMode,
+                  loc.t('profileDarkMode'),
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textPrimary(context),
                   ),
                 ),
                 subtitle: Text(
-                  ThemeProvider.instance.isDark ? l.statusOn : l.statusOff,
+                  ThemeProvider.instance.isDark ? loc.t('statusOn') : loc.t('statusOff'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary(context),
@@ -2354,7 +2339,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   color: AppColors.iconColor(context),
                 ),
                 title: Text(
-                  l.settingsLanguage,
+                  loc.t('settingsLanguage'),
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textPrimary(context),
@@ -2364,19 +2349,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   segments: [
                     ButtonSegment(
                       value: 'tr',
-                      label: Text(AppLocalizations.of(context)!.langTR),
+                      label: Text(ref.read(localizationProvider).t('langTR')),
                     ),
                     ButtonSegment(
                       value: 'en',
-                      label: Text(AppLocalizations.of(context)!.langEN),
+                      label: Text(ref.read(localizationProvider).t('langEN')),
                     ),
                     ButtonSegment(
                       value: 'ar',
-                      label: Text(AppLocalizations.of(context)!.langAR),
+                      label: Text(ref.read(localizationProvider).t('langAR')),
                     ),
                     ButtonSegment(
                       value: 'ru',
-                      label: Text(AppLocalizations.of(context)!.langRU),
+                      label: Text(ref.read(localizationProvider).t('langRU')),
                     ),
                   ],
                   selected: {currentLocale.languageCode},
@@ -2396,11 +2381,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profileSupportSection,
+            title: loc.t('profileSupportSection'),
             items: [
               _SettingsTile(
                 icon: Icons.help_outline,
-                label: l.profileSupportCenter,
+                label: loc.t('profileSupportCenter'),
                 onTap: () => _urlGuard.run(() async {
                   final uri = Uri.parse('https://www.teqlif.com/support.html');
                   if (await canLaunchUrl(uri)) {
@@ -2410,7 +2395,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.question_answer_outlined,
-                label: l.profileFaq,
+                label: loc.t('profileFaq'),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -2420,7 +2405,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.description_outlined,
-                label: l.profileTerms,
+                label: loc.t('profileTerms'),
                 onTap: () => _urlGuard.run(() async {
                   final uri = Uri.parse(
                     'https://www.teqlif.com/kullanim-sartlari.html',
@@ -2432,7 +2417,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.lock_outline,
-                label: l.profilePrivacy,
+                label: loc.t('profilePrivacy'),
                 onTap: () => _urlGuard.run(() async {
                   final uri = Uri.parse(
                     'https://www.teqlif.com/gizlilik-politikasi',
@@ -2456,7 +2441,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     color: Color(0xFFEF4444),
                   ),
                   title: Text(
-                    l.btnDeleteAccount,
+                    loc.t('btnDeleteAccount'),
                     style: const TextStyle(
                       color: Color(0xFFEF4444),
                       fontWeight: FontWeight.w600,
@@ -2469,7 +2454,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   key: const Key('settings_tile_cikis_yap'),
                   leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
                   title: Text(
-                    l.btnLogout,
+                    loc.t('btnLogout'),
                     style: const TextStyle(
                       color: Color(0xFFEF4444),
                       fontWeight: FontWeight.w600,
@@ -2559,15 +2544,15 @@ class _SettingsTile extends StatelessWidget {
 
 // ── Profil düzenle ekranı ──────────────────────────────────────────────────
 
-class _EditProfileScreen extends StatefulWidget {
+class _EditProfileScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? user;
   const _EditProfileScreen({required this.user});
 
   @override
-  State<_EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<_EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<_EditProfileScreen> {
+class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _usernameCtrl;
   late final TextEditingController _bioCtrl;
@@ -2705,6 +2690,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
+    final loc = ref.read(localizationProvider);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -2713,12 +2699,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(AppLocalizations.of(ctx)!.profilePickGallery),
+              title: Text(loc.t("profilePickGallery")),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(AppLocalizations.of(ctx)!.profilePickCamera),
+              title: Text(loc.t("profilePickCamera")),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
           ],
@@ -2775,7 +2761,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         'Avatar yüklenemedi: $e',
       );
       if (!mounted) return;
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.profilePhotoUploadError, type: TeqSnackBarType.info);
+      TeqSnackBar.show(message: ref.read(localizationProvider).t('profilePhotoUploadError'), type: TeqSnackBarType.info);
     } finally {
       if (mounted)
         setState(() {
@@ -2788,28 +2774,27 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     final username = _usernameCtrl.text.trim();
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (name.isEmpty || username.isEmpty) {
-      showErrorSnackbar(context, Exception(l.editProfileFillAll));
+      TeqToast.error(loc.t('editProfileFillAll'));
       return;
     }
     if (username.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(username)) {
-      showErrorSnackbar(context, Exception(l.validUsernameInvalid));
+      TeqToast.error(loc.t('validUsernameInvalid'));
       return;
     }
     if (_usernameStatus == 'taken') {
-      showErrorSnackbar(context, Exception(l.validUsernameTaken));
+      TeqToast.error(loc.t('validUsernameTaken'));
       return;
     }
     if (_usernameStatus == 'checking') {
-      showErrorSnackbar(context, Exception(l.usernameCheckingWait));
+      TeqToast.error(loc.t('usernameCheckingWait'));
       return;
     }
     setState(() {
       _saving = true;
     });
-    final linkErrorMsg = AppLocalizations.of(context)!.editProfileLinkError;
-    final errMessenger = ScaffoldMessenger.of(context);
+    final linkErrorMsg = ref.read(localizationProvider).t('editProfileLinkError');
     try {
       final token = await StorageService.getToken();
       if (token == null) throw Exception('No token');
@@ -2873,7 +2858,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -2881,14 +2866,15 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     final initial = (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?')
         .toUpperCase();
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.btnEditProfile),
+        title: Text(loc.t('btnEditProfile')),
         actions: [
           TeqButton.text(
-            text: AppLocalizations.of(context)!.btnSave,
+            text: loc.t('btnSave'),
             onPressed: _saving ? null : _save,
             isExpanded: false,
           ),
@@ -2963,22 +2949,20 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             const SizedBox(height: 24),
             Builder(
               builder: (ctx) {
-                final l = AppLocalizations.of(ctx)!;
                 return TeqTextField(
                   controller: _nameCtrl,
-                  labelText: l.editProfileFullName,
+                  labelText: loc.t('editProfileFullName'),
                 );
               },
             ),
             const SizedBox(height: 14),
             Builder(
               builder: (ctx) {
-                final l = AppLocalizations.of(ctx)!;
                 return TeqTextField(
                   controller: _usernameCtrl,
                   autocorrect: false,
-                  labelText: l.editProfileUsername,
-                  helperText: l.validUsernameChars,
+                  labelText: loc.t('editProfileUsername'),
+                  helperText: loc.t('validUsernameChars'),
                   suffixIcon: _usernameStatus == 'checking'
                       ? const SizedBox(
                           width: 20,
@@ -3004,28 +2988,28 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _bioCtrl,
               builder: (_, val, _) {
-                final l = AppLocalizations.of(context)!;
+                final loc = ref.read(localizationProvider);
                 return TeqTextField(
                   controller: _bioCtrl,
                   maxLength: 60,
                   maxLines: 2,
-                  labelText: l.editProfileBio,
-                  hintText: l.editProfileBioHint,
-                  helperText: l.editProfileBioHelper,
+                  labelText: loc.t('editProfileBio'),
+                  hintText: loc.t('editProfileBioHint'),
+                  helperText: loc.t('editProfileBioHelper'),
                 );
               },
             ),
             const SizedBox(height: 14),
             Builder(
               builder: (context) {
-                final l = AppLocalizations.of(context)!;
+                final loc = ref.read(localizationProvider);
                 return TeqTextField(
                   controller: _linkCtrl,
                   keyboardType: TextInputType.url,
                   autocorrect: false,
-                  labelText: l.editProfileLink,
-                  hintText: l.editProfileLinkHint,
-                  helperText: l.editProfileLinkHelper,
+                  labelText: loc.t('editProfileLink'),
+                  hintText: loc.t('editProfileLinkHint'),
+                  helperText: loc.t('editProfileLinkHelper'),
                 );
               },
             ),
@@ -3089,15 +3073,15 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
 
 // ── Aktif / Pasif ilanlarım ekranı ────────────────────────────────────────────
 
-class _MyListingsScreen extends StatefulWidget {
+class _MyListingsScreen extends ConsumerStatefulWidget {
   final bool active;
   const _MyListingsScreen({required this.active});
 
   @override
-  State<_MyListingsScreen> createState() => _MyListingsScreenState();
+  ConsumerState<_MyListingsScreen> createState() => _MyListingsScreenState();
 }
 
-class _MyListingsScreenState extends State<_MyListingsScreen> {
+class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
   final List<dynamic> _listings = [];
   bool _loading = true;
   bool _isLoadingMore = false;
@@ -3207,7 +3191,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
 
   Future<void> _toggle(dynamic listing) async {
     if (!mounted) return;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final id = listing['id'] as int;
     final status = ListingStatusExtension.fromJson(listing);
     final isActive = status == ListingStatus.active;
@@ -3226,21 +3210,21 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       // Aktif → Pasif
       if (!withinWindow) {
         final hintText = (isPremium && remaining > 0)
-            ? l.listingDeactivateFreeCreditHint
-            : l.listingDeactivateCostHint(cost);
+            ? loc.t('listingDeactivateFreeCreditHint')
+            : loc.t('listingDeactivateCostHint', {'cost': cost.toString()});
 
         final confirm = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text(l.listingDeactivateTitle),
-            content: Text('${l.listingDeactivateWarning}\n\n$hintText'),
+            title: Text(loc.t('listingDeactivateTitle')),
+            content: Text('${loc.t('listingDeactivateWarning')}\n\n$hintText'),
             actions: [
               TeqButton.text(
-                text: l.btnDismiss,
+                text: loc.t('btnDismiss'),
                 onPressed: () => Navigator.pop(context, false),
               ),
               TeqButton.text(
-                text: l.listingDeactivateConfirm,
+                text: loc.t('listingDeactivateConfirm'),
                 customColor: const Color(0xFFDC2626),
                 onPressed: () => Navigator.pop(context, true),
               ),
@@ -3254,22 +3238,22 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       if (!withinWindow) {
         String subtitle;
         if (isPremium && remaining > 0) {
-          subtitle = l.listingReactivateFreeCredit(remaining);
+          subtitle = loc.t('listingReactivateFreeCredit', {'remaining': remaining.toString()});
         } else if (isPremium) {
-          subtitle = l.listingReactivatePaidPro(cost);
+          subtitle = loc.t('listingReactivatePaidPro', {'cost': cost.toString()});
         } else {
-          subtitle = l.listingReactivatePaidNormal(cost, balance);
+          subtitle = loc.t('listingReactivatePaidNormal', {'cost': cost.toString(), 'balance': balance.toString()});
         }
 
         if (!canAfford) {
           await showDialog<void>(
             context: context,
             builder: (_) => AlertDialog(
-              title: Text(l.listingReactivateTitle),
-              content: Text(l.listingReactivateInsufficientBalance),
+              title: Text(loc.t('listingReactivateTitle')),
+              content: Text(loc.t('listingReactivateInsufficientBalance')),
               actions: [
                 TeqButton.text(
-                  text: l.btnDismiss,
+                  text: loc.t('btnDismiss'),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -3279,20 +3263,20 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         }
 
         String extraHint = '';
-        if (!isPremium) extraHint = '\n\n${l.listingReactivateProUpsell}';
+        if (!isPremium) extraHint = '\n\n${loc.t('listingReactivateProUpsell')}';
 
         final confirm = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text(l.listingReactivateTitle),
+            title: Text(loc.t('listingReactivateTitle')),
             content: Text(subtitle + extraHint),
             actions: [
               TeqButton.text(
-                text: l.btnDismiss,
+                text: loc.t('btnDismiss'),
                 onPressed: () => Navigator.pop(context, false),
               ),
               TeqButton.text(
-                text: l.listingReactivateConfirm,
+                text: loc.t('listingReactivateConfirm'),
                 customColor: const Color(0xFF6366F1),
                 onPressed: () => Navigator.pop(context, true),
               ),
@@ -3313,15 +3297,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       if (resp.statusCode == 200) {
         await _load();
       } else if (resp.statusCode == 402 && mounted) {
-        final l2 = AppLocalizations.of(context)!;
-        TeqSnackBar.show(message: l2.listingReactivateInsufficientBalance, type: TeqSnackBarType.info);
+        TeqSnackBar.show(message: ref.read(localizationProvider).t('listingReactivateInsufficientBalance'), type: TeqSnackBarType.info);
       }
     } catch (e) {
       LoggerService.instance.warning(
         'MyListingsScreen',
         'İlan durumu değiştirilemedi: $e',
       );
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     }
   }
 
@@ -3329,15 +3312,15 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.listingDeleteDialogTitle),
-        content: Text(AppLocalizations.of(context)!.listingDeleteDialogBody),
+        title: Text(ref.read(localizationProvider).t('listingDeleteDialogTitle')),
+        content: Text(ref.read(localizationProvider).t('listingDeleteDialogBody')),
         actions: [
           TeqButton.text(
-            text: AppLocalizations.of(context)!.btnDismiss,
+            text: ref.read(localizationProvider).t('btnDismiss'),
             onPressed: () => Navigator.pop(context, false),
           ),
           TeqButton.text(
-            text: AppLocalizations.of(context)!.btnDeleteConfirm,
+            text: ref.read(localizationProvider).t('btnDeleteConfirm'),
             customColor: const Color(0xFFDC2626),
             onPressed: () => Navigator.pop(context, true),
           ),
@@ -3356,7 +3339,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       if (resp.statusCode == 200) await _load();
     } catch (e) {
       LoggerService.instance.warning('MyListingsScreen', 'İlan silinemedi: $e');
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     }
   }
 
@@ -3371,7 +3354,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     return '${buf.toString()} ₺';
   }
 
-  Widget _buildFilterBar(AppLocalizations l) {
+  Widget _buildFilterBar(TranslationPack loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3379,7 +3362,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: TeqTextField(
             controller: _searchCtrl,
-            hintText: l.searchHintTextListing,
+            hintText: loc.t('searchHintTextListing'),
             prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: _searchCtrl.text.isNotEmpty
                 ? IconButton(
@@ -3410,7 +3393,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
                     label: Text(
-                      l.allCategories,
+                      loc.t('allCategories'),
                       style: const TextStyle(fontSize: 12),
                     ),
                     selected: _categoryFilter.isEmpty,
@@ -3445,7 +3428,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
             ),
           ),
         const SizedBox(height: 6),
-        _buildDateRangePicker(l),
+        _buildDateRangePicker(loc),
         const SizedBox(height: 4),
       ],
     );
@@ -3454,7 +3437,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(AppLocalizations l) {
+  Widget _buildDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
@@ -3494,7 +3477,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : l.filterSelectDate,
+                      : loc.t('filterSelectDate'),
                   style: TextStyle(
                     fontSize: 13,
                     color: hasRange
@@ -3520,7 +3503,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final bool hasFilter =
         _searchCtrl.text.isNotEmpty ||
         _categoryFilter.isNotEmpty ||
@@ -3528,13 +3511,13 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.active ? l.profileActiveListings : l.profilePassiveListings,
+          widget.active ? loc.t('profileActiveListings') : loc.t('profilePassiveListings'),
         ),
       ),
       backgroundColor: AppColors.bg(context),
       body: Column(
         children: [
-          _buildFilterBar(l),
+          _buildFilterBar(loc),
           Expanded(
             child: _loading && _listings.isEmpty
                 ? const Center(
@@ -3557,10 +3540,10 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                         const SizedBox(height: 12),
                         Text(
                           hasFilter
-                              ? l.searchNoResults
+                              ? loc.t('searchNoResults')
                               : (widget.active
-                                    ? l.emptyActiveListings
-                                    : l.emptyPassiveListings),
+                                    ? loc.t('emptyActiveListings')
+                                    : loc.t('emptyPassiveListings')),
                           style: const TextStyle(
                             color: Color(0xFF6B7280),
                             fontSize: 15,
@@ -3699,14 +3682,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
 
 // ── Favorilerim ekranı ─────────────────────────────────────────────────────────
 
-class _FavoritesScreen extends StatefulWidget {
+class _FavoritesScreen extends ConsumerStatefulWidget {
   const _FavoritesScreen();
 
   @override
-  State<_FavoritesScreen> createState() => _FavoritesScreenState();
+  ConsumerState<_FavoritesScreen> createState() => _FavoritesScreenState();
 }
 
-class _FavoritesScreenState extends State<_FavoritesScreen> {
+class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
   bool _hasError = false;
@@ -3854,7 +3837,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
     return '${buf.toString()} ₺';
   }
 
-  Widget _buildFavFilterBar(AppLocalizations l) {
+  Widget _buildFavFilterBar(TranslationPack loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3863,7 +3846,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
           child: TeqTextField(
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _searchQuery = v),
-            hintText: l.searchHintTextListing,
+            hintText: loc.t('searchHintTextListing'),
             prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
@@ -3887,7 +3870,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
                     label: Text(
-                      l.allCategories,
+                      loc.t('allCategories'),
                       style: const TextStyle(fontSize: 12),
                     ),
                     selected: _categoryFilter.isEmpty,
@@ -3916,7 +3899,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
             ),
           ),
         const SizedBox(height: 6),
-        _buildFavDateRangePicker(l),
+        _buildFavDateRangePicker(loc),
         const SizedBox(height: 4),
       ],
     );
@@ -3925,7 +3908,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildFavDateRangePicker(AppLocalizations l) {
+  Widget _buildFavDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
@@ -3962,7 +3945,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : l.filterSelectDate,
+                      : loc.t('filterSelectDate'),
                   style: TextStyle(
                     fontSize: 13,
                     color: hasRange
@@ -3985,14 +3968,14 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final filtered = _filteredListings;
     final bool hasFilter =
         _searchQuery.isNotEmpty ||
         _categoryFilter.isNotEmpty ||
         _dateRange != null;
     return Scaffold(
-      appBar: AppBar(title: Text(l.profileFavorites)),
+      appBar: AppBar(title: Text(loc.t('profileFavorites'))),
       backgroundColor: AppColors.bg(context),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
@@ -4010,7 +3993,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    l.favoritesEmpty,
+                    loc.t('favoritesEmpty'),
                     style: const TextStyle(
                       color: Color(0xFF6B7280),
                       fontSize: 15,
@@ -4022,12 +4005,12 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
           : Column(
               children: [
                 if (_hasError) StaleDataBanner(onRetry: _load),
-                _buildFavFilterBar(l),
+                _buildFavFilterBar(loc),
                 if (hasFilter && filtered.isEmpty)
                   Expanded(
                     child: Center(
                       child: Text(
-                        l.searchNoResults,
+                        loc.t('searchNoResults'),
                         style: const TextStyle(
                           color: Color(0xFF6B7280),
                           fontSize: 15,
@@ -4119,9 +4102,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                                   color: Colors.red,
                                   size: 22,
                                 ),
-                                tooltip: AppLocalizations.of(
-                                  ctx,
-                                )!.removeFromFavoritesTooltip,
+                                tooltip: loc.t("removeFromFavoritesTooltip"),
                                 onPressed: () => _removeFavorite(l),
                               ),
                               onTap: () => Navigator.push(
@@ -4153,7 +4134,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
 
 // ── TUCi Cüzdan Kartı ───────────────────────────────────────────────────────
 
-class _TuciWalletCard extends StatefulWidget {
+class _TuciWalletCard extends ConsumerStatefulWidget {
   final int? balance;
   final List<dynamic> history;
   final Future<void> Function() onRefresh;
@@ -4165,10 +4146,10 @@ class _TuciWalletCard extends StatefulWidget {
   });
 
   @override
-  State<_TuciWalletCard> createState() => _TuciWalletCardState();
+  ConsumerState<_TuciWalletCard> createState() => _TuciWalletCardState();
 }
 
-class _TuciWalletCardState extends State<_TuciWalletCard> {
+class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
   bool _refreshing = false;
 
   void _openSheet() {
@@ -4237,7 +4218,7 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    AppLocalizations.of(context)!.lblTuciWallet,
+                    ref.read(localizationProvider).t('lblTuciWallet'),
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -4300,15 +4281,15 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
   }
 }
 
-class _TuciWalletSheet extends StatelessWidget {
+class _TuciWalletSheet extends ConsumerWidget {
   final int balance;
   final List<dynamic> history;
 
   const _TuciWalletSheet({required this.balance, required this.history});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -4354,7 +4335,7 @@ class _TuciWalletSheet extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  AppLocalizations.of(context)!.walletBalance,
+                  ref.read(localizationProvider).t('walletBalance'),
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
                 const SizedBox(height: 6),
@@ -4375,7 +4356,7 @@ class _TuciWalletSheet extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                AppLocalizations.of(context)!.walletRecentTxns,
+                ref.read(localizationProvider).t('walletRecentTxns'),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -4433,7 +4414,7 @@ class _TuciWalletSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: TeqButton(
-              text: l.walletBuyBtn,
+              text: loc.t('walletBuyBtn'),
               icon: Icons.schedule_rounded,
               isDisabled: true, // onPressed is null
               onPressed: null,
@@ -4447,7 +4428,7 @@ class _TuciWalletSheet extends StatelessWidget {
 
 // ── Tam Cüzdan Ekranı ────────────────────────────────────────────────────────
 
-class WalletScreen extends StatefulWidget {
+class WalletScreen extends ConsumerStatefulWidget {
   final int? initialBalance;
   final List<dynamic> initialHistory;
 
@@ -4458,29 +4439,29 @@ class WalletScreen extends StatefulWidget {
   });
 
   @override
-  State<WalletScreen> createState() => _WalletScreenState();
+  ConsumerState<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends State<WalletScreen> {
+class _WalletScreenState extends ConsumerState<WalletScreen> {
   int? _balance;
   List<dynamic> _txns = [];
   bool _loading = false;
 
-  Map<String, String> _typeLabels(AppLocalizations l) => {
-    'airdrop': l.walletTxnAirdrop,
-    'churn_airdrop': l.walletTxnChurnAirdrop,
-    'receive_gift': l.walletTxnReceiveGift,
-    'send_gift': l.walletTxnSendGift,
-    'spend_lead_gen': l.walletTxnSpendLeadGen,
-    'spend_ad_campaign': l.walletTxnSpendAdCampaign,
-    'spend_ai': l.walletTxnSpendAi,
-    'spend_retargeting': l.walletTxnSpendRetargeting,
-    'spend_boost': l.walletTxnSpendBoost,
-    'spend_boost_paid': l.walletTxnSpendBoostPaid,
-    'spend_reactivation': l.walletTxnSpendReactivation,
-    'web_topup': l.walletTxnWebTopup,
-    'referral_bonus': l.walletTxnReferralBonus,
-    'welcome_bonus': l.walletTxnWelcomeBonus,
+  Map<String, String> _typeLabels(TranslationPack loc) => {
+    'airdrop': loc.t('walletTxnAirdrop'),
+    'churn_airdrop': loc.t('walletTxnChurnAirdrop'),
+    'receive_gift': loc.t('walletTxnReceiveGift'),
+    'send_gift': loc.t('walletTxnSendGift'),
+    'spend_lead_gen': loc.t('walletTxnSpendLeadGen'),
+    'spend_ad_campaign': loc.t('walletTxnSpendAdCampaign'),
+    'spend_ai': loc.t('walletTxnSpendAi'),
+    'spend_retargeting': loc.t('walletTxnSpendRetargeting'),
+    'spend_boost': loc.t('walletTxnSpendBoost'),
+    'spend_boost_paid': loc.t('walletTxnSpendBoostPaid'),
+    'spend_reactivation': loc.t('walletTxnSpendReactivation'),
+    'web_topup': loc.t('walletTxnWebTopup'),
+    'referral_bonus': loc.t('walletTxnReferralBonus'),
+    'welcome_bonus': loc.t('walletTxnWelcomeBonus'),
   };
 
   @override
@@ -4504,10 +4485,10 @@ class _WalletScreenState extends State<WalletScreen> {
     });
   }
 
-  Widget _buildTxnRow(dynamic t, AppLocalizations l) {
+  Widget _buildTxnRow(dynamic t, TranslationPack loc) {
     final amount = t['amount'] as int? ?? 0;
     final label =
-        _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
+        _typeLabels(loc)[t['transaction_type'] as String? ?? ''] ??
         (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
     final isPos = amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
@@ -4518,7 +4499,7 @@ class _WalletScreenState extends State<WalletScreen> {
           '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     } catch (_) {}
     return InkWell(
-      onTap: () => _showTxnDetailSheet(context, t, l),
+      onTap: () => _showTxnDetailSheet(context, t, loc),
       borderRadius: BorderRadius.circular(8),
       child: _TxnRow(
         label: label,
@@ -4532,12 +4513,12 @@ class _WalletScreenState extends State<WalletScreen> {
   void _showTxnDetailSheet(
     BuildContext context,
     dynamic t,
-    AppLocalizations l,
+    TranslationPack loc,
   ) {
     final txnId = t['id'] as int?;
     final amount = t['amount'] as int? ?? 0;
     final label =
-        _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
+        _typeLabels(loc)[t['transaction_type'] as String? ?? ''] ??
         (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
     final isPos = amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
@@ -4560,12 +4541,12 @@ class _WalletScreenState extends State<WalletScreen> {
         amount: amount,
         isPositive: isPos,
         formattedDate: formattedDate,
-        l: l,
+        loc: loc,
       ),
     );
   }
 
-  void _showAllTxnsModal(BuildContext context, AppLocalizations l) {
+  void _showAllTxnsModal(BuildContext context, TranslationPack loc) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -4600,7 +4581,7 @@ class _WalletScreenState extends State<WalletScreen> {
               child: Row(
                 children: [
                   Text(
-                    l.walletAllTxnsTitle,
+                    loc.t('walletAllTxnsTitle'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -4621,7 +4602,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 controller: scrollCtrl,
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 itemCount: _txns.length,
-                itemBuilder: (_, i) => _buildTxnRow(_txns[i], l),
+                itemBuilder: (_, i) => _buildTxnRow(_txns[i], loc),
               ),
             ),
           ],
@@ -4645,12 +4626,12 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final summary = _spendingSummary;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          AppLocalizations.of(context)!.walletTitle,
+          ref.read(localizationProvider).t('walletTitle'),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         surfaceTintColor: Colors.transparent,
@@ -4700,7 +4681,7 @@ class _WalletScreenState extends State<WalletScreen> {
               child: Column(
                 children: [
                   Text(
-                    l.walletBalance,
+                    loc.t('walletBalance'),
                     style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
@@ -4722,7 +4703,7 @@ class _WalletScreenState extends State<WalletScreen> {
             // ── Harcama özeti ─────────────────────────────────────────
             if (summary.isNotEmpty) ...[
               Text(
-                l.walletSpendingSummary,
+                loc.t('walletSpendingSummary'),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
@@ -4731,7 +4712,7 @@ class _WalletScreenState extends State<WalletScreen> {
               const SizedBox(height: 10),
               ...summary.entries.map(
                 (e) => _SummaryRow(
-                  label: _typeLabels(l)[e.key] ?? e.key,
+                  label: _typeLabels(loc)[e.key] ?? e.key,
                   amount: e.value,
                 ),
               ),
@@ -4741,22 +4722,22 @@ class _WalletScreenState extends State<WalletScreen> {
             // ── İşlem geçmişi ─────────────────────────────────────────
             if (_txns.isNotEmpty) ...[
               Text(
-                l.walletTxnHistory,
+                loc.t('walletTxnHistory'),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
                 ),
               ),
               const SizedBox(height: 10),
-              ..._txns.take(20).map((t) => _buildTxnRow(t, l)),
+              ..._txns.take(20).map((t) => _buildTxnRow(t, loc)),
               if (_txns.length > 20) ...[
                 const SizedBox(height: 4),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => _showAllTxnsModal(context, l),
+                    onPressed: () => _showAllTxnsModal(context, loc),
                     icon: const Icon(Icons.expand_more_rounded, size: 18),
-                    label: Text(l.walletSeeAllTxns(_txns.length)),
+                    label: Text(loc.t('walletSeeAllTxns', {'n': _txns.length.toString()})),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -4771,7 +4752,7 @@ class _WalletScreenState extends State<WalletScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  l.walletNoTxns,
+                  loc.t('walletNoTxns'),
                   style: const TextStyle(color: Colors.grey),
                 ),
               ),
@@ -4791,7 +4772,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   const Text('🔔', style: TextStyle(fontSize: 28)),
                   const SizedBox(height: 8),
                   Text(
-                    l.walletComingSoonLabel,
+                    loc.t('walletComingSoonLabel'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
@@ -4800,7 +4781,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    l.walletComingSoonDesc,
+                    loc.t('walletComingSoonDesc'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 12,
@@ -4930,13 +4911,13 @@ class _TxnRow extends StatelessWidget {
 
 // ─── Transaction Detail Bottom Sheet ─────────────────────────────────────────
 
-class _TxnDetailSheet extends StatefulWidget {
+class _TxnDetailSheet extends ConsumerStatefulWidget {
   final int? txnId;
   final String label;
   final int amount;
   final bool isPositive;
   final String formattedDate;
-  final AppLocalizations l;
+  final TranslationPack loc;
 
   const _TxnDetailSheet({
     required this.txnId,
@@ -4944,14 +4925,14 @@ class _TxnDetailSheet extends StatefulWidget {
     required this.amount,
     required this.isPositive,
     required this.formattedDate,
-    required this.l,
+    required this.loc,
   });
 
   @override
-  State<_TxnDetailSheet> createState() => _TxnDetailSheetState();
+  ConsumerState<_TxnDetailSheet> createState() => _TxnDetailSheetState();
 }
 
-class _TxnDetailSheetState extends State<_TxnDetailSheet> {
+class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
   Map<String, dynamic>? _detail;
   bool _loading = true;
   bool _error = false;
@@ -4978,7 +4959,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = widget.l;
+    final loc = widget.loc;
     final listing = _detail?['listing'] as Map<String, dynamic>?;
     final stream = _detail?['stream'] as Map<String, dynamic>?;
     final giftEvent = _detail?['gift_event'] as Map<String, dynamic>?;
@@ -5015,7 +4996,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
             child: Row(
               children: [
                 Text(
-                  l.walletDetailTitle,
+                  loc.t('walletDetailTitle'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -5040,7 +5021,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
             Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                l.walletDetailLoadingError,
+                loc.t('walletDetailLoadingError'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey),
               ),
@@ -5099,7 +5080,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l.walletDetailAmount,
+                          loc.t('walletDetailAmount'),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.grey,
@@ -5129,9 +5110,9 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  _DetailRow(label: l.walletDetailType, value: widget.label),
+                  _DetailRow(label: loc.t('walletDetailType'), value: widget.label),
                   _DetailRow(
-                    label: l.walletDetailDate,
+                    label: loc.t('walletDetailDate'),
                     value: widget.formattedDate,
                   ),
 
@@ -5139,12 +5120,12 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                   if (listing != null) ...[
                     const Divider(height: 24),
                     _DetailRow(
-                      label: l.walletDetailListing,
+                      label: loc.t('walletDetailListing'),
                       value: listing['title'] as String? ?? '—',
                       badge:
                           (ListingStatusExtension.fromJson(listing) ==
                               ListingStatus.passive)
-                          ? l.walletDetailListingInactive
+                          ? loc.t('walletDetailListingInactive')
                           : null,
                     ),
                     if ((listing['category'] as String?) != null)
@@ -5160,7 +5141,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     const SizedBox(height: 12),
                     _NavButton(
                       icon: Icons.storefront_rounded,
-                      label: l.walletDetailGoListing,
+                      label: loc.t('walletDetailGoListing'),
                       onTap: () async {
                         final listingId = listing['id'] as int?;
                         if (listingId == null) return;
@@ -5182,7 +5163,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     if ((listing['owner_username'] as String?) != null)
                       _NavButton(
                         icon: Icons.person_rounded,
-                        label: l.walletDetailGoOwner,
+                        label: loc.t('walletDetailGoOwner'),
                         onTap: () => Navigator.push(
                           ctx,
                           MaterialPageRoute(
@@ -5199,13 +5180,13 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                   if (stream != null) ...[
                     const Divider(height: 24),
                     _DetailRow(
-                      label: l.walletDetailStream,
+                      label: loc.t('walletDetailStream'),
                       value: stream['title'] as String? ?? '—',
                     ),
                     const SizedBox(height: 12),
                     _NavButton(
                       icon: Icons.bar_chart_rounded,
-                      label: l.walletDetailGoStream,
+                      label: loc.t('walletDetailGoStream'),
                       onTap: () => Navigator.push(
                         ctx,
                         MaterialPageRoute(
@@ -5218,7 +5199,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     if ((stream['host_username'] as String?) != null)
                       _NavButton(
                         icon: Icons.person_rounded,
-                        label: l.walletDetailGoStreamHost,
+                        label: loc.t('walletDetailGoStreamHost'),
                         onTap: () => Navigator.push(
                           ctx,
                           MaterialPageRoute(
@@ -5239,14 +5220,14 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     ),
                     const SizedBox(height: 12),
                     _DetailRow(
-                      label: l.walletDetailGiftSender,
+                      label: loc.t('walletDetailGiftSender'),
                       value:
                           (giftEvent['sender'] as Map?)?['username']
                               as String? ??
                           '—',
                     ),
                     _DetailRow(
-                      label: l.walletDetailGiftReceiver,
+                      label: loc.t('walletDetailGiftReceiver'),
                       value:
                           (giftEvent['receiver'] as Map?)?['username']
                               as String? ??
@@ -5254,20 +5235,20 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     ),
                     if ((giftEvent['stream'] as Map?)?['title'] != null)
                       _DetailRow(
-                        label: l.walletDetailGiftStream,
+                        label: loc.t('walletDetailGiftStream'),
                         value: (giftEvent['stream'] as Map)['title'] as String,
                       ),
                     if (giftEvent['host_share'] != null &&
                         (giftEvent['host_share'] as int) > 0)
                       _DetailRow(
-                        label: l.walletDetailGiftHostShare,
+                        label: loc.t('walletDetailGiftHostShare'),
                         value: '${giftEvent['host_share']} TUCi',
                       ),
                     const SizedBox(height: 12),
                     if ((giftEvent['stream'] as Map?)?['id'] != null)
                       _NavButton(
                         icon: Icons.bar_chart_rounded,
-                        label: l.walletDetailGoGiftStream,
+                        label: loc.t('walletDetailGoGiftStream'),
                         onTap: () => Navigator.push(
                           ctx,
                           MaterialPageRoute(
@@ -5281,7 +5262,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     if ((giftEvent['sender'] as Map?)?['username'] != null)
                       _NavButton(
                         icon: Icons.person_rounded,
-                        label: l.walletDetailGoGiftSender,
+                        label: loc.t('walletDetailGoGiftSender'),
                         onTap: () => Navigator.push(
                           ctx,
                           MaterialPageRoute(
@@ -5298,7 +5279,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     if ((giftEvent['receiver'] as Map?)?['username'] != null)
                       _NavButton(
                         icon: Icons.person_rounded,
-                        label: l.walletDetailGoGiftReceiver,
+                        label: loc.t('walletDetailGoGiftReceiver'),
                         onTap: () => Navigator.push(
                           ctx,
                           MaterialPageRoute(
@@ -5325,7 +5306,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
   }
 }
 
-class _GiftNameBadge extends StatelessWidget {
+class _GiftNameBadge extends ConsumerWidget {
   final String giftName;
   const _GiftNameBadge({required this.giftName});
 
@@ -5347,31 +5328,31 @@ class _GiftNameBadge extends StatelessWidget {
     'kral tacı': '👑',
   };
 
-  String _displayName(AppLocalizations l) {
+  String _displayName(TranslationPack loc) {
     switch (giftName.toLowerCase()) {
       case 'fire':
       case 'ateş':
       case 'огонь':
       case 'نار':
-        return l.giftNameFire;
+        return loc.t('giftNameFire');
       case 'diamond':
       case 'elmas':
       case 'бриллиант':
       case 'ماس':
-        return l.giftNameDiamond;
+        return loc.t('giftNameDiamond');
       case 'crown':
       case 'kral tacı':
       case 'королевская корона':
       case 'تاج ملكي':
-        return l.giftNameCrown;
+        return loc.t('giftNameCrown');
       default:
         return giftName;
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     final emoji = _giftEmojis[giftName.toLowerCase()] ?? '🎁';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -5388,7 +5369,7 @@ class _GiftNameBadge extends StatelessWidget {
           Text(emoji, style: const TextStyle(fontSize: 22)),
           const SizedBox(width: 10),
           Text(
-            _displayName(l),
+            _displayName(loc),
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,

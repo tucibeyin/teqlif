@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../l10n/app_localizations.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 
-class LiveStreamAnalyticsScreen extends StatefulWidget {
+class LiveStreamAnalyticsScreen extends ConsumerStatefulWidget {
   final int streamId;
   final bool isEmbedded;
   const LiveStreamAnalyticsScreen({
@@ -18,11 +19,11 @@ class LiveStreamAnalyticsScreen extends StatefulWidget {
   });
 
   @override
-  State<LiveStreamAnalyticsScreen> createState() =>
+  ConsumerState<LiveStreamAnalyticsScreen> createState() =>
       _LiveStreamAnalyticsScreenState();
 }
 
-class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
+class _LiveStreamAnalyticsScreenState extends ConsumerState<LiveStreamAnalyticsScreen> {
   Map<String, dynamic>? _data;
   bool _isLoading = true;
   bool _hasError = false;
@@ -66,7 +67,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     final bodyContent = _isLoading
         ? const Center(child: CircularProgressIndicator())
@@ -82,18 +83,18 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  l.proLoadError,
+                  loc.t('proLoadError'),
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: _fetchAnalytics,
-                  child: Text(l.btnRetry),
+                  child: Text(loc.t('btnRetry')),
                 ),
               ],
             ),
           )
-        : _buildDashboard(context);
+        : _buildDashboard(context, loc);
 
     if (widget.isEmbedded) {
       return bodyContent;
@@ -103,7 +104,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         title: Text(
-          l.proToolStreamAnalyticsTitle,
+          loc.t('proToolStreamAnalyticsTitle'),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.bg(context),
@@ -113,8 +114,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
     );
   }
 
-  Widget _buildDashboard(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget _buildDashboard(BuildContext context, TranslationPack loc) {
     final d = _data!;
     final revenue = d['auction_summary']?['total_revenue'] ?? 0.0;
     final recommendation = d['recommendation'] as String? ?? '';
@@ -149,7 +149,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                   child: Column(
                     children: [
                       Text(
-                        l.analyticsRevenue.toUpperCase(),
+                        loc.t('analyticsRevenue').toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -187,7 +187,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              l.analyticsDuration(duration),
+                              loc.t('analyticsDuration', {'minutes': duration.toString()}),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -225,7 +225,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                l.analyticsAiRecommendation,
+                                loc.t('analyticsAiRecommendation'),
                                 style: const TextStyle(
                                   color: Color(0xFF92400E),
                                   fontWeight: FontWeight.bold,
@@ -258,19 +258,19 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                   childAspectRatio: 1.5,
                   children: [
                     _MetricCard(
-                      title: l.analyticsUniqueViewers,
+                      title: loc.t('analyticsUniqueViewers'),
                       value: '${d['unique_viewers'] ?? 0}',
                       icon: Icons.people_alt,
                       color: Colors.blue,
                     ),
                     _MetricCard(
-                      title: l.analyticsPeakViewers,
+                      title: loc.t('analyticsPeakViewers'),
                       value: '${d['peak_viewers'] ?? 0}',
                       icon: Icons.show_chart,
                       color: Colors.purple,
                     ),
                     _MetricCard(
-                      title: l.analyticsAvgBudget,
+                      title: loc.t('analyticsAvgBudget'),
                       value: d['avg_budget'] != null
                           ? '${NumberFormat('#,##0', 'tr_TR').format((d['avg_budget'] as num).toDouble())} ₺'
                           : '-',
@@ -278,7 +278,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                       color: Colors.green,
                     ),
                     _MetricCard(
-                      title: l.analyticsHesitation,
+                      title: loc.t('analyticsHesitation'),
                       value: '${d['hesitation_count'] ?? 0}',
                       icon: Icons.psychology_alt,
                       color: Colors.orange,
@@ -290,7 +290,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
 
                 // Reach Section
                 Text(
-                  l.analyticsFeedReach,
+                  loc.t('analyticsFeedReach'),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -301,7 +301,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                   children: [
                     Expanded(
                       child: _ReachStat(
-                        title: l.analyticsFeedImpressions,
+                        title: loc.t('analyticsFeedImpressions'),
                         value: '${d['swipe_impressions'] ?? 0}',
                         icon: Icons.swipe,
                       ),
@@ -309,7 +309,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _ReachStat(
-                        title: l.analyticsFeedReach,
+                        title: loc.t('analyticsFeedReach'),
                         value: '${d['swipe_reach'] ?? 0}',
                         icon: Icons.radar,
                       ),
@@ -319,7 +319,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
 
                 const SizedBox(height: 32),
                 Text(
-                  l.analyticsItemsSold,
+                  loc.t('analyticsItemsSold'),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -329,19 +329,19 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
             ),
           ),
         ),
-        _buildAuctionList(l, d['auction_summary']?['items'] as List? ?? []),
+        _buildAuctionList(loc, d['auction_summary']?['items'] as List? ?? []),
       ],
     );
   }
 
-  Widget _buildAuctionList(AppLocalizations l, List items) {
+  Widget _buildAuctionList(TranslationPack loc, List items) {
     if (items.isEmpty) {
       return SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0),
           child: Center(
             child: Text(
-              l.analyticsNoAuctions,
+              loc.t('analyticsNoAuctions'),
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
           ),

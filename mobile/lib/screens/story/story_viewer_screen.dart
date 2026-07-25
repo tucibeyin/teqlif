@@ -10,7 +10,7 @@ import '../../config/app_colors.dart';
 import '../../core/app_exception.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../config/theme.dart';
-import '../../l10n/app_localizations.dart';
+import '../../services/localization_service.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
 import '../../services/storage_service.dart';
@@ -38,7 +38,7 @@ import '../public_profile_screen.dart';
 ///   AnimationController'ları dispose eder — aynı anda tek bir aktif
 ///   kaynak seti mevcuttur. PageView'ın kapattığı sayfalar Flutter
 ///   tarafından dispose edildiğinde [_GroupPageState.dispose] her şeyi temizler.
-class StoryViewerScreen extends StatefulWidget {
+class StoryViewerScreen extends ConsumerStatefulWidget {
   final List<UserStoryGroup> groups;
   final int initialIndex;
 
@@ -49,10 +49,10 @@ class StoryViewerScreen extends StatefulWidget {
   });
 
   @override
-  State<StoryViewerScreen> createState() => _StoryViewerScreenState();
+  ConsumerState<StoryViewerScreen> createState() => _StoryViewerScreenState();
 }
 
-class _StoryViewerScreenState extends State<StoryViewerScreen> {
+class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen> {
   late final PageController _pageController;
   // Double-pop koruması: video bitti + kullanıcı aynı anda swipe-down yapınca
   // iki bağımsız yoldan Navigator.pop() çağrılabilir — bu flag bunu önler.
@@ -112,7 +112,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
 
 // ── Tek kullanıcının hikaye sayfası ─────────────────────────────────────────
 
-class _GroupPage extends StatefulWidget {
+class _GroupPage extends ConsumerStatefulWidget {
   final UserStoryGroup group;
   final VoidCallback onNextGroup;
   final VoidCallback onPrevGroup;
@@ -127,10 +127,10 @@ class _GroupPage extends StatefulWidget {
   });
 
   @override
-  State<_GroupPage> createState() => _GroupPageState();
+  ConsumerState<_GroupPage> createState() => _GroupPageState();
 }
 
-class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
+class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderStateMixin {
   int _itemIndex = 0;
   int? _currentUserId;
 
@@ -500,7 +500,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   Future<void> _confirmDeleteStory() async {
     // View isteği sunucuda işleniyorken DELETE gönderilmesini önlemek için
     // önce videoyu durdur, kısa süre bekle
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     _videoCtrl?.pause();
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -508,17 +508,17 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.storyDelete),
-        content: Text(l.storyDeleteConfirm),
+        title: Text(loc.t('storyDelete')),
+        content: Text(loc.t('storyDeleteConfirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l.btnCancel),
+            child: Text(loc.t('btnCancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(l.btnDelete),
+            child: Text(loc.t('btnDelete')),
           ),
         ],
       ),
@@ -554,7 +554,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       }
       await Sentry.captureException(e, stackTrace: st);
       if (mounted) {
-        TeqToast.error(l.storyDeleteFailed);
+        TeqToast.error(loc.t('storyDeleteFailed'));
         _videoCtrl?.play();
       }
     }
@@ -776,7 +776,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   // ── Canlı yayın yönlendirme kartı ────────────────────────────────────────
 
   Widget _buildLiveRedirectCard(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final user = widget.group.user;
     final avatarUrl = user.profileImageThumbUrl ?? user.profileImageUrl;
     final resolved = avatarUrl != null ? imgUrl(avatarUrl) : null;
@@ -829,7 +829,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
             const SizedBox(height: 20),
             // "Şu an Canlı Yayında!"
             Text(
-              l.storyLiveNow,
+              loc.t('storyLiveNow'),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
@@ -872,7 +872,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                       ),
                     )
                   : Text(
-                      l.storyJoinLive,
+                      loc.t('storyJoinLive'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -969,7 +969,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   // ── "Kim Gördü?" altta ortalanmış buton ──────────────────────────────────
 
   Widget _buildViewersButton(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final bottomPad = MediaQuery.of(context).padding.bottom + 24;
     return Positioned(
       bottom: bottomPad,
@@ -991,7 +991,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                     color: Colors.white, size: 18),
                 const SizedBox(width: 7),
                 Text(
-                  l.storyWhoViewed,
+                  loc.t('storyWhoViewed'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
@@ -1113,7 +1113,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                       const Icon(Icons.delete_outline, color: Colors.red, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        AppLocalizations.of(context)!.storyDelete,
+                        ref.read(localizationProvider).t('storyDelete'),
                         style: const TextStyle(color: Colors.red),
                       ),
                     ],
@@ -1148,7 +1148,7 @@ enum _BarState { full, empty, active }
 /// Video öğelerinde [ValueListenableBuilder] ile video konumunu,
 /// live_redirect öğelerinde [AnimatedBuilder] ile 5s timer'ı takip eder.
 /// Yalnızca kendi alt ağacını rebuild ederek gereksiz yeniden çizimi önler.
-class _StoryProgressBar extends StatelessWidget {
+class _StoryProgressBar extends ConsumerWidget {
   final _BarState state;
   final VideoPlayerController? videoController;
   final AnimationController? liveAnim;
@@ -1160,7 +1160,7 @@ class _StoryProgressBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (state == _BarState.full) return _bar(1.0);
     if (state == _BarState.empty) return _bar(0.0);
 
@@ -1198,15 +1198,15 @@ class _StoryProgressBar extends StatelessWidget {
 
 // ── Kim Gördü? bottom sheet ───────────────────────────────────────────────────
 
-class _ViewersSheet extends StatefulWidget {
+class _ViewersSheet extends ConsumerStatefulWidget {
   final int storyId;
   const _ViewersSheet({required this.storyId});
 
   @override
-  State<_ViewersSheet> createState() => _ViewersSheetState();
+  ConsumerState<_ViewersSheet> createState() => _ViewersSheetState();
 }
 
-class _ViewersSheetState extends State<_ViewersSheet> {
+class _ViewersSheetState extends ConsumerState<_ViewersSheet> {
   List<StoryViewer>? _viewers;
   bool _loading = true;
   String? _error;
@@ -1225,7 +1225,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
       await Sentry.captureException(e, stackTrace: st);
       if (mounted) {
         setState(() {
-          _error = AppLocalizations.of(context)!.storyViewersLoadFailed;
+          _error = ref.read(localizationProvider).t('storyViewersLoadFailed');
           _loading = false;
         });
       }
@@ -1234,7 +1234,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Container(
@@ -1268,7 +1268,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                     size: 18, color: AppColors.textSecondary(context)),
                 const SizedBox(width: 8),
                 Text(
-                  l.storyWhoViewed,
+                  loc.t('storyWhoViewed'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1309,7 +1309,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
             Padding(
               padding: const EdgeInsets.all(32),
               child: Text(
-                l.storyNoViewersYet,
+                loc.t('storyNoViewersYet'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary(context)),
               ),
@@ -1370,7 +1370,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
 
   String _formatTime(BuildContext context, DateTime dt) {
     final diff = DateTime.now().difference(dt.toLocal());
-    if (diff.inMinutes < 1) return AppLocalizations.of(context)?.timeJustNow ?? 'Az önce';
+    if (diff.inMinutes < 1) return ref.read(localizationProvider).t('timeJustNow');
     if (diff.inHours < 1) return '${diff.inMinutes}d önce';
     if (diff.inDays < 1) return '${diff.inHours}s önce';
     return '${diff.inDays}g önce';
@@ -1379,13 +1379,13 @@ class _ViewersSheetState extends State<_ViewersSheet> {
 
 // ── Profil fotoğrafı yoksa baş harf ─────────────────────────────────────────
 
-class _InitialsBubble extends StatelessWidget {
+class _InitialsBubble extends ConsumerWidget {
   final String username;
 
   const _InitialsBubble({required this.username});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ColoredBox(
       color: kPrimaryDark,
       child: Center(

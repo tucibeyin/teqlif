@@ -2,18 +2,19 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 
-class GlobalKeyboardAccessory extends StatefulWidget {
+class GlobalKeyboardAccessory extends ConsumerStatefulWidget {
   final Widget child;
 
   const GlobalKeyboardAccessory({super.key, required this.child});
 
   @override
-  State<GlobalKeyboardAccessory> createState() => _GlobalKeyboardAccessoryState();
+  ConsumerState<GlobalKeyboardAccessory> createState() => _GlobalKeyboardAccessoryState();
 }
 
-class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
+class _GlobalKeyboardAccessoryState extends ConsumerState<GlobalKeyboardAccessory> {
   TextEditingController? _activeController;
   bool _isObscure = false;
   bool _isNumeric = false;
@@ -123,7 +124,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   }
 }
 
-class _AccessoryBar extends StatefulWidget {
+class _AccessoryBar extends ConsumerStatefulWidget {
   final TextEditingController controller;
   final bool isObscure;
   final bool isNumeric;
@@ -136,10 +137,10 @@ class _AccessoryBar extends StatefulWidget {
   });
 
   @override
-  State<_AccessoryBar> createState() => _AccessoryBarState();
+  ConsumerState<_AccessoryBar> createState() => _AccessoryBarState();
 }
 
-class _AccessoryBarState extends State<_AccessoryBar> {
+class _AccessoryBarState extends ConsumerState<_AccessoryBar> {
   final _scrollCtrl = ScrollController();
 
   static const _textStyle = TextStyle(
@@ -215,7 +216,7 @@ class _AccessoryBarState extends State<_AccessoryBar> {
     if (keyboardHeight <= 0) return const SizedBox.shrink();
 
     final isDark = AppColors.isDark(context);
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     return Positioned(
       bottom: keyboardHeight,
@@ -241,8 +242,8 @@ class _AccessoryBarState extends State<_AccessoryBar> {
                 top: false,
                 bottom: false,
                 child: widget.isNumeric
-                    ? _buildNumericBar(context, l)
-                    : _buildTextBar(context, l),
+                    ? _buildNumericBar(context, loc)
+                    : _buildTextBar(context, loc),
               ),
             ),
           ),
@@ -252,13 +253,13 @@ class _AccessoryBarState extends State<_AccessoryBar> {
   }
 
   // ── Numeric bar: tutar/sayı girişi için (teklif, fiyat, miktar) ─────────────
-  Widget _buildNumericBar(BuildContext context, AppLocalizations l) {
+  Widget _buildNumericBar(BuildContext context, TranslationPack loc) {
     return Row(
       children: [
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: widget.controller,
           builder: (context, value, _) {
-            final display = value.text.isEmpty ? l.kbdAmountHint : value.text;
+            final display = value.text.isEmpty ? loc.t("kbdAmountHint") : value.text;
             final isEmpty = value.text.isEmpty;
             return Expanded(
               child: Text(
@@ -295,14 +296,14 @@ class _AccessoryBarState extends State<_AccessoryBar> {
               decoration: TextDecoration.none,
             ),
           ),
-          child: Text(l.kbdConfirm),
+          child: Text(loc.t("kbdConfirm")),
         ),
       ],
     );
   }
 
   // ── Text bar: genel metin girişi için (profil, yorum, arama...) ─────────────
-  Widget _buildTextBar(BuildContext context, AppLocalizations l) {
+  Widget _buildTextBar(BuildContext context, TranslationPack loc) {
     return Row(
       children: [
         Expanded(
@@ -324,7 +325,7 @@ class _AccessoryBarState extends State<_AccessoryBar> {
                             return Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                AppLocalizations.of(context)!.kbdTypingHint,
+                                loc.t("kbdTypingHint"),
                                 style: _textStyle.copyWith(
                                   fontStyle: FontStyle.italic,
                                   color: AppColors.textTertiary(context),
@@ -378,7 +379,7 @@ class _AccessoryBarState extends State<_AccessoryBar> {
             foregroundColor: AppColors.textSecondary(context),
           ),
           child: Text(
-            l.kbdDismiss,
+            loc.t("kbdDismiss"),
             style: const TextStyle(
               decoration: TextDecoration.none,
               fontWeight: FontWeight.w600,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../l10n/app_localizations.dart';
 import '../services/connectivity_service.dart';
+import '../services/localization_service.dart';
 
 /// Bağlantı durumunu dinler; çevrimdışıyken ince bir uyarı şeridi gösterir.
 /// Geçişler AnimatedSize ile pürüzsüzdür.
@@ -25,9 +25,10 @@ class OfflineBanner extends ConsumerWidget {
   }
 }
 
-class _BannerContent extends StatelessWidget {
+class _BannerContent extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       width: double.infinity,
       color: const Color(0xFFB91C1C), // kırmızı-700
@@ -40,7 +41,7 @@ class _BannerContent extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                AppLocalizations.of(context)!.offlineBannerMessage,
+                loc.t("offlineBannerMessage"),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,

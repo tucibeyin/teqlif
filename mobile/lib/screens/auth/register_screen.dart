@@ -6,26 +6,25 @@ import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/logger_service.dart';
-import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
+import '../../services/localization_service.dart';
 import '../../widgets/phone_input_field.dart';
 import 'verify_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
-import '../../ui_library/components/overlays/teq_toast.dart';
-import '../../core/app_exception.dart';
-import '../../core/error_display.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../utils/error_helper.dart';
 import '../../ui_library/components/overlays/teq_dialog.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
@@ -33,15 +32,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtrl = TextEditingController();
   final _passConfirmCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
-  String? _phoneE164; // E.164 formatında telefon (+90532...)
+  String? _phoneE164;
 
   bool _loading = false;
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _eulaAccepted = false;
 
-  // Username availability check
-  String? _usernameStatus; // null | 'checking' | 'available' | 'taken'
+  String? _usernameStatus;
   Timer? _usernameDebounce;
 
   @override
@@ -80,47 +78,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final body = await apiCall(
         () => http.get(
-          Uri.parse(
-            '$kBaseUrl/auth/check-username',
-          ).replace(queryParameters: {'username': val}),
+          Uri.parse('$kBaseUrl/auth/check-username')
+              .replace(queryParameters: {'username': val}),
         ),
       );
       if (!mounted) return;
-      setState(
-        () => _usernameStatus = (body['available'] as bool)
-            ? 'available'
-            : 'taken',
-      );
+      setState(() => _usernameStatus = (body['available'] as bool) ? 'available' : 'taken');
     } catch (e) {
-      LoggerService.instance.warning(
-        'RegisterScreen',
-        'Kullanıcı adı kontrolü başarısız: $e',
-      );
+      LoggerService.instance.warning('RegisterScreen', 'Kullanıcı adı kontrolü başarısız: $e');
       if (mounted) setState(() => _usernameStatus = null);
     }
   }
 
-  void _showPhoneInfoDialog(BuildContext context, dynamic l) {
+  void _showPhoneInfoDialog() {
+    final loc = ref.read(localizationProvider);
     TeqDialog.show(
       context: context,
-      title: '🔒 ${l.phoneInfoTitle}',
-      message: l.phoneInfoBody,
-      primaryButtonText: l.phoneInfoGotIt,
+      title: '🔒 ${loc.t('phoneInfoTitle')}',
+      message: loc.t('phoneInfoBody'),
+      primaryButtonText: loc.t('phoneInfoGotIt'),
       onPrimaryPressed: () => Navigator.of(context).pop(),
     );
   }
 
   void _openUrl(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri))
-      launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_eulaAccepted) {
-      final l = AppLocalizations.of(context)!;
-      TeqSnackBar.show(message: l.validTermsRequired,
+      TeqSnackBar.show(
+        message: ref.read(localizationProvider).t('validTermsRequired'),
         type: TeqSnackBarType.error,
       );
       return;
@@ -144,13 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        if (e is AppException) {
-          ErrorDisplay.fromException(context, e);
-        } else {
-          TeqToast.error(AppLocalizations.of(context)!.errorGenericRetry);
-        }
-      }
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -158,10 +142,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
-      appBar: AppBar(title: Text(l.registerTitle)),
+      appBar: AppBar(title: Text(loc.t('registerTitle'))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -169,19 +153,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l.registerSubtitle,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+                loc.t('registerSubtitle'),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                l.registerJoin,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary(context),
-                ),
+                loc.t('registerJoin'),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
               ),
               const SizedBox(height: 28),
               Form(
@@ -192,11 +170,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
                       maxLength: 100,
-                      labelText: l.fieldFullName,
+                      labelText: loc.t('fieldFullName'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return l.fieldFullNameHint;
-                        if (v.trim().length < 2) return l.validFullNameMin;
-                        if (v.length > 100) return l.validFullNameMax;
+                        if (v == null || v.isEmpty) return loc.t('fieldFullNameHint');
+                        if (v.trim().length < 2) return loc.t('validFullNameMin');
+                        if (v.length > 100) return loc.t('validFullNameMax');
                         return null;
                       },
                     ),
@@ -204,43 +182,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TeqTextField(
                       controller: _usernameCtrl,
                       maxLength: 50,
-                      labelText: l.fieldUsername,
-                      helperText: l.fieldUsernameSubtitle,
+                      labelText: loc.t('fieldUsername'),
+                      helperText: loc.t('fieldUsernameSubtitle'),
                       suffixIcon: _usernameStatus == 'checking'
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: Padding(
                                 padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 2),
                               ),
                             )
                           : _usernameStatus == 'available'
-                          ? const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                              size: 20,
-                            )
-                          : _usernameStatus == 'taken'
-                          ? const Icon(
-                              Icons.cancel,
-                              color: Colors.red,
-                              size: 20,
-                            )
-                          : null,
+                              ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                              : _usernameStatus == 'taken'
+                                  ? const Icon(Icons.cancel, color: Colors.red, size: 20)
+                                  : null,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return l.fieldUsernameHint;
-                        if (v.length < 3) return l.validUsernameMin;
-                        if (v.length > 50) return l.validUsernameMax;
-                        if (!RegExp(r'^[a-z0-9_]+$').hasMatch(v)) {
-                          return l.validUsernameChars;
-                        }
-                        if (_usernameStatus == 'taken')
-                          return l.validUsernameTaken;
-                        if (_usernameStatus == 'checking')
-                          return l.usernameChecking;
+                        if (v == null || v.isEmpty) return loc.t('fieldUsernameHint');
+                        if (v.length < 3) return loc.t('validUsernameMin');
+                        if (v.length > 50) return loc.t('validUsernameMax');
+                        if (!RegExp(r'^[a-z0-9_]+$').hasMatch(v)) return loc.t('validUsernameChars');
+                        if (_usernameStatus == 'taken') return loc.t('validUsernameTaken');
+                        if (_usernameStatus == 'checking') return loc.t('usernameChecking');
                         return null;
                       },
                     ),
@@ -249,32 +213,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       maxLength: 255,
-                      labelText: l.fieldEmail,
+                      labelText: loc.t('fieldEmail'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return l.fieldEmailHint;
-                        if (v.length > 255) return l.validEmailMax;
-                        if (!RegExp(
-                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                        ).hasMatch(v)) {
-                          return l.validEmailInvalid;
+                        if (v == null || v.isEmpty) return loc.t('fieldEmailHint');
+                        if (v.length > 255) return loc.t('validEmailMax');
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+                          return loc.t('validEmailInvalid');
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 14),
-                    // ── Telefon Numarası (İsteğe Bağlı) ──────────────────────
                     Row(
                       children: [
                         Text(
-                          l.fieldPhone,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
-                          ),
+                          loc.t('fieldPhone'),
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                         ),
                         const SizedBox(width: 4),
                         GestureDetector(
-                          onTap: () => _showPhoneInfoDialog(context, l),
+                          onTap: _showPhoneInfoDialog,
                           child: Icon(
                             Icons.help_outline_rounded,
                             size: 15,
@@ -295,10 +253,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 12,
                       labelText: 'Davet Kodu (isteğe bağlı)',
-                      prefixIcon: const Icon(
-                        Icons.card_giftcard_outlined,
-                        size: 20,
-                      ),
+                      prefixIcon: const Icon(Icons.card_giftcard_outlined, size: 20),
                       helperText: 'Bir arkadaşın seni davet ettiyse kodunu gir',
                     ),
                     const SizedBox(height: 14),
@@ -306,19 +261,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _passCtrl,
                       obscureText: _obscure,
                       keyboardType: TextInputType.visiblePassword,
-                      labelText: l.fieldPassword,
+                      labelText: loc.t('fieldPassword'),
                       suffixIcon: IconButton(
                         key: const Key('register_btn_password_visibility'),
-                        icon: Icon(
-                          _obscure
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
+                        icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return l.fieldPasswordHint;
-                        if (v.length < 8) return l.validPasswordMin;
+                        if (v == null || v.isEmpty) return loc.t('fieldPasswordHint');
+                        if (v.length < 8) return loc.t('validPasswordMin');
                         return null;
                       },
                     ),
@@ -327,25 +278,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _passConfirmCtrl,
                       obscureText: _obscureConfirm,
                       keyboardType: TextInputType.visiblePassword,
-                      labelText: l.fieldPasswordConfirm,
+                      labelText: loc.t('fieldPasswordConfirm'),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirm
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                        onPressed: () =>
-                            setState(() => _obscureConfirm = !_obscureConfirm),
+                        icon: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                        onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty)
-                          return l.fieldPasswordConfirmHint;
-                        if (v != _passCtrl.text) return l.validPasswordMismatch;
+                        if (v == null || v.isEmpty) return loc.t('fieldPasswordConfirmHint');
+                        if (v != _passCtrl.text) return loc.t('validPasswordMismatch');
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
-                    // EULA onay
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -353,17 +297,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           key: const Key('register_checkbox_eula'),
                           value: _eulaAccepted,
                           activeColor: kPrimary,
-                          onChanged: (v) =>
-                              setState(() => _eulaAccepted = v ?? false),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
+                          onChanged: (v) => setState(() => _eulaAccepted = v ?? false),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                         ),
                         Expanded(
                           child: GestureDetector(
                             key: const Key('register_gesture_eula_text'),
-                            onTap: () =>
-                                setState(() => _eulaAccepted = !_eulaAccepted),
+                            onTap: () => setState(() => _eulaAccepted = !_eulaAccepted),
                             child: Padding(
                               padding: const EdgeInsets.only(top: 10),
                               child: RichText(
@@ -376,9 +317,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     const TextSpan(text: 'teqlif '),
                                     WidgetSpan(
                                       child: GestureDetector(
-                                        key: const Key(
-                                          'register_link_kullanim_sartlari',
-                                        ),
+                                        key: const Key('register_link_kullanim_sartlari'),
                                         onTap: () => _openUrl(
                                           'https://www.teqlif.com/kullanim-sartlari.html',
                                         ),
@@ -393,8 +332,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     ),
                                     const TextSpan(
-                                      text:
-                                          '\'nı okudum, kabul ediyorum. Uygunsuz içeriklere sıfır tolerans politikasını anladım.',
+                                      text: '\'nı okudum, kabul ediyorum. Uygunsuz içeriklere sıfır tolerans politikasını anladım.',
                                     ),
                                   ],
                                 ),
@@ -406,7 +344,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 20),
                     TeqButton(
-                      text: l.registerTitle,
+                      text: loc.t('registerTitle'),
                       isLoading: _loading,
                       onPressed: _submit,
                     ),
@@ -418,17 +356,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    l.registerHaveAccount,
-                    style: TextStyle(
-                      color: AppColors.textSecondary(context),
-                      fontSize: 14,
-                    ),
+                    loc.t('registerHaveAccount'),
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                   ),
                   GestureDetector(
                     key: const Key('register_link_giris_yap'),
                     onTap: () => Navigator.of(context).pop(),
                     child: Text(
-                      l.registerLoginLink,
+                      loc.t('registerLoginLink'),
                       style: const TextStyle(
                         color: kPrimary,
                         fontWeight: FontWeight.w600,

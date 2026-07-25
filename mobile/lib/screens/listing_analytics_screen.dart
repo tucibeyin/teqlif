@@ -1,17 +1,18 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import '../ui_library/components/buttons/teq_button.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/category_service.dart';
 
-class ListingAnalyticsScreen extends StatefulWidget {
+class ListingAnalyticsScreen extends ConsumerStatefulWidget {
   final bool isPremium;
   final bool isEmbedded;
   const ListingAnalyticsScreen({
@@ -21,10 +22,10 @@ class ListingAnalyticsScreen extends StatefulWidget {
   });
 
   @override
-  State<ListingAnalyticsScreen> createState() => _ListingAnalyticsScreenState();
+  ConsumerState<ListingAnalyticsScreen> createState() => _ListingAnalyticsScreenState();
 }
 
-class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
+class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen> {
   bool _loading = true;
   bool _hasError = false;
   String? _selectedListingId;
@@ -151,15 +152,15 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final bodyContent = _loading
         ? const Center(child: CircularProgressIndicator())
         : (_hasError && widget.isPremium)
-        ? _buildError(l)
+        ? _buildError(loc)
         : Stack(
             children: [
-              _buildContent(l),
-              if (!widget.isPremium) _buildPaywall(context, l),
+              _buildContent(loc),
+              if (!widget.isPremium) _buildPaywall(context, loc),
             ],
           );
 
@@ -170,7 +171,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.proToolListingsTitle),
+        title: Text(loc.t("proToolListingsTitle")),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -178,7 +179,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     );
   }
 
-  Widget _buildError(AppLocalizations l) {
+  Widget _buildError(TranslationPack loc) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -190,11 +191,11 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            l.proLoadFailed,
+            loc.t("proLoadFailed"),
             style: TextStyle(color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 16),
-          TeqButton.text(onPressed: _load, text: l.btnRetry, isExpanded: false),
+          TeqButton.text(onPressed: _load, text: loc.t("btnRetry"), isExpanded: false),
         ],
       ),
     );
@@ -203,7 +204,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(AppLocalizations l) {
+  Widget _buildDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return InkWell(
       onTap: () async {
@@ -236,7 +237,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
               child: Text(
                 hasRange
                     ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : l.filterSelectDate,
+                    : loc.t("filterSelectDate"),
                 style: TextStyle(fontSize: 13,
                     color: hasRange ? const Color(0xFF6366F1) : AppColors.textSecondary(context)),
               ),
@@ -252,7 +253,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     );
   }
 
-  Widget _buildFilterBar(AppLocalizations l) {
+  Widget _buildFilterBar(TranslationPack loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -261,7 +262,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
           child: TextField(
             controller: _searchCtrl,
             decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
+              hintText: loc.t("searchHintTextListing"),
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -302,7 +303,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
-                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    label: Text(loc.t("allCategories"), style: const TextStyle(fontSize: 12)),
                     selected: _categoryFilter.isEmpty,
                     onSelected: (_) {
                       if (_categoryFilter.isNotEmpty) {
@@ -333,13 +334,13 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
           ),
           const SizedBox(height: 6),
         ],
-        _buildDateRangePicker(l),
+        _buildDateRangePicker(loc),
         const SizedBox(height: 10),
       ],
     );
   }
 
-  Widget _buildContent(AppLocalizations l) {
+  Widget _buildContent(TranslationPack loc) {
     final _ListingMetric? selectedItem = _selectedListingId == null
         ? null
         : _listings.where((m) => m.id == _selectedListingId).firstOrNull;
@@ -363,7 +364,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          _buildFilterBar(l),
+          _buildFilterBar(loc),
 
           if (_listings.isNotEmpty) ...[
             // Horizontal Carousel for Selection
@@ -404,7 +405,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              l.liveAllCategory, // "Tümü" / "All"
+                              loc.t("liveAllCategory"), // "Tümü" / "All"
                               style: TextStyle(
                                 color: isSelected
                                     ? const Color(0xFF6366F1)
@@ -514,14 +515,14 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             Row(
               children: [
                 _SummaryTile(
-                  label: l.listingTotalViews,
+                  label: loc.t("listingTotalViews"),
                   value: '+${_fmt(displayImp)}',
                   icon: Icons.visibility_outlined,
                   color: const Color(0xFF6366F1),
                 ),
                 const SizedBox(width: 10),
                 _SummaryTile(
-                  label: l.listingAvgCtr,
+                  label: loc.t("listingAvgCtr"),
                   value: '%${displayCtr.toStringAsFixed(1)}',
                   icon: Icons.ads_click_outlined,
                   color: const Color(0xFF10B981),
@@ -531,7 +532,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             const SizedBox(height: 12),
 
             if (selectedItem == null && _videoImp > 0 && _photoImp > 0)
-              _ComparisonCard(videoCtr: _videoCtr, photoCtr: _photoCtr, l: l),
+              _ComparisonCard(videoCtr: _videoCtr, photoCtr: _photoCtr, loc: loc),
 
             if (selectedItem != null) ...[
               const SizedBox(height: 16),
@@ -563,7 +564,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l.listingVideoComplete,
+                              loc.t("listingVideoComplete"),
                               style: TextStyle(
                                 color: AppColors.textSecondary(context),
                                 fontSize: 13,
@@ -613,7 +614,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l.listingGalleryLabel,
+                              loc.t("listingGalleryLabel"),
                               style: TextStyle(
                                 color: AppColors.textSecondary(context),
                                 fontSize: 13,
@@ -623,11 +624,8 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                             const SizedBox(height: 4),
                             Text(
                               selectedItem.avgPhotoDepth! > 1.5
-                                  ? l.listingGalleryDeep(
-                                      selectedItem.avgPhotoDepth!
-                                          .toStringAsFixed(1),
-                                    )
-                                  : l.listingGalleryShallow,
+                                  ? loc.t("listingGalleryDeep", {'n': selectedItem.avgPhotoDepth!.toStringAsFixed(1)})
+                                  : loc.t("listingGalleryShallow"),
                               style: TextStyle(
                                 color: AppColors.textPrimary(context),
                                 fontSize: 14,
@@ -646,15 +644,15 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
           if (_listings.isEmpty)
             _EmptyState(
               icon: Icons.bar_chart_outlined,
-              title: l.listingNoDataTitle,
-              subtitle: l.listingNoDataDesc,
+              title: loc.t("listingNoDataTitle"),
+              subtitle: loc.t("listingNoDataDesc"),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildPaywall(BuildContext context, AppLocalizations l) {
+  Widget _buildPaywall(BuildContext context, TranslationPack loc) {
     return Positioned.fill(
       child: ClipRect(
         child: BackdropFilter(
@@ -700,7 +698,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      l.proUpgradeTitle,
+                      loc.t("proUpgradeTitle"),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -709,7 +707,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      l.listingPaywallDesc,
+                      loc.t("listingPaywallDesc"),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -741,7 +739,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                             ),
                           ),
                           child: Text(
-                            l.proUpgradeBtn,
+                            loc.t("proUpgradeBtn"),
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
@@ -793,7 +791,7 @@ class _ListingMetric {
 
 // ── Reusable Widgets ──────────────────────────────────────────────────────────
 
-class _SummaryTile extends StatelessWidget {
+class _SummaryTile extends ConsumerWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -806,7 +804,7 @@ class _SummaryTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -856,28 +854,28 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-class _ComparisonCard extends StatelessWidget {
+class _ComparisonCard extends ConsumerWidget {
   final double videoCtr;
   final double photoCtr;
-  final AppLocalizations l;
+  final TranslationPack loc;
   const _ComparisonCard({
     required this.videoCtr,
     required this.photoCtr,
-    required this.l,
+    required this.loc,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final String message;
     if (videoCtr == 0 && photoCtr == 0) return const SizedBox.shrink();
     if (photoCtr > 0 && videoCtr > photoCtr * 1.1) {
       final x = (videoCtr / photoCtr).toStringAsFixed(1);
-      message = l.listingVideoBeatsPhoto(x);
+      message = loc.t("listingVideoBeatsPhoto", {"x": x});
     } else if (videoCtr > 0 && photoCtr > videoCtr * 1.1) {
       final x = (photoCtr / videoCtr).toStringAsFixed(1);
-      message = l.listingPhotoBeatsVideo(x);
+      message = loc.t("listingPhotoBeatsVideo", {"x": x});
     } else {
-      message = l.listingMediaEqual;
+      message = loc.t("listingMediaEqual");
     }
 
     return Container(
@@ -903,9 +901,9 @@ class _ComparisonCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _SegChip(emoji: '🎬', label: l.listingVideoLabel, ctr: videoCtr),
+              _SegChip(emoji: '🎬', label: loc.t("listingVideoLabel"), ctr: videoCtr),
               const SizedBox(width: 8),
-              _SegChip(emoji: '📸', label: l.listingPhotoLabel, ctr: photoCtr),
+              _SegChip(emoji: '📸', label: loc.t("listingPhotoLabel"), ctr: photoCtr),
             ],
           ),
         ],
@@ -914,14 +912,14 @@ class _ComparisonCard extends StatelessWidget {
   }
 }
 
-class _SegChip extends StatelessWidget {
+class _SegChip extends ConsumerWidget {
   final String emoji;
   final String label;
   final double ctr;
   const _SegChip({required this.emoji, required this.label, required this.ctr});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -942,7 +940,7 @@ class _SegChip extends StatelessWidget {
 
 
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -953,7 +951,7 @@ class _EmptyState extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(top: 48),
       child: Column(

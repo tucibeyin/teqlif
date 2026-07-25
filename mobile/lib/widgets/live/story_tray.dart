@@ -11,12 +11,12 @@ import 'package:video_compress/video_compress.dart';
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
 import '../../screens/story/story_viewer_screen.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
+import '../../services/localization_service.dart';
 
 /// Takip edilen kullanıcıların hybrid hikaye tepsisini Instagram stilinde gösterir.
 ///
@@ -58,13 +58,13 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   // ── Medya seç → (sıkıştır) → yükle ──────────────────────────────────────
 
   Future<void> _pickAndUpload() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
 
     // Kaynak seç: video kamera, video galeri, fotoğraf kamera, fotoğraf galeri
     final source = await showModalBottomSheet<_MediaSource>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _MediaSourceSheet(l: l),
+      builder: (ctx) => _MediaSourceSheet(loc: loc),
     );
     if (source == null || !mounted) return;
 
@@ -72,13 +72,13 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         source == _MediaSource.photoCamera || source == _MediaSource.photoGallery;
 
     if (isPhoto) {
-      await _pickAndUploadPhoto(source, l);
+      await _pickAndUploadPhoto(source, loc);
     } else {
-      await _pickAndUploadVideo(source, l);
+      await _pickAndUploadVideo(source, loc);
     }
   }
 
-  Future<void> _pickAndUploadPhoto(_MediaSource source, AppLocalizations l) async {
+  Future<void> _pickAndUploadPhoto(_MediaSource source, TranslationPack loc) async {
     final XFile? picked = await ImagePicker().pickImage(
       source: source == _MediaSource.photoGallery
           ? ImageSource.gallery
@@ -94,7 +94,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       await StoryService.uploadStory(File(picked.path));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.storyUploadSuccess)),
+        SnackBar(content: Text(loc.t("storyUploadSuccess"))),
       );
       ref.invalidate(storyGroupsProvider);
       ref.invalidate(myStoriesProvider);
@@ -102,14 +102,14 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.storyUploadFailed)),
+        SnackBar(content: Text(loc.t("storyUploadFailed"))),
       );
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
   }
 
-  Future<void> _pickAndUploadVideo(_MediaSource source, AppLocalizations l) async {
+  Future<void> _pickAndUploadVideo(_MediaSource source, TranslationPack loc) async {
     final XFile? picked = await ImagePicker().pickVideo(
       source: source == _MediaSource.videoGallery
           ? ImageSource.gallery
@@ -124,7 +124,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     final durationMs = info.duration ?? 0;
     if (durationMs > 15500 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.storyTooLong)),
+        SnackBar(content: Text(loc.t("storyTooLong"))),
       );
       return;
     }
@@ -135,7 +135,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l.storyProcessing),
+            content: Text(loc.t("storyProcessing")),
             duration: const Duration(seconds: 30),
           ),
         );
@@ -153,7 +153,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
 
       if (compressed?.path == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.storyUploadFailed)),
+          SnackBar(content: Text(loc.t("storyUploadFailed"))),
         );
         return;
       }
@@ -162,7 +162,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.storyUploadSuccess)),
+        SnackBar(content: Text(loc.t("storyUploadSuccess"))),
       );
 
       ref.invalidate(storyGroupsProvider);
@@ -172,7 +172,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.storyUploadFailed)),
+        SnackBar(content: Text(loc.t("storyUploadFailed"))),
       );
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -297,7 +297,7 @@ class _MyStoryItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final myStoriesAsync = ref.watch(myStoriesProvider);
     final myStories = myStoriesAsync.valueOrNull ?? [];
     final hasStories = myStories.isNotEmpty && !isUploading;
@@ -443,7 +443,7 @@ class _MyStoryItem extends ConsumerWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              l.storyMyStory,
+              loc.t("storyMyStory"),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -462,7 +462,7 @@ class _MyStoryItem extends ConsumerWidget {
 
 // ── Takip edilen kullanıcının hybrid story grubu ──────────────────────────────
 
-class _StoryGroupItem extends StatelessWidget {
+class _StoryGroupItem extends ConsumerWidget {
   final UserStoryGroup group;
   final List<UserStoryGroup> groups;
   final int groupIndex;
@@ -477,7 +477,8 @@ class _StoryGroupItem extends StatelessWidget {
   bool get _hasLive => group.items.any((i) => i.isLiveRedirect);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final avatarUrl =
         group.user.profileImageThumbUrl ?? group.user.profileImageUrl;
     final resolvedUrl = avatarUrl != null ? imgUrl(avatarUrl) : null;
@@ -568,7 +569,7 @@ class _StoryGroupItem extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!.liveBadgeLabel,
+                        loc.t("liveBadgeLabel"),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 7,
@@ -629,8 +630,8 @@ class _InitialAvatar extends StatelessWidget {
 enum _MediaSource { videoCamera, videoGallery, photoCamera, photoGallery }
 
 class _MediaSourceSheet extends StatelessWidget {
-  final AppLocalizations l;
-  const _MediaSourceSheet({required this.l});
+  final TranslationPack loc;
+  const _MediaSourceSheet({required this.loc});
 
   @override
   Widget build(BuildContext context) {
@@ -657,22 +658,22 @@ class _MediaSourceSheet extends StatelessWidget {
           const SizedBox(height: 16),
           _SourceTile(
             icon: Icons.videocam_outlined,
-            label: AppLocalizations.of(context)!.storyTrayRecordVideo,
+            label: loc.t("storyTrayRecordVideo"),
             onTap: () => Navigator.pop(context, _MediaSource.videoCamera),
           ),
           _SourceTile(
             icon: Icons.video_library_outlined,
-            label: AppLocalizations.of(context)!.storyTrayGalleryVideo,
+            label: loc.t("storyTrayGalleryVideo"),
             onTap: () => Navigator.pop(context, _MediaSource.videoGallery),
           ),
           _SourceTile(
             icon: Icons.camera_alt_outlined,
-            label: AppLocalizations.of(context)!.storyTrayTakePhoto,
+            label: loc.t("storyTrayTakePhoto"),
             onTap: () => Navigator.pop(context, _MediaSource.photoCamera),
           ),
           _SourceTile(
             icon: Icons.photo_library_outlined,
-            label: AppLocalizations.of(context)!.storyTrayGalleryPhoto,
+            label: loc.t("storyTrayGalleryPhoto"),
             onTap: () => Navigator.pop(context, _MediaSource.photoGallery),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/phone_number.dart';
 import '../config/app_colors.dart';
@@ -8,7 +9,7 @@ import '../config/theme.dart';
 /// Ülke kodu dropdown'lı telefon giriş alanı.
 /// [onChanged] her geçerli numara değişiminde E.164 formatında (+905...) çağrılır.
 /// [onReset] alan temizlendiğinde / geçersiz olduğunda çağrılır.
-class PhoneInputField extends StatefulWidget {
+class PhoneInputField extends ConsumerStatefulWidget {
   final void Function(String e164) onChanged;
   final void Function()? onReset;
   final String? initialE164; // ör. "+905321234567"
@@ -23,10 +24,10 @@ class PhoneInputField extends StatefulWidget {
   });
 
   @override
-  State<PhoneInputField> createState() => _PhoneInputFieldState();
+  ConsumerState<PhoneInputField> createState() => _PhoneInputFieldState();
 }
 
-class _PhoneInputFieldState extends State<PhoneInputField> {
+class _PhoneInputFieldState extends ConsumerState<PhoneInputField> {
   String _initialCountry = 'TR';
   String _initialNumber = '';
 
@@ -64,6 +65,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fillColor = AppColors.bg(context);
     final textColor = AppColors.textPrimary(context);
@@ -82,7 +84,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
       autofocus: false,
       invalidNumberMessage: null, // kendi hata mesajımızı kullanacağız
       decoration: InputDecoration(
-        hintText: AppLocalizations.of(context)!.phoneInputHint,
+        hintText: loc.t("phoneInputHint"),
         hintStyle: TextStyle(color: hintColor, fontSize: 14),
         filled: true,
         fillColor: fillColor,

@@ -1,20 +1,21 @@
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import '../ui_library/components/cards/teq_card.dart';
 
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/category_service.dart';
 
-class DemandTrendsScreen extends StatefulWidget {
+class DemandTrendsScreen extends ConsumerStatefulWidget {
   const DemandTrendsScreen({super.key});
 
   @override
-  State<DemandTrendsScreen> createState() => _DemandTrendsScreenState();
+  ConsumerState<DemandTrendsScreen> createState() => _DemandTrendsScreenState();
 }
 
-class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
+class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _trends = [];
@@ -60,7 +61,7 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
     return _trends.where((t) => t['category'] == _selectedCategory).toList();
   }
 
-  Widget _buildCategoryFilter(AppLocalizations l) {
+  Widget _buildCategoryFilter(TranslationPack loc) {
     final cats = _categories;
     if (cats == null || cats.isEmpty) return const SizedBox.shrink();
     return SizedBox(
@@ -69,7 +70,7 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
         scrollDirection: Axis.horizontal,
         children: [
           _CategoryChip(
-            label: l.filterAll,
+            label: loc.t("filterAll"),
             selected: _selectedCategory == null,
             onTap: () => setState(() => _selectedCategory = null),
           ),
@@ -86,17 +87,17 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final filtered = _filteredTrends;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.demandTrendsTitle),
+        title: Text(loc.t("demandTrendsTitle")),
         centerTitle: false,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _error != null || _trends.isEmpty
-              ? _Empty(l: l, onRetry: _load)
+              ? _Empty(loc: loc, onRetry: _load)
               : RefreshIndicator(
                   color: kPrimary,
                   onRefresh: _load,
@@ -104,22 +105,22 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       Text(
-                        l.demandTrendsSubtitle,
+                        loc.t("demandTrendsSubtitle"),
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                       ),
                       const SizedBox(height: 10),
-                      _buildCategoryFilter(l),
+                      _buildCategoryFilter(loc),
                       const SizedBox(height: 12),
                       if (filtered.isEmpty)
                         Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 32),
-                            child: Text(l.demandTrendsEmptyLabel,
+                            child: Text(loc.t("demandTrendsEmptyLabel"),
                                 style: TextStyle(color: AppColors.textSecondary(context))),
                           ),
                         )
                       else
-                        ...filtered.map((t) => _TrendCard(trend: t, l: l, categoryLabels: _categories)),
+                        ...filtered.map((t) => _TrendCard(trend: t, loc: loc, categoryLabels: _categories)),
                     ],
                   ),
                 ),
@@ -127,14 +128,14 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+class _CategoryChip extends ConsumerWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
   const _CategoryChip({required this.label, required this.selected, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -163,20 +164,20 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _Empty extends StatelessWidget {
-  final AppLocalizations l;
+class _Empty extends ConsumerWidget {
+  final TranslationPack loc;
   final VoidCallback onRetry;
-  const _Empty({required this.l, required this.onRetry});
+  const _Empty({required this.loc, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.bar_chart_outlined, size: 56, color: AppColors.textTertiary(context)),
           const SizedBox(height: 12),
-          Text(l.demandTrendsEmptyLabel,
+          Text(loc.t("demandTrendsEmptyLabel"),
               style: TextStyle(fontSize: 15, color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
           TextButton.icon(
@@ -190,15 +191,15 @@ class _Empty extends StatelessWidget {
   }
 }
 
-class _TrendCard extends StatelessWidget {
+class _TrendCard extends ConsumerWidget {
   final Map<String, dynamic> trend;
-  final AppLocalizations l;
+  final TranslationPack loc;
   final List<(String, String)>? categoryLabels;
 
-  const _TrendCard({required this.trend, required this.l, this.categoryLabels});
+  const _TrendCard({required this.trend, required this.loc, this.categoryLabels});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final categoryKey = trend['category'] as String? ?? '';
     final category = categoryLabels?.firstWhere(
           (p) => p.$1 == categoryKey,
@@ -210,9 +211,9 @@ class _TrendCard extends StatelessWidget {
     final weekly     = (trend['weekly'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
     final (dirIcon, dirColor, dirLabel) = switch (direction) {
-      'up'   => (Icons.trending_up, const Color(0xFF10B981), l.demandTrendsUpLabel),
-      'down' => (Icons.trending_down, const Color(0xFFEF4444), l.demandTrendsDownLabel),
-      _      => (Icons.trending_flat, const Color(0xFF6B7280), l.demandTrendsStableLabel),
+      'up'   => (Icons.trending_up, const Color(0xFF10B981), loc.t("demandTrendsUpLabel")),
+      'down' => (Icons.trending_down, const Color(0xFFEF4444), loc.t("demandTrendsDownLabel")),
+      _      => (Icons.trending_flat, const Color(0xFF6B7280), loc.t("demandTrendsStableLabel")),
     };
 
     final maxCount = weekly.isEmpty
@@ -247,7 +248,7 @@ class _TrendCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  l.demandTrendsChangeLabel(pct),
+                  loc.t("demandTrendsChangeLabel", {"pct": pct}),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
                 if (supplyGap) ...[
@@ -259,7 +260,7 @@ class _TrendCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      l.demandTrendsSupplyGapLabel,
+                      loc.t("demandTrendsSupplyGapLabel"),
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFFD97706),
@@ -281,7 +282,7 @@ class _TrendCard extends StatelessWidget {
   }
 }
 
-class _MiniBarChart extends StatelessWidget {
+class _MiniBarChart extends ConsumerWidget {
   final List<Map<String, dynamic>> weekly;
   final int maxCount;
   final Color dirColor;
@@ -293,7 +294,7 @@ class _MiniBarChart extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const barHeight = 36.0;
     return SizedBox(
       height: barHeight + 14,

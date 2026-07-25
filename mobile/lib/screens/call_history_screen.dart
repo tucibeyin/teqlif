@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api.dart';
-import '../l10n/app_localizations.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
 
@@ -53,14 +54,14 @@ class _CallHistoryItem {
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-class CallHistoryScreen extends StatefulWidget {
+class CallHistoryScreen extends ConsumerStatefulWidget {
   const CallHistoryScreen({super.key});
 
   @override
-  State<CallHistoryScreen> createState() => _CallHistoryScreenState();
+  ConsumerState<CallHistoryScreen> createState() => _CallHistoryScreenState();
 }
 
-class _CallHistoryScreenState extends State<CallHistoryScreen>
+class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
@@ -160,35 +161,35 @@ class _CallHistoryScreenState extends State<CallHistoryScreen>
       } else {
         setState(() {
           _loading[filter] = false;
-          _errorMessage = AppLocalizations.of(context)!.errorCallHistoryLoad;
+          _errorMessage = ref.read(localizationProvider).t('errorCallHistoryLoad');
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading[filter] = false;
-        _errorMessage = AppLocalizations.of(context)!.errorNetworkMessage;
+        _errorMessage = ref.read(localizationProvider).t('errorNetworkMessage');
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.callHistoryTitle),
+        title: Text(loc.t('callHistoryTitle')),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: false,
           tabs: [
-            Tab(text: l.callHistoryAll),
-            Tab(text: l.callHistoryMissed),
-            Tab(text: l.callHistoryIncoming),
-            Tab(text: l.callHistoryOutgoing),
+            Tab(text: loc.t('callHistoryAll')),
+            Tab(text: loc.t('callHistoryMissed')),
+            Tab(text: loc.t('callHistoryIncoming')),
+            Tab(text: loc.t('callHistoryOutgoing')),
           ],
         ),
       ),
@@ -208,7 +209,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen>
                       final filter = _filters[_tabs.index];
                       _fetchPage(filter, refresh: true);
                     },
-                    child: Text(l.callHistoryRetry),
+                    child: Text(loc.t('callHistoryRetry')),
                   ),
                 ],
               ),
@@ -221,7 +222,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen>
                         items: _items[f]!,
                         loading: _loading[f]!,
                         hasMore: _hasMore[f]!,
-                        emptyLabel: l.callHistoryEmpty,
+                        emptyLabel: loc.t('callHistoryEmpty'),
                         onLoadMore: () => _fetchPage(f),
                         onRefresh: () => _fetchPage(f, refresh: true),
                       ))
@@ -321,7 +322,7 @@ class _FilteredListState extends State<_FilteredList> {
 
 // ── Single call row ───────────────────────────────────────────────────────────
 
-class _CallTile extends StatelessWidget {
+class _CallTile extends ConsumerWidget {
   final _CallHistoryItem item;
   const _CallTile({required this.item});
 
@@ -332,20 +333,20 @@ class _CallTile extends StatelessWidget {
     return '$m:$s';
   }
 
-  String _formatTime(AppLocalizations l, DateTime? dt) {
+  String _formatTime(TranslationPack loc, DateTime? dt) {
     if (dt == null) return '';
     final now = DateTime.now();
     final local = dt.toLocal();
     final today = DateTime(now.year, now.month, now.day);
     final localDate = DateTime(local.year, local.month, local.day);
     final diffDays = today.difference(localDate).inDays;
-    
+
     final timeStr = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 
     if (diffDays == 0) {
-      return '${l.callHistoryToday} $timeStr';
+      return '${loc.t('callHistoryToday')} $timeStr';
     } else if (diffDays == 1) {
-      return '${l.callHistoryYesterday} $timeStr';
+      return '${loc.t('callHistoryYesterday')} $timeStr';
     } else {
       final d = local.day.toString().padLeft(2, '0');
       final m = local.month.toString().padLeft(2, '0');
@@ -354,15 +355,15 @@ class _CallTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     final isMissed = item.isMissed || item.status == 'missed';
     final isOutgoing = item.isOutgoing;
     final duration = _formatDuration(item.durationSeconds);
-    final timeLabel = _formatTime(l, item.startedAt);
+    final timeLabel = _formatTime(loc, item.startedAt);
 
     // Direction icon + color
     final (IconData dirIcon, Color dirColor) = switch (item.status) {
@@ -374,11 +375,11 @@ class _CallTile extends StatelessWidget {
 
     // Status label
     final String statusLabel = switch (item.status) {
-      'missed' => l.callHistoryStatusMissed,
-      'rejected' => isOutgoing ? l.callHistoryStatusDeclined : l.callHistoryStatusYouDeclined,
+      'missed' => loc.t('callHistoryStatusMissed'),
+      'rejected' => isOutgoing ? loc.t('callHistoryStatusDeclined') : loc.t('callHistoryStatusYouDeclined'),
       'ended' when (item.durationSeconds ?? 0) > 0 => duration,
-      'ended' => isOutgoing ? l.callHistoryStatusNoAnswer : l.callHistoryStatusNotAnswered,
-      'calling' => l.callHistoryStatusCancelled,
+      'ended' => isOutgoing ? loc.t('callHistoryStatusNoAnswer') : loc.t('callHistoryStatusNotAnswered'),
+      'calling' => loc.t('callHistoryStatusCancelled'),
       _ => item.status,
     };
 
@@ -435,7 +436,7 @@ class _CallTile extends StatelessWidget {
         ],
       ),
       title: Text(
-        item.otherUsername ?? l.callHistoryUnknown,
+        item.otherUsername ?? loc.t('callHistoryUnknown'),
         style: TextStyle(
           fontWeight: isMissed ? FontWeight.bold : FontWeight.normal,
           color: isMissed ? Colors.red : null,

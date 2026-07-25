@@ -1,22 +1,23 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
+import '../services/localization_service.dart';
 import '../utils/error_helper.dart';
 import 'public_profile_screen.dart';
 
-class MyRatingsScreen extends StatefulWidget {
+class MyRatingsScreen extends ConsumerStatefulWidget {
   const MyRatingsScreen({super.key});
 
   @override
-  State<MyRatingsScreen> createState() => _MyRatingsScreenState();
+  ConsumerState<MyRatingsScreen> createState() => _MyRatingsScreenState();
 }
 
-class _MyRatingsScreenState extends State<MyRatingsScreen> {
+class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
   bool _isLoading = true;
   List<dynamic> _receivedRatings = [];
   List<dynamic> _givenRatings = [];
@@ -68,7 +69,7 @@ class _MyRatingsScreenState extends State<MyRatingsScreen> {
         }
       }
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      handleError(e, ref.read(localizationProvider));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -76,7 +77,7 @@ class _MyRatingsScreenState extends State<MyRatingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     return DefaultTabController(
       length: 2,
@@ -86,14 +87,14 @@ class _MyRatingsScreenState extends State<MyRatingsScreen> {
           backgroundColor: AppColors.surface(context),
           foregroundColor: AppColors.textPrimary(context),
           elevation: 0,
-          title: Text(l.settingsMyRatings, style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(loc.t('settingsMyRatings'), style: const TextStyle(fontWeight: FontWeight.bold)),
           bottom: TabBar(
             labelColor: kPrimary,
             unselectedLabelColor: AppColors.textSecondary(context),
             indicatorColor: kPrimary,
             tabs: [
-              Tab(text: l.tabRatingsReceived),
-              Tab(text: l.tabRatingsGiven),
+              Tab(text: loc.t('tabRatingsReceived')),
+              Tab(text: loc.t('tabRatingsGiven')),
             ],
           ),
         ),

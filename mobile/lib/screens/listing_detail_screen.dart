@@ -21,13 +21,13 @@ import '../services/category_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
-import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'edit_listing_screen.dart';
 import 'messages_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../providers/listing_detail_provider.dart';
 import '../models/enums.dart';
 import '../models/mass_notif_eligibility.dart';
@@ -222,16 +222,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   String _formatCooldown(int totalSeconds) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     if (totalSeconds >= 3600) {
-      return l.massNotifCooldownHours(
-        totalSeconds ~/ 3600,
-        (totalSeconds % 3600) ~/ 60,
-      );
+      return loc.t("massNotifCooldownHours", {"hours": (totalSeconds ~/ 3600).toString(), "min": ((totalSeconds % 3600) ~/ 60).toString()});
     } else if (totalSeconds >= 60) {
-      return l.massNotifCooldownMinutes(totalSeconds ~/ 60);
+      return loc.t("massNotifCooldownMinutes", {"min": (totalSeconds ~/ 60).toString()});
     } else {
-      return l.massNotifCooldownSeconds(totalSeconds);
+      return loc.t("massNotifCooldownSeconds", {"sec": totalSeconds.toString()});
     }
   }
 
@@ -415,7 +412,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   Future<void> _toggleActive() async {
     if (!mounted || !context.mounted) return;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final id = widget.listing['id'] as int;
 
     final costData = await ListingService.getReactivationCost(id);
@@ -432,16 +429,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       // Aktif → Pasif
       if (!withinWindow) {
         final hintText = (isPremium && remaining > 0)
-            ? l.listingDeactivateFreeCreditHint
-            : l.listingDeactivateCostHint(cost);
+            ? loc.t("listingDeactivateFreeCreditHint")
+            : loc.t("listingDeactivateCostHint", {"cost": cost.toString()});
 
         final confirm = await TeqDialog.show<bool>(
           context: context,
-          title: l.listingDeactivateTitle,
-          message: '${l.listingDeactivateWarning}\n\n$hintText',
-          primaryButtonText: l.listingDeactivateConfirm,
+          title: loc.t("listingDeactivateTitle"),
+          message: '${loc.t("listingDeactivateWarning")}\n\n$hintText',
+          primaryButtonText: loc.t("listingDeactivateConfirm"),
           onPrimaryPressed: () => Navigator.pop(context, true),
-          secondaryButtonText: l.btnDismiss,
+          secondaryButtonText: loc.t("btnDismiss"),
           onSecondaryPressed: () => Navigator.pop(context, false),
           isDestructive: true,
         );
@@ -453,9 +450,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         if (!canAfford) {
           await TeqDialog.show<void>(
             context: context,
-            title: l.listingReactivateTitle,
-            message: l.listingReactivateInsufficientBalance,
-            primaryButtonText: l.btnDismiss,
+            title: loc.t("listingReactivateTitle"),
+            message: loc.t("listingReactivateInsufficientBalance"),
+            primaryButtonText: loc.t("btnDismiss"),
             onPrimaryPressed: () => Navigator.pop(context),
           );
           return;
@@ -463,21 +460,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
         String subtitle;
         if (isPremium && remaining > 0) {
-          subtitle = l.listingReactivateFreeCredit(remaining);
+          subtitle = loc.t("listingReactivateFreeCredit", {"remaining": remaining.toString()});
         } else if (isPremium) {
-          subtitle = l.listingReactivatePaidPro(cost);
+          subtitle = loc.t("listingReactivatePaidPro", {"cost": cost.toString()});
         } else {
-          subtitle = l.listingReactivatePaidNormal(cost, balance);
+          subtitle = loc.t("listingReactivatePaidNormal", {"cost": cost.toString(), "balance": balance.toString()});
         }
-        if (!isPremium) subtitle += '\n\n${l.listingReactivateProUpsell}';
+        if (!isPremium) subtitle += '\n\n${loc.t("listingReactivateProUpsell")}';
 
         final confirm = await TeqDialog.show<bool>(
           context: context,
-          title: l.listingReactivateTitle,
+          title: loc.t("listingReactivateTitle"),
           message: subtitle,
-          primaryButtonText: l.listingReactivateConfirm,
+          primaryButtonText: loc.t("listingReactivateConfirm"),
           onPrimaryPressed: () => Navigator.pop(context, true),
-          secondaryButtonText: l.btnDismiss,
+          secondaryButtonText: loc.t("btnDismiss"),
           onSecondaryPressed: () => Navigator.pop(context, false),
         );
         if (confirm != true) return;
@@ -497,12 +494,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             .setStatus(
               newActive ? ListingStatus.active : ListingStatus.passive,
             );
-        TeqSnackBar.show(message: newActive ? l.listingActivated : l.listingDeactivated,
+        TeqSnackBar.show(message: newActive ? loc.t("listingActivated") : loc.t("listingDeactivated"),
           type: TeqSnackBarType.success,
         );
         if (newActive) eventBus.fire(const CreditsChangedEvent());
       } else if (resp['statusCode'] == 402 && mounted) {
-        TeqSnackBar.show(message: l.listingReactivateInsufficientBalance, type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: loc.t("listingReactivateInsufficientBalance"), type: TeqSnackBarType.error);
       }
     } catch (_) {}
   }
@@ -592,7 +589,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   String _fmt(dynamic price) {
-    if (price == null) return AppLocalizations.of(context)!.listingPriceNotSet;
+    if (price == null) return ref.read(localizationProvider).t("listingPriceNotSet");
     final s = (price as num).toInt().toString();
     final buf = StringBuffer();
     for (int i = 0; i < s.length; i++) {
@@ -635,10 +632,10 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   Future<void> _placeOffer() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final amount = _parseFormattedPrice(_offerCtrl.text);
     if (amount == null || amount <= 0) {
-      TeqSnackBar.show(message: l.offerInvalidAmount, type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: loc.t("offerInvalidAmount"), type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _offerSubmitting = true);
@@ -655,13 +652,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         interactionType: 'listing_offer_submit',
         pricePoint: amount.toDouble(),
       );
-      TeqSnackBar.show(message: l.offerSuccess, type: TeqSnackBarType.success);
+      TeqSnackBar.show(message: loc.t("offerSuccess"), type: TeqSnackBarType.success);
       final offers = await ListingService.getOffers(id);
       if (mounted && context.mounted) _offersNotifier.value = offers;
     } catch (e) {
       if (!mounted || !context.mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      TeqSnackBar.show(message: msg.isNotEmpty ? msg : l.offerError, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: msg.isNotEmpty ? msg : loc.t("offerError"), type: TeqSnackBarType.error);
     } finally {
       if (mounted && context.mounted) setState(() => _offerSubmitting = false);
     }
@@ -669,11 +666,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    final l = AppLocalizations.of(context)!;
-    if (diff.inSeconds < 60) return l.timeJustNow;
-    if (diff.inMinutes < 60) return l.timeMinAgo(diff.inMinutes);
-    if (diff.inHours < 24) return l.timeHoursAgo(diff.inHours);
-    return l.timeDaysAgo(diff.inDays);
+    final loc = ref.read(localizationProvider);
+    if (diff.inSeconds < 60) return loc.t("timeJustNow");
+    if (diff.inMinutes < 60) return loc.t("timeMinAgo", {"n": diff.inMinutes.toString()});
+    if (diff.inHours < 24) return loc.t("timeHoursAgo", {"n": diff.inHours.toString()});
+    return loc.t("timeDaysAgo", {"n": diff.inDays.toString()});
   }
 
   void _goToProfile() {
@@ -712,14 +709,14 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (user == null) return;
     final otherId = user['id'] as int?;
     if (otherId == null) return;
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
 
     if (_myUserId == null) {
-      TeqSnackBar.show(message: l.listingMsgLoginRequired, type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: loc.t("listingMsgLoginRequired"), type: TeqSnackBarType.warning);
       return;
     }
     if (_myUserId == otherId) {
-      TeqSnackBar.show(message: l.listingMsgOwnListing, type: TeqSnackBarType.warning);
+      TeqSnackBar.show(message: loc.t("listingMsgOwnListing"), type: TeqSnackBarType.warning);
       return;
     }
 
@@ -744,26 +741,26 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   void _confirmDelete(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     TeqDialog.show(
       context: context,
-      title: l.dialogDeleteListingTitle,
-      message: l.listingDeleteConfirmContent,
-      primaryButtonText: l.listingDeleteConfirmYes,
+      title: loc.t("dialogDeleteListingTitle"),
+      message: loc.t("listingDeleteConfirmContent"),
+      primaryButtonText: loc.t("listingDeleteConfirmYes"),
       onPrimaryPressed: () async {
         Navigator.pop(context);
         await _deleteListing(context);
       },
-      secondaryButtonText: l.btnDismiss,
+      secondaryButtonText: loc.t("btnDismiss"),
       onSecondaryPressed: () => Navigator.pop(context),
       isDestructive: true,
     );
   }
 
   Future<void> _deleteListing(BuildContext context) async {
+    final loc = ref.read(localizationProvider);
     final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final connErr = AppLocalizations.of(context)!.errorConnection;
+    final connErr = loc.t("errorConnection");
     final token = await StorageService.getToken();
     if (token == null) return;
     final id = widget.listing['id'];
@@ -778,7 +775,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       } else {
         final detail =
             jsonDecode(resp.body)['detail'] ??
-            AppLocalizations.of(context)?.errSomethingWentWrong ??
+            ref.read(localizationProvider).t("errSomethingWentWrong") ??
             'Error';
         TeqSnackBar.show(message: detail, type: TeqSnackBarType.error);
       }
@@ -790,6 +787,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   void _openAdReport(BuildContext context) {
+    final loc = ref.read(localizationProvider);
     final campaignId = _campaignId;
     if (campaignId == null) return;
     Navigator.push(
@@ -799,13 +797,14 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           campaignId: campaignId,
           listingTitle:
               widget.listing['title'] as String? ??
-              AppLocalizations.of(context)!.lblListingUpper,
+              loc.t("lblListingUpper"),
         ),
       ),
     );
   }
 
   Future<void> _sendMassNotification(BuildContext context) async {
+    final loc = ref.read(localizationProvider);
     final listingId = widget.listing['id'] as int;
     final notifier = ref.read(listingDetailProvider(listingId).notifier);
     notifier.setSending(true);
@@ -815,7 +814,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (est == null || !mounted || !context.mounted) {
       notifier.setSending(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.audienceCalcError)),
+        SnackBar(content: Text(loc.t("audienceCalcError"))),
       );
       return;
     }
@@ -825,7 +824,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       if (!mounted || !context.mounted) return;
       notifier.setSending(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound)),
+        SnackBar(content: Text(loc.t("audienceNoPotentialFound"))),
       );
       return;
     }
@@ -866,10 +865,10 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     } else if (apiResult != null) {
       CacheService.clearData('user_wallet_data');
       notifier.startCooldown(86400);
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.audienceMassSendSuccess, type: TeqSnackBarType.success);
+      TeqSnackBar.show(message: loc.t("audienceMassSendSuccess"), type: TeqSnackBarType.success);
     } else {
       notifier.setSending(false);
-      TeqSnackBar.show(message: AppLocalizations.of(context)!.audienceMassSendError, type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: loc.t("audienceMassSendError"), type: TeqSnackBarType.error);
     }
   }
 
@@ -886,7 +885,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   Future<void> _boostListing(BuildContext ctx) async {
     final boostMessenger = ScaffoldMessenger.of(context);
-    final l = AppLocalizations.of(ctx)!;
+    final loc = ref.read(localizationProvider);
     // Önce boost kredi durumunu çek
     int remaining = 0;
     int limit = 0;
@@ -927,7 +926,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (!isPro) {
       boostMessenger.showSnackBar(
         SnackBar(
-          content: Text(l.boostOnlyPro),
+          content: Text(loc.t("boostOnlyPro")),
           backgroundColor: const Color(0xFFF97316),
         ),
       );
@@ -940,7 +939,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     showDialog<void>(
       context: context,
       builder: (dlgCtx) {
-        final dl = AppLocalizations.of(dlgCtx)!;
+        final loc = ref.read(localizationProvider);
 
         Future<void> performBoost() async {
           final token = await StorageService.getToken();
@@ -959,7 +958,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             );
             if (!mounted || !context.mounted) return;
             Navigator.pop(dlgCtx);
-            final ll = AppLocalizations.of(ctx)!;
+            final loc = ref.read(localizationProvider);
             if (resp.statusCode == 201) {
               final data = jsonDecode(resp.body) as Map<String, dynamic>;
               final wasFree = data['is_free'] == true;
@@ -969,21 +968,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 widget.listing['campaign_id'] = _campaignId;
                 widget.listing['is_sponsored'] = true;
               });
-              TeqSnackBar.show(message: wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid,
+              TeqSnackBar.show(message: wasFree ? loc.t("boostSuccessFree") : loc.t("boostSuccessPaid"),
                 type: TeqSnackBarType.success,
               );
             } else {
               final body = jsonDecode(resp.body) as Map<String, dynamic>;
-              final msg = body['detail'] ?? ll.boostErrorDefault;
+              final msg = body['detail'] ?? loc.t("boostErrorDefault");
               TeqSnackBar.show(message: msg.toString(),
                 type: TeqSnackBarType.error,
               );
             }
           } catch (_) {
             if (mounted && context.mounted) {
-              final ll = AppLocalizations.of(ctx)!;
+              final loc = ref.read(localizationProvider);
               Navigator.pop(dlgCtx);
-              TeqSnackBar.show(message: ll.boostErrorConnection, type: TeqSnackBarType.error);
+              TeqSnackBar.show(message: loc.t("boostErrorConnection"), type: TeqSnackBarType.error);
             }
           }
         }
@@ -992,7 +991,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           // Ücretsiz boost dialog'ı
           return AlertDialog(
             title: Text(
-              dl.boostDialogTitle,
+              loc.t("boostDialogTitle"),
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             content: Column(
@@ -1000,7 +999,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  dl.boostDialogPlanLabel,
+                  loc.t("boostDialogPlanLabel"),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -1009,22 +1008,22 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 const SizedBox(height: 10),
                 _BoostRow(
                   icon: Icons.account_balance_wallet_outlined,
-                  label: dl.boostDialogTotalBudget,
-                  value: dl.boostDialogTotalBudgetValue,
+                  label: loc.t("boostDialogTotalBudget"),
+                  value: loc.t("boostDialogTotalBudgetValue"),
                 ),
                 _BoostRow(
                   icon: Icons.ads_click,
-                  label: dl.boostDialogCpc,
-                  value: dl.boostDialogCpcValue,
+                  label: loc.t("boostDialogCpc"),
+                  value: loc.t("boostDialogCpcValue"),
                 ),
                 _BoostRow(
                   icon: Icons.touch_app_outlined,
-                  label: dl.boostDialogEstClicks,
-                  value: dl.boostDialogEstClicksValue,
+                  label: loc.t("boostDialogEstClicks"),
+                  value: loc.t("boostDialogEstClicksValue"),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  dl.boostDialogFeedHint,
+                  loc.t("boostDialogFeedHint"),
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
@@ -1038,7 +1037,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    dl.boostDialogCredits(remaining, limit),
+                    loc.t("boostDialogCredits", {"remaining": remaining.toString(), "limit": limit.toString()}),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFFF97316),
@@ -1051,13 +1050,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             actions: [
               TeqButton(
                 onPressed: () => Navigator.pop(dlgCtx, false),
-                text: dl.btnCancel,
+                text: loc.t("btnCancel"),
                 type: TeqButtonType.text,
                 isExpanded: false,
               ),
               TeqButton(
                 onPressed: performBoost,
-                text: dl.boostDialogStart,
+                text: loc.t("boostDialogStart"),
                 type: TeqButtonType.primary,
                 isExpanded: false,
               ),
@@ -1075,7 +1074,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  dl.boostDialogPaidTitle,
+                  loc.t("boostDialogPaidTitle"),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],
@@ -1095,7 +1094,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    dl.boostDialogPaidBadge(limit),
+                    loc.t("boostDialogPaidBadge", {"limit": limit.toString()}),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFFDC2626),
@@ -1105,18 +1104,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  dl.boostDialogPaidDesc,
+                  loc.t("boostDialogPaidDesc"),
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 12),
                 _BoostRow(
                   icon: Icons.price_change_outlined,
-                  label: dl.boostDialogPaidCost,
-                  value: dl.boostDialogPaidCostValue,
+                  label: loc.t("boostDialogPaidCost"),
+                  value: loc.t("boostDialogPaidCostValue"),
                 ),
                 _BoostRow(
                   icon: Icons.account_balance_wallet_outlined,
-                  label: dl.boostDialogPaidBalance,
+                  label: loc.t("boostDialogPaidBalance"),
                   value: '$tuciBalance TUCi',
                   valueColor: tuciBalance >= 50
                       ? const Color(0xFF16A34A)
@@ -1127,7 +1126,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             actions: [
               TeqButton(
                 onPressed: () => Navigator.pop(dlgCtx, false),
-                text: dl.btnCancel,
+                text: loc.t("btnCancel"),
                 type: TeqButtonType.text,
                 isExpanded: false,
               ),
@@ -1135,7 +1134,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 onPressed: tuciBalance >= 50
                     ? () => Navigator.pop(dlgCtx, true)
                     : null,
-                text: dl.boostDialogPaidConfirm,
+                text: loc.t("boostDialogPaidConfirm"),
                 type: TeqButtonType.primary,
                 isExpanded: false,
               ),
@@ -1147,7 +1146,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   void _openReport(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     String? selectedReason;
     final noteCtrl = TextEditingController();
     showModalBottomSheet(
@@ -1169,7 +1168,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '🚩 ${l.listingReportTitle}',
+                '🚩 ${loc.t("listingReportTitle")}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1180,7 +1179,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 key: const Key('listing_detail_report_select_neden'),
                 // ignore: deprecated_member_use
                 value: selectedReason,
-                hint: Text(l.listingReportSelectHint),
+                hint: Text(loc.t("listingReportSelectHint")),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -1192,24 +1191,24 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 ),
                 items: [
                   DropdownMenuItem(
-                    value: l.listingReportMisleading,
-                    child: Text(l.listingReportMisleading),
+                    value: loc.t("listingReportMisleading"),
+                    child: Text(loc.t("listingReportMisleading")),
                   ),
                   DropdownMenuItem(
-                    value: l.listingReportIllegal,
-                    child: Text(l.listingReportIllegal),
+                    value: loc.t("listingReportIllegal"),
+                    child: Text(loc.t("listingReportIllegal")),
                   ),
                   DropdownMenuItem(
-                    value: l.listingReportSpam,
-                    child: Text(l.listingReportSpam),
+                    value: loc.t("listingReportSpam"),
+                    child: Text(loc.t("listingReportSpam")),
                   ),
                   DropdownMenuItem(
-                    value: l.listingReportInappropriate,
-                    child: Text(l.listingReportInappropriate),
+                    value: loc.t("listingReportInappropriate"),
+                    child: Text(loc.t("listingReportInappropriate")),
                   ),
                   DropdownMenuItem(
-                    value: l.listingReportFraud,
-                    child: Text(l.listingReportFraud),
+                    value: loc.t("listingReportFraud"),
+                    child: Text(loc.t("listingReportFraud")),
                   ),
                 ],
                 onChanged: (v) => setModalState(() => selectedReason = v),
@@ -1219,7 +1218,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 key: const Key('listing_detail_report_input_aciklama'),
                 controller: noteCtrl,
                 maxLines: 3,
-                hintText: l.listingReportNoteHint,
+                hintText: loc.t("listingReportNoteHint"),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -1228,7 +1227,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   key: const Key('listing_detail_report_btn_gonder'),
                   onPressed: () async {
                     if (selectedReason == null) {
-                      TeqSnackBar.show(message: l.listingReportSelectRequired, type: TeqSnackBarType.warning);
+                      TeqSnackBar.show(message: loc.t("listingReportSelectRequired"), type: TeqSnackBarType.warning);
                       return;
                     }
                     final note = noteCtrl.text.trim();
@@ -1237,7 +1236,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     Navigator.pop(ctx);
                     await _submitReport(reason);
                   },
-                  text: l.listingReportSubmitBtn,
+                  text: loc.t("listingReportSubmitBtn"),
                   type: TeqButtonType.primary,
                 ),
               ),
@@ -1262,27 +1261,27 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         body: jsonEncode({'listing_id': id, 'reason': reason}),
       );
       if (!mounted || !context.mounted) return;
-      final l = AppLocalizations.of(context)!;
+      final loc = ref.read(localizationProvider);
       if (resp.statusCode == 200) {
-        TeqSnackBar.show(message: l.listingReportSuccess, type: TeqSnackBarType.success);
+        TeqSnackBar.show(message: loc.t("listingReportSuccess"), type: TeqSnackBarType.success);
       } else {
         final detail =
             jsonDecode(resp.body)['detail'] ??
-            AppLocalizations.of(context)?.errSomethingWentWrong ??
+            ref.read(localizationProvider).t("errSomethingWentWrong") ??
             'Error';
         TeqSnackBar.show(message: detail, type: TeqSnackBarType.error);
       }
     } catch (_) {
       if (mounted && context.mounted) {
-        final l = AppLocalizations.of(context)!;
-        TeqSnackBar.show(message: l.errorConnection, type: TeqSnackBarType.error);
+        final loc = ref.read(localizationProvider);
+        TeqSnackBar.show(message: loc.t("errorConnection"), type: TeqSnackBarType.error);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final listing = widget.listing;
     final user = listing['user'] as Map<String, dynamic>?;
     final isMine = _myUserId != null && user?['id'] == _myUserId;
@@ -1310,7 +1309,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             builder: (btnCtx) => IconButton(
               key: const Key('listing_detail_btn_paylasım'),
               icon: const Icon(Icons.share_outlined),
-              tooltip: l.btnShare,
+              tooltip: loc.t("btnShare"),
               onPressed: () {
                 final id = listing['id'] as int?;
                 final box = btnCtx.findRenderObject() as RenderBox?;
@@ -1328,7 +1327,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 ShareService.show(
                   btnCtx,
                   url: 'https://www.teqlif.com/ilan/$id',
-                  text: l.shareListingText(listing['title'] ?? ''),
+                  text: loc.t("shareListingText", {"title": listing['title'] ?? ''}),
                   imageUrl: imageUrl,
                   origin: origin,
                 );
@@ -1339,7 +1338,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             IconButton(
               key: const Key('listing_detail_btn_edit'),
               icon: const Icon(Icons.edit_outlined),
-              tooltip: l.editListingTitle,
+              tooltip: loc.t("editListingTitle"),
               onPressed: () async {
                 final updated = await Navigator.push(
                   context,
@@ -1368,13 +1367,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     : Icons.visibility_outlined,
                 color: _isActive ? const Color(0xFF6B7280) : kPrimary,
               ),
-              tooltip: _isActive ? l.btnDeactivate : l.btnActivate,
+              tooltip: _isActive ? loc.t("btnDeactivate") : loc.t("btnActivate"),
               onPressed: _toggleActive,
             ),
             IconButton(
               key: const Key('listing_detail_btn_sil'),
               icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
-              tooltip: l.listingDeleteTooltip,
+              tooltip: loc.t("listingDeleteTooltip"),
               onPressed: () => _confirmDelete(context),
             ),
           ] else if (_myUserId != null) ...[
@@ -1388,7 +1387,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     ? Colors.red
                     : const Color(0xFF9CA3AF),
               ),
-              tooltip: _isFavorited ? l.btnRemoveFavorite : l.btnAddFavorite,
+              tooltip: _isFavorited ? loc.t("btnRemoveFavorite") : loc.t("btnAddFavorite"),
               onPressed: _toggleFavorite,
             ),
             IconButton(
@@ -1398,7 +1397,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 color: Color(0xFF9CA3AF),
                 size: 22,
               ),
-              tooltip: l.listingReportTooltip,
+              tooltip: loc.t("listingReportTooltip"),
               onPressed: () => _openReport(context),
             ),
           ],
@@ -1445,7 +1444,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           listing['impression_count'] != null)
                         Builder(
                           builder: (ctx) {
-                            final l = AppLocalizations.of(ctx)!;
+                            final loc = ref.read(localizationProvider);
                             return Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1457,9 +1456,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    l.listingReach(
-                                      listing['impression_count'] as int,
-                                    ),
+                                    loc.t("listingReach", {"count": (listing["impression_count"] as int).toString()}),
                                     style: TextStyle(
                                       color: AppColors.textSecondary(context),
                                       fontSize: 13,
@@ -1534,7 +1531,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l.listingDescriptionLabel,
+                      loc.t("listingDescriptionLabel"),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -1564,7 +1561,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l.listingInfo,
+                    loc.t("listingInfo"),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -1573,17 +1570,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   ),
                   const SizedBox(height: 12),
                   if (isMine && _isListingInitialized)
-                    _statusChipRow(l.listingStatusLabel, _isActive),
+                    _statusChipRow(loc.t("listingStatusLabel"), _isActive),
                   _infoRow(
-                    l.categoryLabel,
-                    CategoryService.localizedLabelFor(
-                      l, listing['category'] as String? ?? '',
+                    loc.t("categoryLabel"),
+                    CategoryService.localizedLabelFor(loc, listing['category'] as String? ?? '',
                     ),
                   ),
                   if (listing['condition'] != null)
                     _infoRow(
-                      l.fieldCondition,
-                      _localizeCondition(l, listing['condition'] as String),
+                      loc.t("fieldCondition"),
+                      _localizeCondition(loc, listing['condition'] as String),
                     ),
                   if (listing['location'] != null)
                     _infoRow('Konum', listing['location']),
@@ -1710,7 +1706,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    l.offerHistory,
+                    loc.t("offerHistory"),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -1739,7 +1735,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                 _offerTypedAmount = null;
                               }
                             },
-                            hintText: l.offerAmountHint,
+                            hintText: loc.t("offerAmountHint"),
                             prefixText: '₺ ',
                           ),
                         ),
@@ -1749,7 +1745,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           onPressed: (_offerSubmitting || !_isActive)
                               ? null
                               : _placeOffer,
-                          text: l.offerBtn,
+                          text: loc.t("offerBtn"),
                           type: TeqButtonType.primary,
                           isExpanded: false,
                           isLoading: _offerSubmitting,
@@ -1760,7 +1756,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   if (!isMine && !_isLoggedIn) ...[
                     const SizedBox(height: 8),
                     Text(
-                      l.offerLoginRequired,
+                      loc.t("offerLoginRequired"),
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary(context),
@@ -1783,7 +1779,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Text(
-                            l.offerEmpty,
+                            loc.t("offerEmpty"),
                             style: TextStyle(
                               fontSize: 13,
                               color: AppColors.textSecondary(context),
@@ -1814,7 +1810,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
-                  AppLocalizations.of(context)!.similarListings,
+                  loc.t("similarListings"),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1912,7 +1908,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                       padding: const EdgeInsets.all(12),
                       child: Builder(
                         builder: (ctx) {
-                          final l = AppLocalizations.of(ctx)!;
+                          final loc = ref.read(localizationProvider);
                           return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -1927,7 +1923,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                       children: [
                                         TeqButton(
                                           onPressed: isSending ? null : () => _sendMassNotification(blastCtx),
-                                          text: '📢 ${l.btnSendMassNotification}',
+                                          text: '📢 ${loc.t("btnSendMassNotification")}',
                                           type: TeqButtonType.primary,
                                           size: TeqButtonSize.large,
                                           customColor: const Color(0xFF14B8A6),
@@ -1941,7 +1937,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                       children: [
                                         TeqButton(
                                           onPressed: isSending ? null : () => _openMassNotificationReport(blastCtx),
-                                          text: l.btnViewNotificationReport,
+                                          text: loc.t("btnViewNotificationReport"),
                                           type: TeqButtonType.primary,
                                           size: TeqButtonSize.large,
                                           customColor: const Color(0xFF14B8A6),
@@ -1963,7 +1959,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                       children: [
                                         TeqButton(
                                           onPressed: null,
-                                          text: '📢 ${l.btnSendMassNotification}',
+                                          text: '📢 ${loc.t("btnSendMassNotification")}',
                                           type: TeqButtonType.primary,
                                           size: TeqButtonSize.large,
                                           customColor: const Color(0xFF14B8A6),
@@ -1971,7 +1967,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                         Padding(
                                           padding: const EdgeInsets.only(top: 5),
                                           child: Text(
-                                            l.massNotifUnavailableListingNotActive,
+                                            loc.t("massNotifUnavailableListingNotActive"),
                                             style: const TextStyle(color: Colors.white54, fontSize: 11),
                                             textAlign: TextAlign.center,
                                           ),
@@ -1985,7 +1981,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                               if (_campaignId != null)
                                 TeqButton(
                                   onPressed: () => _openAdReport(context),
-                                  text: '📊 ${l.boostBtnReport}',
+                                  text: '📊 ${loc.t("boostBtnReport")}',
                                   type: TeqButtonType.primary,
                                   size: TeqButtonSize.large,
                                   customColor: const Color(0xFF6366F1),
@@ -1993,7 +1989,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                               else if (_isActive)
                                 TeqButton(
                                   onPressed: () => _boostListing(context),
-                                  text: '🔥 ${l.boostBtnStart}',
+                                  text: '🔥 ${loc.t("boostBtnStart")}',
                                   type: TeqButtonType.primary,
                                   size: TeqButtonSize.large,
                                   customColor: const Color(0xFFF97316),
@@ -2015,7 +2011,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                         key: const Key('listing_detail_btn_mesaj_gonder'),
                         onPressed: _openChat,
                         icon: Icons.chat_bubble_outline,
-                        text: l.listingSendMessage,
+                        text: loc.t("listingSendMessage"),
                         type: TeqButtonType.primary,
                         size: TeqButtonSize.large,
                       ),
@@ -2251,13 +2247,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     ),
   );
 
-  String _localizeCondition(AppLocalizations l, String condition) {
+  String _localizeCondition(TranslationPack loc, String condition) {
     switch (condition) {
-      case 'new':       return l.conditionNew;
-      case 'like_new':  return l.conditionLikeNew;
-      case 'used':      return l.conditionUsed;
-      case 'damaged':      return l.conditionDamaged;
-      case 'refurbished':  return l.conditionRefurbished;
+      case 'new':       return loc.t("conditionNew");
+      case 'like_new':  return loc.t("conditionLikeNew");
+      case 'used':      return loc.t("conditionUsed");
+      case 'damaged':      return loc.t("conditionDamaged");
+      case 'refurbished':  return loc.t("conditionRefurbished");
       default:             return condition;
     }
   }
@@ -2294,7 +2290,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   Widget _statusChipRow(String label, bool isActive) => Builder(
     builder: (context) {
-      final l = AppLocalizations.of(context)!;
+      final loc = ref.read(localizationProvider);
       return Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Row(
@@ -2318,7 +2314,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                isActive ? l.listingStatusActive : l.listingStatusPassive,
+                isActive ? loc.t("listingStatusActive") : loc.t("listingStatusPassive"),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -2418,16 +2414,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 }
 
-class _FullscreenGallery extends StatefulWidget {
+class _FullscreenGallery extends ConsumerStatefulWidget {
   final List<String> images;
   final int initial;
   const _FullscreenGallery({required this.images, required this.initial});
 
   @override
-  State<_FullscreenGallery> createState() => _FullscreenGalleryState();
+  ConsumerState<_FullscreenGallery> createState() => _FullscreenGalleryState();
 }
 
-class _FullscreenGalleryState extends State<_FullscreenGallery> {
+class _FullscreenGalleryState extends ConsumerState<_FullscreenGallery> {
   late int _current;
   late final PageController _ctrl;
 
@@ -2513,13 +2509,13 @@ class _PriceInputFormatter extends TextInputFormatter {
 
 /// Deep link ile sadece ilan ID'si geldiğinde kullanılır.
 /// API'dan veri çekip [ListingDetailScreen]'e yönlendirir.
-class _SellerTrustRow extends StatelessWidget {
+class _SellerTrustRow extends ConsumerWidget {
   final Map<String, dynamic> user;
   const _SellerTrustRow({required this.user});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     final trust = user['trust_score'] as int?;
     final rank = user['influence_rank'] as int?;
     if (trust == null && rank == null) return const SizedBox.shrink();
@@ -2532,8 +2528,8 @@ class _SellerTrustRow extends StatelessWidget {
             _TrustChip(
               icon: FontAwesomeIcons.shieldHalved,
               value: '$trust / 100',
-              hint: l.trustScoreHint,
-              title: l.trustScoreLabel,
+              hint: loc.t("trustScoreHint"),
+              title: loc.t("trustScoreLabel"),
               color: trust >= 70
                   ? const Color(0xFF10B981)
                   : trust >= 35
@@ -2544,8 +2540,8 @@ class _SellerTrustRow extends StatelessWidget {
             _TrustChip(
               icon: FontAwesomeIcons.rankingStar,
               value: '$rank',
-              hint: l.influenceRankHint,
-              title: l.influenceRankLabel,
+              hint: loc.t("influenceRankHint"),
+              title: loc.t("influenceRankLabel"),
               color: const Color(0xFF8B5CF6),
             ),
         ],
@@ -2614,15 +2610,15 @@ class _TrustChip extends StatelessWidget {
   }
 }
 
-class ListingDeepLinkLoader extends StatefulWidget {
+class ListingDeepLinkLoader extends ConsumerStatefulWidget {
   final int listingId;
   const ListingDeepLinkLoader({super.key, required this.listingId});
 
   @override
-  State<ListingDeepLinkLoader> createState() => _ListingDeepLinkLoaderState();
+  ConsumerState<ListingDeepLinkLoader> createState() => _ListingDeepLinkLoaderState();
 }
 
-class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
+class _ListingDeepLinkLoaderState extends ConsumerState<ListingDeepLinkLoader> {
   @override
   void initState() {
     super.initState();
@@ -2701,7 +2697,7 @@ class _BoostRow extends StatelessWidget {
   }
 }
 
-class _MassNotificationDialog extends StatefulWidget {
+class _MassNotificationDialog extends ConsumerStatefulWidget {
   final int maxAudience;
   final int creditsLeft;
   final int perBlastCap;
@@ -2715,11 +2711,11 @@ class _MassNotificationDialog extends StatefulWidget {
   });
 
   @override
-  State<_MassNotificationDialog> createState() =>
+  ConsumerState<_MassNotificationDialog> createState() =>
       _MassNotificationDialogState();
 }
 
-class _MassNotificationDialogState extends State<_MassNotificationDialog> {
+class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog> {
   bool _useCustomCount = false;
   late TextEditingController _countCtrl;
 
@@ -2760,6 +2756,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     int requestedCount = int.tryParse(_countCtrl.text) ?? 0;
     if (!_useCustomCount) {
       requestedCount = widget.maxAudience < widget.perBlastCap
@@ -2781,7 +2778,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
       backgroundColor: const Color(0xFF1E293B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        AppLocalizations.of(context)!.massAudienceNotification,
+        loc.t("massAudienceNotification"),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w800,
@@ -2793,9 +2790,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppLocalizations.of(
-                context,
-              )!.listingBlastDialogBody(widget.maxAudience),
+              loc.t("listingBlastDialogBody", {"count": widget.maxAudience.toString()}),
               style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
             ),
             const SizedBox(height: 16),
@@ -2817,7 +2812,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    AppLocalizations.of(context)!.audienceSendToX,
+                    loc.t("audienceSendToX"),
                     style: const TextStyle(color: Color(0xFFCBD5E1)),
                   ),
                 ),
@@ -2834,9 +2829,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                   controller: _countCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  hintText: AppLocalizations.of(
-                    context,
-                  )!.audiencePersonCountHint,
+                  hintText: loc.t("audiencePersonCountHint"),
                 ),
               ),
             const SizedBox(height: 16),
@@ -2855,18 +2848,14 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.audienceNotificationWillGoTo,
+                        loc.t("audienceNotificationWillGoTo"),
                         style: TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 13,
                         ),
                       ),
                       Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.audienceCountPeople(actualCount),
+                        loc.t("audienceCountPeople", {"count": actualCount.toString()}),
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -2880,16 +2869,14 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        AppLocalizations.of(context)!.audienceMonthlyFreeRights,
+                        loc.t("audienceMonthlyFreeRights"),
                         style: TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 13,
                         ),
                       ),
                       Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.audienceFreeSlots(freeUsed),
+                        loc.t("audienceFreeSlots", {"count": freeUsed.toString()}),
                         style: const TextStyle(
                           color: Color(0xFF2DD4BF),
                           fontWeight: FontWeight.bold,
@@ -2906,7 +2893,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        AppLocalizations.of(context)!.audienceTotalCost,
+                        loc.t("audienceTotalCost"),
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -2930,7 +2917,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                  AppLocalizations.of(context)!.audienceInsufficientTuci,
+                  loc.t("audienceInsufficientTuci"),
                   style: const TextStyle(
                     color: Color(0xFFEF4444),
                     fontSize: 12,
@@ -2944,7 +2931,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
       actions: [
         TeqButton(
           onPressed: () => Navigator.pop(context, null),
-          text: AppLocalizations.of(context)!.btnCancel,
+          text: loc.t("btnCancel"),
           type: TeqButtonType.text,
           isExpanded: false,
         ),
@@ -2955,7 +2942,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                   'cost': tuciCost,
                 })
               : null,
-          text: AppLocalizations.of(context)!.btnSend,
+          text: loc.t("btnSend"),
           type: TeqButtonType.primary,
           customColor: const Color(0xFF14B8A6),
           isExpanded: false,

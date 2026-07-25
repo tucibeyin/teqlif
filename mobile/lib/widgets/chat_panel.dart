@@ -8,7 +8,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../core/logger_service.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
 import '../services/analytics_service.dart';
@@ -148,7 +149,7 @@ class _TimedMessage {
   }
 }
 
-class ChatPanel extends StatefulWidget {
+class ChatPanel extends ConsumerStatefulWidget {
   final int streamId;
   final VoidCallback? onStreamEnded;
   final void Function(int count)? onViewerCountChanged;
@@ -245,10 +246,10 @@ class ChatPanel extends StatefulWidget {
   });
 
   @override
-  State<ChatPanel> createState() => ChatPanelState();
+  ConsumerState<ChatPanel> createState() => ChatPanelState();
 }
 
-class ChatPanelState extends State<ChatPanel> {
+class ChatPanelState extends ConsumerState<ChatPanel> {
   final List<_TimedMessage> _messages = [];
   final List<ChatMessage> _history = [];
   final _inputCtrl = TextEditingController();
@@ -381,6 +382,7 @@ class ChatPanelState extends State<ChatPanel> {
       onDone: (closeCode) => _scheduleReconnect(closeCode: closeCode),
       onData: (data) {
         if (!mounted) return;
+        final loc = ref.read(localizationProvider);
         String? eventType;
         try {
           final json = jsonDecode(data as String) as Map<String, dynamic>;
@@ -392,7 +394,7 @@ class ChatPanelState extends State<ChatPanel> {
               ChatMessage(
                 id: 'join_${DateTime.now().millisecondsSinceEpoch}',
                 username: uname,
-                content: AppLocalizations.of(context)!.chatJoinedStream,
+                content: loc.t("chatJoinedStream"),
                 createdAt: DateTime.now(),
                 isSystem: true,
               ),
@@ -507,7 +509,7 @@ class ChatPanelState extends State<ChatPanel> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    AppLocalizations.of(context)!.chatRateLimited,
+                    loc.t("chatRateLimited"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -756,6 +758,7 @@ class ChatPanelState extends State<ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,8 +886,8 @@ class ChatPanelState extends State<ChatPanel> {
                       },
                       decoration: InputDecoration(
                         hintText: _selfMuted
-                            ? AppLocalizations.of(context)!.chatMutedHint
-                            : AppLocalizations.of(context)!.chatMessageHint,
+                            ? loc.t("chatMutedHint")
+                            : loc.t("chatMessageHint"),
                         hintStyle: const TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 12,
@@ -934,14 +937,14 @@ class ChatPanelState extends State<ChatPanel> {
   }
 }
 
-class _HistorySheet extends StatelessWidget {
+class _HistorySheet extends ConsumerWidget {
   final List<ChatMessage> history;
 
   const _HistorySheet({required this.history});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return DraggableScrollableSheet(
       initialChildSize: 0.55,
       minChildSize: 0.3,
@@ -978,7 +981,7 @@ class _HistorySheet extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    l.chatHistoryTitle,
+                    loc.t("chatHistoryTitle"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -987,7 +990,7 @@ class _HistorySheet extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    l.chatHistoryCount(history.length),
+                    loc.t("chatHistoryCount", {"count": history.length.toString()}),
                     style: const TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ],

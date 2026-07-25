@@ -1,14 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
+import '../services/localization_service.dart';
 import '../services/version_service.dart';
 
 const _kAndroidStoreUrl =
     'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
 
-class ForceUpdateScreen extends StatelessWidget {
+class ForceUpdateScreen extends ConsumerWidget {
   const ForceUpdateScreen({super.key});
 
   Future<void> _openStore() async {
@@ -20,8 +21,8 @@ class ForceUpdateScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -51,7 +52,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  l.updateRequiredTitle,
+                  loc.t('updateRequiredTitle'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
@@ -62,7 +63,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  l.updateRequiredDesc,
+                  loc.t('updateRequiredDesc'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Color(0xFF94A3B8),
@@ -87,7 +88,7 @@ class ForceUpdateScreen extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    child: Text(l.updateRequiredBtn),
+                    child: Text(loc.t('updateRequiredBtn')),
                   ),
                 ),
               ],

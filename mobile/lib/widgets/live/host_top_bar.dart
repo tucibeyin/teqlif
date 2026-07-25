@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/localization_service.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
 ///
 /// CANLI rozeti, izleyici sayacı (tıklanabilir), kayar başlık,
 /// mikrofon/kamera/çevirme kontrolleri ve "Bitir" butonu içerir.
 /// Tüm etkileşimler callback ile üst widget'a iletilir.
-class HostTopBar extends StatelessWidget {
+class HostTopBar extends ConsumerWidget {
   final double topPad;
   final int viewerCount;
   final String title;
@@ -33,8 +34,8 @@ class HostTopBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Container(
       padding: EdgeInsets.only(
         top: topPad + 14,
@@ -64,7 +65,7 @@ class HostTopBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
-                  l.liveBadgeLabel,
+                  loc.t("liveBadgeLabel"),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -130,7 +131,7 @@ class HostTopBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    l.liveEndStreamBtn,
+                    loc.t("liveEndStreamBtn"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,

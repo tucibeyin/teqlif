@@ -1,8 +1,9 @@
 import 'dart:developer';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import '../../services/auth_service.dart';
 import '../../services/category_service.dart';
 import '../../utils/price_formatter.dart';
@@ -14,14 +15,14 @@ import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import 'sale_detail_screen.dart';
 
-class SalesScreen extends StatefulWidget {
+class SalesScreen extends ConsumerStatefulWidget {
   const SalesScreen({super.key});
 
   @override
-  State<SalesScreen> createState() => _SalesScreenState();
+  ConsumerState<SalesScreen> createState() => _SalesScreenState();
 }
 
-class _SalesScreenState extends State<SalesScreen> {
+class _SalesScreenState extends ConsumerState<SalesScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _sales = [];
   List<(String, String)>? _categories;
@@ -99,7 +100,8 @@ class _SalesScreenState extends State<SalesScreen> {
         setState(() {
           _loading = false;
         });
-        TeqToast.error(AppLocalizations.of(context)!.saleLoadError, duration: const Duration(seconds: 4));
+        final loc = ref.read(localizationProvider);
+        TeqToast.error(loc.t("saleLoadError"), duration: const Duration(seconds: 4));
       }
     }
   }
@@ -114,7 +116,7 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
-  Widget _buildFilterBar(AppLocalizations l) {
+  Widget _buildFilterBar(TranslationPack loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -122,7 +124,7 @@ class _SalesScreenState extends State<SalesScreen> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: TeqTextField(
             controller: _searchCtrl,
-            hintText: l.searchHintTextListing,
+            hintText: loc.t("searchHintTextListing"),
             prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
@@ -147,7 +149,7 @@ class _SalesScreenState extends State<SalesScreen> {
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
                     label: Text(
-                      l.allCategories,
+                      loc.t("allCategories"),
                       style: const TextStyle(fontSize: 12),
                     ),
                     selected: _categoryFilter.isEmpty,
@@ -176,7 +178,7 @@ class _SalesScreenState extends State<SalesScreen> {
             ),
           ),
         const SizedBox(height: 6),
-        _buildDateRangePicker(l),
+        _buildDateRangePicker(loc),
         const SizedBox(height: 4),
       ],
     );
@@ -185,7 +187,7 @@ class _SalesScreenState extends State<SalesScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(AppLocalizations l) {
+  Widget _buildDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
@@ -222,7 +224,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : l.filterSelectDate,
+                      : loc.t("filterSelectDate"),
                   style: TextStyle(
                     fontSize: 13,
                     color: hasRange
@@ -245,7 +247,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final filtered = _filteredSales;
     final bool hasFilter =
         _searchQuery.isNotEmpty ||
@@ -254,7 +256,7 @@ class _SalesScreenState extends State<SalesScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.settingsMySales),
+        title: Text(loc.t("settingsMySales")),
         backgroundColor: AppColors.surface(context),
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
@@ -265,7 +267,7 @@ class _SalesScreenState extends State<SalesScreen> {
           : _sales.isEmpty
           ? Center(
               child: Text(
-                l.saleEmptyState,
+                loc.t("saleEmptyState"),
                 style: TextStyle(
                   color: AppColors.textSecondary(context),
                   fontSize: 16,
@@ -274,12 +276,12 @@ class _SalesScreenState extends State<SalesScreen> {
             )
           : Column(
               children: [
-                _buildFilterBar(l),
+                _buildFilterBar(loc),
                 if (hasFilter && filtered.isEmpty)
                   Expanded(
                     child: Center(
                       child: Text(
-                        l.searchNoResults,
+                        loc.t("searchNoResults"),
                         style: const TextStyle(
                           color: Color(0xFF6B7280),
                           fontSize: 15,
@@ -299,12 +301,12 @@ class _SalesScreenState extends State<SalesScreen> {
                           final item = filtered[index];
                           final itemName =
                               item['item_name'] as String? ??
-                              l.purchaseUnknownItem;
+                              loc.t("purchaseUnknownItem");
                           final price =
                               (item['final_price'] as num?)?.toDouble() ?? 0.0;
                           final buyer =
                               item['buyer_username'] as String? ??
-                              l.saleUnknownBuyer;
+                              loc.t("saleUnknownBuyer");
                           final category = item['category'] as String?;
                           final thumbnailUrl =
                               item['thumbnail_url'] as String? ??
@@ -425,8 +427,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                             ),
                                             child: Text(
                                               isBuyItNow
-                                                  ? l.saleTypeBuyNow
-                                                  : l.saleTypeBid,
+                                                  ? loc.t("saleTypeBuyNow")
+                                                  : loc.t("saleTypeBid"),
                                               style: TextStyle(
                                                 color: isBuyItNow
                                                     ? const Color(0xFF16A34A)

@@ -5532,6 +5532,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get apiErrorAiServiceTimeout => 'انتهت مهلة خدمة الذكاء الاصطناعي.';
 
   @override
+  String get errorServerBusy => 'الخادم مشغول حالياً، يرجى المحاولة لاحقاً.';
+
+  @override
+  String get errorSessionExpired => 'انتهت جلستك، يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
   String get conditionRefurbished => 'مجدد';
 
   @override

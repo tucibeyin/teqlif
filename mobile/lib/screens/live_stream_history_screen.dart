@@ -5,21 +5,22 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import 'live_stream_analytics_screen.dart';
 
-class LiveStreamHistoryScreen extends StatefulWidget {
+class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
   const LiveStreamHistoryScreen({super.key, this.isEmbedded = false});
 
   @override
-  State<LiveStreamHistoryScreen> createState() =>
+  ConsumerState<LiveStreamHistoryScreen> createState() =>
       _LiveStreamHistoryScreenState();
 }
 
-class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
+class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScreen> {
   final List<dynamic> _streams = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -141,7 +142,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.watch(localizationProvider);
 
     Widget bodyContent;
     if (_isLoading) {
@@ -158,11 +159,11 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              l.proLoadError,
+              loc.t("proLoadError"),
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: _fetchHistory, child: Text(l.btnRetry)),
+            FilledButton(onPressed: _fetchHistory, child: Text(loc.t("btnRetry"))),
           ],
         ),
       );
@@ -178,7 +179,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              l.proToolStreamHistoryEmpty,
+              loc.t("proToolStreamHistoryEmpty"),
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
           ],
@@ -204,7 +205,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                 TextField(
                   controller: _searchCtrl,
                   decoration: InputDecoration(
-                    hintText: l.searchHintTextListing,
+                    hintText: loc.t("searchHintTextListing"),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -219,7 +220,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                   onChanged: (v) => setState(() => _searchQuery = v.trim()),
                 ),
                 const SizedBox(height: 8),
-                _buildDateRangePicker(l),
+                _buildDateRangePicker(loc),
                 const SizedBox(height: 8),
                 _buildCategoryChips(),
               ],
@@ -266,7 +267,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            l.liveAllCategory,
+                            loc.t("liveAllCategory"),
                             style: TextStyle(
                               color: isSelected
                                   ? const Color(0xFF8B5CF6)
@@ -364,7 +365,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                           children: [
                             Expanded(
                               child: _buildSummaryCard(
-                                l.analyticsRevenue,
+                                loc.t("analyticsRevenue"),
                                 '${NumberFormat('#,##0', 'tr_TR').format(totalRev)} TUCi',
                                 Icons.monetization_on,
                                 const Color(0xFF22C55E),
@@ -374,7 +375,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _buildSummaryCard(
-                                l.audienceTotalViewers,
+                                loc.t("audienceTotalViewers"),
                                 '$totalViewers',
                                 Icons.visibility,
                                 const Color(0xFF8B5CF6),
@@ -538,7 +539,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         title: Text(
-          l.proToolStreamHistoryTitle,
+          loc.t("proToolStreamHistoryTitle"),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.bg(context),
@@ -554,7 +555,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
   String _fmtDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(AppLocalizations l) {
+  Widget _buildDateRangePicker(TranslationPack loc) {
     final hasRange = _dateRange != null;
     return InkWell(
       onTap: () async {
@@ -584,7 +585,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
               child: Text(
                 hasRange
                     ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : l.filterSelectDate,
+                    : loc.t("filterSelectDate"),
                 style: TextStyle(fontSize: 13,
                     color: hasRange ? kPrimary : AppColors.textSecondary(context)),
               ),
@@ -601,6 +602,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
   }
 
   Widget _buildCategoryChips() {
+    final loc = ref.read(localizationProvider);
     final cats = _categories;
     if (cats == null || cats.isEmpty) return const SizedBox.shrink();
     return SizedBox(
@@ -608,7 +610,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chip(AppLocalizations.of(context)!.filterAll, _categoryFilter == null, () => setState(() => _categoryFilter = null)),
+          _chip(loc.t("filterAll"), _categoryFilter == null, () => setState(() => _categoryFilter = null)),
           ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
               () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
         ],

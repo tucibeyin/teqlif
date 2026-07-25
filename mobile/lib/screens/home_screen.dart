@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter/material.dart";
+import "../services/localization_service.dart";
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -25,18 +27,17 @@ import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
-import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => HomeScreenState();
+  ConsumerState<HomeScreen> createState() => HomeScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends ConsumerState<HomeScreen> {
   void refresh({bool bypassCache = true}) => _load(bypassCache: bypassCache);
   // En Son Eklenenler — dikey grid, sonsuz scroll
   List<dynamic> _recentListings = [];
@@ -62,31 +63,31 @@ class HomeScreenState extends State<HomeScreen> {
   bool _showOnboardingBanner = false;
   final _bannerGuard = OnceGuard();
 
-  List<Map<String, dynamic>> _buildCategories(AppLocalizations l) => [
+  List<Map<String, dynamic>> _buildCategories(TranslationPack loc) => [
     {
       'slug': 'electronics',
-      'label': l.catElectronics,
+      'label': loc.t("catElectronics"),
       'icon': Icons.devices_outlined,
     },
     {
       'slug': 'vehicles',
-      'label': l.catVehicles,
+      'label': loc.t("catVehicles"),
       'icon': Icons.directions_car_outlined,
     },
     {
       'slug': 'real_estate',
-      'label': l.catRealEstate,
+      'label': loc.t("catRealEstate"),
       'icon': Icons.home_work_outlined,
     },
-    {'slug': 'fashion', 'label': l.catClothing, 'icon': Icons.checkroom_outlined},
+    {'slug': 'fashion', 'label': loc.t("catClothing"), 'icon': Icons.checkroom_outlined},
     {
       'slug': 'sports',
-      'label': l.catSports,
+      'label': loc.t("catSports"),
       'icon': Icons.sports_soccer_outlined,
     },
-    {'slug': 'books', 'label': l.catBooks, 'icon': Icons.menu_book_outlined},
-    {'slug': 'home', 'label': l.catHomeLife, 'icon': Icons.home_outlined},
-    {'slug': 'other', 'label': l.catOther, 'icon': Icons.more_horiz},
+    {'slug': 'books', 'label': loc.t("catBooks"), 'icon': Icons.menu_book_outlined},
+    {'slug': 'home', 'label': loc.t("catHomeLife"), 'icon': Icons.home_outlined},
+    {'slug': 'other', 'label': loc.t("catOther"), 'icon': Icons.more_horiz},
   ];
 
   bool get _hasFilter => _selectedCategory != null || _selectedCity != null || _searchQuery.isNotEmpty;
@@ -288,13 +289,13 @@ class HomeScreenState extends State<HomeScreen> {
     _load();
   }
 
-  String _filteredHeader(AppLocalizations l) {
-    if (_recentLoading) return l.homeSearchingHeader;
-    return l.homeResultsCount(_recentListings.length);
+  String _filteredHeader(TranslationPack loc) {
+    if (_recentLoading) return loc.t("homeSearchingHeader");
+    return loc.t("homeResultsCount", {'count': _recentListings.length.toString()});
   }
 
   void _showCityPicker() {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -320,7 +321,7 @@ class HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Text(
-                l.citySelectTitle,
+                loc.t("citySelectTitle"),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -329,7 +330,7 @@ class HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ListTile(
-              title: Text(l.cityAll),
+              title: Text(loc.t("cityAll")),
               leading: Icon(
                 _selectedCity == null
                     ? Icons.radio_button_checked
@@ -388,12 +389,12 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final categories = _buildCategories(l);
+    final loc = ref.read(localizationProvider);
+    final categories = _buildCategories(loc);
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          l.homeAppBarTitle,
+          loc.t("homeAppBarTitle"),
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
         centerTitle: false,
@@ -407,7 +408,7 @@ class HomeScreenState extends State<HomeScreen> {
             ),
             icon: const Icon(Icons.add, size: 18, color: kPrimary),
             label: Text(
-              l.btnCreateListing,
+              loc.t("btnCreateListing"),
               style: const TextStyle(
                 color: kPrimary,
                 fontWeight: FontWeight.w600,
@@ -547,7 +548,7 @@ class HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _selectedCity ?? l.fieldCity,
+                            _selectedCity ?? loc.t("fieldCity"),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: _selectedCity != null
@@ -628,7 +629,7 @@ class HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              l.btnClearFilters,
+                              loc.t("btnClearFilters"),
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.red,
@@ -652,7 +653,7 @@ class HomeScreenState extends State<HomeScreen> {
             child: TeqTextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
-              hintText: l.searchHintTextListing,
+              hintText: loc.t("searchHintTextListing"),
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -682,7 +683,7 @@ class HomeScreenState extends State<HomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         child: Text(
-                          _filteredHeader(l),
+                          _filteredHeader(loc),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -720,7 +721,7 @@ class HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                l.emptyFilteredListings,
+                                loc.t("emptyFilteredListings"),
                                 style: const TextStyle(color: Colors.grey),
                               ),
                               const SizedBox(height: 8),
@@ -728,7 +729,7 @@ class HomeScreenState extends State<HomeScreen> {
                                 key: const Key(
                                   'home_btn_filtreleri_temizle_bos',
                                 ),
-                                text: l.btnClearFilters,
+                                text: loc.t("btnClearFilters"),
                                 onPressed: _clearAll,
                               ),
                             ],
@@ -796,12 +797,12 @@ class HomeScreenState extends State<HomeScreen> {
                                   const Icon(Icons.history, size: 16, color: Colors.orange),
                                   const SizedBox(width: 6),
                                   Text(
-                                    l.hesitatedSectionTitle,
+                                    loc.t("hesitatedSectionTitle"),
                                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '— ${l.hesitatedSectionSubtitle}',
+                                    '— ${loc.t("hesitatedSectionSubtitle")}',
                                     style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                                   ),
                                 ],
@@ -883,7 +884,7 @@ class HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              l.homeRecentListings,
+                              loc.t("homeRecentListings"),
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -925,7 +926,7 @@ class HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(
-                              l.emptyListings,
+                              loc.t("emptyListings"),
                               style: const TextStyle(color: Colors.grey),
                             ),
                           ),
@@ -1011,14 +1012,14 @@ class HomeScreenState extends State<HomeScreen> {
 }
 
 // ── Aktif filtre chip'i ─────────────────────────────────────────────────────
-class _ActiveFilterChip extends StatelessWidget {
+class _ActiveFilterChip extends ConsumerWidget {
   final String label;
   final VoidCallback onRemove;
 
   const _ActiveFilterChip({required this.label, required this.onRemove});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
@@ -1050,7 +1051,7 @@ class _ActiveFilterChip extends StatelessWidget {
 }
 
 // ── İlan grid tile ──────────────────────────────────────────────────────────
-class _GridItem extends StatefulWidget {
+class _GridItem extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
   final VoidCallback? onRemove;
@@ -1062,10 +1063,10 @@ class _GridItem extends StatefulWidget {
   });
 
   @override
-  State<_GridItem> createState() => _GridItemState();
+  ConsumerState<_GridItem> createState() => _GridItemState();
 }
 
-class _GridItemState extends State<_GridItem> {
+class _GridItemState extends ConsumerState<_GridItem> {
   late int _likesCount;
   late bool _isLiked;
 
@@ -1105,7 +1106,7 @@ class _GridItemState extends State<_GridItem> {
   }
 
   Future<void> _markNotInterested() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     final listingId = widget.listing['id'] as int?;
     if (listingId == null) return;
     try {
@@ -1116,7 +1117,7 @@ class _GridItemState extends State<_GridItem> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 204 && mounted) {
-        TeqSnackBar.show(message: l.notInterestedConfirmed,
+        TeqSnackBar.show(message: loc.t("notInterestedConfirmed"),
           type: TeqSnackBarType.info,
         );
         widget.onRemove?.call();
@@ -1125,7 +1126,7 @@ class _GridItemState extends State<_GridItem> {
   }
 
   Future<void> _showLongPressMenu() async {
-    final l = AppLocalizations.of(context)!;
+    final loc = ref.read(localizationProvider);
     await showModalBottomSheet<void>(
       context: context,
       builder: (_) => SafeArea(
@@ -1134,7 +1135,7 @@ class _GridItemState extends State<_GridItem> {
           children: [
             ListTile(
               leading: const Icon(Icons.thumb_down_alt_outlined),
-              title: Text(l.notInterested),
+              title: Text(loc.t("notInterested")),
               onTap: () {
                 Navigator.pop(context);
                 _markNotInterested();
@@ -1209,6 +1210,7 @@ class _GridItemState extends State<_GridItem> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     final imgs = widget.listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
@@ -1273,7 +1275,7 @@ class _GridItemState extends State<_GridItem> {
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)!.badgeSponsored,
+                    loc.t("badgeSponsored"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 9,
@@ -1313,7 +1315,7 @@ class _GridItemState extends State<_GridItem> {
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)!.badgeTrustedSeller,
+                    loc.t("badgeTrustedSeller"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 8,
@@ -1336,7 +1338,7 @@ class _GridItemState extends State<_GridItem> {
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)!.badgeActiveSeller,
+                    loc.t("badgeActiveSeller"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 8,
@@ -1417,14 +1419,14 @@ class _GridItemState extends State<_GridItem> {
   );
 }
 
-class _OnboardingBanner extends StatelessWidget {
+class _OnboardingBanner extends ConsumerWidget {
   final VoidCallback onTap;
 
   const _OnboardingBanner({required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.read(localizationProvider);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1446,7 +1448,7 @@ class _OnboardingBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l.onboardingBannerTitle,
+                    loc.t("onboardingBannerTitle"),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1455,7 +1457,7 @@ class _OnboardingBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    l.onboardingBannerSubtitle,
+                    loc.t("onboardingBannerSubtitle"),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF64748B),
@@ -1469,7 +1471,7 @@ class _OnboardingBanner extends StatelessWidget {
           GestureDetector(
             onTap: onTap,
             child: Text(
-              l.onboardingBannerCta,
+              loc.t("onboardingBannerCta"),
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

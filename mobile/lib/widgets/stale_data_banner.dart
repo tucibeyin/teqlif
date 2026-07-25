@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 
 /// Cache'den gelen eski veri gösterilirken ağ güncellemesi başarısız olduğunda
 /// içerik alanının üstüne yerleştirilen ince uyarı şeridi.
@@ -9,13 +10,13 @@ import '../l10n/app_localizations.dart';
 /// if (_networkError && items.isNotEmpty)
 ///   StaleDataBanner(onRetry: _load),
 /// ```
-class StaleDataBanner extends StatelessWidget {
+class StaleDataBanner extends ConsumerWidget {
   final VoidCallback onRetry;
   const StaleDataBanner({super.key, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     return Material(
       color: Colors.orange.withValues(alpha: 0.12),
       child: Padding(
@@ -26,7 +27,7 @@ class StaleDataBanner extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                l.staleDataBannerMessage,
+                loc.t("staleDataBannerMessage"),
                 style: const TextStyle(fontSize: 12, color: Colors.orange),
               ),
             ),
@@ -38,7 +39,7 @@ class StaleDataBanner extends StatelessWidget {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
-                l.btnRefresh,
+                loc.t("btnRefresh"),
                 style: const TextStyle(fontSize: 12, color: Colors.orange),
               ),
             ),

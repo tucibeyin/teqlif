@@ -5612,6 +5612,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get apiErrorAiServiceTimeout => 'Время ожидания службы ИИ истекло.';
 
   @override
+  String get errorServerBusy => 'Сервер занят, попробуйте позже.';
+
+  @override
+  String get errorSessionExpired =>
+      'Ваш сеанс истёк, пожалуйста, войдите снова.';
+
+  @override
   String get conditionRefurbished => 'Восстановленный';
 
   @override

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../config/api.dart'; // for imgUrl
 
-class StreamerAvatarCard extends StatelessWidget {
+class StreamerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> streamer;
   final VoidCallback? onTap;
   const StreamerAvatarCard({super.key, required this.streamer, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
@@ -101,7 +103,7 @@ class StreamerAvatarCard extends StatelessWidget {
                           border: Border.all(color: AppColors.surface(context), width: 1),
                         ),
                         child: Text(
-                          AppLocalizations.of(context)!.liveBadgeLabel,
+                          loc.t("liveBadgeLabel"),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 7,

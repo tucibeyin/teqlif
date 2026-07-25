@@ -5564,6 +5564,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yapay zeka servisi zaman aşımına uğradı.';
 
   @override
+  String get errorServerBusy =>
+      'Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.';
+
+  @override
+  String get errorSessionExpired =>
+      'Oturumunuzun süresi doldu, lütfen tekrar giriş yapın.';
+
+  @override
   String get conditionRefurbished => 'Yenilenmiş';
 
   @override

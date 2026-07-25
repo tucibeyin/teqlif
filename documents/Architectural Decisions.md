@@ -4,16 +4,17 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Temmuz 2026
+**Son güncelleme:** Temmuz 2026 — TeqSnackBar/TeqToast ilişkisi, Result<T> değişikliği, ARB codegen kuralı eklendi
 
 ---
 
 ## İçindekiler
 
 1. [OTA Localization](#1-ota-localization)
-2. [Merkezi Error Handling](#2-merkezi-error-handling)
-3. [Deploy Pipeline](#3-deploy-pipeline)
-4. [Ekran Migration Checklist](#4-ekran-migration-checklist)
+2. [Dinamik Field Konfigürasyonu](#2-dinamik-field-konfigürasyonu)
+3. [Merkezi Error Handling](#3-merkezi-error-handling)
+4. [Deploy Pipeline](#4-deploy-pipeline)
+5. [Ekran Migration Checklist](#5-ekran-migration-checklist)
 
 ---
 
@@ -150,7 +151,33 @@ loc.t(f.labelKey)                           // f.labelKey zaten "extraField_bran
 
 ---
 
-### 1.6 OTA Çeviri Güncelleme Akışı
+### 1.6 ARB Codegen Tutulur — Per-Screen Çağrılar Kaldırılır
+
+OTA'ya geçiş **ARB dosyalarını veya `dart generate` çıktısını silmez**.  
+`AppLocalizations` codegen'i `MaterialApp` için hâlâ gereklidir:
+
+```dart
+// main.dart — bu kalmaya devam eder
+MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  ...
+)
+```
+
+**Sadece ekran içindeki şu satırlar kaldırılır:**
+
+```dart
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';  // sil
+final l = AppLocalizations.of(context)!;                        // sil
+l.someKey                                                       // loc.t('someKey') yap
+```
+
+> ⚠️ ARB dosyaları silme — `sync_translations.py` onları okur ve DB'ye sync'ler.
+
+---
+
+### 1.7 OTA Çeviri Güncelleme Akışı
 
 Çeviriyi değiştirmek için:
 1. ARB dosyasında güncelle (TR, EN, AR, RU)
@@ -162,7 +189,133 @@ loc.t(f.labelKey)                           // f.labelKey zaten "extraField_bran
 
 ---
 
-## 2. Merkezi Error Handling
+## 2. Dinamik Field Konfigürasyonu
+
+### Problem
+
+Form alanları (marka, yıl, renk, vb.) subkategoriye göre değişiyor. Eski yaklaşımda bunlar Flutter tarafında `kSubcategoryFields` Dart sabitleri olarak hardcode edilmişti — yeni alan eklemek için uygulama güncellemesi gerekiyordu, label çevirisi ARB'a bağlıydı.
+
+### Karar
+
+Alan tanımları ve seçenekleri PostgreSQL'de tutulur, API'den serve edilir.  
+Label'lar OTA Localization ile çevrilir. Yeni alan = DB satırı + ARB key + deploy.
+
+### Mimari
+
+```
+category_fields (key, label_key, type, required, position, depends_on, ...)
+      │  1:N
+field_options   (value, label, parent_option_value, position, ...)
+      │
+      ▼  GET /api/field-config/{subcategory}  [24h server cache]
+      │
+FieldConfigService.getFields(subcategory)  [in-memory cache]
+      │
+ExtraFieldDef(key, labelKey, type, options, dependsOn, ...)
+      │
+_buildExtraField(f, loc)
+      │  loc.t(f.labelKey)                    → "Marka", "Yıl", ...
+      │  loc.tOr('opt_${o.value}', o.label)  → "Beyaz", "BMW", ...
+      ▼
+Form widget (TextField / DropdownButton / MultiSelect)
+```
+
+---
+
+### 2.1 Veritabanı Şeması
+
+```
+category_fields
+  id, subcategory, key, label_key, type, required,
+  position, unit, depends_on, is_active
+
+field_options
+  id, field_id, value, label, parent_option_value, position, is_active
+```
+
+**Alan tipleri:** `text` | `number` | `dropdown` | `multiselect`
+
+**`depends_on`** — hangi alanın değerine bağlı olarak gösterileceği (`f.key`'e referans)  
+**`parent_option_value`** — koşullu seçenekler için: `NULL` → her zaman göster; `'bmw'` → sadece parent `bmw` seçilince; `'__excl__'` → multiselect'te exclusive seçenek; `'grp:...'` → grup başlığı
+
+---
+
+### 2.2 Translation Key Convention
+
+| Tablo kolonu | Translations key | Örnek |
+|---|---|---|
+| `category_fields.label_key` | `extraField_brand` | "Marka" / "Brand" |
+| `field_options.value` | `opt_${value}` → `opt_white` | "Beyaz" / "White" |
+| Subkategori isimleri | `subcat_${key}` → `subcat_automobile` | "Otomobil" |
+
+Flutter tarafı:
+```dart
+loc.t(f.labelKey)                    // label_key direkt translation key'i
+loc.tOr('opt_${o.value}', o.label)  // opt_ prefix; yoksa DB'deki label fallback
+```
+
+**`FieldOption.label`** (DB'deki) — OTA key yoksa kullanılan son fallback. Türkçe veya İngilizce olabilir; production'da her zaman OTA key'i tanımla.
+
+---
+
+### 2.3 FieldConfigService — Cache Katmanları
+
+```
+1. In-memory (_cache) — uygulama ömrü boyunca, subkategori başına bir kez çekilir
+2. Sunucu cache (24h) — field schema değişmez, admin deploy'da invalidate
+3. Offline fallback (_fallback) — kSubcategoryFields Dart sabitleri (listing_fields.dart)
+```
+
+> ⚠️ DB'ye eklenen yeni alan offline fallback'te görünmez — bu kabul edilmiş bir trade-off.
+
+---
+
+### 2.4 Yeni Field veya Subkategori Ekleme
+
+1. `category_fields` tablosuna satır ekle (`key`, `label_key`, `type`, `required`, `position`, `subcategory`)
+2. Varsa seçenekleri `field_options` tablosuna ekle (`value`, `label`, `field_id`)
+3. ARB dosyalarına label_key'i ekle (TR, EN, AR, RU):
+   ```
+   "extraField_brand": "Marka"   // TR
+   "opt_bmw": "BMW"              // tek format, tüm dillerde aynı value
+   ```
+4. Deploy: `git pull && python3 scripts/sync_translations.py && sudo systemctl restart teqlif`
+5. Uygulama güncellemesi **gerekmez** — Flutter `FieldConfigService.getFields()` ve `loc.t()` ile her şeyi dinamik alır
+
+---
+
+### 2.5 Flutter Render Flow
+
+**Dosya:** `mobile/lib/utils/listing_fields.dart` (tipler) + `mobile/lib/services/field_config_service.dart`
+
+```dart
+// Subkategori seçilince
+Future<void> _updateExtraFields(String subcategoryKey) async {
+  final fields = await FieldConfigService.getFields(subcategoryKey);
+  setState(() => _currentFields = fields);
+}
+
+// Her alan için widget
+Widget _buildExtraField(ExtraFieldDef f, TranslationPack loc) {
+  final label = loc.t(f.labelKey);               // OTA label
+
+  if (f.dependsOn != null) {                     // koşullu alan
+    final parentVal = _extraValues[f.dependsOn!];
+    options = f.conditionalOptions?[parentVal] ?? [];
+  }
+
+  return switch (f.type) {
+    ExtraFieldType.dropdown    => ...,            // loc.tOr('opt_${o.value}', o.label)
+    ExtraFieldType.multiselect => ...,
+    ExtraFieldType.number      => ...,
+    ExtraFieldType.text        => ...,
+  };
+}
+```
+
+---
+
+## 3. Merkezi Error Handling
 
 ### Problem
 
@@ -288,6 +441,70 @@ API catch bloğu (network'e giden istek başarısız oldu)
 | `AppError` sealed class (dosya) | `ErrorDisplay` silindikten sonra sil |
 
 > ⚠️ Bu iki dosyayı henüz silme — 5 ekran hâlâ `ErrorDisplay` kullanıyor (forgot_password, login, register, host_stream, swipe_live).
+
+---
+
+### 2.7 TeqSnackBar — TeqToast'ın Thin Wrapper'ı
+
+`TeqSnackBar` doğrudan `TeqToast`'a delege eder — ayrı bir implementasyon değil.
+
+```dart
+// İkisi eşdeğerdir:
+TeqSnackBar.show(message: loc.t('saveSuccess'), isSuccess: true);
+TeqToast.success(loc.t('saveSuccess'));
+```
+
+**Ekranlarda ne kullanmalı?**
+
+| Durum | Kullan |
+|-------|--------|
+| Hata göstermek | `handleError(e, loc)` — ErrorMapper üzerinden |
+| Başarı mesajı | `TeqToast.success(msg)` veya `TeqSnackBar.show(isSuccess: true)` |
+| Form validasyon hatası | Flutter `FormField` validator → inline, toast değil |
+
+`TeqSnackBar.show()` context almaz, `loc.t()` kullanır — eski context'li SnackBar pattern değil.
+
+**Kaldırılacak:** `showErrorSnackbar(context, e)` — artık gerekmiyor.  
+**Kalacak:** `TeqSnackBar.show()` ve `TeqToast.*` — ikisi aynı şey.
+
+---
+
+### 2.8 Result<T> — Err Tipi Değişikliği
+
+`core/result.dart`'taki `Err<T>` değiştirildi:
+
+```dart
+// ÖNCE
+class Err<T> extends Result<T> {
+  final AppError error;  // <-- UI katmanına sıkı bağlıydı
+}
+
+// SONRA
+class Err<T> extends Result<T> {
+  final Object error;    // herhangi bir exception wrapped edilebilir
+}
+```
+
+`api.dart` de `AppError.from(e)` sarmalamayı bıraktı:
+
+```dart
+// ÖNCE: return Err(AppError.from(e));
+// SONRA: return Err(e);           — ham exception Err içine girer
+```
+
+**Neden?** `handleError(error, loc)` zaten `Object error` kabul eder.  
+`ErrorMapper` `AppException`, `DioException`, vs. type dispatch yapar.  
+`AppError` ara katman gereksizleşti.
+
+**Servis çağrısında kullanım:**
+
+```dart
+final result = await repo.doSomething();
+result.when(
+  ok: (data) { ... },
+  err: (error) => handleError(error, loc),
+);
+```
 
 ---
 
