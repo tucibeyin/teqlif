@@ -34,6 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscure = true;
   late String _displayedLang;
   bool _isSwitching = false;
+  bool _userChangedLang = false;
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (ok) {
       await ref.read(localeProvider.notifier).setLocale(Locale(newLang));
       if (!mounted) return;
+      _userChangedLang = true;
       setState(() => _isSwitching = false);
       TeqToast.success(ref.read(localizationProvider).t('langSwitchSuccess'));
     } else {
@@ -86,7 +88,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       try {
         final user = await AuthService.me();
         if (user.locale != null && user.locale!.isNotEmpty && mounted) {
-          ref.read(localeProvider.notifier).setLocaleLocally(Locale(user.locale!));
+          if (_userChangedLang) {
+            // User explicitly picked a language on the login screen;
+            // their choice wins and gets synced to the server.
+            ref.read(localeProvider.notifier).setLocale(Locale(_displayedLang)).ignore();
+          } else {
+            // No explicit choice — restore server-stored preference.
+            ref.read(localeProvider.notifier).setLocaleLocally(Locale(user.locale!));
+          }
         }
       } catch (_) {}
 
