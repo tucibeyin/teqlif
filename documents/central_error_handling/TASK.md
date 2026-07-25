@@ -178,11 +178,14 @@ Her ekran: `StatefulWidget` → `ConsumerStatefulWidget`, `l.xxx` → `loc.t('xx
 
 ## FAZ 7 — Son Test & Deploy
 
-- [ ] **T90** — 4 dilde manuel test (TR / EN / AR / RU) — create_listing_screen, login, profile, listing_detail
-- [ ] **T91** — Error senaryoları test: network hatası (uçak modu), 401 (oturumu kapat), 500 server hatası, validasyon hatası
-- [ ] **T92** — Swipe-to-dismiss test
-- [ ] **T93** — OTA doğrulama: DB'de bir çeviriyi güncelle, uygulama yeniden açılınca değişikliği gör
-- [ ] **T94** — Commit + push + VPS deploy (sync_translations dahil)
+- [ ] **T90** — 4 dilde manuel test (TR / EN / AR / RU) — create_listing_screen, login, profile, listing_detail ⬅️ Manuel
+- [ ] **T91** — Error senaryoları test: network hatası (uçak modu), 401 (oturumu kapat), 500 server hatası, validasyon hatası ⬅️ Manuel
+- [ ] **T92** — Swipe-to-dismiss test ⬅️ Manuel
+- [ ] **T93** — OTA doğrulama: DB'de bir çeviriyi güncelle, uygulama yeniden açılınca değişikliği gör ⬅️ Manuel
+- [x] **T94** — Commit + push + VPS deploy ✅
+  - Commit: `e3d0d554` — feat: complete OTA localization migration (FAZ 5 + FAZ 6)
+  - 81 dosya, 3193 ekleme, 3791 silme
+  - VPS deploy: `git pull && python3 scripts/sync_translations.py && sudo systemctl restart teqlif`
 
 ---
 
@@ -192,4 +195,4 @@ Her ekran: `StatefulWidget` → `ConsumerStatefulWidget`, `l.xxx` → `loc.t('xx
 - **Her ekrandan sonra** `dart analyze` çalıştır, biriken hata biriktirme
 - **Widget migration:** Parent'tan `loc` parametresi almak da kabul edilebilir; her widget'ı `ConsumerWidget` yapmak zorunda değiliz
 - **ARB dosyaları silinmez** — MaterialApp delegates için codegen çalışmaya devam eder
-- **Mevcut durum:** `dart analyze` → 0 error, 2 info (tümü önceden vardı). FAZ 5 tamamlandı. FAZ 6 ve 7 kaldı.
+- **Mevcut durum:** FAZ 1–6 tamamen tamamlandı. FAZ 7'de T90–T93 manuel test gerektiriyor. `dart analyze` → 0 error.

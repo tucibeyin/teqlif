@@ -3129,5 +3129,8 @@
   "subcat_musical_instrument": "Музыкальный инструмент",
   "subcat_photo_video": "Фото и видео",
   "subcat_food_agriculture": "Еда и сельское хозяйство",
-  "subcat_misc": "Другое"
+  "subcat_misc": "Другое",
+  "langSwitching": "Загрузка языка…",
+  "langSwitchSuccess": "Язык изменён",
+  "langSwitchFailed": "Не удалось изменить язык. Проверьте соединение."
 }

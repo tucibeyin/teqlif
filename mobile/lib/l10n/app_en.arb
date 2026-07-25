@@ -3164,5 +3164,8 @@
   "subcat_musical_instrument": "Musical Instrument",
   "subcat_photo_video": "Photo & Video",
   "subcat_food_agriculture": "Food & Agriculture",
-  "subcat_misc": "Other"
+  "subcat_misc": "Other",
+  "langSwitching": "Loading language…",
+  "langSwitchSuccess": "Language changed",
+  "langSwitchFailed": "Failed to change language. Check your connection."
 }

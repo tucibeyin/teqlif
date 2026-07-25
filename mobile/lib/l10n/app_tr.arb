@@ -3127,5 +3127,8 @@
   "subcat_musical_instrument": "Müzik Aleti",
   "subcat_photo_video": "Fotoğraf & Video Ekipmanı",
   "subcat_food_agriculture": "Yiyecek & Tarım",
-  "subcat_misc": "Diğer"
+  "subcat_misc": "Diğer",
+  "langSwitching": "Dil yükleniyor…",
+  "langSwitchSuccess": "Dil değiştirildi",
+  "langSwitchFailed": "Dil değiştirilemedi. Bağlantınızı kontrol edin."
 }

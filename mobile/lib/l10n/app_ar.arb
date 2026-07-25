@@ -3128,5 +3128,8 @@
   "subcat_musical_instrument": "آلة موسيقية",
   "subcat_photo_video": "معدات تصوير",
   "subcat_food_agriculture": "غذاء وزراعة",
-  "subcat_misc": "أخرى"
+  "subcat_misc": "أخرى",
+  "langSwitching": "جارٍ تحميل اللغة…",
+  "langSwitchSuccess": "تم تغيير اللغة",
+  "langSwitchFailed": "فشل تغيير اللغة. تحقق من اتصالك."
 }

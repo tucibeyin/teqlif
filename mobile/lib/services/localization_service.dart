@@ -44,6 +44,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     load(lang);
 
     _ref.listen<Locale>(localeProvider, (_, next) {
+      if (next.languageCode == _currentLang && !state.isEmpty) return;
       _currentLang = next.languageCode;
       load(next.languageCode);
     });
@@ -95,10 +96,10 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     }
   }
 
-  Future<void> _fetchAndCache(String lang, Box<String> box) async {
+  Future<bool> _fetchAndCache(String lang, Box<String> box) async {
     try {
       final resp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang'));
-      if (resp.statusCode != 200) return;
+      if (resp.statusCode != 200) return false;
       final strings = Map<String, String>.from(jsonDecode(resp.body) as Map);
       await box.put('pack_$lang', resp.body);
       await box.put('cached_at_$lang', DateTime.now().millisecondsSinceEpoch.toString());
@@ -112,9 +113,37 @@ class LocalizationService extends StateNotifier<TranslationPack> {
       if (_currentLang == lang) {
         state = TranslationPack(strings, lang);
       }
+      return true;
     } catch (e) {
       debugPrint('[i18n] fetch failed for $lang: $e');
+      return false;
     }
+  }
+
+  /// Loads a language pack and updates state only on success.
+  /// Returns true if the pack is now active; false on network/server failure.
+  /// Unlike [load], this method is designed for user-initiated language switches:
+  /// it does NOT update [_currentLang] on failure, enabling the caller to revert UI.
+  Future<bool> switchLanguage(String lang) async {
+    if (lang == _currentLang && !state.isEmpty) return true;
+    final box = _box;
+    if (box == null) return false;
+
+    final cachedJson = box.get('pack_$lang');
+    if (cachedJson != null) {
+      final strings = Map<String, String>.from(jsonDecode(cachedJson) as Map);
+      _currentLang = lang;
+      state = TranslationPack(strings, lang);
+      _checkStale(lang, box).ignore();
+      return true;
+    }
+
+    // Not cached — temporarily adopt the lang so _fetchAndCache updates state on success.
+    final prevLang = _currentLang;
+    _currentLang = lang;
+    final ok = await _fetchAndCache(lang, box);
+    if (!ok) _currentLang = prevLang;
+    return ok;
   }
 
   Future<void> clearCache() async {

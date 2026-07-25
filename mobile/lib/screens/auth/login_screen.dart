@@ -15,6 +15,8 @@ import 'verify_screen.dart';
 import 'forgot_password_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
+import '../../widgets/language_switch_overlay.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -30,6 +32,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passFocus = FocusNode();
   bool _loading = false;
   bool _obscure = true;
+  late String _displayedLang;
+  bool _isSwitching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayedLang = ref.read(localeProvider).languageCode;
+  }
 
   @override
   void dispose() {
@@ -37,6 +47,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _passCtrl.dispose();
     _passFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _onLangChange(String newLang) async {
+    if (_isSwitching || newLang == _displayedLang) return;
+    final prevLang = _displayedLang;
+    setState(() {
+      _isSwitching = true;
+      _displayedLang = newLang;
+    });
+    final ok = await ref.read(localizationProvider.notifier).switchLanguage(newLang);
+    if (!mounted) return;
+    if (ok) {
+      await ref.read(localeProvider.notifier).setLocale(Locale(newLang));
+      if (!mounted) return;
+      setState(() => _isSwitching = false);
+      TeqToast.success(ref.read(localizationProvider).t('langSwitchSuccess'));
+    } else {
+      setState(() {
+        _isSwitching = false;
+        _displayedLang = prevLang;
+      });
+      TeqToast.error(ref.read(localizationProvider).t('langSwitchFailed'));
+    }
   }
 
   Future<void> _submit() async {
@@ -127,10 +160,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final currentLocale = ref.watch(localeProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
-      body: SafeArea(
+      body: LanguageSwitchOverlay(
+        isVisible: _isSwitching,
+        child: SafeArea(
         child: Column(
           children: [
             Expanded(
@@ -283,21 +317,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ButtonSegment(value: 'ar', label: Text(loc.t('langAR'))),
                       ButtonSegment(value: 'ru', label: Text(loc.t('langRU'))),
                     ],
-                    selected: {currentLocale.languageCode},
+                    selected: {_displayedLang},
                     showSelectedIcon: false,
                     style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    onSelectionChanged: (selection) {
-                      ref.read(localeProvider.notifier).setLocale(Locale(selection.first));
-                    },
+                    onSelectionChanged: (selection) => _onLangChange(selection.first),
                   ),
                 ],
               ),
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -36,6 +36,7 @@ import '../utils/error_helper.dart';
 
 import 'my_ratings_screen.dart';
 import '../utils/start_stream_helper.dart';
+import '../widgets/language_switch_overlay.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
@@ -1280,6 +1281,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   // widget.user stale olabilir — StorageService'ten güncel değer okunur
   bool _isPremium = false;
   bool _isPrivate = false;
+  late String _displayedLang;
+  bool _isSwitching = false;
 
   @override
   void initState() {
@@ -1287,10 +1290,34 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     // widget.user'dan ön değer al (anlık gösterim için)
     _isPremium = widget.user?['is_premium'] == true;
     _isPrivate = widget.user?['is_private'] == true;
+    _displayedLang = ref.read(localeProvider).languageCode;
     _loadBiometricState();
     _loadPremiumStatus();
     _loadPendingRequests();
     _loadUnreadRatings();
+  }
+
+  Future<void> _onLangChange(String newLang) async {
+    if (_isSwitching || newLang == _displayedLang) return;
+    final prevLang = _displayedLang;
+    setState(() {
+      _isSwitching = true;
+      _displayedLang = newLang;
+    });
+    final ok = await ref.read(localizationProvider.notifier).switchLanguage(newLang);
+    if (!mounted) return;
+    if (ok) {
+      await ref.read(localeProvider.notifier).setLocale(Locale(newLang));
+      if (!mounted) return;
+      setState(() => _isSwitching = false);
+      TeqToast.success(ref.read(localizationProvider).t('langSwitchSuccess'));
+    } else {
+      setState(() {
+        _isSwitching = false;
+        _displayedLang = prevLang;
+      });
+      TeqToast.error(ref.read(localizationProvider).t('langSwitchFailed'));
+    }
   }
 
   int _pendingRequestCount = 0;
@@ -1942,12 +1969,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.read(localizationProvider);
-    final currentLocale = ref.watch(localeProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(loc.t('navSettings'))),
       backgroundColor: AppColors.bg(context),
-      body: ListView(
+      body: LanguageSwitchOverlay(
+        isVisible: _isSwitching,
+        child: ListView(
         children: [
           const SizedBox(height: 8),
 
@@ -2364,17 +2392,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       label: Text(ref.read(localizationProvider).t('langRU')),
                     ),
                   ],
-                  selected: {currentLocale.languageCode},
+                  selected: {_displayedLang},
                   showSelectedIcon: false,
                   style: ButtonStyle(
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  onSelectionChanged: (selection) {
-                    ref
-                        .read(localeProvider.notifier)
-                        .setLocale(Locale(selection.first));
-                  },
+                  onSelectionChanged: (selection) => _onLangChange(selection.first),
                 ),
               ),
             ],
@@ -2471,6 +2495,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 24),
         ],
+      ),
       ),
     );
   }
