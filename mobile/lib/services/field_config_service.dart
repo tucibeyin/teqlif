@@ -67,16 +67,22 @@ class FieldConfigService {
           o.isExclusive,
         )).toList();
 
-    final topOptions = allOptions
-        .where((o) => o.parentOptionValue == null)
-        .toList();
+    // For multiselect: exclusionGroup marks mutual-exclusion, NOT parent-dependency.
+    // All options are top-level. parentOptionValue is only meaningful for
+    // dropdown fields that depend on another field's selection (e.g. brand→model).
+    final bool isMultiselect = f.type == 'multiselect';
+    final topOptions = isMultiselect
+        ? allOptions
+        : allOptions.where((o) => o.parentOptionValue == null).toList();
 
     Map<String, List<FieldOption>>? conditionalOptions;
-    final condEntries = allOptions.where((o) => o.parentOptionValue != null);
-    if (condEntries.isNotEmpty) {
-      conditionalOptions = <String, List<FieldOption>>{};
-      for (final opt in condEntries) {
-        (conditionalOptions[opt.parentOptionValue!] ??= []).add(opt);
+    if (!isMultiselect) {
+      final condEntries = allOptions.where((o) => o.parentOptionValue != null);
+      if (condEntries.isNotEmpty) {
+        conditionalOptions = <String, List<FieldOption>>{};
+        for (final opt in condEntries) {
+          (conditionalOptions[opt.parentOptionValue!] ??= []).add(opt);
+        }
       }
     }
 

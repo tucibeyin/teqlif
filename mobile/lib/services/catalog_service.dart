@@ -83,27 +83,30 @@ class CatalogService {
       return;
     }
 
-    // Check staleness.
+    // Always compare server version first — this catches data changes (e.g. new
+    // field options after migrations) even before the 24 h stale window expires.
+    try {
+      final cachedVersion = box.get('catalog_version') ?? '';
+      final vResp = await http.get(Uri.parse('$kBaseUrl/catalog/version'));
+      if (vResp.statusCode == 200) {
+        final serverVersion = (jsonDecode(vResp.body) as Map)['version'] as String;
+        if (serverVersion != cachedVersion) {
+          await _fetchAndCache(box);
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('[catalog] version check failed: $e');
+    }
+
+    // No version change — only re-fetch if stale.
     final cachedAtStr = box.get('cached_at');
     if (cachedAtStr != null) {
       final age = DateTime.now().millisecondsSinceEpoch - (int.tryParse(cachedAtStr) ?? 0);
       if (age < _kStaleDurationMs) return;
     }
 
-    // Stale — compare version before full download.
-    try {
-      final cachedVersion = box.get('catalog_version') ?? '';
-      final vResp = await http.get(Uri.parse('$kBaseUrl/catalog/version'));
-      if (vResp.statusCode != 200) return;
-      final serverVersion = (jsonDecode(vResp.body) as Map)['version'] as String;
-      if (serverVersion != cachedVersion) {
-        await _fetchAndCache(box);
-      } else {
-        await box.put('cached_at', DateTime.now().millisecondsSinceEpoch.toString());
-      }
-    } catch (e) {
-      debugPrint('[catalog] stale check failed: $e');
-    }
+    await _fetchAndCache(box);
   }
 
   // ── Internals ───────────────────────────────────────────────────────────────
