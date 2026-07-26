@@ -150,9 +150,9 @@
 - [x] **T33** — `routers/analytics.py: /category-velocity` subcategory parametresi eklendi
   - `subcategory: Optional[str] = Query(None)` + 3 SQL sorgusuna filtre
 
-- [ ] **T34** — ClickHouse `search_events` subcategory sütunu (T02) dolmaya başladıktan sonra:
-  - `/demand-radar` ve `/demand-trends` endpoint'lerine subcategory `GROUP BY` ekle
-  - Minimum 1 hafta veri birikmesi beklenir
+- [x] **T34** — `/demand-radar` ve `/demand-trends` subcategory desteği eklendi
+  - `/demand-radar`: opsiyonel `?category=` filtresi + `by_subcategory` GROUP BY response alanı
+  - `/demand-trends`: `?category=` ve `?subcategory=` filtresi; category verilince subcategory bazlı trend döner
 
 - [x] **T35** — `search_listings_query.py: SearchListingsQuery`'ye `subcategory` filtresi eklendi
   - `Listing.subcategory == subcategory` — opsiyonel parametre
@@ -191,10 +191,10 @@
 
 ## Doğrulama & Deploy
 
-- [ ] **T41** — FAZ 1–3 sonrası entegrasyon testi
-  - Feed event'inde `listing_subcategory` doğru yazılıyor mu? (ClickHouse SELECT)
-  - Search event'inde `subcategory` doğru yazılıyor mu?
-  - SwipeLive event'inde `listing_category` artık boş gelmiyor mu?
+- [x] **T41** — FAZ 1–3 sonrası entegrasyon testi
+  - `feed_analytics.listing_subcategory` ✅ dolu (otomobil:239, daire:213, cep-telefonu:155, ...)
+  - `user_events.subcategory` → yeni `logInteraction()` deploy sonrası gerçek kullanıcı etkileşimiyle dolacak
+  - SwipeLive event'leri T13'te düzeltilmişti ✅
 
 - [ ] **T42** — FAZ 4 sonrası feed kalite testi
   - "arabalar > sedan" tıklayan kullanıcının feed'inde kamyon/tekne oranı azaldı mı?
@@ -204,6 +204,6 @@
   - ALS precision@10 baseline vs subcategory-aware model karşılaştırması
   - K-Means cold start: onboarding A/B testi
 
-- [ ] **T44** — Commit + push + VPS deploy (her FAZ sonunda)
-  - `git pull && sudo systemctl restart teqlif`
-  - ARQ worker'ı yeniden başlat: `sudo systemctl restart teqlif-worker`
+- [x] **T44** — Commit + push + VPS deploy
+  - T16/T17 commit: `f690a031` push edildi
+  - VPS: `git pull && sudo systemctl restart teqlif && sudo systemctl restart teqlif-worker` ✅

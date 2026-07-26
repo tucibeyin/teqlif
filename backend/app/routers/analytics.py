@@ -2135,6 +2135,7 @@ async def video_performance(
 async def demand_radar(
     request: Request,
     days: int = Query(default=7, ge=1, le=30),
+    category: Optional[str] = Query(default=None),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -2146,7 +2147,7 @@ async def demand_radar(
 
     try:
         redis = await get_redis()
-        cache_key = f"cache:demand_radar:{days}"
+        cache_key = f"cache:demand_radar:{days}:{category or ''}"
         cached = await redis.get(cache_key)
         if cached:
             import json
@@ -2158,11 +2159,14 @@ async def demand_radar(
     try:
         ch = await get_clickhouse_client()
 
+        cat_filter = f"AND category = '{category}'" if category else ""
+
         q_top = f"""
             SELECT query, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND length(query) >= 2
+              {cat_filter}
             GROUP BY query
             HAVING cnt >= 2
             ORDER BY cnt DESC
@@ -2180,24 +2184,41 @@ async def demand_radar(
             LIMIT 10
         """
 
+        q_subcat = f"""
+            SELECT category, subcategory, COUNT(*) AS cnt
+            FROM search_events
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+              AND subcategory != ''
+              {cat_filter}
+            GROUP BY category, subcategory
+            HAVING cnt >= 2
+            ORDER BY cnt DESC
+            LIMIT 20
+        """
+
         q_vol = f"""
             SELECT toDate(timestamp) AS day, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
+              {cat_filter}
             GROUP BY day
             ORDER BY day
         """
 
-        # asyncio.gather ile eşzamanlı sorgular
-        top_queries, by_category, daily_volume = await asyncio.gather(
+        top_queries, by_category, by_subcategory, daily_volume = await asyncio.gather(
             ch.query(q_top),
             ch.query(q_cat),
-            ch.query(q_vol)
+            ch.query(q_subcat),
+            ch.query(q_vol),
         )
 
         response_data = {
             "top_queries": [{"query": r[0], "count": int(r[1])} for r in top_queries.result_rows],
             "by_category": [{"category": r[0] or "diğer", "count": int(r[1])} for r in by_category.result_rows],
+            "by_subcategory": [
+                {"category": r[0], "subcategory": r[1], "count": int(r[2])}
+                for r in by_subcategory.result_rows
+            ],
             "daily_volume": [{"day": str(r[0]), "count": int(r[1])} for r in daily_volume.result_rows],
         }
 
@@ -2577,6 +2598,8 @@ async def category_velocity(
 @router.get("/demand-trends")
 async def demand_trends(
     weeks: int = Query(default=8, ge=4, le=16),
+    category: Optional[str] = Query(default=None),
+    subcategory: Optional[str] = Query(default=None),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -2592,17 +2615,27 @@ async def demand_trends(
         if ch is None:
             raise ServiceException(code="ANALYTICS_SERVICE_ERROR")
 
+        extra_filters = ""
+        group_by_col = "category"
+        if subcategory:
+            extra_filters = f"AND category = '{category or ''}' AND subcategory = '{subcategory}'"
+            group_by_col = "subcategory"
+        elif category:
+            extra_filters = f"AND category = '{category}'"
+            group_by_col = "subcategory"
+
         result = await ch.query(f"""
             SELECT
-                category,
+                {group_by_col},
                 toStartOfWeek(timestamp, 1)  AS week,
                 count()                       AS search_count,
                 countIf(result_count = 0)     AS zero_result_count
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {weeks} WEEK
               AND category   != ''
-            GROUP BY category, week
-            ORDER BY category, week
+              {extra_filters}
+            GROUP BY {group_by_col}, week
+            ORDER BY {group_by_col}, week
         """)
 
         from collections import defaultdict
@@ -2636,18 +2669,27 @@ async def demand_trends(
             else:
                 direction = "stable"
 
-            trends.append({
-                "category": cat,
+            entry: dict = {
                 "weekly": weekly,
                 "pct_change_8w": pct_change,
                 "momentum": momentum,
                 "direction": direction,
                 "zero_result_pct": avg_zero_ratio,
                 "supply_gap": avg_zero_ratio >= 30,
-            })
+            }
+            if group_by_col == "subcategory":
+                entry["subcategory"] = cat
+                entry["category"] = category or ""
+            else:
+                entry["category"] = cat
+            trends.append(entry)
 
         trends.sort(key=lambda x: abs(x["pct_change_8w"]), reverse=True)
-        return {"weeks": weeks, "trends": trends}
+        return {
+            "weeks": weeks,
+            "filtered_by": {"category": category, "subcategory": subcategory},
+            "trends": trends,
+        }
 
     except AppException:
         raise
