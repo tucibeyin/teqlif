@@ -125,62 +125,11 @@ def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
     return ""
 
 
-_EXTRA_FIELD_LABELS: dict[str, str] = {
-    "brand": "Marka",
-    "model": "Model",
-    "model_name": "Model",
-    "year": "Yıl",
-    "km": "Kilometre",
-    "fuel_type": "Yakıt",
-    "gear": "Vites",
-    "body_type": "Kasa Tipi",
-    "color": "Renk",
-    "damage": "Hasar Durumu",
-    "engine_cc": "Motor Hacmi",
-    "power_hp": "Motor Gücü",
-    "moto_type": "Tip",
-    "boat_type": "Tekne Türü",
-    "boat_fuel": "Yakıt",
-    "length_m": "Uzunluk (m)",
-    "horse_power": "Beygir Gücü",
-    "room_count": "Oda Sayısı",
-    "size": "Alan (m²)",
-    "floor": "Bulunduğu Kat",
-    "total_floors": "Toplam Kat",
-    "building_age": "Bina Yaşı",
-    "heating": "Isıtma",
-    "furnished": "Eşya Durumu",
-    "title_deed": "Tapu Durumu",
-    "land_use": "Kullanım Durumu",
-    "balcony": "Balkon",
-    "elevator": "Asansör",
-    "parking": "Otopark",
-    "storage": "Depolama",
-    "ram": "RAM",
-    "processor": "İşlemci",
-    "screen_size": "Ekran Boyutu",
-    "camera_type": "Kamera Türü",
-    "gender": "Cinsiyet",
-    "size_clothing": "Beden",
-    "size_shoes": "Numara",
-    "type": "Tür",
-    "material": "Malzeme",
-    "karat_gold": "Altın Ayarı",
-    "karat_silver": "Gümüş Ayarı",
-    "bike_type": "Bisiklet Türü",
-    "wheel_size": "Jant Boyutu",
-    "sport_type": "Spor Dalı",
-    "pet_type": "Hayvan Türü",
-    "instrument_type": "Enstrüman Türü",
-    "author": "Yazar",
-    "isbn": "ISBN",
-    "publisher": "Yayınevi",
-    "console_brand": "Konsol Markası",
-    "console_model": "Konsol Modeli",
-    "furniture_type": "Mobilya Türü",
-    "textile_type": "Tekstil Türü",
-    "lighting_type": "Aydınlatma Türü",
-    "capacity": "Kapasite",
+_LANG_DIRECTIVE: dict[str, str] = {
+    "tr": "ÇIKTI DİLİ: Türkçe. Açıklamayı Türkçe yaz.",
+    "en": "OUTPUT LANGUAGE: English. Write the entire listing description in English.",
+    "ar": "لغة الإخراج: العربية. اكتب وصف الإعلان بالكامل باللغة العربية.",
+    "ru": "ЯЗЫК ВЫВОДА: Русский. Напиши всё описание объявления на русском языке.",
 }
 
 
@@ -190,8 +139,8 @@ def _build_prompt(
     condition: Optional[str],
     subcategory: Optional[str] = None,
     extra_fields: Optional[dict[str, str]] = None,
+    lang: str = "tr",
 ) -> tuple[str, str]:
-    # Alt kategorileri canonical forma çevir
     cat_raw = category.lower().strip()
     cat = _CAT_NORMALIZE.get(cat_raw, cat_raw)
 
@@ -201,46 +150,47 @@ def _build_prompt(
     ex1, ex2 = ListingTemplates.get_few_shot(cat, cond)
     combo_hint = ListingTemplates.get_combo_hint(cat, cond)
 
-    # Her request'te farklı yapı ve odak → çeşitli çıktılar
     para_directive = random.choice(_PARA_DIRECTIVES)
     focus_directive = random.choice(_FOCUS_DIRECTIVES)
+    lang_directive = _LANG_DIRECTIVE.get(lang, _LANG_DIRECTIVE["tr"])
 
     system = (
-        "Türkiye'de ikinci el ilan platformunda bireysel satıcısın. "
-        "Sana ürün bilgisi verilecek, sen sadece ilan metnini yazacaksın.\n\n"
-        "YAZIM KURALLARI:\n"
-        "- Birinci tekil şahısla yaz: 'kullandım', 'satıyorum', 'aldım' gibi.\n"
+        "You are an individual seller on a second-hand marketplace in Turkey. "
+        "You will be given product information and must write only the listing description text.\n\n"
+        "RULES:\n"
+        "- Write in first person: 'I used', 'I'm selling', 'I bought' (adapted to output language).\n"
         f"- {para_directive}\n"
-        "- Başlıktaki ürün adını ve varsa marka veya modeli metninde doğal olarak kullan.\n"
-        "- Fiyat ve teslimat bilgisi YAZMA.\n"
-        "- Özür veya yapay açılış cümlesi ekleme, direkt yaz.\n"
+        "- Naturally mention the product name and brand/model if present.\n"
+        "- Do NOT include price or delivery information.\n"
+        "- No apologetic or artificial opening sentences — start directly.\n"
         f"- {focus_directive}\n"
-        "- Sade Türkçe, tırnak işareti kullanma.\n\n"
-        "YAZI TARZI ÖRNEĞİ:\n"
-        f"1. paragraf:\n{ex1}\n\n"
-        f"Son paragraf:\n{ex2}"
+        "- No quotation marks.\n"
+        f"- {lang_directive}\n\n"
+        "STYLE EXAMPLES (format reference only — follow this structure, write in the output language):\n"
+        f"Opening paragraph:\n{ex1}\n\n"
+        f"Closing paragraph:\n{ex2}"
     )
 
     user_lines: list[str] = [
-        "Şu ürün için ilan metni yaz:",
-        f"Ürün: {title}",
-        f"Alt kategori: {subcategory}" if subcategory else "",
-        f"Durum: {cond_label}" if cond_label else "",
+        "Write a listing description for this product:",
+        f"Title: {title}",
+        f"Subcategory: {subcategory}" if subcategory else "",
+        f"Condition: {cond_label}" if cond_label else "",
     ]
 
     if extra_fields:
-        field_lines = []
-        for key, val in extra_fields.items():
-            if val and val.strip():
-                label = _EXTRA_FIELD_LABELS.get(key, key.replace("_", " ").capitalize())
-                field_lines.append(f"  {label}: {val}")
+        field_lines = [
+            f"  {key}: {val}"
+            for key, val in extra_fields.items()
+            if val and val.strip()
+        ]
         if field_lines:
-            user_lines.append("Ürün özellikleri:")
+            user_lines.append("Product details:")
             user_lines.extend(field_lines)
 
     user_lines += [
         "",
-        "Bu tür ürünlerde genellikle şunlar konuşulur (ürününe uyanları kullan):",
+        "Topics commonly discussed for this type of product (use what's relevant):",
         combo_hint,
     ]
     user = "\n".join(line for line in user_lines if line is not None)
@@ -388,12 +338,13 @@ async def generate_listing_description_stream(
     subcategory: Optional[str] = None,
     district: Optional[str] = None,
     extra_fields: Optional[dict[str, str]] = None,
+    lang: str = "tr",
 ) -> AsyncGenerator[str, None]:
     """
     Groq primary → Gemini fallback.
     Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
     """
-    system_prompt, user_prompt = _build_prompt(title, category, condition, subcategory, extra_fields)
+    system_prompt, user_prompt = _build_prompt(title, category, condition, subcategory, extra_fields, lang)
     full_location = ", ".join(filter(None, [district, location])) or None
 
     # ── Groq path ─────────────────────────────────────────────────────────────

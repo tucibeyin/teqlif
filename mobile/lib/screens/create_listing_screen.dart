@@ -285,6 +285,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         'title': _titleCtrl.text.trim(),
         'category': _selectedCategory,
         'condition': _selectedCondition,
+        'lang': ref.read(localizationProvider).lang,
         if (price != null && price > 0) 'price': price,
         if (_selectedProvince != null) 'location': _selectedProvince,
         if (_selectedSubcategory != null) 'subcategory': _selectedSubcategory,
