@@ -33,9 +33,8 @@
   - `_EMBED_EXTRA_KEYS` tuple (45+ key) + subcategory ile zenginleştirildi
   - Boş/None değerler sessizce atlanır
 
-- [ ] **T07** — `backfill_listing_embeddings_task` ile mevcut tüm aktif ilanları yeniden embed et
-  - Task zaten var; T06 sonrası çalıştırılır
-  - VPS'te ARQ worker'ı üzerinden tetikle
+- [x] **T07** — `backfill_listing_embeddings_task` enqueue edildi (job: 81ae367701384dc0ad5e6a275db51672)
+  - Worker arka planda tüm aktif ilanları yeni `_EMBED_EXTRA_KEYS` ile yeniden embed ediyor
 
 ### SwipeLive — LiveStream Modeli
 
