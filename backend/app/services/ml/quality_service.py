@@ -259,20 +259,23 @@ async def train_quality_model(db_session) -> int:
             ) lk ON lk.listing_id = l.id
             LEFT JOIN (
                 SELECT item_id, COUNT(*) AS cnt
-                FROM analytics_events
-                WHERE event_type = 'listing_favorite'
+                FROM user_interactions
+                WHERE interaction_type = 'listing_favorite'
+                  AND item_type = 'listing'
                 GROUP BY item_id
             ) ae_fav ON ae_fav.item_id = l.id
             LEFT JOIN (
                 SELECT item_id, COUNT(*) AS cnt
-                FROM analytics_events
-                WHERE event_type = 'listing_chat_open'
+                FROM user_interactions
+                WHERE interaction_type = 'listing_chat_open'
+                  AND item_type = 'listing'
                 GROUP BY item_id
             ) ae_chat ON ae_chat.item_id = l.id
             LEFT JOIN (
                 SELECT item_id, COUNT(*) AS cnt
-                FROM analytics_events
-                WHERE event_type = 'listing_offer_submit'
+                FROM user_interactions
+                WHERE interaction_type = 'listing_offer_submit'
+                  AND item_type = 'listing'
                 GROUP BY item_id
             ) ae_offer ON ae_offer.item_id = l.id
             WHERE l.status != 'deleted'

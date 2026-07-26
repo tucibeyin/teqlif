@@ -132,9 +132,9 @@ async def train_bpr(db_session) -> int:
 
     try:
         rows = await db_session.execute(text("""
-            SELECT user_id, item_id, event_type, COUNT(*) AS cnt
-            FROM analytics_events
-            WHERE event_type = ANY(ARRAY[
+            SELECT user_id, item_id, interaction_type, COUNT(*) AS cnt
+            FROM user_interactions
+            WHERE interaction_type = ANY(ARRAY[
                 'listing_offer_submit', 'listing_chat_open', 'listing_favorite',
                 'listing_share', 'listing_like', 'detail_dwell',
                 'listing_view', 'listing_impression'
@@ -142,7 +142,7 @@ async def train_bpr(db_session) -> int:
               AND user_id IS NOT NULL
               AND item_type = 'listing'
               AND created_at >= NOW() - INTERVAL '120 days'
-            GROUP BY user_id, item_id, event_type
+            GROUP BY user_id, item_id, interaction_type
         """))
         interactions = rows.fetchall()
     except Exception as exc:
