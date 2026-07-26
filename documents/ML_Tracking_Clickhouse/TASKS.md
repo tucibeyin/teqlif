@@ -101,34 +101,37 @@
 
 ## FAZ 4 — Feed & Öneri Algoritmaları
 
-- [ ] **T23** — `user_interests` tablosuna subcategory sütunu ekle (Alembic migration)
-  - `(user_id, category, subcategory, score)` — `subcategory = NULL` mevcut top-level kayıtlara dokunmaz
-  - Index: `(user_id, category, subcategory)`
+- [x] **T23** — `user_interests` tablosuna subcategory sütunu ekle (Alembic migration)
+  - `aac_user_interests_subcategory.py` oluşturuldu; `down_revision = 'aab_merge_streams_and_loc'`
+  - `user_interest.py` modeline `subcategory: Mapped[Optional[str]]` + index eklendi
 
-- [ ] **T24** — `use_cases/feed/queries/feed_queries.py: get_user_interests()`'i güncelle
-  - Subcategory bazlı skorları da döndür
+- [x] **T24** — `use_cases/feed/queries/feed_queries.py` güncellendi
+  - `get_user_interests()` → `WHERE subcategory IS NULL` (top-level)
+  - `get_user_subcategory_interests()` → `WHERE subcategory IS NOT NULL`, `"category|subcategory": score`
 
-- [ ] **T25** — `feed_queries.py: _score_and_rank()` scoring SQL'e subcategory affinity terimi ekle
-  - `_get_subcategory_pref_expr()` fonksiyonu yaz — condition tercihi CASE ifadesine benzer biçimde
-  - Scoring formülüne `subcat_affinity × 0.08` ağırlığıyla ekle (freshness veya quality ağırlığından al)
+- [x] **T25** — `feed_queries.py: _score_and_rank()` scoring SQL güncellendi
+  - `subcat_affinity_expr` CASE ifadesi (top-8 subcategory, `l.category || '|' || COALESCE(l.subcategory,'')`)
+  - `subcat_w = 0.08`; `cat_w` 0.30→0.22 (embedding), 0.40→0.32 (no embedding) olarak azaltıldı
 
-- [ ] **T26** — `feed_queries.py: greedy diversity`'ye subcategory limiti ekle
-  - `MAX_PER_SUBCAT = 2` — aynı subcategory'den 2'den fazla ilan art arda feed'e girmesin
+- [x] **T26** — `feed_queries.py: greedy diversity` güncellendi
+  - `MAX_PER_SUBCAT = 2` — `(category, subcategory)` çifti başına limit
+  - `subcat_counts` dict'i ile takip edilir; overflow havuzuna düşer
 
-- [ ] **T27** — `recommendation_service.py: _thompson_sample_categories()`'i subcategory seviyesine indir
-  - `get_user_category_affinity()` subcategory bazlı skoru da çeksin
-  - `_ids_from_categories()` `WHERE subcategory = ANY(:subcats)` filtresi ekle
+- [x] **T27** — `recommendation_service.py` güncellendi
+  - `get_user_subcategory_affinity()` fonksiyonu eklendi (ClickHouse + PostgreSQL)
+  - `_ids_from_categories()` → `subcategories: Optional[list[str]]` + fallback mantığı
+  - `get_personalized_feed()` → top subcategory bilgisi exploit pool'a geçirildi
 
-- [ ] **T28** — `swipe_live_queries.py: _score_stream()` affinity terimini güncelle
-  - `interests.get((stream.category, stream.subcategory), interests.get(stream.category, 0.05))`
-  - Fallback: subcategory skoru yoksa top-level skoru kullan
+- [x] **T28** — `swipe_live_queries.py: _score_stream()` güncellendi
+  - `subcat_interests` parametresi eklendi; `subcat_key = "category|subcategory"` eşleşmesi
+  - Fallback: subcategory skoru yoksa top-level category skoru kullanılır
 
-- [ ] **T29** — `swipe_live_queries.py: _fetch_listing_stream_correlation()` güncelle
-  - `stream_subcategory × listing_subcategory` matrisini de hesapla (ClickHouse şeması T04'te hazır olacak)
+- [x] **T29** — `swipe_live_queries.py: _fetch_listing_stream_correlation()` güncellendi
+  - `stream_subcategory` GROUP BY'a eklendi; `subcat_interests` ile ağırlıklandırma
 
-- [ ] **T30** — `swipe_live_queries.py: GetSwipeFeedQuery`'yi güncelle
-  - `func.random()` yerine: kullanıcı affinity'sine göre ağırlıklı sıralama
-  - Temel: `user_interests` skoruna göre `category` + `subcategory` eşleşmesi öncelikli
+- [x] **T30** — `get_swipe_feed.py: GetSwipeFeedQuery` güncellendi
+  - `preferred_categories` parametresi eklendi → SQLAlchemy `case()` ile öncelik sıralaması
+  - `/swipe-feed` router: auth optional → interests → preferred_categories geçirilir
 
 ---
 

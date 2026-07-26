@@ -76,15 +76,17 @@ class SwipeLiveQueries:
         from app.use_cases.streams.queries.misc_queries import GetActiveStreamsQuery
         streams = await GetActiveStreamsQuery(self.uow).execute(user_id)
 
-        # 2. Kategori ilgi skorları
-        interests: dict[str, float] = await FeedQueries(self.uow).get_user_interests(user_id)
+        # 2. Kategori ilgi skorları (category + subcategory)
+        feed_q = FeedQueries(self.uow)
+        interests: dict[str, float] = await feed_q.get_user_interests(user_id)
+        subcat_interests: dict[str, float] = await feed_q.get_user_subcategory_interests(user_id)
 
         # 3. ClickHouse sinyalleri — paralel çek
         import asyncio
         ch_engagement, listing_engagement, listing_stream_corr = await asyncio.gather(
             self._fetch_ch_stream_engagement(user_id),
             self._fetch_ch_listing_engagement(user_id),
-            self._fetch_listing_stream_correlation(user_id, interests),
+            self._fetch_listing_stream_correlation(user_id, interests, subcat_interests),
         )
 
         # 4. ALS collaborative filtering skorları
@@ -129,7 +131,7 @@ class SwipeLiveQueries:
         scored = []
         for stream in streams:
             score = self._score_stream(
-                stream, interests, ch_engagement,
+                stream, interests, subcat_interests, ch_engagement,
                 als_scores, seen_categories,
                 chat_rate=chat_rates.get(stream.id, 0.0),
                 viewer_delta=viewer_deltas.get(stream.id, 0.0),
@@ -163,17 +165,26 @@ class SwipeLiveQueries:
         }
 
 
-    def _score_stream(self, 
+    def _score_stream(self,
         stream,
         interests: dict[str, float],
+        subcat_interests: dict[str, float],
         ch_engagement: dict[int, dict],
         als_scores: dict[int, float],
         seen_categories: dict[str, int],
         chat_rate: float = 0.0,
         viewer_delta: float = 0.0,
     ) -> float:
-        # 1. Category affinity
-        affinity = min(interests.get(stream.category, 0.05), 1.0)
+        # 1. Category affinity — subcategory eşleşmesi varsa daha hassas skor
+        subcat_key = (
+            f"{stream.category}|{stream.subcategory}"
+            if getattr(stream, "subcategory", None)
+            else ""
+        )
+        if subcat_key and subcat_key in subcat_interests:
+            affinity = min(subcat_interests[subcat_key], 1.0)
+        else:
+            affinity = min(interests.get(stream.category, 0.05), 1.0)
 
         # 2. Stream quality (viewer + like)
         viewer_score = math.log1p(getattr(stream, "viewer_count", 0)) / 10.0
@@ -320,21 +331,19 @@ class SwipeLiveQueries:
             return {}
 
 
-    async def _fetch_listing_stream_correlation(self, 
+    async def _fetch_listing_stream_correlation(self,
         user_id: int,
         interests: dict[str, float],
+        subcat_interests: dict[str, float] | None = None,
     ) -> list[str]:
         """
-        Kullanıcının izlediği stream kategorileri sonrasında hangi listing
+        Kullanıcının izlediği stream kategorileri/subcategorileri sonrasında hangi listing
         kategorilerine tıkladığını hesaplar → preferred_listing_categories listesi.
 
         Mantık:
-          1. Kullanıcının swipe_live_events'teki listing_tap eventlerini çek
-          2. stream_category → listing_category tıklama sayısı
-          3. Kullanıcının top-3 stream kategori ilgisiyle ağırlıklandır
-          4. En yüksek skora sahip top-3 listing kategorisi döndür
-
-        Yeterli veri yoksa boş liste → _build_config fallback'e düşer.
+          1. swipe_live_events: stream_category × stream_subcategory → listing_category tıklama sayısı
+          2. subcat_interests varsa subcategory eşleşmesine ekstra ağırlık verilir
+          3. En yüksek skora sahip top-3 listing kategorisi döndür
         """
         try:
             ch = await get_clickhouse_client()
@@ -342,6 +351,7 @@ class SwipeLiveQueries:
                 """
                 SELECT
                     stream_category,
+                    stream_subcategory,
                     listing_category,
                     count() AS taps
                 FROM swipe_live_events
@@ -350,7 +360,7 @@ class SwipeLiveQueries:
                   AND stream_category != ''
                   AND listing_category != ''
                   AND timestamp >= now() - INTERVAL 60 DAY
-                GROUP BY stream_category, listing_category
+                GROUP BY stream_category, stream_subcategory, listing_category
                 HAVING taps >= 1
                 ORDER BY taps DESC
                 LIMIT 50
@@ -359,13 +369,13 @@ class SwipeLiveQueries:
             )
 
             if not result.result_rows:
-                # Kullanıcı verisi yoksa global korelasyona bak
                 return await self._fetch_global_listing_stream_correlation(interests)
 
-            # stream_category affinity'si ile ağırlıklandırılmış listing skoru
             listing_scores: dict[str, float] = {}
-            for stream_cat, listing_cat, taps in result.result_rows:
-                stream_weight = interests.get(stream_cat, 0.1)
+            _subcat = subcat_interests or {}
+            for stream_cat, stream_subcat, listing_cat, taps in result.result_rows:
+                subcat_key = f"{stream_cat}|{stream_subcat}" if stream_subcat else ""
+                stream_weight = _subcat.get(subcat_key, interests.get(stream_cat, 0.1)) if subcat_key else interests.get(stream_cat, 0.1)
                 listing_scores[listing_cat] = listing_scores.get(listing_cat, 0.0) + taps * stream_weight
 
             if not listing_scores:

@@ -40,6 +40,109 @@ _AFFINITY_CACHE_TTL = 900   # 15 dakika
 _AFFINITY_DAYS = 7
 
 
+async def get_user_subcategory_affinity(
+    user_id: int,
+    db: AsyncSession,
+    top_n: int = 5,
+) -> dict[str, float]:
+    """
+    ClickHouse feed_analytics.listing_subcategory üzerinden subcategory affinite profili döndürür.
+
+    Döndürür: {'category|subcategory': normalized_score, ...} — top_n çift.
+    """
+    redis = await get_redis()
+    cache_key = f"ch_subcat_affinity:{user_id}"
+    cached = await redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    try:
+        ch = await get_clickhouse_client()
+        if ch is None:
+            return {}
+    except Exception as exc:
+        logger.warning("[RecSvc] ClickHouse bağlanamadı (subcat): %s", exc)
+        return {}
+
+    uid_str = str(user_id)
+    ch_query = f"""
+        SELECT
+            listing_id,
+            listing_subcategory,
+            SUM(
+                CASE
+                    WHEN event_type = 'click'
+                        THEN 5 * log2(toFloat64(slot_index) + 2.0)
+                    WHEN event_type = 'impression' AND dwell_time_ms > 3000
+                        THEN 2
+                    WHEN event_type = 'skip'
+                        THEN -2
+                    ELSE 0
+                END
+            ) AS score
+        FROM feed_analytics
+        WHERE user_id = '{uid_str}'
+          AND listing_subcategory != ''
+          AND timestamp >= now() - INTERVAL {_AFFINITY_DAYS} DAY
+        GROUP BY listing_id, listing_subcategory
+        HAVING score > 0
+        ORDER BY score DESC
+        LIMIT 100
+    """
+
+    try:
+        result = await ch.query(ch_query)
+        rows = result.result_rows
+    except Exception as exc:
+        logger.warning("[RecSvc] ClickHouse subcat affinity sorgusu başarısız: %s", exc)
+        return {}
+
+    if not rows:
+        return {}
+
+    # listing_id → (subcategory_string, score)
+    score_by_listing: dict[int, tuple[str, float]] = {}
+    for lid_str, subcat, score in rows:
+        try:
+            lid = int(lid_str)
+            val = float(score)
+            if lid not in score_by_listing or val > score_by_listing[lid][1]:
+                score_by_listing[lid] = (subcat, val)
+        except (ValueError, TypeError):
+            continue
+
+    if not score_by_listing:
+        return {}
+
+    cat_result = await db.execute(
+        select(Listing.id, Listing.category).where(
+            Listing.id.in_(list(score_by_listing.keys()))
+        )
+    )
+
+    subcat_scores: dict[str, float] = {}
+    for lid, category in cat_result.all():
+        if not category:
+            continue
+        subcat_str, score_val = score_by_listing.get(lid, ("", 0.0))
+        if not subcat_str:
+            continue
+        key = f"{category}|{subcat_str}"
+        subcat_scores[key] = subcat_scores.get(key, 0.0) + score_val
+
+    if not subcat_scores:
+        return {}
+
+    max_score = max(subcat_scores.values())
+    affinity = {
+        key: round(score / max_score, 4)
+        for key, score in sorted(subcat_scores.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    }
+
+    await redis.setex(cache_key, _AFFINITY_CACHE_TTL, json.dumps(affinity))
+    return affinity
+
+
 async def get_user_category_affinity(
     user_id: int,
     db: AsyncSession,
@@ -190,13 +293,23 @@ async def get_personalized_feed(
     - Affinity boşsa (yeni kullanıcı — cold start): son 30 günün popüler ilanları.
     - Affinity varsa:
         Thompson Sampling ile hem exploit hem explore kategorileri seçilir.
-        Exploit → affinity yüksek kategorilerden; explore → diğerlerinden.
+        Exploit → affinity yüksek kategorilerden + top subcategory filtresi; explore → diğerlerinden.
       Liste karıştırılarak döndürülür.
     """
     affinity = await get_user_category_affinity(user_id, db)
 
     if not affinity:
         return await _cold_start_feed(user_id, db, limit)
+
+    # Subcategory affinity — exploit pool'u daraltmak için
+    subcat_affinity = await get_user_subcategory_affinity(user_id, db)
+    top_subcats: Optional[list[str]] = None
+    if subcat_affinity:
+        top_subcats = [
+            key.split("|", 1)[1]
+            for key in list(subcat_affinity.keys())[:3]
+            if "|" in key
+        ] or None
 
     # Mevcut tüm aktif kategorileri PostgreSQL'den çek (keşif havuzu için)
     cat_result = await db.execute(
@@ -218,7 +331,10 @@ async def get_personalized_feed(
     )
 
     exploit_ids = await _ids_from_categories(
-        user_id, db, categories=exploit_cats or list(affinity.keys()), limit=n_exploit * 4
+        user_id, db,
+        categories=exploit_cats or list(affinity.keys()),
+        subcategories=top_subcats,
+        limit=n_exploit * 4,
     )
     explore_ids = await _ids_from_categories(
         user_id, db,
@@ -243,10 +359,15 @@ async def _ids_from_categories(
     db: AsyncSession,
     *,
     categories: Optional[list[str]] = None,
+    subcategories: Optional[list[str]] = None,
     exclude_categories: Optional[list[str]] = None,
     limit: int = 40,
 ) -> list[int]:
-    """Belirtilen kategorilerden (veya hariç) rastgele aktif ilan ID'leri döndürür."""
+    """Belirtilen kategorilerden (veya hariç) rastgele aktif ilan ID'leri döndürür.
+
+    subcategories verilirse: category filtresi + subcategory filtresi (kesişim).
+    Kesişim sonucu boş gelirse subcategory filtresi düşürülür.
+    """
     clauses = [
         "l.status = 'active'",
         "l.status != 'deleted'",
@@ -257,6 +378,9 @@ async def _ids_from_categories(
     if categories:
         clauses.append("l.category = ANY(:cats)")
         params["cats"] = categories
+    if subcategories:
+        clauses.append("l.subcategory = ANY(:subcats)")
+        params["subcats"] = subcategories
     if exclude_categories:
         clauses.append("l.category != ALL(:excats)")
         params["excats"] = exclude_categories
@@ -266,7 +390,20 @@ async def _ids_from_categories(
         text(f"SELECT l.id FROM listings l WHERE {where} ORDER BY RANDOM() LIMIT :lim"),
         params,
     )
-    return [row.id for row in result]
+    ids = [row.id for row in result]
+
+    # Kesişim boşsa subcategory filtresini düşür ve tekrar dene
+    if not ids and subcategories and categories:
+        params_fallback = {k: v for k, v in params.items() if k != "subcats"}
+        clauses_fallback = [c for c in clauses if "subcategory" not in c]
+        where_fallback = " AND ".join(clauses_fallback)
+        result_fallback = await db.execute(
+            text(f"SELECT l.id FROM listings l WHERE {where_fallback} ORDER BY RANDOM() LIMIT :lim"),
+            params_fallback,
+        )
+        ids = [row.id for row in result_fallback]
+
+    return ids
 
 
 async def _cold_start_feed(user_id: int, db: AsyncSession, limit: int) -> list[dict]:

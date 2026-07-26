@@ -109,8 +109,18 @@ async def get_video_feed(
 async def get_swipe_feed(
     limit: int = 10,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
-    return await GetSwipeFeedQuery(uow).execute(limit=limit)
+    preferred: list[str] | None = None
+    if current_user:
+        try:
+            from app.use_cases.feed.queries.feed_queries import FeedQueries
+            interests = await FeedQueries(uow).get_user_interests(current_user.id)
+            if interests:
+                preferred = [cat for cat, _ in sorted(interests.items(), key=lambda x: -x[1])[:3]]
+        except Exception:
+            pass
+    return await GetSwipeFeedQuery(uow).execute(limit=limit, preferred_categories=preferred)
 
 
 @router.get("/my")

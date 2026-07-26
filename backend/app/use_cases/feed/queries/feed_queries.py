@@ -56,7 +56,7 @@ class FeedQueries:
         self.uow = uow
 
     async def get_user_interests(self, user_id: int,) -> dict[str, float]:
-        """Kullanıcının category → score sözlüğünü döndürür. Redis'ten okur, yoksa DB'den."""
+        """Kullanıcının category → score sözlüğünü döndürür (subcategory IS NULL satırlar). Redis'ten okur, yoksa DB'den."""
         redis = await get_redis()
         cache_key = f"interests:{user_id}"
         cached = await redis.get(cache_key)
@@ -64,10 +64,30 @@ class FeedQueries:
             return json.loads(cached)
 
         rows = await self.uow.session.execute(
-            text("SELECT category, score FROM user_interests WHERE user_id = :uid ORDER BY score DESC"),
+            text("SELECT category, score FROM user_interests WHERE user_id = :uid AND subcategory IS NULL ORDER BY score DESC"),
             {"uid": user_id},
         )
         interests = {row.category: row.score for row in rows}
+        if interests:
+            await redis.setex(cache_key, INTEREST_CACHE_TTL, json.dumps(interests))
+        return interests
+
+    async def get_user_subcategory_interests(self, user_id: int) -> dict[str, float]:
+        """Kullanıcının 'category|subcategory' → score sözlüğünü döndürür. Redis'ten okur, yoksa DB'den."""
+        redis = await get_redis()
+        cache_key = f"subcat_interests:{user_id}"
+        cached = await redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        rows = await self.uow.session.execute(
+            text(
+                "SELECT category, subcategory, score FROM user_interests "
+                "WHERE user_id = :uid AND subcategory IS NOT NULL ORDER BY score DESC"
+            ),
+            {"uid": user_id},
+        )
+        interests = {f"{row.category}|{row.subcategory}": row.score for row in rows}
         if interests:
             await redis.setex(cache_key, INTEREST_CACHE_TTL, json.dumps(interests))
         return interests
@@ -234,6 +254,8 @@ class FeedQueries:
         if not interests:
             return await self._popular_feed(offset, limit, exclude_user_id=user_id)
 
+        subcat_interests = await self.get_user_subcategory_interests(user_id)
+
         # Hesitation sinyali: kullanıcının teklif tereddüdü olan ilanlar
         # Bu ilanlar için seen_decay cezası sıfırlanır (tekrar göster)
         redis = await get_redis()
@@ -245,11 +267,12 @@ class FeedQueries:
         if user_embedding:
             freshness_w = 0.22 if 6 <= hour <= 10 else 0.15
             social_w    = 0.12 if 19 <= hour <= 23 else 0.08
-            cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.30, 0.15, 0.08, 0.04, 0.04, 0.06, 0.25
+            cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.22, 0.15, 0.08, 0.04, 0.04, 0.06, 0.25
         else:
             freshness_w = 0.28 if 6 <= hour <= 10 else 0.20
             social_w    = 0.14 if 19 <= hour <= 23 else 0.10
-            cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.40, 0.18, 0.08, 0.05, 0.05, 0.08, 0.30
+            cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.32, 0.18, 0.08, 0.05, 0.05, 0.08, 0.30
+        subcat_w = 0.08
 
         # Condition tercih terimi (Redis → normalize edilmiş SQL CASE)
         cond_expr = await self._get_condition_pref_expr(user_id)
@@ -265,6 +288,17 @@ class FeedQueries:
             for cat, score in top_cats
         )
         cat_affinity_expr = f"CASE {cat_cases} ELSE 0.0 END"
+
+        # Subcategory affinity — top-8 (category|subcategory) çifti
+        top_subcats = sorted(subcat_interests.items(), key=lambda x: x[1], reverse=True)[:8]
+        if top_subcats:
+            subcat_cases = " ".join(
+                f"WHEN l.category || '|' || COALESCE(l.subcategory, '') = '{key}' THEN {score:.4f}"
+                for key, score in top_subcats
+            )
+            subcat_affinity_expr = f"CASE {subcat_cases} ELSE 0.0 END"
+        else:
+            subcat_affinity_expr = "0.0"
 
         # Exploration bonusu — top-5 dışı
         exploration_expr = f"CASE WHEN l.category NOT IN ({','.join(repr(c) for c in top_cat_names)}) THEN 0.3 ELSE 0.0 END"
@@ -445,8 +479,10 @@ class FeedQueries:
                 SELECT
                     l.id,
                     l.category,
+                    l.subcategory,
                     (
                         ({cat_affinity_expr}) * {cat_w}
+                        + ({subcat_affinity_expr}) * {subcat_w}
                         + {pgvec_score_term}
                         + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * {quality_w}
                         + COALESCE(l.quality_score, 0.5) * {content_quality_w}
@@ -461,8 +497,7 @@ class FeedQueries:
                         + COALESCE(sc.conv_rate, 0.0) * {conv_w}
                         + COALESCE(si.boost, 0.0) * {influence_w}
                         + ({cond_expr}) * {cond_w}
-                    ) AS feed_score,
-                    l.category
+                    ) AS feed_score
                 FROM candidates c
                 INNER JOIN listings l ON l.id = c.id
                 LEFT JOIN (
@@ -486,7 +521,7 @@ class FeedQueries:
                 LEFT JOIN seller_conv sc ON sc.seller_id = l.user_id
                 LEFT JOIN seller_influence si ON si.seller_id = l.user_id
             )
-            SELECT id, category, feed_score
+            SELECT id, category, subcategory, feed_score
             FROM scored
             ORDER BY feed_score DESC
             LIMIT :pool_lim
@@ -494,16 +529,24 @@ class FeedQueries:
 
         rows = (await self.uow.session.execute(sql, params)).all()
 
-        # Greedy kategori çeşitliliği: her kategoriden max 4 ilan (ForYou ile tutarlı)
+        # Greedy kategori + subcategory çeşitliliği
         MAX_PER_CAT = 4
+        MAX_PER_SUBCAT = 2
         cat_counts: dict[str, int] = {}
+        subcat_counts: dict[str, int] = {}
         diverse_ids: list[int] = []
         overflow_ids: list[int] = []
         for row in rows:
             cat = row.category or ""
-            if cat_counts.get(cat, 0) < MAX_PER_CAT:
+            subcat = row.subcategory or ""
+            subcat_key = f"{cat}|{subcat}" if subcat else ""
+            cat_ok = cat_counts.get(cat, 0) < MAX_PER_CAT
+            subcat_ok = not subcat_key or subcat_counts.get(subcat_key, 0) < MAX_PER_SUBCAT
+            if cat_ok and subcat_ok:
                 diverse_ids.append(row.id)
                 cat_counts[cat] = cat_counts.get(cat, 0) + 1
+                if subcat_key:
+                    subcat_counts[subcat_key] = subcat_counts.get(subcat_key, 0) + 1
             else:
                 overflow_ids.append(row.id)
             if len(diverse_ids) >= limit + offset:

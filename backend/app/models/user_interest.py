@@ -11,6 +11,7 @@ class UserInterest(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "category", name="uq_user_interest"),
         Index("ix_user_interests_user_score", "user_id", "score"),
+        Index("ix_user_interests_category_subcategory", "user_id", "category", "subcategory"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -18,6 +19,7 @@ class UserInterest(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     category: Mapped[str] = mapped_column(String(50), nullable=False)
+    subcategory: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     raw_signals: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
