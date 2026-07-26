@@ -1677,7 +1677,7 @@ class _ListingVideoPage extends ConsumerStatefulWidget {
   final int slotIndex;
   final String streamCategory;
   // Parent'tan gelen swipe_live_events yazıcısı — LPG CTR hesabı için
-  final void Function(int listingId, String eventType, {int dwellMs, String listingCategory, int slotIndex})? onSwipeLiveEvent;
+  final void Function(int listingId, String eventType, {int dwellMs, String listingCategory, String listingSubcategory, int slotIndex})? onSwipeLiveEvent;
 
   const _ListingVideoPage({
     super.key,
