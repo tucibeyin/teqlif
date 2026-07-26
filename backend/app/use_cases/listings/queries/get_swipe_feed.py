@@ -27,6 +27,7 @@ class GetSwipeFeedQuery:
                 "title": listing.title,
                 "price": listing.price,
                 "category": listing.category,
+                "subcategory": listing.subcategory,
                 "location": listing.location,
                 "video_url": listing.video_url,
                 "thumbnail_url": listing.thumbnail_url,

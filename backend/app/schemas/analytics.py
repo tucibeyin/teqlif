@@ -19,6 +19,7 @@ class FeedEventCreate(BaseModel):
     slot_index: int = Field(default=0, ge=0)
     stream_category: str = Field(default="", max_length=64)
     listing_condition: str = Field(default="", max_length=20)
+    listing_subcategory: str = Field(default="", max_length=100)
 
 
 class FeedEventBatch(BaseModel):
@@ -29,3 +30,4 @@ class SearchEventCreate(BaseModel):
     query: str = Field(..., min_length=1, max_length=500)
     category: str = Field(default="", max_length=64)
     result_count: int = Field(default=0, ge=0)
+    subcategory: str = Field(default="", max_length=100)

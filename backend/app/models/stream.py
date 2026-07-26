@@ -16,6 +16,7 @@ class LiveStream(Base):
     room_name: Mapped[str] = mapped_column(String(120), unique=True, index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     category: Mapped[str] = mapped_column(String(60), nullable=False, default="other")
+    subcategory: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     host_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     is_live: Mapped[bool] = mapped_column(Boolean, default=True)
     viewer_count: Mapped[int] = mapped_column(Integer, default=0)

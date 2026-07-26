@@ -17,6 +17,7 @@ class StreamOut {
   final String roomName;
   final String title;
   final String category;
+  final String? subcategory;
   final int viewerCount;
   final StreamHost host;
   final String? thumbnailUrl;
@@ -26,14 +27,13 @@ class StreamOut {
     required this.roomName,
     required this.title,
     required this.category,
+    this.subcategory,
     required this.viewerCount,
     required this.host,
     this.thumbnailUrl,
   });
 
   /// JoinTokenOut'tan minimal bir StreamOut stub'ı oluşturur.
-  /// Yalnızca id, roomName, title, hostUsername alanları doludur.
-  /// SwipeLiveScreen.single() tarafından kullanılır.
   factory StreamOut.fromJoinToken(JoinTokenOut t) => StreamOut(
         id: t.streamId,
         roomName: t.roomName,
@@ -48,6 +48,7 @@ class StreamOut {
         roomName: json['room_name'],
         title: json['title'],
         category: json['category'] ?? 'other',
+        subcategory: json['subcategory'] as String?,
         viewerCount: json['viewer_count'] ?? 0,
         host: StreamHost.fromJson(json['host']),
         thumbnailUrl: json['thumbnail_url'] as String?,
@@ -58,6 +59,7 @@ class StreamOut {
         'room_name': roomName,
         'title': title,
         'category': category,
+        'subcategory': subcategory,
         'viewer_count': viewerCount,
         'host': host.toJson(),
         'thumbnail_url': thumbnailUrl,

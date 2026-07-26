@@ -11,6 +11,7 @@ VALID_CATEGORIES = {
 class StreamStart(BaseModel):
     title: str
     category: str
+    subcategory: Optional[str] = None
 
     @field_validator("title")
     @classmethod
@@ -43,6 +44,7 @@ class StreamOut(BaseModel):
     room_name: str
     title: str
     category: str
+    subcategory: Optional[str] = None
     host: StreamHostOut
     viewer_count: int
     started_at: datetime

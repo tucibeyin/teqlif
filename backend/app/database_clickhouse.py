@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS user_events
     price_point      Nullable(Float64),
     duration_seconds Nullable(Float64),
     metadata         String DEFAULT '',
-    timestamp        DateTime DEFAULT now()
+    timestamp        DateTime DEFAULT now(),
+    subcategory      LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
@@ -61,20 +62,22 @@ SETTINGS index_granularity = 8192
 
 _ALTER_USER_EVENTS = [
     "ALTER TABLE user_events ADD COLUMN IF NOT EXISTS metadata String DEFAULT ''",
+    "ALTER TABLE user_events ADD COLUMN IF NOT EXISTS subcategory LowCardinality(String) DEFAULT ''",
 ]
 
 _CREATE_FEED_ANALYTICS_TABLE = """
 CREATE TABLE IF NOT EXISTS feed_analytics
 (
-    timestamp        DateTime,
-    user_id          String,
-    listing_id       String,
-    event_type       LowCardinality(String),
-    dwell_time_ms    UInt32,
-    content_type     LowCardinality(String) DEFAULT '',
-    slot_index       UInt32 DEFAULT 0,
-    stream_category  LowCardinality(String) DEFAULT '',
-    listing_condition LowCardinality(String) DEFAULT ''
+    timestamp           DateTime,
+    user_id             String,
+    listing_id          String,
+    event_type          LowCardinality(String),
+    dwell_time_ms       UInt32,
+    content_type        LowCardinality(String) DEFAULT '',
+    slot_index          UInt32 DEFAULT 0,
+    stream_category     LowCardinality(String) DEFAULT '',
+    listing_condition   LowCardinality(String) DEFAULT '',
+    listing_subcategory LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
@@ -86,6 +89,7 @@ _ALTER_FEED_ANALYTICS = [
     "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS slot_index UInt32 DEFAULT 0",
     "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS stream_category LowCardinality(String) DEFAULT ''",
     "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS listing_condition LowCardinality(String) DEFAULT ''",
+    "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS listing_subcategory LowCardinality(String) DEFAULT ''",
 ]
 
 _CREATE_SEARCH_EVENTS_TABLE = """
@@ -96,7 +100,8 @@ CREATE TABLE IF NOT EXISTS search_events
     query        String,
     category     LowCardinality(String) DEFAULT '',
     result_count UInt32 DEFAULT 0,
-    intent       LowCardinality(String) DEFAULT ''
+    intent       LowCardinality(String) DEFAULT '',
+    subcategory  LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
@@ -105,23 +110,26 @@ ORDER BY (category, timestamp)
 
 _ALTER_SEARCH_EVENTS = [
     "ALTER TABLE search_events ADD COLUMN IF NOT EXISTS intent LowCardinality(String) DEFAULT ''",
+    "ALTER TABLE search_events ADD COLUMN IF NOT EXISTS subcategory LowCardinality(String) DEFAULT ''",
 ]
 
 _CREATE_SWIPE_LIVE_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS swipe_live_events
 (
-    user_id           UInt32,
-    stream_id         UInt32        DEFAULT 0,
-    listing_id        UInt32        DEFAULT 0,
-    event_type        LowCardinality(String),
-    dwell_ms          UInt32        DEFAULT 0,
-    stream_category   LowCardinality(String) DEFAULT '',
-    listing_category  LowCardinality(String) DEFAULT '',
-    listing_condition LowCardinality(String) DEFAULT '',
-    listings_seen     UInt8         DEFAULT 0,
-    slot_index        UInt32        DEFAULT 0,
-    session_id        String        DEFAULT '',
-    timestamp         DateTime      DEFAULT now()
+    user_id              UInt32,
+    stream_id            UInt32        DEFAULT 0,
+    listing_id           UInt32        DEFAULT 0,
+    event_type           LowCardinality(String),
+    dwell_ms             UInt32        DEFAULT 0,
+    stream_category      LowCardinality(String) DEFAULT '',
+    listing_category     LowCardinality(String) DEFAULT '',
+    listing_condition    LowCardinality(String) DEFAULT '',
+    listings_seen        UInt8         DEFAULT 0,
+    slot_index           UInt32        DEFAULT 0,
+    session_id           String        DEFAULT '',
+    timestamp            DateTime      DEFAULT now(),
+    stream_subcategory   LowCardinality(String) DEFAULT '',
+    listing_subcategory  LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
@@ -131,6 +139,8 @@ SETTINGS index_granularity = 8192
 
 _ALTER_SWIPE_LIVE_EVENTS = [
     "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS listing_condition LowCardinality(String) DEFAULT ''",
+    "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS stream_subcategory LowCardinality(String) DEFAULT ''",
+    "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS listing_subcategory LowCardinality(String) DEFAULT ''",
 ]
 
 # ── Bağlantı ──────────────────────────────────────────────────────────────────
@@ -216,16 +226,18 @@ async def buffer_user_event(
     user_id: Optional[int] = None,
     price_point: Optional[float] = None,
     duration_seconds: Optional[float] = None,
+    subcategory: str = "",
 ) -> None:
     """
     user_events Redis buffer'ına ekler (< 1ms). Fire-and-forget.
     Timestamp event anında alınır — flush anında değil.
+    Row format: [user_id, item_id, item_type, event_type, price_point, duration_seconds, timestamp, subcategory]
     """
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
         row = [user_id, item_id, item_type, event_type,
-               price_point, duration_seconds, _now_str()]
+               price_point, duration_seconds, _now_str(), subcategory]
         await redis.rpush(_BUF_USER_EVENTS, json.dumps(row))
     except Exception as exc:
         logger.warning("[ClickHouse] buffer_user_event başarısız: %s", exc)
@@ -238,12 +250,15 @@ async def buffer_search_event(
     category: str = "",
     result_count: int = 0,
     intent: str = "",
+    subcategory: str = "",
 ) -> None:
-    """search_events Redis buffer'ına ekler."""
+    """search_events Redis buffer'ına ekler.
+    Row format: [timestamp, user_id, query, category, result_count, intent, subcategory]
+    """
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        row = [_now_str(), user_id, query, category, result_count, intent]
+        row = [_now_str(), user_id, query, category, result_count, intent, subcategory]
         await redis.rpush(_BUF_SEARCH_EVENTS, json.dumps(row))
     except Exception as exc:
         logger.warning("[ClickHouse] buffer_search_event başarısız: %s", exc)
@@ -279,6 +294,7 @@ async def batch_insert_swipe_live_events(events: list[dict]) -> None:
         "user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
         "stream_category", "listing_category", "listing_condition",
         "listings_seen", "slot_index", "session_id",
+        "stream_subcategory", "listing_subcategory",
     ]
     rows = [
         [
@@ -293,6 +309,8 @@ async def batch_insert_swipe_live_events(events: list[dict]) -> None:
             e.get("listings_seen", 0),
             e.get("slot_index", 0),
             e.get("session_id", ""),
+            e.get("stream_subcategory", ""),
+            e.get("listing_subcategory", ""),
         ]
         for e in events
     ]
@@ -342,17 +360,19 @@ async def flush_all_buffers() -> None:
         redis = await get_redis()
 
         # ── user_events ────────────────────────────────────────────────────────
+        # Row format: [user_id, item_id, item_type, event_type, price_point, duration_seconds, timestamp, subcategory?]
         rows = await _drain(redis, _BUF_USER_EVENTS)
         if rows:
             data = [
                 [
-                    r[0],              # user_id    Nullable(UInt32)
-                    int(r[1]),         # item_id    UInt32
-                    str(r[2]),         # item_type  LowCardinality
-                    str(r[3]),         # event_type LowCardinality
-                    r[4],              # price_point Nullable(Float64)
-                    r[5],              # duration_seconds Nullable(Float64)
-                    _parse_dt(r[6]),   # timestamp  DateTime
+                    r[0],                                      # user_id
+                    int(r[1]),                                 # item_id
+                    str(r[2]),                                 # item_type
+                    str(r[3]),                                 # event_type
+                    r[4],                                      # price_point
+                    r[5],                                      # duration_seconds
+                    _parse_dt(r[6]),                           # timestamp
+                    str(r[7]) if len(r) > 7 else "",           # subcategory (yeni alan)
                 ]
                 for r in rows
             ]
@@ -361,29 +381,31 @@ async def flush_all_buffers() -> None:
                 data,
                 column_names=[
                     "user_id", "item_id", "item_type", "event_type",
-                    "price_point", "duration_seconds", "timestamp",
+                    "price_point", "duration_seconds", "timestamp", "subcategory",
                 ],
             )
             logger.debug("[ClickHouse] user_events flush | %d satır", len(data))
 
         # ── search_events ──────────────────────────────────────────────────────
+        # Row format: [timestamp, user_id, query, category, result_count, intent, subcategory?]
         rows = await _drain(redis, _BUF_SEARCH_EVENTS)
         if rows:
             data = [
                 [
-                    _parse_dt(r[0]),          # timestamp  DateTime
-                    r[1],                     # user_id    Nullable(UInt32)
-                    str(r[2]),                # query      String
-                    str(r[3]),                # category   LowCardinality
-                    int(r[4]),                # result_count UInt32
-                    str(r[5]) if len(r) > 5 else "",  # intent LowCardinality
+                    _parse_dt(r[0]),                           # timestamp
+                    r[1],                                      # user_id
+                    str(r[2]),                                 # query
+                    str(r[3]),                                 # category
+                    int(r[4]),                                 # result_count
+                    str(r[5]) if len(r) > 5 else "",           # intent
+                    str(r[6]) if len(r) > 6 else "",           # subcategory (yeni alan)
                 ]
                 for r in rows
             ]
             await _client.insert(
                 "search_events",
                 data,
-                column_names=["timestamp", "user_id", "query", "category", "result_count", "intent"],
+                column_names=["timestamp", "user_id", "query", "category", "result_count", "intent", "subcategory"],
             )
             logger.debug("[ClickHouse] search_events flush | %d satır", len(data))
 

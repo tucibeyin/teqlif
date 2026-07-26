@@ -1570,7 +1570,7 @@ async def ingest_feed_events(
 
     rows = [
         [now, uid, e.listing_id, e.event_type, e.dwell_time_ms,
-         e.content_type, e.slot_index, e.stream_category, e.listing_condition]
+         e.content_type, e.slot_index, e.stream_category, e.listing_condition, e.listing_subcategory]
         for e in batch.events
     ]
 
@@ -1579,7 +1579,7 @@ async def ingest_feed_events(
             "feed_analytics",
             rows,
             column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
-                          "content_type", "slot_index", "stream_category", "listing_condition"],
+                          "content_type", "slot_index", "stream_category", "listing_condition", "listing_subcategory"],
         )
         logger.debug("[feed-events] %d olay yazıldı | user_id=%s", len(rows), uid)
     except Exception as exc:
@@ -1594,7 +1594,9 @@ class SwipeLiveEventItem(BaseModel):
     event_type: str = Field(max_length=40)
     dwell_ms: int = 0
     stream_category: str = Field(default="", max_length=30)
+    stream_subcategory: str = Field(default="", max_length=100)
     listing_category: str = Field(default="", max_length=30)
+    listing_subcategory: str = Field(default="", max_length=100)
     listing_condition: str = Field(default="", max_length=20)
     listings_seen: int = 0
     slot_index: int = 0
@@ -1639,7 +1641,9 @@ async def ingest_swipe_live_events(
             "event_type": e.event_type,
             "dwell_ms": e.dwell_ms,
             "stream_category": e.stream_category,
+            "stream_subcategory": e.stream_subcategory,
             "listing_category": e.listing_category,
+            "listing_subcategory": e.listing_subcategory,
             "listing_condition": e.listing_condition or condition_map.get(e.listing_id, ""),
             "listings_seen": e.listings_seen,
             "slot_index": e.slot_index,
@@ -1800,6 +1804,7 @@ async def track_search(
             category=body.category,
             result_count=body.result_count,
             intent=intent,
+            subcategory=body.subcategory,
         )
     except Exception as exc:
         logger.warning("[track-search] ClickHouse buffer başarısız: %s", exc)

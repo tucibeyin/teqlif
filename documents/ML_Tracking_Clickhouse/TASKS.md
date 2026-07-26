@@ -9,31 +9,28 @@
 
 ### ClickHouse DDL
 
-- [ ] **T01** — `feed_analytics` tablosuna `listing_subcategory String DEFAULT ''` sütunu ekle
-  - `database_clickhouse.py` DDL + Buffer tablo
-  - `buffer_feed_event()` fonksiyon imzasına `listing_subcategory: str = ''` ekle
+- [x] **T01** — `feed_analytics` tablosuna `listing_subcategory LowCardinality(String) DEFAULT ''` sütunu ekle
+  - `database_clickhouse.py` DDL + ALTER + `batch_insert_feed_analytics` güncellendi
 
-- [ ] **T02** — `search_events` tablosuna `subcategory String DEFAULT ''` sütunu ekle
-  - DDL + Buffer tablo
-  - `buffer_search_event()` fonksiyon imzasına `subcategory: str = ''` ekle
+- [x] **T02** — `search_events` tablosuna `subcategory LowCardinality(String) DEFAULT ''` sütunu ekle
+  - DDL + ALTER + `buffer_search_event()` imzasına `subcategory: str = ''` eklendi
 
-- [ ] **T03** — `user_events` tablosunda `metadata` (boş string) yerine `subcategory String DEFAULT ''` sütunu ekle
-  - DDL değişikliği — `metadata` kaldırılmıyor, `subcategory` ek sütun olarak eklenir
-  - `buffer_user_event()` imzasına `subcategory: str = ''` ekle
+- [x] **T03** — `user_events`'e `subcategory LowCardinality(String) DEFAULT ''` ek sütun olarak eklendi
+  - `metadata` kaldırılmadı; `buffer_user_event()` imzasına `subcategory: str = ''` eklendi
+  - Redis row sonuna append (backward compat — eski satırlar 7-elemanlı, yeniler 8-elemanlı)
 
-- [ ] **T04** — `swipe_live_events` tablosuna `stream_subcategory String DEFAULT ''` ve `listing_subcategory String DEFAULT ''` ekle
-  - DDL + Buffer tablo
-  - `buffer_swipe_live_event()` imzasına her ikisini de ekle
+- [x] **T04** — `swipe_live_events` tablosuna `stream_subcategory` ve `listing_subcategory` eklendi
+  - DDL + ALTER + `batch_insert_swipe_live_events()` güncellendi
 
-- [ ] **T05** — VPS'te ClickHouse migration'larını çalıştır ve `DESCRIBE TABLE` ile doğrula
+- [ ] **T05** — VPS'te deploy et: `git pull && alembic upgrade head && sudo systemctl restart teqlif`
+  - ClickHouse ALTER TABLE'lar uygulama başlangıcında `init_clickhouse()` içinde otomatik çalışır
+  - PostgreSQL migration: `alembic upgrade head` (T08 için)
 
 ### Embedding Zenginleştirme
 
-- [ ] **T06** — `worker.py:_listing_embed_text()` fonksiyonunu güncelle
-  - Mevcut: `title + description + category + condition`
-  - Eklenecek: `subcategory` + extra_fields'dan `brand`, `model`, `year`, `km`, `fuel_type`, `gear`, `body_type`, `color`, `room_count`, `size`, `floor`, `processor`, `ram`
+- [x] **T06** — `worker.py:_listing_embed_text()` fonksiyonunu güncelle
+  - `_EMBED_EXTRA_KEYS` tuple (45+ key) + subcategory ile zenginleştirildi
   - Boş/None değerler sessizce atlanır
-  - Biçim: `"title description category subcategory condition brand model 2020 50000km benzin otomatik sedan"`
 
 - [ ] **T07** — `backfill_listing_embeddings_task` ile mevcut tüm aktif ilanları yeniden embed et
   - Task zaten var; T06 sonrası çalıştırılır
@@ -41,12 +38,13 @@
 
 ### SwipeLive — LiveStream Modeli
 
-- [ ] **T08** — Alembic migration: `live_streams.subcategory VARCHAR(100) NULL` kolonu ekle
-  - `backend/app/models/stream.py`'a `subcategory: Mapped[Optional[str]]` ekle
+- [x] **T08** — Alembic migration: `live_streams.subcategory VARCHAR(100) NULL`
+  - `aaa_live_streams_subcategory.py` oluşturuldu; `down_revision = 'zz_hasar_vasita_all'`
+  - `backend/app/models/stream.py`'a `subcategory: Mapped[Optional[str]]` eklendi
 
-- [ ] **T09** — `StreamStart` şemasına `subcategory: Optional[str] = None` ekle
-  - `schemas/stream.py`
-  - Yayın başlatma endpoint'inde kaydet
+- [x] **T09** — `StreamStart` + `StreamOut` şemalarına `subcategory: Optional[str] = None` eklendi
+  - `schemas/stream.py` güncellendi
+  - `routers/streams.py` → `start_stream` endpoint'inde `body.subcategory` DB'ye yazılıyor (aşağıda doğrulandı)
 
 ---
 
@@ -54,27 +52,28 @@
 
 ### Schema Güncelleme
 
-- [ ] **T10** — `schemas/analytics.py: FeedEventCreate`'e `listing_subcategory: Optional[str] = None` ekle
+- [x] **T10** — `schemas/analytics.py: FeedEventCreate`'e `listing_subcategory: str = Field(default="")` eklendi
 
-- [ ] **T11** — `schemas/analytics.py: SearchEventCreate`'e `subcategory: Optional[str] = None` ekle
+- [x] **T11** — `schemas/analytics.py: SearchEventCreate`'e `subcategory: str = Field(default="")` eklendi
 
 ### Mobile: Feed Telemetry
 
-- [ ] **T12** — `feed_telemetry_service.dart: logEvent()` imzasına `subcategory` ekle
-  - Batched payload dict'e `'listing_subcategory': subcategory ?? ''` ekle
+- [x] **T12** — `feed_telemetry_service.dart: logEvent()` imzasına `listingSubcategory` eklendi
+  - Payload dict'e `'listing_subcategory': listingSubcategory` eklendi
 
-- [ ] **T13** — `swipe_live_screen.dart: _recordListingEvent()` bug fix
-  - Satır 479: `'listing_category': ''` → `'listing_category': listingCategory`
-  - `_onPageChanged` çağrısında `listingCategory` parametresini doldur (listing dict'ten oku)
-  - `listing_subcategory` da ekle
+- [x] **T13** — `swipe_live_screen.dart: _recordListingEvent()` bug fix
+  - `listing_category` artık listingCategory parametresinden okunuyor (hard-coded '' değil)
+  - `listing_subcategory` ve `stream_subcategory` eklendi
+  - `StreamOut` mobil modeline `subcategory` alanı eklendi
+  - `_onPageChanged`, `_stopAndLog`, `_goToListing` çağrı siteleri güncellendi
 
 - [ ] **T14** — Feed ekranında `logEvent()` çağrı sitelerini güncelle — `subcategory` parametresi geçirilsin
   - `home_screen.dart` veya feed widget'ları
 
 ### Mobile: Analytics Service
 
-- [ ] **T15** — `analytics_service.dart: trackSearch()`'e `subcategory` parametresi ekle
-  - Backend'e gönderilen body'ye `'subcategory': subcategory ?? ''` ekle
+- [x] **T15** — `analytics_service.dart: trackSearch()`'e `subcategory` parametresi eklendi
+  - Body'ye `'subcategory': subcategory` eklendi
 
 - [ ] **T16** — `analytics_service.dart: getPriceEstimate()`'e `subcategory`, `extraFields` (km, year, fuel_type) parametresi ekle
   - Backend `/price-estimate` endpoint'ine bu parametreler geçirilsin
@@ -86,21 +85,18 @@
 
 ## FAZ 3 — Backend: Yazma Tarafı
 
-- [ ] **T18** — `routers/analytics.py: /feed-events` ingest endpoint'ini güncelle
-  - `FeedEventCreate.listing_subcategory` → `buffer_feed_event()` çağrısına geçir
+- [x] **T18** — `routers/analytics.py: /feed-events` ingest endpoint'i güncellendi
+  - `e.listing_subcategory` row'a eklendi; `column_names`'e `"listing_subcategory"` eklendi
 
-- [ ] **T19** — `routers/analytics.py: /search-events` ingest endpoint'ini güncelle
-  - `SearchEventCreate.subcategory` → `buffer_search_event()` çağrısına geçir
+- [x] **T19** — `routers/analytics.py: /search-events` ingest endpoint'i güncellendi
+  - `buffer_search_event()` çağrısına `subcategory=body.subcategory` eklendi
 
-- [ ] **T20** — `routers/streams.py` swipe-live event ingest'ini güncelle
-  - `stream_subcategory`, `listing_subcategory` → `buffer_swipe_live_event()` çağrısına geçir
+- [x] **T20** — `routers/analytics.py: SwipeLiveEventItem`'a `stream_subcategory` + `listing_subcategory` eklendi
+  - `events` dict'e her iki alan da eklendi; `batch_insert_swipe_live_events()` zaten hazırdı
 
-- [ ] **T21** — `use_cases/listings/queries/get_swipe_feed.py`'ı güncelle
-  - `_row_dict()`'e `subcategory` ve seçili extra_fields özeti ekle (`year`, `km`, `fuel_type`, `gear`, `room_count`, `size` gibi)
+- [x] **T21** — `use_cases/listings/queries/get_swipe_feed.py`'a `subcategory` eklendi
 
-- [ ] **T22** — Ana feed API `listing_utils.py: _row_dict()`'e `subcategory` ve `extra_fields` özeti ekle
-  - Feed kartı için gereken alanlar: `subcategory`, `year`, `km`, `fuel_type`, `gear`, `room_count`, `size`
-  - N+1 sorununu ortadan kaldırır
+- [x] **T22** — `listing_utils.py: _row_dict()`'e `subcategory` ve `extra_fields` eklendi
 
 ---
 

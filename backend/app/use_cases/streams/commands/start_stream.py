@@ -10,7 +10,7 @@ class StartStreamCommand:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, user_id: int, title: str, category: str = None, listing_id: int = None, thumbnail_url: str = None) -> dict:
+    async def execute(self, user_id: int, title: str, category: str = None, subcategory: str = None, listing_id: int = None, thumbnail_url: str = None) -> dict:
         import uuid
         from app.config import settings
         from app.use_cases.streams.stream_utils import make_livekit_token
@@ -34,6 +34,7 @@ class StartStreamCommand:
                 "title": title.strip(),
                 "is_live": False,
                 "category": category if category else "other",
+                "subcategory": subcategory,
                 "thumbnail_url": thumbnail_url
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)

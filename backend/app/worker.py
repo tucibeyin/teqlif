@@ -39,6 +39,29 @@ _CONDITION_EMBED: dict[str, str] = {
 }
 
 
+_EMBED_EXTRA_KEYS = (
+    # Araç ortak: marka/model/yıl/kilometre/yakıt/vites/kasa/renk/hasar
+    "brand", "model", "year", "mileage", "fuel_type", "transmission",
+    "body_type", "color", "damage_status",
+    # Araç spesifik: motor hacmi, tip (moto/tekne/elektrikli/kamyon türü), menzil, uzunluk, çalışma saati
+    "engine_cc", "type", "range_km", "length", "working_hours",
+    # Gayrimenkul: oda sayısı, brüt/net/arsa m², kat, kat sayısı, bina yaşı, ısıtma, eşya, asansör, otopark, tapu, imar, daire sayısı
+    "room_count", "gross_sqm", "net_sqm", "sqm", "land_sqm",
+    "floor", "floor_count", "building_age", "heating", "furnishing",
+    "elevator", "parking", "title_deed", "land_use", "unit_count",
+    # Elektronik: depolama, RAM, işlemci, ekran boyutu
+    "storage", "ram", "processor", "screen_size",
+    # Giyim / ayakkabı / aksesuar / takı / saat
+    "gender", "size", "shoe_size", "material", "gold_carat", "silver_purity",
+    # Yedek parça
+    "compatible_model", "part_type",
+    # Kitap / hobi / spor
+    "book_title", "author", "publisher", "sport_type", "wheel_size",
+    # Evcil hayvan
+    "breed",
+)
+
+
 def _listing_embed_text(listing) -> str:
     """Tutarlı embedding metni — tüm üretim noktaları bu fonksiyonu kullanır."""
     parts = [listing.title or ""]
@@ -46,8 +69,15 @@ def _listing_embed_text(listing) -> str:
         parts.append(listing.description)
     if listing.category:
         parts.append(listing.category)
+    if listing.subcategory:
+        parts.append(listing.subcategory)
     if listing.condition:
         parts.append(_CONDITION_EMBED.get(listing.condition, listing.condition))
+    ef = listing.extra_fields or {}
+    for key in _EMBED_EXTRA_KEYS:
+        val = ef.get(key)
+        if val:
+            parts.append(str(val))
     return " ".join(parts).strip()
 
 

@@ -48,6 +48,7 @@ class FeedTelemetryService with WidgetsBindingObserver {
     String contentType = 'video',
     int slotIndex = 0,
     String streamCategory = '',
+    String listingSubcategory = '',
   }) async {
     if (ownerId != null) {
       final myUserId = await StorageService.getCurrentUserId();
@@ -61,6 +62,7 @@ class FeedTelemetryService with WidgetsBindingObserver {
       'content_type': contentType,
       'slot_index': slotIndex,
       'stream_category': streamCategory,
+      'listing_subcategory': listingSubcategory,
     });
     if (_eventQueue.length >= _flushThreshold) {
       flush();

@@ -388,6 +388,7 @@ class AnalyticsService {
   static Future<void> trackSearch({
     required String query,
     String category = '',
+    String subcategory = '',
     int resultCount = 0,
   }) async {
     try {
@@ -403,6 +404,7 @@ class AnalyticsService {
             body: jsonEncode({
               'query': query,
               'category': category,
+              'subcategory': subcategory,
               'result_count': resultCount,
             }),
           )

@@ -324,7 +324,14 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     if (_listingPageStart != null && prevItem is ListingFeedItem) {
       final dwellMs = now - _listingPageStart!;
       final isFast = dwellMs < _listingFastThresholdMs;
-      _recordListingEvent(prevItem.data['id'], isFast ? 'skip' : 'dwell', dwellMs: dwellMs, slotIndex: _currentPage);
+      _recordListingEvent(
+        prevItem.data['id'],
+        isFast ? 'skip' : 'dwell',
+        dwellMs: dwellMs,
+        listingCategory: (prevItem.data['category'] as String?) ?? '',
+        listingSubcategory: (prevItem.data['subcategory'] as String?) ?? '',
+        slotIndex: _currentPage,
+      );
     }
 
     setState(() {
@@ -444,7 +451,9 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
       'event_type': dwellMs < 2000 ? 'skip' : 'dwell',
       'dwell_ms': dwellMs,
       'stream_category': stream.category,
+      'stream_subcategory': stream.subcategory ?? '',
       'listing_category': '',
+      'listing_subcategory': '',
       'listings_seen': 0,
       'slot_index': _currentPage,
       'session_id': _sessionId,
@@ -458,7 +467,9 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
       'event_type': eventType,
       'dwell_ms': 0,
       'stream_category': stream.category,
+      'stream_subcategory': stream.subcategory ?? '',
       'listing_category': '',
+      'listing_subcategory': '',
       'listings_seen': 0,
       'slot_index': _currentPage,
       'session_id': _sessionId,
@@ -466,15 +477,17 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     if (_pendingEvents.length >= 20) _flushPendingEvents();
   }
 
-  void _recordListingEvent(int listingId, String eventType, {int dwellMs = 0, String listingCategory = '', int slotIndex = 0}) {
-    final streamCategory = _getCurrentStream()?.category ?? '';
+  void _recordListingEvent(int listingId, String eventType, {int dwellMs = 0, String listingCategory = '', String listingSubcategory = '', int slotIndex = 0}) {
+    final stream = _getCurrentStream();
     _pendingEvents.add({
       'stream_id': 0,
       'listing_id': listingId,
       'event_type': eventType,
       'dwell_ms': dwellMs,
-      'stream_category': streamCategory,
-      'listing_category': '',
+      'stream_category': stream?.category ?? '',
+      'stream_subcategory': stream?.subcategory ?? '',
+      'listing_category': listingCategory,
+      'listing_subcategory': listingSubcategory,
       'listings_seen': 0,
       'slot_index': _currentPage,
       'session_id': _sessionId,
@@ -1700,6 +1713,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     final lid = (widget.listing['id'] ?? '').toString();
     final lidInt = int.tryParse(lid) ?? 0;
     final category = (widget.listing['category'] as String?) ?? '';
+    final subcategory = (widget.listing['subcategory'] as String?) ?? '';
     final hasVideo = (widget.listing['video_url'] as String?) != null &&
         (widget.listing['video_url'] as String).isNotEmpty;
 
@@ -1711,6 +1725,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
       contentType: hasVideo ? 'video' : 'photo',
       slotIndex: widget.slotIndex,
       streamCategory: widget.streamCategory,
+      listingSubcategory: subcategory,
     );
 
     // swipe_live_events'e de yaz — LPG CTR hesabının veri kaynağı
@@ -1720,6 +1735,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
         ms < 2000 ? 'listing_skip' : 'listing_impression',
         dwellMs: ms,
         listingCategory: category,
+        listingSubcategory: subcategory,
         slotIndex: widget.slotIndex,
       );
     }
@@ -1823,6 +1839,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     final lid = (widget.listing['id'] ?? '').toString();
     final lidInt = int.tryParse(lid) ?? 0;
     final category = (widget.listing['category'] as String?) ?? '';
+    final subcategory = (widget.listing['subcategory'] as String?) ?? '';
     final dwellMs = _stopwatch.elapsedMilliseconds;
 
     // feed_analytics'e tıklama yaz
@@ -1833,6 +1850,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
       contentType: hasVideo ? 'video' : 'photo',
       slotIndex: widget.slotIndex,
       streamCategory: widget.streamCategory,
+      listingSubcategory: subcategory,
     );
 
     // swipe_live_events'e de yaz — LPG CTR için
@@ -1842,6 +1860,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
         'listing_tap',
         dwellMs: dwellMs,
         listingCategory: category,
+        listingSubcategory: subcategory,
         slotIndex: widget.slotIndex,
       );
     }
