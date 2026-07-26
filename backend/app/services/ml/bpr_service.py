@@ -153,6 +153,43 @@ async def train_bpr(db_session) -> int:
         logger.warning("[BPR] Yetersiz etkileşim (%d), model güncellenmedi", len(interactions))
         return 0
 
+    # Hard negatives: aynı category, farklı subcategory → 0.05 negatif sinyal
+    # Kullanıcının tıkladığı subcategory'nin "rakip" subcategory'lerini düşük ağırlıkla ekle
+    try:
+        from collections import defaultdict
+        # Tüm interacted ilan ID'lerini çek
+        all_item_ids_raw = sorted({r[1] for r in interactions})
+        if all_item_ids_raw:
+            sc_rows = await db_session.execute(text("""
+                SELECT id, category, subcategory FROM listings
+                WHERE id = ANY(:ids) AND subcategory IS NOT NULL
+            """), {"ids": all_item_ids_raw})
+            item_cat_subcat: dict[int, tuple[str, str]] = {
+                r[0]: (r[1] or "", r[2] or "") for r in sc_rows.all()
+            }
+            # Kullanıcı başına: pozitif subcategory setleri
+            user_pos_subcats: dict[int, set[str]] = defaultdict(set)
+            user_pos_cats: dict[int, set[str]] = defaultdict(set)
+            for uid, iid, etype, cnt in interactions:
+                w = _WEIGHTS.get(etype, 0.0)
+                if w >= 2.0 and iid in item_cat_subcat:
+                    cat, subcat = item_cat_subcat[iid]
+                    user_pos_subcats[uid].add(f"{cat}|{subcat}")
+                    user_pos_cats[uid].add(cat)
+            # Kategori içinde kullanıcının tercih etmediği subcategory ilanlarını bul
+            hard_neg_interactions: list[tuple[int, int, str, int]] = []
+            for iid, (cat, subcat) in item_cat_subcat.items():
+                for uid in user_pos_cats:
+                    if cat in user_pos_cats[uid]:
+                        key = f"{cat}|{subcat}"
+                        if key not in user_pos_subcats[uid]:
+                            hard_neg_interactions.append((uid, iid, "_hard_neg", 1))
+            if hard_neg_interactions:
+                interactions = list(interactions) + hard_neg_interactions
+                _WEIGHTS["_hard_neg"] = -0.05  # negatif ağırlık
+    except Exception as exc:
+        logger.debug("[BPR] Hard negative örnekleme atlandı: %s", exc)
+
     user_ids = sorted({r[0] for r in interactions})
     item_ids = sorted({r[1] for r in interactions})
 

@@ -25,16 +25,22 @@ logger = logging.getLogger(__name__)
 
 _USER_VEC_KEY = "feed:als:user_vec:{uid}"
 _ITEM_VEC_KEY = "feed:als:item_vec:{lid}"
+_SUBCAT_VEC_KEY = "feed:als:subcat_vec:{key}"  # key = "category|subcategory"
 _ALS_TTL = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
 _MIN_ROWS = 50       # Bu kadar satır yoksa eğitimi atla
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
-async def get_als_scores(user_id: int, listing_ids: list[int]) -> dict[int, float]:
+async def get_als_scores(
+    user_id: int,
+    listing_ids: list[int],
+    listing_subcats: dict[int, str] | None = None,
+) -> dict[int, float]:
     """
     ALS modelinden kullanıcı–ilan benzerlik skorlarını döndürür.
-    Model yoksa ya da vektör eksikse boş dict → çağıran 0.0 kullanır.
+    İlan vektörü yoksa subcategory centroid'i kullanır (cold-start).
+    listing_subcats: {listing_id: 'category|subcategory'} — opsiyonel fallback için
     """
     if not listing_ids:
         return {}
@@ -54,8 +60,20 @@ async def get_als_scores(user_id: int, listing_ids: list[int]) -> dict[int, floa
     item_keys = [_ITEM_VEC_KEY.format(lid=lid) for lid in listing_ids]
     raw_vecs = await redis.mget(*item_keys)
 
+    # Cold-start: subcategory centroid'leri için eksik olanları topla
+    missing_lids = [lid for lid, raw in zip(listing_ids, raw_vecs) if not raw]
+    subcat_vecs: dict[str, bytes] = {}
+    if missing_lids and listing_subcats:
+        needed_keys = {listing_subcats[lid] for lid in missing_lids if lid in listing_subcats}
+        if needed_keys:
+            sc_keys = [_SUBCAT_VEC_KEY.format(key=k) for k in needed_keys]
+            sc_raws = await redis.mget(*sc_keys)
+            subcat_vecs = {k: v for k, v in zip(needed_keys, sc_raws) if v}
+
     scores: dict[int, float] = {}
     for lid, raw in zip(listing_ids, raw_vecs):
+        if not raw and listing_subcats and lid in listing_subcats:
+            raw = subcat_vecs.get(listing_subcats[lid])
         if not raw:
             continue
         iv = np.frombuffer(raw, dtype=np.float32)
@@ -63,16 +81,16 @@ async def get_als_scores(user_id: int, listing_ids: list[int]) -> dict[int, floa
         if iv_norm == 0:
             continue
         cosine = float(np.dot(user_vec, iv) / (user_norm * iv_norm))
-        # Cosine [-1, 1] → [0, 1]
         scores[lid] = max(0.0, (cosine + 1.0) / 2.0)
 
     return scores
 
 
-async def train_feed_als() -> None:
+async def train_feed_als(db_session=None) -> None:
     """
     30 günlük feed_analytics verisinden ALS modeli eğit.
     Faktör vektörlerini Redis'e yaz (25 saat TTL).
+    db_session: subcategory centroid hesaplamak için opsiyonel PostgreSQL oturumu.
     """
     try:
         import implicit
@@ -207,3 +225,28 @@ async def train_feed_als() -> None:
         "[FeedALS] Eğitim tamamlandı | users=%d listings=%d factors=%d",
         n_users, n_items, factors,
     )
+
+    # Subcategory centroid vektörleri — cold-start ilanlar için
+    if db_session is not None:
+        try:
+            from sqlalchemy import text as _text
+            sc_rows = await db_session.execute(_text(
+                "SELECT id, category, subcategory FROM listings "
+                "WHERE id = ANY(:ids) AND subcategory IS NOT NULL"
+            ), {"ids": list(l2i.keys())})
+            subcat_map: dict[str, list[np.ndarray]] = {}
+            itf_arr = np.asarray(model.item_factors, dtype=np.float32)
+            for lid, cat, subcat in sc_rows.all():
+                if lid not in l2i:
+                    continue
+                key = f"{cat}|{subcat}"
+                subcat_map.setdefault(key, []).append(itf_arr[l2i[lid]])
+            if subcat_map:
+                sc_pipe = redis.pipeline()
+                for key, vecs in subcat_map.items():
+                    centroid = np.mean(vecs, axis=0).astype(np.float32)
+                    sc_pipe.setex(_SUBCAT_VEC_KEY.format(key=key), _ALS_TTL, centroid.tobytes())
+                await sc_pipe.execute()
+                logger.info("[FeedALS] %d subcategory centroid yazıldı", len(subcat_map))
+        except Exception as exc:
+            logger.warning("[FeedALS] Subcategory centroid hesaplanamadı: %s", exc)

@@ -30,14 +30,39 @@ _model: Any = None
 _scaler: Any = None
 _model_lock = threading.Lock()
 
-FEATURE_COUNT = 15
+FEATURE_COUNT = 18
 
 
 # ── Özellik çıkarımı ─────────────────────────────────────────────────────────
 
+_VEHICLE_FIELDS = {"mileage", "year", "fuel_type", "transmission"}
+_REALESTATE_FIELDS = {"room_count", "gross_sqm", "floor"}
+_ELECTRONICS_FIELDS = {"ram", "processor"}
+
+
+def _extra_completeness(listing) -> tuple[float, float, float]:
+    """Araç / gayrimenkul / elektronik extra_fields doluluk oranları."""
+    ef: dict = {}
+    raw = getattr(listing, "extra_fields", None)
+    if raw:
+        if isinstance(raw, str):
+            try:
+                ef = json.loads(raw)
+            except Exception:
+                ef = {}
+        elif isinstance(raw, dict):
+            ef = raw
+
+    cat = (getattr(listing, "category", None) or "").lower()
+    has_v = sum(1 for k in _VEHICLE_FIELDS if ef.get(k)) / len(_VEHICLE_FIELDS)
+    has_r = sum(1 for k in _REALESTATE_FIELDS if ef.get(k)) / len(_REALESTATE_FIELDS)
+    has_e = sum(1 for k in _ELECTRONICS_FIELDS if ef.get(k)) / len(_ELECTRONICS_FIELDS)
+    return has_v, has_r, has_e
+
+
 def extract_features(listing) -> list[float]:
     """
-    Bir ilanın içerik özelliklerini 15 boyutlu vektöre çevirir.
+    Bir ilanın içerik özelliklerini 18 boyutlu vektöre çevirir.
     Değerler [0, 1] aralığına normalize edilmiştir.
     """
     title = listing.title or ""
@@ -57,22 +82,27 @@ def extract_features(listing) -> list[float]:
     hour = getattr(listing.created_at, "hour", 12) if listing.created_at else 12
     dow = getattr(listing.created_at, "weekday", lambda: 0)() if listing.created_at else 0
 
+    has_v, has_r, has_e = _extra_completeness(listing)
+
     return [
-        min(title_len, 200) / 200,           # başlık uzunluğu
-        min(title_words, 30) / 30,            # başlık kelime sayısı
-        min(desc_len, 2000) / 2000,           # açıklama uzunluğu
-        min(desc_words, 300) / 300,            # açıklama kelime sayısı
-        min(image_count, 10) / 10,            # fotoğraf sayısı
-        1.0 if listing.video_url else 0.0,    # video var mı
-        1.0 if listing.price is not None else 0.0,  # fiyat girilmiş mi
-        math.log1p(listing.price or 0) / 15, # fiyat büyüklüğü (log)
-        1.0 if listing.location else 0.0,     # konum girilmiş mi
-        1.0 if listing.category else 0.0,     # kategori seçilmiş mi
-        1.0 if listing.brand else 0.0,        # marka girilmiş mi
-        1.0 if listing.model_name else 0.0,   # model girilmiş mi
-        1.0 if listing.condition else 0.0,    # durum seçilmiş mi
-        hour / 23.0,                          # yayın saati
-        dow / 6.0,                            # yayın günü
+        min(title_len, 200) / 200,                  # başlık uzunluğu
+        min(title_words, 30) / 30,                   # başlık kelime sayısı
+        min(desc_len, 2000) / 2000,                  # açıklama uzunluğu
+        min(desc_words, 300) / 300,                   # açıklama kelime sayısı
+        min(image_count, 10) / 10,                   # fotoğraf sayısı
+        1.0 if listing.video_url else 0.0,           # video var mı
+        1.0 if listing.price is not None else 0.0,   # fiyat girilmiş mi
+        math.log1p(listing.price or 0) / 15,         # fiyat büyüklüğü (log)
+        1.0 if listing.location else 0.0,            # konum girilmiş mi
+        1.0 if listing.category else 0.0,            # kategori seçilmiş mi
+        1.0 if listing.brand else 0.0,               # marka girilmiş mi
+        1.0 if listing.model_name else 0.0,          # model girilmiş mi
+        1.0 if listing.condition else 0.0,           # durum seçilmiş mi
+        hour / 23.0,                                 # yayın saati
+        dow / 6.0,                                   # yayın günü
+        has_v,                                       # araç extra_fields doluluk
+        has_r,                                       # gayrimenkul extra_fields doluluk
+        has_e,                                       # elektronik extra_fields doluluk
     ]
 
 
@@ -127,9 +157,14 @@ def _rule_based_score(listing) -> float:
     if listing.condition:
         score += 2
 
-    # Kategori (7 puan)
+    # Kategori (5 puan)
     if listing.category:
-        score += 7
+        score += 5
+
+    # Extra fields completeness bonus (0–2 puan, her dolu alan +0.5)
+    has_v, has_r, has_e = _extra_completeness(listing)
+    extra_bonus = (has_v + has_r + has_e) * 2.0 / 3.0
+    score += extra_bonus * 2.0
 
     return round(score / 100.0, 4)
 
@@ -202,6 +237,7 @@ async def train_quality_model(db_session) -> int:
                 l.description,
                 l.price,
                 l.category,
+                l.subcategory,
                 l.brand,
                 l.model_name,
                 l.condition,
@@ -210,6 +246,7 @@ async def train_quality_model(db_session) -> int:
                 l.image_urls,
                 l.video_url,
                 l.created_at,
+                l.extra_fields,
                 -- Engagement target
                 COALESCE(lk.like_count, 0) * 1.0
                 + COALESCE(ae_fav.cnt, 0) * 2.0
@@ -253,9 +290,9 @@ async def train_quality_model(db_session) -> int:
 
     class _FakeListing:
         __slots__ = [
-            "title", "description", "price", "category", "brand",
+            "title", "description", "price", "category", "subcategory", "brand",
             "model_name", "condition", "location", "image_url",
-            "image_urls", "video_url", "created_at",
+            "image_urls", "video_url", "created_at", "extra_fields",
         ]
 
     X, y = [], []
@@ -265,16 +302,18 @@ async def train_quality_model(db_session) -> int:
         fl.description = row[2]
         fl.price = row[3]
         fl.category = row[4]
-        fl.brand = row[5]
-        fl.model_name = row[6]
-        fl.condition = row[7]
-        fl.location = row[8]
-        fl.image_url = row[9]
-        fl.image_urls = row[10]
-        fl.video_url = row[11]
-        fl.created_at = row[12]
+        fl.subcategory = row[5]
+        fl.brand = row[6]
+        fl.model_name = row[7]
+        fl.condition = row[8]
+        fl.location = row[9]
+        fl.image_url = row[10]
+        fl.image_urls = row[11]
+        fl.video_url = row[12]
+        fl.created_at = row[13]
+        fl.extra_fields = row[14]
         X.append(extract_features(fl))
-        y.append(float(row[13]))
+        y.append(float(row[15]))
 
     X = np.array(X, dtype=np.float32)
     y = np.array(y, dtype=np.float32)

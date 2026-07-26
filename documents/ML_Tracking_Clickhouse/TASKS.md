@@ -161,32 +161,30 @@
 
 ## FAZ 6 — ML Model Güncellemeleri *(Minimum 2 Hafta Veri Birikmesi Şart)*
 
-- [ ] **T36** — `kmeans_service.py` cluster profili güncelle
-  - `SELECT id, embedding, category, subcategory FROM listings`
-  - `cat_profiles`: `{(category, subcategory): fraction}` — tuple key
-  - `get_cold_start_embedding()`: subcategory bazlı ağırlık hesabı
+- [x] **T36** — `kmeans_service.py` cluster profili güncellendi
+  - SQL: `SELECT id, embedding, category, subcategory FROM listings`
+  - `subcat_profiles` eklendi: `[{"category|subcategory": fraction}]` her cluster için
+  - `get_cold_start_embedding(subcat_scores=None)`: subcategory bonus × 0.5
 
-- [ ] **T37** — `quality_service.py: extract_features()` güncelle
-  - extra_fields completeness sinyalleri ekle:
-    - Araç: `has_km`, `has_year`, `has_fuel_type`, `has_gear` (bool)
-    - Gayrimenkul: `has_room_count`, `has_size`, `has_floor` (bool)
-    - Elektronik: `has_ram`, `has_processor` (bool)
-  - `_rule_based_score()` completeness bonus ekle: dolu her alan +0.5 puan
-  - `train_quality_model()` sorgusuna `l.subcategory`, `l.extra_fields` ekle
+- [x] **T37** — `quality_service.py: extract_features()` güncellendi
+  - `_extra_completeness()`: araç (4 alan), gayrimenkul (3), elektronik (2) doluluk oranları
+  - `FEATURE_COUNT` 15 → 18; 3 yeni özellik: `has_v, has_r, has_e`
+  - `_rule_based_score()`: extra bonus × 2 puan
+  - `train_quality_model()` SQL'e `l.subcategory, l.extra_fields` eklendi; `_FakeListing` güncellendi
 
-- [ ] **T38** — `feed_als_ml.py` ALS eğitimini güncelle
-  - `feed_analytics` sorgusuna `listing_subcategory` ekle (T01 sonrası veri var)
-  - Item feature matrix'e subcategory one-hot encoding ekle
-  - Soğuk başlangıç ilanları için subcategory bazlı başlangıç vektörü üret
+- [x] **T38** — `feed_als_ml.py` ALS eğitimi güncellendi
+  - `get_als_scores(listing_subcats=None)`: eksik item → subcategory centroid fallback
+  - `_SUBCAT_VEC_KEY` Redis key tanımlandı
+  - `train_feed_als(db_session=None)`: eğitim sonrası subcategory centroid vektörleri hesaplanıp Redis'e yazılır
 
-- [ ] **T39** — `bpr_service.py` negatif örneklemeyi güncelle
-  - Pozitif: kullanıcının tıkladığı ilan (category + subcategory)
-  - Negatif: aynı category'den farklı subcategory'deki ilan (daha güçlü negatif sinyal)
+- [x] **T39** — `bpr_service.py` hard negative örnekleme eklendi
+  - Eğitim öncesi: aynı category + farklı subcategory → `_WEIGHTS["_hard_neg"] = -0.05`
+  - `item_cat_subcat` haritası ile kullanıcı bazlı pozitif subcategory setleri karşılaştırılır
 
-- [ ] **T40** — `swipe_live_ml.py` ALS eğitimini güncelle
-  - `swipe_live_events` sorgusuna `stream_subcategory` ekle (T04 sonrası veri var)
-  - Stream feature matrix'e subcategory ekle
-  - `get_user_stream_recommendations()` dönen adayları stream.subcategory affinity ile re-rank et
+- [x] **T40** — `swipe_live_ml.py` ALS eğitimi güncellendi
+  - ClickHouse: `any(stream_subcategory) AS stream_subcat` GROUP BY'a eklendi
+  - Subcategory centroid vektörleri eğitim sonrası `_ALS_SUBCAT_VEC_KEY` ile Redis'e yazılır
+  - `get_user_stream_recommendations()` eklendi: ALS + subcat_interests × 0.15 re-rank
 
 ---
 

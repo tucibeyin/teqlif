@@ -62,35 +62,36 @@ def _load_model() -> Optional[dict]:
 
 def get_cold_start_embedding(
     category_scores: dict[str, float],
+    subcat_scores: dict[str, float] | None = None,
 ) -> Optional[list[float]]:
     """
-    Kullanıcının kategori ilgi skorlarından başlangıç embedding üretir.
+    Kullanıcının kategori + subcategory ilgi skorlarından başlangıç embedding üretir.
 
-    category_scores: {category: score} — user_interests tablosundan
-    Dönüş: 384-dim embedding listesi veya None (model yoksa)
-
-    Mantık:
-      1. Her cluster için kullanıcı kategorileriyle örtüşme skoru hesapla
-      2. Top-3 cluster'ı ilgi ağırlığıyla ortala
-      3. Normalize et → preference_embedding ile aynı formatta
+    category_scores: {category: score}
+    subcat_scores:   {'category|subcategory': score} — opsiyonel, subcategory hassasiyeti artırır
     """
     model = _load_model()
     if model is None:
         return None
 
-    centroids: np.ndarray = model["centroids"]      # (K, 384)
-    cat_profiles: list[dict] = model["cat_profiles"] # K adet {cat: fraction}
+    centroids: np.ndarray = model["centroids"]        # (K, 384)
+    cat_profiles: list[dict] = model["cat_profiles"]  # K adet {cat: fraction}
+    subcat_profiles: list[dict] = model.get("subcat_profiles", [{} for _ in cat_profiles])
 
     if not category_scores:
         return None
 
-    # Her cluster'ın kullanıcı profiliyle örtüşme skoru
     cluster_scores: list[tuple[float, int]] = []
     for k_idx, cat_profile in enumerate(cat_profiles):
+        # Kategori bazlı örtüşme
         relevance = sum(
             category_scores.get(cat, 0.0) * fraction
             for cat, fraction in cat_profile.items()
         )
+        # Subcategory bonus — varsa cluster'ı daha hassas eşleştir
+        if subcat_scores and subcat_profiles:
+            for key, fraction in subcat_profiles[k_idx].items():
+                relevance += subcat_scores.get(key, 0.0) * fraction * 0.5
         if relevance > 0.0:
             cluster_scores.append((relevance, k_idx))
 
@@ -128,7 +129,7 @@ async def train_kmeans(db_session) -> int:
 
     try:
         rows = await db_session.execute(text("""
-            SELECT id, embedding, category
+            SELECT id, embedding, category, subcategory
             FROM listings
             WHERE status = 'active'
               AND embedding IS NOT NULL
@@ -149,6 +150,7 @@ async def train_kmeans(db_session) -> int:
 
     listing_ids = [r[0] for r in data]
     categories = [r[2] or "" for r in data]
+    subcategories = [r[3] or "" for r in data]
 
     def _parse(raw) -> list:
         if isinstance(raw, str):
@@ -174,18 +176,31 @@ async def train_kmeans(db_session) -> int:
     )
     labels = kmeans.fit_predict(vectors)
 
-    # Her cluster için kategori profili (fraction)
+    # Her cluster için kategori + subcategory profilleri
     cat_profiles: list[dict] = []
+    subcat_profiles: list[dict] = []
+    from collections import Counter
     for k_idx in range(N_CLUSTERS):
         mask = labels == k_idx
         cluster_cats = [categories[i] for i in range(len(categories)) if mask[i] and categories[i]]
-        if not cluster_cats:
+        cluster_subcats = [
+            f"{categories[i]}|{subcategories[i]}"
+            for i in range(len(categories))
+            if mask[i] and categories[i] and subcategories[i]
+        ]
+        if cluster_cats:
+            counts = Counter(cluster_cats)
+            total = sum(counts.values())
+            cat_profiles.append({cat: cnt / total for cat, cnt in counts.most_common(10)})
+        else:
             cat_profiles.append({})
-            continue
-        from collections import Counter
-        counts = Counter(cluster_cats)
-        total = sum(counts.values())
-        cat_profiles.append({cat: cnt / total for cat, cnt in counts.most_common(10)})
+
+        if cluster_subcats:
+            scounts = Counter(cluster_subcats)
+            stotal = sum(scounts.values())
+            subcat_profiles.append({key: cnt / stotal for key, cnt in scounts.most_common(20)})
+        else:
+            subcat_profiles.append({})
 
     centroids = kmeans.cluster_centers_.astype(np.float32)
 
@@ -197,6 +212,7 @@ async def train_kmeans(db_session) -> int:
     payload = {
         "centroids": centroids,
         "cat_profiles": cat_profiles,
+        "subcat_profiles": subcat_profiles,
         "n_listings": len(data),
     }
 

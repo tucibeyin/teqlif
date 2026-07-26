@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 _ALS_USER_VEC_KEY = "swipelive:als:user_vec:{uid}"
 _ALS_STREAM_VEC_KEY = "swipelive:als:stream_vec:{sid}"
+_ALS_SUBCAT_VEC_KEY = "swipelive:als:subcat_vec:{key}"  # key = "category|subcategory"
 _ALS_TTL = 90_000  # 25 saat — günlük yeniden eğitimden önce bayatlamasın
 
 
@@ -63,6 +64,37 @@ async def get_als_scores(user_id: int, stream_ids: list[int]) -> dict[int, float
     return scores
 
 
+async def get_user_stream_recommendations(
+    user_id: int,
+    candidate_streams: list,  # stream objects with .id, .category, .subcategory
+    subcat_interests: dict[str, float] | None = None,
+    top_n: int = 20,
+) -> list[int]:
+    """
+    ALS skorlarını subcategory affinity ile harmanlayarak stream ID listesi döndürür.
+    Model yoksa boş liste → çağıran fallback kullanır.
+    """
+    stream_ids = [s.id for s in candidate_streams]
+    als = await get_als_scores(user_id, stream_ids)
+    if not als:
+        return []
+
+    _subcat = subcat_interests or {}
+    reranked = []
+    for stream in candidate_streams:
+        base = als.get(stream.id, 0.0)
+        subcat_key = (
+            f"{stream.category}|{stream.subcategory}"
+            if getattr(stream, "subcategory", None)
+            else ""
+        )
+        affinity_bonus = _subcat.get(subcat_key, 0.0) * 0.15 if subcat_key else 0.0
+        reranked.append((stream.id, base + affinity_bonus))
+
+    reranked.sort(key=lambda x: -x[1])
+    return [sid for sid, _ in reranked[:top_n]]
+
+
 async def train_swipe_live_als() -> None:
     """
     30 günlük swipe_live_events verisinden ALS modeli eğit.
@@ -83,6 +115,7 @@ async def train_swipe_live_als() -> None:
         SELECT
             user_id,
             stream_id,
+            any(stream_subcategory)                                 AS stream_subcat,
             countIf(event_type = 'dwell')                           AS dwells,
             countIf(event_type = 'skip')                            AS skips,
             avgIf(dwell_ms, event_type = 'dwell')                   AS avg_dwell,
@@ -107,8 +140,15 @@ async def train_swipe_live_als() -> None:
     u2i = {uid: i for i, uid in enumerate(user_ids)}
     s2i = {sid: i for i, sid in enumerate(stream_ids)}
 
+    # stream_id → stream_subcategory haritası (centroid hesabı için)
+    stream_subcat: dict[int, str] = {}
+    for row in rows:
+        sid, sc = row[1], row[2] or ""
+        if sc and sid not in stream_subcat:
+            stream_subcat[sid] = sc
+
     data, rows_idx, cols_idx = [], [], []
-    for uid, sid, dwells, skips, avg_dwell, hearts, strong in rows:
+    for uid, sid, sc, dwells, skips, avg_dwell, hearts, strong in rows:
         
         # 1. GÜVENLİK: ClickHouse'dan gelen "NaN" zehrini temizle
         if avg_dwell is None or math.isnan(float(avg_dwell)):
@@ -168,3 +208,18 @@ async def train_swipe_live_als() -> None:
         "[SwipeLiveML] ALS eğitim tamamlandı | users=%d streams=%d factors=%d",
         n_users, n_streams, factors,
     )
+
+    # Subcategory centroid vektörleri — kişiselleştirilmiş stream önerileri için
+    sf_arr = np.asarray(model.item_factors, dtype=np.float32)
+    subcat_vecs: dict[str, list[np.ndarray]] = {}
+    for sid, si in s2i.items():
+        sc = stream_subcat.get(sid, "")
+        if sc:
+            subcat_vecs.setdefault(sc, []).append(sf_arr[si])
+    if subcat_vecs:
+        sc_pipe = redis.pipeline()
+        for key, vecs in subcat_vecs.items():
+            centroid = np.mean(vecs, axis=0).astype(np.float32)
+            sc_pipe.setex(_ALS_SUBCAT_VEC_KEY.format(key=key), _ALS_TTL, centroid.tobytes())
+        await sc_pipe.execute()
+        logger.info("[SwipeLiveML] %d subcategory centroid yazıldı", len(subcat_vecs))
