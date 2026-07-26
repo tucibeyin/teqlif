@@ -2159,7 +2159,10 @@ async def demand_radar(
     try:
         ch = await get_clickhouse_client()
 
-        cat_filter = f"AND category = '{category}'" if category else ""
+        import re as _re
+        _safe = lambda s: _re.sub(r"[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ\-_]", "", s) if s else ""
+        cat_safe = _safe(category)
+        cat_filter = f"AND category = '{cat_safe}'" if cat_safe else ""
 
         q_top = f"""
             SELECT query, COUNT(*) AS cnt
@@ -2615,13 +2618,18 @@ async def demand_trends(
         if ch is None:
             raise ServiceException(code="ANALYTICS_SERVICE_ERROR")
 
+        import re as _re
+        _safe = lambda s: _re.sub(r"[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ\-_]", "", s) if s else ""
+        cat_safe  = _safe(category)
+        sub_safe  = _safe(subcategory)
+
         extra_filters = ""
         group_by_col = "category"
-        if subcategory:
-            extra_filters = f"AND category = '{category or ''}' AND subcategory = '{subcategory}'"
+        if sub_safe:
+            extra_filters = f"AND category = '{cat_safe}' AND subcategory = '{sub_safe}'"
             group_by_col = "subcategory"
-        elif category:
-            extra_filters = f"AND category = '{category}'"
+        elif cat_safe:
+            extra_filters = f"AND category = '{cat_safe}'"
             group_by_col = "subcategory"
 
         result = await ch.query(f"""

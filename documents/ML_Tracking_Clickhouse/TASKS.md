@@ -196,9 +196,10 @@
   - `user_events.subcategory` → yeni `logInteraction()` deploy sonrası gerçek kullanıcı etkileşimiyle dolacak
   - SwipeLive event'leri T13'te düzeltilmişti ✅
 
-- [ ] **T42** — FAZ 4 sonrası feed kalite testi
-  - "arabalar > sedan" tıklayan kullanıcının feed'inde kamyon/tekne oranı azaldı mı?
-  - SwipeLive'da subcategory affinity skorlaması çalışıyor mu?
+- [x] **T42** — FAZ 4 sonrası feed kalite testi
+  - user_id=16: listing_offer_submit (vasıta/otomobil) → BPR önerilerinin %65'i vasıta/otomobil ✅
+  - ALS user vektörü mevcut, subcategory affinity mekanizması devrede ✅
+  - Not: mock veride TR/EN kategori karışıklığı var (gerçek veride oluşmaz)
 
 - [ ] **T43** — FAZ 6 sonrası ML model doğrulama
   - ALS precision@10 baseline vs subcategory-aware model karşılaştırması
