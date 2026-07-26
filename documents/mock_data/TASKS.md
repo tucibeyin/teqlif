@@ -21,55 +21,32 @@
 
 ### JSON Dosyaları
 
-- [ ] **T02** — `mock_01_listings.json` üret (600 ilan)
-  - 50 kullanıcı, her biri 12 ilan
-  - Grup dağılımı: PLAN.md'deki kullanıcı gruplarına göre
-  - Her ilan: title, description, price, category, subcategory, condition, brand, model_name, extra_fields, location, image_url, image_urls, status, quality_score
-  - 8 kategori, tüm subcategory'ler temsil edilmiş
-  - Türkçe başlık ve açıklama (en az 1-2 ilgili cümle)
-  - Gerçekçi TL fiyatları
-  - picsum.photos seed URL'leri
+- [x] **T02** — `mock_01_listings.json` üretildi (600 ilan)
+  - 50 kullanıcı × 12 ilan, 8 kategori, Türkçe başlık + açıklama
+  - Gerçekçi TL fiyatları, picsum.photos URL'leri, extra_fields dolu
+  - Üretici: `generate_mock_data.py`
 
-- [ ] **T03** — `mock_02_analytics_events.json` üret (~5.000 event)
-  - PostgreSQL `analytics_events` tablosuna gidecek
-  - Alanlar: user_id, item_id (listing_id), item_type="listing", event_type, event_metadata, created_at
-  - Event tipleri (BPR weight'leri): listing_impression (0.3), listing_view (1.0), listing_like (3.0), listing_favorite (5.0), listing_chat_open (6.0), listing_offer_submit (10.0), detail_dwell (2.0)
-  - Grup davranışı: Vasıta grubundaki kullanıcılar ağırlıklı vasıta ilanlarıyla etkileşim
-  - Zaman aralığı: Son 120 gün (BPR eğitim penceresi)
-  - created_at: son 120 günde rastgele, son 30 güne doğru yoğunlaşan dağılım
+- [x] **T03** — `mock_02_user_interactions.json` üretildi (~4.200 event)
+  - PostgreSQL `user_interactions` tablosuna gidecek (BPR bug fix sonrası doğru tablo)
+  - Alanlar: user_id, listing_idx, item_type, interaction_type, duration_seconds, created_at
+  - Grup A kullanıcıları %~70 vasıta etkileşimi (tutarlı davranış sinyali)
 
-- [ ] **T04** — `mock_03_user_interests.json` üret (~250 satır)
+- [x] **T04** — `mock_03_user_interests.json` üretildi (230 satır)
   - PostgreSQL `user_interests` tablosuna gidecek
-  - Alanlar: user_id, category, subcategory (NULL veya değer), score
-  - Her kullanıcı için: 2-3 top-level category skoru + 3-4 subcategory skoru
-  - Grup A: vasita (score 0.85), vasita|otomobil (0.75), vasita|motosiklet (0.35)
-  - Grup B: emlak (0.82), emlak|daire (0.70), emlak|mustakil-ev-villa (0.40)
-  - Grup C: elektronik (0.80), elektronik|cep-telefonu (0.72), elektronik|bilgisayar-laptop (0.45)
-  - Grup D: giyim-aksesuar (0.60), spor-outdoor (0.55), giyim-aksesuar|kadin-giyim (0.50)
-  - Grup E: tüm skorlar 0.05–0.25 arası düşük (cold-start)
+  - (user_id, category) unique — her kullanıcı × 5 kategori (E grubu 3)
+  - Grup skorları: A→vasita 0.85, B→emlak 0.82, C→elektronik 0.80, D→giyim 0.65
 
-- [ ] **T05** — `mock_04_feed_analytics.json` üret (~3.000 satır)
+- [x] **T05** — `mock_04_feed_analytics.json` üretildi (~2.570 satır)
   - ClickHouse `feed_analytics` tablosuna gidecek
-  - Alanlar: timestamp, user_id (String), listing_id (String), event_type, dwell_time_ms, slot_index, listing_subcategory
-  - Event tipleri: impression, click, skip
-  - Dwell time: click → 5.000-30.000ms, impression → 1.000-8.000ms, skip → 0-500ms
-  - Grup davranışı: click oranı kendi grubunun ilgi alanında yüksek
-  - Zaman aralığı: Son 30 gün (ALS eğitim penceresi)
+  - click/impression/skip dağılımı; kendi grubunda click oranı yüksek
 
-- [ ] **T06** — `mock_05_search_events.json` üret (~600 satır)
+- [x] **T06** — `mock_05_search_events.json` üretildi (~480 satır)
   - ClickHouse `search_events` tablosuna gidecek
-  - Alanlar: timestamp, user_id (Nullable UInt32), query, category, subcategory, result_count, intent
-  - Query örnekleri: "sedan araba", "2+1 daire kiralık", "iPhone 15", "bisiklet"
-  - Intent: browse / buy / compare
-  - Grup davranışı: Vasıta grubu "araba", "otomobil" gibi sorgular atar
-  - Zaman aralığı: Son 30 gün
+  - Grup-spesifik Türkçe arama sorguları
 
-- [ ] **T07** — `mock_06_swipe_live.json` üret (~300 satır) *(T01 sonucuna bağlı)*
+- [x] **T07** — `mock_06_swipe_live.json` üretildi (~294 satır)
   - ClickHouse `swipe_live_events` tablosuna gidecek
-  - Alanlar: user_id, stream_id, listing_id, event_type, dwell_ms, stream_category, stream_subcategory, listing_category, listing_subcategory, timestamp
-  - Event tipleri: dwell, skip, stream_heart
-  - Stream varsa: T01'den alınan ID'ler kullanılır
-  - Stream yoksa: Bu task skip edilir
+  - Stream ID 4-33 kullanıldı (T01 sonucu)
 
 ---
 
@@ -81,10 +58,10 @@
   - Insert sonrası üretilen ID'leri `listing_ids.json` olarak kaydeder (sonraki scriptler kullanır)
   - Çıktı: `✓ X ilan eklendi, Y atlandı`
 
-- [ ] **T09** — `insert_02_analytics_events.py` yaz
+- [ ] **T09** — `insert_02_user_interactions.py` yaz
   - `listing_ids.json`'dan listing ID'lerini okur (T08 çıktısı)
-  - Mock JSON'daki listing sıra numaralarını gerçek ID'lerle eşleştirir
-  - `analytics_events`'e toplu INSERT
+  - Mock JSON'daki listing_idx'leri gerçek ID'lerle eşleştirir
+  - `user_interactions`'a toplu INSERT (listing_idx → item_id)
   - Çıktı: `✓ X event eklendi`
 
 - [ ] **T10** — `insert_03_user_interests.py` yaz
@@ -126,15 +103,15 @@
   GROUP BY category, subcategory ORDER BY COUNT(*) DESC;
   ```
 
-- [ ] **T16** — Adım 2: analytics_events insert et
+- [ ] **T16** — Adım 2: user_interactions insert et
   ```bash
-  python documents/mock_data/insert_02_analytics_events.py
+  python documents/mock_data/insert_02_user_interactions.py
   ```
   Doğrulama:
   ```sql
-  SELECT event_type, COUNT(*) FROM analytics_events
+  SELECT interaction_type, COUNT(*) FROM user_interactions
   WHERE created_at > NOW() - INTERVAL '1 hour'
-  GROUP BY event_type;
+  GROUP BY interaction_type;
   ```
 
 - [ ] **T17** — Adım 3: user_interests insert et

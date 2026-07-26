@@ -1,0 +1,4295 @@
+[
+  {
+    "timestamp": "2026-07-24T04:03:00Z",
+    "user_id": 395,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 111,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-09T13:03:00Z",
+    "user_id": 386,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 84,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-07T01:03:00Z",
+    "user_id": 17,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 156,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-01T21:03:00Z",
+    "user_id": 389,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 74,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-30T17:03:00Z",
+    "user_id": 391,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 181,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T14:03:00Z",
+    "user_id": 28,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 66,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T21:03:00Z",
+    "user_id": 1,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 61,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-14T16:03:00Z",
+    "user_id": 22,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 82,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T15:03:00Z",
+    "user_id": 1,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 153,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T06:03:00Z",
+    "user_id": 399,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 186,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-15T17:03:00Z",
+    "user_id": 10,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 105,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T07:03:00Z",
+    "user_id": 25,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 122,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-01T14:03:00Z",
+    "user_id": 20,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 29,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T19:03:00Z",
+    "user_id": 12,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 182,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-02T09:03:00Z",
+    "user_id": 32,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 141,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T19:03:00Z",
+    "user_id": 4,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 76,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T14:03:00Z",
+    "user_id": 30,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 38,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T03:03:00Z",
+    "user_id": 23,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 48,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-02T13:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 35,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-27T06:03:00Z",
+    "user_id": 19,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 155,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-11T23:03:00Z",
+    "user_id": 399,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 171,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-01T13:03:00Z",
+    "user_id": 388,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 45,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T18:03:00Z",
+    "user_id": 22,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 68,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T13:03:00Z",
+    "user_id": 5,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 199,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T09:03:00Z",
+    "user_id": 23,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 90,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T20:03:00Z",
+    "user_id": 1,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 23,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T02:03:00Z",
+    "user_id": 386,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 189,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-21T06:03:00Z",
+    "user_id": 19,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 159,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T05:03:00Z",
+    "user_id": 3,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 170,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T20:03:00Z",
+    "user_id": 389,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 200,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T14:03:00Z",
+    "user_id": 388,
+    "query": "roman kitap seti",
+    "category": "kitap-hobi",
+    "subcategory": "roman-hikaye",
+    "result_count": 70,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-15T04:03:00Z",
+    "user_id": 3,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 83,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T23:03:00Z",
+    "user_id": 17,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 156,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-03T10:03:00Z",
+    "user_id": 22,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 147,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T09:03:00Z",
+    "user_id": 399,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 146,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T05:03:00Z",
+    "user_id": 19,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 38,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-19T14:03:00Z",
+    "user_id": 21,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 11,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-08T08:03:00Z",
+    "user_id": 398,
+    "query": "tefal tencere seti",
+    "category": "ev-yasam",
+    "subcategory": "mutfak-pisirme",
+    "result_count": 190,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T08:03:00Z",
+    "user_id": 12,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 168,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-05T14:03:00Z",
+    "user_id": 16,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 62,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T14:03:00Z",
+    "user_id": 10,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 195,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-18T09:03:00Z",
+    "user_id": 24,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 193,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T19:03:00Z",
+    "user_id": 400,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 127,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-16T02:03:00Z",
+    "user_id": 1,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 148,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-12T20:03:00Z",
+    "user_id": 394,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 143,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-08T10:03:00Z",
+    "user_id": 22,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 197,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-15T02:03:00Z",
+    "user_id": 26,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 87,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T05:03:00Z",
+    "user_id": 404,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 149,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-10T05:03:00Z",
+    "user_id": 392,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 85,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T16:03:00Z",
+    "user_id": 386,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 31,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T23:03:00Z",
+    "user_id": 25,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 31,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T10:03:00Z",
+    "user_id": 401,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 40,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T21:03:00Z",
+    "user_id": 399,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 130,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T04:03:00Z",
+    "user_id": 6,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 16,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T09:03:00Z",
+    "user_id": 27,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 48,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T04:03:00Z",
+    "user_id": 388,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 105,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T21:03:00Z",
+    "user_id": 409,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 123,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-27T02:03:00Z",
+    "user_id": 24,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 150,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-11T20:03:00Z",
+    "user_id": 401,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 137,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-13T19:03:00Z",
+    "user_id": 403,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 120,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-08T11:03:00Z",
+    "user_id": 5,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 31,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-30T09:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 65,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T03:03:00Z",
+    "user_id": 390,
+    "query": "futbol topu profesyonel",
+    "category": "spor-outdoor",
+    "subcategory": "takim-sporlari",
+    "result_count": 71,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-19T19:03:00Z",
+    "user_id": 406,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 107,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T21:03:00Z",
+    "user_id": 391,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 150,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T20:03:00Z",
+    "user_id": 399,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 72,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T16:03:00Z",
+    "user_id": 395,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 173,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T05:03:00Z",
+    "user_id": 397,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 120,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T20:03:00Z",
+    "user_id": 21,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 97,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-29T01:03:00Z",
+    "user_id": 25,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 108,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T15:03:00Z",
+    "user_id": 11,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 83,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T01:03:00Z",
+    "user_id": 20,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 158,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T23:03:00Z",
+    "user_id": 391,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 171,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-29T00:03:00Z",
+    "user_id": 396,
+    "query": "roman kitap seti",
+    "category": "kitap-hobi",
+    "subcategory": "roman-hikaye",
+    "result_count": 55,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-21T23:03:00Z",
+    "user_id": 25,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 111,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T20:03:00Z",
+    "user_id": 393,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 5,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T01:03:00Z",
+    "user_id": 395,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 179,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T20:03:00Z",
+    "user_id": 1,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 150,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T00:03:00Z",
+    "user_id": 397,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 146,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T06:03:00Z",
+    "user_id": 32,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 33,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T13:03:00Z",
+    "user_id": 11,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 119,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-08T23:03:00Z",
+    "user_id": 13,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 76,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-14T06:03:00Z",
+    "user_id": 2,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 47,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-09T15:03:00Z",
+    "user_id": 408,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 21,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-10T00:03:00Z",
+    "user_id": 22,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 167,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T03:03:00Z",
+    "user_id": 4,
+    "query": "futbol topu profesyonel",
+    "category": "spor-outdoor",
+    "subcategory": "takim-sporlari",
+    "result_count": 15,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T00:03:00Z",
+    "user_id": 5,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 34,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-05T17:03:00Z",
+    "user_id": 26,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 30,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T13:03:00Z",
+    "user_id": 17,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 38,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T06:03:00Z",
+    "user_id": 10,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 152,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T20:03:00Z",
+    "user_id": 405,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 7,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T21:03:00Z",
+    "user_id": 392,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 66,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T14:03:00Z",
+    "user_id": 5,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 42,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-17T19:03:00Z",
+    "user_id": 10,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 94,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-28T22:03:00Z",
+    "user_id": 28,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 33,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T19:03:00Z",
+    "user_id": 16,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 130,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T20:03:00Z",
+    "user_id": 27,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 67,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T21:03:00Z",
+    "user_id": 387,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 119,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T13:03:00Z",
+    "user_id": 4,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 167,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-15T15:03:00Z",
+    "user_id": 24,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 64,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T11:03:00Z",
+    "user_id": 20,
+    "query": "roman kitap seti",
+    "category": "kitap-hobi",
+    "subcategory": "roman-hikaye",
+    "result_count": 153,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T17:03:00Z",
+    "user_id": 4,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 158,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-04T09:03:00Z",
+    "user_id": 12,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 31,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-28T23:03:00Z",
+    "user_id": 2,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 47,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T13:03:00Z",
+    "user_id": 5,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 111,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-21T06:03:00Z",
+    "user_id": 396,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 93,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T15:03:00Z",
+    "user_id": 29,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 131,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-29T08:03:00Z",
+    "user_id": 13,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 126,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T12:03:00Z",
+    "user_id": 13,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 189,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T00:03:00Z",
+    "user_id": 389,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 199,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-04T03:03:00Z",
+    "user_id": 25,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 58,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T17:03:00Z",
+    "user_id": 31,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 78,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T04:03:00Z",
+    "user_id": 21,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 200,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-18T20:03:00Z",
+    "user_id": 392,
+    "query": "kedi evi oyuncak",
+    "category": "diger",
+    "subcategory": "evcil-hayvan",
+    "result_count": 172,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T10:03:00Z",
+    "user_id": 24,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 173,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T23:03:00Z",
+    "user_id": 401,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 40,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-01T07:03:00Z",
+    "user_id": 16,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 126,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-09T14:03:00Z",
+    "user_id": 388,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 97,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T10:03:00Z",
+    "user_id": 28,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 133,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T12:03:00Z",
+    "user_id": 11,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 85,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T06:03:00Z",
+    "user_id": 388,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 69,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-19T00:03:00Z",
+    "user_id": 30,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 106,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-11T17:03:00Z",
+    "user_id": 1,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 134,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T23:03:00Z",
+    "user_id": 394,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 54,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-02T07:03:00Z",
+    "user_id": 6,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 16,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T21:03:00Z",
+    "user_id": 6,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 97,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T14:03:00Z",
+    "user_id": 3,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 37,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T12:03:00Z",
+    "user_id": 19,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 157,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T13:03:00Z",
+    "user_id": 396,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 89,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-09T21:03:00Z",
+    "user_id": 27,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 42,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T08:03:00Z",
+    "user_id": 398,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 83,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-11T07:03:00Z",
+    "user_id": 405,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 58,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-18T22:03:00Z",
+    "user_id": 393,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 65,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T20:03:00Z",
+    "user_id": 402,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 133,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T11:03:00Z",
+    "user_id": 24,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 60,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T17:03:00Z",
+    "user_id": 393,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 200,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-10T11:03:00Z",
+    "user_id": 2,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 5,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-05T17:03:00Z",
+    "user_id": 29,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 151,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T21:03:00Z",
+    "user_id": 17,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 85,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T06:03:00Z",
+    "user_id": 21,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 182,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T06:03:00Z",
+    "user_id": 409,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 194,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T20:03:00Z",
+    "user_id": 13,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 184,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T23:03:00Z",
+    "user_id": 2,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 139,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-07T01:03:00Z",
+    "user_id": 12,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 31,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T21:03:00Z",
+    "user_id": 10,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 189,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T14:03:00Z",
+    "user_id": 387,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 20,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T13:03:00Z",
+    "user_id": 21,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 63,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T11:03:00Z",
+    "user_id": 26,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 117,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T23:03:00Z",
+    "user_id": 404,
+    "query": "akustik gitar satılık fender",
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "result_count": 120,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T19:03:00Z",
+    "user_id": 20,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 44,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-21T15:03:00Z",
+    "user_id": 5,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 179,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-22T12:03:00Z",
+    "user_id": 32,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 188,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T06:03:00Z",
+    "user_id": 392,
+    "query": "tefal tencere seti",
+    "category": "ev-yasam",
+    "subcategory": "mutfak-pisirme",
+    "result_count": 51,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T06:03:00Z",
+    "user_id": 32,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 186,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T16:03:00Z",
+    "user_id": 3,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 11,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-05T20:03:00Z",
+    "user_id": 393,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 162,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T04:03:00Z",
+    "user_id": 409,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 118,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-09T13:03:00Z",
+    "user_id": 24,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 23,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-10T22:03:00Z",
+    "user_id": 389,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 37,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-21T05:03:00Z",
+    "user_id": 30,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 193,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T21:03:00Z",
+    "user_id": 399,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 78,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T09:03:00Z",
+    "user_id": 395,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 184,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-08T10:03:00Z",
+    "user_id": 398,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 158,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-18T18:03:00Z",
+    "user_id": 388,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 92,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T02:03:00Z",
+    "user_id": 389,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 154,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-04T14:03:00Z",
+    "user_id": 13,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 131,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-08T00:03:00Z",
+    "user_id": 399,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 6,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T16:03:00Z",
+    "user_id": 31,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 39,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T21:03:00Z",
+    "user_id": 399,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 153,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-11T21:03:00Z",
+    "user_id": 21,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 76,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T02:03:00Z",
+    "user_id": 392,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 46,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-16T22:03:00Z",
+    "user_id": 10,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 159,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T23:03:00Z",
+    "user_id": 6,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 169,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T13:03:00Z",
+    "user_id": 5,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 145,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-30T23:03:00Z",
+    "user_id": 32,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 169,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T23:03:00Z",
+    "user_id": 32,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 197,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T20:03:00Z",
+    "user_id": 389,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 102,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T15:03:00Z",
+    "user_id": 31,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 14,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T01:03:00Z",
+    "user_id": 1,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 103,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T02:03:00Z",
+    "user_id": 402,
+    "query": "futbol topu profesyonel",
+    "category": "spor-outdoor",
+    "subcategory": "takim-sporlari",
+    "result_count": 52,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-29T10:03:00Z",
+    "user_id": 30,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 59,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T05:03:00Z",
+    "user_id": 393,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 52,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-27T20:03:00Z",
+    "user_id": 30,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 116,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T23:03:00Z",
+    "user_id": 391,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 56,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T11:03:00Z",
+    "user_id": 404,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 119,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T02:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 10,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T21:03:00Z",
+    "user_id": 32,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 110,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T23:03:00Z",
+    "user_id": 392,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 81,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-14T10:03:00Z",
+    "user_id": 28,
+    "query": "tefal tencere seti",
+    "category": "ev-yasam",
+    "subcategory": "mutfak-pisirme",
+    "result_count": 148,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T11:03:00Z",
+    "user_id": 396,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 65,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T18:03:00Z",
+    "user_id": 5,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 159,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-28T22:03:00Z",
+    "user_id": 386,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 86,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T08:03:00Z",
+    "user_id": 395,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 193,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T03:03:00Z",
+    "user_id": 4,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 143,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T09:03:00Z",
+    "user_id": 20,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 55,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-27T14:03:00Z",
+    "user_id": 30,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 15,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-01T02:03:00Z",
+    "user_id": 5,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 58,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T23:03:00Z",
+    "user_id": 397,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 140,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T01:03:00Z",
+    "user_id": 395,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 163,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-16T20:03:00Z",
+    "user_id": 27,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 163,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T16:03:00Z",
+    "user_id": 387,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 170,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-03T00:03:00Z",
+    "user_id": 386,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 174,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T13:03:00Z",
+    "user_id": 393,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 193,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-12T06:03:00Z",
+    "user_id": 389,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 112,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T10:03:00Z",
+    "user_id": 409,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 78,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-13T00:03:00Z",
+    "user_id": 396,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 166,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-03T02:03:00Z",
+    "user_id": 396,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 157,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T15:03:00Z",
+    "user_id": 396,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 149,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T18:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 138,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T19:03:00Z",
+    "user_id": 16,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 99,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T05:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 127,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T02:03:00Z",
+    "user_id": 22,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 23,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T23:03:00Z",
+    "user_id": 407,
+    "query": "akustik gitar satılık fender",
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "result_count": 50,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-30T05:03:00Z",
+    "user_id": 394,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 135,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T10:03:00Z",
+    "user_id": 23,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 183,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T10:03:00Z",
+    "user_id": 398,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 5,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T22:03:00Z",
+    "user_id": 399,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 70,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-18T07:03:00Z",
+    "user_id": 28,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 155,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-18T19:03:00Z",
+    "user_id": 389,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 56,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-17T09:03:00Z",
+    "user_id": 31,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 5,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-04T03:03:00Z",
+    "user_id": 13,
+    "query": "roman kitap seti",
+    "category": "kitap-hobi",
+    "subcategory": "roman-hikaye",
+    "result_count": 58,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T07:03:00Z",
+    "user_id": 24,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 31,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-14T00:03:00Z",
+    "user_id": 31,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 130,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T13:03:00Z",
+    "user_id": 29,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 51,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-01T15:03:00Z",
+    "user_id": 10,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 43,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-14T05:03:00Z",
+    "user_id": 406,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 131,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T15:03:00Z",
+    "user_id": 13,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 196,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-06T11:03:00Z",
+    "user_id": 396,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 150,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-06T04:03:00Z",
+    "user_id": 386,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 51,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-14T23:03:00Z",
+    "user_id": 403,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 164,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-13T07:03:00Z",
+    "user_id": 397,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 156,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T09:03:00Z",
+    "user_id": 11,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 163,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-09T04:03:00Z",
+    "user_id": 28,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 53,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-14T17:03:00Z",
+    "user_id": 386,
+    "query": "akustik gitar satılık fender",
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "result_count": 60,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-05T07:03:00Z",
+    "user_id": 398,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 36,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T12:03:00Z",
+    "user_id": 388,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 86,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T22:03:00Z",
+    "user_id": 31,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 170,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-18T20:03:00Z",
+    "user_id": 20,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 195,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-26T20:03:00Z",
+    "user_id": 392,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 198,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-03T20:03:00Z",
+    "user_id": 4,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 173,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T11:03:00Z",
+    "user_id": 4,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 96,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-21T23:03:00Z",
+    "user_id": 16,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 153,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-06T18:03:00Z",
+    "user_id": 16,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 71,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T22:03:00Z",
+    "user_id": 394,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 25,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-07T23:03:00Z",
+    "user_id": 386,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 104,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-17T16:03:00Z",
+    "user_id": 389,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 96,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-11T13:03:00Z",
+    "user_id": 25,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 132,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-05T15:03:00Z",
+    "user_id": 2,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 165,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-09T00:03:00Z",
+    "user_id": 397,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 181,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-04T16:03:00Z",
+    "user_id": 386,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 109,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T22:03:00Z",
+    "user_id": 28,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 10,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T15:03:00Z",
+    "user_id": 1,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 16,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T13:03:00Z",
+    "user_id": 26,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 33,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-03T17:03:00Z",
+    "user_id": 17,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 125,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T16:03:00Z",
+    "user_id": 1,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 6,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-04T23:03:00Z",
+    "user_id": 31,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 7,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-02T14:03:00Z",
+    "user_id": 32,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 154,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-02T03:03:00Z",
+    "user_id": 31,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 84,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T10:03:00Z",
+    "user_id": 13,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 167,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-13T15:03:00Z",
+    "user_id": 394,
+    "query": "kedi evi oyuncak",
+    "category": "diger",
+    "subcategory": "evcil-hayvan",
+    "result_count": 11,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-18T18:03:00Z",
+    "user_id": 4,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 137,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T16:03:00Z",
+    "user_id": 16,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 193,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-05T14:03:00Z",
+    "user_id": 394,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 99,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-16T09:03:00Z",
+    "user_id": 399,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 116,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T10:03:00Z",
+    "user_id": 398,
+    "query": "kedi evi oyuncak",
+    "category": "diger",
+    "subcategory": "evcil-hayvan",
+    "result_count": 161,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T18:03:00Z",
+    "user_id": 2,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 120,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-10T17:03:00Z",
+    "user_id": 26,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 193,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T04:03:00Z",
+    "user_id": 389,
+    "query": "akustik gitar satılık fender",
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "result_count": 175,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T20:03:00Z",
+    "user_id": 30,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 138,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-21T19:03:00Z",
+    "user_id": 386,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 105,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T22:03:00Z",
+    "user_id": 6,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 147,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-10T06:03:00Z",
+    "user_id": 21,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 93,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-04T03:03:00Z",
+    "user_id": 29,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 59,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T14:03:00Z",
+    "user_id": 403,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 37,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T02:03:00Z",
+    "user_id": 24,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 139,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T05:03:00Z",
+    "user_id": 5,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 102,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-10T10:03:00Z",
+    "user_id": 12,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 196,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T04:03:00Z",
+    "user_id": 17,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 181,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T00:03:00Z",
+    "user_id": 10,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 172,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T02:03:00Z",
+    "user_id": 395,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 21,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-13T00:03:00Z",
+    "user_id": 3,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 160,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-21T06:03:00Z",
+    "user_id": 21,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 52,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T11:03:00Z",
+    "user_id": 387,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 24,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-28T15:03:00Z",
+    "user_id": 394,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 199,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-29T01:03:00Z",
+    "user_id": 30,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 68,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T21:03:00Z",
+    "user_id": 392,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 28,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-21T17:03:00Z",
+    "user_id": 32,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 47,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T11:03:00Z",
+    "user_id": 2,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 146,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T23:03:00Z",
+    "user_id": 396,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 107,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T23:03:00Z",
+    "user_id": 394,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 136,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T00:03:00Z",
+    "user_id": 398,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 115,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-02T14:03:00Z",
+    "user_id": 406,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 125,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-10T19:03:00Z",
+    "user_id": 398,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 31,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T15:03:00Z",
+    "user_id": 19,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 155,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-27T07:03:00Z",
+    "user_id": 17,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 17,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T05:03:00Z",
+    "user_id": 399,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 136,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-26T16:03:00Z",
+    "user_id": 16,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 9,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T20:03:00Z",
+    "user_id": 407,
+    "query": "futbol topu profesyonel",
+    "category": "spor-outdoor",
+    "subcategory": "takim-sporlari",
+    "result_count": 93,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-09T19:03:00Z",
+    "user_id": 397,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 155,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-14T00:03:00Z",
+    "user_id": 19,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 60,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T07:03:00Z",
+    "user_id": 17,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 60,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T00:03:00Z",
+    "user_id": 404,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 167,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T05:03:00Z",
+    "user_id": 32,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 80,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T08:03:00Z",
+    "user_id": 401,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 33,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T14:03:00Z",
+    "user_id": 6,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 25,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T04:03:00Z",
+    "user_id": 25,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 143,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-01T04:03:00Z",
+    "user_id": 387,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 75,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T13:03:00Z",
+    "user_id": 25,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 14,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-27T11:03:00Z",
+    "user_id": 392,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 163,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T07:03:00Z",
+    "user_id": 23,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 187,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-12T23:03:00Z",
+    "user_id": 27,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 116,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-01T14:03:00Z",
+    "user_id": 1,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 53,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T17:03:00Z",
+    "user_id": 390,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 163,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-06T12:03:00Z",
+    "user_id": 3,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 63,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T20:03:00Z",
+    "user_id": 12,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 137,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T15:03:00Z",
+    "user_id": 13,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 13,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T09:03:00Z",
+    "user_id": 25,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 186,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-28T17:03:00Z",
+    "user_id": 395,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 37,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T21:03:00Z",
+    "user_id": 390,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 20,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T17:03:00Z",
+    "user_id": 6,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 127,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-20T16:03:00Z",
+    "user_id": 392,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 41,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-21T01:03:00Z",
+    "user_id": 17,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 137,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-10T13:03:00Z",
+    "user_id": 387,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 83,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T16:03:00Z",
+    "user_id": 402,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 40,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T08:03:00Z",
+    "user_id": 2,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 139,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T17:03:00Z",
+    "user_id": 398,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 70,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T09:03:00Z",
+    "user_id": 11,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 39,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-27T02:03:00Z",
+    "user_id": 393,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 189,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T20:03:00Z",
+    "user_id": 16,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 187,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-23T17:03:00Z",
+    "user_id": 28,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 157,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-04T16:03:00Z",
+    "user_id": 26,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 179,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-12T06:03:00Z",
+    "user_id": 389,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 51,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-02T13:03:00Z",
+    "user_id": 3,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 22,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T21:03:00Z",
+    "user_id": 392,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 28,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-14T05:03:00Z",
+    "user_id": 407,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 119,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-26T13:03:00Z",
+    "user_id": 31,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 118,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-30T12:03:00Z",
+    "user_id": 20,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 90,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-03T18:03:00Z",
+    "user_id": 5,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 127,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-14T15:03:00Z",
+    "user_id": 399,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 54,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T22:03:00Z",
+    "user_id": 11,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 151,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-28T07:03:00Z",
+    "user_id": 23,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 11,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T03:03:00Z",
+    "user_id": 24,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 180,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T05:03:00Z",
+    "user_id": 11,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 188,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-04T10:03:00Z",
+    "user_id": 29,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 178,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T09:03:00Z",
+    "user_id": 2,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 20,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-13T01:03:00Z",
+    "user_id": 26,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 63,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-06T19:03:00Z",
+    "user_id": 387,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 58,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-08T03:03:00Z",
+    "user_id": 408,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 135,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T01:03:00Z",
+    "user_id": 27,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 16,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T13:03:00Z",
+    "user_id": 1,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 95,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T16:03:00Z",
+    "user_id": 4,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 135,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T05:03:00Z",
+    "user_id": 19,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 5,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-26T22:03:00Z",
+    "user_id": 396,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 9,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-17T07:03:00Z",
+    "user_id": 396,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 20,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T13:03:00Z",
+    "user_id": 12,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 49,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-12T23:03:00Z",
+    "user_id": 1,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 88,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T05:03:00Z",
+    "user_id": 11,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 102,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-21T21:03:00Z",
+    "user_id": 10,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 6,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T23:03:00Z",
+    "user_id": 31,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 107,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T17:03:00Z",
+    "user_id": 394,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 80,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-07T09:03:00Z",
+    "user_id": 394,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 162,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-26T05:03:00Z",
+    "user_id": 400,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 37,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-30T00:03:00Z",
+    "user_id": 16,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 65,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-07T23:03:00Z",
+    "user_id": 19,
+    "query": "futbol topu profesyonel",
+    "category": "spor-outdoor",
+    "subcategory": "takim-sporlari",
+    "result_count": 78,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T13:03:00Z",
+    "user_id": 405,
+    "query": "koşu bandı satılık ev",
+    "category": "spor-outdoor",
+    "subcategory": "fitness-spor-salonu",
+    "result_count": 99,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-02T18:03:00Z",
+    "user_id": 21,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 191,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-14T22:03:00Z",
+    "user_id": 26,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 189,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T23:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 45,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-15T16:03:00Z",
+    "user_id": 11,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 44,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T21:03:00Z",
+    "user_id": 22,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 189,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-17T19:03:00Z",
+    "user_id": 27,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 22,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T21:03:00Z",
+    "user_id": 23,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 77,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-15T21:03:00Z",
+    "user_id": 32,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 91,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-11T04:03:00Z",
+    "user_id": 400,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 189,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-13T06:03:00Z",
+    "user_id": 20,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 52,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-13T10:03:00Z",
+    "user_id": 29,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 117,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-05T11:03:00Z",
+    "user_id": 31,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 133,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T05:03:00Z",
+    "user_id": 397,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 182,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-18T17:03:00Z",
+    "user_id": 403,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 116,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-12T09:03:00Z",
+    "user_id": 11,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 184,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T01:03:00Z",
+    "user_id": 396,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 200,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T21:03:00Z",
+    "user_id": 391,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 124,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-14T14:03:00Z",
+    "user_id": 400,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 46,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-04T11:03:00Z",
+    "user_id": 396,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 32,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-08T15:03:00Z",
+    "user_id": 24,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 10,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T07:03:00Z",
+    "user_id": 3,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 174,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T04:03:00Z",
+    "user_id": 19,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 181,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T06:03:00Z",
+    "user_id": 6,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 173,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T06:03:00Z",
+    "user_id": 393,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 91,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T15:03:00Z",
+    "user_id": 28,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 176,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-12T03:03:00Z",
+    "user_id": 25,
+    "query": "lego oyuncak seti",
+    "category": "diger",
+    "subcategory": "oyuncak-cocuk-oyun",
+    "result_count": 34,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T15:03:00Z",
+    "user_id": 24,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 176,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-09T17:03:00Z",
+    "user_id": 386,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 145,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-01T13:03:00Z",
+    "user_id": 390,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 56,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-05T02:03:00Z",
+    "user_id": 387,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 61,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-30T08:03:00Z",
+    "user_id": 12,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 48,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T00:03:00Z",
+    "user_id": 399,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 194,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T10:03:00Z",
+    "user_id": 5,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 180,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-11T18:03:00Z",
+    "user_id": 12,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 200,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-07T09:03:00Z",
+    "user_id": 388,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 116,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-23T11:03:00Z",
+    "user_id": 23,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 163,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-09T20:03:00Z",
+    "user_id": 11,
+    "query": "motosiklet satılık honda",
+    "category": "vasita",
+    "subcategory": "motosiklet",
+    "result_count": 81,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-06T19:03:00Z",
+    "user_id": 29,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 33,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-02T13:03:00Z",
+    "user_id": 10,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 182,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-26T10:03:00Z",
+    "user_id": 397,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 195,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-24T14:03:00Z",
+    "user_id": 19,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 177,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-03T00:03:00Z",
+    "user_id": 397,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 44,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-18T08:03:00Z",
+    "user_id": 404,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 162,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-25T23:03:00Z",
+    "user_id": 13,
+    "query": "sedan araba ikinci el",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 5,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-09T04:03:00Z",
+    "user_id": 30,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 148,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-18T17:03:00Z",
+    "user_id": 4,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 88,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T05:03:00Z",
+    "user_id": 1,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 12,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-10T04:03:00Z",
+    "user_id": 1,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 123,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-30T00:03:00Z",
+    "user_id": 13,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 16,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-07T17:03:00Z",
+    "user_id": 23,
+    "query": "dağ bisikleti 29 jant",
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "result_count": 107,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T02:03:00Z",
+    "user_id": 408,
+    "query": "philips saç makinesi",
+    "category": "diger",
+    "subcategory": "saglik-guzellik",
+    "result_count": 76,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-05T18:03:00Z",
+    "user_id": 407,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 189,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T19:03:00Z",
+    "user_id": 390,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 120,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T15:03:00Z",
+    "user_id": 21,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 154,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-23T17:03:00Z",
+    "user_id": 3,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 168,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T20:03:00Z",
+    "user_id": 406,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 144,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-11T23:03:00Z",
+    "user_id": 28,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 19,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T09:03:00Z",
+    "user_id": 30,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 120,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-15T21:03:00Z",
+    "user_id": 3,
+    "query": "ticari araç ford transit",
+    "category": "vasita",
+    "subcategory": "kamyonet-minibus",
+    "result_count": 43,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-07T19:03:00Z",
+    "user_id": 394,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 127,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-04T01:03:00Z",
+    "user_id": 397,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 128,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-01T10:03:00Z",
+    "user_id": 389,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 20,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T15:03:00Z",
+    "user_id": 29,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 164,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-06T16:03:00Z",
+    "user_id": 394,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 15,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-22T23:03:00Z",
+    "user_id": 2,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 86,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-28T14:03:00Z",
+    "user_id": 398,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 188,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T02:03:00Z",
+    "user_id": 390,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 74,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T19:03:00Z",
+    "user_id": 29,
+    "query": "macbook air m2",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 170,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T23:03:00Z",
+    "user_id": 388,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 22,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-18T08:03:00Z",
+    "user_id": 409,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 142,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-16T23:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 49,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T22:03:00Z",
+    "user_id": 23,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 167,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-08T06:03:00Z",
+    "user_id": 23,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 46,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-06-26T13:03:00Z",
+    "user_id": 406,
+    "query": "satılık daire ankara",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 153,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-09T17:03:00Z",
+    "user_id": 396,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 192,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-25T18:03:00Z",
+    "user_id": 390,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 191,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-20T04:03:00Z",
+    "user_id": 20,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 101,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-18T15:03:00Z",
+    "user_id": 23,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 134,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-17T18:03:00Z",
+    "user_id": 397,
+    "query": "deri omuz çantası",
+    "category": "giyim-aksesuar",
+    "subcategory": "canta-cuzdan",
+    "result_count": 24,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-21T20:03:00Z",
+    "user_id": 13,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 44,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-14T19:03:00Z",
+    "user_id": 398,
+    "query": "ders kitabı üniversite",
+    "category": "kitap-hobi",
+    "subcategory": "ders-kitabi-akademik",
+    "result_count": 27,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-26T22:03:00Z",
+    "user_id": 6,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 147,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-08T21:03:00Z",
+    "user_id": 20,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 55,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T21:03:00Z",
+    "user_id": 400,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 49,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-17T14:03:00Z",
+    "user_id": 22,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 5,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T21:03:00Z",
+    "user_id": 31,
+    "query": "iphone 15 satılık",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 144,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-15T21:03:00Z",
+    "user_id": 26,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 83,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T20:03:00Z",
+    "user_id": 22,
+    "query": "satılık müstakil ev bahçeli",
+    "category": "emlak",
+    "subcategory": "mustakil-ev-villa",
+    "result_count": 6,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-26T00:03:00Z",
+    "user_id": 5,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 126,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T23:03:00Z",
+    "user_id": 32,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 69,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T01:03:00Z",
+    "user_id": 398,
+    "query": "kamp çadırı 2 kişilik",
+    "category": "spor-outdoor",
+    "subcategory": "outdoor-kamp",
+    "result_count": 68,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-22T02:03:00Z",
+    "user_id": 399,
+    "query": "zara elbise beden m",
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "result_count": 77,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-16T02:03:00Z",
+    "user_id": 31,
+    "query": "2020 dizel vw passat",
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "result_count": 110,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-14T10:03:00Z",
+    "user_id": 406,
+    "query": "futbol topu profesyonel",
+    "category": "spor-outdoor",
+    "subcategory": "takim-sporlari",
+    "result_count": 129,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-06-30T21:03:00Z",
+    "user_id": 5,
+    "query": "elektrikli scooter",
+    "category": "vasita",
+    "subcategory": "elektrikli-arac",
+    "result_count": 40,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-13T03:03:00Z",
+    "user_id": 391,
+    "query": "nike air force 1",
+    "category": "giyim-aksesuar",
+    "subcategory": "ayakkabi",
+    "result_count": 142,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-16T03:03:00Z",
+    "user_id": 390,
+    "query": "nevresim takımı çift kişilik",
+    "category": "ev-yasam",
+    "subcategory": "ev-tekstili",
+    "result_count": 171,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-15T23:03:00Z",
+    "user_id": 391,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 184,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-24T02:03:00Z",
+    "user_id": 17,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 51,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-20T16:03:00Z",
+    "user_id": 393,
+    "query": "casio g-shock saat",
+    "category": "giyim-aksesuar",
+    "subcategory": "saat",
+    "result_count": 22,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-14T02:03:00Z",
+    "user_id": 17,
+    "query": "kiralık 2+1 daire istanbul",
+    "category": "emlak",
+    "subcategory": "daire",
+    "result_count": 7,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-24T08:03:00Z",
+    "user_id": 405,
+    "query": "arsa yatırım",
+    "category": "emlak",
+    "subcategory": "arsa",
+    "result_count": 109,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-07T10:03:00Z",
+    "user_id": 29,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 94,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-08T22:03:00Z",
+    "user_id": 6,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 200,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-05T05:03:00Z",
+    "user_id": 393,
+    "query": "erkek gömlek h&m",
+    "category": "giyim-aksesuar",
+    "subcategory": "erkek-giyim",
+    "result_count": 89,
+    "intent": "buy"
+  },
+  {
+    "timestamp": "2026-07-22T03:03:00Z",
+    "user_id": 24,
+    "query": "kiralık ofis izmir",
+    "category": "emlak",
+    "subcategory": "is-yeri-ofis",
+    "result_count": 26,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-09T05:03:00Z",
+    "user_id": 20,
+    "query": "koltuk takımı satılık",
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "result_count": 91,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-25T14:03:00Z",
+    "user_id": 395,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 126,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-06-30T13:03:00Z",
+    "user_id": 32,
+    "query": "samsung galaxy s23",
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "result_count": 140,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-19T13:03:00Z",
+    "user_id": 28,
+    "query": "gaming laptop rtx",
+    "category": "elektronik",
+    "subcategory": "bilgisayar-laptop",
+    "result_count": 104,
+    "intent": "compare"
+  },
+  {
+    "timestamp": "2026-07-03T03:03:00Z",
+    "user_id": 27,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 164,
+    "intent": "browse"
+  },
+  {
+    "timestamp": "2026-07-21T22:03:00Z",
+    "user_id": 388,
+    "query": "playstation 5 satılık",
+    "category": "elektronik",
+    "subcategory": "oyun-konsolu",
+    "result_count": 186,
+    "intent": "browse"
+  }
+]

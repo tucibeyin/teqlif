@@ -1,0 +1,1382 @@
+[
+  {
+    "user_id": 1,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8781
+  },
+  {
+    "user_id": 1,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.3009
+  },
+  {
+    "user_id": 1,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1733
+  },
+  {
+    "user_id": 1,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0919
+  },
+  {
+    "user_id": 1,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.05
+  },
+  {
+    "user_id": 2,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8641
+  },
+  {
+    "user_id": 2,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.2869
+  },
+  {
+    "user_id": 2,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1451
+  },
+  {
+    "user_id": 2,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.091
+  },
+  {
+    "user_id": 2,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1118
+  },
+  {
+    "user_id": 3,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8281
+  },
+  {
+    "user_id": 3,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.3369
+  },
+  {
+    "user_id": 3,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2084
+  },
+  {
+    "user_id": 3,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0731
+  },
+  {
+    "user_id": 3,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1282
+  },
+  {
+    "user_id": 4,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8009
+  },
+  {
+    "user_id": 4,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.3355
+  },
+  {
+    "user_id": 4,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2293
+  },
+  {
+    "user_id": 4,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1222
+  },
+  {
+    "user_id": 4,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1161
+  },
+  {
+    "user_id": 5,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8934
+  },
+  {
+    "user_id": 5,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.3355
+  },
+  {
+    "user_id": 5,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.15
+  },
+  {
+    "user_id": 5,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1413
+  },
+  {
+    "user_id": 5,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1276
+  },
+  {
+    "user_id": 6,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8632
+  },
+  {
+    "user_id": 6,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.3002
+  },
+  {
+    "user_id": 6,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2072
+  },
+  {
+    "user_id": 6,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1316
+  },
+  {
+    "user_id": 6,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1182
+  },
+  {
+    "user_id": 10,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.7992
+  },
+  {
+    "user_id": 10,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.2628
+  },
+  {
+    "user_id": 10,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1892
+  },
+  {
+    "user_id": 10,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0741
+  },
+  {
+    "user_id": 10,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.0999
+  },
+  {
+    "user_id": 11,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.7963
+  },
+  {
+    "user_id": 11,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.2991
+  },
+  {
+    "user_id": 11,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2068
+  },
+  {
+    "user_id": 11,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0838
+  },
+  {
+    "user_id": 11,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.053
+  },
+  {
+    "user_id": 12,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.9024
+  },
+  {
+    "user_id": 12,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.2838
+  },
+  {
+    "user_id": 12,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2253
+  },
+  {
+    "user_id": 12,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0648
+  },
+  {
+    "user_id": 12,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.05
+  },
+  {
+    "user_id": 13,
+    "category": "vasita",
+    "subcategory": "otomobil",
+    "score": 0.8688
+  },
+  {
+    "user_id": 13,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.2702
+  },
+  {
+    "user_id": 13,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1386
+  },
+  {
+    "user_id": 13,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1339
+  },
+  {
+    "user_id": 13,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1338
+  },
+  {
+    "user_id": 16,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8395
+  },
+  {
+    "user_id": 16,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.3961
+  },
+  {
+    "user_id": 16,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1602
+  },
+  {
+    "user_id": 16,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1198
+  },
+  {
+    "user_id": 16,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.0956
+  },
+  {
+    "user_id": 17,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.7797
+  },
+  {
+    "user_id": 17,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4489
+  },
+  {
+    "user_id": 17,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.2244
+  },
+  {
+    "user_id": 17,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1913
+  },
+  {
+    "user_id": 17,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.1406
+  },
+  {
+    "user_id": 19,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8258
+  },
+  {
+    "user_id": 19,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.3922
+  },
+  {
+    "user_id": 19,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1932
+  },
+  {
+    "user_id": 19,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1962
+  },
+  {
+    "user_id": 19,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.1325
+  },
+  {
+    "user_id": 20,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8565
+  },
+  {
+    "user_id": 20,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4365
+  },
+  {
+    "user_id": 20,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.202
+  },
+  {
+    "user_id": 20,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1531
+  },
+  {
+    "user_id": 20,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.0948
+  },
+  {
+    "user_id": 21,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8136
+  },
+  {
+    "user_id": 21,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4264
+  },
+  {
+    "user_id": 21,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1554
+  },
+  {
+    "user_id": 21,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1501
+  },
+  {
+    "user_id": 21,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.1423
+  },
+  {
+    "user_id": 22,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.875
+  },
+  {
+    "user_id": 22,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4378
+  },
+  {
+    "user_id": 22,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1857
+  },
+  {
+    "user_id": 22,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1102
+  },
+  {
+    "user_id": 22,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.0869
+  },
+  {
+    "user_id": 23,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8553
+  },
+  {
+    "user_id": 23,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4016
+  },
+  {
+    "user_id": 23,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1515
+  },
+  {
+    "user_id": 23,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.0894
+  },
+  {
+    "user_id": 23,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.052
+  },
+  {
+    "user_id": 24,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8003
+  },
+  {
+    "user_id": 24,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.3857
+  },
+  {
+    "user_id": 24,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1526
+  },
+  {
+    "user_id": 24,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1761
+  },
+  {
+    "user_id": 24,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.1046
+  },
+  {
+    "user_id": 25,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8676
+  },
+  {
+    "user_id": 25,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4309
+  },
+  {
+    "user_id": 25,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.2237
+  },
+  {
+    "user_id": 25,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1807
+  },
+  {
+    "user_id": 25,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.1044
+  },
+  {
+    "user_id": 26,
+    "category": "emlak",
+    "subcategory": "daire",
+    "score": 0.8204
+  },
+  {
+    "user_id": 26,
+    "category": "ev-yasam",
+    "subcategory": "mobilya",
+    "score": 0.4579
+  },
+  {
+    "user_id": 26,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1746
+  },
+  {
+    "user_id": 26,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1992
+  },
+  {
+    "user_id": 26,
+    "category": "kitap-hobi",
+    "subcategory": null,
+    "score": 0.093
+  },
+  {
+    "user_id": 27,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.8529
+  },
+  {
+    "user_id": 27,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.3097
+  },
+  {
+    "user_id": 27,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1535
+  },
+  {
+    "user_id": 27,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1415
+  },
+  {
+    "user_id": 27,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.136
+  },
+  {
+    "user_id": 28,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.831
+  },
+  {
+    "user_id": 28,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.386
+  },
+  {
+    "user_id": 28,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1483
+  },
+  {
+    "user_id": 28,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.0805
+  },
+  {
+    "user_id": 28,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1402
+  },
+  {
+    "user_id": 29,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.8511
+  },
+  {
+    "user_id": 29,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.2863
+  },
+  {
+    "user_id": 29,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.2323
+  },
+  {
+    "user_id": 29,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1989
+  },
+  {
+    "user_id": 29,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.148
+  },
+  {
+    "user_id": 30,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.7899
+  },
+  {
+    "user_id": 30,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.3769
+  },
+  {
+    "user_id": 30,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1204
+  },
+  {
+    "user_id": 30,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1194
+  },
+  {
+    "user_id": 30,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1022
+  },
+  {
+    "user_id": 31,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.7618
+  },
+  {
+    "user_id": 31,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.3244
+  },
+  {
+    "user_id": 31,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1996
+  },
+  {
+    "user_id": 31,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.0877
+  },
+  {
+    "user_id": 31,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1138
+  },
+  {
+    "user_id": 32,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.7651
+  },
+  {
+    "user_id": 32,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.3152
+  },
+  {
+    "user_id": 32,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1499
+  },
+  {
+    "user_id": 32,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1523
+  },
+  {
+    "user_id": 32,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.05
+  },
+  {
+    "user_id": 386,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.8408
+  },
+  {
+    "user_id": 386,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.371
+  },
+  {
+    "user_id": 386,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1834
+  },
+  {
+    "user_id": 386,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1745
+  },
+  {
+    "user_id": 386,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.0874
+  },
+  {
+    "user_id": 387,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.7691
+  },
+  {
+    "user_id": 387,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.3563
+  },
+  {
+    "user_id": 387,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.2003
+  },
+  {
+    "user_id": 387,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1289
+  },
+  {
+    "user_id": 387,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1405
+  },
+  {
+    "user_id": 388,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.7484
+  },
+  {
+    "user_id": 388,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.3132
+  },
+  {
+    "user_id": 388,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1865
+  },
+  {
+    "user_id": 388,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1282
+  },
+  {
+    "user_id": 388,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1146
+  },
+  {
+    "user_id": 389,
+    "category": "elektronik",
+    "subcategory": "cep-telefonu",
+    "score": 0.8241
+  },
+  {
+    "user_id": 389,
+    "category": "kitap-hobi",
+    "subcategory": "muzik-aleti",
+    "score": 0.2988
+  },
+  {
+    "user_id": 389,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.2276
+  },
+  {
+    "user_id": 389,
+    "category": "spor-outdoor",
+    "subcategory": null,
+    "score": 0.1959
+  },
+  {
+    "user_id": 389,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1274
+  },
+  {
+    "user_id": 390,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.5934
+  },
+  {
+    "user_id": 390,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5303
+  },
+  {
+    "user_id": 390,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2336
+  },
+  {
+    "user_id": 390,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1622
+  },
+  {
+    "user_id": 390,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.134
+  },
+  {
+    "user_id": 391,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.7061
+  },
+  {
+    "user_id": 391,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.4923
+  },
+  {
+    "user_id": 391,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1642
+  },
+  {
+    "user_id": 391,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1848
+  },
+  {
+    "user_id": 391,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.0839
+  },
+  {
+    "user_id": 392,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.7009
+  },
+  {
+    "user_id": 392,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.509
+  },
+  {
+    "user_id": 392,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1663
+  },
+  {
+    "user_id": 392,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.2004
+  },
+  {
+    "user_id": 392,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.1452
+  },
+  {
+    "user_id": 393,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.6112
+  },
+  {
+    "user_id": 393,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5862
+  },
+  {
+    "user_id": 393,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2381
+  },
+  {
+    "user_id": 393,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1901
+  },
+  {
+    "user_id": 393,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.089
+  },
+  {
+    "user_id": 394,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.6544
+  },
+  {
+    "user_id": 394,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5563
+  },
+  {
+    "user_id": 394,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1794
+  },
+  {
+    "user_id": 394,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1358
+  },
+  {
+    "user_id": 394,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.1347
+  },
+  {
+    "user_id": 395,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.6323
+  },
+  {
+    "user_id": 395,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5026
+  },
+  {
+    "user_id": 395,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1675
+  },
+  {
+    "user_id": 395,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1968
+  },
+  {
+    "user_id": 395,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.05
+  },
+  {
+    "user_id": 396,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.5992
+  },
+  {
+    "user_id": 396,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5452
+  },
+  {
+    "user_id": 396,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.1617
+  },
+  {
+    "user_id": 396,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1653
+  },
+  {
+    "user_id": 396,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.0523
+  },
+  {
+    "user_id": 397,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.6985
+  },
+  {
+    "user_id": 397,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5448
+  },
+  {
+    "user_id": 397,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2558
+  },
+  {
+    "user_id": 397,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.2087
+  },
+  {
+    "user_id": 397,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.0799
+  },
+  {
+    "user_id": 398,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.6283
+  },
+  {
+    "user_id": 398,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5858
+  },
+  {
+    "user_id": 398,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.2016
+  },
+  {
+    "user_id": 398,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.2034
+  },
+  {
+    "user_id": 398,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.0698
+  },
+  {
+    "user_id": 399,
+    "category": "giyim-aksesuar",
+    "subcategory": "kadin-giyim",
+    "score": 0.6382
+  },
+  {
+    "user_id": 399,
+    "category": "spor-outdoor",
+    "subcategory": "bisiklet",
+    "score": 0.5078
+  },
+  {
+    "user_id": 399,
+    "category": "ev-yasam",
+    "subcategory": null,
+    "score": 0.212
+  },
+  {
+    "user_id": 399,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.185
+  },
+  {
+    "user_id": 399,
+    "category": "diger",
+    "subcategory": null,
+    "score": 0.0656
+  },
+  {
+    "user_id": 400,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1427
+  },
+  {
+    "user_id": 400,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0534
+  },
+  {
+    "user_id": 400,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1054
+  },
+  {
+    "user_id": 401,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1461
+  },
+  {
+    "user_id": 401,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1127
+  },
+  {
+    "user_id": 401,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.0706
+  },
+  {
+    "user_id": 402,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.0891
+  },
+  {
+    "user_id": 402,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0706
+  },
+  {
+    "user_id": 402,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1095
+  },
+  {
+    "user_id": 403,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1646
+  },
+  {
+    "user_id": 403,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0957
+  },
+  {
+    "user_id": 403,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1001
+  },
+  {
+    "user_id": 404,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1894
+  },
+  {
+    "user_id": 404,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0879
+  },
+  {
+    "user_id": 404,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1443
+  },
+  {
+    "user_id": 405,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1127
+  },
+  {
+    "user_id": 405,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1207
+  },
+  {
+    "user_id": 405,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1158
+  },
+  {
+    "user_id": 406,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1431
+  },
+  {
+    "user_id": 406,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0872
+  },
+  {
+    "user_id": 406,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.0944
+  },
+  {
+    "user_id": 407,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1869
+  },
+  {
+    "user_id": 407,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1692
+  },
+  {
+    "user_id": 407,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1309
+  },
+  {
+    "user_id": 408,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.1988
+  },
+  {
+    "user_id": 408,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.1039
+  },
+  {
+    "user_id": 408,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.05
+  },
+  {
+    "user_id": 409,
+    "category": "elektronik",
+    "subcategory": null,
+    "score": 0.0985
+  },
+  {
+    "user_id": 409,
+    "category": "giyim-aksesuar",
+    "subcategory": null,
+    "score": 0.0791
+  },
+  {
+    "user_id": 409,
+    "category": "vasita",
+    "subcategory": null,
+    "score": 0.1104
+  }
+]
