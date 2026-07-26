@@ -74,11 +74,12 @@
 - [x] **T15** — `analytics_service.dart: trackSearch()`'e `subcategory` parametresi eklendi
   - Body'ye `'subcategory': subcategory` eklendi
 
-- [ ] **T16** — `analytics_service.dart: getPriceEstimate()`'e `subcategory`, `extraFields` (km, year, fuel_type) parametresi ekle
-  - Backend `/price-estimate` endpoint'ine bu parametreler geçirilsin
+- [x] **T16** — `analytics_service.dart: getPriceEstimate()`'e `subcategory`, `extraFields` parametresi eklendi
+  - `create_listing_screen.dart`: `_collectExtraFields()` helper eklendi, `_fetchAiPriceEstimate()` + `_submit()` güncellendi
+  - `edit_listing_screen.dart`: `widget.listing['subcategory/condition/extra_fields']` üzerinden geçirildi
 
-- [ ] **T17** — `analytics_service.dart: logInteraction()`'da `metadata` dict'e subcategory ekle
-  - Her çağrı sitesinde listing'in subcategory'si varsa metadata'ya ekle
+- [x] **T17** — `analytics_service.dart: logInteraction()`'a `subcategory` eklendi
+  - `listing_detail_screen.dart`'taki tüm 14 çağrı sitesi güncellendi (`widget.listing['subcategory']`)
 
 ---
 

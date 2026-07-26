@@ -138,8 +138,10 @@ class AnalyticsService {
     required String title,
     required String description,
     required String category,
+    String subcategory = '',
     String city = '',
     String condition = '',
+    Map<String, dynamic>? extraFields,
     int? excludeListingId,
   }) async {
     try {
@@ -154,8 +156,11 @@ class AnalyticsService {
             'title': title,
             'description': description,
             'category': category,
+            if (subcategory.isNotEmpty) 'subcategory': subcategory,
             'city': city,
             if (condition.isNotEmpty) 'condition': condition,
+            if (extraFields != null && extraFields.isNotEmpty)
+              'extra_fields': extraFields,
             if (excludeListingId != null && excludeListingId > 0)
               'exclude_listing_id': excludeListingId,
           }),
@@ -325,6 +330,7 @@ class AnalyticsService {
     int? ownerId,
     double? durationSeconds,
     double? pricePoint,
+    String subcategory = '',
     Map<String, dynamic>? metadata,
   }) async {
     try {
@@ -336,13 +342,17 @@ class AnalyticsService {
         'Content-Type': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
       };
+      final mergedMeta = <String, dynamic>{
+        if (metadata != null) ...metadata,
+        if (subcategory.isNotEmpty) 'subcategory': subcategory,
+      };
       final body = <String, dynamic>{
         'item_id': itemId,
         'item_type': itemType,
         'interaction_type': interactionType,
         'duration_seconds': ?durationSeconds,
         'price_point': ?pricePoint,
-        'metadata': ?metadata,
+        if (mergedMeta.isNotEmpty) 'metadata': mergedMeta,
         // JWT expire olsa bile user_id kaybolmasın diye body'ye de yaz
         'user_id': ?myUserId,
       };

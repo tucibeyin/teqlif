@@ -209,6 +209,33 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       _selectedProvince != null &&
       _selectedCondition != null;
 
+  Map<String, dynamic> _collectExtraFields() {
+    final ef = <String, dynamic>{};
+    if (_selectedSubcategory == null) return ef;
+    for (final f in _currentFields) {
+      if (f.type == ExtraFieldType.multiselect) {
+        final vals = _extraMultiValues[f.key];
+        if (vals != null && vals.isNotEmpty) ef[f.key] = vals.toList();
+      } else if (f.type == ExtraFieldType.dropdown) {
+        final v = _extraValues[f.key];
+        if (v != null && v.isNotEmpty) {
+          ef[f.key] = f.key == 'year' ? (int.tryParse(v) ?? v) : v;
+        }
+      } else {
+        final v = _extraCtrlMap[f.key]?.text.trim() ?? '';
+        if (v.isNotEmpty) {
+          if (f.type == ExtraFieldType.number) {
+            final n = num.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
+            if (n != null) ef[f.key] = n;
+          } else {
+            ef[f.key] = v;
+          }
+        }
+      }
+    }
+    return ef;
+  }
+
   Future<void> _fetchAiPriceEstimate() async {
     final loc = ref.read(localizationProvider);
     if (!_aiReady) {
@@ -217,12 +244,15 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     }
     setState(() => _aiLoading = true);
     try {
+      final ef = _collectExtraFields();
       final result = await AnalyticsService.getPriceEstimate(
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         category: _selectedCategory ?? '',
+        subcategory: _selectedSubcategory ?? '',
         city: _selectedProvince ?? '',
         condition: _selectedCondition ?? '',
+        extraFields: ef.isNotEmpty ? ef : null,
       );
       if (!mounted) return;
       if (result == null) {
@@ -747,35 +777,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       final captchaToken = await CaptchaService.getToken();
       if (!mounted) return;
 
-      // Build extra_fields: merge controller values + dropdown values, skip blanks
-      final Map<String, dynamic> extraFields = {};
-      if (_selectedSubcategory != null) {
-        final fields = _currentFields;
-        for (final f in fields) {
-          if (f.type == ExtraFieldType.multiselect) {
-            final vals = _extraMultiValues[f.key];
-            if (vals != null && vals.isNotEmpty) extraFields[f.key] = vals.toList();
-          } else if (f.type == ExtraFieldType.dropdown) {
-            final v = _extraValues[f.key];
-            if (v != null && v.isNotEmpty) {
-              // yil is stored as integer for consistency with existing listings
-              final asInt = f.key == 'year' ? int.tryParse(v) : null;
-              extraFields[f.key] = asInt ?? v;
-            }
-          } else {
-            final ctrl = _extraCtrlMap[f.key];
-            final v = ctrl?.text.trim() ?? '';
-            if (v.isNotEmpty) {
-              if (f.type == ExtraFieldType.number) {
-                final n = num.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
-                if (n != null) extraFields[f.key] = n;
-              } else {
-                extraFields[f.key] = v;
-              }
-            }
-          }
-        }
-      }
+      final extraFields = _collectExtraFields();
 
       await apiCall(
         () async => http.post(

@@ -150,11 +150,16 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
     setState(() => _aiLoading = true);
     try {
+      final rawEf = widget.listing['extra_fields'];
+      final ef = rawEf is Map ? Map<String, dynamic>.from(rawEf) : null;
       final result = await AnalyticsService.getPriceEstimate(
         title: title,
         description: desc,
         category: _selectedCategory ?? '',
+        subcategory: widget.listing['subcategory'] as String? ?? '',
         city: _selectedCity ?? '',
+        condition: widget.listing['condition'] as String? ?? '',
+        extraFields: (ef != null && ef.isNotEmpty) ? ef : null,
         excludeListingId: widget.listing['id'] as int?,
       );
       if (!mounted) return;

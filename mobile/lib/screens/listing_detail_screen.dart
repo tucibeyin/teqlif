@@ -309,6 +309,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             itemType: 'listing',
             interactionType: newLiked ? 'listing_like' : 'listing_unlike',
             pricePoint: pricePoint,
+            subcategory: widget.listing['subcategory'] as String? ?? '',
           );
         }
       }
@@ -386,6 +387,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               itemType: 'listing',
               interactionType: 'listing_unfavorite',
               pricePoint: pricePoint,
+              subcategory: widget.listing['subcategory'] as String? ?? '',
             );
         }
       } else {
@@ -404,6 +406,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               itemType: 'listing',
               interactionType: 'listing_favorite',
               pricePoint: pricePoint,
+              subcategory: widget.listing['subcategory'] as String? ?? '',
             );
         }
       }
@@ -520,6 +523,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         interactionType: 'view',
         durationSeconds: durationSec,
         pricePoint: pricePoint,
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
     }
     // Detail dwell: kullanıcı 30+ saniye harcadıysa güçlü ilgi sinyali
@@ -530,6 +534,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         interactionType: 'detail_dwell',
         durationSeconds: durationSec,
         pricePoint: pricePoint,
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
     }
     // Photo swipe depth
@@ -539,6 +544,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         itemType: 'listing',
         interactionType: 'listing_photo_swipe',
         durationSeconds: _maxPhotoReached.toDouble(),
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
     }
     // Scroll depth
@@ -548,6 +554,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         itemType: 'listing',
         interactionType: 'listing_scroll_depth',
         durationSeconds: _maxScrollDepth,
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
     }
     _scrollCtrl.dispose();
@@ -563,6 +570,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             itemType: 'listing',
             interactionType: 'listing_video_watch',
             durationSeconds: pct,
+            subcategory: widget.listing['subcategory'] as String? ?? '',
           );
         }
       }
@@ -580,6 +588,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           itemType: 'listing',
           interactionType: 'bid_hesitation',
           pricePoint: _offerTypedAmount,
+          subcategory: widget.listing['subcategory'] as String? ?? '',
         );
       }
     }
@@ -651,6 +660,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         itemType: 'listing',
         interactionType: 'listing_offer_submit',
         pricePoint: amount.toDouble(),
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
       TeqSnackBar.show(message: loc.t("offerSuccess"), type: TeqSnackBarType.success);
       final offers = await ListingService.getOffers(id);
@@ -683,6 +693,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         itemType: 'listing',
         interactionType: 'listing_profile_tap',
         metadata: {'seller_id': sellerId},
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
     }
     // Kendi ilanıysa kendi profil ekranına git (loop'u önle)
@@ -725,6 +736,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       itemType: 'listing',
       interactionType: 'listing_chat_open',
       metadata: {'seller_id': otherId},
+      subcategory: widget.listing['subcategory'] as String? ?? '',
     );
     Navigator.push(
       context,
@@ -1322,6 +1334,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     itemId: id,
                     itemType: 'listing',
                     interactionType: 'listing_share',
+                    subcategory: widget.listing['subcategory'] as String? ?? '',
                   );
                 }
                 ShareService.show(
@@ -2402,6 +2415,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         itemType: 'listing',
         interactionType: 'listing_photo_fullscreen',
         metadata: {'photo_index': startIndex},
+        subcategory: widget.listing['subcategory'] as String? ?? '',
       );
     }
     Navigator.push(
