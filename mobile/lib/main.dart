@@ -73,6 +73,11 @@ void main() async {
 
       await CacheService.init();
       await LocalizationService.initBox();
+      // Pre-load locale + translation pack before runApp so providers start
+      // with correct values — eliminates the first-render flash of keys.
+      final savedLang = prefs.getString('app_locale_language_code') ?? 'tr';
+      final _initialLocale = Locale(savedLang);
+      final _initialPack = LocalizationService.readCacheSync(savedLang);
       TeqToast.init(TeqlifApp.navigatorKey);
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] CacheService.init done | ${_sw.elapsedMilliseconds}ms');
       // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
@@ -97,7 +102,17 @@ void main() async {
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] runApp starting | totalMs=${_sw.elapsedMilliseconds}ms');
       // Sentry appRunner zaten runZonedGuarded ile sarılı olduğundan
       // async hataları da Sentry tarafından yakalanır.
-      runApp(const ProviderScope(child: TeqlifApp()));
+      runApp(ProviderScope(
+        overrides: [
+          localeProvider.overrideWith(
+            (ref) => LocaleNotifier(initial: _initialLocale),
+          ),
+          localizationProvider.overrideWith(
+            (ref) => LocalizationService(ref, initialPack: _initialPack),
+          ),
+        ],
+        child: const TeqlifApp(),
+      ));
     },
   );
   // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU SONU ---

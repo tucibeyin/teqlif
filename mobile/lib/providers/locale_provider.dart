@@ -19,8 +19,10 @@ const _kLocaleKey = 'app_locale_language_code';
 class LocaleNotifier extends StateNotifier<Locale> {
   static const _tag = 'LocaleNotifier';
 
-  LocaleNotifier() : super(const Locale('tr')) {
-    _loadSavedLocale();
+  /// [initial] verilirse SharedPreferences async yükleme atlanır (main'de
+  /// önceden okunan değer kullanılır → provider ilk render'dan önce doğru).
+  LocaleNotifier({Locale? initial}) : super(initial ?? const Locale('tr')) {
+    if (initial == null) _loadSavedLocale();
   }
 
   Future<void> _loadSavedLocale() async {

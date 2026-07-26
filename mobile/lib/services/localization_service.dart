@@ -38,16 +38,45 @@ class TranslationPack {
 }
 
 class LocalizationService extends StateNotifier<TranslationPack> {
-  LocalizationService(this._ref) : super(const TranslationPack({}, 'tr')) {
+  /// [initialPack] verilirse — main()'de Hive'dan senkron okunmuş paket —
+  /// provider ilk render anında zaten dolu başlar; key flash olmaz.
+  /// Boş gelirse (ilk kurulum, cache yok) normal async fetch tetiklenir.
+  LocalizationService(this._ref, {TranslationPack? initialPack})
+      : super(initialPack ?? const TranslationPack({}, 'tr')) {
     final lang = _ref.read(localeProvider).languageCode;
     _currentLang = lang;
-    load(lang);
+
+    final box = _box;
+    if (box != null) {
+      if (initialPack != null && !initialPack.isEmpty) {
+        // Pack hazır — sadece stale kontrolü arka planda yap.
+        _checkStale(lang, box).ignore();
+      } else {
+        // Cache yok (ilk kurulum) — API'den çek.
+        _fetchAndCache(lang, box).ignore();
+      }
+    }
 
     _ref.listen<Locale>(localeProvider, (_, next) {
       if (next.languageCode == _currentLang && !state.isEmpty) return;
       _currentLang = next.languageCode;
       load(next.languageCode);
     });
+  }
+
+  /// Hive box'tan senkron okuma — initBox() sonrası güvenle çağrılabilir.
+  /// main()'de runApp öncesi ilk pack'i almak için kullanılır.
+  static TranslationPack readCacheSync(String lang) {
+    final box = _box;
+    if (box == null) return TranslationPack({}, lang);
+    final json = box.get('pack_$lang');
+    if (json == null) return TranslationPack({}, lang);
+    try {
+      return TranslationPack(
+        Map<String, String>.from(jsonDecode(json) as Map), lang);
+    } catch (_) {
+      return TranslationPack({}, lang);
+    }
   }
 
   final Ref _ref;
