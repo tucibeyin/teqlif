@@ -13,7 +13,6 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
 import '../services/api_service.dart';
-import '../services/city_service.dart';
 import '../services/image_cache_manager.dart';
 
 import '../services/storage_service.dart';
@@ -27,6 +26,8 @@ import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
+import '../models/listing_filter_state.dart';
+import '../widgets/listing_filter_bar.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 
@@ -52,53 +53,21 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
   bool _networkError = false;
-  String? _selectedCategory;
-  String? _selectedCity;
+  ListingFilterState _filter = const ListingFilterState();
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  List<String> _cities = [];
   final ScrollController _scrollCtrl = ScrollController();
 
   bool _showOnboardingBanner = false;
   final _bannerGuard = OnceGuard();
 
-  List<Map<String, dynamic>> _buildCategories(TranslationPack loc) => [
-    {
-      'slug': 'electronics',
-      'label': loc.t("catElectronics"),
-      'icon': Icons.devices_outlined,
-    },
-    {
-      'slug': 'vehicles',
-      'label': loc.t("catVehicles"),
-      'icon': Icons.directions_car_outlined,
-    },
-    {
-      'slug': 'real_estate',
-      'label': loc.t("catRealEstate"),
-      'icon': Icons.home_work_outlined,
-    },
-    {'slug': 'fashion', 'label': loc.t("catClothing"), 'icon': Icons.checkroom_outlined},
-    {
-      'slug': 'sports',
-      'label': loc.t("catSports"),
-      'icon': Icons.sports_soccer_outlined,
-    },
-    {'slug': 'books', 'label': loc.t("catBooks"), 'icon': Icons.menu_book_outlined},
-    {'slug': 'home', 'label': loc.t("catHomeLife"), 'icon': Icons.home_outlined},
-    {'slug': 'other', 'label': loc.t("catOther"), 'icon': Icons.more_horiz},
-  ];
-
-  bool get _hasFilter => _selectedCategory != null || _selectedCity != null || _searchQuery.isNotEmpty;
+  bool get _hasFilter => !_filter.isEmpty || _searchQuery.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
     _load();
-    CityService.getCities().then((c) {
-      if (mounted) setState(() => _cities = c);
-    });
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -253,8 +222,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     });
     try {
       final params = <String, String>{};
-      if (_selectedCategory != null) params['category'] = _selectedCategory!;
-      if (_selectedCity != null) params['location'] = _selectedCity!;
+      if (_filter.category != null) params['category'] = _filter.category!;
+      if (_filter.subcategory != null) params['subcategory'] = _filter.subcategory!;
+      if (_filter.city != null) params['location'] = _filter.city!;
+      if (_filter.condition != null) params['condition'] = _filter.condition!;
+      if (_filter.sortBy != null) params['sort_by'] = _filter.sortBy!;
+      if (_filter.minPrice != null) params['min_price'] = _filter.minPrice!.toStringAsFixed(0);
+      if (_filter.maxPrice != null) params['max_price'] = _filter.maxPrice!.toStringAsFixed(0);
       if (_searchQuery.isNotEmpty) params['q'] = _searchQuery;
       final uri = Uri.parse(
         '$kBaseUrl/listings',
@@ -282,8 +256,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   void _clearAll() {
     _searchController.clear();
     setState(() {
-      _selectedCategory = null;
-      _selectedCity = null;
+      _filter = const ListingFilterState();
       _searchQuery = '';
     });
     _load();
@@ -294,103 +267,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     return loc.t("homeResultsCount", {'count': _recentListings.length.toString()});
   }
 
-  void _showCityPicker() {
-    final loc = ref.read(localizationProvider);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        builder: (_, controller) => Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border(context),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Text(
-                loc.t("citySelectTitle"),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-            ),
-            ListTile(
-              title: Text(loc.t("cityAll")),
-              leading: Icon(
-                _selectedCity == null
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                color: kPrimary,
-                size: 20,
-              ),
-              onTap: () {
-                setState(() => _selectedCity = null);
-                Navigator.pop(ctx);
-                _load();
-              },
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView.separated(
-                controller: controller,
-                itemCount: _cities.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, i) {
-                  final city = _cities[i];
-                  final selected = _selectedCity == city;
-                  return ListTile(
-                    title: Text(
-                      city,
-                      style: TextStyle(
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                        color: selected
-                            ? kPrimary
-                            : AppColors.textPrimary(context),
-                      ),
-                    ),
-                    leading: Icon(
-                      selected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: kPrimary,
-                      size: 20,
-                    ),
-                    onTap: () {
-                      setState(() => _selectedCity = city);
-                      Navigator.pop(ctx);
-                      _load();
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.read(localizationProvider);
-    final categories = _buildCategories(loc);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -437,215 +316,26 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 }
               }),
             ),
-          // ── Kategori ikonları ────────────────────────────
-          SizedBox(
-            height: 90,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: categories.length,
-              itemBuilder: (context, i) {
-                final cat = categories[i];
-                final slug = cat['slug'] as String;
-                final isSelected = _selectedCategory == slug;
-                return GestureDetector(
-                  key: Key('home_cat_$slug'),
-                  onTap: () {
-                    final next = isSelected ? null : slug;
-                    setState(() => _selectedCategory = next);
-                    if (next != null) {
-                      AnalyticsService.trackEvent('filter_applied', {'category': next, 'source': 'home'});
-                    }
-                    _load();
-                  },
-                  child: Container(
-                    width: 68,
-                    margin: const EdgeInsets.only(right: 10),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? kPrimary
-                                : AppColors.primaryBg(context),
-                            borderRadius: BorderRadius.circular(12),
-                            border: isSelected
-                                ? Border.all(color: kPrimaryDark, width: 1.5)
-                                : null,
-                          ),
-                          child: Icon(
-                            cat['icon'] as IconData,
-                            color: isSelected ? Colors.white : kPrimary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          cat['label'] as String,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: isSelected
-                                ? kPrimary
-                                : AppColors.textSecondary(context),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+          // ── Filtre bar ───────────────────────────────────
+          ListingFilterBar(
+            filter: _filter,
+            onChanged: (f) {
+              setState(() => _filter = f);
+              if (!f.isEmpty) {
+                AnalyticsService.trackEvent('filter_applied', {
+                  if (f.category != null) 'category': f.category!,
+                  'source': 'home',
+                });
+              }
+              _load();
+            },
+            showCategory: true,
+            showSubcategory: true,
+            showCity: true,
+            showCondition: true,
+            showSort: true,
+            showPriceRange: true,
           ),
-
-          // ── Filtre chip'leri satırı ──────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  // Şehir seçici chip
-                  GestureDetector(
-                    key: const Key('home_chip_sehir_sec'),
-                    onTap: _cities.isEmpty ? null : _showCityPicker,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _selectedCity != null
-                            ? kPrimary.withValues(alpha: 0.1)
-                            : AppColors.surface(context),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _selectedCity != null
-                              ? kPrimary
-                              : AppColors.border(context),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
-                            color: _selectedCity != null
-                                ? kPrimary
-                                : AppColors.textSecondary(context),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedCity ?? loc.t("fieldCity"),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: _selectedCity != null
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
-                              color: _selectedCity != null
-                                  ? kPrimary
-                                  : AppColors.textSecondary(context),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Icon(
-                            Icons.arrow_drop_down,
-                            size: 16,
-                            color: _selectedCity != null
-                                ? kPrimary
-                                : AppColors.textSecondary(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Aktif kategori chip
-                  if (_selectedCategory != null) ...[
-                    const SizedBox(width: 8),
-                    _ActiveFilterChip(
-                      label:
-                          categories.firstWhere(
-                                (c) => c['slug'] == _selectedCategory,
-                              )['label']
-                              as String,
-                      onRemove: () {
-                        setState(() => _selectedCategory = null);
-                        _load();
-                      },
-                    ),
-                  ],
-
-                  // Aktif şehir chip
-                  if (_selectedCity != null) ...[
-                    const SizedBox(width: 8),
-                    _ActiveFilterChip(
-                      label: _selectedCity!,
-                      onRemove: () {
-                        setState(() => _selectedCity = null);
-                        _load();
-                      },
-                    ),
-                  ],
-
-                  // Filtreleri Temizle
-                  if (_hasFilter) ...[
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      key: const Key('home_btn_filtreleri_temizle'),
-                      onTap: _clearAll,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.close,
-                              size: 13,
-                              color: Colors.red,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              loc.t("btnClearFilters"),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.red,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
 
           // ── Arama kutusu ─────────────────────────────────────────
           Padding(
@@ -1004,45 +694,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Aktif filtre chip'i ─────────────────────────────────────────────────────
-class _ActiveFilterChip extends ConsumerWidget {
-  final String label;
-  final VoidCallback onRemove;
-
-  const _ActiveFilterChip({required this.label, required this.onRemove});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: kPrimary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kPrimary, width: 1.2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: kPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            key: Key('home_chip_kaldir_$label'),
-            onTap: onRemove,
-            child: const Icon(Icons.close, size: 14, color: kPrimary),
           ),
         ],
       ),

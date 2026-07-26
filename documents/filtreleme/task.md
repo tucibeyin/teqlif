@@ -59,13 +59,13 @@ Kaynak: `analiz.md` v3 — tüm FAZ'ların uygulama adımları.
 
 ## FAZ 5 — Ekran Migration'ları
 
-- [ ] **E-1** — `home_screen.dart`: kategori ikonu şeridi + şehir chip + filtre chip satırını kaldır; `ListingFilterBar(showSort: true, showPriceRange: true, showCity: true, showCondition: true)` ekle; API çağrısını `ListingFilterState`'e bağla
-- [ ] **E-2** — `profile_screen.dart`: `ListingFilter` widget'ı + `_ListingFilterState` + `_CategoryChip` iç sınıflarını sil; `ListingFilterBar(showSubcategory: true, showCity: false, showCondition: false)` ekle
-- [ ] **E-3** — `public_profile_screen.dart`: aynı değişiklik
-- [ ] **E-4** — `sales_screen.dart`: inline filtre chip'lerini sil; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false)` ekle
-- [ ] **E-5** — `competitor_radar_screen.dart`: `_categoryFilter` + chip satırını kaldır; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false, showSearchBar: false)` ekle
-- [ ] **E-6** — `demand_trends_screen.dart`: `_selectedCategory` + chip satırını kaldır; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false, showSearchBar: false)` ekle
-- [ ] **E-7** — `pro_insights_screen.dart`: `_filterBar()` + `_filterChip()` metodlarını sil; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false, showSearchBar: false)` ekle
+- [x] **E-1** — `home_screen.dart`: kategori ikonu şeridi + şehir chip + filtre chip satırını kaldır; `ListingFilterBar(showSort: true, showPriceRange: true, showCity: true, showCondition: true)` ekle; API çağrısını `ListingFilterState`'e bağla
+- [x] **E-2** — `profile_screen.dart`: `ListingFilter` widget'ı + `_ListingFilterState` + `_CategoryChip` iç sınıflarını sil; `ListingFilterBar(showSubcategory: true, showCity: false, showCondition: false)` ekle
+- [x] **E-3** — `public_profile_screen.dart`: aynı değişiklik
+- [x] **E-4** — `sales_screen.dart`: inline filtre chip'lerini sil; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false)` ekle
+- [x] **E-5** — `competitor_radar_screen.dart`: `_categoryFilter` + chip satırını kaldır; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false, showSearchBar: false)` ekle
+- [x] **E-6** — `demand_trends_screen.dart`: `_selectedCategory` + chip satırını kaldır; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false, showSearchBar: false)` ekle
+- [x] **E-7** — `pro_insights_screen.dart`: `_filterBar()` + `_filterChip()` metodlarını sil; `ListingFilterBar(showSubcategory: false, showCity: false, showCondition: false, showSearchBar: false)` ekle
 - [ ] **E-8** — Tüm ekranlarda manuel test: filtre uygula → temizle → sonuçlar doğru mu
 
 ---

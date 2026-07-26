@@ -5,7 +5,8 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import '../../services/auth_service.dart';
-import '../../services/category_service.dart';
+import '../models/listing_filter_state.dart';
+import '../widgets/listing_filter_bar.dart';
 import '../../utils/price_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
@@ -25,11 +26,10 @@ class SalesScreen extends ConsumerStatefulWidget {
 class _SalesScreenState extends ConsumerState<SalesScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _sales = [];
-  List<(String, String)>? _categories;
 
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
-  String _categoryFilter = '';
+  ListingFilterState _filter = const ListingFilterState();
   DateTimeRange? _dateRange;
 
   List<Map<String, dynamic>> get _filteredSales {
@@ -43,9 +43,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           )
           .toList();
     }
-    if (_categoryFilter.isNotEmpty) {
+    if (_filter.category != null) {
       result = result
-          .where((item) => (item['category'] as String?) == _categoryFilter)
+          .where((item) => (item['category'] as String?) == _filter.category)
           .toList();
     }
     if (_dateRange != null) {
@@ -65,18 +65,6 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   void initState() {
     super.initState();
     _loadSales();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(
-        locale: Localizations.localeOf(context).languageCode,
-      ).then((cats) {
-        if (mounted) setState(() => _categories = cats);
-      });
-    }
   }
 
   @override
@@ -138,45 +126,16 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             onChanged: (v) => setState(() => _searchQuery = v),
           ),
         ),
-        if (_categories != null && _categories!.isNotEmpty)
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(
-                      loc.t("allCategories"),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selected: _categoryFilter.isEmpty,
-                    onSelected: (_) => setState(() => _categoryFilter = ''),
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                ),
-                ..._categories!.map(
-                  (cat) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: FilterChip(
-                      label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                      selected: _categoryFilter == cat.$1,
-                      onSelected: (_) => setState(
-                        () => _categoryFilter = _categoryFilter == cat.$1
-                            ? ''
-                            : cat.$1,
-                      ),
-                      selectedColor: kPrimary.withValues(alpha: 0.15),
-                      checkmarkColor: kPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        ListingFilterBar(
+          filter: _filter,
+          onChanged: (f) => setState(() => _filter = f),
+          showSearchBar: false,
+          showSubcategory: false,
+          showCity: false,
+          showCondition: false,
+          showSort: false,
+          showPriceRange: false,
+        ),
         const SizedBox(height: 6),
         _buildDateRangePicker(loc),
         const SizedBox(height: 4),
@@ -251,7 +210,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     final filtered = _filteredSales;
     final bool hasFilter =
         _searchQuery.isNotEmpty ||
-        _categoryFilter.isNotEmpty ||
+        !_filter.isEmpty ||
         _dateRange != null;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
@@ -390,17 +349,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                                     BorderRadius.circular(4),
                                               ),
                                               child: Text(
-                                                _categories
-                                                        ?.firstWhere(
-                                                          (p) =>
-                                                              p.$1 == category,
-                                                          orElse: () => (
-                                                            category,
-                                                            category,
-                                                          ),
-                                                        )
-                                                        .$2 ??
-                                                    category,
+                                                category,
                                                 style: const TextStyle(
                                                   color: kPrimary,
                                                   fontSize: 11,

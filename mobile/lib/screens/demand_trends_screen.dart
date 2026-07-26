@@ -5,8 +5,9 @@ import '../ui_library/components/cards/teq_card.dart';
 
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
-import '../services/category_service.dart';
+import '../widgets/listing_filter_bar.dart';
 
 class DemandTrendsScreen extends ConsumerStatefulWidget {
   const DemandTrendsScreen({super.key});
@@ -19,22 +20,12 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _trends = [];
-  List<(String, String)>? _categories;
-  String? _selectedCategory;
+  ListingFilterState _filter = const ListingFilterState();
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) { if (mounted) setState(() => _categories = cats); });
-    }
   }
 
   Future<void> _load() async {
@@ -57,32 +48,8 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
   }
 
   List<Map<String, dynamic>> get _filteredTrends {
-    if (_selectedCategory == null) return _trends;
-    return _trends.where((t) => t['category'] == _selectedCategory).toList();
-  }
-
-  Widget _buildCategoryFilter(TranslationPack loc) {
-    final cats = _categories;
-    if (cats == null || cats.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _CategoryChip(
-            label: loc.t("filterAll"),
-            selected: _selectedCategory == null,
-            onTap: () => setState(() => _selectedCategory = null),
-          ),
-          ...cats.map((c) => _CategoryChip(
-            label: c.$2,
-            selected: _selectedCategory == c.$1,
-            onTap: () => setState(() =>
-              _selectedCategory = _selectedCategory == c.$1 ? null : c.$1),
-          )),
-        ],
-      ),
-    );
+    if (_filter.category == null) return _trends;
+    return _trends.where((t) => t['category'] == _filter.category).toList();
   }
 
   @override
@@ -109,7 +76,16 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                       ),
                       const SizedBox(height: 10),
-                      _buildCategoryFilter(loc),
+                      ListingFilterBar(
+                        filter: _filter,
+                        onChanged: (f) => setState(() => _filter = f),
+                        showSearchBar: false,
+                        showSubcategory: false,
+                        showCity: false,
+                        showCondition: false,
+                        showSort: false,
+                        showPriceRange: false,
+                      ),
                       const SizedBox(height: 12),
                       if (filtered.isEmpty)
                         Center(
@@ -120,46 +96,10 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
                           ),
                         )
                       else
-                        ...filtered.map((t) => _TrendCard(trend: t, loc: loc, categoryLabels: _categories)),
+                        ...filtered.map((t) => _TrendCard(trend: t, loc: loc)),
                     ],
                   ),
                 ),
-    );
-  }
-}
-
-class _CategoryChip extends ConsumerWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _CategoryChip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? kPrimary : AppColors.card(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? kPrimary : AppColors.border(context),
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? Colors.white : AppColors.textPrimary(context),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -194,17 +134,12 @@ class _Empty extends ConsumerWidget {
 class _TrendCard extends ConsumerWidget {
   final Map<String, dynamic> trend;
   final TranslationPack loc;
-  final List<(String, String)>? categoryLabels;
 
-  const _TrendCard({required this.trend, required this.loc, this.categoryLabels});
+  const _TrendCard({required this.trend, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoryKey = trend['category'] as String? ?? '';
-    final category = categoryLabels?.firstWhere(
-          (p) => p.$1 == categoryKey,
-          orElse: () => (categoryKey, categoryKey),
-        ).$2 ?? categoryKey;
+    final category = trend['category'] as String? ?? '';
     final direction  = trend['direction'] as String? ?? 'stable';
     final pct        = (trend['pct_change_8w'] as num?)?.toStringAsFixed(1) ?? '0';
     final supplyGap  = trend['supply_gap'] as bool? ?? false;

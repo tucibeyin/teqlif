@@ -22,8 +22,8 @@ import '../services/call_service.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
-import 'profile_screen.dart' show ListingFilter;
-import '../services/category_service.dart';
+import '../models/listing_filter_state.dart';
+import '../widgets/listing_filter_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 const _starColor = Color(0xFFF59E0B);
@@ -50,35 +50,13 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
   // ── Arama & kategori filtresi ─────────────────────────────────────────────
   String _searchQuery = '';
-  String? _selectedCategory;
+  ListingFilterState _filter = const ListingFilterState();
   final _searchCtrl = TextEditingController();
-  List<(String, String)>? _allCategoryLabels;
-
-  List<(String, String)> get _categories {
-    final keys =
-        _listings
-            .map((l) => l['category'] as String?)
-            .whereType<String>()
-            .where((c) => c.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    if (_allCategoryLabels == null) {
-      return keys.map((k) => (k, k)).toList();
-    }
-    return keys.map((k) {
-      final match = _allCategoryLabels!.firstWhere(
-        (p) => p.$1 == k,
-        orElse: () => (k, k),
-      );
-      return (k, match.$2);
-    }).toList();
-  }
 
   List<dynamic> get _filteredListings {
     var r = _listings;
-    if (_selectedCategory != null) {
-      r = r.where((l) => l['category'] == _selectedCategory).toList();
+    if (_filter.category != null) {
+      r = r.where((l) => l['category'] == _filter.category).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -93,18 +71,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_allCategoryLabels == null) {
-      CategoryService.getCategories(
-        locale: Localizations.localeOf(context).languageCode,
-      ).then((cats) {
-        if (mounted) setState(() => _allCategoryLabels = cats);
-      });
-    }
   }
 
   @override
@@ -766,18 +732,37 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         else ...[
           if (!_loading || _listings.isNotEmpty)
           SliverToBoxAdapter(
-            child: ListingFilter(
-              searchCtrl: _searchCtrl,
-              searchQuery: _searchQuery,
-              selectedCategory: _selectedCategory,
-              categories: _categories,
-              onSearchChanged: (v) => setState(() => _searchQuery = v.trim()),
-              onSearchCleared: () {
-                _searchCtrl.clear();
-                setState(() => _searchQuery = '');
-              },
-              onCategorySelected: (cat) =>
-                  setState(() => _selectedCategory = cat),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: TeqTextField(
+                    controller: _searchCtrl,
+                    onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                    hintText: loc.t('profileSearchListingHint'),
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                  ),
+                ),
+                ListingFilterBar(
+                  filter: _filter,
+                  onChanged: (f) => setState(() => _filter = f),
+                  showSubcategory: true,
+                  showCity: false,
+                  showCondition: false,
+                  showSort: false,
+                  showPriceRange: false,
+                ),
+              ],
             ),
           ),
 

@@ -41,6 +41,8 @@ import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
 import '../utils/once.dart';
+import '../models/listing_filter_state.dart';
+import '../widgets/listing_filter_bar.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live_stream_analytics_screen.dart';
@@ -79,35 +81,13 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Arama & kategori filtresi ─────────────────────────────────────────────
   String _searchQuery = '';
-  String? _selectedCategory;
+  ListingFilterState _filter = const ListingFilterState();
   final _searchCtrl = TextEditingController();
-  List<(String, String)>? _allCategoryLabels;
-
-  List<(String, String)> get _categories {
-    final keys =
-        _listings
-            .map((l) => l['category'] as String?)
-            .whereType<String>()
-            .where((c) => c.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    if (_allCategoryLabels == null) {
-      return keys.map((k) => (k, k)).toList();
-    }
-    return keys.map((k) {
-      final match = _allCategoryLabels!.firstWhere(
-        (p) => p.$1 == k,
-        orElse: () => (k, k),
-      );
-      return (k, match.$2);
-    }).toList();
-  }
 
   List<dynamic> get _filteredListings {
     var r = _listings;
-    if (_selectedCategory != null) {
-      r = r.where((l) => l['category'] == _selectedCategory).toList();
+    if (_filter.category != null) {
+      r = r.where((l) => l['category'] == _filter.category).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -125,18 +105,6 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_allCategoryLabels == null) {
-      CategoryService.getCategories(
-        locale: Localizations.localeOf(context).languageCode,
-      ).then((cats) {
-        if (mounted) setState(() => _allCategoryLabels = cats);
-      });
-    }
   }
 
   void refresh({bool bypassCache = false}) => _load(bypassCache: bypassCache);
@@ -796,19 +764,37 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
             // ── Arama & Kategori filtresi ──
             if (!_loading || _listings.isNotEmpty)
               SliverToBoxAdapter(
-                child: ListingFilter(
-                  searchCtrl: _searchCtrl,
-                  searchQuery: _searchQuery,
-                  selectedCategory: _selectedCategory,
-                  categories: _categories,
-                  onSearchChanged: (v) =>
-                      setState(() => _searchQuery = v.trim()),
-                  onSearchCleared: () {
-                    _searchCtrl.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                  onCategorySelected: (cat) =>
-                      setState(() => _selectedCategory = cat),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: TeqTextField(
+                        controller: _searchCtrl,
+                        onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                        hintText: ref.read(localizationProvider).t('profileSearchListingHint'),
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
+                    ListingFilterBar(
+                      filter: _filter,
+                      onChanged: (f) => setState(() => _filter = f),
+                      showSubcategory: true,
+                      showCity: false,
+                      showCondition: false,
+                      showSort: false,
+                      showPriceRange: false,
+                    ),
+                  ],
                 ),
               ),
 
@@ -926,167 +912,6 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Arama + Kategori filtresi widget'ı (ProfileScreen & PublicProfileScreen) ──
-
-class ListingFilter extends ConsumerStatefulWidget {
-  final TextEditingController searchCtrl;
-  final String searchQuery;
-  final String? selectedCategory;
-  final List<(String, String)> categories;
-  final ValueChanged<String> onSearchChanged;
-  final VoidCallback onSearchCleared;
-  final ValueChanged<String?> onCategorySelected;
-
-  const ListingFilter({
-    super.key,
-    required this.searchCtrl,
-    required this.searchQuery,
-    required this.selectedCategory,
-    required this.categories,
-    required this.onSearchChanged,
-    required this.onSearchCleared,
-    required this.onCategorySelected,
-  });
-
-  @override
-  ConsumerState<ListingFilter> createState() => _ListingFilterState();
-}
-
-class _ListingFilterState extends ConsumerState<ListingFilter> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final loc = ref.watch(localizationProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.filter_list,
-                  size: 20,
-                  color: AppColors.textSecondary(context),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  ref.read(localizationProvider).t('filterTitle'),
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  _expanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  color: AppColors.textSecondary(context),
-                ),
-              ],
-            ),
-          ),
-        ),
-        AnimatedCrossFade(
-          firstChild: const SizedBox(height: 0, width: double.infinity),
-          secondChild: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: TeqTextField(
-                  controller: widget.searchCtrl,
-                  onChanged: widget.onSearchChanged,
-                  hintText: loc.t("profileSearchListingHint"),
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: widget.searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: widget.onSearchCleared,
-                        )
-                      : null,
-                ),
-              ),
-              if (widget.categories.isNotEmpty)
-                SizedBox(
-                  height: 36,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      _CategoryChip(
-                        label: ref.read(localizationProvider).t('profileFilterAll'),
-                        selected: widget.selectedCategory == null,
-                        onTap: () => widget.onCategorySelected(null),
-                      ),
-                      ...widget.categories.map(
-                        (cat) => _CategoryChip(
-                          label: cat.$2,
-                          selected: widget.selectedCategory == cat.$1,
-                          onTap: () => widget.onCategorySelected(cat.$1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 16),
-            ],
-          ),
-          crossFadeState: _expanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 200),
-        ),
-      ],
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected ? kPrimary : AppColors.surface(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? kPrimary : AppColors.border(context),
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.textPrimary(context),
-            ),
-          ),
         ),
       ),
     );

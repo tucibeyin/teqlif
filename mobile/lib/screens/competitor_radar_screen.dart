@@ -9,9 +9,10 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
-import '../services/category_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/listing_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -33,8 +34,7 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
   String _listingQuery = '';
   DateTimeRange? _dateRange;
   Timer? _searchDebounce;
-  String? _categoryFilter;
-  List<(String, String)>? _categories;
+  ListingFilterState _filter = const ListingFilterState();
 
   List<Map<String, dynamic>> _listings = [];
   bool _listingsLoading = true;
@@ -43,15 +43,6 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
   void initState() {
     super.initState();
     _loadListings();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) { if (mounted) setState(() => _categories = cats); });
-    }
   }
 
   @override
@@ -125,47 +116,6 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
     );
   }
 
-  Widget _buildCategoryChips() {
-    final cats = _categories;
-    if (cats == null || cats.isEmpty) return const SizedBox.shrink();
-    final loc = ref.read(localizationProvider);
-    return SizedBox(
-      height: 34,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _chip(loc.t("filterAll"), _categoryFilter == null, () => setState(() => _categoryFilter = null)),
-          ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
-              () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(String label, bool selected, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? kPrimary : AppColors.card(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: selected ? kPrimary : AppColors.border(context)),
-          ),
-          child: Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? Colors.white : AppColors.textPrimary(context),
-              )),
-        ),
-      ),
-    );
-  }
-
   Future<void> _loadData() async {
     final listing = _selectedListing;
     if (listing == null) return;
@@ -195,8 +145,8 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
       final q = _listingQuery.toLowerCase();
       result = result.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_categoryFilter != null) {
-      result = result.where((l) => l['category'] == _categoryFilter).toList();
+    if (_filter.category != null) {
+      result = result.where((l) => l['category'] == _filter.category).toList();
     }
     return result;
   }
@@ -255,7 +205,16 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
           ),
           _buildDateRangePicker(loc),
           const SizedBox(height: 8),
-          _buildCategoryChips(),
+          ListingFilterBar(
+            filter: _filter,
+            onChanged: (f) => setState(() => _filter = f),
+            showSearchBar: false,
+            showSubcategory: false,
+            showCity: false,
+            showCondition: false,
+            showSort: false,
+            showPriceRange: false,
+          ),
           const SizedBox(height: 8),
           _buildHorizontalCarousel(loc),
           const SizedBox(height: 20),

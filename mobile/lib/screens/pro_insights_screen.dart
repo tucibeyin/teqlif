@@ -4,8 +4,9 @@ import "../services/localization_service.dart";
 import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
-import '../services/category_service.dart';
+import '../widgets/listing_filter_bar.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
@@ -27,32 +28,19 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   // ── Filtre state ─────────────────────────────────────────────────────────
   final TextEditingController _hotLeadsSearchCtrl = TextEditingController();
   String _hotLeadsSearch = '';
-  String _hotLeadsCategory = '';
+  ListingFilterState _hotLeadsFilter = const ListingFilterState();
 
   final TextEditingController _priceIntelSearchCtrl = TextEditingController();
   String _priceIntelSearch = '';
-  String _priceIntelCategory = '';
+  ListingFilterState _priceIntelFilter = const ListingFilterState();
   String _priceIntelSignal = '';
 
   DateTimeRange? _dateRange;
-
-  List<(String, String)>? _categoryLabels;
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categoryLabels == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) {
-        if (mounted) setState(() => _categoryLabels = cats);
-      });
-    }
   }
 
   @override
@@ -184,8 +172,8 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
       final q = _hotLeadsSearch.toLowerCase();
       r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_hotLeadsCategory.isNotEmpty) {
-      r = r.where((m) => m['category'] == _hotLeadsCategory).toList();
+    if (_hotLeadsFilter.category != null) {
+      r = r.where((m) => m['category'] == _hotLeadsFilter.category).toList();
     }
     return r;
   }
@@ -196,86 +184,13 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
       final q = _priceIntelSearch.toLowerCase();
       r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_priceIntelCategory.isNotEmpty) {
-      r = r.where((m) => m['category'] == _priceIntelCategory).toList();
+    if (_priceIntelFilter.category != null) {
+      r = r.where((m) => m['category'] == _priceIntelFilter.category).toList();
     }
     if (_priceIntelSignal.isNotEmpty) {
       r = r.where((m) => m['signal'] == _priceIntelSignal).toList();
     }
     return r;
-  }
-
-  List<(String, String)> _categoriesFor(List<Map<String, dynamic>> items) {
-    final keys = items
-        .map((m) => m['category'] as String?)
-        .whereType<String>()
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    return keys.map((k) {
-      final label = _categoryLabels?.firstWhere(
-            (p) => p.$1 == k,
-            orElse: () => (k, k),
-          ).$2 ?? k;
-      return (k, label);
-    }).toList();
-  }
-
-  Widget _filterBar({
-    required TextEditingController ctrl,
-    required String searchQuery,
-    required String selectedCategory,
-    required List<(String, String)> categories,
-    required ValueChanged<String> onSearchChanged,
-    required ValueChanged<String> onCategoryChanged,
-    required TranslationPack loc,
-    List<Widget> extraChipRows = const [],
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: TextField(
-            controller: ctrl,
-            decoration: InputDecoration(
-              hintText: loc.t("searchHintTextListing"),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () { ctrl.clear(); onSearchChanged(''); },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onChanged: onSearchChanged,
-          ),
-        ),
-        if (categories.isNotEmpty) ...[
-          SizedBox(
-            height: 32,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _filterChip(loc.t("allCategories"), selectedCategory.isEmpty,
-                    () => onCategoryChanged('')),
-                ...categories.map((cat) => _filterChip(
-                    cat.$2,
-                    selectedCategory == cat.$1,
-                    () => onCategoryChanged(selectedCategory == cat.$1 ? '' : cat.$1))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-        ],
-        ...extraChipRows,
-        const SizedBox(height: 10),
-      ],
-    );
   }
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {
@@ -305,8 +220,8 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     final hotLeads   = _applyHotLeadsFilter(allHotLeads);
     final priceIntel = _applyPriceIntelFilter(allPriceIntel);
 
-    final bool hlFiltered = _hotLeadsSearch.isNotEmpty || _hotLeadsCategory.isNotEmpty;
-    final bool piFiltered = _priceIntelSearch.isNotEmpty || _priceIntelCategory.isNotEmpty || _priceIntelSignal.isNotEmpty;
+    final bool hlFiltered = _hotLeadsSearch.isNotEmpty || !_hotLeadsFilter.isEmpty;
+    final bool piFiltered = _priceIntelSearch.isNotEmpty || !_priceIntelFilter.isEmpty || _priceIntelSignal.isNotEmpty;
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
@@ -328,17 +243,42 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
         if (allHotLeads.isNotEmpty) ...[
           _SectionLabel(loc.t("proSectionHotLeads")),
           _SubLabel(loc.t("proHotLeadsDesc")),
-          _filterBar(
-            ctrl: _hotLeadsSearchCtrl,
-            searchQuery: _hotLeadsSearch,
-            selectedCategory: _hotLeadsCategory,
-            categories: _categoriesFor(allHotLeads),
-            onSearchChanged: (v) => setState(() { _hotLeadsSearch = v; _showAll['hotLeads'] = false; }),
-            onCategoryChanged: (v) => setState(() { _hotLeadsCategory = v; _showAll['hotLeads'] = false; }),
-            loc: loc,
-            extraChipRows: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TextField(
+                  controller: _hotLeadsSearchCtrl,
+                  decoration: InputDecoration(
+                    hintText: loc.t("searchHintTextListing"),
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _hotLeadsSearch.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () { _hotLeadsSearchCtrl.clear(); setState(() => _hotLeadsSearch = ''); },
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onChanged: (v) => setState(() { _hotLeadsSearch = v; _showAll['hotLeads'] = false; }),
+                ),
+              ),
+              ListingFilterBar(
+                filter: _hotLeadsFilter,
+                onChanged: (f) => setState(() { _hotLeadsFilter = f; _showAll['hotLeads'] = false; }),
+                showSearchBar: false,
+                showSubcategory: false,
+                showCity: false,
+                showCondition: false,
+                showSort: false,
+                showPriceRange: false,
+              ),
               const SizedBox(height: 6),
               _buildDateRangePicker(loc),
+              const SizedBox(height: 10),
             ],
           ),
           if (hlFiltered && hotLeads.isEmpty)
@@ -355,15 +295,39 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
         if (allPriceIntel.isNotEmpty) ...[
           _SectionLabel(loc.t("proSectionPriceIntel")),
           _SubLabel(loc.t("proPriceIntelDesc")),
-          _filterBar(
-            ctrl: _priceIntelSearchCtrl,
-            searchQuery: _priceIntelSearch,
-            selectedCategory: _priceIntelCategory,
-            categories: _categoriesFor(allPriceIntel),
-            onSearchChanged: (v) => setState(() { _priceIntelSearch = v; _showAll['priceIntel'] = false; }),
-            onCategoryChanged: (v) => setState(() { _priceIntelCategory = v; _showAll['priceIntel'] = false; }),
-            loc: loc,
-            extraChipRows: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TextField(
+                  controller: _priceIntelSearchCtrl,
+                  decoration: InputDecoration(
+                    hintText: loc.t("searchHintTextListing"),
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _priceIntelSearch.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () { _priceIntelSearchCtrl.clear(); setState(() => _priceIntelSearch = ''); },
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onChanged: (v) => setState(() { _priceIntelSearch = v; _showAll['priceIntel'] = false; }),
+                ),
+              ),
+              ListingFilterBar(
+                filter: _priceIntelFilter,
+                onChanged: (f) => setState(() { _priceIntelFilter = f; _showAll['priceIntel'] = false; }),
+                showSearchBar: false,
+                showSubcategory: false,
+                showCity: false,
+                showCondition: false,
+                showSort: false,
+                showPriceRange: false,
+              ),
               const SizedBox(height: 6),
               SizedBox(
                 height: 32,
@@ -383,6 +347,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
               ),
               const SizedBox(height: 6),
               _buildDateRangePicker(loc),
+              const SizedBox(height: 10),
             ],
           ),
           if (piFiltered && priceIntel.isEmpty)
@@ -418,7 +383,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
 
         if (_metrics != null) ...[
           _SectionLabel(loc.t("proSectionAIMetrics")),
-          _ProMetricsCard(metrics: _metrics!, loc: loc, categoryLabels: _categoryLabels),
+          _ProMetricsCard(metrics: _metrics!, loc: loc),
           const SizedBox(height: 20),
         ],
       ],
@@ -440,7 +405,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        itemBuilder: (ctx, i) => _HotLeadCard(lead: items[i], loc: loc, categoryLabels: _categoryLabels),
+        itemBuilder: (ctx, i) => _HotLeadCard(lead: items[i], loc: loc),
       ),
     );
   }
@@ -452,7 +417,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        itemBuilder: (ctx, i) => _PriceIntelCard(item: items[i], loc: loc, categoryLabels: _categoryLabels),
+        itemBuilder: (ctx, i) => _PriceIntelCard(item: items[i], loc: loc),
       ),
     );
   }
@@ -770,8 +735,7 @@ class _TipCard extends ConsumerWidget {
 class _HotLeadCard extends ConsumerWidget {
   final Map<String, dynamic> lead;
   final TranslationPack loc;
-  final List<(String, String)>? categoryLabels;
-  const _HotLeadCard({required this.lead, required this.loc, this.categoryLabels});
+  const _HotLeadCard({required this.lead, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -779,9 +743,7 @@ class _HotLeadCard extends ConsumerWidget {
     final hes   = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
     final heat  = (lead['heat_score'] as num?)?.toInt() ?? 0;
     final price = (lead['price'] as num?)?.toDouble();
-    final catKey = lead['category'] as String? ?? '';
-    final catLabel = categoryLabels?.firstWhere(
-          (p) => p.$1 == catKey, orElse: () => (catKey, catKey)).$2 ?? catKey;
+    final catLabel = lead['category'] as String? ?? '';
     final heatColor = heat > 15
         ? const Color(0xFFEF4444)
         : heat > 5 ? const Color(0xFFF59E0B) : const Color(0xFF22C55E);
@@ -844,8 +806,7 @@ class _HotLeadCard extends ConsumerWidget {
 class _PriceIntelCard extends ConsumerWidget {
   final Map<String, dynamic> item;
   final TranslationPack loc;
-  final List<(String, String)>? categoryLabels;
-  const _PriceIntelCard({required this.item, required this.loc, this.categoryLabels});
+  const _PriceIntelCard({required this.item, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1145,8 +1106,7 @@ class _PeakHourBar extends ConsumerWidget {
 class _ProMetricsCard extends ConsumerWidget {
   final Map<String, dynamic> metrics;
   final TranslationPack loc;
-  final List<(String, String)>? categoryLabels;
-  const _ProMetricsCard({required this.metrics, required this.loc, this.categoryLabels});
+  const _ProMetricsCard({required this.metrics, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1186,7 +1146,7 @@ class _ProMetricsCard extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
                 Expanded(child: Text(
-                  categoryLabels?.firstWhere((p) => p.$1 == (e['category'] as String? ?? ''), orElse: () => (e['category'] as String? ?? '', e['category'] as String? ?? '')).$2 ?? (e['category'] as String? ?? ''),
+                  e['category'] as String? ?? '',
                   style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
                 Text(loc.t("proSearchCount", {"count": ((e['search_count'] as num?)?.toInt() ?? 0).toString()}), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ]),
