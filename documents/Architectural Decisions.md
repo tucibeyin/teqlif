@@ -12,9 +12,10 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 
 1. [OTA Localization](#1-ota-localization)
 2. [Dinamik Field Konfigürasyonu](#2-dinamik-field-konfigürasyonu)
-3. [Merkezi Error Handling](#3-merkezi-error-handling)
-4. [Deploy Pipeline](#4-deploy-pipeline)
-5. [Ekran Migration Checklist](#5-ekran-migration-checklist)
+3. [ML / Analytics / ClickHouse](#3-ml--analytics--clickhouse)
+4. [Merkezi Error Handling](#4-merkezi-error-handling)
+5. [Deploy Pipeline](#5-deploy-pipeline)
+6. [Ekran Migration Checklist](#6-ekran-migration-checklist)
 
 ---
 
@@ -640,7 +641,71 @@ result.when(
 
 ---
 
-## 3. Deploy Pipeline
+## 3. ML / Analytics / ClickHouse
+
+### 3.1 ClickHouse Schema Değişikliği: ALTER TABLE
+
+**Karar: `ALTER TABLE ... ADD COLUMN` — yeni tablo açma**
+
+ClickHouse MergeTree'de `ADD COLUMN` non-blocking'dir; mevcut satırlar otomatik olarak sütunun default değerini alır (boş string veya 0). Yeni INSERT'ler sütunu doldurur, eski satırlara backfill gerekmez. Geriye dönük uyumluluk korunur.
+
+> Yeni bir ClickHouse sütunu eklemek için yeni tablo açmaya gerek yok. ALTER + default yeterli.
+
+---
+
+### 3.2 user_interests Subcategory Pattern
+
+**Karar: Ayrı tablo değil, aynı tabloda `subcategory IS NULL` / `NOT NULL` ayrımı**
+
+```sql
+user_interests(user_id, category, subcategory, score)
+-- subcategory IS NULL     → top-level kategori skoru ("arabalar")
+-- subcategory IS NOT NULL → alt kategori skoru ("arabalar | sedan")
+```
+
+Feed scoring SQL her iki satır tipini birlikte kullanır — top-level affinity ve subcategory affinity ayrı sütunlardan okunur, backward compat korunur. Yeni subcategory sütunu için migration: `aac_user_interests_subcategory`.
+
+---
+
+### 3.3 ML Model Güncellemelerinde Veri Önce Prensibi
+
+**Karar: ClickHouse'da subcategory verisi birikmeden ML modelleri güncellenmez**
+
+ALS / BPR / K-Means'e subcategory feature enjekte etmek için önce 2-4 hafta gerçek kullanıcı sinyali birikmelidir (`user_events.subcategory`, `feed_analytics.listing_subcategory`). Veri olmadan yapılan model güncellemesi mock veriyle overfitting üretir.
+
+**Eğitim frekansları:**
+- BPR: haftada 3x (Pazartesi/Çarşamba/Cumartesi)
+- K-Means: haftada 2x (Çarşamba/Pazar)
+- Feed ALS + SwipeLive ALS: haftada 1x
+
+---
+
+### 3.4 Subcategory Sinyal Akışı
+
+```
+Mobile logInteraction(subcategory)
+  → /api/analytics/user-events → user_events.subcategory (ClickHouse)
+  → Redis flush (5 dk) → user_interests güncelleme
+
+Mobile feed_telemetry(listingSubcategory)
+  → /api/analytics/feed-events → feed_analytics.listing_subcategory
+
+worker.py backfill_listing_embeddings
+  → _listing_embed_text() = title + description + category + subcategory + extra_fields
+  → listings.embedding (pgvector)
+
+BPR / ALS eğitimi
+  → subcategory hard-negative örnekleme
+  → Redis: bpr:rec:{uid}, feed:als:user_vec:{uid}
+
+feed_queries._score_and_rank()
+  → subcat_affinity_expr CASE (top-8 subcategory, ağırlık 0.08)
+  → greedy diversity: MAX_PER_SUBCAT=2
+```
+
+---
+
+## 4. Deploy Pipeline
 
 ### Standart Deploy Komutu
 
