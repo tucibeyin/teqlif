@@ -52,35 +52,27 @@
 
 ## FAZ 2 — Insert Scriptleri
 
-- [ ] **T08** — `insert_01_listings.py` yaz
-  - JSON okur, `asyncpg` ile PostgreSQL'e toplu INSERT
-  - Çakışmada (ON CONFLICT user_id+title) satırı atlar
-  - Insert sonrası üretilen ID'leri `listing_ids.json` olarak kaydeder (sonraki scriptler kullanır)
-  - Çıktı: `✓ X ilan eklendi, Y atlandı`
+- [x] **T08** — `insert_01_listings.py` yazıldı
+  - asyncpg ile PostgreSQL'e INSERT, mevcut (user_id+title) ikilisi varsa atlar
+  - Insert sonrası `listing_ids.json` kaydeder: {listing_idx → real_id}
 
-- [ ] **T09** — `insert_02_user_interactions.py` yaz
-  - `listing_ids.json`'dan listing ID'lerini okur (T08 çıktısı)
-  - Mock JSON'daki listing_idx'leri gerçek ID'lerle eşleştirir
-  - `user_interactions`'a toplu INSERT (listing_idx → item_id)
-  - Çıktı: `✓ X event eklendi`
+- [x] **T09** — `insert_02_user_interactions.py` yazıldı
+  - listing_ids.json'dan listing_idx → item_id eşlemesi yapar
+  - user_interactions tablosuna 500'lük batch INSERT
 
-- [ ] **T10** — `insert_03_user_interests.py` yaz
-  - Mevcut kayıt varsa `ON CONFLICT DO UPDATE SET score = EXCLUDED.score`
-  - Çıktı: `✓ X satır upsert edildi`
+- [x] **T10** — `insert_03_user_interests.py` yazıldı
+  - ON CONFLICT ON CONSTRAINT uq_user_interest DO UPDATE (score + subcategory)
 
-- [ ] **T11** — `insert_04_feed_analytics.py` yaz
-  - ClickHouse bağlantısı: `clickhouse_connect` veya `httpx` ile HTTP interface
-  - `listing_ids.json`'dan ID eşleştirmesi
-  - Batch INSERT (1.000 satır/batch)
-  - Çıktı: `✓ X feed_analytics satırı eklendi`
+- [x] **T11** — `insert_04_feed_analytics.py` yazıldı
+  - clickhouse_connect ile feed_analytics'e 1000'lik batch INSERT
+  - listing_id: String(real_id)
 
-- [ ] **T12** — `insert_05_search_events.py` yaz
-  - ClickHouse'a batch INSERT
-  - Çıktı: `✓ X search_events satırı eklendi`
+- [x] **T12** — `insert_05_search_events.py` yazıldı
+  - clickhouse_connect ile search_events'e batch INSERT
 
-- [ ] **T13** — `insert_06_swipe_live.py` yaz *(T07 skip değilse)*
-  - ClickHouse'a batch INSERT
-  - Çıktı: `✓ X swipe_live_events satırı eklendi`
+- [x] **T13** — `insert_06_swipe_live.py` yazıldı
+  - clickhouse_connect ile swipe_live_events'e batch INSERT
+  - listing_id: UInt32(real_id)
 
 ---
 
