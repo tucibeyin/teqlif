@@ -1606,9 +1606,9 @@ async def reembed_condition_listings_task(ctx: dict) -> None:
 
 async def backfill_listing_embeddings_task(ctx: dict) -> None:
     """
-    Her saat çalışır; embedding'i NULL olan aktif ilanlar için
+    Her 30 dakikada çalışır; embedding'i NULL olan aktif ilanlar için
     sentence-transformer embedding üretir ve kaydeder.
-    Batch 20 ilan — uzun süren işlerin cron'u bloke etmemesi için küçük tutuldu.
+    Batch 100 ilan — saatte 200 ilan, büyük deployment'larda 3 saat içinde tamamlanır.
     """
     try:
         from sqlalchemy import select, update as sa_update
@@ -1621,7 +1621,7 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
                 select(Listing)
                 .where(Listing.embedding.is_(None), Listing.status != "deleted")
                 .order_by(Listing.id)
-                .limit(20)
+                .limit(100)
             )).all()
 
             if not rows:
@@ -3406,18 +3406,18 @@ class WorkerSettings:
         cron(rebuild_faiss_index_task, hour={0, 12}, minute=30),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
-        # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)
-        cron(backfill_listing_embeddings_task, minute=30),
+        # Her 30 dakikada — embedding'i olmayan ilanlar için backfill (100'er batch)
+        cron(backfill_listing_embeddings_task, minute={0, 30}),
         # Her saat :45'inde — quality_score'u olmayan ilanları rule-based skorla
         cron(backfill_listing_quality_scores_task, minute=45),
         # Her Pazar 02:30 — listing kalite modeli haftalık eğitim
         cron(train_listing_quality_model_task, weekday=6, hour=2, minute=30),
         # Her Pazar 04:00 — Item2Vec oturum tabanlı collaborative model
         cron(train_item2vec_task, weekday=6, hour=4, minute=0),
-        # Her Pazar 05:00 — K-Means cold start clustering (yeni kullanıcılar)
-        cron(train_kmeans_cold_start_task, weekday=6, hour=5, minute=0),
-        # Her Cumartesi 03:00 — BPR collaborative filtering (implicit feedback)
-        cron(train_bpr_task, weekday=5, hour=3, minute=0),
+        # Çarşamba + Pazar 05:00 — K-Means cold start clustering (yeni kullanıcılar)
+        cron(train_kmeans_cold_start_task, weekday={2, 6}, hour=5, minute=0),
+        # Pazartesi + Çarşamba + Cumartesi 03:00 — BPR collaborative filtering
+        cron(train_bpr_task, weekday={0, 2, 5}, hour=3, minute=0),
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi

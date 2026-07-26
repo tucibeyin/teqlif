@@ -1686,8 +1686,15 @@ async def ingest_swipe_live_events(
         }
         for e in batch.events
     ]
-    import asyncio
-    asyncio.create_task(batch_insert_swipe_live_events(events))
+    async def _insert_safe(ev: list[dict]) -> None:
+        try:
+            await batch_insert_swipe_live_events(ev)
+        except Exception as exc:
+            logging.getLogger(__name__).error(
+                "[SwipeLive] ClickHouse insert başarısız: %s", exc, exc_info=True
+            )
+
+    asyncio.create_task(_insert_safe(events))
 
 
 # ── Feed Performans İstatistikleri (Pro) ──────────────────────────────────────
