@@ -127,6 +127,11 @@ async def sync() -> None:
         for lang in _LANGS:
             await redis.delete(f"i18n:{lang}")
             await redis.delete(f"i18n:{lang}:version")
+        # Catalog cache'ini de temizle (fastapi_cache keys)
+        catalog_keys = await redis.keys("fastapi-cache*catalog*")
+        if catalog_keys:
+            await redis.delete(*catalog_keys)
+            print(f"[sync_translations] Catalog cache temizlendi ({len(catalog_keys)} key)")
         print("[sync_translations] Redis i18n cache temizlendi")
     except Exception as exc:
         print(f"[sync_translations] WARN: Redis cache temizlenemedi: {exc}")

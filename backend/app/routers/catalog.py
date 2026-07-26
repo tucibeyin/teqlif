@@ -55,6 +55,7 @@ async def _build_catalog() -> dict:
     for opt in all_options:
         options_by_field.setdefault(opt.field_id, []).append({
             "value": opt.value,
+            "label": opt.label,
             "label_key": f"opt_{opt.value}",
             "parent_option_value": opt.parent_option_value,
         })

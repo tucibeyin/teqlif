@@ -1,16 +1,19 @@
 class CatalogOption {
   const CatalogOption({
     required this.value,
+    required this.label,
     required this.labelKey,
     this.parentOptionValue,
   });
 
   final String value;
-  final String labelKey;
+  final String label;    // human-readable display name from DB (e.g. "Benzin")
+  final String labelKey; // i18n key (e.g. "opt_gasoline")
   final String? parentOptionValue;
 
   factory CatalogOption.fromJson(Map<String, dynamic> j) => CatalogOption(
         value: j['value'] as String,
+        label: j['label'] as String? ?? j['value'] as String,
         labelKey: j['label_key'] as String? ?? 'opt_${j['value']}',
         parentOptionValue: j['parent_option_value'] as String?,
       );

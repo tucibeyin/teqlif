@@ -61,7 +61,7 @@ class FieldConfigService {
 
     final allOptions = f.options.map((o) => FieldOption(
           o.value,
-          o.labelKey,
+          o.label,
           o.parentOptionValue,
         )).toList();
 
