@@ -12,9 +12,14 @@ listing_ids.json'dan listing_idx → real_id eşlemesini okur.
 """
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import asyncpg
+
+
+def parse_dt(s: str) -> datetime:
+    return datetime.fromisoformat(s.replace("Z", "+00:00")).replace(tzinfo=timezone.utc)
 
 DATA_FILE = Path(__file__).parent / "mock_02_user_interactions.json"
 IDS_FILE  = Path(__file__).parent / "listing_ids.json"
@@ -24,7 +29,7 @@ BATCH     = 500
 INSERT_SQL = """
 INSERT INTO user_interactions
     (user_id, item_id, item_type, interaction_type, duration_seconds, created_at)
-VALUES ($1, $2, $3, $4, $5, $6::timestamptz)
+VALUES ($1, $2, $3, $4, $5, $6)
 """
 
 
@@ -51,7 +56,7 @@ async def main() -> None:
             ev["item_type"],
             ev["interaction_type"],
             ev.get("duration_seconds"),
-            ev["created_at"],
+            parse_dt(ev["created_at"]),
         ))
 
     inserted = 0

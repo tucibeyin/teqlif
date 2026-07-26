@@ -11,9 +11,16 @@ insert_01_listings.py — mock_01_listings.json → PostgreSQL listings tablosu
 """
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import asyncpg
+
+
+def parse_dt(s: str | None) -> datetime | None:
+    if not s:
+        return None
+    return datetime.fromisoformat(s.replace("Z", "+00:00")).replace(tzinfo=timezone.utc)
 
 DATA_FILE = Path(__file__).parent / "mock_01_listings.json"
 IDS_FILE  = Path(__file__).parent / "listing_ids.json"
@@ -69,7 +76,7 @@ async def main() -> None:
             item.get("status", "active"),
             json.dumps(ef, ensure_ascii=False) if ef else None,
             item.get("quality_score"),
-            item.get("created_at"),
+            parse_dt(item.get("created_at")),
         )
         idx_to_id[str(item["listing_idx"])] = row["id"]
         existing_set.add(key)
