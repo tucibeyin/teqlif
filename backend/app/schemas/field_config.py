@@ -5,6 +5,8 @@ class FieldOptionSchema(BaseModel):
     value: str
     label: str
     parent_option_value: str | None = None
+    exclusion_group: str | None = None
+    is_exclusive: bool = False
 
     model_config = {"from_attributes": True}
 

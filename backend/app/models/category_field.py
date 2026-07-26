@@ -55,6 +55,12 @@ class FieldOption(Base):
             "parent_option_value",
             "is_active",
         ),
+        Index(
+            "ix_field_options_exclusion_group",
+            "field_id",
+            "exclusion_group",
+            "is_active",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -65,6 +71,8 @@ class FieldOption(Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     # NULL → top-level option; 'bmw' → only shown when parent = 'bmw'
     parent_option_value: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    exclusion_group: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    is_exclusive: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(

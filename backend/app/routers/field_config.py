@@ -58,6 +58,8 @@ async def get_field_config(
                     value=o.value,
                     label=o.label,
                     parent_option_value=o.parent_option_value,
+                    exclusion_group=o.exclusion_group,
+                    is_exclusive=o.is_exclusive,
                 )
                 for o in options_by_field.get(f.id, [])
             ],

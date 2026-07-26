@@ -12,19 +12,25 @@ class FieldOption {
   final String value;
   final String label;
   final String? parentOptionValue;
+  final String? exclusionGroup;
   // true = selecting this clears all other multiselect selections
   final bool isExclusive;
 
-  const FieldOption(this.value, this.label, [this.parentOptionValue, this.isExclusive = false]);
+  const FieldOption(
+    this.value,
+    this.label, [
+    this.parentOptionValue,
+    this.exclusionGroup,
+    this.isExclusive = false,
+  ]);
 
   factory FieldOption.fromJson(Map<String, dynamic> j) {
-    final pov = j['parent_option_value'] as String?;
-    final exclusive = pov == '__excl__';
     return FieldOption(
       j['value'] as String,
       j['label'] as String,
-      exclusive ? null : pov,
-      exclusive,
+      j['parent_option_value'] as String?,
+      j['exclusion_group'] as String?,
+      j['is_exclusive'] as bool? ?? false,
     );
   }
 }
@@ -63,12 +69,10 @@ class ExtraFieldDef {
         .map((o) => FieldOption.fromJson(o as Map<String, dynamic>))
         .toList();
 
-    // Include top-level options (null parent) and group-tagged options ('grp:' prefix).
+    // Include top-level options (null parent).
     // Conditional dropdown options (real parent value like 'bmw') are excluded here.
     final topOptions = allOptions
-        .where((o) =>
-            o.parentOptionValue == null ||
-            (o.parentOptionValue?.startsWith('grp:') ?? false))
+        .where((o) => o.parentOptionValue == null)
         .toList();
 
     Map<String, List<FieldOption>>? conditionalOptions;
@@ -225,10 +229,10 @@ const _motoTip = [
 const _hasar = [
   FieldOption('painted',             'Boyalı'),
   FieldOption('accident',             'Kazalı'),
-  // 'grp:damage_level' → mutually exclusive with each other within this group
-  FieldOption('damage_record',      'Hasar Kayıtlı',      'grp:damage_level'),
-  FieldOption('heavy_damage_record', 'Ağır Hasar Kayıtlı', 'grp:damage_level'),
-  FieldOption('flawless',            'Hatasız',             null, true), // exclusive: clears all
+  // 'damage_level' → mutually exclusive with each other within this group
+  FieldOption('damage_record',      'Hasar Kayıtlı',      null, 'damage_level'),
+  FieldOption('heavy_damage_record', 'Ağır Hasar Kayıtlı', null, 'damage_level'),
+  FieldOption('flawless',            'Hatasız',             null, null, true), // exclusive: clears all
 ];
 
 const _markaKamyon = [

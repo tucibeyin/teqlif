@@ -58,6 +58,8 @@ async def _build_catalog() -> dict:
             "label": opt.label,
             "label_key": f"opt_{opt.value}",
             "parent_option_value": opt.parent_option_value,
+            "exclusion_group": opt.exclusion_group,
+            "is_exclusive": opt.is_exclusive,
         })
 
     # Index fields by subcategory key

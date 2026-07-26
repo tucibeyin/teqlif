@@ -63,6 +63,8 @@ class FieldConfigService {
           o.value,
           o.label,
           o.parentOptionValue,
+          o.exclusionGroup,
+          o.isExclusive,
         )).toList();
 
     final topOptions = allOptions

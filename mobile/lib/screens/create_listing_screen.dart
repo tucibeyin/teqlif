@@ -1379,14 +1379,11 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           child: TeqMultiSelect(
             label: displayLabel,
             options: f.options.map((o) {
-                  final pov = o.parentOptionValue;
                   return TeqMultiSelectOption(
                     value: o.value,
                     label: loc.tOr('opt_${o.value}', o.label),
                     isExclusive: o.isExclusive,
-                    exclusionGroup: (pov != null && pov.startsWith('grp:'))
-                        ? pov.substring(4)
-                        : null,
+                    exclusionGroup: o.exclusionGroup,
                   );
                 }).toList(),
             selected: _extraMultiValues[f.key] ?? const {},

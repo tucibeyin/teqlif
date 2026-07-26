@@ -4,18 +4,24 @@ class CatalogOption {
     required this.label,
     required this.labelKey,
     this.parentOptionValue,
+    this.exclusionGroup,
+    this.isExclusive = false,
   });
 
   final String value;
   final String label;    // human-readable display name from DB (e.g. "Benzin")
   final String labelKey; // i18n key (e.g. "opt_gasoline")
   final String? parentOptionValue;
+  final String? exclusionGroup;
+  final bool isExclusive;
 
   factory CatalogOption.fromJson(Map<String, dynamic> j) => CatalogOption(
         value: j['value'] as String,
         label: j['label'] as String? ?? j['value'] as String,
         labelKey: j['label_key'] as String? ?? 'opt_${j['value']}',
         parentOptionValue: j['parent_option_value'] as String?,
+        exclusionGroup: j['exclusion_group'] as String?,
+        isExclusive: j['is_exclusive'] as bool? ?? false,
       );
 }
 
