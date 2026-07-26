@@ -7,6 +7,7 @@ import '../models/catalog.dart';
 import '../models/listing_filter_state.dart';
 import '../services/catalog_service.dart';
 import '../services/city_service.dart';
+import '../services/field_config_service.dart';
 import '../services/localization_service.dart';
 import '../utils/listing_fields.dart';
 
@@ -36,7 +37,7 @@ class ListingFilterSheet extends ConsumerStatefulWidget {
     required ListingFilterState initial,
     bool showCategory = true,
     bool showSubcategory = true,
-    bool showExtraFields = false,
+    bool showExtraFields = true,
     bool showCity = true,
     bool showCondition = true,
     bool showSort = true,
@@ -73,6 +74,10 @@ class _ListingFilterSheetState extends ConsumerState<ListingFilterSheet> {
   List<String> _cities = [];
   bool _citiesLoaded = false;
 
+  List<ExtraFieldDef> _fields = [];
+  bool _fieldsLoading = false;
+  final Map<String, TextEditingController> _extraCtrls = {};
+
   @override
   void initState() {
     super.initState();
@@ -88,26 +93,58 @@ class _ListingFilterSheetState extends ConsumerState<ListingFilterSheet> {
         if (mounted) setState(() { _cities = c; _citiesLoaded = true; });
       });
     }
+    if (widget.showExtraFields && _pending.subcategory != null) {
+      _loadFields(_pending.subcategory!);
+    }
   }
 
   @override
   void dispose() {
     _minController.dispose();
     _maxController.dispose();
+    for (final ctrl in _extraCtrls.values) {
+      ctrl.dispose();
+    }
     super.dispose();
   }
 
-  void _setCategory(String? key) => setState(() {
-        _pending = _pending.copyWith(
-          category: key,
-          subcategory: null,
-          extraFields: {},
+  Future<void> _loadFields(String subcategoryKey) async {
+    setState(() { _fieldsLoading = true; _fields = []; });
+    final fields = await FieldConfigService.getFields(subcategoryKey);
+    if (!mounted) return;
+    for (final f in fields) {
+      if (f.type == ExtraFieldType.number || f.type == ExtraFieldType.text) {
+        _extraCtrls[f.key] ??= TextEditingController(
+          text: _pending.extraFields[f.key]?.toString() ?? '',
         );
-      });
+      }
+    }
+    setState(() { _fields = fields; _fieldsLoading = false; });
+  }
 
-  void _setSubcategory(String? key) => setState(() {
-        _pending = _pending.copyWith(subcategory: key, extraFields: {});
-      });
+  void _setCategory(String? key) {
+    for (final ctrl in _extraCtrls.values) {
+      ctrl.dispose();
+    }
+    _extraCtrls.clear();
+    setState(() {
+      _fields = [];
+      _pending = _pending.copyWith(
+        category: key,
+        subcategory: null,
+        extraFields: {},
+      );
+    });
+  }
+
+  void _setSubcategory(String? key) {
+    for (final ctrl in _extraCtrls.values) {
+      ctrl.dispose();
+    }
+    _extraCtrls.clear();
+    setState(() => _pending = _pending.copyWith(subcategory: key, extraFields: {}));
+    if (key != null && widget.showExtraFields) _loadFields(key);
+  }
 
   void _setExtraField(String fieldKey, dynamic value) {
     final fields = Map<String, dynamic>.from(_pending.extraFields);
@@ -118,6 +155,229 @@ class _ListingFilterSheetState extends ConsumerState<ListingFilterSheet> {
     }
     setState(() => _pending = _pending.copyWith(extraFields: fields));
   }
+
+  Widget _buildCategoryDropdown(TranslationPack loc) {
+    final categories = CatalogService.isReady
+        ? CatalogService.categories
+        : kSubcategories.keys
+            .map((k) => CatalogCategory(key: k, subcategories: const []))
+            .toList();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonFormField<String>(
+        // ignore: deprecated_member_use
+        value: _pending.category,
+        decoration: _fieldDecor(loc.tOr('filterCategoryAll', 'Tüm Kategoriler')),
+        hint: Text(loc.tOr('filterCategoryAll', 'Tüm Kategoriler')),
+        items: [
+          DropdownMenuItem<String>(
+            value: null,
+            child: Text(loc.tOr('filterCategoryAll', 'Tüm Kategoriler')),
+          ),
+          ...categories.map((c) => DropdownMenuItem<String>(
+                value: c.key,
+                child: Text(loc.t(c.labelKey)),
+              )),
+        ],
+        onChanged: (v) => _setCategory(v),
+      ),
+    );
+  }
+
+  Widget _buildSubcategoryDropdown(TranslationPack loc) {
+    final subcats = CatalogService.subcategoriesFor(_pending.category!);
+    if (subcats.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonFormField<String>(
+        // ignore: deprecated_member_use
+        value: _pending.subcategory,
+        decoration: _fieldDecor(loc.tOr('filterSubcategoryAll', 'Tüm Alt Kategoriler')),
+        hint: Text(loc.tOr('filterSubcategoryAll', 'Tüm Alt Kategoriler')),
+        items: [
+          DropdownMenuItem<String>(
+            value: null,
+            child: Text(loc.tOr('filterSubcategoryAll', 'Tüm Alt Kategoriler')),
+          ),
+          ...subcats.map((s) {
+            final (key, labelKey) = s;
+            return DropdownMenuItem<String>(
+              value: key,
+              child: Text(loc.t(labelKey)),
+            );
+          }),
+        ],
+        onChanged: (v) => _setSubcategory(v),
+      ),
+    );
+  }
+
+  Widget _buildFilterExtraField(ExtraFieldDef f, TranslationPack loc) {
+    final label = loc.t(f.labelKey);
+
+    if (f.dependsOn != null) {
+      final parentVal = _pending.extraFields[f.dependsOn!] as String?;
+      final options = parentVal != null
+          ? (f.conditionalOptions?[parentVal] ?? <FieldOption>[])
+          : <FieldOption>[];
+      return AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        child: options.isEmpty
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: _pending.extraFields[f.key] as String?,
+                  decoration: _fieldDecor(label),
+                  hint: Text(label),
+                  items: [
+                    DropdownMenuItem<String>(
+                      value: null,
+                      child: Text(loc.tOr('filterFieldAll', 'Tümü')),
+                    ),
+                    ...options.map((o) => DropdownMenuItem<String>(
+                          value: o.value,
+                          child: Text(loc.tOr('opt_${o.value}', o.label)),
+                        )),
+                  ],
+                  onChanged: (v) => _setExtraField(f.key, v),
+                ),
+              ),
+      );
+    }
+
+    switch (f.type) {
+      case ExtraFieldType.dropdown:
+        final items = f.key == 'year'
+            ? [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text(loc.tOr('filterFieldAll', 'Tümü')),
+                ),
+                ...List.generate(
+                  DateTime.now().year - 1899,
+                  (i) {
+                    final y = (DateTime.now().year - i).toString();
+                    return DropdownMenuItem<String>(value: y, child: Text(y));
+                  },
+                ),
+              ]
+            : [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text(loc.tOr('filterFieldAll', 'Tümü')),
+                ),
+                ...f.options.map((o) => DropdownMenuItem<String>(
+                      value: o.value,
+                      child: Text(loc.tOr('opt_${o.value}', o.label)),
+                    )),
+              ];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
+            value: _pending.extraFields[f.key] as String?,
+            decoration: _fieldDecor(label, unit: f.unit),
+            hint: Text(label),
+            items: items,
+            onChanged: (v) {
+              _setExtraField(f.key, v);
+              for (final dep in _fields) {
+                if (dep.dependsOn == f.key) _setExtraField(dep.key, null);
+              }
+            },
+          ),
+        );
+
+      case ExtraFieldType.number:
+        final ctrl = _extraCtrls[f.key] ??= TextEditingController(
+          text: _pending.extraFields[f.key]?.toString() ?? '',
+        );
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+            decoration: _fieldDecor(label, unit: f.unit),
+            onChanged: (v) => _setExtraField(f.key, v.isEmpty ? null : v),
+          ),
+        );
+
+      case ExtraFieldType.text:
+        final ctrl = _extraCtrls[f.key] ??= TextEditingController(
+          text: _pending.extraFields[f.key]?.toString() ?? '',
+        );
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: TextField(
+            controller: ctrl,
+            style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+            decoration: _fieldDecor(label),
+            onChanged: (v) => _setExtraField(f.key, v.isEmpty ? null : v),
+          ),
+        );
+
+      case ExtraFieldType.multiselect:
+        final selected = (_pending.extraFields[f.key] as List<dynamic>?)
+                ?.cast<String>()
+                .toSet() ??
+            {};
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: f.options.map((o) {
+                  final isSelected = selected.contains(o.value);
+                  return _FilterChip(
+                    label: loc.tOr('opt_${o.value}', o.label),
+                    selected: isSelected,
+                    onTap: () {
+                      final newSet = Set<String>.from(selected);
+                      if (isSelected) {
+                        newSet.remove(o.value);
+                      } else {
+                        if (o.isExclusive) newSet.clear();
+                        newSet.add(o.value);
+                      }
+                      _setExtraField(f.key, newSet.isEmpty ? null : newSet.toList());
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+
+  InputDecoration _fieldDecor(String label, {String? unit}) => InputDecoration(
+        labelText: label,
+        suffixText: unit,
+        filled: true,
+        fillColor: AppColors.inputFill(context),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -150,33 +410,48 @@ class _ListingFilterSheetState extends ConsumerState<ListingFilterSheet> {
               children: [
                 if (widget.showCategory) ...[
                   _SectionHeader(loc.t('filterCategory')),
-                  _CategoryStrip(
-                    loc: loc,
-                    selected: _pending.category,
-                    onSelect: _setCategory,
-                  ),
+                  _buildCategoryDropdown(loc),
                 ],
-                if (widget.showSubcategory && _pending.category != null)
+                if (widget.showSubcategory)
                   AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOut,
-                    child: _SubcategoryStrip(
-                      loc: loc,
-                      categoryKey: _pending.category!,
-                      selected: _pending.subcategory,
-                      onSelect: _setSubcategory,
-                    ),
+                    child: _pending.category == null
+                        ? const SizedBox.shrink()
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SectionHeader(loc.t('filterSubcategory')),
+                              _buildSubcategoryDropdown(loc),
+                            ],
+                          ),
                   ),
-                if (widget.showExtraFields && _pending.subcategory != null)
+                if (widget.showExtraFields)
                   AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 260),
                     curve: Curves.easeOut,
-                    child: _ExtraFieldsSection(
-                      loc: loc,
-                      subcategoryKey: _pending.subcategory!,
-                      extraFields: _pending.extraFields,
-                      onSet: _setExtraField,
-                    ),
+                    child: _pending.subcategory == null
+                        ? const SizedBox.shrink()
+                        : _fieldsLoading
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary)),
+                              )
+                            : _fields.isEmpty
+                                ? const SizedBox.shrink()
+                                : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _SectionHeader(loc.t('filterExtraFields')),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: _fields.map((f) => _buildFilterExtraField(f, loc)).toList(),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                   ),
                 if (widget.showCity) ...[
                   _SectionHeader(loc.t('filterCitySection')),
@@ -365,163 +640,6 @@ class _ChipRow extends StatelessWidget {
           },
         ),
       );
-}
-
-// ── Category strip ────────────────────────────────────────────────────────────
-
-class _CategoryStrip extends StatelessWidget {
-  const _CategoryStrip({
-    required this.loc,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final TranslationPack loc;
-  final String? selected;
-  final ValueChanged<String?> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final categories = CatalogService.isReady
-        ? CatalogService.categories
-        : kSubcategories.keys
-            .map((k) => CatalogCategory(key: k, subcategories: const []))
-            .toList();
-
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final cat = categories[i];
-          final isSelected = selected == cat.key;
-          return _FilterChip(
-            label: loc.t(cat.labelKey),
-            selected: isSelected,
-            onTap: () => onSelect(isSelected ? null : cat.key),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ── Subcategory strip ─────────────────────────────────────────────────────────
-
-class _SubcategoryStrip extends StatelessWidget {
-  const _SubcategoryStrip({
-    required this.loc,
-    required this.categoryKey,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final TranslationPack loc;
-  final String categoryKey;
-  final String? selected;
-  final ValueChanged<String?> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final subcats = CatalogService.subcategoriesFor(categoryKey);
-    if (subcats.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(loc.t('filterSubcategory')),
-        SizedBox(
-          height: 40,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: subcats.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final (key, labelKey) = subcats[i];
-              final isSelected = selected == key;
-              return _FilterChip(
-                label: loc.t(labelKey),
-                selected: isSelected,
-                onTap: () => onSelect(isSelected ? null : key),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Extra fields (dropdown only, no dependsOn) ────────────────────────────────
-
-class _ExtraFieldsSection extends StatelessWidget {
-  const _ExtraFieldsSection({
-    required this.loc,
-    required this.subcategoryKey,
-    required this.extraFields,
-    required this.onSet,
-  });
-
-  final TranslationPack loc;
-  final String subcategoryKey;
-  final Map<String, dynamic> extraFields;
-  final void Function(String key, dynamic value) onSet;
-
-  @override
-  Widget build(BuildContext context) {
-    final fields = CatalogService.fieldsFor(subcategoryKey);
-    if (fields == null || fields.isEmpty) return const SizedBox.shrink();
-
-    final filterable = fields
-        .where((f) =>
-            f.type == 'dropdown' &&
-            f.dependsOn == null &&
-            f.topLevelOptions.isNotEmpty)
-        .toList();
-    if (filterable.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(loc.t('filterExtraFields')),
-        for (final field in filterable) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-            child: Text(
-              loc.t(field.labelKey),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: field.topLevelOptions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final (value, labelKey) = field.topLevelOptions[i];
-                final isSelected = extraFields[field.key] == value;
-                return _FilterChip(
-                  label: loc.t(labelKey),
-                  selected: isSelected,
-                  onTap: () => onSet(field.key, isSelected ? null : value),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
 }
 
 // ── City tile + picker ────────────────────────────────────────────────────────

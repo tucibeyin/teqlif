@@ -15,7 +15,7 @@ class ListingFilterBar extends ConsumerWidget {
     this.showSearchBar = false,
     this.showCategory = true,
     this.showSubcategory = true,
-    this.showExtraFields = false,
+    this.showExtraFields = true,
     this.showCity = true,
     this.showCondition = true,
     this.showSort = true,
