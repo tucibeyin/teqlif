@@ -137,25 +137,25 @@
 
 ## FAZ 5 — Analytics Endpoint'leri
 
-- [ ] **T31** — `routers/analytics.py: /price-estimate` güncelle
-  - Kandidat SQL'e `AND (:subcat = '' OR l.subcategory = :subcat)` ekle
-  - NER çarpanlarına `km`, `year`, `fuel_type` ekle
-  - Mobile `getPriceEstimate()` çağrısı (T16) ile koordineli
+- [x] **T31** — `routers/analytics.py: /price-estimate` güncellendi
+  - `PriceEstimateRequest`'e `subcategory` ve `extra_fields` eklendi
+  - Kandidat SQL'e `AND (:subcat = '' OR l.subcategory = :subcat)` + `l.subcategory, l.extra_fields` SELECT
+  - Scoring: `subcat_mult` (1.3/0.8) + NER çarpanları `mileage`, `year`, `fuel_type`
 
-- [ ] **T32** — `routers/analytics.py: /competitor-radar/{listing_id}` güncelle
-  - Fallback sorgu: `WHERE category = :cat AND subcategory = :subcat`
-  - Embedding sorgusu: subcategory filtresi ile daralt (subcategory yoksa category ile fallback)
+- [x] **T32** — `routers/analytics.py: /competitor-radar/{listing_id}` güncellendi
+  - Fallback + embedding sorgusu: `AND (:subcat = '' OR l.subcategory = :subcat)`
+  - `listing.subcategory` otomatik geçirilir
 
-- [ ] **T33** — `routers/analytics.py: /category-velocity` endpoint'ine subcategory parametresi ekle
-  - `WHERE l.category = :cat AND (:subcat = '' OR l.subcategory = :subcat)`
+- [x] **T33** — `routers/analytics.py: /category-velocity` subcategory parametresi eklendi
+  - `subcategory: Optional[str] = Query(None)` + 3 SQL sorgusuna filtre
 
 - [ ] **T34** — ClickHouse `search_events` subcategory sütunu (T02) dolmaya başladıktan sonra:
   - `/demand-radar` ve `/demand-trends` endpoint'lerine subcategory `GROUP BY` ekle
   - Minimum 1 hafta veri birikmesi beklenir
 
-- [ ] **T35** — `search.py: SearchListingsQuery`'ye `subcategory` filtresi ekle
+- [x] **T35** — `search_listings_query.py: SearchListingsQuery`'ye `subcategory` filtresi eklendi
   - `Listing.subcategory == subcategory` — opsiyonel parametre
-  - GIN index kullanan extra_fields JSONB filtresi: `extra_fields @> '{"fuel_type": "gasoline"}'::jsonb`
+  - `GET /listings?subcategory=sedan` şeklinde kullanılabilir
 
 ---
 

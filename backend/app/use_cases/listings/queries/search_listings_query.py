@@ -17,6 +17,7 @@ class SearchListingsQuery:
         db_session,
         user_id: Optional[int] = None,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         location: Optional[str] = None,
         q: Optional[str] = None,
         current_user_id: Optional[int] = None,
@@ -41,6 +42,8 @@ class SearchListingsQuery:
             q_stmt = q_stmt.where(Listing.user_id != current_user_id)
         if category:
             q_stmt = q_stmt.where(Listing.category == category)
+        if subcategory:
+            q_stmt = q_stmt.where(Listing.subcategory == subcategory)
         if location:
             q_stmt = q_stmt.where(Listing.location.ilike(f"%{location}%"))
         

@@ -458,11 +458,13 @@ class PriceEstimateRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=2000)
     category: str = Field(default="")
+    subcategory: str = Field(default="")
     city: str = Field(default="")
     condition: str = Field(default="")
     image_url: str = Field(default="")
     image_phash: str | None = Field(default=None)
     exclude_listing_id: int = Field(default=0)
+    extra_fields: dict = Field(default_factory=dict)
 
 
 @router.post("/price-estimate")
@@ -542,6 +544,7 @@ async def price_estimate(
     candidates_q = sql_text("""
         SELECT
             l.category,
+            l.subcategory,
             l.location,
             l.image_phash,
             l.created_at,
@@ -551,7 +554,8 @@ async def price_estimate(
             er.usd_try AS historical_usd,
             l.brand,
             l.model_name,
-            l.condition
+            l.condition,
+            l.extra_fields
         FROM listings l
         LEFT JOIN exchange_rates er ON er.date = DATE(l.created_at)
         WHERE l.embedding IS NOT NULL
@@ -559,12 +563,14 @@ async def price_estimate(
           AND l.last_sold_price > 0
           AND (:excl = 0 OR l.id != :excl)
           AND (:cat = '' OR l.category = :cat)
+          AND (:subcat = '' OR l.subcategory = :subcat)
         ORDER BY l.embedding <=> CAST(:emb AS vector)
         LIMIT 150
     """)
     result = await db.execute(candidates_q, {
         "emb": emb_str, "excl": body.exclude_listing_id,
         "cat": body.category.strip(),
+        "subcat": body.subcategory.strip(),
     })
     rows = result.fetchall()
 
@@ -621,6 +627,11 @@ async def price_estimate(
             except Exception:
                 pass
                 
+        # Subcategory eşleşme çarpanı
+        subcat_mult = 1.0
+        if body.subcategory and row.subcategory:
+            subcat_mult = 1.3 if body.subcategory.strip() == row.subcategory else 0.8
+
         # NER Score (Soft Filter)
         ner_mult = 1.0
         if t_brand and row.brand:
@@ -632,8 +643,32 @@ async def price_estimate(
         if t_condition and row.condition:
             if t_condition == row.condition: ner_mult *= 1.5
             else: ner_mult *= 0.4
-            
-        composite = sem_sim * cat_mult * city_mult * recency * phash_mult * ner_mult
+
+        # Extra-field NER: km (mileage), year, fuel_type
+        ef = row.extra_fields or {}
+        b_km = body.extra_fields.get("mileage")
+        b_year = body.extra_fields.get("year")
+        b_fuel = body.extra_fields.get("fuel_type")
+        if b_km is not None and ef.get("mileage") is not None:
+            try:
+                km_diff = abs(int(b_km) - int(ef["mileage"]))
+                if km_diff < 20000: ner_mult *= 1.3
+                elif km_diff > 100000: ner_mult *= 0.5
+            except (ValueError, TypeError):
+                pass
+        if b_year is not None and ef.get("year") is not None:
+            try:
+                year_diff = abs(int(b_year) - int(ef["year"]))
+                if year_diff == 0: ner_mult *= 1.5
+                elif year_diff <= 2: ner_mult *= 1.2
+                elif year_diff > 5: ner_mult *= 0.6
+            except (ValueError, TypeError):
+                pass
+        if b_fuel and ef.get("fuel_type"):
+            if b_fuel == ef["fuel_type"]: ner_mult *= 1.3
+            else: ner_mult *= 0.5
+
+        composite = sem_sim * cat_mult * city_mult * recency * phash_mult * ner_mult * subcat_mult
         scored.append((composite, row, adj_final_price))
 
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -2335,18 +2370,21 @@ async def competitor_radar(
     if listing.price is None:
         return {"signal": "no_price", "competitors": [], "stats": {}}
 
+    subcat = listing.subcategory or ""
     if listing.embedding is None:
-        # Embedding yoksa kategori bazlı karşılaştırmaya dön
+        # Embedding yoksa kategori + subcategory bazlı karşılaştırmaya dön
         rows = (await db.execute(sql_text("""
             SELECT id, title, price, user_id
             FROM listings
             WHERE status = 'active'
               AND category = :cat AND id != :lid AND user_id != :uid
               AND price IS NOT NULL
+              AND (:subcat = '' OR subcategory = :subcat)
             ORDER BY ABS(price - :price) ASC
             LIMIT 20
         """), {"cat": listing.category, "lid": listing_id,
-               "uid": current_user.id, "price": float(listing.price)})).fetchall()
+               "uid": current_user.id, "price": float(listing.price),
+               "subcat": subcat})).fetchall()
     else:
         emb_str = "[" + ",".join(f"{v:.6f}" for v in listing.embedding) + "]"
         rows = (await db.execute(sql_text("""
@@ -2356,10 +2394,12 @@ async def competitor_radar(
               AND l.embedding IS NOT NULL
               AND l.id != :lid AND l.user_id != :uid
               AND l.price IS NOT NULL
+              AND (:subcat = '' OR l.subcategory = :subcat)
               AND (l.embedding <=> CAST(:emb AS vector)) < 0.45
             ORDER BY l.embedding <=> CAST(:emb AS vector)
             LIMIT 20
-        """), {"lid": listing_id, "uid": current_user.id, "emb": emb_str})).fetchall()
+        """), {"lid": listing_id, "uid": current_user.id, "emb": emb_str,
+               "subcat": subcat})).fetchall()
 
     if not rows:
         return {"signal": "no_data", "competitors": [], "stats": {}}
@@ -2417,15 +2457,18 @@ async def competitor_radar(
 async def category_velocity(
     request: Request,
     category: str = Query(..., min_length=1),
+    subcategory: Optional[str] = Query(None),
     listing_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    PRO: Kategoride son 90 günde satılan ilanların ortalama satış süresi,
-    fiyat hassasiyeti ve en iyi fiyat aralığı.
+    PRO: Kategoride (ve opsiyonel subcategory'de) son 90 günde satılan ilanların
+    ortalama satış süresi, fiyat hassasiyeti ve en iyi fiyat aralığı.
     """
     from app.models.bid import Bid
+
+    _subcat = subcategory or ""
 
     # Ortalama satış süresi (oluşturma → kazanılan auction)
     velocity_row = (await db.execute(sql_text("""
@@ -2443,9 +2486,10 @@ async def category_velocity(
           AND a.winner_username IS NOT NULL
           AND a.ended_at IS NOT NULL
           AND l.category = :cat
+          AND (:subcat = '' OR l.subcategory = :subcat)
           AND a.ended_at > NOW() - INTERVAL '90 days'
           AND l.price IS NOT NULL
-    """), {"cat": category})).fetchone()
+    """), {"cat": category, "subcat": _subcat})).fetchone()
 
     # Fiyat hassasiyeti — ucuz vs pahalı ilanların satış hızı farkı
     price_sens = (await db.execute(sql_text("""
@@ -2458,24 +2502,28 @@ async def category_velocity(
         INNER JOIN (
             SELECT category,
                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) AS p50
-            FROM listings WHERE category = :cat AND status != 'deleted'
+            FROM listings
+            WHERE category = :cat AND status != 'deleted'
+              AND (:subcat = '' OR subcategory = :subcat)
             GROUP BY category
         ) pct ON pct.category = l.category
         WHERE a.status = 'completed'
           AND a.winner_username IS NOT NULL
           AND a.ended_at IS NOT NULL
           AND l.category = :cat
+          AND (:subcat = '' OR l.subcategory = :subcat)
           AND a.ended_at > NOW() - INTERVAL '90 days'
           AND l.price IS NOT NULL
         GROUP BY bucket
-    """), {"cat": category})).fetchall()
+    """), {"cat": category, "subcat": _subcat})).fetchall()
 
     # Mevcut aktif rakip sayısı
     active_count = await db.scalar(sql_text("""
         SELECT COUNT(*) FROM listings
         WHERE category = :cat AND status = 'active'
+          AND (:subcat = '' OR subcategory = :subcat)
           AND id != COALESCE(:lid, 0)
-    """), {"cat": category, "lid": listing_id or 0})
+    """), {"cat": category, "subcat": _subcat, "lid": listing_id or 0})
 
     total_sold = int(velocity_row[0]) if velocity_row and velocity_row[0] else 0
     avg_days = float(velocity_row[1]) if velocity_row and velocity_row[1] else None
