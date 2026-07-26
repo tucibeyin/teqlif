@@ -151,29 +151,44 @@ loc.t(f.labelKey)                           // f.labelKey zaten "extraField_bran
 
 ---
 
-### 1.6 ARB Codegen Tutulur — Per-Screen Çağrılar Kaldırılır
+### 1.6 ARB Codegen Tamamen Kaldırıldı — ARB Tek Kaynak
 
-OTA'ya geçiş **ARB dosyalarını veya `dart generate` çıktısını silmez**.  
-`AppLocalizations` codegen'i `MaterialApp` için hâlâ gereklidir:
+`flutter gen-l10n` pipeline'ı tamamen kaldırıldı. Flutter uygulaması artık hiçbir noktada `AppLocalizations` import etmez.
 
+**Silinen dosyalar:**
+- `mobile/l10n.yaml` — codegen config
+- `mobile/lib/l10n/app_localizations*.dart` — tüm generated Dart dosyaları
+- `mobile/lib/utils/field_labels.dart` — dead code (subcatLabel, AppLocalizations bağımlıydı)
+- `pubspec.yaml`'dan `generate: true` kaldırıldı
+
+**`main.dart` değişikliği:**
 ```dart
-// main.dart — bu kalmaya devam eder
-MaterialApp(
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
-  supportedLocales: AppLocalizations.supportedLocales,
-  ...
-)
+// Önce (AppLocalizations delegate):
+localizationsDelegates: AppLocalizations.localizationsDelegates,
+supportedLocales: AppLocalizations.supportedLocales,
+
+// Sonra (global delegates — RTL/AR desteği korundu):
+localizationsDelegates: const [
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+],
+supportedLocales: const [Locale('tr'), Locale('en'), Locale('ar'), Locale('ru')],
 ```
 
-**Sadece ekran içindeki şu satırlar kaldırılır:**
-
+**Background isolate pattern** (`push_notification_service.dart`):  
+BuildContext olmayan background isolate'lerde `lookupAppLocalizations` yerine:
 ```dart
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';  // sil
-final l = AppLocalizations.of(context)!;                        // sil
-l.someKey                                                       // loc.t('someKey') yap
+await Hive.initFlutter();
+await LocalizationService.initBox();
+final pack = LocalizationService.readCacheSync(langCode);
+pack.t('callVoiceCall');
 ```
+`Hive.initFlutter()` + `initBox()` tekrar çağrısı güvenli — `_box ??=` guard'ı koruyor.
 
-> ⚠️ ARB dosyaları silme — `sync_translations.py` onları okur ve DB'ye sync'ler.
+**ARB dosyalarının rolü:** Artık yalnızca `sync_translations.py → DB` zincirinin kaynağı. Uygulama ARB'yi hiç görmez.
+
+> ⚠️ ARB dosyalarını silme — `sync_translations.py` onları okur ve DB'ye sync'ler.
 
 ---
 
