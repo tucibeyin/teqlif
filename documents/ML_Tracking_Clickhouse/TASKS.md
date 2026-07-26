@@ -22,9 +22,10 @@
 - [x] **T04** — `swipe_live_events` tablosuna `stream_subcategory` ve `listing_subcategory` eklendi
   - DDL + ALTER + `batch_insert_swipe_live_events()` güncellendi
 
-- [ ] **T05** — VPS'te deploy et: `git pull && alembic upgrade head && sudo systemctl restart teqlif`
-  - ClickHouse ALTER TABLE'lar uygulama başlangıcında `init_clickhouse()` içinde otomatik çalışır
-  - PostgreSQL migration: `alembic upgrade head` (T08 için)
+- [x] **T05** — VPS deploy tamamlandı
+  - `aaa_live_streams_subcategory` migration uygulandı (live_streams.subcategory)
+  - `aab_merge_streams_and_loc` merge migration uygulandı
+  - ClickHouse ALTER TABLE'lar servis başlangıcında init_clickhouse() içinde otomatik çalıştı
 
 ### Embedding Zenginleştirme
 
@@ -67,8 +68,7 @@
   - `StreamOut` mobil modeline `subcategory` alanı eklendi
   - `_onPageChanged`, `_stopAndLog`, `_goToListing` çağrı siteleri güncellendi
 
-- [ ] **T14** — Feed ekranında `logEvent()` çağrı sitelerini güncelle — `subcategory` parametresi geçirilsin
-  - `home_screen.dart` veya feed widget'ları
+- [x] **T14** — `search_screen.dart` logEvent impression/click çağrılarına `listingSubcategory` eklendi
 
 ### Mobile: Analytics Service
 

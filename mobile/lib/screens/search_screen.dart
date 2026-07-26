@@ -1475,6 +1475,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
         contentType: (widget.listing['video_url'] as String?) != null
             ? 'video'
             : 'photo',
+        listingSubcategory: (widget.listing['subcategory'] as String?) ?? '',
       );
     }
   }
@@ -1520,6 +1521,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
             contentType: (widget.listing['video_url'] as String?) != null
                 ? 'video'
                 : 'photo',
+            listingSubcategory: (widget.listing['subcategory'] as String?) ?? '',
           );
         }
         widget.onTap();
