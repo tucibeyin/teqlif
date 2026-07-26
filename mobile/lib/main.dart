@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -155,8 +155,17 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         debugShowCheckedModeBanner: false,
         themeMode: ThemeProvider.instance.themeMode,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('tr'),
+          Locale('en'),
+          Locale('ar'),
+          Locale('ru'),
+        ],
         navigatorKey: TeqlifApp.navigatorKey,
         navigatorObservers: [AnalyticsRouteObserver(), _callRouteObserver],
         builder: (context, child) {

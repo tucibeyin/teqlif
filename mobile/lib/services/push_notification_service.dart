@@ -11,7 +11,8 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import 'storage_service.dart';
 import 'call_service.dart';
-import '../l10n/app_localizations.dart';
+import 'localization_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 
@@ -98,14 +99,16 @@ Future<void> _showCallNotification({
 }) async {
   debugPrint('[CallKit] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
 
-  // Load language from shared prefs since we have no BuildContext
+  // Load language + translation pack — no BuildContext available here.
+  // Hive may not be initialized in the background isolate; init safely.
   String langCode = 'tr';
   try {
     final prefs = await SharedPreferences.getInstance();
     langCode = prefs.getString('app_locale_language_code') ?? 'tr';
   } catch (_) {}
-  
-  final l = lookupAppLocalizations(Locale(langCode));
+  await Hive.initFlutter();
+  await LocalizationService.initBox();
+  final l = LocalizationService.readCacheSync(langCode);
 
   final callUuid = formatToUuid(callId);
 
@@ -114,13 +117,13 @@ Future<void> _showCallNotification({
     nameCaller: callerUsername,
     appName: 'teqlif',
     avatar: callerAvatar.isNotEmpty ? callerAvatar : 'https://i.pravatar.cc/100',
-    handle: l.callVoiceCall,
+    handle: l.t('callVoiceCall'),
     type: 0,
     duration: 45000,
     missedCallNotification: NotificationParams(
       showNotification: true,
       isShowCallback: false,
-      subtitle: l.callMissed,
+      subtitle: l.t('callMissed'),
     ),
     extra: {
       'call_id': callId,
@@ -136,8 +139,8 @@ Future<void> _showCallNotification({
       isShowLogo: false,
       backgroundColor: '#0A1628',
       actionColor: '#4CAF50',
-      textAccept: l.callNotifAccept,
-      textDecline: l.callNotifDecline,
+      textAccept: l.t('callNotifAccept'),
+      textDecline: l.t('callNotifDecline'),
     ),
     ios: const IOSParams(
       iconName: 'AppIcon',
@@ -204,8 +207,9 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
 class PushNotificationService {
   static Future<void> showWarningNotification() async {
     final prefs = await SharedPreferences.getInstance();
-    final langCode = prefs.getString('language') ?? 'tr';
-    final l = lookupAppLocalizations(Locale(langCode));
+    final langCode = prefs.getString('app_locale_language_code') ?? 'tr';
+    await LocalizationService.initBox();
+    final l = LocalizationService.readCacheSync(langCode);
 
     const androidDetails = AndroidNotificationDetails(
       'general_alerts',
@@ -218,8 +222,8 @@ class PushNotificationService {
     const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
     await _flnp.show(
       DateTime.now().millisecond,
-      l.micPermissionRequiredTitle,
-      l.micPermissionRequiredBody,
+      l.t('micPermissionRequiredTitle'),
+      l.t('micPermissionRequiredBody'),
       details,
     );
   }

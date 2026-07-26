@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
-import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
 import '../services/client_logger.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
@@ -27,11 +28,11 @@ Future<void> showStartStreamDialog(
   );
   final token = await StorageService.getToken();
   if (!context.mounted) return;
-  final l = AppLocalizations.of(context)!;
+  final loc = ProviderScope.containerOf(context, listen: false).read(localizationProvider);
 
   if (token == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l.liveLoginRequired)),
+      SnackBar(content: Text(loc.t('liveLoginRequired'))),
     );
     return;
   }
@@ -75,7 +76,7 @@ Future<void> showStartStreamDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setStateDialog) => AlertDialog(
-        title: Text(l.liveStartStreamDialogTitle),
+        title: Text(loc.t('liveStartStreamDialogTitle')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,8 +87,8 @@ Future<void> showStartStreamDialog(
               autofocus: true,
               maxLength: 200,
               decoration: InputDecoration(
-                hintText: l.liveStreamTitleHint,
-                labelText: l.liveStreamTitleLabel,
+                hintText: loc.t('liveStreamTitleHint'),
+                labelText: loc.t('liveStreamTitleLabel'),
                 border: const OutlineInputBorder(),
               ),
               onChanged: (v) {
@@ -103,10 +104,10 @@ Future<void> showStartStreamDialog(
               // ignore: deprecated_member_use
               value: selectedCategory,
               decoration: InputDecoration(
-                labelText: l.liveCategoryLabel,
+                labelText: loc.t('liveCategoryLabel'),
                 border: const OutlineInputBorder(),
               ),
-              hint: Text(l.liveCategoryHint),
+              hint: Text(loc.t('liveCategoryHint')),
               items: categories
                   .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                   .toList(),
@@ -128,7 +129,7 @@ Future<void> showStartStreamDialog(
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    l.audienceCalculating,
+                    loc.t('audienceCalculating'),
                     style: const TextStyle(fontSize: 12),
                   ),
                 ],
@@ -141,20 +142,21 @@ Future<void> showStartStreamDialog(
                   final t = titleController.text.trim();
                   if (t.isEmpty) {
                     setStateDialog(
-                        () => errorText = l.liveStreamTitleRequired);
+                        () => errorText = loc.t('liveStreamTitleRequired'));
                     return;
                   }
                   if (t.length < 3) {
-                    setStateDialog(() => errorText = l.liveStreamTitleMin);
+                    setStateDialog(() => errorText = loc.t('liveStreamTitleMin'));
                     return;
                   }
                   if (selectedCategory == null) {
                     setStateDialog(
-                        () => errorText = l.liveCategoryRequired);
+                        () => errorText = loc.t('liveCategoryRequired'));
                     return;
                   }
                   final confirmed = await _showBlastConfirmDialog(
                     ctx,
+                    loc: loc,
                     audienceSize: audienceSize,
                     audienceCost: audienceCost.toInt(),
                   );
@@ -185,7 +187,7 @@ Future<void> showStartStreamDialog(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l.audienceReadyBuyersBanner(audienceSize),
+                              loc.t('audienceReadyBuyersBanner', {'count': audienceSize.toString()}),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -194,8 +196,8 @@ Future<void> showStartStreamDialog(
                             ),
                             Text(
                               audienceCost == 0
-                                  ? l.blastSubtitleFree
-                                  : l.blastSubtitlePaid(audienceCost.toInt()),
+                                  ? loc.t('blastSubtitleFree')
+                                  : loc.t('blastSubtitlePaid', {'cost': audienceCost.toInt().toString()}),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: kPrimary.withValues(alpha: 0.7),
@@ -226,7 +228,7 @@ Future<void> showStartStreamDialog(
               debounceTimer?.cancel();
               Navigator.pop(ctx);
             },
-            child: Text(l.btnCancel),
+            child: Text(loc.t('btnCancel')),
           ),
           ElevatedButton(
             key: const Key('live_dialog_btn_baslat'),
@@ -234,22 +236,22 @@ Future<void> showStartStreamDialog(
             onPressed: () {
               final t = titleController.text.trim();
               if (t.isEmpty) {
-                setStateDialog(() => errorText = l.liveStreamTitleRequired);
+                setStateDialog(() => errorText = loc.t('liveStreamTitleRequired'));
                 return;
               }
               if (t.length < 3) {
-                setStateDialog(() => errorText = l.liveStreamTitleMin);
+                setStateDialog(() => errorText = loc.t('liveStreamTitleMin'));
                 return;
               }
               if (selectedCategory == null) {
-                setStateDialog(() => errorText = l.liveCategoryRequired);
+                setStateDialog(() => errorText = loc.t('liveCategoryRequired'));
                 return;
               }
               debounceTimer?.cancel();
               Navigator.pop(ctx, (t, selectedCategory!, false, 0));
             },
             child: Text(
-              audienceSize > 0 ? l.btnStartNormal : l.liveStartBtn,
+              audienceSize > 0 ? loc.t('btnStartNormal') : loc.t('liveStartBtn'),
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -313,8 +315,7 @@ Future<void> showStartStreamDialog(
       stackTrace: st,
       details: {'title': title, 'category': category},
     );
-    final ll = AppLocalizations.of(context)!;
-    final msg = _mapCaptchaError(e, ll);
+    final msg = _mapCaptchaError(e, loc);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   } catch (e, st) {
     if (context.mounted) Navigator.pop(context);
@@ -325,24 +326,23 @@ Future<void> showStartStreamDialog(
       stackTrace: st,
       details: {'title': title, 'category': category},
     );
-    TeqToast.error(AppLocalizations.of(context)?.errorGenericRetry ?? 'Bir hata oluştu');
+    TeqToast.error(loc.t('errorGenericRetry'));
   }
 }
 
 Future<bool?> _showBlastConfirmDialog(
   BuildContext ctx, {
+  required TranslationPack loc,
   required int audienceSize,
   required int audienceCost,
 }) {
   final isFree = audienceCost == 0;
   return showDialog<bool>(
     context: ctx,
-    builder: (dlgCtx) {
-      final l = AppLocalizations.of(dlgCtx)!;
-      return AlertDialog(
+    builder: (dlgCtx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        l.blastInviteDialogTitle,
+        loc.t('blastInviteDialogTitle'),
         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
       ),
       content: Column(
@@ -359,29 +359,29 @@ Future<bool?> _showBlastConfirmDialog(
               children: [
                 _InfoRow(
                   icon: Icons.people_alt_outlined,
-                  label: l.blastTargetAudience,
+                  label: loc.t('blastTargetAudience'),
                   value: '$audienceSize kişi',
                   color: kPrimary,
                 ),
                 const SizedBox(height: 10),
                 _InfoRow(
                   icon: Icons.notifications_active_outlined,
-                  label: l.blastNotificationLabel,
-                  value: l.blastNotificationValue,
+                  label: loc.t('blastNotificationLabel'),
+                  value: loc.t('blastNotificationValue'),
                   color: const Color(0xFF3B82F6),
                 ),
                 const SizedBox(height: 10),
                 isFree
                     ? _InfoRow(
                         icon: Icons.check_circle_outline,
-                        label: l.blastConfirmCostFreeLabel,
-                        value: l.blastConfirmCostFree,
+                        label: loc.t('blastConfirmCostFreeLabel'),
+                        value: loc.t('blastConfirmCostFree'),
                         color: const Color(0xFF22C55E),
                         bold: true,
                       )
                     : _InfoRow(
                         icon: Icons.account_balance_wallet_outlined,
-                        label: l.blastConfirmCostPaidLabel,
+                        label: loc.t('blastConfirmCostPaidLabel'),
                         value: '$audienceCost TUCi',
                         color: const Color(0xFFB8860B),
                         bold: true,
@@ -391,8 +391,8 @@ Future<bool?> _showBlastConfirmDialog(
           ),
           const SizedBox(height: 12),
           Text(
-            l.streamNotificationAutoSent,
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            loc.t('streamNotificationAutoSent'),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
         ],
@@ -400,22 +400,21 @@ Future<bool?> _showBlastConfirmDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dlgCtx, false),
-          child: Text(l.btnDismiss),
+          child: Text(loc.t('btnDismiss')),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dlgCtx, true),
           style: FilledButton.styleFrom(backgroundColor: kPrimary),
-          child: Text(l.actionConfirmAndStart),
+          child: Text(loc.t('actionConfirmAndStart')),
         ),
       ],
-    );
-    },
+    ),
   );
 }
 
-String _mapCaptchaError(AppException e, AppLocalizations l) {
-  if (e.statusCode == 403 || e.code == 'FORBIDDEN') return l.errorCaptchaFailed;
-  if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return l.errorTooFast;
+String _mapCaptchaError(AppException e, TranslationPack loc) {
+  if (e.statusCode == 403 || e.code == 'FORBIDDEN') return loc.t('errorCaptchaFailed');
+  if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return loc.t('errorTooFast');
   return e.message;
 }
 

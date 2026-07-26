@@ -114,7 +114,7 @@ class CategoryService {
   static void clearCache() => _cache.clear();
 
   /// ARB cat_* key'lerini kullanarak emoji içermeyen lokalize kategori adı döner.
-  /// Cihaz dilini AppLocalizations üzerinden otomatik yansıtır.
+  /// Cihaz dilini locale parametresi üzerinden yansıtır.
   static String localizedLabelFor(TranslationPack loc, String key) {
     return switch (key) {
       'electronics' => loc.t('cat_electronics'),
