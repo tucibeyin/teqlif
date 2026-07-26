@@ -3130,5 +3130,22 @@
   "subcat_misc": "Diğer",
   "langSwitching": "Dil yükleniyor…",
   "langSwitchSuccess": "Dil değiştirildi",
-  "langSwitchFailed": "Dil değiştirilemedi. Bağlantınızı kontrol edin."
+  "langSwitchFailed": "Dil değiştirilemedi. Bağlantınızı kontrol edin.",
+  "filterApply": "Filtre Uygula",
+  "filterClear": "Filtreyi Temizle",
+  "filterCategory": "Kategori",
+  "filterSubcategory": "Alt Kategori",
+  "filterExtraFields": "Ek Özellikler",
+  "filterCitySection": "Şehir",
+  "filterConditionSection": "Durum",
+  "filterSortSection": "Sıralama",
+  "filterPriceRange": "Fiyat Aralığı",
+  "filterPriceMin": "Min. Fiyat",
+  "filterPriceMax": "Maks. Fiyat",
+  "filterButton": "Filtrele",
+  "citySearchHint": "Şehir ara…",
+  "sortNewest": "En Yeni",
+  "sortOldest": "En Eski",
+  "sortPriceAsc": "Fiyat: Ucuzdan Pahalıya",
+  "sortPriceDesc": "Fiyat: Pahalıdan Ucuza"
 }

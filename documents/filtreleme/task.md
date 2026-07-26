@@ -34,25 +34,25 @@ Kaynak: `analiz.md` v3 — tüm FAZ'ların uygulama adımları.
 - [x] **F-2** — `mobile/lib/services/catalog_service.dart`: `initBox()`, `readCacheSync()`, `checkAndRefresh()`, `subcategoriesFor()`, `fieldsFor()` — kSubcategories fallback dahil
 - [x] **F-3** — Fallback: `subcategoriesFor()` → `kSubcategories[cat]`; `fieldsFor()` → null döner, caller FieldConfigService'e düşer
 - [x] **F-4** — `main.dart`: `CatalogService.initBox()` + `readCacheSync()` + `checkAndRefresh().ignore()` eklendi
-- [ ] **F-5** — `field_config_service.dart`: `CatalogService.isReady` ise HTTP atlamadan delegate et (FAZ 4 ile birleşti)
+- [x] **F-5** — `field_config_service.dart`: `CatalogService.isReady` ise HTTP atlamadan delegate et; `_fromCatalog()` ile `CatalogField` → `ExtraFieldDef` dönüşümü
 
 ---
 
 ## FAZ 3 — Filtre Componentleri
 
-- [ ] **W-1** — `mobile/lib/models/listing_filter_state.dart` yaz: `category`, `subcategory`, `city`, `condition`, `sortBy`, `minPrice`, `maxPrice`, `extraFields` + `isEmpty`, `activeCount`, `copyWith`, `clearAll`
-- [ ] **W-2** — `mobile/lib/widgets/listing_filter_sheet.dart` yaz: DraggableScrollableSheet, kategori şerit, subcategory şerit (AnimatedSize), extra field'lar (AnimatedSize), şehir, durum, fiyat aralığı, sıralama, sticky footer
-- [ ] **W-3** — `ListingFilterSheet`: pending state davranışı — kategori değişince subcategory+extraFields sıfırla; subcategory değişince extraFields sıfırla
-- [ ] **W-4** — `ListingFilterSheet`: label'lar `t("cat_" + key)`, `t("subcat_" + key)`, `t(field.labelKey)` — LocalizationService üzerinden
-- [ ] **W-5** — `mobile/lib/widgets/listing_filter_bar.dart` yaz: arama satırı + "Filtrele (N)" butonu + "Temizle" butonu; feature flag parametreleri (`showCategory`, `showSubcategory`, `showExtraFields`, `showCity`, `showCondition`, `showSort`, `showPriceRange`, `showSearchBar`)
+- [x] **W-1** — `mobile/lib/models/listing_filter_state.dart` yaz: `category`, `subcategory`, `city`, `condition`, `sortBy`, `minPrice`, `maxPrice`, `extraFields` + `isEmpty`, `activeCount`, `copyWith`, `clearAll`
+- [x] **W-2** — `mobile/lib/widgets/listing_filter_sheet.dart` yaz: DraggableScrollableSheet, kategori şerit, subcategory şerit (AnimatedSize), extra field'lar (AnimatedSize), şehir, durum, fiyat aralığı, sıralama, sticky footer
+- [x] **W-3** — `ListingFilterSheet`: pending state davranışı — kategori değişince subcategory+extraFields sıfırla; subcategory değişince extraFields sıfırla
+- [x] **W-4** — `ListingFilterSheet`: label'lar `t("cat_" + key)`, `t("subcat_" + key)`, `t(field.labelKey)` — LocalizationService üzerinden
+- [x] **W-5** — `mobile/lib/widgets/listing_filter_bar.dart` yaz: arama satırı + "Filtrele (N)" butonu + "Temizle" butonu; feature flag parametreleri (`showCategory`, `showSubcategory`, `showExtraFields`, `showCity`, `showCondition`, `showSort`, `showPriceRange`, `showSearchBar`)
 
 ---
 
 ## FAZ 4 — create_listing + edit_listing Migration
 
-- [ ] **M-1** — `create_listing_screen.dart`: `kSubcategories[_selectedCategory]` → `CatalogService.subcategoriesFor(_selectedCategory ?? '')`
-- [ ] **M-2** — `create_listing_screen.dart`: `await FieldConfigService.getFields(_selectedSubcategory)` → `CatalogService.fieldsFor(_selectedSubcategory ?? '')` (senkron, setState güncelle)
-- [ ] **M-3** — `edit_listing_screen.dart`: aynı iki değişiklik
+- [x] **M-1** — `create_listing_screen.dart`: `kSubcategories[_selectedCategory]` → `CatalogService.subcategoriesFor(_selectedCategory ?? '')`
+- [x] **M-2** — `field_config_service.dart`'ta `_fromCatalog()` delegate; `getFields()` CatalogService.isReady ise HTTP yerine önbellek kullanır
+- [x] **M-3** — `edit_listing_screen.dart`: kSubcategories/FieldConfigService kullanmıyordu — değişiklik gerekmedi
 - [ ] **M-4** — Manuel test: ilan oluşturma + düzenleme akışı, subcategory seçiminde bekleme olmadığını doğrula
 
 ---

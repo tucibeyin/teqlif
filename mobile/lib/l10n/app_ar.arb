@@ -3131,5 +3131,22 @@
   "subcat_misc": "أخرى",
   "langSwitching": "جارٍ تحميل اللغة…",
   "langSwitchSuccess": "تم تغيير اللغة",
-  "langSwitchFailed": "فشل تغيير اللغة. تحقق من اتصالك."
+  "langSwitchFailed": "فشل تغيير اللغة. تحقق من اتصالك.",
+  "filterApply": "تطبيق الفلتر",
+  "filterClear": "مسح الفلاتر",
+  "filterCategory": "الفئة",
+  "filterSubcategory": "الفئة الفرعية",
+  "filterExtraFields": "المزيد من الفلاتر",
+  "filterCitySection": "المدينة",
+  "filterConditionSection": "الحالة",
+  "filterSortSection": "ترتيب حسب",
+  "filterPriceRange": "نطاق السعر",
+  "filterPriceMin": "أدنى سعر",
+  "filterPriceMax": "أقصى سعر",
+  "filterButton": "فلتر",
+  "citySearchHint": "ابحث عن مدينة…",
+  "sortNewest": "الأحدث",
+  "sortOldest": "الأقدم",
+  "sortPriceAsc": "السعر: من الأرخص",
+  "sortPriceDesc": "السعر: من الأغلى"
 }

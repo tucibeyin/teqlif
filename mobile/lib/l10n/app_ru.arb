@@ -3132,5 +3132,22 @@
   "subcat_misc": "Другое",
   "langSwitching": "Загрузка языка…",
   "langSwitchSuccess": "Язык изменён",
-  "langSwitchFailed": "Не удалось изменить язык. Проверьте соединение."
+  "langSwitchFailed": "Не удалось изменить язык. Проверьте соединение.",
+  "filterApply": "Применить фильтр",
+  "filterClear": "Сбросить фильтры",
+  "filterCategory": "Категория",
+  "filterSubcategory": "Подкатегория",
+  "filterExtraFields": "Доп. фильтры",
+  "filterCitySection": "Город",
+  "filterConditionSection": "Состояние",
+  "filterSortSection": "Сортировка",
+  "filterPriceRange": "Диапазон цен",
+  "filterPriceMin": "Мин. цена",
+  "filterPriceMax": "Макс. цена",
+  "filterButton": "Фильтр",
+  "citySearchHint": "Поиск города…",
+  "sortNewest": "Новейшие",
+  "sortOldest": "Старейшие",
+  "sortPriceAsc": "Цена: по возрастанию",
+  "sortPriceDesc": "Цена: по убыванию"
 }

@@ -16,6 +16,7 @@ import '../services/cache_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
+import '../services/catalog_service.dart';
 import '../services/field_config_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
@@ -111,7 +112,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   }
 
   void _updateSubcategories(String categoryKey) {
-    final subs = kSubcategories[categoryKey] ?? [];
+    final subs = CatalogService.subcategoriesFor(categoryKey);
     setState(() {
       _subcategories = subs;
       _selectedSubcategory = null;

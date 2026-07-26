@@ -3167,5 +3167,22 @@
   "subcat_misc": "Other",
   "langSwitching": "Loading language…",
   "langSwitchSuccess": "Language changed",
-  "langSwitchFailed": "Failed to change language. Check your connection."
+  "langSwitchFailed": "Failed to change language. Check your connection.",
+  "filterApply": "Apply Filter",
+  "filterClear": "Clear Filters",
+  "filterCategory": "Category",
+  "filterSubcategory": "Subcategory",
+  "filterExtraFields": "More Filters",
+  "filterCitySection": "City",
+  "filterConditionSection": "Condition",
+  "filterSortSection": "Sort By",
+  "filterPriceRange": "Price Range",
+  "filterPriceMin": "Min. Price",
+  "filterPriceMax": "Max. Price",
+  "filterButton": "Filter",
+  "citySearchHint": "Search city…",
+  "sortNewest": "Newest",
+  "sortOldest": "Oldest",
+  "sortPriceAsc": "Price: Low to High",
+  "sortPriceDesc": "Price: High to Low"
 }
