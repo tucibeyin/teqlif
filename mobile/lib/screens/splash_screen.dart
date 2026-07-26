@@ -20,6 +20,7 @@ import '../widgets/soft_update_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/locale_provider.dart';
+import '../services/localization_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,6 +38,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _boot() async {
     final token = await StorageService.getToken();
+
+    // İlk kurulumda Hive cache boştur; API fetch tamamlanana kadar
+    // native splash bekletilir — kullanıcı asla key görmez.
+    // Cache'te pack varsa ready anında complete; timeout garantisi var.
+    await ProviderScope.containerOf(context, listen: false)
+        .read(localizationProvider.notifier)
+        .ready
+        .timeout(const Duration(seconds: 5), onTimeout: () {});
+
     FlutterNativeSplash.remove();
 
     final updateStatus = await VersionService.checkVersion();

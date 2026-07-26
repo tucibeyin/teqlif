@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
@@ -49,12 +50,17 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     final box = _box;
     if (box != null) {
       if (initialPack != null && !initialPack.isEmpty) {
-        // Pack hazır — sadece stale kontrolü arka planda yap.
+        // Pack hazır — ready'yi hemen tamamla, stale kontrolü arka planda.
+        _readyCompleter.complete();
         _checkStale(lang, box).ignore();
       } else {
-        // Cache yok (ilk kurulum) — API'den çek.
-        _fetchAndCache(lang, box).ignore();
+        // Cache yok (ilk kurulum) — API'den çek, bitince ready'yi tamamla.
+        _fetchAndCache(lang, box).then((_) {
+          if (!_readyCompleter.isCompleted) _readyCompleter.complete();
+        });
       }
+    } else {
+      _readyCompleter.complete();
     }
 
     _ref.listen<Locale>(localeProvider, (_, next) {
@@ -81,6 +87,12 @@ class LocalizationService extends StateNotifier<TranslationPack> {
 
   final Ref _ref;
   String _currentLang = 'tr';
+
+  /// Completes when the first non-empty pack is ready.
+  /// SplashScreen awaits this (with timeout) before removing the native splash,
+  /// guaranteeing zero flash of keys even on first install.
+  final _readyCompleter = Completer<void>();
+  Future<void> get ready => _readyCompleter.future;
 
   static Box<String>? _box;
 
