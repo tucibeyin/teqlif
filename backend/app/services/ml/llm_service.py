@@ -30,7 +30,9 @@ GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gem
 _GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
 
 # Sentences containing these words are truncated from LLM output (price/delivery guard)
-_STOP_WORDS = ["TL", "₺", "elden", "kargo", "shipping", "delivery", "livraison"]
+# Max 4 items — Groq hard limit. "kargo" intentionally omitted: truncation risk in
+# legitimate contexts ("kargo geldi" etc.); system prompt directive handles it instead.
+_STOP_WORDS = ["TL", "₺", "elden"]
 
 # ── Kategori normalizasyonu ───────────────────────────────────────────────────
 _CAT_NORMALIZE: dict[str, str] = {
