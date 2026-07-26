@@ -5987,4 +5987,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subcat_misc => 'Другое';
+
+  @override
+  String get langSwitching => 'Загрузка языка…';
+
+  @override
+  String get langSwitchSuccess => 'Язык изменён';
+
+  @override
+  String get langSwitchFailed =>
+      'Не удалось изменить язык. Проверьте соединение.';
 }

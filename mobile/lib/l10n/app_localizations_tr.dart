@@ -5940,4 +5940,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get subcat_misc => 'Diğer';
+
+  @override
+  String get langSwitching => 'Dil yükleniyor…';
+
+  @override
+  String get langSwitchSuccess => 'Dil değiştirildi';
+
+  @override
+  String get langSwitchFailed =>
+      'Dil değiştirilemedi. Bağlantınızı kontrol edin.';
 }

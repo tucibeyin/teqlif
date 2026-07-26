@@ -189,6 +189,123 @@ l.someKey                                                       // loc.t('someKe
 
 ---
 
+### 1.8 Dil Değiştirme UX Pattern'i
+
+**Dosyalar:** `mobile/lib/services/localization_service.dart`, `mobile/lib/widgets/language_switch_overlay.dart`, `mobile/lib/screens/auth/login_screen.dart`, `mobile/lib/screens/profile_screen.dart`
+
+**Sorun:** `localeProvider.setLocale()` anında state güncelliyor (toggle hareket ediyor), ama dil paketi henüz yüklenmemişse UI eski dilde kalıyor. Kullanıcı toggle'ın çalıştığını sanıyor, çalışmıyor.
+
+**Karar:** Dil değiştirme UI'dan soyutlandı — `switchLanguage()` başarısız olursa toggle geri döner, `setLocale()` sadece başarı sonrası çağrılır.
+
+```
+Kullanıcı toggle'a basar
+  → _displayedLang = newLang (optimistik)
+  → _isSwitching = true → LanguageSwitchOverlay (blur + spinner)
+  → await switchLanguage(newLang)
+      ├── true  → setLocale(newLang) + success toast
+      └── false → _displayedLang = prevLang (toggle geri) + error toast
+```
+
+**`LocalizationService.switchLanguage(lang) → Future<bool>`:**
+- Cache'te varsa: anında pack yükle → `return true`
+- Cache'te yoksa: `_fetchAndCache()` → başarıda `return true`, hata/timeout → `return false`
+- Başarısızda `_currentLang` değişmez — caller UI'ı revert edebilir
+
+**Ekran pattern'i:**
+```dart
+late String _displayedLang;   // initState: ref.read(localeProvider).languageCode
+bool _isSwitching = false;
+
+Future<void> _onLangChange(String newLang) async {
+  if (_isSwitching || newLang == _displayedLang) return;
+  final prevLang = _displayedLang;
+  setState(() { _isSwitching = true; _displayedLang = newLang; });
+  final ok = await ref.read(localizationProvider.notifier).switchLanguage(newLang);
+  if (!mounted) return;
+  if (ok) {
+    await ref.read(localeProvider.notifier).setLocale(Locale(newLang));
+    setState(() => _isSwitching = false);
+    TeqToast.success(ref.read(localizationProvider).t('langSwitchSuccess'));
+  } else {
+    setState(() { _isSwitching = false; _displayedLang = prevLang; });
+    TeqToast.error(ref.read(localizationProvider).t('langSwitchFailed'));
+  }
+}
+```
+
+**`LanguageSwitchOverlay`:** `BackdropFilter` blur + `CircularProgressIndicator`. Scaffold.body'yi sarar — `isVisible: _isSwitching` ile kontrol edilir.
+
+**SegmentedButton:** `selected: {_displayedLang}` — `localeProvider`'a değil lokal state'e bağlı. `setLocale()` başarı sonrası çağrıldığında `localeProvider` listener'ı pack zaten yüklü olduğundan guard'a takılır (`_currentLang == lang && !state.isEmpty`) ve gereksiz reload yapmaz.
+
+**Yeni ARB key'leri:** `langSwitching`, `langSwitchSuccess`, `langSwitchFailed` — 4 dilde.
+
+---
+
+### 1.9 Soğuk Başlatma — Sıfır Flash Garantisi
+
+**Sorun:** `LocalizationService` ve `LocaleNotifier` senkron default değerlerle başlıyordu (boş pack, `'tr'` locale). Async Hive/SharedPreferences okuması bir tick sonra geliyordu — bu tek tick'te `loc.t('key')` → `'key'` dönüyordu.
+
+**Karar:** `main()` içinde `runApp()` öncesi her ikisi de önyüklenir; provider override'larıyla geçilir.
+
+```dart
+// main() — initBox() ve prefs zaten hazır
+final savedLang = prefs.getString('app_locale_language_code') ?? 'tr';
+final initialPack = LocalizationService.readCacheSync(savedLang); // senkron, 0ms
+
+runApp(ProviderScope(
+  overrides: [
+    localeProvider.overrideWith((ref) => LocaleNotifier(initial: Locale(savedLang))),
+    localizationProvider.overrideWith((ref) => LocalizationService(ref, initialPack: initialPack)),
+  ],
+  child: const TeqlifApp(),
+));
+```
+
+**`readCacheSync(lang)`:** Hive box `initBox()` sonrası bellekte — `box.get()` O(1) memory lookup, I/O yok, gerçek 0ms.
+
+**`LocaleNotifier(initial:)`:** `initial` verilirse `_loadSavedLocale()` async çağrısı atlanır.
+
+**`LocalizationService(initialPack:)`:** Pack dolu gelirse `load()` atlanır, sadece arka planda `_checkStale()` çalışır.
+
+**İlk kurulum (Hive boş):** `initialPack.isEmpty` → constructor `_fetchAndCache()` başlatır. `SplashScreen` native splash'i pack hazır olmadan kaldırmaz:
+
+```dart
+// SplashScreen._boot()
+await ProviderScope.containerOf(context, listen: false)
+    .read(localizationProvider.notifier)
+    .ready                                     // Completer — pack hazırsa anında
+    .timeout(const Duration(seconds: 5), onTimeout: () {});
+FlutterNativeSplash.remove();                  // Asla key gösterilmez
+```
+
+**`LocalizationService.ready`:** Pack ilk kez dolu hale gelince tamamlanan `Completer<void>`. Cache varsa constructor'da anında complete; yoksa `_fetchAndCache()` bitince complete.
+
+---
+
+### 1.10 Login Sonrası Locale Öncelik Kuralı
+
+**Sorun:** Login ekranında kullanıcı dil değiştirdikten sonra login olduğunda, `AuthService.me()` server'dan eski locale'yi (`user.locale`) getirip `setLocaleLocally()` ile ezerek kullanıcının seçimini geri alıyordu.
+
+**Karar:** Kullanıcının login ekranında bilinçli yaptığı seçim, server'da saklı eski değerden önceliklidir.
+
+```dart
+// login_screen.dart — _submit()
+bool _userChangedLang = false;  // _onLangChange başarı olunca true
+
+// login sonrası:
+if (_userChangedLang) {
+  // Kullanıcının tercihi kazanır + server'a PATCH ile sync
+  ref.read(localeProvider.notifier).setLocale(Locale(_displayedLang)).ignore();
+} else {
+  // Bilinçli seçim yok — server tercihi geri yüklenir (multi-device sync)
+  ref.read(localeProvider.notifier).setLocaleLocally(Locale(user.locale!));
+}
+```
+
+**Kural:** `setLocale()` = state + SharedPreferences + backend PATCH. `setLocaleLocally()` = state + SharedPreferences, PATCH yok. Login ekranında kullanıcı değiştirmediyse `setLocaleLocally` ile sunucu tercihi uygulanır.
+
+---
+
 ## 2. Dinamik Field Konfigürasyonu
 
 ### Problem

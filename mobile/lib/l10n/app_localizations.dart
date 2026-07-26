@@ -10751,6 +10751,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Diğer'**
   String get subcat_misc;
+
+  /// No description provided for @langSwitching.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil yükleniyor…'**
+  String get langSwitching;
+
+  /// No description provided for @langSwitchSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil değiştirildi'**
+  String get langSwitchSuccess;
+
+  /// No description provided for @langSwitchFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil değiştirilemedi. Bağlantınızı kontrol edin.'**
+  String get langSwitchFailed;
 }
 
 class _AppLocalizationsDelegate

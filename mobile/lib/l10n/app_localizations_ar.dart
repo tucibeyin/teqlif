@@ -5906,4 +5906,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get subcat_misc => 'أخرى';
+
+  @override
+  String get langSwitching => 'جارٍ تحميل اللغة…';
+
+  @override
+  String get langSwitchSuccess => 'تم تغيير اللغة';
+
+  @override
+  String get langSwitchFailed => 'فشل تغيير اللغة. تحقق من اتصالك.';
 }

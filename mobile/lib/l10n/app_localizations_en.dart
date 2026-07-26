@@ -5937,4 +5937,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subcat_misc => 'Other';
+
+  @override
+  String get langSwitching => 'Loading language…';
+
+  @override
+  String get langSwitchSuccess => 'Language changed';
+
+  @override
+  String get langSwitchFailed =>
+      'Failed to change language. Check your connection.';
 }
