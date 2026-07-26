@@ -75,6 +75,17 @@ async def sync() -> None:
                     "values": list(pack.values()),
                 },
             )
+            await session.execute(
+                sa.text(
+                    "DELETE FROM translations WHERE lang = :lang AND key LIKE 'opt_%' AND NOT (key = ANY(:keys))"
+                ).bindparams(
+                    bindparam("keys", type_=ARRAY(Text)),
+                ),
+                {
+                    "lang": lang,
+                    "keys": list(pack.keys()),
+                },
+            )
             totals[lang] = len(pack)
 
         await session.commit()
