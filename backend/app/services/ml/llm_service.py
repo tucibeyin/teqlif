@@ -29,8 +29,8 @@ _GROQ_DAILY_LIMIT = 14_000
 GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent"
 _GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
 
-# "kargo" çıkarıldı — sistem direktifi zaten kapsamakta; meşru bağlamda truncation riski taşır
-_STOP_WORDS = ["TL", "₺", "elden"]
+# Sentences containing these words are truncated from LLM output (price/delivery guard)
+_STOP_WORDS = ["TL", "₺", "elden", "kargo", "shipping", "delivery", "livraison"]
 
 # ── Kategori normalizasyonu ───────────────────────────────────────────────────
 _CAT_NORMALIZE: dict[str, str] = {
@@ -48,58 +48,90 @@ _CAT_NORMALIZE: dict[str, str] = {
 
 # ── Ürün durumu etiketleri ────────────────────────────────────────────────────
 _CONDITION_LABELS: dict[str, str] = {
-    "new":       "Sıfır, kutusunda hiç açılmamış",
-    "like_new":  "Az kullanılmış, adeta sıfır",
-    "used":      "Kullanılmış, temiz",
-    "damaged":   "Hasarlı veya arızalı",
+    "new":       "brand new, never opened",
+    "like_new":  "lightly used, like new",
+    "used":      "used, good condition",
+    "damaged":   "damaged or defective",
 }
 
-# ── Fiyat + lokasyon şablonları ───────────────────────────────────────────────
+# ── Fiyat + lokasyon şablonları (dil-farkında, teslimat yöntemi YOK) ─────────
 _PRICE_ONLY: list[str] = [
     "{price} TL'ye satıyorum, pazarlık payı var.",
     "Fiyatım {price} TL, ciddi alıcı beklerim.",
     "{price} TL istiyorum, fiyat konuşulur.",
     "{price} TL, sabit fiyat.",
 ]
-_LOCATION_ONLY: list[str] = [
-    "Sadece {city} içi elden teslim yapabilirim.",
-    "{city}'den elden teslim, kargoya bakmıyorum.",
-    "Elden {city}'den verebilirim.",
-    "{city} içinden elden teslim tercihim.",
-]
-_PRICE_AND_LOCATION: list[str] = [
-    "{price} TL, sadece {city} içi elden teslim.",
-    "{price} TL'ye satıyorum, {city}'den elden verebilirim.",
-    "Fiyatım {price} TL. {city} içi elden teslim yapabilirim.",
-    "{price} TL istiyorum, {city}'den elden.",
-]
+_LOCATION_ONLY: dict[str, list[str]] = {
+    "tr": [
+        "Ürün {city}'de bulunuyor.",
+        "{city}'de mevcut, yerinde görülebilir.",
+        "Ürün şu an {city}'de.",
+        "{city}'deyim.",
+    ],
+    "en": [
+        "Item is located in {city}.",
+        "Available in {city}, can be seen in person.",
+        "I'm based in {city}.",
+    ],
+    "ar": [
+        "المنتج موجود في {city}.",
+        "متاح في {city}، يمكن المعاينة.",
+        "أنا في {city}.",
+    ],
+    "ru": [
+        "Товар находится в {city}.",
+        "Нахожусь в {city}, можно посмотреть.",
+        "Товар в {city}.",
+    ],
+}
+_PRICE_AND_LOCATION: dict[str, list[str]] = {
+    "tr": [
+        "{price} TL. Ürün {city}'de bulunuyor.",
+        "{price} TL istiyorum. {city}'deyim.",
+        "Fiyatım {price} TL. {city}'deyim.",
+        "{price} TL, {city}'de.",
+    ],
+    "en": [
+        "{price} TL. Item is in {city}.",
+        "{price} TL. Located in {city}.",
+        "{price} TL — available in {city}.",
+    ],
+    "ar": [
+        "{price} TL. المنتج في {city}.",
+        "{price} TL. أنا في {city}.",
+    ],
+    "ru": [
+        "{price} TL. Товар в {city}.",
+        "{price} TL. Нахожусь в {city}.",
+    ],
+}
 
 # ── Yazım çeşitlendirme direktifleri ─────────────────────────────────────────
 # Her request'te rastgele seçilir → aynı (kategori, kondisyon) için farklı yapılar
 _PARA_DIRECTIVES: list[str] = [
     (
-        "TAM OLARAK İKİ PARAGRAF yaz, aralarına boş satır bırak. "
-        "1. paragraf: ürünün durumu ve özellikleri (2-3 cümle). "
-        "2. paragraf: satış nedeni veya alıcıya kısa not (1-2 cümle)."
+        "Write EXACTLY TWO PARAGRAPHS separated by a blank line. "
+        "Paragraph 1: condition and features of the item (2-3 sentences). "
+        "Paragraph 2: reason for selling or a short note to the buyer (1-2 sentences)."
     ),
     (
-        "TAM OLARAK ÜÇ PARAGRAF yaz, aralarına boş satır bırak. "
-        "1. paragraf: ürünün fiziksel durumu (2 cümle). "
-        "2. paragraf: öne çıkan bir özellik veya avantaj (1-2 cümle). "
-        "3. paragraf: satış nedeni veya alıcıya not (1-2 cümle)."
+        "Write EXACTLY THREE PARAGRAPHS separated by blank lines. "
+        "Paragraph 1: physical condition of the item (2 sentences). "
+        "Paragraph 2: a standout feature or advantage (1-2 sentences). "
+        "Paragraph 3: reason for selling or note to buyer (1-2 sentences)."
     ),
     (
-        "TAM OLARAK İKİ PARAGRAF yaz, aralarına boş satır bırak. "
-        "1. paragraf: ürünün durumu ve dikkat çeken özellikleri (2-3 cümle). "
-        "2. paragraf: satış nedeni ve fiyat mantığı (1-2 cümle)."
+        "Write EXACTLY TWO PARAGRAPHS separated by a blank line. "
+        "Paragraph 1: condition and notable features (2-3 sentences). "
+        "Paragraph 2: reason for selling and pricing rationale (1-2 sentences)."
     ),
 ]
 
 _FOCUS_DIRECTIVES: list[str] = [
-    "Ürünün fiziksel durumunu somut detaylarla anlat.",
-    "Alıcının aklındaki soruları önceden yanıtlayacak şekilde yaz.",
-    "Dürüst ama ikna edici bir dil kullan.",
-    "Kısa ve net yaz, gereksiz kelime kullanma.",
+    "Describe the physical condition with concrete details.",
+    "Anticipate what a buyer would want to know and address it directly.",
+    "Use an honest but persuasive tone.",
+    "Be concise and clear, avoid filler words.",
 ]
 
 # YZ açılış kalıpları — ilk cümlede tespit edilirse atlanır
@@ -113,15 +145,17 @@ _SENTENCE_END = frozenset({".", "!", "?"})
 
 
 # ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
-def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
+def _build_suffix(price: Optional[float], location: Optional[str], lang: str = "tr") -> str:
     p = f"{int(price):,}".replace(",", ".") if price and price > 0 else None
     c = location.strip() if location else None
+    loc_only = _LOCATION_ONLY.get(lang, _LOCATION_ONLY["tr"])
+    both = _PRICE_AND_LOCATION.get(lang, _PRICE_AND_LOCATION["tr"])
     if p and c:
-        return random.choice(_PRICE_AND_LOCATION).format(price=p, city=c)
+        return random.choice(both).format(price=p, city=c)
     if p:
         return random.choice(_PRICE_ONLY).format(price=p)
     if c:
-        return random.choice(_LOCATION_ONLY).format(city=c)
+        return random.choice(loc_only).format(city=c)
     return ""
 
 
@@ -297,6 +331,7 @@ async def _sentence_stream(
     price: Optional[float],
     location: Optional[str],
     provider: str,
+    lang: str = "tr",
 ) -> AsyncGenerator[str, None]:
     """Token stream'ini cümle sınırlarında flush eder, suffix ekler."""
     sentence_buf = ""
@@ -320,7 +355,7 @@ async def _sentence_stream(
     if sentence_buf.strip():
         logger.info("[LLM] Dangling fragment yutuldu: %r", sentence_buf[:60])
 
-    suffix = _build_suffix(price, location)
+    suffix = _build_suffix(price, location, lang)
     if suffix:
         yield "\n\n"
         yield suffix
@@ -352,7 +387,7 @@ async def generate_listing_description_stream(
         try:
             logger.info("[LLM] Groq | title=%r", title[:60])
             async for chunk in _sentence_stream(
-                _tokens_groq(system_prompt, user_prompt), price, full_location, "groq"
+                _tokens_groq(system_prompt, user_prompt), price, full_location, "groq", lang
             ):
                 yield chunk
             return
@@ -364,7 +399,7 @@ async def generate_listing_description_stream(
         try:
             logger.info("[LLM] Gemini | title=%r", title[:60])
             async for chunk in _sentence_stream(
-                _tokens_gemini(system_prompt, user_prompt), price, full_location, "gemini"
+                _tokens_gemini(system_prompt, user_prompt), price, full_location, "gemini", lang
             ):
                 yield chunk
             return
