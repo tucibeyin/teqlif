@@ -12,17 +12,18 @@ Kaynak: `analiz.md` v3 — tüm FAZ'ların uygulama adımları.
 - [x] **DB-3b** — `category_fields.subcategory` Türkçe slug'ları İngilizce'ye rename et (48 rename) — `aaa_slug_unification.py`
 - [x] **DB-3c** — `category_fields.key` / `label_key` / `depends_on` Türkçe → İngilizce rename (45 field key rename)
 - [x] **DB-4** — `subcat_*` label key'leri ARB dosyalarında zaten mevcut (59 key, 4 dil) — ek iş gerekmedi
-- [ ] **DB-5** — VPS'te migration çalıştır, `subcategories` tablosunu verify et
+- [x] **DB-5** — VPS'te migration çalıştır, `subcategories` tablosunu verify et (59 subcat, automobile→brand/year/mileage doğrulandı)
 
 ---
 
 ## FAZ 1 — Backend Catalog Endpoint
 
-- [ ] **C-1** — `backend/app/routers/catalog.py` dosyası oluştur
-- [ ] **C-2** — `GET /api/catalog/version` endpoint: categories + subcategories + category_fields satır sayısı + max updated_at → MD5 hash
-- [ ] **C-3** — `GET /api/catalog` endpoint: tam ağaç döndür (categories → subcategories → fields → options), sadece `label_key` (label string yok)
-- [ ] **C-4** — Redis 24h cache ekle (`cache:catalog`)
-- [ ] **C-5** — `main.py`'a catalog router kaydını ekle
+- [x] **C-1** — `backend/app/routers/catalog.py` oluşturuldu
+- [x] **C-2** — `GET /api/catalog/version` endpoint: MD5 hash of full catalog JSON
+- [x] **C-3** — `GET /api/catalog` endpoint: tam ağaç, sadece `label_key` (label string yok)
+- [x] **C-4** — Redis 24h cache (`@cache(expire=86400)`) her iki endpoint'e eklendi
+- [x] **C-4b** — `models/subcategory.py` + `alembic/env.py` import eklendi
+- [x] **C-5** — `main.py`'a `catalog.router` kaydı eklendi
 - [ ] **C-6** — VPS deploy + curl ile her iki endpoint'i test et
 
 ---

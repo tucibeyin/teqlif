@@ -68,6 +68,7 @@ from app.routers import client_log, config
 from app.routers import calls
 from app.routers import field_config
 from app.routers import i18n
+from app.routers import catalog
 from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
@@ -293,6 +294,7 @@ app.include_router(search_alerts.router)
 app.include_router(calls.router)
 app.include_router(field_config.router)
 app.include_router(i18n.router)
+app.include_router(catalog.router)
 
 
 # Frontend dosyalarını sun
