@@ -24,18 +24,17 @@ Kaynak: `analiz.md` v3 — tüm FAZ'ların uygulama adımları.
 - [x] **C-4** — Redis 24h cache (`@cache(expire=86400)`) her iki endpoint'e eklendi
 - [x] **C-4b** — `models/subcategory.py` + `alembic/env.py` import eklendi
 - [x] **C-5** — `main.py`'a `catalog.router` kaydı eklendi
-- [ ] **C-6** — VPS deploy + curl ile her iki endpoint'i test et
+- [x] **C-6** — VPS deploy + curl testi: version=a600a069, 9 cat, 59 subcat doğrulandı
 
 ---
 
 ## FAZ 2 — Flutter CatalogService
 
-- [ ] **F-1** — `mobile/lib/models/catalog.dart` yaz: `CatalogCategory`, `CatalogSubcategory`, `CatalogField`, `CatalogOption` — Hive TypeAdapter'lı
-- [ ] **F-2** — `mobile/lib/services/catalog_service.dart` yaz: `init()`, `readCacheSync()`, `checkAndRefresh()`, senkron getterlar (`categories`, `subcategoriesFor()`, `fieldsFor()`)
-- [ ] **F-3** — Fallback zinciri ekle: `CatalogService.fieldsFor()` → `FieldConfigService.getFields()` → `kSubcategoryFields`
-- [ ] **F-4** — Fallback zinciri ekle: `CatalogService.subcategoriesFor()` → `kSubcategories`
-- [ ] **F-5** — `main.dart`: Hive box `catalog_cache` aç + `CatalogService.init()` + `CatalogService.readCacheSync()` sıralamasını LocalizationService ile eş tut
-- [ ] **F-6** — `field_config_service.dart`: `CatalogService.isReady` kontrolü ekle, hazırsa HTTP yapmadan CatalogService'e delegate et
+- [x] **F-1** — `mobile/lib/models/catalog.dart`: `CatalogCategory`, `CatalogSubcategory`, `CatalogField`, `CatalogOption` — JSON string Hive, TypeAdapter yok
+- [x] **F-2** — `mobile/lib/services/catalog_service.dart`: `initBox()`, `readCacheSync()`, `checkAndRefresh()`, `subcategoriesFor()`, `fieldsFor()` — kSubcategories fallback dahil
+- [x] **F-3** — Fallback: `subcategoriesFor()` → `kSubcategories[cat]`; `fieldsFor()` → null döner, caller FieldConfigService'e düşer
+- [x] **F-4** — `main.dart`: `CatalogService.initBox()` + `readCacheSync()` + `checkAndRefresh().ignore()` eklendi
+- [ ] **F-5** — `field_config_service.dart`: `CatalogService.isReady` ise HTTP atlamadan delegate et (FAZ 4 ile birleşti)
 
 ---
 

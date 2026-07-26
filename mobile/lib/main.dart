@@ -22,6 +22,7 @@ import 'services/offline_queue_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'services/localization_service.dart';
+import 'services/catalog_service.dart';
 import 'ui_library/components/overlays/teq_toast.dart';
 import 'widgets/global_keyboard_accessory.dart';
 import 'widgets/global_call_overlay.dart';
@@ -73,11 +74,13 @@ void main() async {
 
       await CacheService.init();
       await LocalizationService.initBox();
+      await CatalogService.initBox();
       // Pre-load locale + translation pack before runApp so providers start
       // with correct values — eliminates the first-render flash of keys.
       final savedLang = prefs.getString('app_locale_language_code') ?? 'tr';
       final _initialLocale = Locale(savedLang);
       final _initialPack = LocalizationService.readCacheSync(savedLang);
+      CatalogService.readCacheSync();
       TeqToast.init(TeqlifApp.navigatorKey);
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] CacheService.init done | ${_sw.elapsedMilliseconds}ms');
       // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
@@ -113,6 +116,7 @@ void main() async {
         ],
         child: const TeqlifApp(),
       ));
+      CatalogService.checkAndRefresh().ignore();
     },
   );
   // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU SONU ---
