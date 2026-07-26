@@ -15,14 +15,33 @@ class CatalogOption {
   final String? exclusionGroup;
   final bool isExclusive;
 
-  factory CatalogOption.fromJson(Map<String, dynamic> j) => CatalogOption(
-        value: j['value'] as String,
-        label: j['label'] as String? ?? j['value'] as String,
-        labelKey: j['label_key'] as String? ?? 'opt_${j['value']}',
-        parentOptionValue: j['parent_option_value'] as String?,
-        exclusionGroup: j['exclusion_group'] as String?,
-        isExclusive: j['is_exclusive'] as bool? ?? false,
-      );
+  factory CatalogOption.fromJson(Map<String, dynamic> j) {
+    final rawParent = j['parent_option_value'] as String?;
+    // Support both old API format (parent_option_value overloaded) and
+    // new clean format (exclusion_group + is_exclusive columns).
+    // Old: parent_option_value='grp:damage_level'  → exclusionGroup='damage_level'
+    // Old: parent_option_value='__excl__'          → isExclusive=true
+    // New: exclusion_group='damage_level', is_exclusive=true (parent_option_value=null)
+    final String? exclusionGroup = j['exclusion_group'] as String? ??
+        (rawParent != null && rawParent.startsWith('grp:')
+            ? rawParent.substring(4)
+            : null);
+    final bool isExclusive = j['is_exclusive'] as bool? ??
+        (rawParent == '__excl__');
+    final String? parentOptionValue = (rawParent != null &&
+            !rawParent.startsWith('grp:') &&
+            rawParent != '__excl__')
+        ? rawParent
+        : null;
+    return CatalogOption(
+      value: j['value'] as String,
+      label: j['label'] as String? ?? j['value'] as String,
+      labelKey: j['label_key'] as String? ?? 'opt_${j['value']}',
+      parentOptionValue: parentOptionValue,
+      exclusionGroup: exclusionGroup,
+      isExclusive: isExclusive,
+    );
+  }
 }
 
 class CatalogField {
