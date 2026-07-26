@@ -7,7 +7,7 @@ Create Date: 2026-07-23
 from typing import Sequence, Union
 
 revision: str = "zu_merge_districts_and_vps"
-down_revision: Union[str, Sequence[str], None] = ("zt_districts", "14913da997d1")
+down_revision: Union[str, Sequence[str], None] = "zt_districts"
 branch_labels = None
 depends_on = None
 
