@@ -10,7 +10,6 @@ import '../config/api.dart';
 import '../providers/locale_provider.dart';
 
 const _kBoxName = 'i18n_cache';
-const _kStaleDurationMs = 24 * 60 * 60 * 1000; // 24h
 
 /// Immutable translation pack returned by [localizationProvider].
 /// Widgets watch this; [t] is the translation helper.
@@ -117,11 +116,6 @@ class LocalizationService extends StateNotifier<TranslationPack> {
   }
 
   Future<void> _checkStale(String lang, Box<String> box) async {
-    final cachedAtStr = box.get('cached_at_$lang');
-    if (cachedAtStr != null) {
-      final age = DateTime.now().millisecondsSinceEpoch - (int.tryParse(cachedAtStr) ?? 0);
-      if (age < _kStaleDurationMs) return;
-    }
     try {
       final cachedVersion = box.get('version_$lang') ?? '';
       final vResp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang/version'));
@@ -129,8 +123,6 @@ class LocalizationService extends StateNotifier<TranslationPack> {
       final serverVersion = (jsonDecode(vResp.body) as Map)['version'] as String;
       if (serverVersion != cachedVersion) {
         await _fetchAndCache(lang, box);
-      } else {
-        await box.put('cached_at_$lang', DateTime.now().millisecondsSinceEpoch.toString());
       }
     } catch (e) {
       debugPrint('[i18n] stale check failed: $e');
