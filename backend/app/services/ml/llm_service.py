@@ -125,7 +125,72 @@ def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
     return ""
 
 
-def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[str, str]:
+_EXTRA_FIELD_LABELS: dict[str, str] = {
+    "brand": "Marka",
+    "model": "Model",
+    "model_name": "Model",
+    "year": "Yıl",
+    "km": "Kilometre",
+    "fuel_type": "Yakıt",
+    "gear": "Vites",
+    "body_type": "Kasa Tipi",
+    "color": "Renk",
+    "damage": "Hasar Durumu",
+    "engine_cc": "Motor Hacmi",
+    "power_hp": "Motor Gücü",
+    "moto_type": "Tip",
+    "boat_type": "Tekne Türü",
+    "boat_fuel": "Yakıt",
+    "length_m": "Uzunluk (m)",
+    "horse_power": "Beygir Gücü",
+    "room_count": "Oda Sayısı",
+    "size": "Alan (m²)",
+    "floor": "Bulunduğu Kat",
+    "total_floors": "Toplam Kat",
+    "building_age": "Bina Yaşı",
+    "heating": "Isıtma",
+    "furnished": "Eşya Durumu",
+    "title_deed": "Tapu Durumu",
+    "land_use": "Kullanım Durumu",
+    "balcony": "Balkon",
+    "elevator": "Asansör",
+    "parking": "Otopark",
+    "storage": "Depolama",
+    "ram": "RAM",
+    "processor": "İşlemci",
+    "screen_size": "Ekran Boyutu",
+    "camera_type": "Kamera Türü",
+    "gender": "Cinsiyet",
+    "size_clothing": "Beden",
+    "size_shoes": "Numara",
+    "type": "Tür",
+    "material": "Malzeme",
+    "karat_gold": "Altın Ayarı",
+    "karat_silver": "Gümüş Ayarı",
+    "bike_type": "Bisiklet Türü",
+    "wheel_size": "Jant Boyutu",
+    "sport_type": "Spor Dalı",
+    "pet_type": "Hayvan Türü",
+    "instrument_type": "Enstrüman Türü",
+    "author": "Yazar",
+    "isbn": "ISBN",
+    "publisher": "Yayınevi",
+    "console_brand": "Konsol Markası",
+    "console_model": "Konsol Modeli",
+    "furniture_type": "Mobilya Türü",
+    "textile_type": "Tekstil Türü",
+    "lighting_type": "Aydınlatma Türü",
+    "capacity": "Kapasite",
+}
+
+
+def _build_prompt(
+    title: str,
+    category: str,
+    condition: Optional[str],
+    subcategory: Optional[str] = None,
+    extra_fields: Optional[dict[str, str]] = None,
+) -> tuple[str, str]:
     # Alt kategorileri canonical forma çevir
     cat_raw = category.lower().strip()
     cat = _CAT_NORMALIZE.get(cat_raw, cat_raw)
@@ -156,10 +221,24 @@ def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[
         f"Son paragraf:\n{ex2}"
     )
 
-    user_lines = [
+    user_lines: list[str] = [
         "Şu ürün için ilan metni yaz:",
         f"Ürün: {title}",
+        f"Alt kategori: {subcategory}" if subcategory else "",
         f"Durum: {cond_label}" if cond_label else "",
+    ]
+
+    if extra_fields:
+        field_lines = []
+        for key, val in extra_fields.items():
+            if val and val.strip():
+                label = _EXTRA_FIELD_LABELS.get(key, key.replace("_", " ").capitalize())
+                field_lines.append(f"  {label}: {val}")
+        if field_lines:
+            user_lines.append("Ürün özellikleri:")
+            user_lines.extend(field_lines)
+
+    user_lines += [
         "",
         "Bu tür ürünlerde genellikle şunlar konuşulur (ürününe uyanları kullan):",
         combo_hint,
@@ -306,19 +385,23 @@ async def generate_listing_description_stream(
     condition: Optional[str] = None,
     price: Optional[float] = None,
     location: Optional[str] = None,
+    subcategory: Optional[str] = None,
+    district: Optional[str] = None,
+    extra_fields: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Groq primary → Gemini fallback.
     Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
     """
-    system_prompt, user_prompt = _build_prompt(title, category, condition)
+    system_prompt, user_prompt = _build_prompt(title, category, condition, subcategory, extra_fields)
+    full_location = ", ".join(filter(None, [district, location])) or None
 
     # ── Groq path ─────────────────────────────────────────────────────────────
     if settings.groq_api_key and await _quota_ok("groq", _GROQ_DAILY_LIMIT):
         try:
             logger.info("[LLM] Groq | title=%r", title[:60])
             async for chunk in _sentence_stream(
-                _tokens_groq(system_prompt, user_prompt), price, location, "groq"
+                _tokens_groq(system_prompt, user_prompt), price, full_location, "groq"
             ):
                 yield chunk
             return
@@ -330,7 +413,7 @@ async def generate_listing_description_stream(
         try:
             logger.info("[LLM] Gemini | title=%r", title[:60])
             async for chunk in _sentence_stream(
-                _tokens_gemini(system_prompt, user_prompt), price, location, "gemini"
+                _tokens_gemini(system_prompt, user_prompt), price, full_location, "gemini"
             ):
                 yield chunk
             return

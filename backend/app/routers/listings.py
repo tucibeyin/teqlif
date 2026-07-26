@@ -477,6 +477,9 @@ class GenerateDescriptionRequest(BaseModel):
     condition: Optional[str] = Field(default=None)
     price: Optional[float] = Field(default=None, ge=0)
     location: Optional[str] = Field(default=None)
+    subcategory: Optional[str] = Field(default=None)
+    district: Optional[str] = Field(default=None)
+    extra_fields: Optional[dict[str, str]] = Field(default=None)
 
 
 @router.get("/ai-desc-credits")
@@ -542,6 +545,9 @@ async def generate_description(
                     condition=body.condition,
                     price=body.price,
                     location=body.location,
+                    subcategory=body.subcategory,
+                    district=body.district,
+                    extra_fields=body.extra_fields,
                 ):
                     await queue.put({"type": "chunk", "data": chunk})
                 

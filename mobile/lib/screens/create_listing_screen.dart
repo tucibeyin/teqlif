@@ -287,6 +287,14 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         'condition': _selectedCondition,
         if (price != null && price > 0) 'price': price,
         if (_selectedProvince != null) 'location': _selectedProvince,
+        if (_selectedSubcategory != null) 'subcategory': _selectedSubcategory,
+        if (_selectedDistrict != null) 'district': _selectedDistrict,
+        if (_extraValues.isNotEmpty || _extraMultiValues.isNotEmpty)
+          'extra_fields': {
+            ..._extraValues,
+            for (final e in _extraMultiValues.entries)
+              if (e.value.isNotEmpty) e.key: e.value.join(', '),
+          },
       });
 
       client = http.Client();
@@ -1412,7 +1420,6 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           const SizedBox(height: 10),
           _AiDescButton(
             loading: _aiDescLoading,
-            enabled: _aiReady,
             isPro: _isPro,
             creditsRemaining: _aiDescCreditsRemaining,
             onTap: _fetchAiDescription,
@@ -1550,13 +1557,11 @@ class _AiPriceButton extends ConsumerWidget {
 
 class _AiDescButton extends ConsumerWidget {
   final bool loading;
-  final bool enabled;
   final bool isPro;
   final int? creditsRemaining;
   final VoidCallback onTap;
   const _AiDescButton(
       {required this.loading,
-      required this.enabled,
       required this.onTap,
       this.isPro = false,
       this.creditsRemaining});
@@ -1564,7 +1569,7 @@ class _AiDescButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final active = enabled && !loading;
+    final active = !loading;
     return GestureDetector(
       onTap: active ? onTap : null,
       child: AnimatedContainer(

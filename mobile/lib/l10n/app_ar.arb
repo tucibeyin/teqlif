@@ -2970,7 +2970,7 @@
   "aiDescButton": "كتابة الوصف بالذكاء الاصطناعي",
   "aiDescGenerating": "الذكاء الاصطناعي يكتب الوصف...",
   "aiDescError": "فشل إنشاء الوصف. حاول مجدداً.",
-  "aiDescUnavailable": "خدمة وصف الذكاء الاصطناعي غير متاحة حالياً.",
+  "aiDescUnavailable": "خدمة الذكاء الاصطناعي لكتابة الوصف غير متاحة حالياً.",
   "fieldCondition": "حالة المنتج",
   "fieldConditionHint": "اختر حالة المنتج",
   "conditionNew": "جديد",
