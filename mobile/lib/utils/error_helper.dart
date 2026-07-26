@@ -13,9 +13,12 @@ import '../ui_library/components/overlays/teq_toast.dart';
 /// }
 /// ```
 void handleError(Object error, TranslationPack loc) {
-  // 401: oturum süresi dolmuş → authFailedStream'e sinyal ver.
-  // main_screen bunu dinleyip logout + /login yapar; toast gösterilmez.
-  if (error is AppException && error.statusCode == 401) {
+  // 401: oturum süresi dolmuş (login/register dışındaki istekler) → authFailedStream'e sinyal ver.
+  // INVALID_CREDENTIALS / UNAUTHORIZED giriş hataları ise kullanıcıya gösterilmelidir.
+  if (error is AppException &&
+      error.statusCode == 401 &&
+      error.code != 'INVALID_CREDENTIALS' &&
+      error.code != 'UNAUTHORIZED') {
     AuthService.authFailedStream.add(null);
     return;
   }

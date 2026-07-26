@@ -179,7 +179,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.hashed_password):
-        raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrInvalidCredentials", "E-posta veya şifre hatalı"))
+        raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrInvalidCredentials", "E-posta veya şifre hatalı"), code="INVALID_CREDENTIALS")
 
     if user.status != UserStatus.ACTIVE:
         raise ForbiddenException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrAccountDisabled", "Hesabınız devre dışı"))
