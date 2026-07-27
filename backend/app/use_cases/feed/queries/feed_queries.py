@@ -618,7 +618,7 @@ class FeedQueries:
     # ── For-You Feed (pgvector cosine distance) ──────────────────────────────────
 
     FORYOU_CACHE_TTL = 900    # 15 dakika — yeni etkileşimler daha hızlı yansısın
-    FORYOU_POOL_SIZE = 100    # Önceden hesaplanan ID havuzu
+    FORYOU_POOL_SIZE = 500    # Önceden hesaplanan ID havuzu (25 sayfa x 20 ilan)
 
 
     async def get_foryou_feed(self, user_id: int, page: int,) -> list[dict]:

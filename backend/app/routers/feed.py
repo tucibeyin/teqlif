@@ -106,7 +106,7 @@ async def get_recent_mixed_feed(
 
 @router.get("/for-you")
 async def get_for_you_feed(
-    page: int = Query(default=0, ge=0, le=4),
+    page: int = Query(default=0, ge=0, le=25),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
@@ -115,7 +115,7 @@ async def get_for_you_feed(
 
     - preference_embedding yoksa cold start (popüler ilanlar)
     - varsa pgvector cosine distance ile en yakın ilanlar
-    - Sayfa başına 20 ilan, maks 5 sayfa (100 ilan havuzu Redis'te 5 dk önbelleklenir)
+    - Sayfa başına 20 ilan, maks 25 sayfa (500 ilan havuzu Redis'te 15 dk önbelleklenir)
     """
     return await FeedQueries(uow).get_foryou_feed(current_user.id, page)
 

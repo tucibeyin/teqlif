@@ -378,9 +378,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     required bool bypassCache,
     required VoidCallback onData,
   }) {
+    final url = _isLoggedIn
+        ? '$kBaseUrl/feed/for-you?page=1'
+        : '$kBaseUrl/feed/recent?page=0';
+    final cacheKey =
+        _isLoggedIn ? 'explore_foryou_grid' : 'explore_recent_feed';
     ApiService.get<List<dynamic>>(
-      url: '$kBaseUrl/feed/recent?page=0',
-      cacheKey: 'explore_recent_feed',
+      url: url,
+      cacheKey: cacheKey,
       cacheTtl: const Duration(minutes: 5),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
@@ -388,7 +393,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
       if (mounted) {
         setState(() {
           _recentListings = recent;
-          _recentPage = 1;
+          _recentPage = _isLoggedIn ? 2 : 1;
           _recentExhausted = recent.length < 20;
         });
         final recentIds = recent
@@ -400,7 +405,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
         if (recentIds.isNotEmpty) {
           AnalyticsService.logListingImpressions(
             listingIds: recentIds,
-            section: 'recent',
+            section: _isLoggedIn ? 'for_you_grid' : 'recent',
           );
         }
       }
@@ -412,16 +417,17 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _loadMoreRecentListings() async {
-    if (!_isLoggedIn || _recentExhausted || _recentLoadingMore || _hasQuery) return;
+    if (_recentExhausted || _recentLoadingMore || _hasQuery) return;
     setState(() => _recentLoadingMore = true);
     try {
       final token = await StorageService.getToken();
-      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final excludeParam = _forYouIds.isNotEmpty
-          ? '&exclude_ids=${_forYouIds.join(',')}'
-          : '';
+      final headers =
+          token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+      final url = _isLoggedIn
+          ? '$kBaseUrl/feed/for-you?page=$_recentPage'
+          : '$kBaseUrl/feed/recent?page=$_recentPage${_forYouIds.isNotEmpty ? '&exclude_ids=${_forYouIds.join(',')}' : ''}';
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/recent?page=$_recentPage$excludeParam'),
+        Uri.parse(url),
         headers: headers,
       );
       if (!mounted) return;
