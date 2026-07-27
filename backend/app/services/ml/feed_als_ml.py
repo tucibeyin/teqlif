@@ -10,9 +10,9 @@ Yeterli veri yoksa (<50 satır) sessizce çıkar.
 
 Confidence ağırlıkları:
   click                              → 1.0
-  impression + dwell_time > 8000ms  → 0.7
-  impression + dwell_time > 3000ms  → 0.4
-  bid_hesitation (user_events)       → 2.0  (fiyat yazdı ama göndermedi — güçlü sinyal)
+  impression + dwell_time > 8000ms  → 1.2
+  impression + dwell_time > 3000ms  → 0.5
+  bid_hesitation (user_events)       → 3.0  (fiyat yazdı ama göndermedi — güçlü sinyal)
   skip                               → 0.05  (negatif örnek, düşük ağırlık)
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ _USER_VEC_KEY = "feed:als:user_vec:{uid}"
 _ITEM_VEC_KEY = "feed:als:item_vec:{lid}"
 _SUBCAT_VEC_KEY = "feed:als:subcat_vec:{key}"  # key = "category|subcategory"
 _ALS_TTL = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
-_MIN_ROWS = 50       # Bu kadar satır yoksa eğitimi atla
+_MIN_ROWS = 15       # Bu kadar satır yoksa eğitimi atla
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -179,9 +179,9 @@ async def train_feed_als(db_session=None) -> None:
         hesitations = hes_map.get((uid, lid), 0)
         confidence = (
             1.0 * clicks
-            + 0.7 * long_dwells
-            + 0.4 * short_dwells
-            + 2.0 * hesitations
+            + 1.2 * long_dwells
+            + 0.5 * short_dwells
+            + 3.0 * hesitations
             + 0.05 * skips
         )
         confidence = max(confidence, 0.01)

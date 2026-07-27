@@ -580,7 +580,7 @@ class FeedQueries:
                       {date_filter}
                       {uid_filter}
                     GROUP BY l.id
-                    ORDER BY COUNT(ll.id) DESC, l.created_at DESC
+                    ORDER BY (COUNT(ll.id) * 1.5 + COALESCE(l.quality_score, 0.5) * 4.0) DESC, l.created_at DESC
                     LIMIT :lim OFFSET :off
                 """),
                 params,
@@ -727,6 +727,18 @@ class FeedQueries:
         redis = await get_redis()
         user = await self.uow.session.scalar(select(User).where(User.id == user_id))
 
+        try:
+            session_b64 = await redis.get(f"feed:session:{user_id}")
+        except Exception:
+            session_b64 = None
+            await redis.delete(f"feed:session:{user_id}")
+        sess_vec = np.array([], dtype=np.float32)
+        if session_b64:
+            try:
+                sess_vec = np.frombuffer(base64.b64decode(session_b64), dtype=np.float32)
+            except Exception:
+                sess_vec = np.array([], dtype=np.float32)
+
         if user is None or user.preference_embedding is None:
             # K-Means cold start: onboarding kategorilerinden başlangıç embedding
             cold_start_vec = None
@@ -738,43 +750,32 @@ class FeedQueries:
             except Exception as _exc:
                 logger.debug("[ForYou] K-Means cold start atlandı: %s", _exc)
 
-            if cold_start_vec is None:
+            if cold_start_vec is not None:
+                try:
+                    from sqlalchemy import update as _sa_update
+                    await self.uow.session.execute(
+                        _sa_update(User)
+                        .where(User.id == user_id)
+                        .values(preference_embedding=cold_start_vec)
+                    )
+                    await self.uow.session.commit()
+                except Exception:
+                    pass
+                pref_vec = np.array(cold_start_vec, dtype=np.float32)
+            elif sess_vec.size > 0:
+                # Zero-Latency In-Session drift: DB embedding yoksa bile oturum içi tıklama vektörüyle semantik arama yap
+                pref_vec = sess_vec
+                logger.debug("[ForYou] DB embedding yok, in-session drift vektörü kullanıldı (user_id=%s)", user_id)
+            else:
                 return await self._popular_feed(0, limit, exclude_user_id=user_id)
-
-            # Cold-start embedding'i DB'ye yaz (bir sonraki istekte hazır olsun)
-            try:
-                from sqlalchemy import update as _sa_update
-                await self.uow.session.execute(
-                    _sa_update(User)
-                    .where(User.id == user_id)
-                    .values(preference_embedding=cold_start_vec)
-                )
-                await self.uow.session.commit()
-            except Exception:
-                pass  # yazma başarısız olursa bu istek yine de devam eder
-
-            pref_vec = np.array(cold_start_vec, dtype=np.float32)
         else:
-            # Session-içi drift: mevcut oturum vektörüyle preference_embedding'i harmanlayın
             pref_vec = np.array(user.preference_embedding, dtype=np.float32)
-        try:
-            session_b64 = await redis.get(f"feed:session:{user_id}")
-        except Exception:
-            # decode_responses=True olan client raw binary key'i UTF-8 olarak decode edemez
-            session_b64 = None
-            await redis.delete(f"feed:session:{user_id}")
-        sess_vec = np.array([], dtype=np.float32)
-        if session_b64:
-            try:
-                sess_vec = np.frombuffer(base64.b64decode(session_b64), dtype=np.float32)
-            except Exception:
-                sess_vec = np.array([], dtype=np.float32)
-        if session_b64 and sess_vec.shape == pref_vec.shape:
-            blended = pref_vec * 0.70 + sess_vec * 0.30
-            bn = np.linalg.norm(blended)
-            if bn > 0:
-                blended /= bn
-            pref_vec = blended
+            if sess_vec.size > 0 and sess_vec.shape == pref_vec.shape:
+                blended = pref_vec * 0.70 + sess_vec * 0.30
+                bn = np.linalg.norm(blended)
+                if bn > 0:
+                    blended /= bn
+                pref_vec = blended
 
         vec_str = "[" + ",".join(f"{x:.8f}" for x in pref_vec.tolist()) + "]"
 
