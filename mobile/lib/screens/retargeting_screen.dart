@@ -520,12 +520,12 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     // Bildirim Raporu Sekmesi
     final Widget reportTab = FutureBuilder<Map<String, dynamic>>(
       future: _reportFuture,
       builder: (context, snapshot) {
-        final loc = ref.read(localizationProvider);
+        final loc = ref.watch(localizationProvider);
         return ListView(
           shrinkWrap: widget.isEmbedded,
           physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,

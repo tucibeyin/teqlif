@@ -109,7 +109,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final filtered = _filteredPurchases;
     final bool hasFilter = !_filter.isEmpty;
     return Scaffold(

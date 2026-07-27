@@ -127,7 +127,7 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final bodyContent = RefreshIndicator(
       onRefresh: _loadData,
       child: ListView(
@@ -328,7 +328,7 @@ class _RadarSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final signal = data['signal'] as String? ?? '';
 
     if (signal == 'no_price' || signal == 'no_data') {

@@ -1784,7 +1784,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(loc.t('navSettings'))),
@@ -3180,7 +3180,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final bool hasFilter = !_filter.isEmpty;
     return Scaffold(
       appBar: AppBar(
@@ -3506,7 +3506,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final filtered = _filteredListings;
     final bool hasFilter = !_filter.isEmpty;
     return Scaffold(
@@ -3832,7 +3832,7 @@ class _TuciWalletSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -4169,7 +4169,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final summary = _spendingSummary;
     return Scaffold(
       appBar: AppBar(
@@ -4895,7 +4895,7 @@ class _GiftNameBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final emoji = _giftEmojis[giftName.toLowerCase()] ?? '🎁';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

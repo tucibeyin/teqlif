@@ -65,7 +65,7 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final content = _loading
           ? const Center(child: CircularProgressIndicator())
           : _hasError
@@ -285,7 +285,7 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final content = _loading
           ? const Center(child: CircularProgressIndicator())
           : _hasError

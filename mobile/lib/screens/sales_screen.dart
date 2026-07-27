@@ -101,7 +101,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final filtered = _filteredSales;
     final bool hasFilter = !_filter.isEmpty;
     return Scaffold(

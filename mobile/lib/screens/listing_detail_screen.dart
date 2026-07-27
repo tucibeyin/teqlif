@@ -1293,7 +1293,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final listing = widget.listing;
     final user = listing['user'] as Map<String, dynamic>?;
     final isMine = _myUserId != null && user?['id'] == _myUserId;
@@ -2529,7 +2529,7 @@ class _SellerTrustRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final trust = user['trust_score'] as int?;
     final rank = user['influence_rank'] as int?;
     if (trust == null && rank == null) return const SizedBox.shrink();

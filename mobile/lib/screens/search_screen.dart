@@ -552,7 +552,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       body: SafeArea(
@@ -1504,7 +1504,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final imgs = widget.listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String

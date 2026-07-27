@@ -110,7 +110,7 @@ class MessagesScreenState extends ConsumerState<MessagesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.t("msgTabMessages")),
@@ -363,7 +363,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -888,7 +888,7 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -1996,7 +1996,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -2420,7 +2420,7 @@ class _ContextBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final item = purchase ?? sale!;
     final isPurchase = purchase != null;
     final itemName = item['item_name'] as String? ?? loc.t("msgItemFallback");
@@ -2591,7 +2591,7 @@ class _MessageText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final normalColor = isMe ? Colors.white : AppColors.textPrimary(context);
     const linkColor = Color(0xFF38BDF8);
     const auctionLinkColor = Color(0xFF4ADE80);

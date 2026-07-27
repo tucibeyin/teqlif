@@ -54,7 +54,7 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final filtered = _filteredTrends;
     return Scaffold(
       appBar: AppBar(

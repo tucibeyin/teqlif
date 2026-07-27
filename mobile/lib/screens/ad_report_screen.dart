@@ -119,7 +119,7 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
   }
 
   Widget _buildLoading() {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -527,7 +527,7 @@ class _CtrInsight extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

@@ -199,7 +199,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final cats = _categories;
     final showFilter = !_loading && cats.isNotEmpty;
     final filtered = _filtered;
@@ -551,7 +551,7 @@ class _EmptyState extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     return ListView(
       children: [
         const SizedBox(height: 120),

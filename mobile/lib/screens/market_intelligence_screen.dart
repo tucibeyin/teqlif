@@ -61,7 +61,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
 
   @override
   Widget build(BuildContext context) {
-    final loc = ref.read(localizationProvider);
+    final loc = ref.watch(localizationProvider);
     final bodyContent = _loading
         ? const Center(child: CircularProgressIndicator())
         : _hasError
