@@ -1,10 +1,11 @@
 from typing import Optional
 from sqlalchemy import select, or_, func
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app.models.listing import Listing
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.models.enums import ListingStatus
+from app.use_cases.listings.queries.listing_utils import _parse_image_urls
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -49,14 +50,12 @@ class SearchListingsQuery:
         if location:
             q_stmt = q_stmt.where(Listing.location.ilike(f"%{location}%"))
         if date_from:
-            from datetime import datetime
             try:
                 sd = datetime.strptime(date_from, '%Y-%m-%d')
                 q_stmt = q_stmt.where(Listing.created_at >= sd)
             except ValueError:
                 pass
         if date_to:
-            from datetime import datetime, timedelta
             try:
                 ed = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
                 q_stmt = q_stmt.where(Listing.created_at < ed)
@@ -88,20 +87,17 @@ class SearchListingsQuery:
         result = await db_session.execute(q_stmt)
         rows = result.all()
 
-        listing_ids = [listing.id for listing, _ in rows]
-        user_ids = list({user.id for _, user in rows})
-        
-        # Mocks for now, real implementation requires porting LikeService and Meta helpers
-        # To avoid massive file size, we will return basic dicts for the refactor
-        
         return [
             {
                 "id": listing.id,
                 "title": listing.title,
+                "description": listing.description,
                 "price": listing.price,
                 "category": listing.category,
                 "location": listing.location,
                 "image_url": listing.image_url,
+                "image_urls": _parse_image_urls(listing.image_urls),
+                "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
                 "created_at": listing.created_at.isoformat() if listing.created_at else None,
                 "user": {
                     "id": user.id,
