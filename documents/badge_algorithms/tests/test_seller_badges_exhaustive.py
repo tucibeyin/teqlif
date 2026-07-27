@@ -51,7 +51,7 @@ async def run_test():
         f"seller:badge:{MOCK_NO_BADGE_SELLER_ID}"
     )
     try:
-        await ch.execute(
+        await ch.command(
             f"ALTER TABLE user_events DELETE WHERE user_id IN ({MOCK_TRUSTED_SELLER_ID}, {MOCK_ACTIVE_SELLER_ID}, {MOCK_NO_BADGE_SELLER_ID})"
         )
     except Exception as exc:
@@ -107,7 +107,7 @@ async def run_test():
 
     # 3. Worker görevini tetikle
     print("⚙️ compute_seller_badges_task() çalıştırılıyor...")
-    await compute_seller_badges_task()
+    await compute_seller_badges_task({})
     print("✅ Worker görevi tamamlandı.\n")
 
     # 4. Redis rozetlerini ve TTL değerlerini doğrula
@@ -144,7 +144,7 @@ async def run_test():
         f"seller:badge:{MOCK_NO_BADGE_SELLER_ID}"
     )
     try:
-        await ch.execute(
+        await ch.command(
             f"ALTER TABLE user_events DELETE WHERE user_id IN ({MOCK_TRUSTED_SELLER_ID}, {MOCK_ACTIVE_SELLER_ID}, {MOCK_NO_BADGE_SELLER_ID})"
         )
     except Exception as exc:

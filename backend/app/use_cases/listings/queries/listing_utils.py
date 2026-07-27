@@ -46,6 +46,7 @@ async def _fetch_seller_meta(
         badge_vals, trust_vals, inf_vals = all_vals[:n], all_vals[n:2*n], all_vals[2*n:]
         badge_map    = {uid: (val or None) for uid, val in zip(user_ids, badge_vals)}
         trust_map    = {uid: (int(val) if val is not None else None) for uid, val in zip(user_ids, trust_vals)}
+        influence_map= {uid: (int(val) if val is not None else None) for uid, val in zip(user_ids, inf_vals)}
         pipe = redis.pipeline()
         pipe.smembers("trending:categories")
         pipe.smembers("trending:listings")
