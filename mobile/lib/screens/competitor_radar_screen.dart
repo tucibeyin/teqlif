@@ -13,6 +13,7 @@ import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../utils/number_formatter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class CompetitorRadarScreen extends ConsumerStatefulWidget {
@@ -566,7 +567,7 @@ class _RadarSection extends ConsumerWidget {
     );
   }
 
-  String _fmtPrice(double v) => NumberFormat('#,##0', 'tr_TR').format(v);
+  String _fmtPrice(double v) => TeqNumberFormatter.format(v, fieldKey: 'price');
 }
 
 // ── Satış Hızı Bölümü ─────────────────────────────────────────────────────────
@@ -781,7 +782,7 @@ class _VelocitySection extends ConsumerWidget {
     );
   }
 
-  String _fmtPrice(double v) => NumberFormat('#,##0', 'tr_TR').format(v);
+  String _fmtPrice(double v) => TeqNumberFormatter.format(v, fieldKey: 'price');
 }
 
 // ── Skeleton Loading ──────────────────────────────────────────────────────────

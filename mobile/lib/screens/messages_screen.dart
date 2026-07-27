@@ -21,7 +21,7 @@ import 'package:video_player/video_player.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../utils/price_formatter.dart';
+import '../utils/number_formatter.dart';
 import '../services/api_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/notification_service.dart';
@@ -2494,7 +2494,7 @@ class _ContextBanner extends ConsumerWidget {
               ),
             ),
             Text(
-              fmtPrice(price),
+              TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺'),
               style: const TextStyle(
                 color: Color(0xFF4ADE80),
                 fontWeight: FontWeight.bold,

@@ -7,7 +7,7 @@ import "../services/localization_service.dart";
 import '../../services/auth_service.dart';
 import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
-import '../../utils/price_formatter.dart';
+import '../../utils/number_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
@@ -308,7 +308,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      fmtPrice(price),
+                                      TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺'),
                                       style: const TextStyle(
                                         color: Color(0xFF4ADE80),
                                         fontWeight: FontWeight.bold,

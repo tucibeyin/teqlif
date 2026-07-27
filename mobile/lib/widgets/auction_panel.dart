@@ -15,7 +15,7 @@ import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
-import '../utils/price_formatter.dart';
+import '../utils/number_formatter.dart';
 import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
@@ -468,9 +468,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   String _fmt(double? v) {
     if (v == null) return '—';
-    return v
-        .toStringAsFixed(0)
-        .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+    return TeqNumberFormatter.format(v, fieldKey: 'price');
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -689,7 +687,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final price = listing['price'];
     final loc = ref.watch(localizationProvider);
     final priceStr = price != null
-        ? '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}'
+        ? '₺ ${TeqNumberFormatter.format(price, fieldKey: 'price')}'
         : loc.t("listingPriceNotSet");
     final seller = (listing['user'] as Map?)?['username'] ?? '';
 
@@ -1576,9 +1574,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
   String _fmt(double? v) {
     if (v == null) return '—';
-    return v
-        .toStringAsFixed(0)
-        .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+    return TeqNumberFormatter.format(v, fieldKey: 'price');
   }
 
   void _setMsg(String msg, {bool error = false}) {
@@ -2078,7 +2074,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   key: const Key('auction_input_ozel_teklif'),
                   controller: _customBidCtrl,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [ThousandsSeparatorInputFormatter()],
+                  inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: loc.t("auctionCustomAmountHint"),
@@ -2115,8 +2111,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   onPressed: _loading
                       ? null
                       : () {
-                          final raw = _customBidCtrl.text.replaceAll('.', '');
-                          final v = double.tryParse(raw);
+                          final v = TeqNumberFormatter.parse(_customBidCtrl.text)?.toDouble();
                           if (v == null || v <= 0) {
                             _setMsg(loc.t("auctionValidAmount"), error: true);
                             return;
@@ -2254,7 +2249,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
 
   String _fmtPrice(dynamic price) {
     if (price == null) return '';
-    return '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
+    return '₺ ${TeqNumberFormatter.format(price, fieldKey: 'price')}';
   }
 
   @override
@@ -2442,16 +2437,10 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
             ),
           ),
           onPressed: () {
-            final binRaw = _binCtrl.text
-                .replaceAll('.', '')
-                .replaceAll(',', '.');
-            final binPrice = binRaw.isNotEmpty ? double.tryParse(binRaw) : null;
+            final binPrice = TeqNumberFormatter.parse(_binCtrl.text)?.toDouble();
             if (_fromListing) {
               if (_selectedListing == null) return;
-              final raw = _priceCtrl.text
-                  .replaceAll('.', '')
-                  .replaceAll(',', '.');
-              final price = double.tryParse(raw);
+              final price = TeqNumberFormatter.parse(_priceCtrl.text)?.toDouble();
               if (price == null || price < 0) return;
               Navigator.pop(context, {
                 'listing_id': _selectedListing['id'] as int,
@@ -2460,10 +2449,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
               });
             } else {
               final item = _itemCtrl.text.trim();
-              final raw = _priceCtrl.text
-                  .replaceAll('.', '')
-                  .replaceAll(',', '.');
-              final price = double.tryParse(raw);
+              final price = TeqNumberFormatter.parse(_priceCtrl.text)?.toDouble();
               if (item.length < 2 || price == null || price < 0) return;
               Navigator.pop(context, {
                 'item': item,
@@ -2527,7 +2513,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
     return TextField(
       controller: ctrl,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      inputFormatters: isNumber ? [ThousandsSeparatorInputFormatter()] : null,
+      inputFormatters: isNumber ? [const TeqNumericInputFormatter(fieldKey: 'price')] : null,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,

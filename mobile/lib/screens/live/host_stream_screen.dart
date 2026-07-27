@@ -13,7 +13,7 @@ import '../../services/analytics_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/stream_service.dart';
 import 'seller_report_screen.dart';
-import '../../utils/price_formatter.dart';
+import '../../utils/number_formatter.dart';
 import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
@@ -1494,7 +1494,7 @@ class _BidsOverlay extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  fmtPrice(bid.amount),
+                                  TeqNumberFormatter.format(bid.amount, fieldKey: 'price', unit: '₺'),
                                   style: const TextStyle(
                                     color: Color(0xFF4ADE80),
                                     fontSize: 10,

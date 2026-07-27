@@ -22,6 +22,7 @@ import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
+import '../utils/number_formatter.dart';
 
 class EditListingScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
@@ -200,7 +201,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
     String fmt(double? v) {
       if (v == null || v <= 0) return '—';
-      return '${v.toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₺';
+      return TeqNumberFormatter.format(v, fieldKey: 'price', unit: '₺');
     }
 
     Color confidenceColor = confidence == 'high'
@@ -403,11 +404,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   child: FilledButton(
                     onPressed: () {
                       final intVal = suggested.toInt();
-                      final formatted = intVal.toString().replaceAllMapped(
-                        RegExp(r'(\d)(?=(\d{3})+$)'),
-                        (m) => '${m[1]}.',
-                      );
-                      _priceCtrl.text = formatted;
+                      _priceCtrl.text = TeqNumberFormatter.format(intVal, fieldKey: 'price');
                       Navigator.pop(context);
                     },
                     style: FilledButton.styleFrom(
@@ -636,9 +633,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           body: jsonEncode({
             'title': _titleCtrl.text.trim(),
             'description': _descCtrl.text.trim(),
-            'price': double.tryParse(
-              _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
-            ),
+            'price': TeqNumberFormatter.parse(_priceCtrl.text.trim())?.toDouble(),
             'category': _selectedCategory,
             if (_selectedCity != null && _selectedCity!.isNotEmpty)
               'location': _selectedCity,
@@ -998,7 +993,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                       key: const Key('create_listing_input_fiyat'),
                       controller: _priceCtrl,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [_ThousandSeparatorFormatter()],
+                      inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
                       labelText: loc.t('fieldPrice'),
                       hintText: loc.t('fieldPriceHint'),
                       prefixText: '₺ ',
@@ -1068,31 +1063,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         ),
       ),
     );
-  }
-}
-
-class _ThousandSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll('.', '');
-    if (digits.isEmpty) return newValue.copyWith(text: '');
-    final formatted = _addDots(digits);
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-
-  String _addDots(String digits) {
-    final buf = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
-      buf.write(digits[i]);
-    }
-    return buf.toString();
   }
 }
 

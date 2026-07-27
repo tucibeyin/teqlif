@@ -6,7 +6,7 @@ import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import '../../services/auth_service.dart';
 import '../../services/category_service.dart';
-import '../../utils/price_formatter.dart';
+import '../../utils/number_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
@@ -278,7 +278,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              fmtPrice(price),
+                                              TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺'),
                                               style: const TextStyle(
                                                 color: Color(0xFF4ADE80),
                                                 fontWeight: FontWeight.bold,

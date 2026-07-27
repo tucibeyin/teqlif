@@ -33,6 +33,8 @@ import '../providers/listing_detail_provider.dart';
 import '../models/enums.dart';
 import '../models/mass_notif_eligibility.dart';
 import 'ad_report_screen.dart';
+import '../utils/listing_fields.dart';
+import '../utils/number_formatter.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
@@ -517,18 +519,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   String _fmt(dynamic price) {
     if (price == null) return ref.read(localizationProvider).t("listingPriceNotSet");
-    final s = (price as num).toInt().toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return '${buf.toString()} ₺';
+    return TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺');
   }
 
   // Noktalı formatı silerek double parse eder: "1.234" → 1234.0
   double? _parseFormattedPrice(String text) =>
-      double.tryParse(text.trim().replaceAll('.', '').replaceAll(',', '.'));
+      TeqNumberFormatter.parse(text)?.toDouble();
 
   Future<void> _loadOffers() async {
     final id = widget.listing['id'] as int;
@@ -1678,7 +1674,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                             key: const Key('listing_detail_offer_input'),
                             controller: _offerCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [_PriceInputFormatter()],
+                            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
                             readOnly: !_isActive,
                             onChanged: (val) {
                               final parsed = _parseFormattedPrice(val);
@@ -2217,24 +2213,43 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   ///   - List (multiselect) → her değeri opt_{v} ile çevirip virgülle birleştirir
   ///   - String (dropdown/text) → opt_{v} key dener, yoksa olduğu gibi gösterir
   ///   - Sayısal → birim varsa birleştirir
-  String _localizeFieldValue(TranslationPack loc, dynamic value, {String? unit}) {
+  String _localizeFieldValue(
+    TranslationPack loc,
+    dynamic value, {
+    String? unit,
+    String? fieldKey,
+    String? subcategory,
+  }) {
     if (value == null) return '';
-    String raw;
     if (value is List) {
-      raw = value
+      final raw = value
           .map((v) {
             final key = 'opt_${v.toString()}';
             final t = loc.t(key);
             return t != key ? t : v.toString();
           })
           .join(', ');
-    } else {
-      final key = 'opt_${value.toString()}';
-      final t = loc.t(key);
-      raw = t != key ? t : value.toString();
+      return unit != null && unit.isNotEmpty ? '$raw $unit' : raw;
     }
-    if (unit != null && unit.isNotEmpty) return '$raw $unit';
-    return raw;
+
+    final optKey = 'opt_${value.toString()}';
+    final t = loc.t(optKey);
+    final raw = t != optKey ? t : value.toString();
+
+    String? resolvedUnit = unit;
+    if (resolvedUnit == null && subcategory != null && fieldKey != null) {
+      final defs = kSubcategoryFields[subcategory];
+      if (defs != null) {
+        for (final d in defs) {
+          if (d.key == fieldKey) {
+            resolvedUnit = d.unit;
+            break;
+          }
+        }
+      }
+    }
+
+    return TeqNumberFormatter.format(raw, fieldKey: fieldKey, unit: resolvedUnit);
   }
 
   // Kategori başına öncelikli gösterilecek field sırası (top-N için)
@@ -2277,7 +2292,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       final label = loc.t(labelKey);
       rows.add(_infoRow(
         label != labelKey ? label : key,
-        _localizeFieldValue(loc, val),
+        _localizeFieldValue(
+          loc,
+          val,
+          fieldKey: key,
+          subcategory: subcategory,
+        ),
       ));
     }
     return rows;
@@ -2390,7 +2410,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                               final label = loc.t(labelKey);
                               return _infoRow(
                                 label != labelKey ? label : key,
-                                _localizeFieldValue(loc, ef[key]),
+                                _localizeFieldValue(
+                                  loc,
+                                  ef[key],
+                                  fieldKey: key,
+                                  subcategory: subcategory,
+                                ),
                               );
                             })
                             .toList();
@@ -2631,31 +2656,7 @@ class _FullscreenGalleryState extends ConsumerState<_FullscreenGallery> {
   }
 }
 
-/// Kullanıcının girdiği rakamları Türkçe binlik nokta formatına çevirir.
-/// Örnek: "1234567" → "1.234.567"
-class _PriceInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    // Sadece rakamları al
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return newValue.copyWith(text: '');
-
-    // Binlik nokta ekle (_fmt ile aynı algoritma)
-    final buf = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
-      buf.write(digits[i]);
-    }
-    final formatted = buf.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
+// _PriceInputFormatter kaldırıldı (merkezi TeqNumericInputFormatter kullanılıyor).
 
 /// Deep link ile sadece ilan ID'si geldiğinde kullanılır.
 /// API'dan veri çekip [ListingDetailScreen]'e yönlendirir.

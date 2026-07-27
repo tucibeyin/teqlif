@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/localization_service.dart';
-import '../../utils/price_formatter.dart';
+import '../../utils/number_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
 import '../../services/listing_service.dart';
@@ -134,9 +134,9 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                   ),
                   const Divider(height: 24),
-                  _infoRow(context, ref.read(localizationProvider).t('competitorRadarSalePrice'), fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
+                  _infoRow(context, ref.read(localizationProvider).t('competitorRadarSalePrice'), TeqNumberFormatter.format(finalPrice, fieldKey: 'price', unit: '₺'), valueColor: const Color(0xFF4ADE80)),
                   if (startPrice != null)
-                    _infoRow(context, loc.t('saleStartPrice'), fmtPrice(startPrice)),
+                    _infoRow(context, loc.t('saleStartPrice'), TeqNumberFormatter.format(startPrice, fieldKey: 'price', unit: '₺')),
                   _infoRow(
                     context,
                     loc.t('saleType'),

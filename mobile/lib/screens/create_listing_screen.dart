@@ -24,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../utils/error_helper.dart';
 import '../utils/listing_fields.dart';
+import '../utils/number_formatter.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/inputs/teq_multi_select.dart';
@@ -226,7 +227,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         final v = _extraCtrlMap[f.key]?.text.trim() ?? '';
         if (v.isNotEmpty) {
           if (f.type == ExtraFieldType.number) {
-            final n = num.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
+            final n = TeqNumberFormatter.parse(v);
             if (n != null) ef[f.key] = n;
           } else {
             ef[f.key] = v;
@@ -304,9 +305,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     http.Client? client;
     try {
       final token = await StorageService.getToken();
-      final priceRaw =
-          _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
-      final price = double.tryParse(priceRaw);
+      final priceRaw = _priceCtrl.text.trim();
+      final price = TeqNumberFormatter.parse(priceRaw)?.toDouble();
 
       final req = http.Request(
           'POST', Uri.parse('$kBaseUrl/listings/generate-description'));
@@ -425,7 +425,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
     String fmt(double? v) {
       if (v == null || v <= 0) return '—';
-      return '${v.toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₺';
+      return TeqNumberFormatter.format(v, fieldKey: 'price', unit: '₺');
     }
 
     final Color confidenceColor = confidence == 'high'
@@ -590,10 +590,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                   child: FilledButton(
                     onPressed: () {
                       final intVal = suggested.toInt();
-                      _priceCtrl.text = intVal
-                          .toString()
-                          .replaceAllMapped(
-                              RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+                      _priceCtrl.text = TeqNumberFormatter.format(intVal, fieldKey: 'price');
                       Navigator.pop(context);
                     },
                     style: FilledButton.styleFrom(
@@ -792,9 +789,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           body: jsonEncode({
             'title': _titleCtrl.text.trim(),
             'description': _descCtrl.text.trim(),
-            'price': double.tryParse(
-              _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
-            ),
+            'price': TeqNumberFormatter.parse(_priceCtrl.text.trim())?.toDouble(),
             'category': _selectedCategory,
             if (_selectedSubcategory != null)
               'subcategory': _selectedSubcategory,
@@ -1346,7 +1341,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           labelText: displayLabel,
           floatingLabel: true,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [TeqNumericInputFormatter(fieldKey: f.key)],
           suffixIcon: f.unit != null
               ? Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -1438,7 +1433,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             key: const Key('create_listing_input_fiyat'),
             controller: _priceCtrl,
             keyboardType: TextInputType.number,
-            inputFormatters: [_ThousandSeparatorFormatter()],
+            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
             labelText: loc.t('fieldPrice'),
             hintText: loc.t('fieldPriceHint'),
             prefixText: '₺ ',
@@ -1459,28 +1454,6 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 }
 
 // ── Formatters & sub-widgets ──────────────────────────────────────────────────
-
-class _ThousandSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    final digits = newValue.text.replaceAll('.', '');
-    if (digits.isEmpty) return newValue.copyWith(text: '');
-    final formatted = _addDots(digits);
-    return TextEditingValue(
-        text: formatted,
-        selection: TextSelection.collapsed(offset: formatted.length));
-  }
-
-  String _addDots(String digits) {
-    final buf = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
-      buf.write(digits[i]);
-    }
-    return buf.toString();
-  }
-}
 
 class _AiPriceButton extends ConsumerWidget {
   final bool loading;

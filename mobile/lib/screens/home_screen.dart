@@ -23,6 +23,7 @@ import '../providers/listing_interaction_provider.dart';
 import '../widgets/shimmer_loading.dart';
 import '../utils/once.dart';
 import '../utils/error_helper.dart';
+import '../utils/number_formatter.dart';
 import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
@@ -485,7 +486,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                   final raw = item['image_url'] as String?;
                                   final photo = raw != null ? imgUrl(raw) : null;
                                   final price = item['price'] != null
-                                      ? '${(item['price'] as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₺'
+                                      ? TeqNumberFormatter.format(item['price'], fieldKey: 'price', unit: '₺')
                                       : '';
                                   return GestureDetector(
                                     onTap: () => Navigator.push(ctx, MaterialPageRoute(
