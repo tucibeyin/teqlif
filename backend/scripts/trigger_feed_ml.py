@@ -9,8 +9,13 @@ Kullanım:
   cd /Users/tucibeyin/Desktop/teqlif/backend (veya VPS backend klasörü)
   python3 scripts/trigger_feed_ml.py
 """
-import asyncio
 import os
+
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
+import asyncio
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
