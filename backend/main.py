@@ -40,6 +40,7 @@ from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.user import User
+from app.models.enums import UserStatus
 from app.models.stream import LiveStream
 import app.models.auction  # noqa: F401 — tablo kaydı için
 import app.models.bid  # noqa: F401 — tablo kaydı için
@@ -384,7 +385,10 @@ if os.path.exists(frontend_dir):
     async def serve_profile_page(request: Request, username: str):
         async with AsyncSessionLocal() as db:
             user = await db.scalar(
-                select(User).where(User.username == username, User.is_active.is_(True))
+                select(User).where(
+                    User.username == username,
+                    User.status == UserStatus.ACTIVE,
+                )
             )
         if not user:
             return HTMLResponse(

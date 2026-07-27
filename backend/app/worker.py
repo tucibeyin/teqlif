@@ -3074,12 +3074,17 @@ async def compute_trust_scores_task(ctx: dict) -> None:
         pipe = redis.pipeline()
         _TTL = 90_000  # 25 saat
 
+        import math
+        def _safe(v: float) -> float:
+            """NaN/Inf değerleri 0.0'a dönüştür."""
+            return 0.0 if (math.isnan(v) or math.isinf(v)) else v
+
         for uid in all_uids:
             pg = pg_data.get(uid, {"age_days": 0, "active": 0, "deleted": 0, "total": 0})
             ch = ch_data.get(uid, {"wins": 0, "total": 0, "hes": 0, "bids": 0})
 
             # Sinyal 1: tamamlanan artırma (+30 max) — p90 ile normalize edilir
-            auction_score = min(ch["total"] / p90_auctions, 1.0) * 30
+            auction_score = min(ch["total"] / max(p90_auctions, 1.0), 1.0) * 30
 
             # Sinyal 2: kazanım oranı (+25 max)
             win_rate = ch["wins"] / max(ch["total"], 1)
@@ -3096,7 +3101,9 @@ async def compute_trust_scores_task(ctx: dict) -> None:
             hes_ratio = ch["hes"] / max(ch["bids"], 1) if ch["bids"] > 0 else 0.5
             hes_score = max(0.0, 1.0 - min(hes_ratio, 1.0)) * 10
 
-            trust = round(auction_score + win_score + listing_score + age_score + hes_score)
+            # NaN/Inf koruma — herhangi bir sinyal bozuksa 0 yap
+            total = _safe(auction_score) + _safe(win_score) + _safe(listing_score) + _safe(age_score) + _safe(hes_score)
+            trust = round(total)
             trust = max(0, min(100, trust))
             pipe.setex(f"trust_score:{uid}", _TTL, str(trust))
 
