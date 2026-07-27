@@ -1074,6 +1074,8 @@
   "listingDeleteConfirmContent": "Вы уверены, что хотите удалить это объявление? Это действие невозможно отменить.",
   "listingDeleteConfirmYes": "Да, удалить",
   "listingInfo": "Детали листинга",
+  "seeAll": "Смотреть все",
+  "subcategoryLabel": "Подкатегория",
   "listingStatusLabel": "Статус",
   "listingStatusActive": "Активное",
   "listingStatusPassive": "Неактивное",

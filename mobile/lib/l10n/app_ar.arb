@@ -378,6 +378,8 @@
   "listingDeleteConfirmContent": "هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء.",
   "listingDeleteConfirmYes": "نعم، احذف",
   "listingInfo": "معلومات الإعلان",
+  "seeAll": "عرض الكل",
+  "subcategoryLabel": "الفئة الفرعية",
   "listingStatusLabel": "الحالة",
   "listingStatusActive": "نشط",
   "listingStatusPassive": "غير نشط",

@@ -378,6 +378,8 @@
   "listingDeleteConfirmContent": "Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
   "listingDeleteConfirmYes": "Evet, Sil",
   "listingInfo": "İlan Bilgileri",
+  "seeAll": "Tümünü Gör",
+  "subcategoryLabel": "Alt Kategori",
   "listingStatusLabel": "Durum",
   "listingStatusActive": "Aktif",
   "listingStatusPassive": "Pasif",

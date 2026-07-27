@@ -1483,38 +1483,62 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               ),
             const SizedBox(height: 8),
 
-            // İlan Bilgileri
-            Container(
+            // İlan Bilgileri — tıklanabilir, top-5 preview + modal
+            Material(
               color: AppColors.surface(context),
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    loc.t("listingInfo"),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary(context),
-                    ),
+              child: InkWell(
+                onTap: () => _showAllDetailsSheet(context, loc, listing, isMine),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            loc.t("listingInfo"),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                loc.t("seeAll"),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary(context),
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 18,
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (isMine && _isListingInitialized)
+                        _statusChipRow(loc.t("listingStatusLabel"), _isActive),
+                      _infoRow(
+                        loc.t("categoryLabel"),
+                        CategoryService.localizedLabelFor(loc, listing['category'] as String? ?? ''),
+                      ),
+                      if (listing['condition'] != null)
+                        _infoRow(
+                          loc.t("fieldCondition"),
+                          _localizeCondition(loc, listing['condition'] as String),
+                        ),
+                      ..._buildTopExtraFieldRows(loc, listing, maxCount: 3),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  if (isMine && _isListingInitialized)
-                    _statusChipRow(loc.t("listingStatusLabel"), _isActive),
-                  _infoRow(
-                    loc.t("categoryLabel"),
-                    CategoryService.localizedLabelFor(loc, listing['category'] as String? ?? '',
-                    ),
-                  ),
-                  if (listing['condition'] != null)
-                    _infoRow(
-                      loc.t("fieldCondition"),
-                      _localizeCondition(loc, listing['condition'] as String),
-                    ),
-                  if (listing['location'] != null)
-                    _infoRow('Konum', listing['location']),
-                ],
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -2180,14 +2204,208 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   String _localizeCondition(TranslationPack loc, String condition) {
     switch (condition) {
-      case 'new':       return loc.t("conditionNew");
-      case 'like_new':  return loc.t("conditionLikeNew");
-      case 'used':      return loc.t("conditionUsed");
+      case 'new':          return loc.t("conditionNew");
+      case 'like_new':     return loc.t("conditionLikeNew");
+      case 'used':         return loc.t("conditionUsed");
       case 'damaged':      return loc.t("conditionDamaged");
       case 'refurbished':  return loc.t("conditionRefurbished");
       default:             return condition;
     }
   }
+
+  /// Extra field değerini lokalize eder:
+  ///   - List (multiselect) → her değeri opt_{v} ile çevirip virgülle birleştirir
+  ///   - String (dropdown/text) → opt_{v} key dener, yoksa olduğu gibi gösterir
+  ///   - Sayısal → birim varsa birleştirir
+  String _localizeFieldValue(TranslationPack loc, dynamic value, {String? unit}) {
+    if (value == null) return '';
+    String raw;
+    if (value is List) {
+      raw = value
+          .map((v) {
+            final key = 'opt_${v.toString()}';
+            final t = loc.t(key);
+            return t != key ? t : v.toString();
+          })
+          .join(', ');
+    } else {
+      final key = 'opt_${value.toString()}';
+      final t = loc.t(key);
+      raw = t != key ? t : value.toString();
+    }
+    if (unit != null && unit.isNotEmpty) return '$raw $unit';
+    return raw;
+  }
+
+  // Kategori başına öncelikli gösterilecek field sırası (top-N için)
+  static const _kPriorityKeys = <String, List<String>>{
+    'automobile':        ['brand', 'model', 'year', 'fuel_type', 'transmission'],
+    'motorcycle':        ['brand', 'model', 'year', 'engine_cc', 'mileage'],
+    'electric_vehicle':  ['brand', 'model', 'year', 'range_km', 'color'],
+    'mobile_phone':      ['brand', 'model', 'storage', 'ram', 'color'],
+    'laptop':            ['brand', 'model', 'processor', 'ram', 'storage'],
+    'tablet':            ['brand', 'model', 'storage', 'screen_size', 'color'],
+    'apartment':         ['room_count', 'net_sqm', 'gross_sqm', 'floor', 'heating'],
+    'house_villa':       ['net_sqm', 'gross_sqm', 'room_count', 'building_age', 'heating'],
+    'land':              ['land_sqm', 'title_deed', 'land_use'],
+  };
+
+  /// Extra fields'ten öncelik sırasına göre en fazla [maxCount] satır döndürür.
+  List<Widget> _buildTopExtraFieldRows(
+    TranslationPack loc,
+    Map<String, dynamic> listing, {
+    int maxCount = 3,
+  }) {
+    final rawEf = listing['extra_fields'];
+    if (rawEf == null) return [];
+    final ef = rawEf is Map<String, dynamic> ? rawEf : <String, dynamic>{};
+    if (ef.isEmpty) return [];
+
+    final subcategory = listing['subcategory'] as String? ?? '';
+    final priority = _kPriorityKeys[subcategory] ?? ef.keys.toList();
+    final ordered = [
+      ...priority.where((k) => ef.containsKey(k)),
+      ...ef.keys.where((k) => !priority.contains(k)),
+    ];
+
+    final rows = <Widget>[];
+    for (final key in ordered) {
+      if (rows.length >= maxCount) break;
+      final val = ef[key];
+      if (val == null || val.toString().isEmpty) continue;
+      final labelKey = 'extraField_$key';
+      final label = loc.t(labelKey);
+      rows.add(_infoRow(
+        label != labelKey ? label : key,
+        _localizeFieldValue(loc, val),
+      ));
+    }
+    return rows;
+  }
+
+  /// Tüm ilan detaylarını gösteren bottom sheet.
+  void _showAllDetailsSheet(
+    BuildContext context,
+    TranslationPack loc,
+    Map<String, dynamic> listing,
+    bool isMine,
+  ) {
+    final rawEf = listing['extra_fields'];
+    final ef = rawEf is Map<String, dynamic> ? rawEf : <String, dynamic>{};
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (_, scrollCtrl) => Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface(ctx),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                // Handle
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.textSecondary(ctx).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Başlık
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        loc.t('listingInfo'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary(ctx),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: Icon(Icons.close_rounded,
+                            color: AppColors.textSecondary(ctx)),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // İçerik
+                Expanded(
+                  child: ListView(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                    children: [
+                      if (isMine && _isListingInitialized)
+                        _statusChipRow(loc.t('listingStatusLabel'), _isActive),
+                      _infoRow(
+                        loc.t('categoryLabel'),
+                        CategoryService.localizedLabelFor(
+                            loc, listing['category'] as String? ?? ''),
+                      ),
+                      if (listing['subcategory'] != null)
+                        _infoRow(
+                          loc.t('subcategoryLabel'),
+                          loc.t('subcat_${listing['subcategory']}'),
+                        ),
+                      if (listing['condition'] != null)
+                        _infoRow(
+                          loc.t('fieldCondition'),
+                          _localizeCondition(loc, listing['condition'] as String),
+                        ),
+                      if (listing['location'] != null)
+                        _infoRow(loc.t('listingLocationLabel'), listing['location'] as String),
+                      // Extra fields — tüm field'lar öncelik sırasına göre
+                      if (ef.isNotEmpty) ...() {
+                        final subcategory =
+                            listing['subcategory'] as String? ?? '';
+                        final priority =
+                            _kPriorityKeys[subcategory] ?? ef.keys.toList();
+                        final ordered = [
+                          ...priority.where((k) => ef.containsKey(k)),
+                          ...ef.keys.where((k) => !priority.contains(k)),
+                        ];
+                        return ordered
+                            .where((k) {
+                              final v = ef[k];
+                              return v != null && v.toString().isNotEmpty;
+                            })
+                            .map((key) {
+                              final labelKey = 'extraField_$key';
+                              final label = loc.t(labelKey);
+                              return _infoRow(
+                                label != labelKey ? label : key,
+                                _localizeFieldValue(loc, ef[key]),
+                              );
+                            })
+                            .toList();
+                      }(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   Widget _infoRow(String label, String value) => Builder(
     builder: (context) => Padding(
