@@ -1,6 +1,6 @@
 """Normalize legacy subcategory slugs to canonical English keys
 
-Revision ID: zzzza_normalize_subcategory_slugs
+Revision ID: zzzza_norm_subcat_slugs
 Revises: zzzz_merge_category_and_flags
 Create Date: 2026-07-28
 """
@@ -9,7 +9,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "zzzza_normalize_subcategory_slugs"
+revision: str = "zzzza_norm_subcat_slugs"
 down_revision: Union[str, Sequence[str], None] = "zzzz_merge_category_and_flags"
 branch_labels = None
 depends_on = None
