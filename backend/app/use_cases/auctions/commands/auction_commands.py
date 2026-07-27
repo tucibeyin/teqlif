@@ -850,6 +850,17 @@ class AuctionCommands:
             )
             self.uow.session.add(purchase)
 
+            if listing_id:
+                from app.database_clickhouse import track_user_event
+                _seller_id = listing.user_id if listing else user.id
+                fire_and_forget(track_user_event(
+                    event_type="listing_sold",
+                    item_id=listing_id,
+                    item_type="listing",
+                    user_id=_seller_id,
+                    price_point=bin_price,
+                ))
+
             winner_dm_content = dm_content + f"\n📋 teqlif://auction/{auction.id}"
             dm = DirectMessage(
                 sender_id=user.id,
@@ -1188,6 +1199,14 @@ class AuctionCommands:
                 item_id=listing_id,
                 item_type="listing",
                 user_id=winner_user_id,
+                price_point=final_price,
+            ))
+            _seller_id = listing.user_id if listing else user.id
+            fire_and_forget(track_user_event(
+                event_type="listing_sold",
+                item_id=listing_id,
+                item_type="listing",
+                user_id=_seller_id,
                 price_point=final_price,
             ))
 

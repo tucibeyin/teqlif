@@ -2319,11 +2319,11 @@ async def compute_seller_badges_task(ctx: dict) -> None:
             FROM (
                 SELECT
                     user_id,
-                    countIf(event_type = 'auction_won')                        AS won,
-                    countIf(event_type IN ('auction_won', 'auction_ended'))     AS total
+                    countIf(event_type IN ('auction_won', 'listing_sold', 'order_completed', 'offer_accepted')) AS won,
+                    countIf(event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')) AS total
                 FROM user_events
                 WHERE timestamp >= now() - INTERVAL 30 DAY
-                  AND event_type IN ('auction_won', 'auction_ended')
+                  AND event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')
                   AND user_id IS NOT NULL
                 GROUP BY user_id
                 HAVING total >= 2
@@ -2338,11 +2338,11 @@ async def compute_seller_badges_task(ctx: dict) -> None:
         result = await ch.query("""
             SELECT
                 user_id,
-                countIf(event_type = 'auction_won')                           AS won,
-                countIf(event_type IN ('auction_won', 'auction_ended'))        AS total
+                countIf(event_type IN ('auction_won', 'listing_sold', 'order_completed', 'offer_accepted')) AS won,
+                countIf(event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')) AS total
             FROM user_events
             WHERE timestamp >= now() - INTERVAL 30 DAY
-              AND event_type IN ('auction_won', 'auction_ended')
+              AND event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')
               AND user_id IS NOT NULL
             GROUP BY user_id
             HAVING total >= 2
