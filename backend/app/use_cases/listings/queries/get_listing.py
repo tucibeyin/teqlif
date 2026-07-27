@@ -1,10 +1,9 @@
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, text
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
-from app.models.listing_impression import ListingImpression
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.services.like_service import LikeService
@@ -33,11 +32,18 @@ class GetListingQuery:
 
         if current_user_id and listing.user_id != current_user_id:
             try:
-                imp = ListingImpression(listing_id=listing.id, user_id=current_user_id)
-                self.uow.session.add(imp)
+                # ON CONFLICT DO NOTHING: aynı kullanıcı aynı ilanı tekrar açarsa sessizce geçilir.
+                await self.uow.session.execute(
+                    text(
+                        "INSERT INTO listing_impressions (user_id, listing_id) "
+                        "VALUES (:uid, :lid) ON CONFLICT DO NOTHING"
+                    ),
+                    {"uid": current_user_id, "lid": listing.id},
+                )
                 await self.uow.session.commit()
             except Exception as exc:
                 logger.warning("[GetListingQuery] İzlenme kaydedilemedi: %s", exc)
+                await self.uow.session.rollback()  # session'ı temiz bırak
 
         counts, liked_set = await LikeService.batch_listing_likes(
             self.uow.session, [listing.id], current_user_id
