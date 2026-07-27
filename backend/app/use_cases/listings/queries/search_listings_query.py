@@ -23,8 +23,10 @@ class SearchListingsQuery:
         current_user_id: Optional[int] = None,
         limit: int = 50,
         offset: int = 0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> list:
-        logger.info("[SearchListingsQuery] Başlatıldı | q=%s category=%s", q, category)
+        logger.info("[SearchListingsQuery] Başlatıldı | q=%s category=%s date_from=%s date_to=%s", q, category, date_from, date_to)
         
         q_stmt = (
             select(Listing, User)
@@ -46,6 +48,20 @@ class SearchListingsQuery:
             q_stmt = q_stmt.where(Listing.subcategory == subcategory)
         if location:
             q_stmt = q_stmt.where(Listing.location.ilike(f"%{location}%"))
+        if date_from:
+            from datetime import datetime
+            try:
+                sd = datetime.strptime(date_from, '%Y-%m-%d')
+                q_stmt = q_stmt.where(Listing.created_at >= sd)
+            except ValueError:
+                pass
+        if date_to:
+            from datetime import datetime, timedelta
+            try:
+                ed = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+                q_stmt = q_stmt.where(Listing.created_at < ed)
+            except ValueError:
+                pass
         
         if q:
             search_term = f"%{q}%"

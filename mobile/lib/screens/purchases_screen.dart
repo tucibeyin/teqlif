@@ -12,8 +12,9 @@ import '../../config/theme.dart';
 import '../../config/api.dart';
 import 'purchase_detail_screen.dart';
 
-import '../../ui_library/components/cards/teq_card.dart';
-import '../../ui_library/components/inputs/teq_text_field.dart';
+import "../../ui_library/components/cards/teq_card.dart";
+import '../../models/listing_filter_state.dart';
+import '../../ui_library/components/filters/teq_filter_bar.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
 
 class PurchasesScreen extends ConsumerStatefulWidget {
@@ -27,26 +28,22 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _purchases = [];
   List<(String, String)>? _categories;
-
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
-  String _categoryFilter = '';
-  DateTimeRange? _dateRange;
+  ListingFilterState _filter = const ListingFilterState();
 
   List<Map<String, dynamic>> get _filteredPurchases {
     var result = _purchases;
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
       result = result.where((item) =>
         (item['item_name'] as String? ?? '').toLowerCase().contains(q)
       ).toList();
     }
-    if (_categoryFilter.isNotEmpty) {
-      result = result.where((item) => (item['category'] as String?) == _categoryFilter).toList();
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
+      result = result.where((item) => (item['category'] as String?) == _filter.category).toList();
     }
-    if (_dateRange != null) {
-      final start = _dateRange!.start;
-      final end = _dateRange!.end.add(const Duration(days: 1));
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      final start = _filter.dateFrom!;
+      final end = _filter.dateTo!.add(const Duration(days: 1));
       result = result.where((item) {
         final raw = item['ended_at'] as String?;
         if (raw == null) return false;
@@ -76,7 +73,6 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -111,123 +107,11 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
     }
   }
 
-  Widget _buildFilterBar(TranslationPack loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TeqTextField(
-            controller: _searchCtrl,
-            hintText: loc.t("searchHintTextListing"),
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      _searchCtrl.clear();
-                      setState(() => _searchQuery = '');
-                    },
-                  )
-                : null,
-            onChanged: (v) => setState(() => _searchQuery = v),
-          ),
-        ),
-        if (_categories != null && _categories!.isNotEmpty)
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(loc.t("allCategories"), style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter.isEmpty,
-                    onSelected: (_) => setState(() => _categoryFilter = ''),
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                ),
-                ..._categories!.map((cat) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter == cat.$1,
-                    onSelected: (_) => setState(() =>
-                        _categoryFilter = _categoryFilter == cat.$1 ? '' : cat.$1),
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                )),
-              ],
-            ),
-          ),
-        const SizedBox(height: 6),
-        _buildDateRangePicker(loc),
-        const SizedBox(height: 4),
-      ],
-    );
-  }
-
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-
-  Widget _buildDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-      child: InkWell(
-        onTap: () async {
-          final picked = await showDateRangePicker(
-            context: context,
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now(),
-            initialDateRange: _dateRange,
-            locale: Localizations.localeOf(context),
-          );
-          if (picked != null) setState(() => _dateRange = picked);
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
-            borderRadius: BorderRadius.circular(8),
-            color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_today_outlined, size: 16,
-                  color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hasRange
-                      ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : loc.t("filterSelectDate"),
-                  style: TextStyle(fontSize: 13,
-                      color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-                ),
-              ),
-              if (hasRange)
-                GestureDetector(
-                  onTap: () => setState(() => _dateRange = null),
-                  child: Icon(Icons.close, size: 16, color: kPrimary),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.read(localizationProvider);
     final filtered = _filteredPurchases;
-    final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _dateRange != null;
+    final bool hasFilter = !_filter.isEmpty;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -248,7 +132,16 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
                 )
               : Column(
                   children: [
-                    _buildFilterBar(loc),
+                    TeqFilterBar(
+                      filter: _filter,
+                      onChanged: (f) => setState(() => _filter = f),
+                      showSubcategory: false,
+                      showCity: false,
+                      showCondition: false,
+                      showSort: false,
+                      showPriceRange: false,
+                    ),
+                    const SizedBox(height: 10),
                     if (hasFilter && filtered.isEmpty)
                       Expanded(
                         child: Center(

@@ -99,7 +99,6 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
   Future<void> _showAlertSheet(BuildContext context) async {
     final query = _controller.text.trim();
     final loc = ref.read(localizationProvider);
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       shape: const RoundedRectangleBorder(

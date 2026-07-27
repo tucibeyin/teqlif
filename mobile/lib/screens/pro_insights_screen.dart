@@ -6,7 +6,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
-import '../widgets/listing_filter_bar.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
@@ -26,16 +26,9 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   static const int _kMaxVisible = 5;
 
   // ── Filtre state ─────────────────────────────────────────────────────────
-  final TextEditingController _hotLeadsSearchCtrl = TextEditingController();
-  String _hotLeadsSearch = '';
   ListingFilterState _hotLeadsFilter = const ListingFilterState();
-
-  final TextEditingController _priceIntelSearchCtrl = TextEditingController();
-  String _priceIntelSearch = '';
   ListingFilterState _priceIntelFilter = const ListingFilterState();
   String _priceIntelSignal = '';
-
-  DateTimeRange? _dateRange;
 
   @override
   void initState() {
@@ -45,67 +38,37 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
 
   @override
   void dispose() {
-    _hotLeadsSearchCtrl.dispose();
-    _priceIntelSearchCtrl.dispose();
     super.dispose();
   }
 
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+  void _onHotLeadsFilterChanged(ListingFilterState f) {
+    final dateChanged = f.dateFrom != _hotLeadsFilter.dateFrom || f.dateTo != _hotLeadsFilter.dateTo;
+    setState(() {
+      _hotLeadsFilter = f;
+      if (dateChanged) {
+        _priceIntelFilter = _priceIntelFilter.copyWith(dateFrom: f.dateFrom, dateTo: f.dateTo);
+      }
+      _showAll['hotLeads'] = false;
+    });
+    if (dateChanged) _load();
+  }
 
-  Widget _buildDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return InkWell(
-      onTap: () async {
-        final picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          initialDateRange: _dateRange,
-          locale: Localizations.localeOf(context),
-        );
-        if (picked != null) {
-          setState(() { _dateRange = picked; _showAll.clear(); });
-          _load();
-        }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
-          borderRadius: BorderRadius.circular(8),
-          color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined, size: 16,
-                color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                hasRange
-                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : loc.t("filterSelectDate"),
-                style: TextStyle(fontSize: 13,
-                    color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-              ),
-            ),
-            if (hasRange)
-              GestureDetector(
-                onTap: () { setState(() { _dateRange = null; _showAll.clear(); }); _load(); },
-                child: Icon(Icons.close, size: 16, color: kPrimary),
-              ),
-          ],
-        ),
-      ),
-    );
+  void _onPriceIntelFilterChanged(ListingFilterState f) {
+    final dateChanged = f.dateFrom != _priceIntelFilter.dateFrom || f.dateTo != _priceIntelFilter.dateTo;
+    setState(() {
+      _priceIntelFilter = f;
+      if (dateChanged) {
+        _hotLeadsFilter = _hotLeadsFilter.copyWith(dateFrom: f.dateFrom, dateTo: f.dateTo);
+      }
+      _showAll['priceIntel'] = false;
+    });
+    if (dateChanged) _load();
   }
 
   Future<void> _load() async {
     setState(() { _loading = true; _hasError = false; });
-    final sd = _dateRange?.start.toIso8601String().substring(0, 10);
-    final ed = _dateRange?.end.toIso8601String().substring(0, 10);
+    final sd = _hotLeadsFilter.dateFrom?.toIso8601String().substring(0, 10);
+    final ed = _hotLeadsFilter.dateTo?.toIso8601String().substring(0, 10);
     final results = await Future.wait([
       AnalyticsService.getProInsights(startDate: sd, endDate: ed),
       AnalyticsService.getProMetrics(),
@@ -168,11 +131,11 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   // ── Filtre yardımcıları ──────────────────────────────────────────────────
   List<Map<String, dynamic>> _applyHotLeadsFilter(List<Map<String, dynamic>> raw) {
     var r = raw;
-    if (_hotLeadsSearch.isNotEmpty) {
-      final q = _hotLeadsSearch.toLowerCase();
+    if (_hotLeadsFilter.searchQuery != null && _hotLeadsFilter.searchQuery!.isNotEmpty) {
+      final q = _hotLeadsFilter.searchQuery!.toLowerCase();
       r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_hotLeadsFilter.category != null) {
+    if (_hotLeadsFilter.category != null && _hotLeadsFilter.category!.isNotEmpty) {
       r = r.where((m) => m['category'] == _hotLeadsFilter.category).toList();
     }
     return r;
@@ -180,11 +143,11 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
 
   List<Map<String, dynamic>> _applyPriceIntelFilter(List<Map<String, dynamic>> raw) {
     var r = raw;
-    if (_priceIntelSearch.isNotEmpty) {
-      final q = _priceIntelSearch.toLowerCase();
+    if (_priceIntelFilter.searchQuery != null && _priceIntelFilter.searchQuery!.isNotEmpty) {
+      final q = _priceIntelFilter.searchQuery!.toLowerCase();
       r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_priceIntelFilter.category != null) {
+    if (_priceIntelFilter.category != null && _priceIntelFilter.category!.isNotEmpty) {
       r = r.where((m) => m['category'] == _priceIntelFilter.category).toList();
     }
     if (_priceIntelSignal.isNotEmpty) {
@@ -220,8 +183,8 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     final hotLeads   = _applyHotLeadsFilter(allHotLeads);
     final priceIntel = _applyPriceIntelFilter(allPriceIntel);
 
-    final bool hlFiltered = _hotLeadsSearch.isNotEmpty || !_hotLeadsFilter.isEmpty;
-    final bool piFiltered = _priceIntelSearch.isNotEmpty || !_priceIntelFilter.isEmpty || _priceIntelSignal.isNotEmpty;
+    final bool hlFiltered = !_hotLeadsFilter.isEmpty;
+    final bool piFiltered = !_priceIntelFilter.isEmpty || _priceIntelSignal.isNotEmpty;
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
@@ -246,38 +209,15 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: TextField(
-                  controller: _hotLeadsSearchCtrl,
-                  decoration: InputDecoration(
-                    hintText: loc.t("searchHintTextListing"),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _hotLeadsSearch.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () { _hotLeadsSearchCtrl.clear(); setState(() => _hotLeadsSearch = ''); },
-                          )
-                        : null,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onChanged: (v) => setState(() { _hotLeadsSearch = v; _showAll['hotLeads'] = false; }),
-                ),
-              ),
-              ListingFilterBar(
+              TeqFilterBar(
                 filter: _hotLeadsFilter,
-                onChanged: (f) => setState(() { _hotLeadsFilter = f; _showAll['hotLeads'] = false; }),
-                showSearchBar: false,
+                onChanged: _onHotLeadsFilterChanged,
                 showSubcategory: false,
                 showCity: false,
                 showCondition: false,
                 showSort: false,
                 showPriceRange: false,
               ),
-              const SizedBox(height: 6),
-              _buildDateRangePicker(loc),
               const SizedBox(height: 10),
             ],
           ),
@@ -298,30 +238,9 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: TextField(
-                  controller: _priceIntelSearchCtrl,
-                  decoration: InputDecoration(
-                    hintText: loc.t("searchHintTextListing"),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _priceIntelSearch.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () { _priceIntelSearchCtrl.clear(); setState(() => _priceIntelSearch = ''); },
-                          )
-                        : null,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onChanged: (v) => setState(() { _priceIntelSearch = v; _showAll['priceIntel'] = false; }),
-                ),
-              ),
-              ListingFilterBar(
+              TeqFilterBar(
                 filter: _priceIntelFilter,
-                onChanged: (f) => setState(() { _priceIntelFilter = f; _showAll['priceIntel'] = false; }),
-                showSearchBar: false,
+                onChanged: _onPriceIntelFilterChanged,
                 showSubcategory: false,
                 showCity: false,
                 showCondition: false,
@@ -345,8 +264,6 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
-              _buildDateRangePicker(loc),
               const SizedBox(height: 10),
             ],
           ),

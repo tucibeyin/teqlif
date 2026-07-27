@@ -67,8 +67,8 @@ async def get_listings(
     q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -82,8 +82,8 @@ async def get_listings(
             category=category,
             limit=limit,
             offset=offset,
-            start_date=start_date,
-            end_date=end_date,
+            date_from=date_from,
+            date_to=date_to,
         )
     else:
         return await SearchListingsQuery().execute(
@@ -96,6 +96,8 @@ async def get_listings(
             limit=limit,
             offset=offset,
             current_user_id=current_user.id if current_user else None,
+            date_from=date_from,
+            date_to=date_to,
         )
 
 
@@ -133,8 +135,8 @@ async def get_my_listings(
     category: Optional[str] = None,
     limit: int = 1000,
     offset: int = 0,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
@@ -146,8 +148,8 @@ async def get_my_listings(
         category=category,
         limit=limit,
         offset=offset,
-        start_date=start_date,
-        end_date=end_date,
+        date_from=date_from,
+        date_to=date_to,
     )
 
 

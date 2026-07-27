@@ -23,7 +23,7 @@ import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
 import '../models/listing_filter_state.dart';
-import '../widgets/listing_filter_bar.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 const _starColor = Color(0xFFF59E0B);
@@ -48,21 +48,31 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   bool _isBlocked = false;
   Map<String, dynamic>? _ratingSummary;
 
-  // ── Arama & kategori filtresi ─────────────────────────────────────────────
-  String _searchQuery = '';
   ListingFilterState _filter = const ListingFilterState();
-  final _searchCtrl = TextEditingController();
 
   List<dynamic> get _filteredListings {
     var r = _listings;
-    if (_filter.category != null) {
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
       r = r.where((l) => l['category'] == _filter.category).toList();
     }
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      r = r
-          .where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q))
-          .toList();
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
+      r = r.where((l) {
+        final title = (l['title'] as String? ?? '').toLowerCase();
+        final desc = (l['description'] as String? ?? '').toLowerCase();
+        return title.contains(q) || desc.contains(q);
+      }).toList();
+    }
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      final start = _filter.dateFrom!;
+      final end = _filter.dateTo!.add(const Duration(days: 1));
+      r = r.where((l) {
+        final dateStr = l['created_at'] as String?;
+        if (dateStr == null) return true;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) return true;
+        return !date.isBefore(start) && date.isBefore(end);
+      }).toList();
     }
     return r;
   }
@@ -75,7 +85,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -731,40 +740,17 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           )
         else ...[
           if (!_loading || _listings.isNotEmpty)
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  child: TeqTextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                    hintText: loc.t('profileSearchListingHint'),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                  ),
-                ),
-                ListingFilterBar(
-                  filter: _filter,
-                  onChanged: (f) => setState(() => _filter = f),
-                  showSubcategory: true,
-                  showCity: false,
-                  showCondition: false,
-                  showSort: false,
-                  showPriceRange: false,
-                ),
-              ],
+            SliverToBoxAdapter(
+              child: TeqFilterBar(
+                filter: _filter,
+                onChanged: (f) => setState(() => _filter = f),
+                showSubcategory: true,
+                showCity: false,
+                showCondition: false,
+                showSort: false,
+                showPriceRange: false,
+              ),
             ),
-          ),
 
         // Listings grid
         if (_listings.isEmpty)

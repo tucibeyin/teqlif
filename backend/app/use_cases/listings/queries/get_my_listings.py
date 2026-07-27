@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.core.uow import AbstractUnitOfWork
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
@@ -12,7 +12,7 @@ class GetMyListingsQuery:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0, start_date: Optional[str] = None, end_date: Optional[str] = None) -> list:
+    async def execute(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0, date_from: Optional[str] = None, date_to: Optional[str] = None) -> list:
         query = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
@@ -23,18 +23,24 @@ class GetMyListingsQuery:
         if category:
             query = query.where(Listing.category == category)
         if q:
-            query = query.where(Listing.title.ilike(f"%{q}%"))
-        if start_date:
+            search_term = f"%{q}%"
+            query = query.where(
+                or_(
+                    Listing.title.ilike(search_term),
+                    Listing.description.ilike(search_term)
+                )
+            )
+        if date_from:
             from datetime import datetime
             try:
-                sd = datetime.strptime(start_date, '%Y-%m-%d')
+                sd = datetime.strptime(date_from, '%Y-%m-%d')
                 query = query.where(Listing.created_at >= sd)
             except ValueError:
                 pass
-        if end_date:
+        if date_to:
             from datetime import datetime, timedelta
             try:
-                ed = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+                ed = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
                 query = query.where(Listing.created_at < ed)
             except ValueError:
                 pass

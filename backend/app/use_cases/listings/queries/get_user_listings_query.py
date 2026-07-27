@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.models.listing import Listing
 from app.models.user import User
 from app.models.enums import ListingStatus
@@ -40,7 +40,12 @@ class GetUserListingsQuery:
             
         if q:
             search_term = f"%{q}%"
-            query = query.where(Listing.title.ilike(search_term))
+            query = query.where(
+                or_(
+                    Listing.title.ilike(search_term),
+                    Listing.description.ilike(search_term)
+                )
+            )
             
         if start_date:
             query = query.where(Listing.created_at >= start_date)

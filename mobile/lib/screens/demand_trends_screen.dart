@@ -7,7 +7,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
-import '../widgets/listing_filter_bar.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 
 class DemandTrendsScreen extends ConsumerStatefulWidget {
   const DemandTrendsScreen({super.key});
@@ -76,7 +76,7 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                       ),
                       const SizedBox(height: 10),
-                      ListingFilterBar(
+                      TeqFilterBar(
                         filter: _filter,
                         onChanged: (f) => setState(() => _filter = f),
                         showSearchBar: false,

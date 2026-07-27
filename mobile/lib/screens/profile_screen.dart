@@ -25,7 +25,6 @@ import '../services/auth_service.dart';
 import '../services/cache_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/listing_service.dart';
-import '../services/category_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
@@ -42,7 +41,7 @@ import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
 import '../utils/once.dart';
 import '../models/listing_filter_state.dart';
-import '../widgets/listing_filter_bar.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live_stream_analytics_screen.dart';
@@ -80,20 +79,31 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _websiteGuard = OnceGuard(); // Çift tıklama engeli
 
   // ── Arama & kategori filtresi ─────────────────────────────────────────────
-  String _searchQuery = '';
   ListingFilterState _filter = const ListingFilterState();
-  final _searchCtrl = TextEditingController();
 
   List<dynamic> get _filteredListings {
     var r = _listings;
-    if (_filter.category != null) {
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
       r = r.where((l) => l['category'] == _filter.category).toList();
     }
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      r = r
-          .where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q))
-          .toList();
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
+      r = r.where((l) {
+        final title = (l['title'] as String? ?? '').toLowerCase();
+        final desc = (l['description'] as String? ?? '').toLowerCase();
+        return title.contains(q) || desc.contains(q);
+      }).toList();
+    }
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      final start = _filter.dateFrom!;
+      final end = _filter.dateTo!.add(const Duration(days: 1));
+      r = r.where((l) {
+        final dateStr = l['created_at'] as String?;
+        if (dateStr == null) return true;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) return true;
+        return !date.isBefore(start) && date.isBefore(end);
+      }).toList();
     }
     return r;
   }
@@ -111,7 +121,6 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
     for (final sub in _subs) {
       sub.cancel();
     }
@@ -767,25 +776,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: TeqTextField(
-                        controller: _searchCtrl,
-                        onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                        hintText: ref.read(localizationProvider).t('profileSearchListingHint'),
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                    ListingFilterBar(
+                    TeqFilterBar(
                       filter: _filter,
                       onChanged: (f) => setState(() => _filter = f),
                       showSubcategory: true,
@@ -2939,11 +2930,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
   int _offset = 0;
   final ScrollController _scrollController = ScrollController();
 
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _categoryFilter = '';
-  DateTimeRange? _dateRange;
-  List<(String, String)>? _categories;
-  Timer? _searchDebounce;
+  ListingFilterState _filter = const ListingFilterState();
 
   @override
   void initState() {
@@ -2960,22 +2947,8 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(
-        locale: Localizations.localeOf(context).languageCode,
-      ).then((cats) {
-        if (mounted) setState(() => _categories = cats);
-      });
-    }
-  }
-
-  @override
   void dispose() {
     _scrollController.dispose();
-    _searchCtrl.dispose();
-    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -2995,18 +2968,19 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final activeParam = widget.active ? 'true' : 'false';
-      final q = _searchCtrl.text.trim();
-      final cat = _categoryFilter;
+      final q = _filter.searchQuery ?? '';
+      final cat = _filter.category ?? '';
       var listingsUrl =
           '$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset';
       if (q.isNotEmpty) listingsUrl += '&q=${Uri.encodeComponent(q)}';
-      if (cat.isNotEmpty)
+      if (cat.isNotEmpty) {
         listingsUrl += '&category=${Uri.encodeComponent(cat)}';
-      if (_dateRange != null) {
+      }
+      if (_filter.dateFrom != null && _filter.dateTo != null) {
         listingsUrl +=
-            '&start_date=${_dateRange!.start.toIso8601String().substring(0, 10)}';
+            '&date_from=${_filter.dateFrom!.toIso8601String().substring(0, 10)}';
         listingsUrl +=
-            '&end_date=${_dateRange!.end.toIso8601String().substring(0, 10)}';
+            '&date_to=${_filter.dateTo!.toIso8601String().substring(0, 10)}';
       }
       final resp = await http.get(
         Uri.parse(listingsUrl),
@@ -3204,160 +3178,10 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
     return '${buf.toString()} ₺';
   }
 
-  Widget _buildFilterBar(TranslationPack loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TeqTextField(
-            controller: _searchCtrl,
-            hintText: loc.t('searchHintTextListing'),
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _searchCtrl.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      _searchCtrl.clear();
-                      _load();
-                    },
-                  )
-                : null,
-            onChanged: (_) {
-              _searchDebounce?.cancel();
-              _searchDebounce = Timer(
-                const Duration(milliseconds: 400),
-                () => _load(),
-              );
-            },
-          ),
-        ),
-        if (_categories != null && _categories!.isNotEmpty)
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(
-                      loc.t('allCategories'),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selected: _categoryFilter.isEmpty,
-                    onSelected: (_) {
-                      setState(() => _categoryFilter = '');
-                      _load();
-                    },
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                ),
-                ..._categories!.map(
-                  (cat) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: FilterChip(
-                      label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                      selected: _categoryFilter == cat.$1,
-                      onSelected: (_) {
-                        setState(
-                          () => _categoryFilter = _categoryFilter == cat.$1
-                              ? ''
-                              : cat.$1,
-                        );
-                        _load();
-                      },
-                      selectedColor: kPrimary.withValues(alpha: 0.15),
-                      checkmarkColor: kPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 6),
-        _buildDateRangePicker(loc),
-        const SizedBox(height: 4),
-      ],
-    );
-  }
-
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-
-  Widget _buildDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-      child: InkWell(
-        onTap: () async {
-          final picked = await showDateRangePicker(
-            context: context,
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now(),
-            initialDateRange: _dateRange,
-            locale: Localizations.localeOf(context),
-          );
-          if (picked != null) {
-            setState(() => _dateRange = picked);
-            _load();
-          }
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: hasRange ? kPrimary : AppColors.border(context),
-            ),
-            borderRadius: BorderRadius.circular(8),
-            color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: 16,
-                color: hasRange ? kPrimary : AppColors.textSecondary(context),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hasRange
-                      ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : loc.t('filterSelectDate'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: hasRange
-                        ? kPrimary
-                        : AppColors.textSecondary(context),
-                  ),
-                ),
-              ),
-              if (hasRange)
-                GestureDetector(
-                  onTap: () {
-                    setState(() => _dateRange = null);
-                    _load();
-                  },
-                  child: Icon(Icons.close, size: 16, color: kPrimary),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.read(localizationProvider);
-    final bool hasFilter =
-        _searchCtrl.text.isNotEmpty ||
-        _categoryFilter.isNotEmpty ||
-        _dateRange != null;
+    final bool hasFilter = !_filter.isEmpty;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -3367,7 +3191,18 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       backgroundColor: AppColors.bg(context),
       body: Column(
         children: [
-          _buildFilterBar(loc),
+          TeqFilterBar(
+            filter: _filter,
+            onChanged: (f) {
+              setState(() => _filter = f);
+              _load();
+            },
+            showSubcategory: false,
+            showCity: false,
+            showCondition: false,
+            showSort: false,
+            showPriceRange: false,
+          ),
           Expanded(
             child: _loading && _listings.isEmpty
                 ? const Center(
@@ -3544,31 +3379,26 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   bool _loading = true;
   bool _hasError = false;
 
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
-  String _categoryFilter = '';
-  DateTimeRange? _dateRange;
-  List<(String, String)>? _categories;
+  ListingFilterState _filter = const ListingFilterState();
 
   List<dynamic> get _filteredListings {
     var result = _listings;
-    if (_searchQuery.isNotEmpty) {
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
+      result = result.where((item) {
+        final title = (item['title'] as String? ?? '').toLowerCase();
+        final desc = (item['description'] as String? ?? '').toLowerCase();
+        return title.contains(q) || desc.contains(q);
+      }).toList();
+    }
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
       result = result
-          .where(
-            (item) => (item['title'] as String? ?? '').toLowerCase().contains(
-              _searchQuery.toLowerCase(),
-            ),
-          )
+          .where((item) => (item['category'] as String?) == _filter.category)
           .toList();
     }
-    if (_categoryFilter.isNotEmpty) {
-      result = result
-          .where((item) => (item['category'] as String?) == _categoryFilter)
-          .toList();
-    }
-    if (_dateRange != null) {
-      final start = _dateRange!.start;
-      final end = _dateRange!.end.add(const Duration(days: 1));
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      final start = _filter.dateFrom!;
+      final end = _filter.dateTo!.add(const Duration(days: 1));
       result = result.where((item) {
         final raw = item['created_at'] as String?;
         if (raw == null) return false;
@@ -3586,20 +3416,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(
-        locale: Localizations.localeOf(context).languageCode,
-      ).then((cats) {
-        if (mounted) setState(() => _categories = cats);
-      });
-    }
-  }
-
-  @override
   void dispose() {
-    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -3687,143 +3504,11 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
     return '${buf.toString()} ₺';
   }
 
-  Widget _buildFavFilterBar(TranslationPack loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TeqTextField(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _searchQuery = v),
-            hintText: loc.t('searchHintTextListing'),
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      _searchCtrl.clear();
-                      setState(() => _searchQuery = '');
-                    },
-                  )
-                : null,
-          ),
-        ),
-        if (_categories != null && _categories!.isNotEmpty)
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(
-                      loc.t('allCategories'),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selected: _categoryFilter.isEmpty,
-                    onSelected: (_) => setState(() => _categoryFilter = ''),
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                ),
-                ..._categories!.map(
-                  (cat) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: FilterChip(
-                      label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                      selected: _categoryFilter == cat.$1,
-                      onSelected: (_) => setState(
-                        () => _categoryFilter = _categoryFilter == cat.$1
-                            ? ''
-                            : cat.$1,
-                      ),
-                      selectedColor: kPrimary.withValues(alpha: 0.15),
-                      checkmarkColor: kPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 6),
-        _buildFavDateRangePicker(loc),
-        const SizedBox(height: 4),
-      ],
-    );
-  }
-
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-
-  Widget _buildFavDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-      child: InkWell(
-        onTap: () async {
-          final picked = await showDateRangePicker(
-            context: context,
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now(),
-            initialDateRange: _dateRange,
-            locale: Localizations.localeOf(context),
-          );
-          if (picked != null) setState(() => _dateRange = picked);
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: hasRange ? kPrimary : AppColors.border(context),
-            ),
-            borderRadius: BorderRadius.circular(8),
-            color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: 16,
-                color: hasRange ? kPrimary : AppColors.textSecondary(context),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hasRange
-                      ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                      : loc.t('filterSelectDate'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: hasRange
-                        ? kPrimary
-                        : AppColors.textSecondary(context),
-                  ),
-                ),
-              ),
-              if (hasRange)
-                GestureDetector(
-                  onTap: () => setState(() => _dateRange = null),
-                  child: Icon(Icons.close, size: 16, color: kPrimary),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.read(localizationProvider);
     final filtered = _filteredListings;
-    final bool hasFilter =
-        _searchQuery.isNotEmpty ||
-        _categoryFilter.isNotEmpty ||
-        _dateRange != null;
+    final bool hasFilter = !_filter.isEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(loc.t('profileFavorites'))),
       backgroundColor: AppColors.bg(context),
@@ -3855,7 +3540,15 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
           : Column(
               children: [
                 if (_hasError) StaleDataBanner(onRetry: _load),
-                _buildFavFilterBar(loc),
+                TeqFilterBar(
+                  filter: _filter,
+                  onChanged: (f) => setState(() => _filter = f),
+                  showSubcategory: false,
+                  showCity: false,
+                  showCondition: false,
+                  showSort: false,
+                  showPriceRange: false,
+                ),
                 if (hasFilter && filtered.isEmpty)
                   Expanded(
                     child: Center(

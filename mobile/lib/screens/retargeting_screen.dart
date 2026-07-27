@@ -9,8 +9,9 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
-import '../services/category_service.dart';
+import '../models/listing_filter_state.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 
 class RetargetingScreen extends ConsumerStatefulWidget {
@@ -38,30 +39,22 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   int? _selectedReportListingId;
   List<Map<String, dynamic>> _reportListings = [];
   Future<Map<String, dynamic>>? _reportFuture;
-  final TextEditingController _reportSearchCtrl = TextEditingController();
-  String _reportQuery = '';
-  DateTimeRange? _dateRange;
-  String? _reportCategoryFilter;
+  ListingFilterState _reportFilter = const ListingFilterState();
 
   // Retargeting sekmesi filtreler
-  final TextEditingController _retargetSearchCtrl = TextEditingController();
-  String _retargetQuery = '';
-  String? _retargetCategoryFilter;
-  DateTimeRange? _retargetDateRange;
-
-  // Ortak kategori listesi
-  List<(String, String)>? _categories;
+  ListingFilterState _campaignFilter = const ListingFilterState();
 
   List<Map<String, dynamic>> get _filteredReportListings {
     var result = _reportListings;
-    if (_reportQuery.isNotEmpty) {
+    if (_reportFilter.searchQuery != null && _reportFilter.searchQuery!.isNotEmpty) {
+      final q = _reportFilter.searchQuery!.toLowerCase();
       result = result.where((l) =>
-        (l['title'] as String? ?? '').toLowerCase().contains(_reportQuery.toLowerCase())
+        (l['title'] as String? ?? '').toLowerCase().contains(q)
       ).toList();
     }
-    if (_dateRange != null) {
-      final start = _dateRange!.start;
-      final end = _dateRange!.end.add(const Duration(days: 1));
+    if (_reportFilter.dateFrom != null && _reportFilter.dateTo != null) {
+      final start = _reportFilter.dateFrom!;
+      final end = _reportFilter.dateTo!.add(const Duration(days: 1));
       result = result.where((item) {
         final raw = item['created_at'] as String?;
         if (raw == null) return false;
@@ -69,26 +62,26 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
         return dt != null && !dt.isBefore(start) && dt.isBefore(end);
       }).toList();
     }
-    if (_reportCategoryFilter != null) {
-      result = result.where((l) => l['category'] == _reportCategoryFilter).toList();
+    if (_reportFilter.category != null && _reportFilter.category!.isNotEmpty) {
+      result = result.where((l) => l['category'] == _reportFilter.category).toList();
     }
     return result;
   }
 
   List<Map<String, dynamic>> get _filteredCampaignListings {
     var result = _reportListings;
-    if (_retargetQuery.isNotEmpty) {
-      final q = _retargetQuery.toLowerCase();
+    if (_campaignFilter.searchQuery != null && _campaignFilter.searchQuery!.isNotEmpty) {
+      final q = _campaignFilter.searchQuery!.toLowerCase();
       result = result.where((l) =>
         (l['title'] as String? ?? '').toLowerCase().contains(q)
       ).toList();
     }
-    if (_retargetCategoryFilter != null) {
-      result = result.where((l) => l['category'] == _retargetCategoryFilter).toList();
+    if (_campaignFilter.category != null && _campaignFilter.category!.isNotEmpty) {
+      result = result.where((l) => l['category'] == _campaignFilter.category).toList();
     }
-    if (_retargetDateRange != null) {
-      final start = _retargetDateRange!.start;
-      final end = _retargetDateRange!.end.add(const Duration(days: 1));
+    if (_campaignFilter.dateFrom != null && _campaignFilter.dateTo != null) {
+      final start = _campaignFilter.dateFrom!;
+      final end = _campaignFilter.dateTo!.add(const Duration(days: 1));
       result = result.where((item) {
         final raw = item['created_at'] as String?;
         if (raw == null) return false;
@@ -107,14 +100,6 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     _loadReportListings();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) { if (mounted) setState(() => _categories = cats); });
-    }
-  }
 
   Future<void> _loadReportListings() async {
     final listings = await _fetchListingsPage(0);
@@ -200,108 +185,27 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
-    _reportSearchCtrl.dispose();
-    _retargetSearchCtrl.dispose();
     super.dispose();
   }
-
-  // ── Rapor: İlan Kartu Karuseli ───────────────────────────────────────────
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
   Widget _buildListingCarousel() {
     final loc = ref.read(localizationProvider);
     final filtered = _filteredReportListings;
-    final hasRange = _dateRange != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: TextField(
-            controller: _reportSearchCtrl,
-            decoration: InputDecoration(
-              hintText: loc.t("searchHintTextListing"),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _reportQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _reportSearchCtrl.clear();
-                        setState(() => _reportQuery = '');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onChanged: (v) => setState(() => _reportQuery = v),
+          child: TeqFilterBar(
+            filter: _reportFilter,
+            onChanged: (f) => setState(() => _reportFilter = f),
+            showSubcategory: false,
+            showCity: false,
+            showCondition: false,
+            showSort: false,
+            showPriceRange: false,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: InkWell(
-            onTap: () async {
-              final picked = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-                initialDateRange: _dateRange,
-                locale: Localizations.localeOf(context),
-              );
-              if (picked != null) setState(() => _dateRange = picked);
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: hasRange ? const Color(0xFF14B8A6) : AppColors.border(context)),
-                borderRadius: BorderRadius.circular(8),
-                color: hasRange ? const Color(0xFF14B8A6).withValues(alpha: 0.08) : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_today_outlined, size: 16,
-                      color: hasRange ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      hasRange
-                          ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                          : loc.t("filterSelectDate"),
-                      style: TextStyle(fontSize: 13,
-                          color: hasRange ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
-                    ),
-                  ),
-                  if (hasRange)
-                    GestureDetector(
-                      onTap: () => setState(() => _dateRange = null),
-                      child: const Icon(Icons.close, size: 16, color: Color(0xFF14B8A6)),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (_categories != null && _categories!.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              height: 34,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _catChip(loc.t("filterAll"), _reportCategoryFilter == null,
-                      () => setState(() => _reportCategoryFilter = null)),
-                  ..._categories!.map((c) => _catChip(c.$2, _reportCategoryFilter == c.$1,
-                      () => setState(() => _reportCategoryFilter = _reportCategoryFilter == c.$1 ? null : c.$1))),
-                ],
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: 8),
         SizedBox(
           height: 112,
@@ -1169,32 +1073,9 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     );
   }
 
-  Widget _catChip(String label, bool selected, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? kPrimary : AppColors.card(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: selected ? kPrimary : AppColors.border(context)),
-          ),
-          child: Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? Colors.white : AppColors.textPrimary(context),
-              )),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildCampaignListingCarousel() {
-    final loc = ref.read(localizationProvider);
     if (_reportListings.isEmpty) return _emptyState();
     final filtered = _filteredCampaignListings;
     return Column(
@@ -1202,86 +1083,16 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: TextField(
-            controller: _retargetSearchCtrl,
-            decoration: InputDecoration(
-              hintText: loc.t("searchHintTextListing"),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _retargetQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () { _retargetSearchCtrl.clear(); setState(() => _retargetQuery = ''); },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onChanged: (v) => setState(() => _retargetQuery = v.trim()),
+          child: TeqFilterBar(
+            filter: _campaignFilter,
+            onChanged: (f) => setState(() => _campaignFilter = f),
+            showSubcategory: false,
+            showCity: false,
+            showCondition: false,
+            showSort: false,
+            showPriceRange: false,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: InkWell(
-            onTap: () async {
-              final picked = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-                initialDateRange: _retargetDateRange,
-                locale: Localizations.localeOf(context),
-              );
-              if (picked != null) setState(() => _retargetDateRange = picked);
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.border(context)),
-                borderRadius: BorderRadius.circular(8),
-                color: _retargetDateRange != null ? const Color(0xFF14B8A6).withValues(alpha: 0.08) : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_today_outlined, size: 16,
-                      color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _retargetDateRange != null
-                          ? '${_fmtDate(_retargetDateRange!.start)} – ${_fmtDate(_retargetDateRange!.end)}'
-                          : loc.t("filterSelectDate"),
-                      style: TextStyle(fontSize: 13,
-                          color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
-                    ),
-                  ),
-                  if (_retargetDateRange != null)
-                    GestureDetector(
-                      onTap: () => setState(() => _retargetDateRange = null),
-                      child: const Icon(Icons.close, size: 16, color: Color(0xFF14B8A6)),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (_categories != null && _categories!.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: SizedBox(
-              height: 34,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _catChip(loc.t("filterAll"), _retargetCategoryFilter == null,
-                      () => setState(() => _retargetCategoryFilter = null)),
-                  ..._categories!.map((c) => _catChip(c.$2, _retargetCategoryFilter == c.$1,
-                      () => setState(() => _retargetCategoryFilter = _retargetCategoryFilter == c.$1 ? null : c.$1))),
-                ],
-              ),
-            ),
-          ),
-        ],
         SizedBox(
           height: 112,
           child: ListView.builder(

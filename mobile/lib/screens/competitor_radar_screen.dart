@@ -8,11 +8,10 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../config/theme.dart';
 import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
-import '../widgets/listing_filter_bar.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -30,10 +29,6 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
   Map<String, dynamic>? _velocityData;
   bool _loadingData = false;
 
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _listingQuery = '';
-  DateTimeRange? _dateRange;
-  Timer? _searchDebounce;
   ListingFilterState _filter = const ListingFilterState();
 
   List<Map<String, dynamic>> _listings = [];
@@ -47,8 +42,6 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
-    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -56,64 +49,21 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
     final token = await StorageService.getToken();
     if (token == null) return [];
     var url = '$kBaseUrl/listings/my?limit=50&offset=$offset&active=true';
-    if (_dateRange != null) {
-      url += '&start_date=${_dateRange!.start.toIso8601String().substring(0, 10)}';
-      url += '&end_date=${_dateRange!.end.toIso8601String().substring(0, 10)}';
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      url += '&q=${Uri.encodeComponent(_filter.searchQuery!)}';
+    }
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
+      url += '&category=${Uri.encodeComponent(_filter.category!)}';
+    }
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      url += '&date_from=${_filter.dateFrom!.toIso8601String().substring(0, 10)}';
+      url += '&date_to=${_filter.dateTo!.toIso8601String().substring(0, 10)}';
     }
     final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
     if (resp.statusCode == 200) {
       return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
     }
     return [];
-  }
-
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-
-  Widget _buildDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return InkWell(
-      onTap: () async {
-        final picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          initialDateRange: _dateRange,
-          locale: Localizations.localeOf(context),
-        );
-        if (picked != null) { setState(() => _dateRange = picked); _loadListings(); }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
-          borderRadius: BorderRadius.circular(8),
-          color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined, size: 16,
-                color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                hasRange
-                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : loc.t("filterSelectDate"),
-                style: TextStyle(fontSize: 13,
-                    color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-              ),
-            ),
-            if (hasRange)
-              GestureDetector(
-                onTap: () { setState(() => _dateRange = null); _loadListings(); },
-                child: Icon(Icons.close, size: 16, color: kPrimary),
-              ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _loadData() async {
@@ -141,12 +91,22 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
 
   List<Map<String, dynamic>> get _filteredListings {
     var result = _listings;
-    if (_listingQuery.isNotEmpty) {
-      final q = _listingQuery.toLowerCase();
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
       result = result.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_filter.category != null) {
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
       result = result.where((l) => l['category'] == _filter.category).toList();
+    }
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      final start = _filter.dateFrom!;
+      final end = _filter.dateTo!.add(const Duration(days: 1));
+      result = result.where((l) {
+        final raw = l['created_at'] as String?;
+        if (raw == null) return false;
+        final dt = DateTime.tryParse(raw)?.toLocal();
+        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
+      }).toList();
     }
     return result;
   }
@@ -175,40 +135,12 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
         physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: loc.t("searchHintTextListing"),
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _listingQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _listingQuery = '');
-                        },
-                      )
-                    : null,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onChanged: (v) {
-                _searchDebounce?.cancel();
-                _searchDebounce = Timer(const Duration(milliseconds: 400), () {
-                  setState(() => _listingQuery = v.trim());
-                });
-              },
-            ),
-          ),
-          _buildDateRangePicker(loc),
-          const SizedBox(height: 8),
-          ListingFilterBar(
+          TeqFilterBar(
             filter: _filter,
-            onChanged: (f) => setState(() => _filter = f),
-            showSearchBar: false,
+            onChanged: (f) {
+              setState(() => _filter = f);
+              _loadListings();
+            },
             showSubcategory: false,
             showCity: false,
             showCondition: false,

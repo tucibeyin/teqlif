@@ -4,11 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/listing_filter_state.dart';
 import '../services/localization_service.dart';
-import '../services/category_service.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'live_stream_analytics_screen.dart';
 
 class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
@@ -30,25 +30,20 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
   String? _cursor;
   final ScrollController _scrollController = ScrollController();
 
-  // Filters
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
-  String? _categoryFilter;
-  DateTimeRange? _dateRange;
-  List<(String, String)>? _categories;
+  ListingFilterState _filter = const ListingFilterState();
 
   List<dynamic> get _filtered {
     var result = _streams;
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
       result = result.where((s) => (s['title'] as String? ?? '').toLowerCase().contains(q)).toList();
     }
-    if (_categoryFilter != null) {
-      result = result.where((s) => s['category'] == _categoryFilter).toList();
+    if (_filter.category != null && _filter.category!.isNotEmpty) {
+      result = result.where((s) => s['category'] == _filter.category).toList();
     }
-    if (_dateRange != null) {
-      final start = _dateRange!.start;
-      final end = _dateRange!.end.add(const Duration(days: 1));
+    if (_filter.dateFrom != null && _filter.dateTo != null) {
+      final start = _filter.dateFrom!;
+      final end = _filter.dateTo!.add(const Duration(days: 1));
       result = result.where((s) {
         final raw = s['started_at'] as String?;
         if (raw == null) return false;
@@ -73,18 +68,8 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) { if (mounted) setState(() => _categories = cats); });
-    }
-  }
-
-  @override
   void dispose() {
     _scrollController.dispose();
-    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -197,33 +182,16 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
 
       bodyContent = Column(
         children: [
-          // ── Arama + tarih + kategori ─────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchCtrl,
-                  decoration: InputDecoration(
-                    hintText: loc.t("searchHintTextListing"),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
-                          )
-                        : null,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                ),
-                const SizedBox(height: 8),
-                _buildDateRangePicker(loc),
-                const SizedBox(height: 8),
-                _buildCategoryChips(),
-              ],
+            child: TeqFilterBar(
+              filter: _filter,
+              onChanged: (f) => setState(() => _filter = f),
+              showSubcategory: false,
+              showCity: false,
+              showCondition: false,
+              showSort: false,
+              showPriceRange: false,
             ),
           ),
           const SizedBox(height: 8),
@@ -552,95 +520,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
     );
   }
 
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
-  Widget _buildDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return InkWell(
-      onTap: () async {
-        final picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          initialDateRange: _dateRange,
-          locale: Localizations.localeOf(context),
-        );
-        if (picked != null) setState(() => _dateRange = picked);
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
-          borderRadius: BorderRadius.circular(8),
-          color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined, size: 16,
-                color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                hasRange
-                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : loc.t("filterSelectDate"),
-                style: TextStyle(fontSize: 13,
-                    color: hasRange ? kPrimary : AppColors.textSecondary(context)),
-              ),
-            ),
-            if (hasRange)
-              GestureDetector(
-                onTap: () => setState(() => _dateRange = null),
-                child: Icon(Icons.close, size: 16, color: kPrimary),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryChips() {
-    final loc = ref.read(localizationProvider);
-    final cats = _categories;
-    if (cats == null || cats.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 34,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _chip(loc.t("filterAll"), _categoryFilter == null, () => setState(() => _categoryFilter = null)),
-          ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
-              () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(String label, bool selected, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? kPrimary : AppColors.card(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: selected ? kPrimary : AppColors.border(context)),
-          ),
-          child: Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? Colors.white : AppColors.textPrimary(context),
-              )),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSummaryCard(
     String title,

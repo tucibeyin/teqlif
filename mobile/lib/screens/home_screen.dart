@@ -17,17 +17,17 @@ import '../services/image_cache_manager.dart';
 
 import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
-import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../services/listing_service.dart';
 import '../widgets/shimmer_loading.dart';
 import '../utils/once.dart';
+import '../utils/error_helper.dart';
 import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
 import '../models/listing_filter_state.dart';
-import '../widgets/listing_filter_bar.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 
@@ -54,15 +54,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isLoggedIn = false;
   bool _networkError = false;
   ListingFilterState _filter = const ListingFilterState();
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _debounce;
   final ScrollController _scrollCtrl = ScrollController();
 
   bool _showOnboardingBanner = false;
   final _bannerGuard = OnceGuard();
 
-  bool get _hasFilter => !_filter.isEmpty || _searchQuery.isNotEmpty;
+  bool get _hasFilter => !_filter.isEmpty;
 
   @override
   void initState() {
@@ -73,20 +70,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
     _scrollCtrl.dispose();
     super.dispose();
-  }
-
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      if (mounted && _searchQuery != query) {
-        setState(() => _searchQuery = query);
-        _load();
-      }
-    });
   }
 
   void _onScroll() {
@@ -229,7 +214,15 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       if (_filter.sortBy != null) params['sort_by'] = _filter.sortBy!;
       if (_filter.minPrice != null) params['min_price'] = _filter.minPrice!.toStringAsFixed(0);
       if (_filter.maxPrice != null) params['max_price'] = _filter.maxPrice!.toStringAsFixed(0);
-      if (_searchQuery.isNotEmpty) params['q'] = _searchQuery;
+      if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+        params['q'] = _filter.searchQuery!;
+      }
+      if (_filter.dateFrom != null) {
+        params['date_from'] = _filter.dateFrom!.toIso8601String().substring(0, 10);
+      }
+      if (_filter.dateTo != null) {
+        params['date_to'] = _filter.dateTo!.toIso8601String().substring(0, 10);
+      }
       final uri = Uri.parse(
         '$kBaseUrl/listings',
       ).replace(queryParameters: params);
@@ -247,17 +240,19 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() {
           _recentLoading = false;
         });
+        handleError(Exception('API error: ${resp.statusCode}'), ref.read(localizationProvider));
       }
-    } catch (_) {
-      if (mounted) setState(() => _recentLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _recentLoading = false);
+        handleError(e, ref.read(localizationProvider));
+      }
     }
   }
 
   void _clearAll() {
-    _searchController.clear();
     setState(() {
       _filter = const ListingFilterState();
-      _searchQuery = '';
     });
     _load();
   }
@@ -317,7 +312,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               }),
             ),
           // ── Filtre bar ───────────────────────────────────
-          ListingFilterBar(
+          TeqFilterBar(
             filter: _filter,
             onChanged: (f) {
               setState(() => _filter = f);
@@ -335,26 +330,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
             showCondition: true,
             showSort: true,
             showPriceRange: true,
-          ),
-
-          // ── Arama kutusu ─────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: TeqTextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              hintText: loc.t("searchHintTextListing"),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        _onSearchChanged('');
-                      },
-                    )
-                  : null,
-            ),
           ),
 
           // ── İLAN LİSTESİ (SADECE BURASI KAYACAK) ────────────────

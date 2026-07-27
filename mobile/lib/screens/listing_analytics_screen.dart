@@ -8,9 +8,9 @@ import '../ui_library/components/buttons/teq_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/api.dart';
-import '../config/theme.dart';
+import '../models/listing_filter_state.dart';
 import '../services/analytics_service.dart';
-import '../services/category_service.dart';
+import '../ui_library/components/filters/teq_filter_bar.dart';
 
 class ListingAnalyticsScreen extends ConsumerStatefulWidget {
   final bool isPremium;
@@ -36,15 +36,16 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
   int _videoImp = 0;
   int _photoImp = 0;
 
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
-  String _categoryFilter = '';
-  DateTimeRange? _dateRange;
-  List<(String, String)>? _categories;
+  ListingFilterState _filter = const ListingFilterState();
 
-  List<_ListingMetric> get _filteredListings => _searchQuery.isEmpty
-      ? _listings
-      : _listings.where((m) => m.title.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  List<_ListingMetric> get _filteredListings {
+    var res = _listings;
+    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+      final q = _filter.searchQuery!.toLowerCase();
+      res = res.where((m) => m.title.toLowerCase().contains(q)).toList();
+    }
+    return res;
+  }
 
   @override
   void initState() {
@@ -57,17 +58,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) { if (mounted) setState(() => _categories = cats); });
-    }
-  }
-
-  @override
   void dispose() {
-    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -77,9 +68,9 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
       _hasError = false;
     });
 
-    final sd = _dateRange?.start.toIso8601String().substring(0, 10);
-    final ed = _dateRange?.end.toIso8601String().substring(0, 10);
-    final cat = _categoryFilter.isNotEmpty ? _categoryFilter : null;
+    final sd = _filter.dateFrom?.toIso8601String().substring(0, 10);
+    final ed = _filter.dateTo?.toIso8601String().substring(0, 10);
+    final cat = (_filter.category != null && _filter.category!.isNotEmpty) ? _filter.category : null;
 
     final results = await Future.wait([
       AnalyticsService.getVideoRoi(startDate: sd, endDate: ed, category: cat),
@@ -201,145 +192,6 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
     );
   }
 
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-
-  Widget _buildDateRangePicker(TranslationPack loc) {
-    final hasRange = _dateRange != null;
-    return InkWell(
-      onTap: () async {
-        final picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          initialDateRange: _dateRange,
-          locale: Localizations.localeOf(context),
-        );
-        if (picked != null) {
-          setState(() => _dateRange = picked);
-          _load();
-        }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: hasRange ? const Color(0xFF6366F1) : AppColors.border(context)),
-          borderRadius: BorderRadius.circular(8),
-          color: hasRange ? const Color(0xFF6366F1).withValues(alpha: 0.08) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined, size: 16,
-                color: hasRange ? const Color(0xFF6366F1) : AppColors.textSecondary(context)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                hasRange
-                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
-                    : loc.t("filterSelectDate"),
-                style: TextStyle(fontSize: 13,
-                    color: hasRange ? const Color(0xFF6366F1) : AppColors.textSecondary(context)),
-              ),
-            ),
-            if (hasRange)
-              GestureDetector(
-                onTap: () { setState(() => _dateRange = null); _load(); },
-                child: const Icon(Icons.close, size: 16, color: Color(0xFF6366F1)),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterBar(TranslationPack loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: TextField(
-            controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: loc.t("searchHintTextListing"),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() {
-                          _searchQuery = '';
-                          if (_selectedListingId != null &&
-                              !_filteredListings.any((m) => m.id == _selectedListingId)) {
-                            _selectedListingId = null;
-                          }
-                        });
-                      },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onChanged: (v) {
-              setState(() {
-                _searchQuery = v;
-                if (_selectedListingId != null &&
-                    !_filteredListings.any((m) => m.id == _selectedListingId)) {
-                  _selectedListingId = null;
-                }
-              });
-            },
-          ),
-        ),
-        if (_categories != null && _categories!.isNotEmpty) ...[
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(loc.t("allCategories"), style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter.isEmpty,
-                    onSelected: (_) {
-                      if (_categoryFilter.isNotEmpty) {
-                        setState(() => _categoryFilter = '');
-                        _load();
-                      }
-                    },
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                ),
-                ..._categories!.map((cat) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter == cat.$1,
-                    onSelected: (_) {
-                      final newVal = _categoryFilter == cat.$1 ? '' : cat.$1;
-                      setState(() => _categoryFilter = newVal);
-                      _load();
-                    },
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-        ],
-        _buildDateRangePicker(loc),
-        const SizedBox(height: 10),
-      ],
-    );
-  }
-
   Widget _buildContent(TranslationPack loc) {
     final _ListingMetric? selectedItem = _selectedListingId == null
         ? null
@@ -364,7 +216,25 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          _buildFilterBar(loc),
+          TeqFilterBar(
+            filter: _filter,
+            onChanged: (f) {
+              setState(() {
+                _filter = f;
+                if (_selectedListingId != null &&
+                    !_filteredListings.any((m) => m.id == _selectedListingId)) {
+                  _selectedListingId = null;
+                }
+              });
+              _load();
+            },
+            showSubcategory: false,
+            showCity: false,
+            showCondition: false,
+            showSort: false,
+            showPriceRange: false,
+          ),
+          const SizedBox(height: 10),
 
           if (_listings.isNotEmpty) ...[
             // Horizontal Carousel for Selection
