@@ -149,9 +149,9 @@ def upgrade() -> None:
             sa.text("UPDATE listings SET subcategory = :canonical WHERE subcategory = :legacy"),
             {"canonical": canonical, "legacy": legacy},
         )
-        # Update streams
+        # Update live_streams
         conn.execute(
-            sa.text("UPDATE streams SET subcategory = :canonical WHERE subcategory = :legacy"),
+            sa.text("UPDATE live_streams SET subcategory = :canonical WHERE subcategory = :legacy"),
             {"canonical": canonical, "legacy": legacy},
         )
         # Update user_interests
