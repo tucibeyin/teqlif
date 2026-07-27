@@ -33,7 +33,7 @@ class GetListingQuery:
 
         if current_user_id and listing.user_id != current_user_id:
             try:
-                imp = ListingImpression(listing_id=listing.id, user_id=current_user_id, ip_address=ip_address)
+                imp = ListingImpression(listing_id=listing.id, user_id=current_user_id)
                 self.uow.session.add(imp)
                 await self.uow.session.commit()
             except Exception as exc:
