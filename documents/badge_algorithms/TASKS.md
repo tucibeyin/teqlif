@@ -39,9 +39,9 @@ Bu döküman, `PLAN.md` içerisinde tanımlanan mimari modernizasyon adımların
 ---
 
 ## 🚀 Faz 4: VPS Canlı Dağıtım ve İzleme (Staging & Deployment)
-- [ ] **4.1. Git Commit ve Deploys**
+- [x] **4.1. Git Commit ve Deploys**
   - [x] Yapılan tüm modernizasyonların lokalde test edilmesi ve GitHub `main` dalına push edilmesi.
-  - [ ] VPS sunucusunda `git pull` yapılması ve backend servislerinin (`sudo systemctl restart teqlif` / celery worker) yeniden başlatılması.
-- [ ] **4.2. Log ve Metrik Gözlemi**
-  - [ ] Gece 01:30 cron görevinin (veya manuel tetiklenen test koşusunun) worker loglarındaki `"rozet=X"` çıktısının izlenmesi ve rozet alan satıcı sayısındaki adil artışın gözlemlenmesi.
-  - [ ] Mobil uygulama üzerinden Keşfet akışı ile İlan Detay sayfaları arasındaki 🔥 Trend rozeti görsel tutarlılığının canlı test edilmesi.
+  - [x] VPS sunucusunda `git pull` yapılması ve backend servislerinin (`sudo systemctl restart teqlif` / celery worker) yeniden başlatılması.
+- [x] **4.2. Log ve Metrik Gözlemi**
+  - [x] Gece 01:30 cron görevinin (veya manuel tetiklenen test koşusunun) worker loglarındaki `"rozet=X"` çıktısının izlenmesi ve rozet alan satıcı sayısındaki adil artışın gözlemlenmesi.
+  - [x] Mobil uygulama üzerinden Keşfet akışı ile İlan Detay sayfaları arasındaki 🔥 Trend rozeti görsel tutarlılığının canlı test edilmesi.
