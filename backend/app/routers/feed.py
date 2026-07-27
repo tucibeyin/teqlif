@@ -225,7 +225,14 @@ async def get_hesitated_listings(
         r = listing_map.get(lid)
         if r is None:
             continue
-        imgs = r.image_urls or []
+
+        # image_urls Text kolonu — JSON string olarak saklanıyor, parse et
+        raw_urls = r.image_urls
+        try:
+            imgs = json.loads(raw_urls) if isinstance(raw_urls, str) else (raw_urls or [])
+        except Exception:
+            imgs = []
+
         photo = imgs[0] if imgs else r.image_url
         listings.append({
             "id": r.id,
