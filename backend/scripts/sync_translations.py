@@ -7,7 +7,7 @@ Kullanım (VPS'te):
     python scripts/sync_translations.py
 
 Ne yapar:
-  - mobile/lib/l10n/app_{tr,en,ar,ru}.arb dosyalarını okur
+  - documents/language/app_{tr,en,ar,ru}.arb dosyalarını okur
   - @-annotation ve @@locale satırlarını atlar
   - ARB'de bulunmayan opt_* option label'larını statik dict'ten ekler
   - translations tablosuna UPSERT eder (key, lang, value)
@@ -32,7 +32,7 @@ from app.database import AsyncSessionLocal
 from app.utils.redis_client import get_redis
 
 _LANGS = ["tr", "en", "ar", "ru"]
-_ARB_DIR = os.path.join(backend_dir, "..", "mobile", "lib", "l10n")
+_ARB_DIR = os.path.join(backend_dir, "..", "documents", "language")
 
 
 

@@ -156,6 +156,10 @@ async def lifespan(app: FastAPI):
     from app.core.i18n import I18nService
     I18nService.load_all()
 
+    # ARB bağımsız runtime: DB / Redis üzerinden çevirileri bellek ön belleğine yükle
+    from app.utils.i18n import preload_i18n_cache
+    await preload_i18n_cache()
+
     # DI Container'i başlat
     init_di()
     

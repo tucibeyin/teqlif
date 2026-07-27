@@ -7,11 +7,11 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
 backend_dir = os.path.join(project_root, "backend")
 alembic_dir = os.path.join(backend_dir, "alembic", "versions")
-mobile_l10n_dir = os.path.join(project_root, "mobile", "lib", "l10n")
+arb_dir = os.path.join(project_root, "documents", "language")
 
 
 def read_arb(lang):
-    path = os.path.join(mobile_l10n_dir, f"app_{lang}.arb")
+    path = os.path.join(arb_dir, f"app_{lang}.arb")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f), path
 

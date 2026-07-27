@@ -2,10 +2,10 @@ import os
 import sys
 import json
 
-mobile_l10n_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "mobile", "lib", "l10n")
+arb_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "documents", "language")
 
 def read_arb(lang):
-    with open(os.path.join(mobile_l10n_dir, f"app_{lang}.arb"), "r", encoding="utf-8") as f:
+    with open(os.path.join(arb_dir, f"app_{lang}.arb"), "r", encoding="utf-8") as f:
         return json.load(f)
 
 tr_arb = read_arb("tr")
