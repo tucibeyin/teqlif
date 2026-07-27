@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime, timedelta
 from sqlalchemy import select, or_
 from app.core.uow import AbstractUnitOfWork
 from app.models.listing import Listing
@@ -31,14 +32,12 @@ class GetMyListingsQuery:
                 )
             )
         if date_from:
-            from datetime import datetime
             try:
                 sd = datetime.strptime(date_from, '%Y-%m-%d')
                 query = query.where(Listing.created_at >= sd)
             except ValueError:
                 pass
         if date_to:
-            from datetime import datetime, timedelta
             try:
                 ed = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
                 query = query.where(Listing.created_at < ed)
