@@ -28,7 +28,8 @@ def _listing_dict(l: Listing, u: User, likes_count: int = 0, is_liked: bool = Fa
         "status": l.status.value,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
         "likes_count": likes_count,
-        "is_liked": is_liked,
+        "is_liked": True,
+        "is_favorited": True,
     }
 
 
@@ -83,14 +84,18 @@ async def add_favorite(listing_id: int, current_user: User = Depends(get_current
         raise NotFoundException(code="LISTING_NOT_FOUND")
     if listing.user_id == current_user.id:
         raise ForbiddenException(code="SELF_FAVORITE_FORBIDDEN")
-    existing = await db.scalar(
+    existing_fav = await db.scalar(
         select(Favorite).where(Favorite.user_id == current_user.id, Favorite.listing_id == listing_id)
     )
-    if existing:
-        return {"ok": True}
-    db.add(Favorite(user_id=current_user.id, listing_id=listing_id))
+    existing_like = await db.scalar(
+        select(ListingLike).where(ListingLike.user_id == current_user.id, ListingLike.listing_id == listing_id)
+    )
+    if not existing_fav:
+        db.add(Favorite(user_id=current_user.id, listing_id=listing_id))
+    if not existing_like:
+        db.add(ListingLike(user_id=current_user.id, listing_id=listing_id))
     await db.commit()
-    return {"ok": True}
+    return {"ok": True, "is_favorited": True, "is_liked": True}
 
 
 @router.delete("/{listing_id}")
@@ -98,7 +103,12 @@ async def remove_favorite(listing_id: int, current_user: User = Depends(get_curr
     fav = await db.scalar(
         select(Favorite).where(Favorite.user_id == current_user.id, Favorite.listing_id == listing_id)
     )
+    like_obj = await db.scalar(
+        select(ListingLike).where(ListingLike.user_id == current_user.id, ListingLike.listing_id == listing_id)
+    )
     if fav:
         await db.delete(fav)
-        await db.commit()
-    return {"ok": True}
+    if like_obj:
+        await db.delete(like_obj)
+    await db.commit()
+    return {"ok": True, "is_favorited": False, "is_liked": False}

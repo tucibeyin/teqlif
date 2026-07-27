@@ -19,6 +19,7 @@ import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../services/listing_service.dart';
+import '../providers/listing_interaction_provider.dart';
 import '../widgets/shimmer_loading.dart';
 import '../utils/once.dart';
 import '../utils/error_helper.dart';
@@ -694,16 +695,17 @@ class _GridItem extends ConsumerStatefulWidget {
 
 class _GridItemState extends ConsumerState<_GridItem> {
   late int _likesCount;
-  late bool _isLiked;
+
+  bool get _isLiked {
+    final id = widget.listing['id'] as int;
+    final map = ref.watch(listingInteractionCacheProvider);
+    return map[id] ?? ListingService.getCachedLike(id) ?? (widget.listing['is_liked'] as bool? ?? false);
+  }
 
   @override
   void initState() {
     super.initState();
-    final id = widget.listing['id'] as int;
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
-    _isLiked =
-        ListingService.getCachedLike(id) ??
-        (widget.listing['is_liked'] as bool? ?? false);
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
       if (cid != null) AnalyticsService.trackAdImpression(cid as int);
@@ -713,21 +715,12 @@ class _GridItemState extends ConsumerState<_GridItem> {
   @override
   void didUpdateWidget(_GridItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final id = widget.listing['id'] as int;
-    if (oldWidget.listing['id'] != id) {
-      // Farklı ilan → tamamen sıfırla
+    if (oldWidget.listing['id'] != widget.listing['id']) {
       _likesCount = widget.listing['likes_count'] as int? ?? 0;
-      _isLiked =
-          ListingService.getCachedLike(id) ??
-          (widget.listing['is_liked'] as bool? ?? false);
       if (widget.listing['is_sponsored'] == true) {
         final cid = widget.listing['campaign_id'];
         if (cid != null) AnalyticsService.trackAdImpression(cid as int);
       }
-    } else {
-      // Aynı ilan → cache'te güncelleme varsa uygula
-      final cached = ListingService.getCachedLike(id);
-      if (cached != null && cached != _isLiked) _isLiked = cached;
     }
   }
 
@@ -776,38 +769,21 @@ class _GridItemState extends ConsumerState<_GridItem> {
   Future<void> _toggleLike() async {
     // Optimistic UI
     HapticFeedback.lightImpact();
+    final id = widget.listing['id'] as int;
     final prevLiked = _isLiked;
     final prevCount = _likesCount;
     setState(() {
-      _isLiked = !_isLiked;
-      _likesCount += _isLiked ? 1 : -1;
+      _likesCount += prevLiked ? -1 : 1;
     });
     try {
-      final id = widget.listing['id'] as int;
-      final result = await ListingService.toggleLike(id);
+      final result = await ListingService.toggleFavoriteAndLike(id, prevLiked);
       final newCount = result['likes_count'] as int? ?? _likesCount;
-      final newLiked = result['is_liked'] as bool? ?? _isLiked;
+      final newLiked = result['is_liked'] as bool? ?? result['is_favorited'] as bool? ?? !prevLiked;
       widget.listing['likes_count'] = newCount;
       widget.listing['is_liked'] = newLiked;
-      // Favorites API ile senkronize et
-      final token = await StorageService.getToken();
-      if (token != null) {
-        if (newLiked) {
-          http.post(
-            Uri.parse('$kBaseUrl/favorites/$id'),
-            headers: {'Authorization': 'Bearer $token'},
-          );
-        } else {
-          http.delete(
-            Uri.parse('$kBaseUrl/favorites/$id'),
-            headers: {'Authorization': 'Bearer $token'},
-          );
-        }
-      }
       if (mounted) {
         setState(() {
           _likesCount = newCount;
-          _isLiked = newLiked;
         });
       }
     } catch (_) {
@@ -816,7 +792,6 @@ class _GridItemState extends ConsumerState<_GridItem> {
       widget.listing['is_liked'] = prevLiked;
       if (mounted) {
         setState(() {
-          _isLiked = prevLiked;
           _likesCount = prevCount;
         });
       }

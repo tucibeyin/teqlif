@@ -13,10 +13,16 @@ class ListingService {
   // Herhangi bir ekrandan toggleLike / setLikeCache çağrılınca güncellenir;
   // _GridItem.initState önce buraya bakarak en güncel durumu okur.
   static final Map<int, bool> _likeCache = {};
+  static dynamic interactionNotifier; // Riverpod StateNotifier referansı
 
   static bool? getCachedLike(int id) => _likeCache[id];
 
-  static void setLikeCache(int id, bool liked) => _likeCache[id] = liked;
+  static void setLikeCache(int id, bool liked) {
+    _likeCache[id] = liked;
+    try {
+      interactionNotifier?.setLike(id, liked);
+    } catch (_) {}
+  }
 
   static Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
@@ -98,9 +104,11 @@ class ListingService {
     }
   }
 
-  /// [listingId] ilanı için beğeni toggle eder (beğen / beğeniyi kaldır).
-  /// Güncel [likes_count] ve [is_liked] döner.
-  static Future<Map<String, dynamic>> toggleLike(int listingId) async {
+  /// Evrensel Etkileşim Metodu (Beğeni & Favori Atomik Senkronizasyon).
+  /// İyimser Arayüz (Optimistic UI) prensibiyle cache'i anında günceller.
+  static Future<Map<String, dynamic>> toggleFavoriteAndLike(int listingId, bool currentLiked) async {
+    final newStatus = !currentLiked;
+    setLikeCache(listingId, newStatus);
     try {
       final resp = await http.post(
         Uri.parse('$kBaseUrl/listings/$listingId/like'),
@@ -108,21 +116,29 @@ class ListingService {
       );
       if (resp.statusCode == 200) {
         final result = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-        _likeCache[listingId] = result['is_liked'] as bool? ?? false;
+        final confirmedStatus = result['is_liked'] as bool? ?? result['is_favorited'] as bool? ?? newStatus;
+        setLikeCache(listingId, confirmedStatus);
         return result;
       }
       final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       final errMap = body['error'] as Map?;
       throw AppException(
-        errMap?['message'] as String? ?? 'Beğeni gönderilemedi.',
+        errMap?['message'] as String? ?? 'İşlem gerçekleştirilemedi.',
         code: errMap?['code'] as String? ?? 'ERR_${resp.statusCode}',
         statusCode: resp.statusCode,
       );
     } catch (e, st) {
-      debugPrint('[ListingService] toggleLike hatası: $e');
+      setLikeCache(listingId, currentLiked);
+      debugPrint('[ListingService] toggleFavoriteAndLike hatası: $e');
       await Sentry.captureException(e, stackTrace: st);
       rethrow;
     }
+  }
+
+  /// Geriye dönük uyumluluk için toggleLike metodu evrensel toggleFavoriteAndLike'a yönlendirildi.
+  static Future<Map<String, dynamic>> toggleLike(int listingId) async {
+    final current = getCachedLike(listingId) ?? false;
+    return toggleFavoriteAndLike(listingId, current);
   }
 
   /// Verilen [listingId]'ye [amount] tutarında teklif verir.

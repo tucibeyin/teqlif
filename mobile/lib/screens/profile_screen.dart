@@ -25,6 +25,7 @@ import '../services/auth_service.dart';
 import '../services/cache_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/listing_service.dart';
+import '../providers/listing_interaction_provider.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
@@ -3382,7 +3383,13 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   ListingFilterState _filter = const ListingFilterState();
 
   List<dynamic> get _filteredListings {
-    var result = _listings;
+    final cacheMap = ref.watch(listingInteractionCacheProvider);
+    var result = _listings.where((item) {
+      final id = item['id'] as int;
+      final cached = cacheMap[id] ?? ListingService.getCachedLike(id);
+      if (cached == false) return false;
+      return true;
+    }).toList();
     if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
       final q = _filter.searchQuery!.toLowerCase();
       result = result.where((item) {
@@ -3469,20 +3476,11 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
 
   Future<void> _removeFavorite(dynamic listing) async {
     final id = listing['id'] as int;
-    final wasLiked = listing['is_liked'] as bool? ?? false;
     // Optimistic: anında listeden kaldır; cache'i hemen güncelle
     ListingService.setLikeCache(id, false);
     setState(() => _listings.removeWhere((l) => l['id'] == id));
-    final token = await StorageService.getToken();
-    if (token == null) return;
     try {
-      await http.delete(
-        Uri.parse('$kBaseUrl/favorites/$id'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (wasLiked) {
-        await ListingService.toggleLike(id);
-      }
+      await ListingService.toggleFavoriteAndLike(id, true);
     } catch (e) {
       LoggerService.instance.warning(
         'FavoritesScreen',

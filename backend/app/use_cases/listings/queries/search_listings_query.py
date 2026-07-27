@@ -6,6 +6,7 @@ from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.models.enums import ListingStatus
 from app.use_cases.listings.queries.listing_utils import _parse_image_urls
+from app.services.like_service import LikeService
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -87,6 +88,9 @@ class SearchListingsQuery:
         result = await db_session.execute(q_stmt)
         rows = result.all()
 
+        listing_ids = [listing.id for listing, _ in rows]
+        counts, liked_set = await LikeService.batch_listing_likes(db_session, listing_ids, current_user_id)
+
         return [
             {
                 "id": listing.id,
@@ -99,6 +103,9 @@ class SearchListingsQuery:
                 "image_urls": _parse_image_urls(listing.image_urls),
                 "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
                 "created_at": listing.created_at.isoformat() if listing.created_at else None,
+                "likes_count": counts.get(listing.id, 0),
+                "is_liked": listing.id in liked_set,
+                "is_favorited": listing.id in liked_set,
                 "user": {
                     "id": user.id,
                     "username": user.username,

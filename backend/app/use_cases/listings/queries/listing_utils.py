@@ -81,6 +81,7 @@ def _row_dict(
     impression_count: int = 0,
     seller_trust_score: Optional[float] = None,
     seller_influence_rank: Optional[str] = None,
+    is_favorited: bool = False,
 ) -> dict:
     return {
         "id": listing.id,
@@ -105,7 +106,8 @@ def _row_dict(
         "is_highlight": listing.is_highlight,
         "buy_it_now_price": listing.buy_it_now_price,
         "likes_count": likes_count,
-        "is_liked": is_liked,
+        "is_liked": is_liked or is_favorited,
+        "is_favorited": is_favorited or is_liked,
         "impression_count": impression_count,
         "is_sponsored": is_sponsored,
         "campaign_id": campaign_id,

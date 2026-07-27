@@ -19,6 +19,7 @@ import '../models/listing_offer.dart';
 import '../services/cache_service.dart';
 import '../services/category_service.dart';
 import '../services/listing_service.dart';
+import '../providers/listing_interaction_provider.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import '../services/auth_service.dart';
@@ -54,7 +55,6 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   late final PageController _pageCtrl;
   late final List<String> _images;
   int? _myUserId;
-  bool _isFavorited = false;
 
   bool get _isActive {
     final id = widget.listing['id'] as int?;
@@ -88,9 +88,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   ChewieController? _chewieCtrl;
   bool _videoInitialized = false;
 
-  // Beğeni state'i
+  // Beğeni ve Favori reaktif state'i
   late int _likesCount;
-  late bool _isLiked;
+  bool get _isLiked {
+    final id = widget.listing['id'] as int?;
+    if (id == null) return widget.listing['is_liked'] as bool? ?? false;
+    final map = ref.watch(listingInteractionCacheProvider);
+    return map[id] ?? ListingService.getCachedLike(id) ?? (widget.listing['is_liked'] as bool? ?? widget.listing['is_favorited'] as bool? ?? false);
+  }
+  bool get _isFavorited => _isLiked;
   bool _heartVisible = false;
   AnimationController? _heartAnimCtrl;
 
@@ -134,7 +140,6 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
 
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
-    _isLiked = widget.listing['is_liked'] as bool? ?? false;
     _videoUrl = widget.listing['video_url'] as String?;
     _campaignId = widget.listing['campaign_id'] as int?;
     if (_videoUrl != null) {
@@ -202,7 +207,6 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (token != null && _myUserId != null) {
       final listingUserId = (widget.listing['user'] as Map?)?['id'];
       if (listingUserId != _myUserId) {
-        _loadFavoriteStatus(token);
         _recordView(token);
       } else {
         // İlanın sahibiyiz — taze kampanya durumunu çek + bildirim cooldown'unu yükle
@@ -262,65 +266,40 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   Future<void> _toggleLike() async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    // Optimistic UI
     HapticFeedback.lightImpact();
     final listingId = widget.listing['id'] as int?;
+    if (listingId == null) return;
     final rawPrice = widget.listing['price'];
     final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
     final prevLiked = _isLiked;
     final prevCount = _likesCount;
-    final prevFav = _isFavorited;
     setState(() {
-      _isLiked = !_isLiked;
-      _likesCount += _isLiked ? 1 : -1;
-      // Beğeni ve favori senkron: beğenince favori de güncellenir
-      _isFavorited = _isLiked;
+      _likesCount += prevLiked ? -1 : 1;
     });
     try {
-      final id = widget.listing['id'] as int;
-      final result = await ListingService.toggleLike(id);
+      final result = await ListingService.toggleFavoriteAndLike(listingId, prevLiked);
       final newCount = result['likes_count'] as int? ?? _likesCount;
-      final newLiked = result['is_liked'] as bool? ?? _isLiked;
+      final newLiked = result['is_liked'] as bool? ?? result['is_favorited'] as bool? ?? !prevLiked;
       widget.listing['likes_count'] = newCount;
       widget.listing['is_liked'] = newLiked;
-      // Favorites API ile senkronize et — beğeni = favoriye ekle/çıkar
-      if (newLiked) {
-        await http.post(
-          Uri.parse('$kBaseUrl/favorites/$id'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-      } else {
-        await http.delete(
-          Uri.parse('$kBaseUrl/favorites/$id'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-      }
       if (mounted && context.mounted) {
         setState(() {
           _likesCount = newCount;
-          _isLiked = newLiked;
-          _isFavorited = newLiked;
         });
-        if (listingId != null) {
-          AnalyticsService.logInteraction(
-            itemId: listingId,
-            itemType: 'listing',
-            interactionType: newLiked ? 'listing_like' : 'listing_unlike',
-            pricePoint: pricePoint,
-            subcategory: widget.listing['subcategory'] as String? ?? '',
-          );
-        }
+        AnalyticsService.logInteraction(
+          itemId: listingId,
+          itemType: 'listing',
+          interactionType: newLiked ? 'listing_like' : 'listing_unlike',
+          pricePoint: pricePoint,
+          subcategory: widget.listing['subcategory'] as String? ?? '',
+        );
       }
     } catch (_) {
       widget.listing['likes_count'] = prevCount;
       widget.listing['is_liked'] = prevLiked;
       if (mounted && context.mounted) {
         setState(() {
-          _isLiked = prevLiked;
           _likesCount = prevCount;
-          _isFavorited = prevFav;
         });
       }
     }
@@ -346,71 +325,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     _heartAnimCtrl = null;
   }
 
-  Future<void> _loadFavoriteStatus(String token) async {
-    final id = widget.listing['id'];
-    try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/favorites/$id'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final isFav = data['is_favorited'] as bool? ?? false;
-        setState(() {
-          _isFavorited = isFav;
-          if (isFav) _isLiked = true;
-        });
-      }
-    } catch (_) {}
-  }
-
   Future<void> _toggleFavorite() async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    final id = widget.listing['id'] as int?;
-    final rawPrice = widget.listing['price'];
-    final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
-    try {
-      if (_isFavorited) {
-        await http.delete(
-          Uri.parse('$kBaseUrl/favorites/$id'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-        if (mounted && context.mounted) {
-          setState(() {
-            _isFavorited = false;
-            _isLiked = false;
-          });
-          if (id != null)
-            AnalyticsService.logInteraction(
-              itemId: id,
-              itemType: 'listing',
-              interactionType: 'listing_unfavorite',
-              pricePoint: pricePoint,
-              subcategory: widget.listing['subcategory'] as String? ?? '',
-            );
-        }
-      } else {
-        await http.post(
-          Uri.parse('$kBaseUrl/favorites/$id'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-        if (mounted && context.mounted) {
-          setState(() {
-            _isFavorited = true;
-            _isLiked = true;
-          });
-          if (id != null)
-            AnalyticsService.logInteraction(
-              itemId: id,
-              itemType: 'listing',
-              interactionType: 'listing_favorite',
-              pricePoint: pricePoint,
-              subcategory: widget.listing['subcategory'] as String? ?? '',
-            );
-        }
-      }
-    } catch (_) {}
+    return _toggleLike();
   }
 
   Future<void> _toggleActive() async {

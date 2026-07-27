@@ -225,13 +225,20 @@ class LikeService:
 
         liked_set: set[int] = set()
         if current_user_id:
+            from app.models.favorite import Favorite
             liked_rows = await db.execute(
                 select(ListingLike.listing_id).where(
                     ListingLike.listing_id.in_(listing_ids),
                     ListingLike.user_id == current_user_id,
                 )
             )
-            liked_set = {row.listing_id for row in liked_rows}
+            fav_rows = await db.execute(
+                select(Favorite.listing_id).where(
+                    Favorite.listing_id.in_(listing_ids),
+                    Favorite.user_id == current_user_id,
+                )
+            )
+            liked_set = {row.listing_id for row in liked_rows}.union({row.listing_id for row in fav_rows})
 
         return counts, liked_set
 
