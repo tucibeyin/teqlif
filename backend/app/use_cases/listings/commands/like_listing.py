@@ -49,5 +49,15 @@ class LikeListingCommand:
                 logger.info("[LikeListingCommand] Beğeni ve favoriye eklendi | listing_id=%s", listing_id)
 
             # TODO: EventBus publish ListingLikedEvent
+            await self.uow.session.flush()
+            from app.services.like_service import LikeService
+            counts, _ = await LikeService.batch_listing_likes(self.uow.session, [listing_id])
+            count = counts.get(listing_id, 0)
 
-        return {"id": listing_id, "action": action, "is_liked": action == "liked", "is_favorited": action == "liked"}
+        return {
+            "id": listing_id,
+            "action": action,
+            "is_liked": action == "liked",
+            "is_favorited": action == "liked",
+            "likes_count": count,
+        }

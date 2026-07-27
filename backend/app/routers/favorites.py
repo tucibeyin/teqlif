@@ -9,6 +9,7 @@ from app.models.like import ListingLike
 from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
+from app.services.like_service import LikeService
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 
 router = APIRouter(prefix="/api/favorites", tags=["favorites"])
@@ -48,20 +49,7 @@ async def get_favorites(current_user: User = Depends(get_current_user), db: Asyn
 
     listing_ids = [l.id for l, _, _ in rows]
 
-    # Toplam beğeni sayıları
-    like_counts_rows = (await db.execute(
-        select(ListingLike.listing_id, func.count().label("cnt"))
-        .where(ListingLike.listing_id.in_(listing_ids))
-        .group_by(ListingLike.listing_id)
-    )).all()
-    like_counts = {r.listing_id: r.cnt for r in like_counts_rows}
-
-    # Kullanıcının beğendikleri
-    liked_rows = (await db.execute(
-        select(ListingLike.listing_id)
-        .where(ListingLike.user_id == current_user.id, ListingLike.listing_id.in_(listing_ids))
-    )).scalars().all()
-    liked_set = set(liked_rows)
+    like_counts, liked_set = await LikeService.batch_listing_likes(db, listing_ids, current_user.id)
 
     return [
         _listing_dict(l, u, likes_count=like_counts.get(l.id, 0), is_liked=l.id in liked_set)

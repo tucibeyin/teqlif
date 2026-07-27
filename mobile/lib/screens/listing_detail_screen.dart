@@ -168,6 +168,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         }
       });
     _loadMyId();
+    _refreshListingData();
     _loadOffers();
     _loadSimilarListings();
   }
@@ -209,8 +210,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       if (listingUserId != _myUserId) {
         _recordView(token);
       } else {
-        // İlanın sahibiyiz — taze kampanya durumunu çek + bildirim cooldown'unu yükle
-        _refreshCampaignStatus(token);
+        // İlanın sahibiyiz — bildirim cooldown'unu yükle
         final listingId = widget.listing['id'] as int?;
         if (listingId != null) {
           _loadNotificationCooldown(listingId);
@@ -247,19 +247,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     } catch (_) {}
   }
 
-  Future<void> _refreshCampaignStatus(String token) async {
-    final id = widget.listing['id'];
+  Future<void> _refreshListingData() async {
+    final id = widget.listing['id'] as int?;
     if (id == null) return;
     try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$id'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final freshId = data['campaign_id'] as int?;
-        if (freshId != _campaignId) {
-          setState(() => _campaignId = freshId);
+      final data = await ListingService.getListingById(id);
+      if (data != null && mounted) {
+        setState(() {
+          widget.listing.addAll(data);
+          _likesCount = data['likes_count'] as int? ?? _likesCount;
+          _campaignId = data['campaign_id'] as int? ?? _campaignId;
+        });
+        ref.read(listingDetailProvider(id).notifier).initFromData(widget.listing);
+        final isLiked = data['is_liked'] as bool? ?? data['is_favorited'] as bool?;
+        if (isLiked != null) {
+          ListingService.setLikeCache(id, isLiked);
         }
       }
     } catch (_) {}

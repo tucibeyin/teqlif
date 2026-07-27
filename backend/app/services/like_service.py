@@ -18,7 +18,7 @@ Hata Yönetimi:
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, union_all, distinct
 
 from app.models.enums import ListingStatus
 from app.models.like import ListingLike, StoryLike, StreamLike
@@ -80,9 +80,8 @@ class LikeService:
             capture_exception(exc)
             raise DatabaseException(code="LIKE_FAILED")
 
-        count = await self.db.scalar(
-            select(func.count(ListingLike.id)).where(ListingLike.listing_id == listing_id)
-        ) or 0
+        counts, _ = await self.batch_listing_likes(self.db, [listing_id])
+        count = counts.get(listing_id, 0)
 
         logger.info(
             "[LIKES] İlan beğeni %s | listing_id=%s user_id=%s likes_count=%s",
@@ -216,16 +215,19 @@ class LikeService:
         if not listing_ids:
             return {}, set()
 
+        from app.models.favorite import Favorite
+        q1 = select(ListingLike.listing_id, ListingLike.user_id).where(ListingLike.listing_id.in_(listing_ids))
+        q2 = select(Favorite.listing_id, Favorite.user_id).where(Favorite.listing_id.in_(listing_ids))
+        union_sub = union_all(q1, q2).subquery()
+
         count_rows = await db.execute(
-            select(ListingLike.listing_id, func.count(ListingLike.id).label("cnt"))
-            .where(ListingLike.listing_id.in_(listing_ids))
-            .group_by(ListingLike.listing_id)
+            select(union_sub.c.listing_id, func.count(distinct(union_sub.c.user_id)).label("cnt"))
+            .group_by(union_sub.c.listing_id)
         )
         counts = {row.listing_id: row.cnt for row in count_rows}
 
         liked_set: set[int] = set()
         if current_user_id:
-            from app.models.favorite import Favorite
             liked_rows = await db.execute(
                 select(ListingLike.listing_id).where(
                     ListingLike.listing_id.in_(listing_ids),

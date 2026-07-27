@@ -53,3 +53,17 @@ Bu kontrol listesi, `PLAN.md` dokümanında detaylandırılan endüstri standard
   - [x] İlanlar sayfasına dönüldüğünde ilanın üzerindeki kalp ikonunun boş (`Icons.favorite_border`) olduğunun doğrulanması.
 - [x] **4.4 Analitik ve Telemetri Doğrulaması**
   - [x] `AnalyticsService.logInteraction` çağrılarının (`listing_favorite`, `listing_like`, vb.) mükerrer (çift) kayıt oluşturmadan tekil, doğru parametrelerle ve doğru subcategory bilgisiyle ClickHouse / Sentry / Firebase tarafına iletildiğinin kontrol edilmesi.
+
+---
+
+## 🔢 Faz 5: Sayım (Count) Tutarlılığı ve Detay Ekranı Senkronizasyonu (Count Consistency & Detail Sync)
+
+- [x] **5.1 Backend: `LikeListingCommand` Yanıtına `likes_count` Eklenmesi**
+  - [x] `backend/app/use_cases/listings/commands/like_listing.py`: İşlem (favorite/like ekleme veya çıkarma) bittikten sonra veritabanındaki güncel beğeni sayısının hesaplanıp API return sözlüğüne `"likes_count": count` olarak eklenmesi.
+- [x] **5.2 Backend: SQL Beğeni ve Favori Sayım Mantığının Birleştirilmesi (`batch_listing_likes`)**
+  - [x] `backend/app/services/like_service.py`: `batch_listing_likes` metodu içindeki count hesaplama sorgusunda, hem `ListingLike` hem de `Favorite` tablolarını kapsayacak şekilde benzersiz (`distinct user_id`) sayım yapılmasının (geriye dönük veri uyumluluğunun) sağlanması.
+- [x] **5.3 Mobil: İlan Detay Ekranında Reaktif Sayı Senkronizasyonu (`ListingDetailScreen`)**
+  - [x] `mobile/lib/screens/listing_detail_screen.dart`: Detay ekranı açıldığında API'dan en güncel ilan bilgisinin (`GET /listings/{id}`) çekilip ekrandaki `_likesCount` ve state'in anında senkronize edilmesi.
+- [x] **5.4 Doğrulama ve Test**
+  - [x] Backend (`pytest` veya manuel kontrol) ve Mobil (`flutter analyze`) testlerinin sıfır hata ile geçmesi.
+  - [x] İlana favori eklenip detay sayfasına girildiğinde sayının 0 değil, gerçek güncel değer (örn: 1) olarak sergilendiğinin doğrulanması.
