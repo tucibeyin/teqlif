@@ -43,10 +43,10 @@ def upgrade() -> None:
             ),
             {"canonical": canonical, "legacy": legacy},
         )
-    # categories tablosunda hâlâ kayıtlıysa deaktive et
+    # categories tablosunda hâlâ kayıtlıysa pasife al (CategoryStatus enum: 'active' | 'passive')
     conn.execute(
         sa.text(
-            "UPDATE categories SET status = 'inactive' "
+            "UPDATE categories SET status = 'passive' "
             "WHERE key = ANY(:keys)"
         ),
         {"keys": list(_SLUG_MAP.keys())},
