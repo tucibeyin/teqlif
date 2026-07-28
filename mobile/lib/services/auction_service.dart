@@ -8,10 +8,7 @@ import 'analytics_service.dart';
 class AuctionService {
   static Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return buildApiHeaders(token, json: true);
   }
 
   static Future<AuctionState> getState(int streamId) async {

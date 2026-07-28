@@ -12,7 +12,7 @@ from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword
-from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies
+from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies, invalidate_user_session_cache
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
 from app.utils.i18n import _get_t, _msg, get_locale
 from app.utils.redis_client import get_redis
@@ -198,6 +198,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
                 sa_update(User).where(User.id == user.id).values(onboarding_completed=True)
             )
             await db.commit()
+            await invalidate_user_session_cache(user.id)
 
     redis = await get_redis()
     token = create_access_token(user.id)
@@ -296,6 +297,7 @@ async def me(current_user: User = Depends(get_current_user), db: AsyncSession = 
                 sa_update(User).where(User.id == current_user.id).values(onboarding_completed=True)
             )
             await db.commit()
+            await invalidate_user_session_cache(current_user.id)
     return current_user
 
 
@@ -339,9 +341,6 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if hasattr(data, 'locale') and data.locale is not None:
-        current_user.locale = data.locale.strip()
-
     if data.is_private is not None:
         current_user.is_private = data.is_private
 
@@ -385,11 +384,37 @@ async def update_me(
         if _val is not None:
             setattr(current_user, _field, _val.strip() or None)
 
+    locale_changed = False
+    old_locale = current_user.locale
     if data.locale is not None:
-        current_user.locale = data.locale.strip()
+        new_locale = data.locale.strip()
+        new_updated_at = getattr(data, 'locale_updated_at', None)
+        
+        # Stale request koruması: Eğer DB'deki zaman damgası gelen zaman damgasından daha yeniyse yoksay.
+        should_update = True
+        if current_user.locale_updated_at is not None and new_updated_at is not None:
+            if new_updated_at < current_user.locale_updated_at:
+                should_update = False
+                logger.info(
+                    "[CALL_PROCESS][LOCALE] Stale locale update ignored for user=%d | db_time=%s req_time=%s",
+                    current_user.id, current_user.locale_updated_at, new_updated_at
+                )
+        
+        if should_update:
+            if current_user.locale != new_locale:
+                locale_changed = True
+            current_user.locale = new_locale
+            current_user.locale_updated_at = new_updated_at or datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(current_user)
+
+    if locale_changed:
+        from app.utils.i18n import invalidate_user_i18n_caches
+        await invalidate_user_i18n_caches(current_user.id, old_locale)
+    else:
+        await invalidate_user_session_cache(current_user.id)
+
     return current_user
 
 
@@ -722,6 +747,7 @@ async def change_password_confirm(
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrVerifyCodeInvalid", "Doğrulama kodu hatalı veya süresi dolmuş"))
     current_user.hashed_password = hash_password(data.new_password)
     await db.commit()
+    await invalidate_user_session_cache(current_user.id)
     await redis.delete(f"chpwd:{current_user.id}")
     return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgPasswordChanged", "Şifreniz başarıyla değiştirildi")}
 
@@ -742,6 +768,7 @@ async def update_notification_prefs(
     current_user.notification_prefs = data.model_dump()
     await db.commit()
     await db.refresh(current_user)
+    await invalidate_user_session_cache(current_user.id)
     return data
 
 
@@ -826,6 +853,7 @@ async def verify_email_change(
 
     current_user.email = stored["new_email"]
     await db.commit()
+    await invalidate_user_session_cache(current_user.id)
     await redis.delete(f"email_change:{current_user.id}")
 
     logger.info("[EMAIL_CHANGE] E-posta güncellendi | user_id=%s → %s", current_user.id, stored["new_email"])
@@ -862,6 +890,7 @@ async def request_phone_verification(
     current_user.phone = data.phone
     current_user.phone_verified = False
     await db.commit()
+    await invalidate_user_session_cache(current_user.id)
 
     # Token üret ve Redis'e kaydet
     token = secrets.token_urlsafe(32)
@@ -963,6 +992,7 @@ async def confirm_phone_verification(
             user.phone_verified = True
             await db.commit()
             await db.refresh(user)
+            await invalidate_user_session_cache(user.id)
             if user.pending_referred_by and user.is_verified:
                 try:
                     from app.services.referral_service import apply_referral
@@ -980,6 +1010,7 @@ async def confirm_phone_verification(
             user.phone = None
             user.phone_verified = False
             await db.commit()
+            await invalidate_user_session_cache(user.id)
         await redis.delete(f"phone_verify:{token}")
         return HTMLResponse(_phone_verify_html(
             "Numara Reddedildi",
@@ -1102,8 +1133,6 @@ async def save_device_tokens(
         values["voip_token"] = voip_token or None
         # Token güncellenince yaşını da kaydet (None ise silme — timestamp da temizle)
         values["voip_token_updated_at"] = datetime.now(timezone.utc) if voip_token else None
-    if current_user.locale != lang:
-        values["locale"] = lang
 
     if not token and not voip_token_sent:
         logger.warning(
@@ -1124,6 +1153,7 @@ async def save_device_tokens(
         )
         await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
         await db.commit()
+        await invalidate_user_session_cache(current_user.id)
     return {"ok": True}
 
 

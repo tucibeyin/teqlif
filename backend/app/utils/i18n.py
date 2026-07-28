@@ -156,3 +156,43 @@ def _msg(request, data, key: str, default: str) -> str:
     if not lang:
         lang = "tr"
     return _get_t(lang).get(key, default)
+
+
+async def invalidate_user_i18n_caches(user_id: int, old_locale: str = None) -> None:
+    """
+    Kullanıcının dili değiştiğinde ilgili önbellekleri temizler:
+    - Pazar trendleri ve istatistikler (cache:market_trends_*, cache:pro_insights:{uid}:*)
+    - Dile özel feed ve öneri önbellekleri (interests:{uid}, subcat_interests:{uid}, feed:foryou:{uid})
+    - Oturum önbelleği (session:user:{uid})
+    """
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        
+        # Kesin tuşları doğrudan sil
+        exact_keys = [
+            f"session:user:{user_id}",
+            f"interests:{user_id}",
+            f"subcat_interests:{user_id}",
+            f"feed:foryou:{user_id}",
+        ]
+        await redis.delete(*exact_keys)
+        
+        # Desen eşleşen tuşları bul ve sil
+        patterns = [
+            "cache:market_trends_*",
+            f"cache:pro_insights:{user_id}:*",
+        ]
+        for pattern in patterns:
+            keys_to_del = []
+            async for key in redis.scan_iter(match=pattern):
+                keys_to_del.append(key)
+                if len(keys_to_del) >= 100:
+                    await redis.delete(*keys_to_del)
+                    keys_to_del = []
+            if keys_to_del:
+                await redis.delete(*keys_to_del)
+                
+        logger.info("[I18N] User i18n caches invalidated for user_id=%d (old_locale=%s)", user_id, old_locale)
+    except Exception as e:
+        logger.warning("[I18N] Failed to invalidate i18n caches for user_id=%d: %s", user_id, e)

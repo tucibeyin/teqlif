@@ -11,10 +11,7 @@ import 'storage_service.dart';
 class StoryService {
   static Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return buildApiHeaders(token, json: true);
   }
 
   // ── Hybrid: video hikayeleri + canlı yayın harmanlama ─────────────────────

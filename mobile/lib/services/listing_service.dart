@@ -26,10 +26,7 @@ class ListingService {
 
   static Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return buildApiHeaders(token, json: true);
   }
 
   /// ClickHouse telemetri tabanlı epsilon-greedy kişiselleştirilmiş feed.

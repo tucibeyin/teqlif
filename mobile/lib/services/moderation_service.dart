@@ -6,10 +6,7 @@ import 'storage_service.dart';
 class ModerationService {
   static Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return buildApiHeaders(token, json: true);
   }
 
   static Future<void> mute(int streamId, String username) async {

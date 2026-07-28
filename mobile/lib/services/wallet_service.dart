@@ -5,6 +5,9 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
 class WalletService {
+  static Future<Map<String, String>> _headers(String? token, {bool json = false}) =>
+      buildApiHeaders(token, json: json);
+
   static Future<Map<String, dynamic>> sendGift({
     required int streamId,
     required String receiverUsername,
@@ -16,10 +19,7 @@ class WalletService {
       if (token == null) return {'ok': false, 'error': 'Oturum bulunamadı.'};
       final resp = await http.post(
         Uri.parse('$kBaseUrl/wallet/send-gift'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+        headers: await _headers(token, json: true),
         body: jsonEncode({
           'stream_id': streamId,
           'receiver_username': receiverUsername,
@@ -45,7 +45,7 @@ class WalletService {
       if (token == null) return null;
       final resp = await http.get(
         Uri.parse('$kBaseUrl/wallet/balance?limit=$limit'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: await _headers(token),
       );
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
@@ -60,7 +60,7 @@ class WalletService {
       if (token == null) return null;
       final resp = await http.get(
         Uri.parse('$kBaseUrl/wallet/transaction/$txnId'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: await _headers(token),
       );
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;

@@ -194,11 +194,11 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       final user = await AuthService.me();
       
-      // DB'deki locale bilgisini uygulama başlatılırken senkronize et
+      // DB'deki ile cihazdaki locale bilgisini akıllı zaman damgasıyla karşılaştırarak senkronize et
       if (user.locale != null && user.locale!.isNotEmpty && mounted) {
-        ProviderScope.containerOf(context, listen: false)
+        await ProviderScope.containerOf(context, listen: false)
             .read(localeProvider.notifier)
-            .setLocaleLocally(Locale(user.locale!));
+            .syncWithServer(user.locale!, user.localeUpdatedAt);
       }
       
       // Profil bilgisini locale kaydet ki session güncel kalsın

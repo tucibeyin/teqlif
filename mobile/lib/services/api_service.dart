@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
+import '../config/api.dart';
 import '../core/app_exception.dart';
 import 'cache_service.dart';
 import 'storage_service.dart';
@@ -32,10 +33,7 @@ class ApiService {
 
   static Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return buildApiHeaders(token, json: true);
   }
 
   /// SWR GET isteği — önce cache, sonra network olmak üzere iki kez emit eder.

@@ -27,12 +27,8 @@ class AuthService {
   // Aynı anda birden fazla refresh isteği olmasın (race condition önlemi)
   static Completer<RefreshOutcome>? _refreshInProgress;
   static Future<Map<String, String>> _headers({bool auth = false}) async {
-    final headers = {'Content-Type': 'application/json'};
-    if (auth) {
-      final token = await StorageService.getToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
+    final token = auth ? await StorageService.getToken() : null;
+    return buildApiHeaders(token, json: true);
   }
 
   static Future<String> register({

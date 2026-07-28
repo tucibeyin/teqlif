@@ -1,3 +1,4 @@
+import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -79,13 +80,80 @@ def decode_token(token: str) -> Optional[int]:
         return None
 
 
+_USER_SESSION_TTL = 900  # 15 dakika
+_USER_DATETIME_COLS = ("voip_token_updated_at", "created_at", "premium_since", "referral_code_expires_at", "locale_updated_at")
+
+
+def _serialize_user(user) -> dict:
+    data = {}
+    for col in user.__table__.columns:
+        if col.name == "preference_embedding":
+            data[col.name] = None
+            continue
+        val = getattr(user, col.name, None)
+        if isinstance(val, datetime):
+            data[col.name] = val.isoformat()
+        elif isinstance(val, UserStatus):
+            data[col.name] = val.value
+        else:
+            data[col.name] = val
+    return data
+
+
+async def _fetch_and_cache_user(db: AsyncSession, user_id: int):
+    from app.models.user import User
+    from app.utils.redis_client import get_redis
+    from app.core.logger import get_logger
+
+    try:
+        redis = await get_redis()
+        cached = await redis.get(f"session:user:{user_id}")
+        if cached:
+            data = json.loads(cached)
+            for dt_col in _USER_DATETIME_COLS:
+                val = data.get(dt_col)
+                if val and isinstance(val, str):
+                    try:
+                        data[dt_col] = datetime.fromisoformat(val.replace("Z", "+00:00"))
+                    except (ValueError, TypeError):
+                        data[dt_col] = None
+            if data.get("status"):
+                try:
+                    data["status"] = UserStatus(data["status"])
+                except ValueError:
+                    data["status"] = UserStatus.ACTIVE
+            user = User(**data)
+            return await db.merge(user, load=False)
+    except Exception as exc:
+        get_logger(__name__).debug("[AUTH] Redis session cache read error for user_id=%s: %s", user_id, exc)
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user and user.status == UserStatus.ACTIVE:
+        try:
+            redis = await get_redis()
+            data = _serialize_user(user)
+            await redis.setex(f"session:user:{user_id}", _USER_SESSION_TTL, json.dumps(data, ensure_ascii=False))
+        except Exception as exc:
+            get_logger(__name__).debug("[AUTH] Redis session cache write error for user_id=%s: %s", user_id, exc)
+    return user
+
+
+async def invalidate_user_session_cache(user_id: int) -> None:
+    """Kullanıcı bilgileri güncellendiğinde 15 dakikalık session cache'ini temizler."""
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        await redis.delete(f"session:user:{user_id}")
+    except Exception:
+        pass
+
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     cookie_token: Optional[str] = Cookie(default=None, alias=ACCESS_COOKIE),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.models.user import User
-
     # Bearer header öncelikli (mobile), sonra cookie (web tarayıcı)
     raw_token = (credentials.credentials if credentials else None) or cookie_token
     if not raw_token:
@@ -99,8 +167,7 @@ async def get_current_user(
         get_logger(__name__).error(f"[AUTH] get_current_user 401: Geçersiz token (raw_token={raw_token})")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz token")
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    user = await _fetch_and_cache_user(db, user_id)
 
     if not user or user.status != UserStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı")
@@ -114,8 +181,6 @@ async def get_current_user_optional(
     db: AsyncSession = Depends(get_db),
 ):
     """Token varsa kullanıcıyı döndürür, yoksa None (misafir erişimi için)."""
-    from app.models.user import User
-
     raw_token = (credentials.credentials if credentials else None) or cookie_token
     if not raw_token:
         return None
@@ -124,6 +189,5 @@ async def get_current_user_optional(
     if not user_id:
         return None
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    user = await _fetch_and_cache_user(db, user_id)
     return user if user and (user.status == UserStatus.ACTIVE) else None

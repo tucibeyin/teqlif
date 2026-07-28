@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.database import get_db
 from app.models.user import User
 from app.models.user_interest import UserInterest
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, invalidate_user_session_cache
 from app.utils.redis_client import get_redis
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
@@ -65,6 +65,7 @@ async def seed_interests(
         sa_update(User).where(User.id == current_user.id).values(onboarding_completed=True)
     )
     await db.commit()
+    await invalidate_user_session_cache(current_user.id)
 
     # Feed cache'i geçersiz kıl — yeni interests hemen etkili olsun
     try:
@@ -72,6 +73,7 @@ async def seed_interests(
         await redis.delete(
             f"interests:{current_user.id}",
             f"feed:{current_user.id}:0",
+            f"session:user:{current_user.id}",
         )
     except Exception:
         pass
