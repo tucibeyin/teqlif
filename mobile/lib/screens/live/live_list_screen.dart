@@ -7,6 +7,7 @@ import '../../config/api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/theme.dart';
+import '../../config/app_colors.dart';
 import '../../models/stream.dart';
 import '../../services/catalog_service.dart';
 import '../../services/connectivity_service.dart';
