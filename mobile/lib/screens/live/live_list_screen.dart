@@ -327,7 +327,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                     ..._subcategories.map(
                       (s) {
                          final sub = CatalogService.subcategoryByKey(s);
-                         final labelKey = sub?.labelKey ?? 'cat_$s';
+                         final labelKey = sub?.labelKey ?? 'subcat_$s';
                          return _SubcategoryChip(
                            label: loc.t(labelKey),
                            icon: getSubcategoryIcon(s),

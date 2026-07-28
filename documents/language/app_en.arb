@@ -4219,5 +4219,8 @@
   "filterCityAll": "All Cities",
   "conditionGood": "Good",
   "conditionFair": "Fair",
-  "conditionNeedsRepair": "Needs Repair"
+  "conditionNeedsRepair": "Needs Repair",
+  "liveSubcategoryLabel": "Subcategory",
+  "liveSubcategoryHint": "Select a subcategory",
+  "liveSubcategoryRequired": "Please select a subcategory"
 }

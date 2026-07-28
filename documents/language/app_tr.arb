@@ -4182,5 +4182,8 @@
   "filterCityAll": "Tüm Şehirler",
   "conditionGood": "İyi",
   "conditionFair": "Orta",
-  "conditionNeedsRepair": "Tamir Gerekli"
+  "conditionNeedsRepair": "Tamir Gerekli",
+  "liveSubcategoryLabel": "Alt Kategori",
+  "liveSubcategoryHint": "Bir alt kategori seçin",
+  "liveSubcategoryRequired": "Lütfen bir alt kategori seçin"
 }
