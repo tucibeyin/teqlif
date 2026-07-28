@@ -99,6 +99,9 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
     if (_filter.category != null && _filter.category!.isNotEmpty) {
       result = result.where((l) => l['category'] == _filter.category).toList();
     }
+    if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
+      result = result.where((l) => l['subcategory'] == _filter.subcategory).toList();
+    }
     if (_filter.dateFrom != null && _filter.dateTo != null) {
       final start = _filter.dateFrom!;
       final end = _filter.dateTo!.add(const Duration(days: 1));

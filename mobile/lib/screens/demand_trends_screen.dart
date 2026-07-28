@@ -49,7 +49,10 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
 
   List<Map<String, dynamic>> get _filteredTrends {
     if (_filter.category == null) return _trends;
-    return _trends.where((t) => t['category'] == _filter.category).toList();
+    return _trends.where((t) => 
+      t['category'] == _filter.category &&
+      (_filter.subcategory == null || t['subcategory'] == _filter.subcategory)
+    ).toList();
   }
 
   @override

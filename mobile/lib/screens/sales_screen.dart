@@ -41,7 +41,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     }
     if (_filter.category != null && _filter.category!.isNotEmpty) {
       result = result
-          .where((item) => (item['category'] as String?) == _filter.category)
+          .where((item) => 
+            (item['category'] as String?) == _filter.category &&
+            (_filter.subcategory == null || item['subcategory'] == _filter.subcategory)
+          )
           .toList();
     }
     if (_filter.dateFrom != null && _filter.dateTo != null) {

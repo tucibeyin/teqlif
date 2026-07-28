@@ -39,7 +39,10 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
       ).toList();
     }
     if (_filter.category != null && _filter.category!.isNotEmpty) {
-      result = result.where((item) => (item['category'] as String?) == _filter.category).toList();
+      result = result.where((item) => 
+        (item['category'] as String?) == _filter.category &&
+        (_filter.subcategory == null || item['subcategory'] == _filter.subcategory)
+      ).toList();
     }
     if (_filter.dateFrom != null && _filter.dateTo != null) {
       final start = _filter.dateFrom!;

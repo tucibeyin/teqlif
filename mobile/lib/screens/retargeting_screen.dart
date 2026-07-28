@@ -65,6 +65,9 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     if (_reportFilter.category != null && _reportFilter.category!.isNotEmpty) {
       result = result.where((l) => l['category'] == _reportFilter.category).toList();
     }
+    if (_reportFilter.subcategory != null && _reportFilter.subcategory!.isNotEmpty) {
+      result = result.where((l) => l['subcategory'] == _reportFilter.subcategory).toList();
+    }
     return result;
   }
 
@@ -78,6 +81,9 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     }
     if (_campaignFilter.category != null && _campaignFilter.category!.isNotEmpty) {
       result = result.where((l) => l['category'] == _campaignFilter.category).toList();
+    }
+    if (_campaignFilter.subcategory != null && _campaignFilter.subcategory!.isNotEmpty) {
+      result = result.where((l) => l['subcategory'] == _campaignFilter.subcategory).toList();
     }
     if (_campaignFilter.dateFrom != null && _campaignFilter.dateTo != null) {
       final start = _campaignFilter.dateFrom!;

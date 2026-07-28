@@ -87,6 +87,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_filter.category != null && _filter.category!.isNotEmpty) {
       r = r.where((l) => l['category'] == _filter.category).toList();
     }
+    if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
+      r = r.where((l) => l['subcategory'] == _filter.subcategory).toList();
+    }
     if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
       final q = _filter.searchQuery!.toLowerCase();
       r = r.where((l) {

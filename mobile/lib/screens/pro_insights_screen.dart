@@ -138,6 +138,9 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     if (_hotLeadsFilter.category != null && _hotLeadsFilter.category!.isNotEmpty) {
       r = r.where((m) => m['category'] == _hotLeadsFilter.category).toList();
     }
+    if (_hotLeadsFilter.subcategory != null && _hotLeadsFilter.subcategory!.isNotEmpty) {
+      r = r.where((m) => m['subcategory'] == _hotLeadsFilter.subcategory).toList();
+    }
     return r;
   }
 
@@ -149,6 +152,9 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     }
     if (_priceIntelFilter.category != null && _priceIntelFilter.category!.isNotEmpty) {
       r = r.where((m) => m['category'] == _priceIntelFilter.category).toList();
+    }
+    if (_priceIntelFilter.subcategory != null && _priceIntelFilter.subcategory!.isNotEmpty) {
+      r = r.where((m) => m['subcategory'] == _priceIntelFilter.subcategory).toList();
     }
     if (_priceIntelSignal.isNotEmpty) {
       r = r.where((m) => m['signal'] == _priceIntelSignal).toList();
