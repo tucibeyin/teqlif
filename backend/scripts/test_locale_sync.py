@@ -59,7 +59,7 @@ async def async_test_5_1_offline_recovery_locale_persistence():
     update_payload = UserUpdate(locale="en", locale_updated_at=offline_time)
 
     with patch("app.utils.i18n.invalidate_user_i18n_caches", new_callable=AsyncMock) as mock_i18n_cache, \
-         patch("app.utils.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
+         patch("app.routers.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
         
         updated_user = await update_me(data=update_payload, current_user=user, db=db)
         
@@ -85,7 +85,7 @@ async def async_test_5_1_race_condition_stale_timestamp():
     stale_payload = UserUpdate(locale="fr", locale_updated_at=older_time)
 
     with patch("app.utils.i18n.invalidate_user_i18n_caches", new_callable=AsyncMock) as mock_i18n_cache, \
-         patch("app.utils.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
+         patch("app.routers.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
         
         updated_user = await update_me(data=stale_payload, current_user=user, db=db)
         
@@ -114,7 +114,7 @@ async def async_test_5_2_side_effect_device_tokens():
     request = Request(scope)
     payload = {"token": "fcm_test_token_12345", "voip_token": "voip_test_token_67890"}
 
-    with patch("app.utils.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
+    with patch("app.routers.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
         res = await save_device_tokens(request=request, payload=payload, current_user=user, db=db)
         
         assert res == {"ok": True}
@@ -137,7 +137,7 @@ async def async_test_5_2_side_effect_notification_prefs():
     
     prefs_data = NotificationPrefs(email=True, push=False, sms=True)
     
-    with patch("app.utils.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
+    with patch("app.routers.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
         res = await update_notification_prefs(data=prefs_data, current_user=user, db=db)
         
         assert res.email is True and res.push is False
