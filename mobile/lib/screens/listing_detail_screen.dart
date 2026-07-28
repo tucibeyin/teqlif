@@ -2521,16 +2521,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             CircleAvatar(
               radius: 18,
               backgroundColor: AppColors.primaryBg(context),
-              child: Text(
-                offer.username.isNotEmpty
-                    ? offer.username[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  color: kPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
+              backgroundImage: offer.profileImageUrl != null
+                  ? NetworkImage(imgUrl(offer.profileImageUrl!))
+                  : null,
+              child: offer.profileImageUrl == null
+                  ? Text(
+                      offer.username.isNotEmpty
+                          ? offer.username[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: kPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 10),
             Expanded(
