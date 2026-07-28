@@ -584,7 +584,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
       
       if (!mounted) return;
       setState(() {
-        final newItems = raw.cast<Map<String, dynamic>>();
+        final newItems = List<Map<String, dynamic>>.from(raw);
         if (_preferredListingCategories.isNotEmpty) {
           newItems.sort((a, b) {
             final catA = a['category']?.toString() ?? '';

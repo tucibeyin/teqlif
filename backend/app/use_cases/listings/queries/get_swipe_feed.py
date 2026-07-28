@@ -28,7 +28,7 @@ class GetSwipeFeedQuery:
                 ],
                 else_=len(preferred_categories),
             )
-            order_clauses = [cat_rank, desc(nullslast(Listing.quality_score)), func.random()]
+            order_clauses = [cat_rank, nullslast(desc(Listing.quality_score)), func.random()]
         else:
             order_clauses = [func.random()]
 
