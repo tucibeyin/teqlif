@@ -33,20 +33,8 @@ class LiveListScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveListScreen> createState() => LiveListScreenState();
 }
 
-const _kCatEmoji = {
-  'chat': '🗣',
-  'electronics': '📱',
-  'fashion': '👗',
-  'home': '🏠',
-  'vehicles': '🚗',
-  'sports': '⚽',
-  'books': '📚',
-  'real_estate': '🏘️',
-  'other': '📦',
-};
-
 String _catLabel(String key, TranslationPack loc) {
-  final name = switch (key) {
+  return switch (key) {
     'chat'        => loc.t("cat_chat"),
     'electronics' => loc.t("cat_electronics"),
     'fashion'     => loc.t("cat_fashion"),
@@ -58,8 +46,6 @@ String _catLabel(String key, TranslationPack loc) {
     'other'       => loc.t("cat_other"),
     _             => key,
   };
-  final emoji = _kCatEmoji[key];
-  return emoji != null ? '$emoji $name' : name;
 }
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
