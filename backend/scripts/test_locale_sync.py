@@ -135,12 +135,12 @@ async def async_test_5_2_side_effect_notification_prefs():
     user = MockUser(id=1, locale="tr", locale_updated_at=datetime.now(timezone.utc))
     db = MockAsyncSession()
     
-    prefs_data = NotificationPrefs(email=True, push=False, sms=True)
+    prefs_data = NotificationPrefs(messages=True, follows=False)
     
     with patch("app.routers.auth.invalidate_user_session_cache", new_callable=AsyncMock) as mock_sess_cache:
         res = await update_notification_prefs(data=prefs_data, current_user=user, db=db)
         
-        assert res.email is True and res.push is False
+        assert res.messages is True and res.follows is False
         assert user.locale == "tr", f"Yan etki: bildirim ayarları güncellenirken dil değişti! Alınan: '{user.locale}'"
         assert db.committed is True
         assert db.refreshed is True
