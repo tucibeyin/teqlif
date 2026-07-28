@@ -2,177 +2,127 @@ import 'package:flutter/material.dart';
 
 IconData getSubcategoryIcon(String subcatKey) {
   switch (subcatKey) {
-    case 'computers_tablets':
-      return Icons.computer;
-    case 'phones_accessories':
+    // Vehicles
+    case 'automobile':
+    case 'electric_vehicle':
+      return Icons.directions_car;
+    case 'motorcycle':
+      return Icons.two_wheeler;
+    case 'van_minibus':
+    case 'truck':
+      return Icons.local_shipping;
+    case 'tractor':
+      return Icons.agriculture;
+    case 'boat':
+      return Icons.directions_boat;
+    case 'caravan':
+      return Icons.rv_hookup;
+    case 'spare_parts':
+      return Icons.build;
+      
+    // Electronics
+    case 'mobile_phone':
       return Icons.smartphone;
-    case 'cameras_lenses':
-      return Icons.camera_alt;
-    case 'audio_headphones':
-      return Icons.headphones;
-    case 'gaming_consoles':
-      return Icons.videogame_asset;
-    case 'smartwatches_wearables':
-      return Icons.watch;
-    case 'home_appliances':
-      return Icons.kitchen;
-    case 'televisions_monitors':
+    case 'laptop':
+      return Icons.computer;
+    case 'tablet':
+      return Icons.tablet_mac;
+    case 'tv_monitor':
       return Icons.tv;
-    case 'pc_components':
-      return Icons.memory;
-    case 'networking_routers':
-      return Icons.router;
-    case 'printers_scanners':
-      return Icons.print;
-    case 'drones_accessories':
-      return Icons.airplanemode_active;
+    case 'camera':
+    case 'photo_video':
+      return Icons.camera_alt;
+    case 'audio_system':
+      return Icons.speaker;
+    case 'smartwatch':
+      return Icons.watch;
+    case 'gaming_console':
+      return Icons.videogame_asset;
+    case 'other_electronics':
+      return Icons.devices_other;
+
+    // Real Estate
+    case 'apartment':
+    case 'house_villa':
+    case 'building':
+      return Icons.home;
+    case 'land':
+    case 'field_garden':
+      return Icons.landscape;
+    case 'office':
+      return Icons.storefront;
+    case 'warehouse':
+      return Icons.warehouse;
+
+    // Fashion
     case 'womens_clothing':
     case 'mens_clothing':
     case 'kids_clothing':
       return Icons.checkroom;
-    case 'shoes_sneakers':
+    case 'shoes':
       return Icons.do_not_step;
-    case 'jewelry_watches':
-      return Icons.diamond;
-    case 'bags_backpacks':
+    case 'bag':
       return Icons.shopping_bag;
-    case 'accessories_sunglasses':
-      return Icons.face;
-    case 'perfumes_fragrances':
-      return Icons.local_florist;
-    case 'makeup_cosmetics':
-      return Icons.brush;
-    case 'skincare_bodycare':
-      return Icons.spa;
-    case 'haircare_tools':
-      return Icons.content_cut;
-    case 'sedan':
-    case 'hatchback':
-    case 'suv':
-    case 'pickup_truck':
-    case 'minivan_van':
-    case 'coupe_sports_car':
-    case 'convertible':
-    case 'electric_hybrid':
-      return Icons.directions_car;
-    case 'motorcycles':
-    case 'scooters':
-      return Icons.two_wheeler;
-    case 'commercial_vehicles':
-      return Icons.local_shipping;
-    case 'rvs_campers':
-      return Icons.rv_hookup;
-    case 'boats_watercraft':
-      return Icons.directions_boat;
-    case 'car_parts_accessories':
-      return Icons.build;
-    case 'tires_wheels':
-      return Icons.radio_button_unchecked;
-    case 'motorcycle_parts_gear':
-      return Icons.sports_motorsports;
-    case 'apartments_flats':
-    case 'houses_villas':
-    case 'townhouses':
-      return Icons.home;
-    case 'commercial_properties':
-      return Icons.storefront;
-    case 'land_plots':
-      return Icons.landscape;
-    case 'vacation_rentals':
-      return Icons.holiday_village;
-    case 'rooms_for_rent':
+    case 'jewelry':
+      return Icons.diamond;
+    case 'watch':
+      return Icons.watch;
+    case 'accessories':
+      return Icons.style;
+
+    // Home
+    case 'furniture':
+      return Icons.chair;
+    case 'kitchen_equipment':
+      return Icons.kitchen;
+    case 'cleaning_equipment':
+      return Icons.cleaning_services;
+    case 'home_textile':
       return Icons.bed;
-    case 'garages_parking':
-      return Icons.local_parking;
-    case 'living_room_furniture':
-      return Icons.weekend;
-    case 'bedroom_furniture':
-      return Icons.bed;
-    case 'kitchen_dining_furniture':
-      return Icons.dining;
-    case 'office_furniture':
-      return Icons.desk;
-    case 'outdoor_patio_furniture':
+    case 'lighting':
+      return Icons.lightbulb;
+    case 'garden_outdoor':
       return Icons.deck;
-    case 'home_decor_accents':
-      return Icons.category;
-    case 'lighting_lamps':
-      return Icons.light;
-    case 'rugs_carpets':
-      return Icons.texture;
-    case 'storage_organization':
-      return Icons.inventory_2;
-    case 'bedding_linens':
-      return Icons.king_bed;
-    case 'dogs_puppies':
-    case 'cats_kittens':
-    case 'birds':
-    case 'fish_aquariums':
-    case 'small_pets':
-    case 'reptiles_amphibians':
-    case 'farm_animals':
-    case 'pet_supplies_accessories':
-      return Icons.pets;
-    case 'bicycles_cycling':
+
+    // Sports & Hobbies
+    case 'antique':
+      return Icons.history_edu;
+    case 'bicycle':
       return Icons.pedal_bike;
-    case 'fitness_gym_equipment':
+    case 'fitness_equipment':
       return Icons.fitness_center;
-    case 'camping_hiking_gear':
+    case 'outdoor_camping':
       return Icons.terrain;
-    case 'hunting_fishing_equipment':
-      return Icons.kayaking;
-    case 'winter_sports':
-      return Icons.snowboarding;
-    case 'water_sports':
-      return Icons.surfing;
-    case 'golf_equipment':
-      return Icons.sports_golf;
     case 'team_sports':
       return Icons.sports_soccer;
-    case 'racket_sports':
-      return Icons.sports_tennis;
-    case 'sports_apparel':
+    case 'outdoor_sports':
+      return Icons.directions_run;
+    case 'other_sports':
       return Icons.sports;
-    case 'toys_action_figures':
+
+    // Books & Others
+    case 'fiction':
+    case 'sci_fi':
+    case 'self_development':
+    case 'kids_books':
+    case 'school_books':
+    case 'arts_books':
+      return Icons.menu_book;
+    case 'magazine':
+      return Icons.auto_stories;
+
+    // Miscellaneous
+    case 'pet':
+      return Icons.pets;
+    case 'baby_toys':
       return Icons.smart_toy;
-    case 'board_games_puzzles':
-      return Icons.extension;
-    case 'video_games':
-      return Icons.videogame_asset;
-    case 'strollers_car_seats':
-      return Icons.child_care;
-    case 'baby_clothing_shoes':
-      return Icons.child_friendly;
-    case 'baby_feeding_nursing':
-      return Icons.baby_changing_station;
-    case 'nursery_furniture':
-      return Icons.crib;
-    case 'maternity_clothing':
-      return Icons.pregnant_woman;
-    case 'guitars_basses':
-    case 'keyboards_pianos':
-    case 'drums_percussion':
-    case 'dj_equipment':
-    case 'pro_audio_recording':
-    case 'wind_brass_instruments':
-    case 'string_instruments':
+    case 'musical_instrument':
       return Icons.music_note;
-    case 'books_novels':
-    case 'textbooks_education':
-    case 'magazines_comics':
-    case 'vinyl_records_cds':
-    case 'movies_dvds_blurays':
-      return Icons.book;
-    case 'antiques_vintage':
-      return Icons.history;
-    case 'coins_stamps':
-      return Icons.monetization_on;
-    case 'art_crafts':
-      return Icons.palette;
-    case 'tickets_events':
-      return Icons.local_activity;
-    case 'gift_cards_vouchers':
-      return Icons.card_giftcard;
+    case 'food_agriculture':
+      return Icons.restaurant;
+    case 'misc':
+      return Icons.category;
+      
     default:
       return Icons.category_outlined;
   }
