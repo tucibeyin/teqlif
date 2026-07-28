@@ -127,3 +127,17 @@ IconData getSubcategoryIcon(String subcatKey) {
       return Icons.category_outlined;
   }
 }
+
+IconData getCategoryIcon(String catKey) {
+  switch (catKey) {
+    case 'vehicles': return Icons.directions_car;
+    case 'electronics': return Icons.devices;
+    case 'real_estate': return Icons.home;
+    case 'fashion': return Icons.checkroom;
+    case 'home': return Icons.chair;
+    case 'sports': return Icons.fitness_center;
+    case 'books': return Icons.menu_book;
+    case 'other': return Icons.category;
+    default: return Icons.category_outlined;
+  }
+}

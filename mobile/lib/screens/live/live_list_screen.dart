@@ -302,6 +302,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                     (c) => _CategoryChip(
                       key: Key('live_list_chip_$c'),
                       label: _catLabel(c, loc),
+                      icon: getCategoryIcon(c),
                       active: _selectedCategory == c,
                       onTap: () => setState(() {
                         _selectedCategory = c;
@@ -567,12 +568,14 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
 class _CategoryChip extends ConsumerWidget {
   final String label;
+  final IconData? icon;
   final bool active;
   final VoidCallback onTap;
 
   const _CategoryChip({
     super.key,
     required this.label,
+    this.icon,
     required this.active,
     required this.onTap,
   });
@@ -584,7 +587,7 @@ class _CategoryChip extends ConsumerWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active ? kPrimary : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -593,13 +596,26 @@ class _CategoryChip extends ConsumerWidget {
             width: 1.5,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            color: active ? Colors.white : const Color(0xFF6B7280),
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: active ? Colors.white : kPrimary,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: active ? Colors.white : const Color(0xFF6B7280),
+              ),
+            ),
+          ],
         ),
       ),
     );
