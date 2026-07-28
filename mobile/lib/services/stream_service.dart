@@ -103,7 +103,8 @@ class StreamService {
 
   static Future<StreamTokenOut> startStream(
     String title,
-    String category, {
+    String category,
+    String subcategory, {
     String? captchaToken,
   }) async {
     final headers = await _headers();
@@ -114,7 +115,7 @@ class StreamService {
       () async => http.post(
         Uri.parse('$kBaseUrl/streams/start'),
         headers: headers,
-        body: jsonEncode({'title': title, 'category': category}),
+        body: jsonEncode({'title': title, 'category': category, 'subcategory': subcategory}),
       ),
     );
     return StreamTokenOut.fromJson(body);

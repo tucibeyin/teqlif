@@ -108,7 +108,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
   int _currentListingsPerGroup = 2;
   int? _dwellStart;        // mevcut yayın sayfasına girildiği an (ms epoch)
   int? _listingPageStart;  // mevcut ilan sayfasına girildiği an (ms epoch)
-  static const int _listingFastThresholdMs = 1500;
+
 
   int _listingPage = 0;
   bool _hasMoreListings = true;
@@ -323,10 +323,10 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     // ── Önceki sayfa ilansa ──
     if (_listingPageStart != null && prevItem is ListingFeedItem) {
       final dwellMs = now - _listingPageStart!;
-      final isFast = dwellMs < _listingFastThresholdMs;
+      final eventType = dwellMs < 1500 ? 'skip' : (dwellMs <= 4000 ? 'glance' : 'dwell');
       _recordListingEvent(
         prevItem.data['id'],
-        isFast ? 'skip' : 'dwell',
+        eventType,
         dwellMs: dwellMs,
         listingCategory: (prevItem.data['category'] as String?) ?? '',
         listingSubcategory: (prevItem.data['subcategory'] as String?) ?? '',
@@ -448,7 +448,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     _pendingEvents.add({
       'stream_id': stream.id,
       'listing_id': 0,
-      'event_type': dwellMs < 2000 ? 'skip' : 'dwell',
+      'event_type': dwellMs < 3000 ? 'skip' : (dwellMs <= 10000 ? 'glance' : 'dwell'),
       'dwell_ms': dwellMs,
       'stream_category': stream.category,
       'stream_subcategory': stream.subcategory ?? '',

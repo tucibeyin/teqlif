@@ -4,15 +4,19 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../../services/localization_service.dart";
 import '../../config/api.dart';
-import '../../config/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../config/theme.dart';
 import '../../models/stream.dart';
+import '../../services/catalog_service.dart';
 import '../../services/connectivity_service.dart';
+import '../../services/localization_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/ws_service.dart';
 import '../../services/stream_connection_manager.dart';
 import '../../utils/start_stream_helper.dart';
+import '../../utils/subcategory_icons.dart';
 import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
 import '../../widgets/network_error_widget.dart';
@@ -64,6 +68,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   bool _loading = true;
   bool _isLoggedIn = false;
   String? _selectedCategory; // null = Tümü
+  String? _selectedSubcategory; // null = Tümü
   String? _error;
   bool _isOffline = false;
 
@@ -188,14 +193,34 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     return _streams.map((s) => s.category).where(seen.add).toList();
   }
 
-  List<StreamOut> get _filtered => _selectedCategory == null
-      ? _streams
-      : _streams.where((s) => s.category == _selectedCategory).toList();
+  List<String> get _subcategories {
+    if (_selectedCategory == null) return [];
+    final seen = <String>{};
+    return _streams
+        .where((s) => s.category == _selectedCategory && (s.subcategory?.isNotEmpty ?? false))
+        .map((s) => s.subcategory!)
+        .where(seen.add)
+        .toList();
+  }
+
+  List<StreamOut> get _filtered {
+    if (_selectedCategory == null) return _streams;
+    var list = _streams.where((s) => s.category == _selectedCategory).toList();
+    if (_selectedSubcategory != null) {
+      list = list.where((s) => s.subcategory == _selectedSubcategory).toList();
+    }
+    return list;
+  }
 
   // Sana Özel: kategori filtresi de uygulanır
-  List<StreamOut> get _filteredRecommended => _selectedCategory == null
-      ? _recommended
-      : _recommended.where((s) => s.category == _selectedCategory).toList();
+  List<StreamOut> get _filteredRecommended {
+    if (_selectedCategory == null) return _recommended;
+    var list = _recommended.where((s) => s.category == _selectedCategory).toList();
+    if (_selectedSubcategory != null) {
+      list = list.where((s) => s.subcategory == _selectedSubcategory).toList();
+    }
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +278,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           const StoryTray(),
 
           // ── Kategori filtre çubuğu ──────────────────────────────
-          if (showFilter)
+          if (showFilter) ...[
             SizedBox(
               height: 44,
               child: ListView(
@@ -267,19 +292,53 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                     key: const Key('live_list_chip_tumü'),
                     label: loc.t("liveAllCategory"),
                     active: _selectedCategory == null,
-                    onTap: () => setState(() => _selectedCategory = null),
+                    onTap: () => setState(() {
+                      _selectedCategory = null;
+                      _selectedSubcategory = null;
+                    }),
                   ),
                   ...cats.map(
                     (c) => _CategoryChip(
                       key: Key('live_list_chip_$c'),
                       label: _catLabel(c, loc),
                       active: _selectedCategory == c,
-                      onTap: () => setState(() => _selectedCategory = c),
+                      onTap: () => setState(() {
+                        _selectedCategory = c;
+                        _selectedSubcategory = null;
+                      }),
                     ),
                   ),
                 ],
               ),
             ),
+            if (_selectedCategory != null && _subcategories.isNotEmpty)
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  children: [
+                    _SubcategoryChip(
+                      label: loc.t("liveAllCategory"),
+                      active: _selectedSubcategory == null,
+                      onTap: () => setState(() => _selectedSubcategory = null),
+                    ),
+                    ..._subcategories.map(
+                      (s) {
+                         final sub = CatalogService.subcategoryByKey(s);
+                         final labelKey = sub?.labelKey ?? 'cat_$s';
+                         return _SubcategoryChip(
+                           label: loc.t(labelKey),
+                           icon: getSubcategoryIcon(s),
+                           active: _selectedSubcategory == s,
+                           onTap: () => setState(() => _selectedSubcategory = s),
+                         );
+                      }
+                    ),
+                  ],
+                ),
+              ),
+          ],
           if (_error != null && _streams.isNotEmpty)
             StaleDataBanner(onRetry: _load),
           // ── İçerik ──────────────────────────────────────────────
@@ -540,6 +599,58 @@ class _CategoryChip extends ConsumerWidget {
             fontWeight: active ? FontWeight.w600 : FontWeight.w500,
             color: active ? Colors.white : const Color(0xFF6B7280),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubcategoryChip extends ConsumerWidget {
+  final String label;
+  final IconData? icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _SubcategoryChip({
+    super.key,
+    required this.label,
+    this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? kPrimary.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? kPrimary : const Color(0xFFE5E7EB),
+            width: 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: active ? kPrimary : const Color(0xFF6B7280)),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: active ? kPrimary : const Color(0xFF6B7280),
+              ),
+            ),
+          ],
         ),
       ),
     );

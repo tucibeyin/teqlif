@@ -34,6 +34,7 @@ router = APIRouter(prefix="/api/leads", tags=["leads"])
 async def audience_size(
     title: str = Query(..., min_length=2, max_length=200),
     category: str = Query(default=""),
+    subcategory: str = Query(default=""),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -48,6 +49,8 @@ async def audience_size(
     )
     if category:
         listing_q = listing_q.where(Listing.category == category)
+    if subcategory:
+        listing_q = listing_q.where(Listing.subcategory == subcategory)
     listing_q = listing_q.limit(500)
 
     result = await db.execute(listing_q)
@@ -144,6 +147,7 @@ async def blast_credits(
 class BlastRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     category: str = Field(default="")
+    subcategory: str = Field(default="")
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
     estimated_cost: int | None = Field(default=None, ge=0)
@@ -187,6 +191,8 @@ async def send_blast(
     )
     if body.category:
         listing_q = listing_q.where(Listing.category == body.category)
+    if body.subcategory:
+        listing_q = listing_q.where(Listing.subcategory == body.subcategory)
     listing_q = listing_q.limit(500)
     listing_result = await db.execute(listing_q)
     listing_ids = [r[0] for r in listing_result.fetchall()]
@@ -291,8 +297,17 @@ async def send_blast(
 
     # ── In-app bildirim kayıtları (tüm alıcılar — push almayacaklar dahil) ─────
     from app.models.notification import Notification
+    from app.utils.i18n import _get_t
+    
+    lang = current_user.locale if current_user.locale else "tr"
+    t = _get_t(lang)
+    
     notif_title = "lead_blast"
-    notif_body  = body.title
+    if body.subcategory:
+        sub_label = t.get(f"cat_{body.subcategory}", body.subcategory.upper())
+        notif_body = f"[{sub_label}] {body.title}"
+    else:
+        notif_body = body.title
     db.add_all([
         Notification(
             user_id=uid,

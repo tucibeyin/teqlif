@@ -69,6 +69,7 @@ class AnalyticsService {
   static Future<Map<String, dynamic>?> getAudienceSize({
     required String title,
     String category = '',
+    String subcategory = '',
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -77,6 +78,7 @@ class AnalyticsService {
         queryParameters: {
           'title': title,
           if (category.isNotEmpty) 'category': category,
+          if (subcategory.isNotEmpty) 'subcategory': subcategory,
         },
       );
       final resp = await http.get(
@@ -94,6 +96,7 @@ class AnalyticsService {
   static Future<Map<String, dynamic>?> sendLeadBlast({
     required String title,
     required String category,
+    String subcategory = '',
     required int estimatedCost,
     int? listingId,
     int? streamId,
@@ -111,10 +114,11 @@ class AnalyticsService {
         body: jsonEncode({
           'title': title,
           'category': category,
+          'subcategory': subcategory,
           'estimated_cost': estimatedCost,
-          'listing_id': ?listingId,
-          'stream_id': ?streamId,
-          'recipient_count': ?recipientCount,
+          if (listingId != null) 'listing_id': listingId,
+          if (streamId != null) 'stream_id': streamId,
+          if (recipientCount != null) 'recipient_count': recipientCount,
         }),
       );
       if (resp.statusCode == 202) {

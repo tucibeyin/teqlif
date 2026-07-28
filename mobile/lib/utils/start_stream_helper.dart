@@ -10,6 +10,8 @@ import '../services/client_logger.dart';
 import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
+import '../services/catalog_service.dart';
+import 'subcategory_icons.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
 
@@ -39,6 +41,8 @@ Future<void> showStartStreamDialog(
 
   final titleController = TextEditingController();
   String? selectedCategory;
+  String? selectedSubcategory;
+  bool hasSubcategories = false;
   String? errorText;
   int audienceSize = 0;
   double audienceCost = 0.0;
@@ -48,9 +52,10 @@ Future<void> showStartStreamDialog(
   Future<void> fetchAudience(
     String title,
     String? category,
+    String? subcategory,
     void Function(void Function()) setS,
   ) async {
-    if (title.length < 3 || category == null) {
+    if (title.length < 3 || category == null || (hasSubcategories && subcategory == null)) {
       setS(() {
         audienceSize = 0;
         audienceCost = 0.0;
@@ -62,6 +67,7 @@ Future<void> showStartStreamDialog(
     final result = await AnalyticsService.getAudienceSize(
       title: title,
       category: category,
+      subcategory: subcategory ?? '',
     );
     final size = (result?['audience_size'] as num?)?.toInt() ?? 0;
     final cost = (result?['estimated_cost'] as num?)?.toDouble() ?? 0.0;
@@ -72,7 +78,7 @@ Future<void> showStartStreamDialog(
     });
   }
 
-  final result = await showDialog<(String, String, bool, int)?>(
+  final result = await showDialog<(String, String, String, bool, int)?>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setStateDialog) => AlertDialog(
@@ -94,7 +100,7 @@ Future<void> showStartStreamDialog(
               onChanged: (v) {
                 debounceTimer?.cancel();
                 debounceTimer = Timer(const Duration(milliseconds: 800), () {
-                  fetchAudience(v.trim(), selectedCategory, setStateDialog);
+                  fetchAudience(v.trim(), selectedCategory, selectedSubcategory, setStateDialog);
                 });
               },
             ),
@@ -112,12 +118,44 @@ Future<void> showStartStreamDialog(
                   .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                   .toList(),
               onChanged: (v) {
-                setStateDialog(() => selectedCategory = v);
+                setStateDialog(() {
+                  selectedCategory = v;
+                  selectedSubcategory = null;
+                  hasSubcategories = CatalogService.subcategoriesFor(v ?? '').isNotEmpty;
+                });
                 debounceTimer?.cancel();
-                fetchAudience(
-                    titleController.text.trim(), v, setStateDialog);
+                fetchAudience(titleController.text.trim(), v, selectedSubcategory, setStateDialog);
               },
             ),
+            if (hasSubcategories) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: const Key('live_dialog_select_alt_kategori'),
+                value: selectedSubcategory,
+                decoration: InputDecoration(
+                  labelText: loc.t('liveSubcategoryLabel'),
+                  border: const OutlineInputBorder(),
+                ),
+                hint: Text(loc.t('liveSubcategoryHint')),
+                items: CatalogService.subcategoriesFor(selectedCategory ?? '')
+                    .map((s) => DropdownMenuItem(
+                          value: s.$1,
+                          child: Row(
+                            children: [
+                              Icon(getSubcategoryIcon(s.$1), size: 20, color: kPrimary),
+                              const SizedBox(width: 8),
+                              Text(loc.t(s.$2)),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  setStateDialog(() => selectedSubcategory = v);
+                  debounceTimer?.cancel();
+                  fetchAudience(titleController.text.trim(), selectedCategory, v, setStateDialog);
+                },
+              ),
+            ],
             if (audienceLoading) ...[
               const SizedBox(height: 12),
               Row(
@@ -154,6 +192,11 @@ Future<void> showStartStreamDialog(
                         () => errorText = loc.t('liveCategoryRequired'));
                     return;
                   }
+                  if (hasSubcategories && selectedSubcategory == null) {
+                    setStateDialog(
+                        () => errorText = loc.t('liveSubcategoryRequired'));
+                    return;
+                  }
                   final confirmed = await _showBlastConfirmDialog(
                     ctx,
                     loc: loc,
@@ -162,7 +205,7 @@ Future<void> showStartStreamDialog(
                   );
                   if (confirmed == true && ctx.mounted) {
                     Navigator.pop(
-                        ctx, (t, selectedCategory!, true, audienceCost.toInt()));
+                        ctx, (t, selectedCategory!, selectedSubcategory ?? '', true, audienceCost.toInt()));
                   }
                 },
                 child: Container(
@@ -247,8 +290,12 @@ Future<void> showStartStreamDialog(
                 setStateDialog(() => errorText = loc.t('liveCategoryRequired'));
                 return;
               }
+              if (hasSubcategories && selectedSubcategory == null) {
+                setStateDialog(() => errorText = loc.t('liveSubcategoryRequired'));
+                return;
+              }
               debounceTimer?.cancel();
-              Navigator.pop(ctx, (t, selectedCategory!, false, 0));
+              Navigator.pop(ctx, (t, selectedCategory!, selectedSubcategory ?? '', false, 0));
             },
             child: Text(
               audienceSize > 0 ? loc.t('btnStartNormal') : loc.t('liveStartBtn'),
@@ -261,10 +308,11 @@ Future<void> showStartStreamDialog(
   );
 
   if (result == null) return;
-  final (title, category, blastApproved, blastCost) = result;
+  final (title, category, subcategory, blastApproved, blastCost) = result;
 
   AnalyticsService.trackEvent('stream_start_intent', {
     'category': category,
+    'subcategory': subcategory,
     'blast_approved': blastApproved,
   });
 
@@ -287,6 +335,7 @@ Future<void> showStartStreamDialog(
     final streamToken = await StreamService.startStream(
       title,
       category,
+      subcategory,
       captchaToken: captchaToken,
     );
     if (!context.mounted) return;
