@@ -33,20 +33,7 @@ class LiveListScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveListScreen> createState() => LiveListScreenState();
 }
 
-String _catLabel(String key, TranslationPack loc) {
-  return switch (key) {
-    'chat'        => loc.t("cat_chat"),
-    'electronics' => loc.t("cat_electronics"),
-    'fashion'     => loc.t("cat_fashion"),
-    'home'        => loc.t("cat_home"),
-    'vehicles'    => loc.t("cat_vehicles"),
-    'sports'      => loc.t("cat_sports"),
-    'books'       => loc.t("cat_books"),
-    'real_estate' => loc.t("cat_real_estate"),
-    'other'       => loc.t("cat_other"),
-    _             => key,
-  };
-}
+
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
   List<StreamOut> _streams = []; // tüm aktif yayınlar (En Son)
@@ -287,7 +274,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   ...cats.map(
                     (c) => _CategoryChip(
                       key: Key('live_list_chip_$c'),
-                      label: _catLabel(c, loc),
+                      label: loc.t('cat_$c'),
                       icon: getCategoryIcon(c),
                       active: _selectedCategory == c,
                       onTap: () => setState(() {
@@ -470,7 +457,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 const SizedBox(width: 6),
                 Text(
                   _selectedCategory != null
-                      ? loc.t("categoryStreams", {"category": _catLabel(_selectedCategory!, loc)})
+                      ? loc.t("categoryStreams", {"category": loc.t('cat_$_selectedCategory')})
                       : loc.t("latestLiveStreams"),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
@@ -519,7 +506,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
               child: Text(
-                _catLabel(c, loc),
+                loc.t('cat_$c'),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
