@@ -52,10 +52,12 @@ class GetAuctionStateQuery:
         return {
             "status": data.get("status", "idle"),
             "item_name": data.get("item_name"),
+            "start_price": float(data["start_price"]) if data.get("start_price") else None,
+            "listing_id": int(data["listing_id"]) if data.get("listing_id") else None,
             "current_bid": float(data.get("current_bid", 0)),
             "current_bidder": data.get("current_bidder_name"),
             "current_bidder_name": data.get("current_bidder_name"),
             "bid_count": int(data.get("bid_count", 0)),
-            "buy_it_now_price": float(data.get("buy_it_now_price")) if data.get("buy_it_now_price") else None,
+            "buy_it_now_price": float(data["buy_it_now_price"]) if data.get("buy_it_now_price") else None,
             "bin_buyer_username": data.get("bin_buyer_username"),
         }
