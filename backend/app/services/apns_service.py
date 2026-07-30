@@ -27,10 +27,12 @@ def get_apns_client() -> APNs | None:
     try:
         if _use_token_auth():
             # Token-based auth (.p8) — süresi dolmaz, tercih edilen yöntem.
+            # aioapns 3.x: topic zorunlu, aksi halde constructor ValueError fırlatır.
             _apns_client = APNs(
                 key=settings.apns_key_path,
                 key_id=settings.apns_key_id,
                 team_id=settings.apns_team_id,
+                topic=f"{settings.ios_bundle_id}.voip",
                 use_sandbox=settings.apns_use_sandbox,
             )
             logger.info("[APNs] Client initialized (token-based / .p8).")
