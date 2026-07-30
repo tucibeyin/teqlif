@@ -585,6 +585,19 @@ class PushNotificationService {
       return;
     }
     _cpLog('PUSH', '_rejectCallById | callId=$callId status=$status');
+
+    // Optimistic reset: state clears immediately so the bar (or native CallKit UI) disappears
+    // without waiting for the HTTP round-trip (~1-2s). Mirrors the endCall() fire-and-forget
+    // pattern — user intent is unambiguous regardless of backend result.
+    final cs = CallService.instance;
+    if ((cs.state.value.status == CallStatus.ringing ||
+         cs.state.value.status == CallStatus.calling) &&
+        cs.state.value.callId?.toString() == callId) {
+      _cpLog('PUSH', '_rejectCallById → reset (optimistic) | callId=$callId');
+      cs.reset();
+    }
+
+    // Fire HTTP after reset — failure is non-fatal (state is already cleared).
     try {
       final token = await StorageService.getToken();
       if (token != null) {
@@ -598,16 +611,6 @@ class PushNotificationService {
       }
     } catch (e) {
       _cpLog('PUSH', '_rejectCallById ERROR | callId=$callId $e');
-    }
-    // Reset state unconditionally — user's decline intent is clear regardless of HTTP result.
-    // Without this, a 500 from backend leaves Android stuck in ringing state → BUSY_REJECT
-    // blocks the next incoming call.
-    final cs = CallService.instance;
-    if ((cs.state.value.status == CallStatus.ringing ||
-         cs.state.value.status == CallStatus.calling) &&
-        cs.state.value.callId?.toString() == callId) {
-      _cpLog('PUSH', '_rejectCallById → reset | callId=$callId');
-      cs.reset();
     }
   }
 

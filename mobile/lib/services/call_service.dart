@@ -1161,12 +1161,15 @@ class CallService {
       return;
     }
     final callId = state.value.callId;
-    if (callId != null) {
-      try {
-        await _post('/calls/$callId/reject');
-      } catch (_) {}
-    }
+    // Optimistic reset: bar disappears immediately; HTTP fires in background.
+    // Same pattern as endCall() fire-and-forget — user intent is unambiguous.
     reset();
+    if (callId != null) {
+      _post('/calls/$callId/reject').catchError((e) {
+        _cpLog('IN', 'rejectCall HTTP FAILED (non-fatal, state already reset) | callId=$callId $e');
+        return <String, dynamic>{};
+      });
+    }
   }
 
   // ── Called when caller gets call_accepted WS event ────────────────────────
@@ -1614,7 +1617,21 @@ class CallService {
   void _onRoomEvent(RoomEvent event) {
     _cpLog('LK', 'roomEvent | ${event.runtimeType}');
     if (event is RoomDisconnectedEvent) {
-      _cpLog('LK', 'RoomDisconnected → endCall (notifies backend)');
+      final s = state.value.status;
+      // Only call endCall() from an active-call state. Terminal states (rejected, missed,
+      // busy, noAnswer, ended, idle) and callee pre-connect (ringing) reach here via
+      // reset()/_disconnectRoom() cleanup — calling endCall() would double-post /end.
+      if (s == CallStatus.idle ||
+          s == CallStatus.ended ||
+          s == CallStatus.rejected ||
+          s == CallStatus.missed ||
+          s == CallStatus.busy ||
+          s == CallStatus.noAnswer ||
+          s == CallStatus.ringing) {
+        _cpLog('LK', 'RoomDisconnected SKIPPED | status=${s.name} (terminal or pre-connect — cleanup-triggered disconnect)');
+        return;
+      }
+      _cpLog('LK', 'RoomDisconnected → endCall | status=${s.name}');
       endCall();
     } else if (event is RoomReconnectingEvent) {
       _setState(state.value.copyWith(status: CallStatus.reconnecting));

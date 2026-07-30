@@ -212,6 +212,33 @@ async def _ws_broadcast(user_id: int, payload: dict) -> None:
         await ws_manager.store_call_event(user_id, payload)
 
 
+async def _send_call_push_bg(
+    callee_id: int,
+    caller_id: int,
+    call_id: int,
+    room_name: str,
+    callee_lk_token: str,
+) -> None:
+    """Background wrapper for _send_call_push with its own DB session.
+
+    Called via asyncio.create_task() so /start returns immediately without
+    blocking on push delivery (which can take 1-3s per provider).
+    """
+    try:
+        async with AsyncSessionLocal() as db:
+            callee = await db.get(User, callee_id)
+            caller = await db.get(User, caller_id)
+            if callee and caller:
+                await _send_call_push(callee, caller, call_id, room_name, callee_lk_token, db)
+            else:
+                logger.warning(
+                    "[CALL_PROCESS][PUSH] _send_call_push_bg: user not found | callee=%s caller=%s",
+                    callee_id, caller_id,
+                )
+    except Exception as exc:
+        logger.exception("[CALL_PROCESS][PUSH] _send_call_push_bg UNHANDLED | call_id=%d %s", call_id, exc)
+
+
 async def _send_call_push(
     callee: User,
     caller: User,
@@ -470,10 +497,14 @@ async def start_call(
         "[CALL_PROCESS][OUT] start_call: WS+Push (always) | call_id=%d callee=%d ws_connected=%s",
         call.id, callee_id, callee_ws_connected,
     )
-    await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
+    # Fire-and-forget: push runs in background after HTTP response is returned.
+    # Avoids 1-3s latency on /start when APNs/FCM is slow or unavailable.
+    asyncio.create_task(
+        _send_call_push_bg(callee_id, current_user.id, call.id, room_name, callee_token)
+    )
 
     logger.info(
-        "[CALL_PROCESS][OUT] start_call: WS+Push sent | call_id=%d callee=%d ws_connected=%s callee_voip=%s callee_fcm=%s",
+        "[CALL_PROCESS][OUT] start_call: WS+Push (bg task) | call_id=%d callee=%d ws_connected=%s callee_voip=%s callee_fcm=%s",
         call.id, callee_id,
         callee_ws_connected,
         "YES" if callee.voip_token else "NO",
