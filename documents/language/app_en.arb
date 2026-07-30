@@ -4222,5 +4222,12 @@
   "conditionNeedsRepair": "Needs Repair",
   "liveSubcategoryLabel": "Subcategory",
   "liveSubcategoryHint": "Select a subcategory",
-  "liveSubcategoryRequired": "Please select a subcategory"
+  "liveSubcategoryRequired": "Please select a subcategory",
+  "permCameraRequired": "Camera and microphone permission required to go on stage",
+  "permCameraRevoked": "Camera permission revoked",
+  "permMicRevoked": "Microphone permission revoked",
+  "permPermanentlyDenied": "Permission required for this feature. Enable it in Settings.",
+  "permOpenSettings": "Open Settings",
+  "micToggleFailed": "Could not toggle microphone",
+  "cameraToggleFailed": "Could not toggle camera"
 }

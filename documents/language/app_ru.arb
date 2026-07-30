@@ -4184,5 +4184,12 @@
   "filterCityAll": "Все города",
   "conditionGood": "Хорошее",
   "conditionFair": "Удовлетворительное",
-  "conditionNeedsRepair": "Требует ремонта"
+  "conditionNeedsRepair": "Требует ремонта",
+  "permCameraRequired": "Для выхода на сцену требуется доступ к камере и микрофону",
+  "permCameraRevoked": "Доступ к камере отозван",
+  "permMicRevoked": "Доступ к микрофону отозван",
+  "permPermanentlyDenied": "Для этой функции требуется разрешение. Включите его в настройках.",
+  "permOpenSettings": "Открыть настройки",
+  "micToggleFailed": "Не удалось переключить микрофон",
+  "cameraToggleFailed": "Не удалось переключить камеру"
 }

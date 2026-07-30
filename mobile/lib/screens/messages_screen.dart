@@ -1412,9 +1412,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           ? Permission.camera
           : Permission.photos;
       final status = await perm.status;
-      if (status.isPermanentlyDenied) {
-        await openAppSettings();
-      }
+      if (!status.isGranted) await openAppSettings();
       return;
     }
     final raw = await picked.readAsBytes();
@@ -1444,7 +1442,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       source: source,
       maxDuration: const Duration(seconds: 15),
     );
-    if (picked == null || !mounted) return;
+    if (picked == null) {
+      if (!mounted) return;
+      final perm = source == ImageSource.camera ? Permission.camera : Permission.videos;
+      final status = await perm.status;
+      if (!status.isGranted) await openAppSettings();
+      return;
+    }
+    if (!mounted) return;
     final info = await VideoCompress.getMediaInfo(picked.path);
     if ((info.duration ?? 0) / 1000 > 15) {
       if (!mounted) return;
@@ -1548,7 +1553,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (!mounted) return;
       final micStatus = await Permission.microphone.status;
       if (!mounted) return;
-      if (micStatus.isPermanentlyDenied) {
+      if (!micStatus.isGranted) {
         await openAppSettings();
       } else {
         TeqSnackBar.show(message: loc.t("voiceRecordFailed"));

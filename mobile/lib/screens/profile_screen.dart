@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -2557,6 +2558,16 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       ),
     );
     if (source == null || !mounted) return;
+
+    // T-HC-09: Kamera seçiminde izni önceden kontrol et
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
+    }
 
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, imageQuality: 85);

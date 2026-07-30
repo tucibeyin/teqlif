@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import '../config/api.dart';
@@ -614,6 +615,16 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   // ── Media helpers ──────────────────────────────────────────────────────────
 
   Future<void> _pickVideo(ImageSource source) async {
+    // T-HC-07: Kamera seçiminde izni önceden kontrol et
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
+    }
+
     XFile? picked;
     if (source == ImageSource.camera) {
       picked = await _picker.pickVideo(
@@ -698,6 +709,15 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     if (_images.length >= _maxImages) {
       TeqSnackBar.show(message: ref.read(localizationProvider).t('listingMaxPhotos'), type: TeqSnackBarType.warning);
       return;
+    }
+    // T-HC-07: Kamera seçiminde izni önceden kontrol et
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
     }
     if (source == ImageSource.gallery) {
       final picked = await _picker.pickMultiImage(

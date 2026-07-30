@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_compress/video_compress.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
@@ -79,6 +80,15 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   }
 
   Future<void> _pickAndUploadPhoto(_MediaSource source, TranslationPack loc) async {
+    // T-HC-08: Kamera seçiminde izni önceden kontrol et
+    if (source == _MediaSource.photoCamera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
+    }
     final XFile? picked = await ImagePicker().pickImage(
       source: source == _MediaSource.photoGallery
           ? ImageSource.gallery
@@ -110,6 +120,15 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   }
 
   Future<void> _pickAndUploadVideo(_MediaSource source, TranslationPack loc) async {
+    // T-HC-08: Kamera seçiminde izni önceden kontrol et
+    if (source == _MediaSource.videoCamera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
+    }
     final XFile? picked = await ImagePicker().pickVideo(
       source: source == _MediaSource.videoGallery
           ? ImageSource.gallery

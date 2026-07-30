@@ -21,6 +21,7 @@ import '../services/city_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
 
@@ -431,6 +432,15 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   }
 
   Future<void> _pickVideo(ImageSource source) async {
+    // T-HC-07: Kamera seçiminde izni önceden kontrol et
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
+    }
     XFile? picked;
     if (source == ImageSource.camera) {
       picked = await _picker.pickVideo(
@@ -528,6 +538,15 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         type: TeqSnackBarType.warning,
       );
       return;
+    }
+    // T-HC-07: Kamera seçiminde izni önceden kontrol et
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await openAppSettings();
+        return;
+      }
     }
     if (source == ImageSource.gallery) {
       final picked = await _picker.pickMultiImage(

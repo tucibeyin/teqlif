@@ -4185,5 +4185,12 @@
   "conditionNeedsRepair": "Tamir Gerekli",
   "liveSubcategoryLabel": "Alt Kategori",
   "liveSubcategoryHint": "Bir alt kategori seçin",
-  "liveSubcategoryRequired": "Lütfen bir alt kategori seçin"
+  "liveSubcategoryRequired": "Lütfen bir alt kategori seçin",
+  "permCameraRequired": "Sahneye çıkmak için kamera ve mikrofon izni gerekli",
+  "permCameraRevoked": "Kamera izni kaldırıldı",
+  "permMicRevoked": "Mikrofon izni kaldırıldı",
+  "permPermanentlyDenied": "Bu özellik için izin gerekli. Ayarlardan etkinleştir.",
+  "permOpenSettings": "Ayarları Aç",
+  "micToggleFailed": "Mikrofon değiştirilemedi",
+  "cameraToggleFailed": "Kamera değiştirilemedi"
 }

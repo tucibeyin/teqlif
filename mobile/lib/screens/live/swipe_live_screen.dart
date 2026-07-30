@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
@@ -726,7 +727,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
 }
 
 class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   
   bool _isCoHost = false;
   bool _isSelfCoHostValue = false;
@@ -788,6 +789,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     }
     
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    WidgetsBinding.instance.addObserver(this);
     widget.session.addListener(_onSessionUpdated);
     if (widget.isActive) {
       widget.onPipActionChanged?.call(_pipForBackGesture);
@@ -841,7 +843,34 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   @override
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (!_isSelfCoHost) return;
+    _recheckCoHostPermissionsAfterResume();
+  }
+
+  Future<void> _recheckCoHostPermissionsAfterResume() async {
+    final camStatus = await Permission.camera.status;
+    final micStatus = await Permission.microphone.status;
+    if (!mounted) return;
+    final loc = ref.read(localizationProvider);
+    final room = widget.session.room;
+    if (!camStatus.isGranted && _localVideoTrack != null) {
+      setState(() => _localVideoTrack = null);
+      try { await room?.localParticipant?.setCameraEnabled(false); } catch (_) {}
+      TeqToast.warning(loc.tOr('permCameraRevoked', 'Kamera izni kaldırıldı'));
+    }
+    if (!micStatus.isGranted && !_selfMuted) {
+      setState(() => _selfMuted = true);
+      try { await room?.localParticipant?.setMicrophoneEnabled(false); } catch (_) {}
+      TeqToast.warning(loc.tOr('permMicRevoked', 'Mikrofon izni kaldırıldı'));
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (!widget.session.isDisposed) {
       widget.session.removeListener(_onSessionUpdated);
     }
@@ -1016,6 +1045,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           _localVideoTrack = widget.session.localVideoTrack;
         });
       }
+    } on CoHostPermissionException catch (_) {
+      if (!mounted) return;
+      await openAppSettings();
     } catch (e) {
       if (mounted) {
         handleError(e, ref.read(localizationProvider));

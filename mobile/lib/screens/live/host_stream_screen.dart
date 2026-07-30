@@ -61,7 +61,8 @@ class HostStreamScreen extends ConsumerStatefulWidget {
   ConsumerState<HostStreamScreen> createState() => _HostStreamScreenState();
 }
 
-class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
+class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
+    with WidgetsBindingObserver {
   Room? _room;
   EventsListener<RoomEvent>? _listener;
   LocalVideoTrack? _localVideoTrack;
@@ -69,6 +70,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
   bool _cameraEnabled = true;
   bool _isFrontCamera = true;
   String? _error;
+  bool _permPermanentlyDenied = false;
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
@@ -100,12 +102,45 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     StreamService.isHosting = true;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
     if (widget.streamToken.category != 'chat') _loadBidHistory();
     if (!widget.blastApproved) _loadAudienceSize();
+  }
+
+  // T-HC-02: Uygulama ön plana döndüğünde izinleri kontrol et.
+  // Kullanıcı yayındayken sistem ayarlarından izni kaldırıp geri dönebilir.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (_room == null || _error != null) return;
+    _recheckPermissionsAfterResume();
+  }
+
+  Future<void> _recheckPermissionsAfterResume() async {
+    final camStatus = await Permission.camera.status;
+    final micStatus = await Permission.microphone.status;
+    if (!mounted) return;
+
+    final loc = ref.read(localizationProvider);
+
+    if (!camStatus.isGranted && _cameraEnabled) {
+      setState(() => _cameraEnabled = false);
+      try {
+        await _room?.localParticipant?.setCameraEnabled(false);
+      } catch (_) {}
+      TeqToast.warning(loc.tOr('permCameraRevoked', 'Kamera izni kaldırıldı'));
+    }
+    if (!micStatus.isGranted && _micEnabled) {
+      setState(() => _micEnabled = false);
+      try {
+        await _room?.localParticipant?.setMicrophoneEnabled(false);
+      } catch (_) {}
+      TeqToast.warning(loc.tOr('permMicRevoked', 'Mikrofon izni kaldırıldı'));
+    }
   }
 
   void _showGiftHud(String sender, String giftName, int cost) {
@@ -312,6 +347,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     StreamService.isHosting = false;
     _thumbTimer?.cancel();
     _whaleHudTimer?.cancel();
@@ -330,13 +366,18 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
     final camStatus = await Permission.camera.request();
     final micStatus = await Permission.microphone.request();
 
-    if (camStatus.isDenied || micStatus.isDenied) {
-      // Kamera/mikrofon izni yok — pending yayın kaydını temizle
+    // T-HC-01: isDenied vs isPermanentlyDenied ayrımı
+    final anyDenied = !camStatus.isGranted || !micStatus.isGranted;
+    if (anyDenied) {
+      final permanent = camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
       StreamService.cancelStream(widget.streamToken.streamId).ignore();
       if (mounted) {
         final loc = ref.read(localizationProvider);
         setState(() {
-          _error = loc.t('livePermissionRequired');
+          _permPermanentlyDenied = permanent;
+          _error = permanent
+              ? loc.tOr('permPermanentlyDenied', 'Bu özellik için izin gerekli. Ayarlardan etkinleştir.')
+              : loc.t('livePermissionRequired');
         });
       }
       return;
@@ -377,8 +418,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
         widget.streamToken.token,
       );
 
-      await room.localParticipant?.setCameraEnabled(true);
-      await room.localParticipant?.setMicrophoneEnabled(true);
+      // T-HC-05: Bağlantı başarılı ama kamera/mikrofon başlatma ayrı hata verebilir
+      try {
+        await room.localParticipant?.setCameraEnabled(true);
+        await room.localParticipant?.setMicrophoneEnabled(true);
+      } catch (e) {
+        _log.captureException(e, tag: 'HostConnect.trackEnable');
+        if (mounted) {
+          TeqToast.warning(ref.read(localizationProvider).tOr(
+              'cameraToggleFailed', 'Kamera başlatılamadı, yayın devam ediyor'));
+        }
+      }
 
       // Track zaten publish edilmişse hemen al
       LocalVideoTrack? foundTrack;
@@ -450,16 +500,31 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
     }
   }
 
+  // T-HC-03: State flip'i başarılı await sonrasına taşındı — hata olursa UI önceki durumda kalır
   Future<void> _toggleMic() async {
-    _micEnabled = !_micEnabled;
-    await _room?.localParticipant?.setMicrophoneEnabled(_micEnabled);
-    setState(() {});
+    final target = !_micEnabled;
+    try {
+      await _room?.localParticipant?.setMicrophoneEnabled(target);
+      if (mounted) setState(() => _micEnabled = target);
+    } catch (e) {
+      _log.captureException(e, tag: 'HostStream.toggleMic');
+      if (mounted) {
+        TeqToast.error(ref.read(localizationProvider).tOr('micToggleFailed', 'Mikrofon değiştirilemedi'));
+      }
+    }
   }
 
   Future<void> _toggleCamera() async {
-    _cameraEnabled = !_cameraEnabled;
-    await _room?.localParticipant?.setCameraEnabled(_cameraEnabled);
-    setState(() {});
+    final target = !_cameraEnabled;
+    try {
+      await _room?.localParticipant?.setCameraEnabled(target);
+      if (mounted) setState(() => _cameraEnabled = target);
+    } catch (e) {
+      _log.captureException(e, tag: 'HostStream.toggleCamera');
+      if (mounted) {
+        TeqToast.error(ref.read(localizationProvider).tOr('cameraToggleFailed', 'Kamera değiştirilemedi'));
+      }
+    }
   }
 
   Future<void> _switchCamera() async {
@@ -766,9 +831,15 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen> {
                             textAlign: TextAlign.center),
                         const SizedBox(height: 20),
                         ElevatedButton(
+                          onPressed: () async { await openAppSettings(); },
+                          child: Text(ref.read(localizationProvider).tOr('permOpenSettings', 'Ayarları Aç')),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
                           onPressed: () => Navigator.pushNamedAndRemoveUntil(
                               context, '/home', (route) => false),
-                          child: Text(ref.read(localizationProvider).t('btnGoBack')),
+                          child: Text(ref.read(localizationProvider).t('btnGoBack'),
+                              style: const TextStyle(color: Colors.white54)),
                         ),
                       ],
                     ),

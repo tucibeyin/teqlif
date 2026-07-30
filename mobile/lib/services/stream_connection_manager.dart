@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/stream.dart';
 import 'stream_service.dart';
 import 'background_audio_handler.dart';
@@ -311,14 +312,23 @@ class StreamConnectionManager with WidgetsBindingObserver {
     }
   }
 
+  /// T-HC-04: Kamera ve mikrofon izinlerini önce kontrol et; reddedilirse hata fırlat.
+  /// Caller (_acceptCoHostInvite) bu exception'ı yakalamalı ve kullanıcıya göstermeli.
   Future<void> upgradeToCoHost(int streamId, StreamTokenOut newToken) async {
     final session = getSession(streamId);
     if (session.room == null) return;
-    
-    // Bağlantı çakışmalarını önlemek için lock koyalım
+
+    // İzin kontrolü — yükseltmeden önce
+    final camStatus = await Permission.camera.request();
+    final micStatus = await Permission.microphone.request();
+    if (!camStatus.isGranted || !micStatus.isGranted) {
+      final permanent = camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
+      throw CoHostPermissionException(permanentlyDenied: permanent);
+    }
+
     if (_connectionLocks.contains(streamId)) return;
     _connectionLocks.add(streamId);
-    
+
     try {
       // Best Practice: Backend yetkiyi güncellediği için disconnect/connect yapmamıza gerek yok!
       // LiveKit SDK arkada yetki güncellemesini alacak, biz direkt kamerayı açabiliriz.
@@ -332,6 +342,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.update();
     } catch (e) {
       debugPrint('[StreamConnectionManager] upgradeToCoHost failed: $e');
+      rethrow;
     } finally {
       _connectionLocks.remove(streamId);
     }
@@ -370,4 +381,10 @@ class StreamConnectionManager with WidgetsBindingObserver {
   void dispose() {
     clearViewport();
   }
+}
+
+/// Co-host yükseltmesinde kamera/mikrofon izni yokken fırlatılır.
+class CoHostPermissionException implements Exception {
+  final bool permanentlyDenied;
+  const CoHostPermissionException({required this.permanentlyDenied});
 }

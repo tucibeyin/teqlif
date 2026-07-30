@@ -4183,5 +4183,12 @@
   "filterCityAll": "جميع المدن",
   "conditionGood": "جيد",
   "conditionFair": "مقبول",
-  "conditionNeedsRepair": "يحتاج إصلاح"
+  "conditionNeedsRepair": "يحتاج إصلاح",
+  "permCameraRequired": "الكاميرا والميكروفون مطلوبان للظهور على المسرح",
+  "permCameraRevoked": "تم سحب إذن الكاميرا",
+  "permMicRevoked": "تم سحب إذن الميكروفون",
+  "permPermanentlyDenied": "الإذن مطلوب لهذه الميزة. فعّله من الإعدادات.",
+  "permOpenSettings": "فتح الإعدادات",
+  "micToggleFailed": "تعذّر تبديل الميكروفون",
+  "cameraToggleFailed": "تعذّر تبديل الكاميرا"
 }
