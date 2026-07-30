@@ -101,15 +101,12 @@
 - [x] `get_current_user`'a `request: Request` parametresi eklendi; `request.state.user = user` set ediliyor
 - [x] `error_handlers.py`'de `user_label = @username#id` formatına geçildi (her iki handler)
 
-### T-12: Flutter — Sistem mute WS event mesajı
-**Dosya:** `mobile/lib/screens/live/swipe_live_screen.dart` (ve viewer_stream_screen eğer varsa)
-- [ ] `MUTED` WS event handler'ında `source` alanını kontrol et:
-  ```dart
-  if (msg["source"] == "system") {
-    TeqToast.warning(loc.t('bidFraudDetected'));
-  }
-  ```
-- [ ] `bidFraudDetected` ARB key'ini tüm dil dosyalarına ekle
+### T-12: Flutter — Sistem mute WS event mesajı ✅
+**Dosya:** `mobile/lib/widgets/chat_panel.dart`
+- [x] `muted` WS event handler'ında `source == 'system'` kontrolü eklendi
+- [x] `TeqToast.warning(loc.t('bidFraudDetected'))` çağrısı eklendi
+- [x] `teq_toast.dart` import'u eklendi
+- [ ] `bidFraudDetected` key'i translations tablosuna eklenmeli (SQL aşağıda)
 
 ### T-13: Flutter — Feed poller guard
 **Dosya:** `mobile/lib/screens/live/live_list_screen.dart` veya `swipe_live_screen.dart`

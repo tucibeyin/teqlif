@@ -16,6 +16,7 @@ import '../services/analytics_service.dart';
 import '../services/auth_service.dart' show AuthService, RefreshOutcome;
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 
 final _log = LoggerService.instance;
 
@@ -415,6 +416,9 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
           } else if (json['type'] == 'muted') {
             if (mounted) setState(() => _selfMuted = true);
             eventType = 'muted';
+            if (json['source'] == 'system') {
+              TeqToast.warning(loc.t('bidFraudDetected'));
+            }
           } else if (json['type'] == 'unmuted') {
             if (mounted) setState(() => _selfMuted = false);
             eventType = 'unmuted';
