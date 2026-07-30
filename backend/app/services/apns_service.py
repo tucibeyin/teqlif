@@ -7,6 +7,10 @@ from app.core.logger import get_logger
 logger = get_logger(__name__)
 
 # Global APNs client instance
+# UYARI: Sertifika bazlı auth (.pem) kullanılıyor — her yıl yenilenmesi gerekir.
+# Sertifika süresi dolarsa tüm iOS VoIP push'ları sessizce durur.
+# Uzun vadede token-based auth (.p8 key, süresi dolmaz) önerilir:
+#   APNs(key=settings.apns_key_path, key_id=..., team_id=..., topic=..., use_sandbox=...)
 _apns_client: APNs | None = None
 _apns_last_failure: float = 0.0
 _APNS_RETRY_COOLDOWN: int = 60  # seconds — failed init sonrası spam retry'ı önler

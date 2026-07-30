@@ -57,29 +57,88 @@ import Security
   // PKPushRegistry callback'i app kapalıyken de tetiklenir; Keychain'den
   // auth token'ı okuyarak doğrudan URLSession ile backend'e kaydeder.
 
-  private let kVoIPTokenKey = "teqlif_voip_token"   // UserDefaults backup
-  private let kBackendURL   = "https://www.teqlif.com/api/auth/device-tokens"
+  private let kVoIPTokenKey    = "teqlif_voip_token"   // UserDefaults backup
+  private let kBackendURL      = "https://www.teqlif.com/api/auth/device-tokens"
+  private let kRefreshURL      = "https://www.teqlif.com/api/auth/refresh"
+  private let kAuthTokenKey    = "teqlif_token"
+  private let kRefreshTokenKey = "teqlif_refresh_token"
 
-  /// flutter_secure_storage Keychain'inden JWT auth token'ını okur.
-  private func readAuthToken() -> String? {
+  /// flutter_secure_storage Keychain'inden verilen key'e ait değeri okur.
+  private func readKeychainValue(_ key: String) -> String? {
     let query: [CFString: Any] = [
-      kSecClass:            kSecClassGenericPassword,
-      kSecAttrService:      "flutter_secure_storage",
-      kSecAttrAccount:      "teqlif_token",
-      kSecReturnData:       true,
-      kSecMatchLimit:       kSecMatchLimitOne
+      kSecClass:       kSecClassGenericPassword,
+      kSecAttrService: "flutter_secure_storage",
+      kSecAttrAccount: key as CFString,
+      kSecReturnData:  true,
+      kSecMatchLimit:  kSecMatchLimitOne,
     ]
     var result: AnyObject?
     let status = SecItemCopyMatching(query as CFDictionary, &result)
     guard status == errSecSuccess,
           let data = result as? Foundation.Data,
-          let token = String(data: data, encoding: .utf8) else {
-      return nil
+          let value = String(data: data, encoding: .utf8) else { return nil }
+    return value
+  }
+
+  /// flutter_secure_storage formatında Keychain'e değer yazar (update veya add).
+  private func saveKeychainValue(_ key: String, value: String) {
+    guard let data = value.data(using: .utf8) else { return }
+    let query: [CFString: Any] = [
+      kSecClass:       kSecClassGenericPassword,
+      kSecAttrService: "flutter_secure_storage",
+      kSecAttrAccount: key as CFString,
+    ]
+    let attrs: [CFString: Any] = [kSecValueData: data]
+    let status = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
+    if status == errSecItemNotFound {
+      var addQuery = query
+      addQuery[kSecValueData] = data
+      SecItemAdd(addQuery as CFDictionary, nil)
     }
-    return token
+  }
+
+  private func readAuthToken()    -> String? { readKeychainValue(kAuthTokenKey) }
+  private func readRefreshToken() -> String? { readKeychainValue(kRefreshTokenKey) }
+
+  /// 401 alındığında refresh token ile yeni access token alır, Keychain'e yazar
+  /// ve VoIP token kaydını bir kez daha dener.
+  private func refreshAuthTokenAndRetry(voipToken: String) {
+    guard let refreshToken = readRefreshToken() else {
+      print("[PushKit][Native] Refresh token yok — retry yapılamıyor")
+      return
+    }
+    guard let url = URL(string: kRefreshURL) else { return }
+
+    var req = URLRequest(url: url)
+    req.httpMethod      = "POST"
+    req.timeoutInterval = 15
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = ["refresh_token": refreshToken]
+    guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return }
+    req.httpBody = bodyData
+
+    URLSession.shared.dataTask(with: req) { [weak self] data, response, error in
+      guard let self = self else { return }
+      guard error == nil,
+            let http = response as? HTTPURLResponse, http.statusCode == 200,
+            let data = data,
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let newAccess = json["access_token"] as? String else {
+        print("[PushKit][Native] Token refresh başarısız — VoIP token kaydı iptal")
+        return
+      }
+      self.saveKeychainValue(self.kAuthTokenKey, value: newAccess)
+      if let newRefresh = json["refresh_token"] as? String {
+        self.saveKeychainValue(self.kRefreshTokenKey, value: newRefresh)
+      }
+      print("[PushKit][Native] Token refresh başarılı — VoIP token kaydı yeniden deneniyor")
+      self.sendVoIPTokenToBackend(voipToken)
+    }.resume()
   }
 
   /// Token'ı backend'e URLSession ile gönderir — Flutter bridge gerektirmez.
+  /// 401 alınırsa refresh token ile bir kez retry yapar.
   /// voipToken boş string ise backend token'ı DB'den temizler.
   private func sendVoIPTokenToBackend(_ voipToken: String) {
     guard let authToken = readAuthToken() else {
@@ -89,8 +148,8 @@ import Security
     guard let url = URL(string: kBackendURL) else { return }
 
     var req = URLRequest(url: url)
-    req.httpMethod          = "POST"
-    req.timeoutInterval     = 15
+    req.httpMethod      = "POST"
+    req.timeoutInterval = 15
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
 
@@ -98,11 +157,15 @@ import Security
     guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return }
     req.httpBody = bodyData
 
-    URLSession.shared.dataTask(with: req) { _, response, error in
+    URLSession.shared.dataTask(with: req) { [weak self] _, response, error in
       if let error = error {
         print("[PushKit][Native] Token kayıt hatası: \(error.localizedDescription)")
       } else if let http = response as? HTTPURLResponse {
         print("[PushKit][Native] Token kayıt yanıtı: \(http.statusCode) | token=\(voipToken.prefix(10))...")
+        if http.statusCode == 401 {
+          print("[PushKit][Native] 401 → token refresh deneniyor")
+          self?.refreshAuthTokenAndRetry(voipToken: voipToken)
+        }
       }
     }.resume()
   }
@@ -145,12 +208,16 @@ import Security
       let dictionary = payload.dictionaryPayload
 
       // APNs'ten gelen verileri alıyoruz
-      let callId = dictionary["call_id"] as? String ?? dictionary["id"] as? String ?? ""
+      let callId        = dictionary["call_id"] as? String ?? dictionary["id"] as? String ?? ""
       let callerUsername = dictionary["caller_username"] as? String ?? dictionary["nameCaller"] as? String ?? "Bilinmeyen"
-      let callerAvatar = dictionary["caller_avatar"] as? String ?? dictionary["avatar"] as? String ?? "https://i.pravatar.cc/100"
-      let roomName = dictionary["room_name"] as? String ?? ""
-      let callerId = dictionary["caller_id"] as? String ?? ""
-      print("[CALL_PROCESS][\(ts())][PUSH] VoIP Push received | callId=\(callId) caller=\(callerUsername) roomName=\(roomName) callerId=\(callerId)")
+      let callerAvatar  = dictionary["caller_avatar"] as? String ?? dictionary["avatar"] as? String ?? "https://i.pravatar.cc/100"
+      let roomName      = dictionary["room_name"] as? String ?? ""
+      let callerId      = dictionary["caller_id"] as? String ?? ""
+      // Self-contained payload: callee_token + livekit_url artık VoIP push içinde geliyor.
+      // Dart tarafı bunları extra'dan okuyarak HTTP fetch'i atlayabilir.
+      let livekitUrl   = dictionary["livekit_url"] as? String ?? ""
+      let calleeToken  = dictionary["callee_token"] as? String ?? ""
+      print("[CALL_PROCESS][\(ts())][PUSH] VoIP Push received | callId=\(callId) caller=\(callerUsername) roomName=\(roomName) callerId=\(callerId) hasCalleeToken=\(!calleeToken.isEmpty)")
       
       // CallId'yi UUID'ye çeviriyoruz (Dart _formatToUuid ile aynı: sola sıfır dolgulama)
       let padded = String(repeating: "0", count: max(0, 32 - callId.count)) + callId
@@ -175,12 +242,14 @@ import Security
       let data = flutter_callkit_incoming.Data(id: uuidStr, nameCaller: callerUsername, handle: handleText, type: 0)
       data.avatar = callerAvatar
       data.extra = [
-          "call_id": callId,
-          "call_uuid": uuidStr,
-          "caller_id": callerId,
+          "call_id":        callId,
+          "call_uuid":      uuidStr,
+          "caller_id":      callerId,
           "caller_username": callerUsername,
-          "caller_avatar": callerAvatar,
-          "room_name": roomName
+          "caller_avatar":  callerAvatar,
+          "room_name":      roomName,
+          "livekit_url":    livekitUrl,   // self-contained → Dart HTTP fetch'ini atlar
+          "callee_token":   calleeToken,  // self-contained → pre-connect hemen başlar
       ]
 
       // If app is already in foreground, WS + IncomingCallBar handles the call UI.
