@@ -85,20 +85,12 @@
 
 ## 🟡 P2 — Orta (ML · DB · Flutter · Log)
 
-### T-09: Trust Score — Fraud sinyali ekle
+### T-09: Trust Score — Fraud sinyali ekle ✅
 **Dosya:** `backend/app/worker.py` — `compute_trust_scores_task`
-- [ ] ClickHouse sorgusuna fraud event sayılarını ekle:
-  ```sql
-  countIf(event_type = 'bid_fraud_mute') AS fraud_mutes,
-  countIf(event_type = 'bid_fraud_warn') AS fraud_warns
-  ```
-- [ ] Skor hesabına negatif sinyal ekle:
-  ```python
-  # fraud_mute >= 3 ise ceza (1-2 false positive için ceza yok)
-  fraud_penalty = min(max(0, ch["fraud_mutes"] - 2) * 5, 15)
-  total -= _safe(fraud_penalty)
-  ```
-- [ ] Değişiklik sonrası mevcut kullanıcıların skor dağılımını doğrula
+- [x] ClickHouse sorgusuna `fraud_mutes` ve `fraud_warns` kolonları eklendi
+- [x] result_rows unpack ve ch_data dict güncellendi
+- [x] Skor hesabına negatif sinyal eklendi: `fraud_penalty = min(max(0, fraud_mutes - 2) * 5, 15)` (max -15 puan)
+- [ ] Değişiklik sonrası mevcut kullanıcıların skor dağılımını doğrula (deploy sonrası 02:15'te çalışır)
 
 ### T-10: PostgreSQL — `user_interactions` fraud indeksi
 **Dosya:** Alembic migration veya direkt SQL

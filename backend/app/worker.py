@@ -3028,7 +3028,9 @@ async def compute_trust_scores_task(ctx: dict) -> None:
                     countIf(event_type = 'auction_won')                      AS wins,
                     countIf(event_type IN ('auction_won', 'auction_ended'))   AS total_auctions,
                     countIf(event_type = 'bid_hesitation')                    AS hesitations,
-                    countIf(event_type = 'bid_placed')                        AS bids
+                    countIf(event_type = 'bid_placed')                        AS bids,
+                    countIf(event_type = 'bid_fraud_mute')                    AS fraud_mutes,
+                    countIf(event_type = 'bid_fraud_warn')                    AS fraud_warns
                 FROM user_events
                 WHERE timestamp >= now() - INTERVAL 90 DAY
                   AND user_id IS NOT NULL
@@ -3061,13 +3063,15 @@ async def compute_trust_scores_task(ctx: dict) -> None:
 
         ch_data: dict[int, dict] = {}
         if ch_result and ch_result.result_rows:
-            for uid, wins, total, hes, bids in ch_result.result_rows:
+            for uid, wins, total, hes, bids, fraud_mutes, fraud_warns in ch_result.result_rows:
                 if uid:
                     ch_data[int(uid)] = {
                         "wins": int(wins),
                         "total": int(total),
                         "hes": int(hes),
                         "bids": int(bids),
+                        "fraud_mutes": int(fraud_mutes),
+                        "fraud_warns": int(fraud_warns),
                     }
 
         all_uids = set(pg_data.keys()) | set(ch_data.keys())
@@ -3081,7 +3085,7 @@ async def compute_trust_scores_task(ctx: dict) -> None:
 
         for uid in all_uids:
             pg = pg_data.get(uid, {"age_days": 0, "active": 0, "deleted": 0, "total": 0})
-            ch = ch_data.get(uid, {"wins": 0, "total": 0, "hes": 0, "bids": 0})
+            ch = ch_data.get(uid, {"wins": 0, "total": 0, "hes": 0, "bids": 0, "fraud_mutes": 0, "fraud_warns": 0})
 
             # Sinyal 1: tamamlanan artırma (+30 max) — p90 ile normalize edilir
             auction_score = min(ch["total"] / max(p90_auctions, 1.0), 1.0) * 30
@@ -3101,8 +3105,11 @@ async def compute_trust_scores_task(ctx: dict) -> None:
             hes_ratio = ch["hes"] / max(ch["bids"], 1) if ch["bids"] > 0 else 0.5
             hes_score = max(0.0, 1.0 - min(hes_ratio, 1.0)) * 10
 
+            # Sinyal 6: fraud cezası (max -15) — 1-2 mute false positive için ceza yok
+            fraud_penalty = min(max(0, ch["fraud_mutes"] - 2) * 5, 15)
+
             # NaN/Inf koruma — herhangi bir sinyal bozuksa 0 yap
-            total = _safe(auction_score) + _safe(win_score) + _safe(listing_score) + _safe(age_score) + _safe(hes_score)
+            total = _safe(auction_score) + _safe(win_score) + _safe(listing_score) + _safe(age_score) + _safe(hes_score) - _safe(fraud_penalty)
             trust = round(total)
             trust = max(0, min(100, trust))
             pipe.setex(f"trust_score:{uid}", _TTL, str(trust))
