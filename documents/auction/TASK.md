@@ -50,24 +50,24 @@
 - [x] Modül seviyesinde `from app.services.moderation_service import mute_key` eklendi
 - [x] Router re-export'ları (`# noqa: F401`) bozulmadı
 
-### T-06: `FraudDetectionService` sınıfını oluştur
+### T-06: `FraudDetectionService` sınıfını oluştur ✅
 **Dosya:** `backend/app/services/fraud_detection_service.py` — **YENİ DOSYA**
-- [ ] `FraudDecision(action, score, reason)` dataclass tanımla
-- [ ] `FraudDetectionService.evaluate_bid(bidder_ip, host_ip, user, stream_id) -> FraudDecision` metodu yaz
-  - Shill score hesaplama mantığını buraya taşı
-  - `shill_cnt:{stream_id}:{user_id}` sayaç okuma/yazma buraya taşı
-  - `_log_fraud_attempt()` çağrısını buraya ekle
-  - `FraudDecision` döndür
-- [ ] `place_bid()` içindeki shill blok kodunu kaldır, `FraudDetectionService().evaluate_bid()` çağrısıyla değiştir
+- [x] `FraudDecision(action, score, reason)` dataclass tanımlandı
+- [x] `FraudDetectionService.evaluate_bid(stream_id, user, bidder_ip, host_ip, amount) -> FraudDecision` yazıldı
+  - Shill score hesaplama mantığı taşındı
+  - `shill_cnt:{stream_id}:{user_id}` sayaç okuma/yazma taşındı
+  - `_log_fraud_attempt()` (Redis ZADD) taşındı ve fraud_detection_service'te tanımlandı
+  - `FraudDecision(PASS/WARN/MUTE)` döndürülüyor
+- [x] `place_bid()` shill bloğu kaldırıldı → `FraudDetectionService(self.uow.session).evaluate_bid()` kullanılıyor
+- [x] auction_utils'ten `_log_fraud_attempt` import'u kaldırıldı (eski imza çakışması temizlendi)
 
-### T-07: ClickHouse — Fraud event tracking ekle
-**Dosya:** `backend/app/services/fraud_detection_service.py` (T-06 içinde)
-- [ ] WARN kararında: `buffer_user_event(event_type="bid_fraud_warn", item_id=stream_id, item_type="stream", user_id=user.id, price_point=amount)`
-- [ ] MUTE kararında: `buffer_user_event(event_type="bid_fraud_mute", ...)`
+### T-07: ClickHouse — Fraud event tracking ekle ✅
+**Dosya:** `backend/app/services/fraud_detection_service.py`
+- [x] WARN: `track_user_event(event_type="bid_fraud_warn", ...)`
+- [x] MUTE: `track_user_event(event_type="bid_fraud_mute", ...)`
 
-**Dosya:** `backend/app/routers/auction.py`
-- [ ] `place_bid` endpoint'inde `BID_BLOCKED_VERIFY` hatasında `buffer_user_event(event_type="bid_blocked_verify", ...)` ekle
-  - `try/except` ile yakalanıp event yazılabilir veya exception handler'da
+**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
+- [x] `BID_BLOCKED_VERIFY` öncesi `track_user_event(event_type="bid_blocked_verify", ...)` eklendi
 
 **Etki:** Bu event'ler ClickHouse `user_events` tablosuna düşecek → Trust Score ML beslenecek
 

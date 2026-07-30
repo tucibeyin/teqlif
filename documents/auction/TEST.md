@@ -202,6 +202,55 @@ sudo journalctl -u teqlif -f | grep -E "ERROR|ImportError|ModuleNotFoundError"
 
 ---
 
+---
+
+## T-06 + T-07 — FraudDetectionService + ClickHouse Fraud Tracking
+
+> **Değişiklikler:** Shill detection mantığı `FraudDetectionService.evaluate_bid()`'e taşındı; ClickHouse fraud event'leri eklendi
+
+**Amaç:** Davranışsal fark yok — shill mute aynı çalışmalı. ClickHouse'da yeni event type'ları görünmeli.
+
+**Ön koşul:** VPS'te deploy tamamlanmış
+
+### Test A — Servis Başlatma Hatası Yok
+
+```bash
+sudo journalctl -u teqlif -f | grep -E "ERROR|ImportError|ModuleNotFoundError"
+```
+**Beklenen:** Temiz başlangıç, import hatası yok.
+
+### Test B — Shill WARN ClickHouse Event'i
+
+1. Unverified + eski hesap + aynı IP → 2 teklif ver (WARN aşamalı)
+2. Logda `[FRAUD_ATTEMPT] type=shill_bidding` satırları görünmeli
+3. Teklif geçmeli (WARN kararı teklifi bloke etmez)
+
+**ClickHouse doğrulaması (opsiyonel):**
+```sql
+SELECT event_type, count() FROM user_events
+WHERE event_type IN ('bid_fraud_warn', 'bid_fraud_mute', 'bid_blocked_verify')
+GROUP BY event_type ORDER BY event_type;
+```
+**Beklenen:** `bid_fraud_warn` satırı görünür.
+
+### Test C — Troll Teklif (BID_BLOCKED_VERIFY) ClickHouse Event'i
+
+1. Doğrulanmamış hesapla yüksek teklif (₺6000+) ver
+2. `HTTP 403 BID_BLOCKED_VERIFY` alınmalı
+3. ClickHouse'da `bid_blocked_verify` event'i görünmeli
+
+**Logda:**
+```
+[FRAUD_ATTEMPT] type=troll_bid_no_phone stream_id=X user_id=Y ...
+```
+
+### Test D — Shill MUTE Hâlâ Çalışıyor
+
+T-01/T-02 testleriyle aynı — Unverified + yeni hesap + aynı IP → `HTTP 403 BID_BLOCKED_MUTE`  
+Bu test artık `FraudDetectionService`'in içinden geliyor.
+
+---
+
 > Bu dosya her yeni task tamamlandıkça güncellenir.  
-> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-16**  
-> Bekleyen testler: T-06, T-07, T-08, T-09, T-10~T-15, T-17, T-18
+> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-16**  
+> Bekleyen testler: T-08, T-09, T-10~T-15, T-17, T-18

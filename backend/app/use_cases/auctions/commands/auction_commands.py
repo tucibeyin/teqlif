@@ -1,7 +1,7 @@
 from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
 
 from app.core.uow import AbstractUnitOfWork
-from app.use_cases.auctions.auction_utils import manager, _log_fraud_attempt, fmt_price, auction_key, publish_auction, _require_host
+from app.use_cases.auctions.auction_utils import manager, fmt_price, auction_key, publish_auction, _require_host
 """
 Açık artırma servisi — iş mantığını router'dan ayırır.
 
@@ -51,6 +51,7 @@ from app.core.ws_manager import ws_manager
 from app.constants import ws_types as WS
 from app.services.moderation_service import mute_key
 from app.services.notification_service import push_notification
+from app.services.fraud_detection_service import FraudDetectionService, _log_fraud_attempt
 
 _DM_CHANNEL = "dm_broadcast"
 
@@ -68,57 +69,6 @@ _MULTIPLIER_MIN_BASE_TL = 500
 _HIGH_BID_MULTIPLIER = 10
 # Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır — unverified hesaplar
 _HIGH_BID_MULTIPLIER_UNVERIFIED = 7
-
-# Shill bidding sinyal skorları
-# IP eşleşmesi tek başına dominat olmamalı (aynı ağda meşru kullanıcılar olabilir)
-_SHILL_SCORE_IP_MATCH     = 30  # IP eşleşmesi (tetikleyici, tek başına yeterli değil)
-_SHILL_SCORE_UNVERIFIED   = 35  # Doğrulanmamış hesap + IP → ciddi sinyal
-_SHILL_SCORE_NEW_ACCOUNT  = 25  # Hesap 7 günden genç
-_SHILL_SCORE_REPEAT       = 10  # Aynı stream'de önceki sinyal başına (max 2x)
-_SHILL_THRESHOLD_MUTE     = 80  # Verified+eski hesap aynı ağdan asla mute edilmez
-_SHILL_THRESHOLD_WARN     = 45  # Bu skoru aşarsa: sayaç artır, teklif geçer
-_SHILL_COUNTER_TTL        = 86_400  # Sinyal sayacı 24 saat canlı kalır
-
-
-async def _log_fraud_attempt(
-    fraud_type: str,
-    stream_id: int,
-    user_id: int,
-    username: str,
-    extra: dict | None = None,
-) -> None:
-    """
-    Dolandırıcılık girişimini logger + Redis'e kaydeder.
-
-    - Logger: Grafana/log-alert ile gerçek zamanlı izlenebilir.
-    - Redis ZADD fraud_log: score=timestamp → son 30 günü tutar,
-      admin sorgusu veya banlama scripti için kullanılır.
-    """
-    import json as _json
-    import time
-
-    payload = {
-        "fraud_type": fraud_type,
-        "stream_id": stream_id,
-        "user_id": user_id,
-        "username": username,
-        **(extra or {}),
-    }
-    logger.warning(
-        "[FRAUD_ATTEMPT] type=%s stream_id=%s user_id=%s username=%s extra=%s",
-        fraud_type, stream_id, user_id, username, extra,
-    )
-    try:
-        redis = await get_redis()
-        score = time.time()
-        value = _json.dumps(payload)
-        await redis.zadd("fraud_log", {value: score})
-        # 30 günden eski kayıtları temizle
-        cutoff = score - 30 * 24 * 3600
-        await redis.zremrangebyscore("fraud_log", "-inf", cutoff)
-    except Exception as exc:
-        logger.error("[FRAUD_ATTEMPT] Redis log yazılamadı | %s", exc)
-
 
 # ── Fiyat formatlama yardımcısı ──────────────────────────────────────────────
 def fmt_price(v: float) -> str:
@@ -535,45 +485,12 @@ class AuctionCommands:
         prev_bidder_id_str = prev_data.get("current_bidder_id", "")
         prev_item_name = prev_data.get("item_name", "")
 
-        # ── Shill Bidding (Çok Sinyal Skoru) ─────────────────────────────────
-        # IP eşleşmesi tek başına yeterli değil (aynı ev/ofis meşru olabilir).
-        # Birden fazla sinyal birikmesi gerekir: IP + hesap yaşı + doğrulama durumu.
-        host_ip_stored = prev_data.get("host_ip", "")
-        if bidder_ip and host_ip_stored and bidder_ip == host_ip_stored:
-            shill_score = _SHILL_SCORE_IP_MATCH
-
-            if not user.is_verified:
-                shill_score += _SHILL_SCORE_UNVERIFIED
-
-            created_at = user.created_at
-            if created_at.tzinfo is None:
-                created_at = created_at.replace(tzinfo=timezone.utc)
-            account_age_days = (datetime.now(timezone.utc) - created_at).days
-            if account_age_days < 7:
-                shill_score += _SHILL_SCORE_NEW_ACCOUNT
-
-            shill_counter_key = f"shill_cnt:{stream_id}:{user.id}"
-            prior_raw = await redis.get(shill_counter_key)
-            prior_count = int(prior_raw) if prior_raw else 0
-            shill_score += min(prior_count * _SHILL_SCORE_REPEAT, _SHILL_SCORE_REPEAT * 2)
-
-            await _log_fraud_attempt(
-                "shill_bidding",
-                stream_id=stream_id,
-                user_id=user.id,
-                username=user.username,
-                extra={"bidder_ip": bidder_ip, "amount": float(data.amount), "shill_score": shill_score},
-            )
-
-            if shill_score >= _SHILL_THRESHOLD_MUTE:
-                from app.services.moderation_service import ModerationService as _ModerationService
-                await _ModerationService(self.uow.session).system_mute(
-                    stream_id, user.id, reason="shill_bidding"
-                )
-                raise ForbiddenException(code="BID_BLOCKED_MUTE")
-            elif shill_score >= _SHILL_THRESHOLD_WARN:
-                await redis.incr(shill_counter_key)
-                await redis.expire(shill_counter_key, _SHILL_COUNTER_TTL)
+        # ── Shill Bidding ─────────────────────────────────────────────────────
+        decision = await FraudDetectionService(self.uow.session).evaluate_bid(
+            stream_id, user, bidder_ip, prev_data.get("host_ip", ""), float(data.amount)
+        )
+        if decision.action == "MUTE":
+            raise ForbiddenException(code="BID_BLOCKED_MUTE")
 
         # ── Troll Teklif Koruması (Telefon + Hesap Doğrulama) ────────────────
         # Doğrulanmış hesaplar daha yüksek eşikten yararlanır.
@@ -596,6 +513,14 @@ class AuctionCommands:
                 username=user.username,
                 extra={"amount": float(data.amount), "current_bid": current_bid, "is_verified": user.is_verified},
             )
+            from app.database_clickhouse import track_user_event
+            asyncio.create_task(track_user_event(
+                event_type="bid_blocked_verify",
+                item_id=stream_id,
+                item_type="stream",
+                user_id=user.id,
+                price_point=float(data.amount),
+            ))
             raise ForbiddenException(code="BID_BLOCKED_VERIFY")
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)
