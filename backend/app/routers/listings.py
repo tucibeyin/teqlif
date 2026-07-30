@@ -203,6 +203,13 @@ async def update_listing(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
+    # Sadece payload'da gerçekten bulunan medya alanlarını ilet.
+    # Yoksa _UNSET varsayılanı devreye girer → DB'deki değer değişmez.
+    media_kwargs = {}
+    for field in ("image_urls", "image_url", "thumbnail_url", "video_url"):
+        if field in payload:
+            media_kwargs[field] = payload[field]
+
     result = await UpdateListingCommand(uow).execute(
         listing_id=listing_id,
         user_id=current_user.id,
@@ -215,6 +222,7 @@ async def update_listing(
         province=payload.get("province"),
         district=payload.get("district"),
         extra_fields=payload.get("extra_fields"),
+        **media_kwargs,
     )
     await invalidate_cache("listings:search")
     return result

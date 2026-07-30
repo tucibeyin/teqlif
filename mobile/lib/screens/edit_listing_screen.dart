@@ -640,7 +640,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
             'thumbnail_url': ?thumbnailUrl,
-            'video_url': ?_videoUploadUrl,
+            'video_url': _videoUploadUrl,
           }),
         ),
       );

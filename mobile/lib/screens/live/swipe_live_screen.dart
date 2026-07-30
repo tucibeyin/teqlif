@@ -758,6 +758,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   String? _resolvedTitle;
   String? _resolvedHostUsername;
   
+  int _viewerCount = 0;
+
   // Kazanan konfetisi
   late ConfettiController _confettiController;
   // Hediye HUD overlay
@@ -771,6 +773,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   @override
   void initState() {
     super.initState();
+    _viewerCount = widget.stream.viewerCount;
     StorageService.getUserInfo().then((info) {
       if (mounted && info != null) {
         setState(() => _myUsername = info['username'] as String?);
@@ -1195,7 +1198,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           right: 0,
           child: ViewerTopBar(
             topPad: topPad,
-            viewerCount: widget.stream.viewerCount,
+            viewerCount: _viewerCount,
             title: _resolvedTitle ?? widget.stream.title,
             hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
             isCoHost: _isCoHost,
@@ -1355,7 +1358,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                         widget.onEngagementEvent?.call('raid_view');
                       }
                     },
-                    onViewerCountChanged: (_) {},
+                    onViewerCountChanged: (n) => setState(() => _viewerCount = n),
                     onMuted: _handleMuted,
                     onUnmuted: _handleUnmuted,
                     onKicked: _handleKicked,
