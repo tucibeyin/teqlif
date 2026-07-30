@@ -96,10 +96,10 @@
 **Dosya:** Direkt SQL (VPS'te çalıştırıldı)
 - [x] `ix_user_interactions_fraud` oluşturuldu (kısmi indeks, WHERE interaction_type = 'fraud_attempt')
 
-### T-11: Error handler `user=guest` log bug
-**Dosya:** `backend/app/core/error_handlers.py`
-- [ ] `DomainError` handler'da `request.state` üzerinden kullanıcı bilgisini oku
-- [ ] Authenticated isteklerde `username` doğru loglandığını test et
+### T-11: Error handler `user=guest` log bug ✅
+**Dosya:** `backend/app/utils/auth.py` + `backend/app/core/error_handlers.py`
+- [x] `get_current_user`'a `request: Request` parametresi eklendi; `request.state.user = user` set ediliyor
+- [x] `error_handlers.py`'de `user_label = @username#id` formatına geçildi (her iki handler)
 
 ### T-12: Flutter — Sistem mute WS event mesajı
 **Dosya:** `mobile/lib/screens/live/swipe_live_screen.dart` (ve viewer_stream_screen eğer varsa)

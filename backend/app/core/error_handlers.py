@@ -23,14 +23,14 @@ def setup_exception_handlers(app: FastAPI):
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException):
         user = getattr(request.state, "user", None)
-        user_id = getattr(user, "id", "guest") if user else "guest"
+        user_label = f"@{user.username}#{user.id}" if user else "guest"
         req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
 
         log_level = logging.ERROR if exc.status_code >= 500 else logging.WARNING
         logger.log(
             log_level,
             "[DomainError] %s | code=%s user=%s path=%s req_id=%s",
-            exc.message, exc.error_code, user_id, request.url.path, req_id,
+            exc.message, exc.error_code, user_label, request.url.path, req_id,
         )
 
         headers = {}
@@ -136,12 +136,12 @@ def setup_exception_handlers(app: FastAPI):
             return await http_exception_handler(request, exc)
             
         user = getattr(request.state, "user", None)
-        user_id = getattr(user, "id", "guest") if user else "guest"
+        user_label = f"@{user.username}#{user.id}" if user else "guest"
         req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-        
+
         logger.error(
-            "[UnhandledError] %s | user=%s path=%s req_id=%s\n%s", 
-            str(exc), user_id, request.url.path, req_id, traceback.format_exc()
+            "[UnhandledError] %s | user=%s path=%s req_id=%s\n%s",
+            str(exc), user_label, request.url.path, req_id, traceback.format_exc()
         )
         capture_exception(exc)
 

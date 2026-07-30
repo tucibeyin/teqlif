@@ -5,7 +5,7 @@ from typing import Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Cookie, Depends, HTTPException, Response, status
+from fastapi import Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -150,6 +150,7 @@ async def invalidate_user_session_cache(user_id: int) -> None:
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     cookie_token: Optional[str] = Cookie(default=None, alias=ACCESS_COOKIE),
     db: AsyncSession = Depends(get_db),
@@ -172,6 +173,8 @@ async def get_current_user(
     if not user or user.status != UserStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı")
 
+    # Hata handler'larının kullanıcıya erişebilmesi için state'e yaz
+    request.state.user = user
     return user
 
 
