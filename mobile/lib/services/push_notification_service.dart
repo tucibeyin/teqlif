@@ -599,6 +599,16 @@ class PushNotificationService {
     } catch (e) {
       _cpLog('PUSH', '_rejectCallById ERROR | callId=$callId $e');
     }
+    // Reset state unconditionally — user's decline intent is clear regardless of HTTP result.
+    // Without this, a 500 from backend leaves Android stuck in ringing state → BUSY_REJECT
+    // blocks the next incoming call.
+    final cs = CallService.instance;
+    if ((cs.state.value.status == CallStatus.ringing ||
+         cs.state.value.status == CallStatus.calling) &&
+        cs.state.value.callId?.toString() == callId) {
+      _cpLog('PUSH', '_rejectCallById → reset | callId=$callId');
+      cs.reset();
+    }
   }
 
   static Future<void> _endCallById(String callId) async {

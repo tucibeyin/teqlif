@@ -669,15 +669,18 @@ async def reject_call(
     await _ws_broadcast(caller_id, {"type": "call_rejected", "call_id": call_id_val})
     caller = await db.get(User, caller_id)
     if caller and caller.fcm_token:
-        logger.info(f"[Calls] Sending 'call_rejected' FCM push to {caller.username} (call_id={call_id})")
-        await send_push(
-            token=caller.fcm_token,
-            title="",
-            body="",
-            notif_type="call_rejected",
-            extra_data={"call_id": str(call_id_val)},
-            is_silent=True
-        )
+        logger.info("[CALL_PROCESS][IN] reject_call FCM push | call_id=%d caller=%s", call_id_val, caller.username)
+        try:
+            await send_push(
+                token=caller.fcm_token,
+                title="",
+                body="",
+                notif_type="call_rejected",
+                extra_data={"call_id": str(call_id_val)},
+                is_silent=True
+            )
+        except Exception as _e:
+            logger.warning("[CALL_PROCESS][IN] reject_call FCM push FAILED | call_id=%d %s", call_id_val, _e)
 
     # LK room'u sil — reject sonrası oda askıda kalıyordu
     await _delete_lk_room(room_name)
@@ -794,13 +797,16 @@ async def _send_missed_call_push(callee: User, caller: User, call_id: int) -> No
         title = title_raw
         body = body_raw
 
-    await send_push(
-        token=callee.fcm_token,
-        title=title,
-        body=body,
-        notif_type="call_missed",
-        extra_data={"caller_username": caller.username, "related_id": str(caller.id), "call_id": str(call_id)}
-    )
+    try:
+        await send_push(
+            token=callee.fcm_token,
+            title=title,
+            body=body,
+            notif_type="call_missed",
+            extra_data={"caller_username": caller.username, "related_id": str(caller.id), "call_id": str(call_id)}
+        )
+    except Exception as _e:
+        logger.warning("[CALL_PROCESS][IN] missed_call FCM push FAILED | call_id=%d %s", call_id, _e)
 
 @router.post("/{call_id}/missed")
 async def missed_call(
