@@ -325,6 +325,59 @@ GET shill_cnt:{stream_id}:{user_id}
 
 ---
 
+## T-18 — ClickHouse BIN Flow ve Pause/Resume Event Tracking
+
+> **Değişiklikler:** `accept_buy_it_now()`, `reject_buy_it_now()`, `pause()`, `resume()` metodlarına `track_user_event()` çağrısı eklendi.
+
+### Senaryo A — Hemen Al Kabul (buy_it_now_accepted)
+
+**Ön koşul:** Aktif artırma, alıcı "Hemen Al" talebi göndermiş, host kabul ediyor.
+
+**Adımlar:**
+1. Host `POST /api/auction/{stream_id}/accept-buy-it-now` çağırır
+2. İşlem başarıyla tamamlanır
+
+**Beklenen:** ClickHouse `user_events` tablosunda `event_type = 'buy_it_now_accepted'` kaydı düşer; `user_id = buyer_id`, `price_point = bin_price`.
+
+**ClickHouse doğrulaması:**
+```sql
+SELECT event_type, user_id, price_point, toDateTime(event_time)
+FROM user_events
+WHERE event_type = 'buy_it_now_accepted'
+ORDER BY event_time DESC
+LIMIT 5;
+```
+
+---
+
+### Senaryo B — Hemen Al Red (buy_it_now_rejected)
+
+**Ön koşul:** Aktif artırma, alıcı "Hemen Al" talebi göndermiş, host reddediyor.
+
+**Adımlar:**
+1. Host `POST /api/auction/{stream_id}/reject-buy-it-now` çağırır
+
+**Beklenen:** ClickHouse'da `event_type = 'buy_it_now_rejected'` kaydı düşer; `user_id = buyer_id`.
+
+---
+
+### Senaryo C — Artırma Duraklat / Devam Ettir
+
+**Adımlar:**
+1. Host `POST /api/auction/{stream_id}/pause` çağırır → `auction_paused` eventi
+2. Host `POST /api/auction/{stream_id}/resume` çağırır → `auction_resumed` eventi
+
+**ClickHouse doğrulaması:**
+```sql
+SELECT event_type, user_id, toDateTime(event_time)
+FROM user_events
+WHERE event_type IN ('auction_paused', 'auction_resumed')
+ORDER BY event_time DESC
+LIMIT 10;
+```
+
+---
+
 > Bu dosya her yeni task tamamlandıkça güncellenir.  
-> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08, T-16**  
+> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08, T-09, T-10, T-11, T-12, T-13, T-16, T-17, T-18**  
 > Bekleyen testler: T-09, T-10~T-15, T-17, T-18

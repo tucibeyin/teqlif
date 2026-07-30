@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 import asyncio
 
 from app.models.enums import UserStatus

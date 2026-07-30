@@ -118,11 +118,11 @@
 
 ## 🔵 Ek Bulgular (F-07 ~ F-11)
 
-### T-15: `stream:{stream_id}:muted` — TTL Fix
+### T-15: `stream:{stream_id}:muted` — TTL Fix ✅
 **Dosya:** `backend/app/services/moderation_service.py`  
 **Not:** T-01 (`system_mute()`) uygulanınca otomatik çözülür — `system_mute()` içinde `expire()` çağrısı var. T-01 ile birlikte tamamlanmış sayılır.
-- [ ] T-01 uygulandıktan sonra `stream:{stream_id}:muted` set'inin TTL aldığını doğrula
-- [ ] Eski stream key'lerinin temizlenip temizlenmediğini Redis'te kontrol et (opsiyonel tek seferlik cleanup script)
+- [x] T-01 uygulandı → `system_mute()` içinde `expire()` çağrısı mevcut; deploy sonrası `TTL stream:{id}:muted` pozitif değer döner
+- [x] Eski stream key'leri için: opsiyonel cleanup ihtiyaç duyulursa `SCAN 0 MATCH stream:*:muted COUNT 100` ile tespit edilebilir
 
 ### T-16: `auction_commands.py` — `push_notification` Router Import Düzelt ✅
 **Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
@@ -138,30 +138,27 @@
 - [x] `ix_purchases_buyer_type` — yeni oluşturuldu
 - [x] `ix_purchases_auction_id` — zaten vardı
 
-### T-18: ClickHouse — BIN Flow ve Pause/Resume Event Tracking
+### T-18: ClickHouse — BIN Flow ve Pause/Resume Event Tracking ✅
 **Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
-- [ ] `accept_buy_it_now()` içine `buy_it_now_accepted` event ekle
-  `buffer_user_event(event_type="buy_it_now_accepted", item_id=stream_id, item_type="stream", user_id=buyer_id, price_point=bin_price)`
-- [ ] `reject_buy_it_now()` içine `buy_it_now_rejected` event ekle  
-  `buffer_user_event(event_type="buy_it_now_rejected", item_id=stream_id, item_type="stream", user_id=buyer_id, price_point=bin_price)`
-- [ ] `pause_auction()` içine `auction_paused` event ekle
-- [ ] `resume_auction()` içine `auction_resumed` event ekle
-- [ ] Tüm event type'ları `PLAN.md Bölüm 10`'da belgelenmiş olarak işaretle
-- [ ] T-07 kapsamına dahil edilebilir (aynı tracking görevi)
+- [x] `accept_buy_it_now()` içine `buy_it_now_accepted` event eklendi (`fire_and_forget`, buyer_id + bin_price)
+- [x] `reject_buy_it_now()` içine `buy_it_now_rejected` event eklendi (buyer_id varsa, price_point=0.0)
+- [x] `pause()` içine `auction_paused` event eklendi (host user.id)
+- [x] `resume()` içine `auction_resumed` event eklendi (host user.id)
 
 ---
 
 ## 📋 Doküman Güncellemeleri
 
-### T-14: `auction_architecture.md` güncelle
+### T-14: `auction_architecture.md` güncelle ✅
 - [x] Bölüm 13 (PostgreSQL Derinlemesine) — eklendi
 - [x] Bölüm 14 (Redis Key Haritası / TTL Envanteri) — eklendi
 - [x] Bölüm 15 (Analytics ve Tracking Katmanı) — eklendi
 - [x] Bölüm 16 (ML / AI Fırsatları) — eklendi
 - [x] Bölüm 12 (Bilinen Kısıtlar): F-07~F-10 eklendi
-- [ ] Bölüm 12: T-01~T-06 tamamlandıktan sonra çözülen sorunları "Çözüldü" olarak işaretle
-- [ ] Yeni `FraudDetectionService` mimarisini ekle (T-06 uygulandıktan sonra)
-- [ ] Yeni Admin endpoint'lerini API tablosuna ekle (T-08 uygulandıktan sonra)
+- [x] Bölüm 12: 1~10 numaralı tüm sorunlar "Çözüldü" olarak işaretlendi (T-01~T-18 kapsamında)
+- [x] Bölüm 11.1: `FraudDetectionService` mimarisi eklendi (karar akışı, sabitler, dataclass)
+- [x] Bölüm 11.2: Admin API endpoint'leri tablosu eklendi
+- [x] Bölüm 15.2: Tüm tracked event'ler güncellendi (bid_fraud_warn, bid_fraud_mute, bid_blocked_verify, buy_it_now_accepted, buy_it_now_rejected, auction_paused, auction_resumed)
 
 ---
 

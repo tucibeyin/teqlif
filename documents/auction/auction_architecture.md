@@ -365,20 +365,96 @@ Aynı tutar için duplicate ARQ retry'da tek push gönderilmesini garantiler.
 
 ---
 
+## 11.1 FraudDetectionService Mimarisi
+
+**Dosya:** `backend/app/services/fraud_detection_service.py`
+
+### Sabitler
+
+| Sabit | Değer | Açıklama |
+|---|---|---|
+| `_SHILL_SCORE_IP_MATCH` | 30 | Host ile aynı IP/subnet |
+| `_SHILL_SCORE_UNVERIFIED` | 35 | Telefon doğrulanmamış hesap |
+| `_SHILL_SCORE_NEW_ACCOUNT` | 25 | Hesap yaşı < 7 gün |
+| `_SHILL_SCORE_REPEAT` | 10 | Önceki uyarı sayacı başına |
+| `_SHILL_THRESHOLD_MUTE` | 80 | Bu eşiği geçen otomatik mute edilir |
+| `_SHILL_THRESHOLD_WARN` | 45 | Bu eşiği geçen uyarı alır |
+| `_SHILL_COUNTER_TTL` | 86400 | Uyarı sayacı TTL (24 saat) |
+
+### FraudDecision Dataclass
+
+```python
+@dataclass
+class FraudDecision:
+    action: str   # "PASS" | "WARN" | "MUTE"
+    score: int    # 0..100+
+    reason: str   # "no_ip_match" | "shill_warn" | "shill_mute"
+```
+
+### Karar Akışı
+
+```
+evaluate_bid(stream_id, user, bidder_ip, host_ip, amount)
+  ├── bidder_ip != host_ip → FraudDecision("PASS", 0, "no_ip_match")
+  └── IP eşleşti:
+        score = _SHILL_SCORE_IP_MATCH
+        score += _SHILL_SCORE_UNVERIFIED  (telefon doğrulanmamışsa)
+        score += _SHILL_SCORE_NEW_ACCOUNT (hesap < 7 gün ise)
+        score += _SHILL_SCORE_REPEAT * shill_cnt  (önceki warn sayısı)
+        ├── score >= _SHILL_THRESHOLD_MUTE:
+        │     system_mute(stream_id, user_id, reason="shill_bidding")
+        │     track_user_event("bid_fraud_mute")
+        │     return FraudDecision("MUTE", score, "shill_mute")
+        ├── score >= _SHILL_THRESHOLD_WARN:
+        │     incr shill_cnt:{stream_id}:{user_id}
+        │     track_user_event("bid_fraud_warn")
+        │     return FraudDecision("WARN", score, "shill_warn")
+        └── else: return FraudDecision("PASS", score, "no_ip_match")
+```
+
+### place_bid() Entegrasyonu
+
+```python
+decision = await FraudDetectionService(self.uow.session).evaluate_bid(
+    stream_id, user, bidder_ip, prev_data.get("host_ip", ""), float(data.amount)
+)
+if decision.action == "MUTE":
+    raise ForbiddenException(code="BID_BLOCKED_MUTE")
+# WARN → teklif kabul edilir, arka planda sayaç artar
+```
+
+---
+
+## 11.2 Admin API — Fraud & Mute Yönetim Endpoint'leri
+
+**Prefix:** `/api/admin-data/`  **Auth:** Admin token gerekli
+
+| Method | Path | Açıklama |
+|---|---|---|
+| `GET` | `/fraud-log` | Redis `fraud_log` ZADD'inden son N kayıt (max 200, default 50) |
+| `GET` | `/streams/{stream_id}/mutes` | Stream'in muted set'i + shill_mute meta hash + TTL |
+| `DELETE` | `/streams/{stream_id}/mutes/{user_id}` | Admin force-unmute: srem + hdel + WS UNMUTED (source="admin") |
+| `DELETE` | `/shill-counter/{stream_id}/{user_id}` | `shill_cnt:{stream_id}:{user_id}` Redis key'ini siler |
+
+**Admin Panel:** `frontend/admin.html` → "🛡 Fraud & Mute" sekmesi  
+**JS:** `frontend/static/js/admin-page.js` — `loadFraudLog()`, `loadStreamMutes()`, `forceUnmute()`, `resetShillCounter()`
+
+---
+
 ## 12. Bilinen Kısıtlar ve Teknik Borç
 
-| # | Sorun | Kök Neden | Etki |
-|---|---|---|---|
-| 1 | Shill mute `publish_mod_event()` çağırmıyor | Moderasyon servisi atlanıyor, direkt Redis yazımı | Host client mute'dan haberdar olmaz; unmute senaryosu bozulur |
-| 2 | Verified kullanıcı aynı ağdan 3 teklifte mute olur | IP eşleşmesi + 2 warn birikimi = eşik | Meşru izleyici false positive ile bloke edilir |
-| 3 | `AuctionCommands` → `from app.routers.moderation import mute_key` | Bağımlılık yönü ihlali | Use Case → Router; Clean Architecture Dependency Rule çiğneniyor |
-| 4 | Otomatik fraud kararı geri alınamaz | Admin override mekanizması yok | Hatalı mute stream boyunca kalıcılaşır |
-| 5 | Fraud detection `place_bid` içine gömülü | FraudDetectionService yok | Bağımsız test edilemez; değişiklik riski yüksek |
-| 6 | `stream:{stream_id}:muted` set'ine TTL atalanmıyor | Direkt `redis.sadd()` çağrısı, expire yok | Stream bittikten sonra key sonsuza kadar Redis'te kalır; düşük ama gerçek memory leak |
-| 7 | `place_bid()` içinde `from app.routers.notifications import push_notification` lazy import | Metod içi import | Use Case → Router bağımlılığı; mute_key import'una ek ihlal noktası |
-| 8 | `bids` tablosunda `(bidder_id)` index yok | İlk tasarım | Kullanıcı teklif geçmişi sorgusu tam tablo taraması yapar |
-| 9 | `auctions` tablosunda `(winner_id)` index yok | İlk tasarım | Kullanıcı kazanma geçmişi sorgusu tam tablo taraması yapar |
-| 10 | BIN flow ve pause/resume ClickHouse'da izlenmiyor | Takip edilmemiş event türleri | BIN kabul/red oranı ve pause süresi ölçülemez |
+| # | Sorun | Kök Neden | Etki | Durum |
+|---|---|---|---|---|
+| 1 | Shill mute `publish_mod_event()` çağırmıyor | Moderasyon servisi atlanıyor, direkt Redis yazımı | Host client mute'dan haberdar olmaz; unmute senaryosu bozulur | ✅ **Çözüldü** — T-01: `system_mute()` `publish_mod_event()` çağırıyor |
+| 2 | Verified kullanıcı aynı ağdan 3 teklifte mute olur | IP eşleşmesi + 2 warn birikimi = eşik | Meşru izleyici false positive ile bloke edilir | ✅ **Çözüldü** — T-03: Skor sabitleri güncellendi; verified+eski hesap kombinasyonu 80 eşiğine ulaşamaz |
+| 3 | `AuctionCommands` → `from app.routers.moderation import mute_key` | Bağımlılık yönü ihlali | Use Case → Router; Clean Architecture Dependency Rule çiğneniyor | ✅ **Çözüldü** — T-05: `mute_key` `moderation_service.py`'e taşındı |
+| 4 | Otomatik fraud kararı geri alınamaz | Admin override mekanizması yok | Hatalı mute stream boyunca kalıcılaşır | ✅ **Çözüldü** — T-08: Admin force-unmute endpoint'i eklendi |
+| 5 | Fraud detection `place_bid` içine gömülü | FraudDetectionService yok | Bağımsız test edilemez; değişiklik riski yüksek | ✅ **Çözüldü** — T-06: `FraudDetectionService` oluşturuldu |
+| 6 | `stream:{stream_id}:muted` set'ine TTL atalanmıyor | Direkt `redis.sadd()` çağrısı, expire yok | Stream bittikten sonra key sonsuza kadar Redis'te kalır; düşük ama gerçek memory leak | ✅ **Çözüldü** — T-01: `system_mute()` içinde `expire()` çağrısı var |
+| 7 | `place_bid()` içinde `from app.routers.notifications import push_notification` lazy import | Metod içi import | Use Case → Router bağımlılığı; mute_key import'una ek ihlal noktası | ✅ **Çözüldü** — T-16: `push_notification` `notification_service.py`'e taşındı |
+| 8 | `bids` tablosunda `(bidder_id)` index yok | İlk tasarım | Kullanıcı teklif geçmişi sorgusu tam tablo taraması yapar | ✅ **Çözüldü** — T-17: VPS'te `ix_bids_bidder_id` oluşturuldu |
+| 9 | `auctions` tablosunda `(winner_id)` index yok | İlk tasarım | Kullanıcı kazanma geçmişi sorgusu tam tablo taraması yapar | ✅ **Çözüldü** — T-17: VPS'te `ix_auctions_winner_id` oluşturuldu |
+| 10 | BIN flow ve pause/resume ClickHouse'da izlenmiyor | Takip edilmemiş event türleri | BIN kabul/red oranı ve pause süresi ölçülemez | ✅ **Çözüldü** — T-18: 4 yeni event eklendi |
 
 ---
 
@@ -480,20 +556,20 @@ user_events (
 | `auction_won` | `accept_bid()` saga | Kazanan teklif kabul edildi |
 | `auction_ended` | `end_auction()` | Kazanan olmadan bitti |
 | `listing_sold` | `accept_bid()` saga | İlanlı artırma satıldı |
+| `bid_fraud_warn` | `FraudDetectionService.evaluate_bid()` | Shill uyarısı (T-07) |
+| `bid_fraud_mute` | `FraudDetectionService.evaluate_bid()` | Shill mute (T-07) |
+| `bid_blocked_verify` | `place_bid()` — BID_BLOCKED_VERIFY öncesi | Telefon doğrulama engeli (T-07) |
+| `buy_it_now_accepted` | `accept_buy_it_now()` | BIN kabul edildi (T-18) |
+| `buy_it_now_rejected` | `reject_buy_it_now()` | BIN reddedildi (T-18) |
+| `auction_paused` | `pause()` | Artırma duraklatıldı (T-18) |
+| `auction_resumed` | `resume()` | Artırma devam ettirildi (T-18) |
 
-### 15.3 Eksik Event'ler (Tracking Boşlukları)
+### 15.3 Kalan Tracking Boşlukları
 
 | Event Type | Neden Eksik | ML/Analytics Etkisi |
 |---|---|---|
-| `bid_fraud_warn` | FraudDetectionService yok | Trust score fraud sinyali beslenemiyor |
-| `bid_fraud_mute` | Direkt Redis, CH yok | Mute oranı ölçülemiyor |
-| `bid_blocked_verify` | Exception'da CH yok | Telefon doğrulama engel oranı bilinmiyor |
 | `bid_rate_limited` | Exception'da CH yok | Bot/spam aktivite tespit edilemiyor |
 | `buy_it_now_requested` | Event yok | BIN talep oranı ölçülemiyor |
-| `buy_it_now_rejected` | Event yok | Host red oranı / cooldown analizi yok |
-| `buy_it_now_accepted` | `accept_buy_it_now` içinde yok | BIN conversion funnel eksik |
-| `auction_paused` | `pause_auction` içinde yok | Yayın davranışı analizi yok |
-| `auction_resumed` | `resume_auction` içinde yok | Pause süresi hesaplanamıyor |
 
 ### 15.4 Trust Score Sinyalleri
 

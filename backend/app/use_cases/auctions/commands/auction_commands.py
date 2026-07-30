@@ -333,6 +333,14 @@ class AuctionCommands:
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
                     stream_id, manager.conn_count(stream_id))
+        from app.database_clickhouse import track_user_event
+        fire_and_forget(track_user_event(
+            event_type="auction_paused",
+            item_id=stream_id,
+            item_type="stream",
+            user_id=user.id,
+            price_point=0.0,
+        ))
         return state
 
     # ── Devam Ettir ──────────────────────────────────────────────────────────
@@ -350,6 +358,14 @@ class AuctionCommands:
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
                     stream_id, manager.conn_count(stream_id))
+        from app.database_clickhouse import track_user_event
+        fire_and_forget(track_user_event(
+            event_type="auction_resumed",
+            item_id=stream_id,
+            item_type="stream",
+            user_id=user.id,
+            price_point=0.0,
+        ))
         return state
 
     async def end_auction(
@@ -908,6 +924,14 @@ class AuctionCommands:
         from app.use_cases.chat.chat_utils import publish_chat
         await publish_chat(stream_id, chat_msg)
 
+        from app.database_clickhouse import track_user_event
+        fire_and_forget(track_user_event(
+            event_type="buy_it_now_accepted",
+            item_id=stream_id,
+            item_type="stream",
+            user_id=buyer_id,
+            price_point=bin_price,
+        ))
         logger.info(
             "[HEMEN AL KABUL] TAMAMLANDI | stream_id=%s buyer=%s price=%s",
             stream_id, buyer_username, bin_price,
@@ -945,6 +969,15 @@ class AuctionCommands:
             "[HEMEN AL RED] | stream_id=%s host=%s buyer=%s restored_status=%s",
             stream_id, user.username, buyer_username, prev_status,
         )
+        if buyer_id:
+            from app.database_clickhouse import track_user_event
+            fire_and_forget(track_user_event(
+                event_type="buy_it_now_rejected",
+                item_id=stream_id,
+                item_type="stream",
+                user_id=int(buyer_id),
+                price_point=0.0,
+            ))
         return state
 
     # ── Teklif Kabul ─────────────────────────────────────────────────────────
