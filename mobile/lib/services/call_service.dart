@@ -173,8 +173,8 @@ class CallService {
       await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
       await _ringbackPlayer.setAudioContext(ap.AudioContext(
         android: const ap.AudioContextAndroid(
-          usageType: ap.AndroidUsageType.notificationRingtone,
-          contentType: ap.AndroidContentType.music,
+          usageType: ap.AndroidUsageType.voiceCommunication,
+          contentType: ap.AndroidContentType.sonification,
           audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
         ),
         iOS: ap.AudioContextIOS(
@@ -446,17 +446,17 @@ class CallService {
     if (newStatus == CallStatus.calling) {
       AudioSession.instance.then((session) async {
         try {
-          _cpLog('HW', 'audioSession CONFIGURE | context=ringtone category=playAndRecord mode=voiceChat androidUsage=notificationRingtone');
+          _cpLog('HW', 'audioSession CONFIGURE | context=ringtone category=playAndRecord mode=voiceChat androidUsage=voiceCommunication');
           await session.configure(AudioSessionConfiguration(
             avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
             avAudioSessionMode: AVAudioSessionMode.voiceChat,
             avAudioSessionCategoryOptions:
                 AVAudioSessionCategoryOptions.allowBluetooth |
                 AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-            androidAudioAttributes: AndroidAudioAttributes(
-              contentType: AndroidAudioContentType.music,
+            androidAudioAttributes: const AndroidAudioAttributes(
+              contentType: AndroidAudioContentType.sonification,
               flags: AndroidAudioFlags.none,
-              usage: AndroidAudioUsage.notificationRingtone,
+              usage: AndroidAudioUsage.voiceCommunication,
             ),
             androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
             androidWillPauseWhenDucked: false,
@@ -925,8 +925,9 @@ class CallService {
             AVAudioSessionCategoryOptions.allowBluetooth |
             AVAudioSessionCategoryOptions.allowBluetoothA2dp,
       ));
-      _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-post-configure');
-      await Hardware.instance.setSpeakerphoneOn(false);
+      final speakerTarget = preventCallScreenAutoOpen.value;
+      _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=_activateCalleeAudio-post-configure swipeLive=$speakerTarget');
+      await Hardware.instance.setSpeakerphoneOn(speakerTarget);
       _cpLog('IN', '_activateCalleeAudio: AudioSession configure OK');
     } catch (e) {
       _cpLog('IN', '_activateCalleeAudio: AudioSession configure ERROR | $e');
@@ -936,8 +937,9 @@ class CallService {
     _cpLog('HW', 'microphone ENABLE | context=_activateCalleeAudio');
     await _room?.localParticipant?.setMicrophoneEnabled(true);
     await Future.delayed(const Duration(milliseconds: 300));
-    _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-post-mic');
-    await Hardware.instance.setSpeakerphoneOn(false);
+    final speakerTargetPostMic = preventCallScreenAutoOpen.value;
+    _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_activateCalleeAudio-post-mic swipeLive=$speakerTargetPostMic');
+    await Hardware.instance.setSpeakerphoneOn(speakerTargetPostMic);
     final totalMs = DateTime.now().difference(activateStartAt).inMilliseconds;
     _cpLog('IN', '_activateCalleeAudio DONE | totalMs=$totalMs');
 
@@ -955,9 +957,10 @@ class CallService {
         _cpLog('LK', '_activateCalleeAudio: remote audio already subscribed → connected immediately');
         _transitionToConnected(context: 'activateCalleeAudio-alreadySubscribed');
         if (Platform.isAndroid) {
-          _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-already-subscribed isSpeaker=false');
-          Hardware.instance.setSpeakerphoneOn(false);
-          _setState(state.value.copyWith(isSpeaker: false));
+          final speakerTarget = preventCallScreenAutoOpen.value;
+          _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=_activateCalleeAudio-already-subscribed swipeLive=$speakerTarget');
+          Hardware.instance.setSpeakerphoneOn(speakerTarget);
+          _setState(state.value.copyWith(isSpeaker: speakerTarget));
         }
       }
     }
@@ -1427,8 +1430,9 @@ class CallService {
             avAudioSessionMode: AVAudioSessionMode.voiceChat,
             avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
           ));
-          _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-callee-post-configure');
-          await Hardware.instance.setSpeakerphoneOn(false);
+          final speakerTarget = preventCallScreenAutoOpen.value;
+          _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=_joinRoom-callee-post-configure swipeLive=$speakerTarget');
+          await Hardware.instance.setSpeakerphoneOn(speakerTarget);
           _cpLog('LK', 'AudioSession configure OK | role=callee');
         } catch (e) {
           _cpLog('LK', 'AudioSession configure ERROR | role=callee $e');
@@ -1438,8 +1442,9 @@ class CallService {
         await _room!.localParticipant?.setMicrophoneEnabled(true);
         _cpLog('LK', 'setMicrophoneEnabled(true) done | role=callee');
         await Future.delayed(const Duration(milliseconds: 300));
-        _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-callee-post-mic');
-        await Hardware.instance.setSpeakerphoneOn(false);
+        final speakerTargetPostMic = preventCallScreenAutoOpen.value;
+        _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_joinRoom-callee-post-mic swipeLive=$speakerTargetPostMic');
+        await Hardware.instance.setSpeakerphoneOn(speakerTargetPostMic);
       } else {
         // Network-only pre-connect (caller=calling veya callee=ringing): standart ses atlandı.
         // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
@@ -1698,8 +1703,10 @@ class CallService {
               avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
             ));
             if (Platform.isIOS) {
-              _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-post-configure platform=iOS');
-              await Hardware.instance.setSpeakerphoneOn(false);
+              final speakerTarget = preventCallScreenAutoOpen.value;
+              _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackSubscribed-post-configure platform=iOS swipeLive=$speakerTarget');
+              await Hardware.instance.setSpeakerphoneOn(speakerTarget);
+              _setState(state.value.copyWith(isSpeaker: speakerTarget));
             }
             _cpLog('LK', 'TrackSubscribed: AudioSession voice configure OK');
           } catch (e) {
@@ -1723,9 +1730,10 @@ class CallService {
             });
           }
           if (Platform.isAndroid) {
-            _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-Android isSpeaker=false');
-            Hardware.instance.setSpeakerphoneOn(false);
-            _setState(state.value.copyWith(isSpeaker: false));
+            final speakerTarget = preventCallScreenAutoOpen.value;
+            _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackSubscribed-Android swipeLive=$speakerTarget');
+            Hardware.instance.setSpeakerphoneOn(speakerTarget);
+            _setState(state.value.copyWith(isSpeaker: speakerTarget));
           }
         }
       } else if (event.track.kind == TrackType.VIDEO) {
@@ -1765,8 +1773,10 @@ class CallService {
               avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
             ));
             if (Platform.isIOS) {
-              _cpLog('HW', 'speakerphone SET | enabled=false context=TrackUnmuted-post-configure platform=iOS');
-              await Hardware.instance.setSpeakerphoneOn(false);
+              final speakerTarget = preventCallScreenAutoOpen.value;
+              _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackUnmuted-post-configure platform=iOS swipeLive=$speakerTarget');
+              await Hardware.instance.setSpeakerphoneOn(speakerTarget);
+              _setState(state.value.copyWith(isSpeaker: speakerTarget));
             }
             _cpLog('LK', 'TrackUnmuted: AudioSession voice configure OK');
           } catch (e) {
@@ -1775,9 +1785,10 @@ class CallService {
         });
         _transitionToConnected(context: 'TrackUnmuted');
         if (Platform.isAndroid) {
-          _cpLog('HW', 'speakerphone SET | enabled=false context=TrackUnmuted-Android isSpeaker=false');
-          Hardware.instance.setSpeakerphoneOn(false);
-          _setState(state.value.copyWith(isSpeaker: false));
+          final speakerTarget = preventCallScreenAutoOpen.value;
+          _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackUnmuted-Android swipeLive=$speakerTarget');
+          Hardware.instance.setSpeakerphoneOn(speakerTarget);
+          _setState(state.value.copyWith(isSpeaker: speakerTarget));
         }
       }
     } else if (event is LocalTrackPublishedEvent) {
@@ -2114,6 +2125,17 @@ class CallService {
       } catch (e) {
         _cpLog('HW', 'speakerphone SET ERROR | context=_hangUpLocally $e');
         debugPrint('[CallService] setSpeakerphoneOn(false) error: $e');
+      }
+      // iOS: voiceChat modu ile playAndRecord session'ı açık kalır → turuncu nokta göstergesi.
+      // Arama sonrası deactivate et; SwipeLiveScreen ve diğer ses kaynakları session'ı devralabilir.
+      if (Platform.isIOS) {
+        try {
+          final session = await AudioSession.instance;
+          await session.setActive(false);
+          _cpLog('HW', 'audioSession DEACTIVATE | context=_hangUpLocally platform=iOS');
+        } catch (e) {
+          _cpLog('HW', 'audioSession DEACTIVATE ERROR | context=_hangUpLocally $e');
+        }
       }
 
       if (skipStateChange) {
