@@ -49,6 +49,8 @@ from app.core.saga import Saga, SagaError
 from app.core.logger import get_logger, capture_exception
 from app.core.ws_manager import ws_manager
 from app.constants import ws_types as WS
+from app.services.moderation_service import mute_key
+from app.services.notification_service import push_notification
 
 _DM_CHANNEL = "dm_broadcast"
 
@@ -509,8 +511,6 @@ class AuctionCommands:
 
     # ── Teklif Ver ───────────────────────────────────────────────────────────
     async def place_bid(self, stream_id: int, data: BidIn, user: User, bidder_ip: str | None = None) -> dict:
-        from app.routers.notifications import push_notification
-        from app.routers.moderation import mute_key
         from app.core.action_guard import check_user_action_rate
         from app.core.exceptions import TooManyRequestsException
 
@@ -715,8 +715,6 @@ class AuctionCommands:
 
     # ── Hemen Al Talebi ──────────────────────────────────────────────────────
     async def request_buy_it_now(self, stream_id: int, user: User) -> dict:
-        from app.routers.moderation import mute_key
-
         result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
@@ -774,8 +772,6 @@ class AuctionCommands:
 
     # ── Hemen Al Kabul ───────────────────────────────────────────────────────
     async def accept_buy_it_now(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
-        from app.routers.notifications import push_notification
-
         await self._require_host(stream_id, user)
         redis = await get_redis()
         key = auction_key(stream_id)
@@ -1028,8 +1024,6 @@ class AuctionCommands:
 
     # ── Teklif Kabul ─────────────────────────────────────────────────────────
     async def accept_bid(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
-        from app.routers.notifications import push_notification
-
         await self._require_host(stream_id, user)
         redis = await get_redis()
         key = auction_key(stream_id)

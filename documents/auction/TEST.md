@@ -159,6 +159,49 @@ WS received: {type: "muted", user_id: X, source: "system", reason: "shill_biddin
 
 ---
 
+---
+
+## T-05 + T-16 — Clean Architecture: Router Import Temizliği
+
+> **Değişiklikler:**
+> - `mute_key` → `app.services.moderation_service` (2 lazy import kaldırıldı)
+> - `push_notification` → `app.services.notification_service` (3 lazy import kaldırıldı + yeni servis dosyası)
+> - `auction_commands.py` artık hiçbir router modülünü import etmiyor
+
+**Amaç:** Servisin çalışmaya devam ettiğini doğrula — davranışsal fark yok, sadece import yolu değişti.
+
+**Ön koşul:** VPS'te deploy tamamlanmış (`git pull && sudo systemctl restart teqlif`)
+
+### Test A — Shill Mute Hâlâ Çalışıyor
+
+1. Unverified + yeni hesap + aynı ağdan teklif ver
+2. `HTTP 403 BID_BLOCKED_MUTE` beklenir
+3. Log: `[MOD] SYSTEM_MUTE | stream_id=X user_id=Y reason=shill_bidding`
+
+**Redis doğrulaması:**
+```bash
+SISMEMBER stream:{stream_id}:muted {user_id}
+# Beklenen: (integer) 1
+```
+
+### Test B — push_notification Hâlâ Çalışıyor
+
+1. Artırma sonuçlandır (accept_bid veya BIN kabul et)
+2. Kazanan kullanıcıya push notification geldiğini doğrula
+3. Log: `[PUSH] push_notification çağrıldı | user_id=X | type=...`
+
+**Beklenen:** Davranış değişmez; sadece `[PUSH]` log satırları notification_service'ten geliyor (router'dan değil)
+
+### Test C — Servis Başlatma Hatası Yok
+
+VPS'te restart sonrası:
+```bash
+sudo journalctl -u teqlif -f | grep -E "ERROR|ImportError|ModuleNotFoundError"
+```
+**Beklenen:** Import hatası yok, servis temiz başlıyor.
+
+---
+
 > Bu dosya her yeni task tamamlandıkça güncellenir.  
-> Tamamlanan testler: **T-01, T-02, T-03, T-04**  
-> Bekleyen testler: T-05, T-06, T-07, T-08, T-09, T-10~T-18
+> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-16**  
+> Bekleyen testler: T-06, T-07, T-08, T-09, T-10~T-15, T-17, T-18

@@ -44,11 +44,11 @@
 
 ## 🟠 P1 — Yüksek (Mimari + Tracking)
 
-### T-05: `mute_key` import yolunu düzelt
-**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py` — L512, L714
-- [ ] `from app.routers.moderation import mute_key` → `from app.services.moderation_service import mute_key`
-- [ ] İki lokasyonu güncelle (L512 ve L714)
-- [ ] `app.routers.moderation` re-export'larının (`# noqa: F401`) bozulmadığını doğrula
+### T-05: `mute_key` import yolunu düzelt ✅
+**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
+- [x] `from app.routers.moderation import mute_key` lazy importlar kaldırıldı (2 lokasyon)
+- [x] Modül seviyesinde `from app.services.moderation_service import mute_key` eklendi
+- [x] Router re-export'ları (`# noqa: F401`) bozulmadı
 
 ### T-06: `FraudDetectionService` sınıfını oluştur
 **Dosya:** `backend/app/services/fraud_detection_service.py` — **YENİ DOSYA**
@@ -144,12 +144,12 @@
 - [ ] T-01 uygulandıktan sonra `stream:{stream_id}:muted` set'inin TTL aldığını doğrula
 - [ ] Eski stream key'lerinin temizlenip temizlenmediğini Redis'te kontrol et (opsiyonel tek seferlik cleanup script)
 
-### T-16: `auction_commands.py` — `push_notification` Router Import Düzelt
-**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py` — satır 511
-- [ ] `from app.routers.notifications import push_notification` — lazy import kaldır
-- [ ] T-05 ile birlikte uygulanabilir (aynı dosya, aynı import düzeltme kapsamı)
-- [ ] Seçenek: `push_notification` fonksiyonunu `app.services.notification_service` modülüne taşı ve oradan import et
-- [ ] Seçenek (kısa vadeli): en azından `auction_commands.py` modül seviyesine çek; router import yasaklığı ortadan kalkar
+### T-16: `auction_commands.py` — `push_notification` Router Import Düzelt ✅
+**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
+- [x] `push_notification` fonksiyonu `app.routers.notifications`'dan `app.services.notification_service`'e taşındı
+- [x] `from app.routers.notifications import push_notification` lazy importlar kaldırıldı (3 lokasyon)
+- [x] Modül seviyesinde `from app.services.notification_service import push_notification` eklendi
+- [x] `notifications.py` re-export ile geriye dönük uyumluluk korundu
 
 ### T-17: PostgreSQL — Artırma Sorgu İndeksleri
 **Dosya:** Alembic migration (T-10 ile birleştirilebilir)
