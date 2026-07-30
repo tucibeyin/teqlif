@@ -57,7 +57,7 @@ function showPanel(panel) {
         campaigns: 'navCampaigns', streams: 'navStreams',
         'stream-history': 'navStreamHistory', listings: 'navListings',
         reports: 'navReports', push: 'navPush', analytics: 'navAnalytics',
-        config: 'navConfig'
+        fraud: 'navFraud', config: 'navConfig'
     };
     const navEl = document.getElementById(navMap[panel]);
     if (navEl) navEl.classList.add('active');
@@ -71,6 +71,7 @@ function showPanel(panel) {
     if (panel === 'listings') loadListings();
     if (panel === 'reports') loadReports();
     if (panel === 'analytics') loadAnalytics();
+    if (panel === 'fraud') loadFraudLog();
     if (panel === 'config') loadConfig();
 }
 
@@ -534,6 +535,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('navReports')?.addEventListener('click', () => showPanel('reports'));
     document.getElementById('navPush')?.addEventListener('click', () => showPanel('push'));
     document.getElementById('navAnalytics')?.addEventListener('click', () => showPanel('analytics'));
+    document.getElementById('navFraud')?.addEventListener('click', () => showPanel('fraud'));
     document.getElementById('navConfig')?.addEventListener('click', () => showPanel('config'));
 
     // Reload buttons
@@ -614,6 +616,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = e.target.closest('[data-resolve-report]');
         if (btn) resolveReport(Number(btn.dataset.resolveReport));
     });
+
+    // Fraud & Mute
+    document.getElementById('btnLoadFraudLog')?.addEventListener('click', loadFraudLog);
+    document.getElementById('btnLoadStreamMutes')?.addEventListener('click', () => {
+        const sid = Number(document.getElementById('inputStreamId').value);
+        if (sid) loadStreamMutes(sid);
+    });
+    document.getElementById('stream-mutes-body')?.addEventListener('click', async e => {
+        const unmute = e.target.closest('[data-unmute]');
+        if (unmute) { await forceUnmute(Number(unmute.dataset.streamId), Number(unmute.dataset.userId), unmute.dataset.username); return; }
+        const reset = e.target.closest('[data-reset-shill]');
+        if (reset) resetShillCounter(Number(reset.dataset.streamId), Number(reset.dataset.userId), reset.dataset.username);
+    });
 });
 
 
@@ -654,7 +669,7 @@ async function saveConfig() {
         android_latest_version: document.getElementById('configAndroidLatest').value.trim(),
         android_store_url: document.getElementById('configAndroidStoreUrl').value.trim(),
     };
-    
+
     try {
         const res = await fetch('/api/config/version', {
             method: 'POST',
@@ -666,6 +681,78 @@ async function saveConfig() {
     } catch(e) {
         alert(e.message);
     }
+}
+
+
+// ── FRAUD & MUTE YÖNETİMİ ─────────────────────────────────────────────────────
+
+function fmtTs(ts) {
+    if (!ts) return '—';
+    return new Date(ts * 1000).toLocaleString('tr-TR');
+}
+
+async function loadFraudLog() {
+    const res = await adminFetch('/api/admin-data/fraud-log?limit=50');
+    if (!res) return;
+    const data = await res.json();
+    const tbody = document.getElementById('fraud-log-body');
+    if (!data.entries || data.entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:2rem;">Kayıt yok</td></tr>';
+        return;
+    }
+    const typeColors = { shill_bidding: '#f59e0b', troll_bid_no_phone: '#ef4444' };
+    tbody.innerHTML = data.entries.map(e => {
+        const color = typeColors[e.fraud_type] || '#94a3b8';
+        return `<tr>
+            <td><span style="color:${color};font-weight:700;">${e.fraud_type || '—'}</span></td>
+            <td>${e.stream_id ?? '—'}</td>
+            <td>${e.username ? `<span style="color:#38bdf8;">@${e.username}</span> <small style="color:#64748b;">#${e.user_id}</small>` : e.user_id ?? '—'}</td>
+            <td><span style="color:${(e.shill_score ?? 0) >= 80 ? '#ef4444' : (e.shill_score ?? 0) >= 45 ? '#f59e0b' : '#94a3b8'};font-weight:700;">${e.shill_score ?? '—'}</span></td>
+            <td>${e.amount != null ? '₺' + Number(e.amount).toLocaleString('tr-TR') : '—'}</td>
+            <td style="font-size:0.78rem;color:#94a3b8;">${e.bidder_ip ?? '—'}</td>
+            <td style="font-size:0.78rem;color:#64748b;">${fmtTs(e.timestamp)}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function loadStreamMutes(streamId) {
+    const res = await adminFetch(`/api/admin-data/streams/${streamId}/mutes`);
+    if (!res) return;
+    const data = await res.json();
+    const info = document.getElementById('stream-mutes-info');
+    const tbody = document.getElementById('stream-mutes-body');
+    const ttlLabel = data.muted_set_ttl > 0 ? `TTL: ${Math.round(data.muted_set_ttl / 3600)}s` : 'TTL yok';
+    info.textContent = `Stream #${data.stream_id} — ${data.muted_count} mute · ${ttlLabel}`;
+    if (!data.users || data.users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;padding:1.5rem;">Mute yok</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.users.map(u => `<tr>
+        <td style="color:#64748b;">#${u.user_id}</td>
+        <td>${u.username ? `<span style="color:#38bdf8;">@${u.username}</span>` : '—'}</td>
+        <td><span style="color:${u.shill_reason ? '#f59e0b' : '#94a3b8'};">${u.shill_reason ?? 'manuel'}</span></td>
+        <td style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button data-unmute data-stream-id="${streamId}" data-user-id="${u.user_id}" data-username="${u.username ?? u.user_id}"
+                style="width:auto;padding:0.4rem 0.8rem;font-size:0.78rem;background:#10b981;">✅ Unmute</button>
+            <button data-reset-shill data-stream-id="${streamId}" data-user-id="${u.user_id}" data-username="${u.username ?? u.user_id}"
+                style="width:auto;padding:0.4rem 0.8rem;font-size:0.78rem;background:#6366f1;">🔄 Sayaç Sıfırla</button>
+        </td>
+    </tr>`).join('');
+}
+
+async function forceUnmute(streamId, userId, username) {
+    if (!confirm(`@${username} kullanıcısının mute'unu kaldır?`)) return;
+    const res = await adminFetch(`/api/admin-data/streams/${streamId}/mutes/${userId}`, { method: 'DELETE' });
+    if (res) {
+        alert(`@${username} unmute edildi.`);
+        loadStreamMutes(streamId);
+    }
+}
+
+async function resetShillCounter(streamId, userId, username) {
+    if (!confirm(`@${username} kullanıcısının shill sayacını sıfırla?`)) return;
+    const res = await adminFetch(`/api/admin-data/shill-counter/${streamId}/${userId}`, { method: 'DELETE' });
+    if (res) alert(`@${username} shill sayacı sıfırlandı.`);
 }
 
 // SÜRÜM YÖNETİMİ BİTİŞ

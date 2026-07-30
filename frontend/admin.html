@@ -288,6 +288,7 @@
             <div class="nav-item" id="navReports">🚩 Şikayetler</div>
             <div class="nav-item" id="navPush">🔔 Bildirim Gönder</div>
             <div class="nav-item" id="navAnalytics">📈 Analitik</div>
+            <div class="nav-item" id="navFraud">🛡 Fraud & Mute</div>
             <div class="nav-item" id="navConfig">⚙️ Sürüm Yönetimi</div>
             <div class="divider"></div>
             <button id="btnAdminLogout" style="background: var(--admin-danger);">Güvenli Çıkış</button>
@@ -531,6 +532,59 @@
             </div>
 
         
+            <!-- FRAUD & MUTE YÖNETİMİ -->
+            <div id="panel-fraud" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;overflow-y:auto;gap:1.5rem;">
+
+                <!-- Fraud Log -->
+                <div>
+                    <div class="header-bar">
+                        <h1>🛡 Fraud & Mute Yönetimi</h1>
+                        <button id="btnLoadFraudLog" style="width:auto;background:#3b82f6;">🔄 Fraud Log Yenile</button>
+                    </div>
+                    <div style="margin-bottom:0.5rem;color:#94a3b8;font-size:0.85rem;">Son 50 sahte teklif girişimi · Redis fraud_log</div>
+                    <div class="table-container" style="max-height:320px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tip</th>
+                                    <th>Stream</th>
+                                    <th>Kullanıcı</th>
+                                    <th>Skor</th>
+                                    <th>Tutar</th>
+                                    <th>IP</th>
+                                    <th>Zaman</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fraud-log-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Stream Mutes -->
+                <div>
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;flex-shrink:0;">
+                        <h2 style="margin:0;color:white;font-size:1.2rem;">Yayın Mute Listesi</h2>
+                        <input type="number" id="inputStreamId" placeholder="Stream ID" style="width:120px;padding:0.5rem;border-radius:0.5rem;border:1px solid var(--admin-border);background:var(--admin-bg);color:white;">
+                        <button id="btnLoadStreamMutes" style="width:auto;background:#6366f1;">Getir</button>
+                    </div>
+                    <div id="stream-mutes-info" style="font-size:0.82rem;color:#94a3b8;margin-bottom:0.5rem;"></div>
+                    <div class="table-container" style="max-height:260px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Kullanıcı Adı</th>
+                                    <th>Shill Neden</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stream-mutes-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
             <!-- SÜRÜM YÖNETİMİ -->
             <div id="panel-config" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;overflow-y:auto;">
                 <div class="header-bar">
