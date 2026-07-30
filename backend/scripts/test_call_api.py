@@ -33,7 +33,7 @@ import asyncpg
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 BASE_URL    = "https://www.teqlif.com/api"
 WS_URL      = "wss://www.teqlif.com/api/messages/ws"
-DB_DSN      = "postgresql://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
+DB_DSN      = "postgresql://teqlif:xxx@127.0.0.1:5432/teqlif"
 
 CALLER_USER = "teqlif"
 CALLEE_USER = "tesbih"

@@ -23,7 +23,7 @@ def parse_dt(s: str) -> datetime:
 
 DATA_FILE = Path(__file__).parent / "mock_02_user_interactions.json"
 IDS_FILE  = Path(__file__).parent / "listing_ids.json"
-DB_DSN    = "postgresql://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
+DB_DSN    = "postgresql://teqlif:xxx@127.0.0.1:5432/teqlif"
 BATCH     = 500
 
 INSERT_SQL = """

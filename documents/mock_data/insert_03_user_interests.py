@@ -17,7 +17,7 @@ from pathlib import Path
 import asyncpg
 
 DATA_FILE = Path(__file__).parent / "mock_03_user_interests.json"
-DB_DSN    = "postgresql://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
+DB_DSN    = "postgresql://teqlif:xxx@127.0.0.1:5432/teqlif"
 BATCH     = 500
 
 UPSERT_SQL = """

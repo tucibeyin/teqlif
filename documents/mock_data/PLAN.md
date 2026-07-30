@@ -153,7 +153,7 @@ import json, asyncio
 from pathlib import Path
 
 DATA_FILE = Path(__file__).parent / "mock_0X_xxxx.json"
-DB_URL = "postgresql+asyncpg://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
+DB_URL = "postgresql+asyncpg://teqlif:xxx@127.0.0.1:5432/teqlif"
 
 async def main():
     data = json.loads(DATA_FILE.read_text())

@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 import httpx
 import argparse
 
-DB_URL = "postgresql+asyncpg://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
+DB_URL = "postgresql+asyncpg://teqlif:xxx@127.0.0.1:5432/teqlif"
 BASE_URL = "https://www.teqlif.com/api"
 TEST_EMAIL = "teqlif@gmail.com"
 
