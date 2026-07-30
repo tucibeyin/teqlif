@@ -118,11 +118,10 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
         _handleNotifNavigation(pendingNotif);
       }
 
-      // T-HC-10: Proaktif mikrofon izni — sonucu takip et (isPermanentlyDenied ise ayarlara yönlendir)
-      final micStatus = await Permission.microphone.request();
-      if (micStatus.isPermanentlyDenied && mounted) {
-        await openAppSettings();
-      }
+      // T-HC-10: Proaktif mikrofon izni — sonucu takip et
+      Permission.microphone.request().then((micStatus) async {
+        if (!micStatus.isGranted && mounted) await openAppSettings();
+      });
     });
   }
 
