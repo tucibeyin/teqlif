@@ -40,6 +40,8 @@ class ErrorMapper {
       case 'UNAUTHORIZED':
         return loc.t('apiErrInvalidCredentials');
       case 'RATE_LIMIT_EXCEEDED':
+      case 'RATE_LIMITED':
+      case 'BID_RATE_LIMIT':
         return loc.t('errorTooFast');
       case 'FORBIDDEN':
       case 'CAPTCHA_FAILED':

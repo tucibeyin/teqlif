@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
+import '../core/error_mapper.dart';
 import '../core/logger_service.dart';
 import '../models/auction.dart';
 import '../providers/auction_provider.dart';
@@ -1137,7 +1138,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                             // Dialog ref.listen üzerinden kapanacak (host kararıyla)
                           } on AppException catch (e) {
                             if (ctx.mounted) Navigator.pop(ctx);
-                            _setMsg(e.message, error: true);
+                            _setMsg(ErrorMapper.toMessage(e, ref.read(localizationProvider)), error: true);
                           } catch (e, st) {
                             LoggerService.instance.captureException(
                               e,
@@ -1281,7 +1282,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           proofImageUrl: proofUrl,
         );
       } on AppException catch (e) {
-        _setMsg(e.message, error: true);
+        _setMsg(ErrorMapper.toMessage(e, ref.read(localizationProvider)), error: true);
       } catch (e, st) {
         LoggerService.instance.captureException(
           e,
@@ -1294,7 +1295,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       try {
         await AuctionService.rejectBuyItNow(widget.streamId);
       } on AppException catch (e) {
-        _setMsg(e.message, error: true);
+        _setMsg(ErrorMapper.toMessage(e, ref.read(localizationProvider)), error: true);
       } catch (e, st) {
         LoggerService.instance.captureException(
           e,
@@ -1622,8 +1623,9 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       return;
     }
 
-    // Diğer hatalar → mevcut hata kutusu
-    _setMsg(e.message, error: true);
+    // Diğer hatalar → ErrorMapper üzerinden lokalize mesaj
+    final loc = ref.read(localizationProvider);
+    _setMsg(ErrorMapper.toMessage(e, loc), error: true);
   }
 
   void _showBidBlockedSheet(String code) {
