@@ -259,16 +259,16 @@ async def _send_call_push(
         "callee_token": callee_token,
     }
 
-    # VoIP (APNs) payload: minimal — JWT token push payload'ında olmamalı.
-    # iOS callee uyanınca GET /calls/:id/callee-token ile taze token çeker.
-    # flutter_callkit_incoming native handler'ı sadece bilinen alanları map eder;
-    # custom alanlar ancak "extra" alt dict'inde ulaşılabilir olur.
+    # VoIP (APNs) payload: self-contained — callee_token + livekit_url dahil.
+    # iOS uyanınca HTTP fetch gerekmez; pre-connect hemen başlar (WhatsApp pattern).
     voip_extra_data = {
         "call_id": str(call_id),
         "room_name": room_name,
         "caller_id": str(caller.id),
         "caller_username": caller.username,
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
+        "livekit_url": settings.livekit_url,
+        "callee_token": callee_token,
     }
 
     # Token yaşını hesapla
@@ -306,7 +306,7 @@ async def _send_call_push(
         return success
 
     async def _try_fcm() -> None:
-        """FCM push dener."""
+        """FCM push dener — data-only (is_silent=True) + yüksek öncelik + 45s TTL."""
         if not callee.fcm_token:
             logger.warning("[CALL_PROCESS][PUSH] FCM push skipped — no fcm_token | callee=%d", callee.id)
             return
@@ -318,7 +318,13 @@ async def _send_call_push(
                 body=body,
                 badge=None,
                 notif_type="incoming_call",
-                extra_data=fcm_extra_data,  # FCM: full payload with callee_token
+                extra_data=fcm_extra_data,
+                # Data-only: flutter_callkit_incoming callkit UI'ını kendisi gösterir.
+                # Sistem bildirimi + callkit double-UI'ını önler.
+                is_silent=True,
+                # 45s: çalma süresiyle uyumlu — Doze window'u aşmadan expire olur.
+                ttl=45,
+                android_channel_id="teqlif_calls",
             )
             logger.info("[CALL_PROCESS][PUSH] FCM push sent | callee=%d", callee.id)
         except Exception as exc:
@@ -456,13 +462,13 @@ async def start_call(
     }
     await _ws_broadcast(callee_id, ws_payload)
     callee_ws_connected = await ws_manager.is_dm_online(callee_id)
-    if callee_ws_connected:
-        logger.info(
-            "[CALL_PROCESS][OUT] start_call: WS connected → push skipped | call_id=%d callee=%d",
-            call.id, callee_id,
-        )
-    else:
-        await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
+    # Belt-and-suspenders: WS bağlı olsa bile her zaman push gönder.
+    # WS arka planda suspend edilmiş olabilir; push (VoIP/FCM) garantili ulaşır.
+    logger.info(
+        "[CALL_PROCESS][OUT] start_call: WS+Push (always) | call_id=%d callee=%d ws_connected=%s",
+        call.id, callee_id, callee_ws_connected,
+    )
+    await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
 
     logger.info(
         "[CALL_PROCESS][OUT] start_call: WS+Push sent | call_id=%d callee=%d ws_connected=%s callee_voip=%s callee_fcm=%s",

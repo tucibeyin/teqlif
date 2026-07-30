@@ -33,7 +33,16 @@ class FirebaseAdapter(PushNotificationPort):
             capture_exception(exc)
             return None
 
-    async def send_notification(self, token: str, title: str, body: str, data: Dict[str, Any] = None) -> bool:
+    async def send_notification(
+        self,
+        token: str,
+        title: str,
+        body: str,
+        data: Dict[str, Any] = None,
+        is_silent: bool = False,
+        ttl: int | None = None,
+        android_channel_id: str | None = None,
+    ) -> bool:
         if not token:
             logger.error("[FirebaseAdapter] send_notification çağrıldı ama token boş")
             return False
@@ -45,16 +54,27 @@ class FirebaseAdapter(PushNotificationPort):
                     raise ServiceException("Firebase app not initialized")
 
                 from firebase_admin import messaging
-                
-                # Sadece standart push parametreleri için mock bir implementasyon uyarladık.
-                # data dict olarak geliyorsa string'e dönüştürülmeli
+
                 formatted_data = {k: str(v) for k, v in data.items()} if data else {}
 
+                # is_silent=True → data-only mesaj (notification alanı yok).
+                # Callkit/background handler bildirimi kendisi yönetir; sistem
+                # bildirim + callkit double-UI'ını önler.
+                notification = None if is_silent else messaging.Notification(title=title, body=body)
+
+                android_cfg = messaging.AndroidConfig(
+                    priority="high",
+                    ttl=ttl,
+                    notification=messaging.AndroidNotification(
+                        channel_id=android_channel_id,
+                    ) if (android_channel_id and not is_silent) else None,
+                )
+
                 msg = messaging.Message(
-                    notification=messaging.Notification(title=title, body=body),
+                    notification=notification,
                     data=formatted_data,
                     token=token,
-                    android=messaging.AndroidConfig(priority="high"),
+                    android=android_cfg,
                 )
                 
                 result = await asyncio.get_event_loop().run_in_executor(

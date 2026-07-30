@@ -37,6 +37,8 @@ async def send_push(
     extra_data: dict[str, str] | None = None,
     image_url: str | None = None,
     is_silent: bool = False,
+    ttl: int | None = None,
+    android_channel_id: str | None = None,
 ) -> None:
     """
     Eski servis fonksiyonu, geriye dönük uyumluluk (Facade) amacıyla korunmuştur.
@@ -56,7 +58,12 @@ async def send_push(
         # DI Container üzerinden port'u alıyoruz.
         # init_di() main.py veya worker tarafından daha önce çağrılmış olmalı.
         push_port = container.resolve(PushNotificationPort)
-        success = await push_port.send_notification(token, title, body, data)
+        success = await push_port.send_notification(
+            token, title, body, data,
+            is_silent=is_silent,
+            ttl=ttl,
+            android_channel_id=android_channel_id,
+        )
         if not success:
             logger.warning("[FCM Facade] Push gönderimi başarısız döndü.")
     except Exception as exc:

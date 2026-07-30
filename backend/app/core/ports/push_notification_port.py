@@ -8,9 +8,21 @@ class PushNotificationPort(abc.ABC):
     """
 
     @abc.abstractmethod
-    def send_notification(self, token: str, title: str, body: str, data: Dict[str, Any] = None) -> bool:
+    def send_notification(
+        self,
+        token: str,
+        title: str,
+        body: str,
+        data: Dict[str, Any] = None,
+        is_silent: bool = False,
+        ttl: int | None = None,
+        android_channel_id: str | None = None,
+    ) -> bool:
         """
         Tek bir cihaza bildirim gönderir.
+        is_silent=True → notification alanı olmadan data-only mesaj (callkit için).
+        ttl → FCM mesaj yaşam süresi (saniye).
+        android_channel_id → özel kanal ID'si.
         """
         pass
 

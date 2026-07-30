@@ -184,15 +184,44 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
   if (response.actionId == _kActionDecline) {
     debugPrint('[FLNP][BG] Reddet aksiyonu — API çağrısı yapılıyor');
     try {
-      final token = await StorageService.getToken();
-      if (token != null) {
-        final r = await http.post(
-          Uri.parse('$kBaseUrl/calls/$callId/reject'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-        debugPrint('[FLNP][BG] reject yanıtı: ${r.statusCode}');
-      } else {
+      String? authToken = await StorageService.getToken();
+      if (authToken == null) {
         debugPrint('[FLNP][BG] Token bulunamadı — reject yapılamadı');
+        return;
+      }
+      var r = await http.post(
+        Uri.parse('$kBaseUrl/calls/$callId/reject'),
+        headers: {'Authorization': 'Bearer $authToken'},
+      );
+      debugPrint('[FLNP][BG] reject yanıtı: ${r.statusCode}');
+
+      // 401 → token süresi dolmuş: refresh dene, sonra tekrar gönder.
+      if (r.statusCode == 401) {
+        debugPrint('[FLNP][BG] 401 → token refresh deneniyor');
+        final refreshToken = await StorageService.getRefreshToken();
+        if (refreshToken != null) {
+          final refreshResp = await http.post(
+            Uri.parse('$kBaseUrl/auth/refresh'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refresh_token': refreshToken}),
+          );
+          if (refreshResp.statusCode == 200) {
+            final body = jsonDecode(refreshResp.body) as Map<String, dynamic>;
+            final newAccess = body['access_token'] as String?;
+            final newRefresh = body['refresh_token'] as String?;
+            if (newAccess != null) {
+              await StorageService.saveToken(newAccess);
+              if (newRefresh != null) await StorageService.saveRefreshToken(newRefresh);
+              r = await http.post(
+                Uri.parse('$kBaseUrl/calls/$callId/reject'),
+                headers: {'Authorization': 'Bearer $newAccess'},
+              );
+              debugPrint('[FLNP][BG] reject retry yanıtı: ${r.statusCode}');
+            }
+          } else {
+            debugPrint('[FLNP][BG] refresh başarısız: ${refreshResp.statusCode}');
+          }
+        }
       }
     } catch (e) {
       debugPrint('[FLNP][BG] reject hatası: $e');
