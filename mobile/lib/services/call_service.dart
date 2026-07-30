@@ -801,11 +801,14 @@ class CallService {
     _activeIncomingCallId = null;
 
     // Pre-connect: LK odaya ringing sırasında bağlan → acceptance'da sadece mic aktive et.
-    if ((calleeToken == null || livekitUrl == null) && incomingCallId != null) {
+    // Empty string guard: VoIP payload'da callee_token/livekit_url yoksa AppDelegate "" döner.
+    // "" != null → null-check geçer ama _joinRoom("","") → malformed URI → exception → endCall.
+    // isEmpty kontrolü ile HTTP fetch fallback'e düşüyoruz.
+    if ((calleeToken == null || calleeToken.isEmpty || livekitUrl == null || livekitUrl.isEmpty) && incomingCallId != null) {
       // VoIP push (iOS): payload'da token yok → önce fetch, sonra pre-connect.
-      _cpLog('IN', 'calleeToken/livekitUrl missing — proactive fetch starting | callId=$incomingCallId source=$source');
+      _cpLog('IN', 'calleeToken/livekitUrl missing or empty — proactive fetch starting | callId=$incomingCallId source=$source');
       _fetchAndStoreCalleeToken(incomingCallId);
-    } else if (calleeToken != null && livekitUrl != null && incomingCallId != null && _room == null && !_isJoiningRoom) {
+    } else if (calleeToken != null && calleeToken.isNotEmpty && livekitUrl != null && livekitUrl.isNotEmpty && incomingCallId != null && _room == null && !_isJoiningRoom) {
       // WS path (Android foreground): token payload'da hazır → pre-connect hemen başlat.
       // iOS VoIP push path'i _fetchAndStoreCalleeToken üzerinden zaten pre-connect yapar.
       _preConnectStartedAt = DateTime.now();
@@ -1601,7 +1604,13 @@ class CallService {
     } catch (e) {
       _cpLog('LK', '_joinRoom EXCEPTION | $e');
       _isJoiningRoom = false;
-      endCall();
+      // Pre-connect failure (ringing/calling): user hasn't accepted yet — preserve the call.
+      // The CallKit screen stays visible; acceptCall() will retry _joinRoom with a fresh token.
+      if (callStatusAtEntry == CallStatus.ringing || callStatusAtEntry == CallStatus.calling) {
+        _cpLog('LK', '_joinRoom EXCEPTION in pre-connect ($callStatusAtEntry) — call preserved');
+      } else {
+        endCall();
+      }
     }
   }
 

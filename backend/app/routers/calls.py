@@ -289,7 +289,7 @@ async def _send_call_push(
             "[CALL_PROCESS][PUSH] VoIP push attempt | callee=%d tokenAge=%dd token=%s…",
             callee.id, token_age_days, callee.voip_token[:10],
         )
-        # VoIP payload'ında JWT yok — callee API'den çeker (GET /callee-token)
+        # Self-contained payload: callee_token + livekit_url dahil → Dart HTTP fetch'ini atlar.
         payload = {
             "aps": {"content-available": 1},
             **voip_extra_data,
