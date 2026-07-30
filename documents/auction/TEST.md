@@ -251,6 +251,80 @@ Bu test artık `FraudDetectionService`'in içinden geliyor.
 
 ---
 
+---
+
+## T-08 — Admin API: Fraud & Mute Yönetimi
+
+> **Yeni endpoint'ler:** `/api/admin-data/fraud-log`, `/streams/{id}/mutes`, `/streams/{id}/mutes/{uid}`, `/shill-counter/{sid}/{uid}`
+
+**Ön koşul:** VPS'te deploy tamamlanmış, admin token'ı hazır
+
+### Test A — Fraud Log Listesi
+
+```bash
+curl -H "Authorization: Bearer <admin_token>" \
+  "https://www.teqlif.com/api/admin-data/fraud-log?limit=10"
+```
+
+**Beklenen:** Son fraud girişimleri JSON olarak döner
+```json
+{"count": N, "entries": [{"fraud_type": "shill_bidding", "stream_id": ..., "timestamp": ...}, ...]}
+```
+
+### Test B — Stream Mute Listesi
+
+```bash
+# Önce shill mute oluştur (T-01 Senaryo B)
+# Sonra listele:
+curl -H "Authorization: Bearer <admin_token>" \
+  "https://www.teqlif.com/api/admin-data/streams/{stream_id}/mutes"
+```
+
+**Beklenen:**
+```json
+{
+  "stream_id": X,
+  "muted_count": 1,
+  "muted_set_ttl": 86XXX,
+  "users": [{"user_id": Y, "username": "...", "shill_reason": "shill_bidding"}]
+}
+```
+
+### Test C — Admin Force Unmute
+
+```bash
+curl -X DELETE -H "Authorization: Bearer <admin_token>" \
+  "https://www.teqlif.com/api/admin-data/streams/{stream_id}/mutes/{user_id}"
+```
+
+**Beklenen:** `{"ok": true, "stream_id": X, "user_id": Y}`
+
+**Redis doğrulaması:**
+```bash
+SISMEMBER stream:{stream_id}:muted {user_id}
+# Beklenen: (integer) 0
+
+HGET shill_mute:{stream_id} {user_id}
+# Beklenen: (nil)
+```
+
+### Test D — Shill Sayacı Sıfırlama
+
+```bash
+curl -X DELETE -H "Authorization: Bearer <admin_token>" \
+  "https://www.teqlif.com/api/admin-data/shill-counter/{stream_id}/{user_id}"
+```
+
+**Beklenen:** `{"ok": true, "deleted": true}`
+
+**Redis doğrulaması:**
+```bash
+GET shill_cnt:{stream_id}:{user_id}
+# Beklenen: (nil)
+```
+
+---
+
 > Bu dosya her yeni task tamamlandıkça güncellenir.  
-> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-16**  
-> Bekleyen testler: T-08, T-09, T-10~T-15, T-17, T-18
+> Tamamlanan testler: **T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08, T-16**  
+> Bekleyen testler: T-09, T-10~T-15, T-17, T-18

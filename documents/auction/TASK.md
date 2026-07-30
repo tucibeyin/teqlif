@@ -71,19 +71,15 @@
 
 **Etki:** Bu event'ler ClickHouse `user_events` tablosuna düşecek → Trust Score ML beslenecek
 
-### T-08: Admin API — Fraud & Mute yönetim endpoint'leri
+### T-08: Admin API — Fraud & Mute yönetim endpoint'leri ✅
 **Dosya:** `backend/app/routers/admin_data.py`
-- [ ] `GET /api/admin-data/fraud-log` — Redis ZADD `fraud_log` son 50 kaydı döndür
-  ```python
-  entries = await redis.zrevrange("fraud_log", 0, 49, withscores=True)
-  ```
-- [ ] `GET /api/admin-data/streams/{stream_id}/mutes` — muted set + shill_mute meta hash döndür
-- [ ] `DELETE /api/admin-data/streams/{stream_id}/mutes/{user_id}` — admin force unmute
+- [x] `GET /api/admin-data/fraud-log` — Redis ZADD `fraud_log` son 50 kaydı döndür (limit query param, max 200)
+- [x] `GET /api/admin-data/streams/{stream_id}/mutes` — muted set + shill_mute meta hash + TTL döndür
+- [x] `DELETE /api/admin-data/streams/{stream_id}/mutes/{user_id}` — admin force unmute
   - `redis.srem(mute_key(stream_id), str(user_id))`
   - `redis.hdel(f"shill_mute:{stream_id}", str(user_id))`
-  - `publish_mod_event()` ile WS event yayınla
-- [ ] `DELETE /api/admin-data/shill-counter/{stream_id}/{user_id}` — shill sayacını sıfırla
-  - `redis.delete(f"shill_cnt:{stream_id}:{user_id}")`
+  - `publish_mod_event()` ile WS UNMUTED event yayınla (source="admin")
+- [x] `DELETE /api/admin-data/shill-counter/{stream_id}/{user_id}` — shill sayacını sıfırla
 
 ---
 

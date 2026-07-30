@@ -708,3 +708,88 @@ async def get_admin_analytics_summary(db: AsyncSession = Depends(get_db), admin:
         "device_stats": device_stats,
         "recent_events": recent_list
     }
+
+
+# ==========================================
+# 10. FRAUD & MUTE YÖNETİMİ
+# ==========================================
+
+@router.get("/fraud-log")
+async def get_fraud_log(
+    limit: int = Query(default=50, le=200),
+    admin: User = Depends(check_admin_access),
+):
+    """Redis fraud_log ZADD'inden son N kaydı döndür (en yeniden eskiye)."""
+    import json as _json
+    redis = await get_redis()
+    raw_entries = await redis.zrevrange("fraud_log", 0, limit - 1, withscores=True)
+    result = []
+    for value, score in raw_entries:
+        try:
+            entry = _json.loads(value)
+            entry["timestamp"] = score
+        except Exception:
+            entry = {"raw": value, "timestamp": score}
+        result.append(entry)
+    return {"count": len(result), "entries": result}
+
+
+@router.get("/streams/{stream_id}/mutes")
+async def get_stream_mutes(
+    stream_id: int,
+    admin: User = Depends(check_admin_access),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bir stream'deki muted kullanıcıları ve shill_mute meta bilgisini döndür."""
+    from app.services.moderation_service import mute_key
+    redis = await get_redis()
+    muted_ids = await redis.smembers(mute_key(stream_id))
+    shill_meta = await redis.hgetall(f"shill_mute:{stream_id}")
+    muted_ttl = await redis.ttl(mute_key(stream_id))
+
+    users = []
+    for uid_bytes in muted_ids:
+        uid = int(uid_bytes)
+        user = await db.get(User, uid)
+        users.append({
+            "user_id": uid,
+            "username": user.username if user else None,
+            "shill_reason": shill_meta.get(str(uid)),
+        })
+
+    return {
+        "stream_id": stream_id,
+        "muted_count": len(users),
+        "muted_set_ttl": muted_ttl,
+        "users": users,
+    }
+
+
+@router.delete("/streams/{stream_id}/mutes/{user_id}")
+async def admin_force_unmute(
+    stream_id: int,
+    user_id: int,
+    admin: User = Depends(check_admin_access),
+):
+    """Admin force unmute — hem muted set'ten hem shill_mute hash'ten siler, WS event yayınlar."""
+    from app.services.moderation_service import mute_key, publish_mod_event
+    redis = await get_redis()
+    await redis.srem(mute_key(stream_id), str(user_id))
+    await redis.hdel(f"shill_mute:{stream_id}", str(user_id))
+    await publish_mod_event(stream_id, WS.UNMUTED, user_id, source="admin", admin_id=admin.id)
+    logger.info("[ADMIN] Force unmute | stream_id=%s user_id=%s admin=%s", stream_id, user_id, admin.email)
+    return {"ok": True, "stream_id": stream_id, "user_id": user_id}
+
+
+@router.delete("/shill-counter/{stream_id}/{user_id}")
+async def reset_shill_counter(
+    stream_id: int,
+    user_id: int,
+    admin: User = Depends(check_admin_access),
+):
+    """Belirli bir kullanıcının shill sayacını sıfırla (false positive düzeltme)."""
+    redis = await get_redis()
+    deleted = await redis.delete(f"shill_cnt:{stream_id}:{user_id}")
+    logger.info("[ADMIN] Shill counter reset | stream_id=%s user_id=%s deleted=%s admin=%s",
+                stream_id, user_id, deleted, admin.email)
+    return {"ok": True, "deleted": bool(deleted)}
