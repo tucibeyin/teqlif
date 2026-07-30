@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     minio_secure: bool = False
 
     # APNS VoIP Push Ayarları
+    # Token-based auth (.p8) — süresi dolmaz, tercih edilen yöntem.
+    # apns_key_path + apns_key_id + apns_team_id üçü set edilirse token-based kullanılır.
+    apns_key_path: str = ""       # /path/to/AuthKey_XXXXXXXXXX.p8
+    apns_key_id: str = ""         # 10 karakterlik Key ID (Apple Developer Portal)
+    apns_team_id: str = ""        # 10 karakterlik Team ID
+    # Eski sertifika bazlı auth (.pem) — yıllık yenileme gerekir, fallback olarak korundu.
     apns_cert_path: str = ""
     ios_bundle_id: str = "teqlif"
     apns_use_sandbox: bool = False
