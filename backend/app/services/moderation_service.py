@@ -152,6 +152,25 @@ class ModerationService:
 
         return stream, target
 
+    # ── Sistem Mute (Fraud / Shill Tespiti) ─────────────────────────────────
+    async def system_mute(self, stream_id: int, user_id: int, reason: str) -> None:
+        """Sistem tarafından tetiklenen mute (shill/fraud). WS event dahil.
+
+        Manuel mute'dan farkı: DB session veya yetki doğrulaması gerektirmez;
+        host_id referansı olmadan direkt çağrılabilir. shill_mute meta hash'e
+        kayıt yazar → host unmute'u override edebilir.
+        """
+        redis = await get_redis()
+        await redis.sadd(mute_key(stream_id), str(user_id))
+        await redis.expire(mute_key(stream_id), _TTL)
+        await redis.hset(f"shill_mute:{stream_id}", str(user_id), reason)
+        await redis.expire(f"shill_mute:{stream_id}", _TTL)
+        await publish_mod_event(stream_id, WS.MUTED, user_id, reason=reason, source="system")
+        logger.warning(
+            "[MOD] SYSTEM_MUTE | stream_id=%s user_id=%s reason=%s",
+            stream_id, user_id, reason,
+        )
+
     # ── Sustur ───────────────────────────────────────────────────────────────
     async def mute(self, stream_id: int, username: str, current_user: User) -> dict:
         _, target = await self._resolve_actors(stream_id, username, current_user)
@@ -173,6 +192,8 @@ class ModerationService:
 
         redis = await get_redis()
         await redis.srem(mute_key(stream_id), str(target.id))
+        # Sistem (shill) mute meta kaydını da temizle — host override
+        await redis.hdel(f"shill_mute:{stream_id}", str(target.id))
 
         await publish_mod_event(stream_id, WS.UNMUTED, target.id)
         logger.info(

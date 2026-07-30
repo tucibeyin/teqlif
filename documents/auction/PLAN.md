@@ -294,20 +294,137 @@ case "muted":
 
 ---
 
-## Bölüm 8 — Öncelik Matrisi
+## Bölüm 8 — Redis TTL Standardizasyonu
+
+### 8.1 Sorun
+
+`stream:{stream_id}:muted` Redis Set'ine TTL atanmıyor. `place_bid()` içindeki shill mute kodu:
+
+```python
+# MEVCUT — TTL YOK
+await redis.sadd(mute_key(stream_id), str(user.id))
+# expire() çağrısı yok → key sonsuza kadar kalır
+```
+
+`moderation_service.py → mute()` metodu `_TTL` ile expire ediyor ama shill kodu bu metodu bypass ediyor.
+
+### 8.2 Çözüm
+
+T-01 (`system_mute()`) uygulanınca otomatik çözülür:
+
+```python
+# system_mute() içinde
+await redis.sadd(mute_key(stream_id), str(user.id))
+await redis.expire(mute_key(stream_id), _TTL)  # TTL ekleniyor
+```
+
+Ek olarak, tüm Redis key'leri ve TTL'leri `auction_architecture.md` Bölüm 14'te belgelendi.
+
+---
+
+## Bölüm 9 — Eksik PostgreSQL İndeksleri
+
+### 9.1 Tespit
+
+Kullanıcı taraflı artırma sorguları (teklif geçmişi, kazanma geçmişi, satın alma geçmişi) için gerekli indeksler eksik:
+
+| Tablo | Eksik İndeks | Sorgu Tipi |
+|---|---|---|
+| `bids` | `(bidder_id)` | Kullanıcı teklif geçmişi |
+| `auctions` | `(winner_id)` | Kullanıcı kazanma geçmişi |
+| `purchases` | `(buyer_id, purchase_type)` | Kullanıcı satın alma geçmişi |
+| `purchases` | `(auction_id)` | Artırma sonucu doğrulama |
+
+### 9.2 Migration
+
+```sql
+-- Alembic migration: add_auction_query_indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_bids_bidder_id
+  ON bids (bidder_id);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_auctions_winner_id
+  ON auctions (winner_id);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_purchases_buyer_type
+  ON purchases (buyer_id, purchase_type);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_purchases_auction_id
+  ON purchases (auction_id);
+```
+
+Mevcut T-10'da `user_interactions` fraud index var; yeni migration bu indeksleri de içerebilir.
+
+---
+
+## Bölüm 10 — ClickHouse Event Coverage Genişletme
+
+### 10.1 BIN Flow Tracking
+
+`accept_buy_it_now()` ve `reject_buy_it_now()` içine event yaz:
+
+```python
+# accept_buy_it_now() içinde
+await buffer_user_event(
+    event_type="buy_it_now_accepted",
+    item_id=stream_id,
+    item_type="stream",
+    user_id=buyer_id,
+    price_point=float(bin_price),
+)
+
+# reject_buy_it_now() içinde
+await buffer_user_event(
+    event_type="buy_it_now_rejected",
+    item_id=stream_id,
+    item_type="stream",
+    user_id=buyer_id,
+    price_point=float(bin_price),
+)
+```
+
+### 10.2 Artırma Yaşam Döngüsü Tracking
+
+```python
+# pause_auction() içinde
+await buffer_user_event(event_type="auction_paused", item_id=stream_id, item_type="stream", user_id=host_id)
+
+# resume_auction() içinde
+await buffer_user_event(event_type="auction_resumed", item_id=stream_id, item_type="stream", user_id=host_id)
+```
+
+### 10.3 İkinci Router Import İhlali Düzeltmesi
+
+`place_bid()` içindeki `from app.routers.notifications import push_notification` Use Case → Router ihlali.
+
+```python
+# ÖNCE (Use Case içinde, satır 511)
+from app.routers.notifications import push_notification
+
+# SONRA — lazy import kaldırılır; modül düzeyinde import veya servis soyutlaması
+# Seçenek A: auction_commands.py başında modül düzeyinde import
+from app.services.notification_service import push_notification  # servis katmanına taşı
+
+# Seçenek B: kısa vadeli — en azından import yolunu router'dan servis'e çek
+# Bu T-05'in (mute_key) benzeri bir düzeltme
+```
+
+---
+
+## Bölüm 11 — Öncelik Matrisi (Güncellenmiş)
 
 | # | Bileşen | Değişiklik | Etki | Öncelik |
 |---|---|---|---|---|
-| 1 | `moderation_service.py` | `system_mute()` + WS event + meta hash | Host unmute bug düzelir | 🔴 P0 |
+| 1 | `moderation_service.py` | `system_mute()` + WS event + meta hash + TTL | Host unmute bug + Redis leak | 🔴 P0 |
 | 2 | `auction_commands.py` | Shill score sabitleri güncelle | False positive önlenir | 🔴 P0 |
 | 3 | `auction_commands.py` | Direkt Redis → `system_mute()` | Mimari tutarlılık | 🔴 P0 |
-| 4 | `auction_commands.py` | Import yolu düzelt | Clean Arch uyumu | 🟠 P1 |
-| 5 | `fraud_detection_service.py` | Yeni servis | Test edilebilirlik | 🟠 P1 |
-| 6 | `database_clickhouse.py` | Fraud event tracking ekle | ML/Trust Score beslemesi | 🟠 P1 |
-| 7 | `admin_data.py` | Fraud log + mute yönetim endpoint'leri | Admin operasyon | 🟠 P1 |
-| 8 | `worker.py` | Trust score'a fraud sinyali ekle | ML kalitesi | 🟡 P2 |
-| 9 | `user_interactions` indeks | PostgreSQL fraud index | Sorgu performansı | 🟡 P2 |
-| 10 | `error_handlers.py` | `user=guest` log bug | Log kalitesi | 🟡 P2 |
-| 11 | Flutter WS handler | `reason=system` mute mesajı | UX netliği | 🟡 P2 |
-| 12 | Flutter feed poller | Guard ekle | Navigation tutarlılığı | 🟡 P2 |
+| 4 | `auction_commands.py` | `mute_key` import yolu düzelt | Clean Arch uyumu | 🟠 P1 |
+| 5 | `auction_commands.py` | `push_notification` router import düzelt | Clean Arch uyumu (F-08) | 🟠 P1 |
+| 6 | `fraud_detection_service.py` | Yeni servis | Test edilebilirlik | 🟠 P1 |
+| 7 | `database_clickhouse.py` | Fraud + BIN + pause/resume event tracking | ML/Trust Score beslemesi | 🟠 P1 |
+| 8 | `admin_data.py` | Fraud log + mute yönetim endpoint'leri | Admin operasyon | 🟠 P1 |
+| 9 | `worker.py` | Trust score'a fraud sinyali ekle | ML kalitesi | 🟡 P2 |
+| 10 | Alembic migration | fraud index + bids/auctions/purchases index | Sorgu performansı | 🟡 P2 |
+| 11 | `error_handlers.py` | `user=guest` log bug | Log kalitesi | 🟡 P2 |
+| 12 | Flutter WS handler | `reason=system` mute mesajı | UX netliği | 🟡 P2 |
+| 13 | Flutter feed poller | Guard ekle | Navigation tutarlılığı | 🟡 P2 |
 

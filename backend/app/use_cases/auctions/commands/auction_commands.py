@@ -68,12 +68,13 @@ _HIGH_BID_MULTIPLIER = 10
 _HIGH_BID_MULTIPLIER_UNVERIFIED = 7
 
 # Shill bidding sinyal skorları
-_SHILL_SCORE_IP_MATCH     = 40  # IP eşleşmesi (temel sinyal)
-_SHILL_SCORE_UNVERIFIED   = 30  # Hesap email+telefon doğrulanmamış
-_SHILL_SCORE_NEW_ACCOUNT  = 20  # Hesap 7 günden genç
-_SHILL_SCORE_REPEAT       = 15  # Aynı stream'de önceki sinyal başına (max 2x)
-_SHILL_THRESHOLD_MUTE     = 70  # Bu skoru aşarsa: stream boyunca mute + teklif bloke
-_SHILL_THRESHOLD_WARN     = 40  # Bu skoru aşarsa: sayaç artır, teklif geçer
+# IP eşleşmesi tek başına dominat olmamalı (aynı ağda meşru kullanıcılar olabilir)
+_SHILL_SCORE_IP_MATCH     = 30  # IP eşleşmesi (tetikleyici, tek başına yeterli değil)
+_SHILL_SCORE_UNVERIFIED   = 35  # Doğrulanmamış hesap + IP → ciddi sinyal
+_SHILL_SCORE_NEW_ACCOUNT  = 25  # Hesap 7 günden genç
+_SHILL_SCORE_REPEAT       = 10  # Aynı stream'de önceki sinyal başına (max 2x)
+_SHILL_THRESHOLD_MUTE     = 80  # Verified+eski hesap aynı ağdan asla mute edilmez
+_SHILL_THRESHOLD_WARN     = 45  # Bu skoru aşarsa: sayaç artır, teklif geçer
 _SHILL_COUNTER_TTL        = 86_400  # Sinyal sayacı 24 saat canlı kalır
 
 
@@ -565,7 +566,10 @@ class AuctionCommands:
             )
 
             if shill_score >= _SHILL_THRESHOLD_MUTE:
-                await redis.sadd(mute_key(stream_id), str(user.id))
+                from app.services.moderation_service import ModerationService as _ModerationService
+                await _ModerationService(self.uow.session).system_mute(
+                    stream_id, user.id, reason="shill_bidding"
+                )
                 raise ForbiddenException(code="BID_BLOCKED_MUTE")
             elif shill_score >= _SHILL_THRESHOLD_WARN:
                 await redis.incr(shill_counter_key)

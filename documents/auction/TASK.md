@@ -10,36 +10,35 @@
 
 ### T-01: `system_mute()` metodunu ModerationService'e ekle
 **Dosya:** `backend/app/services/moderation_service.py`
-- [ ] `system_mute(self, stream_id, user_id, reason)` async metodu yaz
-- [ ] `redis.sadd(mute_key(stream_id), str(user_id))` + `expire` ekle
-- [ ] `redis.hset(f"shill_mute:{stream_id}", str(user_id), reason)` + `expire(_TTL)` ekle  ← **YENİ Redis key**
-- [ ] `publish_mod_event(stream_id, WS.MUTED, user_id, reason=reason, source="system")` çağır
-- [ ] Logger: `[MOD] SYSTEM_MUTE | stream_id=... user_id=... reason=...`
+- [x] `system_mute(self, stream_id, user_id, reason)` async metodu yaz
+- [x] `redis.sadd(mute_key(stream_id), str(user_id))` + `expire` ekle
+- [x] `redis.hset(f"shill_mute:{stream_id}", str(user_id), reason)` + `expire(_TTL)` ekle  ← **YENİ Redis key**
+- [x] `publish_mod_event(stream_id, WS.MUTED, user_id, reason=reason, source="system")` çağır
+- [x] Logger: `[MOD] SYSTEM_MUTE | stream_id=... user_id=... reason=...`
 
 ### T-02: `place_bid()` içindeki shill mute'u `system_mute()`'a taşı
 **Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py` — L567-569
-- [ ] `await redis.sadd(mute_key(stream_id), str(user.id))` satırını kaldır
-- [ ] `await ModerationService(self.uow.session).system_mute(stream_id, user.id, reason="shill_bidding")` ile değiştir
-- [ ] ModerationService'in bu use case içinde db session olmadan çalışabildiğini doğrula
+- [x] `await redis.sadd(mute_key(stream_id), str(user.id))` satırını kaldır
+- [x] `await ModerationService(self.uow.session).system_mute(stream_id, user.id, reason="shill_bidding")` ile değiştir
+- [x] ModerationService.system_mute() self.db kullanmıyor — session geçmek zararsız ✅
 
 ### T-03: Shill score sabitlerini güncelle
 **Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py` — L71-76
-- [ ] `_SHILL_SCORE_IP_MATCH`   : `40` → `30`
-- [ ] `_SHILL_SCORE_UNVERIFIED` : `30` → `35`
-- [ ] `_SHILL_SCORE_NEW_ACCOUNT`: `20` → `25`
-- [ ] `_SHILL_SCORE_REPEAT`     : `15` → `10`
-- [ ] `_SHILL_THRESHOLD_MUTE`   : `70` → `80`
-- [ ] `_SHILL_THRESHOLD_WARN`   : `40` → `45`
-- [ ] Değişiklik sonrası 3 senaryo doğrula (kağıt üzerinde):
-  - Verified + eski hesap + aynı IP → mute olmamalı
-  - Unverified + yeni hesap + aynı IP → ilk teklifte mute
-  - Unverified + eski hesap + aynı IP → WARN, 3-4 teklifte mute
+- [x] `_SHILL_SCORE_IP_MATCH`   : `40` → `30`
+- [x] `_SHILL_SCORE_UNVERIFIED` : `30` → `35`
+- [x] `_SHILL_SCORE_NEW_ACCOUNT`: `20` → `25`
+- [x] `_SHILL_SCORE_REPEAT`     : `15` → `10`
+- [x] `_SHILL_THRESHOLD_MUTE`   : `70` → `80`
+- [x] `_SHILL_THRESHOLD_WARN`   : `40` → `45`
+- [x] Senaryo doğrulaması:
+  - Verified + eski hesap + aynı IP: maks 30+20=50 → asla 80'e ulaşmaz ✅
+  - Unverified + yeni hesap + aynı IP: 30+35+25=90 → ilk teklifte mute ✅
+  - Unverified + eski hesap + aynı IP: teklif 3'te 30+35+20=85 → mute ✅
 
 ### T-04: Host sistem mute'larını override edebilmeli
 **Dosya:** `backend/app/services/moderation_service.py`
-- [ ] `unmute()` metoduna `shill_mute:{stream_id}` hash temizlemesini ekle:
-  `await redis.hdel(f"shill_mute:{stream_id}", str(target.id))`
-- [ ] `_resolve_actors()` içindeki self-check'in sistem mute senaryosunda çalışmamasını doğrula
+- [x] `unmute()` metoduna `redis.hdel(f"shill_mute:{stream_id}", str(target.id))` eklendi
+- [x] `_resolve_actors()` self-check `STREAM_MOD_SELF_FORBIDDEN` — sistem mute'unda host, kendi kendini hedef almaz (farklı user_id) ✅
 
 ---
 
@@ -137,30 +136,74 @@
 
 ---
 
-## 📋 Doküman Güncellemeleri
+## 🔵 Ek Bulgular (F-07 ~ F-11)
 
-### T-14: `auction_architecture.md` güncelle
-- [ ] Bölüm 11 (Bilinen Kısıtlar): T-01~T-06 tamamlandıktan sonra "Çözüldü" olarak işaretle
-- [ ] Yeni `FraudDetectionService` mimarisini ekle
-- [ ] `system_mute()` akışını ve yeni Redis key'ini ekle
-- [ ] Yeni ClickHouse event listesini ekle
-- [ ] Yeni Admin endpoint'lerini API tablosuna ekle
+### T-15: `stream:{stream_id}:muted` — TTL Fix
+**Dosya:** `backend/app/services/moderation_service.py`  
+**Not:** T-01 (`system_mute()`) uygulanınca otomatik çözülür — `system_mute()` içinde `expire()` çağrısı var. T-01 ile birlikte tamamlanmış sayılır.
+- [ ] T-01 uygulandıktan sonra `stream:{stream_id}:muted` set'inin TTL aldığını doğrula
+- [ ] Eski stream key'lerinin temizlenip temizlenmediğini Redis'te kontrol et (opsiyonel tek seferlik cleanup script)
+
+### T-16: `auction_commands.py` — `push_notification` Router Import Düzelt
+**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py` — satır 511
+- [ ] `from app.routers.notifications import push_notification` — lazy import kaldır
+- [ ] T-05 ile birlikte uygulanabilir (aynı dosya, aynı import düzeltme kapsamı)
+- [ ] Seçenek: `push_notification` fonksiyonunu `app.services.notification_service` modülüne taşı ve oradan import et
+- [ ] Seçenek (kısa vadeli): en azından `auction_commands.py` modül seviyesine çek; router import yasaklığı ortadan kalkar
+
+### T-17: PostgreSQL — Artırma Sorgu İndeksleri
+**Dosya:** Alembic migration (T-10 ile birleştirilebilir)
+- [ ] Migration ismi: `add_auction_query_indexes`
+- [ ] `CREATE INDEX CONCURRENTLY ix_bids_bidder_id ON bids (bidder_id)`
+- [ ] `CREATE INDEX CONCURRENTLY ix_auctions_winner_id ON auctions (winner_id)`
+- [ ] `CREATE INDEX CONCURRENTLY ix_purchases_buyer_type ON purchases (buyer_id, purchase_type)`
+- [ ] `CREATE INDEX CONCURRENTLY ix_purchases_auction_id ON purchases (auction_id)`
+- [ ] T-10 ile tek migration'da birleştirilebilir (verimlilik)
+
+### T-18: ClickHouse — BIN Flow ve Pause/Resume Event Tracking
+**Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
+- [ ] `accept_buy_it_now()` içine `buy_it_now_accepted` event ekle
+  `buffer_user_event(event_type="buy_it_now_accepted", item_id=stream_id, item_type="stream", user_id=buyer_id, price_point=bin_price)`
+- [ ] `reject_buy_it_now()` içine `buy_it_now_rejected` event ekle  
+  `buffer_user_event(event_type="buy_it_now_rejected", item_id=stream_id, item_type="stream", user_id=buyer_id, price_point=bin_price)`
+- [ ] `pause_auction()` içine `auction_paused` event ekle
+- [ ] `resume_auction()` içine `auction_resumed` event ekle
+- [ ] Tüm event type'ları `PLAN.md Bölüm 10`'da belgelenmiş olarak işaretle
+- [ ] T-07 kapsamına dahil edilebilir (aynı tracking görevi)
 
 ---
 
-## Bağımlılık Grafiği
+## 📋 Doküman Güncellemeleri
+
+### T-14: `auction_architecture.md` güncelle
+- [x] Bölüm 13 (PostgreSQL Derinlemesine) — eklendi
+- [x] Bölüm 14 (Redis Key Haritası / TTL Envanteri) — eklendi
+- [x] Bölüm 15 (Analytics ve Tracking Katmanı) — eklendi
+- [x] Bölüm 16 (ML / AI Fırsatları) — eklendi
+- [x] Bölüm 12 (Bilinen Kısıtlar): F-07~F-10 eklendi
+- [ ] Bölüm 12: T-01~T-06 tamamlandıktan sonra çözülen sorunları "Çözüldü" olarak işaretle
+- [ ] Yeni `FraudDetectionService` mimarisini ekle (T-06 uygulandıktan sonra)
+- [ ] Yeni Admin endpoint'lerini API tablosuna ekle (T-08 uygulandıktan sonra)
+
+---
+
+## Bağımlılık Grafiği (Güncellenmiş)
 
 ```
-T-01 (system_mute) ───────────────────────────────────────────────────►
+T-01 (system_mute + TTL) ─────────────────────────────────────────────►
 T-02 (place_bid güncelle) ──── T-01 tamamlanmalı ─────────────────────►
 T-03 (shill sabitler) ──────── bağımsız ──────────────────────────────►
 T-04 (host override) ───────── T-01 tamamlanmalı ─────────────────────►
-T-05 (import düzelt) ───────── bağımsız ──────────────────────────────►
+T-05 (mute_key import düzelt) ─ bağımsız ─────────────────────────────►
+T-16 (push_notification import)─ T-05 ile birlikte ──────────────────►
 T-06 (FraudService) ────────── T-05 sonrası ──────────────────────────►
-T-07 (ClickHouse tracking) ─── T-06 içinde ──────────────────────────►
+T-07 (ClickHouse fraud track.)── T-06 içinde ────────────────────────►
+T-18 (ClickHouse BIN/pause)──── T-07 ile birlikte ───────────────────►
 T-08 (Admin API) ───────────── bağımsız ──────────────────────────────►
 T-09 (Trust Score ML) ──────── T-07 sonrası (CH event'leri gerekli) ─►
-T-10 (PG indeks) ───────────── bağımsız, herhangi bir anda ──────────►
+T-10 (PG fraud index) ──────── bağımsız, herhangi bir anda ──────────►
+T-17 (PG artırma indeksler) ─── T-10 ile birleştirilebilir ──────────►
+T-15 (muted set TTL check) ──── T-01 sonrası doğrulama ─────────────►
 T-11 (log bug) ─────────────── bağımsız ──────────────────────────────►
 T-12 (Flutter WS msg) ──────── T-01 sonrası (source field gerekli) ──►
 T-13 (Flutter poller) ──────── bağımsız ──────────────────────────────►
@@ -169,18 +212,18 @@ T-14 (docs) ────────────────── tüm P0/P1 so
 
 ---
 
-## Etkilenen Dosyalar Özeti
+## Etkilenen Dosyalar Özeti (Güncellenmiş)
 
 | Dosya | Değişiklik Türü |
 |---|---|
-| `backend/app/services/moderation_service.py` | `system_mute()` ekle |
+| `backend/app/services/moderation_service.py` | `system_mute()` + TTL ekle |
 | `backend/app/services/fraud_detection_service.py` | **YENİ DOSYA** |
-| `backend/app/use_cases/auctions/commands/auction_commands.py` | Import + shill sabitler + system_mute çağrısı |
+| `backend/app/use_cases/auctions/commands/auction_commands.py` | Import (×2) + shill sabitler + system_mute + BIN/pause events |
 | `backend/app/routers/admin_data.py` | 4 yeni endpoint |
 | `backend/app/core/error_handlers.py` | user context fix |
 | `backend/app/worker.py` | compute_trust_scores_task — fraud sinyal |
 | `mobile/lib/screens/live/swipe_live_screen.dart` | WS MUTED handler + feed guard |
 | `mobile/lib/l10n/*.arb` | `bidFraudDetected` key |
-| Alembic migration | `ix_user_interactions_fraud` indeksi |
-| `documents/auction/auction_architecture.md` | Güncel mimari dökümantasyonu |
+| Alembic migration | `ix_user_interactions_fraud` + 4 artırma sorgu index |
+| `documents/auction/auction_architecture.md` | Bölüm 13-16 eklendi ✅ |
 

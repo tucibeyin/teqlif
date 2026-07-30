@@ -374,3 +374,213 @@ Aynı tutar için duplicate ARQ retry'da tek push gönderilmesini garantiler.
 | 3 | `AuctionCommands` → `from app.routers.moderation import mute_key` | Bağımlılık yönü ihlali | Use Case → Router; Clean Architecture Dependency Rule çiğneniyor |
 | 4 | Otomatik fraud kararı geri alınamaz | Admin override mekanizması yok | Hatalı mute stream boyunca kalıcılaşır |
 | 5 | Fraud detection `place_bid` içine gömülü | FraudDetectionService yok | Bağımsız test edilemez; değişiklik riski yüksek |
+| 6 | `stream:{stream_id}:muted` set'ine TTL atalanmıyor | Direkt `redis.sadd()` çağrısı, expire yok | Stream bittikten sonra key sonsuza kadar Redis'te kalır; düşük ama gerçek memory leak |
+| 7 | `place_bid()` içinde `from app.routers.notifications import push_notification` lazy import | Metod içi import | Use Case → Router bağımlılığı; mute_key import'una ek ihlal noktası |
+| 8 | `bids` tablosunda `(bidder_id)` index yok | İlk tasarım | Kullanıcı teklif geçmişi sorgusu tam tablo taraması yapar |
+| 9 | `auctions` tablosunda `(winner_id)` index yok | İlk tasarım | Kullanıcı kazanma geçmişi sorgusu tam tablo taraması yapar |
+| 10 | BIN flow ve pause/resume ClickHouse'da izlenmiyor | Takip edilmemiş event türleri | BIN kabul/red oranı ve pause süresi ölçülemez |
+
+---
+
+## 13. PostgreSQL Derinlemesine
+
+### 13.1 Tablo Rolleri
+
+| Tablo | Rol |
+|---|---|
+| `auctions` | Artırma sonuç kaydı (sadece biten artırmalar) — canlı state **Redis'tedir** |
+| `bids` | Her teklifin audit kaydı (race condition'da bile tutulur) |
+| `purchases` | Tamamlanan işlem kayıtları (AUCTION_WIN / BUY_IT_NOW) |
+
+`auctions` tablosu live durumu temsil etmez. Canlı artırma state'i tamamen Redis Hash `auction:{stream_id}` içindedir. PostgreSQL sadece artırma bitince (accept_bid / end_auction / accept_buy_it_now) yazılır.
+
+### 13.2 Mevcut İndeksler
+
+| Tablo | İndeks | Amaç |
+|---|---|---|
+| `bids` | `(stream_id, created_at)` composite | Son teklif sorguları (`/bids` endpoint) |
+| `user_interactions` | `(user_id, interaction_type)` | Trust score sorguları |
+
+### 13.3 Eksik İndeksler (Tespit Edildi)
+
+| Tablo | Eksik İndeks | Etkilenen Sorgu | Öncelik |
+|---|---|---|---|
+| `bids` | `(bidder_id)` | Kullanıcı teklif geçmişi | 🟠 P1 |
+| `auctions` | `(winner_id)` | Kullanıcı kazanma geçmişi | 🟠 P1 |
+| `purchases` | `(buyer_id, purchase_type)` | Kullanıcı satın alma geçmişi | 🟠 P1 |
+| `purchases` | `(auction_id)` | Artırma → satın alma eşleşmesi | 🟡 P2 |
+| `user_interactions` | fraud partial index | Admin fraud sorguları | 🟡 P2 (PLAN.md T-10) |
+
+### 13.4 `auctions` Tablo — `winner_accepted` Alanı
+
+```
+winner_accepted = True  → accept_bid ile biten (kazanan var, işlem tamamlandı)
+winner_accepted = False → end_auction ile biten (kazanan yok, bid_count > 0 ise audit)
+```
+
+Tüm UI konfeti/kazanma animasyonu `winner_accepted === true` kontrolüne bağlanmalı.
+
+### 13.5 Saga Pattern — Hata Yönetimi
+
+`accept_bid` 3 adımlı saga; her adımın compensation fonksiyonu var:
+
+```
+Adım 1 (create_auction)      → DB hatasında: sil + Redis status geri yükle
+Adım 2 (deactivate_listing)  → DB hatasında: listing.status önceki değere döner
+Adım 3 (create_purchase +    → Compensation yok — audit trail korunur
+         DirectMessage +
+         UserInteraction)
+→ Tek DB commit noktası
+→ Başarı: Redis cleanup + WS + push + ARQ queue + ClickHouse
+```
+
+Race condition senaryosunda DB commit başarılıysa bile Redis `_BID_SCRIPT` re-validate edebilir (`CONCURRENT_BID_OUTBID`). Bu durumda bid DB'de audit olarak kalır, WS event publish edilmez. Bu bilinçli bir karar.
+
+---
+
+## 14. Redis Key Haritası — Tam TTL Envanteri
+
+| Key Pattern | Tip | TTL | Silinme Zamanı | Açıklama |
+|---|---|---|---|---|
+| `auction:{stream_id}` | Hash | 24 saat | `end_auction` / `accept_bid` → explicit DEL | Canlı artırma state'i |
+| `auction:bidders:{stream_id}` | Set | ∞ (TTL yok) | Saga step 3 → explicit DEL | Artırmaya katılan user_id'ler |
+| `auction:events:{stream_id}` | Stream | 24 saat | — | Event outbox; max 200 entry (MAXLEN ~) |
+| `shill_cnt:{stream_id}:{user_id}` | String | 24 saat | Otomatik expire | Shill uyarı sayacı |
+| `stream:{stream_id}:muted` | Set | **TTL YOK** ⚠️ | Stream akışında temizlenmiyor | Muted user_id'ler |
+| `shill_mute:{stream_id}` | Hash | 24 saat (planlı) | — | **YENİ (PLAN.md T-01)** — shill mute meta |
+| `bin_cooldown:{stream_id}:{buyer_id}` | String | 60 saniye | Otomatik expire | BIN reddi sonrası cooldown |
+| `fraud_log` | Sorted Set | 30 gün (rolling) | `zremrangebyscore` | Global fraud kayıt log'u |
+| `act_rate:{user_id}:place_bid` | String | 3 saniye | Otomatik expire | Teklif hız limiti sayacı |
+| `i18n:{lang}` | String | 1 saat | sync_translations.py DEL | OTA lokalizasyon cache'i |
+
+> ⚠️ `stream:{stream_id}:muted` hiçbir zaman expire edilmiyor. Stream kapandığında `redis.sadd()` sonrası `expire()` çağrılmıyor. Düşük ancak gerçek memory leak; stream_id PostgreSQL PK'sı olduğundan yeniden kullanılmasa da key birikir.
+
+---
+
+## 15. Analytics ve Tracking Katmanı
+
+### 15.1 ClickHouse Şeması
+
+```
+user_events (
+  user_id   UInt64,
+  event_type String,
+  item_id   UInt64,
+  item_type  String,   -- 'stream' | 'listing' | ...
+  price_point Float32,
+  created_at DateTime
+)
+```
+
+### 15.2 Mevcut Tracked Event'ler (Artırma)
+
+| Event Type | Nerede Yazılıyor | Açıklama |
+|---|---|---|
+| `bid_placed` | `auction.py` router | Her başarılı teklif |
+| `auction_won` | `accept_bid()` saga | Kazanan teklif kabul edildi |
+| `auction_ended` | `end_auction()` | Kazanan olmadan bitti |
+| `listing_sold` | `accept_bid()` saga | İlanlı artırma satıldı |
+
+### 15.3 Eksik Event'ler (Tracking Boşlukları)
+
+| Event Type | Neden Eksik | ML/Analytics Etkisi |
+|---|---|---|
+| `bid_fraud_warn` | FraudDetectionService yok | Trust score fraud sinyali beslenemiyor |
+| `bid_fraud_mute` | Direkt Redis, CH yok | Mute oranı ölçülemiyor |
+| `bid_blocked_verify` | Exception'da CH yok | Telefon doğrulama engel oranı bilinmiyor |
+| `bid_rate_limited` | Exception'da CH yok | Bot/spam aktivite tespit edilemiyor |
+| `buy_it_now_requested` | Event yok | BIN talep oranı ölçülemiyor |
+| `buy_it_now_rejected` | Event yok | Host red oranı / cooldown analizi yok |
+| `buy_it_now_accepted` | `accept_buy_it_now` içinde yok | BIN conversion funnel eksik |
+| `auction_paused` | `pause_auction` içinde yok | Yayın davranışı analizi yok |
+| `auction_resumed` | `resume_auction` içinde yok | Pause süresi hesaplanamıyor |
+
+### 15.4 Trust Score Sinyalleri
+
+`compute_trust_scores_task` şu an ClickHouse'dan şunları alıyor:
+```sql
+countIf(event_type = 'auction_won')                    AS wins
+countIf(event_type IN ('auction_won','auction_ended')) AS total_auctions
+countIf(event_type = 'bid_placed')                     AS bids
+```
+
+Eksik sinyal:
+- `bid_fraud_warn` sayısı → fraud geçmişi
+- `bid_fraud_mute` sayısı → kalıcı fraud kaydı
+- BIN kabul oranı → güvenilir alıcı mı?
+
+---
+
+## 16. ML / AI Fırsatları
+
+### 16.1 Fraud Detection — Kural Motoru → ML
+
+**Mevcut:** IP + 3 kural → skor → eşik. Bağlamdan bağımsız, sinyaller arasında ilişki yok.
+
+**Öneri:** Scikit-learn veya LightGBM tabanlı ikili sınıflandırıcı:
+```
+Feature'lar:
+  - IP eşleşmesi (bool)
+  - Hesap yaşı (gün)
+  - is_verified (bool)
+  - Aynı stream'de önceki teklif sayısı
+  - Bid-to-bid zaman aralığı (ms) — bot pattern tespiti
+  - Tarihsel fraud oran (user'ın geçmiş stream'leri)
+  - Host ile ortak geçmiş stream sayısı
+
+Eğitim verisi: fraud_log (Redis → CSV export) + manuel etiketleme
+Hedef: false positive <%1, gerçek shill yakalama >%80
+```
+
+Bu model `FraudDetectionService.evaluate_bid()` içinde `_score_rule_based()` ile paralel çalışabilir; ilk 6 ay rule-based devam eder.
+
+### 16.2 Dinamik Teklif Artış Tablosu
+
+**Mevcut:** Sabit adımlar (₺1/₺10/₺25/₺50) — tüm kategorilerde aynı.
+
+**Öneri:** Kategori + başlangıç fiyatı + katılımcı sayısına göre dinamik increment:
+```python
+def optimal_increment(category: str, start_price: float, bidder_count: int) -> float:
+    # Elektronik, mevcut_fiyat=₺3000, 8 teklif veren → ₺100 increment (değer teklif hissini artırır)
+    # Antika, mevcut_fiyat=₺500, 2 teklif veren → ₺25 (düşük increment katılımı artırır)
+```
+
+ClickHouse'daki tarihsel teklif verisi ile A/B test edilebilir:
+- Kontrol: sabit increment
+- Deney: ML increment
+- Metrik: toplam teklif sayısı ve final_price / start_price oranı
+
+### 16.3 BIN Fiyat Önerisi
+
+Host yeni artırma açarken ML modeli optimal BIN fiyat önerisi sunabilir:
+```
+Girdi: kategori, alt kategori, extra fields (marka, model, yıl, durum)
+Benzer tamamlanan artırmalar: son 90 gün, aynı subkategori
+Öneri: final_price medianı × 1.2 → BIN fiyatı teklifi
+Arayüz: "Bu ürün genellikle ₺X–₺Y arası satılıyor, BIN için ₺Z öneriyoruz"
+```
+
+### 16.4 Anomali Tespiti — Koordineli Shill Ring
+
+Tek kullanıcı tespiti yetersiz kalan senaryolar için grup tespiti:
+```
+Senaryo: 3 farklı IP'den 5 kullanıcı aynı host'un her yayınına giriyor, sadece 1 teklif veriyor, sonra çıkıyor.
+Mevcut sistem: bireysel IP kontrolü → kimse mute edilmez.
+
+Çözüm: Graph-based anomaly detection
+  - Düğüm: kullanıcı / host
+  - Kenar: "birlikte yayın izledi" (stream co-occurrence)
+  - Şüpheli cluster: aynı N kullanıcı grubu birden fazla host ile yüksek co-occurrence
+```
+
+Bu, teklif verilmeden önce stream join event'lerini ClickHouse'a yazmayı gerektirir.
+
+### 16.5 Kısa Vadeli ML Yol Haritası
+
+| Aşama | Veri Gereksinimi | Tahmini Süre |
+|---|---|---|
+| T-07 (ClickHouse fraud event'leri) | — | 1 sprint |
+| Fraud verisi birikimi | 4-8 hafta gerçek traffic | — |
+| Rule-based baseline kalibrasyonu (PLAN Bölüm 2) | Mevcut | 1 sprint |
+| Scikit-learn fraud classifier eğitimi | 500+ etiketli örnek | 2 sprint |
+| Dinamik increment A/B testi | 90 gün ClickHouse bid data | 3 sprint |
