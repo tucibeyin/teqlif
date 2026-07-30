@@ -108,10 +108,11 @@
 - [x] `teq_toast.dart` import'u eklendi
 - [ ] `bidFraudDetected` key'i translations tablosuna eklenmeli (SQL aşağıda)
 
-### T-13: Flutter — Feed poller guard
-**Dosya:** `mobile/lib/screens/live/live_list_screen.dart` veya `swipe_live_screen.dart`
-- [ ] Yayın izleniyorken feed update tetiklenince `LIVE_UI_ACTIVE` event'inin atlanmasını sağla
-- [ ] `_isInLiveRoom` flag veya aktif stream ID kontrolü ekle
+### T-13: Flutter — Feed poller guard ✅
+**Dosya:** `mobile/lib/screens/live/swipe_live_screen.dart`
+- [x] `_isWatchingLiveStream()` helper metodu eklendi — mevcut feed item `LiveFeedItem` ise `true` döner
+- [x] 15s timer callback'e `!_isWatchingLiveStream()` guard eklendi
+- [x] Push notification tetikli refresh'e aynı guard eklendi
 
 ---
 

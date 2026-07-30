@@ -163,13 +163,13 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     _fetchPersonalizedConfig();
     // Her 15 saniyede canlı yayın durumunu kontrol et (daha hızlı güncellemeler için)
     _streamCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (mounted && !_isRefreshingLive) _refreshLiveStreams();
+      if (mounted && !_isRefreshingLive && !_isWatchingLiveStream()) _refreshLiveStreams();
     });
 
     _notifSub = PushNotificationService.notificationStream.stream.listen((data) {
       // Eğer foreground (boş map) veya stream_started bildirimi gelirse feed'i güncelle
       final type = data['type'] as String?;
-      if ((data.isEmpty || type == 'stream_started') && mounted && !_isRefreshingLive) {
+      if ((data.isEmpty || type == 'stream_started') && mounted && !_isRefreshingLive && !_isWatchingLiveStream()) {
         _refreshLiveStreams();
       }
     });
@@ -507,6 +507,13 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
   StreamOut? _getCurrentStream() {
     final item = _feedManager.getItemAt(_currentPage);
     return item is LiveFeedItem ? item.stream : null;
+  }
+
+  /// Kullanıcı şu an bir canlı yayın sayfasındaysa true döner.
+  /// Feed yenileme bu durumda atlanır — sayfa kayması yaşanmasın.
+  bool _isWatchingLiveStream() {
+    final item = _feedManager.getItemAt(_currentPage);
+    return item is LiveFeedItem;
   }
 
   Future<void> _refreshLiveStreams() async {
