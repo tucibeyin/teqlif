@@ -92,9 +92,17 @@ class _GlobalKeyboardAccessoryState extends ConsumerState<GlobalKeyboardAccessor
           if (barBox.size.contains(localPos)) return;
         }
         final primaryFocus = FocusManager.instance.primaryFocus;
-        if (primaryFocus != null && primaryFocus.hasFocus) {
-          primaryFocus.unfocus();
+        if (primaryFocus == null || !primaryFocus.hasFocus) return;
+
+        // Tıklama fokuslu widget'ın kendi sınırları içindeyse unfocus etme —
+        // widget kendi tap'ini ve focus'unu yönetir (cursor reposition, double-tap vs.)
+        final focusedRenderObject = primaryFocus.context?.findRenderObject();
+        if (focusedRenderObject is RenderBox && focusedRenderObject.attached) {
+          final localPos = focusedRenderObject.globalToLocal(event.position);
+          if (focusedRenderObject.size.contains(localPos)) return;
         }
+
+        primaryFocus.unfocus();
       },
       behavior: HitTestBehavior.translucent,
       child: Stack(
