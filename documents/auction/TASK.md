@@ -92,15 +92,9 @@
 - [x] Skor hesabına negatif sinyal eklendi: `fraud_penalty = min(max(0, fraud_mutes - 2) * 5, 15)` (max -15 puan)
 - [ ] Değişiklik sonrası mevcut kullanıcıların skor dağılımını doğrula (deploy sonrası 02:15'te çalışır)
 
-### T-10: PostgreSQL — `user_interactions` fraud indeksi
-**Dosya:** Alembic migration veya direkt SQL
-- [ ] Migration yaz:
-  ```sql
-  CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_user_interactions_fraud
-  ON user_interactions (user_id, interaction_type, created_at DESC)
-  WHERE interaction_type = 'fraud_attempt';
-  ```
-- [ ] Alembic env ile uygula ve verify et
+### T-10: PostgreSQL — `user_interactions` fraud indeksi ✅
+**Dosya:** Direkt SQL (VPS'te çalıştırıldı)
+- [x] `ix_user_interactions_fraud` oluşturuldu (kısmi indeks, WHERE interaction_type = 'fraud_attempt')
 
 ### T-11: Error handler `user=guest` log bug
 **Dosya:** `backend/app/core/error_handlers.py`
@@ -139,14 +133,12 @@
 - [x] Modül seviyesinde `from app.services.notification_service import push_notification` eklendi
 - [x] `notifications.py` re-export ile geriye dönük uyumluluk korundu
 
-### T-17: PostgreSQL — Artırma Sorgu İndeksleri
-**Dosya:** Alembic migration (T-10 ile birleştirilebilir)
-- [ ] Migration ismi: `add_auction_query_indexes`
-- [ ] `CREATE INDEX CONCURRENTLY ix_bids_bidder_id ON bids (bidder_id)`
-- [ ] `CREATE INDEX CONCURRENTLY ix_auctions_winner_id ON auctions (winner_id)`
-- [ ] `CREATE INDEX CONCURRENTLY ix_purchases_buyer_type ON purchases (buyer_id, purchase_type)`
-- [ ] `CREATE INDEX CONCURRENTLY ix_purchases_auction_id ON purchases (auction_id)`
-- [ ] T-10 ile tek migration'da birleştirilebilir (verimlilik)
+### T-17: PostgreSQL — Artırma Sorgu İndeksleri ✅
+**Dosya:** Direkt SQL (VPS'te çalıştırıldı)
+- [x] `ix_bids_bidder_id` — zaten vardı
+- [x] `ix_auctions_winner_id` — zaten vardı
+- [x] `ix_purchases_buyer_type` — yeni oluşturuldu
+- [x] `ix_purchases_auction_id` — zaten vardı
 
 ### T-18: ClickHouse — BIN Flow ve Pause/Resume Event Tracking
 **Dosya:** `backend/app/use_cases/auctions/commands/auction_commands.py`
