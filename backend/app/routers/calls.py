@@ -30,6 +30,7 @@ from app.utils.call_redis import (
     add_participant_redis, remove_participant_redis,
     get_participants_redis, is_participant_redis,
     acquire_invite_lock, release_invite_lock,
+    clear_call_redis,
 )
 from app.services.call_ws import broadcast_to_call_participants, send_to_user
 from app.constants import ws_types
@@ -45,7 +46,8 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
 
 _DM_CHANNEL = "dm_broadcast"
-_CALL_RING_TIMEOUT = 30  # seconds
+_CALL_RING_TIMEOUT = 30   # seconds — Flutter client fires missed after this many seconds
+_CALL_RING_TIMEOUT_BACKUP = _CALL_RING_TIMEOUT + 10  # ARQ backup fires 10s after client timeout
 
 
 def _make_livekit_token(room_name: str, user: User) -> str:
@@ -485,10 +487,10 @@ async def start_call(
             call.id,
             current_user.id,
             callee_id,
-            _defer_by=timedelta(seconds=60),
+            _defer_by=timedelta(seconds=_CALL_RING_TIMEOUT_BACKUP),
             _job_id=f"call_timeout_{call.id}"
         )
-        logger.info("[CALL_PROCESS][OUT] start_call: ARQ timeout task enqueued | call_id=%d defer=60s", call.id)
+        logger.info("[CALL_PROCESS][OUT] start_call: ARQ timeout task enqueued | call_id=%d defer=%ds", call.id, _CALL_RING_TIMEOUT_BACKUP)
     else:
         logger.warning("[CALL_PROCESS][OUT] start_call: ARQ pool not available — timeout task NOT enqueued | call_id=%d", call.id)
 
@@ -584,11 +586,13 @@ async def accept_call(
             call_id_val, caller_id, "NO",
         )
 
+    _token_gen_start = time.monotonic()
     token = _make_livekit_token(room_name, current_user)
+    _token_gen_ms = int((time.monotonic() - _token_gen_start) * 1000)
 
     logger.info(
-        "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s",
-        call_id, current_user.id, caller_id, accepted_at.isoformat(),
+        "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s token_gen_ms=%d",
+        call_id, current_user.id, caller_id, accepted_at.isoformat(), _token_gen_ms,
     )
     return {
         "call_id": call_id_val,
@@ -597,6 +601,30 @@ async def accept_call(
         "token": token,
         "accepted_at": accepted_at.isoformat(),
     }
+
+
+# ── POST /api/calls/{id}/connected ───────────────────────────────────────────
+# Called by the Flutter client when both sides reach CallStatus.connected (real
+# audio data is flowing). Stamps connected_at for accurate duration measurement.
+
+@router.post("/{call_id}/connected")
+async def call_connected(
+    call_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Call).where(Call.id == call_id))
+    call = result.scalar_one_or_none()
+    if not call or current_user.id not in (call.caller_id, call.callee_id):
+        raise NotFoundException()
+    if call.connected_at is None and call.status in ("active", "calling"):
+        call.connected_at = datetime.now(timezone.utc)
+        await db.commit()
+        logger.info(
+            "[CALL_PROCESS] call_connected | call_id=%d by=%d connected_at=%s",
+            call_id, current_user.id, call.connected_at.isoformat(),
+        )
+    return {"ok": True}
 
 
 # ── POST /api/calls/{id}/reject ───────────────────────────────────────────────
@@ -632,6 +660,11 @@ async def reject_call(
     call.status = "rejected"
     call.ended_at = datetime.now(timezone.utc)
     await db.commit()
+
+    try:
+        await clear_call_redis(call_id_val)
+    except Exception as _e:
+        logger.warning("[CALL_PROCESS][IN] reject_call: clear_call_redis FAILED | call_id=%d %s", call_id_val, _e)
 
     await _ws_broadcast(caller_id, {"type": "call_rejected", "call_id": call_id_val})
     caller = await db.get(User, caller_id)
@@ -691,17 +724,28 @@ async def end_call(
         acc = accepted_at if accepted_at.tzinfo else accepted_at.replace(tzinfo=timezone.utc)
         duration_seconds = max(0, int((ended_at - acc).total_seconds()))
 
+    # Use connected_at for duration if available (more accurate than accepted_at)
+    connected_at = call.connected_at
+    if connected_at:
+        conn = connected_at if connected_at.tzinfo else connected_at.replace(tzinfo=timezone.utc)
+        duration_seconds = max(0, int((ended_at - conn).total_seconds()))
+
     call.status = "ended"
     call.ended_at = ended_at
     call.duration_seconds = duration_seconds
     await db.commit()
+
+    try:
+        await clear_call_redis(call_id_val)
+    except Exception as _e:
+        logger.warning("[CALL_PROCESS][END] end_call: clear_call_redis FAILED | call_id=%d %s", call_id_val, _e)
 
     # FOR UPDATE above handles concurrent API-vs-API end_call.
     # NX lock handles API-vs-webhook race: whoever sets this key first wins.
     try:
         from app.utils.redis_client import get_redis as _get_redis
         _redis = await _get_redis()
-        if not await _redis.set(f"call_ended_sent:{call_id_val}", "api", ex=60, nx=True):
+        if not await _redis.set(f"call_ended_sent:{call_id_val}", "api", ex=300, nx=True):
             logger.info("[CALL_PROCESS][END] end_call: duplicate suppressed by Redis NX | call_id=%d", call_id_val)
             return {"ok": True}
     except Exception:
@@ -802,6 +846,12 @@ async def missed_call(
         db.add(n)
 
         await db.commit()
+
+        try:
+            await clear_call_redis(call.id)
+        except Exception as _e:
+            logger.warning("[CALL_PROCESS][END] missed_call: clear_call_redis FAILED | call_id=%d %s", call.id, _e)
+
         await _ws_broadcast(call.callee_id, {"type": "call_missed", "call_id": call.id})
         await _delete_lk_room(call.room_name)
 

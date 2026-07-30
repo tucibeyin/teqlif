@@ -953,16 +953,7 @@ class CallService {
       _cpLog('IN', '_activateCalleeAudio: post-audio check | anyAudioSubscribed=$anyAudioSubscribed');
       if (anyAudioSubscribed) {
         _cpLog('LK', '_activateCalleeAudio: remote audio already subscribed → connected immediately');
-        stopRingtoneAndVibration();
-        final nowUtc = DateTime.now().toUtc();
-        final acceptedAt = state.value.acceptedAt;
-        final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
-        _cpLog('TIMER', '_activateCalleeAudio → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
-        _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
-        _startElapsedTimer();
-        _startProximitySensor();
-        _startStatsMonitor();
-        _startNetworkMonitor();
+        _transitionToConnected(context: 'activateCalleeAudio-alreadySubscribed');
         if (Platform.isAndroid) {
           _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-already-subscribed isSpeaker=false');
           Hardware.instance.setSpeakerphoneOn(false);
@@ -1468,6 +1459,18 @@ class CallService {
                 await pub.mute(stopOnMute: false);
                 _cpLog('LK', 'muted audio track pre-published | sid=${pub.sid} waitingForUnmute=true platform=Android');
                 _cpLog('HW', 'microphone MUTED (pre-connect) | track=published rtpMuted=true audioCapture=active stopOnMute=false platform=Android');
+                // WebRTC audio focus (STREAM_VOICE_CALL) may duck audioplayers ringback
+                // (STREAM_MUSIC) on Android. Re-check and restore ringback if interrupted.
+                await Future.delayed(const Duration(milliseconds: 200));
+                if (_ringbackPlayer.state != PlayerState.playing && state.value.status == CallStatus.calling) {
+                  _ringbackPlayer.seek(Duration.zero).then((_) => _ringbackPlayer.resume()).catchError((e) {
+                    _cpLog('SOUND', 'ringbackPlayer RESUME after Android pre-publish FAILED | $e');
+                    return null;
+                  });
+                  _cpLog('SOUND', 'ringbackPlayer RESUMED after Android muted pre-publish (audio focus guard) | platform=Android');
+                } else {
+                  _cpLog('SOUND', 'ringbackPlayer state=${_ringbackPlayer.state.name} after Android pre-publish | no restore needed');
+                }
               } else {
                 _cpLog('LK', 'pre-publish muted track: no publications after setMicEnabled (micPubs empty) | standard path on acceptance platform=Android');
               }
@@ -1481,7 +1484,10 @@ class CallService {
             _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | platform=iOS ringback=preserved mic-will-start-on-acceptance');
             // room.connect() internally overrides AVAudioSession to SoloAmbient, which
             // interrupts the audioplayers ringback. Restore playAndRecord and re-resume.
-            if (state.value.status == CallStatus.calling) {
+            // Also covers connecting: if callee accepted while room.connect() was in flight,
+            // status is now connecting but ringback should still play until audio arrives.
+            final postConnectStatus = state.value.status;
+            if (postConnectStatus == CallStatus.calling || postConnectStatus == CallStatus.connecting) {
               try {
                 final session = await AudioSession.instance;
                 await session.configure(AudioSessionConfiguration(
@@ -1495,9 +1501,9 @@ class CallService {
                 if (_ringbackPlayer.state != PlayerState.playing) {
                   await _ringbackPlayer.seek(Duration.zero);
                   await _ringbackPlayer.resume();
-                  _cpLog('SOUND', 'ringbackPlayer RESUMED after LiveKit SoloAmbient override | iOS caller pre-connect');
+                  _cpLog('SOUND', 'ringbackPlayer RESUMED after LiveKit SoloAmbient override | iOS caller status=$postConnectStatus');
                 } else {
-                  _cpLog('SOUND', 'ringbackPlayer STILL PLAYING after room.connect() (no interruption) | iOS caller');
+                  _cpLog('SOUND', 'ringbackPlayer STILL PLAYING after room.connect() (no interruption) | iOS caller status=$postConnectStatus');
                 }
               } catch (e) {
                 _cpLog('SOUND', 'ringbackPlayer restore ERROR after LiveKit SoloAmbient | $e');
@@ -1563,16 +1569,7 @@ class CallService {
           );
           if (anyAudioSubscribed) {
             _cpLog('LK', 'peerAlreadyJoined + audioSubscribed → connected immediately');
-            final nowUtc = DateTime.now().toUtc();
-            final acceptedAt = state.value.acceptedAt;
-            final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
-            _cpLog('TIMER', 'peerAlreadyJoined → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
-            stopRingtoneAndVibration();
-            _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
-            _startElapsedTimer();
-            _startProximitySensor();
-            _startStatsMonitor();
-            _startNetworkMonitor();
+            _transitionToConnected(context: 'peerAlreadyJoined');
           } else {
             _cpLog('LK', 'peerAlreadyJoined but audio not yet subscribed → waiting for TrackSubscribed');
           }
@@ -1663,7 +1660,15 @@ class CallService {
           return;
         }
 
-        _cpLog('LK', 'TrackSubscribed AUDIO → voice AudioSession → ringing stop → connected');
+        // Muted track subscription: gerçek ses henüz akmıyor → TrackUnmuted'ı bekle.
+        // Bu, Android caller'ın pre-published muted track'ini callee connecting state'inde
+        // subscribe ettiği nadir senaryoda veya callee mic warmup gecikmesinde olabilir.
+        if (event.publication.muted) {
+          _cpLog('LK', 'TrackSubscribed AUDIO but muted | status=${state.value.status.name} → wait for TrackUnmuted');
+          return;
+        }
+
+        _cpLog('LK', 'TrackSubscribed AUDIO (unmuted) → voice AudioSession → ringing stop → connected');
         // AudioSession'ı ses akışı başlamadan hemen önce voice-chat moduna geçir.
         // iOS: speakerphone AudioSession sonrası set edilir (async callback).
         // Android: speakerphone aşağıdaki senkron blokta hemen set edilir — callback'te tekrar edilmez.
@@ -1684,18 +1689,9 @@ class CallService {
             _cpLog('LK', 'TrackSubscribed: AudioSession configure ERROR | $e');
           }
         });
-        stopRingtoneAndVibration();
         if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
           final preTransitionStatus = state.value.status;
-          final nowUtc = DateTime.now().toUtc();
-          final acceptedAt = state.value.acceptedAt;
-          final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
-          _cpLog('TIMER', 'TrackSubscribed → CONNECTED | role=${preTransitionStatus.name} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
-          _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
-          _startElapsedTimer();
-          _startProximitySensor();
-          _startStatsMonitor();
-          _startNetworkMonitor();
+          _transitionToConnected(context: 'TrackSubscribed-${preTransitionStatus.name}');
           // P0 FIX: iOS caller mic race.
           // iOS skips mic pre-publish during pre-connect (to preserve ringback AVAudioSession).
           // call_accepted WS arrives ~1.65s AFTER TrackSubscribed, so we must enable mic HERE
@@ -1709,11 +1705,11 @@ class CallService {
               return null;
             });
           }
-        }
-        if (Platform.isAndroid) {
-          _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-Android isSpeaker=false');
-          Hardware.instance.setSpeakerphoneOn(false);
-          _setState(state.value.copyWith(isSpeaker: false));
+          if (Platform.isAndroid) {
+            _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-Android isSpeaker=false');
+            Hardware.instance.setSpeakerphoneOn(false);
+            _setState(state.value.copyWith(isSpeaker: false));
+          }
         }
       } else if (event.track.kind == TrackType.VIDEO) {
         _cpLog('LK', 'TrackSubscribed VIDEO | participant=${event.participant.identity}');
@@ -1760,16 +1756,7 @@ class CallService {
             _cpLog('LK', 'TrackUnmuted: AudioSession configure ERROR | $e');
           }
         });
-        stopRingtoneAndVibration();
-        final nowUtc = DateTime.now().toUtc();
-        final acceptedAt = state.value.acceptedAt;
-        final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
-        _cpLog('TIMER', 'TrackUnmuted → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} acceptToAudioMs=$audioLag');
-        _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
-        _startElapsedTimer();
-        _startProximitySensor();
-        _startStatsMonitor();
-        _startNetworkMonitor();
+        _transitionToConnected(context: 'TrackUnmuted');
         if (Platform.isAndroid) {
           _cpLog('HW', 'speakerphone SET | enabled=false context=TrackUnmuted-Android isSpeaker=false');
           Hardware.instance.setSpeakerphoneOn(false);
@@ -1797,11 +1784,20 @@ class CallService {
         _setState(state.value.copyWith(remoteVideoEnabled: false));
       }
     } else if (event is ParticipantConnectionQualityUpdatedEvent) {
-      if (event.participant == _room?.localParticipant) {
-        final isPoor =
-            (event.connectionQuality == ConnectionQuality.poor ||
-            event.connectionQuality == ConnectionQuality.lost);
+      final isLocal = event.participant == _room?.localParticipant;
+      final isLost = event.connectionQuality == ConnectionQuality.lost;
+      final isPoor = event.connectionQuality == ConnectionQuality.poor || isLost;
+      if (isLocal) {
         if (state.value.isPoorConnection != isPoor) {
+          _cpLog('LK', 'LocalQuality=${event.connectionQuality.name} isPoor=$isPoor');
+          _setState(state.value.copyWith(isPoorConnection: isPoor));
+        }
+      } else {
+        // T9: Remote katılımcının bağlantısı kesiliyorsa peer tarafında da göster.
+        // LiveKit RoomReconnecting kendi tarafı için status=reconnecting seti yapıyor.
+        // Karşı taraf için isPoorConnection zaten varsa onu yeniden kullan.
+        if (state.value.isPoorConnection != isPoor) {
+          _cpLog('LK', 'RemoteQuality=${event.connectionQuality.name} isPoor=$isPoor → updating isPoorConnection for peer');
           _setState(state.value.copyWith(isPoorConnection: isPoor));
         }
       }
@@ -1828,6 +1824,32 @@ class CallService {
         }
       }
     });
+  }
+
+  // ── Connected State Transition (T12 — single source of truth) ────────────
+
+  /// Her "calling/connecting → connected" geçişini buradan yap.
+  /// [context]: log etiketleme için (TrackSubscribed, TrackUnmuted, peerAlready…)
+  void _transitionToConnected({required String context}) {
+    if (state.value.status == CallStatus.connected) return;
+    final nowUtc = DateTime.now().toUtc();
+    final acceptedAt = state.value.acceptedAt;
+    final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
+    _cpLog('TIMER', 'CONNECTED | context=$context acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} acceptToAudioMs=$audioLag');
+    stopRingtoneAndVibration();
+    _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
+    _startElapsedTimer();
+    _startProximitySensor();
+    _startStatsMonitor();
+    _startNetworkMonitor();
+    // T6: Notify backend so connected_at is stamped for accurate duration.
+    final callId = state.value.callId;
+    if (callId != null) {
+      _post('/calls/$callId/connected').catchError((e) {
+        _cpLog('API', 'POST /calls/$callId/connected FAILED | $e');
+        return <String, dynamic>{};
+      });
+    }
   }
 
   // ── Proximity Sensor (auto earpiece when phone at ear) ───────────────────

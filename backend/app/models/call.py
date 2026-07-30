@@ -24,6 +24,7 @@ class Call(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="calling")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    connected_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     had_video: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

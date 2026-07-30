@@ -1933,6 +1933,12 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
 
             await db.commit()
 
+            try:
+                from app.utils.call_redis import clear_call_redis as _clear_redis
+                await _clear_redis(call_id)
+            except Exception as _re:
+                logger.warning("[CALL_PROCESS][ARQ] delayed_call_timeout_task: clear_call_redis FAILED | call_id=%d %s", call_id, _re)
+
             # İki tarafa da missed event'i at
             await ws_manager.publish("dm_broadcast", f"dm:{caller_id}", {"type": "call_missed", "call_id": call_id})
             await ws_manager.publish("dm_broadcast", f"dm:{callee_id}", {"type": "call_missed", "call_id": call_id})
