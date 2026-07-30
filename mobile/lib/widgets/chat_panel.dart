@@ -414,14 +414,20 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
             _streamEnded = true;
             eventType = 'stream_ended';
           } else if (json['type'] == 'muted') {
-            if (mounted) setState(() => _selfMuted = true);
-            eventType = 'muted';
-            if (json['source'] == 'system') {
-              TeqToast.warning(loc.t('bidFraudDetected'));
+            final targetId = (json['user_id'] as num?)?.toInt();
+            if (_myUserId == null || targetId == null || targetId == _myUserId) {
+              if (mounted) setState(() => _selfMuted = true);
+              eventType = 'muted';
+              if (json['source'] == 'system') {
+                TeqToast.warning(loc.t('bidFraudDetected'));
+              }
             }
           } else if (json['type'] == 'unmuted') {
-            if (mounted) setState(() => _selfMuted = false);
-            eventType = 'unmuted';
+            final targetId = (json['user_id'] as num?)?.toInt();
+            if (_myUserId == null || targetId == null || targetId == _myUserId) {
+              if (mounted) setState(() => _selfMuted = false);
+              eventType = 'unmuted';
+            }
           } else if (json['type'] == 'kicked') {
             _streamEnded = true;
             eventType = 'kicked';

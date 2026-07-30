@@ -56,5 +56,6 @@ class GetAuctionStateQuery:
             "current_bidder": data.get("current_bidder_name"),
             "current_bidder_name": data.get("current_bidder_name"),
             "bid_count": int(data.get("bid_count", 0)),
-            "buy_it_now_price": float(data.get("buy_it_now_price")) if data.get("buy_it_now_price") else None
+            "buy_it_now_price": float(data.get("buy_it_now_price")) if data.get("buy_it_now_price") else None,
+            "bin_buyer_username": data.get("bin_buyer_username"),
         }
