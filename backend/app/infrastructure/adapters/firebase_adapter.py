@@ -70,11 +70,25 @@ class FirebaseAdapter(PushNotificationPort):
                     ) if (android_channel_id and not is_silent) else None,
                 )
 
+                # iOS: apns-priority 10 (high) olmadan arka planda/kapalıyken bildirim gösterilmez.
+                # is_silent=True (VoIP çağrıları) için APNs config gönderilmez — o akış
+                # apns_service.py üzerinden PushType.VOIP ile ayrıca gidiyor.
+                apns_cfg = None if is_silent else messaging.APNSConfig(
+                    headers={
+                        "apns-priority": "10",
+                        "apns-push-type": "alert",
+                    },
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(sound="default"),
+                    ),
+                )
+
                 msg = messaging.Message(
                     notification=notification,
                     data=formatted_data,
                     token=token,
                     android=android_cfg,
+                    apns=apns_cfg,
                 )
                 
                 result = await asyncio.get_event_loop().run_in_executor(
