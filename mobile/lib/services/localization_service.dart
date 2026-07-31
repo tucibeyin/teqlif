@@ -121,7 +121,31 @@ class LocalizationService extends StateNotifier<TranslationPack> {
       final vResp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang/version'));
       if (vResp.statusCode != 200) return;
       final serverVersion = (jsonDecode(vResp.body) as Map)['version'] as String;
+
       if (serverVersion != cachedVersion) {
+        await _fetchAndCache(lang, box);
+        return;
+      }
+
+      // Versiyon eşleşse bile pack içeriğinin bütünlüğünü doğrula.
+      // Eski kod pack/version desynk'i bırakabilirdi (version yeni, pack eski).
+      // pack_key_count yoksa bu eski bir cache — yenile.
+      final storedCount = box.get('pack_key_count_$lang');
+      if (storedCount == null) {
+        await _fetchAndCache(lang, box);
+        return;
+      }
+      final localJson = box.get('pack_$lang');
+      if (localJson == null) {
+        await _fetchAndCache(lang, box);
+        return;
+      }
+      try {
+        final actualCount = (jsonDecode(localJson) as Map).length;
+        if (actualCount != int.parse(storedCount)) {
+          await _fetchAndCache(lang, box);
+        }
+      } catch (_) {
         await _fetchAndCache(lang, box);
       }
     } catch (e) {
@@ -139,6 +163,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
       final stringsJson = jsonEncode(strings);
       await box.put('pack_$lang', stringsJson);
       await box.put('version_$lang', version);
+      await box.put('pack_key_count_$lang', strings.length.toString());
       await box.put('cached_at_$lang', DateTime.now().millisecondsSinceEpoch.toString());
       if (_currentLang == lang) {
         state = TranslationPack(strings, lang);
