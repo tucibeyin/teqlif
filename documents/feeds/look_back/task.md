@@ -20,11 +20,11 @@
 | T-LB-05 | hesitated_shelf_tap Thompson Sampling | F-09 | Orta | ✅ Tamamlandı |
 | T-LB-06 | Dismiss → TeqToast | F-10 | Düşük | ✅ Tamamlandı |
 | T-LB-15 | retarget_task penceresini 14 güne genişlet | F-16 | Düşük | ✅ Tamamlandı |
-| T-LB-16 | VPS: ClickHouse subcategory sütunu doğrulama | F-15 | Düşük | Bekliyor |
-| T-LB-07 | price_point semantik ayrımı (araştırma) | F-08 | Araştırma | Bekliyor |
-| T-LB-08 | hesitated:{uid} ML feature değerlendirmesi | F-01 | Araştırma | Bekliyor |
-| T-LB-09 | Shelf shimmer loading | — | Araştırma | Bekliyor |
-| T-LB-10 | Subcategory-level diversity | — | Araştırma | Bekliyor |
+| T-LB-16 | VPS: ClickHouse subcategory sütunu doğrulama | F-15 | Düşük | ✅ Kapandı |
+| T-LB-07 | price_point semantik ayrımı (araştırma) | F-08 | Araştırma | ✅ Kapandı |
+| T-LB-08 | hesitated:{uid} ML feature değerlendirmesi | F-01 | Araştırma | ✅ Kapandı |
+| T-LB-09 | Shelf shimmer loading | — | Araştırma | ✅ Tamamlandı |
+| T-LB-10 | Subcategory-level diversity | — | Araştırma | ✅ Tamamlandı |
 
 ---
 
@@ -300,42 +300,35 @@ await redis.setex(dedup_key, 14 * 86400, "1")  # 7 gün → 14 gün
 
 ---
 
-### T-LB-16 — PG user_interactions subcategory Sütunu Araştırma
+### T-LB-16 — PG user_interactions subcategory Sütunu Araştırma ✅ KAPANDI
 
 **Kaynak:** F-15  
-**Dosya:** [backend/app/worker.py](../../../backend/app/worker.py#L429), [backend/app/models/analytics.py](../../../backend/app/models/analytics.py)
-
-1. `UserInteraction` modelinde `subcategory` kolonu var mı kontrol et.
-2. Varsa → `pg_rows` dict'ine ekle.
-3. Yoksa → migration karar ver (Alembic + VPS'te `alembic upgrade head`).
-4. Şu an PG'den subcategory okuyan bir sorgu yoksa bu task ertelenebilir.
+**Sonuç:** `UserInteraction` modelinde `subcategory` kolonu yok. PG `user_interactions` tablosu ham event sink'i — subcategory analitiği ClickHouse `user_events` tablosundan yapılıyor (F-03 sonrası subcategory yazılıyor). Migration gerekmez; PG'den subcategory okuyan aktif sorgu yok.
 
 ---
 
 ## Araştırma / Gelecek
 
-### T-LB-07 — price_point Semantik Ayrımı
+### T-LB-07 — price_point Semantik Ayrımı ✅ KAPANDI
 
 **Kaynak:** F-08  
-T-LB-12 (argMax düzeltmesi) tamamlandıktan sonra değerlendir — o task ayrı sütunları (`bid_price_point`, `dwell_price_point`) zaten getiriyor.
+**Sonuç:** T-LB-12 ile çözüldü. ClickHouse sorgusu artık `argMaxIf` ile ayrı `bid_price_point` ve `dwell_price_point` sütunları üretiyor. Python'da `price_dropped` ve `price_near_offer` bağımsız hesaplanıyor. Ek değişiklik gerekmez.
 
 ---
 
-### T-LB-08 — hesitated:{uid} Set'ini ML Feature Olarak Değerlendir
+### T-LB-08 — hesitated:{uid} Set'ini ML Feature Olarak Değerlendir ✅ KAPANDI (araştırma)
 
 **Kaynak:** F-01  
-Set şu an `hes_spike` için tutulmakta. Potansiyel kullanımlar:
-- Real-time "Sana Özel" feed'inden hesitate edilen ilanları dışla (tekrar gösterme)
-- Oturum içi anlık ilgi vektörü seed'i
+**Sonuç:** `hesitated:{uid}` set'i şu an Geri Bak feed'inin ham kaynağı ve dismiss filtresi olarak kullanılıyor — bu primary use case yeterli. "Sana Özel" feed'inden hariç tutma önerisi reddedildi: kullanıcı hem Geri Bak'ta görüp hem de ana feed'de görmek isteyebilir (farklı context). Oturum vektörü seed'i için ClickHouse `user_events` daha zengin sinyal sağlıyor. Future enhancement değil, mevcut tasarım yeterli.
 
 ---
 
-### T-LB-09 — Shelf Shimmer Loading
+### T-LB-09 — Shelf Shimmer Loading ✅ Tamamlandı
 
-Şu an liste boşken shelf hiç render edilmiyor. Yükleme sırasında skeleton göstermek UX'i iyileştirir. `_hesitatedLoading` bayrağı + shimmer widget gerektiriyor.
+`_hesitatedLoading` bayrağı eklendi. Yükleme süresince 4 adet `ShimmerBox(100×130, radius:10)` gösteriliyor. Veri gelince veya hata oluşunca bayrak `false`'a çekiliyor.
 
 ---
 
-### T-LB-10 — Subcategory-Level Diversity
+### T-LB-10 — Subcategory-Level Diversity ✅ Tamamlandı
 
-Şu an kategori başına max 3. Subcategory (alt kategori) bazında da kısıt eklenebilir (örn. max 2). `feed.py`'ye `subcat_counts` dict ve PostgreSQL `listings` sorgusuna `subcategory` JOIN gerektiriyor.
+`l.subcategory` SQL SELECT + GROUP BY'a eklendi. `subcat_counts` dict ile alt kategori başına maks 2 ilan kuralı uygulandı. Mevcut kategori kuralı (maks 3) korundu.

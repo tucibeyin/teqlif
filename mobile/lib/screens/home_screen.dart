@@ -52,6 +52,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   // "Geri Bak" — tereddüt edilip teklif gönderilmeyen ilanlar
   List<dynamic> _hesitatedListings = [];
+  bool _hesitatedLoading = false;
 
   // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
@@ -122,6 +123,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _loadHesitated({bool bypassCache = false}) {
+    if (mounted) setState(() => _hesitatedLoading = true);
     ApiService.get<List<dynamic>>(
       url: '$kBaseUrl/feed/hesitated',
       cacheKey: 'feed_hesitated',
@@ -130,10 +132,16 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       fromJson: (raw) => raw as List,
     ).listen(
       (data) {
-        if (mounted) setState(() => _hesitatedListings = data);
+        if (mounted) setState(() {
+          _hesitatedListings = data;
+          _hesitatedLoading = false;
+        });
       },
       onError: (e) {
-        if (mounted) handleError(e, ref.read(localizationProvider));
+        if (mounted) {
+          setState(() => _hesitatedLoading = false);
+          handleError(e, ref.read(localizationProvider));
+        }
       },
     );
   }
@@ -457,7 +465,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   // ══════════════════════════════════════════════════════════
                   if (!_hasFilter) ...[
                     // ── Geri Bak shelf ────────────────────────────────────
-                    if (_hesitatedListings.isNotEmpty)
+                    if (_hesitatedLoading || _hesitatedListings.isNotEmpty)
                       SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,7 +490,20 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             SizedBox(
                               height: 130,
-                              child: ListView.builder(
+                              child: _hesitatedLoading
+                                  ? ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                                      itemCount: 4,
+                                      itemBuilder: (_, __) => Container(
+                                        width: 100,
+                                        margin: const EdgeInsets.only(right: 8),
+                                        child: ShimmerBox(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 itemCount: _hesitatedListings.length,

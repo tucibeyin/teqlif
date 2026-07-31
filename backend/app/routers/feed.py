@@ -284,28 +284,35 @@ async def get_hesitated_listings(
         sql_text("""
             SELECT
                 l.id, l.title, l.price, l.image_urls, l.image_url, l.category,
+                l.subcategory,
                 COUNT(lo.id) AS offer_count
             FROM listings l
             LEFT JOIN listing_offers lo ON lo.listing_id = l.id
             WHERE l.id = ANY(:ids)
               AND l.status = 'active'
-            GROUP BY l.id, l.title, l.price, l.image_urls, l.image_url, l.category
+            GROUP BY l.id, l.title, l.price, l.image_urls, l.image_url, l.category, l.subcategory
         """),
         {"ids": listing_ids},
     )
     listing_map = {r.id: r for r in rows.fetchall()}
 
-    # Diversity: kategori başına maks 3
+    # Diversity: kategori başına maks 3, alt kategori başına maks 2
     category_counts: dict[str, int] = {}
+    subcat_counts: dict[str, int] = {}
     listings = []
     for lid in listing_ids:
         r = listing_map.get(lid)
         if r is None:
             continue
         cat = r.category or "other"
+        subcat = r.subcategory or ""
         if category_counts.get(cat, 0) >= 3:
             continue
+        if subcat and subcat_counts.get(subcat, 0) >= 2:
+            continue
         category_counts[cat] = category_counts.get(cat, 0) + 1
+        if subcat:
+            subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
 
         raw_urls = r.image_urls
         try:
