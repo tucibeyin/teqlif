@@ -350,7 +350,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     final fullName = (_user!['full_name'] as String?) ?? widget.username;
     final userId = (_user!['id'] as int?) ?? widget.userId ?? 0;
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
-    final listingCount = _user!['listing_count'] ?? 0;
+    final listingCount = _user!['active_listings_count'] ?? 0;
     final followerCount = _user!['follower_count'] ?? 0;
     final followingCount = _user!['following_count'] ?? 0;
     final hasMyRating = _ratingSummary?['my_rating'] != null;
