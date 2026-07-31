@@ -2117,14 +2117,22 @@ class CallService {
       }
       await FlutterCallkitIncoming.endAllCalls();
 
-      // Çağrı sonrası ses oturumunu varsayılan konuma (kulaklık/earpiece) döndür.
-      // true bırakmak hoparlörü açık bırakır → bir sonraki arama/bildirim hoparlörden gelir.
+      // SwipeLiveScreen bağlamında arama bitti → stream hoparlörden devam etmeli.
+      // reset() preventCallScreenAutoOpen'ı temizlemeden önce flag'i oku.
+      final wasInSwipeLive = preventCallScreenAutoOpen.value;
       try {
-        _cpLog('HW', 'speakerphone SET | enabled=false context=_hangUpLocally-post-callkit (reset to earpiece)');
-        await Hardware.instance.setSpeakerphoneOn(false);
+        if (wasInSwipeLive) {
+          // SwipeLive: stream hoparlöre dönmesi için speaker=true bırak.
+          _cpLog('HW', 'speakerphone SET | enabled=true context=_hangUpLocally-swipeLive (restore stream speaker)');
+          await Hardware.instance.setSpeakerphoneOn(true);
+        } else {
+          // Standart arama: earpiece'e sıfırla.
+          _cpLog('HW', 'speakerphone SET | enabled=false context=_hangUpLocally-post-callkit (reset to earpiece)');
+          await Hardware.instance.setSpeakerphoneOn(false);
+        }
       } catch (e) {
         _cpLog('HW', 'speakerphone SET ERROR | context=_hangUpLocally $e');
-        debugPrint('[CallService] setSpeakerphoneOn(false) error: $e');
+        debugPrint('[CallService] setSpeakerphoneOn error: $e');
       }
       // iOS: voiceChat modu ile playAndRecord session'ı açık kalır → turuncu nokta göstergesi.
       // Arama sonrası deactivate et; SwipeLiveScreen ve diğer ses kaynakları session'ı devralabilir.
@@ -2132,7 +2140,7 @@ class CallService {
         try {
           final session = await AudioSession.instance;
           await session.setActive(false);
-          _cpLog('HW', 'audioSession DEACTIVATE | context=_hangUpLocally platform=iOS');
+          _cpLog('HW', 'audioSession DEACTIVATE | context=_hangUpLocally platform=iOS swipeLive=$wasInSwipeLive');
         } catch (e) {
           _cpLog('HW', 'audioSession DEACTIVATE ERROR | context=_hangUpLocally $e');
         }
