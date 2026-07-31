@@ -2702,6 +2702,10 @@
   "badgePassive": "Неактивно",
   "hesitatedSectionTitle": "Вернуться",
   "hesitatedSectionSubtitle": "Вы собирались сделать ставку",
+  "hesitatedPriceDrop": "Цена снижена",
+  "hesitatedPriceNearOffer": "Близко к вашей ставке",
+  "hesitatedOffers": "Предложений",
+  "hesitatedDismissed": "Удалено из вашего списка",
   "searchSmartResultsLabel": "Умные результаты",
   "searchShowAllAccounts": "Показать все аккаунты ({count})",
   "@searchShowAllAccounts": {

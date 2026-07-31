@@ -123,6 +123,7 @@ async def track_interaction(
         "duration_seconds": payload.duration_seconds,
         "price_point": payload.price_point,
         "metadata": payload.metadata,
+        "subcategory": getattr(payload, "subcategory", "") or "",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -154,12 +155,12 @@ async def track_interaction(
                     logger.warning("[ANALYTICS] Cold start trigger başarısız: %s", arq_exc)
 
         # Sıcak ilan spike dedektörü: 24 saat içinde 3. bid_hesitation → satıcıya bildirim
-        if payload.interaction_type == "bid_hesitation" and payload.item_type == "listing":
+        if payload.interaction_type in ("bid_hesitation", "detail_dwell") and payload.item_type == "listing":
             try:
-                # Feed geri beslemesi: bu ilan tekrar feed'de gösterilmeli (seen_decay sıfırla)
+                # Hesitated Redis seti — her iki sinyal de "ilgi var ama satın alma yok" demek
                 hes_key = f"hesitated:{user_id}"
                 await redis.sadd(hes_key, str(payload.item_id))
-                await redis.expire(hes_key, 7 * 86400)  # 7 gün TTL
+                await redis.expire(hes_key, 14 * 86400)  # 14 gün TTL (7'den uzatıldı)
 
                 spike_key = f"hes_spike:{payload.item_id}"
                 spike_count = await redis.incr(spike_key)
@@ -1091,7 +1092,7 @@ async def pro_insights(
                 ch_r = await ch.query(f"""
                     SELECT
                         countIf(event_type = 'view')              AS views,
-                        countIf(event_type = 'dwell')             AS dwells,
+                        countIf(event_type = 'detail_dwell')      AS dwells,
                         countDistinctIf(user_id, event_type = 'bid_hesitation') AS hesitations
                     FROM user_events
                     WHERE item_type = 'listing'
@@ -1309,7 +1310,7 @@ async def pro_insights(
             SELECT toHour(timestamp) AS hr, COUNT(*) AS cnt
             FROM user_events
             WHERE timestamp >= now() - INTERVAL 30 DAY
-              AND event_type IN ('view','dwell','bid_hesitation')
+              AND event_type IN ('view','detail_dwell','bid_hesitation')
             GROUP BY hr ORDER BY cnt DESC LIMIT 5
         """)
         peak_hours = [
@@ -2285,7 +2286,7 @@ async def get_pro_metrics(
                 FROM user_events
                 WHERE item_type = 'listing'
                   AND item_id IN ({ids_str})
-                  AND event_type = 'dwell'
+                  AND event_type = 'detail_dwell'
                   AND timestamp >= now() - INTERVAL 30 DAY
             """)
             if dwell_ch.result_rows and dwell_ch.result_rows[0][0] is not None:

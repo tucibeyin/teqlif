@@ -2701,6 +2701,10 @@
   "badgePassive": "غير نشط",
   "hesitatedSectionTitle": "انظر للخلف",
   "hesitatedSectionSubtitle": "كنت على وشك تقديم عرض",
+  "hesitatedPriceDrop": "انخفض السعر",
+  "hesitatedPriceNearOffer": "قريب من عرضك",
+  "hesitatedOffers": "عروض",
+  "hesitatedDismissed": "تمت الإزالة من قائمتك",
   "searchSmartResultsLabel": "نتائج ذكية",
   "searchShowAllAccounts": "عرض كل الحسابات ({count})",
   "@searchShowAllAccounts": {

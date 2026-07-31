@@ -116,21 +116,20 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     } else {
       // Paralel yükleme: ForYou beklenmeden arka planda başlar
       await _loadRecent(token, bypassCache: bypassCache);
-      if (loggedIn) _loadHesitated(token);
+      if (loggedIn) _loadHesitated(bypassCache: bypassCache);
     }
   }
 
-  Future<void> _loadHesitated(String token) async {
-    try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/hesitated'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 6));
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() => _hesitatedListings = data);
-      }
-    } catch (_) {}
+  void _loadHesitated({bool bypassCache = false}) {
+    ApiService.get<List<dynamic>>(
+      url: '$kBaseUrl/feed/hesitated',
+      cacheKey: 'feed_hesitated',
+      cacheTtl: const Duration(minutes: 15),
+      bypassCache: bypassCache,
+      fromJson: (raw) => raw as List,
+    ).listen((data) {
+      if (mounted) setState(() => _hesitatedListings = data);
+    });
   }
 
   // ── En Son Eklenenler (dikey grid, /api/listings) ─────────────────────────
@@ -482,18 +481,51 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 itemCount: _hesitatedListings.length,
                                 itemBuilder: (ctx, i) {
-                                  final item = _hesitatedListings[i];
+                                  final item = _hesitatedListings[i] as Map<String, dynamic>;
+                                  final lid = item['id'] as int?;
                                   final raw = item['image_url'] as String?;
                                   final photo = raw != null ? imgUrl(raw) : null;
                                   final price = item['price'] != null
                                       ? TeqNumberFormatter.format(item['price'], fieldKey: 'price', unit: '₺')
                                       : '';
+                                  final priceDrop = item['price_dropped'] == true;
+                                  final nearOffer = item['price_near_offer'] == true;
+                                  final offerCount = (item['offer_count'] as num?)?.toInt() ?? 0;
                                   return GestureDetector(
-                                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                                      builder: (_) => ListingDetailScreen(
-                                        listing: Map<String, dynamic>.from(item),
-                                      ),
-                                    )),
+                                    onTap: () {
+                                      if (lid != null) {
+                                        AnalyticsService.logInteraction(
+                                          itemId: lid,
+                                          itemType: 'listing',
+                                          interactionType: 'hesitated_shelf_tap',
+                                        );
+                                      }
+                                      Navigator.push(ctx, MaterialPageRoute(
+                                        builder: (_) => ListingDetailScreen(
+                                          listing: Map<String, dynamic>.from(item),
+                                        ),
+                                      ));
+                                    },
+                                    onLongPress: () async {
+                                      if (lid == null) return;
+                                      setState(() => _hesitatedListings.removeWhere(
+                                        (e) => (e as Map)['id'] == lid,
+                                      ));
+                                      final token = await StorageService.getToken();
+                                      final headers = await buildApiHeaders(token, json: true);
+                                      http.delete(
+                                        Uri.parse('$kBaseUrl/feed/hesitated/$lid'),
+                                        headers: headers,
+                                      );
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(loc.t('hesitatedDismissed')),
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    },
                                     child: Container(
                                       width: 100,
                                       margin: const EdgeInsets.only(right: 8),
@@ -525,6 +557,45 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
                                                   maxLines: 1, overflow: TextOverflow.ellipsis,
                                                 ),
+                                              ),
+                                            ),
+                                          // Fiyat düştü badge
+                                          if (priceDrop)
+                                            Positioned(
+                                              top: 4, left: 4,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.shade600,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text('↓', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                                              ),
+                                            )
+                                          // Teklife yaklaştı badge
+                                          else if (nearOffer)
+                                            Positioned(
+                                              top: 4, left: 4,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green.shade600,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text('✓', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                                              ),
+                                            ),
+                                          // Teklif sayısı badge
+                                          if (offerCount > 0)
+                                            Positioned(
+                                              top: 4, right: 4,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black54,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text('$offerCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
                                               ),
                                             ),
                                         ],

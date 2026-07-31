@@ -2737,6 +2737,10 @@
   "badgePassive": "Inactive",
   "hesitatedSectionTitle": "Look Back",
   "hesitatedSectionSubtitle": "You Were About to Bid",
+  "hesitatedPriceDrop": "Price Dropped",
+  "hesitatedPriceNearOffer": "Near Your Offer",
+  "hesitatedOffers": "Offers",
+  "hesitatedDismissed": "Removed from your list",
   "searchSmartResultsLabel": "Smart Results",
   "searchShowAllAccounts": "See all accounts ({count})",
   "@searchShowAllAccounts": {

@@ -67,6 +67,19 @@ async def get_affinity_profile(
     return {"user_id": current_user.id, "affinity": affinity, "cold_start": not affinity}
 
 
+@router.delete("/hesitated/{listing_id}", status_code=204)
+async def dismiss_hesitated(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """Geri Bak şelfinden bir ilanı kaldır — not_interested'a ekle, cache'i temizle."""
+    redis = await get_redis()
+    key = f"not_interested:{current_user.id}"
+    await redis.sadd(key, listing_id)
+    await redis.expire(key, 14 * 86400)
+    await redis.delete(f"feed:hesitated:{current_user.id}")
+
+
 @router.post("/not-interested/{listing_id}", status_code=204)
 async def mark_not_interested(
     listing_id: int,
@@ -178,9 +191,24 @@ async def get_hesitated_listings(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Son 7 günde kullanıcının teklif alanına fiyat yazıp göndermediği ilanlar.
-    Maksimum 10 ilan, en son tereddüt önce.
+    Son 14 günde bid_hesitation (teklif yazıp göndermeme) veya
+    detail_dwell (30+ saniye inceleme) sinyali üretilen aktif ilanlar.
+
+    - Kategori başına maks 3 ilan (diversity)
+    - Fiyat düşüşü ve teklife yaklaşma bayrakları
+    - Teklif sayısı (sosyal kanıt)
+    - 15 dk Redis cache
     """
+    redis = await get_redis()
+    cache_key = f"feed:hesitated:{current_user.id}"
+
+    cached = await redis.get(cache_key)
+    if cached:
+        try:
+            return json.loads(cached)
+        except Exception:
+            pass
+
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
@@ -189,21 +217,51 @@ async def get_hesitated_listings(
 
         result = await ch.query(
             """
-            SELECT item_id, MAX(timestamp) AS last_hes
+            SELECT
+                item_id,
+                argMax(event_type, timestamp)   AS top_signal,
+                MAX(timestamp)                  AS last_seen,
+                argMax(price_point, timestamp)  AS last_price_point
             FROM user_events
-            WHERE event_type = 'bid_hesitation'
-              AND item_type  = 'listing'
-              AND user_id    = %(uid)s
-              AND timestamp >= now() - INTERVAL 7 DAY
+            WHERE event_type IN ('bid_hesitation', 'detail_dwell')
+              AND item_type = 'listing'
+              AND user_id   = %(uid)s
+              AND timestamp >= now() - INTERVAL 14 DAY
             GROUP BY item_id
-            ORDER BY last_hes DESC
-            LIMIT 10
+            ORDER BY
+                multiIf(top_signal = 'bid_hesitation', 0, 1),
+                last_seen DESC
+            LIMIT 40
             """,
             parameters={"uid": current_user.id},
         )
-        listing_ids = [int(r[0]) for r in result.result_rows if r[0]]
+        ch_rows = result.result_rows
     except Exception:
         return []
+
+    if not ch_rows:
+        return []
+
+    seen_ids: set[int] = set()
+    listing_ids: list[int] = []
+    signal_map: dict[int, str] = {}
+    price_point_map: dict[int, float | None] = {}
+    for r in ch_rows:
+        lid = int(r[0])
+        if lid in seen_ids:
+            continue
+        seen_ids.add(lid)
+        listing_ids.append(lid)
+        signal_map[lid] = r[1]
+        price_point_map[lid] = float(r[3]) if r[3] is not None else None
+
+    # not_interested filtresi
+    try:
+        excluded_raw = await redis.smembers(f"not_interested:{current_user.id}")
+        excluded_ids = {int(x) for x in excluded_raw} if excluded_raw else set()
+        listing_ids = [lid for lid in listing_ids if lid not in excluded_ids]
+    except Exception:
+        pass
 
     if not listing_ids:
         return []
@@ -211,33 +269,72 @@ async def get_hesitated_listings(
     from sqlalchemy import text as sql_text
     rows = await db.execute(
         sql_text("""
-            SELECT l.id, l.title, l.price, l.image_urls, l.image_url
+            SELECT
+                l.id, l.title, l.price, l.image_urls, l.image_url, l.category,
+                COUNT(lo.id) AS offer_count
             FROM listings l
+            LEFT JOIN listing_offers lo ON lo.listing_id = l.id
             WHERE l.id = ANY(:ids)
               AND l.status = 'active'
+            GROUP BY l.id, l.title, l.price, l.image_urls, l.image_url, l.category
         """),
         {"ids": listing_ids},
     )
     listing_map = {r.id: r for r in rows.fetchall()}
 
+    # Diversity: kategori başına maks 3
+    category_counts: dict[str, int] = {}
     listings = []
     for lid in listing_ids:
         r = listing_map.get(lid)
         if r is None:
             continue
+        cat = r.category or "other"
+        if category_counts.get(cat, 0) >= 3:
+            continue
+        category_counts[cat] = category_counts.get(cat, 0) + 1
 
-        # image_urls Text kolonu — JSON string olarak saklanıyor, parse et
         raw_urls = r.image_urls
         try:
             imgs = json.loads(raw_urls) if isinstance(raw_urls, str) else (raw_urls or [])
         except Exception:
             imgs = []
-
         photo = imgs[0] if imgs else r.image_url
+
+        current_price = float(r.price) if r.price is not None else None
+        stored_pp = price_point_map.get(lid)
+        signal = signal_map.get(lid, "detail_dwell")
+
+        # detail_dwell → stored_pp = ilanın o andaki liste fiyatı
+        price_dropped = bool(
+            signal == "detail_dwell"
+            and current_price is not None
+            and stored_pp is not None
+            and current_price < stored_pp * 0.99
+        )
+        # bid_hesitation → stored_pp = kullanıcının yazdığı teklif tutarı
+        price_near_offer = bool(
+            signal == "bid_hesitation"
+            and current_price is not None
+            and stored_pp is not None
+            and current_price <= stored_pp * 1.05
+        )
+
         listings.append({
             "id": r.id,
             "title": r.title,
-            "price": float(r.price) if r.price is not None else None,
+            "price": current_price,
             "image_url": photo,
+            "signal": signal,
+            "offer_count": int(r.offer_count) if r.offer_count else 0,
+            "price_dropped": price_dropped,
+            "price_near_offer": price_near_offer,
         })
+
+        if len(listings) >= 12:
+            break
+
+    if listings:
+        await redis.setex(cache_key, 900, json.dumps(listings))  # 15 dk
+
     return listings

@@ -413,6 +413,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                     "duration_seconds": float(data["duration_seconds"]) if data.get("duration_seconds") is not None else None,
                     "price_point": float(data["price_point"]) if data.get("price_point") is not None else None,
                     "metadata": json.dumps(data["metadata"]) if data.get("metadata") else "",
+                    "subcategory": str(data.get("subcategory", "") or "")[:50],
                     "created_at": created_dt,
                 })
             except Exception:
@@ -456,6 +457,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                     r["price_point"],      # Nullable(Float64)
                     r["duration_seconds"], # Nullable(Float64)
                     r["metadata"],         # String (JSON)
+                    r["subcategory"],      # LowCardinality(String)
                     r["created_at"],       # DateTime
                 ]
                 for r in rows
@@ -466,7 +468,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                 column_names=[
                     "user_id", "item_id", "item_type",
                     "event_type", "price_point",
-                    "duration_seconds", "metadata", "timestamp",
+                    "duration_seconds", "metadata", "subcategory", "timestamp",
                 ],
             )
             logger.info(

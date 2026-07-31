@@ -2700,6 +2700,10 @@
   "badgePassive": "Pasif",
   "hesitatedSectionTitle": "Geri Bak",
   "hesitatedSectionSubtitle": "Teklif Vermek Üzereydin",
+  "hesitatedPriceDrop": "Fiyat Düştü",
+  "hesitatedPriceNearOffer": "Teklife Yaklaştı",
+  "hesitatedOffers": "Teklif",
+  "hesitatedDismissed": "İlan listenizden kaldırıldı",
   "searchSmartResultsLabel": "Akıllı Sonuçlar",
   "searchShowAllAccounts": "Tüm hesapları gör ({count})",
   "@searchShowAllAccounts": {
