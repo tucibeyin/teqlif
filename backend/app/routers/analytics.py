@@ -999,6 +999,10 @@ async def pro_insights(
     """
     from datetime import datetime as _dt, timedelta as _td
     uid = current_user.id
+
+    if not current_user.is_premium:
+        raise ForbiddenException(code="PRO_REQUIRED")
+
     _t = _get_t(get_locale(current_user, request))
 
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
@@ -1079,6 +1083,7 @@ async def pro_insights(
         await db.rollback()
 
     # ── 2. Dönüşüm Hunisi — ClickHouse + PostgreSQL ──────────────────────────
+    listing_ids: list[int] = []   # satıcının tüm ilan ID'leri — peak_hours da kullanır
     funnel: dict = {}
     try:
         listing_ids_result = await db.execute(
@@ -1136,12 +1141,13 @@ async def pro_insights(
         )
         if _sd: _hl_q = _hl_q.where(Listing.created_at >= _sd)
         if _ed: _hl_q = _hl_q.where(Listing.created_at < _ed)
-        active_ids_r = await db.execute(_hl_q.limit(20))
+        active_ids_r = await db.execute(_hl_q.order_by(Listing.created_at.desc()).limit(50))
         active_listings = active_ids_r.fetchall()
         if active_listings:
             ids_str = ", ".join(str(r.id) for r in active_listings)
             import time as _time_mod
             view_map: dict[int, int] = {r.id: 0 for r in active_listings}
+            dwell_map: dict[int, int] = {r.id: 0 for r in active_listings}
             hes_map: dict[int, int] = {r.id: 0 for r in active_listings}
             ts_map: dict[int, float] = {}
             like_map: dict[int, int] = {}
@@ -1151,6 +1157,7 @@ async def pro_insights(
                 ch_r2 = await ch.query(f"""
                     SELECT item_id,
                            countIf(event_type = 'view') AS views,
+                           countIf(event_type = 'detail_dwell') AS dwells,
                            countDistinctIf(user_id, event_type = 'bid_hesitation') AS hes,
                            toUnixTimestamp(max(timestamp)) AS last_event_ts
                     FROM user_events
@@ -1158,9 +1165,10 @@ async def pro_insights(
                       AND timestamp >= now() - INTERVAL 30 DAY
                     GROUP BY item_id
                 """)
-                view_map = {int(r[0]): int(r[1]) for r in ch_r2.result_rows}
-                hes_map  = {int(r[0]): int(r[2]) for r in ch_r2.result_rows}
-                ts_map   = {int(r[0]): float(r[3]) for r in ch_r2.result_rows}
+                view_map  = {int(r[0]): int(r[1]) for r in ch_r2.result_rows}
+                dwell_map = {int(r[0]): int(r[2]) for r in ch_r2.result_rows}
+                hes_map   = {int(r[0]): int(r[3]) for r in ch_r2.result_rows}
+                ts_map    = {int(r[0]): float(r[4]) for r in ch_r2.result_rows}
             except Exception:
                 pass
             try:
@@ -1177,7 +1185,12 @@ async def pro_insights(
 
             def _heat(lid: int) -> float:
                 age_h = max((_now_ts - ts_map.get(lid, _now_ts)) / 3600, 0.0)
-                raw = view_map.get(lid, 0) * 1 + like_map.get(lid, 0) * 2 + hes_map.get(lid, 0) * 3
+                raw = (
+                    view_map.get(lid, 0)  * 1 +
+                    like_map.get(lid, 0)  * 2 +
+                    dwell_map.get(lid, 0) * 2 +
+                    hes_map.get(lid, 0)   * 3
+                )
                 return raw / (age_h + 2) ** 1.2
 
             scored = sorted(active_listings, key=lambda r: _heat(r.id), reverse=True)[:5]
@@ -1207,14 +1220,14 @@ async def pro_insights(
         )
         if _sd: _pi_q = _pi_q.where(Listing.created_at >= _sd)
         if _ed: _pi_q = _pi_q.where(Listing.created_at < _ed)
-        my_listings_r = await db.execute(_pi_q.limit(5))
+        my_listings_r = await db.execute(_pi_q.order_by(Listing.price.desc()).limit(10))
         my_listings = my_listings_r.fetchall()
         for ml in my_listings:
             market_avg: float | None = None
             price_stddev: float | None = None
-            # Fiyat aralığı: ilanın fiyatının 0.05x–20x arası (test verisi ve aykırı değerleri eler)
-            price_lo = float(ml.price) * 0.05
-            price_hi = float(ml.price) * 20.0
+            # Fiyat aralığı: ilanın fiyatının 0.4x–2.5x arası (aynı sınıf ürünlerle karşılaştırır)
+            price_lo = float(ml.price) * 0.4
+            price_hi = float(ml.price) * 2.5
             if ml.embedding is not None:
                 try:
                     emb_str = "[" + ",".join(f"{x:.6f}" for x in ml.embedding) + "]"
@@ -1314,17 +1327,23 @@ async def pro_insights(
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
-        ph_r = await ch.query("""
-            SELECT toHour(timestamp) AS hr, COUNT(*) AS cnt
-            FROM user_events
-            WHERE timestamp >= now() - INTERVAL 30 DAY
-              AND event_type IN ('view','detail_dwell','bid_hesitation')
-            GROUP BY hr ORDER BY cnt DESC LIMIT 5
-        """)
+        if listing_ids:
+            _ph_ids_str = ", ".join(str(i) for i in listing_ids)
+            ph_r = await ch.query(f"""
+                SELECT toHour(timestamp) AS hr, COUNT(*) AS cnt
+                FROM user_events
+                WHERE timestamp >= now() - INTERVAL 30 DAY
+                  AND event_type IN ('view','detail_dwell','bid_hesitation')
+                  AND item_type = 'listing'
+                  AND item_id IN ({_ph_ids_str})
+                GROUP BY hr ORDER BY cnt DESC LIMIT 5
+            """)
+        else:
+            ph_r = None
         peak_hours = [
             {"hour": int(r[0]), "count": int(r[1]),
              "label": f"{int(r[0]):02d}:00–{int(r[0])+1:02d}:00"}
-            for r in ph_r.result_rows
+            for r in (ph_r.result_rows if ph_r else [])
         ]
     except Exception as exc:
         logger.warning("[ProInsights] peak_hours başarısız: %s", exc)
@@ -1339,30 +1358,36 @@ async def pro_insights(
         overpriced = [p for p in price_intel if p["signal"] == "pahalı"]
         underpriced = [p for p in price_intel if p["signal"] == "ucuz"]
         if overpriced:
-            tips.append({
-                "icon": "💰", "type": "price",
-                "title": t.get("proTipPriceDownTitle", ""),
-                "body": t.get("proTipPriceDownBody", '"{title}" piyasa ortalamasının %{diff} üzerinde. Fiyatı {avg} ₺ civarına çekersen satış hızlanabilir.').format(
-                    title=overpriced[0]["title"], diff=abs(overpriced[0]["diff_pct"]), avg=int(overpriced[0]["market_avg"])
-                ),
-            })
+            _body = t.get("proTipPriceDownBody", "")
+            if _body:
+                tips.append({
+                    "icon": "💰", "type": "price",
+                    "title": t.get("proTipPriceDownTitle", ""),
+                    "body": _body.format(
+                        title=overpriced[0]["title"], diff=abs(overpriced[0]["diff_pct"]), avg=int(overpriced[0]["market_avg"])
+                    ),
+                })
         if underpriced:
-            tips.append({
-                "icon": "🚀", "type": "price_up",
-                "title": t.get("proTipPriceUpTitle", ""),
-                "body": t.get("proTipPriceUpBody", '"{title}" benzer ilanların %{diff} altında. Piyasa fiyatı {avg} ₺ — artırma fırsatı var.').format(
-                    title=underpriced[0]["title"], diff=abs(underpriced[0]["diff_pct"]), avg=int(underpriced[0]["market_avg"])
-                ),
-            })
+            _body = t.get("proTipPriceUpBody", "")
+            if _body:
+                tips.append({
+                    "icon": "🚀", "type": "price_up",
+                    "title": t.get("proTipPriceUpTitle", ""),
+                    "body": _body.format(
+                        title=underpriced[0]["title"], diff=abs(underpriced[0]["diff_pct"]), avg=int(underpriced[0]["market_avg"])
+                    ),
+                })
         # Sıcak talep
         if hot_leads and hot_leads[0].get("hesitations_30d", 0) > 0:
-            tips.append({
-                "icon": "🎯", "type": "lead",
-                "title": t.get("proTipLeadTitle", ""),
-                "body": t.get("proTipLeadBody", '"{title}" için son 30 günde {count} kişi inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.').format(
-                    title=hot_leads[0]["title"], count=hot_leads[0]["hesitations_30d"]
-                ),
-            })
+            _body = t.get("proTipLeadBody", "")
+            if _body:
+                tips.append({
+                    "icon": "🎯", "type": "lead",
+                    "title": t.get("proTipLeadTitle", ""),
+                    "body": _body.format(
+                        title=hot_leads[0]["title"], count=hot_leads[0]["hesitations_30d"]
+                    ),
+                })
         # Tereddüt fiyat noktası: alıcıların yazdığı fiyat lisans fiyatının çok altındaysa somut öneri
         try:
             seller_lid_rows = await db.execute(sql_text(
@@ -1390,14 +1415,13 @@ async def pro_insights(
                         sl = seller_listings.get(lid_h)
                         if sl and sl["price"] > 0 and avg_pp < sl["price"] * 0.85:
                             suggested = int(round(avg_pp / 50) * 50) or int(avg_pp)
-                            tips.append({
-                                "icon": "💡", "type": "hesitation_price",
-                                "title": t.get("proTipHesPriceTitle", ""),
-                                "body": t.get(
-                                    "proTipHesPriceBody",
-                                    '"{title}" için birden fazla kişi ≈{suggested} ₺ yazdı ama teklif göndermedi. Bu fiyata yaklaştırmak dönüşümü artırabilir.'
-                                ).format(title=sl["title"], suggested=suggested),
-                            })
+                            _hes_body = t.get("proTipHesPriceBody", "")
+                            if _hes_body:
+                                tips.append({
+                                    "icon": "💡", "type": "hesitation_price",
+                                    "title": t.get("proTipHesPriceTitle", ""),
+                                    "body": _hes_body.format(title=sl["title"], suggested=suggested),
+                                })
                             break
         except Exception as hes_tip_exc:
             logger.warning("[ProInsights] hesitation_price tip başarısız: %s", hes_tip_exc)
@@ -2168,24 +2192,22 @@ async def demand_radar(
     try:
         ch = await get_clickhouse_client()
 
-        import re as _re
-        _safe = lambda s: _re.sub(r"[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ\-_]", "", s) if s else ""
-        cat_safe = _safe(category)
-        cat_filter = f"AND category = '{cat_safe}'" if cat_safe else ""
+        _cat_param = category or ""
+        _dr_params = {"days": days, "cat": _cat_param}
 
-        q_top = f"""
+        q_top = """
             SELECT query, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND length(query) >= 2
-              {cat_filter}
+              AND ({cat} = '' OR category = {cat})
             GROUP BY query
             HAVING cnt >= 2
             ORDER BY cnt DESC
             LIMIT 20
         """
 
-        q_cat = f"""
+        q_cat = """
             SELECT category, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
@@ -2196,32 +2218,32 @@ async def demand_radar(
             LIMIT 10
         """
 
-        q_subcat = f"""
+        q_subcat = """
             SELECT category, subcategory, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND subcategory != ''
-              {cat_filter}
+              AND ({cat} = '' OR category = {cat})
             GROUP BY category, subcategory
             HAVING cnt >= 2
             ORDER BY cnt DESC
             LIMIT 20
         """
 
-        q_vol = f"""
+        q_vol = """
             SELECT toDate(timestamp) AS day, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
-              {cat_filter}
+              AND ({cat} = '' OR category = {cat})
             GROUP BY day
             ORDER BY day
         """
 
         top_queries, by_category, by_subcategory, daily_volume = await asyncio.gather(
-            ch.query(q_top),
-            ch.query(q_cat),
-            ch.query(q_subcat),
-            ch.query(q_vol),
+            ch.query(q_top, parameters=_dr_params),
+            ch.query(q_cat, parameters={"days": days}),
+            ch.query(q_subcat, parameters=_dr_params),
+            ch.query(q_vol, parameters=_dr_params),
         )
 
         response_data = {
@@ -2266,6 +2288,20 @@ async def get_pro_metrics(
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
+
+    # ── Cache Check ──────────────────────────────────────────────────────────
+    _pm_redis = None
+    _pm_cache_key = None
+    try:
+        _pm_redis = await get_redis()
+        _pm_cache_key = f"cache:pro_metrics:{uid}"
+        _pm_cached = await _pm_redis.get(_pm_cache_key)
+        if _pm_cached:
+            import json as _pm_json
+            return _pm_json.loads(_pm_cached)
+    except Exception:
+        _pm_redis = None
+        _pm_cache_key = None
 
     # 0. Kullanıcının aktif ilanlarını ve saatlerini çek
     listings_result = await db.execute(sql_text("""
@@ -2378,7 +2414,7 @@ async def get_pro_metrics(
         total_viewer_count = int(ret_row[1])
         return_viewer_count = int(ret_row[2])
 
-    return {
+    _pm_result = {
         "avg_detail_dwell_seconds": avg_dwell,
         "search_visibility": search_visibility,
         "best_posting_hour": best_hour,
@@ -2386,6 +2422,15 @@ async def get_pro_metrics(
         "return_viewer_count": return_viewer_count,
         "total_viewer_count": total_viewer_count,
     }
+
+    if _pm_redis and _pm_cache_key:
+        try:
+            import json as _pm_json
+            await _pm_redis.setex(_pm_cache_key, 600, _pm_json.dumps(_pm_result))  # 10 dk
+        except Exception:
+            pass
+
+    return _pm_result
 
 
 # ── Rakip Fiyat Radarı ───────────────────────────────────────────────────────
@@ -2401,6 +2446,23 @@ async def competitor_radar(
     PRO: Kullanıcının ilanını pgvector ile benzer aktif ilanlarla karşılaştırır.
     Fiyat dağılımı, rakip sayısı ve pozisyon sinyali döner.
     """
+    if not current_user.is_premium:
+        raise ForbiddenException(code="PRO_REQUIRED")
+
+    # ── Cache Check ──────────────────────────────────────────────────────────
+    _cr_redis = None
+    _cr_cache_key = None
+    try:
+        _cr_redis = await get_redis()
+        _cr_cache_key = f"cache:competitor_radar:{listing_id}"
+        _cr_cached = await _cr_redis.get(_cr_cache_key)
+        if _cr_cached:
+            import json as _cr_json
+            return _cr_json.loads(_cr_cached)
+    except Exception:
+        _cr_redis = None
+        _cr_cache_key = None
+
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
@@ -2476,7 +2538,7 @@ async def competitor_radar(
         for r in rows[:8]
     ]
 
-    return {
+    _cr_result = {
         "signal": signal,
         "signal_detail": signal_detail,
         "my_price": my_price,
@@ -2489,6 +2551,15 @@ async def competitor_radar(
         "suggested_price": suggested_price,
         "competitors": competitors,
     }
+
+    if _cr_redis and _cr_cache_key:
+        try:
+            import json as _cr_json
+            await _cr_redis.setex(_cr_cache_key, 1800, _cr_json.dumps(_cr_result))  # 30 dk
+        except Exception:
+            pass
+
+    return _cr_result
 
 
 # ── Satış Hızı ───────────────────────────────────────────────────────────────

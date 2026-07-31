@@ -517,12 +517,13 @@ class _FunnelCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cardBg = AppColors.card(context);
     final views = (funnel['views'] as num?)?.toInt() ?? 0;
+    final dwells = (funnel['dwells'] as num?)?.toInt() ?? 0;
     final hesitations = (funnel['hesitations'] as num?)?.toInt() ?? 0;
     final bids = (funnel['bids'] as num?)?.toInt() ?? 0;
     final sales = (funnel['sales'] as num?)?.toInt() ?? 0;
     final v2b = (funnel['view_to_bid_pct'] as num?)?.toDouble() ?? 0;
     final b2s = (funnel['bid_to_sale_pct'] as num?)?.toDouble() ?? 0;
-    final maxVal = [views, hesitations, bids, sales].reduce((a, b) => a > b ? a : b).toDouble();
+    final maxVal = [views, dwells, hesitations, bids, sales].reduce((a, b) => a > b ? a : b).toDouble();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -530,6 +531,8 @@ class _FunnelCard extends ConsumerWidget {
       child: Column(
         children: [
           _FunnelRow(label: loc.t("proFunnelViews"), count: views, maxVal: maxVal, color: const Color(0xFF3B82F6)),
+          const SizedBox(height: 8),
+          _FunnelRow(label: loc.t("proFunnelDwells"), count: dwells, maxVal: maxVal, color: const Color(0xFF06B6D4)),
           const SizedBox(height: 8),
           _FunnelRow(label: loc.t("proFunnelHesitation"), count: hesitations, maxVal: maxVal, color: const Color(0xFFF59E0B)),
           const SizedBox(height: 8),
