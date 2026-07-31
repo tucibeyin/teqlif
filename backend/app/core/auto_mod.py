@@ -39,7 +39,7 @@ except Exception:
     pass
 
 _BAD_WORDS_DIR = os.path.join(os.path.dirname(__file__), "bad_words")
-_SUPPORTED_LANGS = ("tr", "en", "ar")
+_SUPPORTED_LANGS = ("tr", "en", "ar", "ru")
 
 # Normalize'da temizlenecek karakter sınıfı: noktalama ve ayırıcılar (BOŞLUKLAR HARİÇ)
 _PUNCT_RE = re.compile(r"[\.,\-_\*\+|\\/:;'\"!?@#$%^&()\[\]{}<>~`​­]+")
