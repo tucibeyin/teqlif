@@ -25,26 +25,11 @@ class FirebaseAdapter(PushNotificationPort):
 
     def __init__(self, project_id: str | None, sa_path: str | None):
         self._project_id = project_id
-        self._session = None
+        self._sa_path = sa_path
         if sa_path and project_id:
-            try:
-                from google.oauth2 import service_account
-                import google.auth.transport.requests
-                creds = service_account.Credentials.from_service_account_file(
-                    sa_path,
-                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
-                )
-                self._session = google.auth.transport.requests.AuthorizedSession(creds)
-                logger.info(
-                    "[FirebaseAdapter] FCM oturumu hazır | project=%s",
-                    project_id,
-                )
-            except Exception as exc:
-                logger.error(
-                    "[FirebaseAdapter] FCM oturumu başlatılamadı: %s",
-                    exc,
-                    exc_info=True,
-                )
+            logger.info("[FirebaseAdapter] hazır | project=%s", project_id)
+        else:
+            logger.warning("[FirebaseAdapter] sa_path veya project_id yok — push devre dışı")
 
     async def send_notification(
         self,
@@ -60,8 +45,8 @@ class FirebaseAdapter(PushNotificationPort):
             logger.error("[FirebaseAdapter] send_notification çağrıldı ama token boş")
             return False
 
-        if self._session is None:
-            logger.error("[FirebaseAdapter] FCM oturumu yok — push devre dışı")
+        if not self._sa_path or not self._project_id:
+            logger.error("[FirebaseAdapter] sa_path/project_id eksik — push devre dışı")
             return False
 
         try:
@@ -139,16 +124,29 @@ class FirebaseAdapter(PushNotificationPort):
         return msg
 
     def _send_http(self, msg: dict) -> str:
-        """FCM V1 REST API'ye senkron POST. asyncio.to_thread içinde çalışır."""
-        url = self.FCM_SEND_URL.format(project_id=self._project_id)
-        resp = self._session.post(url, json={"message": msg}, timeout=30)
+        """FCM V1 REST API'ye senkron POST. asyncio.to_thread içinde çalışır.
 
-        # Gönderilen Authorization header'ını logla (TEMP diagnostic)
+        Her çağrıda taze credentials + AuthorizedSession oluşturur. Paylaşılan
+        session'da concurrent token yenileme yarış koşulunu önler.
+        """
+        from google.oauth2 import service_account
+        import google.auth.transport.requests
+
+        creds = service_account.Credentials.from_service_account_file(
+            self._sa_path,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        session = google.auth.transport.requests.AuthorizedSession(creds)
+
+        url = self.FCM_SEND_URL.format(project_id=self._project_id)
+        resp = session.post(url, json={"message": msg}, timeout=30)
+
         sent_auth = resp.request.headers.get("Authorization", "NOT_SET")
         logger.info(
-            "[FirebaseAdapter] FCM isteği gönderildi | auth=%s | status=%d",
-            sent_auth[:30] if sent_auth != "NOT_SET" else "NOT_SET",
+            "[FirebaseAdapter] FCM isteği | auth_prefix=%s | status=%d | token=%s…",
+            sent_auth[7:27] if sent_auth != "NOT_SET" else "NOT_SET",
             resp.status_code,
+            msg.get("token", "")[:12],
         )
 
         if resp.status_code == 200:
