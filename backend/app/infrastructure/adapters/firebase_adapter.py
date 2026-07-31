@@ -137,34 +137,10 @@ class FirebaseAdapter(PushNotificationPort):
             scopes=["https://www.googleapis.com/auth/cloud-platform"],
         )
 
-        # Token'ı burada açıkça refresh edip sonucunu logla
-        try:
-            creds.refresh(google.auth.transport.requests.Request())
-            logger.info(
-                "[FirebaseAdapter] OAuth2 token üretildi"
-                " | token_prefix=%s | valid=%s | expiry=%s",
-                (creds.token or "NONE")[:20],
-                creds.valid,
-                creds.expiry,
-            )
-        except Exception as exc:
-            logger.error("[FirebaseAdapter] Token refresh BAŞARISIZ: %s", exc, exc_info=True)
-            raise
-
         session = google.auth.transport.requests.AuthorizedSession(creds)
 
         url = self.FCM_SEND_URL.format(project_id=self._project_id)
         resp = session.post(url, json={"message": msg}, timeout=30)
-
-        sent_auth = resp.request.headers.get("Authorization", "NOT_SET")
-        logger.info(
-            "[FirebaseAdapter] FCM isteği | auth_prefix=%s | status=%d"
-            " | fcm_token=%s… | response_body=%s",
-            sent_auth[7:27] if sent_auth != "NOT_SET" else "NOT_SET",
-            resp.status_code,
-            msg.get("token", "")[:12],
-            resp.text[:600],
-        )
 
         if resp.status_code == 200:
             return resp.json().get("name", "")
