@@ -140,7 +140,9 @@ async def rebuild_index() -> None:
     faiss.normalize_L2(vectors)
 
     n = len(rows)
-    if n < _NLIST:
+    # IVFFlat için FAISS önerisi: centroid başına en az 39 training point.
+    # Altında kalan dataset boyutlarında FlatIP daha doğru ve yeterince hızlı.
+    if n < _NLIST * 39:
         index = faiss.IndexFlatIP(_DIM)
     else:
         quantizer = faiss.IndexFlatIP(_DIM)
