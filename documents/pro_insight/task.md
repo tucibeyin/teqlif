@@ -10,7 +10,7 @@
 | ID | Başlık | Kaynak | Öncelik | Durum | Tarih |
 |----|--------|--------|---------|-------|-------|
 | T-PI-01 | Premium guard — 3 endpoint'e ekle | F-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
-| T-PI-02 | AnalyticsService error handling — hatalar kullanıcıya iletilsin | F-02 | Yüksek | Bekliyor | — |
+| T-PI-02 | AnalyticsService error handling — hatalar kullanıcıya iletilsin | F-02 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-PI-03 | `/pro/metrics` Redis cache ekle | F-03 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-PI-04 | `/competitor-radar` Redis cache ekle | F-04 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-PI-05 | `peak_hours` satıcıya özel filtre ekle | F-05 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
@@ -22,9 +22,9 @@
 | T-PI-11 | Tips hard-coded Türkçe fallback'leri kaldır | F-13 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
 | T-PI-12 | `search_visibility` metrik başlığını düzelt | F-14 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
 | T-PI-13 | `price_intel` fiyat aralığı filtresini daralt | F-16 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
-| T-PI-14 | Flutter typed model'lar oluştur | F-10 | Araştırma | Bekliyor | — |
-| T-PI-15 | SWR / Hive cache — offline destek | F-15 | Araştırma | Bekliyor | — |
-| T-PI-16 | Clean Architecture refactor — Use Case katmanı | F-09 | Araştırma | Bekliyor | — |
+| T-PI-14 | Flutter typed model'lar oluştur | F-10 | Araştırma | ✅ Tamamlandı | 31 Tem 2026 |
+| T-PI-15 | SWR / Hive cache — offline destek | F-15 | Araştırma | ✅ Tamamlandı | 31 Tem 2026 |
+| T-PI-16 | Clean Architecture refactor — Use Case katmanı | F-09 | Araştırma | ✅ Tamamlandı | 31 Tem 2026 |
 
 ---
 

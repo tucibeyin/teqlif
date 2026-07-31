@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/listing_filter_state.dart';
+import '../models/pro_insights_data.dart';
 import '../services/analytics_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
+import '../utils/error_helper.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
@@ -17,8 +19,8 @@ class ProInsightsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
-  Map<String, dynamic>? _data;
-  Map<String, dynamic>? _metrics;
+  ProInsightsData? _data;
+  ProMetrics? _metrics;
   bool _loading = true;
   bool _hasError = false;
   final Map<String, bool> _showAll = {};
@@ -47,6 +49,8 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
       _hotLeadsFilter = f;
       if (dateChanged) {
         _priceIntelFilter = _priceIntelFilter.copyWith(dateFrom: f.dateFrom, dateTo: f.dateTo);
+        _data = null;
+        _metrics = null;
       }
       _showAll['hotLeads'] = false;
     });
@@ -59,28 +63,47 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
       _priceIntelFilter = f;
       if (dateChanged) {
         _hotLeadsFilter = _hotLeadsFilter.copyWith(dateFrom: f.dateFrom, dateTo: f.dateTo);
+        _data = null;
+        _metrics = null;
       }
       _showAll['priceIntel'] = false;
     });
     if (dateChanged) _load();
   }
 
-  Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
+  Future<void> _load({bool bypassCache = false}) async {
+    setState(() {
+      if (_data == null) _loading = true;
+      _hasError = false;
+    });
     final sd = _hotLeadsFilter.dateFrom?.toIso8601String().substring(0, 10);
     final ed = _hotLeadsFilter.dateTo?.toIso8601String().substring(0, 10);
-    final results = await Future.wait([
-      AnalyticsService.getProInsights(startDate: sd, endDate: ed),
-      AnalyticsService.getProMetrics(),
+    await Future.wait([
+      _loadInsights(sd, ed, bypassCache),
+      _loadMetrics(bypassCache),
     ]);
-    if (mounted) {
-      setState(() {
-        _data = results[0];
-        _metrics = results[1];
-        _loading = false;
-        _hasError = results[0] == null;
-      });
+  }
+
+  Future<void> _loadInsights(String? sd, String? ed, bool bypassCache) async {
+    try {
+      await for (final data in AnalyticsService.getProInsights(startDate: sd, endDate: ed, bypassCache: bypassCache)) {
+        if (!mounted) return;
+        setState(() { _data = data; _loading = false; });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; if (_data == null) _hasError = true; });
+      if (_data == null) handleError(e, ref.read(localizationProvider));
     }
+  }
+
+  Future<void> _loadMetrics(bool bypassCache) async {
+    try {
+      await for (final met in AnalyticsService.getProMetrics(bypassCache: bypassCache)) {
+        if (!mounted) return;
+        setState(() { _metrics = met; });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -90,7 +113,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
         ? const Center(child: CircularProgressIndicator())
         : _hasError
             ? _buildError(loc)
-            : RefreshIndicator(onRefresh: _load, child: _buildBody(loc));
+            : RefreshIndicator(onRefresh: () => _load(bypassCache: true), child: _buildBody(loc));
 
     if (widget.isEmbedded) {
       return bodyContent;
@@ -105,7 +128,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _load,
+            onPressed: () => _load(bypassCache: true),
           ),
         ],
       ),
@@ -122,42 +145,42 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
           const SizedBox(height: 12),
           Text(loc.t("proLoadFailed"), style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _load, child: Text(loc.t("btnRetry"))),
+          FilledButton(onPressed: () => _load(bypassCache: true), child: Text(loc.t("btnRetry"))),
         ],
       ),
     );
   }
 
   // ── Filtre yardımcıları ──────────────────────────────────────────────────
-  List<Map<String, dynamic>> _applyHotLeadsFilter(List<Map<String, dynamic>> raw) {
+  List<HotLead> _applyHotLeadsFilter(List<HotLead> raw) {
     var r = raw;
     if (_hotLeadsFilter.searchQuery != null && _hotLeadsFilter.searchQuery!.isNotEmpty) {
       final q = _hotLeadsFilter.searchQuery!.toLowerCase();
-      r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+      r = r.where((m) => m.title.toLowerCase().contains(q)).toList();
     }
     if (_hotLeadsFilter.category != null && _hotLeadsFilter.category!.isNotEmpty) {
-      r = r.where((m) => m['category'] == _hotLeadsFilter.category).toList();
+      r = r.where((m) => m.category == _hotLeadsFilter.category).toList();
     }
     if (_hotLeadsFilter.subcategory != null && _hotLeadsFilter.subcategory!.isNotEmpty) {
-      r = r.where((m) => m['subcategory'] == _hotLeadsFilter.subcategory).toList();
+      r = r.where((m) => m.subcategory == _hotLeadsFilter.subcategory).toList();
     }
     return r;
   }
 
-  List<Map<String, dynamic>> _applyPriceIntelFilter(List<Map<String, dynamic>> raw) {
+  List<PriceIntel> _applyPriceIntelFilter(List<PriceIntel> raw) {
     var r = raw;
     if (_priceIntelFilter.searchQuery != null && _priceIntelFilter.searchQuery!.isNotEmpty) {
       final q = _priceIntelFilter.searchQuery!.toLowerCase();
-      r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+      r = r.where((m) => m.title.toLowerCase().contains(q)).toList();
     }
     if (_priceIntelFilter.category != null && _priceIntelFilter.category!.isNotEmpty) {
-      r = r.where((m) => m['category'] == _priceIntelFilter.category).toList();
+      r = r.where((m) => m.category == _priceIntelFilter.category).toList();
     }
     if (_priceIntelFilter.subcategory != null && _priceIntelFilter.subcategory!.isNotEmpty) {
-      r = r.where((m) => m['subcategory'] == _priceIntelFilter.subcategory).toList();
+      r = r.where((m) => m.subcategory == _priceIntelFilter.subcategory).toList();
     }
     if (_priceIntelSignal.isNotEmpty) {
-      r = r.where((m) => m['signal'] == _priceIntelSignal).toList();
+      r = r.where((m) => m.signal == _priceIntelSignal).toList();
     }
     return r;
   }
@@ -178,13 +201,13 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   }
 
   Widget _buildBody(TranslationPack loc) {
-    final kpis           = (_data?['kpis']        as Map<String, dynamic>?) ?? {};
-    final funnel         = (_data?['funnel']       as Map<String, dynamic>?) ?? {};
-    final allHotLeads    = (_data?['hot_leads']    as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final allPriceIntel  = (_data?['price_intel']  as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final streamStats    = (_data?['stream_stats'] as Map<String, dynamic>?) ?? {};
-    final peakHours      = (_data?['peak_hours']   as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final tips           = (_data?['tips']         as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final kpis        = _data?.kpis ?? ProKpis.empty;
+    final funnel      = _data?.funnel ?? ProFunnel.empty;
+    final allHotLeads = _data?.hotLeads ?? <HotLead>[];
+    final allPriceIntel = _data?.priceIntel ?? <PriceIntel>[];
+    final streamStats = _data?.streamStats ?? StreamStats.empty;
+    final peakHours   = _data?.peakHours ?? <PeakHour>[];
+    final tips        = _data?.tips ?? <ProTip>[];
 
     final hotLeads   = _applyHotLeadsFilter(allHotLeads);
     final priceIntel = _applyPriceIntelFilter(allPriceIntel);
@@ -321,7 +344,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   int _visibleCount(String key, int total) =>
       _showAll[key] == true ? total : total.clamp(0, _kMaxVisible);
 
-  Widget _buildHotLeadsCarousel(List<Map<String, dynamic>> items, TranslationPack loc) {
+  Widget _buildHotLeadsCarousel(List<HotLead> items, TranslationPack loc) {
     if (items.isEmpty) return const SizedBox.shrink();
     return SizedBox(
       height: 140,
@@ -333,7 +356,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     );
   }
 
-  Widget _buildPriceIntelCarousel(List<Map<String, dynamic>> items, TranslationPack loc) {
+  Widget _buildPriceIntelCarousel(List<PriceIntel> items, TranslationPack loc) {
     if (items.isEmpty) return const SizedBox.shrink();
     return SizedBox(
       height: 160,
@@ -345,14 +368,12 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     );
   }
 
-  List<Widget> _buildPeakBars(List<Map<String, dynamic>> hours, TranslationPack loc) {
-    final maxCount = hours.map((h) => (h['count'] as num?)?.toInt() ?? 0).reduce((a, b) => a > b ? a : b);
+  List<Widget> _buildPeakBars(List<PeakHour> hours, TranslationPack loc) {
+    final maxCount = hours.map((h) => h.count).reduce((a, b) => a > b ? a : b);
     return hours.asMap().entries.map((e) {
-      final i = e.key;
       final h = e.value;
-      final count = (h['count'] as num?)?.toInt() ?? 0;
-      final ratio = maxCount > 0 ? count / maxCount : 0.0;
-      return _PeakHourBar(label: h['label'] as String, count: count, ratio: ratio, rank: i + 1, loc: loc);
+      final ratio = maxCount > 0 ? h.count / maxCount : 0.0;
+      return _PeakHourBar(label: h.label, count: h.count, ratio: ratio, rank: e.key + 1, loc: loc);
     }).toList();
   }
 }
@@ -393,18 +414,18 @@ class _SubLabel extends ConsumerWidget {
 // ── KPI Grid ─────────────────────────────────────────────────────────────────
 
 class _KpiGrid extends ConsumerWidget {
-  final Map<String, dynamic> kpis;
+  final ProKpis kpis;
   final TranslationPack loc;
   const _KpiGrid({required this.kpis, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rev30 = (kpis['revenue_30d'] as num?)?.toDouble() ?? 0;
-    final revGrowth = (kpis['revenue_growth_pct'] as num?)?.toDouble();
-    final sales30 = (kpis['sales_30d'] as num?)?.toInt() ?? 0;
-    final bids30 = (kpis['bids_30d'] as num?)?.toInt() ?? 0;
-    final activeL = (kpis['active_listings'] as num?)?.toInt() ?? 0;
-    final totalRev = (kpis['total_revenue'] as num?)?.toDouble() ?? 0;
+    final rev30 = kpis.revenue30d;
+    final revGrowth = kpis.revenueGrowthPct;
+    final sales30 = kpis.sales30d;
+    final bids30 = kpis.bids30d;
+    final activeL = kpis.activeListings;
+    final totalRev = kpis.totalRevenue;
 
     String growthStr = '';
     if (revGrowth != null) {
@@ -509,20 +530,20 @@ class _KpiCard extends ConsumerWidget {
 // ── Dönüşüm Hunisi ──────────────────────────────────────────────────────────
 
 class _FunnelCard extends ConsumerWidget {
-  final Map<String, dynamic> funnel;
+  final ProFunnel funnel;
   final TranslationPack loc;
   const _FunnelCard({required this.funnel, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cardBg = AppColors.card(context);
-    final views = (funnel['views'] as num?)?.toInt() ?? 0;
-    final dwells = (funnel['dwells'] as num?)?.toInt() ?? 0;
-    final hesitations = (funnel['hesitations'] as num?)?.toInt() ?? 0;
-    final bids = (funnel['bids'] as num?)?.toInt() ?? 0;
-    final sales = (funnel['sales'] as num?)?.toInt() ?? 0;
-    final v2b = (funnel['view_to_bid_pct'] as num?)?.toDouble() ?? 0;
-    final b2s = (funnel['bid_to_sale_pct'] as num?)?.toDouble() ?? 0;
+    final views = funnel.views;
+    final dwells = funnel.dwells;
+    final hesitations = funnel.hesitations;
+    final bids = funnel.bids;
+    final sales = funnel.sales;
+    final v2b = funnel.viewToBidPct;
+    final b2s = funnel.bidToSalePct;
     final maxVal = [views, dwells, hesitations, bids, sales].reduce((a, b) => a > b ? a : b).toDouble();
 
     return Container(
@@ -611,7 +632,7 @@ class _RateBadge extends ConsumerWidget {
 // ── Akıllı Öneri Kartı ───────────────────────────────────────────────────────
 
 class _TipCard extends ConsumerWidget {
-  final Map<String, dynamic> tip;
+  final ProTip tip;
   const _TipCard({required this.tip});
 
   @override
@@ -621,7 +642,7 @@ class _TipCard extends ConsumerWidget {
       'lead': const Color(0xFFF59E0B), 'stream': const Color(0xFF3B82F6),
       'listing_quality': const Color(0xFF8B5CF6), 'general': kPrimary,
     };
-    final color = typeColors[tip['type'] as String? ?? 'general'] ?? kPrimary;
+    final color = typeColors[tip.type] ?? kPrimary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -637,16 +658,16 @@ class _TipCard extends ConsumerWidget {
           Container(
             width: 38, height: 38,
             decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: Center(child: Text(tip['icon'] as String? ?? '💡', style: const TextStyle(fontSize: 18))),
+            child: Center(child: Text(tip.icon, style: const TextStyle(fontSize: 18))),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tip['title'] as String? ?? '', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+                Text(tip.title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
                 const SizedBox(height: 4),
-                Text(tip['body'] as String? ?? '', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context), height: 1.4)),
+                Text(tip.body, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context), height: 1.4)),
               ],
             ),
           ),
@@ -659,18 +680,18 @@ class _TipCard extends ConsumerWidget {
 // ── Sıcak Talep Carousel Kartı ───────────────────────────────────────────────
 
 class _HotLeadCard extends ConsumerWidget {
-  final Map<String, dynamic> lead;
+  final HotLead lead;
   final TranslationPack loc;
   const _HotLeadCard({required this.lead, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final views     = (lead['views_30d'] as num?)?.toInt() ?? 0;
-    final hes       = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
-    final heat      = (lead['heat_score'] as num?)?.toInt() ?? 0;
-    final price     = (lead['price'] as num?)?.toDouble();
-    final catLabel  = lead['category'] as String? ?? '';
-    final isBoosted = lead['is_boosted'] as bool? ?? false;
+    final views     = lead.views30d;
+    final hes       = lead.hesitations30d;
+    final heat      = lead.heatScore;
+    final price     = lead.price;
+    final catLabel  = lead.category;
+    final isBoosted = lead.isBoosted;
     final heatColor = heat > 15
         ? const Color(0xFFEF4444)
         : heat > 5 ? const Color(0xFFF59E0B) : const Color(0xFF22C55E);
@@ -722,7 +743,7 @@ class _HotLeadCard extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            lead['title'] as String? ?? '',
+            lead.title,
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
             maxLines: 2, overflow: TextOverflow.ellipsis,
           ),
@@ -743,16 +764,16 @@ class _HotLeadCard extends ConsumerWidget {
 // ── Fiyat Zekası Carousel Kartı ───────────────────────────────────────────────
 
 class _PriceIntelCard extends ConsumerWidget {
-  final Map<String, dynamic> item;
+  final PriceIntel item;
   final TranslationPack loc;
   const _PriceIntelCard({required this.item, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final yourPrice = (item['your_price'] as num?)?.toDouble() ?? 0;
-    final marketAvg = (item['market_avg'] as num?)?.toDouble() ?? 0;
-    final diffPct   = (item['diff_pct'] as num?)?.toDouble() ?? 0;
-    final signal    = item['signal'] as String? ?? 'uygun';
+    final yourPrice = item.yourPrice;
+    final marketAvg = item.marketAvg;
+    final diffPct   = item.diffPct;
+    final signal    = item.signal;
 
     final sigColor = signal == 'pahalı' ? const Color(0xFFEF4444)
         : signal == 'ucuz' ? const Color(0xFF22C55E)
@@ -778,7 +799,7 @@ class _PriceIntelCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  item['title'] as String? ?? '',
+                  item.title,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
                   maxLines: 2, overflow: TextOverflow.ellipsis,
                 ),
@@ -871,7 +892,7 @@ class _PriceRow extends ConsumerWidget {
 // ── Yayın Performansı ─────────────────────────────────────────────────────────
 
 class _StreamStatsCard extends ConsumerWidget {
-  final Map<String, dynamic> stats;
+  final StreamStats stats;
   final TranslationPack loc;
   final bool showAll;
   final VoidCallback onToggleAll;
@@ -879,12 +900,12 @@ class _StreamStatsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final total   = (stats['total_streams'] as num?)?.toInt() ?? 0;
-    final s30     = (stats['streams_30d'] as num?)?.toInt() ?? 0;
-    final avgV    = (stats['avg_viewers'] as num?)?.toDouble() ?? 0;
-    final peakV   = (stats['peak_viewers'] as num?)?.toInt() ?? 0;
-    final avgDur  = (stats['avg_duration_min'] as num?)?.toDouble() ?? 0;
-    final best    = (stats['best_streams'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final total   = stats.totalStreams;
+    final s30     = stats.streams30d;
+    final avgV    = stats.avgViewers;
+    final peakV   = stats.peakViewers;
+    final avgDur  = stats.avgDurationMin;
+    final best    = stats.bestStreams;
 
     if (total == 0) {
       return Container(
@@ -926,7 +947,7 @@ class _StreamStatsCard extends ConsumerWidget {
         ),
         if (best.isNotEmpty) ...[
           const SizedBox(height: 8),
-          ...( showAll ? best : best.take(5).toList())
+          ...(showAll ? best : best.take(5).toList())
               .asMap().entries.map((e) => _BestStreamRow(rank: e.key + 1, stream: e.value, loc: loc)),
           if (best.length > 5)
             _ShowMoreBtn(
@@ -965,7 +986,7 @@ class _StatBox extends ConsumerWidget {
 
 class _BestStreamRow extends ConsumerWidget {
   final int rank;
-  final Map<String, dynamic> stream;
+  final BestStream stream;
   final TranslationPack loc;
   const _BestStreamRow({required this.rank, required this.stream, required this.loc});
 
@@ -973,9 +994,6 @@ class _BestStreamRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final medals = ['🥇', '🥈', '🥉'];
     final medal = rank <= 3 ? medals[rank - 1] : '#$rank';
-    final viewers = (stream['viewers'] as num?)?.toInt() ?? 0;
-    final bids = (stream['bids'] as num?)?.toInt() ?? 0;
-    final dur = (stream['duration_min'] as num?)?.toInt() ?? 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -984,9 +1002,9 @@ class _BestStreamRow extends ConsumerWidget {
         children: [
           Text(medal, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 10),
-          Expanded(child: Text(stream['title'] as String? ?? '', style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(stream.title, style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis)),
           const SizedBox(width: 8),
-          Text(loc.t("proStreamRowStats", {"viewers": viewers.toString(), "bids": bids.toString(), "dur": dur.toString()}),
+          Text(loc.t("proStreamRowStats", {"viewers": stream.viewers.toString(), "bids": stream.bids.toString(), "dur": stream.durationMin.toString()}),
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
         ],
       ),
@@ -1043,16 +1061,16 @@ class _PeakHourBar extends ConsumerWidget {
 // ── PRO Gelişmiş Metrikler Kartı ─────────────────────────────────────────────
 
 class _ProMetricsCard extends ConsumerWidget {
-  final Map<String, dynamic> metrics;
+  final ProMetrics metrics;
   final TranslationPack loc;
   const _ProMetricsCard({required this.metrics, required this.loc});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dwell = metrics['avg_detail_dwell_seconds'];
-    final bestHour = metrics['best_posting_hour'];
-    final returnRate = metrics['return_viewer_rate_pct'];
-    final searchVis = (metrics['search_visibility'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final dwell = metrics.avgDetailDwellSeconds;
+    final bestHour = metrics.bestPostingHour;
+    final returnRate = metrics.returnViewerRatePct;
+    final searchVis = metrics.searchVisibility;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1085,9 +1103,9 @@ class _ProMetricsCard extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
                 Expanded(child: Text(
-                  e['category'] as String? ?? '',
+                  e.category,
                   style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
-                Text(loc.t("proSearchCount", {"count": ((e['search_count'] as num?)?.toInt() ?? 0).toString()}), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                Text(loc.t("proSearchCount", {"count": e.searchCount.toString()}), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ]),
             )),
           ],

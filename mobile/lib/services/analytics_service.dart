@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../core/app_exception.dart';
+import '../models/pro_insights_data.dart';
+import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
 class AiInsufficientTuciException implements Exception {
@@ -179,39 +181,41 @@ class AnalyticsService {
     return null;
   }
 
-  /// Pro satıcı kapsamlı analitik → `GET /api/analytics/pro-insights`
-  static Future<Map<String, dynamic>?> getProInsights({String? startDate, String? endDate}) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return null;
-      final headers = await buildApiHeaders(token);
-      var url = '$kBaseUrl/analytics/pro-insights';
-      final params = <String>[];
-      if (startDate != null) params.add('start_date=$startDate');
-      if (endDate != null) params.add('end_date=$endDate');
-      if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: headers);
-      if (resp.statusCode == 200) {
-        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-      }
-    } catch (_) {}
-    return null;
+  /// Pro satıcı kapsamlı analitik — SWR stream (cache → network).
+  /// Önce Hive cache'den anlık emit, sonra `/api/analytics/pro-insights`'tan taze veri.
+  static Stream<ProInsightsData> getProInsights({
+    String? startDate,
+    String? endDate,
+    bool bypassCache = false,
+  }) {
+    var url = '$kBaseUrl/analytics/pro-insights';
+    final params = <String>[];
+    if (startDate != null) params.add('start_date=$startDate');
+    if (endDate != null) params.add('end_date=$endDate');
+    if (params.isNotEmpty) url += '?${params.join('&')}';
+    return ApiService.get<ProInsightsData>(
+      url: url,
+      cacheKey: 'pro_insights_${startDate ?? ''}_${endDate ?? ''}',
+      fromJson: (raw) => ProInsightsData.fromJson(raw as Map<String, dynamic>),
+      bypassCache: bypassCache,
+      cacheTtl: const Duration(minutes: 10),
+      timeout: const Duration(seconds: 20),
+    );
   }
 
-  /// PRO gelişmiş metrikler → `GET /api/analytics/pro/metrics`
-  static Future<Map<String, dynamic>?> getProMetrics() async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return null;
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/pro/metrics'),
-        headers: await buildApiHeaders(token),
+  /// PRO gelişmiş metrikler — SWR stream (cache → network).
+  static Stream<ProMetrics> getProMetrics({bool bypassCache = false}) =>
+      ApiService.get<ProMetrics>(
+        url: '$kBaseUrl/analytics/pro/metrics',
+        cacheKey: 'pro_metrics',
+        fromJson: (raw) => ProMetrics.fromJson(raw as Map<String, dynamic>),
+        bypassCache: bypassCache,
+        cacheTtl: const Duration(minutes: 10),
+        timeout: const Duration(seconds: 20),
       );
-      if (resp.statusCode == 200) {
-        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-      }
-    } catch (_) {}
-    return null;
+
+  static Map<String, dynamic> _safeJsonBody(String body) {
+    try { return jsonDecode(body) as Map<String, dynamic>; } catch (_) { return {}; }
   }
 
   /// Sektörel pazar trendleri → `GET /api/analytics/market-trends`
