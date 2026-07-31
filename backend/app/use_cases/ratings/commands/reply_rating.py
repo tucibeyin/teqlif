@@ -8,6 +8,7 @@ from app.core.logger import get_logger
 from app.models.rating import Rating
 from app.models.user import User
 from app.services.notification_service import push_notification
+from app.core.auto_mod import censor_text
 
 logger = get_logger(__name__)
 
@@ -24,6 +25,8 @@ class ReplyRatingCommand:
             raise BadRequestException(code="REPLY_EMPTY")
         if len(reply_text) > 500:
             raise BadRequestException(code="REPLY_TOO_LONG")
+
+        reply_text = censor_text(reply_text)
 
         rating = await self.uow.session.scalar(
             select(Rating).where(Rating.id == rating_id)

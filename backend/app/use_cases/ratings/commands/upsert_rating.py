@@ -10,6 +10,7 @@ from app.models.rating import Rating
 from app.models.rating_history import RatingHistory
 from app.models.user import User
 from app.services.notification_service import push_notification
+from app.core.auto_mod import censor_text
 
 logger = get_logger(__name__)
 
@@ -37,6 +38,9 @@ class UpsertRatingCommand:
 
         if comment and len(comment) > 500:
             raise BadRequestException(code="COMMENT_TOO_LONG")
+
+        if comment:
+            comment = censor_text(comment)
 
         target = await self.uow.session.scalar(
             select(User).where(User.id == rated_id, User.status == UserStatus.ACTIVE)

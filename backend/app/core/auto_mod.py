@@ -115,18 +115,52 @@ def analyze_text_all(text: str) -> bool:
     normalized = normalize_text(text)
     if not normalized:
         return False
-        
+
     tokens = set(normalized.split())
     stripped_all = normalized.replace(" ", "")
-    
+
     for lang in _SUPPORTED_LANGS:
         bad_words = _load_bad_words(lang)
         if not tokens.isdisjoint(bad_words):
             return True
         if stripped_all in bad_words:
             return True
-            
+
     return False
+
+
+def censor_text(text: str) -> str:
+    """
+    Küfür içeren kelimeleri yıldızla maskeler, metnin geri kalanını korur.
+    Her token normalize edilip tüm dil sözlükleriyle karşılaştırılır;
+    eşleşen kelime orijinal uzunluğu kadar * ile değiştirilir.
+    better-profanity kuruluysa ek bir geçiş daha yapılır.
+    """
+    if not text or not text.strip():
+        return text
+
+    words = text.split()
+    result: list[str] = []
+    for word in words:
+        normalized = normalize_text(word)
+        censored = False
+        for lang in _SUPPORTED_LANGS:
+            if normalized in _load_bad_words(lang):
+                result.append("*" * len(word))
+                censored = True
+                break
+        if not censored:
+            result.append(word)
+
+    cleaned = " ".join(result)
+
+    if _bp_profanity is not None:
+        try:
+            cleaned = _bp_profanity.censor(cleaned)
+        except Exception:
+            pass
+
+    return cleaned
 
 
 # ── Geriye dönük uyumluluk — eski kod auto_mod.contains_profanity() kullanıyor ──
