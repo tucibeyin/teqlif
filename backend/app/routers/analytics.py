@@ -24,6 +24,7 @@ from app.core.exceptions import AppException, InsufficientFundsException, Servic
 from app.services import credit_service
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
+from app.models.ad_campaign import AdCampaign
 from app.services.ml.ner_service import extract_ner
 from app.utils.i18n import _get_t, get_locale
 
@@ -411,7 +412,10 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/reactivation-credits")
-async def reactivation_credits(current_user: User = Depends(get_current_user)):
+async def reactivation_credits(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
     reactivation_cost = credit_service.cost_tuci("reactivation")
     if not current_user.is_premium:
@@ -425,6 +429,7 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
             "cost": reactivation_cost,
             "balance": current_user.tuci_balance,
             "can_afford": current_user.tuci_balance >= reactivation_cost,
+            "within_window_count": 0,
         }
     used      = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
     limit     = credit_service.free_limit("reactivation", is_premium=True)
@@ -435,6 +440,20 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
     renewal_date: str | None = None
     if current_user.premium_since:
         renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
+
+    within_window_count = 0
+    try:
+        ww_r = await db.execute(sql_text("""
+            SELECT COUNT(*) FROM listings
+            WHERE user_id = :uid
+              AND status = 'active'
+              AND reactivated_at IS NOT NULL
+              AND reactivated_at >= NOW() - INTERVAL '30 days'
+        """), {"uid": current_user.id})
+        within_window_count = ww_r.scalar() or 0
+    except Exception:
+        pass
+
     return {
         "used": used,
         "limit": limit,
@@ -445,6 +464,7 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
         "cost": cost,
         "balance": current_user.tuci_balance,
         "can_afford": can_afford,
+        "within_window_count": within_window_count,
     }
 
 
@@ -527,7 +547,10 @@ async def price_estimate(
             embedding: list[float] = await job.result(timeout=15.0)
         except Exception:
             raise ServiceException(code="AI_SERVICE_TIMEOUT")
-        
+
+        if not embedding or len(embedding) < 64:
+            raise ServiceException(code="AI_SERVICE_EMBEDDING_INVALID")
+
         emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
         await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache
 
@@ -1141,7 +1164,7 @@ async def pro_insights(
         )
         if _sd: _hl_q = _hl_q.where(Listing.created_at >= _sd)
         if _ed: _hl_q = _hl_q.where(Listing.created_at < _ed)
-        active_ids_r = await db.execute(_hl_q.order_by(Listing.created_at.desc()).limit(50))
+        active_ids_r = await db.execute(_hl_q.order_by(func.coalesce(Listing.reactivated_at, Listing.created_at).desc()).limit(50))
         active_listings = active_ids_r.fetchall()
         if active_listings:
             ids_str = ", ".join(str(r.id) for r in active_listings)
@@ -1181,6 +1204,18 @@ async def pro_insights(
             except Exception:
                 await db.rollback()
 
+            boost_ids: set[int] = set()
+            try:
+                boost_r = await db.execute(
+                    select(AdCampaign.listing_id).where(
+                        AdCampaign.listing_id.in_([r.id for r in active_listings]),
+                        AdCampaign.status == "active",
+                    )
+                )
+                boost_ids = {row[0] for row in boost_r.fetchall()}
+            except Exception:
+                pass
+
             _now_ts = _time_mod.time()
 
             def _heat(lid: int) -> float:
@@ -1203,6 +1238,7 @@ async def pro_insights(
                     "views_30d": view_map.get(r.id, 0),
                     "hesitations_30d": hes_map.get(r.id, 0),
                     "heat_score": round(_heat(r.id), 2),
+                    "is_boosted": r.id in boost_ids,
                 }
                 for r in scored
             ]

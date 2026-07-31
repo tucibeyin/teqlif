@@ -738,6 +738,7 @@ class CreditItemModel {
   final Map<String, dynamic>? data;
   final int defaultPremiumLimit;
   final int defaultFreeLimit;
+  final String Function(TranslationPack, Map<String, dynamic>?)? extraHintBuilder;
 
   CreditItemModel({
     required this.icon,
@@ -747,6 +748,7 @@ class CreditItemModel {
     required this.data,
     required this.defaultPremiumLimit,
     required this.defaultFreeLimit,
+    this.extraHintBuilder,
   });
 }
 
@@ -851,6 +853,10 @@ class _CreditsSummaryCard extends ConsumerWidget {
         data: reactivationCredits,
         defaultPremiumLimit: 3,
         defaultFreeLimit: 0,
+        extraHintBuilder: (l, d) {
+          final count = (d?['within_window_count'] as num?)?.toInt() ?? 0;
+          return count > 0 ? l.t('proReactivationWindowHint', {'count': count.toString()}) : '';
+        },
       ),
     ];
 
@@ -927,6 +933,14 @@ class _CreditsSummaryCard extends ConsumerWidget {
                                 loc.t('proCreditsUsedFormat', {'used': (limit - remaining).toString(), 'remaining': remaining.toString()}),
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                               ),
+                              if (item.extraHintBuilder != null) Builder(builder: (_) {
+                                final hint = item.extraHintBuilder!(loc, item.data);
+                                if (hint.isEmpty) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(hint, style: const TextStyle(fontSize: 11, color: Color(0xFF10B981))),
+                                );
+                              }),
                             ],
                           ),
                         ),

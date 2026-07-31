@@ -602,6 +602,10 @@ async def generate_description(
                     if chunk == "__LLM_ERROR__":
                         yield f"data: {json.dumps({'error': 'AI_SERVICE_ERROR'}, ensure_ascii=False)}\n\n"
                         return
+                    if chunk.startswith("__META_") and chunk.endswith("__"):
+                        provider = chunk[7:-2]  # "__META_groq__" → "groq"
+                        yield f"data: {json.dumps({'meta': {'model': provider}}, ensure_ascii=False)}\n\n"
+                        continue
                     if not text_generated:
                         # İlk chunk'ta krediyi say: LLM çalışıyor ve kullanıcı içerik alıyor.
                         # Bağlantı daha sonra koparsa bile kredi tüketilmiş sayılır.
@@ -773,7 +777,7 @@ async def send_mass_notification(
         db.add(TuciTransaction(
             user_id=current_user.id,
             amount=-tuci_cost,
-            transaction_type="spend_mass_notification",
+            transaction_type="spend_blast",
             reference_id=listing_id,
             reference_type="listing",
         ))

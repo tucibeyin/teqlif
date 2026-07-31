@@ -1390,6 +1390,12 @@
   "proCreditsAiDescName": "AI Создание описания",
   "proCreditsAiDescDesc": "Автоматически создаёт описание объявления из заголовка, категории и состояния товара.",
   "proCreditsReactivationDesc": "Позволяет бесплатно повторно публиковать просроченные или приостановленные списки.",
+  "proReactivationWindowHint": "{count} объявл. в рамках 30-дневного окна",
+  "@proReactivationWindowHint": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "proCreditsUsedFormat": "{used} использовано, осталось {remaining}",
   "proCreditsLimitFormat": "{remaining} / {limit}",
   "blastConfirmCostFreeLabel": "Стоимость",
@@ -1460,6 +1466,8 @@
   "proLoadError": "Не удалось загрузить данные. Пожалуйста, попробуйте еще раз.",
   "hotLeadViewed": "Просмотрено {count} раз",
   "hotLeadHesitated": "{count} люди колебались",
+  "hotLeadBoosted": "Продвинуто",
+  "@hotLeadBoosted": {},
   "listingCtrExplain": "{ctr} кликов на 100 просмотров",
   "marketSearchTitle": "Люди ищут",
   "marketDayFilter": "{days} дней",
@@ -2977,6 +2985,8 @@
   "walletTxnChurnAirdrop": "Подарок за возвращение",
   "aiDescButton": "Написать описание с искусственным интеллектом",
   "aiDescGenerating": "ИИ пишет ваше описание...",
+  "aiDescFallbackNotice": "Основной ИИ занят, используется резервная модель.",
+  "@aiDescFallbackNotice": {},
   "aiDescError": "Не удалось создать описание. Попробуйте снова.",
   "aiDescUnavailable": "Сервис описаний с искусственным интеллектом временно недоступен.",
   "fieldCondition": "Состояние товара",

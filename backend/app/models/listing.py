@@ -59,6 +59,8 @@ class Listing(Base):
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Otomatik pasife alındığında set edilir; 60 gün sonra ilan silinir.
     deactivated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Ücretli reaktivasyon anı — feed sıralaması bu alanı kullanır; created_at (orijinal) dokunulmaz.
+    reactivated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     likes: Mapped[list["ListingLike"]] = relationship(  # type: ignore[name-defined]
         "ListingLike", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"

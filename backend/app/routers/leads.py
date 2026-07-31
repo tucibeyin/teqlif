@@ -297,7 +297,7 @@ async def send_blast(
         db.add(TuciTransaction(
             user_id=current_user.id,
             amount=-tuci_cost,
-            transaction_type="spend_lead_gen",
+            transaction_type="spend_blast",
             reference_id=body.listing_id,
             reference_type="listing",
         ))

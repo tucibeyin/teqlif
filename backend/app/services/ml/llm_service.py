@@ -388,6 +388,7 @@ async def generate_listing_description_stream(
     if settings.groq_api_key and await _quota_ok("groq", _GROQ_DAILY_LIMIT):
         try:
             logger.info("[LLM] Groq | title=%r", title[:60])
+            yield "__META_groq__"
             async for chunk in _sentence_stream(
                 _tokens_groq(system_prompt, user_prompt), price, full_location, "groq", lang
             ):
@@ -400,6 +401,7 @@ async def generate_listing_description_stream(
     if settings.gemini_api_key and await _quota_ok("gemini", _GEMINI_DAILY_LIMIT):
         try:
             logger.info("[LLM] Gemini | title=%r", title[:60])
+            yield "__META_gemini__"
             async for chunk in _sentence_stream(
                 _tokens_gemini(system_prompt, user_prompt), price, full_location, "gemini", lang
             ):

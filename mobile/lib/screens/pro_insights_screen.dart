@@ -665,11 +665,12 @@ class _HotLeadCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final views = (lead['views_30d'] as num?)?.toInt() ?? 0;
-    final hes   = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
-    final heat  = (lead['heat_score'] as num?)?.toInt() ?? 0;
-    final price = (lead['price'] as num?)?.toDouble();
-    final catLabel = lead['category'] as String? ?? '';
+    final views     = (lead['views_30d'] as num?)?.toInt() ?? 0;
+    final hes       = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
+    final heat      = (lead['heat_score'] as num?)?.toInt() ?? 0;
+    final price     = (lead['price'] as num?)?.toDouble();
+    final catLabel  = lead['category'] as String? ?? '';
+    final isBoosted = lead['is_boosted'] as bool? ?? false;
     final heatColor = heat > 15
         ? const Color(0xFFEF4444)
         : heat > 5 ? const Color(0xFFF59E0B) : const Color(0xFF22C55E);
@@ -702,7 +703,19 @@ class _HotLeadCard extends ConsumerWidget {
                     style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context)),
                     overflow: TextOverflow.ellipsis),
               ),
-              if (price != null)
+              if (isBoosted) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+                  ),
+                  child: Text(loc.t("hotLeadBoosted"),
+                      style: const TextStyle(fontSize: 9, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600)),
+                ),
+              ] else if (price != null)
                 Text('${NumberFormat('#,##0', 'tr_TR').format(price)} ₺',
                     style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
             ],

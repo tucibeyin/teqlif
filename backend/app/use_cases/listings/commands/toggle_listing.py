@@ -64,7 +64,7 @@ class ToggleListingCommand:
 
                 listing.status = ListingStatus.ACTIVE
                 if not is_free_due_to_window:
-                    listing.created_at = datetime.now(timezone.utc)
+                    listing.reactivated_at = datetime.now(timezone.utc)
                 listing.deactivated_at = None
             else:
                 listing.status = ListingStatus.PASSIVE

@@ -172,7 +172,7 @@ async def explore(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(Listing.status == ListingStatus.ACTIVE)  # noqa: E712
-            .order_by(Listing.created_at.desc())
+            .order_by(func.coalesce(Listing.reactivated_at, Listing.created_at).desc())
             .limit(20)
         )
         listings_result = await db.execute(listing_q)
@@ -256,7 +256,7 @@ async def search_all(
                 Listing.status != ListingStatus.DELETED,  # noqa: E712
                 or_(Listing.title.ilike(term), Listing.description.ilike(term)),
             )
-            .order_by(Listing.created_at.desc())
+            .order_by(func.coalesce(Listing.reactivated_at, Listing.created_at).desc())
             .offset(offset)
             .limit(12)
         )
@@ -459,7 +459,7 @@ async def search_listings(
                 Listing.status != ListingStatus.DELETED,  # noqa: E712
                 or_(Listing.title.ilike(term), Listing.description.ilike(term)),
             )
-            .order_by(Listing.created_at.desc())
+            .order_by(func.coalesce(Listing.reactivated_at, Listing.created_at).desc())
             .offset(offset)
             .limit(12)
         )

@@ -823,6 +823,12 @@
   "proCreditsAiDescName": "AI Description Writer",
   "proCreditsAiDescDesc": "Automatically generates a listing description from your title, category, and condition.",
   "proCreditsReactivationDesc": "Allows you to republish expired or suspended listings for free.",
+  "proReactivationWindowHint": "{count} listing(s) within 30-day window",
+  "@proReactivationWindowHint": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "proCreditsUsedFormat": "{used} used, {remaining} remaining",
   "@proCreditsUsedFormat": {
     "placeholders": {
@@ -995,6 +1001,8 @@
       }
     }
   },
+  "hotLeadBoosted": "Boosted",
+  "@hotLeadBoosted": {},
   "listingCtrExplain": "{ctr} clicks per 100 views",
   "@listingCtrExplain": {
     "placeholders": {
@@ -3012,6 +3020,8 @@
   "walletTxnChurnAirdrop": "Welcome Back Airdrop",
   "aiDescButton": "Write Description with Artificial Intelligence",
   "aiDescGenerating": "AI is writing your description...",
+  "aiDescFallbackNotice": "Primary AI is busy, using backup model.",
+  "@aiDescFallbackNotice": {},
   "aiDescError": "Failed to generate description. Please try again.",
   "aiDescUnavailable": "Artificial Intelligence description service is currently unavailable.",
   "fieldCondition": "Item Condition",

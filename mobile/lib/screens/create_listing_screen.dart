@@ -345,7 +345,12 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             final dataStr = line.substring(6);
             try {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
-              if (json.containsKey('error')) {
+              if (json.containsKey('meta')) {
+                final metaMap = json['meta'] as Map<String, dynamic>?;
+                if (metaMap?['model'] == 'gemini') {
+                  TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), type: TeqSnackBarType.info);
+                }
+              } else if (json.containsKey('error')) {
                 TeqSnackBar.show(message: loc.t('aiDescError'), type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {

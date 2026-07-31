@@ -822,6 +822,12 @@
   "proCreditsAiDescName": "كاتب وصف بالذكاء الاصطناعي",
   "proCreditsAiDescDesc": "ينشئ وصفاً تلقائياً للإعلان من العنوان والفئة والحالة.",
   "proCreditsReactivationDesc": "يسمح لك بإعادة نشر الإعلانات منتهية الصلاحية أو المعلقة مجاناً.",
+  "proReactivationWindowHint": "{count} إعلان ضمن نافذة 30 يوماً",
+  "@proReactivationWindowHint": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "proCreditsUsedFormat": "تم استخدام {used}، {remaining} متبقٍ",
   "@proCreditsUsedFormat": {
     "placeholders": {
@@ -994,6 +1000,8 @@
       }
     }
   },
+  "hotLeadBoosted": "مميّز",
+  "@hotLeadBoosted": {},
   "listingCtrExplain": "{ctr} نقرة لكل 100 مشاهدة",
   "@listingCtrExplain": {
     "placeholders": {
@@ -2976,6 +2984,8 @@
   "walletTxnChurnAirdrop": "هدية العودة",
   "aiDescButton": "كتابة الوصف بالذكاء الاصطناعي",
   "aiDescGenerating": "الذكاء الاصطناعي يكتب الوصف...",
+  "aiDescFallbackNotice": "الذكاء الاصطناعي الرئيسي مشغول، يُستخدم النموذج الاحتياطي.",
+  "@aiDescFallbackNotice": {},
   "aiDescError": "فشل إنشاء الوصف. حاول مجدداً.",
   "aiDescUnavailable": "خدمة الذكاء الاصطناعي لكتابة الوصف غير متاحة حالياً.",
   "fieldCondition": "حالة المنتج",

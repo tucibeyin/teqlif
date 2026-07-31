@@ -822,6 +822,12 @@
   "proCreditsAiDescName": "AI Açıklama Yazarı",
   "proCreditsAiDescDesc": "İlan başlığı, kategori ve durum bilgilerinizden otomatik Türkçe açıklama oluşturur.",
   "proCreditsReactivationDesc": "Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.",
+  "proReactivationWindowHint": "{count} ilanın 30 gün penceresi içinde",
+  "@proReactivationWindowHint": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "proCreditsUsedFormat": "{used} kullanıldı, {remaining} kaldı",
   "@proCreditsUsedFormat": {
     "placeholders": {
@@ -994,6 +1000,8 @@
       }
     }
   },
+  "hotLeadBoosted": "Öne Çıkarıldı",
+  "@hotLeadBoosted": {},
   "listingCtrExplain": "Her 100 görüntülemede {ctr} tıklama",
   "@listingCtrExplain": {
     "placeholders": {
@@ -2975,6 +2983,8 @@
   "walletTxnChurnAirdrop": "Geri Dönüş Hediyesi",
   "aiDescButton": "Yapay Zeka ile Açıklama Yaz",
   "aiDescGenerating": "Yapay Zeka metni yazıyor...",
+  "aiDescFallbackNotice": "Birincil yapay zeka meşgul, yedek model kullanılıyor.",
+  "@aiDescFallbackNotice": {},
   "aiDescError": "Açıklama oluşturulamadı. Tekrar deneyin.",
   "aiDescStreamError": "Bağlantı koptu, tekrar deneyin.",
   "aiDescUnavailable": "Yapay Zeka açıklama servisi şu an aktif değil.",
