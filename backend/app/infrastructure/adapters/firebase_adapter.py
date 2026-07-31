@@ -32,7 +32,7 @@ class FirebaseAdapter(PushNotificationPort):
                 import google.auth.transport.requests
                 creds = service_account.Credentials.from_service_account_file(
                     sa_path,
-                    scopes=["https://www.googleapis.com/auth/firebase.messaging"],
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
                 )
                 self._session = google.auth.transport.requests.AuthorizedSession(creds)
                 logger.info(
