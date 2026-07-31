@@ -516,7 +516,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                     "listing_offer_submit", "listing_chat_open", "listing_favorite",
                     "listing_share", "listing_like", "detail_dwell",
                     "listing_view", "listing_impression", "listing_skip",
-                    "listing_unfavorite",
+                    "listing_unfavorite", "hesitated_shelf_tap",
                 )
             ]
             if listing_events:
@@ -2907,7 +2907,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
             FROM user_events
             WHERE event_type  = 'bid_hesitation'
               AND item_type   = 'listing'
-              AND timestamp  >= now() - INTERVAL 7 DAY
+              AND timestamp  >= now() - INTERVAL 14 DAY
               AND user_id IS NOT NULL
               AND price_point IS NOT NULL
             GROUP BY user_id, item_id
@@ -2972,7 +2972,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
                         },
                         pref_key="new_bid",
                     )
-                    await redis.setex(dedup_key, 604_800, "1")  # 7 gün
+                    await redis.setex(dedup_key, 14 * 86400, "1")  # 14 gün — pencere ile eşit
                     sent += 1
                 except Exception as exc:
                     logger.warning("[HesitationRetarget] Push gönderilemedi uid=%d lid=%d: %s", uid, lid, exc)

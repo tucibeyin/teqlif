@@ -41,6 +41,7 @@ _REWARDS = {
     "listing_share":        2.5,
     "listing_like":         1.5,
     "detail_dwell":         1.5,
+    "hesitated_shelf_tap":  2.0,  # yeniden-ilgi: detail_dwell'den güçlü, favoriden zayıf
     "listing_view":         0.5,
     "listing_impression":   0.1,
     "listing_skip":        -1.0,

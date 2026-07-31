@@ -154,14 +154,19 @@ async def track_interaction(
                 except Exception as arq_exc:
                     logger.warning("[ANALYTICS] Cold start trigger başarısız: %s", arq_exc)
 
-        # Sıcak ilan spike dedektörü: 24 saat içinde 3. bid_hesitation → satıcıya bildirim
+        # Hesitated sinyal seti — hem bid_hesitation hem detail_dwell "ilgi var ama satın alma yok"
         if payload.interaction_type in ("bid_hesitation", "detail_dwell") and payload.item_type == "listing":
             try:
-                # Hesitated Redis seti — her iki sinyal de "ilgi var ama satın alma yok" demek
                 hes_key = f"hesitated:{user_id}"
                 await redis.sadd(hes_key, str(payload.item_id))
-                await redis.expire(hes_key, 14 * 86400)  # 14 gün TTL (7'den uzatıldı)
+                await redis.expire(hes_key, 14 * 86400)
+            except Exception as hes_exc:
+                logger.warning("[ANALYTICS] Hesitated set yazımı başarısız: %s", hes_exc)
 
+        # Sıcak ilan spike dedektörü: 24 saat içinde 3. bid_hesitation → satıcıya bildirim
+        # Yalnızca bid_hesitation sayılır — detail_dwell teklif niyeti taşımaz
+        if payload.interaction_type == "bid_hesitation" and payload.item_type == "listing":
+            try:
                 spike_key = f"hes_spike:{payload.item_id}"
                 spike_count = await redis.incr(spike_key)
                 if spike_count == 1:

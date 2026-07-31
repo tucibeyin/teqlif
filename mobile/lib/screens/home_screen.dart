@@ -18,6 +18,7 @@ import '../services/image_cache_manager.dart';
 import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 import '../services/listing_service.dart';
 import '../providers/listing_interaction_provider.dart';
 import '../widgets/shimmer_loading.dart';
@@ -127,9 +128,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       cacheTtl: const Duration(minutes: 15),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
-    ).listen((data) {
-      if (mounted) setState(() => _hesitatedListings = data);
-    });
+    ).listen(
+      (data) {
+        if (mounted) setState(() => _hesitatedListings = data);
+      },
+      onError: (e) {
+        if (mounted) handleError(e, ref.read(localizationProvider));
+      },
+    );
   }
 
   // ── En Son Eklenenler (dikey grid, /api/listings) ─────────────────────────
@@ -517,14 +523,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                         Uri.parse('$kBaseUrl/feed/hesitated/$lid'),
                                         headers: headers,
                                       );
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(loc.t('hesitatedDismissed')),
-                                            duration: const Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
+                                      TeqToast.success(loc.t('hesitatedDismissed'));
                                     },
                                     child: Container(
                                       width: 100,

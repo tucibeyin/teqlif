@@ -1,6 +1,10 @@
 import json
 import base64
 from typing import Literal
+
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,12 +91,12 @@ async def mark_not_interested(
 ):
     """
     Bir ilanı 'ilgilenmiyorum' olarak işaretle — Redis set'e ekler.
-    Feed ve For-You sorgularında bu ilanlar filtrelenir (7 gün TTL).
+    Feed ve For-You sorgularında bu ilanlar filtrelenir (14 gün TTL).
     """
     redis = await get_redis()
     key = f"not_interested:{current_user.id}"
     await redis.sadd(key, listing_id)
-    await redis.expire(key, 7 * 86400)
+    await redis.expire(key, 14 * 86400)
 
 
 @router.get("/recent")
@@ -219,9 +223,13 @@ async def get_hesitated_listings(
             """
             SELECT
                 item_id,
-                argMax(event_type, timestamp)   AS top_signal,
-                MAX(timestamp)                  AS last_seen,
-                argMax(price_point, timestamp)  AS last_price_point
+                countIf(event_type = 'bid_hesitation') > 0      AS has_bid_intent,
+                argMax(event_type, timestamp)                    AS top_signal,
+                MAX(timestamp)                                   AS last_seen,
+                argMaxIf(price_point, timestamp,
+                         event_type = 'bid_hesitation')          AS bid_price_point,
+                argMaxIf(price_point, timestamp,
+                         event_type = 'detail_dwell')            AS dwell_price_point
             FROM user_events
             WHERE event_type IN ('bid_hesitation', 'detail_dwell')
               AND item_type = 'listing'
@@ -229,14 +237,15 @@ async def get_hesitated_listings(
               AND timestamp >= now() - INTERVAL 14 DAY
             GROUP BY item_id
             ORDER BY
-                multiIf(top_signal = 'bid_hesitation', 0, 1),
+                has_bid_intent DESC,
                 last_seen DESC
             LIMIT 40
             """,
             parameters={"uid": current_user.id},
         )
         ch_rows = result.result_rows
-    except Exception:
+    except Exception as ch_exc:
+        logger.warning("[Feed/Hesitated] ClickHouse sorgu hatası: %s", ch_exc)
         return []
 
     if not ch_rows:
@@ -245,15 +254,19 @@ async def get_hesitated_listings(
     seen_ids: set[int] = set()
     listing_ids: list[int] = []
     signal_map: dict[int, str] = {}
-    price_point_map: dict[int, float | None] = {}
+    bid_price_map: dict[int, float | None] = {}
+    dwell_price_map: dict[int, float | None] = {}
     for r in ch_rows:
         lid = int(r[0])
         if lid in seen_ids:
             continue
         seen_ids.add(lid)
         listing_ids.append(lid)
-        signal_map[lid] = r[1]
-        price_point_map[lid] = float(r[3]) if r[3] is not None else None
+        # r[0]=item_id, r[1]=has_bid_intent, r[2]=top_signal, r[3]=last_seen
+        # r[4]=bid_price_point, r[5]=dwell_price_point
+        signal_map[lid] = r[2]
+        bid_price_map[lid] = float(r[4]) if r[4] is not None else None
+        dwell_price_map[lid] = float(r[5]) if r[5] is not None else None
 
     # not_interested filtresi
     try:
@@ -302,22 +315,21 @@ async def get_hesitated_listings(
         photo = imgs[0] if imgs else r.image_url
 
         current_price = float(r.price) if r.price is not None else None
-        stored_pp = price_point_map.get(lid)
         signal = signal_map.get(lid, "detail_dwell")
+        stored_bid_pp = bid_price_map.get(lid)
+        stored_dwell_pp = dwell_price_map.get(lid)
 
-        # detail_dwell → stored_pp = ilanın o andaki liste fiyatı
+        # dwell fiyatı = ilanın o andaki liste fiyatı → mevcut fiyat düşmüş mü?
         price_dropped = bool(
-            signal == "detail_dwell"
-            and current_price is not None
-            and stored_pp is not None
-            and current_price < stored_pp * 0.99
+            current_price is not None
+            and stored_dwell_pp is not None
+            and current_price < stored_dwell_pp * 0.99
         )
-        # bid_hesitation → stored_pp = kullanıcının yazdığı teklif tutarı
+        # bid fiyatı = kullanıcının yazdığı teklif tutarı → fiyat teklife yaklaştı mı?
         price_near_offer = bool(
-            signal == "bid_hesitation"
-            and current_price is not None
-            and stored_pp is not None
-            and current_price <= stored_pp * 1.05
+            current_price is not None
+            and stored_bid_pp is not None
+            and current_price <= stored_bid_pp * 1.05
         )
 
         listings.append({
