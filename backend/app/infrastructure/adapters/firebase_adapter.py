@@ -143,6 +143,14 @@ class FirebaseAdapter(PushNotificationPort):
         url = self.FCM_SEND_URL.format(project_id=self._project_id)
         resp = self._session.post(url, json={"message": msg}, timeout=30)
 
+        # Gönderilen Authorization header'ını logla (TEMP diagnostic)
+        sent_auth = resp.request.headers.get("Authorization", "NOT_SET")
+        logger.info(
+            "[FirebaseAdapter] FCM isteği gönderildi | auth=%s | status=%d",
+            sent_auth[:30] if sent_auth != "NOT_SET" else "NOT_SET",
+            resp.status_code,
+        )
+
         if resp.status_code == 200:
             return resp.json().get("name", "")
 
