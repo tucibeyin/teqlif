@@ -581,6 +581,7 @@ async def generate_description(
 
         producer_task = asyncio.create_task(producer())
 
+        tuci_spent = 0
         try:
             while True:
                 try:
@@ -602,40 +603,39 @@ async def generate_description(
                         yield f"data: {json.dumps({'error': 'AI_SERVICE_ERROR'}, ensure_ascii=False)}\n\n"
                         return
                     if not text_generated:
-                        logger.info(f"[API] First chunk received from Ollama for user_id={current_user.id}")
-                    text_generated = True
+                        # İlk chunk'ta krediyi say: LLM çalışıyor ve kullanıcı içerik alıyor.
+                        # Bağlantı daha sonra koparsa bile kredi tüketilmiş sayılır.
+                        text_generated = True
+                        logger.info(f"[API] First chunk received, charging credit for user_id={current_user.id}")
+                        try:
+                            if current_user.is_premium:
+                                ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
+                                if ai_used_new > _ai_desc_limit:
+                                    await db.execute(
+                                        text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                                        {"cost": _ai_desc_cost, "uid": current_user.id},
+                                    )
+                                    db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+                                    await db.commit()
+                                    tuci_spent = _ai_desc_cost
+                            else:
+                                await db.execute(
+                                    text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                                    {"cost": _ai_desc_cost, "uid": current_user.id},
+                                )
+                                db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+                                await db.commit()
+                                tuci_spent = _ai_desc_cost
+                        except Exception as charge_exc:
+                            logger.error(f"[AI Desc] Kredi sayma başarısız: %s", charge_exc)
+
                     chunk_payload = json.dumps({'text': chunk}, ensure_ascii=False)
                     padding = ' ' * 8192
                     yield f": {padding}\ndata: {chunk_payload}\n\n"
-                    
-                    # LLM (özellikle 3B gibi küçük modeller) bazen saniyede 100+ token üretecek kadar hızlı çalışır.
-                    # İnsan gözünün o daktilo hissiyatını yakalayabilmesi için her kelime arasına 50 milisaniye yapay bir gecikme ekliyoruz.
                     await asyncio.sleep(0.05)
-            
+
             if text_generated:
-                logger.info(f"[API] Stream finished for user_id={current_user.id}. Charging TUCi...")
-                # Üretim bittikten sonra TUCi kesintisi yap
-                tuci_spent = 0
-                if current_user.is_premium:
-                    ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
-                    if ai_used_new > _ai_desc_limit:
-                        await db.execute(
-                            text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                            {"cost": _ai_desc_cost, "uid": current_user.id},
-                        )
-                        db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai"))
-                        await db.commit()
-                        tuci_spent = _ai_desc_cost
-                else:
-                    await db.execute(
-                        text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                        {"cost": _ai_desc_cost, "uid": current_user.id},
-                    )
-                    db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai"))
-                    await db.commit()
-                    tuci_spent = _ai_desc_cost
-                
-                # Bitiş sinyali ve harcanan TUCi
+                logger.info(f"[API] Stream finished for user_id={current_user.id}. tuci_spent={tuci_spent}")
                 yield f"data: {json.dumps({'done': True, 'tuci_spent': tuci_spent}, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"[LLM] Stream generator error: {e}")

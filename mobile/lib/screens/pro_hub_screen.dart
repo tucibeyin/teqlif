@@ -822,8 +822,8 @@ class _CreditsSummaryCard extends ConsumerWidget {
         titleBuilder: (l) => loc.t('proCreditsBoostName'),
         descBuilder: (l) => loc.t('proCreditsBoostDesc'),
         data: boostCredits,
-        defaultPremiumLimit: 5,
-        defaultFreeLimit: 1,
+        defaultPremiumLimit: 3,
+        defaultFreeLimit: 0,
       ),
       CreditItemModel(
         icon: Icons.psychology_outlined,
@@ -831,7 +831,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
         titleBuilder: (l) => loc.t('proCreditsAiName'),
         descBuilder: (l) => loc.t('proCreditsAiDesc'),
         data: aiCredits,
-        defaultPremiumLimit: 20,
+        defaultPremiumLimit: 6,
         defaultFreeLimit: 0,
       ),
       CreditItemModel(
@@ -849,7 +849,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
         titleBuilder: (l) => loc.t('proCreditsReactivationName'),
         descBuilder: (l) => loc.t('proCreditsReactivationDesc'),
         data: reactivationCredits,
-        defaultPremiumLimit: 5,
+        defaultPremiumLimit: 3,
         defaultFreeLimit: 0,
       ),
     ];

@@ -11,7 +11,7 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from app.core.exceptions import NotFoundException, ForbiddenException, InsufficientFundsException
+from app.core.exceptions import NotFoundException, ForbiddenException, InsufficientFundsException, CooldownException
 from app.services import credit_service
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text as sql_text
@@ -169,6 +169,18 @@ async def send_blast(
     3. PostgreSQL → FCM tokenları al.
     4. Firebase → toplu push gönder.
     """
+    # ── 24 saatlik cooldown: aynı kullanıcı 24 saat içinde tekrar lead blast gönderemesin ──
+    from app.models.mass_notification import MassNotificationCampaign as _MNC
+    from datetime import datetime as _dt, timedelta as _td
+    _last_lead_blast = await db.scalar(
+        select(_MNC.id).where(
+            _MNC.user_id == current_user.id,
+            _MNC.created_at >= _dt.utcnow() - _td(hours=24),
+        ).order_by(_MNC.created_at.desc()).limit(1)
+    )
+    if _last_lead_blast is not None:
+        raise CooldownException()
+
     cap   = credit_service.per_op_cap("blast", current_user.is_premium)
     limit = credit_service.free_limit("blast", current_user.is_premium)
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)

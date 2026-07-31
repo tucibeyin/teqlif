@@ -784,7 +784,7 @@ async def price_estimate(
             db.add(TuciTransaction(
                 user_id=current_user.id,
                 amount=-_ai_price_cost,
-                transaction_type="spend_ai",
+                transaction_type="spend_ai_price",
                 reference_id=ref_id,
                 reference_type=ref_type,
             ))
