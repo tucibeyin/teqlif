@@ -40,6 +40,13 @@ class FirebaseAdapter(PushNotificationPort):
             logger.error("[FirebaseAdapter] Firebase app None — push devre dışı")
             return False
 
+        logger.info(
+            "[FirebaseAdapter] send_notification başlıyor | app=%s | cred_type=%s | token=%s…",
+            getattr(self._app, 'name', '?'),
+            type(self._app.credential).__name__,
+            token[:12],
+        )
+
         try:
             async with fcm_breaker:
                 from firebase_admin import messaging
