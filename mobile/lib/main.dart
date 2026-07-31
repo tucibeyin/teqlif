@@ -131,7 +131,7 @@ class TeqlifApp extends ConsumerStatefulWidget {
   ConsumerState<TeqlifApp> createState() => _TeqlifAppState();
 }
 
-class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserver {
+class _TeqlifAppState extends ConsumerState<TeqlifApp> {
   final _lifecycleObserver = AnalyticsLifecycleObserver();
   final _callRouteObserver = CallRouteObserver();
 
@@ -139,22 +139,12 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
-    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      final lang = ref.read(localeProvider).languageCode;
-      ref.read(localizationProvider.notifier).load(lang);
-    }
   }
 
   @override

@@ -31,18 +31,22 @@ async def _load_pack(lang: str, db: AsyncSession) -> dict[str, str]:
 async def get_language_pack(
     lang: str,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> dict:
     if lang not in _SUPPORTED_LANGS:
         raise BadRequestException(code="UNSUPPORTED_LANGUAGE")
 
     redis = await get_redis()
     cached = await redis.get(_cache_key(lang))
     if cached:
-        return json.loads(cached)
+        pack = json.loads(cached)
+    else:
+        pack = await _load_pack(lang, db)
+        await redis.set(_cache_key(lang), json.dumps(pack, ensure_ascii=False), ex=_CACHE_TTL)
 
-    pack = await _load_pack(lang, db)
-    await redis.set(_cache_key(lang), json.dumps(pack, ensure_ascii=False), ex=_CACHE_TTL)
-    return pack
+    digest = hashlib.md5(
+        json.dumps(pack, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
+    return {"version": digest, "strings": pack}
 
 
 @router.get("/{lang}/version")

@@ -133,16 +133,13 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     try {
       final resp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang'));
       if (resp.statusCode != 200) return false;
-      final strings = Map<String, String>.from(jsonDecode(resp.body) as Map);
-      await box.put('pack_$lang', resp.body);
+      final body = jsonDecode(resp.body) as Map;
+      final version = body['version'] as String;
+      final strings = Map<String, String>.from(body['strings'] as Map);
+      final stringsJson = jsonEncode(strings);
+      await box.put('pack_$lang', stringsJson);
+      await box.put('version_$lang', version);
       await box.put('cached_at_$lang', DateTime.now().millisecondsSinceEpoch.toString());
-      try {
-        final vResp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang/version'));
-        if (vResp.statusCode == 200) {
-          final ver = (jsonDecode(vResp.body) as Map)['version'] as String;
-          await box.put('version_$lang', ver);
-        }
-      } catch (_) {}
       if (_currentLang == lang) {
         state = TranslationPack(strings, lang);
       }
