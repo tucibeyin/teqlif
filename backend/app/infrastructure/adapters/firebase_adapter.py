@@ -13,25 +13,14 @@ class FirebaseAdapter(PushNotificationPort):
     """
     Firebase altyapısını saran Adapter (Hexagonal Architecture).
     Port (Arayüz) üzerinden iş mantığına servis edilir.
+
+    app: init_di() tarafından dışarıdan enjekte edilen firebase_admin.App instance.
+    messaging.send(msg, app=self._app) ile her zaman bu spesifik app kullanılır —
+    default app belirsizliğine ve _apps singleton race condition'ına karşı koruma sağlar.
     """
 
-    def _get_firebase_app(self):
-        from app.config import settings
-        if not settings.firebase_service_account:
-            logger.error("[FirebaseAdapter] firebase_service_account ayarlanmamış — push devre dışı")
-            return None
-        try:
-            import firebase_admin
-            from firebase_admin import credentials
-            if not firebase_admin._apps:
-                cred = credentials.Certificate(settings.firebase_service_account)
-                firebase_admin.initialize_app(cred)
-                logger.info("[FirebaseAdapter] Firebase başarıyla başlatıldı")
-            return firebase_admin.get_app()
-        except Exception as exc:
-            logger.error("[FirebaseAdapter] Firebase init failed: %s", exc, exc_info=True)
-            capture_exception(exc)
-            return None
+    def __init__(self, app):
+        self._app = app
 
     async def send_notification(
         self,
@@ -47,12 +36,12 @@ class FirebaseAdapter(PushNotificationPort):
             logger.error("[FirebaseAdapter] send_notification çağrıldı ama token boş")
             return False
 
+        if self._app is None:
+            logger.error("[FirebaseAdapter] Firebase app None — push devre dışı")
+            return False
+
         try:
             async with fcm_breaker:
-                app = self._get_firebase_app()
-                if app is None:
-                    raise ServiceException("Firebase app not initialized")
-
                 from firebase_admin import messaging
 
                 formatted_data = {k: str(v) for k, v in data.items()} if data else {}
@@ -90,9 +79,9 @@ class FirebaseAdapter(PushNotificationPort):
                     android=android_cfg,
                     apns=apns_cfg,
                 )
-                
+
                 result = await asyncio.get_event_loop().run_in_executor(
-                    None, messaging.send, msg
+                    None, messaging.send, msg, False, self._app
                 )
                 logger.info("[FirebaseAdapter] Push başarılı | message_id=%s | token=%s…", result, token[:12])
                 return True
@@ -111,7 +100,7 @@ class FirebaseAdapter(PushNotificationPort):
                     return False
             except ImportError:
                 pass
-                
+
             logger.error("[FirebaseAdapter] Push başarısız | token=%s… | hata=%s", token[:12], exc, exc_info=True)
             capture_exception(exc)
             raise ServiceException(f"Push notification failed: {exc}")
