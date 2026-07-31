@@ -448,7 +448,7 @@ async def get_suggested_streamers(
             LEFT JOIN (
                 SELECT DISTINCT host_id, TRUE AS is_live
                 FROM live_streams
-                WHERE ended_at IS NULL
+                WHERE is_live = TRUE
             ) live_now ON live_now.host_id = u.id
             LEFT JOIN (
                 -- En iyi kategori eşleşmesinin affinitesini al (streamer birden fazla kategoride yayın yapabilir)
