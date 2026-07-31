@@ -4190,5 +4190,21 @@
   "permPermanentlyDenied": "الإذن مطلوب لهذه الميزة. فعّله من الإعدادات.",
   "permOpenSettings": "فتح الإعدادات",
   "micToggleFailed": "تعذّر تبديل الميكروفون",
-  "cameraToggleFailed": "تعذّر تبديل الكاميرا"
+  "cameraToggleFailed": "تعذّر تبديل الكاميرا",
+  "notifRatingUpdatedTitle": "قام @{username} بتحديث تقييمه",
+  "@notifRatingUpdatedTitle": {
+    "description": "عنوان الإشعار عند تحديث تقييم",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifRatingReplyTitle": "ردّ @{username} على تقييمك",
+  "@notifRatingReplyTitle": {
+    "description": "عنوان الإشعار عند الرد على تقييم",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifSettingsRatingsTitle": "إشعارات التقييم",
+  "notifSettingsRatingsDesc": "عند تحديث تقييم أو الرد عليه"
 }

@@ -4191,5 +4191,21 @@
   "permPermanentlyDenied": "Для этой функции требуется разрешение. Включите его в настройках.",
   "permOpenSettings": "Открыть настройки",
   "micToggleFailed": "Не удалось переключить микрофон",
-  "cameraToggleFailed": "Не удалось переключить камеру"
+  "cameraToggleFailed": "Не удалось переключить камеру",
+  "notifRatingUpdatedTitle": "@{username} обновил оценку",
+  "@notifRatingUpdatedTitle": {
+    "description": "Заголовок push-уведомления при обновлении оценки",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifRatingReplyTitle": "@{username} ответил на твой отзыв",
+  "@notifRatingReplyTitle": {
+    "description": "Заголовок push-уведомления при ответе на оценку",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifSettingsRatingsTitle": "Уведомления об оценках",
+  "notifSettingsRatingsDesc": "При обновлении оценки или ответе на неё"
 }

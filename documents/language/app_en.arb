@@ -4229,5 +4229,21 @@
   "permPermanentlyDenied": "Permission required for this feature. Enable it in Settings.",
   "permOpenSettings": "Open Settings",
   "micToggleFailed": "Could not toggle microphone",
-  "cameraToggleFailed": "Could not toggle camera"
+  "cameraToggleFailed": "Could not toggle camera",
+  "notifRatingUpdatedTitle": "@{username} updated their rating",
+  "@notifRatingUpdatedTitle": {
+    "description": "Push notification title when a rating is updated",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifRatingReplyTitle": "@{username} replied to your rating",
+  "@notifRatingReplyTitle": {
+    "description": "Push notification title when a rating reply is posted",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifSettingsRatingsTitle": "Rating Notifications",
+  "notifSettingsRatingsDesc": "When a rating is updated or replied to"
 }

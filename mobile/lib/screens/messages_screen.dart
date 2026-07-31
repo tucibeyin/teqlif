@@ -44,6 +44,7 @@ import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import 'my_ratings_screen.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -673,6 +674,12 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
       'churn_airdrop' => loc.t("notifChurnAirdropBuyer"),
       'churn_airdrop_buyer' => loc.t("notifChurnAirdropBuyer"),
       'churn_airdrop_seller' => loc.t("notifChurnAirdropSeller"),
+      'rating_updated' => username.isNotEmpty
+          ? loc.t("notifRatingUpdatedTitle", {"username": username})
+          : title,
+      'rating_reply' => username.isNotEmpty
+          ? loc.t("notifRatingReplyTitle", {"username": username})
+          : title,
       _ => title,
     };
   }
@@ -793,6 +800,8 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
       'call_missed' => const Color(0xFFEF4444),
       'churn_airdrop_buyer' => const Color(0xFF16A34A),
       'churn_airdrop_seller' => const Color(0xFF16A34A),
+      'rating_updated' => const Color(0xFFF59E0B),
+      'rating_reply' => const Color(0xFFF59E0B),
       _ => kPrimary,
     };
   }
@@ -883,6 +892,12 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
             ),
           );
         }
+      case 'rating_updated':
+      case 'rating_reply':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+        );
     }
   }
 

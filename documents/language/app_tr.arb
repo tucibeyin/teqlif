@@ -4192,5 +4192,21 @@
   "permPermanentlyDenied": "Bu özellik için izin gerekli. Ayarlardan etkinleştir.",
   "permOpenSettings": "Ayarları Aç",
   "micToggleFailed": "Mikrofon değiştirilemedi",
-  "cameraToggleFailed": "Kamera değiştirilemedi"
+  "cameraToggleFailed": "Kamera değiştirilemedi",
+  "notifRatingUpdatedTitle": "@{username} değerlendirmesini güncelledi",
+  "@notifRatingUpdatedTitle": {
+    "description": "Bir değerlendirme güncellendiğinde gönderilen bildirim başlığı",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifRatingReplyTitle": "@{username} değerlendirmene yanıt verdi",
+  "@notifRatingReplyTitle": {
+    "description": "Bir değerlendirmeye yanıt verildiğinde gönderilen bildirim başlığı",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifSettingsRatingsTitle": "Değerlendirme Bildirimleri",
+  "notifSettingsRatingsDesc": "Değerlendirme güncellendiğinde veya yanıtlandığında"
 }

@@ -1,3 +1,5 @@
+import asyncio
+
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
@@ -7,6 +9,7 @@ from app.models.follow import Follow
 from app.models.rating import Rating
 from app.models.rating_history import RatingHistory
 from app.models.user import User
+from app.services.notification_service import push_notification
 
 logger = get_logger(__name__)
 
@@ -57,6 +60,7 @@ class UpsertRatingCommand:
         )
 
         if existing:
+            old_score = existing.score
             # Güncelleme: eski değeri history'ye kaydet
             self.uow.session.add(
                 RatingHistory(
@@ -71,6 +75,27 @@ class UpsertRatingCommand:
                 "[UpsertRatingCommand] Updated | rater=%s rated=%s score=%s",
                 rater_id, rated_id, score,
             )
+            await self.uow.session.commit()
+
+            if old_score != score:
+                rater = await self.uow.session.scalar(
+                    select(User).where(User.id == rater_id)
+                )
+                if rater:
+                    asyncio.create_task(push_notification(
+                        user_id=rated_id,
+                        notif={
+                            "type": "rating_updated",
+                            "i18n": {
+                                "title_key": "notifRatingUpdatedTitle",
+                                "title_params": {"username": rater.username},
+                            },
+                            "related_id": rater.id,
+                            "sender_username": rater.username,
+                            "sender_image_url": rater.profile_image_url,
+                        },
+                        pref_key="ratings",
+                    ))
         else:
             self.uow.session.add(
                 Rating(rater_id=rater_id, rated_id=rated_id, score=score, comment=comment)
@@ -79,6 +104,6 @@ class UpsertRatingCommand:
                 "[UpsertRatingCommand] Created | rater=%s rated=%s score=%s",
                 rater_id, rated_id, score,
             )
+            await self.uow.session.commit()
 
-        await self.uow.session.commit()
         return {"ok": True}

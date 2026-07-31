@@ -31,6 +31,7 @@ class _NotificationSettingsScreenState
     'new_listing': true,
     'new_bid': true,
     'outbid': true,
+    'ratings': true,
   };
 
   // Pro ayarları
@@ -75,6 +76,11 @@ class _NotificationSettingsScreenState
       loc.t("notifSettingsOutbidTitle"),
       loc.t("notifSettingsOutbidDesc"),
       Icons.trending_up_outlined,
+    ),
+    'ratings': (
+      loc.t("notifSettingsRatingsTitle"),
+      loc.t("notifSettingsRatingsDesc"),
+      Icons.star_outline,
     ),
   };
 
