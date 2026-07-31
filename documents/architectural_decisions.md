@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Temmuz 2026 — TeqSnackBar/TeqToast ilişkisi, Result<T> değişikliği, ARB codegen kuralı eklendi
+**Son güncelleme:** Temmuz 2026 — TeqAsyncButton, async buton loading pattern'i eklendi
 
 ---
 
@@ -14,8 +14,9 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 2. [Dinamik Field Konfigürasyonu](#2-dinamik-field-konfigürasyonu)
 3. [ML / Analytics / ClickHouse](#3-ml--analytics--clickhouse)
 4. [Merkezi Error Handling](#4-merkezi-error-handling)
-5. [Deploy Pipeline](#5-deploy-pipeline)
-6. [Ekran Migration Checklist](#6-ekran-migration-checklist)
+5. [Async Buton Loading Pattern](#5-async-buton-loading-pattern)
+6. [Deploy Pipeline](#6-deploy-pipeline)
+7. [Ekran Migration Checklist](#7-ekran-migration-checklist)
 
 ---
 
@@ -705,7 +706,64 @@ feed_queries._score_and_rank()
 
 ---
 
-## 4. Deploy Pipeline
+## 5. Async Buton Loading Pattern
+
+### Problem
+
+Bir butona basıldığında network çağrısı tetikleniyorsa (dialog açmadan önce API, form submit, vb.), API yanıtı gelmeden kullanıcı tekrar tıklayabiliyor. Her tıklama ayrı bir coroutine başlatıyor; birden fazla dialog açılıyor veya istek tekrarlıyor.
+
+Manuel çözüm (`_loading` bool + `setState`) her ekranda yeniden yazılması gereken boilerplate üretiyor.
+
+### Karar
+
+İki katmanlı kural:
+
+| Durum | Kullan |
+|-------|--------|
+| Yalnızca "çift tıklamayı önle" gerekiyor | `TeqAsyncButton` |
+| Loading state başka widget'larda da görünüyorsa **veya** yaşam süresi tek build'i aşıyorsa (cooldown, timer) | `TeqButton` + provider state (`isLoading: notifier.isSending`) |
+
+### TeqAsyncButton
+
+**Dosya:** `mobile/lib/ui_library/components/buttons/teq_async_button.dart`
+
+`onPressed` olarak `Future<void> Function()?` alır. Future süresince butonu otomatik spinner'a alır, çift tıklamayı önler. Future bitince butonu serbest bırakır. Ekranda `_loading` bool veya `setState` yazmaya gerek yok.
+
+```dart
+// ÖNCE — ekranda bool + setState
+bool _submitLoading = false;
+
+TeqButton(
+  onPressed: _submitLoading ? null : () async {
+    setState(() => _submitLoading = true);
+    try { await _submit(); }
+    finally { if (mounted) setState(() => _submitLoading = false); }
+  },
+  isLoading: _submitLoading,
+  text: 'Gönder',
+)
+
+// SONRA — TeqAsyncButton
+TeqAsyncButton(
+  onPressed: _submit,
+  text: 'Gönder',
+)
+```
+
+Props `TeqButton` ile aynıdır (`text`, `type`, `size`, `customColor`, `icon`, `isDisabled`, `isExpanded`). `isLoading` dışarıdan geçilmez — buton kendi yönetir.
+
+### Provider state ne zaman gerekli?
+
+`isMassNotifSending` (Toplu Kitle Bildirimi) örneği:
+- Cooldown sayacı başka bir widget'ta da gösteriliyor
+- Sealed class state (`MassNotifAvailable`, `MassNotifCooldownActive`) provider'da tutuluyor
+- Loading state bir timer ile güncelleniyor — widget build döngüsünü aşıyor
+
+Bu durumlarda `TeqButton(isLoading: ref.watch(...).isSending, onPressed: isSending ? null : handler)` pattern'i korunur.
+
+---
+
+## 6. Deploy Pipeline
 
 ### Standart Deploy Komutu
 
@@ -742,7 +800,7 @@ Tüm hatalar standart JSON formatında döner:
 
 ---
 
-## 4. Ekran Migration Checklist
+## 7. Ekran Migration Checklist
 
 Bir ekranı refactor ederken sırayla bu adımları uygula.
 
@@ -772,7 +830,13 @@ Bir ekranı refactor ederken sırayla bu adımları uygula.
 - [ ] `import '...app_error.dart'` → sil
 - [ ] `import '...error_helper.dart'` ekle (handleError için)
 
-### 4.3 Son Kontroller
+### 4.3 Async Buton
+
+- [ ] Network veya async iş tetikleyen butonlar `TeqAsyncButton` kullanıyor mu?
+- [ ] Ekranda `_xxxLoading` bool + `setState(() => _xxxLoading = ...)` varsa → `TeqAsyncButton`'a migrate et
+- [ ] Provider state'e bağlı loading (`isLoading: ref.watch(...).isSending`) gereken durumlarda `TeqButton` korunuyor
+
+### 4.4 Son Kontroller
 
 - [ ] `dart analyze` → 0 error, 0 warning
 - [ ] Cihazda 4 dil test: TR / EN / AR / RU

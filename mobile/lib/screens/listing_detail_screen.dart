@@ -40,6 +40,7 @@ import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/buttons/teq_async_button.dart';
 import '../core/event_bus.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
@@ -1938,7 +1939,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   customColor: const Color(0xFF6366F1),
                                 )
                               else if (_isActive)
-                                TeqButton(
+                                TeqAsyncButton(
                                   onPressed: () => _boostListing(context),
                                   text: '🔥 ${loc.t("boostBtnStart")}',
                                   type: TeqButtonType.primary,
