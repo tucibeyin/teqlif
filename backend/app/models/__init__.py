@@ -11,6 +11,7 @@ from .mass_notification import MassNotificationCampaign
 from .listing_offer import ListingOffer
 from .listing_impression import ListingImpression
 from .rating import Rating
+from .rating_history import RatingHistory
 from .report import Report
 from .purchase import Purchase
 from .stream import LiveStream, LiveStreamViewer

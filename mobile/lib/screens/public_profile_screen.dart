@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import '../widgets/ratings/expandable_comment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1455,103 +1456,262 @@ class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
                         Divider(height: 1, color: AppColors.divider(context)),
                     itemBuilder: (_, i) {
                       final r = _ratings![i] as Map<String, dynamic>;
-                      final rater = r['rater'] as Map<String, dynamic>;
-                      final raterName =
-                          (rater['full_name'] as String?) ??
-                          (rater['username'] as String?) ??
-                          '?';
-                      final raterInitial = raterName.isNotEmpty
-                          ? raterName[0].toUpperCase()
-                          : '?';
-                      final raterImg = rater['profile_image_url'] as String?;
-                      final score = r['score'] as int;
-                      final comment = r['comment'] as String?;
-                      final date =
-                          (r['updated_at'] as String?) ??
-                          (r['created_at'] as String?);
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Rater avatar
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: kPrimary.withValues(alpha: 0.12),
-                              backgroundImage: raterImg != null
-                                  ? NetworkImage(imgUrl(raterImg))
-                                  : null,
-                              child: raterImg == null
-                                  ? Text(
-                                      raterInitial,
-                                      style: const TextStyle(
-                                        color: kPrimary,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          raterName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${'★' * score}${'☆' * (5 - score)}',
-                                        style: const TextStyle(
-                                          color: _starColor,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (comment != null &&
-                                      comment.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      comment,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.textSecondary(context),
-                                      ),
-                                    ),
-                                  ],
-                                  if (date != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatDate(date),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textTertiary(context),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                      return _PublicRatingItem(
+                        key: ValueKey(r['id']),
+                        rating: r,
+                        formatDate: _formatDate,
                       );
                     },
                   ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Public Rating Item ───────────────────────────────────────────────────────
+
+class _PublicRatingItem extends StatefulWidget {
+  final Map<String, dynamic> rating;
+  final String Function(String) formatDate;
+
+  const _PublicRatingItem({
+    super.key,
+    required this.rating,
+    required this.formatDate,
+  });
+
+  @override
+  State<_PublicRatingItem> createState() => _PublicRatingItemState();
+}
+
+class _PublicRatingItemState extends State<_PublicRatingItem> {
+  bool _historyExpanded = false;
+
+  void _goToRaterProfile() {
+    final rater = widget.rating['rater'] as Map<String, dynamic>?;
+    final username = rater?['username'] as String?;
+    if (username == null || username.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicProfileScreen(username: username),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.rating;
+    final rater = r['rater'] as Map<String, dynamic>;
+    final raterName = (rater['full_name'] as String?) ??
+        (rater['username'] as String?) ??
+        '?';
+    final raterInitial =
+        raterName.isNotEmpty ? raterName[0].toUpperCase() : '?';
+    final raterImg = rater['profile_image_url'] as String?;
+    final score = r['score'] as int;
+    final comment = r['comment'] as String?;
+    final reply = r['reply'] as String?;
+    final history =
+        (r['history'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final hasHistory = history.isNotEmpty;
+    final hasReply = reply != null && reply.isNotEmpty;
+    final date = (r['updated_at'] as String?) ?? (r['created_at'] as String?);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Rater header (tappable) ──────────────────────────────────
+          GestureDetector(
+            onTap: _goToRaterProfile,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: kPrimary.withValues(alpha: 0.12),
+                  backgroundImage:
+                      raterImg != null ? NetworkImage(imgUrl(raterImg)) : null,
+                  child: raterImg == null
+                      ? Text(
+                          raterInitial,
+                          style: const TextStyle(
+                            color: kPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              raterName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${'★' * score}${'☆' * (5 - score)}',
+                            style: const TextStyle(
+                              color: _starColor,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (date != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.formatDate(date),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textTertiary(context),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Yorum ────────────────────────────────────────────────────
+          if (comment != null && comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ExpandableComment(text: comment),
+          ],
+
+          // ── Yanıt ────────────────────────────────────────────────────
+          if (hasReply) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant(context),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.reply,
+                      size: 13,
+                      color: AppColors.textTertiary(context)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      reply,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Geçmiş ───────────────────────────────────────────────────
+          if (hasHistory) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () =>
+                  setState(() => _historyExpanded = !_historyExpanded),
+              child: Row(
+                children: [
+                  Icon(Icons.history,
+                      size: 13,
+                      color: AppColors.textTertiary(context)),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Düzenlendi (${history.length}x)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textTertiary(context),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    _historyExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 14,
+                    color: AppColors.textTertiary(context),
+                  ),
+                ],
+              ),
+            ),
+            if (_historyExpanded) ...[
+              const SizedBox(height: 6),
+              ...history.reversed.map((h) {
+                final hScore = h['score'] as int? ?? 0;
+                final hComment = h['comment'] as String?;
+                final hDate = widget.formatDate(
+                    h['changed_at'] as String? ?? '');
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '${'★' * hScore}${'☆' * (5 - hScore)}',
+                              style: const TextStyle(
+                                color: _starColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              hDate,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textTertiary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (hComment != null && hComment.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            hComment,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
         ],
       ),
     );

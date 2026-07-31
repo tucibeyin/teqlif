@@ -5,12 +5,16 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import UserStatus
-from app.database import get_db
+from app.database import get_db, get_uow
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.follow import Follow
 from app.models.rating import Rating
+from app.models.rating_history import RatingHistory
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
+from app.use_cases.ratings.commands.upsert_rating import UpsertRatingCommand
+from app.use_cases.ratings.commands.reply_rating import ReplyRatingCommand
 
 router = APIRouter(prefix="/api/ratings", tags=["ratings"])
 
@@ -25,9 +29,41 @@ async def _optional_user(
     if not user_id:
         return None
     result = await db.execute(
-        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
+        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)
     )
     return result.scalar_one_or_none()
+
+
+def _serialize_history(history_rows) -> list:
+    return [
+        {
+            "score": h.score,
+            "comment": h.comment,
+            "changed_at": h.changed_at.isoformat() if h.changed_at else None,
+        }
+        for h in history_rows
+    ]
+
+
+async def _fetch_history(db: AsyncSession, rating_ids: list[int]) -> dict[int, list]:
+    """rating_id → history list sözlüğü döndürür (toplu sorgu)."""
+    if not rating_ids:
+        return {}
+    rows = await db.execute(
+        select(RatingHistory)
+        .where(RatingHistory.rating_id.in_(rating_ids))
+        .order_by(RatingHistory.rating_id, RatingHistory.changed_at.asc())
+    )
+    history_map: dict[int, list] = {}
+    for h in rows.scalars().all():
+        history_map.setdefault(h.rating_id, []).append(
+            {
+                "score": h.score,
+                "comment": h.comment,
+                "changed_at": h.changed_at.isoformat() if h.changed_at else None,
+            }
+        )
+    return history_map
 
 
 @router.get("/me/unread-count")
@@ -35,7 +71,6 @@ async def get_unread_count(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Giriş yapan kullanıcının okumadığı değerlendirmelerin sayısını döndürür."""
     count = await db.scalar(
         select(func.count(Rating.id))
         .where(Rating.rated_id == current_user.id, Rating.is_read == False)
@@ -48,7 +83,6 @@ async def mark_read(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının okumadığı tüm değerlendirmeleri okundu olarak işaretler."""
     ratings = await db.scalars(
         select(Rating).where(Rating.rated_id == current_user.id, Rating.is_read == False)
     )
@@ -63,21 +97,28 @@ async def get_my_received_ratings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının aldığı değerlendirmeleri (puanlayan kişinin detaylarıyla) listeler."""
+    """Kullanıcının aldığı değerlendirmeler — yanıt ve geçmiş bilgisiyle."""
     rows = await db.execute(
         select(Rating, User)
         .join(User, User.id == Rating.rater_id)
         .where(Rating.rated_id == current_user.id)
         .order_by(Rating.created_at.desc())
     )
+    pairs = rows.all()
+    rating_ids = [r.id for r, _ in pairs]
+    history_map = await _fetch_history(db, rating_ids)
+
     return [
         {
             "id": r.id,
             "score": r.score,
             "comment": r.comment,
+            "reply": r.reply,
+            "replied_at": r.replied_at.isoformat() if r.replied_at else None,
             "is_read": r.is_read,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            "history": history_map.get(r.id, []),
             "rater": {
                 "id": u.id,
                 "username": u.username,
@@ -85,7 +126,7 @@ async def get_my_received_ratings(
                 "profile_image_url": u.profile_image_url,
             },
         }
-        for r, u in rows.all()
+        for r, u in pairs
     ]
 
 
@@ -94,20 +135,27 @@ async def get_my_given_ratings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının başkalarına verdiği değerlendirmeleri (puanlanan kişinin detaylarıyla) listeler."""
+    """Kullanıcının verdiği değerlendirmeler — geçmiş bilgisiyle."""
     rows = await db.execute(
         select(Rating, User)
         .join(User, User.id == Rating.rated_id)
         .where(Rating.rater_id == current_user.id)
         .order_by(Rating.created_at.desc())
     )
+    pairs = rows.all()
+    rating_ids = [r.id for r, _ in pairs]
+    history_map = await _fetch_history(db, rating_ids)
+
     return [
         {
             "id": r.id,
             "score": r.score,
             "comment": r.comment,
+            "reply": r.reply,
+            "replied_at": r.replied_at.isoformat() if r.replied_at else None,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            "history": history_map.get(r.id, []),
             "rated": {
                 "id": u.id,
                 "username": u.username,
@@ -115,7 +163,7 @@ async def get_my_given_ratings(
                 "profile_image_url": u.profile_image_url,
             },
         }
-        for r, u in rows.all()
+        for r, u in pairs
     ]
 
 
@@ -124,49 +172,33 @@ async def upsert_rating(
     user_id: int,
     payload: dict,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    """Hedef kullanıcıya puan ver (veya güncelle). Takip etmek zorunlu."""
-    if user_id == current_user.id:
-        raise ForbiddenException(code="SELF_RATING_FORBIDDEN")
-
-    # Hedef kullanıcı var mı?
-    target = await db.scalar(
-        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
-    )
-    if not target:
-        raise NotFoundException(code="USER_NOT_FOUND")
-
-    # Takip kontrolü
-    is_following = await db.scalar(
-        select(Follow).where(
-            Follow.follower_id == current_user.id,
-            Follow.followed_id == user_id,
-        )
-    )
-    if not is_following:
-        raise ForbiddenException(code="RATING_REQUIRES_FOLLOW")
-
+    """Hedef kullanıcıya puan ver veya güncelle. Eski değer history'ye yazılır."""
     score = payload.get("score")
-    if not isinstance(score, int) or score < 1 or score > 5:
-        raise BadRequestException(code="INVALID_RATING_RANGE")
-
     comment = (payload.get("comment") or "").strip() or None
-    if comment and len(comment) > 500:
-        raise BadRequestException(code="COMMENT_TOO_LONG")
-
-    # Upsert: var olan puanı güncelle, yoksa oluştur
-    existing = await db.scalar(
-        select(Rating).where(Rating.rater_id == current_user.id, Rating.rated_id == user_id)
+    return await UpsertRatingCommand(uow).execute(
+        rater_id=current_user.id,
+        rated_id=user_id,
+        score=score,
+        comment=comment,
     )
-    if existing:
-        existing.score = score
-        existing.comment = comment
-    else:
-        db.add(Rating(rater_id=current_user.id, rated_id=user_id, score=score, comment=comment))
 
-    await db.commit()
-    return {"ok": True}
+
+@router.post("/reply/{rating_id}")
+async def reply_rating(
+    rating_id: int,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    """Değerlendirilen kişi aldığı değerlendirmeye yanıt yazar."""
+    reply_text = (payload.get("reply") or "").strip()
+    return await ReplyRatingCommand(uow).execute(
+        rating_id=rating_id,
+        replier_id=current_user.id,
+        reply_text=reply_text,
+    )
 
 
 @router.get("/{user_id}/summary")
@@ -175,7 +207,6 @@ async def get_rating_summary(
     current_user: Optional[User] = Depends(_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının puan ortalaması ve toplam puan sayısı."""
     row = await db.execute(
         select(func.avg(Rating.score), func.count(Rating.id))
         .where(Rating.rated_id == user_id)
@@ -185,7 +216,9 @@ async def get_rating_summary(
     my_rating = None
     if current_user and current_user.id != user_id:
         my_rating = await db.scalar(
-            select(Rating).where(Rating.rater_id == current_user.id, Rating.rated_id == user_id)
+            select(Rating).where(
+                Rating.rater_id == current_user.id, Rating.rated_id == user_id
+            )
         )
 
     return {
@@ -203,20 +236,27 @@ async def get_ratings(
     user_id: int,
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcıya verilen tüm puanları listele (rater bilgisiyle)."""
+    """Kullanıcıya verilen tüm puanlar — yanıt ve geçmiş bilgisiyle."""
     rows = await db.execute(
         select(Rating, User)
         .join(User, User.id == Rating.rater_id)
         .where(Rating.rated_id == user_id)
         .order_by(Rating.updated_at.desc())
     )
+    pairs = rows.all()
+    rating_ids = [r.id for r, _ in pairs]
+    history_map = await _fetch_history(db, rating_ids)
+
     return [
         {
             "id": r.id,
             "score": r.score,
             "comment": r.comment,
+            "reply": r.reply,
+            "replied_at": r.replied_at.isoformat() if r.replied_at else None,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            "history": history_map.get(r.id, []),
             "rater": {
                 "id": u.id,
                 "username": u.username,
@@ -224,7 +264,7 @@ async def get_ratings(
                 "profile_image_url": u.profile_image_url,
             },
         }
-        for r, u in rows.all()
+        for r, u in pairs
     ]
 
 
@@ -234,9 +274,10 @@ async def delete_rating(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Verilen puanı geri al."""
     rating = await db.scalar(
-        select(Rating).where(Rating.rater_id == current_user.id, Rating.rated_id == user_id)
+        select(Rating).where(
+            Rating.rater_id == current_user.id, Rating.rated_id == user_id
+        )
     )
     if not rating:
         raise NotFoundException(code="RATING_NOT_FOUND")
