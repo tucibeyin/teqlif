@@ -302,8 +302,10 @@ Context'e bağımlı native SnackBar kullanımı, projenin merkezi toast altyap�
 
 ### F-04 — Pro Insights'ta 'dwell' Event Adı Hatalıydı [DÜZELTİLDİ]
 
-**Commit:** `75fcf5d8`  
-`analytics.py`'deki 3 sorguda `'dwell'` → `'detail_dwell'` düzeltildi. Etkilenen metrikler: `dwells`, `avg_detail_dwell_seconds`, peak hours.
+**Commit:** `75fcf5d8` + T-LB-03 fix  
+- `analytics.py`'deki 3 sorguda `'dwell'` → `'detail_dwell'` düzeltildi (etkilenen: `dwells`, `avg_detail_dwell_seconds`, peak hours)
+- Ek fix: funnel sorgusunda `r[1]` (dwells) Python'da extract edilmiyordu; `dwells_total` değişkeni ve `"dwells"` funnel dict key'i eklendi
+- Not: `avg_detail_dwell_seconds` `/pro-insights`'ta değil, ayrı `/pro/metrics` endpoint'indedir
 
 ---
 

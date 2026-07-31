@@ -9,9 +9,9 @@
 
 | ID | Başlık | Kaynak | Öncelik | Durum |
 |----|--------|--------|---------|-------|
-| T-LB-01 | VPS deploy + ClickHouse subcategory doğrulama | F-03 | Kritik | Bekliyor |
-| T-LB-02 | ARB anahtarlarını VPS'e sync'le | — | Kritik | Bekliyor |
-| T-LB-03 | Pro Insights metrik doğrulama | F-04 | Kritik | Bekliyor |
+| T-LB-01 | VPS deploy + ClickHouse subcategory doğrulama | F-03 | Kritik | ✅ Tamamlandı |
+| T-LB-02 | ARB anahtarlarını VPS'e sync'le | — | Kritik | ✅ Tamamlandı |
+| T-LB-03 | Pro Insights metrik doğrulama | F-04 | Kritik | ✅ Tamamlandı |
 | T-LB-11 | hes_spike'ı bid_hesitation'a kısıtla | F-11 | Yüksek | ✅ Tamamlandı |
 | T-LB-12 | argMax top_signal mantığını düzelt | F-12 | Yüksek | ✅ Tamamlandı |
 | T-LB-13 | _loadHesitated stream onError ekle | F-13 | Orta | ✅ Tamamlandı |
@@ -69,14 +69,25 @@ Yeni anahtarlar (4 dilde): `hesitatedPriceDrop`, `hesitatedPriceNearOffer`, `hes
 
 ### T-LB-03 — Pro Insights Metrik Doğrulama
 
-**Kaynak:** F-04 düzeltmesi (Temmuz 2026)  
-**Doğrulama:**
+**Kaynak:** F-04 düzeltmesi + funnel dwells bug fix (Temmuz 2026)  
+**Durum:** ✅ Tamamlandı (deploy + funnel fix)
 
+**`dwells` alanı** `/pro-insights` endpoint'inde `.funnel.dwells` olarak görünür:
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-  https://api.teqlif.com/api/analytics/pro-insights/{listing_id}
-# avg_detail_dwell_seconds > 0, dwells > 0 bekleniyor.
+  https://api.teqlif.com/api/analytics/pro-insights
+# .funnel.dwells > 0 bekleniyor (detail_dwell event'leri varsa)
 ```
+
+**`avg_detail_dwell_seconds`** ise `/pro/metrics` endpoint'indedir — `/pro-insights` değil:
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.teqlif.com/api/analytics/pro/metrics
+# avg_detail_dwell_seconds > 0 bekleniyor
+```
+
+**Not:** F-04 fix ClickHouse query'yi doğru event_type ile güncellemişti; bu ek fix
+`r[1]` (dwells) değerinin Python'da extract edilmesini ve funnel dict'e eklenmesini sağladı.
 
 ---
 

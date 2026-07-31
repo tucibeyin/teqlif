@@ -1087,6 +1087,7 @@ async def pro_insights(
         listing_ids = [r[0] for r in listing_ids_result.fetchall()]
 
         views_total = 0
+        dwells_total = 0
         hesitations = 0
 
         if listing_ids:
@@ -1106,6 +1107,7 @@ async def pro_insights(
                 """)
                 r = ch_r.result_rows[0] if ch_r.result_rows else (0, 0, 0)
                 views_total = int(r[0] or 0)
+                dwells_total = int(r[1] or 0)
                 hesitations = int(r[2] or 0)
             except Exception:
                 pass
@@ -1114,6 +1116,7 @@ async def pro_insights(
         sales_count = kpis.get("sales_30d", 0)
         funnel = {
             "views": views_total,
+            "dwells": dwells_total,
             "hesitations": hesitations,
             "bids": bids_count,
             "sales": sales_count,
