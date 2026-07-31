@@ -123,21 +123,21 @@ Backend WS sinyali (`call_reconnecting` event) ileride eklenebilir; mevcut LiveK
 
 ## Özet Tablo
 
-| # | Öncelik | Başlık | Durum |
-|---|---|---|---|
-| T1 | P0 | iOS ringback restore `connecting` dahil | ✅ |
-| T2 | P0 | Android pre-publish audio focus guard | ✅ |
-| T3 | P1 | `TrackSubscribed` muted check | ✅ |
-| T4 | P1 | UI `connecting` → "Bağlanıyor" | ✅ (zaten vardı) |
-| T5 | P1 | `livekit_url` tek kaynak | ✅ (kod zaten doğruydu) |
-| T6 | P1 | `connected_at` + `/connected` endpoint | ✅ (SQL VPS'te çalıştırılmalı) |
-| T7 | P2 | `clear_call_redis` tutarlılık | ✅ |
-| T8 | P2 | Accept token_gen_ms logu | ✅ |
-| T9 | P2 | Remote kalite takibi (reconnecting UX) | ✅ kısmi |
-| T10 | P2 | Timeout sabitleri 40s backup | ✅ |
-| T11 | P3 | Ringback merkezileştirme | ✅ (T12 ile) |
-| T12 | P3 | `_transitionToConnected()` helper | ✅ |
-| T13 | P3 | NX TTL 300s | ✅ |
+| # | Öncelik | Başlık | Durum | Tarih |
+|---|---|---|---|---|
+| T1 | P0 | iOS ringback restore `connecting` dahil | ✅ Tamamlandı | 30 Tem 2026 |
+| T2 | P0 | Android pre-publish audio focus guard | ✅ Tamamlandı | 30 Tem 2026 |
+| T3 | P1 | `TrackSubscribed` muted check | ✅ Tamamlandı | 30 Tem 2026 |
+| T4 | P1 | UI `connecting` → "Bağlanıyor" | ✅ Tamamlandı (zaten vardı) | 30 Tem 2026 |
+| T5 | P1 | `livekit_url` tek kaynak | ✅ Tamamlandı (kod zaten doğruydu) | 30 Tem 2026 |
+| T6 | P1 | `connected_at` + `/connected` endpoint | ✅ Tamamlandı | 30 Tem 2026 |
+| T7 | P2 | `clear_call_redis` tutarlılık | ✅ Tamamlandı | 30 Tem 2026 |
+| T8 | P2 | Accept token_gen_ms logu | ✅ Tamamlandı | 30 Tem 2026 |
+| T9 | P2 | Remote kalite takibi (reconnecting UX) | ✅ Tamamlandı (kısmi) | 30 Tem 2026 |
+| T10 | P2 | Timeout sabitleri 40s backup | ✅ Tamamlandı | 30 Tem 2026 |
+| T11 | P3 | Ringback merkezileştirme | ✅ Tamamlandı (T12 ile) | 30 Tem 2026 |
+| T12 | P3 | `_transitionToConnected()` helper | ✅ Tamamlandı | 30 Tem 2026 |
+| T13 | P3 | NX TTL 300s | ✅ Tamamlandı | 30 Tem 2026 |
 
 ---
 

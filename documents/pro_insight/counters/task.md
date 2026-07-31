@@ -7,18 +7,18 @@
 
 ## Özet Tablo
 
-| ID | Başlık | Kaynak | Öncelik | Durum |
-|----|--------|--------|---------|-------|
-| T-CNT-01 | Pro Hub fallback limitleri düzelt (boost:3, ai_price:6, react:3) | F-CROSS-01 | Kritik | ✅ Tamamlandı |
-| T-CNT-02 | TuciTransaction type ayrıştır: spend_ai_price / spend_ai_desc | F-AIPRICE-02, F-AIDESC-02 | Yüksek | ✅ Tamamlandı |
-| T-CNT-03 | SSE krediyi ilk chunk'ta say (bağlantı kopma koruması) | F-AIDESC-01 | Kritik | ✅ Tamamlandı |
-| T-CNT-04 | Lead blast'a 24 saatlik cooldown ekle | F-BLAST-02 | Orta | ✅ Tamamlandı |
-| T-CNT-05 | listings.py blast TuciTransaction type düzelt (spend_lead_gen → spend_blast) | F-BLAST-01 | Yüksek | ✅ Tamamlandı |
-| T-CNT-06 | Reaktivasyon → created_at sıfırlanmasını Insights sorgularında ele al | F-REACT-01 | Yüksek | ✅ Tamamlandı |
-| T-CNT-07 | boost: listings tablosuna is_boosted computed alanı veya view ekle | F-BOOST-02 | Orta | ✅ Tamamlandı |
-| T-CNT-08 | ai_price embed başarısız → kredi tüketme, hata döndür | F-AIPRICE-04 | Orta | ✅ Tamamlandı |
-| T-CNT-09 | LLM fallback (Groq→Gemini) Flutter'a bildirilsin | F-AIDESC-03 | Düşük | ✅ Tamamlandı |
-| T-CNT-10 | 30 gün reaktivasyon penceresini Pro Hub sayacında göster | F-REACT-03 | Düşük | ✅ Tamamlandı |
+| ID | Başlık | Kaynak | Öncelik | Durum | Tarih |
+|----|--------|--------|---------|-------|-------|
+| T-CNT-01 | Pro Hub fallback limitleri düzelt (boost:3, ai_price:6, react:3) | F-CROSS-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-02 | TuciTransaction type ayrıştır: spend_ai_price / spend_ai_desc | F-AIPRICE-02, F-AIDESC-02 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-03 | SSE krediyi ilk chunk'ta say (bağlantı kopma koruması) | F-AIDESC-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-04 | Lead blast'a 24 saatlik cooldown ekle | F-BLAST-02 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-05 | listings.py blast TuciTransaction type düzelt (spend_lead_gen → spend_blast) | F-BLAST-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-06 | Reaktivasyon → created_at sıfırlanmasını Insights sorgularında ele al | F-REACT-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-07 | boost: is_boosted hot_leads API + Flutter badge | F-BOOST-02 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-08 | ai_price embed başarısız → kredi tüketme, hata döndür | F-AIPRICE-04 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-09 | LLM fallback (Groq→Gemini) Flutter'a bildirilsin | F-AIDESC-03 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-10 | 30 gün reaktivasyon penceresini Pro Hub sayacında göster | F-REACT-03 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
 
 ---
 

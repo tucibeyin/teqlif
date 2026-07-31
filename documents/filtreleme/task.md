@@ -2,6 +2,9 @@
 
 Kaynak: `analiz.md` v3 — tüm FAZ'ların uygulama adımları.
 
+**Tamamlanma:** FAZ 0–5 kod taskları 26–27 Tem 2026 tamamlandı.  
+**Bekleyen:** M-4 ve E-8 manuel test (kod değişikliği yok).
+
 ---
 
 ## FAZ 0 — DB Altyapı

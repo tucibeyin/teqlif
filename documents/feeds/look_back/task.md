@@ -7,24 +7,24 @@
 
 ## Özet
 
-| ID | Başlık | Kaynak | Öncelik | Durum |
-|----|--------|--------|---------|-------|
-| T-LB-01 | VPS deploy + ClickHouse subcategory doğrulama | F-03 | Kritik | ✅ Tamamlandı |
-| T-LB-02 | ARB anahtarlarını VPS'e sync'le | — | Kritik | ✅ Tamamlandı |
-| T-LB-03 | Pro Insights metrik doğrulama | F-04 | Kritik | ✅ Tamamlandı |
-| T-LB-11 | hes_spike'ı bid_hesitation'a kısıtla | F-11 | Yüksek | ✅ Tamamlandı |
-| T-LB-12 | argMax top_signal mantığını düzelt | F-12 | Yüksek | ✅ Tamamlandı |
-| T-LB-13 | _loadHesitated stream onError ekle | F-13 | Orta | ✅ Tamamlandı |
-| T-LB-14 | /hesitated ClickHouse hata loglama | F-14 | Orta | ✅ Tamamlandı |
-| T-LB-04 | not_interested TTL eşitleme | F-07 | Orta | ✅ Tamamlandı |
-| T-LB-05 | hesitated_shelf_tap Thompson Sampling | F-09 | Orta | ✅ Tamamlandı |
-| T-LB-06 | Dismiss → TeqToast | F-10 | Düşük | ✅ Tamamlandı |
-| T-LB-15 | retarget_task penceresini 14 güne genişlet | F-16 | Düşük | ✅ Tamamlandı |
-| T-LB-16 | VPS: ClickHouse subcategory sütunu doğrulama | F-15 | Düşük | ✅ Kapandı |
-| T-LB-07 | price_point semantik ayrımı (araştırma) | F-08 | Araştırma | ✅ Kapandı |
-| T-LB-08 | hesitated:{uid} ML feature değerlendirmesi | F-01 | Araştırma | ✅ Kapandı |
-| T-LB-09 | Shelf shimmer loading | — | Araştırma | ✅ Tamamlandı |
-| T-LB-10 | Subcategory-level diversity | — | Araştırma | ✅ Tamamlandı |
+| ID | Başlık | Kaynak | Öncelik | Durum | Tarih |
+|----|--------|--------|---------|-------|-------|
+| T-LB-01 | VPS deploy + ClickHouse subcategory doğrulama | F-03 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-02 | ARB anahtarlarını VPS'e sync'le | — | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-03 | Pro Insights metrik doğrulama | F-04 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-11 | hes_spike'ı bid_hesitation'a kısıtla | F-11 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-12 | argMax top_signal mantığını düzelt | F-12 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-13 | _loadHesitated stream onError ekle | F-13 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-14 | /hesitated ClickHouse hata loglama | F-14 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-04 | not_interested TTL eşitleme | F-07 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-05 | hesitated_shelf_tap Thompson Sampling | F-09 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-06 | Dismiss → TeqToast | F-10 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-15 | retarget_task penceresini 14 güne genişlet | F-16 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-16 | VPS: ClickHouse subcategory sütunu doğrulama | F-15 | Düşük | ✅ Kapandı | 31 Tem 2026 |
+| T-LB-07 | price_point semantik ayrımı (araştırma) | F-08 | Araştırma | ✅ Kapandı | 31 Tem 2026 |
+| T-LB-08 | hesitated:{uid} ML feature değerlendirmesi | F-01 | Araştırma | ✅ Kapandı | 31 Tem 2026 |
+| T-LB-09 | Shelf shimmer loading | — | Araştırma | ✅ Tamamlandı | 31 Tem 2026 |
+| T-LB-10 | Subcategory-level diversity | — | Araştırma | ✅ Tamamlandı | 31 Tem 2026 |
 
 ---
 
