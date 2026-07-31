@@ -36,31 +36,36 @@ def inject(interface: Type[T]):
 def init_di():
     """
     Uygulama başlarken DI Container'a tüm interface ve adapter'ları kaydeder.
-    Firebase, lazy değil eager olarak burada initialize edilir — worker/uvicorn
-    başladığı anda credentials doğrulanır, singleton belirsizliği ortadan kalkar.
+    FirebaseAdapter, firebase_admin.messaging yerine google-auth + requests ile
+    FCM V1 REST API'yi doğrudan çağırır.
     """
     from app.core.ports.push_notification_port import PushNotificationPort
     from app.infrastructure.adapters.firebase_adapter import FirebaseAdapter
     from app.config import settings
     import logging
+    import json
     _log = logging.getLogger(__name__)
 
-    firebase_app = None
-    if settings.firebase_service_account:
+    project_id = None
+    sa_path = settings.firebase_service_account or None
+
+    if sa_path:
         try:
-            import firebase_admin
-            from firebase_admin import credentials
-            cred = credentials.Certificate(settings.firebase_service_account)
-            try:
-                firebase_app = firebase_admin.get_app()
-                _log.info("[DI] Firebase app zaten mevcut, yeniden kullanılıyor.")
-            except ValueError:
-                firebase_app = firebase_admin.initialize_app(cred)
-                _log.info("[DI] Firebase başarıyla başlatıldı | project=%s", cred.project_id)
+            with open(sa_path) as f:
+                sa_data = json.load(f)
+            project_id = sa_data.get("project_id")
+            _log.info(
+                "[DI] Service account okundu | project=%s | sa_path=%s",
+                project_id,
+                sa_path,
+            )
         except Exception as exc:
-            _log.error("[DI] Firebase init başarısız: %s", exc, exc_info=True)
+            _log.error("[DI] Service account okunamadı: %s", exc, exc_info=True)
     else:
         _log.warning("[DI] FIREBASE_SERVICE_ACCOUNT ayarlanmamış — push devre dışı")
 
-    container.register(PushNotificationPort, FirebaseAdapter(firebase_app))
+    container.register(
+        PushNotificationPort,
+        FirebaseAdapter(project_id=project_id, sa_path=sa_path if project_id else None),
+    )
 
