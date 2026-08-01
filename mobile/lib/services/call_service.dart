@@ -1232,8 +1232,8 @@ class CallService {
     _setState(state.value.copyWith(status: CallStatus.connecting));
 
     // Caller mic activation: two paths
-    // FAST PATH (Android): Pre-connect published muted track → unmute (~15ms, no re-negotiation).
-    // STANDARD PATH (iOS/fallback): setMicrophoneEnabled(true) (~1-1.5s, AVAudioSession init).
+    // FAST PATH: If a pre-published muted track exists (legacy/fallback), unmute it.
+    // STANDARD PATH: setMicrophoneEnabled(true) — used by both iOS and Android.
     if (_room != null) {
       final micPubs = _room!.localParticipant?.audioTrackPublications;
       if (micPubs != null && micPubs.isNotEmpty) {
@@ -1456,46 +1456,15 @@ class CallService {
         // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
 
         if (callStatusAtEntry == CallStatus.calling) {
-          // iOS'ta setMicrophoneEnabled(true) LiveKit'in AVAudioSession'ı ele geçirmesine yol açar
-          // ve audioplayers'ın çaldığı ringing.wav ringback tonunu keser.
-          // Android'de audio focus sistemi farklı çalıştığı için sorun yaratmaz.
-          // iOS caller: sadece ağ pre-connect (TCP/TLS/ICE); mic onCallAccepted'da standart yolla açılır.
-          // Android caller: muted pre-publish → acceptance'da pub.unmute (~50ms FAST PATH).
-          if (Platform.isAndroid) {
-            _cpLog('LK', 'caller pre-connect: pre-publishing MUTED audio track for fast acceptance | callId=${state.value.callId} platform=Android');
-            _cpLog('HW', 'microphone CAPTURE START (muted pre-connect) | audioCapture=active rtpTransmission=paused stopOnMute=false ringtone=preserved platform=Android');
-            try {
-              await _room!.localParticipant?.setMicrophoneEnabled(true);
-              final micPubs = _room!.localParticipant?.audioTrackPublications;
-              if (micPubs != null && micPubs.isNotEmpty) {
-                final pub = micPubs.first;
-                // stopOnMute:false → capture çalışır, RTP paketleri gönderilmez.
-                await pub.mute(stopOnMute: false);
-                _cpLog('LK', 'muted audio track pre-published | sid=${pub.sid} waitingForUnmute=true platform=Android');
-                _cpLog('HW', 'microphone MUTED (pre-connect) | track=published rtpMuted=true audioCapture=active stopOnMute=false platform=Android');
-                // WebRTC audio focus (STREAM_VOICE_CALL) may duck audioplayers ringback
-                // (STREAM_MUSIC) on Android. Re-check and restore ringback if interrupted.
-                await Future.delayed(const Duration(milliseconds: 200));
-                if (_ringbackPlayer.state != PlayerState.playing && state.value.status == CallStatus.calling) {
-                  _ringbackPlayer.seek(Duration.zero).then((_) => _ringbackPlayer.resume()).catchError((e) {
-                    _cpLog('SOUND', 'ringbackPlayer RESUME after Android pre-publish FAILED | $e');
-                    return null;
-                  });
-                  _cpLog('SOUND', 'ringbackPlayer RESUMED after Android muted pre-publish (audio focus guard) | platform=Android');
-                } else {
-                  _cpLog('SOUND', 'ringbackPlayer state=${_ringbackPlayer.state.name} after Android pre-publish | no restore needed');
-                }
-              } else {
-                _cpLog('LK', 'pre-publish muted track: no publications after setMicEnabled (micPubs empty) | standard path on acceptance platform=Android');
-              }
-            } catch (e) {
-              _cpLog('LK', 'pre-publish muted track ERROR | $e → standard setMicEnabled path will be used on acceptance platform=Android');
-              _cpLog('HW', 'microphone CAPTURE (muted pre-connect) FAILED | fallback=standard on acceptance platform=Android');
-            }
-          } else {
-            // iOS: sadece ağ pre-connect — mic/AudioSession dokunulmaz, ringing.wav korunur.
-            _cpLog('LK', 'caller pre-connect: network-only (NO mic pre-publish) | callId=${state.value.callId} platform=iOS reason=avAudioSession-would-kill-ringback');
-            _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | platform=iOS ringback=preserved mic-will-start-on-acceptance');
+          // Both platforms: network-only pre-connect — mic starts on acceptance via standard path.
+          // Android pre-publish (muted track for fast unmute) was removed: it took
+          // AUDIOFOCUS_GAIN via STREAM_VOICE_CALL which starved the ringback player, causing
+          // it to stop after one loop. The ~1s acceptance latency is preferable to broken audio.
+          // iOS: room.connect() overrides AVAudioSession → ringback restore needed.
+          // Android: room.connect() has no audio-session effect → no restore needed.
+          _cpLog('LK', 'caller pre-connect: network-only (no mic pre-publish) | callId=${state.value.callId}');
+          _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | ringback=preserved mic-will-start-on-acceptance');
+          if (Platform.isIOS) {
             // room.connect() internally overrides AVAudioSession to SoloAmbient, which
             // interrupts the audioplayers ringback. Restore playAndRecord and re-resume.
             // Also covers connecting: if callee accepted while room.connect() was in flight,
@@ -1540,8 +1509,8 @@ class CallService {
             });
           } else {
             // Caller: onCallAccepted, room.connect() sırasında geldi.
-            // Muted track zaten yayınlandı — sadece unmute et.
-            _cpLog('LK', 'caller: call_accepted already received during pre-connect → unmuting pre-published track');
+            // Pre-publish yoksa (standard path) setMicrophoneEnabled çağrılır.
+            _cpLog('LK', 'caller: call_accepted already received during pre-connect → enabling mic');
             final micPubs = _room!.localParticipant?.audioTrackPublications;
             if (micPubs != null && micPubs.isNotEmpty) {
               final pub = micPubs.first;
@@ -1689,8 +1658,7 @@ class CallService {
         }
 
         // Muted track subscription: gerçek ses henüz akmıyor → TrackUnmuted'ı bekle.
-        // Bu, Android caller'ın pre-published muted track'ini callee connecting state'inde
-        // subscribe ettiği nadir senaryoda veya callee mic warmup gecikmesinde olabilir.
+        // Nadir senaryo: ağ gecikmesi veya callee mic warmup sırasında track muted gelebilir.
         if (event.publication.muted) {
           _cpLog('LK', 'TrackSubscribed AUDIO but muted | status=${state.value.status.name} → wait for TrackUnmuted');
           return;
@@ -1759,10 +1727,9 @@ class CallService {
         _setState(state.value.copyWith(remoteVideoEnabled: false));
       }
     } else if (event is TrackUnmutedEvent) {
-      // Android caller pre-publishes a MUTED audio track during calling state.
-      // iOS callee receives TrackSubscribedEvent during RINGING → skips transition (correct).
-      // When Android unmutes after callee accepts, only TrackUnmutedEvent fires on iOS —
-      // no second TrackSubscribedEvent. Drive connecting→connected here.
+      // Fallback: a previously-subscribed muted track was unmuted.
+      // Android no longer pre-publishes during calling state, so this path is rare.
+      // Still handles edge cases (e.g. track re-negotiation, network recovery).
       final isRemote = event.participant != _room?.localParticipant;
       _cpLog('LK', 'TrackUnmuted | kind=${event.publication.kind} isRemote=$isRemote status=${state.value.status.name}');
       if (isRemote && event.publication.kind == TrackType.VIDEO) {
@@ -1845,7 +1812,12 @@ class CallService {
       event,
     ) {
       if (event.begin) {
-        if (!state.value.isMuted) {
+        // Only save/restore mic during active call states where mic is expected to be on.
+        // During ringing/calling, isMuted defaults to false but mic was never activated —
+        // blindly setting isMuted=true here would cause interruption-end to re-enable the mic.
+        final micIsActive = state.value.status == CallStatus.connected ||
+            state.value.status == CallStatus.connecting;
+        if (micIsActive && !state.value.isMuted) {
           _cpLog('HW', 'microphone DISABLE | context=audioInterruption-begin isMuted=false→true');
           _room?.localParticipant?.setMicrophoneEnabled(false);
           _setState(state.value.copyWith(isMuted: true));
