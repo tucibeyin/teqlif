@@ -24,24 +24,16 @@ import 'push_notification_service.dart';
 import 'ws_service.dart';
 import '../models/call_event.dart';
 import '../models/call_participant.dart';
+import '../call/state/call_status.dart';
+import '../call/state/call_role.dart';
+import '../call/state/call_state_machine.dart';
+
+// Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
+export '../call/state/call_status.dart';
+export '../call/state/call_role.dart';
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
-}
-
-enum CallStatus {
-  idle,
-  calling, // outgoing — waiting for answer
-  ringing, // incoming — waiting for our action
-  connecting, // accepted — joining LiveKit room
-  connected, // in call
-  ended,
-  rejected,
-  missed,
-  noAnswer,
-  permissionDenied,
-  busy,
-  reconnecting,
 }
 
 class CallApiException implements Exception {
@@ -240,6 +232,10 @@ class CallService {
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
   Timer? _connectingTimeoutTimer; // 15s guard: connecting → endCall if TrackSubscribed never fires
 
+  // V2.0 CallStateMachine: role-aware transition guard.
+  // startCall → caller, onIncomingCall → callee, reset → null.
+  CallRole? _currentRole;
+
   bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
   // WS connection lock: true while an active call is holding the WsService lock.
@@ -361,29 +357,23 @@ class CallService {
     return jsonDecode(response.body) as List<dynamic>;
   }
 
-  // WhatsApp-style explicit transition table.
-  // Log-only guard (no hard block) during hardening phase — prevents blind drift.
-  static const Map<CallStatus, Set<CallStatus>> _allowedTransitions = {
-    CallStatus.idle: {CallStatus.calling, CallStatus.ringing},
-    CallStatus.calling: {CallStatus.connecting, CallStatus.ended, CallStatus.rejected, CallStatus.missed, CallStatus.noAnswer, CallStatus.busy, CallStatus.idle},
-    CallStatus.ringing: {CallStatus.connecting, CallStatus.ended, CallStatus.missed, CallStatus.rejected, CallStatus.idle},
-    CallStatus.connecting: {CallStatus.connected, CallStatus.ended, CallStatus.idle, CallStatus.reconnecting},
-    CallStatus.connected: {CallStatus.ended, CallStatus.reconnecting, CallStatus.idle},
-    CallStatus.reconnecting: {CallStatus.connected, CallStatus.ended, CallStatus.idle},
-    CallStatus.ended: {CallStatus.idle, CallStatus.calling},
-    CallStatus.rejected: {CallStatus.idle},
-    CallStatus.missed: {CallStatus.idle},
-    CallStatus.noAnswer: {CallStatus.idle},
-    CallStatus.busy: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle},
-  };
-
   void _setState(CallState s) {
     final oldStatus = state.value.status;
     if (oldStatus != s.status) {
-      final allowed = _allowedTransitions[oldStatus] ?? {};
-      if (!allowed.contains(s.status)) {
-        _cpLog('STATE', 'WARN unexpected transition ${oldStatus.name} → ${s.status.name} | allowed=${allowed.map((e) => e.name).join(",")} callId=${s.callId}');
+      final validated = CallStateMachine.transition(
+        current: oldStatus,
+        next: s.status,
+        role: _currentRole,
+      );
+      if (validated == null) {
+        _cpLog(
+          'STATE',
+          'WARN blocked transition ${oldStatus.name} → ${s.status.name} | role=${_currentRole?.name ?? "unknown"} callId=${s.callId}',
+        );
+        // Step 1: assert + log (hard block Step 2'de açılır, testler tamamlandıktan sonra)
+        assert(false, 'Invalid state transition: ${oldStatus.name} → ${s.status.name} | role=${_currentRole?.name}');
+        // Production'da log yeterli — state değiştirilmez
+        return;
       }
     }
     _cpLog('STATE', '${oldStatus.name} → ${s.status.name} | callId=${s.callId}');
@@ -414,11 +404,7 @@ class CallService {
   }
 
   static bool _isActiveCallStatus(CallStatus s) =>
-      s == CallStatus.calling ||
-      s == CallStatus.ringing ||
-      s == CallStatus.connecting ||
-      s == CallStatus.connected ||
-      s == CallStatus.reconnecting;
+      CallStateMachine.isActiveCallState(s);
 
   void _handleStatusChange(CallStatus oldStatus, CallStatus newStatus) {
     // Acquire WS connection lock when entering first active-call state so the
@@ -534,6 +520,7 @@ class CallService {
     required String? calleeAvatar,
   }) async {
     _cpLog('OUT', 'startCall ENTERED | calleeId=$calleeId calleeUsername=$calleeUsername');
+    _currentRole = CallRole.caller;
     _resetTimer?.cancel();
     // If previous call just ended and reset timer was pending, clear elapsed now.
     if (state.value.status == CallStatus.ended) {
@@ -705,6 +692,7 @@ class CallService {
   Future<void> onIncomingCall(Map<String, dynamic> data) async {
     final source = data['_source'] as String? ?? 'overlay/ws';
     _cpLog('IN', 'onIncomingCall received | source=$source callId=${data['call_id']} caller=${data['caller_username']} calleeToken=${data['callee_token'] != null ? "EXISTS" : "MISSING"} livekitUrl=${data['livekit_url'] != null ? "EXISTS" : "MISSING"} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+    _currentRole = CallRole.callee;
     _resetTimer?.cancel();
 
     final incomingCallId = data['call_id'] is int
@@ -2191,6 +2179,7 @@ class CallService {
     _preConnectStartedAt = null;
     _activeIncomingCallId = null; // Dedup guard sıfırla — yeni aramalara açık
     _acceptedAt = null;
+    _currentRole = null; // Role sıfırla — bir sonraki arama başlangıcında set edilir
     elapsed.value = Duration.zero; // elapsed notifier'ı sıfırla
     _stopStatsMonitor();
     _stopProximitySensor();
