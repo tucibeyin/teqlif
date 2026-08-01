@@ -59,7 +59,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | Adım | Ne | Neden Önce | Durum |
 |---|---|---|---|
 | **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli | ✅ `cc9bd511` |
-| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `TBD` |
+| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `f47c2460` |
 | **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | 🔴 |
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | 🔴 |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
@@ -259,7 +259,7 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 **Durum:** ✅ Tamamlandı  
 **Başlangıç:** 2026-08-01  
 **Tamamlanma:** 2026-08-01  
-**Commit:** TBD
+**Commit:** `f47c2460`
 
 **Oluşturulan dosyalar:** —
 
