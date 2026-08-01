@@ -60,7 +60,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 |---|---|---|---|
 | **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli | ✅ `cc9bd511` |
 | **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `f47c2460` + `662e165a` |
-| **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | 🔴 |
+| **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | ✅ `d961e82e` + `e153e1a2` |
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | 🔴 |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | 🔴 |
@@ -290,11 +290,11 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 
 ## Step 3: `EndReason` + Terminal State Absorbe
 
-**Durum:** 🟡 Devam ediyor  
+**Durum:** ✅ Tamamlandı  
 **Başlangıç:** 2026-08-01  
-**Tamamlanma:** —  
-**Commit A:** `d961e82e` (additive — tamamlandı)  
-**Commit B:** — (terminal cleanup — devam ediyor)
+**Tamamlanma:** 2026-08-01  
+**Commit A:** `d961e82e` — EndReason additive (non-breaking)  
+**Commit B:** `e153e1a2` — terminal state'ler ended+EndReason'a absorbe
 
 **Bağımlılık:** Step 2 tamamlanmış olmalı.
 
