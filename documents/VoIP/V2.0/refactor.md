@@ -578,7 +578,9 @@ Group call endpoint'leri (`/invite`, `/participants/*`) — bunlar farklı flow,
 - [x] `call_service.dart`: `_repository` field eklendi
 - [x] Tüm call endpoint `_post`/`_get` çağrıları repository'e taşındı
 - [x] `dart analyze` sıfır hata
-- [ ] Reject / endCall / accept senaryoları manuel test (Android→iOS)
+- [x] Reject / endCall / accept senaryoları manuel test (Android→iOS)
+
+**Test notu (2026-08-01):** Tüm CALL_REPO log path'leri doğrulandı (getCallStatus, acceptCall attempt=1 SUCCESS, rejectCall f-a-f OK, endCall f-a-f OK, reportConnected OK). Refactordan kaynaklanan sıfır hata. Testte tespit edilen iki sorun (uygulama ön plandayken iOS native Call Screen flash, arayan bitirince FCM call_ended notification) Step 7 (CallNotifAdapter) scope'unda — şu an dokunulmadı.
 
 **Production'a alma:** `CallService` sadece `_repository.*` çağırır, call-related HTTP kodu tamamen dışarı taşındı.
 
