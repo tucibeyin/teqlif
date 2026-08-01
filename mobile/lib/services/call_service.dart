@@ -370,9 +370,7 @@ class CallService {
           'STATE',
           'WARN blocked transition ${oldStatus.name} → ${s.status.name} | role=${_currentRole?.name ?? "unknown"} callId=${s.callId}',
         );
-        // Step 1: assert + log (hard block Step 2'de açılır, testler tamamlandıktan sonra)
         assert(false, 'Invalid state transition: ${oldStatus.name} → ${s.status.name} | role=${_currentRole?.name}');
-        // Production'da log yeterli — state değiştirilmez
         return;
       }
     }

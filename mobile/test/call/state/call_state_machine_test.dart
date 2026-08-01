@@ -151,6 +151,20 @@ void main() {
         equals(CallStatus.idle),
       );
     });
+
+    test('idle → permissionDenied geçerli (mic kontrolü dialing öncesi)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.permissionDenied, role: CallRole.caller),
+        equals(CallStatus.permissionDenied),
+      );
+    });
+
+    test('permissionDenied → ended geçerli (caller — _hangUpLocally uyumluluğu)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.permissionDenied, next: CallStatus.ended, role: CallRole.caller),
+        equals(CallStatus.ended),
+      );
+    });
   });
 
   group('CallStateMachine — Callee transitions', () {
@@ -230,6 +244,27 @@ void main() {
         isNull,
       );
     });
+
+    test('idle → permissionDenied geçersiz (callee — mic kontrolü connecting\'de)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.permissionDenied, role: CallRole.callee),
+        isNull,
+      );
+    });
+
+    test('connecting → permissionDenied geçerli (callee — acceptCall mic izni yok)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.permissionDenied, role: CallRole.callee),
+        equals(CallStatus.permissionDenied),
+      );
+    });
+
+    test('permissionDenied → ended geçerli (callee — _hangUpLocally uyumluluğu)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.permissionDenied, next: CallStatus.ended, role: CallRole.callee),
+        equals(CallStatus.ended),
+      );
+    });
   });
 
   group('CallStateMachine — Role null (crash recovery fallback)', () {
@@ -275,10 +310,10 @@ void main() {
   });
 
   group('CallStateMachine — allowedTargets', () {
-    test('caller idle için sadece dialing', () {
+    test('caller idle için dialing ve permissionDenied', () {
       expect(
         CallStateMachine.allowedTargets(CallStatus.idle, CallRole.caller),
-        equals({CallStatus.dialing}),
+        equals({CallStatus.dialing, CallStatus.permissionDenied}),
       );
     });
 

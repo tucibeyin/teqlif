@@ -263,6 +263,7 @@ Bu bölümdeki tablolar aşağıdaki kararlara dayanır.
 | `fcm_push_received` | callee | `ringing` | Background/killed — FCM push |
 | `ws_connected` | both | `idle` → restore? | /active sorgula; aktif arama varsa state restore |
 | `app_launch` | both | `idle` → restore? | /active sorgula; aktif arama varsa state restore |
+| `error_mic_denied` | caller | `permissionDenied` | Mic kontrolü `dialing`'den önce yapılır; izin yoksa arama başlatılmaz |
 | diğer | both | `idle` | Yoksay |
 
 ---
@@ -298,6 +299,8 @@ Sunucu onayladı. Callee bildirildi. Caller'ın cevap bekleme aşaması.
 | `ws_connected` | caller | `waiting` | /active → hâlâ calling: burada kal |
 | `app_background` | caller | `waiting` | Arama devam eder |
 | diğer | caller | `waiting` | Yoksay |
+
+> **`error_mic_denied`:** Mic kontrolü `startCall()` içinde `dialing` state'e **girmeden** önce yapılır. Bu nedenle mic izni reddi §5.1 (idle) tablosunda — `idle → permissionDenied` transition'ı olarak modellenmiştir. `dialing` state'inden mic denied event'i gelmez.
 
 ---
 
@@ -343,6 +346,8 @@ Callee kabul etti. LiveKit bağlantısı ve ses aktivasyonu sürüyor.
 | `user_call_end` | both | `ended` | Connecting'de kullanıcı kesti |
 | `ws_call_ended` | both | `ended` | Karşı taraf connecting'de kesti |
 | `network_lost` | both | `ended` | Connecting'de ağ kesilirse retry yok |
+| `lk_reconnecting` | both | `reconnecting` | LiveKit kendi retry'ını başlattı — connecting'de de tetiklenebilir |
+| `error_mic_denied` | callee | `permissionDenied` | acceptCall'da mic izni yoksa; hemen `_hangUpLocally(ended)` takip eder |
 | diğer | both | `connecting` | Yoksay |
 
 > **iOS Callee — `_callkitAudioReady` Completer:**  

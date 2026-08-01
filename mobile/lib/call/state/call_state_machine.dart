@@ -18,6 +18,7 @@ class CallStateMachine {
   static const Map<CallStatus, Set<CallStatus>> _callerTransitions = {
     CallStatus.idle: {
       CallStatus.dialing,
+      CallStatus.permissionDenied, // mic kontrolü dialing'den önce; izin yoksa buradan çıkılır
     },
     CallStatus.dialing: {
       CallStatus.waiting,   // /start → 200: callId + token geldi
@@ -53,12 +54,12 @@ class CallStateMachine {
       CallStatus.idle,
       CallStatus.dialing,  // arama biter bitmez yeni arama başlatılabilir
     },
-    // Terminal state'ler — tek geçiş: idle'a dön
+    // Terminal state'ler — idle veya ended üzerinden reset
     CallStatus.rejected: {CallStatus.idle},
     CallStatus.missed: {CallStatus.idle},
     CallStatus.noAnswer: {CallStatus.idle},
     CallStatus.busy: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle},
+    CallStatus.permissionDenied: {CallStatus.idle, CallStatus.ended},
   };
 
   // ── Callee transition tablosu ──────────────────────────────────────────────
@@ -78,6 +79,7 @@ class CallStateMachine {
       CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
+      CallStatus.permissionDenied, // acceptCall'da mic izni yoksa; hemen _hangUpLocally takip eder
       CallStatus.idle,
     },
     CallStatus.active: {
@@ -95,7 +97,7 @@ class CallStateMachine {
     },
     CallStatus.rejected: {CallStatus.idle},
     CallStatus.missed: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle},
+    CallStatus.permissionDenied: {CallStatus.idle, CallStatus.ended},
   };
 
   // ── Role bilinmiyorsa fallback (crash recovery, uygulama yeniden açılış) ──
@@ -105,6 +107,7 @@ class CallStateMachine {
     CallStatus.idle: {
       CallStatus.dialing,
       CallStatus.ringing,
+      CallStatus.permissionDenied,
     },
     CallStatus.dialing: {
       CallStatus.waiting,
@@ -131,6 +134,7 @@ class CallStateMachine {
       CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
+      CallStatus.permissionDenied,
       CallStatus.idle,
     },
     CallStatus.active: {
@@ -151,7 +155,7 @@ class CallStateMachine {
     CallStatus.missed: {CallStatus.idle},
     CallStatus.noAnswer: {CallStatus.idle},
     CallStatus.busy: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle},
+    CallStatus.permissionDenied: {CallStatus.idle, CallStatus.ended},
   };
 
   // ── Public API ─────────────────────────────────────────────────────────────

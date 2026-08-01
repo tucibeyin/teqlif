@@ -474,3 +474,6 @@ Refactoring sırasında alınan kararlar buraya kaydedilir.
 | 2026-08-01 | Terminal state absorbe zamanı | Step 3 (Step 2 sonrası) | İsimler stabil olmadan absorbe riski yüksek |
 | 2026-08-01 | iOS push kanalı seçimi | VoIP push > FCM; voip_token varsa FCM göz ardı edilir | FCM data push iOS background'da CallKit'i tetikleyemez; VoIP push APNs'in yüksek öncelikli kanalıdır — gözlemlenen FCM/VoIP karışıklığının kök nedeni |
 | 2026-08-01 | Multi-device token modeli | Tek cihaz varsayımı (son kaydeden kazanır) | V2.0 kapsamı dışında; gerekirse `(user_id, device_id, token_type)` PK'lı tablo migrasyonu ayrı adım olarak ele alınır |
+| 2026-08-01 | `idle → permissionDenied` transition | Caller tablosuna eklendi | Step 1 hard block regresyonu: mic izni reddinde `_setState(permissionDenied)` `idle`'dan çağrılıyor; önceden log-only guard'da gizleniyordu |
+| 2026-08-01 | `connecting → permissionDenied` transition | Callee tablosuna eklendi; `permissionDenied → ended` de eklendi | Callee acceptCall yolunda mic yoksa `connecting → permissionDenied → ended` gerekiyor; `_hangUpLocally(ended)` permissionDenied üzerinden çalışmalı |
+| 2026-08-01 | `connecting → reconnecting` belgelendi | VoIP.md §5.5'e eklendi | `RoomReconnectingEvent` connecting state'indeyken de tetiklenebilir; kod izin veriyor ama doc eksikti |
