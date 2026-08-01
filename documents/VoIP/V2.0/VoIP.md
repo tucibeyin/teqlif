@@ -331,9 +331,12 @@ Callee kabul etti. LiveKit bağlantısı ve ses aktivasyonu sürüyor.
 
 | Event | Role | Yeni State | Not |
 |---|---|---|---|
-| `lk_connect_ok` | both | `active` | Bağlantı kuruldu |
-| `audio_session_active` | callee | `active` | iOS — CallKit audio session aktif |
-| `audio_focus_gained` | callee | `active` | Android — AudioFocus alındı |
+| `lk_connect_ok` | caller | `active` | Pre-connect yoksa; Android callee için de geçerli |
+| `lk_peer_joined` | caller | `active` | Pre-connect durumunda callee LiveKit'e katıldı |
+| `audio_session_active` | callee | `active` | iOS: `_callkitAudioReady` Completer fulfills → mic aktif |
+| `audio_focus_gained` | callee | `active` | Android: AudioFocus alındı → mic aktif |
+| `api_accept_error` | callee | `ended` | /accept başarısız — caller iptal → 404, veya 5xx |
+| `callkit_ended` | both | `ended` | Sistem / native ekran aramayı sonlandırdı |
 | `timer_connecting_exp` | both | `ended` | 15s doldu, takıldı |
 | `lk_connect_failed` | both | `ended` | Bağlantı kurulamadı |
 | `error_lk_permanent` | both | `ended` | LiveKit tamamen vazgeçti |
@@ -341,6 +344,9 @@ Callee kabul etti. LiveKit bağlantısı ve ses aktivasyonu sürüyor.
 | `ws_call_ended` | both | `ended` | Karşı taraf connecting'de kesti |
 | `network_lost` | both | `ended` | Connecting'de ağ kesilirse retry yok |
 | diğer | both | `connecting` | Yoksay |
+
+> **iOS Callee — `_callkitAudioReady` Completer:**  
+> iOS callee için `connecting→active` iki koşul gerektirir: LiveKit bağlantısı (`lk_connect_ok`) VE AVAudioSession aktivasyonu (`audio_session_active`). Sıra belirsizdir; hangisi geç gelirse o `active`'i tetikler. `_audioSessionActivated` flag erken gelen sinyalin kaybolmasını önler.
 
 ---
 
@@ -700,15 +706,282 @@ V1.0 `VoIP_decisions.md` içindeki use case'ler V2.0 state transition'larına ka
 
 ---
 
+## 11. Anahtar Akış Sekansları
+
+Transition tablosu "ne → ne" anlatır; sekanslar "ne sırayla" anlatır. Her önemli akış için adım adım sıra.
+
+---
+
+### 11.1 Normal Arama — iOS Caller → iOS Callee (Pre-connect ile)
+
+**Caller tarafı:**
+
+```
+1.  user_call_start → state: idle → dialing
+2.  POST /calls/start →
+      200: {call_id, room_name, token}
+    api_start_ok → state: dialing → waiting
+3.  ringback başlar (loop)
+4.  Pre-connect: room.connect(token) → lk_connect_ok
+    (waiting'de alınır, state değişmez — caller callee'yi bekler)
+5.  Backend callee'yi bildirir (WS + VoIP push)
+6.  Callee kabul eder → backend: ws_call_accepted
+    ws_call_accepted → state: waiting → connecting
+7.  ringback durur
+8.  lk_peer_joined (callee LiveKit'e bağlandı)
+    lk_peer_joined → state: connecting → active
+9.  Ses aktif, CallScreen güncellenir
+```
+
+**Callee tarafı (iOS, foreground):**
+
+```
+1.  WS ws_call_incoming → state: idle → ringing
+2.  IncomingCallScreen açılır
+3.  Kullanıcı kabul → user_call_accept → state: ringing → connecting
+4.  POST /calls/accept →
+      200: {token}
+    api_accept_ok → room.connect(token) başlar
+5.  CallKit: action.fulfill() çağrılır
+6.  provider(_:didActivate:audioSession:) callback → Flutter method channel → audio_session_active
+7.  lk_connect_ok VE audio_session_active her ikisi gelince:
+    _callkitAudioReady Completer tamamlanır → state: connecting → active
+8.  AVAudioSession: playAndRecord/voiceChat configure
+    setSpeakerphoneOn(preventCallScreenAutoOpen)
+9.  Mikrofon aktif, ses akışı başlar
+```
+
+---
+
+### 11.2 Caller Cancel (Caller waiting, Callee ringing)
+
+```
+Caller (waiting)                    Backend                 Callee (ringing)
+     |                                 |                          |
+     | user_call_cancel                |                          |
+     | state: waiting → ended          |                          |
+     |---- POST /calls/end ----------->|                          |
+     |                                 |--- ws_call_ended ------->|
+     |                                 |                ws_call_ended
+     |                                 |                state: ringing → ended
+     |                                 |                IncomingCallScreen kapanır
+     | 2s → timer_reset_ready          |                          |
+     | state: ended → idle             |                2s → timer_reset_ready
+                                                        state: ended → idle
+```
+
+---
+
+### 11.3 Race — Caller Cancel + Callee Accept Çakışması
+
+Bu sekans `api_accept_error`'ın neden transition tablosunda olduğunu gösterir.
+
+```
+Caller (waiting)              Backend              Callee (ringing)
+     |                           |                       |
+     | user_call_cancel           |    user_call_accept   |
+     | state: waiting → ended    |   state: ringing → connecting
+     |--- POST /calls/end ------>|                       |
+     |                           | call.status = "ended" |
+     |                           |<--- POST /calls/accept|
+     |                           |--- 404 (not found) -->|
+     |                           |              api_accept_error
+     |                           |              state: connecting → ended
+     |                           |
+     | Her iki taraf ended → idle (2s sonra)
+```
+
+> Callee tarafında `ws_call_ended` da gelebilir (backend /end işledi). İkisi de aynı sonuca getirir: `ended`. Dedup: zaten `ended`'daysa `ws_call_ended` yoksayılır.
+
+---
+
+### 11.4 Crash Recovery (Active Call, Caller Crash)
+
+**Kısa crash (< D-3: 10s):**
+
+```
+Caller (active) → CRASH
+Callee (active): lk_peer_left → 10s peer timer başlar
+
+Caller: app relaunched
+  app_launch → idle → GET /calls/active →
+    200: {call_id, token, role="caller", status="calling"}
+  api_active_found → state: idle → active (restore)
+  room.connect(token) — yeni oturumla bağlan
+
+Callee: 10s dolmadan lk_peer_joined → timer iptal → active devam
+```
+
+**Uzun crash (> D-3: 10s):**
+
+```
+Caller → CRASH
+Callee: lk_peer_left → 10s → timer_peer_expired → state: active → ended
+
+Caller: app relaunched
+  app_launch → idle → GET /calls/active →
+    204 (arama bitti)
+  api_active_none → state: idle kalır
+```
+
+---
+
+### 11.5 Network Recovery (Active → Reconnecting → Active)
+
+```
+Her iki taraf (active):
+  Ağ kesildi → network_lost → state: active → reconnecting
+  LiveKit kendi reconnect döngüsünü başlatır
+  WS hemen kapanır, mark_dm_offline → Redis temizlenir
+
+Ağ geri geldi → network_restored
+  LiveKit retry başarılı → lk_reconnected → state: reconnecting → active
+  WS yeniden bağlanır → ws_connected → GET /calls/active → hâlâ calling: state doğrulandı
+
+Retry başarısız (D-3: 40s):
+  timer_peer_expired → state: reconnecting → ended
+```
+
+---
+
+## 12. CallNotifAdapter Spesifikasyonu
+
+Push bildirim katmanının tam spesifikasyonu. Bu adapter `CallHardwareAdapter` ile aynı seviyede; state değiştirmez, event üretir.
+
+---
+
+### 12.1 Push Payload Formatları
+
+**VoIP Push (iOS APNs — background/killed):**
+
+```json
+{
+  "call_id": "123",
+  "caller_id": "456",
+  "caller_username": "ahmet",
+  "caller_avatar": "/uploads/avatars/ahmet.jpg",
+  "room_name": "lk_room_abc123",
+  "livekit_token": "<jwt>",
+  "type": "incoming_call"
+}
+```
+
+**FCM Data Push (Android — background/killed):**
+
+```json
+{
+  "data": {
+    "type": "incoming_call",
+    "call_id": "123",
+    "caller_id": "456",
+    "caller_username": "ahmet",
+    "caller_avatar": "/uploads/avatars/ahmet.jpg",
+    "room_name": "lk_room_abc123",
+    "livekit_token": "<jwt>"
+  }
+}
+```
+
+**Push type değerleri:**
+
+| type | Açıklama | Alıcı event |
+|---|---|---|
+| `incoming_call` | Yeni arama | `voip_push_received` / `fcm_push_received` |
+| `call_cancelled` | Caller iptal etti (background callee) | Background'da CallKit dismiss |
+| `call_ended` | Arama bitti | Background'da CallKit dismiss |
+
+---
+
+### 12.2 Token Kayıt Akışı
+
+**iOS VoIP token:**
+```
+pushRegistry(_:didUpdate:for:) callback
+  → token hex string
+  → POST /users/me/voip-token { "token": "<hex>" }
+```
+
+**iOS FCM token:**
+```
+Messaging.messaging().token (uygulama açılışında)
+  → POST /users/me/fcm-token { "token": "<fcm_token>" }
+```
+
+**Android FCM token:**
+```
+FirebaseMessaging.instance.getToken()
+  → POST /users/me/fcm-token { "token": "<fcm_token>" }
+```
+
+**Token yenileme:**
+- iOS VoIP: `pushRegistry(_:didUpdate:for:)` yeni token → aynı endpoint
+- Android/iOS FCM: `FirebaseMessaging.onTokenRefresh` → aynı endpoint
+- Token yenileme, uygulama açık olmasa da çalışmalı — arka planda kayıt
+
+---
+
+### 12.3 Push Skip Kuralı
+
+```
+Backend /calls/start:
+  callee_ws_connected = is_dm_online(callee_id)  ← Redis: ws_dm_online:{id}
+
+  if callee_ws_connected:
+      push ATLA — WS eventi yeterli
+  else:
+      voip_token varsa → VoIP push (iOS)
+      fcm_token varsa  → FCM push (Android)
+      her ikisi yoksa  → sadece WS eventi (foreground-only teslimat)
+```
+
+---
+
+### 12.4 Token Null Durumu
+
+| voip_token | fcm_token | Sonuç |
+|---|---|---|
+| var | — | VoIP push (iOS) |
+| — | var | FCM push (Android) |
+| var | var | Platform'a göre ikisi de denenebilir |
+| null | null | Push yok — WS bağlıysa ulaşır, değilse arama kaybolur |
+
+> Token null ise ve WS offline ise callee aramayı hiç görmez. Bu bir hata değil, tasarım gereği — token kayıt başarısız olmuş demektir. Backend bu durumu loglamalı.
+
+---
+
+### 12.5 Background'da `call_cancelled` / `call_ended` İşleme
+
+Callee background'da beklerken caller iptal ederse:
+
+**iOS (background):**
+```
+FCM/VoIP push: type="call_cancelled"
+  → AppDelegate: saveEndCall(uuid, reason=.remoteEnded)
+  → provider.reportCall(with:endedAt:reason:) → CallKit native ekran kapanır
+  → Flutter: callkit_ended event → state: ringing → ended
+```
+
+**Android (background):**
+```
+FCM push: type="call_cancelled"
+  → flutter_callkit_incoming: hideCallkitIncoming(uuid)
+  → Bildirim kaldırılır
+  → Flutter: event → state: ringing → ended
+```
+
+---
+
 ## Sonraki Adımlar
 
 - [x] **Bölüm 1** — Tasarım kararları (axioms)
 - [x] **Bölüm 2** — Üç boyutlu model
 - [x] **Bölüm 3** — State listesi + cross-cutting event kuralları
 - [x] **Bölüm 4** — Event kataloğu
-- [x] **Bölüm 5** — Transition tablosu
+- [x] **Bölüm 5** — Transition tablosu (api_accept_error + lk_peer_joined + callkit_ended eklendi)
 - [x] **Bölüm 6** — Platform side effect'leri (iOS + Android adapter)
 - [x] **Bölüm 7** — Call related UI routing
 - [x] **Bölüm 8** — Modül mimarisi ve sorumluluk sınırları
 - [x] **Bölüm 9** — API / DB / Redis katmanı
 - [x] **Bölüm 10** — V1.0 use case → V2.0 eşlemesi
+- [x] **Bölüm 11** — Anahtar akış sekansları (5 kritik akış)
+- [x] **Bölüm 12** — CallNotifAdapter spesifikasyonu
