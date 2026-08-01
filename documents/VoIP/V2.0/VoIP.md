@@ -97,11 +97,9 @@ RECOVERY:
   active → reconnecting → ended    (timeout)
 ```
 
----
+### 3.4 Cross-Cutting Events
 
-## 4. Cross-Cutting Events
-
-Bu event'ler herhangi bir state'te gelebilir. Her state için davranışı aşağıdaki tablolarda tanımlanacaktır (bkz. Bölüm 5).
+Bu event'ler herhangi bir state'te gelebilir. Her state için davranışı Bölüm 5 transition tablosunda tanımlanmıştır.
 
 | Event               | Kaynak                              |
 |---------------------|-------------------------------------|
@@ -112,12 +110,12 @@ Bu event'ler herhangi bir state'te gelebilir. Her state için davranışı aşa�
 | `app_crash`         | Sistem (OOM, exception)             |
 | `app_launch`        | Kullanıcı (crash sonrası yeniden aç)|
 
-### Network kaybında genel kural:
+#### Network kaybında genel kural:
 - **WS:** Hemen kapanır, `mark_dm_offline` → Redis temizlenir
 - **LiveKit:** Kendi reconnect mekanizması devreye girer
 - **Pending state:** `network_restored` event'inde `/calls/active` ile state restore
 
-### Crash/launch'da genel kural:
+#### Crash/launch'da genel kural:
 - App açılışında `/calls/active` sorgulanır
 - Aktif çağrı varsa → ilgili role'e göre state restore
 - Aktif çağrı yoksa → `idle`
@@ -395,13 +393,322 @@ Arama sonlandı. 2s cleanup penceresi.
 
 ---
 
+## 6. Platform Side Effect'leri (Hardware Adapter)
+
+State machine platform-agnostic'tir. Her transition'ın platform-specific side effect'i bu bölümde tanımlanır.
+
+---
+
+### 6.1 iOS — CallHardwareAdapter
+
+**Merkezi otorite:** `AVAudioSession`  
+**Arama UI:** CallKit (native sistem ekranı)  
+**Audio session aktivasyon sinyali:** `didActivateAudioSession` (CallKit callback)
+
+#### State → Side Effect
+
+| State | Side Effect |
+|---|---|
+| `dialing` | AVAudioSession: `playAndRecord/voiceChat` configure; ringback başlar (loop) |
+| `waiting` | ringback devam |
+| `ringing` | VoIP push → `reportNewIncomingCall` → CallKit native screen, sistem zili |
+| `connecting` | `_callkitAudioReady` Completer bekler (`didActivateAudioSession` sinyaline kadar) |
+| `active` | Completer tamamlanır; `setSpeakerphoneOn(swipeLiveActive)` — session configure SONRASI |
+| `reconnecting` | weak.wav earpiece; AVAudioSession değiştirilmez |
+| `ended` | ended.wav veya busy.wav earpiece; `provider.reportCall(with:endedAt:reason:)` |
+| `idle` | AVAudioSession release; tüm player'lar durdurulur |
+
+#### Kritik kurallar
+
+**`room.connect()` AVAudioSession override:**  
+`room.connect()` içeride AVAudioSession'ı `soloAmbient`'e çeker → ringback durur.  
+Çözüm: `room.connect()` sonrası `playAndRecord/voiceChat` yeniden configure + ringback resume.
+
+**`setSpeakerphoneOn` sırası:**  
+Her zaman `session.configure()` SONRASI çağrılmalı; önce çağrılırsa AVAudioSession override'ı sıfırlar.
+
+**`_callkitAudioReady` Completer:**  
+`didActivateAudioSession` sinyali `connecting` state'inde gelir. Sinyal erken gelse dahi `_audioSessionActivated` flag sayesinde Completer kaybolmaz — `_joinRoom()` asla sinyal kaçırmaz.
+
+**Foreground çağrı dismiss (saveEndCall):**  
+WS online kullanıcıya push gönderilmez (§9.3). Eğer race condition nedeniyle push gelirse: `appIsActive=true` → `saveEndCall(uuid, 3)` ile `provider.reportCall(ended:)` çağrılır. Bu, `CXCallController` round-trip'inden (~67ms) daha hızlıdır.
+
+---
+
+### 6.2 Android — CallHardwareAdapter
+
+**Merkezi otorite:** `AudioFocus` (AudioManager)  
+**Arama UI:** `flutter_callkit_incoming` (bildirim tabanlı — CallKit yok)  
+**Audio session aktivasyon sinyali:** YOK — doğrudan configure
+
+#### State → Side Effect
+
+| State | Side Effect |
+|---|---|
+| `dialing` | AudioSession configure `voiceChat`; ringback `ReleaseMode.loop` başlar |
+| `waiting` | ringback devam |
+| `ringing` | FCM push → bildirim UI; sistem zili |
+| `connecting` | AudioFocus GAIN talep edilir; `_activateCalleeAudio()` doğrudan çağrılır |
+| `active` | `setSpeakerphoneOn(swipeLiveActive)` — AudioSession configure SONRASI |
+| `reconnecting` | weak.wav; AudioFocus değiştirilmez |
+| `ended` | ended.wav / busy.wav (`voiceCommunication` context); AudioFocus abandon |
+| `idle` | tüm player'lar durdurulur, AudioFocus release |
+
+#### Kritik kurallar
+
+**`ReleaseMode.loop`:**  
+`onPlayerComplete` AudioFocus kaybında tetiklenmez. `ReleaseMode.loop` native MediaPlayer loop kullanır; focus kaybı + resume sonrası loop devam eder.
+
+**`voiceCommunication` context (bitiş sesleri):**  
+WebRTC AudioFocus bırakınca Android ses çıkışını speaker'a döndürür. ended.wav / busy.wav için `voiceCommunication` usage context tanımlanmazsa bu sesler speaker'dan çıkar.
+
+**`setCallConnected(uuid)` notu:**  
+Android'de yalnızca görsel bildirim günceller; iOS `didActivateAudioSession` eşdeğeri etkisi yoktur.
+
+---
+
+### 6.3 Audio Routing Tablosu
+
+| State | Ses | iOS Çıkış | Android Çıkış |
+|---|---|---|---|
+| `dialing` / `waiting` | ringback.wav (loop) | Earpiece | Earpiece (voiceCommunication) |
+| `ringing` | Sistem zili | Speaker (platform default) | Speaker (platform default) |
+| `connecting` | — | Earpiece | Earpiece |
+| `active` | Gerçek ses | Caller=Earpiece / Callee=bkz.aşağı | Caller=Earpiece / Callee=bkz.aşağı |
+| `reconnecting` | weak.wav | Earpiece | Earpiece |
+| `ended` (bağlıyken) | ended.wav | Earpiece | Earpiece (voiceCommunication) |
+| `ended` (reject/busy) | busy.wav | Earpiece | Earpiece (voiceCommunication) |
+| `idle` | Sessiz | — | — |
+
+**Callee active ses kuralı:**  
+Callee SwipeLive'daysa → Speaker, değilse → Earpiece.  
+Caller her zaman Earpiece (SwipeLive PiP'teyken de).  
+Karar verici: `preventCallScreenAutoOpen` flag'i.
+
+---
+
+### 6.4 Platform Fark Özeti
+
+| Konu | iOS | Android |
+|---|---|---|
+| Ses otoritesi | AVAudioSession | AudioFocus + AudioManager |
+| Arama UI | CallKit (native) | flutter_callkit_incoming (bildirim) |
+| Audio session aktivasyon sinyali | `didActivateAudioSession` (CallKit) | Yok — doğrudan configure |
+| Ringback loop | ReleaseMode.loop | ReleaseMode.loop |
+| `room.connect()` yan etkisi | AVAudioSession → soloAmbient | AudioFocus talep eder |
+| `room.connect()` sonrası | playAndRecord yeniden configure | 200ms bekleme + ringback kontrol |
+| Speakerphone sırası | `setSpeakerphoneOn` (session.configure sonrası) | `setSpeakerphoneOn` (AudioSession sonrası) |
+
+---
+
+## 7. Call Related UI Routing
+
+`CallScreenRouter` arama state'ini, role'ü ve bağlamı okuyarak hangi ekranın gösterileceğine karar verir. Her ekran kendi state yorumunu yapmaz; routing kararı tek bir yerden çıkar.
+
+---
+
+### 7.1 Ekran Envanteri
+
+| Ekran | Açıklama |
+|---|---|
+| `CallScreen` | Tam ekran arama ekranı — outgoing, connecting, active, ended |
+| `IncomingCallScreen` | Tam ekran gelen arama (callee, foreground, SwipeLive yok) |
+| `IncomingCallBar` | Alt bar — gelen arama (callee, SwipeLive aktif) |
+| `MinimizedCallBar` | Küçültülmüş durum (swipe-up ile açılır, swipe-down ile restore) |
+| CallKit Native Screen | iOS sistem ekranı — VoIP push ile açılır |
+| FCM Notification | Android bildirim — background/killed state |
+
+---
+
+### 7.2 Routing Tablosu
+
+| State | Role | Bağlam | Ekran |
+|---|---|---|---|
+| `idle` | both | — | Yok |
+| `dialing` | caller | — | `CallScreen` (calling indicator) |
+| `waiting` | caller | — | `CallScreen` (ringing indicator) |
+| `ringing` | callee | foreground, SwipeLive yok | `IncomingCallScreen` |
+| `ringing` | callee | foreground, SwipeLive aktif | `IncomingCallBar` |
+| `ringing` | callee | background / killed (iOS) | CallKit Native Screen (VoIP push) |
+| `ringing` | callee | background / killed (Android) | FCM Notification |
+| `connecting` | both | — | `CallScreen` (connecting state) |
+| `active` | both | `preventCallScreenAutoOpen=false` | `CallScreen` |
+| `active` | both | `preventCallScreenAutoOpen=true` | `MinimizedCallBar` (SwipeLive PiP) |
+| `reconnecting` | both | — | `CallScreen` (reconnecting indicator) |
+| `ended` | both | — | `CallScreen` (ended tone → 2s sonra dismiss) |
+
+---
+
+### 7.3 Routing Kuralları
+
+**Kural 1 — Tek karar noktası:**  
+Hangi ekranın açılacağı / kapanacağı `CallScreenRouter`'dan geçer. State değişikliği → router bildirilir → router ekran kararını verir. Ekranlar kendi routing kararı vermez.
+
+**Kural 2 — SwipeLive bağlamı:**  
+`preventCallScreenAutoOpen=true` → tam ekran aç değil; `false` → tam ekran aç.  
+Bu flag tüm routing noktalarında tutarlı biçimde okunur.
+
+**Kural 3 — Dedup:**  
+`ringing` state'inde WS eventi + VoIP push eş zamanlı gelebilir. Router zaten `ringing`'deyse ikinci ekranı açmaz.
+
+**Kural 4 — `ended` 2s window:**  
+`ended` state'inde ekran hemen kapanmaz; ended tonu çalınır, `timer_reset_ready` (2s) gelince `idle`'a geçilir ve ekran dismiss edilir.
+
+---
+
+## 8. Modül Mimarisi
+
+### 8.1 Modül Listesi
+
+| Modül | Tek Sorumluluk | Platform |
+|---|---|---|
+| `CallStateMachine` | State + transition logic; event routing | Dart (pure, platform bağımsız) |
+| `CallHardwareAdapter` | Audio session, speakerphone, ringback | iOS impl / Android impl ayrı |
+| `CallNotifAdapter` | VoIP / FCM push al-gönder, CallKit raporlama | iOS impl / Android impl ayrı |
+| `CallScreenRouter` | Hangi ekran — state × role × context | Dart (UI-aware) |
+| `CallRepository` | API çağrıları (/start, /accept, /reject, /end, /active) | Dart |
+| `CallService` | Orchestration — modülleri bağlar, dışarıya tek API noktası | Dart |
+
+---
+
+### 8.2 Bağımlılık Akışı
+
+```
+[UI / Screen]
+      │ (yalnızca CallService'e bağımlı)
+      ▼
+CallService
+  ├── CallStateMachine    ← saf state logic
+  ├── CallHardwareAdapter ← ses hardware (iOS/Android impl)
+  ├── CallNotifAdapter    ← bildirim (iOS/Android impl)
+  ├── CallScreenRouter    ← ekran kararı
+  └── CallRepository      ← API / network
+```
+
+**Kural:** Bağımlılık tek yönlüdür — dış katmandan iç katmana.  
+`CallStateMachine` hiçbir modülü import etmez.  
+`CallHardwareAdapter` state'i değiştirmez, event'leri dinler.  
+`CallService` orkestra eder; iş mantığı kararı vermez.
+
+---
+
+### 8.3 Sorumluluk Sınırları
+
+| Modül | Evet | Hayır |
+|---|---|---|
+| `CallStateMachine` | State değiştir, transition tanımla | Platform API, UI, network |
+| `CallHardwareAdapter` | AVAudioSession, AudioFocus, speakerphone | State değiştir |
+| `CallNotifAdapter` | Push gönder/al, CallKit raporla | State değiştir |
+| `CallScreenRouter` | Ekran aç/kapat kararı ver | State değiştir, iş mantığı |
+| `CallRepository` | HTTP istek yap, yanıt parse et | İş mantığı kararı |
+| `CallService` | Modülleri orkestra et | Doğrudan platform API'ye ulaş |
+
+---
+
+## 9. API / DB / Redis Katmanı
+
+### 9.1 API Kontratları
+
+| Endpoint | Method | Role | Çağrı anı | State transition |
+|---|---|---|---|---|
+| `/calls/start` | POST | caller | `dialing` girişi | `api_start_ok` → `waiting` |
+| `/calls/{id}/accept` | POST | callee | `connecting` girişi | — |
+| `/calls/{id}/reject` | POST | callee | `ended` girişi (callee) | — |
+| `/calls/{id}/end` | POST | both | `ended` girişi | — |
+| `/calls/{id}/missed` | POST | caller | `ended` (ring timeout) | fire-and-forget |
+| `/calls/active` | GET | both | App launch + WS reconnect | `api_active_found` → restore |
+
+#### `/calls/start`
+
+```
+POST /calls/start
+Body: { "callee_id": <int> }
+
+200 → { "call_id": <int>, "room_name": <str>, "token": <str> }
+409 → error_busy_callee
+423 → error_busy_caller
+```
+
+#### `/calls/active`
+
+```
+GET /calls/active
+
+200 → { "call_id": <int>, "room_name": <str>, "token": <str>,
+         "role": "caller"|"callee", "status": <str> }
+204 → aktif arama yok (api_active_none)
+```
+
+---
+
+### 9.2 DB — Call Record Yaşam Döngüsü
+
+| Olay | DB İşlemi |
+|---|---|
+| `/calls/start` başarılı | INSERT calls (caller_id, callee_id, status="ringing", room_name) |
+| Callee accept | UPDATE status="calling" |
+| Callee reject | UPDATE status="rejected" |
+| End (bağlıyken) | UPDATE status="ended" |
+| Missed (ring timeout) | UPDATE status="missed" |
+| Recovery (`/calls/active`) | SELECT WHERE (caller_id=x OR callee_id=x) AND status IN ("ringing","calling") |
+
+**status enum:** `ringing` → `calling` → `ended` / `rejected` / `missed`
+
+---
+
+### 9.3 Redis Anahtarları
+
+| Anahtar | Değer | TTL | Kullanım |
+|---|---|---|---|
+| `ws_dm_online:{user_id}` | `1` | 90s | WS presence; connect'te set, disconnect'te del |
+
+**Push skip kararı:**  
+`/calls/start` → `is_dm_online(callee_id)` → key varsa push atlanır, WS eventi yeterlidir. Key yoksa (background/killed) push gönderilir.
+
+**TTL mantığı:**  
+90s TTL WS keepalive cycle'ını kapsar. Normal disconnect'te `mark_dm_offline` ile silinir; crash durumunda TTL korur.
+
+---
+
+## 10. V1.0 Use Case → V2.0 Eşlemesi
+
+V1.0 `VoIP_decisions.md` içindeki use case'ler V2.0 state transition'larına karşılık gelir. V1.0 kararları geçerliliğini korur; V2.0 bunları modele entegre eder.
+
+| UC | V1.0 Başlık | V2.0 State Akışı | Tetikleyici Event |
+|---|---|---|---|
+| UC-01 | Normal Arama (Callee Kabul) | `idle→dialing→waiting→connecting→active→ended→idle` | `lk_connect_ok` / `audio_session_active` |
+| UC-02 | Callee Reddetti | `waiting→ended` (caller) + `ringing→ended` (callee) | `ws_call_rejected` |
+| UC-03 | Caller İptal Etti | `waiting→ended` (caller) + `ringing→ended` (callee) | `user_call_cancel` + `ws_call_ended` |
+| UC-04 | Cevap Yok (Timeout) | `waiting→ended` / `ringing→ended` | `timer_ring_expired` / `timer_ring_expired` (D-2) |
+| UC-05 | Meşgul (Busy) | `dialing→ended` | `api_start_error` (409) |
+| UC-06 | Caller Aktif Aramayi Sonlandırdı | `active→ended→idle` (her iki taraf) | `user_call_end` → `ws_call_ended` |
+| UC-07 | Callee Aktif Aramayi Sonlandırdı | `active→ended→idle` (her iki taraf) | `user_call_end` → `ws_call_ended` |
+| UC-08 | Aramadayken Yeni Arama | Backend guard aktif; mevcut state değişmez | — |
+| UC-09 | Ağ Kesintisi / Yeniden Bağlanma | `active→reconnecting→active` veya `→ended` | `lk_reconnected` / `timer_peer_expired` |
+| UC-10 | Mikrofon İzni Reddedildi | `dialing→ended` | `error_mic_denied` |
+
+**V1.0'dan V2.0'a taşınan kararlar:**
+
+| V1.0 Bölüm | V2.0 Karşılığı |
+|---|---|
+| §2.1 iOS AVAudioSession + CallKit | Bölüm 6.1 |
+| §2.2 Android AudioFocus | Bölüm 6.2 |
+| §2.3 Platform fark tablosu | Bölüm 6.4 |
+| §3 Audio routing matrisi | Bölüm 6.3 |
+| §4 SwipeLive edge case'ler | Bölüm 7.2 (`preventCallScreenAutoOpen`) |
+| §5 Architectural decisions | Bölüm 1 axiom'larının motivasyonu |
+
+---
+
 ## Sonraki Adımlar
 
-Aşağıdaki bölümler sıradaki oturumlarda tamamlanacak:
-
+- [x] **Bölüm 1** — Tasarım kararları (axioms)
+- [x] **Bölüm 2** — Üç boyutlu model
+- [x] **Bölüm 3** — State listesi + cross-cutting event kuralları
 - [x] **Bölüm 4** — Event kataloğu
 - [x] **Bölüm 5** — Transition tablosu
-- [ ] **Bölüm 6** — Platform side effect'leri (iOS adapter / Android adapter)
-- [ ] **Bölüm 7** — Screen routing tablosu (CallScreenRouter kararları)
-- [ ] **Bölüm 8** — Modül mimarisi ve sorumluluk sınırları
-- [ ] **Bölüm 9** — V1.0 use case'lerinin V2.0 state machine'e eşlemesi
+- [x] **Bölüm 6** — Platform side effect'leri (iOS + Android adapter)
+- [x] **Bölüm 7** — Call related UI routing
+- [x] **Bölüm 8** — Modül mimarisi ve sorumluluk sınırları
+- [x] **Bölüm 9** — API / DB / Redis katmanı
+- [x] **Bölüm 10** — V1.0 use case → V2.0 eşlemesi
