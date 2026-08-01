@@ -381,7 +381,7 @@ class CallService {
         return;
       }
     }
-    _cpLog('STATE', '${oldStatus.name} → ${s.status.name} | callId=${s.callId}');
+    _cpLog('STATE', '${oldStatus.name} → ${s.status.name} | callId=${s.callId} | role=${_currentRole?.name ?? "unknown"}${s.status == CallStatus.ended && s.endReason != null ? " | endReason=${s.endReason!.name}" : ""}');
     final oldPoor = state.value.isPoorConnection;
 
     // Pre-sync elapsed BEFORE notifying listeners so the first connected frame
