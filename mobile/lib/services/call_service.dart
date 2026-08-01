@@ -148,18 +148,8 @@ class CallState {
 
 class CallService {
   CallService._() {
-    // _audioPlayer: busy/ended/weak sesleri için — ringing.wav buradan kaldırıldı.
-    // (ringing.wav artık pre-loaded _ringbackPlayer'da loop ile çalıyor)
-
-    // _ringbackPlayer: caller ringback (ringing.wav) — init'te pre-load edilir.
-    // ReleaseMode.stop: onPlayerComplete her zaman tetiklenir; manuel restart loop yapar.
-    _ringbackPlayer.onPlayerComplete.listen((_) async {
-      if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
-        _cpLog('SOUND', 'ringbackPlayer RESTART on complete (loop fallback) | status=${state.value.status.name}');
-        await _ringbackPlayer.seek(Duration.zero);
-        await _ringbackPlayer.resume();
-      }
-    });
+    // _ringbackPlayer: caller ringback (ringing.wav) — init'te pre-load edilir, ReleaseMode.loop ile döner.
+    // _audioPlayer: busy/ended/weak sesleri için — voiceCommunication context ile earpiece'te çalar.
     _preloadRingback();
 
     if (Platform.isIOS) {
@@ -170,7 +160,17 @@ class CallService {
 
   Future<void> _preloadRingback() async {
     try {
-      await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
+      // Android: busy/ended/weak sesler WebRTC audio focus bırakıldığında speaker'a geçmesin.
+      if (Platform.isAndroid) {
+        await _audioPlayer.setAudioContext(ap.AudioContext(
+          android: const ap.AudioContextAndroid(
+            usageType: ap.AndroidUsageType.voiceCommunication,
+            contentType: ap.AndroidContentType.sonification,
+            audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
+          ),
+        ));
+      }
+      await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
       await _ringbackPlayer.setAudioContext(ap.AudioContext(
         android: const ap.AudioContextAndroid(
           usageType: ap.AndroidUsageType.voiceCommunication,
@@ -477,15 +477,15 @@ class CallService {
               // Pre-loaded path: seek to start + resume — no asset loading delay (~10ms)
               // setReleaseMode explicitly on every resume: after stop() the mode may reset.
               _cpLog('SOUND', 'ringbackPlayer RESUME (pre-loaded) | ringing.wav instant start');
-              _cpLog('HW', 'ringbackPlayer PLAY | mode=stop pre-loaded=true device=earpiece');
-              await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
+              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=true device=earpiece');
+              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
               await _ringbackPlayer.seek(Duration.zero);
               await _ringbackPlayer.resume();
             } else {
               // Fallback: pre-load başarısızsa normal play (yükleme gecikmesi olabilir)
               _cpLog('SOUND', 'ringbackPlayer PLAY (fallback, not pre-loaded) | ringing.wav');
-              _cpLog('HW', 'ringbackPlayer PLAY | mode=stop pre-loaded=false device=earpiece');
-              await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
+              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=false device=earpiece');
+              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
               await _ringbackPlayer.play(ap.AssetSource('sounds/ringing.wav'));
             }
           }
