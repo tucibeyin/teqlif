@@ -491,25 +491,25 @@ async def start_call(
     }
     await _ws_broadcast(callee_id, ws_payload)
     callee_ws_connected = await ws_manager.is_dm_online(callee_id)
-    # Belt-and-suspenders: WS bağlı olsa bile her zaman push gönder.
-    # WS arka planda suspend edilmiş olabilir; push (VoIP/FCM) garantili ulaşır.
-    logger.info(
-        "[CALL_PROCESS][OUT] start_call: WS+Push (always) | call_id=%d callee=%d ws_connected=%s",
-        call.id, callee_id, callee_ws_connected,
-    )
-    # Fire-and-forget: push runs in background after HTTP response is returned.
-    # Avoids 1-3s latency on /start when APNs/FCM is slow or unavailable.
-    asyncio.create_task(
-        _send_call_push_bg(callee_id, current_user.id, call.id, room_name, callee_token)
-    )
-
-    logger.info(
-        "[CALL_PROCESS][OUT] start_call: WS+Push (bg task) | call_id=%d callee=%d ws_connected=%s callee_voip=%s callee_fcm=%s",
-        call.id, callee_id,
-        callee_ws_connected,
-        "YES" if callee.voip_token else "NO",
-        "YES" if callee.fcm_token else "NO",
-    )
+    if callee_ws_connected:
+        # Callee is foreground (active WS). WS event above is sufficient;
+        # VoIP/FCM push is unnecessary and causes a native CallKit screen flash on iOS.
+        logger.info(
+            "[CALL_PROCESS][OUT] start_call: push SKIPPED — callee WS online | call_id=%d callee=%d",
+            call.id, callee_id,
+        )
+    else:
+        # Callee is background/killed — push is the only reliable delivery path.
+        # Fire-and-forget: avoids 1-3s latency on /start when APNs/FCM is slow.
+        asyncio.create_task(
+            _send_call_push_bg(callee_id, current_user.id, call.id, room_name, callee_token)
+        )
+        logger.info(
+            "[CALL_PROCESS][OUT] start_call: push scheduled (bg task) | call_id=%d callee=%d voip=%s fcm=%s",
+            call.id, callee_id,
+            "YES" if callee.voip_token else "NO",
+            "YES" if callee.fcm_token else "NO",
+        )
     # Askıda kalan aramaları (Ghost calls) 35-40 sn sonra timeout'a çekmek için ARQ görevi ekle
     pool = get_pool()
     if pool:
