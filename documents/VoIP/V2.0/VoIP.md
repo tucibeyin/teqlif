@@ -289,6 +289,7 @@ Bu bölümdeki tablolar aşağıdaki kararlara dayanır.
 | D-2 | Callee fallback ring timer | **45s** | Caller 30s + server ARQ 40s'i de kapsar + buffer |
 | D-3 | `lk_peer_left` in `active` timeout | **10s** | Endüstri standardı (WhatsApp/Zoom pattern) |
 | D-4 | `audio_focus_lost` state etkisi | **State değişmez** | Adapter içinde yönetilir; state machine görmez |
+| D-5 | `reset()` — herhangi state'ten doğrudan `idle` | `reset()` herhangi bir state'ten direkt `idle`'a geçer, `ended`'ı atlar. `rejectCall()` ve `noAnswer` timer şu an bu yolu kullanıyor. State machine `→ idle` geçişlerine izin verir. | Step 8 hedefi: `reject` ve `noAnswer` akışları önce `ended`'a geçip sonra 2s sonra `idle`'a geçecek. Şimdilik `reset()` direkt geçiş için güvenli çünkü ringing/noAnswer'da temizlenecek LK/audio kaynağı yok. |
 
 ---
 
@@ -360,6 +361,8 @@ Callee bildirim aldı, kullanıcı kararını bekliyor.
 | `ws_call_incoming` | callee | `ringing` | Dedup — zaten burada, yoksay |
 | `voip_push_received` | callee | `ringing` | Dedup — yoksay |
 | `fcm_push_received` | callee | `ringing` | Dedup — yoksay |
+| `error_mic_denied` (denied) | callee | `ended` | acceptCall öncesi mic izni reddedildi; `/reject` fire-and-forget |
+| `error_mic_denied` (permanentlyDenied) | callee | `ringing` | State **KALMAZ**; `permPermanentlyDenied=true`; in-app modal + [Ayarlar'a Git]; kullanıcı döndüğünde `/calls/active` check (§15.2–15.3) |
 | `network_lost` | callee | `ringing` | Native screen devam eder (CallKit) |
 | `ws_connected` | callee | `ringing` | /active → hâlâ calling: burada kal |
 | `app_background` | callee | `ringing` | Native screen yönetir |
@@ -386,8 +389,9 @@ Callee kabul etti. LiveKit bağlantısı ve ses aktivasyonu sürüyor.
 | `ws_call_ended` | both | `ended` | Karşı taraf connecting'de kesti |
 | `network_lost` | both | `ended` | Connecting'de ağ kesilirse retry yok |
 | `lk_reconnecting` | both | `reconnecting` | LiveKit kendi retry'ını başlattı — connecting'de de tetiklenebilir |
-| `error_mic_denied` | callee | `permissionDenied` | acceptCall'da mic izni yoksa; hemen `_hangUpLocally(ended)` takip eder |
 | diğer | both | `connecting` | Yoksay |
+
+> **Callee mic kontrolü:** Hedef (Step 5 sonrası) — mic izni `connecting`'e **girmeden**, `ringing` state'indeyken kontrol edilir (§5.4 + §15.2). `connecting → permissionDenied` callee geçişi Step 5 öncesi mevcut kodda geçici olarak var; Step 5'te kaldırılacak.
 
 > **iOS Callee — `_callkitAudioReady` Completer:**  
 > iOS callee için `connecting→active` iki koşul gerektirir: LiveKit bağlantısı (`lk_connect_ok`) VE AVAudioSession aktivasyonu (`audio_session_active`). Sıra belirsizdir; hangisi geç gelirse o `active`'i tetikler. `_audioSessionActivated` flag erken gelen sinyalin kaybolmasını önler.
@@ -1604,35 +1608,83 @@ Her resource yalnızca acquire edildiyse release edilir.
 
 ---
 
-### 16.10 Backend Stale Call Cleanup
+### 16.10 Backend Ghost Call Cleanup — Spec
 
-`cleanup_ghost_calls_task` — ARQ worker'da çalışan cron job, **her 15 dakikada** (`:00`, `:15`, `:30`, `:45`).
+Uygulama çökmesi, sunucu yeniden başlatma veya ağ kesintisi nedeniyle `/end` hiç POST edilemediğinde DB'de `calling`/`active` kayıtlar kalabilir. Bu kayıtların periyodik olarak tespit edilip kapatılması gerekir.
 
-#### Temizleme eşikleri
+---
 
-| DB status | Koşul | Aksion |
+#### Tasarım Kararları
+
+**Kural 1 — İki ayrı eşik, iki farklı gerekçe:**
+
+`calling` kaydı için eşik:
+
+```
+eşik = max_ring_timeout + güvenlik_tamponu
+     = 45s (D-2: callee fallback) + ~4.5 dakika tampon
+     = 5 dakika
+```
+
+Normal akışta `delayed_call_timeout_task` (per-call ARQ task) 40s'de `missed` yapar — bu birincil mekanizmadır. Ghost cleanup ikincil güvenlik ağıdır: ARQ task'ı kaçırırsa (worker restart, Redis hatası) en geç **5 dakika** sonra kayıt kapanır.
+
+`active` kaydı için eşik:
+
+```
+primary signal  : LK room artık yok (otoriter — oda gidince arama da bitmiş)
+secondary guard : started_at > 1 saat (LK API geçici hatasında gerçek aramayı kapatmamak için)
+```
+
+LK API erişilemezse `active` kayıtlara dokunulmaz — kör temizlik yapmaktansa beklemek tercih edilir.
+
+**Kural 2 — Her cleanup 5 aksiyonu içerir:**
+
+| # | Aksiyon | Gerekçe |
 |---|---|---|
-| `calling` | `started_at` > **5 dakika** önce | `status = "missed"`, `ended_at = now`, LK oda sil |
-| `active` | `started_at` > **1 saat** önce **VE** LK odası yok | `status = "ended"`, `ended_at = now`, LK oda sil |
-| `active` | `started_at` > 1 saat önce **AMA** LK odası var | Dokunulmaz — gerçek çağrı olabilir |
+| 1 | `status` güncelle (`missed` / `ended`) | DB tutarlılığı |
+| 2 | `ended_at = now` | Süre hesabı ve raporlama |
+| 3 | WS eventi her iki tarafa | Açık uygulamalar state güncellesin |
+| 4 | LK odayı sil | Sunucu kaynağı serbest bırak |
+| 5 | `clear_call_redis(call_id)` | Redis participant key temizle |
 
-#### Her iki taraf bildirilir
+**Kural 3 — WS eventi hem caller hem callee'ye:**
+- `calling → missed` → `{"type": "call_missed"}`
+- `active → ended` → `{"type": "call_ended"}`
 
-Cleanup sırasında hem caller hem callee'ye WS eventi yayımlanır:
-- `calling → missed`: `{"type": "call_missed", "call_id": ...}`
-- `active → ended`: `{"type": "call_ended", "call_id": ...}`
+Kullanıcı uygulamayı açık tutuyorsa bu eventi alır → `ws_call_missed` / `ws_call_ended` → normal state transition.
 
-Kullanıcı uygulama açıksa bu eventi alır → `ws_call_missed` / `ws_call_ended` → normal state transition.
+**Kural 4 — Çalışma sıklığı: 15 dakika yeterlidir.**
+Normalin 20× üstünde — ghost'lar 5 dakikalık eşiği aştıktan sonra en fazla bir 15 dakika daha bekler (toplam ~20 dakika worst-case).
 
-#### Flutter crash recovery ile ilişkisi
+---
 
-| Crash sonrası süre | `/calls/active` sonucu | Flutter davranışı |
+#### Flutter Crash Recovery Penceresi
+
+| Crash sonrası süre | DB durumu | Flutter davranışı |
 |---|---|---|
-| < 5 dakika | DB hâlâ `calling` → `active_call` dolu | Recovery başlatılır (§11.4 kısa crash yolu) |
-| 5–15 dakika | Job henüz çalışmamış olabilir — belirsiz | Recovery dener; LK bağlanamazsa `ended` |
-| > 15 dakika | Job çalışmış → `missed`/`ended` | `/calls/active` → `active_call: null` → `idle` |
+| < 5 dakika | `calling`/`active` hâlâ var | `/calls/active` → recovery başlatılır (§11.4) |
+| 5–20 dakika | Ghost task henüz çalışmamış olabilir | Recovery dener; başarısızsa `ended` |
+| > 20 dakika | Ghost task çalışmış → `missed`/`ended` | `/calls/active: null` → `idle` |
 
-**Sonuç:** Flutter uygulaması `/end` POST edemeden çökse bile backend 5–20 dakika içinde DB'yi `missed`/`ended`'a çekip WS bildirimi gönderir. Uygulama tarafında ek bir stale kayıt temizleme mekanizmasına gerek yoktur.
+Flutter tarafında ek stale cleanup mekanizmasına gerek yoktur.
+
+---
+
+#### Mevcut Uygulama Değerlendirmesi
+
+`cleanup_ghost_calls_task` (ARQ cron, her 15 dk — `app/worker.py`):
+
+| Kural | Durum | Not |
+|---|---|---|
+| `calling` 5 dakika eşiği | ✅ | `calling_threshold = now - timedelta(minutes=5)` |
+| `active` 1 saat + LK room check | ✅ | `active_threshold = now - timedelta(hours=1)` + `lk_rooms` kontrolü |
+| LK API hatasında aktif aramalara dokunmama | ✅ | `if lk_rooms is None: continue` |
+| `ended_at` set etme | ✅ | Önceki bug düzeltilmiş |
+| WS bildirimi her iki tarafa | ✅ | `call_missed` ve `call_ended` publish ediliyor |
+| LK odayı sil | ✅ | `DeleteRoomRequest` çağrılıyor |
+| `clear_call_redis(call_id)` | ❌ **EKSİK** | Ghost task Redis participant key'i temizlemiyor; `call:{id}:participants` 3h TTL'ine kadar stale kalabilir |
+
+**Gerekli backend fix:** `cleanup_ghost_calls_task` içinde her temizlenen call için `clear_call_redis(call.id)` çağrısı eklenmeli.
 
 ---
 
