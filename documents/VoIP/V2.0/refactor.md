@@ -686,7 +686,7 @@ requestMicPermission()
                         _scheduleReset() → idle
 ```
 
-> **Step 3'te yapıldı:** `idle → ended` caller geçişi state machine'e eklendi; `endReason=permissionDenied` set ediliyor. Step 5'te bu akış `CallHardwareAdapter.requestMicPermission()` üzerinden çalışacak.
+> **Step 3'te yapıldı:** `idle → ended` caller geçişi state machine'e eklendi; `endReason=permissionDenied` set ediliyor. **Step 5'te tamamlandı:** `CallHardwareAdapter.requestMicPermission()` üzerinden çalışıyor.
 
 ---
 
@@ -708,11 +708,7 @@ requestMicPermission()
                           → bitmişse: ringing → ended
 ```
 
-**Mevcut durum (Step 5 öncesi):** Mic kontrolü `connecting`'e girdikten SONRA yapılıyor (`Permission.microphone.status` — `.request()` değil). `_hangUpLocally(ended, endReason: permissionDenied)` ile cleanup yapılıyor. Step 5'te:
-1. `.status` → `.request()` geçişi (OS dialog gösterilsin)
-2. Kontrol `connecting`'e girmeden önce yapılsın (`ringing` state'inde)
-3. `denied` → `ringing → ended` (connecting hiç girilmez)
-4. `permanentlyDenied` → `ringing` kalır (modal)
+**Step 5'te tamamlandı:** `.request()` ile OS dialog gösteriliyor; kontrol `connecting`'e girmeden yapılıyor (`ringing` state'inde). `denied` → `ringing → ended`; `permanentlyDenied` → `ringing` kalır (modal `IncomingCallScreen`/`IncomingCallBar` sorumluluğu — §15.3).
 
 ---
 
@@ -812,6 +808,28 @@ class CallScreenRouter {
 }
 ```
 
+**`ended + permissionDenied + !isCallScreenVisible` (VoIP.md §7.3 Kural 5):**
+
+Bu case `CallScreenRouter`'ın kapsamı dışındadır — router ekran kararı verir, hata bildirimi değil. `GlobalCallOverlay` doğrudan state'i dinleyerek handle eder:
+
+```dart
+// GlobalCallOverlay._onStateChange() içinde
+if (cs.status == CallStatus.ended &&
+    cs.endReason == EndReason.permissionDenied &&
+    !_cs.isCallScreenVisible.value) {
+  if (cs.permPermanentlyDenied) {
+    // AlertDialog: "Mikrofon erişimi Ayarlar'dan verilmeli" + [Ayarlar'a Git]
+    _showMicPermissionDialog(context);
+  } else {
+    // Snackbar: "Mikrofon izni gerekli"
+    ScaffoldMessenger.of(context).showSnackBar(...);
+  }
+}
+```
+
+Callee `permanentlyDenied` case'i `IncomingCallScreen`/`IncomingCallBar` sorumluluğundadır (§15.3) — `GlobalCallOverlay` müdahale etmez.
+```
+
 ---
 
 ## Step 7: `CallNotifAdapter`
@@ -909,3 +927,4 @@ Refactoring sırasında alınan kararlar buraya kaydedilir.
 | 2026-08-01 | Callee mic check timing değişikliği | Mevcut: `.status` SONRA `connecting`; Hedef: `.request()` ÖNCE `connecting` — Step 5'te uygulanacak | Yanlış timing: kullanıcı OS dialog'unu görmeden `connecting` state'e giriyor |
 | 2026-08-01 | `connecting → permissionDenied` callee geçici | Step 5'te kaldırılacak (mic check `connecting`'e girmeden olacak) | Şimdilik mevcut code ile uyumlu; Step 5 sonrası dead code olur |
 | 2026-08-01 | Ghost cleanup Redis gap (backend bug) | `cleanup_ghost_calls_task` içine `clear_call_redis(call_id)` çağrısı eklenmeli | §16.10 spec review sırasında tespit edildi: ghost temizlenince `call:{id}:participants` key (3h TTL) temizlenmiyor; `delayed_call_timeout_task` bunu yapıyor ama ghost task yapmıyor — stale Redis state 3 saate kadar kalabilir |
+| 2026-08-02 | Caller mic denied UI kararı | `GlobalCallOverlay` handle eder — CallScreen açılmaz | `idle → ended (permissionDenied)` case'inde `isCallScreenVisible=false`; CallScreen açmak semantik olarak yanlış ("arama başlamadı"); Overlay zaten `!isCallScreenVisible` durumunda call UI fallback görevi yapıyor |

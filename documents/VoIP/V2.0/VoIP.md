@@ -303,7 +303,7 @@ Bu bölümdeki tablolar aşağıdaki kararlara dayanır.
 | `fcm_push_received` | callee | `ringing` | Background/killed — FCM push |
 | `ws_connected` | both | `idle` → restore? | /active sorgula; aktif arama varsa state restore |
 | `app_launch` | both | `idle` → restore? | /active sorgula; aktif arama varsa state restore |
-| `error_mic_denied` | caller | `permissionDenied` | Mic kontrolü `dialing`'den önce yapılır; izin yoksa arama başlatılmaz |
+| `error_mic_denied` | caller | `ended` | Mic kontrolü `dialing`'den önce yapılır; endReason=permissionDenied; izin yoksa arama başlatılmaz |
 | diğer | both | `idle` | Yoksay |
 
 ---
@@ -340,7 +340,7 @@ Sunucu onayladı. Callee bildirildi. Caller'ın cevap bekleme aşaması.
 | `app_background` | caller | `waiting` | Arama devam eder |
 | diğer | caller | `waiting` | Yoksay |
 
-> **`error_mic_denied`:** Mic kontrolü `startCall()` içinde `dialing` state'e **girmeden** önce yapılır. Bu nedenle mic izni reddi §5.1 (idle) tablosunda — `idle → permissionDenied` transition'ı olarak modellenmiştir. `dialing` state'inden mic denied event'i gelmez.
+> **`error_mic_denied`:** Mic kontrolü `startCall()` içinde `dialing` state'e **girmeden** önce yapılır. Bu nedenle mic izni reddi §5.1 (idle) tablosunda — `idle → ended (endReason=permissionDenied)` transition'ı olarak modellenmiştir. `dialing` state'inden mic denied event'i gelmez. `isCallScreenVisible=false` olduğundan CallScreen açılmaz; UI kararı `GlobalCallOverlay`'e aittir (§7.3 Kural 5).
 
 ---
 
@@ -391,7 +391,7 @@ Callee kabul etti. LiveKit bağlantısı ve ses aktivasyonu sürüyor.
 | `lk_reconnecting` | both | `reconnecting` | LiveKit kendi retry'ını başlattı — connecting'de de tetiklenebilir |
 | diğer | both | `connecting` | Yoksay |
 
-> **Callee mic kontrolü:** Hedef (Step 5 sonrası) — mic izni `connecting`'e **girmeden**, `ringing` state'indeyken kontrol edilir (§5.4 + §15.2). `connecting → permissionDenied` callee geçişi Step 5 öncesi mevcut kodda geçici olarak var; Step 5'te kaldırılacak.
+> **Callee mic kontrolü (Step 5 — tamamlandı):** Mic izni `connecting`'e **girmeden**, `ringing` state'indeyken kontrol edilir (§5.4 + §15.2). `connecting → permissionDenied` geçici callee geçişi Step 5'te kaldırıldı.
 
 > **iOS Callee — `_callkitAudioReady` Completer:**  
 > iOS callee için `connecting→active` iki koşul gerektirir: LiveKit bağlantısı (`lk_connect_ok`) VE AVAudioSession aktivasyonu (`audio_session_active`). Sıra belirsizdir; hangisi geç gelirse o `active`'i tetikler. `_audioSessionActivated` flag erken gelen sinyalin kaybolmasını önler.
@@ -589,7 +589,9 @@ Karar verici: `preventCallScreenAutoOpen` flag'i.
 | `active` | both | `preventCallScreenAutoOpen=false` | `CallScreen` |
 | `active` | both | `preventCallScreenAutoOpen=true` | `MinimizedCallBar` (SwipeLive PiP) |
 | `reconnecting` | both | — | `CallScreen` (reconnecting indicator) |
-| `ended` | both | — | `CallScreen` (ended tone → 2s sonra dismiss) |
+| `ended` | both | isCallScreenVisible=true | `CallScreen` (ended tone → 2s sonra dismiss) |
+| `ended` | caller | isCallScreenVisible=false, endReason=permissionDenied | `GlobalCallOverlay` permissionDenied UI (§7.3 Kural 5) |
+| `ended` | both | isCallScreenVisible=false, diğer endReason | Yok — caller hiç calling'e geçmedi |
 
 ---
 
@@ -607,6 +609,13 @@ Bu flag tüm routing noktalarında tutarlı biçimde okunur.
 
 **Kural 4 — `ended` 2s window:**  
 `ended` state'inde ekran hemen kapanmaz; ended tonu çalınır, `timer_reset_ready` (2s) gelince `idle`'a geçilir ve ekran dismiss edilir.
+
+**Kural 5 — `ended + permissionDenied + !isCallScreenVisible`:**  
+Caller mic izni reddedilince CallScreen hiç açılmadığından `GlobalCallOverlay` bu durumu handle eder:  
+- `permPermanentlyDenied=false` → Snackbar: "Mikrofon izni gerekli"  
+- `permPermanentlyDenied=true` → AlertDialog: "Mikrofon erişimi Ayarlar'dan verilmeli" + [Ayarlar'a Git] [İptal]  
+
+`GlobalCallOverlay`, `state.status == ended && state.endReason == permissionDenied && !isCallScreenVisible` koşulunu dinler. 2s `timer_reset_ready` bitince `idle`'a geçilir — dialog zaten dismiss edilmiş olur. Bu kural yalnızca **caller** içindir; callee `permanentlyDenied` zaten `ringing` state'inde modal açar (§15.3).
 
 ---
 
@@ -1107,8 +1116,7 @@ FCM push: type="call_cancelled"
 | Modül | MODULE tag |
 |---|---|
 | `CallRepository` | `CALL_REPO` |
-| `CallHardwareAdapter` (iOS) | `CALL_HW_IOS` |
-| `CallHardwareAdapter` (Android) | `CALL_HW_AND` |
+| `CallHardwareAdapter` (iOS + Android) | `CALL_HW` |
 | `CallNotifAdapter` | `CALL_NOTIF` |
 | `CallScreenRouter` | `CALL_ROUTER` |
 
@@ -1200,7 +1208,7 @@ PERM | mic request → permanentlyDenied | role=callee
 ```bash
 # Tüm arama akışı — debug build
 flutter run | grep -iE --line-buffered \
-  "CALL_PROCESS|CALL_REPO|CALL_HW_IOS|CALL_HW_AND|CALL_NOTIF|CALL_ROUTER|UI_CALL|LIVE_SCREEN_CALL|Multiple devices|Please choose|\[[0-9]+\]:|Launching|Running Gradle|Syncing files"
+  "CALL_PROCESS|CALL_REPO|CALL_HW|CALL_NOTIF|CALL_ROUTER|UI_CALL|LIVE_SCREEN_CALL|Multiple devices|Please choose|\[[0-9]+\]:|Launching|Running Gradle|Syncing files"
 ```
 
 Sadece state geçişleri:
@@ -1313,8 +1321,8 @@ Arama akışındaki her hardware izninin ne zaman, nasıl ve hangi sonuçla kont
 | Kontrol noktası | `startCall()` — `dialing` state'e girmeden önce |
 | Yöntem | `Permission.microphone.request()` — OS dialog gösterir (ilk defa veya tekrar sorulabilirse) |
 | `granted` | Normal devam: `idle → dialing` |
-| `denied` (kalıcı değil) | `idle → permissionDenied`; kısa hata mesajı; bir sonraki denemede dialog tekrar çıkabilir |
-| `permanentlyDenied` | `idle → permissionDenied`, `permPermanentlyDenied=true`; in-app modal: "Mikrofon erişimi Ayarlar'dan verilmeli" + [Ayarlar'a Git] butonu |
+| `denied` (kalıcı değil) | `idle → ended` (endReason=permissionDenied); `GlobalCallOverlay` Snackbar: "Mikrofon izni gerekli"; bir sonraki denemede OS dialog tekrar çıkabilir |
+| `permanentlyDenied` | `idle → ended` (endReason=permissionDenied, permPermanentlyDenied=true); `GlobalCallOverlay` AlertDialog: "Mikrofon erişimi Ayarlar'dan verilmeli" + [Ayarlar'a Git] (§7.3 Kural 5) |
 
 #### Callee yolu
 
