@@ -61,7 +61,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli | ✅ `cc9bd511` |
 | **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `f47c2460` + `662e165a` |
 | **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | ✅ `d961e82e` + `e153e1a2` |
-| **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | 🔴 |
+| **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | ✅ |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | 🔴 |
 | **Step 7** | `CallNotifAdapter` | Push layer izole | 🔴 |
@@ -457,43 +457,130 @@ cs.status == CallStatus.ended && cs.endReason == EndReason.permissionDenied
 
 ## Step 4: `CallRepository`
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-01  
+**Tamamlanma:** 2026-08-01  
+**Commit:** —  _(sonraki commit)_
 
 **Bağımlılık:** Step 3 tamamlanmış olmalı (state naming stabil).
 
-**Log standardı (VoIP.md §13):** Her yeni modül şu helper'ı tanımlar:
-```dart
-void _log(String phase, String msg) =>
-    debugPrint('[CALL_REPO][${DateTime.now().toIso8601String()}][$phase] $msg');
-```
-`CallRepository` için MODULE tag: `CALL_REPO`, phase tag'ler: `API` (HTTP istek/yanıt).  
-Zorunlu log noktaları: her HTTP isteği öncesi + yanıt sonrası (§13.3).
+**Log standardı (VoIP.md §13):** `CALL_REPO` MODULE tag, `API` phase.
 
-`call_service.dart` içindeki HTTP metotlarını izole et:
+---
+
+### 4.1 Dosya Yapısı
 
 ```
 mobile/lib/call/
   repository/
-    call_repository.dart    ← typed API methods
+    call_repository.dart    ← CallRepository sınıfı + tüm result type'lar
 ```
 
+---
+
+### 4.2 Result Types
+
 ```dart
-class CallRepository {
-  Future<CallStartResult> startCall(int calleeId);
-  Future<CallAcceptResult> acceptCall(int callId);
-  Future<void> rejectCall(int callId);
-  Future<void> endCall(int callId);
-  Future<void> reportMissed(int callId);
-  Future<ActiveCallResult?> getActiveCall();
-  Future<CallStatus> getCallStatus(int callId);
-  Future<CalleeTokenResult> getCalleeToken(int callId);
+class CallStartResult {
+  final int callId;
+  final String roomName;
+  final String livekitUrl;
+  final String token;
+}
+
+class CallAcceptResult {
+  final DateTime? acceptedAt;
+  final String? token;
+  final String? livekitUrl;
+}
+
+class ActiveCallResult {
+  final int callId;
+  final String status;       // backend string: "calling" | "active" | ...
+  final String role;         // "caller" | "callee"
+  final String roomName;
+  final String livekitUrl;
+  final String token;
+  final Map<String, dynamic> otherUser;
+  final DateTime? acceptedAt;
+}
+
+class CalleeTokenResult {
+  final String? token;
+  final String? livekitUrl;
+  final String? roomName;
 }
 ```
 
-**Production'a alma:** `CallService` sadece `_repository.*` çağırır, HTTP kodu tamamen dışarı taşındı.
+---
+
+### 4.3 Repository Metotları
+
+| Metot | HTTP | Fire-and-forget? | Retry? | Notlar |
+|---|---|---|---|---|
+| `startCall(calleeId)` | `POST /calls/start` | Hayır | Hayır | AppException propagate (USER_BUSY vb.) |
+| `acceptCall(callId)` | `POST /calls/$id/accept` | Hayır | Evet (max 4, 500ms·n backoff) | state guard retry'da değil, caller'da |
+| `rejectCall(callId)` | `POST /calls/$id/reject` | Evet | Hayır | catchError log |
+| `endCall(callId)` | `POST /calls/$id/end` | Evet | Evet (1 retry, 500ms) | catchError log |
+| `reportMissed(callId)` | `POST /calls/$id/missed` | Evet | Hayır | catchError log |
+| `reportConnected(callId)` | `POST /calls/$id/connected` | Evet | Hayır | catchError log |
+| `getActiveCall()` | `GET /calls/active` | Hayır | Hayır | null döner active_call yoksa |
+| `getCallStatus(callId)` | `GET /calls/$id/status` | Hayır | Hayır | String döner: "calling"\|"active"\|... |
+| `getCalleeToken(callId)` | `GET /calls/$id/callee-token` | Hayır | Hayır | token/url null olabilir |
+
+**Auth:** Constructor parametresiz; `StorageService.instance.getAccessToken()` + `apiCall()` util direkt çağrılır (mevcut `_post`/`_get` patterni ile özdeş).
+
+**acceptCall retry:** Retry döngüsü `CallRepository`'de — ama `status != connecting` abort kontrolü caller (CallService) sorumluluğunda. Repository sadece HTTP dener, abort sinyalini `abortSignal` callback ile alır:
+
+```dart
+Future<CallAcceptResult> acceptCall(
+  int callId, {
+  required bool Function() shouldAbort,  // () => status != connecting
+});
+```
+
+---
+
+### 4.4 call_service.dart Değişiklikleri
+
+Eklenenler:
+```dart
+final _repository = CallRepository();
+```
+
+Her `_post('/calls/...')` ve `_get('/calls/...')` çağrısı `_repository.*` ile değiştirilir:
+
+| Eski | Yeni |
+|---|---|
+| `_post('/calls/start', {'callee_id': id})` | `_repository.startCall(id)` |
+| `_post('/calls/$id/accept')` (retry döngüsü) | `_repository.acceptCall(id, shouldAbort: ...)` |
+| `_post('/calls/$id/reject').catchError(...)` | `_repository.rejectCall(id)` |
+| `_post('/calls/$id/end').catchError(...)` (retry) | `_repository.endCall(id)` |
+| `_post('/calls/$id/missed')` | `_repository.reportMissed(id)` |
+| `_post('/calls/$id/connected').catchError(...)` | `_repository.reportConnected(id)` |
+| `_get('/calls/active')` | `_repository.getActiveCall()` |
+| `_get('/calls/$id/status')` | `_repository.getCallStatus(id)` |
+| `_get('/calls/$id/callee-token')` | `_repository.getCalleeToken(id)` |
+
+**Kapsam dışı (Step 4'te taşınmaz):**  
+Group call endpoint'leri (`/invite`, `/participants/*`) — bunlar farklı flow, ayrı adımda.  
+`_post`/`_get`/`_getList` helper'ları call_service'de kalır (group call'lar için hâlâ lazım).
+
+---
+
+### 4.5 Checklist
+
+- [x] `call_repository.dart` oluşturuldu (result types + sınıf)
+- [x] `_log()` helper: `[CALL_REPO][timestamp][API]` formatı
+- [x] Her HTTP istek öncesi + yanıt sonrası log (§13.3)
+- [x] `acceptCall` retry + `shouldAbort` callback
+- [x] `endCall` fire-and-forget + 1 retry
+- [x] `call_service.dart`: `_repository` field eklendi
+- [x] Tüm call endpoint `_post`/`_get` çağrıları repository'e taşındı
+- [x] `dart analyze` sıfır hata
+- [ ] Reject / endCall / accept senaryoları manuel test (Android→iOS)
+
+**Production'a alma:** `CallService` sadece `_repository.*` çağırır, call-related HTTP kodu tamamen dışarı taşındı.
 
 ---
 

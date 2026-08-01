@@ -28,11 +28,13 @@ import '../call/state/call_status.dart';
 import '../call/state/call_role.dart';
 import '../call/state/call_state_machine.dart';
 import '../call/state/end_reason.dart';
+import '../call/repository/call_repository.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
 export '../call/state/call_role.dart';
 export '../call/state/end_reason.dart';
+export '../call/repository/call_repository.dart' show CallStartResult, CallAcceptResult, ActiveCallResult, CalleeTokenResult;
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -212,6 +214,8 @@ class CallService {
   }
   static final CallService instance = CallService._();
 
+  final _repository = CallRepository();
+
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
   final isCallScreenVisible = ValueNotifier<bool>(false);
   final preventCallScreenAutoOpen = ValueNotifier<bool>(false);
@@ -342,15 +346,6 @@ class CallService {
         Uri.parse('$kBaseUrl$path'),
         headers: await _authHeaders(),
         body: body != null ? jsonEncode(body) : null,
-      ),
-    );
-  }
-
-  Future<Map<String, dynamic>> _get(String path) async {
-    return await apiCall(
-      () async => http.get(
-        Uri.parse('$kBaseUrl$path'),
-        headers: await _authHeaders(),
       ),
     );
   }
@@ -559,23 +554,21 @@ class CallService {
     );
 
     try {
-      _cpLog('OUT', 'POST /calls/start → request | calleeId=$calleeId');
-      final data = await _post('/calls/start', {'callee_id': calleeId});
-      _cpLog('OUT', 'POST /calls/start → response | callId=${data['call_id']} roomName=${data['room_name']}');
+      final startResult = await _repository.startCall(calleeId);
       _cpLog('OUT', 'POST /calls/start e2ee=NO');
       _setState(
         state.value.copyWith(
           status: CallStatus.waiting,
-          callId: data['call_id'] as int,
-          roomName: data['room_name'] as String,
-          livekitUrl: data['livekit_url'] as String,
-          token: data['token'] as String,
+          callId: startResult.callId,
+          roomName: startResult.roomName,
+          livekitUrl: startResult.livekitUrl,
+          token: startResult.token,
         ),
       );
 
       if (Platform.isIOS) {
         try {
-          final uuid = _formatToUuid(data['call_id'].toString());
+          final uuid = _formatToUuid(startResult.callId.toString());
           final params = CallKitParams(
             id: uuid,
             nameCaller: calleeUsername,
@@ -584,7 +577,7 @@ class CallService {
             handle: 'Teqlif Voice Call',
             type: 0,
             duration: 45000,
-            extra: {'call_id': data['call_id']},
+            extra: {'call_id': startResult.callId},
             ios: IOSParams(
               iconName: 'AppIcon',
               handleType: 'generic',
@@ -615,14 +608,13 @@ class CallService {
       // WhatsApp-like Pre-Connection: Arayan kişi beklemeden LiveKit'e bağlanır.
       _cpLog('OUT', 'pre-connect _joinRoom starting (WhatsApp-like)');
       await _joinRoom(
-        livekitUrl: data['livekit_url'] as String,
-        token: data['token'] as String,
+        livekitUrl: startResult.livekitUrl,
+        token: startResult.token,
       );
       _cpLog('OUT', 'pre-connect _joinRoom finished');
 
       // WS kayıp event recovery: call_accepted WS'den gelmezse poll ile yakala
-      final callIdForPoll = data['call_id'] as int;
-      _startCallerStatusPoll(callIdForPoll);
+      _startCallerStatusPoll(startResult.callId);
     } on AppException catch (e) {
       _cpLog('OUT', 'startCall AppException | code=${e.code}');
       if (e.code == 'USER_BUSY') {
@@ -647,9 +639,7 @@ class CallService {
         final callId = state.value.callId;
         _cpLog('OUT', 'ringTimer FIRED → noAnswer | callId=$callId');
         if (callId != null) {
-          try {
-            await _post('/calls/$callId/missed');
-          } catch (_) {}
+          _repository.reportMissed(callId);
         }
         _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.noAnswer));
         await Future.delayed(const Duration(seconds: 2));
@@ -669,16 +659,13 @@ class CallService {
         return;
       }
       try {
-        final statusData = await _get('/calls/$callId/status');
-        final s = statusData['status'] as String?;
+        final s = await _repository.getCallStatus(callId);
         _cpLog('OUT', 'callerStatusPoll tick | callId=$callId backendStatus=$s status=${state.value.status}');
         if (s == 'active') {
           _callerStatusPollTimer?.cancel();
           if (state.value.status == CallStatus.waiting) {
             _cpLog('OUT', 'callerStatusPoll → RECOVERED call_accepted | callId=$callId');
-            await onCallAccepted({
-              if (statusData['accepted_at'] != null) 'accepted_at': statusData['accepted_at'],
-            });
+            await onCallAccepted({});
           }
         } else if (s == 'missed' || s == 'ended' || s == 'rejected') {
           _callerStatusPollTimer?.cancel();
@@ -733,9 +720,7 @@ class CallService {
     if (hasActiveCall) {
       _cpLog('IN', 'hasActiveCall BUSY_REJECT | currentStatus=${state.value.status} currentCallId=${state.value.callId} incomingCallId=$incomingCallId');
       if (incomingCallId != null && incomingCallId != state.value.callId) {
-        try {
-          await _post('/calls/$incomingCallId/reject');
-        } catch (_) {}
+        _repository.rejectCall(incomingCallId);
         // Dismiss the stale incoming notification so the user cannot tap Accept/Decline
         // on it later (which would fire duplicate call_rejected events to the caller).
         try {
@@ -752,8 +737,7 @@ class CallService {
 
     if (incomingCallId != null) {
       try {
-        final statusData = await _get('/calls/$incomingCallId/status');
-        final backendStatus = statusData['status'];
+        final backendStatus = await _repository.getCallStatus(incomingCallId);
         _cpLog('IN', 'backendStatus check | callId=$incomingCallId status=$backendStatus');
         if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
           _cpLog('IN', 'backendStatus SKIPPED (already terminated) | callId=$incomingCallId');
@@ -838,12 +822,12 @@ class CallService {
     final fetchStartAt = DateTime.now();
     _cpLog('IN', '_fetchCalleeToken start | callId=$callId fetchStartUtc=${fetchStartAt.toUtc().toIso8601String()}');
     try {
-      final data = await _get('/calls/$callId/callee-token');
+      final tokenResult = await _repository.getCalleeToken(callId);
       final fetchEndAt = DateTime.now();
       final httpMs = fetchEndAt.difference(fetchStartAt).inMilliseconds;
-      final token = data['token'] as String?;
-      final url = data['livekit_url'] as String?;
-      final room = data['room_name'] as String?;
+      final token = tokenResult.token;
+      final url = tokenResult.livekitUrl;
+      final room = tokenResult.roomName;
       _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room httpMs=$httpMs');
       if (state.value.status == CallStatus.ringing && state.value.callId == callId) {
         _setState(state.value.copyWith(
@@ -1098,32 +1082,14 @@ class CallService {
       _cpLog('IN', 'acceptCall: NO pre-connect (room=null, isJoining=false, token=${preConnectToken != null}) → FALLBACK to /accept response token');
     }
 
-    _cpLog('IN', 'POST /calls/$callId/accept → request (retry max=4)');
     try {
-      Map<String, dynamic>? data;
-      int retryCount = 0;
-      while (retryCount < 4) {
-        // Abort if state changed during a retry wait (e.g. endCall called while backing off).
-        if (state.value.status != CallStatus.connecting) {
-          _cpLog('IN', 'acceptCall ABORTED during retry | status=${state.value.status.name}');
-          return;
-        }
-        try {
-          _cpLog('IN', 'POST /calls/$callId/accept attempt=${retryCount + 1}');
-          data = await _post('/calls/$callId/accept');
-          _cpLog('IN', 'POST /calls/$callId/accept SUCCESS | acceptedAt=${data['accepted_at']} tokenLen=${(data['token'] as String?)?.length}');
-          break;
-        } catch (e) {
-          retryCount++;
-          _cpLog('IN', 'POST /calls/$callId/accept RETRY | attempt=$retryCount error=$e');
-          if (retryCount >= 4) rethrow;
-          await Future.delayed(Duration(milliseconds: 500 * retryCount));
-        }
-      }
-      if (data == null) throw Exception('Accept data is null');
+      final acceptResult = await _repository.acceptCall(
+        callId,
+        shouldAbort: () => state.value.status != CallStatus.connecting,
+      );
 
-      if (data['accepted_at'] != null) {
-        final parsedAt = DateTime.parse(data['accepted_at']);
+      if (acceptResult.acceptedAt != null) {
+        final parsedAt = acceptResult.acceptedAt!;
         final nowUtc = DateTime.now().toUtc();
         _cpLog('TIMER', 'acceptedAt SET [CALLEE/accept-response] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} httpRTT=${nowUtc.difference(parsedAt).inMilliseconds}ms');
         // Use backing field — avoids connecting→connecting self-transition rebuild.
@@ -1134,8 +1100,8 @@ class CallService {
 
       // FALLBACK: hiç pre-connect başlamadıysa response token ile LiveKit'e bağlan.
       if (_room == null && !_isJoiningRoom) {
-        final responseToken = data['token'] as String?;
-        final responseLkUrl = (data['livekit_url'] as String?) ?? preConnectUrl;
+        final responseToken = acceptResult.token;
+        final responseLkUrl = acceptResult.livekitUrl ?? preConnectUrl;
         _cpLog('IN', 'acceptCall FALLBACK: _joinRoom with RESPONSE token | tokenLen=${responseToken?.length} url=$responseLkUrl');
         if (responseToken != null && responseLkUrl != null) {
           _joinRoom(livekitUrl: responseLkUrl, token: responseToken).catchError((e) {
@@ -1146,6 +1112,13 @@ class CallService {
           _hangUpLocally(status: CallStatus.ended);
         }
       }
+    } on AppException catch (e) {
+      if (e.code == 'ABORTED') {
+        _cpLog('IN', 'acceptCall ABORTED | status=${state.value.status.name}');
+        return;
+      }
+      _cpLog('IN', 'acceptCall FAILED | $e');
+      _hangUpLocally(status: CallStatus.ended);
     } catch (e) {
       _cpLog('IN', 'acceptCall FAILED after retries | $e');
       _hangUpLocally(status: CallStatus.ended);
@@ -1167,10 +1140,7 @@ class CallService {
     // Same pattern as endCall() fire-and-forget — user intent is unambiguous.
     reset();
     if (callId != null) {
-      _post('/calls/$callId/reject').catchError((e) {
-        _cpLog('IN', 'rejectCall HTTP FAILED (non-fatal, state already reset) | callId=$callId $e');
-        return <String, dynamic>{};
-      });
+      _repository.rejectCall(callId);
     }
   }
 
@@ -1842,10 +1812,7 @@ class CallService {
     // T6: Notify backend so connected_at is stamped for accurate duration.
     final callId = state.value.callId;
     if (callId != null) {
-      _post('/calls/$callId/connected').catchError((e) {
-        _cpLog('API', 'POST /calls/$callId/connected FAILED | $e');
-        return <String, dynamic>{};
-      });
+      _repository.reportConnected(callId);
     }
   }
 
@@ -2003,17 +1970,7 @@ class CallService {
     final callId = state.value.callId;
     _callerStatusPollTimer?.cancel();
     if (callId != null) {
-      _cpLog('END', 'POST /calls/$callId/end fire-and-forget');
-      _post('/calls/$callId/end').catchError((e) {
-        _cpLog('END', 'POST /calls/$callId/end retry | $e');
-        Future.delayed(const Duration(milliseconds: 500)).then((_) {
-          _post('/calls/$callId/end').catchError((e2) {
-            _cpLog('END', 'POST /calls/$callId/end retry2 FAILED | $e2');
-            return <String, dynamic>{};
-          });
-        });
-        return <String, dynamic>{};
-      });
+      _repository.endCall(callId);
     }
     await _hangUpLocally(status: CallStatus.ended);
   }
@@ -2216,26 +2173,24 @@ class CallService {
     }
 
     try {
-      final data = await _get('/calls/active');
-      final activeCall = data['active_call'];
+      final activeCall = await _repository.getActiveCall();
 
       if (activeCall == null) {
         _cpLog('RECOVERY', 'checkActiveCall → no active call (idle confirmed)');
         return;
       }
 
-      final callId     = activeCall['call_id'] as int;
-      final callStatus = activeCall['status']  as String;
-      final role       = activeCall['role']    as String;    // "caller" | "callee"
-      final roomName   = activeCall['room_name'] as String;
-      final lkUrl      = activeCall['livekit_url'] as String;
-      final freshToken = activeCall['token']   as String;
-      final otherUser  = activeCall['other_user'] as Map<String, dynamic>? ?? {};
+      final callId     = activeCall.callId;
+      final callStatus = activeCall.status;
+      final role       = activeCall.role;
+      final roomName   = activeCall.roomName;
+      final lkUrl      = activeCall.livekitUrl;
+      final freshToken = activeCall.token;
+      final otherUser  = activeCall.otherUser;
       final otherUserId   = otherUser['id'] as int?;
       final otherUsername = otherUser['username'] as String?;
       final otherAvatar   = otherUser['avatar']   as String?;
-      final acceptedAtStr = activeCall['accepted_at'] as String?;
-      final acceptedAt    = acceptedAtStr != null ? DateTime.tryParse(acceptedAtStr) : null;
+      final acceptedAt    = activeCall.acceptedAt;
 
       _cpLog(
         'RECOVERY',
