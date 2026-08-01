@@ -75,6 +75,9 @@ class CallState {
   final bool remoteVideoEnabled;
   final List<CallParticipant> participants;
   final GroupInvite? pendingGroupInvite;
+  // true: grup davetine katılan misafir (host değil).
+  // Bu flag endCall() yerine leaveGroupCall() çağrısını tetikler.
+  final bool isGroupGuest;
 
   const CallState({
     this.status = CallStatus.idle,
@@ -96,6 +99,7 @@ class CallState {
     this.remoteVideoEnabled = false,
     this.participants = const [],
     this.pendingGroupInvite,
+    this.isGroupGuest = false,
   });
 
   CallState copyWith({
@@ -118,6 +122,7 @@ class CallState {
     bool? remoteVideoEnabled,
     List<CallParticipant>? participants,
     GroupInvite? Function()? pendingGroupInvite,
+    bool? isGroupGuest,
   }) {
     return CallState(
       status: status ?? this.status,
@@ -142,6 +147,7 @@ class CallState {
       pendingGroupInvite: pendingGroupInvite != null
           ? pendingGroupInvite()
           : this.pendingGroupInvite,
+      isGroupGuest: isGroupGuest ?? this.isGroupGuest,
     );
   }
 }
@@ -2495,29 +2501,34 @@ class CallService {
       final myId = await StorageService.getCurrentUserId();
       if (myId == null) throw AppException('No user id', code: 'NO_USER', statusCode: 401);
 
-      final resp = await _post('/calls/${invite.callId}/participants/$myId/accept');
+      // FIX 1: connecting + callId ÖNCE set et — _joinRoom içi rol tespiti
+      // callStatusAtEntry == connecting → isCalleeRole=true → audio session + mic açılır.
+      // Eski sırada state=idle idi → caller pre-connect yoluna giriyordu → mic açılmıyordu.
+      //
+      // FIX 2: _audioSessionActivated = true — grup davetinin CallKit incoming call'u yok.
+      // Callee yolunda iOS 4s bekler (didActivateAudioSession); bu bayrak beklemeyi atlar.
+      _setState(state.value.copyWith(
+        pendingGroupInvite: () => null,
+        status: CallStatus.connecting,
+        callId: invite.callId,
+        roomName: invite.roomName,
+        isGroupGuest: true,
+      ));
+      _audioSessionActivated = true;
 
-      // Clear pending invite
-      _setState(state.value.copyWith(pendingGroupInvite: () => null));
-
-      // Join the LiveKit room
+      // LiveKit odasına bağlan (callee yolu: audio session configure + mic aç)
       await _joinRoom(
         livekitUrl: invite.livekitUrl,
         token: invite.livekitToken,
       );
 
-      // Load participants from response
+      // Backen'de "joined" olarak işaretle ve güncel katılımcı listesini al
+      final resp = await _post('/calls/${invite.callId}/participants/$myId/accept');
       final rawParticipants = resp['participants'] as List<dynamic>? ?? [];
       final participants = rawParticipants
           .map((p) => CallParticipant.fromJson(p as Map<String, dynamic>))
           .toList();
-
-      _setState(state.value.copyWith(
-        callId: invite.callId,
-        roomName: invite.roomName,
-        status: CallStatus.connecting,
-        participants: participants,
-      ));
+      _setState(state.value.copyWith(participants: participants));
 
       _cpLog('GROUP', 'acceptGroupInvite OK | callId=${invite.callId} participants=${participants.length}');
     } catch (e) {
@@ -2542,6 +2553,23 @@ class CallService {
     } catch (e) {
       _cpLog('GROUP', 'rejectGroupInvite ERROR (non-fatal) | $e');
     }
+  }
+
+  // ── Grup Arama: Gruptan Ayrıl (misafir) ──────────────────────────────────────
+
+  /// Grup aramasına davet yoluyla katılan misafirin gruptan ayrılması.
+  /// endCall()'dan farklı olarak aramayı herkes için bitirmez — sadece kendisi ayrılır.
+  Future<void> leaveGroupCall() async {
+    final callId = state.value.callId;
+    final myId = await StorageService.getCurrentUserId();
+    _cpLog('GROUP', 'leaveGroupCall | callId=$callId myId=$myId');
+    if (callId != null && myId != null) {
+      _post('/calls/$callId/participants/$myId/leave').catchError((e) {
+        _cpLog('GROUP', 'leaveGroupCall HTTP FAILED (non-fatal) | $e');
+        return <String, dynamic>{};
+      });
+    }
+    await _hangUpLocally(status: CallStatus.ended);
   }
 
   // ── Grup Arama: Katılımcı Çıkar ───────────────────────────────────────────

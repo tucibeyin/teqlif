@@ -648,9 +648,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       cs.status == CallStatus.reconnecting)
                                     GestureDetector(
                                       onTap: () {
-                                        _cpLog('END', 'CallScreen END CALL tapped | callId=${CallService.instance.state.value.callId}');
-                                        _uiLog('CALL_SCREEN', 'END_TAP', 'callId=${CallService.instance.state.value.callId}');
-                                        CallService.instance.endCall();
+                                        final svc = CallService.instance;
+                                        _cpLog('END', 'CallScreen END/LEAVE tapped | callId=${svc.state.value.callId} isGroupGuest=${svc.state.value.isGroupGuest}');
+                                        _uiLog('CALL_SCREEN', 'END_TAP', 'callId=${svc.state.value.callId} isGroupGuest=${svc.state.value.isGroupGuest}');
+                                        if (svc.state.value.isGroupGuest) {
+                                          svc.leaveGroupCall();
+                                        } else {
+                                          svc.endCall();
+                                        }
                                       },
                                       child: Container(
                                         width: 72,

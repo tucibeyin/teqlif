@@ -1358,6 +1358,58 @@ async def remove_participant(
     return {"ok": True}
 
 
+# ── POST /api/calls/{call_id}/participants/{user_id}/leave ────────────────────
+
+@router.post("/{call_id}/participants/{user_id}/leave")
+async def leave_group_call(
+    call_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Davetli kişi grubu kendi isteğiyle terk eder. Aramayı herkes için bitirmez."""
+    if current_user.id != user_id:
+        raise ForbiddenException()
+
+    logger.info("[CALL_GROUP][LEAVE] leave_group_call ENTER | call_id=%d user=%d", call_id, user_id)
+
+    result = await db.execute(
+        select(CallParticipant).where(
+            CallParticipant.call_id == call_id,
+            CallParticipant.user_id == user_id,
+            CallParticipant.status == "joined",
+        ).with_for_update()
+    )
+    cp = result.scalar_one_or_none()
+    if not cp:
+        return {"ok": True}  # idempotent
+
+    cp.status = "left"
+    cp.left_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    await remove_participant_redis(call_id, user_id)
+
+    call = await db.get(Call, call_id)
+    payload = {
+        "type": ws_types.CALL_PARTICIPANT_LEFT,
+        "call_id": call_id,
+        "user_id": user_id,
+        "username": current_user.username,
+    }
+
+    # Kalan guest'lere bildir
+    await broadcast_to_call_participants(call_id, payload, exclude_user_id=user_id)
+
+    # Orijinal 1-on-1 çiftine bildir (Redis SET'inde değiller)
+    if call:
+        for uid in {call.caller_id, call.callee_id} - {user_id}:
+            await send_to_user(uid, payload)
+
+    logger.info("[CALL_GROUP][LEAVE] leave OK | call_id=%d user=%d", call_id, user_id)
+    return {"ok": True}
+
+
 # ── GET /api/calls/{call_id}/participants ─────────────────────────────────────
 
 @router.get("/{call_id}/participants")

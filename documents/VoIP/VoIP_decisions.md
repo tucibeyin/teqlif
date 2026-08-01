@@ -617,6 +617,77 @@ if (_audioSessionActivated) {
 
 ---
 
+## 7. Grup Arama
+
+---
+
+### 7.1 Kurallar
+
+| Taraf | Yapabildiği |
+|---|---|
+| Aramayı başlatan (host) | Aktif aramaya kişi davet edebilir |
+| Aramayı başlatan (host) | Katılımcıyı gruptan çıkarabilir |
+| Davet edilen misafir | Daveti kabul veya reddedebilir |
+| Davet edilen misafir | Dilediğinde gruptan kendi çıkabilir |
+
+Grup araması her zaman 1-on-1 başlar. Host, aktif aramadayken `/invite` endpoint'iyle kişileri ekler. Maksimum katılımcı sayısı `Call.max_participants` ile sınırlıdır.
+
+---
+
+### 7.2 Uygulama Durumu (Ağustos 2026)
+
+| Katman | Durum |
+|---|---|
+| Backend | Tam uygulandı: `/invite`, `/accept`, `/reject`, `/leave`, `/remove`, `/participants` |
+| Redis | Misafir katılımcı takibi — `call:{id}:participants` SET |
+| ARQ | Davet timeout (30s) — `invite_timeout_task` |
+| WS event'leri | Tam: `call_group_invite`, `call_participant_joined/left/removed/rejected/timeout/invited` |
+| Mobile service | Tam: `inviteToCall`, `acceptGroupInvite`, `rejectGroupInvite`, `leaveGroupCall`, `removeParticipant` |
+| Mobile UI | Büyük ölçüde hazır: davet modalı, katılımcı şeridi, grup davet banner'ı |
+| Production'da aktif | **Hayır** — henüz kullanıcılara açılmadı |
+
+---
+
+### 7.3 Misafir vs Host Audio Akışı
+
+**Host (1-on-1 aramayı başlatan):** Normal `startCall` → `acceptCall` akışı. `endCall()` aramayı herkes için bitirir.
+
+**Misafir (davete katılan):** `acceptGroupInvite()` → state `connecting` → `_joinRoom()` (callee yolu) → `/accept` HTTP. Gruptan ayrılmak için `leaveGroupCall()` → `/participants/{id}/leave` → sadece kendi bağlantısını keser.
+
+**Kritik fark:** `isGroupGuest: true` ise call screen "End Call" butonu `leaveGroupCall()` çağırır. `false` ise `endCall()`.
+
+---
+
+### 7.4 Bilinen Düzeltilen Bug — acceptGroupInvite Audio Path
+
+**Problem:** `acceptGroupInvite()` içinde `_joinRoom()` state=`idle`'dayken çağrılıyordu. `_joinRoom` içinde `isCalleeRole = callStatusAtEntry == CallStatus.connecting` olduğu için rol tespiti başarısız oluyordu — misafir "caller pre-connect" yoluna giriyordu, mikrofon açılmıyordu.
+
+**Ek sorun (iOS):** Callee yolunda iOS `didActivateAudioSession` sinyali beklenir (4s timeout). Grup daveti için CallKit incoming call yok — sinyal hiç gelmez, her kabul 4s gecikir.
+
+**Çözüm (Ağustos 2026):**
+1. `_setState(connecting + callId + isGroupGuest=true)` → `_joinRoom()` öncesinde
+2. `_audioSessionActivated = true` → iOS CallKit bekleme bypass
+
+---
+
+### 7.5 Misafirin Gruptan Ayrılması — Neden Ayrı Endpoint
+
+`endCall()` → `POST /calls/{id}/end` — tüm aramayı bitirir, odayı siler. Misafir için bu yanlış.
+
+`leaveGroupCall()` → `POST /calls/{id}/participants/{myId}/leave` — sadece misafiri çıkarır, arama devam eder. Backend Redis'ten siler, kalan katılımcılara `call_participant_left` broadcast eder.
+
+---
+
+### 7.6 Uyarılar — Aktif Etmeden Önce Test Edilmesi Gerekenler
+
+1. **Ses aktivasyonu:** Misafir Android'de mic açılıyor mu? (iOS: `_audioSessionActivated=true` bypass'ı doğru çalışıyor mu?)
+2. **Ayrılma:** Misafir "Leave" tuşuna bastığında 1-on-1 çifti aramada kalıyor mu?
+3. **Çıkarılma:** Host "Remove" yaptığında misafir kendi ekranında aramanın bittiğini görüyor mu?
+4. **Katılımcı şeridi:** Birisi ayrıldığında/çıkarıldığında host ekranında avatar strip güncelleniyor mu?
+5. **Max katılımcı:** Limit dolduğunda davet butonu pasif mi?
+
+---
+
 ### 6.8 WS Reconnect'te Tekrar Arama Görünmesi
 
 **Problem:** WS kopup yeniden bağlandığında replayed eventlar arasında `call_incoming` gelebilir. Arama zaten bitmiş olduğu hâlde zil sesi yeniden başlar.
