@@ -138,20 +138,22 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       _uiLog('CALL_SCREEN', 'CONNECTED', 'callId=${CallService.instance.state.value.callId} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"}');
     }
     if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
-      if (s == CallStatus.rejected ||
-          s == CallStatus.missed ||
-          s == CallStatus.busy ||
-          s == CallStatus.noAnswer) {
-        _cpLog('UI', 'CallScreen → delayed pop (2s) | reason=${s.name}');
+      final endReason = CallService.instance.state.value.endReason;
+      final isNamedEnd = endReason == EndReason.rejected ||
+          endReason == EndReason.missed ||
+          endReason == EndReason.busy ||
+          endReason == EndReason.noAnswer;
+      if (s == CallStatus.ended && isNamedEnd) {
+        _cpLog('UI', 'CallScreen → delayed pop (2s) | endReason=${endReason?.name}');
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted && !_hasPopped) {
-            _cpLog('UI', 'CallScreen → pop (delayed) | reason=${s.name}');
+            _cpLog('UI', 'CallScreen → pop (delayed) | endReason=${endReason?.name}');
             _hasPopped = true;
             Navigator.of(context).pop();
           }
         });
       } else {
-        _cpLog('UI', 'CallScreen → pop immediately | reason=${s.name}');
+        _cpLog('UI', 'CallScreen → pop immediately | status=${s.name} endReason=${endReason?.name}');
         _hasPopped = true;
         Navigator.of(context).pop();
       }
@@ -825,14 +827,20 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       }
       return formatted;
     }
+    if (s == CallStatus.ended) {
+      final endReason = CallService.instance.state.value.endReason;
+      return switch (endReason) {
+        EndReason.rejected => loc.t('callRejected'),
+        EndReason.missed => loc.t('callMissed'),
+        EndReason.noAnswer => loc.t('callNoAnswer'),
+        EndReason.busy => loc.t('callBusy'),
+        EndReason.permissionDenied => loc.t('callEnded'),
+        _ => loc.t('callEnded'),
+      };
+    }
     return switch (s) {
       CallStatus.dialing || CallStatus.waiting => loc.t('callCalling'),
       CallStatus.connecting => loc.t('callConnecting'),
-      CallStatus.ended => loc.t('callEnded'),
-      CallStatus.rejected => loc.t('callRejected'),
-      CallStatus.missed => loc.t('callMissed'),
-      CallStatus.noAnswer => loc.t('callNoAnswer'),
-      CallStatus.busy => loc.t('callBusy'),
       CallStatus.reconnecting => loc.t('callReconnecting'),
       _ => loc.t('callConnecting'),
     };

@@ -290,10 +290,11 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 
 ## Step 3: `EndReason` + Terminal State Absorbe
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
+**Durum:** 🟡 Devam ediyor  
+**Başlangıç:** 2026-08-01  
 **Tamamlanma:** —  
-**Commit:** —
+**Commit A:** `d961e82e` (additive — tamamlandı)  
+**Commit B:** — (terminal cleanup — devam ediyor)
 
 **Bağımlılık:** Step 2 tamamlanmış olmalı.
 

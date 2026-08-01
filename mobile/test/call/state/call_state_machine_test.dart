@@ -40,6 +40,13 @@ void main() {
       );
     });
 
+    test('idle → ended geçerli (mic izni reddi → ended + endReason.permissionDenied)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.ended, role: CallRole.caller),
+        equals(CallStatus.ended),
+      );
+    });
+
     test('dialing → waiting geçerli (/start 200: callId geldi)', () {
       expect(
         CallStateMachine.transition(current: CallStatus.dialing, next: CallStatus.waiting, role: CallRole.caller),
@@ -61,24 +68,10 @@ void main() {
       );
     });
 
-    test('waiting → ended geçerli (cancel/error)', () {
+    test('waiting → ended geçerli (cancel/rejected/missed/noAnswer/busy → ended+endReason)', () {
       expect(
         CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.ended, role: CallRole.caller),
         equals(CallStatus.ended),
-      );
-    });
-
-    test('waiting → rejected geçerli', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.rejected, role: CallRole.caller),
-        equals(CallStatus.rejected),
-      );
-    });
-
-    test('waiting → busy geçerli', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.busy, role: CallRole.caller),
-        equals(CallStatus.busy),
       );
     });
 
@@ -144,34 +137,6 @@ void main() {
         equals(CallStatus.dialing),
       );
     });
-
-    test('rejected → idle geçerli', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.rejected, next: CallStatus.idle, role: CallRole.caller),
-        equals(CallStatus.idle),
-      );
-    });
-
-    test('idle → permissionDenied geçerli (mic kontrolü dialing öncesi)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.permissionDenied, role: CallRole.caller),
-        equals(CallStatus.permissionDenied),
-      );
-    });
-
-    test('idle → ended geçerli (Step 3+: mic izni reddi → direkt ended+permissionDenied)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.ended, role: CallRole.caller),
-        equals(CallStatus.ended),
-      );
-    });
-
-    test('permissionDenied → ended geçerli (caller — _hangUpLocally uyumluluğu)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.permissionDenied, next: CallStatus.ended, role: CallRole.caller),
-        equals(CallStatus.ended),
-      );
-    });
   });
 
   group('CallStateMachine — Callee transitions', () {
@@ -196,17 +161,10 @@ void main() {
       );
     });
 
-    test('ringing → ended geçerli (caller cancel)', () {
+    test('ringing → ended geçerli (cancel / reject / missed / mic denied)', () {
       expect(
         CallStateMachine.transition(current: CallStatus.ringing, next: CallStatus.ended, role: CallRole.callee),
         equals(CallStatus.ended),
-      );
-    });
-
-    test('ringing → missed geçerli (timeout)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.ringing, next: CallStatus.missed, role: CallRole.callee),
-        equals(CallStatus.missed),
       );
     });
 
@@ -217,7 +175,7 @@ void main() {
       );
     });
 
-    test('connecting → ended geçerli (api_accept_error — race condition)', () {
+    test('connecting → ended geçerli (api_accept_error / mic denied)', () {
       expect(
         CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.ended, role: CallRole.callee),
         equals(CallStatus.ended),
@@ -251,27 +209,6 @@ void main() {
         isNull,
       );
     });
-
-    test('idle → permissionDenied geçersiz (callee — mic kontrolü connecting\'e girmeden, ringing\'den yapılır)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.permissionDenied, role: CallRole.callee),
-        isNull,
-      );
-    });
-
-    test('connecting → permissionDenied geçerli (callee — acceptCall mic izni yok)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.permissionDenied, role: CallRole.callee),
-        equals(CallStatus.permissionDenied),
-      );
-    });
-
-    test('permissionDenied → ended geçerli (callee — _hangUpLocally uyumluluğu)', () {
-      expect(
-        CallStateMachine.transition(current: CallStatus.permissionDenied, next: CallStatus.ended, role: CallRole.callee),
-        equals(CallStatus.ended),
-      );
-    });
   });
 
   group('CallStateMachine — Role null (crash recovery fallback)', () {
@@ -286,6 +223,13 @@ void main() {
       expect(
         CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.ringing, role: null),
         equals(CallStatus.ringing),
+      );
+    });
+
+    test('idle → ended geçerli (role unknown — caller mic denied union)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.ended, role: null),
+        equals(CallStatus.ended),
       );
     });
 
@@ -313,14 +257,13 @@ void main() {
     test('reconnecting aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.reconnecting), isTrue));
     test('idle pasif', () => expect(CallStateMachine.isActiveCallState(CallStatus.idle), isFalse));
     test('ended pasif', () => expect(CallStateMachine.isActiveCallState(CallStatus.ended), isFalse));
-    test('rejected pasif', () => expect(CallStateMachine.isActiveCallState(CallStatus.rejected), isFalse));
   });
 
   group('CallStateMachine — allowedTargets', () {
-    test('caller idle için dialing, ended ve permissionDenied', () {
+    test('caller idle için dialing ve ended', () {
       expect(
         CallStateMachine.allowedTargets(CallStatus.idle, CallRole.caller),
-        equals({CallStatus.dialing, CallStatus.ended, CallStatus.permissionDenied}),
+        equals({CallStatus.dialing, CallStatus.ended}),
       );
     });
 
@@ -331,10 +274,10 @@ void main() {
       );
     });
 
-    test('null role idle için dialing ve ringing (union)', () {
+    test('null role idle için dialing, ringing ve ended (union)', () {
       expect(
         CallStateMachine.allowedTargets(CallStatus.idle, null),
-        containsAll([CallStatus.dialing, CallStatus.ringing]),
+        containsAll([CallStatus.dialing, CallStatus.ringing, CallStatus.ended]),
       );
     });
 

@@ -18,21 +18,16 @@ class CallStateMachine {
   static const Map<CallStatus, Set<CallStatus>> _callerTransitions = {
     CallStatus.idle: {
       CallStatus.dialing,
-      CallStatus.ended,            // Step 3+: mic izni reddi → direkt ended (endReason=permissionDenied)
-      CallStatus.permissionDenied, // Step 3 öncesi geçici; Commit B'de kaldırılacak
+      CallStatus.ended, // mic izni reddi → ended (endReason=permissionDenied)
     },
     CallStatus.dialing: {
-      CallStatus.waiting,   // /start → 200: callId + token geldi
-      CallStatus.ended,     // /start HTTP hatası
+      CallStatus.waiting, // /start → 200: callId + token geldi
+      CallStatus.ended,   // /start HTTP hatası
       CallStatus.idle,
     },
     CallStatus.waiting: {
-      CallStatus.connecting,   // call_accepted WS eventi
+      CallStatus.connecting, // call_accepted WS eventi
       CallStatus.ended,
-      CallStatus.rejected,     // Step 3'te ended+reason'a absorbe edilecek
-      CallStatus.missed,
-      CallStatus.noAnswer,
-      CallStatus.busy,
       CallStatus.idle,
     },
     CallStatus.connecting: {
@@ -53,14 +48,8 @@ class CallStateMachine {
     },
     CallStatus.ended: {
       CallStatus.idle,
-      CallStatus.dialing,  // arama biter bitmez yeni arama başlatılabilir
+      CallStatus.dialing, // arama biter bitmez yeni arama başlatılabilir
     },
-    // Terminal state'ler — idle veya ended üzerinden reset
-    CallStatus.rejected: {CallStatus.idle},
-    CallStatus.missed: {CallStatus.idle},
-    CallStatus.noAnswer: {CallStatus.idle},
-    CallStatus.busy: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle, CallStatus.ended},
   };
 
   // ── Callee transition tablosu ──────────────────────────────────────────────
@@ -72,15 +61,12 @@ class CallStateMachine {
     CallStatus.ringing: {
       CallStatus.connecting,
       CallStatus.ended,
-      CallStatus.missed,   // ring timeout
-      CallStatus.rejected, // kullanıcı reddetti
       CallStatus.idle,
     },
     CallStatus.connecting: {
       CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
-      CallStatus.permissionDenied, // acceptCall'da mic izni yoksa; hemen _hangUpLocally takip eder
       CallStatus.idle,
     },
     CallStatus.active: {
@@ -96,9 +82,6 @@ class CallStateMachine {
     CallStatus.ended: {
       CallStatus.idle,
     },
-    CallStatus.rejected: {CallStatus.idle},
-    CallStatus.missed: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle, CallStatus.ended},
   };
 
   // ── Role bilinmiyorsa fallback (crash recovery, uygulama yeniden açılış) ──
@@ -108,8 +91,7 @@ class CallStateMachine {
     CallStatus.idle: {
       CallStatus.dialing,
       CallStatus.ringing,
-      CallStatus.ended,            // caller mic izni reddi union'ı
-      CallStatus.permissionDenied, // Commit B'de kaldırılacak
+      CallStatus.ended, // caller mic izni reddi
     },
     CallStatus.dialing: {
       CallStatus.waiting,
@@ -119,24 +101,17 @@ class CallStateMachine {
     CallStatus.waiting: {
       CallStatus.connecting,
       CallStatus.ended,
-      CallStatus.rejected,
-      CallStatus.missed,
-      CallStatus.noAnswer,
-      CallStatus.busy,
       CallStatus.idle,
     },
     CallStatus.ringing: {
       CallStatus.connecting,
       CallStatus.ended,
-      CallStatus.missed,
-      CallStatus.rejected,
       CallStatus.idle,
     },
     CallStatus.connecting: {
       CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
-      CallStatus.permissionDenied,
       CallStatus.idle,
     },
     CallStatus.active: {
@@ -153,11 +128,6 @@ class CallStateMachine {
       CallStatus.idle,
       CallStatus.dialing,
     },
-    CallStatus.rejected: {CallStatus.idle},
-    CallStatus.missed: {CallStatus.idle},
-    CallStatus.noAnswer: {CallStatus.idle},
-    CallStatus.busy: {CallStatus.idle},
-    CallStatus.permissionDenied: {CallStatus.idle, CallStatus.ended},
   };
 
   // ── Public API ─────────────────────────────────────────────────────────────

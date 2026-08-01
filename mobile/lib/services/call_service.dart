@@ -541,11 +541,12 @@ class CallService {
     if (permStatus != PermissionStatus.granted) {
       _setState(
         state.value.copyWith(
-          status: CallStatus.permissionDenied,
+          status: CallStatus.ended,
           endReason: EndReason.permissionDenied,
           permPermanentlyDenied: permStatus.isPermanentlyDenied,
         ),
       );
+      _scheduleReset();
       return;
     }
 
@@ -626,7 +627,7 @@ class CallService {
     } on AppException catch (e) {
       _cpLog('OUT', 'startCall AppException | code=${e.code}');
       if (e.code == 'USER_BUSY') {
-        _setState(state.value.copyWith(status: CallStatus.busy, endReason: EndReason.busy));
+        _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.busy));
         _scheduleReset();
       } else {
         _setState(state.value.copyWith(status: CallStatus.ended));
@@ -651,7 +652,7 @@ class CallService {
             await _post('/calls/$callId/missed');
           } catch (_) {}
         }
-        _setState(state.value.copyWith(status: CallStatus.noAnswer, endReason: EndReason.noAnswer));
+        _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.noAnswer));
         await Future.delayed(const Duration(seconds: 2));
         reset();
       }
@@ -1049,14 +1050,11 @@ class CallService {
     final permStatus = await Permission.microphone.status;
     _cpLog('IN', 'mic status check | status=$permStatus');
     if (!permStatus.isGranted) {
-      _setState(
-        state.value.copyWith(
-          status: CallStatus.permissionDenied,
-          endReason: EndReason.permissionDenied,
-          permPermanentlyDenied: permStatus.isPermanentlyDenied,
-        ),
+      _hangUpLocally(
+        status: CallStatus.ended,
+        endReason: EndReason.permissionDenied,
+        permPermanentlyDenied: permStatus.isPermanentlyDenied,
       );
-      _hangUpLocally(status: CallStatus.ended);
       try {
         await PushNotificationService.showWarningNotification();
       } catch (_) {}
@@ -1298,7 +1296,7 @@ class CallService {
     }
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
-    _setState(state.value.copyWith(status: CallStatus.rejected, endReason: EndReason.rejected));
+    _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.rejected));
     if (await Vibration.hasVibrator() == true) {
       _cpLog('HW', 'haptic VIBRATE | pattern=[200,100,200,100,200] reason=rejected');
       Vibration.vibrate(pattern: [200, 100, 200, 100, 200]);
@@ -1312,7 +1310,7 @@ class CallService {
   }
 
   void onCallMissed({int? callId}) async {
-    if (state.value.status == CallStatus.missed) return;
+    if (state.value.status == CallStatus.ended && state.value.endReason == EndReason.missed) return;
     // Guard: no active call in state → stale event after reset(), ignore.
     if (state.value.callId == null) {
       _cpLog('END', 'onCallMissed SKIPPED | no active call (state.callId=null) incoming=$callId (stale event)');
@@ -1335,7 +1333,7 @@ class CallService {
       return;
     }
     stopRingtoneAndVibration();
-    _setState(state.value.copyWith(status: CallStatus.missed, endReason: EndReason.missed));
+    _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.missed));
     if (await Vibration.hasVibrator() == true) {
       _cpLog('HW', 'haptic VIBRATE | pattern=[200,100,200] reason=missed');
       Vibration.vibrate(pattern: [200, 100, 200]);
@@ -2032,20 +2030,12 @@ class CallService {
     return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
   }
 
-  // States where the terminal UI feedback (sound, haptic, scheduleReset) was already triggered
-  // by an upstream handler (onCallRejected / onCallMissed / onCallBusy / onCallNoAnswer).
-  // _hangUpLocally still needs to run hardware teardown for these states, but must NOT call
-  // _setState(ended) or a second _scheduleReset() — doing so cuts busy.wav short and emits
-  // the spurious "unexpected transition rejected→ended" WARN in the state machine.
-  static const _terminalPendingStatuses = {
-    CallStatus.rejected,
-    CallStatus.missed,
-    CallStatus.busy,
-    CallStatus.noAnswer,
-  };
-
-  Future<void> _hangUpLocally({required CallStatus status}) async {
-    _cpLog('END', '_hangUpLocally called | targetStatus=$status prevStatus=${state.value.status} callId=${state.value.callId}');
+  Future<void> _hangUpLocally({
+    required CallStatus status,
+    EndReason? endReason,
+    bool? permPermanentlyDenied,
+  }) async {
+    _cpLog('END', '_hangUpLocally called | targetStatus=$status endReason=$endReason prevStatus=${state.value.status} callId=${state.value.callId}');
     if (_isHangingUp) {
       _cpLog('END', '_hangUpLocally SKIPPED | already hanging up');
       return;
@@ -2058,12 +2048,7 @@ class CallService {
       return;
     }
 
-    // Capture before any await — state may shift during async teardown.
     final prevStatus = state.value.status;
-    // Terminal-pending states already have sound/haptic/scheduleReset handled upstream.
-    // Hardware teardown below is still needed; state + reset must be skipped.
-    final skipStateChange = status == CallStatus.ended && _terminalPendingStatuses.contains(prevStatus);
-
     _isHangingUp = true;
     try {
       if (prevStatus == status) {
@@ -2122,16 +2107,13 @@ class CallService {
         }
       }
 
-      if (skipStateChange) {
-        // Hardware teardown is done. State (e.g. rejected) and its scheduleReset are already
-        // managed by the upstream handler — no second state change or reset timer needed.
-        _cpLog('END', '_hangUpLocally: teardown done | prevStatus=$prevStatus already terminal — skipping setState+scheduleReset');
-        return;
-      }
-
       // Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
       // Böylece UI katmanı (SwipeLiveScreen) tepki verdiğinde her şey hazır oluyor.
-      _setState(state.value.copyWith(status: status));
+      _setState(state.value.copyWith(
+        status: status,
+        endReason: endReason,
+        permPermanentlyDenied: permPermanentlyDenied,
+      ));
       _scheduleReset();
     } finally {
       _isHangingUp = false;
