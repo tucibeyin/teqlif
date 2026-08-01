@@ -18,7 +18,8 @@ class CallStateMachine {
   static const Map<CallStatus, Set<CallStatus>> _callerTransitions = {
     CallStatus.idle: {
       CallStatus.dialing,
-      CallStatus.permissionDenied, // mic kontrolü dialing'den önce; izin yoksa buradan çıkılır
+      CallStatus.ended,            // Step 3+: mic izni reddi → direkt ended (endReason=permissionDenied)
+      CallStatus.permissionDenied, // Step 3 öncesi geçici; Commit B'de kaldırılacak
     },
     CallStatus.dialing: {
       CallStatus.waiting,   // /start → 200: callId + token geldi
@@ -107,7 +108,8 @@ class CallStateMachine {
     CallStatus.idle: {
       CallStatus.dialing,
       CallStatus.ringing,
-      CallStatus.permissionDenied,
+      CallStatus.ended,            // caller mic izni reddi union'ı
+      CallStatus.permissionDenied, // Commit B'de kaldırılacak
     },
     CallStatus.dialing: {
       CallStatus.waiting,

@@ -27,10 +27,12 @@ import '../models/call_participant.dart';
 import '../call/state/call_status.dart';
 import '../call/state/call_role.dart';
 import '../call/state/call_state_machine.dart';
+import '../call/state/end_reason.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
 export '../call/state/call_role.dart';
+export '../call/state/end_reason.dart';
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -49,6 +51,7 @@ class CallApiException implements Exception {
 
 class CallState {
   final CallStatus status;
+  final EndReason? endReason;
   final int? callId;
   final String? roomName;
   final String? livekitUrl;
@@ -73,6 +76,7 @@ class CallState {
 
   const CallState({
     this.status = CallStatus.idle,
+    this.endReason,
     this.callId,
     this.roomName,
     this.livekitUrl,
@@ -96,6 +100,8 @@ class CallState {
 
   CallState copyWith({
     CallStatus? status,
+    EndReason? endReason,
+    bool clearEndReason = false,
     int? callId,
     String? roomName,
     String? livekitUrl,
@@ -118,6 +124,7 @@ class CallState {
   }) {
     return CallState(
       status: status ?? this.status,
+      endReason: clearEndReason ? null : (endReason ?? this.endReason),
       callId: callId ?? this.callId,
       roomName: roomName ?? this.roomName,
       livekitUrl: livekitUrl ?? this.livekitUrl,
@@ -535,6 +542,7 @@ class CallService {
       _setState(
         state.value.copyWith(
           status: CallStatus.permissionDenied,
+          endReason: EndReason.permissionDenied,
           permPermanentlyDenied: permStatus.isPermanentlyDenied,
         ),
       );
@@ -618,7 +626,7 @@ class CallService {
     } on AppException catch (e) {
       _cpLog('OUT', 'startCall AppException | code=${e.code}');
       if (e.code == 'USER_BUSY') {
-        _setState(state.value.copyWith(status: CallStatus.busy));
+        _setState(state.value.copyWith(status: CallStatus.busy, endReason: EndReason.busy));
         _scheduleReset();
       } else {
         _setState(state.value.copyWith(status: CallStatus.ended));
@@ -643,7 +651,7 @@ class CallService {
             await _post('/calls/$callId/missed');
           } catch (_) {}
         }
-        _setState(state.value.copyWith(status: CallStatus.noAnswer));
+        _setState(state.value.copyWith(status: CallStatus.noAnswer, endReason: EndReason.noAnswer));
         await Future.delayed(const Duration(seconds: 2));
         reset();
       }
@@ -1044,6 +1052,7 @@ class CallService {
       _setState(
         state.value.copyWith(
           status: CallStatus.permissionDenied,
+          endReason: EndReason.permissionDenied,
           permPermanentlyDenied: permStatus.isPermanentlyDenied,
         ),
       );
@@ -1289,7 +1298,7 @@ class CallService {
     }
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
-    _setState(state.value.copyWith(status: CallStatus.rejected));
+    _setState(state.value.copyWith(status: CallStatus.rejected, endReason: EndReason.rejected));
     if (await Vibration.hasVibrator() == true) {
       _cpLog('HW', 'haptic VIBRATE | pattern=[200,100,200,100,200] reason=rejected');
       Vibration.vibrate(pattern: [200, 100, 200, 100, 200]);
@@ -1326,7 +1335,7 @@ class CallService {
       return;
     }
     stopRingtoneAndVibration();
-    _setState(state.value.copyWith(status: CallStatus.missed));
+    _setState(state.value.copyWith(status: CallStatus.missed, endReason: EndReason.missed));
     if (await Vibration.hasVibrator() == true) {
       _cpLog('HW', 'haptic VIBRATE | pattern=[200,100,200] reason=missed');
       Vibration.vibrate(pattern: [200, 100, 200]);

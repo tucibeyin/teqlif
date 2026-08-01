@@ -159,6 +159,13 @@ void main() {
       );
     });
 
+    test('idle → ended geçerli (Step 3+: mic izni reddi → direkt ended+permissionDenied)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.ended, role: CallRole.caller),
+        equals(CallStatus.ended),
+      );
+    });
+
     test('permissionDenied → ended geçerli (caller — _hangUpLocally uyumluluğu)', () {
       expect(
         CallStateMachine.transition(current: CallStatus.permissionDenied, next: CallStatus.ended, role: CallRole.caller),
@@ -310,10 +317,10 @@ void main() {
   });
 
   group('CallStateMachine — allowedTargets', () {
-    test('caller idle için dialing ve permissionDenied', () {
+    test('caller idle için dialing, ended ve permissionDenied', () {
       expect(
         CallStateMachine.allowedTargets(CallStatus.idle, CallRole.caller),
-        equals({CallStatus.dialing, CallStatus.permissionDenied}),
+        equals({CallStatus.dialing, CallStatus.ended, CallStatus.permissionDenied}),
       );
     });
 
