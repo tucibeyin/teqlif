@@ -405,6 +405,27 @@ mobile/lib/call/
     android_call_notif_adapter.dart
 ```
 
+**Token yönetimi — implementasyon notları (VoIP.md §12.2–12.4'ten):**
+
+| Konu | Kural |
+|---|---|
+| iOS push kanalı | VoIP push her zaman FCM'e tercih edilir — FCM CallKit'i tetikleyemez |
+| iOS `var|var` durumu | `voip_token` varsa FCM'e bakma — VoIP push gönder |
+| Android | Yalnızca FCM token; voip_token register edilmez |
+| Stale token | APNs/FCM hata döndürürse backend `voip_token = NULL` / FCM token sil |
+| Multi-device | Mevcut model tek cihaz varsayımı — son kaydeden kazanır; çoklu cihaz desteği bu adımın kapsamı dışında |
+
+**Backend `/calls/start` push seçim mantığı:**
+```python
+if callee_ws_connected:
+    pass  # WS yeterli
+elif callee.voip_token:
+    send_voip_push(callee.voip_token, payload)   # iOS
+elif callee.fcm_token:
+    send_fcm_push(callee.fcm_token, payload)     # Android
+# else: foreground-only (WS bağlıysa alır, değilse kaybolur)
+```
+
 ---
 
 ## Step 8: `CallService` İnce Orchestrator
@@ -445,5 +466,7 @@ Refactoring sırasında alınan kararlar buraya kaydedilir.
 
 | Tarih | Konu | Karar | Gerekçe |
 |---|---|---|---|
-| — | Step 1 hard block | `assert` + log, return değil | Production güvenliliği — test sonrası Step 2'de hard block açılır |
-| — | Terminal state absorbe zamanı | Step 3 (Step 2 sonrası) | İsimler stabil olmadan absorbe riski yüksek |
+| 2026-08-01 | Step 1 hard block | `assert` + log, return değil | Production güvenliliği — test sonrası Step 2'de hard block açılır |
+| 2026-08-01 | Terminal state absorbe zamanı | Step 3 (Step 2 sonrası) | İsimler stabil olmadan absorbe riski yüksek |
+| 2026-08-01 | iOS push kanalı seçimi | VoIP push > FCM; voip_token varsa FCM göz ardı edilir | FCM data push iOS background'da CallKit'i tetikleyemez; VoIP push APNs'in yüksek öncelikli kanalıdır — gözlemlenen FCM/VoIP karışıklığının kök nedeni |
+| 2026-08-01 | Multi-device token modeli | Tek cihaz varsayımı (son kaydeden kazanır) | V2.0 kapsamı dışında; gerekirse `(user_id, device_id, token_type)` PK'lı tablo migrasyonu ayrı adım olarak ele alınır |

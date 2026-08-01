@@ -918,6 +918,24 @@ FirebaseMessaging.instance.getToken()
 - Android/iOS FCM: `FirebaseMessaging.onTokenRefresh` → aynı endpoint
 - Token yenileme, uygulama açık olmasa da çalışmalı — arka planda kayıt
 
+**Token geçersizleşme:**
+- Kullanıcı uygulamayı yeniden kurduğunda yeni token üretilir. Uygulama ilk açılışta kayıt eder → DB güncellenir.
+- Eski (stale) token APNs tarafından reddedilir: backend bu hatayı yakalamalı ve `voip_token = NULL` yapmalıdır.
+- FCM stale token: `messaging/invalid-registration-token` hatası → aynı şekilde temizlenmeli.
+
+**Multi-device modeli (mevcut sınırlama):**
+
+V2.0 tek cihaz varsayımı üzerine çalışır: her `POST /users/me/voip-token` öncekinin üzerine yazar. Kullanıcı birden fazla cihazda login olursa yalnızca son kaydeden cihaz push alır.
+
+Çoklu cihaz desteği gerekirse DB modeli şu formata taşınmalıdır:
+
+```
+push_tokens(user_id, device_id, token_type, token_value, updated_at)
+PK: (user_id, device_id, token_type)
+```
+
+Step 7 (`CallNotifAdapter`) bu sınırlamayı bilerek implemente eder. Çoklu cihaz desteği ayrı bir migration olarak ele alınır.
+
 ---
 
 ### 12.3 Push Skip Kuralı
@@ -929,10 +947,14 @@ Backend /calls/start:
   if callee_ws_connected:
       push ATLA — WS eventi yeterli
   else:
-      voip_token varsa → VoIP push (iOS)
-      fcm_token varsa  → FCM push (Android)
-      her ikisi yoksa  → sadece WS eventi (foreground-only teslimat)
+      callee'nin kayıtlı token'larına göre:
+        voip_token varsa → VoIP push (iOS — CallKit native screen)
+        voip_token yoksa, fcm_token varsa → FCM push (Android)
+      her ikisi yoksa → sadece WS eventi (foreground-only teslimat)
 ```
+
+**iOS'ta VoIP push FCM'e her zaman tercih edilir.**  
+FCM data push iOS'ta background/killed state'te CallKit'i tetikleyemez. VoIP push APNs'in yüksek öncelikli kanalıdır ve doğrudan `pushRegistry` callback'ini çalıştırır. iOS FCM token yalnızca non-call bildirimler (sohbet, genel bildirimler) içindir.
 
 ---
 
@@ -940,9 +962,9 @@ Backend /calls/start:
 
 | voip_token | fcm_token | Sonuç |
 |---|---|---|
-| var | — | VoIP push (iOS) |
-| — | var | FCM push (Android) |
-| var | var | Platform'a göre ikisi de denenebilir |
+| var | — | VoIP push — iOS cihazı, FCM henüz kaydolmamış |
+| — | var | FCM push — Android cihazı |
+| var | var | **VoIP push tercih edilir** — iOS cihazı; FCM yalnızca non-call bildirimler için |
 | null | null | Push yok — WS bağlıysa ulaşır, değilse arama kaybolur |
 
 > Token null ise ve WS offline ise callee aramayı hiç görmez. Bu bir hata değil, tasarım gereği — token kayıt başarısız olmuş demektir. Backend bu durumu loglamalı.
@@ -955,7 +977,7 @@ Callee background'da beklerken caller iptal ederse:
 
 **iOS (background):**
 ```
-FCM/VoIP push: type="call_cancelled"
+VoIP push: type="call_cancelled"   ← VoIP push tercih edilir (yüksek öncelikli APNs kanalı)
   → AppDelegate: saveEndCall(uuid, reason=.remoteEnded)
   → provider.reportCall(with:endedAt:reason:) → CallKit native ekran kapanır
   → Flutter: callkit_ended event → state: ringing → ended
