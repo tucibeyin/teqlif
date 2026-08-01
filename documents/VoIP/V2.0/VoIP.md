@@ -237,12 +237,170 @@ Herhangi bir katmandaki başarısızlık durumları.
 
 ---
 
+## 5. Transition Tablosu
+
+Her state için: hangi event, hangi role'de, hangi yeni state'e geçirir.  
+Tabloda yer almayan event + state kombinasyonu → **yoksay** (log'la, state değiştirme).
+
+### 5.0 Tasarım Kararları
+
+Bu bölümdeki tablolar aşağıdaki kararlara dayanır.
+
+| # | Konu | Karar | Gerekçe |
+|---|------|-------|---------|
+| D-1 | `network_lost` in `waiting` timeout | **20s** | Ring timer 30s — hiccup toleransı için yeterli pencere |
+| D-2 | Callee fallback ring timer | **45s** | Caller 30s + server ARQ 40s'i de kapsar + buffer |
+| D-3 | `lk_peer_left` in `active` timeout | **10s** | Endüstri standardı (WhatsApp/Zoom pattern) |
+| D-4 | `audio_focus_lost` state etkisi | **State değişmez** | Adapter içinde yönetilir; state machine görmez |
+
+---
+
+### 5.1 `idle`
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `user_call_start` | caller | `dialing` | /start isteği gönderilir |
+| `ws_call_incoming` | callee | `ringing` | WS ile gelen arama |
+| `voip_push_received` | callee | `ringing` | Background/killed — VoIP push |
+| `fcm_push_received` | callee | `ringing` | Background/killed — FCM push |
+| `ws_connected` | both | `idle` → restore? | /active sorgula; aktif arama varsa state restore |
+| `app_launch` | both | `idle` → restore? | /active sorgula; aktif arama varsa state restore |
+| diğer | both | `idle` | Yoksay |
+
+---
+
+### 5.2 `dialing` (caller only)
+
+HTTP isteği uçuşta. Sunucu yanıtı bekleniyor.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `api_start_ok` | caller | `waiting` | call_id + token alındı |
+| `api_start_error` | caller | `ended` | busy / network / 5xx — kullanıcıya hata göster |
+| `user_call_cancel` | caller | `ended` | İstek uçuştayken iptal — /end fire-and-forget |
+| `network_lost` | caller | `ended` | Request tamamlanamaz |
+| `error_mic_denied` | caller | `ended` | İzin yok, arama başlatılamaz |
+| diğer | caller | `dialing` | Yoksay |
+
+---
+
+### 5.3 `waiting` (caller only)
+
+Sunucu onayladı. Callee bildirildi. Caller'ın cevap bekleme aşaması.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `ws_call_accepted` | caller | `connecting` | Callee kabul etti, ses aktivasyonu başlar |
+| `ws_call_rejected` | caller | `ended` | Callee reddetti |
+| `ws_call_missed` | caller | `ended` | Sunucu timeout (ARQ) |
+| `timer_ring_expired` | caller | `ended` | 30s doldu → POST /missed |
+| `user_call_cancel` | caller | `ended` | POST /end |
+| `lk_connect_ok` | caller | `waiting` | Pre-connect tamam, callee hâlâ bekleniyor |
+| `network_lost` | caller | `waiting` | D-1: 20s bekle; süre dolunca → `ended` |
+| `ws_connected` | caller | `waiting` | /active → hâlâ calling: burada kal |
+| `app_background` | caller | `waiting` | Arama devam eder |
+| diğer | caller | `waiting` | Yoksay |
+
+---
+
+### 5.4 `ringing` (callee only)
+
+Callee bildirim aldı, kullanıcı kararını bekliyor.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `user_call_accept` | callee | `connecting` | POST /accept + ses aktivasyonu |
+| `user_call_reject` | callee | `ended` | POST /reject |
+| `callkit_accept` | callee | `connecting` | iOS native ekrandan kabul |
+| `callkit_decline` | callee | `ended` | iOS native ekrandan reddet |
+| `ws_call_ended` | callee | `ended` | Caller iptal etti |
+| `ws_call_missed` | callee | `ended` | Sunucu timeout bildirdi |
+| `timer_ring_expired` | callee | `ended` | D-2: 45s fallback — WS gelmezse kendisi sonlandır |
+| `lk_connect_ok` | callee | `ringing` | Pre-connect tamam, hâlâ ringing |
+| `ws_call_incoming` | callee | `ringing` | Dedup — zaten burada, yoksay |
+| `voip_push_received` | callee | `ringing` | Dedup — yoksay |
+| `fcm_push_received` | callee | `ringing` | Dedup — yoksay |
+| `network_lost` | callee | `ringing` | Native screen devam eder (CallKit) |
+| `ws_connected` | callee | `ringing` | /active → hâlâ calling: burada kal |
+| `app_background` | callee | `ringing` | Native screen yönetir |
+| diğer | callee | `ringing` | Yoksay |
+
+---
+
+### 5.5 `connecting` (both)
+
+Callee kabul etti. LiveKit bağlantısı ve ses aktivasyonu sürüyor.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `lk_connect_ok` | both | `active` | Bağlantı kuruldu |
+| `audio_session_active` | callee | `active` | iOS — CallKit audio session aktif |
+| `audio_focus_gained` | callee | `active` | Android — AudioFocus alındı |
+| `timer_connecting_exp` | both | `ended` | 15s doldu, takıldı |
+| `lk_connect_failed` | both | `ended` | Bağlantı kurulamadı |
+| `error_lk_permanent` | both | `ended` | LiveKit tamamen vazgeçti |
+| `user_call_end` | both | `ended` | Connecting'de kullanıcı kesti |
+| `ws_call_ended` | both | `ended` | Karşı taraf connecting'de kesti |
+| `network_lost` | both | `ended` | Connecting'de ağ kesilirse retry yok |
+| diğer | both | `connecting` | Yoksay |
+
+---
+
+### 5.6 `active` (both)
+
+Ses bağlantısı kuruldu, arama sürüyor.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `user_call_end` | both | `ended` | POST /end |
+| `ws_call_ended` | both | `ended` | Karşı taraf kapattı |
+| `lk_peer_left` | both | `active`* | D-3: 10s peer timer başlar; gelirse devam, gelmezse `ended` |
+| `lk_disconnected` | both | `reconnecting` | LiveKit bağlantısı koptu |
+| `lk_reconnecting` | both | `reconnecting` | LiveKit kendi retry'ını bildirdi |
+| `network_lost` | both | `reconnecting` | Ağ koptu, LiveKit retry başlar |
+| `callkit_ended` | both | `ended` | iOS sistem aramayı kapattı |
+| `audio_focus_lost` | both | `active` | D-4: State değişmez — adapter yönetir |
+| `audio_focus_gained` | both | `active` | D-4: Adapter restore eder |
+| `app_background` | both | `active` | Arama arka planda devam eder |
+| `app_crash` | both | `active`* | Recovery: app_launch → /active → restore |
+| diğer | both | `active` | Yoksay |
+
+---
+
+### 5.7 `reconnecting` (both)
+
+`active` iken bağlantı koptu. LiveKit yeniden bağlanmayı deniyor.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `lk_reconnected` | both | `active` | Başarılı — devam |
+| `lk_disconnected` | both | `reconnecting` | Hâlâ deniyor |
+| `timer_peer_expired` | both | `ended` | Timeout — vazgeçildi |
+| `error_lk_permanent` | both | `ended` | LiveKit tamamen vazgeçti |
+| `user_call_end` | both | `ended` | Kullanıcı reconnecting'de kesti |
+| `ws_call_ended` | both | `ended` | Karşı taraf bağlantı beklerken kesti |
+| `network_restored` | both | `reconnecting` | Ağ geldi, LiveKit retry devam |
+| diğer | both | `reconnecting` | Yoksay |
+
+---
+
+### 5.8 `ended` (both)
+
+Arama sonlandı. 2s cleanup penceresi.
+
+| Event | Role | Yeni State | Not |
+|---|---|---|---|
+| `timer_reset_ready` | both | `idle` | 2s doldu, reset tamamlandı |
+| diğer | both | `ended` | Geç gelen event'ler yoksayılır |
+
+---
+
 ## Sonraki Adımlar
 
 Aşağıdaki bölümler sıradaki oturumlarda tamamlanacak:
 
 - [x] **Bölüm 4** — Event kataloğu
-- [ ] **Bölüm 5** — Tam transition tablosu (her state × her event × her role)
+- [x] **Bölüm 5** — Transition tablosu
 - [ ] **Bölüm 6** — Platform side effect'leri (iOS adapter / Android adapter)
 - [ ] **Bölüm 7** — Screen routing tablosu (CallScreenRouter kararları)
 - [ ] **Bölüm 8** — Modül mimarisi ve sorumluluk sınırları
