@@ -586,15 +586,26 @@ class PushNotificationService {
     }
     _cpLog('PUSH', '_rejectCallById | callId=$callId status=$status');
 
-    // Optimistic reset: state clears immediately so the bar (or native CallKit UI) disappears
-    // without waiting for the HTTP round-trip (~1-2s). Mirrors the endCall() fire-and-forget
-    // pattern — user intent is unambiguous regardless of backend result.
+    // Optimistic reset: state clears immediately so the Flutter call bar disappears
+    // without waiting for the HTTP round-trip (~1-2s).
     final cs = CallService.instance;
     if ((cs.state.value.status == CallStatus.ringing ||
          cs.state.value.status == CallStatus.calling) &&
         cs.state.value.callId?.toString() == callId) {
       _cpLog('PUSH', '_rejectCallById → reset (optimistic) | callId=$callId');
       cs.reset();
+    }
+
+    // Dismiss the native notification (Android full-screen intent / iOS CallKit screen).
+    // reset() only clears the Flutter IncomingCallBar — the native notification stays
+    // visible until FlutterCallkitIncoming.endCall() is explicitly called.
+    if (callId.isNotEmpty) {
+      try {
+        await FlutterCallkitIncoming.endCall(formatToUuid(callId));
+        _cpLog('PUSH', '_rejectCallById → native notification dismissed | callId=$callId');
+      } catch (e) {
+        _cpLog('PUSH', '_rejectCallById → endCall ERROR (non-fatal) | callId=$callId $e');
+      }
     }
 
     // Fire HTTP after reset — failure is non-fatal (state is already cleared).

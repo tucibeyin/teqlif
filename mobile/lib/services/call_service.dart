@@ -1480,12 +1480,14 @@ class CallService {
                       AVAudioSessionCategoryOptions.allowBluetooth |
                       AVAudioSessionCategoryOptions.allowBluetoothA2dp,
                 ));
-                await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
                 if (_ringbackPlayer.state != PlayerState.playing) {
+                  // SoloAmbient interrupted the ringback — restore loop mode and restart.
+                  await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
                   await _ringbackPlayer.seek(Duration.zero);
                   await _ringbackPlayer.resume();
                   _cpLog('SOUND', 'ringbackPlayer RESUMED after LiveKit SoloAmbient override | iOS caller status=$postConnectStatus');
                 } else {
+                  // Still playing in loop mode — don't change mode.
                   _cpLog('SOUND', 'ringbackPlayer STILL PLAYING after room.connect() (no interruption) | iOS caller status=$postConnectStatus');
                 }
               } catch (e) {
