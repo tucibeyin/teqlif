@@ -124,10 +124,124 @@ Bu event'ler herhangi bir state'te gelebilir. Her state için davranışı aşa�
 
 ---
 
+## 4. Event Kataloğu
+
+Event'ler kaynağına göre gruplandırılmıştır. Her event hangi role'ü etkiler bilgisini taşır. Hangi state'lerde geçerli olduğu Bölüm 5 transition tablosunda tanımlanır.
+
+### 4.1 Kullanıcı Event'leri
+
+Doğrudan kullanıcı etkileşiminden üretilir (dokunuş, swipe, buton).
+
+| Event                | Role   | Açıklama                                              |
+|----------------------|--------|-------------------------------------------------------|
+| `user_call_start`    | caller | Arama başlat butonuna bastı                           |
+| `user_call_accept`   | callee | IncomingCallBar'da kabul taptı                        |
+| `user_call_reject`   | callee | IncomingCallBar'da reddet taptı                       |
+| `user_call_end`      | both   | Aktif aramada kapat taptı                             |
+| `user_call_cancel`   | caller | Callee henüz cevaplamadı, iptal taptı                 |
+| `user_swipe_minimize`| callee | IncomingCallBar'ı swipe-up ile küçülttü               |
+| `user_swipe_restore` | callee | MinimizedCallBar'ı swipe-down ile geri açtı           |
+
+### 4.2 API Event'leri
+
+HTTP istek yanıtlarından üretilir.
+
+| Event               | Role   | Açıklama                                               |
+|---------------------|--------|--------------------------------------------------------|
+| `api_start_ok`      | caller | POST /start 200 — call_id + token geldi                |
+| `api_start_error`   | caller | POST /start başarısız (busy, network, 5xx)             |
+| `api_accept_ok`     | callee | POST /accept 200                                       |
+| `api_accept_error`  | callee | POST /accept başarısız                                 |
+| `api_end_ok`        | both   | POST /end 200                                          |
+| `api_active_found`  | both   | GET /active → aktif arama var (recovery)               |
+| `api_active_none`   | both   | GET /active → aktif arama yok (recovery)               |
+
+### 4.3 WebSocket Event'leri
+
+Sunucudan gerçek zamanlı olarak gelir.
+
+| Event               | Role   | Açıklama                                               |
+|---------------------|--------|--------------------------------------------------------|
+| `ws_call_incoming`  | callee | Gelen arama bildirimi                                  |
+| `ws_call_accepted`  | caller | Callee kabul etti                                      |
+| `ws_call_rejected`  | caller | Callee reddetti                                        |
+| `ws_call_ended`     | callee | Caller aramayı kapattı                                 |
+| `ws_call_missed`    | callee | Ring timeout doldu                                     |
+| `ws_connected`      | both   | WS bağlantısı kuruldu (recovery tetikler)              |
+| `ws_disconnected`   | both   | WS bağlantısı koptu                                    |
+
+### 4.4 Push / CallKit Event'leri
+
+Platform bildirim katmanından üretilir.
+
+| Event                | Role   | Açıklama                                              |
+|----------------------|--------|-------------------------------------------------------|
+| `voip_push_received` | callee | iOS VoIP push geldi (background / killed)             |
+| `fcm_push_received`  | callee | Android FCM push geldi (background / killed)          |
+| `callkit_accept`     | callee | iOS native ekranda kabul kaydırdı                     |
+| `callkit_decline`    | callee | iOS native ekranda reddet kaydırdı                    |
+| `callkit_ended`      | both   | CallKit aramayı sonlandırdı                           |
+
+### 4.5 LiveKit Event'leri
+
+Medya katmanından üretilir.
+
+| Event               | Role   | Açıklama                                               |
+|---------------------|--------|--------------------------------------------------------|
+| `lk_connect_ok`     | both   | room.connect() başarılı                                |
+| `lk_connect_failed` | both   | room.connect() başarısız                               |
+| `lk_peer_joined`    | both   | Karşı taraf LiveKit'e bağlandı                         |
+| `lk_peer_left`      | both   | Karşı taraf LiveKit'ten ayrıldı                        |
+| `lk_reconnecting`   | both   | Network koptu, LiveKit kendi retry'ını başlattı        |
+| `lk_reconnected`    | both   | LiveKit retry başarılı                                 |
+| `lk_disconnected`   | both   | LiveKit bağlantı tamamen koptu                         |
+
+### 4.6 Timer Event'leri
+
+Dahili zamanlayıcılardan üretilir.
+
+| Event                 | Role   | Açıklama                                             |
+|-----------------------|--------|------------------------------------------------------|
+| `timer_ring_expired`  | caller | 30s doldu, callee cevaplamadı → missed               |
+| `timer_peer_expired`  | both   | 40s doldu, LiveKit'te peer gelmedi                   |
+| `timer_connecting_exp`| both   | 15s doldu, connecting state'inde takıldı             |
+| `timer_reset_ready`   | both   | Ended'dan sonra 2s bekleme doldu → idle              |
+
+### 4.7 Sistem / OS Event'leri
+
+Cross-cutting — herhangi bir state'te gelebilir.
+
+| Event                  | Role   | Açıklama                                            |
+|------------------------|--------|-----------------------------------------------------|
+| `network_lost`         | both   | İnternet bağlantısı koptu                           |
+| `network_restored`     | both   | İnternet bağlantısı geri geldi                      |
+| `app_background`       | both   | Uygulama arka plana geçti                           |
+| `app_foreground`       | both   | Uygulama ön plana geçti                             |
+| `app_crash`            | both   | Uygulama beklenmedik şekilde kapandı                |
+| `app_launch`           | both   | Soğuk başlatma (crash sonrası dahil)                |
+| `audio_session_active` | callee | iOS CallKit audio session aktive edildi             |
+| `audio_focus_gained`   | callee | Android AudioFocus verildi                          |
+| `audio_focus_lost`     | both   | Android AudioFocus başka uygulamaya geçti           |
+
+### 4.8 Hata Event'leri
+
+Herhangi bir katmandaki başarısızlık durumları.
+
+| Event                | Role   | Açıklama                                              |
+|----------------------|--------|-------------------------------------------------------|
+| `error_mic_denied`   | both   | Mikrofon izni reddedildi                              |
+| `error_busy_caller`  | caller | Caller zaten başka aramada                            |
+| `error_busy_callee`  | caller | Callee meşgul (409)                                   |
+| `error_call_not_found`| both  | Arama bulunamadı (404)                                |
+| `error_lk_permanent` | both   | LiveKit retry sonrasında da bağlanamadı               |
+
+---
+
 ## Sonraki Adımlar
 
 Aşağıdaki bölümler sıradaki oturumlarda tamamlanacak:
 
+- [x] **Bölüm 4** — Event kataloğu
 - [ ] **Bölüm 5** — Tam transition tablosu (her state × her event × her role)
 - [ ] **Bölüm 6** — Platform side effect'leri (iOS adapter / Android adapter)
 - [ ] **Bölüm 7** — Screen routing tablosu (CallScreenRouter kararları)
