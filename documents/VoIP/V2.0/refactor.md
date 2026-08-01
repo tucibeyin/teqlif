@@ -54,20 +54,37 @@ V2.0 ile mevcut kod arasındaki isimlendirme farkı. Bu fark Step 2'de kapatıl�
 
 Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a alınabilir.
 
-| Adım | Ne | Neden Önce |
-|---|---|---|
-| **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli |
-| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli |
-| **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası |
-| **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız |
-| **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır |
-| **Step 6** | `CallScreenRouter` | Routing merkezlenir |
-| **Step 7** | `CallNotifAdapter` | Push layer izole |
-| **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca |
+**Durum ikonları:** 🔴 Başlamadı · 🟡 Devam ediyor · ✅ Tamamlandı
+
+| Adım | Ne | Neden Önce | Durum |
+|---|---|---|---|
+| **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli | ✅ `cc9bd511` |
+| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | 🔴 |
+| **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | 🔴 |
+| **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | 🔴 |
+| **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
+| **Step 6** | `CallScreenRouter` | Routing merkezlenir | 🔴 |
+| **Step 7** | `CallNotifAdapter` | Push layer izole | 🔴 |
+| **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | 🔴 |
 
 ---
 
 ## Step 1: `CallStateMachine` + `CallRole`
+
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-01  
+**Tamamlanma:** 2026-08-01  
+**Commit:** `cc9bd511`  
+**Oluşturulan dosyalar:**
+- `mobile/lib/call/state/call_status.dart`
+- `mobile/lib/call/state/call_role.dart`
+- `mobile/lib/call/state/call_state_machine.dart`
+- `mobile/test/call/state/call_state_machine_test.dart` — 42 test, tamamı geçiyor
+
+**Değiştirilen dosyalar:**
+- `mobile/lib/services/call_service.dart` — `CallStatus` kaldırıldı (re-export ile), `_currentRole` eklendi, `_setState` guard delegate edildi, `_allowedTransitions` tablosu kaldırıldı
+
+---
 
 **Hedef:** `call_service.dart` içindeki transition logic'i, `_allowedTransitions` tablosunu ve role kavramını saf bir Dart sınıfına taşı.
 
@@ -239,6 +256,11 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 
 ## Step 2: State İsim Uyumu (Rename)
 
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
+
 **Bağımlılık:** Step 1 tamamlanmış olmalı.
 
 **Değişiklikler:**
@@ -253,6 +275,11 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 ---
 
 ## Step 3: `EndReason` + Terminal State Absorbe
+
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
 
 **Bağımlılık:** Step 2 tamamlanmış olmalı.
 
@@ -272,6 +299,11 @@ UI'da `cs.status == CallStatus.rejected` → `cs.status == CallStatus.ended && c
 ---
 
 ## Step 4: `CallRepository`
+
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
 
 **Bağımlılık:** Step 3 tamamlanmış olmalı (state naming stabil).
 
@@ -302,6 +334,11 @@ class CallRepository {
 
 ## Step 5: `CallHardwareAdapter`
 
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
+
 **Bağımlılık:** Step 4 tamamlanmış olmalı.
 
 AVAudioSession, AudioFocus, ringback, speakerphone — platform'a göre ayrı impl:
@@ -319,6 +356,11 @@ mobile/lib/call/
 ---
 
 ## Step 6: `CallScreenRouter`
+
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
 
 **Bağımlılık:** Step 2 tamamlanmış olmalı (state names stabil).
 
@@ -346,6 +388,11 @@ class CallScreenRouter {
 
 ## Step 7: `CallNotifAdapter`
 
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
+
 **Bağımlılık:** Step 5 tamamlanmış olmalı.
 
 VoIP token kayıt, FCM token kayıt, CallKit raporlama:
@@ -361,6 +408,11 @@ mobile/lib/call/
 ---
 
 ## Step 8: `CallService` İnce Orchestrator
+
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
 
 **Bağımlılık:** Step 1–7 tamamlanmış olmalı.
 
