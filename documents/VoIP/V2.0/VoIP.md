@@ -1047,6 +1047,132 @@ FCM push: type="call_cancelled"
 
 ---
 
+## 15. Hardware İzin Politikası
+
+Arama akışındaki her hardware izninin ne zaman, nasıl ve hangi sonuçla kontrol edileceği. Bu kararlar `CallHardwareAdapter` (Step 5) tarafından implemente edilir; state machine bu detayları görmez.
+
+---
+
+### 15.1 İzin Hiyerarşisi
+
+| İzin | Kritiklik | Gerekçe |
+|---|---|---|
+| **Mikrofon** | Call-blocking | Ses olmadan anlamlı arama olmaz |
+| **Kamera** | Non-blocking | Arama her zaman sesli başlar; kamera isteğe bağlı |
+| **Bluetooth** (Android 31+) | Non-blocking | Sadece ses yönlendirmeyi etkiler, aramayı engellemez |
+
+---
+
+### 15.2 Mikrofon İzni
+
+#### Caller yolu
+
+| Adım | Detay |
+|---|---|
+| Kontrol noktası | `startCall()` — `dialing` state'e girmeden önce |
+| Yöntem | `Permission.microphone.request()` — OS dialog gösterir (ilk defa veya tekrar sorulabilirse) |
+| `granted` | Normal devam: `idle → dialing` |
+| `denied` (kalıcı değil) | `idle → permissionDenied`; kısa hata mesajı; bir sonraki denemede dialog tekrar çıkabilir |
+| `permanentlyDenied` | `idle → permissionDenied`, `permPermanentlyDenied=true`; in-app modal: "Mikrofon erişimi Ayarlar'dan verilmeli" + [Ayarlar'a Git] butonu |
+
+#### Callee yolu
+
+| Adım | Detay |
+|---|---|
+| Kontrol noktası | `acceptCall()` — `connecting` state'e girmeden önce |
+| Yöntem | `Permission.microphone.request()` — "Accept" sonrası OS dialog normal UX |
+| `granted` | Normal devam: `ringing → connecting` |
+| `denied` (kalıcı değil) | `ringing → ended`; kullanıcı OS dialog'unda reddetmiş demektir |
+| `permanentlyDenied` | State `ringing` kalır; in-app modal: "Mikrofon erişimi Ayarlar'dan verilmeli" + [Ayarlar'a Git] + [İptal] |
+
+> **`permanentlyDenied` — neden arama hemen bitmez:**  
+> Kullanıcı "Kabul Et" taptıktan sonra Ayarlar'dan izin verip geri dönebilir. Caller'ın 30s ring timer'ı içindeyse arama hâlâ `calling` durumunda olabilir. Geri dönüşte `/calls/active` sonucuna göre devam edilir veya sonlandırılır.
+
+---
+
+### 15.3 Kalıcı Reddedilmiş Mic — Callee Ayarlar Dönüş Akışı
+
+```
+Kullanıcı "Kabul Et" taptı
+    │
+    ├── mic permanently denied
+    │       │
+    │       ▼
+    │   State: ringing (değişmez)
+    │   Modal: "Mikrofon izni gerekli" + [Ayarlar'a Git] [İptal]
+    │       │                                   │
+    │       │ [İptal]                  [Ayarlar'a Git]
+    │       ▼                                   │
+    │   ringing → ended                  iOS/Android Ayarlar açılır
+    │                                  app_background → ringing kalır
+    │                                           │
+    │                               Kullanıcı izin verir → geri döner
+    │                                           │
+    │                                   app_foreground
+    │                                   WS reconnect → /calls/active
+    │                                           │
+    │                          ┌────────────────┴────────────────┐
+    │                    call aktif                         call bitti
+    │                 (status=calling)              (missed/ended — timer doldu)
+    │                          │                               │
+    │                  ringing hâlâ gösterilir          ringing → ended
+    │                  Kullanıcı Accept'e tekrar
+    │                  basabilir → normal devam
+```
+
+---
+
+### 15.4 Kamera İzni
+
+Kamera **hiçbir zaman** call state'i değiştirmez. Aramanın sesli devam etmesi esastır.
+
+| Kontrol noktası | `active` state'de kamera toggle anı |
+|---|---|
+| `notDetermined` | `Permission.camera.request()` göster; `granted` → `setCameraEnabled(true)` |
+| `granted` | Doğrudan `setCameraEnabled(true)` |
+| `denied` | Toast: "Kamera erişimi reddedildi"; arama sesli devam eder |
+| `permanentlyDenied` | Toast + [Ayarlar'a Git] linki; arama sesli devam eder |
+
+**Kamera asla call-blocking değildir.** Şu an veya gelecekte yalnızca ses + isteğe bağlı video modeli geçerlidir.
+
+---
+
+### 15.5 Bluetooth (Android API 31+)
+
+Arama akışının dışında — app startup sorumluluğu.
+
+| Durum | Davranış |
+|---|---|
+| `granted` | Bluetooth headset routing otomatik çalışır |
+| `denied` / `permanentlyDenied` | Headset routing çalışmaz; arama speaker/earpiece'ten devam eder |
+
+`AVAudioSession` (iOS) Bluetooth'u `allowBluetooth | allowBluetoothA2dp` seçenekleriyle yönetir — iOS'ta ayrıca izin istenmez. Bu kural yalnızca Android API 31+ için geçerlidir.
+
+---
+
+### 15.6 Platform Farkları
+
+| Konu | iOS | Android |
+|---|---|---|
+| Kalıcı red tespiti | `PermissionStatus.permanentlyDenied` | `shouldShowRequestPermissionRationale = false` |
+| Bluetooth izni | Gerekmez — AVAudioSession yönetir | API 31+: `BLUETOOTH_CONNECT` gerekir |
+| Mic dialog zamanlaması | `.request()` VoIP push callback'inde de çalışır | `.request()` normal Activity context gerektirir |
+| iOS VoIP push + mic denied | `reportNewIncomingCall` çalışır; accept'te mic check | — |
+| Android FCM push + mic denied | — | Bildirim gelir; accept'te mic check |
+
+---
+
+### 15.7 `permPermanentlyDenied` State Flag'i
+
+`CallState.permPermanentlyDenied` alanı UI'a iki farklı davranış göstermesini sağlar:
+
+| `permPermanentlyDenied` | UI Davranışı |
+|---|---|
+| `false` | "Mikrofon izni reddedildi" — kısa hata mesajı; sonraki aramada OS tekrar sorabilir |
+| `true` | "Mikrofon izni Ayarlar'dan verilmeli" + [Ayarlar'a Git] butonu |
+
+---
+
 ## 13. Log Katmanı
 
 ### 13.1 Log Format

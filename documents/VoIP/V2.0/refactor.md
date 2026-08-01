@@ -345,7 +345,7 @@ class CallRepository {
 
 **Bağımlılık:** Step 4 tamamlanmış olmalı.
 
-AVAudioSession, AudioFocus, ringback, speakerphone — platform'a göre ayrı impl:
+AVAudioSession, AudioFocus, ringback, speakerphone ve **hardware izin yönetimi** — platform'a göre ayrı impl.
 
 ```
 mobile/lib/call/
@@ -354,6 +354,68 @@ mobile/lib/call/
     ios_call_hardware_adapter.dart  ← iOS impl
     android_call_hardware_adapter.dart ← Android impl
 ```
+
+### 5.1 İzin Kontrol Interface'i
+
+```dart
+abstract class CallHardwareAdapter {
+  // Mic izni iste. granted | denied | permanentlyDenied döner.
+  Future<PermissionStatus> requestMicPermission();
+
+  // Kamera izni iste. granted | denied | permanentlyDenied döner.
+  Future<PermissionStatus> requestCameraPermission();
+
+  // AVAudioSession / AudioFocus kurulumu
+  Future<void> setupAudioSession();
+  Future<void> teardownAudioSession();
+
+  // Speakerphone, ringback, vibration...
+  void setSpeaker(bool enabled);
+  void startRingback();
+  void stopRingback();
+}
+```
+
+### 5.2 Caller Mic Akışı (startCall içinde)
+
+```
+Permission.microphone.request()
+  → granted           → dialing state'e geç
+  → denied            → idle → permissionDenied (OS dialog'da kullanıcı reddetmiş)
+  → permanentlyDenied → idle → permissionDenied, permPermanentlyDenied=true
+                        UI: in-app modal + [Ayarlar'a Git]
+```
+
+### 5.3 Callee Mic Akışı (acceptCall içinde, ringing state'de)
+
+```
+Permission.microphone.request()
+  → granted           → ringing → connecting (normal devam)
+  → denied            → ringing → ended (OS dialog'da reddetmiş)
+  → permanentlyDenied → state ringing KALIR
+                        UI: in-app modal + [Ayarlar'a Git] [İptal]
+                        Kullanıcı Settings'den döndüğünde → app_foreground → /calls/active check
+                        → hâlâ calling: ringing devam, tekrar Accept edilebilir
+                        → bitmişse: ringing → ended
+```
+
+**State machine değişikliği (Step 5'te):**  
+`connecting → permissionDenied` callee transition'ı kaldırılır — mic check artık `connecting`'e girmeden olacak.
+
+### 5.4 Kamera İzin Akışı (toggleCamera sırasında)
+
+```
+Permission.camera.request()
+  → granted           → setCameraEnabled(true)
+  → denied            → toast: "Kamera erişimi reddedildi"
+  → permanentlyDenied → toast + [Ayarlar'a Git]
+```
+
+CallStatus değişmez. Arama sesli devam eder.
+
+### 5.5 Bluetooth Android 31+
+
+`BLUETOOTH_CONNECT` app startup'ta istenir (arama akışı dışında). Bu adımda audit edilir; call_service.dart'taki mevcut initialization kodu `CallHardwareAdapter.init()`'e taşınır.
 
 **Production'a alma:** `CallService` `_hardware.*` çağırır. Platform kodu service'den tamamen ayrılır.
 
@@ -477,3 +539,10 @@ Refactoring sırasında alınan kararlar buraya kaydedilir.
 | 2026-08-01 | `idle → permissionDenied` transition | Caller tablosuna eklendi | Step 1 hard block regresyonu: mic izni reddinde `_setState(permissionDenied)` `idle`'dan çağrılıyor; önceden log-only guard'da gizleniyordu |
 | 2026-08-01 | `connecting → permissionDenied` transition | Callee tablosuna eklendi; `permissionDenied → ended` de eklendi | Callee acceptCall yolunda mic yoksa `connecting → permissionDenied → ended` gerekiyor; `_hangUpLocally(ended)` permissionDenied üzerinden çalışmalı |
 | 2026-08-01 | `connecting → reconnecting` belgelendi | VoIP.md §5.5'e eklendi | `RoomReconnectingEvent` connecting state'indeyken de tetiklenebilir; kod izin veriyor ama doc eksikti |
+| 2026-08-01 | Hardware izin politikası | VoIP.md §15 olarak eklendi | Her kombinasyonun davranışı tanımlanmadan Step 5 uygulaması riskli; endüstri standardı analizi sonrası karara varıldı |
+| 2026-08-01 | Mikrofon = call-blocking | Her iki taraf için de `.request()` ile kontrol edilir; izin yoksa arama başlamaz/devam etmez | Mikrofonsuz sesli arama anlamsız; industry standard (WhatsApp, FaceTime) |
+| 2026-08-01 | Kamera = non-blocking, audio-first | Toggle sırasında `.request()` gösterilir; CallStatus değişmez; direkt görüntülü arama planlanmıyor | Kullanıcı kararı: "şuan sadece arama temelli görüntülü konuşma var" |
+| 2026-08-01 | Bluetooth Android 31+ = app startup | Arama akışı dışında; başlangıçta istenir; reddedilirse headset routing çalışmaz, arama devam eder | Arama sırasında `BLUETOOTH_CONNECT` istenmesi hatalı UX; app startup'ta halledilmeli |
+| 2026-08-01 | Kalıcı reddedilmiş mic — callee | State `ringing` kalır; in-app modal + Ayarlar butonu; kullanıcı döndüğünde tekrar Accept edebilir | Kullanıcı kararı: "kullanıcıya fırsat verilsin"; hemen bitirmek yerine Settings redirect |
+| 2026-08-01 | Callee mic check timing değişikliği | Mevcut: `.status` SONRA `connecting`; Hedef: `.request()` ÖNCE `connecting` — Step 5'te uygulanacak | Yanlış timing: kullanıcı OS dialog'unu görmeden `connecting` state'e giriyor |
+| 2026-08-01 | `connecting → permissionDenied` callee geçici | Step 5'te kaldırılacak (mic check `connecting`'e girmeden olacak) | Şimdilik mevcut code ile uyumlu; Step 5 sonrası dead code olur |
