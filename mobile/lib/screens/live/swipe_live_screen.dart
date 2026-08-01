@@ -181,11 +181,8 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
 
   void _onCallStateChanged() {
     final status = CallService.instance.state.value.status;
-    final isCallActive = status != CallStatus.idle && 
-                         status != CallStatus.ended && 
-                         status != CallStatus.rejected &&
-                         status != CallStatus.noAnswer &&
-                         status != CallStatus.missed;
+    final isCallActive = status != CallStatus.idle &&
+                         status != CallStatus.ended;
     
     if (_isCallActive != isCallActive) {
       _isCallActive = isCallActive;

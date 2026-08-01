@@ -488,17 +488,16 @@ class CallService {
           }
         }
       });
-    } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
-      _cpLog('HW', 'ringbackPlayer STOP | reason=$newStatus');
-      _ringbackPlayer.stop();
-      _cpLog('HW', 'audioPlayer PLAY | source=busy.wav mode=release reason=$newStatus');
-      _cpLog('SOUND', 'busy.wav PLAY | reason=$newStatus');
-      _audioPlayer.setReleaseMode(ReleaseMode.release);
-      _audioPlayer.play(AssetSource('sounds/busy.wav'));
     } else if (newStatus == CallStatus.ended) {
       _cpLog('HW', 'ringbackPlayer STOP | reason=ended');
       _ringbackPlayer.stop();
-      if (oldStatus == CallStatus.active || oldStatus == CallStatus.connecting) {
+      final endReason = state.value.endReason;
+      if (endReason == EndReason.busy || endReason == EndReason.rejected) {
+        _cpLog('HW', 'audioPlayer PLAY | source=busy.wav mode=release endReason=$endReason');
+        _cpLog('SOUND', 'busy.wav PLAY | endReason=$endReason');
+        _audioPlayer.setReleaseMode(ReleaseMode.release);
+        _audioPlayer.play(AssetSource('sounds/busy.wav'));
+      } else if (oldStatus == CallStatus.active || oldStatus == CallStatus.connecting) {
         _cpLog('HW', 'audioPlayer PLAY | source=ended.wav mode=release wasConnected=true');
         _cpLog('SOUND', 'ended.wav PLAY | wasConnected=true');
         _audioPlayer.setReleaseMode(ReleaseMode.release);
@@ -1155,7 +1154,7 @@ class CallService {
 
   Future<void> rejectCall() async {
     final currentStatus = state.value.status;
-    if (currentStatus == CallStatus.ended || currentStatus == CallStatus.rejected) return;
+    if (currentStatus == CallStatus.ended) return;
     // Call already accepted — stale reject from UI must not call /reject.
     if (currentStatus == CallStatus.connecting ||
         currentStatus == CallStatus.active ||
@@ -1594,15 +1593,11 @@ class CallService {
     _cpLog('LK', 'roomEvent | ${event.runtimeType}');
     if (event is RoomDisconnectedEvent) {
       final s = state.value.status;
-      // Only call endCall() from an active-call state. Terminal states (rejected, missed,
-      // busy, noAnswer, ended, idle) and callee pre-connect (ringing) reach here via
-      // reset()/_disconnectRoom() cleanup — calling endCall() would double-post /end.
+      // Only call endCall() from an active-call state. Terminal states (ended, idle)
+      // and callee pre-connect (ringing) reach here via reset()/_disconnectRoom()
+      // cleanup — calling endCall() would double-post /end.
       if (s == CallStatus.idle ||
           s == CallStatus.ended ||
-          s == CallStatus.rejected ||
-          s == CallStatus.missed ||
-          s == CallStatus.busy ||
-          s == CallStatus.noAnswer ||
           s == CallStatus.ringing) {
         _cpLog('LK', 'RoomDisconnected SKIPPED | status=${s.name} (terminal or pre-connect — cleanup-triggered disconnect)');
         return;

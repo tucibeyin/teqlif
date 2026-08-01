@@ -58,30 +58,14 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
 
     if (_hasNavigated || !mounted) return;
 
-    if (status == CallStatus.ended ||
-        status == CallStatus.idle ||
-        status == CallStatus.missed) {
+    if (status == CallStatus.ended || status == CallStatus.idle) {
       _cpLog('UI', 'IncomingCallScreen → pop | reason=${status.name}');
       _hasNavigated = true;
       Navigator.of(context).pop();
-    } else if (status == CallStatus.connecting) {
-      _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen | status=connecting');
-      _hasNavigated = true;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          settings: const RouteSettings(name: '/call_screen'),
-          builder: (_) => const CallScreen(),
-          fullscreenDialog: true,
-        ),
-      );
-    } else if (status == CallStatus.permissionDenied) {
-      if (mounted) {
-        final isPermanent =
-            CallService.instance.state.value.permPermanentlyDenied;
-        CallService.instance.reset();
-        Navigator.of(context).pop();
+      final endReason = CallService.instance.state.value.endReason;
+      if (endReason == EndReason.permissionDenied && mounted) {
+        final isPermanent = CallService.instance.state.value.permPermanentlyDenied;
         if (isPermanent) {
-          // iOS kalıcı reddi: Settings'e yönlendir
           await showDialog<void>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -104,6 +88,16 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
           );
         }
       }
+    } else if (status == CallStatus.connecting) {
+      _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen | status=connecting');
+      _hasNavigated = true;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/call_screen'),
+          builder: (_) => const CallScreen(),
+          fullscreenDialog: true,
+        ),
+      );
     }
   }
 
