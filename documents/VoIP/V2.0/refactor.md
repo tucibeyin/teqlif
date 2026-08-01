@@ -297,18 +297,160 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 
 **Bağımlılık:** Step 2 tamamlanmış olmalı.
 
-`rejected`, `missed`, `noAnswer`, `busy`, `permissionDenied` → `ended` + `EndReason` field.
+---
+
+### 3.1 Hedef
+
+`rejected`, `missed`, `noAnswer`, `busy`, `permissionDenied` → `CallStatus.ended + EndReason` field.  
+Bu 5 state `CallStatus`'tan kaldırılır; state machine yalınlaşır.
+
+---
+
+### 3.2 `EndReason` Enum (VoIP.md §3.5)
 
 ```dart
-enum EndReason { normal, rejected, missed, noAnswer, busy, permissionDenied, error }
-
-// CallState'e eklenir:
-final EndReason? endReason;
+// mobile/lib/call/state/end_reason.dart  ← yeni dosya
+enum EndReason {
+  normal,           // user_call_end (her iki taraf normalce kapattı)
+  rejected,         // callee reddetti
+  missed,           // ring timeout — server bildirdi (ARQ)
+  noAnswer,         // caller 30s timer doldu
+  busy,             // /start 409 — callee meşgul
+  permissionDenied, // mic izni reddedildi (caller veya callee denied)
+  error,            // LiveKit/API kalıcı hata
+}
 ```
 
-UI'da `cs.status == CallStatus.rejected` → `cs.status == CallStatus.ended && cs.endReason == EndReason.rejected`
+---
 
-**Production'a alma:** UI dosyaları teker teker güncellenir, her biri bağımsız commit.
+### 3.3 `CallState` Değişikliği
+
+```dart
+// call_state.dart — mevcut alanlar korunur, endReason eklenir
+class CallState {
+  // ...mevcut alanlar...
+  final EndReason? endReason;  // null = henüz belirlenmedi veya aktif arama
+
+  const CallState({
+    // ...
+    this.endReason,
+  });
+
+  CallState copyWith({
+    // ...
+    EndReason? endReason,
+    bool clearEndReason = false,  // reset() için: null'a çek
+  }) {
+    return CallState(
+      // ...
+      endReason: clearEndReason ? null : (endReason ?? this.endReason),
+    );
+  }
+}
+```
+
+---
+
+### 3.4 `call_service.dart` Migrasyon Haritası
+
+| Mevcut `_setState` çağrısı | Yeni çağrı | Kaynak event |
+|---|---|---|
+| `status: CallStatus.rejected` | `status: ended, endReason: EndReason.rejected` | POST /reject 200 veya ws_call_rejected |
+| `status: CallStatus.missed` | `status: ended, endReason: EndReason.missed` | ws_call_missed (callee ve caller) |
+| `status: CallStatus.noAnswer` | `status: ended, endReason: EndReason.noAnswer` | caller 30s ringTimer |
+| `status: CallStatus.busy` | `status: ended, endReason: EndReason.busy` | /start 409 |
+| `status: CallStatus.permissionDenied` | `status: ended, endReason: EndReason.permissionDenied` | mic izni reddi (caller) |
+| `status: CallStatus.ended` (normal) | `status: ended, endReason: EndReason.normal` | user_call_end, ws_call_ended |
+| `status: CallStatus.ended` (LK hata) | `status: ended, endReason: EndReason.error` | lk_connect_failed, error_lk_permanent |
+
+> **Not:** Callee denied mic (`ringing → ended`) zaten `ended` geçiyor; buna `endReason: EndReason.permissionDenied` eklenir.  
+> Callee permanentlyDenied: state `ringing` kalıyor, `ended` tetiklenmez — endReason yok.
+
+---
+
+### 3.5 State Machine Değişiklikleri
+
+**Phase A (migrasyon öncesi):**  
+`_callerTransitions[idle]`'a `CallStatus.ended` ekle — mic izni reddi artık `idle → ended` doğrudan geçer.
+
+```dart
+CallStatus.idle: {
+  CallStatus.dialing,
+  CallStatus.ended,          // ← YENİ: mic izni reddi (permissionDenied kaldırılıyor)
+  // CallStatus.permissionDenied  kaldırılacak
+},
+```
+
+**Phase B (terminal state'ler temizlenince):**  
+`_callerTransitions`, `_calleeTransitions`, `_unknownRoleTransitions` tablolarından `rejected`, `missed`, `noAnswer`, `busy`, `permissionDenied` hedef ve kaynak state'leri tamamen kaldırılır.
+
+---
+
+### 3.6 UI Migrasyon Kuralı
+
+```dart
+// ÖNCE:
+cs.status == CallStatus.rejected
+cs.status == CallStatus.missed
+cs.status == CallStatus.busy
+cs.status == CallStatus.permissionDenied
+
+// SONRA:
+cs.status == CallStatus.ended && cs.endReason == EndReason.rejected
+cs.status == CallStatus.ended && cs.endReason == EndReason.missed
+cs.status == CallStatus.ended && cs.endReason == EndReason.busy
+cs.status == CallStatus.ended && cs.endReason == EndReason.permissionDenied
+```
+
+**Auto-pop kuralı (VoIP.md §3.5):** `ended` + `endReason != null` → 2s sonra dismiss.  
+`endReason == null` → bekle (henüz belirlenmemiş).
+
+---
+
+### 3.7 İki Commit Stratejisi
+
+**Commit A — Additive (non-breaking):**
+- `end_reason.dart` oluştur
+- `call_state.dart` → `endReason` ekle
+- `call_state_machine.dart` → Phase A: `idle → ended` caller'a ekle
+- `call_service.dart` → tüm terminal `_setState` çağrıları `ended + endReason`'a migrate
+- UI dosyaları → `cs.status == ended && cs.endReason == X` kontrolüne geç
+- Test: terminal state → ended+reason testleri güncelle
+
+**Commit B — Cleanup:**
+- `call_status.dart` → `rejected/missed/noAnswer/busy/permissionDenied` kaldır
+- `call_state_machine.dart` → Phase B: tüm tablolardan terminal state'ler kaldır
+- Test: artık geçersiz transition testleri kaldır, 53 → ~42 test
+
+---
+
+### 3.8 Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `mobile/lib/call/state/end_reason.dart` | YENİ: EndReason enum |
+| `mobile/lib/call/state/call_state.dart` | `endReason` field + copyWith |
+| `mobile/lib/call/state/call_status.dart` | Commit B: 5 enum değeri kaldır |
+| `mobile/lib/call/state/call_state_machine.dart` | Phase A+B state machine güncellemesi |
+| `mobile/test/call/state/call_state_machine_test.dart` | Test güncellemesi |
+| `mobile/lib/services/call_service.dart` | Migrasyon haritası (§3.4) |
+| `mobile/lib/screens/call_screen.dart` | UI migrasyon (§3.6) |
+| `mobile/lib/widgets/global_call_overlay.dart` | UI migrasyon |
+| `mobile/lib/widgets/incoming_call_overlay.dart` | UI migrasyon |
+| `mobile/lib/services/push_notification_service.dart` | Varsa terminal state kontrolü |
+
+---
+
+### 3.9 Production'a Alma Kriterleri
+
+- [ ] `end_reason.dart` oluşturuldu
+- [ ] `CallState.endReason` eklendi
+- [ ] `call_service.dart` terminal `_setState` çağrıları migrate edildi
+- [ ] UI dosyaları `ended + endReason` kontrolüne geçti
+- [ ] `call_status.dart` terminal state'ler kaldırıldı
+- [ ] State machine temizlendi
+- [ ] Testler güncellendi ve geçiyor
+- [ ] iOS + Android'de reject / missed / busy / noAnswer / permissionDenied senaryoları manuel test edildi
 
 ---
 
