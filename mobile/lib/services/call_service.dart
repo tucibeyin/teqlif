@@ -10,11 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:audio_session/audio_session.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory;
-import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:vibration/vibration.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api.dart';
@@ -29,6 +26,9 @@ import '../call/state/call_role.dart';
 import '../call/state/call_state_machine.dart';
 import '../call/state/end_reason.dart';
 import '../call/repository/call_repository.dart';
+import '../call/hardware/call_hardware_adapter.dart';
+import '../call/hardware/ios_call_hardware_adapter.dart';
+import '../call/hardware/android_call_hardware_adapter.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
@@ -155,61 +155,9 @@ class CallState {
 
 class CallService {
   CallService._() {
-    // _ringbackPlayer: caller ringback (ringing.wav) — init'te pre-load edilir, ReleaseMode.loop ile döner.
-    // _audioPlayer: busy/ended/weak sesleri için — voiceCommunication context ile earpiece'te çalar.
-    _preloadRingback();
-
+    _hardware.init();
     if (Platform.isIOS) {
       _initCallkitChannelHandler();
-      _prewarmAudioSession();
-    }
-  }
-
-  Future<void> _preloadRingback() async {
-    try {
-      // Android: busy/ended/weak sesler WebRTC audio focus bırakıldığında speaker'a geçmesin.
-      if (Platform.isAndroid) {
-        await _audioPlayer.setAudioContext(ap.AudioContext(
-          android: const ap.AudioContextAndroid(
-            usageType: ap.AndroidUsageType.voiceCommunication,
-            contentType: ap.AndroidContentType.sonification,
-            audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
-          ),
-        ));
-      }
-      await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
-      await _ringbackPlayer.setAudioContext(ap.AudioContext(
-        android: const ap.AudioContextAndroid(
-          usageType: ap.AndroidUsageType.voiceCommunication,
-          contentType: ap.AndroidContentType.sonification,
-          audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
-        ),
-        iOS: ap.AudioContextIOS(
-          category: ap.AVAudioSessionCategory.playAndRecord,
-          options: {
-            ap.AVAudioSessionOptions.allowBluetooth,
-            ap.AVAudioSessionOptions.allowBluetoothA2DP,
-          },
-        ),
-      ));
-      await _ringbackPlayer.setSource(ap.AssetSource('sounds/ringing.wav'));
-      _ringbackPreloaded = true;
-      _cpLog('SOUND', 'ringing.wav PRE-LOADED in ringbackPlayer | ready for instant resume()');
-      // P2: Android MediaPlayer cold-start (~780ms). Force-decode by playing 50ms then pausing.
-      // After this, resume() in startCall starts in ~15ms instead of ~780ms.
-      if (Platform.isAndroid) {
-        try {
-          await _ringbackPlayer.resume();
-          await Future.delayed(const Duration(milliseconds: 50));
-          await _ringbackPlayer.pause();
-          await _ringbackPlayer.seek(Duration.zero);
-          _cpLog('SOUND', 'ringing.wav FORCE-BUFFERED (Android) | cold-start latency eliminated');
-        } catch (e) {
-          _cpLog('SOUND', 'Android buffer-force FAILED | $e');
-        }
-      }
-    } catch (e) {
-      _cpLog('SOUND', 'ringing.wav pre-load FAILED | $e → will fallback to play(AssetSource)');
     }
   }
   static final CallService instance = CallService._();
@@ -238,7 +186,6 @@ class CallService {
   Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
   Timer? _peerTimeoutTimer; // Timeout if other user doesn't join LiveKit room
-  Timer? _ringtoneLoopTimer; // For iOS ringtone looping
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
   Timer? _connectingTimeoutTimer; // 15s guard: connecting → endCall if TrackSubscribed never fires
@@ -247,12 +194,16 @@ class CallService {
   // startCall → caller, onIncomingCall → callee, reset → null.
   CallRole? _currentRole;
 
+  // Platform-specific audio hardware adapter (iOS / Android).
+  final CallHardwareAdapter _hardware = Platform.isIOS
+      ? IosCallHardwareAdapter()
+      : AndroidCallHardwareAdapter();
+
   bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
   // WS connection lock: true while an active call is holding the WsService lock.
   // Ensures background lifecycle doesn't close the socket mid-call.
   bool _wsLockHeld = false;
-  Completer<void>? _callkitAudioReady; // iOS: didActivateAudioSession sinyali
 
   // Synchronous dedup guard: WS + FCM + CallKit aynı call_id ile ~150ms arayla gelir.
   // İlk çağrı _activeIncomingCallId'yi set eder; sonrakiler erken döner.
@@ -263,40 +214,17 @@ class CallService {
   // (backendStatus HTTP pending) — Android foreground dismiss fired too early.
   int? get activeIncomingCallId => _activeIncomingCallId;
 
-  // Race condition fix: didActivateAudioSession, _joinRoom'daki Completer'dan önce gelebilir.
-  // VoIP push auto-accept senaryosunda bu kaçınılmaz: kullanıcı lock screen'den kabul eder,
-  // action.fulfill() → didActivateAudioSession senkron ateşlenir, Flutter henüz hazır değildir.
-  // Flag sayesinde sinyal kaybolmaz — _joinRoom Completer'ı bulunca anında tamamlar.
-  bool _audioSessionActivated = false;
-
   // Pre-connect başlama zamanı — acceptCall'da kaç ms önce başladığını ölçer.
   DateTime? _preConnectStartedAt;
 
   static const _callkitChannel = MethodChannel('com.teqlif/callkit');
 
-  // iOS: AVAudioSession'ı app başlatılırken soloAmbient ile önceden ısıt.
-  // Bu sayede ilk arama sırasındaki playAndRecord geçişi ~300-500ms daha hızlı olur.
-  Future<void> _prewarmAudioSession() async {
-    try {
-      final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.soloAmbient,
-      ));
-      _cpLog('HW', 'audioSession PRE-WARM (iOS) | category=soloAmbient');
-    } catch (e) {
-      _cpLog('HW', 'audioSession pre-warm ERROR | $e');
-    }
-  }
-
   // iOS: CallKit audio session aktive olduğunda native'den sinyal alır.
   void _initCallkitChannelHandler() {
     _callkitChannel.setMethodCallHandler((call) async {
       if (call.method == 'audioSessionActivated') {
-        _cpLog('LK', 'audioSessionActivated received from CallKit native | completerReady=${_callkitAudioReady != null}');
-        _audioSessionActivated = true; // Flag: sinyal erken gelse de kaybolmaz
-        if (_callkitAudioReady != null && !_callkitAudioReady!.isCompleted) {
-          _callkitAudioReady!.complete();
-        }
+        _cpLog('LK', 'audioSessionActivated received from CallKit native');
+        _hardware.onAudioSessionActivated();
       }
     });
   }
@@ -306,18 +234,10 @@ class CallService {
   // Included in CallState when transitioning to connected so widgets can read it from state.
   DateTime? _acceptedAt;
 
-  Timer? _hapticLoopTimer;
   Timer? _statsTimer;               // WebRTC audio stats polling (5s)
   StreamSubscription<int>? _proximitySub;     // Proximity sensor → earpiece auto-switch
   StreamSubscription<List<ConnectivityResult>>? _networkSub;  // Network change monitor
   ConnectivityResult? _prevNetworkType;  // For networkChange false-positive suppression
-
-  final AudioPlayer _audioPlayer = AudioPlayer();
-
-  // Pre-loaded ringback player: caller ringtone için ayrı player, init'te yüklenir.
-  // Her çağrıda AssetSource yükleme gecikmesi (~500ms) ortadan kalkar → resume() ile anında başlar.
-  final AudioPlayer _ringbackPlayer = AudioPlayer();
-  bool _ringbackPreloaded = false;
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -396,10 +316,7 @@ class CallService {
     }
     
     if (!oldPoor && s.isPoorConnection && s.status == CallStatus.active) {
-      _cpLog('HW', 'audioPlayer PLAY | source=weak.wav poorConnection=true');
-      _cpLog('SOUND', 'weak.wav PLAY | poorConnection detected');
-      _audioPlayer.setReleaseMode(ReleaseMode.release);
-      _audioPlayer.play(AssetSource('sounds/weak.wav'));
+      _hardware.playWeakSound();
     }
   }
 
@@ -436,78 +353,18 @@ class CallService {
     }
 
     if (newStatus == CallStatus.dialing) {
-      AudioSession.instance.then((session) async {
-        try {
-          _cpLog('HW', 'audioSession CONFIGURE | context=ringtone category=playAndRecord mode=voiceChat androidUsage=voiceCommunication');
-          await session.configure(AudioSessionConfiguration(
-            avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-            avAudioSessionMode: AVAudioSessionMode.voiceChat,
-            avAudioSessionCategoryOptions:
-                AVAudioSessionCategoryOptions.allowBluetooth |
-                AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-            androidAudioAttributes: const AndroidAudioAttributes(
-              contentType: AndroidAudioContentType.sonification,
-              flags: AndroidAudioFlags.none,
-              usage: AndroidAudioUsage.voiceCommunication,
-            ),
-            androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
-            androidWillPauseWhenDucked: false,
-          ));
-          _cpLog('HW', 'speakerphone SET | enabled=false context=ringtone-start');
-          await Hardware.instance.setSpeakerphoneOn(false);
-        } catch (e) {
-          _cpLog('HW', 'audioSession CONFIGURE ERROR | context=ringtone $e');
-          debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: $e');
-        }
-
+      _hardware.setupAudioSession().then((_) {
         if (state.value.status == CallStatus.dialing || state.value.status == CallStatus.waiting) {
-          if (Platform.isIOS) {
-            await Future.delayed(const Duration(milliseconds: 600));
-          }
-          if (state.value.status == CallStatus.dialing || state.value.status == CallStatus.waiting) {
-            if (_ringbackPreloaded) {
-              // Pre-loaded path: seek to start + resume — no asset loading delay (~10ms)
-              // setReleaseMode explicitly on every resume: after stop() the mode may reset.
-              _cpLog('SOUND', 'ringbackPlayer RESUME (pre-loaded) | ringing.wav instant start');
-              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=true device=earpiece');
-              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
-              await _ringbackPlayer.seek(Duration.zero);
-              await _ringbackPlayer.resume();
-            } else {
-              // Fallback: pre-load başarısızsa normal play (yükleme gecikmesi olabilir)
-              _cpLog('SOUND', 'ringbackPlayer PLAY (fallback, not pre-loaded) | ringing.wav');
-              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=false device=earpiece');
-              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
-              await _ringbackPlayer.play(ap.AssetSource('sounds/ringing.wav'));
-            }
-          }
+          _hardware.startRingback();
         }
       });
     } else if (newStatus == CallStatus.ended) {
-      _cpLog('HW', 'ringbackPlayer STOP | reason=ended');
-      _ringbackPlayer.stop();
+      _hardware.stopRingback();
       final endReason = state.value.endReason;
-      if (endReason == EndReason.busy || endReason == EndReason.rejected) {
-        _cpLog('HW', 'audioPlayer PLAY | source=busy.wav mode=release endReason=$endReason');
-        _cpLog('SOUND', 'busy.wav PLAY | endReason=$endReason');
-        _audioPlayer.setReleaseMode(ReleaseMode.release);
-        _audioPlayer.play(AssetSource('sounds/busy.wav'));
-      } else if (oldStatus == CallStatus.active || oldStatus == CallStatus.connecting) {
-        _cpLog('HW', 'audioPlayer PLAY | source=ended.wav mode=release wasConnected=true');
-        _cpLog('SOUND', 'ended.wav PLAY | wasConnected=true');
-        _audioPlayer.setReleaseMode(ReleaseMode.release);
-        _audioPlayer.play(AssetSource('sounds/ended.wav'));
-      } else {
-        _cpLog('HW', 'audioPlayer STOP | reason=ended-without-connection');
-        _cpLog('SOUND', 'audioPlayer.stop | ended without connection');
-        _audioPlayer.stop();
-      }
+      final wasConnected = oldStatus == CallStatus.active || oldStatus == CallStatus.connecting;
+      _hardware.playEndedSound(wasConnected: wasConnected, endReason: endReason);
     } else if (newStatus == CallStatus.active || newStatus == CallStatus.idle) {
-      _cpLog('HW', 'ringbackPlayer STOP | reason=$newStatus');
-      _ringbackPlayer.stop();
-      _cpLog('HW', 'audioPlayer STOP | reason=$newStatus');
-      _cpLog('SOUND', 'audioPlayer.stop | status=$newStatus');
-      _audioPlayer.stop();
+      _hardware.stopAllSounds();
     }
   }
 
@@ -530,7 +387,7 @@ class CallService {
       return;
     }
 
-    final permStatus = await Permission.microphone.request();
+    final permStatus = await _hardware.requestMicPermission();
     _cpLog('OUT', 'mic permission | status=$permStatus');
     if (permStatus != PermissionStatus.granted) {
       _setState(
@@ -862,60 +719,27 @@ class CallService {
   /// Çağrıldığında _room bağlı olmalı; iOS'ta CallKit audio session sinyali beklenir.
   Future<void> _activateCalleeAudio() async {
     final activateStartAt = DateTime.now();
-    _cpLog('IN', '_activateCalleeAudio START | status=${state.value.status} audioSessionActivated=$_audioSessionActivated startUtc=${activateStartAt.toUtc().toIso8601String()}');
+    _cpLog('IN', '_activateCalleeAudio START | status=${state.value.status} startUtc=${activateStartAt.toUtc().toIso8601String()}');
 
     if (Platform.isIOS) {
-      if (_audioSessionActivated) {
-        _cpLog('IN', '_activateCalleeAudio: audioSessionActivated flag=true → no wait | waitMs=0');
-        _cpLog('HW', 'audioSessionActivated SKIPPED WAIT | flag=true already received');
-      } else {
-        _callkitAudioReady ??= Completer<void>();
-        final waitStartAt = DateTime.now();
-        _cpLog('IN', '_activateCalleeAudio: waiting for didActivateAudioSession (max 4s) | waitStartUtc=${waitStartAt.toUtc().toIso8601String()}');
-        _cpLog('HW', 'didActivateAudioSession WAITING | callkitAudioReady created maxWait=4s');
-        await _callkitAudioReady!.future.timeout(
-          const Duration(seconds: 4),
-          onTimeout: () {
-            final waitMs = DateTime.now().difference(waitStartAt).inMilliseconds;
-            _cpLog('IN', '_activateCalleeAudio: audioSessionActivated TIMEOUT after ${waitMs}ms → proceeding');
-            _cpLog('HW', 'didActivateAudioSession TIMEOUT | waitMs=$waitMs → proceeding without signal');
-          },
-        );
-        final waitMs = DateTime.now().difference(waitStartAt).inMilliseconds;
-        _cpLog('IN', '_activateCalleeAudio: audioSessionActivated received | waitMs=$waitMs');
-        _cpLog('HW', 'didActivateAudioSession RECEIVED | waitMs=$waitMs');
-        _callkitAudioReady = null;
-      }
+      await _hardware.waitForCallkitAudio();
       if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
         _cpLog('IN', '_activateCalleeAudio: call already ended after audio wait — aborting | status=${state.value.status.name}');
         return;
       }
     } else if (Platform.isAndroid && state.value.callId != null) {
       final uuid = _formatToUuid(state.value.callId!.toString());
-      _cpLog('IN', '_activateCalleeAudio: Android setCallConnected | uuid=$uuid');
-      FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
-        _cpLog('IN', '_activateCalleeAudio setCallConnected ERROR | $e');
-      });
-      await Future.delayed(const Duration(milliseconds: 200));
+      _cpLog('IN', '_activateCalleeAudio: Android onCallConnected | uuid=$uuid');
+      await _hardware.onCallConnected(uuid);
     }
 
     try {
-      _cpLog('IN', '_activateCalleeAudio: AudioSession configure voiceChat');
-      _cpLog('HW', 'audioSession CONFIGURE | context=_activateCalleeAudio category=playAndRecord mode=voiceChat');
-      final session = await AudioSession.instance;
-      await session.configure(AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-        avAudioSessionMode: AVAudioSessionMode.voiceChat,
-        avAudioSessionCategoryOptions:
-            AVAudioSessionCategoryOptions.allowBluetooth |
-            AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-      ));
+      _cpLog('IN', '_activateCalleeAudio: configureVoiceChat');
       final speakerTarget = preventCallScreenAutoOpen.value;
-      _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=_activateCalleeAudio-post-configure swipeLive=$speakerTarget');
-      await Hardware.instance.setSpeakerphoneOn(speakerTarget);
-      _cpLog('IN', '_activateCalleeAudio: AudioSession configure OK');
+      await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
+      _cpLog('IN', '_activateCalleeAudio: configureVoiceChat OK | speakerEnabled=$speakerTarget');
     } catch (e) {
-      _cpLog('IN', '_activateCalleeAudio: AudioSession configure ERROR | $e');
+      _cpLog('IN', '_activateCalleeAudio: configureVoiceChat ERROR | $e');
     }
 
     _cpLog('IN', '_activateCalleeAudio: setMicrophoneEnabled(true)');
@@ -924,7 +748,7 @@ class CallService {
     await Future.delayed(const Duration(milliseconds: 300));
     final speakerTargetPostMic = preventCallScreenAutoOpen.value;
     _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_activateCalleeAudio-post-mic swipeLive=$speakerTargetPostMic');
-    await Hardware.instance.setSpeakerphoneOn(speakerTargetPostMic);
+    await _hardware.setSpeaker(speakerTargetPostMic);
     final totalMs = DateTime.now().difference(activateStartAt).inMilliseconds;
     _cpLog('IN', '_activateCalleeAudio DONE | totalMs=$totalMs');
 
@@ -952,59 +776,24 @@ class CallService {
   }
 
   void playNotification() {
-    _cpLog('SOUND', 'playNotification triggered');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state.value.status == CallStatus.ringing) {
-        FlutterRingtonePlayer().playNotification();
+        _hardware.playNotification();
       }
     });
   }
 
-  void startRingtoneAndVibration() async {
+  void startRingtoneAndVibration() {
     _cpLog('SOUND', 'startRingtoneAndVibration CALLED | status=${state.value.status}');
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state.value.status != CallStatus.ringing) return;
-
-      _cpLog('HW', 'ringtonePlayer PLAY | platform=${defaultTargetPlatform.name} looping=true context=incoming-call');
-      _cpLog('SOUND', 'ringtone PLAY | platform=${defaultTargetPlatform.name} looping=true');
-      FlutterRingtonePlayer().playRingtone(looping: true);
-
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        _ringtoneLoopTimer?.cancel();
-        _cpLog('HW', 'ringtoneLoopTimer START | interval=3s platform=iOS');
-        _cpLog('SOUND', 'iOS ringtoneLoopTimer started | interval=3s');
-        _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-          _cpLog('HW', 'ringtonePlayer PLAY | platform=iOS loopTick');
-          FlutterRingtonePlayer().playRingtone();
-        });
-
-        _hapticLoopTimer?.cancel();
-        _cpLog('HW', 'hapticLoopTimer START | interval=2s platform=iOS');
-        _hapticLoopTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-          if (await Vibration.hasVibrator() == true) {
-            _cpLog('HW', 'haptic VIBRATE | platform=iOS loopTick');
-            Vibration.vibrate();
-          }
-        });
-      }
-
-      if (await Vibration.hasVibrator() == true && defaultTargetPlatform != TargetPlatform.iOS) {
-        _cpLog('HW', 'haptic VIBRATE | pattern=[2000,500,2000,500] repeat=0 platform=Android');
-        Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
-      }
+      _hardware.startRinger();
     });
   }
 
   void stopRingtoneAndVibration() {
     _cpLog('SOUND', 'stopRingtoneAndVibration CALLED | status=${state.value.status}');
-    _ringtoneLoopTimer?.cancel();
-    _ringtoneLoopTimer = null;
-    _hapticLoopTimer?.cancel();
-    _hapticLoopTimer = null;
-    _cpLog('HW', 'ringtonePlayer STOP | context=stopRingtoneAndVibration');
-    FlutterRingtonePlayer().stop();
-    _cpLog('HW', 'haptic CANCEL | context=stopRingtoneAndVibration');
-    Vibration.cancel();
+    _hardware.stopRinger();
   }
 
   Future<void> acceptCall() async {
@@ -1023,15 +812,11 @@ class CallService {
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
 
-    // IMMEDIATELY transition to connecting before any async work.
-    // Fixes two visual glitches observed in logs:
-    // 1. 272ms IncomingCallBar + CallScreen overlap: bar hides on ringing→connecting,
-    //    which now fires before _openCallScreen() pushes the route.
-    // 2. 179ms CallScreen ringing flash: screen opens with connecting state, not ringing.
-    _setState(state.value.copyWith(status: CallStatus.connecting));
-
-    final permStatus = await Permission.microphone.status;
-    _cpLog('IN', 'mic status check | status=$permStatus');
+    // Mic permission check BEFORE connecting transition:
+    // - .request() shows OS dialog (vs .status which is silent) → user sees the prompt
+    // - If denied, we can _hangUpLocally from ringing state (cleaner than connecting→ended)
+    final permStatus = await _hardware.requestMicPermission();
+    _cpLog('IN', 'mic permission | status=$permStatus');
     if (!permStatus.isGranted) {
       _hangUpLocally(
         status: CallStatus.ended,
@@ -1043,6 +828,9 @@ class CallService {
       } catch (_) {}
       return;
     }
+
+    // Transition to connecting only after mic permission confirmed.
+    _setState(state.value.copyWith(status: CallStatus.connecting));
 
     // Snapshot token/url — may be set by _fetchAndStoreCalleeToken (proactive fetch)
     final preConnectUrl = state.value.livekitUrl;
@@ -1330,30 +1118,12 @@ class CallService {
     try {
       _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=$callStatusAtEntry isCallee=$isCalleeRole');
 
-      // ── iOS Callee: didActivateAudioSession sinyali bekle ───────────────────
-      // action.fulfill() AppDelegate.onAccept'te anında çağrılır.
-      // fulfill() → CallKit → provider(_:didActivate:) → didActivateAudioSession → Flutter signal.
-      //
-      // Race condition: VoIP push auto-accept senaryosunda kullanıcı lock screen'den kabul eder.
-      // didActivateAudioSession bu kodu çalışmadan önce ateşlenir (717ms önce, log'dan).
-      // Çözüm: _audioSessionActivated flag'i. Sinyal erken geldiyse Completer'ı anında tamamla.
-      if (Platform.isIOS && isCalleeRole) {
-        _callkitAudioReady = Completer<void>();
-        if (_audioSessionActivated) {
-          _callkitAudioReady!.complete();
-          _cpLog('LK', 'iOS callee: audioSessionActivated already received (early signal, flag=true) — no wait');
-        } else {
-          _cpLog('LK', 'iOS callee: waiting for didActivateAudioSession signal from CallKit');
-        }
-        // Android callee: setCallConnected (audio session yok, direkt çalışır)
-      } else if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
+      // ── Android Callee: notify CallKit UI that call is connected ───────────
+      // iOS: CallKit audio session lifecycle is handled by the adapter's waitForCallkitAudio().
+      if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
         final uuid = _formatToUuid(state.value.callId!.toString());
-        _cpLog('LK', 'Android callee: setCallConnected | uuid=$uuid');
-        FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
-          _cpLog('LK', 'setCallConnected ERROR | $e');
-        });
-        // Android'de audio session yok — kısa bekleme yeterli
-        await Future.delayed(const Duration(milliseconds: 200));
+        _cpLog('LK', 'Android callee: onCallConnected | uuid=$uuid');
+        await _hardware.onCallConnected(uuid);
       }
 
       // ── Ağ bağlantısı (audio session gerektirmez) ────────────────────────────
@@ -1372,16 +1142,10 @@ class CallService {
       );
       _cpLog('LK', 'room.connect() SUCCESS');
 
-      // ── iOS Callee: audio session aktive olana kadar bekle ───────────────────
-      if (Platform.isIOS && isCalleeRole && _callkitAudioReady != null) {
-        _cpLog('LK', 'iOS callee: waiting for audioSessionActivated (max 4s)');
-        await _callkitAudioReady!.future.timeout(
-          const Duration(seconds: 4),
-          onTimeout: () {
-            _cpLog('LK', 'audioSessionActivated TIMEOUT — CallKit may not have activated audio. Proceeding anyway.');
-          },
-        );
-        _callkitAudioReady = null;
+      // ── iOS Callee: wait for CallKit didActivateAudioSession ───────────────
+      if (Platform.isIOS && isCalleeRole) {
+        _cpLog('LK', 'iOS callee: waitForCallkitAudio');
+        await _hardware.waitForCallkitAudio();
       }
 
       // ── Audio session + mic: Rol bazlı aktivasyon ─────────────────────────────
@@ -1391,20 +1155,12 @@ class CallService {
       //   onCallAccepted() içinde etkinleştirilir.
       if (isCalleeRole) {
         try {
-          _cpLog('LK', 'AudioSession configure | role=callee category=playAndRecord mode=voiceChat');
-          _cpLog('HW', 'audioSession CONFIGURE | context=_joinRoom-callee category=playAndRecord mode=voiceChat');
-          final session = await AudioSession.instance;
-          await session.configure(AudioSessionConfiguration(
-            avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-            avAudioSessionMode: AVAudioSessionMode.voiceChat,
-            avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-          ));
           final speakerTarget = preventCallScreenAutoOpen.value;
-          _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=_joinRoom-callee-post-configure swipeLive=$speakerTarget');
-          await Hardware.instance.setSpeakerphoneOn(speakerTarget);
-          _cpLog('LK', 'AudioSession configure OK | role=callee');
+          _cpLog('LK', 'configureVoiceChat | role=callee speakerEnabled=$speakerTarget');
+          await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
+          _cpLog('LK', 'configureVoiceChat OK | role=callee');
         } catch (e) {
-          _cpLog('LK', 'AudioSession configure ERROR | role=callee $e');
+          _cpLog('LK', 'configureVoiceChat ERROR | role=callee $e');
         }
         _cpLog('LK', 'setMicrophoneEnabled(true) calling | role=callee');
         _cpLog('HW', 'microphone ENABLE | context=_joinRoom-callee');
@@ -1412,8 +1168,8 @@ class CallService {
         _cpLog('LK', 'setMicrophoneEnabled(true) done | role=callee');
         await Future.delayed(const Duration(milliseconds: 300));
         final speakerTargetPostMic = preventCallScreenAutoOpen.value;
-        _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_joinRoom-callee-post-mic swipeLive=$speakerTargetPostMic');
-        await Hardware.instance.setSpeakerphoneOn(speakerTargetPostMic);
+        _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_joinRoom-callee-post-mic');
+        await _hardware.setSpeaker(speakerTargetPostMic);
       } else {
         // Network-only pre-connect (caller=calling veya callee=ringing): standart ses atlandı.
         // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
@@ -1428,34 +1184,11 @@ class CallService {
           _cpLog('LK', 'caller pre-connect: network-only (no mic pre-publish) | callId=${state.value.callId}');
           _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | ringback=preserved mic-will-start-on-acceptance');
           if (Platform.isIOS) {
-            // room.connect() internally overrides AVAudioSession to SoloAmbient, which
-            // interrupts the audioplayers ringback. Restore playAndRecord and re-resume.
-            // Also covers connecting: if callee accepted while room.connect() was in flight,
-            // status is now connecting but ringback should still play until audio arrives.
+            // room.connect() internally overrides AVAudioSession to SoloAmbient → ringback stops.
+            // resumeAfterRoomConnect() restores playAndRecord/voiceChat and resumes ringback.
             final postConnectStatus = state.value.status;
             if (postConnectStatus == CallStatus.waiting || postConnectStatus == CallStatus.connecting) {
-              try {
-                final session = await AudioSession.instance;
-                await session.configure(AudioSessionConfiguration(
-                  avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-                  avAudioSessionMode: AVAudioSessionMode.voiceChat,
-                  avAudioSessionCategoryOptions:
-                      AVAudioSessionCategoryOptions.allowBluetooth |
-                      AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-                ));
-                if (_ringbackPlayer.state != PlayerState.playing) {
-                  // SoloAmbient interrupted the ringback — restore loop mode and restart.
-                  await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
-                  await _ringbackPlayer.seek(Duration.zero);
-                  await _ringbackPlayer.resume();
-                  _cpLog('SOUND', 'ringbackPlayer RESUMED after LiveKit SoloAmbient override | iOS caller status=$postConnectStatus');
-                } else {
-                  // Still playing in loop mode — don't change mode.
-                  _cpLog('SOUND', 'ringbackPlayer STILL PLAYING after room.connect() (no interruption) | iOS caller status=$postConnectStatus');
-                }
-              } catch (e) {
-                _cpLog('SOUND', 'ringbackPlayer restore ERROR after LiveKit SoloAmbient | $e');
-              }
+              await _hardware.resumeAfterRoomConnect();
             }
           }
         } else {
@@ -1626,26 +1359,20 @@ class CallService {
         }
 
         _cpLog('LK', 'TrackSubscribed AUDIO (unmuted) → voice AudioSession → ringing stop → connected');
-        // AudioSession'ı ses akışı başlamadan hemen önce voice-chat moduna geçir.
-        // iOS: speakerphone AudioSession sonrası set edilir (async callback).
-        // Android: speakerphone aşağıdaki senkron blokta hemen set edilir — callback'te tekrar edilmez.
-        AudioSession.instance.then((session) async {
+        // Configure audio session asynchronously before transition so audio routing is ready.
+        // iOS: speakerphone state update happens inside configureVoiceChat callback.
+        // Android: speakerphone is set synchronously in the block below.
+        Future(() async {
           try {
-            _cpLog('HW', 'audioSession CONFIGURE | context=TrackSubscribed category=playAndRecord mode=voiceChat');
-            await session.configure(AudioSessionConfiguration(
-              avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-              avAudioSessionMode: AVAudioSessionMode.voiceChat,
-              avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-            ));
+            final speakerTarget = preventCallScreenAutoOpen.value;
+            _cpLog('HW', 'configureVoiceChat | context=TrackSubscribed speakerEnabled=$speakerTarget');
+            await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
             if (Platform.isIOS) {
-              final speakerTarget = preventCallScreenAutoOpen.value;
-              _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackSubscribed-post-configure platform=iOS swipeLive=$speakerTarget');
-              await Hardware.instance.setSpeakerphoneOn(speakerTarget);
               _setState(state.value.copyWith(isSpeaker: speakerTarget));
             }
-            _cpLog('LK', 'TrackSubscribed: AudioSession voice configure OK');
+            _cpLog('LK', 'TrackSubscribed: configureVoiceChat OK');
           } catch (e) {
-            _cpLog('LK', 'TrackSubscribed: AudioSession configure ERROR | $e');
+            _cpLog('LK', 'TrackSubscribed: configureVoiceChat ERROR | $e');
           }
         });
         if (state.value.status == CallStatus.waiting || state.value.status == CallStatus.connecting) {
@@ -1667,7 +1394,7 @@ class CallService {
           if (Platform.isAndroid) {
             final speakerTarget = preventCallScreenAutoOpen.value;
             _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackSubscribed-Android swipeLive=$speakerTarget');
-            Hardware.instance.setSpeakerphoneOn(speakerTarget);
+            _hardware.setSpeaker(speakerTarget);
             _setState(state.value.copyWith(isSpeaker: speakerTarget));
           }
         }
@@ -1698,30 +1425,24 @@ class CallService {
         _setState(state.value.copyWith(remoteVideoEnabled: true));
       } else if (isRemote && event.publication.kind == TrackType.AUDIO && state.value.status == CallStatus.connecting) {
         _cpLog('LK', 'TrackUnmuted AUDIO remote → connecting→connected (Android unmuted pre-published track)');
-        AudioSession.instance.then((session) async {
+        Future(() async {
           try {
-            _cpLog('HW', 'audioSession CONFIGURE | context=TrackUnmuted category=playAndRecord mode=voiceChat');
-            await session.configure(AudioSessionConfiguration(
-              avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-              avAudioSessionMode: AVAudioSessionMode.voiceChat,
-              avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-            ));
+            final speakerTarget = preventCallScreenAutoOpen.value;
+            _cpLog('HW', 'configureVoiceChat | context=TrackUnmuted speakerEnabled=$speakerTarget');
+            await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
             if (Platform.isIOS) {
-              final speakerTarget = preventCallScreenAutoOpen.value;
-              _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackUnmuted-post-configure platform=iOS swipeLive=$speakerTarget');
-              await Hardware.instance.setSpeakerphoneOn(speakerTarget);
               _setState(state.value.copyWith(isSpeaker: speakerTarget));
             }
-            _cpLog('LK', 'TrackUnmuted: AudioSession voice configure OK');
+            _cpLog('LK', 'TrackUnmuted: configureVoiceChat OK');
           } catch (e) {
-            _cpLog('LK', 'TrackUnmuted: AudioSession configure ERROR | $e');
+            _cpLog('LK', 'TrackUnmuted: configureVoiceChat ERROR | $e');
           }
         });
         _transitionToConnected(context: 'TrackUnmuted');
         if (Platform.isAndroid) {
           final speakerTarget = preventCallScreenAutoOpen.value;
           _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackUnmuted-Android swipeLive=$speakerTarget');
-          Hardware.instance.setSpeakerphoneOn(speakerTarget);
+          _hardware.setSpeaker(speakerTarget);
           _setState(state.value.copyWith(isSpeaker: speakerTarget));
         }
       }
@@ -1946,12 +1667,7 @@ class CallService {
   Future<void> setSpeaker(bool enabled) async {
     _cpLog('UI', 'setSpeaker | enabled=$enabled');
     _cpLog('HW', 'speakerphone SET | enabled=$enabled context=setSpeaker userAction=true');
-    try {
-      await Hardware.instance.setSpeakerphoneOn(enabled);
-    } catch (e) {
-      _cpLog('UI', 'setSpeaker ERROR | $e');
-      _cpLog('HW', 'speakerphone SET ERROR | enabled=$enabled $e');
-    }
+    await _hardware.setSpeaker(enabled);
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
   Future<void> endCall() async {
@@ -2033,30 +1749,14 @@ class CallService {
       // SwipeLiveScreen bağlamında arama bitti → stream hoparlörden devam etmeli.
       // reset() preventCallScreenAutoOpen'ı temizlemeden önce flag'i oku.
       final wasInSwipeLive = preventCallScreenAutoOpen.value;
-      try {
-        if (wasInSwipeLive) {
-          // SwipeLive: stream hoparlöre dönmesi için speaker=true bırak.
-          _cpLog('HW', 'speakerphone SET | enabled=true context=_hangUpLocally-swipeLive (restore stream speaker)');
-          await Hardware.instance.setSpeakerphoneOn(true);
-        } else {
-          // Standart arama: earpiece'e sıfırla.
-          _cpLog('HW', 'speakerphone SET | enabled=false context=_hangUpLocally-post-callkit (reset to earpiece)');
-          await Hardware.instance.setSpeakerphoneOn(false);
-        }
-      } catch (e) {
-        _cpLog('HW', 'speakerphone SET ERROR | context=_hangUpLocally $e');
-        debugPrint('[CallService] setSpeakerphoneOn error: $e');
-      }
+      // SwipeLive: speaker=true bırak (stream hoparlöre dönsün).
+      // Standart: earpiece'e sıfırla.
+      _cpLog('HW', 'speakerphone SET | enabled=$wasInSwipeLive context=_hangUpLocally swipeLive=$wasInSwipeLive');
+      await _hardware.setSpeaker(wasInSwipeLive);
       // iOS: voiceChat modu ile playAndRecord session'ı açık kalır → turuncu nokta göstergesi.
       // Arama sonrası deactivate et; SwipeLiveScreen ve diğer ses kaynakları session'ı devralabilir.
       if (Platform.isIOS) {
-        try {
-          final session = await AudioSession.instance;
-          await session.setActive(false);
-          _cpLog('HW', 'audioSession DEACTIVATE | context=_hangUpLocally platform=iOS swipeLive=$wasInSwipeLive');
-        } catch (e) {
-          _cpLog('HW', 'audioSession DEACTIVATE ERROR | context=_hangUpLocally $e');
-        }
+        await _hardware.teardownAudioSession();
       }
 
       // Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
@@ -2073,7 +1773,6 @@ class CallService {
   }
 
   Future<void> _disconnectRoom() async {
-    _ringtoneLoopTimer?.cancel();
     _elapsedTimer?.cancel();
     _peerTimeoutTimer?.cancel();
     _callerStatusPollTimer?.cancel();
@@ -2083,7 +1782,7 @@ class CallService {
     _stopStatsMonitor();
     _stopProximitySensor();
     _stopNetworkMonitor();
-    _ringbackPlayer.stop(); // Pre-loaded ringback'i durdur (caller hangup veya reset)
+    _hardware.stopAllSounds(); // Safety net: stop ringback + any one-shot sounds
 
     _isJoiningRoom = false;
     if (_room != null) {
@@ -2116,8 +1815,7 @@ class CallService {
     _cpLog('HW', 'wakelock DISABLE | context=reset');
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
-    _audioSessionActivated = false; // Sonraki çağrı için iOS audio flag'i sıfırla
-    _callkitAudioReady = null;
+    _hardware.resetAfterCall(); // iOS: _audioSessionActivated flag + Completer sıfırla
     _preConnectStartedAt = null;
     _activeIncomingCallId = null; // Dedup guard sıfırla — yeni aramalara açık
     _acceptedAt = null;
@@ -2418,7 +2116,9 @@ class CallService {
         roomName: invite.roomName,
         isGroupGuest: true,
       ));
-      _audioSessionActivated = true;
+      // Group invite has no CallKit incoming call → simulate audioSessionActivated
+      // so waitForCallkitAudio() returns immediately in _joinRoom callee path.
+      _hardware.onAudioSessionActivated();
 
       // LiveKit odasına bağlan (callee yolu: audio session configure + mic aç)
       await _joinRoom(
