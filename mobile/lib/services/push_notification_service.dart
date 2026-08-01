@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -598,13 +599,29 @@ class PushNotificationService {
 
     // Dismiss the native notification (Android full-screen intent / iOS CallKit screen).
     // reset() only clears the Flutter IncomingCallBar — the native notification stays
-    // visible until FlutterCallkitIncoming.endCall() is explicitly called.
+    // visible until dismissed explicitly.
     if (callId.isNotEmpty) {
+      // endCall cancels the tray notification via NotificationManagerCompat.cancel.
+      // On Android it also sends getIntentDecline broadcast, but that broadcast uses
+      // setClassName(Activity) which prevents the dynamic EndedCallkitIncomingBroadcastReceiver
+      // inside CallkitIncomingActivity from receiving it — so the Activity does NOT close.
       try {
         await FlutterCallkitIncoming.endCall(formatToUuid(callId));
-        _cpLog('PUSH', '_rejectCallById → native notification dismissed | callId=$callId');
+        _cpLog('PUSH', '_rejectCallById → endCall (tray notification) | callId=$callId');
       } catch (e) {
         _cpLog('PUSH', '_rejectCallById → endCall ERROR (non-fatal) | callId=$callId $e');
+      }
+      // Android: resend ACTION_ENDED_CALL_INCOMING without setClassName so the
+      // dynamic receiver inside CallkitIncomingActivity actually receives it and
+      // calls finishAndRemoveTask() immediately.
+      if (Platform.isAndroid) {
+        try {
+          const nativeChannel = MethodChannel('teqlif/native');
+          await nativeChannel.invokeMethod('dismissIncomingCall');
+          _cpLog('PUSH', '_rejectCallById → Activity dismissed (dismissIncomingCall) | callId=$callId');
+        } catch (e) {
+          _cpLog('PUSH', '_rejectCallById → dismissIncomingCall ERROR (non-fatal) | callId=$callId $e');
+        }
       }
     }
 
