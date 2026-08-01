@@ -62,7 +62,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `f47c2460` + `662e165a` |
 | **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | ✅ `d961e82e` + `e153e1a2` |
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | ✅ |
-| **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
+| **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | ✅ |
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | 🔴 |
 | **Step 7** | `CallNotifAdapter` | Push layer izole | 🔴 |
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | 🔴 |
@@ -588,10 +588,10 @@ Group call endpoint'leri (`/invite`, `/participants/*`) — bunlar farklı flow,
 
 ## Step 5: `CallHardwareAdapter`
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-02  
+**Tamamlanma:** 2026-08-02  
+**Commit:** `8159d4d6`
 
 **Bağımlılık:** Step 4 tamamlanmış olmalı.
 
@@ -748,13 +748,15 @@ Connect tamamlandıktan sonra `resumeAudioAfterRoomConnect()` çağrılır:
 
 ### 5.8 Production'a Alma Kriterleri
 
-- [ ] `call_hardware_adapter.dart` abstract interface oluşturuldu
-- [ ] `ios_call_hardware_adapter.dart` impl yazıldı
-- [ ] `android_call_hardware_adapter.dart` impl yazıldı
-- [ ] Callee mic check `ringing` state'ine taşındı (`.request()` ile)
-- [ ] `room.connect()` sonrası `resumeAudioAfterRoomConnect()` çağrılıyor
-- [ ] `CallService` `_hardware.*` çağırıyor; platform kodu service'den tamamen ayrıldı
+- [x] `call_hardware_adapter.dart` abstract interface oluşturuldu
+- [x] `ios_call_hardware_adapter.dart` impl yazıldı
+- [x] `android_call_hardware_adapter.dart` impl yazıldı
+- [x] Callee mic check `ringing` state'ine taşındı (`.request()` ile, `connecting`'e girmeden önce)
+- [x] `room.connect()` sonrası `_hardware.resumeAfterRoomConnect()` çağrılıyor (iOS)
+- [x] `CallService` `_hardware.*` çağırıyor; platform kodu service'den tamamen ayrıldı
 - [ ] iOS + Android'de ses routing, izin senaryoları manuel test edildi
+
+**Test notu:** dart analyze 0 error. Manuel test: ses routing (earpiece/speaker), mic permission dialog, iOS ringback restore, Android setCallConnected davranışı doğrulanmalı.
 
 ---
 
