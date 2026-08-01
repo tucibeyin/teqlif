@@ -245,7 +245,7 @@ void main() {
       );
     });
 
-    test('idle → permissionDenied geçersiz (callee — mic kontrolü connecting\'de)', () {
+    test('idle → permissionDenied geçersiz (callee — mic kontrolü connecting\'e girmeden, ringing\'den yapılır)', () {
       expect(
         CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.permissionDenied, role: CallRole.callee),
         isNull,

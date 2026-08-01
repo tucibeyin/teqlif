@@ -59,7 +59,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | Adım | Ne | Neden Önce | Durum |
 |---|---|---|---|
 | **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli | ✅ `cc9bd511` |
-| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `f47c2460` |
+| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `f47c2460` + `662e165a` |
 | **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | 🔴 |
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | 🔴 |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
@@ -259,11 +259,11 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 **Durum:** ✅ Tamamlandı  
 **Başlangıç:** 2026-08-01  
 **Tamamlanma:** 2026-08-01  
-**Commit:** `f47c2460`
+**Commit:** `f47c2460` (rename) + `662e165a` (regression fix)
 
 **Oluşturulan dosyalar:** —
 
-**Değiştirilen dosyalar:**
+**Değiştirilen dosyalar (f47c2460):**
 - `mobile/lib/call/state/call_status.dart` — `calling` kaldırıldı; `dialing` + `waiting` eklendi; `connected` → `active`
 - `mobile/lib/call/state/call_state_machine.dart` — transition tabloları güncellendi; `isActiveCallState` genişledi
 - `mobile/test/call/state/call_state_machine_test.dart` — 48 test (42→48); tamamı geçiyor
@@ -275,6 +275,16 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 
 **Split noktası:** `startCall` → POST /calls/start → 200 response: `dialing → waiting` (callId atandığı an).  
 **Tek commit:** tüm 8 dosya birden değişti.
+
+**Değiştirilen dosyalar (662e165a) — V2.0 tutarlılık review sonrası regression fix:**
+- `mobile/lib/call/state/call_state_machine.dart`
+  - `_callerTransitions[idle]` → `permissionDenied` eklendi (Step 1 hard block regresyonu)
+  - `_calleeTransitions[connecting]` → `permissionDenied` eklendi (callee acceptCall yolu)
+  - `_callerTransitions[permissionDenied]` → `ended` eklendi (`_hangUpLocally` uyumluluğu)
+  - `_calleeTransitions[permissionDenied]` → `ended` eklendi
+  - `_unknownRoleTransitions[idle]` + `[connecting]` → `permissionDenied` eklendi
+- `mobile/test/call/state/call_state_machine_test.dart` — 53 test (48→53); 5 yeni test; tamamı geçiyor
+- `mobile/lib/services/call_service.dart` — stale 2-satır yorum bloğu kaldırıldı
 
 ---
 
