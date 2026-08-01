@@ -464,6 +464,14 @@ cs.status == CallStatus.ended && cs.endReason == EndReason.permissionDenied
 
 **Bağımlılık:** Step 3 tamamlanmış olmalı (state naming stabil).
 
+**Log standardı (VoIP.md §13):** Her yeni modül şu helper'ı tanımlar:
+```dart
+void _log(String phase, String msg) =>
+    debugPrint('[CALL_REPO][${DateTime.now().toIso8601String()}][$phase] $msg');
+```
+`CallRepository` için MODULE tag: `CALL_REPO`, phase tag'ler: `API` (HTTP istek/yanıt).  
+Zorunlu log noktaları: her HTTP isteği öncesi + yanıt sonrası (§13.3).
+
 `call_service.dart` içindeki HTTP metotlarını izole et:
 
 ```

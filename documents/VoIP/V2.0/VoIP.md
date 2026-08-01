@@ -1094,10 +1094,23 @@ FCM push: type="call_cancelled"
 
 ### 13.1 Log Format
 
-**Flutter — `call_service.dart`:**
+**Flutter — `CallService` (orchestrator):**
 ```
 [CALL_PROCESS][<ISO timestamp>][<phase>] <message>
 ```
+
+**Flutter — Refactored modüller (CallRepository, CallHardwareAdapter, CallNotifAdapter, CallScreenRouter):**
+```
+[<MODULE>][<ISO timestamp>][<phase>] <message>
+```
+
+| Modül | MODULE tag |
+|---|---|
+| `CallRepository` | `CALL_REPO` |
+| `CallHardwareAdapter` (iOS) | `CALL_HW_IOS` |
+| `CallHardwareAdapter` (Android) | `CALL_HW_AND` |
+| `CallNotifAdapter` | `CALL_NOTIF` |
+| `CallScreenRouter` | `CALL_ROUTER` |
 
 **Flutter — UI widget'ları:**
 ```
@@ -1113,38 +1126,97 @@ FCM push: type="call_cancelled"
 
 ### 13.2 Flutter Phase Tag'leri
 
-| Tag | Neyi loglar |
-|---|---|
-| `STATE` | State transition'ları — `idle → dialing \| callId=123` |
-| `OUT` | Outgoing caller akışı — /start isteği ve yanıtı |
-| `IN` | Incoming callee akışı — WS eventi, push, /accept |
-| `HW` | Hardware/audio session — wakelock, AudioFocus, AVAudioSession |
-| `SOUND` | Ses dosyası — ringback.wav, ended.wav, busy.wav başlat/dur |
-| `LK` | LiveKit — room.connect, disconnect, peer join/leave |
-| `TIMER` | Zamanlayıcı start/fire — ring, connecting, peer timeout |
-| `RECOVERY` | Crash/reconnect recovery — checkActiveCall adımları |
-| `EVENT` | Genel event handling |
-| `END` | Arama sonlandırma akışı |
-| `API` | API çağrı sonuçları (ek bağlam) |
-| `UI` | UI state değişimleri |
-| `VIDEO` | LiveKit video/track event'leri |
+| Tag | Modül | Neyi loglar |
+|---|---|---|
+| `STATE` | CallService | Her state transition — format §13.3'te |
+| `OUT` | CallService / CallRepository | Outgoing caller akışı — /start isteği ve yanıtı |
+| `IN` | CallService / CallRepository | Incoming callee akışı — WS eventi, push, /accept |
+| `HW` | CallHardwareAdapter | AVAudioSession, AudioFocus, wakelock, routing |
+| `PERM` | CallHardwareAdapter | Mic/kamera izin isteği ve sonucu |
+| `SOUND` | CallHardwareAdapter | ringback.wav, ended.wav, busy.wav başlat/dur |
+| `LK` | CallService | LiveKit — room.connect, disconnect, peer join/leave |
+| `TIMER` | CallService | Zamanlayıcı start/fire — ring, connecting, peer timeout |
+| `RECOVERY` | CallService | Crash/reconnect recovery — checkActiveCall adımları |
+| `EVENT` | CallService | WS event handling |
+| `END` | CallService | Arama sonlandırma akışı — `_hangUpLocally` |
+| `API` | CallRepository | HTTP istek gönderilmeden önce ve yanıt sonrası |
+| `NOTIF` | CallNotifAdapter | Push token kayıt, CallKit raporlama |
+| `ROUTER` | CallScreenRouter | resolveScreen kararı |
+| `UI` | CallService / UI widget | UI state değişimleri |
+| `VIDEO` | CallService | LiveKit video/track event'leri |
 
 **UI Component Tag'leri (`[UI_CALL][component]`):**
 
 | Component | Kullanım |
 |---|---|
 | `PILL` | GlobalCallOverlay — göster, gizle, tap, end tap |
+| `CALL_SCREEN` | CallScreen — status text, auto-pop |
+| `INCOMING_SCREEN` | IncomingCallScreen — pop, pushReplacement, permissionDenied dialog |
 
 ---
 
 ### 13.3 Log Kuralları
 
-- Her state transition `STATE` tag ile loglanır: `${old} → ${new} | callId=${id}`.
-- Her HTTP istek gönderilmeden önce ve yanıt sonrası loglanır.
-- Recovery path'inin her adımı `RECOVERY` tag ile loglanır.
+**State transition (zorunlu):**
+
+Her `_setState` çağrısından önce `STATE` tag ile loglanır:
+```
+STATE | ${oldStatus} → ${newStatus} | callId=${id} | role=${role}
+```
+Geçiş `ended` ise `endReason` da eklenir:
+```
+STATE | ${oldStatus} → ended | callId=${id} | role=${role} | endReason=${endReason}
+```
+
+**HTTP (zorunlu):**
+
+İstek öncesi ve yanıt sonrası `API` tag ile loglanır:
+```
+API | → POST /calls/start | calleeId=${id}
+API | ← 200 /calls/start | callId=${callId}
+API | ← 409 /calls/start | USER_BUSY
+```
+
+**İzin (zorunlu):**
+
+Her `requestMicPermission()` / `requestCameraPermission()` çağrısı `PERM` tag ile loglanır:
+```
+PERM | mic request → granted | role=caller
+PERM | mic request → denied | role=callee
+PERM | mic request → permanentlyDenied | role=callee
+```
+
+**Genel kurallar:**
+
 - Sessiz başarılar loglanmaz; yalnızca anlamlı event'ler ve hata durumları.
 - `debugPrint` → debug build'de terminale çıkar; release build'de yok olur.
 - Backend `logger.info` / `logger.warning` / `logger.error` → production'da kalıcı.
+- Her yeni modül `_log(String phase, String msg)` private helper tanımlar; format §13.1'e uyar.
+
+---
+
+### 13.4 Debug Grep Komutu
+
+```bash
+# Tüm arama akışı — debug build
+flutter run | grep -iE --line-buffered \
+  "CALL_PROCESS|CALL_REPO|CALL_HW_IOS|CALL_HW_AND|CALL_NOTIF|CALL_ROUTER|UI_CALL|LIVE_SCREEN_CALL|Multiple devices|Please choose|\[[0-9]+\]:|Launching|Running Gradle|Syncing files"
+```
+
+Sadece state geçişleri:
+```bash
+flutter run 2>&1 | grep -E --line-buffered "STATE \|"
+```
+
+Sadece izin + sonlandırma:
+```bash
+flutter run 2>&1 | grep -E --line-buffered "PERM \||END \||endReason"
+```
+
+Sadece ses:
+```bash
+flutter run 2>&1 | grep -E --line-buffered "SOUND \||HW \|"
+```
 
 ---
 
