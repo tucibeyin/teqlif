@@ -444,13 +444,13 @@ cs.status == CallStatus.ended && cs.endReason == EndReason.permissionDenied
 
 ### 3.9 Production'a Alma Kriterleri
 
-- [ ] `end_reason.dart` oluşturuldu
-- [ ] `CallState.endReason` eklendi
-- [ ] `call_service.dart` terminal `_setState` çağrıları migrate edildi
-- [ ] UI dosyaları `ended + endReason` kontrolüne geçti
-- [ ] `call_status.dart` terminal state'ler kaldırıldı
-- [ ] State machine temizlendi
-- [ ] Testler güncellendi ve geçiyor
+- [x] `end_reason.dart` oluşturuldu
+- [x] `CallState.endReason` eklendi
+- [x] `call_service.dart` terminal `_setState` çağrıları migrate edildi
+- [x] UI dosyaları `ended + endReason` kontrolüne geçti
+- [x] `call_status.dart` terminal state'ler kaldırıldı
+- [x] State machine temizlendi
+- [x] Testler güncellendi ve geçiyor (54→45 test)
 - [ ] iOS + Android'de reject / missed / busy / noAnswer / permissionDenied senaryoları manuel test edildi
 
 ---
@@ -498,79 +498,166 @@ class CallRepository {
 
 **Bağımlılık:** Step 4 tamamlanmış olmalı.
 
-AVAudioSession, AudioFocus, ringback, speakerphone ve **hardware izin yönetimi** — platform'a göre ayrı impl.
+AVAudioSession, AudioFocus, ringback, speakerphone ve **hardware izin yönetimi** — platform'a göre ayrı impl. Klavuz: VoIP.md §6 (tüm state→side effect tabloları) + §15 (hardware izin politikası).
 
 ```
 mobile/lib/call/
   hardware/
-    call_hardware_adapter.dart      ← abstract interface
-    ios_call_hardware_adapter.dart  ← iOS impl
+    call_hardware_adapter.dart         ← abstract interface
+    ios_call_hardware_adapter.dart     ← iOS impl
     android_call_hardware_adapter.dart ← Android impl
 ```
 
-### 5.1 İzin Kontrol Interface'i
+---
+
+### 5.1 Abstract Interface
 
 ```dart
 abstract class CallHardwareAdapter {
-  // Mic izni iste. granted | denied | permanentlyDenied döner.
-  Future<PermissionStatus> requestMicPermission();
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  // Bluetooth CONNECT (Android 31+) ve başlangıç audio routing kurulumu.
+  Future<void> init();
+  Future<void> dispose();
 
-  // Kamera izni iste. granted | denied | permanentlyDenied döner.
+  // ── İzin kontrolleri ───────────────────────────────────────────────────────
+  // granted | denied | permanentlyDenied döner.
+  Future<PermissionStatus> requestMicPermission();
   Future<PermissionStatus> requestCameraPermission();
 
-  // AVAudioSession / AudioFocus kurulumu
+  // ── Audio session yönetimi ─────────────────────────────────────────────────
+  // iOS: AVAudioSession playAndRecord/voiceChat configure
+  // Android: AudioFocus GAIN talebi
   Future<void> setupAudioSession();
+
+  // iOS: AVAudioSession deactivate; Android: AudioFocus abandon
   Future<void> teardownAudioSession();
 
-  // Speakerphone, ringback, vibration...
-  void setSpeaker(bool enabled);
+  // room.connect() AVAudioSession'ı override eder (§6.1 kritik kural).
+  // connect() tamamlandıktan sonra playAndRecord/voiceChat yeniden configure
+  // + ringback resume için çağrılır.
+  Future<void> resumeAudioAfterRoomConnect();
+
+  // ── Ringback (caller) ──────────────────────────────────────────────────────
   void startRingback();
   void stopRingback();
+
+  // ── Ringer / vibration (callee) ────────────────────────────────────────────
+  void startRinger();
+  void stopRinger();
+
+  // ── Bitiş sesleri ──────────────────────────────────────────────────────────
+  // iOS: earpiece; Android: voiceCommunication context earpiece (§6.2 kritik kural)
+  void playEndedSound();
+  void playBusySound();
+
+  // ── Speakerphone ───────────────────────────────────────────────────────────
+  // Her zaman setupAudioSession()/resumeAudioAfterRoomConnect() SONRASI çağrılmalı.
+  Future<void> setSpeaker(bool enabled);
 }
 ```
 
-### 5.2 Caller Mic Akışı (startCall içinde)
+---
+
+### 5.2 State → Side Effect Tablosu (VoIP.md §6'dan türetildi)
+
+Her state geçişinde `CallService` adapter metodunu çağırır:
+
+| State | iOS çağrısı | Android çağrısı |
+|---|---|---|
+| `dialing` | `setupAudioSession()` + `startRingback()` | `setupAudioSession()` + `startRingback()` |
+| `waiting` | — (ringback devam) | — (ringback devam) |
+| `ringing` | `startRinger()` (CallKit sistem zili) | `startRinger()` (FCM bildirim + sistem zili) |
+| `connecting` | `_callkitAudioReady` Completer bekler | `setupAudioSession()` direkt |
+| `active` | `setSpeaker(swipeLive)` (Completer tamamlanınca) | `setSpeaker(swipeLive)` |
+| `reconnecting` | `playWeakSound()` | `playWeakSound()` |
+| `ended` | `playEndedSound()` / `playBusySound()` | `playEndedSound()` / `playBusySound()` |
+| `idle` | `teardownAudioSession()` | `teardownAudioSession()` |
+
+---
+
+### 5.3 Caller Mic Akışı — `startCall()` içinde (VoIP.md §15.2)
+
+Mic kontrolü `dialing`'e girmeden **önce**, `idle` state'indeyken yapılır:
 
 ```
-Permission.microphone.request()
-  → granted           → dialing state'e geç
-  → denied            → idle → permissionDenied (OS dialog'da kullanıcı reddetmiş)
-  → permanentlyDenied → idle → permissionDenied, permPermanentlyDenied=true
+requestMicPermission()
+  → granted           → idle → dialing (normal devam)
+  → denied            → idle → ended (endReason=permissionDenied)
+                        _scheduleReset() → idle
+  → permanentlyDenied → idle → ended (endReason=permissionDenied, permPermanentlyDenied=true)
                         UI: in-app modal + [Ayarlar'a Git]
+                        _scheduleReset() → idle
 ```
 
-### 5.3 Callee Mic Akışı (acceptCall içinde, ringing state'de)
+> **Step 3'te yapıldı:** `idle → ended` caller geçişi state machine'e eklendi; `endReason=permissionDenied` set ediliyor. Step 5'te bu akış `CallHardwareAdapter.requestMicPermission()` üzerinden çalışacak.
+
+---
+
+### 5.4 Callee Mic Akışı — `acceptCall()` içinde (VoIP.md §15.2–15.3)
+
+**Hedef (Step 5 sonrası):** Mic kontrolü `connecting`'e girmeden **önce**, `ringing` state'indeyken yapılır:
 
 ```
-Permission.microphone.request()
+requestMicPermission()
   → granted           → ringing → connecting (normal devam)
-  → denied            → ringing → ended (OS dialog'da reddetmiş)
-  → permanentlyDenied → state ringing KALIR
+  → denied            → ringing → ended (endReason=permissionDenied)
+                        /reject fire-and-forget
+  → permanentlyDenied → state ringing KALIR (geçiş yok)
+                        permPermanentlyDenied=true
                         UI: in-app modal + [Ayarlar'a Git] [İptal]
-                        Kullanıcı Settings'den döndüğünde → app_foreground → /calls/active check
-                        → hâlâ calling: ringing devam, tekrar Accept edilebilir
-                        → bitmişse: ringing → ended
+                        Kullanıcı Settings'den döndüğünde:
+                          app_foreground → /calls/active check
+                          → hâlâ ringing: tekrar Accept edilebilir
+                          → bitmişse: ringing → ended
 ```
 
-**State machine değişikliği (Step 5'te):**  
-`connecting → permissionDenied` callee transition'ı kaldırılır — mic check artık `connecting`'e girmeden olacak.
+**Mevcut durum (Step 5 öncesi):** Mic kontrolü `connecting`'e girdikten SONRA yapılıyor (`Permission.microphone.status` — `.request()` değil). `_hangUpLocally(ended, endReason: permissionDenied)` ile cleanup yapılıyor. Step 5'te:
+1. `.status` → `.request()` geçişi (OS dialog gösterilsin)
+2. Kontrol `connecting`'e girmeden önce yapılsın (`ringing` state'inde)
+3. `denied` → `ringing → ended` (connecting hiç girilmez)
+4. `permanentlyDenied` → `ringing` kalır (modal)
 
-### 5.4 Kamera İzin Akışı (toggleCamera sırasında)
+---
+
+### 5.5 Kamera İzin Akışı — `toggleCamera()` sırasında (VoIP.md §15.4)
 
 ```
-Permission.camera.request()
+requestCameraPermission()
   → granted           → setCameraEnabled(true)
   → denied            → toast: "Kamera erişimi reddedildi"
   → permanentlyDenied → toast + [Ayarlar'a Git]
 ```
 
-CallStatus değişmez. Arama sesli devam eder.
+`CallStatus` değişmez. Arama sesli devam eder.
 
-### 5.5 Bluetooth Android 31+
+---
 
-`BLUETOOTH_CONNECT` app startup'ta istenir (arama akışı dışında). Bu adımda audit edilir; call_service.dart'taki mevcut initialization kodu `CallHardwareAdapter.init()`'e taşınır.
+### 5.6 Bluetooth Android 31+ (VoIP.md §15.5)
 
-**Production'a alma:** `CallService` `_hardware.*` çağırır. Platform kodu service'den tamamen ayrılır.
+`BLUETOOTH_CONNECT` izni `init()` içinde istenir (arama akışı dışında, app startup).  
+Reddedilirse headset routing çalışmaz, arama devam eder.  
+Mevcut `call_service.dart` initialization kodu `CallHardwareAdapter.init()`'e taşınır.
+
+---
+
+### 5.7 iOS Kritik Kural — `room.connect()` Sonrası Audio (VoIP.md §6.1)
+
+`room.connect()` içeride AVAudioSession'ı `soloAmbient`'e çeker → ringback durur.  
+Connect tamamlandıktan sonra `resumeAudioAfterRoomConnect()` çağrılır:
+1. `playAndRecord/voiceChat` yeniden configure
+2. Ringback devam
+
+---
+
+### 5.8 Production'a Alma Kriterleri
+
+- [ ] `call_hardware_adapter.dart` abstract interface oluşturuldu
+- [ ] `ios_call_hardware_adapter.dart` impl yazıldı
+- [ ] `android_call_hardware_adapter.dart` impl yazıldı
+- [ ] Callee mic check `ringing` state'ine taşındı (`.request()` ile)
+- [ ] `room.connect()` sonrası `resumeAudioAfterRoomConnect()` çağrılıyor
+- [ ] `CallService` `_hardware.*` çağırıyor; platform kodu service'den tamamen ayrıldı
+- [ ] iOS + Android'de ses routing, izin senaryoları manuel test edildi
 
 ---
 
@@ -581,7 +668,7 @@ CallStatus değişmez. Arama sesli devam eder.
 **Tamamlanma:** —  
 **Commit:** —
 
-**Bağımlılık:** Step 2 tamamlanmış olmalı (state names stabil).
+**Bağımlılık:** Step 3 tamamlanmış olmalı (CallStatus + EndReason stabil).
 
 Ekran kararlarını merkeze al — mevcut dağınık `isCallScreenVisible`, `preventCallScreenAutoOpen` mantığı:
 
@@ -591,10 +678,33 @@ mobile/lib/call/
     call_screen_router.dart
 ```
 
+VoIP.md §7.1 altı ekran tipi tanımlar:
+
+| Ekran | Kime | Tetikleyen |
+|---|---|---|
+| `CallScreen` | Caller + Callee | App önplanda, aktif arama |
+| `IncomingCallScreen` | Callee | App önplanda, ringing state |
+| `IncomingCallBar` | Callee | App arka planda veya SwipeLive aktifken, ringing |
+| `MinimizedCallBar` | Caller + Callee | App arka planda veya SwipeLive aktifken, active/reconnecting |
+| CallKit Native UI | iOS Callee | OS seviyesi — router karar vermez |
+| FCM Notification | Android Callee | OS seviyesi — router karar vermez |
+
+Router sadece uygulama içi kararları verir; OS-seviyesi UI'yi (CallKit / FCM) adapter katmanı yönetir.
+
 ```dart
+/// Uygulama içi ekran kararı. OS-seviyesi UI (CallKit, FCM bildirim) dahil değil.
+enum CallScreenDecision {
+  callScreen,       // Caller/Callee önplanda, aktif arama (dialing→active→reconnecting)
+  incomingScreen,   // Callee önplanda, ringing
+  incomingBar,      // Callee arka planda / SwipeLive aktif, ringing
+  minimizedBar,     // Caller/Callee arka planda / SwipeLive aktif, active/reconnecting
+  none,             // idle veya ended — ekran açılmaz / kapatılır
+}
+
 class CallScreenRouter {
-  static CallScreen resolveScreen({
+  static CallScreenDecision resolveScreen({
     required CallStatus status,
+    required EndReason? endReason,
     required CallRole role,
     required bool swipeLiveActive,
     required bool isBackground,
@@ -660,7 +770,7 @@ Bu adımda `call_service.dart` ~2645 satırdan ~300 satıra iner. Tek işi: even
 
 ```dart
 class CallService {
-  final CallStateMachine _machine;
+  // Not: CallStateMachine pure static — instance field değil, CallStateMachine.transition() direkt çağrılır.
   final CallRepository _repository;
   final CallHardwareAdapter _hardware;
   final CallNotifAdapter _notif;
