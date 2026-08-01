@@ -33,19 +33,19 @@ V2.0 ile mevcut kod arasındaki isimlendirme farkı. Bu fark Step 2'de kapatıl�
 | Mevcut `CallStatus` | V2.0 State | Değişiklik |
 |---|---|---|
 | `idle` | `idle` | Aynı ✓ |
-| `calling` | `dialing` + `waiting` | BÖLÜNÜYOR |
+| `calling` | `dialing` + `waiting` | TAMAMLANDI ✓ (Step 2) |
 | `ringing` | `ringing` | Aynı ✓ |
 | `connecting` | `connecting` | Aynı ✓ |
-| `connected` | `active` | YENİDEN ADLANDIRILACAK |
+| `connected` | `active` | TAMAMLANDI ✓ (Step 2) |
 | `ended` | `ended` | Aynı ✓ |
 | `reconnecting` | `reconnecting` | Aynı ✓ |
-| `rejected` | `ended` (reason=rejected) | ABSORBE |
-| `missed` | `ended` (reason=missed) | ABSORBE |
-| `noAnswer` | `ended` (reason=noAnswer) | ABSORBE |
-| `busy` | `ended` (reason=busy) | ABSORBE |
-| `permissionDenied` | `ended` (reason=permissionDenied) | ABSORBE |
+| `rejected` | `ended` (reason=rejected) | ABSORBE — Step 3 |
+| `missed` | `ended` (reason=missed) | ABSORBE — Step 3 |
+| `noAnswer` | `ended` (reason=noAnswer) | ABSORBE — Step 3 |
+| `busy` | `ended` (reason=busy) | ABSORBE — Step 3 |
+| `permissionDenied` | `ended` (reason=permissionDenied) | ABSORBE — Step 3 |
 
-**`connected` → `active` etkisi:** 7 dosya, 20 referans — derleyici bulur, Step 2'de yapılır.  
+**`calling` → `dialing`+`waiting` ve `connected` → `active` etkisi:** 8 dosya, tamamı Step 2'de değiştirildi.  
 **Terminal state'lerin absorbe edilmesi:** `EndReason` field eklenir, enum değerleri kaldırılır — Step 3'te yapılır.
 
 ---

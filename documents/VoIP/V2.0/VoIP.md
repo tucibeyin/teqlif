@@ -630,9 +630,18 @@ CallService
 POST /calls/start
 Body: { "callee_id": <int> }
 
-200 → { "call_id": <int>, "room_name": <str>, "token": <str> }
-409 → error_busy_callee
-423 → error_busy_caller
+200 → { "call_id": <int>, "room_name": <str>, "livekit_url": <str>, "token": <str> }
+409 → error_busy_callee  (USER_BUSY — callee meşgul)
+423 → error_busy_caller  (CALLER_BUSY — caller zaten aramada)
+```
+
+#### `/calls/accept`
+
+```
+POST /calls/{id}/accept
+
+200 → { "token": <str>, "livekit_url": <str>, "accepted_at": <ISO timestamp> }
+404 → api_accept_error  (race: caller cancel ile çakıştı — §11.3)
 ```
 
 #### `/calls/active`
@@ -640,9 +649,22 @@ Body: { "callee_id": <int> }
 ```
 GET /calls/active
 
-200 → { "call_id": <int>, "room_name": <str>, "token": <str>,
-         "role": "caller"|"callee", "status": <str> }
-204 → aktif arama yok (api_active_none)
+Her zaman 200 döner — 204 yok.
+
+200 → {
+  "active_call": {
+    "call_id":     <int>,
+    "status":      "calling" | "active",
+    "role":        "caller" | "callee",
+    "room_name":   <str>,
+    "livekit_url": <str>,
+    "token":       <str>,
+    "other_user":  { "id": <int>, "username": <str>, "avatar": <str> },
+    "accepted_at": <ISO timestamp | null>   ← null: callee henüz kabul etmedi
+  }
+}
+
+200, active_call: null → aktif arama yok (api_active_none)
 ```
 
 ---
@@ -651,14 +673,41 @@ GET /calls/active
 
 | Olay | DB İşlemi |
 |---|---|
-| `/calls/start` başarılı | INSERT calls (caller_id, callee_id, status="ringing", room_name) |
-| Callee accept | UPDATE status="calling" |
+| `/calls/start` başarılı | INSERT calls (caller_id, callee_id, status="calling", room_name) |
+| Callee accept | UPDATE status="active" |
 | Callee reject | UPDATE status="rejected" |
 | End (bağlıyken) | UPDATE status="ended" |
 | Missed (ring timeout) | UPDATE status="missed" |
-| Recovery (`/calls/active`) | SELECT WHERE (caller_id=x OR callee_id=x) AND status IN ("ringing","calling") |
+| Recovery (`/calls/active`) | SELECT WHERE (caller_id=x OR callee_id=x) AND status IN ("calling","active") |
 
-**status enum:** `ringing` → `calling` → `ended` / `rejected` / `missed`
+**status enum:** `calling` → `active` → `ended` / `rejected` / `missed`
+
+> `calling` ve `active` geçici state'lerdir — aramalar tamamlandığında hep terminal state'e döner. `SELECT DISTINCT status FROM calls` sorgusu yalnızca terminal değerleri gösterir; `calling`/`active` yalnızca süregelen aramalarda mevcuttur.
+
+---
+
+#### Flutter-Only State'ler (DB Temsili Yok)
+
+| Flutter State | DB karşılığı | Açıklama |
+|---|---|---|
+| `noAnswer` | `missed` olarak kaydedilir | Caller ring timer (30s) → POST /missed; DB'de `noAnswer` yok |
+| `busy` | Kayıt oluşmaz | /start 409 yanıtı → INSERT hiç yapılmaz |
+| `permissionDenied` | Kayıt oluşmaz | Mikrofon izni yok → API çağrısı yapılmaz |
+| `reconnecting` | `active` kalır | LiveKit geçici kopma → DB update olmaz |
+
+---
+
+#### Recovery Çeviri Tablosu
+
+`/calls/active` → `status` + `role` → Flutter `CallStatus`:
+
+| DB status | role | Flutter state | Restore davranışı |
+|---|---|---|---|
+| `calling` | `caller` | `waiting` | callerStatusPoll başlatılır |
+| `calling` | `callee` | `ringing` | `onIncomingCall()` ile restore |
+| `active` | `caller` | `reconnecting` → `active` | LK room'a yeniden bağlan |
+| `active` | `callee` | `reconnecting` → `active` | LK room'a yeniden bağlan |
+| `null` (active_call: null) | — | `idle` | Aktif arama yok |
 
 ---
 
@@ -993,6 +1042,131 @@ FCM push: type="call_cancelled"
 
 ---
 
+## 13. Log Katmanı
+
+### 13.1 Log Format
+
+**Flutter — `call_service.dart`:**
+```
+[CALL_PROCESS][<ISO timestamp>][<phase>] <message>
+```
+
+**Flutter — UI widget'ları:**
+```
+[UI_CALL][<component>][<ISO timestamp>] <event> | <detail>
+```
+
+**Backend — Python:**
+```
+[CALL_PROCESS][<severity>] <phase> | <message>
+```
+
+---
+
+### 13.2 Flutter Phase Tag'leri
+
+| Tag | Neyi loglar |
+|---|---|
+| `STATE` | State transition'ları — `idle → dialing \| callId=123` |
+| `OUT` | Outgoing caller akışı — /start isteği ve yanıtı |
+| `IN` | Incoming callee akışı — WS eventi, push, /accept |
+| `HW` | Hardware/audio session — wakelock, AudioFocus, AVAudioSession |
+| `SOUND` | Ses dosyası — ringback.wav, ended.wav, busy.wav başlat/dur |
+| `LK` | LiveKit — room.connect, disconnect, peer join/leave |
+| `TIMER` | Zamanlayıcı start/fire — ring, connecting, peer timeout |
+| `RECOVERY` | Crash/reconnect recovery — checkActiveCall adımları |
+| `EVENT` | Genel event handling |
+| `END` | Arama sonlandırma akışı |
+| `API` | API çağrı sonuçları (ek bağlam) |
+| `UI` | UI state değişimleri |
+| `VIDEO` | LiveKit video/track event'leri |
+
+**UI Component Tag'leri (`[UI_CALL][component]`):**
+
+| Component | Kullanım |
+|---|---|
+| `PILL` | GlobalCallOverlay — göster, gizle, tap, end tap |
+
+---
+
+### 13.3 Log Kuralları
+
+- Her state transition `STATE` tag ile loglanır: `${old} → ${new} | callId=${id}`.
+- Her HTTP istek gönderilmeden önce ve yanıt sonrası loglanır.
+- Recovery path'inin her adımı `RECOVERY` tag ile loglanır.
+- Sessiz başarılar loglanmaz; yalnızca anlamlı event'ler ve hata durumları.
+- `debugPrint` → debug build'de terminale çıkar; release build'de yok olur.
+- Backend `logger.info` / `logger.warning` / `logger.error` → production'da kalıcı.
+
+---
+
+## 14. Exception ve Hata Yönetimi Stratejisi
+
+Her katmandaki hata, §4.8'deki error event'lerinden biriyle state machine'e iletilir. Bu bölüm hangi hata senaryosunun hangi event'i ürettiğini ve Flutter'ın nasıl tepki verdiğini katman katman belirtir.
+
+---
+
+### 14.1 HTTP Katmanı
+
+| Senaryo | HTTP Kodu | Flutter Event | State Geçişi |
+|---|---|---|---|
+| Callee meşgul | 409 (USER_BUSY) | `error_busy_callee` | `dialing → ended` |
+| Caller zaten aramada | 423 (CALLER_BUSY) | `error_busy_caller` | `dialing → ended` |
+| Call bulunamadı | 404 | `error_call_not_found` | `connecting → ended` |
+| Server hatası | 5xx | `api_start_error` | `dialing → ended` |
+| Network timeout | — | `network_lost` | State'e göre §5 |
+
+**Retry politikası:**
+- `/calls/accept`: maksimum 4 deneme (network jitter toleransı).
+- Diğer tüm POST'lar: tek deneme + hata event'i üretilir.
+- `checkActiveCall()`: hata non-fatal — sessizce başarısız olur, `idle` kalır.
+
+---
+
+### 14.2 LiveKit Katmanı
+
+| Senaryo | LK Event | Flutter Event | State Geçişi |
+|---|---|---|---|
+| `room.connect()` başarısız | — | `lk_connect_failed` | `connecting → ended` |
+| Geçici kopukluk | `onReconnecting` | `lk_reconnecting` | `active → reconnecting` |
+| Reconnect başarılı | `onReconnected` | `lk_reconnected` | `reconnecting → active` |
+| Kalıcı disconnect | `onDisconnected` | `lk_disconnected` | `reconnecting → ended` |
+| Peer bağlanmadı (40s) | — | `timer_peer_expired` | `reconnecting → ended` |
+
+> **iOS `room.connect()` yan etkisi:** LiveKit dahili olarak AVAudioSession'ı `soloAmbient`'e çeker → ringback durur. Çözüm: `room.connect()` sonrası `playAndRecord/voiceChat` yeniden configure + ringback resume. Bkz. §6.1.
+
+---
+
+### 14.3 Push Katmanı
+
+| Senaryo | Davranış |
+|---|---|
+| APNs stale token | Backend APNs hatasını yakalar → `voip_token = NULL` |
+| FCM invalid token | Backend `messaging/invalid-registration-token` → `fcm_token = NULL` |
+| Her iki token null + WS offline | Arama callee'ye ulaşmaz — backend loglar, sessiz kayıp |
+| VoIP push + WS eventi yarışı | Dedup: zaten `ringing`'deyse ikinci kaynak yoksayılır |
+| VoIP payload boş token/url | Flutter proaktif `/calls/active` fetch başlatır |
+
+---
+
+### 14.4 Flutter Hata Sınıflandırması
+
+**Fatal — `ended` geçişi tetiklenir:**
+- Mikrofon izni reddedildi (`permissionDenied` state)
+- `/calls/start` 4xx / 5xx yanıtı
+- `/calls/accept` 404 (race condition — §11.3)
+- LiveKit kalıcı disconnect (retry sonrası)
+- Connecting timeout (15s)
+
+**Non-fatal — arama devam eder ya da `idle` kalır:**
+- `checkActiveCall()` exception → sessiz fail, `idle` kalır
+- Elapsed sync başarısız → timer 0'dan başlar
+- Avatar yüklenemedi → baş harf fallback
+- `accepted_at` parse hatası → local clock kullanılır
+- Callee pre-connect (`_fetchCalleeToken`) hatası → `/accept` response token'ı fallback
+
+---
+
 ## Sonraki Adımlar
 
 - [x] **Bölüm 1** — Tasarım kararları (axioms)
@@ -1003,7 +1177,9 @@ FCM push: type="call_cancelled"
 - [x] **Bölüm 6** — Platform side effect'leri (iOS + Android adapter)
 - [x] **Bölüm 7** — Call related UI routing
 - [x] **Bölüm 8** — Modül mimarisi ve sorumluluk sınırları
-- [x] **Bölüm 9** — API / DB / Redis katmanı
+- [x] **Bölüm 9** — API / DB / Redis katmanı (DB lifecycle düzeltildi; recovery tablosu + Flutter-only state'ler eklendi)
 - [x] **Bölüm 10** — V1.0 use case → V2.0 eşlemesi
 - [x] **Bölüm 11** — Anahtar akış sekansları (5 kritik akış)
 - [x] **Bölüm 12** — CallNotifAdapter spesifikasyonu
+- [x] **Bölüm 13** — Log katmanı (format, phase tag'leri, kurallar)
+- [x] **Bölüm 14** — Exception ve hata yönetimi stratejisi
