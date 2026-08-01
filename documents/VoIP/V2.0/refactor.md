@@ -460,7 +460,7 @@ cs.status == CallStatus.ended && cs.endReason == EndReason.permissionDenied
 **Durum:** ✅ Tamamlandı  
 **Başlangıç:** 2026-08-01  
 **Tamamlanma:** 2026-08-01  
-**Commit:** —  _(sonraki commit)_
+**Commit:** `88d5f76a`
 
 **Bağımlılık:** Step 3 tamamlanmış olmalı (state naming stabil).
 
