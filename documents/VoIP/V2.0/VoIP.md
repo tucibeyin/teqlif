@@ -1604,18 +1604,35 @@ Her resource yalnızca acquire edildiyse release edilir.
 
 ---
 
-### 16.10 Backend Stale Call Cleanup ⚠️ AÇIK SORU
+### 16.10 Backend Stale Call Cleanup
 
-DB'de `status="calling"` veya `status="active"` kalmış bir kayıt varsa ve uygulama çökmüşse (hiç /end POST edilmemişse):
+`cleanup_ghost_calls_task` — ARQ worker'da çalışan cron job, **her 15 dakikada** (`:00`, `:15`, `:30`, `:45`).
 
-**Soru:** Backend'de bu kayıtları temizleyen bir scheduled job veya keepalive timeout mekanizması var mı?
+#### Temizleme eşikleri
 
-Bu sorunun cevabına göre iki strateji mümkündür:
+| DB status | Koşul | Aksion |
+|---|---|---|
+| `calling` | `started_at` > **5 dakika** önce | `status = "missed"`, `ended_at = now`, LK oda sil |
+| `active` | `started_at` > **1 saat** önce **VE** LK odası yok | `status = "ended"`, `ended_at = now`, LK oda sil |
+| `active` | `started_at` > 1 saat önce **AMA** LK odası var | Dokunulmaz — gerçek çağrı olabilir |
 
-| Durum | Strateji |
-|---|---|
-| Backend job var | Job stale kayıtları temizler; uygulama sadece kendi cleanup'ını yapar |
-| Backend job yok | Uygulama `/calls/active` kontrolünde stale kayıt bulunca `/end` çağırmalı; yoksa DB'de kalıcı `calling`/`active` kayıtlar birikir |
+#### Her iki taraf bildirilir
+
+Cleanup sırasında hem caller hem callee'ye WS eventi yayımlanır:
+- `calling → missed`: `{"type": "call_missed", "call_id": ...}`
+- `active → ended`: `{"type": "call_ended", "call_id": ...}`
+
+Kullanıcı uygulama açıksa bu eventi alır → `ws_call_missed` / `ws_call_ended` → normal state transition.
+
+#### Flutter crash recovery ile ilişkisi
+
+| Crash sonrası süre | `/calls/active` sonucu | Flutter davranışı |
+|---|---|---|
+| < 5 dakika | DB hâlâ `calling` → `active_call` dolu | Recovery başlatılır (§11.4 kısa crash yolu) |
+| 5–15 dakika | Job henüz çalışmamış olabilir — belirsiz | Recovery dener; LK bağlanamazsa `ended` |
+| > 15 dakika | Job çalışmış → `missed`/`ended` | `/calls/active` → `active_call: null` → `idle` |
+
+**Sonuç:** Flutter uygulaması `/end` POST edemeden çökse bile backend 5–20 dakika içinde DB'yi `missed`/`ended`'a çekip WS bildirimi gönderir. Uygulama tarafında ek bir stale kayıt temizleme mekanizmasına gerek yoktur.
 
 ---
 
@@ -1636,4 +1653,4 @@ Bu sorunun cevabına göre iki strateji mümkündür:
 - [x] **Bölüm 13** — Log katmanı (format, phase tag'leri, kurallar)
 - [x] **Bölüm 14** — Exception ve hata yönetimi stratejisi
 - [x] **Bölüm 15** — Hardware izin politikası (mic/kamera/Bluetooth — caller+callee, platform farkları, kalıcı red akışı)
-- [x] **Bölüm 16** — Resource management (3 faz modeli, timer/LK/audio/wakelock/kamera/crash cleanup, idempotency, iOS CallKit reason eşlemesi) ⚠️ §16.10 backend stale cleanup sorusu açık
+- [x] **Bölüm 16** — Resource management (3 faz modeli, timer/LK/audio/wakelock/kamera/crash cleanup, idempotency, iOS CallKit reason eşlemesi, backend ghost call cron §16.10)
