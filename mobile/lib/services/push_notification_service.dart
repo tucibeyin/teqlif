@@ -42,10 +42,10 @@ bool _callKitAutoDismissExpected = false;
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('[FCM][BG] mesaj geldi | type=${message.data['type']} | keys=${message.data.keys.toList()}');
+  debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] mesaj geldi | type=${message.data['type']} | keys=${message.data.keys.toList()}');
 
   if (message.data['type'] == 'incoming_call') {
-    debugPrint('[FCM][BG] incoming_call işleniyor | call_id=${message.data['call_id']}');
+    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call işleniyor | call_id=${message.data['call_id']}');
     // Flutter binding'i background isolate için başlat
     WidgetsFlutterBinding.ensureInitialized();
     await _showCallNotification(
@@ -58,7 +58,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       calleeToken:    message.data['callee_token']    ?? '',
     );
   } else if (message.data['type'] == 'call_ended' || message.data['type'] == 'call_missed' || message.data['type'] == 'call_rejected') {
-    debugPrint('[FCM][BG] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
+    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
     final callId = message.data['call_id']?.toString() ?? '';
     if (callId.isNotEmpty) {
       final callUuid = formatToUuid(callId);
@@ -77,7 +77,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       'call_id=${message.data['call_id']} — recovery via checkActiveCall() on foreground',
     );
   } else {
-    debugPrint('[FCM][BG] arama dışı type, işlem yok');
+    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] arama dışı type, işlem yok');
   }
 }
 
@@ -98,7 +98,7 @@ Future<void> _showCallNotification({
   String livekitUrl   = '',
   String calleeToken  = '',
 }) async {
-  debugPrint('[CallKit] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
+  debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] _showCallNotification başlıyor | callId=$callId caller=$callerUsername');
 
   // Load language + translation pack — no BuildContext available here.
   // Hive may not be initialized in the background isolate; init safely.
@@ -160,7 +160,9 @@ Future<void> _showCallNotification({
     ),
   );
 
+  debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → calling | callId=$callId caller=$callerUsername');
   await FlutterCallkitIncoming.showCallkitIncoming(params);
+  debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → done | callId=$callId');
 }
 
 // ─── Background notification action handler (separate isolate) ───────────────

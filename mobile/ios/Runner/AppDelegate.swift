@@ -12,8 +12,6 @@ import Security
 
   // Flutter'a audioSessionActivated sinyali göndermek için kanal referansı.
   var callkitChannel: FlutterMethodChannel?
-  // Retained CXCallController for foreground VoIP-push auto-dismiss transactions.
-  private let _ckController = CXCallController()
 
   override func application(
     _ application: UIApplication,
@@ -252,27 +250,23 @@ import Security
           "callee_token":   calleeToken,  // self-contained → pre-connect hemen başlar
       ]
 
-      // If app is already in foreground, WS + IncomingCallBar handles the call UI.
-      // Apple requires reportNewIncomingCall for every VoIP push, so we call
-      // showCallkitIncoming — but dismiss the CX call immediately inside the completion
-      // block (fires once reportNewIncomingCall succeeds) to prevent the full-screen
-      // CallKit UI from ever appearing. 300ms asyncAfter caused a visible flash; the
-      // completion block eliminates it entirely.
+      // Apple requires reportNewIncomingCall for every VoIP push regardless of app state.
+      // When app is foreground, WS + IncomingCallBar already handles the call UI, so we
+      // dismiss the native CallKit screen immediately after reportNewIncomingCall completes.
+      // saveEndCall uses provider.reportCall directly (no CXCallController round-trip),
+      // which is ~67ms faster than the CXEndCallAction transaction path.
       let appIsActive = UIApplication.shared.applicationState == .active
-      let callUUID = UUID(uuidString: data.uuid)
       print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) { [weak self] in
           guard let self = self else { completion(); return }
           print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId) appIsActive=\(appIsActive)")
           completion()
-          guard appIsActive, let uuid = callUUID else { return }
-          // Dismiss synchronously after registration — no asyncAfter delay needed since
-          // the completion block guarantees reportNewIncomingCall has already returned.
-          let endAction = CXEndCallAction(call: uuid)
-          let tx = CXTransaction(action: endAction)
-          self._ckController.request(tx) { error in
-              print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit instant-dismiss | callId=\(callId) error=\(error?.localizedDescription ?? "none")")
-          }
+          guard appIsActive else { return }
+          // provider.reportCall(reason: .unanswered) — synchronous, no delegate callback
+          // chain. callManager.addCall already ran (inside reportNewIncomingCall completion
+          // before this block), so the UUID is registered and saveEndCall succeeds.
+          print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit instant-dismiss (saveEndCall) | callId=\(callId)")
+          SwiftFlutterCallkitIncomingPlugin.sharedInstance?.saveEndCall(data.uuid, 3)
       }
   }
 
