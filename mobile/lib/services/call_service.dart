@@ -381,7 +381,7 @@ class CallService {
 
     // Pre-sync elapsed BEFORE notifying listeners so the first connected frame
     // shows the correct time instead of 00:00 (timer 00:00 flash fix).
-    if (oldStatus != CallStatus.connected && s.status == CallStatus.connected) {
+    if (oldStatus != CallStatus.active && s.status == CallStatus.active) {
       final at = s.acceptedAt ?? _acceptedAt ?? state.value.acceptedAt;
       if (at != null) {
         final already = DateTime.now().toUtc().difference(at.toUtc());
@@ -395,7 +395,7 @@ class CallService {
       _handleStatusChange(oldStatus, s.status);
     }
     
-    if (!oldPoor && s.isPoorConnection && s.status == CallStatus.connected) {
+    if (!oldPoor && s.isPoorConnection && s.status == CallStatus.active) {
       _cpLog('HW', 'audioPlayer PLAY | source=weak.wav poorConnection=true');
       _cpLog('SOUND', 'weak.wav PLAY | poorConnection detected');
       _audioPlayer.setReleaseMode(ReleaseMode.release);
@@ -435,7 +435,7 @@ class CallService {
       });
     }
 
-    if (newStatus == CallStatus.calling) {
+    if (newStatus == CallStatus.dialing) {
       AudioSession.instance.then((session) async {
         try {
           _cpLog('HW', 'audioSession CONFIGURE | context=ringtone category=playAndRecord mode=voiceChat androidUsage=voiceCommunication');
@@ -460,11 +460,11 @@ class CallService {
           debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: $e');
         }
 
-        if (state.value.status == CallStatus.calling) {
+        if (state.value.status == CallStatus.dialing || state.value.status == CallStatus.waiting) {
           if (Platform.isIOS) {
             await Future.delayed(const Duration(milliseconds: 600));
           }
-          if (state.value.status == CallStatus.calling) {
+          if (state.value.status == CallStatus.dialing || state.value.status == CallStatus.waiting) {
             if (_ringbackPreloaded) {
               // Pre-loaded path: seek to start + resume — no asset loading delay (~10ms)
               // setReleaseMode explicitly on every resume: after stop() the mode may reset.
@@ -493,7 +493,7 @@ class CallService {
     } else if (newStatus == CallStatus.ended) {
       _cpLog('HW', 'ringbackPlayer STOP | reason=ended');
       _ringbackPlayer.stop();
-      if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
+      if (oldStatus == CallStatus.active || oldStatus == CallStatus.connecting) {
         _cpLog('HW', 'audioPlayer PLAY | source=ended.wav mode=release wasConnected=true');
         _cpLog('SOUND', 'ended.wav PLAY | wasConnected=true');
         _audioPlayer.setReleaseMode(ReleaseMode.release);
@@ -503,7 +503,7 @@ class CallService {
         _cpLog('SOUND', 'audioPlayer.stop | ended without connection');
         _audioPlayer.stop();
       }
-    } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
+    } else if (newStatus == CallStatus.active || newStatus == CallStatus.idle) {
       _cpLog('HW', 'ringbackPlayer STOP | reason=$newStatus');
       _ringbackPlayer.stop();
       _cpLog('HW', 'audioPlayer STOP | reason=$newStatus');
@@ -545,7 +545,7 @@ class CallService {
 
     _setState(
       CallState(
-        status: CallStatus.calling,
+        status: CallStatus.dialing,
         otherUserId: calleeId,
         otherUsername: calleeUsername,
         otherAvatar: calleeAvatar,
@@ -559,6 +559,7 @@ class CallService {
       _cpLog('OUT', 'POST /calls/start e2ee=NO');
       _setState(
         state.value.copyWith(
+          status: CallStatus.waiting,
           callId: data['call_id'] as int,
           roomName: data['room_name'] as String,
           livekitUrl: data['livekit_url'] as String,
@@ -636,7 +637,7 @@ class CallService {
     _ringTimer?.cancel();
     _cpLog('OUT', 'ringTimer started | timeout=30s callId=${state.value.callId}');
     _ringTimer = Timer(const Duration(seconds: 30), () async {
-      if (state.value.status == CallStatus.calling) {
+      if (state.value.status == CallStatus.waiting) {
         final callId = state.value.callId;
         _cpLog('OUT', 'ringTimer FIRED → noAnswer | callId=$callId');
         if (callId != null) {
@@ -657,7 +658,7 @@ class CallService {
     _callerStatusPollTimer?.cancel();
     _cpLog('OUT', 'callerStatusPoll started | interval=2s callId=$callId');
     _callerStatusPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (state.value.status != CallStatus.calling) {
+      if (state.value.status != CallStatus.waiting) {
         _callerStatusPollTimer?.cancel();
         return;
       }
@@ -667,7 +668,7 @@ class CallService {
         _cpLog('OUT', 'callerStatusPoll tick | callId=$callId backendStatus=$s status=${state.value.status}');
         if (s == 'active') {
           _callerStatusPollTimer?.cancel();
-          if (state.value.status == CallStatus.calling) {
+          if (state.value.status == CallStatus.waiting) {
             _cpLog('OUT', 'callerStatusPoll → RECOVERED call_accepted | callId=$callId');
             await onCallAccepted({
               if (statusData['accepted_at'] != null) 'accepted_at': statusData['accepted_at'],
@@ -675,7 +676,7 @@ class CallService {
           }
         } else if (s == 'missed' || s == 'ended' || s == 'rejected') {
           _callerStatusPollTimer?.cancel();
-          if (state.value.status == CallStatus.calling) {
+          if (state.value.status == CallStatus.waiting) {
             _cpLog('OUT', 'callerStatusPoll → terminated | callId=$callId status=$s');
             await _hangUpLocally(status: CallStatus.ended);
           }
@@ -1018,14 +1019,14 @@ class CallService {
 
   Future<void> acceptCall() async {
     _cpLog('IN', 'acceptCall TRIGGERED | status=${state.value.status} callId=${state.value.callId}');
-    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.active) {
       return;
     }
     final callId = state.value.callId;
     if (callId == null) {
       return;
     }
-    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.active) {
       return;
     }
 
@@ -1152,7 +1153,7 @@ class CallService {
     if (currentStatus == CallStatus.ended || currentStatus == CallStatus.rejected) return;
     // Call already accepted — stale reject from UI must not call /reject.
     if (currentStatus == CallStatus.connecting ||
-        currentStatus == CallStatus.connected ||
+        currentStatus == CallStatus.active ||
         currentStatus == CallStatus.reconnecting) {
       _cpLog('IN', 'rejectCall SKIPPED | status=${currentStatus.name} (call already accepted — use endCall)');
       return;
@@ -1188,7 +1189,7 @@ class CallService {
       _acceptedAt = parsedAt;
       // Correct elapsed timer if TrackSubscribed already transitioned us to connected.
       // Without this, the elapsed timer starts from zero even though the call started ~1.65s ago.
-      if (state.value.status == CallStatus.connected) {
+      if (state.value.status == CallStatus.active) {
         final correctedElapsed = nowUtc.difference(parsedAt);
         if (!correctedElapsed.isNegative && correctedElapsed.inSeconds < 300) {
           elapsed.value = correctedElapsed;
@@ -1202,7 +1203,7 @@ class CallService {
     // iOS race: TrackSubscribed fires ~1.65s before WS → already connected.
     // TrackSubscribed pre-enables mic (see _onRoomEvent), but call _ensureMicEnabled
     // as a safety net in case pre-enable failed or was skipped.
-    if (state.value.status == CallStatus.connected) {
+    if (state.value.status == CallStatus.active) {
       _cpLog('OUT', 'call_accepted WS arrived after connected (iOS race) → ensureMicEnabled | callId=${state.value.callId}');
       _ensureMicEnabled('onCallAccepted-already-connected');
       return;
@@ -1284,8 +1285,8 @@ class CallService {
   }
 
   void onCallRejected() async {
-    if (state.value.status != CallStatus.calling) {
-      _cpLog('END', 'onCallRejected SKIPPED | status=${state.value.status} (not calling — stale/duplicate event)');
+    if (state.value.status != CallStatus.waiting) {
+      _cpLog('END', 'onCallRejected SKIPPED | status=${state.value.status} (not waiting — stale/duplicate event)');
       return;
     }
     stopRingtoneAndVibration();
@@ -1311,7 +1312,7 @@ class CallService {
       return;
     }
     // Guard: a connected/reconnecting call cannot be missed — stale queued FCM.
-    if (state.value.status == CallStatus.connected ||
+    if (state.value.status == CallStatus.active ||
         state.value.status == CallStatus.reconnecting) {
       _cpLog('END', 'onCallMissed SKIPPED | call already connected | incoming=$callId current=${state.value.callId}');
       return;
@@ -1443,7 +1444,7 @@ class CallService {
         // Network-only pre-connect (caller=calling veya callee=ringing): standart ses atlandı.
         // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
 
-        if (callStatusAtEntry == CallStatus.calling) {
+        if (callStatusAtEntry == CallStatus.waiting) {
           // Both platforms: network-only pre-connect — mic starts on acceptance via standard path.
           // Android pre-publish (muted track for fast unmute) was removed: it took
           // AUDIOFOCUS_GAIN via STREAM_VOICE_CALL which starved the ringback player, causing
@@ -1458,7 +1459,7 @@ class CallService {
             // Also covers connecting: if callee accepted while room.connect() was in flight,
             // status is now connecting but ringback should still play until audio arrives.
             final postConnectStatus = state.value.status;
-            if (postConnectStatus == CallStatus.calling || postConnectStatus == CallStatus.connecting) {
+            if (postConnectStatus == CallStatus.waiting || postConnectStatus == CallStatus.connecting) {
               try {
                 final session = await AudioSession.instance;
                 await session.configure(AudioSessionConfiguration(
@@ -1576,7 +1577,7 @@ class CallService {
       _isJoiningRoom = false;
       // Pre-connect failure (ringing/calling): user hasn't accepted yet — preserve the call.
       // The CallKit screen stays visible; acceptCall() will retry _joinRoom with a fresh token.
-      if (callStatusAtEntry == CallStatus.ringing || callStatusAtEntry == CallStatus.calling) {
+      if (callStatusAtEntry == CallStatus.ringing || callStatusAtEntry == CallStatus.waiting) {
         _cpLog('LK', '_joinRoom EXCEPTION in pre-connect ($callStatusAtEntry) — call preserved');
       } else {
         endCall();
@@ -1607,7 +1608,7 @@ class CallService {
       _setState(state.value.copyWith(status: CallStatus.reconnecting));
     } else if (event is RoomReconnectedEvent) {
       if (state.value.status == CallStatus.reconnecting) {
-        _setState(state.value.copyWith(status: CallStatus.connected));
+        _setState(state.value.copyWith(status: CallStatus.active));
       }
     } else if (event is ParticipantConnectedEvent) {
       _cpLog('LK', 'ParticipantConnected → peer joined | peerCount=${_room?.remoteParticipants.length} status=${state.value.status.name}');
@@ -1642,7 +1643,7 @@ class CallService {
         // Her iki durumda da AudioSession ve ringtone'a dokunma — callee henüz kabul etmedi.
         // Gerçek geçiş: calling→connecting (call_accepted WS), ringing→connecting (acceptCall).
         // connecting→connected TrackUnmutedEvent (callee unmutes) veya yeni TrackSubscribed ile olur.
-        if (state.value.status == CallStatus.ringing || state.value.status == CallStatus.calling) {
+        if (state.value.status == CallStatus.ringing || state.value.status == CallStatus.waiting) {
           _cpLog('LK', 'TrackSubscribed AUDIO during ${state.value.status.name} (pre-connect) | muted track subscribed → skip AudioSession configure + ringtone stop');
           return;
         }
@@ -1677,7 +1678,7 @@ class CallService {
             _cpLog('LK', 'TrackSubscribed: AudioSession configure ERROR | $e');
           }
         });
-        if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
+        if (state.value.status == CallStatus.waiting || state.value.status == CallStatus.connecting) {
           final preTransitionStatus = state.value.status;
           _transitionToConnected(context: 'TrackSubscribed-${preTransitionStatus.name}');
           // P0 FIX: iOS caller mic race.
@@ -1685,7 +1686,7 @@ class CallService {
           // call_accepted WS arrives ~1.65s AFTER TrackSubscribed, so we must enable mic HERE
           // instead of waiting for the WS. onCallAccepted will see status=connected and call
           // _ensureMicEnabled as a safety net when the WS finally arrives.
-          if (Platform.isIOS && preTransitionStatus == CallStatus.calling) {
+          if (Platform.isIOS && preTransitionStatus == CallStatus.waiting) {
             _cpLog('LK', 'TrackSubscribed: iOS caller mic pre-enable (before WS) | callId=${state.value.callId}');
             _cpLog('HW', 'microphone ENABLE | context=TrackSubscribed-iOS-caller-preemptive platform=iOS');
             _room?.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
@@ -1805,7 +1806,7 @@ class CallService {
         // Only save/restore mic during active call states where mic is expected to be on.
         // During ringing/calling, isMuted defaults to false but mic was never activated —
         // blindly setting isMuted=true here would cause interruption-end to re-enable the mic.
-        final micIsActive = state.value.status == CallStatus.connected ||
+        final micIsActive = state.value.status == CallStatus.active ||
             state.value.status == CallStatus.connecting;
         if (micIsActive && !state.value.isMuted) {
           _cpLog('HW', 'microphone DISABLE | context=audioInterruption-begin isMuted=false→true');
@@ -1827,13 +1828,13 @@ class CallService {
   /// Her "calling/connecting → connected" geçişini buradan yap.
   /// [context]: log etiketleme için (TrackSubscribed, TrackUnmuted, peerAlready…)
   void _transitionToConnected({required String context}) {
-    if (state.value.status == CallStatus.connected) return;
+    if (state.value.status == CallStatus.active) return;
     final nowUtc = DateTime.now().toUtc();
     final acceptedAt = state.value.acceptedAt;
     final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
     _cpLog('TIMER', 'CONNECTED | context=$context acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} acceptToAudioMs=$audioLag');
     stopRingtoneAndVibration();
-    _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
+    _setState(state.value.copyWith(status: CallStatus.active, acceptedAt: _acceptedAt));
     _startElapsedTimer();
     _startProximitySensor();
     _startStatsMonitor();
@@ -1855,7 +1856,7 @@ class CallService {
     _proximitySub?.cancel();
     _cpLog('HW', 'proximitySensor START | context=_startProximitySensor');
     _proximitySub = ProximitySensor.events.listen((int value) {
-      if (state.value.status != CallStatus.connected) return;
+      if (state.value.status != CallStatus.active) return;
       final isNear = value == 0;
       if (isNear && state.value.isSpeaker) {
         _cpLog('HW', 'proximitySensor NEAR → auto speakerOff (phone at ear)');
@@ -1890,14 +1891,14 @@ class CallService {
     _statsTimer?.cancel();
     _cpLog('LK', 'statsMonitor START | interval=5s callId=${state.value.callId}');
     _statsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (state.value.status != CallStatus.connected || _room == null) {
+      if (state.value.status != CallStatus.active || _room == null) {
         _statsTimer?.cancel();
         return;
       }
       final remotePeerCount = _room!.remoteParticipants.length;
       final quality = state.value.isPoorConnection ? 'POOR' : 'OK';
       _cpLog('LK', 'healthTick | remotePeers=$remotePeerCount quality=$quality callId=${state.value.callId}');
-      if (remotePeerCount == 0 && state.value.status == CallStatus.connected) {
+      if (remotePeerCount == 0 && state.value.status == CallStatus.active) {
         _cpLog('LK', 'healthTick: NO REMOTE PEERS (one-way audio risk) | callId=${state.value.callId}');
       }
     });
@@ -1915,7 +1916,7 @@ class CallService {
     _prevNetworkType = null;
     _cpLog('LK', 'networkMonitor START | callId=${state.value.callId}');
     _networkSub = Connectivity().onConnectivityChanged.listen((results) {
-      if (state.value.status == CallStatus.connected || state.value.status == CallStatus.reconnecting) {
+      if (state.value.status == CallStatus.active || state.value.status == CallStatus.reconnecting) {
         final newType = results.isNotEmpty ? results.first : ConnectivityResult.none;
         if (newType == _prevNetworkType) return; // same type → connectivity_plus false positive
         _prevNetworkType = newType;
@@ -1945,7 +1946,7 @@ class CallService {
     }
 
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.value.status == CallStatus.connected) {
+      if (state.value.status == CallStatus.active) {
         final Duration newElapsed;
         if (state.value.acceptedAt != null) {
           newElapsed = DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc());
@@ -2203,10 +2204,11 @@ class CallService {
   }
 
   bool get hasActiveCall =>
-      state.value.status == CallStatus.calling ||
+      state.value.status == CallStatus.dialing ||
+      state.value.status == CallStatus.waiting ||
       state.value.status == CallStatus.ringing ||
       state.value.status == CallStatus.connecting ||
-      state.value.status == CallStatus.connected ||
+      state.value.status == CallStatus.active ||
       state.value.status == CallStatus.reconnecting;
 
   // ── Crash / Reconnect Recovery ────────────────────────────────────────────
@@ -2267,7 +2269,7 @@ class CallService {
         // Restore outgoing call — we're waiting for the callee to answer.
         _cpLog('RECOVERY', 'checkActiveCall → RESTORE calling (outgoing) | call_id=$callId callee=$otherUsername');
         _setState(CallState(
-          status:       CallStatus.calling,
+          status:       CallStatus.waiting,
           callId:       callId,
           roomName:     roomName,
           livekitUrl:   lkUrl,
@@ -2389,7 +2391,7 @@ class CallService {
 
   Future<void> toggleCamera() async {
     final room = _room;
-    if (room == null || state.value.status != CallStatus.connected) {
+    if (room == null || state.value.status != CallStatus.active) {
       _cpLog('VIDEO', 'toggleCamera: SKIPPED | room=${room != null} status=${state.value.status.name}');
       return;
     }

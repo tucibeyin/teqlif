@@ -171,7 +171,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     }
     // Giden arama: startCall() → calling durumuna geçince CallScreen'i overlay açar.
     // Bu sayede public_profile_screen / messages_screen'in doğrudan push'u kaldırılabildi.
-    if (status == CallStatus.calling || status == CallStatus.connecting || status == CallStatus.connected) {
+    if (status == CallStatus.dialing || status == CallStatus.waiting || status == CallStatus.connecting || status == CallStatus.active) {
       if (!CallService.instance.isCallScreenVisible.value) {
         _cpLog('UI', 'overlay._onCallState: status=${status.name} → _openCallScreen()');
         _openCallScreen();

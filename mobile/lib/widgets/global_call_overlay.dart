@@ -48,7 +48,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
     final isVisible = _cs.isCallScreenVisible.value;
     final cs = _cs.state.value;
     final shouldShow = !isVisible &&
-        (cs.status == CallStatus.connected || cs.status == CallStatus.connecting);
+        (cs.status == CallStatus.active || cs.status == CallStatus.connecting);
     if (shouldShow != _prevPillVisible) {
       _prevPillVisible = shouldShow;
       if (shouldShow) {
@@ -89,7 +89,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
         children: [
           widget.child,
           if (!isVisible &&
-              (cs.status == CallStatus.connected ||
+              (cs.status == CallStatus.active ||
                   cs.status == CallStatus.connecting))
             Positioned(
               top: 0,

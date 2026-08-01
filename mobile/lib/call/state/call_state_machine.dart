@@ -3,51 +3,55 @@ import 'call_status.dart';
 
 // V2.0 VoIP mimarisine göre role-aware transition tablosu.
 // Her transition sadece bir role için geçerliyse yalnızca o tabloda bulunur.
-// Shared state'ler (connecting, connected, ended, reconnecting) her iki tabloda da var.
+// Shared state'ler (connecting, active, ended, reconnecting) her iki tabloda da var.
 //
-// Step 2'de state isimleri V2.0'a uygun hale getirilecek:
-//   calling   → dialing + waiting (ayrılacak)
-//   connected → active (rename)
-//   rejected/missed/noAnswer/busy/permissionDenied → ended + EndReason (Step 3)
+// Step 3'te terminal state'ler (rejected/missed/noAnswer/busy/permissionDenied)
+// ended + EndReason olarak absorbe edilecek.
 
 class CallStateMachine {
   CallStateMachine._();
 
   // ── Caller transition tablosu ──────────────────────────────────────────────
-  // calling: V2.0'da dialing + waiting. Step 2'de ikiye bölünecek.
+  // dialing: HTTP /start in-flight, callId yok.
+  // waiting: callId geldi, callee'yi bekliyoruz.
 
   static const Map<CallStatus, Set<CallStatus>> _callerTransitions = {
     CallStatus.idle: {
-      CallStatus.calling,
+      CallStatus.dialing,
     },
-    CallStatus.calling: {
-      CallStatus.connecting,
+    CallStatus.dialing: {
+      CallStatus.waiting,   // /start → 200: callId + token geldi
+      CallStatus.ended,     // /start HTTP hatası
+      CallStatus.idle,
+    },
+    CallStatus.waiting: {
+      CallStatus.connecting,   // call_accepted WS eventi
       CallStatus.ended,
-      CallStatus.rejected,   // Step 3'te ended+reason'a absorbe edilecek
+      CallStatus.rejected,     // Step 3'te ended+reason'a absorbe edilecek
       CallStatus.missed,
       CallStatus.noAnswer,
       CallStatus.busy,
       CallStatus.idle,
     },
     CallStatus.connecting: {
-      CallStatus.connected,
+      CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
       CallStatus.idle,
     },
-    CallStatus.connected: {
+    CallStatus.active: {
       CallStatus.ended,
       CallStatus.reconnecting,
       CallStatus.idle,
     },
     CallStatus.reconnecting: {
-      CallStatus.connected,
+      CallStatus.active,
       CallStatus.ended,
       CallStatus.idle,
     },
     CallStatus.ended: {
       CallStatus.idle,
-      CallStatus.calling, // arama biter bitmez yeni arama başlatılabilir
+      CallStatus.dialing,  // arama biter bitmez yeni arama başlatılabilir
     },
     // Terminal state'ler — tek geçiş: idle'a dön
     CallStatus.rejected: {CallStatus.idle},
@@ -71,18 +75,18 @@ class CallStateMachine {
       CallStatus.idle,
     },
     CallStatus.connecting: {
-      CallStatus.connected,
+      CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
       CallStatus.idle,
     },
-    CallStatus.connected: {
+    CallStatus.active: {
       CallStatus.ended,
       CallStatus.reconnecting,
       CallStatus.idle,
     },
     CallStatus.reconnecting: {
-      CallStatus.connected,
+      CallStatus.active,
       CallStatus.ended,
       CallStatus.idle,
     },
@@ -99,10 +103,15 @@ class CallStateMachine {
 
   static const Map<CallStatus, Set<CallStatus>> _unknownRoleTransitions = {
     CallStatus.idle: {
-      CallStatus.calling,
+      CallStatus.dialing,
       CallStatus.ringing,
     },
-    CallStatus.calling: {
+    CallStatus.dialing: {
+      CallStatus.waiting,
+      CallStatus.ended,
+      CallStatus.idle,
+    },
+    CallStatus.waiting: {
       CallStatus.connecting,
       CallStatus.ended,
       CallStatus.rejected,
@@ -119,24 +128,24 @@ class CallStateMachine {
       CallStatus.idle,
     },
     CallStatus.connecting: {
-      CallStatus.connected,
+      CallStatus.active,
       CallStatus.ended,
       CallStatus.reconnecting,
       CallStatus.idle,
     },
-    CallStatus.connected: {
+    CallStatus.active: {
       CallStatus.ended,
       CallStatus.reconnecting,
       CallStatus.idle,
     },
     CallStatus.reconnecting: {
-      CallStatus.connected,
+      CallStatus.active,
       CallStatus.ended,
       CallStatus.idle,
     },
     CallStatus.ended: {
       CallStatus.idle,
-      CallStatus.calling,
+      CallStatus.dialing,
     },
     CallStatus.rejected: {CallStatus.idle},
     CallStatus.missed: {CallStatus.idle},
@@ -148,7 +157,6 @@ class CallStateMachine {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /// Geçerli bir transition ise [next] state'i döner, geçersizse null.
-  /// Çağıran: null gelirse state değiştirmez ve loglar.
   /// [role] null ise en geniş izin seti (fallback) kullanılır.
   static CallStatus? transition({
     required CallStatus current,
@@ -179,10 +187,11 @@ class CallStateMachine {
 
   /// Aktif arama gerektiren state mi? WS lock ve wakelock kararlarında kullanılır.
   static bool isActiveCallState(CallStatus status) {
-    return status == CallStatus.calling ||
+    return status == CallStatus.dialing ||
+        status == CallStatus.waiting ||
         status == CallStatus.ringing ||
         status == CallStatus.connecting ||
-        status == CallStatus.connected ||
+        status == CallStatus.active ||
         status == CallStatus.reconnecting;
   }
 }

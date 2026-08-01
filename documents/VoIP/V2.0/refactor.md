@@ -59,7 +59,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | Adım | Ne | Neden Önce | Durum |
 |---|---|---|---|
 | **Step 1** | `CallStateMachine` + `CallRole` | Saf Dart, sıfır bağımlılık, her şeyin temeli | ✅ `cc9bd511` |
-| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | 🔴 |
+| **Step 2** | State isim uyumu (rename) | State machine temiz olduktan sonra güvenli | ✅ `TBD` |
 | **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | 🔴 |
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | 🔴 |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | 🔴 |
@@ -256,21 +256,25 @@ test('her state için reconnecting → active geçişi geçerli (her iki role)',
 
 ## Step 2: State İsim Uyumu (Rename)
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-01  
+**Tamamlanma:** 2026-08-01  
+**Commit:** TBD
 
-**Bağımlılık:** Step 1 tamamlanmış olmalı.
+**Oluşturulan dosyalar:** —
 
-**Değişiklikler:**
-- `CallStatus.calling` → `CallStatus.waiting` *(ve ayrı `dialing` eklenir)*
-- `CallStatus.connected` → `CallStatus.active`
-- Etkilenen dosyalar: 7 dosya, ~23 referans — derleyici kılavuzluk eder
+**Değiştirilen dosyalar:**
+- `mobile/lib/call/state/call_status.dart` — `calling` kaldırıldı; `dialing` + `waiting` eklendi; `connected` → `active`
+- `mobile/lib/call/state/call_state_machine.dart` — transition tabloları güncellendi; `isActiveCallState` genişledi
+- `mobile/test/call/state/call_state_machine_test.dart` — 48 test (42→48); tamamı geçiyor
+- `mobile/lib/services/call_service.dart` — `dialing` (HTTP in-flight), `waiting` (callId geldi), `active` olarak ayrıştırıldı; `hasActiveCall` genişledi
+- `mobile/lib/screens/call_screen.dart` — `active`, `dialing || waiting` switch case
+- `mobile/lib/services/push_notification_service.dart` — `active`, `waiting`
+- `mobile/lib/widgets/global_call_overlay.dart` — `active`
+- `mobile/lib/widgets/incoming_call_overlay.dart` — `dialing || waiting || connecting || active`
 
-**Approach:** Tek commit, hepsi birden. Rename sırasında `calling` kaldırılmadan önce `dialing` eklenir (HTTP request uçuşta aşaması).
-
-**Production'a alma:** Compile + test = ship.
+**Split noktası:** `startCall` → POST /calls/start → 200 response: `dialing → waiting` (callId atandığı an).  
+**Tek commit:** tüm 8 dosya birden değişti.
 
 ---
 

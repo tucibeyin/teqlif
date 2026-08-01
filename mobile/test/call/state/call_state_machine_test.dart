@@ -19,10 +19,10 @@ void main() {
   });
 
   group('CallStateMachine — Caller transitions', () {
-    test('idle → calling geçerli', () {
+    test('idle → dialing geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.calling, role: CallRole.caller),
-        equals(CallStatus.calling),
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.dialing, role: CallRole.caller),
+        equals(CallStatus.dialing),
       );
     });
 
@@ -33,38 +33,59 @@ void main() {
       );
     });
 
-    test('calling → connecting geçerli', () {
+    test('idle → waiting geçersiz (dialing atlanamaz)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.calling, next: CallStatus.connecting, role: CallRole.caller),
-        equals(CallStatus.connecting),
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.waiting, role: CallRole.caller),
+        isNull,
       );
     });
 
-    test('calling → ended geçerli (cancel/error)', () {
+    test('dialing → waiting geçerli (/start 200: callId geldi)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.calling, next: CallStatus.ended, role: CallRole.caller),
+        CallStateMachine.transition(current: CallStatus.dialing, next: CallStatus.waiting, role: CallRole.caller),
+        equals(CallStatus.waiting),
+      );
+    });
+
+    test('dialing → ended geçerli (HTTP hatası)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.dialing, next: CallStatus.ended, role: CallRole.caller),
         equals(CallStatus.ended),
       );
     });
 
-    test('calling → rejected geçerli', () {
+    test('waiting → connecting geçerli (call_accepted WS)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.calling, next: CallStatus.rejected, role: CallRole.caller),
+        CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.connecting, role: CallRole.caller),
+        equals(CallStatus.connecting),
+      );
+    });
+
+    test('waiting → ended geçerli (cancel/error)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.ended, role: CallRole.caller),
+        equals(CallStatus.ended),
+      );
+    });
+
+    test('waiting → rejected geçerli', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.rejected, role: CallRole.caller),
         equals(CallStatus.rejected),
       );
     });
 
-    test('calling → busy geçerli', () {
+    test('waiting → busy geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.calling, next: CallStatus.busy, role: CallRole.caller),
+        CallStateMachine.transition(current: CallStatus.waiting, next: CallStatus.busy, role: CallRole.caller),
         equals(CallStatus.busy),
       );
     });
 
-    test('connecting → connected geçerli', () {
+    test('connecting → active geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.connected, role: CallRole.caller),
-        equals(CallStatus.connected),
+        CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.active, role: CallRole.caller),
+        equals(CallStatus.active),
       );
     });
 
@@ -82,24 +103,24 @@ void main() {
       );
     });
 
-    test('connected → ended geçerli', () {
+    test('active → ended geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.connected, next: CallStatus.ended, role: CallRole.caller),
+        CallStateMachine.transition(current: CallStatus.active, next: CallStatus.ended, role: CallRole.caller),
         equals(CallStatus.ended),
       );
     });
 
-    test('connected → reconnecting geçerli', () {
+    test('active → reconnecting geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.connected, next: CallStatus.reconnecting, role: CallRole.caller),
+        CallStateMachine.transition(current: CallStatus.active, next: CallStatus.reconnecting, role: CallRole.caller),
         equals(CallStatus.reconnecting),
       );
     });
 
-    test('reconnecting → connected geçerli', () {
+    test('reconnecting → active geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.reconnecting, next: CallStatus.connected, role: CallRole.caller),
-        equals(CallStatus.connected),
+        CallStateMachine.transition(current: CallStatus.reconnecting, next: CallStatus.active, role: CallRole.caller),
+        equals(CallStatus.active),
       );
     });
 
@@ -117,10 +138,10 @@ void main() {
       );
     });
 
-    test('ended → calling geçerli (yeni arama hemen başlatılabilir)', () {
+    test('ended → dialing geçerli (yeni arama hemen başlatılabilir)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.ended, next: CallStatus.calling, role: CallRole.caller),
-        equals(CallStatus.calling),
+        CallStateMachine.transition(current: CallStatus.ended, next: CallStatus.dialing, role: CallRole.caller),
+        equals(CallStatus.dialing),
       );
     });
 
@@ -140,9 +161,9 @@ void main() {
       );
     });
 
-    test('idle → calling geçersiz (callee-only idle)', () {
+    test('idle → dialing geçersiz (callee-only idle)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.calling, role: CallRole.callee),
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.dialing, role: CallRole.callee),
         isNull,
       );
     });
@@ -168,10 +189,10 @@ void main() {
       );
     });
 
-    test('connecting → connected geçerli', () {
+    test('connecting → active geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.connected, role: CallRole.callee),
-        equals(CallStatus.connected),
+        CallStateMachine.transition(current: CallStatus.connecting, next: CallStatus.active, role: CallRole.callee),
+        equals(CallStatus.active),
       );
     });
 
@@ -182,17 +203,17 @@ void main() {
       );
     });
 
-    test('connected → ended geçerli', () {
+    test('active → ended geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.connected, next: CallStatus.ended, role: CallRole.callee),
+        CallStateMachine.transition(current: CallStatus.active, next: CallStatus.ended, role: CallRole.callee),
         equals(CallStatus.ended),
       );
     });
 
-    test('reconnecting → connected geçerli', () {
+    test('reconnecting → active geçerli', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.reconnecting, next: CallStatus.connected, role: CallRole.callee),
-        equals(CallStatus.connected),
+        CallStateMachine.transition(current: CallStatus.reconnecting, next: CallStatus.active, role: CallRole.callee),
+        equals(CallStatus.active),
       );
     });
 
@@ -203,19 +224,19 @@ void main() {
       );
     });
 
-    test('ended → calling geçersiz (callee yeni arama hemen başlatamaz bu rolde)', () {
+    test('ended → dialing geçersiz (callee yeni arama bu rolde başlatamaz)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.ended, next: CallStatus.calling, role: CallRole.callee),
+        CallStateMachine.transition(current: CallStatus.ended, next: CallStatus.dialing, role: CallRole.callee),
         isNull,
       );
     });
   });
 
   group('CallStateMachine — Role null (crash recovery fallback)', () {
-    test('idle → calling geçerli (role unknown)', () {
+    test('idle → dialing geçerli (role unknown)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.calling, role: null),
-        equals(CallStatus.calling),
+        CallStateMachine.transition(current: CallStatus.idle, next: CallStatus.dialing, role: null),
+        equals(CallStatus.dialing),
       );
     });
 
@@ -226,19 +247,27 @@ void main() {
       );
     });
 
-    test('reconnecting → connected geçerli (role unknown)', () {
+    test('dialing → waiting geçerli (role unknown)', () {
       expect(
-        CallStateMachine.transition(current: CallStatus.reconnecting, next: CallStatus.connected, role: null),
-        equals(CallStatus.connected),
+        CallStateMachine.transition(current: CallStatus.dialing, next: CallStatus.waiting, role: null),
+        equals(CallStatus.waiting),
+      );
+    });
+
+    test('reconnecting → active geçerli (role unknown)', () {
+      expect(
+        CallStateMachine.transition(current: CallStatus.reconnecting, next: CallStatus.active, role: null),
+        equals(CallStatus.active),
       );
     });
   });
 
   group('CallStateMachine — isActiveCallState', () {
-    test('calling aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.calling), isTrue));
+    test('dialing aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.dialing), isTrue));
+    test('waiting aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.waiting), isTrue));
     test('ringing aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.ringing), isTrue));
     test('connecting aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.connecting), isTrue));
-    test('connected aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.connected), isTrue));
+    test('active aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.active), isTrue));
     test('reconnecting aktif', () => expect(CallStateMachine.isActiveCallState(CallStatus.reconnecting), isTrue));
     test('idle pasif', () => expect(CallStateMachine.isActiveCallState(CallStatus.idle), isFalse));
     test('ended pasif', () => expect(CallStateMachine.isActiveCallState(CallStatus.ended), isFalse));
@@ -246,10 +275,10 @@ void main() {
   });
 
   group('CallStateMachine — allowedTargets', () {
-    test('caller idle için sadece calling', () {
+    test('caller idle için sadece dialing', () {
       expect(
         CallStateMachine.allowedTargets(CallStatus.idle, CallRole.caller),
-        equals({CallStatus.calling}),
+        equals({CallStatus.dialing}),
       );
     });
 
@@ -260,10 +289,17 @@ void main() {
       );
     });
 
-    test('null role idle için calling ve ringing (union)', () {
+    test('null role idle için dialing ve ringing (union)', () {
       expect(
         CallStateMachine.allowedTargets(CallStatus.idle, null),
-        containsAll([CallStatus.calling, CallStatus.ringing]),
+        containsAll([CallStatus.dialing, CallStatus.ringing]),
+      );
+    });
+
+    test('caller dialing için waiting ve ended', () {
+      expect(
+        CallStateMachine.allowedTargets(CallStatus.dialing, CallRole.caller),
+        containsAll([CallStatus.waiting, CallStatus.ended]),
       );
     });
   });

@@ -119,7 +119,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   void _onStateChange() {
     final s = CallService.instance.state.value.status;
     final isVideoNow = CallService.instance.state.value.remoteVideoEnabled &&
-        s == CallStatus.connected;
+        s == CallStatus.active;
     if (isVideoNow && !_wasVideoMode) {
       _wasVideoMode = true;
       _startAutoHideTimer();
@@ -132,7 +132,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     final acceptedAt = CallService.instance.state.value.acceptedAt;
     _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
     _uiLog('CALL_SCREEN', 'STATUS_CHANGE', 'callId=${CallService.instance.state.value.callId} status=${s.name}');
-    if (s == CallStatus.connected && CallService.instance.elapsed.value == Duration.zero) {
+    if (s == CallStatus.active && CallService.instance.elapsed.value == Duration.zero) {
       final nowUtc = DateTime.now().toUtc();
       _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsedNotifier=${CallService.instance.elapsed.value.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
       _uiLog('CALL_SCREEN', 'CONNECTED', 'callId=${CallService.instance.state.value.callId} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"}');
@@ -281,7 +281,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             ? imgUrl(cs.otherAvatar)
             : null;
         final username = cs.otherUsername ?? '';
-        final isVideoMode = cs.remoteVideoEnabled && cs.status == CallStatus.connected;
+        final isVideoMode = cs.remoteVideoEnabled && cs.status == CallStatus.active;
 
         return Scaffold(
           backgroundColor: Colors.black,
@@ -304,7 +304,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
 
               // Remote video — BEFORE SafeArea so controls always render on top
-              if (cs.remoteVideoEnabled && cs.status == CallStatus.connected) ...[
+              if (cs.remoteVideoEnabled && cs.status == CallStatus.active) ...[
                 Positioned.fill(
                   child: _RemoteVideoView(
                     room: CallService.instance.room,
@@ -357,12 +357,12 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                       child: AnimatedSlide(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeOut,
-                        offset: cs.isPoorConnection && cs.status == CallStatus.connected
+                        offset: cs.isPoorConnection && cs.status == CallStatus.active
                             ? Offset.zero
                             : const Offset(0, -1),
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 250),
-                          opacity: cs.isPoorConnection && cs.status == CallStatus.connected ? 1.0 : 0.0,
+                          opacity: cs.isPoorConnection && cs.status == CallStatus.active ? 1.0 : 0.0,
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
@@ -397,7 +397,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     Column(
                       children: [
                         // Hide avatar/name/status when remote video is fullscreen
-                        if (!cs.remoteVideoEnabled || cs.status != CallStatus.connected) ...[
+                        if (!cs.remoteVideoEnabled || cs.status != CallStatus.active) ...[
                           const SizedBox(height: 64),
 
                           // Avatar
@@ -546,7 +546,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                 curve: Curves.easeInOut,
                                 clipBehavior: Clip.hardEdge,
                                 child: (!isVideoMode || _isControlsExpanded) &&
-                                        cs.status == CallStatus.connected
+                                        cs.status == CallStatus.active
                                     ? Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -606,7 +606,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  if (cs.status == CallStatus.connected)
+                                  if (cs.status == CallStatus.active)
                                     _ControlButton(
                                       icon: FontAwesomeIcons.message,
                                       label: loc.t('callChat'),
@@ -642,9 +642,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       width: 60,
                                     ), // Placeholder to keep center alignment
                                   // End call button
-                                  if (cs.status == CallStatus.calling ||
+                                  if (cs.status == CallStatus.dialing ||
+                                      cs.status == CallStatus.waiting ||
                                       cs.status == CallStatus.connecting ||
-                                      cs.status == CallStatus.connected ||
+                                      cs.status == CallStatus.active ||
                                       cs.status == CallStatus.reconnecting)
                                     GestureDetector(
                                       onTap: () {
@@ -682,7 +683,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       ),
                                     ),
 
-                                  if (cs.status == CallStatus.connected)
+                                  if (cs.status == CallStatus.active)
                                     _ControlButton(
                                       icon: FontAwesomeIcons.userPlus,
                                       label: loc.t('callAddPerson'),
@@ -708,7 +709,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
 
               // Local video PiP — freely draggable anywhere on screen
-              if (cs.localVideoEnabled && cs.status == CallStatus.connected)
+              if (cs.localVideoEnabled && cs.status == CallStatus.active)
                 Builder(builder: (context) {
                   const double pipW = 100, pipH = 140, pad = 8;
                   final size = MediaQuery.of(context).size;
@@ -746,7 +747,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 }),
 
               // Camera switch button — top-right when local video active
-              if (cs.localVideoEnabled && cs.status == CallStatus.connected)
+              if (cs.localVideoEnabled && cs.status == CallStatus.active)
                 Positioned(
                   top: 16,
                   right: 16,
@@ -773,7 +774,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 ),
 
               // Participant avatar strip — top center when group call active
-              if (cs.status == CallStatus.connected && cs.participants.isNotEmpty)
+              if (cs.status == CallStatus.active && cs.participants.isNotEmpty)
                 Positioned(
                   top: 60,
                   left: 0,
@@ -817,7 +818,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   }
 
   String _statusText(CallStatus s, TranslationPack loc, Duration elapsed) {
-    if (s == CallStatus.connected) {
+    if (s == CallStatus.active) {
       final formatted = _formatElapsed(elapsed);
       if (elapsed.inSeconds <= 5) {
         _cpLog('TIMER', 'CallScreen UI RENDER | elapsed=${elapsed.inMilliseconds}ms ($formatted) acceptedAt=${CallService.instance.state.value.acceptedAt?.toIso8601String() ?? "NULL"}');
@@ -825,7 +826,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       return formatted;
     }
     return switch (s) {
-      CallStatus.calling => loc.t('callCalling'),
+      CallStatus.dialing || CallStatus.waiting => loc.t('callCalling'),
       CallStatus.connecting => loc.t('callConnecting'),
       CallStatus.ended => loc.t('callEnded'),
       CallStatus.rejected => loc.t('callRejected'),

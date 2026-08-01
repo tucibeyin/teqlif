@@ -454,7 +454,7 @@ class PushNotificationService {
 
         // Guard 2: Call already accepted — stale dismiss after accept must not re-reject.
         if (currentStatus == CallStatus.connecting ||
-            currentStatus == CallStatus.connected ||
+            currentStatus == CallStatus.active ||
             currentStatus == CallStatus.reconnecting) {
           _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=$currentStatus (call already accepted — use endCall)');
           return;
@@ -494,7 +494,7 @@ class PushNotificationService {
         // shown, even if the user already accepted via IncomingCallBar (not the native CK UI).
         // If the call is already connected/reconnecting the timeout is stale — skip it.
         if (isTimeout &&
-            (currentStatus == CallStatus.connected ||
+            (currentStatus == CallStatus.active ||
                 currentStatus == CallStatus.reconnecting)) {
           _cpLog('PUSH', 'CallEventActionCallTimeout SKIPPED | call already $currentStatus | callId=$callIdStr');
           return;
@@ -582,7 +582,7 @@ class PushNotificationService {
     // Final defense: never send /reject if call has moved past ringing (already accepted).
     final status = CallService.instance.state.value.status;
     if (status == CallStatus.connecting ||
-        status == CallStatus.connected ||
+        status == CallStatus.active ||
         status == CallStatus.reconnecting) {
       _cpLog('PUSH', '_rejectCallById SKIPPED | status=$status (call accepted) callId=$callId');
       return;
@@ -593,7 +593,7 @@ class PushNotificationService {
     // without waiting for the HTTP round-trip (~1-2s).
     final cs = CallService.instance;
     if ((cs.state.value.status == CallStatus.ringing ||
-         cs.state.value.status == CallStatus.calling) &&
+         cs.state.value.status == CallStatus.waiting) &&
         cs.state.value.callId?.toString() == callId) {
       _cpLog('PUSH', '_rejectCallById → reset (optimistic) | callId=$callId');
       cs.reset();
