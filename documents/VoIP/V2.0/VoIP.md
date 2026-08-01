@@ -1338,6 +1338,287 @@ Arama akışının dışında — app startup sorumluluğu.
 
 ---
 
+## 16. Resource Management
+
+Bir arama herhangi bir nedenle sonlandığında — normal kapanma, red, timeout, hata, crash —
+tüm sistem kaynaklarının doğru sırada ve doğru zamanda serbest bırakılması gerekir.
+Bu bölüm her resource için **ne zaman**, **nasıl** ve **hangi koşulda** temizleneceğini tanımlar.
+
+---
+
+### 16.1 Üç Faz Modeli
+
+Cleanup üç fazda gerçekleşir. Her faz bir state'e karşılık gelir.
+
+```
+ended state'e giriş
+      │
+      ▼
+ ┌─────────────────────────────────┐
+ │  FAZ 1 — Anında (0ms)           │  Medya durdur, LK kes, platform bildir
+ └─────────────────────────────────┘
+      │
+      ▼
+ ┌─────────────────────────────────┐
+ │  FAZ 2 — 2s Window              │  Son tonu çal, end UI göster
+ └─────────────────────────────────┘
+      │  timer_reset_ready
+      ▼
+ ┌─────────────────────────────────┐
+ │  FAZ 3 — idle girişinde         │  Audio session kapat, state temizle
+ └─────────────────────────────────┘
+```
+
+---
+
+### 16.2 Faz 1 — Anında (`ended` state'e girerken)
+
+Sıra önemlidir. Aşağıdaki operasyonlar `_setState(ended)` çağrısı sırasında, state observer'lar uyarılmadan önce gerçekleşir.
+
+#### 16.2.1 Tüm Timer'ları İptal Et
+
+| Timer | Aksiyon |
+|---|---|
+| `timer_ring_expired` (30s / 45s) | İptal |
+| `timer_connecting_exp` (15s) | İptal |
+| `timer_peer_expired` (10s / 40s) | İptal |
+| `timer_reset_ready` (2s) | Başlat ← bu faza ait tek başlatma |
+
+`timer_reset_ready` dışındaki tüm timer'lar iptal edilir. İptal idempotent'tir — zaten iptal edilmiş timer'ı tekrar iptal etmek hatasızdır.
+
+#### 16.2.2 Kamera Kapat
+
+```dart
+if (_cameraEnabled) {
+  room.localParticipant?.setCameraEnabled(false);
+  _cameraEnabled = false;
+}
+```
+
+Koşullu: kamera hiç açılmamışsa no-op. LK `room.disconnect()`'tan **önce** çağrılır — disconnect tüm track'leri kapatır ancak biz kullanıcıya kamera göstergesinin anında kapandığını hissettirmek isteriz.
+
+#### 16.2.3 LiveKit Disconnect — Fire-and-Forget
+
+```dart
+_room?.disconnect();   // await edilmez
+_room = null;
+```
+
+State, LK disconnect'i beklemez. LK SDK kendi cleanup'ını yapar; server-side participant ~30s sonra timeout'a düşer. `_room` referansı hemen null'lanır — bellek serbest bırakılır.
+
+#### 16.2.4 Backend Bildir — Fire-and-Forget
+
+```dart
+if (_callId != null && !_endReported) {
+  _endReported = true;
+  _repository.endCall(_callId!).ignore();   // await edilmez
+}
+```
+
+`_endReported` flag'i ile çift /end isteği engellenir. Önceden gönderilmişse (örn. `user_call_end` zaten POST /end'i tetiklediyse) no-op.
+
+#### 16.2.5 Platform Bildir
+
+**iOS:**
+```dart
+provider.reportCall(with: uuid, endedAt: Date(), reason: .remoteEnded);
+// EndReason'a göre reason seçilir — bkz. §16.6
+```
+
+CallKit `provider.reportCall(ended:)` çağrısı iOS için kritiktir. Yapılmazsa:
+- Sonraki aramada CallKit duplicate call uyarısı verebilir
+- Pil tüketimi artar (aktif call sayıldığı için)
+- 30s içinde yapılmadıysa iOS kendi sonlandırır → düzensiz cleanup
+
+**Android:**
+```dart
+FlutterCallkitIncoming.endCall(uuid);
+// veya: FlutterCallkitIncoming.endAllCalls();
+```
+
+`endCall` idempotent'tir — zaten kapatılmış aramayı tekrar kapatmak hatasızdır.
+
+**Koşul:** `_callkitReported` flag ile: `reportNewIncomingCall` hiç çağrılmadıysa (örn. caller tarafında ya da WS ile gelen ringing'de CallKit raporlanmadıysa) bu çağrı atlanır.
+
+---
+
+### 16.3 Faz 2 — 2s Window (`ended` state'inde)
+
+`ended` state'ine girildiğinde kullanıcıya son geribildirim verilir. Ekran bu pencerede açık kalır.
+
+#### 16.3.1 Son Ses — EndReason'a Göre
+
+| EndReason | Ses | Kanal |
+|---|---|---|
+| `normal` | ended.wav | Earpiece |
+| `rejected` | busy.wav | Earpiece |
+| `missed` | Sessiz | — |
+| `noAnswer` | Sessiz | — |
+| `busy` | busy.wav | Earpiece |
+| `permissionDenied` | Sessiz | — |
+| `error` | Sessiz | — |
+
+Ses dosyası zaten çalıyorsa (ringback aktifse) önce durdurulur, ardından son ses başlatılır.
+
+**Süre garantisi:** ended.wav ve busy.wav 2s'den kısa olmalıdır. `timer_reset_ready` (2s) her iki dosyadan da sonra tetiklenir — 2s window bittiğinde ses de biter.
+
+#### 16.3.2 UI
+
+- `CallScreen` `ended` state'ini gösterir (süre, EndReason)
+- Auto-pop: 2s sonra `timer_reset_ready → idle` → `idle` geçişinde dismiss
+- **Wakelock korunur** — 2s window boyunca ekran açık kalır
+
+---
+
+### 16.4 Faz 3 — Ertelenen (`idle` state'e girerken)
+
+`timer_reset_ready` tetiklenip `ended → idle` geçişi yapıldığında:
+
+#### 16.4.1 Audio Session Kapat
+
+**iOS:**
+```dart
+try {
+  AVAudioSession.sharedInstance().setActive(false,
+    options: .notifyOthersOnDeactivation);
+} catch { /* hata yoksayılır — session zaten kapalı olabilir */ }
+```
+
+`notifyOthersOnDeactivation`: müzik uygulamaları aramanın bittiğini anlayıp audio'yu devralabilir (endüstri standardı).
+
+**Android:**
+```dart
+audioManager.abandonAudioFocus(_audioFocusChangeListener);
+```
+
+#### 16.4.2 Wakelock Bırak
+
+**Android:**
+```dart
+if (_wakeLock?.isHeld == true) {
+  _wakeLock!.release();
+}
+```
+
+iOS'ta wakelock yönetimi AVAudioSession tarafından yapılır — ayrıca release gerekmez.
+
+#### 16.4.3 State Temizle
+
+```dart
+_callId         = null;
+_roomName       = null;
+_token          = null;
+_currentRole    = null;
+_endReported    = false;
+_callkitReported = false;
+_cameraEnabled  = false;
+// endReason: CallScreen zaten dismiss edildi; null'lanabilir
+```
+
+`_calleeUuid`, `_otherUser` gibi UI'a ait alanlar da bu noktada sıfırlanır.
+
+---
+
+### 16.5 Wakelock Yaşam Döngüsü
+
+| State | Wakelock | Gerekçe |
+|---|---|---|
+| `idle` → `dialing` | — | Henüz ses yok |
+| `dialing` → `waiting` | — | Ringback earpiece'ten, ekranı açık tutmak gerekmiyor |
+| `ringing` | — | Sistem zili + ekran zaten açılır (push/CallKit) |
+| `connecting` → `active` | **Acquire** | Ses akışı başlar, ekran kapanmamalı |
+| `active` | Devam | — |
+| `reconnecting` | Devam | Bağlantı koptu ama arama hâlâ teknik olarak aktif |
+| `ended` | Devam | 2s window — ekran açık kalmalı |
+| `idle` | **Release** | Cleanup tamamlandı |
+
+**Android implementation:** `PowerManager.PARTIAL_WAKE_LOCK` — CPU'yu uyandırır, ekranı açık tutmaz. Ekran `active` state'de kullanıcı etkileşimiyle açıksa `FLAG_KEEP_SCREEN_ON` (WindowManager flag) kullanılır. `FULL_WAKE_LOCK` deprecated, kullanılmaz.
+
+---
+
+### 16.6 iOS CallKit EndReason Eşlemesi
+
+`provider.reportCall(with:endedAt:reason:)` için reason seçimi:
+
+| EndReason | CXCallEndedReason |
+|---|---|
+| `normal` | `.remoteEnded` (karşı taraf kapattı) veya `.answeredElsewhere` (local bitiş) |
+| `rejected` | `.declinedElsewhere` (callee reddetti) |
+| `missed` / `noAnswer` | `.unanswered` |
+| `busy` | `.failed` |
+| `permissionDenied` | `.failed` |
+| `error` | `.failed` |
+
+**`normal` için caller/callee farkı:**
+- Caller local hangup: `local_call_end → .answeredElsewhere` veya sadece `provider.reportCall` çağrısı yapılmaz (CXEndCallAction zaten tetiklemiştir)
+- Callee tarafı bitiriş (`ws_call_ended`): `.remoteEnded`
+
+---
+
+### 16.7 Duplicate Trigger İdempotency
+
+Birden fazla `ended` tetikleyici aynı anda gelebilir (örn. `user_call_end` + `ws_call_ended`).
+
+**Guard mekanizması: state machine.**
+
+State machine `ended → ended` self-transition'ına izin verir (§5.8: "geç gelen event'ler yoksayılır"). İkinci trigger `ended` state'indeyken gelirse `_setState` çağrılmaz — cleanup tekrar çalışmaz.
+
+Tüm cleanup operasyonları ek olarak idempotent yazılır:
+- `_endReported` flag → çift /end isteği engeller
+- `_callkitReported` flag → çift `reportCall` engeller
+- `_cameraEnabled` flag → çift `setCameraEnabled(false)` engeller
+- LK `room.disconnect()` → zaten null ise no-op
+- Timer cancel → zaten iptal ise no-op
+
+**Ek guard gerekmez.** State machine + idempotent operasyonlar yeterlidir.
+
+---
+
+### 16.8 Kısmi Başlatma Senaryoları
+
+Her resource yalnızca acquire edildiyse release edilir.
+
+| Senaryo | LK disconnect | /end | CallKit reportCall | Wakelock |
+|---|---|---|---|---|
+| `idle → permissionDenied → ended` | Hayır (LK hiç bağlanmadı) | Hayır (callId yok) | Hayır (CallKit raporlanmadı) | Hayır |
+| `dialing → ended` (/start 4xx) | Hayır | Hayır (callId yok) | Hayır | Hayır |
+| `waiting → ended` (caller cancel) | Evet (pre-connect yapılmış olabilir) | Evet | Hayır (caller) | Hayır |
+| `ringing → ended` (callee reject) | Hayır | Evet | Evet (iOS CallKit raporlanmıştı) | Hayır |
+| `connecting → ended` | Evet | Evet | Evet | Evet |
+| `active → ended` | Evet | Evet | Evet | Evet |
+
+---
+
+### 16.9 Crash Senaryosu — Resource Durumu
+
+| Resource | Crash'ta ne olur | Recovery |
+|---|---|---|
+| AVAudioSession | OS process sonunda release eder | Sonraki app açılışında clean |
+| AudioFocus | Android OS 200ms-2s içinde abandon eder | Sistem halleder |
+| Wakelock | Process ölünce OS release eder | Otomatik |
+| Kamera | OS process kapatınca release eder | Otomatik |
+| LiveKit room | Participant timeout (~30s) → server-side disconnect | LK server halleder |
+| iOS CallKit UI | Stuck call gösterebilir | `call_cancelled`/`call_ended` VoIP push → AppDelegate `saveEndCall(uuid, .remoteEnded)` (§12.5) |
+| Android bildirim | Stuck notification | `call_cancelled` FCM push → `hideCallkitIncoming` (§12.5) |
+| DB call record | `calling`/`active` kalır | Teqlif-spesifik soru — bkz. §16.10 |
+
+---
+
+### 16.10 Backend Stale Call Cleanup ⚠️ AÇIK SORU
+
+DB'de `status="calling"` veya `status="active"` kalmış bir kayıt varsa ve uygulama çökmüşse (hiç /end POST edilmemişse):
+
+**Soru:** Backend'de bu kayıtları temizleyen bir scheduled job veya keepalive timeout mekanizması var mı?
+
+Bu sorunun cevabına göre iki strateji mümkündür:
+
+| Durum | Strateji |
+|---|---|
+| Backend job var | Job stale kayıtları temizler; uygulama sadece kendi cleanup'ını yapar |
+| Backend job yok | Uygulama `/calls/active` kontrolünde stale kayıt bulunca `/end` çağırmalı; yoksa DB'de kalıcı `calling`/`active` kayıtlar birikir |
+
+---
+
 ## Sonraki Adımlar
 
 - [x] **Bölüm 1** — Tasarım kararları (axioms)
@@ -1355,3 +1636,4 @@ Arama akışının dışında — app startup sorumluluğu.
 - [x] **Bölüm 13** — Log katmanı (format, phase tag'leri, kurallar)
 - [x] **Bölüm 14** — Exception ve hata yönetimi stratejisi
 - [x] **Bölüm 15** — Hardware izin politikası (mic/kamera/Bluetooth — caller+callee, platform farkları, kalıcı red akışı)
+- [x] **Bölüm 16** — Resource management (3 faz modeli, timer/LK/audio/wakelock/kamera/crash cleanup, idempotency, iOS CallKit reason eşlemesi) ⚠️ §16.10 backend stale cleanup sorusu açık
