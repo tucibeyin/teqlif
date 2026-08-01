@@ -6,7 +6,7 @@ Bu dosya, Teqlif'teki arama akışına dair tüm ürün ve mimari kararları tut
 > `VoIP_architecture.md` — altyapı ve state machine teknik detayları  
 > `VoIP_decisions.md` (bu dosya) — use case'ler, donanım yönetimi ve SwipeLive kararları
 
-**Son güncelleme:** Ağustos 2026
+**Son güncelleme:** Ağustos 2026 (Mimari kararlar ve edge case'ler eklendi)
 
 ---
 
@@ -16,6 +16,8 @@ Bu dosya, Teqlif'teki arama akışına dair tüm ürün ve mimari kararları tut
 2. [Platform Audio Donanım Yönetimi](#2-platform-audio-donanım-yönetimi)
 3. [Audio Routing Karar Matrisi](#3-audio-routing-karar-matrisi)
 4. [SwipeLive Edge Case](#4-swipelive-edge-case)
+5. [Mimari Kararlar ve Motivasyonlar](#5-mimari-kararlar-ve-motivasyonlar)
+6. [Bilinen Edge Case'ler ve Guard'lar](#6-bilinen-edge-caseler-ve-guardlar)
 
 ---
 
@@ -439,3 +441,184 @@ CallState.status değişti
 ```
 
 > ⚠️ busy.wav / ended.wav çalarken içerik sesi kapalı kalır. Ses, `idle` state'ine geçişte açılır — bu seslerin bitmesini beklemek gerekmez çünkü `idle` geçişi zaten bu seslerin ardından gelir.
+
+---
+
+## 5. Mimari Kararlar ve Motivasyonlar
+
+Bu bölüm "neden bu şekilde tasarlandı" sorularını yanıtlar. Kod okunduğunda tuhaf gelen şeylerin bilinçli tercihler olduğunu belgelemek için yazıldı.
+
+---
+
+### 5.1 Pre-Connect Stratejisi (WhatsApp Modeli)
+
+**Ne:** Hem caller hem callee, arama kabul edilmeden önce LiveKit odasına bağlanır.
+
+**Neden:** Arama kabul edildiği anda ses gecikmesini ortadan kaldırmak için. Standart modelde callee "Kabul Et" tuşuna bastıktan sonra LiveKit token alır, room.connect() yapar (~1-2s). Pre-connect'te bu süre ringing sırasında tamamlanır; kabul anında sadece mic açılır (~15ms).
+
+**Caller tarafı:**
+- iOS: `room.connect()` ağ bağlantısı kurar, mic YOK. Amaç: ringback ses oturumunu bozmamak.
+- Android: `room.connect()` + muted audio track pre-publish. Kabul gelince sadece `unmute()` — re-negotiation gerekmez.
+
+**Callee tarafı:**
+- `ringing` state'inde `_fetchAndStoreCalleeToken()` ile LK token çekilir, ardından `_joinRoom()` başlar.
+- Kullanıcı "Kabul Et" bastığında `_room != null` ise `_activateCalleeAudio()` çağrılır; `_joinRoom()` atlanır.
+
+**Dikkat:** Pre-connect, "call_rejected" / "noAnswer" akışında `reset()` → `_disconnectRoom()` ile temizlenir. Token geçersizleşmez çünkü reject/end endpoint'leri room'u LK tarafında da siler.
+
+---
+
+### 5.2 Backend vs Client State Machine Ayrımı
+
+**Backend state:** `calling → active → ended / rejected / missed`  
+**Client state:** `idle → calling → ringing → connecting → connected → ended / rejected / missed / noAnswer / busy / reconnecting / permissionDenied`
+
+**Neden bu kadar farklı?**
+
+Backend sadece sinyal koordinasyonundan sorumludur: "Bu arama var mı, kim kabul etti, ne zaman bitti?" İşinin gereği 3 state yeterlidir. Client ise kullanıcıya ne gösterileceğini, hangi sesin çalacağını, audio session'ın nasıl yapılandırılacağını yönetir — bunlar için 12 state gerekir.
+
+Bu ayrımın pratik sonucu: backend `ringing` state'ini bilmez. Callee'nin telefonunun çaldığını backend görmez; sadece caller'ın arama başlattığını (`calling`) ve callee'nin kabul ettiğini (`active`) bilir.
+
+---
+
+### 5.3 Push Notification Stratejisi
+
+**Kural:** WS bağlı olsa bile her zaman push da gönderilir.
+
+**Neden:** WS arka planda iOS tarafından suspend edilebilir. WS'in ulaştığını garanti etmenin yolu yoktur. Push (VoIP/FCM) ise sistem tarafından güvence altındadır.
+
+**Token yaşı stratejisi (`_send_call_push`):**
+
+| Token yaşı | Strateji | Neden |
+|---|---|---|
+| ≤ 7 gün | VoIP only | Taze token güvenilir; batarya tasarrufu |
+| 8–30 gün | VoIP + FCM paralel | Token stale olabilir; ikisi aynı anda → biri mutlaka ulaşır |
+| > 30 gün | FCM önce + VoIP best-effort | Çok eski VoIP token büyük ihtimalle geçersiz |
+| VoIP token yok | FCM only | — |
+
+**iOS VoIP push payload'u self-contained'dir:** `callee_token` + `livekit_url` dahil. AppDelegate uyanınca HTTP fetch gerekmez; pre-connect anında başlar.
+
+**FCM `is_silent=True`:** Sistem bildirimi gösterilmez. `flutter_callkit_incoming` kendi CallKit UI'ını gösterir. İkisi aynı anda çıkarsa double-UI oluşur; `is_silent` bunu önler.
+
+---
+
+### 5.4 Firebase Adapter — firebase-admin Neden Kaldırıldı
+
+**Ne:** `firebase_admin.messaging` kütüphanesi kaldırıldı, yerine `google-auth` + `AuthorizedSession` ile doğrudan FCM V1 REST API kullanılıyor.
+
+**Neden:** iOS push'ları tutarsız başarısız oluyordu. Debug logları `ApnsError: InvalidProviderToken` gösterdi — Firebase Console'da yüklü APNs key ile VPS'teki `.p8` key farklıydı. Sorun kütüphane değil Firebase Console konfigürasyonuydu; ancak geçiş sürecinde `firebase-admin`'in shared session'ında concurrent token yenileme race condition riski de giderildi.
+
+**Avantaj:** Her `_send_http` çağrısında taze credentials + AuthorizedSession oluşturulur. Shared session'da concurrent token refresh yarış koşulu imkânsız hale gelir.
+
+---
+
+### 5.5 Caller Status Polling (`_startCallerStatusPoll`)
+
+**Ne:** Caller `calling` state'indeyken her 2 saniyede `/calls/{id}/status` endpoint'ini sorgular.
+
+**Neden:** WS üzerinden gelen `call_accepted` eventi kaybolabilir (geçici WS kopukluğu, background suspend). Eğer callee aramayı kabul etmişse ama WS eventi ulaşmamışsa, caller `calling` state'inde sıkışır — kullanıcı "Cevap vermiyor" beklerken aslında arama kabul edilmiş olur.
+
+**Çözüm:** `/status` `active` dönerse `onCallAccepted()` manuel tetiklenir; `missed/ended/rejected` dönerse `_hangUpLocally()`.
+
+**Dikkat:** Poll yalnızca `calling` state'inde çalışır; `onCallAccepted` veya timeout tetiklendiğinde iptal edilir.
+
+---
+
+### 5.6 ARQ Worker Backup Timeout
+
+**Ne:** `/start` endpoint'i çağrıldığında ARQ worker'a 40 saniye sonra tetiklenecek `delayed_call_timeout_task` enqueue edilir.
+
+**Neden:** Client-side 30 saniye timeout güvenilir değildir — uygulama crash olabilir, kill edilebilir, network kesintisi yaşanabilir. Bu durumda backend'de `calling` status'unda asılı kalan "ghost call" oluşur. ARQ backup bu hayalet aramaları temizler ve callee'yi serbest bırakır.
+
+**İlişki:** Flutter client 30s sonra `/missed` çağırır; ARQ backup 40s sonra tetiklenir. Client gelirse ARQ dedup ile erken iptal edilir. Client gelmezse ARQ devralır.
+
+---
+
+## 6. Bilinen Edge Case'ler ve Guard'lar
+
+Bu bölüm, en zor bulunan bug'ların hangi guard'larla çözüldüğünü belgeliyor. Guard kaldırılırsa ne olacağını bilesinler diye yazıldı.
+
+---
+
+### 6.1 WS + FCM + CallKit Triple Delivery Dedup
+
+**Problem:** Aynı çağrı için WS, FCM ve CallKit bildirimi ~150ms arayla üst üste gelir. Her biri `onIncomingCall()` tetikler → üç kez zil sesi, üç kez state geçişi.
+
+**Guard:** `_activeIncomingCallId` — ilk çağrı `callId`'yi senkron olarak (ilk `await` öncesinde) set eder. Sonraki çağrılar aynı `callId`'yi görünce erken döner.
+
+```dart
+if (incomingCallId == _activeIncomingCallId) return; // DEDUP
+_activeIncomingCallId = incomingCallId; // Synchronously set BEFORE first await
+```
+
+**Neden senkron:** Dart single-threaded, ancak `await` noktasında başka event loop işlemleri çalışabilir. İlk `await` öncesinde set edilmezse WS + FCM aynı anda geçebilir.
+
+---
+
+### 6.2 Ghost Call Koruması (`_lastEndedCallId`)
+
+**Problem:** Eski (stale) FCM pushlari gecikmeli ulaşır. Bir önceki aramanın "Arama geliyor" bildirimi, yeni bir arama yapıldıktan dakikalarca sonra ekranda belirebilir.
+
+**Guard:** `_lastEndedCallId` — reset()/hangup'ta güncellenir. Gelen `callId <= _lastEndedCallId` ise arama görüntülenmez, CallKit bildirimi kapatılır.
+
+---
+
+### 6.3 iOS Race: TrackSubscribed, call_accepted WS'den Önce Gelir
+
+**Problem:** iOS'ta LiveKit `TrackSubscribed` eventi, `call_accepted` WS eventinden ~1.65 saniye önce tetiklenir. Yani caller `connected` state'ine geçer, sonra WS gelir — `acceptedAt` null kalır, analitik süre yanlış hesaplanır.
+
+**Guard:** `onCallAccepted()` içinde `acceptedAt` her zaman güncellenir, status `connected` olsa bile:
+
+```dart
+// WS geç gelse de acceptedAt'i yaz
+if (data['accepted_at'] != null && _acceptedAt == null && state.value.acceptedAt == null) {
+    _acceptedAt = DateTime.parse(data['accepted_at'] as String);
+    // elapsed'ı geriye dönük düzelt
+}
+```
+
+---
+
+### 6.4 Callee Kabul Ettikten Sonra Stale Reject
+
+**Problem:** Callee aramayı iOS lock screen'den kabul eder. Flutter henüz hazır değildir; `didActivateAudioSession` Completer oluşmadan önce tetiklenir. Bu sinyal kaybolursa `_activateCalleeAudio` 4 saniye timeout'a girer.
+
+**Guard:** `_audioSessionActivated` flag — sinyal `Completer` oluşmadan önce gelse bile flag `true` olarak kalır. `_joinRoom` Completer'ı bulduğunda anında tamamlar:
+
+```dart
+if (_audioSessionActivated) {
+    _callkitAudioReady!.complete(); // Completer'ı hemen tamamla
+}
+```
+
+---
+
+### 6.5 Bağlantı Aşamasında Sıkışma (Connecting Timeout)
+
+**Problem:** `connecting` state'ine geçildi ama `TrackSubscribed` eventi hiç gelmedi (LiveKit sorun, network tam kopmadan yavaşladı). Kullanıcı "Bağlanıyor..." ekranında sonsuza kadar bekler.
+
+**Guard:** `_connectingTimeoutTimer` — `connecting` state'e girilince 15 saniye sayaç başlar. 15 saniye dolduğunda hâlâ `connecting` ise `endCall()` tetiklenir.
+
+---
+
+### 6.6 Eş Zamanlı İki Caller Aynı Kişiyi Arıyor
+
+**Problem:** A ve B kullanıcıları aynı anda C'yi aramaya başlarsa, her ikisi de C'nin "meşgul değil" kontrolünü geçebilir ve iki paralel arama oluşur.
+
+**Guard:** `pg_advisory_xact_lock(42, callee_id)` — PostgreSQL transaction düzeyinde advisory lock. İkinci caller, birincinin commit'ini bekler ve commit sonrası C'yi "meşgul" görür.
+
+---
+
+### 6.7 `/accept` ve `/reject` Aynı Anda Gelirse
+
+**Problem:** Callee'nin iki cihazı varsa (ya da UI bug), aynı aramaya hem accept hem reject gelirse son kazananın kim olduğu belirsiz.
+
+**Guard:** `SELECT FOR UPDATE` — `/accept` ve `/reject` endpoint'leri aynı satırı kilitler. Sadece biri geçer; diğeri `CONFLICT` alır (eğer status artık "calling" değilse).
+
+---
+
+### 6.8 WS Reconnect'te Tekrar Arama Görünmesi
+
+**Problem:** WS kopup yeniden bağlandığında replayed eventlar arasında `call_incoming` gelebilir. Arama zaten bitmiş olduğu hâlde zil sesi yeniden başlar.
+
+**Guard:** Terminal eventlar (`call_ended`, `call_rejected`, `call_missed`) WS store'a kaydedilmez. Sadece non-terminal eventlar replay edilir. Bağlantı sonrası `backendStatus` kontrolü (`/calls/{id}/status`) ile replay'deki aktif olmayan aramalar dismiss edilir.
