@@ -615,7 +615,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                                   color: Colors.black54,
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
-                                                child: Text('$offerCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.gavel, color: Colors.white, size: 9),
+                                                    const SizedBox(width: 2),
+                                                    Text('$offerCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                         ],
