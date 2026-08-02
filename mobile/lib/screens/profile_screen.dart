@@ -1721,10 +1721,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.card(ctx),
           title: Text(
             loc.t('profileDeleteAccount'),
-            style: const TextStyle(color: Color(0xFFEF4444), fontSize: 16),
+            style: const TextStyle(color: Color(0xFFEF4444), fontSize: 16, fontWeight: FontWeight.w600),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1732,7 +1732,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             children: [
               Text(
                 loc.t('profileDeleteAccountDesc'),
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                style: TextStyle(color: AppColors.textSecondary(ctx), fontSize: 13),
               ),
               const SizedBox(height: 16),
               TeqTextField(
@@ -1753,15 +1753,20 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           actions: [
-            TeqButton.text(
-              text: loc.t('btnCancel'),
-              onPressed: () => Navigator.pop(ctx),
-            ),
-            TeqButton(
-              text: loc.t('btnDeleteAccount'),
-              customColor: const Color(0xFFEF4444),
-              isExpanded: false,
-              onPressed: () async {
+            Row(
+              children: [
+                Expanded(
+                  child: TeqButton.outline(
+                    text: loc.t('btnCancel'),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TeqButton(
+                    text: loc.t('btnDeleteAccount'),
+                    customColor: const Color(0xFFEF4444),
+                    onPressed: () async {
                 if (passCtrl.text.isEmpty) {
                   setS(() => error = loc.t('fieldPassword'));
                   return;
