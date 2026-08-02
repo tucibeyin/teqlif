@@ -3,6 +3,7 @@ import '../../config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/localization_service.dart';
 import '../../services/analytics_service.dart';
+import 'viewmodels/seller_report_view_model.dart';
 
 class SellerReportScreen extends ConsumerStatefulWidget {
   final int streamId;
@@ -20,10 +21,6 @@ class SellerReportScreen extends ConsumerStatefulWidget {
 
 class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
     with SingleTickerProviderStateMixin {
-  Map<String, dynamic>? _report;
-  bool _loading = true;
-  bool _hasError = false;
-
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -35,24 +32,12 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
       duration: const Duration(milliseconds: 700),
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _loadReport();
   }
 
   @override
   void dispose() {
     _fadeCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadReport() async {
-    final report = await AnalyticsService.getSellerReport(widget.streamId);
-    if (!mounted) return;
-    setState(() {
-      _report = report;
-      _loading = false;
-      _hasError = report == null;
-    });
-    if (report != null) _fadeCtrl.forward();
   }
 
   // ── Formatters ──────────────────────────────────────────────────────────────
@@ -82,14 +67,22 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
 
   @override
   Widget build(BuildContext context) {
+    final reportAsync = ref.watch(sellerReportViewModelProvider(widget.streamId));
+    
+    ref.listen(sellerReportViewModelProvider(widget.streamId), (prev, next) {
+      if (next.valueOrNull != null && !next.isLoading && next.hasValue) {
+        _fadeCtrl.forward();
+      }
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0F1E),
       body: SafeArea(
-        child: _loading
-            ? _buildLoading()
-            : _hasError
-                ? _buildError()
-                : _buildReport(),
+        child: reportAsync.when(
+          data: (report) => report == null ? _buildError() : _buildReport(report),
+          error: (_, __) => _buildError(),
+          loading: () => _buildLoading(),
+        ),
       ),
     );
   }
@@ -129,10 +122,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
             const SizedBox(height: 24),
             _PrimaryButton(
               label: loc.t("reportRetry"),
-              onTap: () {
-                setState(() { _loading = true; _hasError = false; });
-                _loadReport();
-              },
+              onTap: () => ref.read(sellerReportViewModelProvider(widget.streamId).notifier).retry(),
             ),
             const SizedBox(height: 12),
             _SecondaryButton(
@@ -145,9 +135,8 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
     );
   }
 
-  Widget _buildReport() {
+  Widget _buildReport(Map<String, dynamic> r) {
     final loc = ref.watch(localizationProvider);
-    final r = _report!;
     final uniqueViewers = r['unique_viewers'] as int? ?? 0;
     final peakViewers = r['peak_viewers'] as int? ?? 0;
     final avgBudget = r['avg_budget'];

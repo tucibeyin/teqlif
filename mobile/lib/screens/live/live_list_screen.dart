@@ -4,25 +4,19 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../../services/localization_service.dart";
 import '../../config/api.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/theme.dart';
 import '../../config/app_colors.dart';
 import '../../models/stream.dart';
 import '../../services/catalog_service.dart';
-import '../../services/connectivity_service.dart';
-import '../../services/localization_service.dart';
-import '../../services/storage_service.dart';
-import '../../services/stream_service.dart';
-import '../../services/ws_service.dart';
 import '../../services/stream_connection_manager.dart';
 import '../../utils/start_stream_helper.dart';
 import '../../utils/subcategory_icons.dart';
 import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
 import '../../widgets/network_error_widget.dart';
-import '../../widgets/offline_banner.dart';
 import '../../widgets/stale_data_banner.dart';
+import 'viewmodels/live_list_view_model.dart';
 import 'swipe_live_screen.dart';
 import '../public_profile_screen.dart';
 
@@ -36,172 +30,75 @@ class LiveListScreen extends ConsumerStatefulWidget {
 
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
-  List<StreamOut> _streams = []; // tüm aktif yayınlar (En Son)
-  List<StreamOut> _recommended = []; // kişiselleştirilmiş (Sana Özel)
-  List<Map<String, dynamic>> _suggestedStreamers = []; // önerilen yayıncılar
-  bool _loading = true;
-  bool _isLoggedIn = false;
   String? _selectedCategory; // null = Tümü
   String? _selectedSubcategory; // null = Tümü
-  String? _error;
-  bool _isOffline = false;
 
-  StreamSubscription<Map<String, dynamic>>? _wsSub;
-  StreamSubscription<bool>? _connectSub;
-  final _connectSvc = ConnectivityService();
+  void triggerStartDialog() => _showStartDialog();
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    _wsSub = WsService.messageStream.stream.listen(_onWsMessage);
-
-    // Anlık bağlantı durumu
-    _connectSvc.isConnected.then((online) {
-      if (mounted) setState(() => _isOffline = !online);
-    });
-    // Değişimleri dinle
-    _connectSub = _connectSvc.onConnectivityChanged.listen((online) {
-      if (!mounted) return;
-      final wasOffline = _isOffline;
-      setState(() => _isOffline = !online);
-      // İnternet geri geldi → listeyi yenile
-      if (online && wasOffline) _load(bypassCache: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _wsSub?.cancel();
-    _connectSub?.cancel();
-    super.dispose();
-  }
-
-  void _onWsMessage(Map<String, dynamic> msg) {
-    if (!mounted) return;
-    if (msg['type'] == 'stream_ended') {
-      final streamId = msg['stream_id'];
-      if (streamId is int) {
-        setState(() {
-          _streams.removeWhere((s) => s.id == streamId);
-          _recommended.removeWhere((s) => s.id == streamId);
-        });
-        // Story tray'i de ağdan yenile (cache'i bypass et)
-        unawaited(ref.read(storyGroupsProvider.notifier).refresh());
-      }
-    }
-  }
-
-  void triggerStartDialog() =>
-      showStartStreamDialog(context, onStreamStarted: _load);
-  void refresh({bool bypassCache = true}) => _load(bypassCache: bypassCache);
-
-  /// [bypassCache]: pull-to-refresh ve bağlantı geri geldiğinde true.
-  Future<void> _load({bool bypassCache = false}) async {
-    if (!mounted) return;
-    setState(() => _loading = true);
-    // refresh() → bypassCache:true ile ağdan çeker; invalidate() değil
-    // çünkü invalidate, build()'daki bypassCache:false ile Hive cache'i önce
-    // gösterir ve story tray anlık güncellenmez.
-    unawaited(ref.read(storyGroupsProvider.notifier).refresh());
-    unawaited(ref.read(myStoriesProvider.notifier).refresh());
-
-    final token = await StorageService.getToken();
-    if (mounted) setState(() => _isLoggedIn = token != null);
-
-    // Kişisel öneriler: arka planda ağdan çek (cache gerekmez, oturum bazlı)
-    if (token != null) {
-      unawaited(
-        StreamService.getRecommendedStreams().then((rec) {
-          if (mounted) setState(() => _recommended = rec);
-        }),
-      );
-      unawaited(
-        StreamService.getSuggestedStreamers().then((streamers) {
-          if (mounted) setState(() => _suggestedStreamers = streamers);
-        }),
-      );
-    }
-
-    // Aktif yayınlar: SWR — önce cache (anlık), sonra API (taze)
-    try {
-      await for (final streams in StreamService.getActiveStreamsStream(
-        bypassCache: bypassCache,
-      )) {
-        if (!mounted) return;
-        setState(() {
-          _streams = streams;
-          _loading = false;
-          _error = null;
-        });
-      }
-    } catch (e, st) {
-      debugPrint('[LiveList] _load hatası: $e\n$st');
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'network';
-      });
-    }
+  void refresh({bool bypassCache = true}) {
+    ref.read(liveListViewModelProvider.notifier).refresh(bypassCache: bypassCache);
+    ref.read(storyGroupsProvider.notifier).refresh();
+    ref.read(myStoriesProvider.notifier).refresh();
   }
 
   Future<void> _showStartDialog() =>
-      showStartStreamDialog(context, onStreamStarted: _load);
+      showStartStreamDialog(context, onStreamStarted: () => refresh(bypassCache: true));
 
-  Future<void> _joinStream(StreamOut stream) async {
+  Future<void> _joinStream(StreamOut stream, bool isOffline) async {
     if (!mounted) return;
-    // Çevrimdışıyken yayına girmeyi engelle
-    if (_isOffline) return;
+    if (isOffline) return;
 
-    // Erken bağlantı (Early Connection) - WebRTC handshake'i animasyon süresince başlat
     StreamConnectionManager.instance.prefetchForImmediateJoin(stream.id);
 
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => SwipeLiveScreen.fromStream(stream)),
-    ).then((_) => _load(bypassCache: true));
+    ).then((_) => refresh(bypassCache: true));
   }
 
-  List<String> get _categories {
+  List<String> _getCategories(List<StreamOut> streams) {
     final seen = <String>{};
-    return _streams.map((s) => s.category).where(seen.add).toList();
+    return streams.map((s) => s.category).where(seen.add).toList();
   }
 
-  List<String> get _subcategories {
+  List<String> _getSubcategories(List<StreamOut> streams) {
     if (_selectedCategory == null) return [];
     final seen = <String>{};
-    return _streams
+    return streams
         .where((s) => s.category == _selectedCategory && (s.subcategory?.isNotEmpty ?? false))
         .map((s) => s.subcategory!)
         .where(seen.add)
         .toList();
   }
 
-  List<StreamOut> get _filtered {
-    if (_selectedCategory == null) return _streams;
-    var list = _streams.where((s) => s.category == _selectedCategory).toList();
+  List<StreamOut> _getFiltered(List<StreamOut> streams) {
+    if (_selectedCategory == null) return streams;
+    var list = streams.where((s) => s.category == _selectedCategory).toList();
     if (_selectedSubcategory != null) {
       list = list.where((s) => s.subcategory == _selectedSubcategory).toList();
     }
     return list;
   }
 
-  // Sana Özel: kategori filtresi de uygulanır
-  List<StreamOut> get _filteredRecommended {
-    if (_selectedCategory == null) return _recommended;
-    var list = _recommended.where((s) => s.category == _selectedCategory).toList();
+  List<StreamOut> _getFilteredRecommended(List<StreamOut> recommended) {
+    if (_selectedCategory == null) return recommended;
+    var list = recommended.where((s) => s.category == _selectedCategory).toList();
     if (_selectedSubcategory != null) {
       list = list.where((s) => s.subcategory == _selectedSubcategory).toList();
     }
     return list;
   }
+
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final cats = _categories;
-    final showFilter = !_loading && cats.isNotEmpty;
-    final filtered = _filtered;
+    final stateAsync = ref.watch(liveListViewModelProvider);
+    final stateVal = stateAsync.valueOrNull;
+    final isOffline = stateVal?.isOffline ?? false;
+    final cats = _getCategories(stateVal?.streams ?? []);
+    final showFilter = !stateAsync.isLoading && cats.isNotEmpty;
+    final filtered = _getFiltered(stateVal?.streams ?? []);
 
     return Scaffold(
       appBar: AppBar(
@@ -283,7 +180,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 ],
               ),
             ),
-            if (_selectedCategory != null && _subcategories.isNotEmpty)
+            if (_selectedCategory != null && _getSubcategories(stateVal?.streams ?? []).isNotEmpty)
               SizedBox(
                 height: 40,
                 child: ListView(
@@ -295,7 +192,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                       active: _selectedSubcategory == null,
                       onTap: () => setState(() => _selectedSubcategory = null),
                     ),
-                    ..._subcategories.map(
+                    ..._getSubcategories(stateVal?.streams ?? []).map(
                       (s) {
                          final sub = CatalogService.subcategoryByKey(s);
                          final labelKey = sub?.labelKey ?? 'subcat_$s';
@@ -311,19 +208,19 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 ),
               ),
           ],
-          if (_error != null && _streams.isNotEmpty)
-            StaleDataBanner(onRetry: _load),
+          if (stateAsync.hasError && (stateVal?.streams.isNotEmpty ?? false))
+            StaleDataBanner(onRetry: () => refresh(bypassCache: true)),
           // ── İçerik ──────────────────────────────────────────────
           Expanded(
             child: RefreshIndicator(
               color: kPrimary,
-              onRefresh: _load,
-              child: _loading
+              onRefresh: () async => refresh(bypassCache: true),
+              child: stateAsync.isLoading
                   ? const Center(
                       child: CircularProgressIndicator(color: kPrimary),
                     )
-                  : _error != null && filtered.isEmpty
-                  ? NetworkErrorWidget(onRetry: _load, scrollable: true)
+                  : stateAsync.hasError && filtered.isEmpty
+                  ? NetworkErrorWidget(onRetry: () => refresh(bypassCache: true), scrollable: true)
                   : filtered.isEmpty
                   ? const _EmptyState()
                   : _buildContent(loc, filtered),
@@ -335,10 +232,13 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   }
 
   Widget _buildContent(TranslationPack loc, List<StreamOut> filtered) {
-    final rec = _filteredRecommended;
-    final hasRec = _isLoggedIn && rec.isNotEmpty;
-    final hasSuggestedStreamers = _isLoggedIn && _suggestedStreamers.isNotEmpty;
-    final cats = _categories;
+    final stateAsync = ref.watch(liveListViewModelProvider);
+    final stateVal = stateAsync.valueOrNull;
+    final isOffline = stateVal?.isOffline ?? false;
+    final rec = _getFilteredRecommended(stateVal?.recommended ?? []);
+    final hasRec = (stateVal?.isLoggedIn ?? false) && rec.isNotEmpty;
+    final hasSuggestedStreamers = (stateVal?.isLoggedIn ?? false) && (stateVal?.suggestedStreamers ?? []).isNotEmpty;
+    final cats = _getCategories(stateVal?.streams ?? []);
 
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -370,16 +270,16 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: _suggestedStreamers.length,
+                itemCount: (stateVal?.suggestedStreamers ?? []).length,
                 itemBuilder: (ctx, i) => _StreamerAvatarCard(
-                  streamer: _suggestedStreamers[i],
+                  streamer: (stateVal?.suggestedStreamers ?? [])[i],
                   onTap: () => Navigator.push(
                     ctx,
                     MaterialPageRoute(
                       builder: (_) => PublicProfileScreen(
                         username:
-                            _suggestedStreamers[i]['username'] as String? ?? '',
-                        userId: _suggestedStreamers[i]['id'] as int?,
+                            (stateVal?.suggestedStreamers ?? [])[i]['username'] as String? ?? '',
+                        userId: (stateVal?.suggestedStreamers ?? [])[i]['id'] as int?,
                       ),
                     ),
                   ),
@@ -425,7 +325,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                     padding: const EdgeInsets.only(right: 10),
                     child: _StreamGridTile(
                       stream: rec[i],
-                      onTap: () => _joinStream(rec[i]),
+                      onTap: () => _joinStream(rec[i], isOffline),
                     ),
                   ),
                 ),
@@ -480,19 +380,19 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               delegate: SliverChildBuilderDelegate(
                 (_, i) => _StreamGridTile(
                   stream: filtered[i],
-                  onTap: () => _joinStream(filtered[i]),
+                  onTap: () => _joinStream(filtered[i], isOffline),
                 ),
                 childCount: filtered.length,
               ),
             ),
           )
         else
-          ..._buildSectionedSlivers(cats, filtered, loc),
+          ..._buildSectionedSlivers(cats, filtered, loc, isOffline),
       ],
     );
   }
 
-  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all, TranslationPack loc) {
+  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all, TranslationPack loc, bool isOffline) {
     final groups = {
       for (var c in cats) c: all.where((s) => s.category == c).toList(),
     };
@@ -525,7 +425,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               delegate: SliverChildBuilderDelegate(
                 (ctx, i) => _StreamGridTile(
                   stream: groups[c]![i],
-                  onTap: () => _joinStream(groups[c]![i]),
+                  onTap: () => _joinStream(groups[c]![i], isOffline),
                 ),
                 childCount: groups[c]!.length,
               ),
@@ -650,6 +550,9 @@ class _EmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(liveListViewModelProvider);
+    final stateVal = stateAsync.valueOrNull;
+    final isOffline = stateVal?.isOffline ?? false;
     return ListView(
       children: [
         const SizedBox(height: 120),
@@ -685,6 +588,9 @@ class _StreamerAvatarCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(liveListViewModelProvider);
+    final stateVal = stateAsync.valueOrNull;
+    final isOffline = stateVal?.isOffline ?? false;
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
@@ -873,6 +779,9 @@ class _StreamGridTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(liveListViewModelProvider);
+    final stateVal = stateAsync.valueOrNull;
+    final isOffline = stateVal?.isOffline ?? false;
     final hasThumbnail =
         stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
 
