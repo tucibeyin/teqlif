@@ -545,4 +545,107 @@ class CallRoomAdapter {
       _log('LK', '_disconnectRoom: room was already null | _isJoiningRoom=false');
     }
   }
+
+  // ── Mic/Video track control (D-10) ────────────────────────────────────────
+
+  /// Caller mic activation on call_accepted. Two paths:
+  /// FAST PATH — pre-published muted track exists → unmute.
+  /// STANDARD PATH — no pre-publish → setMicrophoneEnabled(true).
+  void activateCallerMic() {
+    if (_room == null) {
+      _log('HW', 'microphone ACTIVATE SKIPPED | context=activateCallerMic room=null');
+      return;
+    }
+    final micPubs = _room!.localParticipant?.audioTrackPublications;
+    if (micPubs != null && micPubs.isNotEmpty) {
+      final pub = micPubs.first;
+      if (pub.muted) {
+        _log('HW', 'microphone UNMUTE | context=activateCallerMic fastPath=true stopOnMute=false');
+        pub.unmute(stopOnMute: false).catchError((e) {
+          _log('HW', 'microphone ENABLE (unmute-fallback) | context=activateCallerMic');
+          _room!.localParticipant?.setMicrophoneEnabled(true);
+          return null;
+        });
+      } else {
+        _log('HW', 'microphone ALREADY ENABLED+UNMUTED | context=activateCallerMic pub.sid=${pub.sid}');
+      }
+    } else {
+      _log('HW', 'microphone ENABLE | context=activateCallerMic standardPath=true (no publications)');
+      _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+        _log('HW', 'microphone ENABLE ERROR | context=activateCallerMic $e');
+        return null;
+      });
+    }
+  }
+
+  /// Mic state recovery for iOS race condition: WS arrived after TrackSubscribed.
+  /// No-op if room is null or mic is already enabled.
+  void ensureMicEnabled(String context) {
+    if (_room == null) {
+      _log('HW', 'microphone ENSURE SKIPPED | context=$context room=null');
+      return;
+    }
+    final micPubs = _room!.localParticipant?.audioTrackPublications;
+    if (micPubs == null || micPubs.isEmpty) {
+      _log('HW', 'microphone ENABLE | context=$context standardPath=true (no publications)');
+      _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+        _log('HW', 'microphone ENABLE ERROR | context=$context $e');
+        return null;
+      });
+      return;
+    }
+    final pub = micPubs.first;
+    if (pub.muted) {
+      _log('HW', 'microphone UNMUTE | context=$context fastPath=true pub.sid=${pub.sid}');
+      pub.unmute(stopOnMute: false).catchError((e) {
+        _log('HW', 'microphone ENABLE (unmute-fallback) | context=$context $e');
+        _room!.localParticipant?.setMicrophoneEnabled(true);
+        return null;
+      });
+    } else {
+      _log('HW', 'microphone ALREADY ENABLED+UNMUTED | context=$context pub.sid=${pub.sid}');
+    }
+  }
+
+  Future<void> toggleCamera() async {
+    if (_room == null || getState().status != CallStatus.active) {
+      _log('VIDEO', 'toggleCamera: SKIPPED | room=${_room != null} status=${getState().status.name}');
+      return;
+    }
+    final enabled = localVideoEnabled.value;
+    _log('VIDEO', 'toggleCamera | current=$enabled → ${!enabled}');
+    localVideoEnabled.value = !enabled;
+    try {
+      await _room!.localParticipant?.setCameraEnabled(!enabled);
+    } catch (e) {
+      _log('VIDEO', 'toggleCamera ERROR | $e');
+      localVideoEnabled.value = enabled; // revert
+    }
+  }
+
+  Future<void> switchCamera() async {
+    if (_room == null || !localVideoEnabled.value) {
+      _log('VIDEO', 'switchCamera: SKIPPED | roomNull=${_room == null} videoEnabled=${localVideoEnabled.value}');
+      return;
+    }
+    _log('VIDEO', 'switchCamera invoked');
+    try {
+      final pub = _room!.localParticipant?.videoTrackPublications
+          .firstWhere((p) => p.source == TrackSource.camera);
+      if (pub?.track is LocalVideoTrack) {
+        final cameras = await Hardware.instance.videoInputs();
+        _log('VIDEO', 'switchCamera | available=${cameras.length}');
+        if (cameras.length < 2) return;
+        final currentId = (pub!.track as LocalVideoTrack).mediaStreamTrack.getSettings()['deviceId'] as String?;
+        final next = cameras.firstWhere(
+          (c) => c.deviceId != currentId,
+          orElse: () => cameras.first,
+        );
+        await (pub.track as LocalVideoTrack).switchCamera(next.deviceId);
+        _log('VIDEO', 'switchCamera OK | device=${next.label}');
+      }
+    } catch (e) {
+      _log('VIDEO', 'switchCamera ERROR | $e');
+    }
+  }
 }

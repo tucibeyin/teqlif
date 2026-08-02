@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart';
 import '../../services/auth_service.dart';
 import 'call_notif_adapter.dart';
 
@@ -60,6 +61,47 @@ class IosCallNotifAdapter extends CallNotifAdapter {
       notifLog('NOTIF | endAllCalls');
     } catch (e) {
       notifLog('NOTIF | endAllCalls ERROR | $e');
+    }
+  }
+
+  @override
+  Future<void> reportCallStarted({
+    required int callId,
+    required String calleeName,
+    String? calleeAvatar,
+  }) async {
+    try {
+      final uuid = CallNotifAdapter.formatCallId(callId.toString());
+      final params = CallKitParams(
+        id: uuid,
+        nameCaller: calleeName,
+        appName: 'teqlif',
+        avatar: calleeAvatar ?? 'https://i.pravatar.cc/100',
+        handle: 'Teqlif Voice Call',
+        type: 0,
+        duration: 45000,
+        extra: {'call_id': callId},
+        ios: IOSParams(
+          iconName: 'AppIcon',
+          handleType: 'generic',
+          supportsVideo: false,
+          maximumCallGroups: 1,
+          maximumCallsPerCallGroup: 1,
+          audioSessionMode: 'voiceChat',
+          audioSessionActive: true,
+          audioSessionPreferredSampleRate: 44100.0,
+          audioSessionPreferredIOBufferDuration: 0.005,
+          supportsDTMF: true,
+          supportsHolding: true,
+          supportsGrouping: false,
+          supportsUngrouping: false,
+          ringtonePath: 'system_ringtone_default',
+        ),
+      );
+      await FlutterCallkitIncoming.startCall(params);
+      notifLog('NOTIF | reportCallStarted | callId=$callId uuid=$uuid');
+    } catch (e) {
+      notifLog('NOTIF | reportCallStarted ERROR | callId=$callId $e');
     }
   }
 

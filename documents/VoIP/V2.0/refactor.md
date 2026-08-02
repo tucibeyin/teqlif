@@ -72,6 +72,10 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 12** | Hardware/media state → adapter'lara taşı | Step 5 + Step 10 tamamlanmış olmalı | ✅ |
 | **Step 13** | UI routing state → `CallScreenRouter` | Step 6 tamamlanmış olmalı | ✅ |
 | **Step 14** | `fetchFollowingForInvite` → sosyal servis | Step 4 tabanına ihtiyaç var | ✅ |
+| **Step 15** | Grup arama → `GroupCallManager` | Step 9 tamamlanmış olmalı | ✅ |
+| **Step 16** | Mic/video track kontrolü → `CallRoomAdapter` | Step 10 tamamlanmış olmalı | ✅ |
+| **Step 17** | CallKit start → `IosCallNotifAdapter` | Step 7 tamamlanmış olmalı | ✅ |
+| **Step 18** | Proximity sensör → `CallHardwareAdapter` | Step 5 tamamlanmış olmalı | ✅ |
 
 ---
 
@@ -1369,6 +1373,167 @@ Bu satır Step 13 sonrasında otomatik olarak `_router.preventCallScreenAutoOpen
 - [x] `_getList`, `_authHeaders` `CallService`'ten kaldırıldı (artık kullanan yok)
 - [x] `dart:convert`, `package:http/http.dart` `CallService`'ten kaldırıldı
 - [x] `call_screen.dart` → `FollowsService.fetchFollowingForInvite()` kullanıyor
+- [x] `dart analyze` 0 error ✅
+
+---
+
+## Step 15: Grup Arama → `GroupCallManager`
+
+**Durum:** 🔴 Başlamadı  
+**Bağımlılık:** Step 9 (`CallRepository` grup metodları) tamamlanmış olmalı.
+
+VoIP.md D-9 kararının implementasyonu. Grup arama aksiyonları ve WS event handler'ları `CallService`'ten ayrı bir `GroupCallManager` sınıfına taşınır.
+
+### 15.1 Taşınacak metodlar
+
+`CallService`'ten `GroupCallManager`'a taşınacaklar:
+- `inviteToCall(int inviteeId)`
+- `acceptGroupInvite()`
+- `rejectGroupInvite()`
+- `leaveGroupCall()`
+- `removeParticipant(int userId)`
+- `onGroupInviteReceived(Map<String, dynamic>)`
+- `onParticipantJoined(Map<String, dynamic>)`
+- `onParticipantLeft(Map<String, dynamic>)`
+- `onParticipantRemoved(Map<String, dynamic>)`
+- `onParticipantRejected(Map<String, dynamic>)`
+- `onParticipantTimeout(Map<String, dynamic>)`
+
+### 15.2 GroupCallManager constructor
+
+```dart
+class GroupCallManager {
+  GroupCallManager({
+    required CallRepository repository,
+    required CallState Function() getState,
+    required void Function(CallState) setState,
+    required Future<void> Function({required CallStatus status, EndReason? endReason}) hangUpLocally,
+    required Future<void> Function({required String livekitUrl, required String token}) joinRoom,
+    required void Function() onAudioSessionActivated,
+  });
+}
+```
+
+### 15.3 CallService değişiklikleri
+
+```dart
+// Eklenir:
+late final GroupCallManager _groupManager;
+
+// Constructor'da:
+_groupManager = GroupCallManager(
+  repository: _repository,
+  getState: () => state.value,
+  setState: _setState,
+  hangUpLocally: _hangUpLocally,
+  joinRoom: (livekitUrl, token) => _roomAdapter.joinRoom(...),
+  onAudioSessionActivated: _hardware.onAudioSessionActivated,
+);
+
+// Tüm grup metodları delegate'e dönüşür:
+Future<void> inviteToCall(int inviteeId) => _groupManager.inviteToCall(inviteeId);
+// vs.
+```
+
+### 15.4 Checklist
+
+- [x] `mobile/lib/call/group/group_call_manager.dart` oluşturuldu
+- [x] 11 metod `GroupCallManager`'a taşındı
+- [x] `CallService` delegate metodlar kullanıyor
+- [x] `dart analyze` 0 error ✅
+
+---
+
+## Step 16: Mic/Video Track Kontrolü → `CallRoomAdapter`
+
+**Durum:** 🔴 Başlamadı  
+**Bağımlılık:** Step 10 (`CallRoomAdapter`) tamamlanmış olmalı.
+
+VoIP.md D-10 kararının implementasyonu. Room-level track operasyonları `CallRoomAdapter`'a taşınır.
+
+### 16.1 Taşınacak metodlar
+
+- `_ensureMicEnabled(String context)` → `CallRoomAdapter.ensureMicEnabled(String context)`
+- `onCallAccepted()` içindeki caller mic activation bloğu → `CallRoomAdapter.activateCallerMic()`
+- `toggleCamera()` → `CallRoomAdapter.toggleCamera()`
+- `switchCamera()` → `CallRoomAdapter.switchCamera()`
+
+**`toggleMute()` CallService'te kalır** — `isMuted` domain state'e dokunuyor.
+
+### 16.2 Checklist
+
+- [x] `CallRoomAdapter.ensureMicEnabled(String context)` eklendi
+- [x] `CallRoomAdapter.activateCallerMic()` eklendi (caller mic fast/standard path)
+- [x] `CallRoomAdapter.toggleCamera()` eklendi
+- [x] `CallRoomAdapter.switchCamera()` eklendi
+- [x] `CallService.onCallAccepted()` → `_roomAdapter.activateCallerMic()` kullanıyor
+- [x] `CallService.toggleCamera()` / `switchCamera()` → delegate
+- [x] `dart analyze` 0 error ✅
+
+---
+
+## Step 17: CallKit Start → `IosCallNotifAdapter`
+
+**Durum:** 🔴 Başlamadı  
+**Bağımlılık:** Step 7 (`CallNotifAdapter`) tamamlanmış olmalı.
+
+VoIP.md D-11 kararının implementasyonu. `startCall()` içindeki iOS-spesifik `CallKitParams` kurulumu `IosCallNotifAdapter`'a taşınır.
+
+### 17.1 Arayüz değişikliği
+
+```dart
+// CallNotifAdapter'a eklenir:
+Future<void> reportCallStarted({
+  required int callId,
+  required String calleeName,
+  String? calleeAvatar,
+});
+```
+
+### 17.2 Checklist
+
+- [x] `CallNotifAdapter.reportCallStarted` abstract metod eklendi
+- [x] `IosCallNotifAdapter` CallKitParams kurulumu + `FlutterCallkitIncoming.startCall()` ile implemente etti
+- [x] `AndroidCallNotifAdapter` no-op olarak implemente etti
+- [x] `CallService.startCall()` iOS bloğu → `await _notif.reportCallStarted(...)` oldu
+- [x] `dart analyze` 0 error ✅
+
+---
+
+## Step 18: Proximity Sensör → `CallHardwareAdapter`
+
+**Durum:** 🔴 Başlamadı  
+**Bağımlılık:** Step 5 (`CallHardwareAdapter`) tamamlanmış olmalı.
+
+VoIP.md D-12 kararının implementasyonu. Proximity sensör yönetimi `CallHardwareAdapter`'a taşınır.
+
+### 18.1 Arayüz değişikliği
+
+```dart
+// CallHardwareAdapter'a eklenir:
+void startProximitySensor({required void Function() onNear});
+void stopProximitySensor();
+```
+
+### 18.2 CallService kullanımı
+
+```dart
+// _transitionToConnected içinde:
+_hardware.startProximitySensor(onNear: () {
+  if (state.value.status == CallStatus.active && _hardware.isSpeaker.value) {
+    setSpeaker(false);
+  }
+});
+
+// _stopProximitySensor() çağrıları → _hardware.stopProximitySensor()
+```
+
+### 18.3 Checklist
+
+- [x] `CallHardwareAdapter` abstract metodlar eklendi
+- [x] `IosCallHardwareAdapter` implementasyonu (proximity_sensor stream, iOS-only)
+- [x] `AndroidCallHardwareAdapter` implementasyonu (`setProximityScreenOff` dahil)
+- [x] `CallService._startProximitySensor/_stopProximitySensor` kaldırıldı
 - [x] `dart analyze` 0 error ✅
 
 ---

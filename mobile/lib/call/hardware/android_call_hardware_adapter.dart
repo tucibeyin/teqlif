@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory;
 import 'package:audioplayers/audioplayers.dart' as ap;
@@ -19,6 +20,8 @@ class AndroidCallHardwareAdapter extends CallHardwareAdapter {
   // One-shot sounds: busy.wav, ended.wav, weak.wav.
   // Android: voiceCommunication context prevents speaker drift after AudioFocus release.
   final _audioPlayer = AudioPlayer();
+
+  StreamSubscription<int>? _proximitySub;
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -69,6 +72,7 @@ class AndroidCallHardwareAdapter extends CallHardwareAdapter {
 
   @override
   void dispose() {
+    _proximitySub?.cancel();
     _ringbackPlayer.dispose();
     _audioPlayer.dispose();
     FlutterRingtonePlayer().stop();
@@ -274,6 +278,31 @@ class AndroidCallHardwareAdapter extends CallHardwareAdapter {
   @override
   Future<void> waitForCallkitAudio() async {
     // Android: no CallKit audio session to wait for — returns immediately.
+  }
+
+  // ── Proximity sensor ─────────────────────────────────────────────────────────
+
+  @override
+  void startProximitySensor({required void Function() onNear}) {
+    _proximitySub?.cancel();
+    log('HW', 'proximitySensor START');
+    _proximitySub = ProximitySensor.events.listen((int value) {
+      if (value == 0) onNear();
+    }, onError: (e) {
+      log('HW', 'proximitySensor ERROR | $e');
+    });
+    ProximitySensor.setProximityScreenOff(true).catchError((e) {
+      log('HW', 'proximitySensor setScreenOff ERROR | $e');
+    });
+  }
+
+  @override
+  void stopProximitySensor() {
+    if (_proximitySub == null) return;
+    _proximitySub!.cancel().catchError((_) {});
+    _proximitySub = null;
+    ProximitySensor.setProximityScreenOff(false).catchError((_) {});
+    log('HW', 'proximitySensor STOP');
   }
 
   // ── Android CallKit UI ────────────────────────────────────────────────────────

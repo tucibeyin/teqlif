@@ -105,6 +105,17 @@ abstract class CallHardwareAdapter {
   /// iOS: no-op.
   Future<void> onCallConnected(String uuid);
 
+  // ── Proximity sensor ─────────────────────────────────────────────────────────
+
+  /// Start listening to proximity sensor events. Calls [onNear] when the sensor
+  /// detects the device is near the user's ear (value == 0).
+  /// Android: also enables proximity screen-off.
+  void startProximitySensor({required void Function() onNear});
+
+  /// Stop listening to proximity sensor events.
+  /// Android: also disables proximity screen-off.
+  void stopProximitySensor();
+
   // ── Logging ──────────────────────────────────────────────────────────────────
 
   void log(String phase, String msg) =>

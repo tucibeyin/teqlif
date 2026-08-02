@@ -24,6 +24,17 @@ abstract class CallNotifAdapter {
   /// Dismiss all active CallKit / system calls (used in reset()).
   Future<void> endAllCalls();
 
+  /// Report an outgoing call to CallKit (iOS) so the system knows a call is
+  /// in progress. No-op on Android.
+  /// [callId]: the integer call ID from the backend.
+  /// [calleeName]: display name shown in the system call UI.
+  /// [calleeAvatar]: optional avatar URL.
+  Future<void> reportCallStarted({
+    required int callId,
+    required String calleeName,
+    String? calleeAvatar,
+  });
+
   /// Format integer-based call ID to UUID required by CallKit.
   /// Both call_service.dart and push_notification_service.dart use this.
   static String formatCallId(String id) {

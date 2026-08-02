@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory;
 import 'package:audioplayers/audioplayers.dart' as ap;
@@ -21,6 +22,8 @@ class IosCallHardwareAdapter extends CallHardwareAdapter {
 
   // iOS ringtone loop timer (FlutterRingtonePlayer doesn't support true looping on iOS).
   Timer? _ringtoneLoopTimer;
+
+  StreamSubscription<int>? _proximitySub;
 
   // ── CallKit audio session lifecycle ─────────────────────────────────────────
 
@@ -75,6 +78,7 @@ class IosCallHardwareAdapter extends CallHardwareAdapter {
   @override
   void dispose() {
     _ringtoneLoopTimer?.cancel();
+    _proximitySub?.cancel();
     _ringbackPlayer.dispose();
     _audioPlayer.dispose();
     FlutterRingtonePlayer().stop();
@@ -320,6 +324,28 @@ class IosCallHardwareAdapter extends CallHardwareAdapter {
     final ms = DateTime.now().difference(waitStart).inMilliseconds;
     log('HW', 'didActivateAudioSession RECEIVED | waitMs=$ms');
     _callkitAudioReady = null;
+  }
+
+  // ── Proximity sensor ─────────────────────────────────────────────────────────
+
+  @override
+  void startProximitySensor({required void Function() onNear}) {
+    _proximitySub?.cancel();
+    log('HW', 'proximitySensor START');
+    _proximitySub = ProximitySensor.events.listen((int value) {
+      if (value == 0) onNear();
+    }, onError: (e) {
+      log('HW', 'proximitySensor ERROR | $e');
+    });
+    // iOS handles proximity screen-off natively via CallKit — no explicit setProximityScreenOff.
+  }
+
+  @override
+  void stopProximitySensor() {
+    if (_proximitySub == null) return;
+    _proximitySub!.cancel().catchError((_) {});
+    _proximitySub = null;
+    log('HW', 'proximitySensor STOP');
   }
 
   // ── Android no-ops ───────────────────────────────────────────────────────────

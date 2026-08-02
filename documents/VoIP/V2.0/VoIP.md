@@ -293,6 +293,10 @@ Bu bölümdeki tablolar aşağıdaki kararlara dayanır.
 | D-6 | System event routing politikası | **Network olayları `processEvent` üzerinden geçer** — `audio_focus_lost`/`gained` D-4 istisnasıdır (adapter-only) | Unified event bus: state değiştiren her dış olay tek giriş noktasından geçmelidir. İzleme-only monitor (sadece log) yeterli değil. |
 | D-7 | Hardware/media state domain state'e ait değil | **`isSpeaker` → `CallHardwareAdapter`; `localVideoEnabled`/`remoteVideoEnabled` → `CallRoomAdapter`** | D-4 prensibinin genelleştirilmesi: `CallState` yalnızca domain state (kim arıyor, hangi oda, bağlı mı) taşır; hardware routing ve LiveKit track state adapter sınırında kalır. |
 | D-8 | UI routing state CallService'te yer almaz | **`isCallScreenVisible`, `preventCallScreenAutoOpen` → `CallScreenRouter`** | Single responsibility: hangi ekranın açık olduğunu ve SwipeLive bağlamını CallScreenRouter bilir. CallService bu routing kararlarını görmemeli. |
+| D-9 | Grup arama yönetimi CallService'te yer almaz | **Grup arama aksiyonları + WS event handler'ları → `GroupCallManager`** | Grup arama kendi domain'i: davet, katılım, katılımcı yönetimi. CallService sadece delegate eder; GroupCallManager bağımsız test edilebilir. |
+| D-10 | Mic/video track kontrolü CallService'te yer almaz | **`activateCallerMic`, `ensureMicEnabled`, `toggleCamera`, `switchCamera` → `CallRoomAdapter`** | Room-level operasyonlar room adapter'ına ait. `toggleMute` domain state (isMuted) dokunduğu için CallService'te kalır. |
+| D-11 | CallKit çağrı başlatma bildirimi NotifAdapter'a aittir | **`reportCallStarted` → `IosCallNotifAdapter`; Android no-op** | `startCall()` içindeki iOS-spesifik `CallKitParams` kurulumu notification concerns'e ait; platform ayrımı adapter'da yaşar. |
+| D-12 | Proximity sensör yönetimi HardwareAdapter'a aittir | **`startProximitySensor(onNear)` / `stopProximitySensor` → `CallHardwareAdapter`** | Fiziksel sensör I/O hardware adapter'ının sorumluluğudur. Callback pattern: adapter sensörü yönetir, callsite aksiyona karar verir. |
 
 ---
 

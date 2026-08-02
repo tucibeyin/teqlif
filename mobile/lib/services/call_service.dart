@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
-import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
@@ -9,15 +8,12 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:vibration/vibration.dart';
-import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api.dart';
 import '../core/app_exception.dart';
-import '../services/storage_service.dart';
 import 'push_notification_service.dart';
 import 'ws_service.dart';
 import '../models/call_event.dart';
-import '../models/call_participant.dart';
 import '../call/state/call_status.dart';
 import '../call/state/call_role.dart';
 import '../call/state/call_state_machine.dart';
@@ -32,6 +28,7 @@ import '../call/notif/android_call_notif_adapter.dart';
 import '../call/state/call_state.dart';
 import '../call/room/call_room_adapter.dart';
 import '../call/routing/call_screen_router.dart';
+import '../call/group/group_call_manager.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
@@ -53,6 +50,14 @@ class CallService {
       setState: _setState,
       onConnected: (ctx) => _transitionToConnected(context: ctx),
       endCall: endCall,
+    );
+    _groupManager = GroupCallManager(
+      repository: _repository,
+      getState: () => state.value,
+      setState: _setState,
+      hangUpLocally: ({required status, endReason}) => _hangUpLocally(status: status, endReason: endReason),
+      joinRoom: ({required livekitUrl, required token}) => _roomAdapter.joinRoom(livekitUrl: livekitUrl, token: token),
+      onAudioSessionActivated: _hardware.onAudioSessionActivated,
     );
     _hardware.init();
     if (Platform.isIOS) {
@@ -84,6 +89,7 @@ class CallService {
   CallRole? get currentRole => _currentRole;
 
   late final CallRoomAdapter _roomAdapter;
+  late final GroupCallManager _groupManager;
   Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
@@ -143,7 +149,6 @@ class CallService {
   DateTime? _acceptedAt;
 
   Timer? _statsTimer;               // WebRTC audio stats polling (5s)
-  StreamSubscription<int>? _proximitySub;     // Proximity sensor → earpiece auto-switch
   StreamSubscription<List<ConnectivityResult>>? _networkSub;  // Network change monitor
   ConnectivityResult? _prevNetworkType;  // For networkChange false-positive suppression
 
@@ -294,40 +299,11 @@ class CallService {
         ),
       );
 
-      if (Platform.isIOS) {
-        try {
-          final uuid = CallNotifAdapter.formatCallId(startResult.callId.toString());
-          final params = CallKitParams(
-            id: uuid,
-            nameCaller: calleeUsername,
-            appName: 'teqlif',
-            avatar: calleeAvatar ?? 'https://i.pravatar.cc/100',
-            handle: 'Teqlif Voice Call',
-            type: 0,
-            duration: 45000,
-            extra: {'call_id': startResult.callId},
-            ios: IOSParams(
-              iconName: 'AppIcon',
-              handleType: 'generic',
-              supportsVideo: false,
-              maximumCallGroups: 1,
-              maximumCallsPerCallGroup: 1,
-              audioSessionMode: 'voiceChat',
-              audioSessionActive: true,
-              audioSessionPreferredSampleRate: 44100.0,
-              audioSessionPreferredIOBufferDuration: 0.005,
-              supportsDTMF: true,
-              supportsHolding: true,
-              supportsGrouping: false,
-              supportsUngrouping: false,
-              ringtonePath: 'system_ringtone_default',
-            ),
-          );
-          await FlutterCallkitIncoming.startCall(params);
-        } catch (e) {
-          _cpLog('OUT', 'CallKit.startCall ERROR | $e');
-        }
-      }
+      await _notif.reportCallStarted(
+        callId: startResult.callId,
+        calleeName: calleeUsername,
+        calleeAvatar: calleeAvatar,
+      );
 
       _startRingTimer();
       _cpLog('HW', 'wakelock ENABLE | reason=startCall status=calling');
@@ -788,14 +764,14 @@ class CallService {
     // as a safety net in case pre-enable failed or was skipped.
     if (state.value.status == CallStatus.active) {
       _cpLog('OUT', 'call_accepted WS arrived after connected (iOS race) → ensureMicEnabled | callId=${state.value.callId}');
-      _ensureMicEnabled('onCallAccepted-already-connected');
+      _roomAdapter.ensureMicEnabled('onCallAccepted-already-connected');
       return;
     }
 
     // Poll recovery or duplicate WS: already transitioning.
     if (state.value.status == CallStatus.connecting) {
       _cpLog('OUT', 'call_accepted: already connecting — skip state-change, ensureMicEnabled | callId=${state.value.callId}');
-      _ensureMicEnabled('onCallAccepted-already-connecting');
+      _roomAdapter.ensureMicEnabled('onCallAccepted-already-connecting');
       return;
     }
 
@@ -803,68 +779,8 @@ class CallService {
     _cpLog('OUT', 'call_accepted → state=connecting | callId=${state.value.callId}');
     _setState(state.value.copyWith(status: CallStatus.connecting));
 
-    // Caller mic activation: two paths
-    // FAST PATH: If a pre-published muted track exists (legacy/fallback), unmute it.
-    // STANDARD PATH: setMicrophoneEnabled(true) — used by both iOS and Android.
-    if (_roomAdapter.room != null) {
-      final micPubs = _roomAdapter.room!.localParticipant?.audioTrackPublications;
-      if (micPubs != null && micPubs.isNotEmpty) {
-        final pub = micPubs.first;
-        if (pub.muted) {
-          _cpLog('OUT', 'call_accepted → FAST PATH: unmuting pre-published track | pubSid=${pub.sid}');
-          _cpLog('HW', 'microphone UNMUTE | context=onCallAccepted-caller fastPath=true stopOnMute=false');
-          // stopOnMute:false → capture already running; only RTP stream gate opens.
-          pub.unmute(stopOnMute: false).catchError((e) {
-            _cpLog('OUT', 'caller mic unmute ERROR | $e → fallback to setMicEnabled');
-            _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=onCallAccepted-caller');
-            _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true);
-            return null;
-          });
-        } else {
-          _cpLog('OUT', 'call_accepted → mic already published+unmuted | no action');
-          _cpLog('HW', 'microphone ALREADY ENABLED+UNMUTED | context=onCallAccepted-caller pubSid=${pub.sid}');
-        }
-      } else {
-        _cpLog('OUT', 'call_accepted → STANDARD PATH: setMicrophoneEnabled | no pre-publish');
-        _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller standardPath=true');
-        _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
-          _cpLog('OUT', 'caller mic enable ERROR | $e');
-          return null;
-        });
-      }
-    } else {
-      _cpLog('OUT', 'call_accepted: _room is null — mic will be enabled when _joinRoom completes');
-    }
-  }
-
-  /// Mic durumunu kontrol eder ve gerekiyorsa etkinleştirir.
-  /// iOS caller race condition recovery için kullanılır: WS geç geldiğinde
-  /// mic zaten açıksa no-op, muted pre-publish varsa unmute, yoksa setMicEnabled.
-  void _ensureMicEnabled(String context) {
-    if (_roomAdapter.room == null) {
-      _cpLog('HW', 'microphone ENSURE SKIPPED | context=$context room=null');
-      return;
-    }
-    final micPubs = _roomAdapter.room!.localParticipant?.audioTrackPublications;
-    if (micPubs == null || micPubs.isEmpty) {
-      _cpLog('HW', 'microphone ENABLE | context=$context standardPath=true (no publications)');
-      _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
-        _cpLog('HW', 'microphone ENABLE ERROR | context=$context $e');
-        return null;
-      });
-      return;
-    }
-    final pub = micPubs.first;
-    if (pub.muted) {
-      _cpLog('HW', 'microphone UNMUTE | context=$context fastPath=true pub.sid=${pub.sid}');
-      pub.unmute(stopOnMute: false).catchError((e) {
-        _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=$context $e');
-        _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true);
-        return null;
-      });
-    } else {
-      _cpLog('HW', 'microphone ALREADY ENABLED+UNMUTED | context=$context pub.sid=${pub.sid}');
-    }
+    // D-10: Caller mic activation delegated to CallRoomAdapter (fast/standard path).
+    _roomAdapter.activateCallerMic();
   }
 
   void onCallRejected() async {
@@ -933,7 +849,11 @@ class CallService {
     stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.active, acceptedAt: _acceptedAt));
     _startElapsedTimer();
-    _startProximitySensor();
+    _hardware.startProximitySensor(onNear: () {
+      if (state.value.status == CallStatus.active && _hardware.isSpeaker.value) {
+        setSpeaker(false);
+      }
+    });
     _startStatsMonitor();
     _startNetworkMonitor();
     // T6: Notify backend so connected_at is stamped for accurate duration.
@@ -941,39 +861,6 @@ class CallService {
     if (callId != null) {
       _repository.reportConnected(callId);
     }
-  }
-
-  // ── Proximity Sensor (auto earpiece when phone at ear) ───────────────────
-
-  void _startProximitySensor() {
-    if (!Platform.isAndroid && !Platform.isIOS) return;
-    _proximitySub?.cancel();
-    _cpLog('HW', 'proximitySensor START | context=_startProximitySensor');
-    _proximitySub = ProximitySensor.events.listen((int value) {
-      if (state.value.status != CallStatus.active) return;
-      final isNear = value == 0;
-      if (isNear && _hardware.isSpeaker.value) {
-        _cpLog('HW', 'proximitySensor NEAR → auto speakerOff (phone at ear)');
-        setSpeaker(false);
-      }
-    }, onError: (e) {
-      _cpLog('HW', 'proximitySensor ERROR | $e');
-    });
-    if (Platform.isAndroid) {
-      ProximitySensor.setProximityScreenOff(true).catchError((e) {
-        _cpLog('HW', 'proximitySensor setScreenOff ERROR | $e');
-      });
-    }
-  }
-
-  void _stopProximitySensor() {
-    if (_proximitySub == null) return;
-    _proximitySub!.cancel().catchError((_) {});
-    _proximitySub = null;
-    if (Platform.isAndroid) {
-      ProximitySensor.setProximityScreenOff(false).catchError((_) {});
-    }
-    _cpLog('HW', 'proximitySensor STOP');
   }
 
   // ── WebRTC Audio Health Monitor ───────────────────────────────────────────
@@ -1225,7 +1112,7 @@ class CallService {
     _networkLostInWaitingTimer?.cancel();
     _networkLostInWaitingTimer = null;
     _stopStatsMonitor();
-    _stopProximitySensor();
+    _hardware.stopProximitySensor();
     _stopNetworkMonitor();
     _hardware.stopAllSounds(); // Safety net: stop ringback + any one-shot sounds
     await _roomAdapter.disconnect();
@@ -1263,7 +1150,7 @@ class CallService {
     _currentRole = null; // Role sıfırla — bir sonraki arama başlangıcında set edilir
     elapsed.value = Duration.zero; // elapsed notifier'ı sıfırla
     _stopStatsMonitor();
-    _stopProximitySensor();
+    _hardware.stopProximitySensor();
     _stopNetworkMonitor();
     _cpLog('TIMER', 'elapsed notifier RESET | value=Duration.zero');
 
@@ -1457,244 +1344,26 @@ class CallService {
   ValueNotifier<bool> get localVideoEnabled => _roomAdapter.localVideoEnabled;
   ValueNotifier<bool> get remoteVideoEnabled => _roomAdapter.remoteVideoEnabled;
 
-  // ── Video ──────────────────────────────────────────────────────────────────
+  // ── Video (D-10) — delegate to CallRoomAdapter ───────────────────────────
 
-  Future<void> toggleCamera() async {
-    final room = _roomAdapter.room;
-    if (room == null || state.value.status != CallStatus.active) {
-      _cpLog('VIDEO', 'toggleCamera: SKIPPED | room=${room != null} status=${state.value.status.name}');
-      return;
-    }
-    final enabled = _roomAdapter.localVideoEnabled.value;
-    _cpLog('VIDEO', 'toggleCamera | current=$enabled → ${!enabled}');
-    // Optimistic update — setCameraEnabled fires TrackMutedEvent (not Unpublished),
-    // so the event handler alone would never clear localVideoEnabled.
-    _roomAdapter.localVideoEnabled.value = !enabled;
-    try {
-      await room.localParticipant?.setCameraEnabled(!enabled);
-    } catch (e) {
-      _cpLog('VIDEO', 'toggleCamera ERROR | $e');
-      _roomAdapter.localVideoEnabled.value = enabled; // revert
-    }
-  }
+  Future<void> toggleCamera() => _roomAdapter.toggleCamera();
+  Future<void> switchCamera() => _roomAdapter.switchCamera();
 
-  Future<void> switchCamera() async {
-    final room = _roomAdapter.room;
-    if (room == null || !_roomAdapter.localVideoEnabled.value) {
-      _cpLog('VIDEO', 'switchCamera: SKIPPED | roomNull=${room == null} videoEnabled=${_roomAdapter.localVideoEnabled.value}');
-      return;
-    }
-    _cpLog('VIDEO', 'switchCamera invoked');
-    try {
-      final pub = room.localParticipant?.videoTrackPublications
-          .firstWhere((p) => p.source == TrackSource.camera);
-      if (pub?.track is LocalVideoTrack) {
-        final cameras = await Hardware.instance.videoInputs();
-        _cpLog('VIDEO', 'switchCamera | available=${cameras.length}');
-        if (cameras.length < 2) return;
-        final currentId = (pub!.track as LocalVideoTrack).mediaStreamTrack.getSettings()['deviceId'] as String?;
-        final next = cameras.firstWhere(
-          (c) => c.deviceId != currentId,
-          orElse: () => cameras.first,
-        );
-        await (pub.track as LocalVideoTrack).switchCamera(next.deviceId);
-        _cpLog('VIDEO', 'switchCamera OK | device=${next.label}');
-      }
-    } catch (e) {
-      _cpLog('VIDEO', 'switchCamera ERROR | $e');
-    }
-  }
+  // ── Grup Arama (D-9) — delegate to GroupCallManager ─────────────────────
 
-  // ── Grup Arama: Davet Gönder ───────────────────────────────────────────────
-
-  Future<void> inviteToCall(int inviteeId) async {
-    final callId = state.value.callId;
-    if (callId == null) {
-      _cpLog('GROUP', 'inviteToCall: SKIPPED | callId=null');
-      return;
-    }
-    _cpLog('GROUP', 'inviteToCall | callId=$callId inviteeId=$inviteeId');
-    try {
-      await _repository.inviteParticipant(callId, inviteeId);
-      _cpLog('GROUP', 'inviteToCall OK | callId=$callId inviteeId=$inviteeId');
-    } catch (e) {
-      _cpLog('GROUP', 'inviteToCall ERROR | $e');
-      rethrow;
-    }
-  }
-
-  // ── Grup Arama: Gelen Davet Kabul / Red ───────────────────────────────────
-
-  Future<void> acceptGroupInvite() async {
-    final invite = state.value.pendingGroupInvite;
-    if (invite == null) {
-      _cpLog('GROUP', 'acceptGroupInvite: SKIPPED | no pending invite');
-      return;
-    }
-    _cpLog('GROUP', 'acceptGroupInvite | callId=${invite.callId} participantId=${invite.participantId}');
-    try {
-      final myId = await StorageService.getCurrentUserId();
-      if (myId == null) throw AppException('No user id', code: 'NO_USER', statusCode: 401);
-
-      // FIX 1: connecting + callId ÖNCE set et — _joinRoom içi rol tespiti
-      // callStatusAtEntry == connecting → isCalleeRole=true → audio session + mic açılır.
-      // Eski sırada state=idle idi → caller pre-connect yoluna giriyordu → mic açılmıyordu.
-      //
-      // FIX 2: _audioSessionActivated = true — grup davetinin CallKit incoming call'u yok.
-      // Callee yolunda iOS 4s bekler (didActivateAudioSession); bu bayrak beklemeyi atlar.
-      _setState(state.value.copyWith(
-        pendingGroupInvite: () => null,
-        status: CallStatus.connecting,
-        callId: invite.callId,
-        roomName: invite.roomName,
-        isGroupGuest: true,
-      ));
-      // Group invite has no CallKit incoming call → simulate audioSessionActivated
-      // so waitForCallkitAudio() returns immediately in _joinRoom callee path.
-      _hardware.onAudioSessionActivated();
-
-      // LiveKit odasına bağlan (callee yolu: audio session configure + mic aç)
-      await _roomAdapter.joinRoom(
-        livekitUrl: invite.livekitUrl,
-        token: invite.livekitToken,
-      );
-
-      // Backen'de "joined" olarak işaretle ve güncel katılımcı listesini al
-      final participants = await _repository.acceptGroupParticipant(invite.callId, myId);
-      _setState(state.value.copyWith(participants: participants));
-
-      _cpLog('GROUP', 'acceptGroupInvite OK | callId=${invite.callId} participants=${participants.length}');
-    } catch (e) {
-      _cpLog('GROUP', 'acceptGroupInvite ERROR | $e');
-      rethrow;
-    }
-  }
-
-  Future<void> rejectGroupInvite() async {
-    final invite = state.value.pendingGroupInvite;
-    if (invite == null) {
-      _cpLog('GROUP', 'rejectGroupInvite: SKIPPED | no pending invite');
-      return;
-    }
-    _cpLog('GROUP', 'rejectGroupInvite | callId=${invite.callId}');
-    try {
-      final myId = await StorageService.getCurrentUserId();
-      if (myId == null) return;
-      await _repository.rejectGroupParticipant(invite.callId, myId);
-      _setState(state.value.copyWith(pendingGroupInvite: () => null));
-      _cpLog('GROUP', 'rejectGroupInvite OK | callId=${invite.callId}');
-    } catch (e) {
-      _cpLog('GROUP', 'rejectGroupInvite ERROR (non-fatal) | $e');
-    }
-  }
-
-  // ── Grup Arama: Gruptan Ayrıl (misafir) ──────────────────────────────────────
+  Future<void> inviteToCall(int inviteeId) => _groupManager.inviteToCall(inviteeId);
+  Future<void> acceptGroupInvite() => _groupManager.acceptGroupInvite();
+  Future<void> rejectGroupInvite() => _groupManager.rejectGroupInvite();
 
   /// Grup aramasına davet yoluyla katılan misafirin gruptan ayrılması.
   /// endCall()'dan farklı olarak aramayı herkes için bitirmez — sadece kendisi ayrılır.
-  Future<void> leaveGroupCall() async {
-    final callId = state.value.callId;
-    final myId = await StorageService.getCurrentUserId();
-    _cpLog('GROUP', 'leaveGroupCall | callId=$callId myId=$myId');
-    if (callId != null && myId != null) {
-      _repository.leaveGroupCall(callId, myId);
-    }
-    await _hangUpLocally(status: CallStatus.ended);
-  }
+  Future<void> leaveGroupCall() => _groupManager.leaveGroupCall();
 
-  // ── Grup Arama: Katılımcı Çıkar ───────────────────────────────────────────
-
-  Future<void> removeParticipant(int userId) async {
-    final callId = state.value.callId;
-    if (callId == null) return;
-    _cpLog('GROUP', 'removeParticipant | callId=$callId userId=$userId');
-    try {
-      await _repository.removeParticipant(callId, userId);
-      // Local state update handled by WS call_participant_removed broadcast
-      _cpLog('GROUP', 'removeParticipant OK | callId=$callId userId=$userId');
-    } catch (e) {
-      _cpLog('GROUP', 'removeParticipant ERROR | $e');
-      rethrow;
-    }
-  }
-
-  // ── WS Handlers: Grup Arama Eventleri ─────────────────────────────────────
-
-  void onGroupInviteReceived(Map<String, dynamic> data) {
-    _cpLog('GROUP', 'onGroupInviteReceived | data=${data.keys.toList()}');
-    try {
-      final invite = GroupInvite.fromJson(data);
-      _setState(state.value.copyWith(pendingGroupInvite: () => invite));
-      _cpLog('GROUP', 'onGroupInviteReceived: pendingGroupInvite set | callId=${invite.callId} inviter=${invite.inviterUsername}');
-    } catch (e) {
-      _cpLog('GROUP', 'onGroupInviteReceived PARSE ERROR | $e');
-    }
-  }
-
-  void onParticipantJoined(Map<String, dynamic> data) {
-    final userId = data['user_id'] as int?;
-    final username = data['username'] as String? ?? '';
-    final avatar = data['avatar'] as String?;
-    _cpLog('GROUP', 'onParticipantJoined | userId=$userId username=$username');
-    if (userId == null) return;
-
-    final existing = state.value.participants;
-    if (existing.any((p) => p.userId == userId)) return;
-
-    final updated = [
-      ...existing,
-      CallParticipant(
-        userId: userId,
-        username: username,
-        avatar: avatar,
-        role: 'guest',
-        status: 'joined',
-      ),
-    ];
-    _setState(state.value.copyWith(participants: updated));
-  }
-
-  void onParticipantLeft(Map<String, dynamic> data) {
-    final userId = data['user_id'] as int?;
-    _cpLog('GROUP', 'onParticipantLeft | userId=$userId');
-    if (userId == null) return;
-    final updated = state.value.participants
-        .where((p) => p.userId != userId)
-        .toList();
-    _setState(state.value.copyWith(participants: updated));
-  }
-
-  void onParticipantRemoved(Map<String, dynamic> data) {
-    final userId = data['user_id'] as int?;
-    final selfRemoved = data['self_removed'] as bool? ?? false;
-    _cpLog('GROUP', 'onParticipantRemoved | userId=$userId selfRemoved=$selfRemoved');
-
-    if (selfRemoved) {
-      // We were kicked — hang up
-      _cpLog('GROUP', 'onParticipantRemoved: self → _hangUpLocally(ended)');
-      _hangUpLocally(status: CallStatus.ended);
-      return;
-    }
-
-    if (userId != null) {
-      final updated = state.value.participants
-          .where((p) => p.userId != userId)
-          .toList();
-      _setState(state.value.copyWith(participants: updated));
-    }
-  }
-
-  void onParticipantRejected(Map<String, dynamic> data) {
-    final userId = data['user_id'] as int?;
-    final username = data['username'] as String? ?? '?';
-    _cpLog('GROUP', 'onParticipantRejected | userId=$userId username=$username');
-    // Toast is shown by UI layer listening to WS stream directly
-  }
-
-  void onParticipantTimeout(Map<String, dynamic> data) {
-    final userId = data['user_id'] as int?;
-    final username = data['username'] as String? ?? '?';
-    _cpLog('GROUP', 'onParticipantTimeout | userId=$userId username=$username');
-    // Toast is shown by UI layer listening to WS stream directly
-  }
+  Future<void> removeParticipant(int userId) => _groupManager.removeParticipant(userId);
+  void onGroupInviteReceived(Map<String, dynamic> data) => _groupManager.onGroupInviteReceived(data);
+  void onParticipantJoined(Map<String, dynamic> data) => _groupManager.onParticipantJoined(data);
+  void onParticipantLeft(Map<String, dynamic> data) => _groupManager.onParticipantLeft(data);
+  void onParticipantRemoved(Map<String, dynamic> data) => _groupManager.onParticipantRemoved(data);
+  void onParticipantRejected(Map<String, dynamic> data) => _groupManager.onParticipantRejected(data);
+  void onParticipantTimeout(Map<String, dynamic> data) => _groupManager.onParticipantTimeout(data);
 }

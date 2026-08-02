@@ -46,4 +46,13 @@ class AndroidCallNotifAdapter extends CallNotifAdapter {
       notifLog('NOTIF | endAllCalls ERROR | $e');
     }
   }
+
+  @override
+  Future<void> reportCallStarted({
+    required int callId,
+    required String calleeName,
+    String? calleeAvatar,
+  }) async {
+    // Android has no outgoing CallKit equivalent — no-op.
+  }
 }
