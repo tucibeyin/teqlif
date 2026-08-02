@@ -42,6 +42,7 @@ class LiveListState {
 class LiveListViewModel extends AsyncNotifier<LiveListState> {
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   StreamSubscription<bool>? _connectSub;
+  StreamSubscription<List<StreamOut>>? _swrSub;
   final _connectSvc = ConnectivityService();
 
   @override
@@ -62,6 +63,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     ref.onDispose(() {
       _wsSub?.cancel();
       _connectSub?.cancel();
+      _swrSub?.cancel();
     });
 
     return _loadInitial(bypassCache: false);
@@ -86,15 +88,32 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       } catch (_) {}
     }
 
-    // Aktif yayınları çek - SWR Stream'in ilk değerini bekleyeceğiz
-    final streamIt = StreamService.getActiveStreamsStream(bypassCache: bypassCache).iterator;
-    List<StreamOut> activeStreams = [];
-    if (await streamIt.moveNext()) {
-      activeStreams = streamIt.current;
-    }
+    final completer = Completer<List<StreamOut>>();
     
-    // Arkadan gelen stream güncellemelerini de dinlemeliyiz (SWR gereği ağdan taze veri geldiğinde güncellemek için)
-    _listenToSwrStream(bypassCache);
+    _swrSub?.cancel();
+    _swrSub = StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen(
+      (streams) {
+        if (!completer.isCompleted) {
+          completer.complete(streams);
+        } else if (state.value != null) {
+          state = AsyncValue.data(state.value!.copyWith(streams: streams));
+        }
+      },
+      onError: (e, st) {
+        if (!completer.isCompleted) {
+          completer.completeError(e, st);
+        } else if (state.value == null || state.value!.streams.isEmpty) {
+          state = AsyncValue.error(e, st);
+        }
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          completer.complete([]);
+        }
+      }
+    );
+
+    final activeStreams = await completer.future;
 
     return LiveListState(
       streams: activeStreams,
@@ -103,22 +122,6 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       isLoggedIn: isLoggedIn,
       isOffline: !isOnline,
     );
-  }
-  
-  void _listenToSwrStream(bool bypassCache) async {
-    try {
-      await for (final streams in StreamService.getActiveStreamsStream(bypassCache: bypassCache)) {
-        if (state.value != null) {
-          state = AsyncValue.data(state.value!.copyWith(streams: streams));
-        }
-      }
-    } catch (e, st) {
-      // Stream error shouldn't crash the whole screen if we have cached data, but for now we just pass it
-      // if it's a completely new load, otherwise we might ignore it.
-      if (state.value == null || state.value!.streams.isEmpty) {
-        state = AsyncValue.error(e, st);
-      }
-    }
   }
 
   void _onWsMessage(Map<String, dynamic> msg) {
