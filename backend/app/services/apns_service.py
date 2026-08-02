@@ -82,6 +82,7 @@ async def send_voip_push(token: str, payload: dict) -> tuple[bool, bool]:
             message=payload,
             apns_topic=topic,
             push_type=PushType.VOIP,
+            time_to_live=45,  # FCM TTL ile senkron; callee offline kalırsa stale push iletilmez
         )
 
         response = await client.send_notification(request)
