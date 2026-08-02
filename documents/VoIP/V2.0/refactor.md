@@ -64,7 +64,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | ✅ |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | ✅ |
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | ✅ |
-| **Step 7** | `CallNotifAdapter` | Push layer izole | 🔴 |
+| **Step 7** | `CallNotifAdapter` | Push layer izole | ✅ |
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | 🔴 |
 
 ---
@@ -848,10 +848,10 @@ Callee `permanentlyDenied` case'i `IncomingCallScreen`/`IncomingCallBar` sorumlu
 
 ## Step 7: `CallNotifAdapter`
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-02  
+**Tamamlanma:** 2026-08-02  
+**Commit:** `061bf1ac`
 
 **Bağımlılık:** Step 5 tamamlanmış olmalı.
 
@@ -860,9 +860,9 @@ VoIP token kayıt, FCM token kayıt, CallKit raporlama:
 ```
 mobile/lib/call/
   notif/
-    call_notif_adapter.dart
-    ios_call_notif_adapter.dart
-    android_call_notif_adapter.dart
+    call_notif_adapter.dart         ← abstract base + formatCallId() + sendWithRetry()
+    ios_call_notif_adapter.dart     ← VoIP token retry + FCM + CallKit endCall/endAllCalls
+    android_call_notif_adapter.dart ← FCM only (voipToken=null) + CallKit endCall/endAllCalls
 ```
 
 **Token yönetimi — implementasyon notları (VoIP.md §12.2–12.4'ten):**
@@ -870,7 +870,7 @@ mobile/lib/call/
 | Konu | Kural |
 |---|---|
 | iOS push kanalı | VoIP push her zaman FCM'e tercih edilir — FCM CallKit'i tetikleyemez |
-| iOS `var|var` durumu | `voip_token` varsa FCM'e bakma — VoIP push gönder |
+| iOS `var\|var` durumu | `voip_token` varsa FCM'e bakma — VoIP push gönder |
 | Android | Yalnızca FCM token; voip_token register edilmez |
 | Stale token | APNs/FCM hata döndürürse backend `voip_token = NULL` / FCM token sil |
 | Multi-device | Mevcut model tek cihaz varsayımı — son kaydeden kazanır; çoklu cihaz desteği bu adımın kapsamı dışında |
@@ -885,6 +885,21 @@ elif callee.fcm_token:
     send_fcm_push(callee.fcm_token, payload)     # Android
 # else: foreground-only (WS bağlıysa alır, değilse kaybolur)
 ```
+
+### Checklist
+
+- [x] `call_notif_adapter.dart` — abstract interface + `formatCallId()` + `sendWithRetry()` oluşturuldu
+- [x] `ios_call_notif_adapter.dart` — `registerTokens()`: FCM + VoIP token (3s retry) + `AuthService.saveDeviceTokens()`
+- [x] `android_call_notif_adapter.dart` — `registerTokens()`: FCM only (`voipToken: null`) + `AuthService.saveDeviceTokens()`
+- [x] `call_service.dart`: `_notif` field eklendi (Platform.isIOS seçer); `_hangUpLocally` + `reset()` → `_notif.reportCallEnded()` / `_notif.endAllCalls()`
+- [x] `call_service.dart`: `_formatToUuid()` kaldırıldı → `CallNotifAdapter.formatCallId()` (6 call site)
+- [x] `push_notification_service.dart`: `_registerToken()` + `_sendTokenToBackend()` kaldırıldı (dead code); tüm call site'lar `notifAdapter.registerTokens()` kullanıyor
+- [x] `push_notification_service.dart`: `auth_service.dart` import kaldırıldı (artık kullanılmıyor)
+- [x] `dart analyze` 0 warning (2 pre-existing info: unnecessary_import + deprecated_member_use)
+- [ ] iOS + Android'de token registration, VoIP token retry, callkit dismissal manuel test edildi
+
+**`dismissIncomingCall` NOT:** Yalnızca notification-triggered reject akışında (`push_notification_service._rejectCallById`) gerekli — normal call end adapter'ında değil. Adapter'a taşınmadı.  
+**`FlutterCallkitIncoming` import NOT:** `call_service.dart`'ta kaldı — `startCall()` (iOS outgoing indicator) + ghost/busy dismissal `onIncomingCall()` hâlâ direkt çağırıyor.
 
 ---
 
