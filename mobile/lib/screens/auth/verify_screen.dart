@@ -3,12 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
 import '../../services/localization_service.dart';
-import '../../services/push_notification_service.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
-import '../../utils/error_helper.dart';
 import 'category_onboarding_screen.dart';
+import 'viewmodels/verify_view_model.dart';
 
 class VerifyScreen extends ConsumerStatefulWidget {
   final String email;
@@ -21,7 +19,6 @@ class VerifyScreen extends ConsumerStatefulWidget {
 
 class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   final _codeCtrl = TextEditingController();
-  bool _loading = false;
   bool _resending = false;
   late String? _success;
 
@@ -52,37 +49,30 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
       TeqToast.error(loc.t('validVerificationCode'));
       return;
     }
-    setState(() { _loading = true; _success = null; });
-    try {
-      await AuthService.verify(
-        email: widget.email,
-        code: _codeCtrl.text.trim(),
+    setState(() => _success = null);
+    
+    final success = await ref.read(verifyViewModelProvider.notifier).verify(
+      email: widget.email,
+      code: _codeCtrl.text.trim(),
+    );
+
+    if (success && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const CategoryOnboardingScreen(),
+        ),
       );
-      PushNotificationService.initialize();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => const CategoryOnboardingScreen(),
-          ),
-        );
-      }
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _resend() async {
     setState(() { _resending = true; _success = null; });
-    try {
-      final lang = ref.read(localizationProvider).lang;
-      final msg = await AuthService.resendCode(widget.email, lang: lang);
-      if (mounted) setState(() => _success = msg);
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _resending = false);
+    final msg = await ref.read(verifyViewModelProvider.notifier).resend(widget.email);
+    if (mounted) {
+      setState(() {
+        if (msg != null) _success = msg;
+        _resending = false;
+      });
     }
   }
 
@@ -151,8 +141,8 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
             const SizedBox(height: 24),
             ElevatedButton(
               key: const Key('verify_btn_dogrula'),
-              onPressed: _loading ? null : _verify,
-              child: _loading
+              onPressed: ref.watch(verifyViewModelProvider).isLoading ? null : _verify,
+              child: ref.watch(verifyViewModelProvider).isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
 import '../../services/localization_service.dart';
-import '../../services/storage_service.dart';
+import 'viewmodels/category_onboarding_view_model.dart';
 
 class CategoryOnboardingScreen extends ConsumerStatefulWidget {
   final bool fromBanner;
@@ -17,7 +15,6 @@ class CategoryOnboardingScreen extends ConsumerStatefulWidget {
 
 class _CategoryOnboardingScreenState extends ConsumerState<CategoryOnboardingScreen> {
   final Set<String> _selected = {};
-  bool _loading = false;
 
   static const _categories = [
     {'slug': 'electronics', 'icon': Icons.devices_outlined},
@@ -45,47 +42,21 @@ class _CategoryOnboardingScreenState extends ConsumerState<CategoryOnboardingScr
 
   Future<void> _continue() async {
     if (_selected.length < 3) return;
-    setState(() => _loading = true);
-    try {
-      await AuthService.seedOnboardingInterests(_selected.toList());
-      try {
-        final user = await AuthService.me();
-        await StorageService.saveUserInfo(
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          fullName: user.fullName,
-          isPremium: user.isPremium,
-          onboardingCompleted: true,
-          isVerified: user.isVerified,
-          phoneVerified: user.phoneVerified,
-        );
-      } catch (_) {
-        final oldInfo = await StorageService.getUserInfo();
-        if (oldInfo != null) {
-          await StorageService.saveUserInfo(
-            id: oldInfo['id'] as int,
-            email: oldInfo['email'] as String,
-            username: oldInfo['username'] as String,
-            fullName: oldInfo['full_name'] as String,
-            isPremium: oldInfo['is_premium'] as bool? ?? false,
-            onboardingCompleted: true,
-          );
-        }
+    
+    final success = await ref.read(categoryOnboardingViewModelProvider.notifier).submitCategories(_selected.toList());
+    
+    if (success && mounted) {
+      if (widget.fromBanner) {
+        Navigator.pop(context);
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
       }
-    } catch (_) {}
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_done', true);
-    if (!mounted) return;
-    if (widget.fromBanner) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 
-  void _skip() {
-    SharedPreferences.getInstance().then((p) => p.setBool('onboarding_skipped', true));
+  Future<void> _skip() async {
+    await ref.read(categoryOnboardingViewModelProvider.notifier).skip();
+    if (!mounted) return;
     if (widget.fromBanner) {
       Navigator.pop(context);
     } else {
@@ -198,13 +169,13 @@ class _CategoryOnboardingScreenState extends ConsumerState<CategoryOnboardingScr
                 width: double.infinity,
                 height: 50,
                 child: FilledButton(
-                  onPressed: (enough && !_loading) ? _continue : null,
+                  onPressed: (enough && !ref.watch(categoryOnboardingViewModelProvider).isLoading) ? _continue : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: kPrimary,
                     disabledBackgroundColor: kPrimary.withValues(alpha: 0.35),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: _loading
+                  child: ref.watch(categoryOnboardingViewModelProvider).isLoading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -223,7 +194,7 @@ class _CategoryOnboardingScreenState extends ConsumerState<CategoryOnboardingScr
               const SizedBox(height: 12),
               Center(
                 child: TextButton(
-                  onPressed: _loading ? null : _skip,
+                  onPressed: ref.watch(categoryOnboardingViewModelProvider).isLoading ? null : _skip,
                   child: Text(
                     loc.t('onboardingSkip'),
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),

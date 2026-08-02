@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
-import '../../services/localization_service.dart';
 import 'reset_password_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
-import '../../utils/error_helper.dart';
+import '../../services/localization_service.dart';
+import 'viewmodels/forgot_password_view_model.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -19,7 +18,6 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -29,22 +27,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
 
     final email = _emailCtrl.text.trim();
+    final success = await ref.read(forgotPasswordViewModelProvider.notifier).requestReset(email);
 
-    try {
-      final lang = ref.read(localizationProvider).lang;
-      await AuthService.requestPasswordReset(email, lang: lang);
-      if (!mounted) return;
-
+    if (success && mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: email)),
       );
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -116,7 +106,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   const SizedBox(height: 24),
                   TeqButton(
                     text: loc.t('sendResetCode'),
-                    isLoading: _loading,
+                    isLoading: ref.watch(forgotPasswordViewModelProvider).isLoading,
                     onPressed: _submit,
                   ),
                 ],

@@ -28,12 +28,12 @@ Her bir ekran için şu adımlar izlenmelidir:
 ## 📱 Ekranlar ve Refactor Durumu
 
 ### Auth (Kimlik Doğrulama)
-- [ ] `mobile/lib/screens/auth/category_onboarding_screen.dart`
-- [ ] `mobile/lib/screens/auth/forgot_password_screen.dart`
+- [x] `mobile/lib/screens/auth/category_onboarding_screen.dart`
+- [x] `mobile/lib/screens/auth/forgot_password_screen.dart`
 - [x] `mobile/lib/screens/auth/login_screen.dart` (Pilot Ekran)
-- [ ] `mobile/lib/screens/auth/register_screen.dart`
-- [ ] `mobile/lib/screens/auth/reset_password_screen.dart`
-- [ ] `mobile/lib/screens/auth/verify_screen.dart`
+- [x] `mobile/lib/screens/auth/register_screen.dart`
+- [x] `mobile/lib/screens/auth/reset_password_screen.dart`
+- [x] `mobile/lib/screens/auth/verify_screen.dart`
 
 ### Ana Ekranlar ve Gezinme
 - [ ] `mobile/lib/screens/splash_screen.dart`

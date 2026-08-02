@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
 import '../../services/localization_service.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
-import '../../utils/error_helper.dart';
+import 'viewmodels/reset_password_view_model.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String email;
@@ -21,8 +20,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _codeCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _passConfirmCtrl = TextEditingController();
-
-  bool _loading = false;
   bool _obscure1 = true;
   bool _obscure2 = true;
 
@@ -42,25 +39,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       return;
     }
 
-    setState(() => _loading = true);
-    try {
-      await AuthService.resetPassword(
-        email: widget.email,
-        code: _codeCtrl.text.trim(),
-        newPassword: _passCtrl.text,
-      );
+    final success = await ref.read(resetPasswordViewModelProvider.notifier).resetPassword(
+      email: widget.email,
+      code: _codeCtrl.text.trim(),
+      newPassword: _passCtrl.text,
+    );
 
-      if (!mounted) return;
-
+    if (success && mounted) {
       TeqSnackBar.show(
         message: ref.read(localizationProvider).t('passwordResetSuccess'),
         type: TeqSnackBarType.info,
       );
       Navigator.of(context).pop();
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -180,8 +170,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
+                      onPressed: ref.watch(resetPasswordViewModelProvider).isLoading ? null : _submit,
+                      child: ref.watch(resetPasswordViewModelProvider).isLoading
                           ? const SizedBox(
                               height: 20,
                               width: 20,

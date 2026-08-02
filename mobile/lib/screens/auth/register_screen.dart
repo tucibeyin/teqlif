@@ -1,12 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../core/logger_service.dart';
-import '../../services/auth_service.dart';
 import '../../services/localization_service.dart';
 import '../../widgets/phone_input_field.dart';
 import 'verify_screen.dart';
@@ -14,8 +10,8 @@ import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../utils/error_helper.dart';
 import '../../ui_library/components/overlays/teq_dialog.dart';
+import 'viewmodels/register_view_model.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -34,7 +30,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _referralCtrl = TextEditingController();
   String? _phoneE164;
 
-  bool _loading = false;
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _eulaAccepted = false;
@@ -75,19 +70,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _checkUsername(String val) async {
-    try {
-      final body = await apiCall(
-        () => http.get(
-          Uri.parse('$kBaseUrl/auth/check-username')
-              .replace(queryParameters: {'username': val}),
-        ),
-      );
-      if (!mounted) return;
-      setState(() => _usernameStatus = (body['available'] as bool) ? 'available' : 'taken');
-    } catch (e) {
-      LoggerService.instance.warning('RegisterScreen', 'Kullanıcı adı kontrolü başarısız: $e');
-      if (mounted) setState(() => _usernameStatus = null);
-    }
+    final status = await ref.read(registerViewModelProvider.notifier).checkUsername(val);
+    if (mounted) setState(() => _usernameStatus = status);
   }
 
   void _showPhoneInfoDialog() {
@@ -115,28 +99,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       return;
     }
-    setState(() => _loading = true);
-    try {
-      final referralCode = _referralCtrl.text.trim();
-      await AuthService.register(
-        email: _emailCtrl.text.trim(),
-        username: _usernameCtrl.text.trim(),
-        fullName: _fullNameCtrl.text.trim(),
-        password: _passCtrl.text,
-        phone: _phoneE164,
-        referredBy: referralCode.isEmpty ? null : referralCode,
+    
+    final referralCode = _referralCtrl.text.trim();
+    final success = await ref.read(registerViewModelProvider.notifier).register(
+      email: _emailCtrl.text.trim(),
+      username: _usernameCtrl.text.trim(),
+      fullName: _fullNameCtrl.text.trim(),
+      password: _passCtrl.text,
+      phone: _phoneE164,
+      referredBy: referralCode.isEmpty ? null : referralCode,
+    );
+
+    if (success && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VerifyScreen(email: _emailCtrl.text.trim()),
+        ),
       );
-      if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => VerifyScreen(email: _emailCtrl.text.trim()),
-          ),
-        );
-      }
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -345,7 +324,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     const SizedBox(height: 20),
                     TeqButton(
                       text: loc.t('registerTitle'),
-                      isLoading: _loading,
+                      isLoading: ref.watch(registerViewModelProvider).isLoading,
                       onPressed: _submit,
                     ),
                   ],
