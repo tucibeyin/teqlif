@@ -290,9 +290,10 @@ async def get_hesitated_listings(
             LEFT JOIN listing_offers lo ON lo.listing_id = l.id
             WHERE l.id = ANY(:ids)
               AND l.status = 'active'
+              AND l.user_id != :uid
             GROUP BY l.id, l.title, l.price, l.image_urls, l.image_url, l.category, l.subcategory
         """),
-        {"ids": listing_ids},
+        {"ids": listing_ids, "uid": current_user.id},
     )
     listing_map = {r.id: r for r in rows.fetchall()}
 
