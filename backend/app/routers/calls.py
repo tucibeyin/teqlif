@@ -212,6 +212,32 @@ async def _ws_broadcast(user_id: int, payload: dict) -> None:
         await ws_manager.store_call_event(user_id, payload)
 
 
+async def _push_unless_acked(
+    call_id: int,
+    callee_id: int,
+    caller_id: int,
+    room_name: str,
+    callee_token: str,
+) -> None:
+    """
+    Background task: WS online görünen callee için ACK bekler (max 500ms).
+    ACK gelirse uygulama foreground'da, WS teslim edildi → push gereksiz.
+    Timeout → WS race condition veya arka plan → push fallback.
+    """
+    ack = await ws_manager.wait_for_call_ack(call_id, timeout=0.5)
+    if ack:
+        logger.info(
+            "[CALL_PROCESS][OUT] _push_unless_acked: ACK received — push SKIPPED | call_id=%d callee=%d",
+            call_id, callee_id,
+        )
+    else:
+        logger.info(
+            "[CALL_PROCESS][OUT] _push_unless_acked: no ACK (WS race/background) — push fallback | call_id=%d callee=%d",
+            call_id, callee_id,
+        )
+        await _send_call_push_bg(callee_id, caller_id, call_id, room_name, callee_token)
+
+
 async def _send_call_push_bg(
     callee_id: int,
     caller_id: int,
@@ -492,15 +518,19 @@ async def start_call(
     await _ws_broadcast(callee_id, ws_payload)
     callee_ws_connected = await ws_manager.is_dm_online(callee_id)
     if callee_ws_connected:
-        # Callee is foreground (active WS). WS event above is sufficient;
-        # VoIP/FCM push is unnecessary and causes a native CallKit screen flash on iOS.
+        # WS bağlı görünüyor: client'ın call_incoming_ack göndermesini arka planda bekle.
+        # ACK gelirse foreground + WS teslim onaylandı → push atla (iOS CallKit flash önlenir).
+        # ACK gelmezse WS race condition → push fallback. /start response'u engellenmez.
+        asyncio.create_task(_push_unless_acked(
+            call.id, callee_id, current_user.id, room_name, callee_token,
+        ))
         logger.info(
-            "[CALL_PROCESS][OUT] start_call: push SKIPPED — callee WS online | call_id=%d callee=%d",
+            "[CALL_PROCESS][OUT] start_call: WS online — ACK guard armed | call_id=%d callee=%d",
             call.id, callee_id,
         )
     else:
-        # Callee is background/killed — push is the only reliable delivery path.
-        # Fire-and-forget: avoids 1-3s latency on /start when APNs/FCM is slow.
+        # Callee offline — push tek güvenilir teslimat yolu.
+        # Fire-and-forget: APNs/FCM gecikmesi (1-3s) /start'ı engellemez.
         asyncio.create_task(
             _send_call_push_bg(callee_id, current_user.id, call.id, room_name, callee_token)
         )

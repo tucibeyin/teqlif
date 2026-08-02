@@ -284,6 +284,39 @@ class GlobalWSManager:
             logger.warning("[WS GATEWAY] is_dm_online failed | user=%d | %s", user_id, exc)
             return False  # safe fallback: push gönder
 
+    # ── Call Incoming ACK (iOS double-UI guard) ───────────────────────────
+    #
+    # Client sends call_incoming_ack over WS as soon as it receives call_incoming.
+    # /calls/start waits up to 500ms for this ACK before deciding to send a push.
+    # If ACK arrives → app is foreground, WS delivery is confirmed → push skipped.
+    # If no ACK (timeout or WS race) → push sent as fallback.
+    # Redis lpush/blpop bridges the gap across uvicorn workers.
+
+    async def store_call_ack(self, call_id: int) -> None:
+        """Client'ın WS üzerinden gönderdiği call_incoming_ack'i Redis'e yazar."""
+        try:
+            r = await get_redis()
+            key = f"call_ack:{call_id}"
+            await r.lpush(key, 1)
+            await r.expire(key, 10)
+            logger.debug("[WS GATEWAY] call_ack stored | call_id=%d", call_id)
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] store_call_ack failed | call_id=%d | %s", call_id, exc)
+
+    async def wait_for_call_ack(self, call_id: int, timeout: float = 0.5) -> bool:
+        """
+        ACK'i bekler (max timeout saniye).
+        True → ACK alındı, push gönderme.
+        False → timeout veya hata, push gönder (safe fallback).
+        """
+        try:
+            r = await get_redis()
+            result = await r.blpop(f"call_ack:{call_id}", timeout=timeout)
+            return result is not None
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] wait_for_call_ack failed | call_id=%d | %s", call_id, exc)
+            return False  # safe fallback: push gönder
+
     # ── Graceful Shutdown ─────────────────────────────────────────────────
 
     async def shutdown(self) -> None:

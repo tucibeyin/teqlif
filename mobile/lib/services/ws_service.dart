@@ -238,6 +238,15 @@ class WsService {
             if (type != null && type.startsWith('call_')) {
               debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService received message type: $type');
               _lastCallEventTs = DateTime.now().millisecondsSinceEpoch / 1000.0;
+              // ACK: call_incoming alındığında sunucuya hemen bildir.
+              // Backend bu ACK'i bekler (max 500ms); gelirse push atlar → iOS CallKit flash önlenir.
+              if (type == 'call_incoming') {
+                final callId = data['call_id'];
+                if (callId != null) {
+                  sendJson({'type': 'call_incoming_ack', 'call_id': callId});
+                  debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService sent call_incoming_ack | call_id=$callId');
+                }
+              }
             }
             messageStream.add(data);
           } catch (_) {}

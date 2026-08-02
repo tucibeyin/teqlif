@@ -743,13 +743,23 @@ async def messages_ws(websocket: WebSocket):
                     try:
                         import json as _json
                         msg = _json.loads(text)
-                        if isinstance(msg, dict) and msg.get("type") == "typing":
-                            target_id = msg.get("target_user_id")
-                            if isinstance(target_id, int):
-                                await _broadcast_dm(target_id, {
-                                    "type": "typing",
-                                    "sender_id": user_id,
-                                })
+                        if isinstance(msg, dict):
+                            msg_type = msg.get("type")
+                            if msg_type == "typing":
+                                target_id = msg.get("target_user_id")
+                                if isinstance(target_id, int):
+                                    await _broadcast_dm(target_id, {
+                                        "type": "typing",
+                                        "sender_id": user_id,
+                                    })
+                            elif msg_type == "call_incoming_ack":
+                                call_id = msg.get("call_id")
+                                if call_id is not None:
+                                    try:
+                                        await ws_manager.store_call_ack(int(call_id))
+                                        logger.debug("[DM WS] call_incoming_ack | user_id=%s call_id=%s", user_id, call_id)
+                                    except (ValueError, TypeError):
+                                        pass
                     except (ValueError, TypeError):
                         pass
             except asyncio.TimeoutError:
