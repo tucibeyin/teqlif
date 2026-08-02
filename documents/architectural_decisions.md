@@ -884,3 +884,20 @@ loc.tOr('opt_${option.value}', option.label)
 // Param ile key
 loc.t('errorWithCount', {'count': n.toString()})
 ```
+
+---
+
+## 8. UI ve State Management Mimarisi (MVVM)
+
+Flutter tarafında yeni geliştirilen veya refactor edilen karmaşık ekranlarda (iş mantığının UI ile iç içe geçtiği "Fat View" durumlarında) **MVVM (Model-View-ViewModel)** yaklaşımı uygulanacaktır.
+
+- **Model:** API'den dönen veri yapıları (DTO, Entity) ve repository metodlarıdır.
+- **ViewModel (Riverpod `AsyncNotifier` veya `Notifier`):** Sayfanın iş mantığını, API çağrılarını, veri manipülasyonunu ve state yönetimini üstlenir.
+  - UI (Widget ağacı) veya `BuildContext` hakkında hiçbir şey bilmemelidir.
+  - Sayfanın güncel durumunu (`loading`, `data`, `error` veya state class) kapsüller (encapsulate) ve dışarıya sunar.
+- **View (Screen):** Sadece UI çizimi (render) yapar. 
+  - `ref.watch(myViewModelProvider)` kullanarak ViewModel'deki duruma (state) göre ekranda ne gösterileceğine (loading spinner, list, error vs.) karar verir.
+  - `setState` kullanımından olabildiğince kaçınılmalıdır. Tüm işlevler (butona basılması, pull-to-refresh vb.) doğrudan ViewModel üzerindeki metodlara yönlendirilir (Örn: `ref.read(myViewModelProvider.notifier).fetchData()`).
+
+**Neden MVVM?**
+`messages_screen.dart` ve `profile_screen.dart` gibi karmaşık sayfalardaki iş mantığı Widget'lardan soyutlandığında; kod temizleşir, sayfalar hafifler, test edilebilirlik artar ve aynı state başka widget'lar tarafından da kolaylıkla tüketilebilir hale gelir.
