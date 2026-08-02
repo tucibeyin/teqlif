@@ -55,7 +55,7 @@ class SplashState {
   }
 }
 
-class SplashViewModel extends AutoDisposeAsyncNotifier<SplashState> {
+class SplashViewModel extends AsyncNotifier<SplashState> {
   @override
   FutureOr<SplashState> build() {
     return SplashState();
@@ -198,6 +198,6 @@ class SplashViewModel extends AutoDisposeAsyncNotifier<SplashState> {
 }
 
 final splashViewModelProvider =
-    AsyncNotifierProvider.autoDispose<SplashViewModel, SplashState>(() {
+    AsyncNotifierProvider<SplashViewModel, SplashState>(() {
   return SplashViewModel();
 });

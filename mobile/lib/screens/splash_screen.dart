@@ -41,69 +41,73 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _boot() async {
-    final localizationReady = ref.read(localizationProvider.notifier).ready;
-    final state = await ref.read(splashViewModelProvider.notifier).boot(localizationReady);
-    
-    if (!mounted) return;
-
-    if (state.result == SplashResult.forceUpdate) {
-      if (Platform.isAndroid) {
-        try {
-          final info = await InAppUpdate.checkForUpdate();
-          if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-            await InAppUpdate.performImmediateUpdate();
-          }
-        } catch (_) {}
-      }
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
-      );
-      return;
-    } else if (state.result == SplashResult.softUpdate) {
-      if (Platform.isAndroid) {
-        try {
-          final info = await InAppUpdate.checkForUpdate();
-          if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-            await InAppUpdate.startFlexibleUpdate();
-            await InAppUpdate.completeFlexibleUpdate();
-          }
-        } catch (_) {}
-      }
+    try {
+      final localizationReady = ref.read(localizationProvider.notifier).ready;
+      final state = await ref.read(splashViewModelProvider.notifier).boot(localizationReady);
       
-      if (Platform.isIOS || true) {
+      if (!mounted) return;
+
+      if (state.result == SplashResult.forceUpdate) {
+        if (Platform.isAndroid) {
+          try {
+            final info = await InAppUpdate.checkForUpdate();
+            if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+              await InAppUpdate.performImmediateUpdate();
+            }
+          } catch (_) {}
+        }
         if (!mounted) return;
-        await showDialog(
-          context: context,
-          barrierDismissible: true,
-          builder: (_) => const SoftUpdateDialog(),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
         );
+        return;
+      } else if (state.result == SplashResult.softUpdate) {
+        if (Platform.isAndroid) {
+          try {
+            final info = await InAppUpdate.checkForUpdate();
+            if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+              await InAppUpdate.startFlexibleUpdate();
+              await InAppUpdate.completeFlexibleUpdate();
+            }
+          } catch (_) {}
+        }
+        
+        if (Platform.isIOS || true) {
+          if (!mounted) return;
+          await showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (_) => const SoftUpdateDialog(),
+          );
+        }
       }
+
+      // Rozeti sıfırla (non-blocking)
+      AppBadgePlus.isSupported().then((ok) {
+        if (ok) AppBadgePlus.updateBadge(0);
+      });
+
+      if (!mounted) return;
+
+      if (state.result == SplashResult.unauthenticated) {
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+
+      // Locale sync
+      if (state.locale != null && state.locale!.isNotEmpty) {
+        await ref.read(localeProvider.notifier)
+            .syncWithServer(state.locale!, state.localeUpdatedAt);
+      }
+
+      // Precache images
+      await _precacheImages(state.user, state.listings);
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/home');
+    } catch (e, st) {
+      debugPrint('[SPLASH_BOOT_ERROR] Hata oluştu: $e\n$st');
     }
-
-    // Rozeti sıfırla (non-blocking)
-    AppBadgePlus.isSupported().then((ok) {
-      if (ok) AppBadgePlus.updateBadge(0);
-    });
-
-    if (!mounted) return;
-
-    if (state.result == SplashResult.unauthenticated) {
-      Navigator.of(context).pushReplacementNamed('/login');
-      return;
-    }
-
-    // Locale sync
-    if (state.locale != null && state.locale!.isNotEmpty) {
-      await ref.read(localeProvider.notifier)
-          .syncWithServer(state.locale!, state.localeUpdatedAt);
-    }
-
-    // Precache images
-    await _precacheImages(state.user, state.listings);
-
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/home');
   }
 
   Future<void> _precacheImages(Map<String, dynamic>? user, List<dynamic>? listings) async {
