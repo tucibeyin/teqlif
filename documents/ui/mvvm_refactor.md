@@ -35,18 +35,13 @@ Her bir ekran için şu adımlar izlenmelidir:
 - [x] `mobile/lib/screens/auth/reset_password_screen.dart`
 - [x] `mobile/lib/screens/auth/verify_screen.dart`
 
-### Ana Ekranlar ve Gezinme
-- [ ] `mobile/lib/screens/splash_screen.dart`
-- [ ] `mobile/lib/screens/main_screen.dart`
-- [ ] `mobile/lib/screens/home_screen.dart`
-- [ ] `mobile/lib/screens/search_screen.dart`
-- [ ] `mobile/lib/screens/messages_screen.dart`
-- [ ] `mobile/lib/screens/profile_screen.dart`
-
-### İlanlar (Listings)
-- [ ] `mobile/lib/screens/create_listing_screen.dart`
-- [ ] `mobile/lib/screens/edit_listing_screen.dart`
-- [ ] `mobile/lib/screens/listing_detail_screen.dart`
+### 2. Ana Ekranlar ve Gezinme (Batch 2) - **TAMAMLANDI**
+- [x] **Splash Screen:** `lib/screens/splash_screen.dart` -> `lib/screens/viewmodels/splash_view_model.dart`
+- [x] **Main Screen (Bottom Nav):** `lib/screens/main_screen.dart` -> `lib/screens/viewmodels/main_view_model.dart`
+- [x] **Home Screen:** `lib/screens/home_screen.dart` -> `lib/screens/viewmodels/home_view_model.dart`
+- [x] **Search Screen:** `lib/screens/search_screen.dart` -> `lib/screens/viewmodels/search_view_model.dart`
+- [x] **Messages Screen:** `lib/screens/messages_screen.dart` -> `lib/screens/viewmodels/messages_view_model.dart`
+- [x] **Profile Screen:** `lib/screens/profile_screen.dart` -> `lib/screens/viewmodels/profile_view_model.dart`
 
 ### Canlı Yayın (Live & Story)
 - [ ] `mobile/lib/screens/live/host_stream_screen.dart`

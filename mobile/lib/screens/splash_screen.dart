@@ -22,43 +22,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/locale_provider.dart';
 import '../services/localization_service.dart';
 
-class SplashScreen extends StatefulWidget {
+import 'viewmodels/splash_view_model.dart';
+
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _boot();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _boot();
+    });
   }
 
   Future<void> _boot() async {
-    final token = await StorageService.getToken();
-
-    // İlk kurulumda Hive cache boştur; API fetch tamamlanana kadar
-    // native splash bekletilir — kullanıcı asla key görmez.
-    // Cache'te pack varsa ready anında complete; timeout garantisi var.
-    await ProviderScope.containerOf(context, listen: false)
-        .read(localizationProvider.notifier)
-        .ready
-        .timeout(const Duration(seconds: 5), onTimeout: () {});
-
-    FlutterNativeSplash.remove();
-
-    final updateStatus = await VersionService.checkVersion();
+    final localizationReady = ref.read(localizationProvider.notifier).ready;
+    final state = await ref.read(splashViewModelProvider.notifier).boot(localizationReady);
+    
     if (!mounted) return;
 
-    if (updateStatus == VersionStatus.forceUpdate) {
+    if (state.result == SplashResult.forceUpdate) {
       if (Platform.isAndroid) {
         try {
           final info = await InAppUpdate.checkForUpdate();
           if (info.updateAvailability == UpdateAvailability.updateAvailable) {
             await InAppUpdate.performImmediateUpdate();
-            // If it succeeds, the app restarts. If user cancels, we fall back to ForceUpdateScreen.
           }
         } catch (_) {}
       }
@@ -67,7 +60,7 @@ class _SplashScreenState extends State<SplashScreen> {
         MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
       );
       return;
-    } else if (updateStatus == VersionStatus.softUpdate) {
+    } else if (state.result == SplashResult.softUpdate) {
       if (Platform.isAndroid) {
         try {
           final info = await InAppUpdate.checkForUpdate();
@@ -95,73 +88,27 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    await AnalyticsService.setConsent(true);
-    await AnalyticsService.init();
-
-    AnalyticsService.trackEvent('session_start', {
-      'platform': Platform.isIOS ? 'ios' : 'android',
-    });
-
-    if (!mounted) return;
-
-    // Cold-start deep link'i yakala — token kontrolünden önce çalışmalı
-    // ki invite kodu auth akışına (register ekranına) taşınabilsin
-    await DeepLinkService.captureInitialLink();
-
-    if (!mounted) return;
-    if (token == null) {
+    if (state.result == SplashResult.unauthenticated) {
       Navigator.of(context).pushReplacementNamed('/login');
       return;
     }
 
-    // Face ID kontrolü
-    final biometricEnabled = await StorageService.isBiometricEnabled();
-    if (biometricEnabled) {
-      bool ok = false;
-      while (!ok) {
-        ok = await BiometricService.authenticate(
-          reason: 'teqlif hesabınıza giriş yapmak için doğrulayın',
-        );
-        if (!mounted) return;
-        if (!ok) {
-          // İptal edilirse çıkış yapmak (logout) yerine tekrar soruyoruz
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-      }
+    // Locale sync
+    if (state.locale != null && state.locale!.isNotEmpty) {
+      await ref.read(localeProvider.notifier)
+          .syncWithServer(state.locale!, state.localeUpdatedAt);
     }
 
-    // Pre-fetching: kullanıcı + ilan verilerini ve görselleri ön yükle
-    // Timeout: 4sn — yavaş ağda bekletmeden devam et
-    await _prefetch(token).timeout(
-      const Duration(seconds: 4),
-      onTimeout: () {},
-    );
+    // Precache images
+    await _precacheImages(state.user, state.listings);
 
-    if (!mounted) return;
-    // Token backend'e yazılmadan /home'a geçmeyelim — 3sn timeout ile bekle
-    await PushNotificationService.initialize().timeout(
-      const Duration(seconds: 3),
-      onTimeout: () => debugPrint('[FCM] initialize timeout — devam ediliyor'),
-    );
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/home');
   }
 
-
-  Future<void> _prefetch(String token) async {
-    final futures = <Future>[
-      _fetchUser(token),
-      _fetchListings(),
-    ];
-
-    final results = await Future.wait(futures, eagerError: false);
-
-    if (!mounted) return;
-
+  Future<void> _precacheImages(Map<String, dynamic>? user, List<dynamic>? listings) async {
     final urlsToPrecache = <String>[];
 
-    // Kullanıcı profil görseli (thumb öncelikli)
-    final user = results[0];
     if (user != null) {
       final thumbUrl = user['profile_image_thumb_url'] as String?;
       final imageUrl = thumbUrl ?? user['profile_image_url'] as String?;
@@ -170,9 +117,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
 
-    // İlk 5 ilanın thumbnail'ı
-    final listings = results[1];
-    if (listings is List) {
+    if (listings != null) {
       for (final l in listings.take(5)) {
         final m = l as Map<String, dynamic>;
         final thumbUrl = m['thumbnail_url'] as String?;
@@ -183,53 +128,10 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
 
-    // precacheImage — paralel, hatalar sessizce yutulur
     await Future.wait(
       urlsToPrecache.map((url) => _precache(url)),
       eagerError: false,
     );
-  }
-
-  Future<Map<String, dynamic>?> _fetchUser(String token) async {
-    try {
-      final user = await AuthService.me();
-      
-      // DB'deki ile cihazdaki locale bilgisini akıllı zaman damgasıyla karşılaştırarak senkronize et
-      if (user.locale != null && user.locale!.isNotEmpty && mounted) {
-        await ProviderScope.containerOf(context, listen: false)
-            .read(localeProvider.notifier)
-            .syncWithServer(user.locale!, user.localeUpdatedAt);
-      }
-      
-      // Profil bilgisini locale kaydet ki session güncel kalsın
-      await StorageService.saveUserInfo(
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        fullName: user.fullName,
-        isPremium: user.isPremium,
-        onboardingCompleted: user.onboardingCompleted,
-        isVerified: user.isVerified,
-        phoneVerified: user.phoneVerified,
-      );
-      
-      return {
-        'profile_image_url': user.profileImageUrl,
-        'profile_image_thumb_url': user.profileImageThumbUrl,
-      };
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<List<dynamic>?> _fetchListings() async {
-    try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/listings'));
-      if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as List;
-      }
-    } catch (_) {}
-    return null;
   }
 
   Future<void> _precache(String url) async {

@@ -1,16 +1,3 @@
-import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:app_badge_plus/app_badge_plus.dart';
-import '../config/theme.dart';
-import '../services/auth_service.dart';
-import '../services/deep_link_service.dart';
-import '../services/notification_service.dart';
-import '../services/storage_service.dart';
-import '../services/push_notification_service.dart';
-import '../services/stream_service.dart';
-import '../services/ws_service.dart';
 import '../services/analytics_service.dart';
 import 'home_screen.dart';
 import 'listing_detail_screen.dart';
@@ -24,8 +11,10 @@ import 'live/swipe_live_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../widgets/offline_banner.dart';
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-import '../services/call_service.dart';
+import 'viewmodels/main_view_model.dart';
 
 /// Global visibility notifier for the Live tab.
 /// Prevents background ghost joining of streams when the user is on other tabs.
@@ -41,16 +30,7 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
-  int _unreadMessages = 0;
-  int _unreadNotifs = 0;
-  DateTime _sessionStart = DateTime.now();
-
-  Timer? _badgeTimer;
-  StreamSubscription<RemoteMessage>? _fcmSub;
-  StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
-  StreamSubscription<void>? _badgeRefreshSub;
-  StreamSubscription<Uri>? _deepLinkSub;
-  StreamSubscription<void>? _authFailedSub;
+  int _currentIndex = 0;
 
   final GlobalKey<LiveListScreenState> _liveListKey = GlobalKey();
   final GlobalKey<HomeScreenState> _homeKey = GlobalKey();
@@ -81,43 +61,19 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
       MessagesScreen(key: _messagesKey),
       ProfileScreen(key: _profileKey),
     ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      LiveListScreen(key: _liveListKey),
+      HomeScreen(key: _homeKey),
+      SearchScreen(key: _searchKey),
+      MessagesScreen(key: _messagesKey),
+      ProfileScreen(key: _profileKey),
+    ];
     WidgetsBinding.instance.addObserver(this);
-    WsService.connect();
-    _refreshBadges();
-    _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
-    _fcmSub = FirebaseMessaging.onMessage.listen((msg) {
-      _refreshBadges();
-      AnalyticsService.trackEvent('push_received', {
-        'notification_type': msg.data['type'] ?? 'unknown',
-      });
-    });
-    _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
-      _refreshBadges();
-      final isForegroundReceive = data['is_foreground_receive'] == true;
-      if (isForegroundReceive) {
-        return; // Ön planda (açıkken) gelen bildirim doğrudan yönlendirme yapmamalı
-      }
-      if (data['type'] != null && (data['type'] as String).isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotifNavigation(data));
-      }
-    });
-    _authFailedSub = AuthService.authFailedStream.stream.listen((_) => _handleAuthFailed());
-    _badgeRefreshSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) {
-      _refreshBadges();
-    });
-    // Deep link dinleyici — warm/hot start + cold start tüketimi
-    _deepLinkSub = DeepLinkService.uriStream.listen(_handleDeepLink);
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Cold-start URL deep link
-      final pending = DeepLinkService.consumePending();
-      if (pending != null) _handleDeepLink(pending);
-
-      // Cold-start FCM bildirim (uygulama kapalıyken tıklama)
-      final pendingNotif = PushNotificationService.consumePendingNavigation();
-      if (pendingNotif != null && (pendingNotif['type'] as String? ?? '').isNotEmpty) {
-        _handleNotifNavigation(pendingNotif);
-      }
-
       // T-HC-10: Proaktif mikrofon izni — sonucu takip et
       Permission.microphone.request().then((micStatus) async {
         if (!micStatus.isGranted && mounted) await openAppSettings();
@@ -128,37 +84,18 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    WsService.disconnect();
-    _badgeTimer?.cancel();
-    _fcmSub?.cancel();
-    _notifStreamSub?.cancel();
-    _badgeRefreshSub?.cancel();
-    _deepLinkSub?.cancel();
-    _authFailedSub?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      AppBadgePlus.isSupported().then((ok) {
-        if (ok) AppBadgePlus.updateBadge(0);
-      });
-      _refreshBadges();
-      WsService.connect();
-      PushNotificationService.notificationStream.add({});
+      ref.read(mainViewModelProvider.notifier).handleLifecycleResumed();
       // App arka plandan döndü: aktif sekmenin TTL'i dolmuşsa SWR ile yenile
       _maybeRefreshCurrentTab();
-      _sessionStart = DateTime.now();
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
-      final durationSec = DateTime.now().difference(_sessionStart).inSeconds;
-      if (durationSec > 2) {
-        AnalyticsService.trackEvent('session_end', {
-          'duration_sec': durationSec,
-          'active_tab': _kTabNames[_currentIndex],
-        });
-      }
+      ref.read(mainViewModelProvider.notifier).handleLifecyclePausedOrDetached(_kTabNames[_currentIndex]);
     }
   }
 
@@ -176,25 +113,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     }
   }
 
-  Future<void> _refreshBadges() async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    try {
-      final msgs = await NotificationService.getUnreadMessageCount();
-      final notifs = await NotificationService.getUnreadNotifCount();
-      if (mounted) {
-        setState(() {
-          _unreadMessages = msgs;
-          _unreadNotifs = notifs;
-        });
-      }
-      final total = msgs + notifs;
-      final supported = await AppBadgePlus.isSupported();
-      if (supported) {
-        await AppBadgePlus.updateBadge(total);
-      }
-    } catch (_) {}
-  }
+
 
   static const _kTabNames = ['live', 'home', 'search', 'messages', 'profile'];
 
@@ -226,153 +145,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
 
     // Mesajlar tabına geçince badge'i güncelle (içerik TTL ile yönetiliyor)
     if (index == 3) {
-      Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
+      ref.read(mainViewModelProvider.notifier).refreshBadgesNow();
     }
   }
 
-  /// FCM bildirim datasını parse edip ilgili ekrana yönlendirir.
-  /// Hem cold-start hem warm/background start için kullanılır.
-  void _handleNotifNavigation(Map<String, dynamic> data) {
-    if (!mounted) return;
-    final type = data['type'] as String? ?? '';
 
-    // listing_id veya related_id (sender_id olarak iletilir) — hangisi varsa
-    int? listingId() =>
-        int.tryParse(data['listing_id']?.toString() ?? '') ??
-        int.tryParse(data['sender_id']?.toString() ?? '');
-
-    // stream_id veya related_id (sender_id olarak iletilir) — hangisi varsa
-    int? streamId() =>
-        int.tryParse(data['stream_id']?.toString() ?? '') ??
-        int.tryParse(data['sender_id']?.toString() ?? '');
-
-    switch (type) {
-      // ── Canlı yayın bildirimleri ────────────────────────────────────────
-      case 'stream_started':
-      case 'outbid':
-      case 'smart_auction_alert':
-        // Host yayınını kapatma
-        if (StreamService.isHosting) break;
-        final sid = streamId();
-        if (sid != null) _navigateToLiveStream(sid);
-        break;
-
-      // ── İlan bildirimleri ────────────────────────────────────────────────
-      case 'new_listing':
-      case 'auction_won':
-      case 'search_alert':   // related_id = listing_id, sender_id olarak gelir
-      case 'budget_match':   // related_id = listing_id, sender_id olarak gelir
-      case 'churn_airdrop_buyer':  // related_id = listing_id
-      case 'churn_airdrop_seller': // related_id = listing_id
-        final lid = listingId();
-        if (lid != null) {
-          _navigateToListing(lid);
-        } else {
-          _navigateToNotificationsTab();
-        }
-        break;
-
-      // ── Toplu Kitle Bildirimleri (Retargeting) ───────────────────────────
-      case 'lead_blast':
-        final campaignIdRaw = data['campaign_id'];
-        if (campaignIdRaw != null) {
-          final campaignId = int.tryParse(campaignIdRaw.toString());
-          if (campaignId != null) {
-            // Ateşle ve unut (Fire-and-forget)
-            AnalyticsService.trackCampaignClick(campaignId);
-            AnalyticsService.trackEvent('push_click', {'campaign_id': campaignId});
-          }
-        }
-        
-        final lid = listingId();
-        final sid = streamId();
-        
-        if (sid != null && !StreamService.isHosting) {
-          _navigateToLiveStream(sid);
-        } else if (lid != null) {
-          _navigateToListing(lid);
-        } else {
-          _navigateToNotificationsTab();
-        }
-        break;
-
-      // ── Mesaj bildirimi ──────────────────────────────────────────────────
-      case 'message':
-        final senderId = int.tryParse(data['sender_id']?.toString() ?? '');
-        if (senderId != null) {
-          _navigateToDirectChat(data);
-        } else {
-          _navigateToNotificationsTab();
-        }
-        break;
-
-      // ── Profil bildirimi ─────────────────────────────────────────────────
-      case 'follow_accepted':
-      case 'follow':
-        final username = data['sender_username'] as String? ?? '';
-        if (username.isNotEmpty) {
-          _navigateToProfile(username);
-        } else {
-          _navigateToNotificationsTab();
-        }
-        break;
-
-      case 'follow_request':
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
-        );
-        break;
-
-      // ── Gelen arama ───────────────────────────────────────────────────────
-      case 'incoming_call':
-      case 'call_incoming':
-        // Cold-start fix: push_notification_service zaten CallService'i haberdar etti
-        // ama eğer FCM tap üzerinden geldiyse (pendingNavData) burada da kur.
-        if (CallService.instance.state.value.status == CallStatus.idle &&
-            data['call_id'] != null) {
-          CallService.instance.onIncomingCall(data);
-        }
-        break;
-
-      case 'call_accepted':
-      case 'call_rejected':
-      case 'call_ended':
-      case 'call_missed':
-        final username = data['caller_username'] as String?;
-        if (username != null && username.isNotEmpty) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PublicProfileScreen(username: username),
-            ),
-          );
-        }
-        break;
-
-      case 'incoming_call_notification_tap':
-      case 'incoming_call_auto_accept':
-        // IncomingCallOverlay kendi stream'ini dinler.
-        break;
-
-      // ── new_bid: host HostStreamScreen'de zaten görüyor, nav gerekmez ───
-      case 'new_bid':
-        break;
-
-      // ── Bilgilendirme bildirimleri → Bildirimler sekmesi ─────────────────
-      case 'listing_removed':
-      case 'listing_deactivated':
-      case 'listing_deleted':
-        _navigateToNotificationsTab();
-        break;
-
-      // ── Bilinmeyen tür → Bildirimler sekmesi ─────────────────────────────
-      default:
-        if (type.isNotEmpty) _navigateToNotificationsTab();
-        break;
-    }
-  }
 
   void _navigateToNotificationsTab() {
     if (!mounted) return;
@@ -422,63 +199,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     ));
   }
 
-  /// Her iki token da geçersizleştiğinde kullanıcıyı çıkış yaptır.
-  Future<void> _handleAuthFailed() async {
-    await AuthService.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
-  }
 
-  /// Deep link URL'ini parse ederek ilgili ekrana yönlendirir.
-  /// Hem cold-start (pending) hem warm/hot start (uriStream) için kullanılır.
-  void _handleDeepLink(Uri uri) {
-    if (!mounted) return;
 
-    // Aynı URI kısa sürede tekrar geldiyse ikinci işlemi yoksay.
-    if (!DeepLinkService.shouldHandle(uri)) return;
-
-    final segments = uri.scheme == 'teqlif'
-        ? [if (uri.host.isNotEmpty) uri.host, ...uri.pathSegments.where((s) => s.isNotEmpty)]
-        : uri.pathSegments.where((s) => s.isNotEmpty).toList();
-
-    if (segments.length < 2) return;
-
-    final type = segments[0];
-    final param = segments[1];
-
-    switch (type) {
-      case 'profil':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => PublicProfileScreen(username: param),
-        ));
-        break;
-      case 'ilan':
-        final id = int.tryParse(param);
-        if (id != null) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ListingDeepLinkLoader(listingId: id),
-          ));
-        }
-        break;
-      case 'yayin':
-        final id = int.tryParse(param);
-        if (id != null) {
-          // Stack'teki mevcut SwipeLiveScreen'leri temizle, yenisini push et.
-          // Böylece aynı yayına birden fazla kez girildiğinde çakışma olmaz.
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => SwipeLiveScreen.single(streamId: id),
-            ),
-            (route) => route.settings.name == '/home' || route.isFirst,
-          ).then((_) => _liveListKey.currentState?.refresh());
-        }
-        break;
-    }
-  }
-
-  Widget _buildMessageIcon() {
-    final dmCount = _unreadMessages;
-    final hasNotifs = _unreadNotifs > 0;
+  Widget _buildMessageIcon(int unreadMessages, int unreadNotifs) {
+    final dmCount = unreadMessages;
+    final hasNotifs = unreadNotifs > 0;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -518,9 +243,9 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     );
   }
 
-  Widget _buildMessageActiveIcon() {
-    final dmCount = _unreadMessages;
-    final hasNotifs = _unreadNotifs > 0;
+  Widget _buildMessageActiveIcon(int unreadMessages, int unreadNotifs) {
+    final dmCount = unreadMessages;
+    final hasNotifs = unreadNotifs > 0;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -563,6 +288,46 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final mainState = ref.watch(mainViewModelProvider);
+
+    ref.listen<AsyncValue<MainState>>(mainViewModelProvider, (_, state) {
+      if (!state.hasValue) return;
+      final navData = state.value!.navigationData;
+      if (navData.event != MainNavigationEvent.none) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          switch (navData.event) {
+            case MainNavigationEvent.toLiveStream:
+              _navigateToLiveStream(navData.payload as int);
+              break;
+            case MainNavigationEvent.toListing:
+              _navigateToListing(navData.payload as int);
+              break;
+            case MainNavigationEvent.toNotificationsTab:
+              _navigateToNotificationsTab();
+              break;
+            case MainNavigationEvent.toProfile:
+              _navigateToProfile(navData.payload as String);
+              break;
+            case MainNavigationEvent.toDirectChat:
+              _navigateToDirectChat(navData.payload as Map<String, dynamic>);
+              break;
+            case MainNavigationEvent.toFollowRequests:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
+              );
+              break;
+            case MainNavigationEvent.toLogin:
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+              break;
+            case MainNavigationEvent.none:
+              break;
+          }
+          ref.read(mainViewModelProvider.notifier).clearNavigation();
+        });
+      }
+    });
+
     return Scaffold(
       body: Column(
         children: [
@@ -596,8 +361,8 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
             label: loc.t('navSearch'),
           ),
           BottomNavigationBarItem(
-            icon: _buildMessageIcon(),
-            activeIcon: _buildMessageActiveIcon(),
+            icon: _buildMessageIcon(mainState.value?.unreadMessages ?? 0, mainState.value?.unreadNotifs ?? 0),
+            activeIcon: _buildMessageActiveIcon(mainState.value?.unreadMessages ?? 0, mainState.value?.unreadNotifs ?? 0),
             label: loc.t('navMessages'),
           ),
           BottomNavigationBarItem(

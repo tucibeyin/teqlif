@@ -45,6 +45,7 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'my_ratings_screen.dart';
+import 'viewmodels/messages_view_model.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -56,38 +57,19 @@ class MessagesScreen extends ConsumerStatefulWidget {
 class MessagesScreenState extends ConsumerState<MessagesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _unreadNotifs = 0;
-  StreamSubscription<void>? _badgeSub;
-  StreamSubscription<Map<String, dynamic>>? _fcmSub;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
-    _loadUnreadNotifs();
-    // badgeRefreshNeeded: mesaj okunduğunda (chat kapandığında)
-    _badgeSub = PushNotificationService.badgeRefreshNeeded.stream.listen(
-      (_) => _loadUnreadNotifs(),
-    );
-    // notificationStream: yeni FCM bildirimi gelince (follow, bid, vb.) noktayı güncelle
-    _fcmSub = PushNotificationService.notificationStream.stream.listen(
-      (_) => _loadUnreadNotifs(),
-    );
   }
 
   @override
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
-    _badgeSub?.cancel();
-    _fcmSub?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadUnreadNotifs() async {
-    final count = await NotificationService.getUnreadNotifCount();
-    if (mounted) setState(() => _unreadNotifs = count);
   }
 
   void switchToNotificationsTab() {
@@ -102,16 +84,16 @@ class MessagesScreenState extends ConsumerState<MessagesScreen>
 
   void _onTabChanged() {
     if (!_tabController.indexIsChanging && _tabController.index == 1) {
-      NotificationService.markAllRead().then((_) {
-        if (mounted) setState(() => _unreadNotifs = 0);
-        PushNotificationService.badgeRefreshNeeded.add(null);
-      });
+      ref.read(messagesScreenViewModelProvider.notifier).markAllRead();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(messagesScreenViewModelProvider);
+    final state = stateAsync.value ?? const MessagesUiState();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.t("msgTabMessages")),
@@ -127,7 +109,7 @@ class MessagesScreenState extends ConsumerState<MessagesScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(loc.t("msgTabNotifications")),
-                  if (_unreadNotifs > 0) ...[
+                  if (state.unreadNotifs > 0) ...[
                     const SizedBox(width: 6),
                     Container(
                       width: 8,
@@ -162,81 +144,6 @@ class _MessagesTab extends ConsumerStatefulWidget {
 }
 
 class _MessagesTabState extends ConsumerState<_MessagesTab> {
-  List<dynamic> _conversations = [];
-  bool _loading = true;
-  bool _loadInProgress = false;
-  bool _hasError = false;
-  int? _myUserId;
-  StreamSubscription<Map<String, dynamic>>? _fcmSub;
-  StreamSubscription<Map<String, dynamic>>? _wsSub;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMyUserId();
-    _load();
-    _fcmSub = PushNotificationService.notificationStream.stream.listen(
-      (_) => _load(silent: true),
-    );
-    _wsSub = WsService.messageStream.stream.listen((data) {
-      if (data['type'] == 'message') {
-        _updateConversationInMemory(data);
-        PushNotificationService.badgeRefreshNeeded.add(null);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _fcmSub?.cancel();
-    _wsSub?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _loadMyUserId() async {
-    final info = await StorageService.getUserInfo();
-    if (mounted) setState(() => _myUserId = info?['id'] as int?);
-  }
-
-  Future<void> _load({bool silent = false}) async {
-    if (_loadInProgress) return;
-    _loadInProgress = true;
-    // ── A: Kasa kontrolü ───────────────────────────────────────────────────
-    final cached = await StorageService.getCachedData(
-      StorageService.cacheMessages,
-    );
-    if (cached != null && mounted) {
-      setState(() {
-        _conversations = cached as List;
-        _loading = false;
-      });
-    } else if (!silent) {
-      if (mounted) setState(() => _loading = true);
-    }
-
-    // ── B: Arka planda API ─────────────────────────────────────────────────
-    try {
-      final data = await NotificationService.getConversations();
-      await StorageService.cacheData(StorageService.cacheMessages, data);
-      if (mounted) {
-        setState(() {
-          _conversations = data;
-          _loading = false;
-          _hasError = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          if (cached == null) _loading = false;
-        });
-      }
-      debugPrint('[MessagesTab] API hatası: $e');
-    } finally {
-      _loadInProgress = false;
-    }
-  }
 
   /// WS üzerinden gelen mesajı HTTP isteği atmadan anında listeye yansıtır.
   /// Bilinmeyen gönderici (yeni konuşma) varsa API'ya fallback yapar.
@@ -254,39 +161,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
     return (data['content'] as String?) ?? '';
   }
 
-  void _updateConversationInMemory(Map<String, dynamic> data) {
-    final senderId = data['sender_id'] as int?;
-    final receiverId = data['receiver_id'] as int?;
-    final createdAt = data['created_at'] as String?;
-    final otherId = senderId == _myUserId ? receiverId : senderId;
-    final loc = ref.read(localizationProvider);
 
-    if (otherId == null || _myUserId == null) {
-      _load(silent: true);
-      return;
-    }
-
-    final idx = _conversations.indexWhere(
-      (c) => (c['user_id'] as int?) == otherId,
-    );
-    if (idx < 0) {
-      // Yeni konuşma — tam bilgi için API'ya git
-      _load(silent: true);
-      return;
-    }
-
-    final updated = List<dynamic>.from(_conversations);
-    final conv = Map<String, dynamic>.from(updated[idx] as Map);
-    conv['last_message'] = _lastMsgPreview(data, loc);
-    conv['last_at'] = createdAt;
-    if (senderId != _myUserId) {
-      conv['unread_count'] = ((conv['unread_count'] as int?) ?? 0) + 1;
-    }
-    updated
-      ..removeAt(idx)
-      ..insert(0, conv);
-    if (mounted) setState(() => _conversations = updated);
-  }
 
   Future<void> _deleteConversation(int otherId) async {
     final loc = ref.read(localizationProvider);
@@ -333,14 +208,11 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final ok = await NotificationService.deleteConversation(otherId);
+    
+    final ok = await ref.read(messagesTabViewModelProvider.notifier).deleteConversation(otherId);
     if (!mounted) return;
+    
     if (ok) {
-      setState(
-        () => _conversations.removeWhere(
-          (c) => (c['user_id'] as int?) == otherId,
-        ),
-      );
       TeqSnackBar.show(message: loc.t("msgDeleteConversationSuccess"));
     } else {
       TeqSnackBar.show(message: loc.t("msgDeleteConversationFailed"));
@@ -365,13 +237,16 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    if (_loading) {
+    final stateAsync = ref.watch(messagesTabViewModelProvider);
+    final state = stateAsync.value ?? const ConversationsUiState();
+
+    if (state.loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
-    if (_hasError && _conversations.isEmpty) {
-      return NetworkErrorWidget(scrollable: true, onRetry: _load);
+    if (state.hasError && state.conversations.isEmpty) {
+      return NetworkErrorWidget(scrollable: true, onRetry: () => ref.read(messagesTabViewModelProvider.notifier).load());
     }
-    if (_conversations.isEmpty) {
+    if (state.conversations.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -394,16 +269,16 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
     }
     return Column(
       children: [
-        if (_hasError) _buildErrorBanner(),
+        if (state.hasError) _buildErrorBanner(),
         Expanded(
           child: RefreshIndicator(
             color: kPrimary,
-            onRefresh: _load,
+            onRefresh: () async => ref.read(messagesTabViewModelProvider.notifier).load(silent: true),
             child: ListView.separated(
-              itemCount: _conversations.length,
+              itemCount: state.conversations.length,
               separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
               itemBuilder: (context, i) {
-                final conv = _conversations[i];
+                final conv = state.conversations[i];
                 final username = conv['username'] as String? ?? '';
                 final fullName = conv['full_name'] as String? ?? username;
                 final loc = ref.read(localizationProvider);
@@ -508,7 +383,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
                         ),
                       ),
                     ).then((_) {
-                      _load(silent: true);
+                      ref.read(messagesTabViewModelProvider.notifier).load(silent: true);
                       PushNotificationService.badgeRefreshNeeded.add(null);
                     });
                   },
@@ -543,7 +418,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
               ),
             ),
             TextButton(
-              onPressed: _load,
+              onPressed: () => ref.read(messagesTabViewModelProvider.notifier).load(),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(0, 0),
@@ -571,62 +446,7 @@ class _NotificationsTab extends ConsumerStatefulWidget {
 }
 
 class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
-  List<dynamic> _notifications = [];
-  bool _loading = true;
-  bool _notifHasError = false;
-  StreamSubscription<Map<String, dynamic>>? _sub;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-    _sub = PushNotificationService.notificationStream.stream.listen(
-      (_) => _load(silent: true),
-    );
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _load({bool silent = false}) async {
-    // ── A: Kasa kontrolü ───────────────────────────────────────────────────
-    final cached = await StorageService.getCachedData(
-      StorageService.cacheNotifications,
-    );
-    if (cached != null && mounted) {
-      setState(() {
-        _notifications = cached as List;
-        _loading = false;
-      });
-    } else if (!silent) {
-      if (mounted) setState(() => _loading = true);
-    }
-
-    // ── B: Arka planda API ─────────────────────────────────────────────────
-    try {
-      final data = await NotificationService.getNotifications();
-      // ── C: Başarı → kasa güncelle, UI yenile ──────────────────────────
-      await StorageService.cacheData(StorageService.cacheNotifications, data);
-      if (mounted) {
-        setState(() {
-          _notifications = data;
-          _loading = false;
-          _notifHasError = false;
-        });
-      }
-    } catch (e) {
-      // ── D: Hata → kasa doluysa yut, boşsa boş ekran göster ───────────
-      if (cached == null && mounted) {
-        setState(() => _loading = false);
-      }
-      if (mounted) setState(() => _notifHasError = true);
-      debugPrint('[NotificationsTab] API hatası (cache=${cached != null}): $e');
-    }
-  }
-
+  // Helpers for localization
   String _timeAgo(String? isoStr) {
     if (isoStr == null) return '';
     try {
@@ -904,13 +724,16 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    if (_loading) {
+    final stateAsync = ref.watch(notificationsTabViewModelProvider);
+    final state = stateAsync.value ?? const NotificationsUiState();
+
+    if (state.loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
-    if (_notifHasError && _notifications.isEmpty) {
-      return NetworkErrorWidget(scrollable: true, onRetry: _load);
+    if (state.hasError && state.notifications.isEmpty) {
+      return NetworkErrorWidget(scrollable: true, onRetry: () => ref.read(notificationsTabViewModelProvider.notifier).load());
     }
-    if (_notifications.isEmpty) {
+    if (state.notifications.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -933,16 +756,16 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
     }
     return RefreshIndicator(
       color: kPrimary,
-      onRefresh: _load,
+      onRefresh: () async => ref.read(notificationsTabViewModelProvider.notifier).load(silent: true),
       child: Column(
         children: [
-          if (_notifHasError) StaleDataBanner(onRetry: _load),
+          if (state.hasError) StaleDataBanner(onRetry: () => ref.read(notificationsTabViewModelProvider.notifier).load()),
           Expanded(
             child: ListView.separated(
-              itemCount: _notifications.length,
+              itemCount: state.notifications.length,
               separatorBuilder: (_, _) => const Divider(height: 1, indent: 60),
               itemBuilder: (context, i) {
-                final notif = _notifications[i];
+                final notif = state.notifications[i];
                 final type = notif['type'] as String?;
                 final title = notif['title'] as String? ?? '';
                 final body = notif['body'] as String?;
@@ -957,13 +780,8 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
                 final displayTitle = _localizeTitle(type, title, loc);
                 return ListTile(
                   onTap: () {
-                    setState(
-                      () =>
-                          (_notifications[i]
-                                  as Map<String, dynamic>)['is_read'] =
-                              true,
-                    );
-                    _navigate(_notifications[i] as Map<String, dynamic>);
+                    ref.read(notificationsTabViewModelProvider.notifier).markAsRead(i);
+                    _navigate(state.notifications[i] as Map<String, dynamic>);
                   },
                   tileColor: isRead ? null : kPrimary.withValues(alpha: 0.06),
                   leading: Container(

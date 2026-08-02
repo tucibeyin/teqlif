@@ -28,6 +28,8 @@ import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
 
+import 'viewmodels/search_view_model.dart';
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -36,51 +38,19 @@ class SearchScreen extends ConsumerStatefulWidget {
 }
 
 class SearchScreenState extends ConsumerState<SearchScreen> {
-  void refresh({bool bypassCache = true}) =>
-      _loadExplore(bypassCache: bypassCache);
   final _controller = TextEditingController();
   Timer? _debounce;
-  int _searchToken =
-      0; // her yeni arama için artar; eski yanıtlar görmezden gelinir
 
-  List<Map<String, dynamic>> _userResults = [];
-  List<Map<String, dynamic>> _listingResults = [];
-  List<StreamOut> _streamResults = [];
-  bool _isSemanticSearch = false;
-  bool _showAllUsers = false;
-  bool _searching = false;
-  bool _hasQuery = false;
-  bool _alertCreating = false;
-
-  // Explore data
-  // Sana Özel (for-you, personalized)
-  List<dynamic> _exploreListings = [];
-  List<dynamic> _recentListings = [];
-  List<StreamOut> _exploreStreams = [];
-  List<Map<String, dynamic>> _suggestedSellers = [];
-  List<Map<String, dynamic>> _suggestedStreamers = [];
-  bool _exploreLoading = true;
-  bool _exploreNetworkError = false;
-  bool _isLoggedIn = false;
-  int _forYouPage = 0;
-  bool _forYouExhausted = false;
-  bool _forYouLoadingMore = false;
-  int _recentPage = 0;
-  bool _recentExhausted = false;
-  bool _recentLoadingMore = false;
-  // for-you bölümünde gösterilen ilan ID'leri — recent feed'de tekrar gösterme
-  final Set<int> _forYouIds = {};
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _forYouScrollCtrl = ScrollController();
-  StreamSubscription<List<StreamOut>>? _streamsSub;
   static const double _cardWidth = 130.0;
+  
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onQueryChanged);
     _scrollCtrl.addListener(_onScroll);
     _forYouScrollCtrl.addListener(_onForYouScroll);
-    _loadExplore();
   }
 
   @override
@@ -92,7 +62,6 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     _scrollCtrl.dispose();
     _forYouScrollCtrl.removeListener(_onForYouScroll);
     _forYouScrollCtrl.dispose();
-    _streamsSub?.cancel();
     super.dispose();
   }
 
@@ -142,30 +111,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    setState(() => _alertCreating = true);
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/search-alerts'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'query': query}),
-      );
-      if (mounted) {
-        if (resp.statusCode == 201) {
-          TeqSnackBar.show(message: loc.t("searchAlertCreated"), type: TeqSnackBarType.success);
-        } else {
-          TeqSnackBar.show(message: loc.t("searchAlertFailed"), type: TeqSnackBarType.error);
-        }
-      }
-    } catch (_) {
-      if (mounted) {
+    
+    final success = await ref.read(searchViewModelProvider.notifier).createSearchAlert(query);
+    if (mounted) {
+      if (success) {
+        TeqSnackBar.show(message: loc.t("searchAlertCreated"), type: TeqSnackBarType.success);
+      } else {
         TeqSnackBar.show(message: loc.t("searchAlertFailed"), type: TeqSnackBarType.error);
       }
-    } finally {
-      if (mounted) setState(() => _alertCreating = false);
     }
   }
 
@@ -173,7 +126,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     if (!_scrollCtrl.hasClients) return;
     final pos = _scrollCtrl.position;
     if (pos.pixels >= pos.maxScrollExtent - 200) {
-      _loadMoreRecentListings();
+      ref.read(searchViewModelProvider.notifier).loadMoreRecentListings();
     }
   }
 
@@ -181,49 +134,20 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     if (!_forYouScrollCtrl.hasClients) return;
     final pos = _forYouScrollCtrl.position;
     if (pos.pixels >= pos.maxScrollExtent - _cardWidth * 3) {
-      _loadMoreForYou();
+      ref.read(searchViewModelProvider.notifier).loadMoreForYou();
     }
   }
 
   void _onQueryChanged() {
     final q = _controller.text.trim();
-    if (q.isEmpty) {
-      setState(() {
-        _hasQuery = false;
-        _userResults = [];
-        _listingResults = [];
-        _streamResults = [];
-        _isSemanticSearch = false;
-        _showAllUsers = false;
-      });
-      return;
-    }
-    setState(() => _hasQuery = true);
+    ref.read(searchViewModelProvider.notifier).onQueryChanged(q);
+    
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () => _search(q));
-  }
-
-  Future<void> _markNotInterested(int listingId, String section) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/feed/not-interested/$listingId'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 204 && mounted) {
-        setState(() {
-          if (section == 'for_you') {
-            _exploreListings.removeWhere((e) => (e as Map)['id'] == listingId);
-            _forYouIds.remove(listingId);
-          } else {
-            _recentListings.removeWhere((e) => (e as Map)['id'] == listingId);
-          }
-        });
-        final loc = ref.read(localizationProvider);
-        TeqSnackBar.show(message: loc.t("notInterestedConfirmed"), type: TeqSnackBarType.info);
-      }
-    } catch (_) {}
+    if (q.isNotEmpty) {
+      _debounce = Timer(const Duration(milliseconds: 500), () {
+        ref.read(searchViewModelProvider.notifier).search(q);
+      });
+    }
   }
 
   Future<void> _showNotInterestedMenu(int listingId, String section) async {
@@ -237,245 +161,18 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ListTile(
               leading: const Icon(Icons.thumb_down_alt_outlined),
               title: Text(loc.t("notInterested")),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _markNotInterested(listingId, section);
+                await ref.read(searchViewModelProvider.notifier).markNotInterested(listingId, section);
+                if (mounted) {
+                  TeqSnackBar.show(message: loc.t("notInterestedConfirmed"), type: TeqSnackBarType.info);
+                }
               },
             ),
           ],
         ),
       ),
     );
-  }
-
-  /// SWR paralel yükleme: yayınlar + kişisel feed + son ilanlar aynı anda başlar.
-  /// Her akış Hive'dan anında veri yayarsa _exploreLoading hemen kapanır.
-  /// [bypassCache]: pull-to-refresh senaryosunda cache READ atlanır.
-  Future<void> _loadExplore({bool bypassCache = false}) async {
-    if (!mounted) return;
-    setState(() {
-      _exploreLoading = true;
-      _exploreNetworkError = false;
-      _forYouPage = 0;
-      _forYouExhausted = false;
-    });
-
-    final token = await StorageService.getToken();
-    final loggedIn = token != null;
-    if (mounted) setState(() => _isLoggedIn = loggedIn);
-
-    // İlk veri geldiğinde loading'i kapat (cache varsa anlık)
-    bool firstDataArrived = false;
-    void maybeStopLoading() {
-      if (!firstDataArrived && mounted) {
-        firstDataArrived = true;
-        setState(() => _exploreLoading = false);
-      }
-    }
-
-    // ── Aktif yayınlar (1 dk cache) ────────────────────────────────────────
-    _loadExploreStreams(bypassCache, maybeStopLoading);
-
-    // ── Kişisel feed (giriş: 1 saat cache | misafir: 5 dk) ────────────────
-    _loadExploreForYou(
-      loggedIn: loggedIn,
-      bypassCache: bypassCache,
-      onData: maybeStopLoading,
-    );
-
-    // ── Önerilen Yayıncılar ve Satıcılar (Sadece giriş yapılmışsa) ───
-    if (loggedIn) {
-      _loadSuggestedSellers();
-      StreamService.getSuggestedStreamers().then((streamers) {
-        if (mounted) setState(() => _suggestedStreamers = streamers);
-      });
-    }
-
-    // ── En son ilanlar (5 dk cache, yalnızca giriş yapılmışsa ayrı çek) ───
-    if (loggedIn) {
-      _loadExploreRecent(bypassCache: bypassCache, onData: maybeStopLoading);
-    } else {
-      // Misafirde for-you zaten son ilanları gösterir
-      maybeStopLoading();
-    }
-  }
-
-  void _loadExploreStreams(bool bypassCache, VoidCallback onData) {
-    _streamsSub?.cancel();
-    _streamsSub = StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen((
-      streams,
-    ) {
-      if (mounted) setState(() => _exploreStreams = streams.take(4).toList());
-      onData();
-    }, onError: (_) => onData());
-  }
-
-  Future<void> _loadSuggestedSellers() async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final resp = await http
-          .get(
-            Uri.parse('$kBaseUrl/users/suggested-sellers'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
-          .timeout(const Duration(seconds: 5));
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() => _suggestedSellers = data.cast<Map<String, dynamic>>());
-      }
-    } catch (_) {}
-  }
-
-  void _loadExploreForYou({
-    required bool loggedIn,
-    required bool bypassCache,
-    required VoidCallback onData,
-  }) {
-    final url = loggedIn
-        ? '$kBaseUrl/feed/for-you?page=0'
-        : '$kBaseUrl/listings';
-    final cacheKey = loggedIn ? 'explore_for_you' : 'explore_listings';
-    final ttl = const Duration(minutes: 5);
-
-    ApiService.get<List<dynamic>>(
-      url: url,
-      cacheKey: cacheKey,
-      cacheTtl: ttl,
-      bypassCache: bypassCache,
-      fromJson: (raw) => raw as List,
-    ).listen((data) {
-      if (!mounted) return;
-      final ids = data
-          .whereType<Map<String, dynamic>>()
-          .map((e) => e['id'])
-          .whereType<int>()
-          .toSet();
-      setState(() {
-        _exploreListings = data;
-        _forYouIds
-          ..clear()
-          ..addAll(ids);
-        if (loggedIn) {
-          _forYouPage = 1;
-          _forYouExhausted = data.length < 20;
-        }
-      });
-      if (loggedIn && ids.isNotEmpty) {
-        AnalyticsService.logListingImpressions(
-          listingIds: ids.take(10).toList(),
-          section: 'for_you',
-        );
-      }
-      onData();
-    }, onError: (_) {
-      if (mounted) setState(() => _exploreNetworkError = true);
-      onData();
-    });
-  }
-
-  void _loadExploreRecent({
-    required bool bypassCache,
-    required VoidCallback onData,
-  }) {
-    final url = _isLoggedIn
-        ? '$kBaseUrl/feed/for-you?page=1'
-        : '$kBaseUrl/feed/recent?page=0';
-    final cacheKey =
-        _isLoggedIn ? 'explore_foryou_grid' : 'explore_recent_feed';
-    ApiService.get<List<dynamic>>(
-      url: url,
-      cacheKey: cacheKey,
-      cacheTtl: const Duration(minutes: 5),
-      bypassCache: bypassCache,
-      fromJson: (raw) => raw as List,
-    ).listen((recent) {
-      if (mounted) {
-        setState(() {
-          _recentListings = recent;
-          _recentPage = _isLoggedIn ? 2 : 1;
-          _recentExhausted = recent.length < 20;
-        });
-        final recentIds = recent
-            .whereType<Map<String, dynamic>>()
-            .map((e) => e['id'])
-            .whereType<int>()
-            .take(10)
-            .toList();
-        if (recentIds.isNotEmpty) {
-          AnalyticsService.logListingImpressions(
-            listingIds: recentIds,
-            section: _isLoggedIn ? 'for_you_grid' : 'recent',
-          );
-        }
-      }
-      onData();
-    }, onError: (_) {
-      if (mounted) setState(() => _exploreNetworkError = true);
-      onData();
-    });
-  }
-
-  Future<void> _loadMoreRecentListings() async {
-    if (_recentExhausted || _recentLoadingMore || _hasQuery) return;
-    setState(() => _recentLoadingMore = true);
-    try {
-      final token = await StorageService.getToken();
-      final headers =
-          token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final url = _isLoggedIn
-          ? '$kBaseUrl/feed/for-you?page=$_recentPage'
-          : '$kBaseUrl/feed/recent?page=$_recentPage${_forYouIds.isNotEmpty ? '&exclude_ids=${_forYouIds.join(',')}' : ''}';
-      final resp = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() {
-          _recentListings.addAll(data);
-          _recentPage++;
-          if (data.length < 20) _recentExhausted = true;
-        });
-      } else {
-        setState(() => _recentExhausted = true);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _recentExhausted = false);
-    } finally {
-      if (mounted) setState(() => _recentLoadingMore = false);
-    }
-  }
-
-  Future<void> _loadMoreForYou() async {
-    if (!_isLoggedIn || _forYouExhausted || _forYouLoadingMore || _hasQuery) {
-      return;
-    }
-    setState(() => _forYouLoadingMore = true);
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/for-you?page=$_forYouPage'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() {
-          _exploreListings.addAll(data);
-          _forYouPage++;
-          if (data.length < 20) _forYouExhausted = true;
-        });
-      } else {
-        setState(() => _forYouExhausted = true);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _forYouExhausted = false);
-    } finally {
-      if (mounted) setState(() => _forYouLoadingMore = false);
-    }
   }
 
   void _trackInteraction(int itemId, int? ownerId) {
@@ -502,57 +199,12 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
-  // /search/all → kullanıcı + ilan + canlı yayın; tek çağrı; 500ms debounce.
-  Future<void> _search(String q) async {
-    final myToken = ++_searchToken; // bu request'in token'ı
-    setState(() => _searching = true);
-    try {
-      final token = await StorageService.getToken();
-      final headers = token != null
-          ? {'Authorization': 'Bearer $token'}
-          : <String, String>{};
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/search/all').replace(queryParameters: {'q': q}),
-        headers: headers,
-      );
-      if (!mounted || myToken != _searchToken) {
-        return; // eski yanıt, görmezden gel
-      }
-      if (resp.statusCode != 200) {
-        setState(() => _searching = false);
-        return;
-      }
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final listingResults = (data['listings'] as List)
-          .cast<Map<String, dynamic>>();
-      final resultCount =
-          listingResults.length +
-          (data['users'] as List).length +
-          (data['streams'] as List).length;
-      setState(() {
-        _userResults = (data['users'] as List).cast<Map<String, dynamic>>();
-        _listingResults = listingResults;
-        _streamResults = (data['streams'] as List)
-            .map((s) => StreamOut.fromJson(s as Map<String, dynamic>))
-            .toList();
-        _isSemanticSearch = data['search_type'] == 'semantic';
-        _showAllUsers = false;
-        _searching = false;
-      });
-      AnalyticsService.trackSearch(query: q, resultCount: resultCount);
-      if (resultCount == 0) {
-        AnalyticsService.trackEvent('search_no_results', {'query': q});
-      }
-    } catch (_) {
-      if (mounted && myToken == _searchToken) {
-        setState(() => _searching = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final searchStateAsync = ref.watch(searchViewModelProvider);
+    final state = searchStateAsync.value ?? const SearchState();
+    
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       body: SafeArea(
@@ -566,12 +218,12 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                 controller: _controller,
                 hintText: loc.t("searchAiHint"),
                 prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _hasQuery
+                suffixIcon: state.hasQuery
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: _alertCreating
+                            icon: state.isAlertCreating
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
@@ -584,7 +236,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                                     size: 20,
                                   ),
                             tooltip: loc.t("searchAlertTooltip"),
-                            onPressed: _alertCreating
+                            onPressed: state.isAlertCreating
                                 ? null
                                 : () => _showAlertSheet(context),
                           ),
@@ -600,7 +252,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             // ── İçerik ───────────────────────────────────────────────
             Expanded(
-              child: _hasQuery ? _buildSearchResults(loc) : _buildExplore(loc),
+              child: state.hasQuery ? _buildSearchResults(loc, state) : _buildExplore(loc, state),
             ),
           ],
         ),
@@ -608,14 +260,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildSearchResults(TranslationPack loc) {
-    if (_searching) {
+  Widget _buildSearchResults(TranslationPack loc, SearchState state) {
+    if (state.isSearching) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
 
-    final hasUsers = _userResults.isNotEmpty;
-    final hasListings = _listingResults.isNotEmpty;
-    final hasStreams = _streamResults.isNotEmpty;
+    final hasUsers = state.userResults.isNotEmpty;
+    final hasListings = state.listingResults.isNotEmpty;
+    final hasStreams = state.streamResults.isNotEmpty;
 
     if (!hasUsers && !hasListings && !hasStreams) {
       return Center(
@@ -646,8 +298,8 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              onPressed: _alertCreating ? null : () => _showAlertSheet(context),
-              icon: _alertCreating
+              onPressed: state.isAlertCreating ? null : () => _showAlertSheet(context),
+              icon: state.isAlertCreating
                   ? const SizedBox(
                       width: 14,
                       height: 14,
@@ -662,15 +314,15 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     // Max 5 kullanıcı göster; fazlası için "Hepsini gör" satırı
-    final visibleUsers = _showAllUsers
-        ? _userResults
-        : _userResults.take(5).toList();
-    final hasMoreUsers = !_showAllUsers && _userResults.length > 5;
+    final visibleUsers = state.showAllUsers
+        ? state.userResults
+        : state.userResults.take(5).toList();
+    final hasMoreUsers = !state.showAllUsers && state.userResults.length > 5;
 
     return CustomScrollView(
       slivers: [
         // ── Akıllı Sonuçlar rozeti ──────────────────────────────────
-        if (_isSemanticSearch)
+        if (state.isSemanticSearch)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
@@ -777,13 +429,13 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           if (hasMoreUsers)
             SliverToBoxAdapter(
               child: InkWell(
-                onTap: () => setState(() => _showAllUsers = true),
+                onTap: () => ref.read(searchViewModelProvider.notifier).setShowAllUsers(true),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(72, 4, 16, 8),
                   child: Row(
                     children: [
                       Text(
-                        loc.t("searchShowAllAccounts", {"count": _userResults.length.toString()}),
+                        loc.t("searchShowAllAccounts", {"count": state.userResults.length.toString()}),
                         style: TextStyle(
                           color: kPrimary,
                           fontSize: 13,
@@ -807,11 +459,11 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
         if (hasListings) ...[
           SliverToBoxAdapter(
             child: _SectionHeader(
-              icon: _isSemanticSearch
+              icon: state.isSemanticSearch
                   ? Icons.auto_awesome_rounded
                   : Icons.grid_view_rounded,
               label: loc.t("searchFilterListings"),
-              iconColor: _isSemanticSearch ? kPrimary : null,
+              iconColor: state.isSemanticSearch ? kPrimary : null,
             ),
           ),
           SliverPadding(
@@ -823,13 +475,13 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                 mainAxisSpacing: 2,
               ),
               delegate: SliverChildBuilderDelegate((ctx, i) {
-                final listing = _listingResults[i];
+                final listing = state.listingResults[i];
                 return _ListingTile(
                   listing: listing,
                   onTap: () {
                     final id = listing['id'] as int?;
                     final ownerId = (listing['user'] as Map?)?['id'] as int?;
-                    if (id != null && _isLoggedIn) {
+                    if (id != null && state.isLoggedIn) {
                       _trackInteraction(id, ownerId);
                     }
                     AnalyticsService.trackEvent('search_result_tap', {
@@ -845,7 +497,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                     );
                   },
                 );
-              }, childCount: _listingResults.length),
+              }, childCount: state.listingResults.length),
             ),
           ),
         ],
@@ -865,14 +517,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _streamResults.length,
+                itemCount: state.streamResults.length,
                 itemBuilder: (_, i) => _StreamCard(
-                  stream: _streamResults[i],
+                  stream: state.streamResults[i],
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => SwipeLiveScreen.single(
-                        streamId: _streamResults[i].id,
+                        streamId: state.streamResults[i].id,
                       ),
                     ),
                   ),
@@ -887,19 +539,21 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildExplore(TranslationPack loc) {
-    if (_exploreLoading) {
+  Widget _buildExplore(TranslationPack loc, SearchState state) {
+    if (state.exploreLoading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
     return RefreshIndicator(
       color: kPrimary,
-      onRefresh: _loadExplore,
+      onRefresh: () async {
+        ref.read(searchViewModelProvider.notifier).refreshExplore(bypassCache: true);
+      },
       child: CustomScrollView(
         controller: _scrollCtrl,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           // ── Canlı Yayınlar ────────────────────────────────────────
-          if (_exploreStreams.isNotEmpty) ...[
+          if (state.exploreStreams.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -928,14 +582,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _exploreStreams.length,
+                  itemCount: state.exploreStreams.length,
                   itemBuilder: (_, i) => _StreamCard(
-                    stream: _exploreStreams[i],
+                    stream: state.exploreStreams[i],
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => SwipeLiveScreen.single(
-                          streamId: _exploreStreams[i].id,
+                          streamId: state.exploreStreams[i].id,
                         ),
                       ),
                     ),
@@ -945,7 +599,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ],
           // ── Önerilen Yayıncılar ────────────────────────────────
-          if (_suggestedStreamers.isNotEmpty) ...[
+          if (state.suggestedStreamers.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -974,17 +628,17 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _suggestedStreamers.length,
+                  itemCount: state.suggestedStreamers.length,
                   itemBuilder: (ctx, i) => StreamerAvatarCard(
-                    streamer: _suggestedStreamers[i],
+                    streamer: state.suggestedStreamers[i],
                     onTap: () => Navigator.push(
                       ctx,
                       MaterialPageRoute(
                         builder: (_) => PublicProfileScreen(
                           username:
-                              _suggestedStreamers[i]['username'] as String? ??
+                              state.suggestedStreamers[i]['username'] as String? ??
                               '',
-                          userId: _suggestedStreamers[i]['id'] as int?,
+                          userId: state.suggestedStreamers[i]['id'] as int?,
                         ),
                       ),
                     ),
@@ -995,7 +649,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           ],
 
           // ── Önerilen Satıcılar ─────────────────────────────────
-          if (_suggestedSellers.isNotEmpty) ...[
+          if (state.suggestedSellers.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -1020,16 +674,16 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _suggestedSellers.length,
+                  itemCount: state.suggestedSellers.length,
                   itemBuilder: (ctx, i) => SellerAvatarCard(
-                    seller: _suggestedSellers[i],
+                    seller: state.suggestedSellers[i],
                     onTap: () => Navigator.push(
                       ctx,
                       MaterialPageRoute(
                         builder: (_) => PublicProfileScreen(
                           username:
-                              _suggestedSellers[i]['username'] as String? ?? '',
-                          userId: _suggestedSellers[i]['id'] as int?,
+                              state.suggestedSellers[i]['username'] as String? ?? '',
+                          userId: state.suggestedSellers[i]['id'] as int?,
                         ),
                       ),
                     ),
@@ -1040,8 +694,8 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           ],
 
           // ── Sana Özel / Sizin İçin Seçilen İlanlar ──────────────────────────────
-          if (_exploreListings.isNotEmpty ||
-              (_exploreLoading && _isLoggedIn)) ...[
+          if (state.exploreListings.isNotEmpty ||
+              (state.exploreLoading && state.isLoggedIn)) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -1050,14 +704,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                     const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      _isLoggedIn ? loc.t("forYouLabel") : loc.t("listingsSelectedForYou"),
+                      state.isLoggedIn ? loc.t("forYouLabel") : loc.t("listingsSelectedForYou"),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
                     const Spacer(),
-                    if (_forYouLoadingMore)
+                    if (state.forYouLoadingMore)
                       const SizedBox(
                         width: 14,
                         height: 14,
@@ -1071,7 +725,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
             SliverToBoxAdapter(
-              child: _exploreLoading && _exploreListings.isEmpty
+              child: state.exploreLoading && state.exploreListings.isEmpty
                   ? SizedBox(
                       height: 190,
                       child: ListView.builder(
@@ -1089,7 +743,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                         ),
                       ),
                     )
-                  : _exploreListings.isEmpty
+                  : state.exploreListings.isEmpty
                   ? const SizedBox.shrink()
                   : SizedBox(
                       height: 190,
@@ -1098,10 +752,10 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount:
-                            _exploreListings.length +
-                            (_forYouLoadingMore ? 1 : 0),
+                            state.exploreListings.length +
+                            (state.forYouLoadingMore ? 1 : 0),
                         itemBuilder: (ctx, i) {
-                          if (i == _exploreListings.length) {
+                          if (i == state.exploreListings.length) {
                             return const SizedBox(
                               width: 60,
                               child: Center(
@@ -1116,12 +770,12 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                             );
                           }
                           final listing =
-                              _exploreListings[i] as Map<String, dynamic>;
+                              state.exploreListings[i] as Map<String, dynamic>;
                           return _HorizontalListingCard(
                             listing: listing,
                             onLongPress: () {
                               final id = listing['id'] as int?;
-                              if (id != null && _isLoggedIn) {
+                              if (id != null && state.isLoggedIn) {
                                 _showNotInterestedMenu(id, 'for_you');
                               }
                             },
@@ -1129,7 +783,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                               final id = listing['id'] as int?;
                               final ownerId =
                                   (listing['user'] as Map?)?['id'] as int?;
-                              if (id != null && _isLoggedIn) {
+                              if (id != null && state.isLoggedIn) {
                                 _trackInteraction(id, ownerId);
                               }
                               if (listing['is_highlight'] == true) {
@@ -1167,7 +821,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           ],
 
           // ── Sizin İçin Seçilen İlanlar (login, /api/listings) ─────────────────
-          if (_isLoggedIn && _recentListings.isNotEmpty) ...[
+          if (state.isLoggedIn && state.recentListings.isNotEmpty) ...[
             const SliverToBoxAdapter(
               child: Divider(height: 1, indent: 16, endIndent: 16),
             ),
@@ -1202,12 +856,12 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                   mainAxisSpacing: 2,
                 ),
                 delegate: SliverChildBuilderDelegate((ctx, i) {
-                  final listing = _recentListings[i] as Map<String, dynamic>;
+                  final listing = state.recentListings[i] as Map<String, dynamic>;
                   return _ListingTile(
                     listing: listing,
                     onLongPress: () {
                       final id = listing['id'] as int?;
-                      if (id != null && _isLoggedIn) {
+                      if (id != null && state.isLoggedIn) {
                         _showNotInterestedMenu(id, 'recent');
                       }
                     },
@@ -1218,10 +872,10 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                     ),
                   );
-                }, childCount: _recentListings.length),
+                }, childCount: state.recentListings.length),
               ),
             ),
-            if (_recentLoadingMore)
+            if (state.recentLoadingMore)
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
@@ -1237,14 +891,14 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           ],
 
           // ── Boş durum ────────────────────────────────────────────
-          if (!_exploreLoading &&
-              _exploreStreams.isEmpty &&
-              _exploreListings.isEmpty &&
-              _recentListings.isEmpty)
+          if (!state.exploreLoading &&
+              state.exploreStreams.isEmpty &&
+              state.exploreListings.isEmpty &&
+              state.recentListings.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
-              child: _exploreNetworkError
-                  ? NetworkErrorWidget(onRetry: () => _loadExplore(bypassCache: true))
+              child: state.exploreNetworkError
+                  ? NetworkErrorWidget(onRetry: () => ref.read(searchViewModelProvider.notifier).refreshExplore(bypassCache: true))
                   : Center(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -1252,7 +906,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _isLoggedIn
+                              state.isLoggedIn
                                   ? Icons.auto_awesome_outlined
                                   : Icons.explore_outlined,
                               size: 56,
@@ -1260,7 +914,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              _isLoggedIn
+                              state.isLoggedIn
                                   ? loc.t("explorePersonalizedHint")
                                   : loc.t("searchNoContent"),
                               textAlign: TextAlign.center,
@@ -1271,9 +925,9 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                     ),
             ),
-          if (!_exploreLoading && _exploreNetworkError &&
-              (_exploreListings.isNotEmpty || _recentListings.isNotEmpty))
-            SliverToBoxAdapter(child: StaleDataBanner(onRetry: () => _loadExplore(bypassCache: true))),
+          if (!state.exploreLoading && state.exploreNetworkError &&
+              (state.exploreListings.isNotEmpty || state.recentListings.isNotEmpty))
+            SliverToBoxAdapter(child: StaleDataBanner(onRetry: () => ref.read(searchViewModelProvider.notifier).refreshExplore(bypassCache: true))),
         ],
       ),
     );

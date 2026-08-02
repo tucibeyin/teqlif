@@ -62,6 +62,7 @@ import '../models/enums.dart';
 import 'faq_screen.dart';
 import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'viewmodels/profile_view_model.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -71,216 +72,28 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class ProfileScreenState extends ConsumerState<ProfileScreen> {
-  Map<String, dynamic>? _user;
-  List<dynamic> _listings = [];
-  bool _loading = true;
-  bool _listingsError = false;
-  bool _purchasesLoading = false;
-  int? _tuciBalance;
-  List<dynamic> _tuciHistory = [];
   final _websiteGuard = OnceGuard(); // Çift tıklama engeli
-
-  // ── Arama & kategori filtresi ─────────────────────────────────────────────
-  ListingFilterState _filter = const ListingFilterState();
-
-  List<dynamic> get _filteredListings {
-    var r = _listings;
-    if (_filter.category != null && _filter.category!.isNotEmpty) {
-      r = r.where((l) => l['category'] == _filter.category).toList();
-    }
-    if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
-      r = r.where((l) => l['subcategory'] == _filter.subcategory).toList();
-    }
-    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-      final q = _filter.searchQuery!.toLowerCase();
-      r = r.where((l) {
-        final title = (l['title'] as String? ?? '').toLowerCase();
-        final desc = (l['description'] as String? ?? '').toLowerCase();
-        return title.contains(q) || desc.contains(q);
-      }).toList();
-    }
-    if (_filter.dateFrom != null && _filter.dateTo != null) {
-      final start = _filter.dateFrom!;
-      final end = _filter.dateTo!.add(const Duration(days: 1));
-      r = r.where((l) {
-        final dateStr = l['created_at'] as String?;
-        if (dateStr == null) return true;
-        final date = DateTime.tryParse(dateStr);
-        if (date == null) return true;
-        return !date.isBefore(start) && date.isBefore(end);
-      }).toList();
-    }
-    return r;
-  }
-
-  /// Aktif stream aboneliklerinin takibi — dispose'da iptal edilir.
-  final List<StreamSubscription<dynamic>> _subs = [];
 
   @override
   void initState() {
     super.initState();
-    _load();
+    // Load is handled inside build of view model automatically
   }
 
-  void refresh({bool bypassCache = false}) => _load(bypassCache: bypassCache);
+  void refresh({bool bypassCache = false}) {
+    ref.read(profileViewModelProvider.notifier).load(bypassCache: bypassCache);
+  }
 
   @override
   void dispose() {
-    for (final sub in _subs) {
-      sub.cancel();
-    }
     super.dispose();
   }
 
-  Future<void> _loadPurchases() async {
-    if (_purchasesLoading) return;
-    if (mounted) setState(() => _purchasesLoading = true);
-    try {
-      final token = await StorageService.getToken();
-      await http.get(
-        Uri.parse('$kBaseUrl/auth/me/purchases'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-    } catch (_) {
-      // sessizce geç
-    } finally {
-      if (mounted) setState(() => _purchasesLoading = false);
-    }
-  }
-
-  /// Cüzdan bakiyesi için hafif yenileme (wallet butonuna basıldığında).
   Future<void> _loadWallet({bool bypassCache = false}) async {
-    await for (final data in WalletService.getBalanceStream(
-      bypassCache: bypassCache,
-    )) {
-      if (!mounted) return;
-      setState(() {
-        _tuciBalance = data['balance'] as int?;
-        _tuciHistory = data['transactions'] as List? ?? [];
-      });
-    }
+    await ref.read(profileViewModelProvider.notifier).loadWallet(bypassCache: bypassCache);
   }
 
-  /// SWR paralel yükleme: profil, ilanlar ve cüzdan aynı anda başlar.
-  /// Her stream hem Hive cache'ten (anlık) hem API'den (taze) emit eder.
-  /// [bypassCache]: pull-to-refresh için cache okumayı atlar, cache'i ezar.
-  Future<void> _load({bool bypassCache = false}) async {
-    // Önceki abonelikleri iptal et (tekrarlı _load çağrıları için)
-    for (final sub in _subs) {
-      sub.cancel();
-    }
-    _subs.clear();
 
-    // Kimlik bilgisi: güvenli depodan al (hızlı, bir kez)
-    final localInfo = await StorageService.getUserInfo();
-    final username = localInfo?['username'] as String?;
-    final userId = localInfo?['id'] as int?;
-
-    if (!mounted) return;
-    // Güvenli depodan temel bilgileri anında göster (cache gelene kadar).
-    // Avatar URL'si memory'den senkron eklenir — boş avatar gösterilmez.
-    if (_user == null && localInfo != null) {
-      final avatarUrl = StorageService.cachedAvatarUrl;
-      if (avatarUrl != null) localInfo['profile_image_url'] = avatarUrl;
-      setState(() {
-        _user = localInfo;
-        _loading = true;
-      });
-    }
-
-    if (username == null || userId == null) {
-      setState(() => _loading = false);
-      return;
-    }
-
-    // Her stream bağımsız çalışır — UI her event'te güncellenir
-    _subs.add(
-      // ── Profil (cache: user_profile_data) ────────────────────────────────
-      ApiService.get<Map<String, dynamic>>(
-        url: '$kBaseUrl/users/$username',
-        cacheKey: StorageService.cacheProfile,
-        cacheTtl: const Duration(minutes: 10),
-        bypassCache: bypassCache,
-        fromJson: (raw) => Map<String, dynamic>.from(raw as Map),
-      ).listen(
-        (user) {
-          // Avatar URL'yi kalıcı kaydet — sonraki açılışta anında gösterilir
-          final avatarUrl = user['profile_image_url'] as String?;
-          if (avatarUrl != null && avatarUrl.isNotEmpty) {
-            StorageService.saveAvatarUrl(avatarUrl);
-          }
-
-          // Profil bilgisi güncellenince is_premium dahil tüm bilgileri locale kaydet.
-          // /users/{username} endpoint'i email döndurmüyor, localInfo'dan alıyoruz.
-          StorageService.saveUserInfo(
-            id: user['id'] as int? ?? userId,
-            email: localInfo?['email'] as String? ?? '',
-            username: user['username'] as String? ?? username,
-            fullName: user['full_name'] as String? ?? '',
-            isPremium: user['is_premium'] == true,
-            onboardingCompleted: user['onboarding_completed'] == true,
-            isVerified: user['is_verified'] == true,
-            phoneVerified: user['phone_verified'] == true,
-          );
-
-          if (mounted)
-            setState(() {
-              _user = user;
-              _loading = false;
-            });
-        },
-        onError: (e) {
-          LoggerService.instance.warning(
-            'ProfileScreen',
-            'Profil yüklenemedi: $e',
-          );
-          if (mounted) setState(() => _loading = false);
-        },
-      ),
-    );
-
-    _subs.add(
-      // ── İlanlar (cache: user_listings_data) ──────────────────────────────
-      ApiService.get<List<dynamic>>(
-        url: '$kBaseUrl/listings/my?limit=1000',
-        cacheKey: StorageService.cacheUserListings,
-        cacheTtl: const Duration(minutes: 5),
-        bypassCache: bypassCache,
-        fromJson: (raw) => raw as List,
-      ).listen(
-        (listings) {
-          if (mounted)
-            setState(() {
-              _listings = listings;
-              _loading = false;
-              _listingsError = false;
-            });
-        },
-        onError: (_) {
-          if (mounted)
-            setState(() {
-              _loading = false;
-              _listingsError = true;
-            });
-        },
-      ),
-    );
-
-    // ── Satın alma geçmişi (fire-and-forget ilk açılışta) ────────────────
-    _loadPurchases();
-
-    _subs.add(
-      // ── Cüzdan (cache: user_wallet_data) ─────────────────────────────────
-      WalletService.getBalanceStream(bypassCache: bypassCache).listen((wallet) {
-        if (mounted) {
-          setState(() {
-            _tuciBalance = wallet['balance'] as int?;
-            _tuciHistory = wallet['transactions'] as List? ?? [];
-          });
-        }
-      }),
-    );
-  }
 
   String _buildImageUrl(String url) {
     if (url.startsWith('http')) return url;
@@ -313,17 +126,21 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _openSettings() {
+  void _openSettings(Map<String, dynamic>? user) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => _SettingsScreen(user: _user)),
+      MaterialPageRoute(builder: (_) => _SettingsScreen(user: user)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final stateAsync = ref.watch(profileViewModelProvider);
+    final state = stateAsync.value ?? const ProfileUiState();
+    final user = state.user;
+
     // Yerel önbellekte hiç veri yoksa (ilk kurulum) tam ekran spinner
-    if (_loading && _user == null) {
+    if (state.loading && user == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: kPrimary)),
       );
@@ -331,12 +148,12 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     final loc = ref.watch(localizationProvider);
     final fullName =
-        _user?['full_name'] ??
-        _user?['username'] ??
+        user?['full_name'] ??
+        user?['username'] ??
         loc.t('defaultUserFallback');
-    final username = _user?['username'] ?? '';
-    final email = _user?['email'] ?? '';
-    final isVerified = _user?['is_verified'] == true;
+    final username = user?['username'] ?? '';
+    final email = user?['email'] ?? '';
+    final isVerified = user?['is_verified'] == true;
 
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
 
@@ -459,8 +276,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => WalletScreen(
-                    initialBalance: _tuciBalance,
-                    initialHistory: _tuciHistory,
+                    initialBalance: state.tuciBalance,
+                    initialHistory: state.tuciHistory,
                   ),
                 ),
               );
@@ -476,9 +293,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // Settings ikonu ile aynı toplam yükseklikte kalsın
                   SizedBox(
                     height: 11,
-                    child: _tuciBalance != null
+                    child: state.tuciBalance != null
                         ? Text(
-                            '$_tuciBalance T',
+                            '${state.tuciBalance} T',
                             style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
@@ -495,7 +312,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           // Ayarlar — cüzdanla özdeş Column yapısı, alt SizedBox hizayı korur
           GestureDetector(
             key: const Key('profile_btn_ayarlar'),
-            onTap: _openSettings,
+            onTap: () => _openSettings(user),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(6, 0, 12, 0),
               child: Column(
@@ -512,7 +329,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       body: RefreshIndicator(
         color: kPrimary,
-        onRefresh: () => _load(bypassCache: true),
+        onRefresh: () async => ref.read(profileViewModelProvider.notifier).load(bypassCache: true),
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
@@ -530,11 +347,11 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                           children: [
                             _buildAvatar(
                               imageUrl:
-                                  (_user?['profile_image_url'] as String?)
+                                  (user?['profile_image_url'] as String?)
                                           ?.isNotEmpty ==
                                       true
                                   ? _buildImageUrl(
-                                      _user!['profile_image_url'] as String,
+                                      user!['profile_image_url'] as String,
                                     )
                                   : null,
                               radius: 40,
@@ -547,7 +364,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (_user?['is_premium'] == true)
+                            if (user?['is_premium'] == true)
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -582,17 +399,17 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               _StatItem(
-                                count: _listings.length,
+                                count: state.listings.length,
                                 label: loc.t("profileListingCount"),
                               ),
                               GestureDetector(
                                 key: const Key('profile_stat_takipci'),
-                                onTap: _user?['id'] != null
+                                onTap: user?['id'] != null
                                     ? () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (_) => FollowListScreen(
-                                            userId: _user!['id'] as int,
+                                            userId: user!['id'] as int,
                                             type: FollowListType.followers,
                                             title: loc.t("profileFollowersList"),
                                           ),
@@ -601,18 +418,18 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     : null,
                                 child: _StatItem(
                                   count:
-                                      (_user?['follower_count'] as int?) ?? 0,
+                                      (user?['follower_count'] as int?) ?? 0,
                                   label: loc.t("profileFollowers"),
                                 ),
                               ),
                               GestureDetector(
                                 key: const Key('profile_stat_takip'),
-                                onTap: _user?['id'] != null
+                                onTap: user?['id'] != null
                                     ? () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (_) => FollowListScreen(
-                                            userId: _user!['id'] as int,
+                                            userId: user!['id'] as int,
                                             type: FollowListType.following,
                                             title: loc.t("profileFollowingList"),
                                           ),
@@ -621,7 +438,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     : null,
                                 child: _StatItem(
                                   count:
-                                      (_user?['following_count'] as int?) ?? 0,
+                                      (user?['following_count'] as int?) ?? 0,
                                   label: loc.t("profileFollowing"),
                                 ),
                               ),
@@ -646,22 +463,22 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            if (_user?['influence_rank'] != null &&
-                                (_user!['influence_rank'] as int) > 0) ...[
+                            if (user?['influence_rank'] != null &&
+                                (user!['influence_rank'] as int) > 0) ...[
                               const SizedBox(width: 6),
                               _ScoreBadge(
                                 icon: FontAwesomeIcons.rankingStar,
                                 title: loc.t("influenceRankLabel"),
-                                value: '${_user!['influence_rank']}',
+                                value: '${user!['influence_rank']}',
                                 hint: loc.t("influenceRankHint"),
                                 color: const Color(0xFF8B5CF6),
                               ),
                             ],
-                            if (_user?['trust_score'] != null) ...[
+                            if (user?['trust_score'] != null) ...[
                               const SizedBox(width: 6),
                               Builder(
                                 builder: (ctx) {
-                                  final ts = (_user!['trust_score'] as num)
+                                  final ts = (user!['trust_score'] as num)
                                       .toInt();
                                   return _ScoreBadge(
                                     icon: FontAwesomeIcons.shieldHalved,
@@ -687,10 +504,10 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               color: AppColors.textTertiary(context),
                             ),
                           ),
-                        if ((_user?['bio'] as String?)?.isNotEmpty == true) ...[
+                        if ((user?['bio'] as String?)?.isNotEmpty == true) ...[
                           const SizedBox(height: 6),
                           Text(
-                            _user!['bio'] as String,
+                            user!['bio'] as String,
                             style: TextStyle(
                               fontSize: 13,
                               color: AppColors.textSecondary(context),
@@ -698,12 +515,12 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           ),
                         ],
-                        if ((_user?['website_url'] as String?)?.isNotEmpty ==
+                        if ((user?['website_url'] as String?)?.isNotEmpty ==
                             true) ...[
                           const SizedBox(height: 4),
                           GestureDetector(
                             onTap: () => _websiteGuard.run(() async {
-                              final raw = _user!['website_url'] as String;
+                              final raw = user!['website_url'] as String;
                               final uri = Uri.tryParse(raw);
                               if (uri != null && await canLaunchUrl(uri)) {
                                 launchUrl(
@@ -723,7 +540,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 const SizedBox(width: 3),
                                 Flexible(
                                   child: Text(
-                                    (_user!['website_url'] as String)
+                                    (user!['website_url'] as String)
                                         .replaceFirst(
                                           RegExp(r'^https?://'),
                                           '',
@@ -742,8 +559,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                         const SizedBox(height: 10),
                         _SocialLinksRow(
-                          user: _user,
-                          userId: _user?['id'] as int?,
+                          user: user,
+                          userId: user?['id'] as int?,
                         ),
                       ],
                     ),
@@ -758,9 +575,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => _EditProfileScreen(user: _user),
+                          builder: (_) => _EditProfileScreen(user: user),
                         ),
-                      ).then((_) => _load(bypassCache: true)),
+                      ).then((_) => ref.read(profileViewModelProvider.notifier).load(bypassCache: true)),
                     ),
                   ),
                   // Separator
@@ -770,20 +587,20 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
 
             // ── Stale veri uyarısı ──
-            if (_listingsError && _listings.isNotEmpty)
+            if (state.listingsError && state.listings.isNotEmpty)
               SliverToBoxAdapter(
-                child: StaleDataBanner(onRetry: () => _load(bypassCache: true)),
+                child: StaleDataBanner(onRetry: () => ref.read(profileViewModelProvider.notifier).load(bypassCache: true)),
               ),
 
             // ── Arama & Kategori filtresi ──
-            if (!_loading || _listings.isNotEmpty)
+            if (!state.loading || state.listings.isNotEmpty)
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TeqFilterBar(
-                      filter: _filter,
-                      onChanged: (f) => setState(() => _filter = f),
+                      filter: state.filter,
+                      onChanged: (f) => ref.read(profileViewModelProvider.notifier).updateFilter(f),
                       showSubcategory: true,
                       showCity: false,
                       showCondition: false,
@@ -795,7 +612,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
 
             // ── İlanlar grid ──
-            if (_loading)
+            if (state.loading)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 sliver: SliverGrid(
@@ -811,15 +628,15 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
               )
-            else if (_listingsError && _listings.isEmpty)
+            else if (state.listingsError && state.listings.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: NetworkErrorWidget(
                   scrollable: true,
-                  onRetry: () => _load(bypassCache: true),
+                  onRetry: () => ref.read(profileViewModelProvider.notifier).load(bypassCache: true),
                 ),
               )
-            else if (_listings.isEmpty)
+            else if (state.listings.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Builder(
@@ -861,7 +678,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   },
                 ),
               )
-            else if (_filteredListings.isEmpty)
+            else if (state.filteredListings.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Builder(
@@ -896,10 +713,10 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
               SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (ctx, i) => _ListingGridItem(
-                    key: Key('profile_listing_${_filteredListings[i]['id']}'),
-                    listing: _filteredListings[i],
+                    key: Key('profile_listing_${state.filteredListings[i]['id']}'),
+                    listing: state.filteredListings[i],
                   ),
-                  childCount: _filteredListings.length,
+                  childCount: state.filteredListings.length,
                 ),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,

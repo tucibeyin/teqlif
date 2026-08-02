@@ -33,6 +33,7 @@ import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
+import 'viewmodels/home_view_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -42,33 +43,18 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class HomeScreenState extends ConsumerState<HomeScreen> {
-  void refresh({bool bypassCache = true}) => _load(bypassCache: bypassCache);
-  // En Son Eklenenler — dikey grid, sonsuz scroll
-  List<dynamic> _recentListings = [];
-  bool _recentLoading = true;
-  bool _recentLoadingMore = false;
-  bool _recentExhausted = false;
-  int _recentPage = 0;
+  void refresh({bool bypassCache = true}) => ref.read(homeViewModelProvider.notifier).refresh(bypassCache: bypassCache);
 
-  // "Geri Bak" — tereddüt edilip teklif gönderilmeyen ilanlar
-  List<dynamic> _hesitatedListings = [];
-  bool _hesitatedLoading = false;
-
-  // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
-  bool _networkError = false;
-  ListingFilterState _filter = const ListingFilterState();
   final ScrollController _scrollCtrl = ScrollController();
 
   bool _showOnboardingBanner = false;
   final _bannerGuard = OnceGuard();
 
-  bool get _hasFilter => !_filter.isEmpty;
-
   @override
   void initState() {
     super.initState();
-    _load();
+    _checkAuthAndOnboarding();
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -81,18 +67,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
         _scrollCtrl.position.maxScrollExtent - 300) {
-      _loadMoreRecent();
+      ref.read(homeViewModelProvider.notifier).loadMore();
     }
   }
 
-  // ── Ana yükleme ────────────────────────────────────────────────────────────
-
-  /// [bypassCache]: pull-to-refresh'te true — Hive okuma atlanır, cache ezilir.
-  Future<void> _load({bool bypassCache = false}) async {
-    _networkError = false;
-    _recentPage = 0;
-    _recentExhausted = false;
-
+  Future<void> _checkAuthAndOnboarding() async {
     final token = await StorageService.getToken();
     final loggedIn = token != null;
     if (mounted) setState(() => _isLoggedIn = loggedIn);
@@ -102,7 +81,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       final prefs = await SharedPreferences.getInstance();
 
       if (userInfo == null) {
-        // Profil henüz yüklenemediyse banner'ı gösterme
         if (mounted) setState(() => _showOnboardingBanner = false);
       } else {
         final done =
@@ -112,174 +90,23 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
       }
     }
-
-    if (_hasFilter) {
-      await _loadFiltered(token);
-    } else {
-      // Paralel yükleme: ForYou beklenmeden arka planda başlar
-      await _loadRecent(token, bypassCache: bypassCache);
-      if (loggedIn) _loadHesitated(bypassCache: bypassCache);
-    }
-  }
-
-  void _loadHesitated({bool bypassCache = false}) {
-    if (mounted) setState(() => _hesitatedLoading = true);
-    ApiService.get<List<dynamic>>(
-      url: '$kBaseUrl/feed/hesitated',
-      cacheKey: 'feed_hesitated',
-      cacheTtl: const Duration(minutes: 15),
-      bypassCache: bypassCache,
-      fromJson: (raw) => raw as List,
-    ).listen(
-      (data) {
-        if (mounted) setState(() {
-          _hesitatedListings = data;
-          _hesitatedLoading = false;
-        });
-      },
-      onError: (e) {
-        if (mounted) {
-          setState(() => _hesitatedLoading = false);
-          handleError(e, ref.read(localizationProvider));
-        }
-      },
-    );
-  }
-
-  // ── En Son Eklenenler (dikey grid, /api/listings) ─────────────────────────
-
-  /// SWR stream: filtre yoksa Hive cache önce, sonra API. Filtre varsa her zaman API.
-  Future<void> _loadRecent(String? token, {bool bypassCache = false}) async {
-    if (!mounted) return;
-    setState(() {
-      _recentLoading = true;
-      _recentListings = [];
-    });
-    try {
-      await for (final listings in ApiService.get<List<dynamic>>(
-        url: '$kBaseUrl/feed/recent',
-        cacheKey: _hasFilter ? null : 'home_feed_recent',
-        cacheTtl: const Duration(minutes: 5),
-        bypassCache: bypassCache,
-        fromJson: (raw) => raw as List,
-      )) {
-        if (!mounted) return;
-        setState(() {
-          _recentListings = listings;
-          _recentLoading = false;
-          _recentPage = 1;
-        });
-      }
-    } catch (e) {
-      debugPrint('[HomeScreen] _loadRecent: $e');
-      if (!mounted) return;
-      setState(() {
-        _networkError = true;
-        _recentLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadMoreRecent() async {
-    if (_recentLoadingMore || _recentExhausted || _hasFilter) return;
-    setState(() => _recentLoadingMore = true);
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/recent?page=$_recentPage'),
-        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final more = jsonDecode(resp.body) as List;
-        if (more.isEmpty) {
-          setState(() {
-            _recentExhausted = true;
-            _recentLoadingMore = false;
-          });
-        } else {
-          setState(() {
-            _recentListings = [..._recentListings, ...more];
-            _recentPage++;
-            _recentLoadingMore = false;
-          });
-        }
-      } else {
-        setState(() => _recentLoadingMore = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _recentLoadingMore = false);
-    }
-  }
-
-  // ── Filtrelenmiş sonuçlar ──────────────────────────────────────────────────
-
-  Future<void> _loadFiltered(String? token) async {
-    if (!mounted) return;
-    setState(() {
-      _recentLoading = true;
-      _recentListings = [];
-    });
-    try {
-      final params = <String, String>{};
-      if (_filter.category != null) params['category'] = _filter.category!;
-      if (_filter.subcategory != null) params['subcategory'] = _filter.subcategory!;
-      if (_filter.city != null) params['location'] = _filter.city!;
-      if (_filter.condition != null) params['condition'] = _filter.condition!;
-      if (_filter.sortBy != null) params['sort_by'] = _filter.sortBy!;
-      if (_filter.minPrice != null) params['min_price'] = _filter.minPrice!.toStringAsFixed(0);
-      if (_filter.maxPrice != null) params['max_price'] = _filter.maxPrice!.toStringAsFixed(0);
-      if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-        params['q'] = _filter.searchQuery!;
-      }
-      if (_filter.dateFrom != null) {
-        params['date_from'] = _filter.dateFrom!.toIso8601String().substring(0, 10);
-      }
-      if (_filter.dateTo != null) {
-        params['date_to'] = _filter.dateTo!.toIso8601String().substring(0, 10);
-      }
-      final uri = Uri.parse(
-        '$kBaseUrl/listings',
-      ).replace(queryParameters: params);
-      final resp = await http.get(
-        uri,
-        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        setState(() {
-          _recentListings = jsonDecode(resp.body) as List;
-          _recentLoading = false;
-        });
-      } else {
-        setState(() {
-          _recentLoading = false;
-        });
-        handleError(Exception('API error: ${resp.statusCode}'), ref.read(localizationProvider));
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _recentLoading = false);
-        handleError(e, ref.read(localizationProvider));
-      }
-    }
   }
 
   void _clearAll() {
-    setState(() {
-      _filter = const ListingFilterState();
-    });
-    _load();
+    ref.read(homeViewModelProvider.notifier).clearFilters();
   }
 
-  String _filteredHeader(TranslationPack loc) {
-    if (_recentLoading) return loc.t("homeSearchingHeader");
-    return loc.t("homeResultsCount", {'count': _recentListings.length.toString()});
+  String _filteredHeader(TranslationPack loc, HomeState state) {
+    if (state.isLoading) return loc.t("homeSearchingHeader");
+    return loc.t("homeResultsCount", {'count': state.recentListings.length.toString()});
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final homeStateAsync = ref.watch(homeViewModelProvider);
+    final state = homeStateAsync.value ?? const HomeState();
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -328,16 +155,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           // ── Filtre bar ───────────────────────────────────
           TeqFilterBar(
-            filter: _filter,
+            filter: state.filter,
             onChanged: (f) {
-              setState(() => _filter = f);
-              if (!f.isEmpty) {
-                AnalyticsService.trackEvent('filter_applied', {
-                  if (f.category != null) 'category': f.category!,
-                  'source': 'home',
-                });
-              }
-              _load();
+              ref.read(homeViewModelProvider.notifier).applyFilter(f);
             },
             showCategory: true,
             showSubcategory: true,
@@ -350,7 +170,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
           // ── İLAN LİSTESİ (SADECE BURASI KAYACAK) ────────────────
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () => _load(bypassCache: true),
+              onRefresh: () => ref.read(homeViewModelProvider.notifier).refresh(bypassCache: true),
               child: CustomScrollView(
                 controller: _scrollCtrl,
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -358,12 +178,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   // ══════════════════════════════════════════════════════════
                   // FİLTRE MODU: sadece filtrelenmiş grid
                   // ══════════════════════════════════════════════════════════
-                  if (_hasFilter) ...[
+                  if (state.hasFilter) ...[
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         child: Text(
-                          _filteredHeader(loc),
+                          _filteredHeader(loc, state),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -371,7 +191,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
-                    if (_recentLoading)
+                    if (state.isLoading)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
                         sliver: SliverGrid(
@@ -388,7 +208,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                       )
-                    else if (_recentListings.isEmpty)
+                    else if (state.recentListings.isEmpty)
                       SliverFillRemaining(
                         child: Center(
                           child: Column(
@@ -429,15 +249,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           delegate: SliverChildBuilderDelegate(
                             (ctx, i) => _GridItem(
                               key: Key(
-                                'home_listing_filtered_${_recentListings[i]['id']}',
+                                'home_listing_filtered_${state.recentListings[i]['id']}',
                               ),
-                              listing: _recentListings[i],
-                              onRemove: () =>
-                                  setState(() => _recentListings.removeAt(i)),
+                              listing: state.recentListings[i],
+                              onRemove: () => ref.read(homeViewModelProvider.notifier).removeRecent(i),
                               onTap: () {
-                                if (_recentListings[i]['is_sponsored'] ==
+                                if (state.recentListings[i]['is_sponsored'] ==
                                     true) {
-                                  final cid = _recentListings[i]['campaign_id'];
+                                  final cid = state.recentListings[i]['campaign_id'];
                                   if (cid != null) {
                                     AnalyticsService.trackAdClick(cid as int);
                                   }
@@ -447,14 +266,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                   MaterialPageRoute(
                                     builder: (_) => ListingDetailScreen(
                                       listing: Map<String, dynamic>.from(
-                                        _recentListings[i],
+                                        state.recentListings[i],
                                       ),
                                     ),
                                   ),
                                 );
                               },
                             ),
-                            childCount: _recentListings.length,
+                            childCount: state.recentListings.length,
                           ),
                         ),
                       ),
@@ -463,9 +282,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   // ══════════════════════════════════════════════════════════
                   // NORMAL MOD: Sana Özel (yatay) + En Son (dikey grid)
                   // ══════════════════════════════════════════════════════════
-                  if (!_hasFilter) ...[
+                  if (!state.hasFilter) ...[
                     // ── Geri Bak shelf ────────────────────────────────────
-                    if (_hesitatedLoading || _hesitatedListings.isNotEmpty)
+                    if (state.isHesitatedLoading || state.hesitatedListings.isNotEmpty)
                       SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +309,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             SizedBox(
                               height: 130,
-                              child: _hesitatedLoading
+                              child: state.isHesitatedLoading && state.hesitatedListings.isEmpty
                                   ? ListView.builder(
                                       scrollDirection: Axis.horizontal,
                                       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -506,9 +325,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                   : ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                                itemCount: _hesitatedListings.length,
+                                itemCount: state.hesitatedListings.length,
                                 itemBuilder: (ctx, i) {
-                                  final item = _hesitatedListings[i] as Map<String, dynamic>;
+                                  final item = state.hesitatedListings[i] as Map<String, dynamic>;
                                   final lid = item['id'] as int?;
                                   final raw = item['image_url'] as String?;
                                   final photo = raw != null ? imgUrl(raw) : null;
@@ -535,15 +354,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                     },
                                     onLongPress: () async {
                                       if (lid == null) return;
-                                      setState(() => _hesitatedListings.removeWhere(
-                                        (e) => (e as Map)['id'] == lid,
-                                      ));
-                                      final token = await StorageService.getToken();
-                                      final headers = await buildApiHeaders(token, json: true);
-                                      http.delete(
-                                        Uri.parse('$kBaseUrl/feed/hesitated/$lid'),
-                                        headers: headers,
-                                      );
+                                      ref.read(homeViewModelProvider.notifier).removeHesitated(lid);
                                       TeqToast.success(loc.t('hesitatedDismissed'));
                                     },
                                     child: Container(
@@ -659,7 +470,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
-                    if (_recentLoading && _recentListings.isEmpty)
+                    if (state.isLoading && state.recentListings.isEmpty)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
                         sliver: SliverGrid(
@@ -676,16 +487,16 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                       ),
-                    if (_networkError && _recentListings.isNotEmpty)
+                    if (state.hasError && state.recentListings.isNotEmpty)
                       SliverToBoxAdapter(
-                        child: StaleDataBanner(onRetry: _load),
+                        child: StaleDataBanner(onRetry: () => refresh(bypassCache: true)),
                       )
-                    else if (_networkError && _recentListings.isEmpty)
+                    else if (state.hasError && state.recentListings.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
-                        child: NetworkErrorWidget(onRetry: _load),
+                        child: NetworkErrorWidget(onRetry: () => refresh(bypassCache: true)),
                       )
-                    else if (_recentListings.isEmpty)
+                    else if (state.recentListings.isEmpty)
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.all(32),
@@ -710,13 +521,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           delegate: SliverChildBuilderDelegate(
                             (ctx, i) => _GridItem(
                               key: Key(
-                                'home_listing_item_${_recentListings[i]['id']}',
+                                'home_listing_item_${state.recentListings[i]['id']}',
                               ),
-                              listing: _recentListings[i],
-                              onRemove: () =>
-                                  setState(() => _recentListings.removeAt(i)),
+                              listing: state.recentListings[i],
+                              onRemove: () => ref.read(homeViewModelProvider.notifier).removeRecent(i),
                               onTap: () {
-                                final item = _recentListings[i];
+                                final item = state.recentListings[i];
                                 if (item['is_sponsored'] == true) {
                                   final cid = item['campaign_id'];
                                   if (cid != null) {
@@ -750,13 +560,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                 );
                               },
                             ),
-                            childCount: _recentListings.length,
+                            childCount: state.recentListings.length,
                           ),
                         ),
                       ),
 
                     // ── Sonsuz scroll yükleniyor göstergesi ───────────────
-                    if (_recentLoadingMore)
+                    if (state.isLoadingMore)
                       const SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.all(20),
