@@ -1703,6 +1703,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         }
                       }
                     },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1790,7 +1793,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 }
               },
             ),
-          ],
+          ),
+        ],
+      ),
+    ],
         ),
       ),
     );
