@@ -45,10 +45,10 @@ Her bir ekran için şu adımlar izlenmelidir:
 
 ### Canlı Yayın (Live & Story)
 - [ ] `mobile/lib/screens/live/host_stream_screen.dart`
-- [ ] `mobile/lib/screens/live/live_list_screen.dart`
-- [ ] `mobile/lib/screens/live/seller_report_screen.dart`
+- [x] `mobile/lib/screens/live/live_list_screen.dart`
+- [x] `mobile/lib/screens/live/seller_report_screen.dart`
 - [ ] `mobile/lib/screens/live/swipe_live_screen.dart`
-- [ ] `mobile/lib/screens/story/story_viewer_screen.dart`
+- [x] `mobile/lib/screens/story/story_viewer_screen.dart`
 
 ### Arama & İletişim (Call)
 - [ ] `mobile/lib/screens/call_history_screen.dart`

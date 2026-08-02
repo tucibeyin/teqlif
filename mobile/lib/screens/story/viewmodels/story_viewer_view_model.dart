@@ -57,7 +57,7 @@ class StoryViewerViewModel extends AsyncNotifier<StoryViewerState> {
   Future<StreamOut?> getActiveStreamForUser(int userId) async {
     try {
       final streams = await StreamService.getActiveStreams();
-      final idx = streams.indexWhere((s) => s.userId == userId);
+      final idx = streams.indexWhere((s) => s.host.id == userId);
       if (idx != -1) return streams[idx];
     } catch (e) {
       // Ignore
