@@ -65,7 +65,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | ✅ |
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | ✅ |
 | **Step 7** | `CallNotifAdapter` | Push layer izole | ✅ |
-| **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | 🔴 |
+| **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | ✅ |
 
 ---
 
