@@ -1786,3 +1786,17 @@ Flutter tarafında ek stale cleanup mekanizmasına gerek yoktur.
 - [x] **Bölüm 14** — Exception ve hata yönetimi stratejisi
 - [x] **Bölüm 15** — Hardware izin politikası (mic/kamera/Bluetooth — caller+callee, platform farkları, kalıcı red akışı)
 - [x] **Bölüm 16** — Resource management (3 faz modeli, timer/LK/audio/wakelock/kamera/crash cleanup, idempotency, iOS CallKit reason eşlemesi, backend ghost call cron §16.10)
+
+---
+
+## V3.0 Ertelenen Kapsam
+
+V2.0 refactoring cycle'ında bilinçli olarak kapsam dışı bırakılan konular ayrı bir dosyada kayıt altına alındı:
+
+**`documents/VoIP/V3.0/deferred.md`**
+
+Öne çıkan iki başlık:
+
+1. **`CallRoomAdapter` ekstraksiyonu** — `_joinRoom` + `_onRoomEvent` + monitoring (`call_service.dart`'tan ~500 satır). LiveKit room yönetimini izole eder. Erteleme gerekçesi: iOS `AVAudioSession` sıralaması kırılgan; test maliyeti (2 cihaz, ~4 saat) mevcut kazanımla orantılı değil. Unit test için LiveKit mock ihtiyacı doğduğunda anlamlı hale gelir.
+
+2. **Grup çağrısı HTTP → `CallRepository`** — Beş grup endpoint'i hâlâ `CallService._post()` üzerinden çağrılıyor. `CallRepository`'ye taşındığında `_post()` ve `_authHeaders()` helper'ları `CallService`'ten kaldırılabilir.
