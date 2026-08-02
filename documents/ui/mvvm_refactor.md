@@ -6,6 +6,10 @@ Bu döküman, Teqlif uygulamasının mevcut "Fat View" (StatefulWidget merkezli)
 Tüm ekranlara aynı anda müdahale etmek yerine, önce bir **Pilot Ekran** (Örn: `login_screen.dart`) seçilerek MVVM dönüşümü yapılacaktır. 
 Bu pilot dönüşüm sırasında elde edilen tüm deneyimler, Riverpod state-management kurguları ve karşılaşılan zorlukların çözümleri bu dökümanın "Öğrenilenler ve Standartlar" bölümüne işlenecektir. Ardından bir **Refactor Döngüsü** başlatılarak aşağıdaki listede bulunan tüm ekranlar teker teker bu standarda yükseltilecektir.
 
+## 🛑 Kritik Zorunluluk: Mimari Kararlar (Architectural Decisions)
+Bu döküman üzerinden yapılacak her türlü refactor işlemi (Pilot ekran dahil), projede daha önce alınmış olan resmi mimari kararlara sıkı sıkıya bağlı kalmak **zorundadır.**
+Tüm geliştirme (veya AI refactor) süreçlerinde **`documents/architectural_decisions.md`** dosyası mutlak referans olarak kabul edilmelidir. Error Handling (Toast/Banner), State Management (ViewModel kuralları) ve Localization standartları hiçbir ekranda esnetilemez.
+
 ## 🛠 Refactor Döngüsü (Cycle)
 Her bir ekran için şu adımlar izlenmelidir:
 1. Ekranın mevcut State mantığı (API çağrıları, form validation, error handling) incelenir.
