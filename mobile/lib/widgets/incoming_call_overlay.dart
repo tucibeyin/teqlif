@@ -10,6 +10,7 @@ import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import '../screens/incoming_call_screen.dart';
 import '../screens/call_screen.dart';
+import '../call/routing/call_screen_router.dart';
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -169,14 +170,23 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     if (status != CallStatus.ringing) {
       _isBarDismissed = false;
     }
-    // Giden arama: startCall() → calling durumuna geçince CallScreen'i overlay açar.
-    // Bu sayede public_profile_screen / messages_screen'in doğrudan push'u kaldırılabildi.
-    if (status == CallStatus.dialing || status == CallStatus.waiting || status == CallStatus.connecting || status == CallStatus.active) {
-      if (!CallService.instance.isCallScreenVisible.value) {
-        _cpLog('UI', 'overlay._onCallState: status=${status.name} → _openCallScreen()');
-        _openCallScreen();
-      }
+
+    // Route the call state through the central router (VoIP.md §7.2).
+    // Overlay is always foreground; background=false. _openCallScreen() has its
+    // own dedup guard (isCallScreenVisible) for defense-in-depth.
+    final cs = CallService.instance.state.value;
+    final decision = CallScreenRouter.resolveScreen(
+      status: status,
+      endReason: cs.endReason,
+      role: CallService.instance.currentRole,
+      swipeLiveActive: CallService.instance.preventCallScreenAutoOpen.value,
+      isBackground: false,
+      isCallScreenVisible: CallService.instance.isCallScreenVisible.value,
+    );
+    if (decision == CallScreenDecision.callScreen) {
+      _openCallScreen();
     }
+
     setState(() {});
   }
 

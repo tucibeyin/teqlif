@@ -180,6 +180,9 @@ class CallService {
   /// acceptedAt backing field accessor — use instead of state.value.acceptedAt internally.
   DateTime? get acceptedAt => _acceptedAt ?? state.value.acceptedAt;
 
+  /// Current call role — null when idle. Used by CallScreenRouter (Step 6).
+  CallRole? get currentRole => _currentRole;
+
   Room? _room;
   Function? _roomEventsSubscription;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;

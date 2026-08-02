@@ -63,7 +63,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 3** | `EndReason` + terminal state'leri absorbe et | İsim uyumu sonrası | ✅ `d961e82e` + `e153e1a2` |
 | **Step 4** | `CallRepository` | API katmanı izole — state machine bağımsız | ✅ |
 | **Step 5** | `CallHardwareAdapter` | iOS/Android impl ayrılır | ✅ |
-| **Step 6** | `CallScreenRouter` | Routing merkezlenir | 🔴 |
+| **Step 6** | `CallScreenRouter` | Routing merkezlenir | ✅ |
 | **Step 7** | `CallNotifAdapter` | Push layer izole | 🔴 |
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | 🔴 |
 
@@ -762,10 +762,10 @@ Connect tamamlandıktan sonra `resumeAudioAfterRoomConnect()` çağrılır:
 
 ## Step 6: `CallScreenRouter`
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-02  
+**Tamamlanma:** 2026-08-02  
+**Commit:** —  ← commit hash eklenecek
 
 **Bağımlılık:** Step 3 tamamlanmış olmalı (CallStatus + EndReason stabil).
 
@@ -833,6 +833,16 @@ if (cs.status == CallStatus.ended &&
 
 Callee `permanentlyDenied` case'i `IncomingCallScreen`/`IncomingCallBar` sorumluluğundadır (§15.3) — `GlobalCallOverlay` müdahale etmez.
 ```
+
+### Production'a Alma Kriterleri
+
+- [x] `call_screen_router.dart` — `CallScreenDecision` enum + `resolveScreen()` static method
+- [x] `CallService.currentRole` getter — router'ın role'e erişimi için
+- [x] `incoming_call_overlay._onCallState()` — router üzerinden karar; inline status enum karşılaştırması kaldırıldı
+- [x] `dart analyze` 0 hata
+- [ ] Dialing/waiting/connecting/active/ended state'leri için routing kararlarının doğru ekrana yönlendirdiği manuel test
+
+**Production'a alma:** `CallScreenDecision` enum tek karar noktası; `incoming_call_overlay` routing mantığını doğrudan barındırmıyor.
 
 ---
 
