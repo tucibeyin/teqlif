@@ -13,9 +13,10 @@ import '../../config/theme.dart';
 import '../../services/localization_service.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
-import '../../services/storage_service.dart';
+
+import 'viewmodels/story_viewer_view_model.dart';
 import '../../models/stream.dart';
-import '../../services/story_service.dart';
+
 import '../../services/stream_service.dart';
 import '../../services/stream_connection_manager.dart';
 import '../live/swipe_live_screen.dart';
@@ -132,7 +133,6 @@ class _GroupPage extends ConsumerStatefulWidget {
 
 class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderStateMixin {
   int _itemIndex = 0;
-  int? _currentUserId;
 
   // ── Video kaynakları ──────────────────────────────────────────────────────
   VideoPlayerController? _videoCtrl;
@@ -161,22 +161,19 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
   StoryItem get _currentItem => widget.group.items[_itemIndex];
 
   /// Mevcut kullanıcı bu grubun sahibi mi? (Kim Gördü? görünürlüğü için)
-  bool get _isMine =>
-      _currentUserId != null && _currentUserId == widget.group.user.id;
+  bool get _isMine {
+    final state = ref.watch(storyViewerViewModelProvider).valueOrNull;
+    return state?.currentUserId != null && state?.currentUserId == widget.group.user.id;
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUserId();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _loadItem(0);
     });
   }
 
-  Future<void> _loadCurrentUserId() async {
-    final info = await StorageService.getUserInfo();
-    if (mounted) setState(() => _currentUserId = info?['id'] as int?);
-  }
 
   @override
   void dispose() {
@@ -354,7 +351,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
     });
 
     // Görüntüleme kaydı — backend kendi görüntülemesini ve tekrarları yoksayar
-    StoryService.recordStoryView(item.id).catchError((_) {});
+    ref.read(storyViewerViewModelProvider.notifier).recordView(item.id);
   }
 
   /// Video sonuna yaklaştığında otomatik geçişi tetikler.
@@ -387,7 +384,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
     _liveTimerAnim!.addStatusListener(_onLiveTimerDone);
     _liveTimerAnim!.forward();
     setState(() => _videoLoading = false);
-    StoryService.recordStoryView(item.id).catchError((_) {});
+    ref.read(storyViewerViewModelProvider.notifier).recordView(item.id);
   }
 
   void _startLiveCard() {
@@ -445,8 +442,8 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       _currentLikesCount += _currentIsLiked ? 1 : -1;
     });
     try {
-      final result = await StoryService.toggleLike(_currentItem.id);
-      if (mounted) {
+      final result = await ref.read(storyViewerViewModelProvider.notifier).toggleLike(_currentItem.id);
+      if (mounted && result != null) {
         setState(() {
           _currentLikesCount = result['likes_count'] as int? ?? _currentLikesCount;
           _currentIsLiked = result['is_liked'] as bool? ?? _currentIsLiked;
@@ -530,7 +527,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       return;
     }
     try {
-      await StoryService.deleteStory(_currentItem.id);
+      await ref.read(storyViewerViewModelProvider.notifier).deleteStory(_currentItem.id);
       if (!mounted) return;
       // Provider'ı geçersiz kıl → tray arka planda güncellenir
       ProviderScope.containerOf(context).invalidate(myStoriesProvider);
@@ -1207,35 +1204,14 @@ class _ViewersSheet extends ConsumerStatefulWidget {
 }
 
 class _ViewersSheetState extends ConsumerState<_ViewersSheet> {
-  List<StoryViewer>? _viewers;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final viewers = await StoryService.getStoryViewers(widget.storyId);
-      if (mounted) setState(() { _viewers = viewers; _loading = false; });
-    } catch (e, st) {
-      await Sentry.captureException(e, stackTrace: st);
-      if (mounted) {
-        setState(() {
-          _error = ref.read(localizationProvider).t('storyViewersLoadFailed');
-          _loading = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final asyncState = ref.watch(storyViewersViewModelProvider(widget.storyId));
+    final viewers = asyncState.valueOrNull ?? [];
+    final isLoading = asyncState.isLoading;
+    final errorMsg = asyncState.hasError ? loc.t('storyViewersLoadFailed') : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -1275,10 +1251,10 @@ class _ViewersSheetState extends ConsumerState<_ViewersSheet> {
                     color: AppColors.textPrimary(context),
                   ),
                 ),
-                if (_viewers != null) ...[
+                if (viewers.isNotEmpty) ...[
                   const SizedBox(width: 6),
                   Text(
-                    '(${_viewers!.length})',
+                    '(${viewers.length})',
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary(context),
@@ -1291,21 +1267,21 @@ class _ViewersSheetState extends ConsumerState<_ViewersSheet> {
           const SizedBox(height: 10),
           Divider(height: 1, color: AppColors.divider(context)),
           // İçerik
-          if (_loading)
+          if (isLoading)
             const Padding(
               padding: EdgeInsets.all(40),
               child: CircularProgressIndicator(),
             )
-          else if (_error != null)
+          else if (errorMsg != null)
             Padding(
               padding: const EdgeInsets.all(32),
               child: Text(
-                _error!,
+                errorMsg!,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary(context)),
               ),
             )
-          else if (_viewers!.isEmpty)
+          else if (viewers.isEmpty)
             Padding(
               padding: const EdgeInsets.all(32),
               child: Text(
@@ -1319,9 +1295,9 @@ class _ViewersSheetState extends ConsumerState<_ViewersSheet> {
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: EdgeInsets.only(bottom: bottomPad + 8),
-                itemCount: _viewers!.length,
+                itemCount: viewers.length,
                 itemBuilder: (_, i) {
-                  final v = _viewers![i];
+                  final v = viewers[i];
                   final initial =
                       v.username.isNotEmpty ? v.username[0].toUpperCase() : '?';
                   final timeAgo = _formatTime(context, v.viewedAt);
