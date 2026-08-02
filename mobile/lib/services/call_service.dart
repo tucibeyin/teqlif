@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:audio_session/audio_session.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -33,6 +32,7 @@ import '../call/notif/call_notif_adapter.dart';
 import '../call/notif/ios_call_notif_adapter.dart';
 import '../call/notif/android_call_notif_adapter.dart';
 import '../call/state/call_state.dart';
+import '../call/room/call_room_adapter.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
@@ -47,6 +47,14 @@ void _cpLog(String phase, String msg) {
 
 class CallService {
   CallService._() {
+    _roomAdapter = CallRoomAdapter(
+      hardware: _hardware,
+      preventCallScreenAutoOpen: preventCallScreenAutoOpen,
+      getState: () => state.value,
+      setState: _setState,
+      onConnected: (ctx) => _transitionToConnected(context: ctx),
+      endCall: endCall,
+    );
     _hardware.init();
     if (Platform.isIOS) {
       _initCallkitChannelHandler();
@@ -75,12 +83,9 @@ class CallService {
   /// Current call role — null when idle. Used by CallScreenRouter (Step 6).
   CallRole? get currentRole => _currentRole;
 
-  Room? _room;
-  Function? _roomEventsSubscription;
-  StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
+  late final CallRoomAdapter _roomAdapter;
   Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
-  Timer? _peerTimeoutTimer; // Timeout if other user doesn't join LiveKit room
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
   Timer? _connectingTimeoutTimer; // 15s guard: connecting → endCall if TrackSubscribed never fires
@@ -103,7 +108,6 @@ class CallService {
   CallNotifAdapter get notifAdapter => _notif;
 
   bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
-  bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
   // WS connection lock: true while an active call is holding the WsService lock.
   // Ensures background lifecycle doesn't close the socket mid-call.
   bool _wsLockHeld = false;
@@ -354,7 +358,7 @@ class CallService {
 
       // WhatsApp-like Pre-Connection: Arayan kişi beklemeden LiveKit'e bağlanır.
       _cpLog('OUT', 'pre-connect _joinRoom starting (WhatsApp-like)');
-      await _joinRoom(
+      await _roomAdapter.joinRoom(
         livekitUrl: startResult.livekitUrl,
         token: startResult.token,
       );
@@ -534,18 +538,18 @@ class CallService {
 
     // Pre-connect: LK odaya ringing sırasında bağlan → acceptance'da sadece mic aktive et.
     // Empty string guard: VoIP payload'da callee_token/livekit_url yoksa AppDelegate "" döner.
-    // "" != null → null-check geçer ama _joinRoom("","") → malformed URI → exception → endCall.
+    // "" != null → null-check geçer ama _roomAdapter.joinRoom("","") → malformed URI → exception → endCall.
     // isEmpty kontrolü ile HTTP fetch fallback'e düşüyoruz.
     if ((calleeToken == null || calleeToken.isEmpty || livekitUrl == null || livekitUrl.isEmpty) && incomingCallId != null) {
       // VoIP push (iOS): payload'da token yok → önce fetch, sonra pre-connect.
       _cpLog('IN', 'calleeToken/livekitUrl missing or empty — proactive fetch starting | callId=$incomingCallId source=$source');
       _fetchAndStoreCalleeToken(incomingCallId);
-    } else if (calleeToken != null && calleeToken.isNotEmpty && livekitUrl != null && livekitUrl.isNotEmpty && incomingCallId != null && _room == null && !_isJoiningRoom) {
+    } else if (calleeToken != null && calleeToken.isNotEmpty && livekitUrl != null && livekitUrl.isNotEmpty && incomingCallId != null && _roomAdapter.room == null && !_roomAdapter.isJoiningRoom) {
       // WS path (Android foreground): token payload'da hazır → pre-connect hemen başlat.
       // iOS VoIP push path'i _fetchAndStoreCalleeToken üzerinden zaten pre-connect yapar.
       _preConnectStartedAt = DateTime.now();
       _cpLog('IN', 'callee pre-connect (WS token path): _joinRoom starting immediately | callId=$incomingCallId preConnectStartUtc=${_preConnectStartedAt!.toUtc().toIso8601String()} source=$source');
-      _joinRoom(livekitUrl: livekitUrl, token: calleeToken).catchError((e) {
+      _roomAdapter.joinRoom(livekitUrl: livekitUrl, token: calleeToken).catchError((e) {
         _cpLog('IN', 'callee pre-connect (WS token path) _joinRoom ERROR | $e callId=$incomingCallId');
       });
     }
@@ -588,80 +592,20 @@ class CallService {
         // Mic/ses oturumu YOK — sadece TCP+TLS+ICE handshake.
         // Kullanıcı kabul edince _joinRoom atlanır, sadece mic etkinleştirilir.
         // Reddetme/timeout durumunda reset() → _disconnectRoom() temizler.
-        if (_room == null && !_isJoiningRoom && token != null && url != null) {
+        if (_roomAdapter.room == null && !_roomAdapter.isJoiningRoom && token != null && url != null) {
           _preConnectStartedAt = DateTime.now();
           _cpLog('IN', 'callee pre-connect _joinRoom starting during ringing | callId=$callId preConnectStartUtc=${_preConnectStartedAt!.toUtc().toIso8601String()} fetchHttpMs=$httpMs');
-          _joinRoom(livekitUrl: url, token: token).catchError((e) {
+          _roomAdapter.joinRoom(livekitUrl: url, token: token).catchError((e) {
             _cpLog('IN', 'callee pre-connect _joinRoom ERROR | $e');
           });
         } else {
-          _cpLog('IN', '_fetchCalleeToken: pre-connect _joinRoom SKIPPED | roomNull=${_room == null} isJoining=$_isJoiningRoom tokenOk=${token != null} urlOk=${url != null}');
+          _cpLog('IN', '_fetchCalleeToken: pre-connect _joinRoom SKIPPED | roomNull=${_roomAdapter.room == null} isJoining=$_roomAdapter.isJoiningRoom tokenOk=${token != null} urlOk=${url != null}');
         }
       } else {
         _cpLog('IN', '_fetchCalleeToken discarded (state changed) | callId=$callId status=${state.value.status.name}');
       }
     } catch (e) {
       _cpLog('IN', '_fetchCalleeToken FAILED (acceptCall response-token fallback will be used) | $e');
-    }
-  }
-
-  /// Callee pre-connect sonrası audio session + mic aktivasyonu.
-  /// Çağrıldığında _room bağlı olmalı; iOS'ta CallKit audio session sinyali beklenir.
-  Future<void> _activateCalleeAudio() async {
-    final activateStartAt = DateTime.now();
-    _cpLog('IN', '_activateCalleeAudio START | status=${state.value.status} startUtc=${activateStartAt.toUtc().toIso8601String()}');
-
-    if (Platform.isIOS) {
-      await _hardware.waitForCallkitAudio();
-      if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
-        _cpLog('IN', '_activateCalleeAudio: call already ended after audio wait — aborting | status=${state.value.status.name}');
-        return;
-      }
-    } else if (Platform.isAndroid && state.value.callId != null) {
-      final uuid = CallNotifAdapter.formatCallId(state.value.callId!.toString());
-      _cpLog('IN', '_activateCalleeAudio: Android onCallConnected | uuid=$uuid');
-      await _hardware.onCallConnected(uuid);
-    }
-
-    try {
-      _cpLog('IN', '_activateCalleeAudio: configureVoiceChat');
-      final speakerTarget = preventCallScreenAutoOpen.value;
-      await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
-      _cpLog('IN', '_activateCalleeAudio: configureVoiceChat OK | speakerEnabled=$speakerTarget');
-    } catch (e) {
-      _cpLog('IN', '_activateCalleeAudio: configureVoiceChat ERROR | $e');
-    }
-
-    _cpLog('IN', '_activateCalleeAudio: setMicrophoneEnabled(true)');
-    _cpLog('HW', 'microphone ENABLE | context=_activateCalleeAudio');
-    await _room?.localParticipant?.setMicrophoneEnabled(true);
-    await Future.delayed(const Duration(milliseconds: 300));
-    final speakerTargetPostMic = preventCallScreenAutoOpen.value;
-    _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_activateCalleeAudio-post-mic swipeLive=$speakerTargetPostMic');
-    await _hardware.setSpeaker(speakerTargetPostMic);
-    final totalMs = DateTime.now().difference(activateStartAt).inMilliseconds;
-    _cpLog('IN', '_activateCalleeAudio DONE | totalMs=$totalMs');
-
-    // Pre-connect sırasında (ringing) TrackSubscribed skipped edildi.
-    // Şimdi connecting state'indeyiz; remote audio zaten subscribe edilmişse
-    // yeni TrackSubscribed gelmez → burada kontrol et.
-    if (state.value.status == CallStatus.connecting && _room != null) {
-      final anyAudioSubscribed = _room!.remoteParticipants.values.any(
-        (p) => p.trackPublications.values.any(
-          (pub) => pub.subscribed && pub.kind == TrackType.AUDIO,
-        ),
-      );
-      _cpLog('IN', '_activateCalleeAudio: post-audio check | anyAudioSubscribed=$anyAudioSubscribed');
-      if (anyAudioSubscribed) {
-        _cpLog('LK', '_activateCalleeAudio: remote audio already subscribed → connected immediately');
-        _transitionToConnected(context: 'activateCalleeAudio-alreadySubscribed');
-        if (Platform.isAndroid) {
-          final speakerTarget = preventCallScreenAutoOpen.value;
-          _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=_activateCalleeAudio-already-subscribed swipeLive=$speakerTarget');
-          Hardware.instance.setSpeakerphoneOn(speakerTarget);
-          _setState(state.value.copyWith(isSpeaker: speakerTarget));
-        }
-      }
     }
   }
 
@@ -741,19 +685,19 @@ class CallService {
         : -1;
     _cpLog(
       'IN',
-      'acceptCall pre-connect check | roomReady=${_room != null} isJoining=$_isJoiningRoom '
+      'acceptCall pre-connect check | roomReady=${_roomAdapter.room != null} isJoining=$_roomAdapter.isJoiningRoom '
       'tokenReady=${preConnectToken != null} urlReady=${preConnectUrl != null} '
       'preConnectAgeMs=$preConnectAgeMs nowUtc=${DateTime.now().toUtc().toIso8601String()}',
     );
 
-    if (_room != null && !_isJoiningRoom) {
+    if (_roomAdapter.room != null && !_roomAdapter.isJoiningRoom) {
       // _fetchAndStoreCalleeToken pre-connect tamamlandı → sadece audio aktive et.
       // Bu yol: callee pre-connect ÇALIŞIYOR (WhatsApp kalitesi).
       _cpLog('IN', 'acceptCall: callee pre-connect ROOM READY → _activateCalleeAudio | preConnectAgeMs=$preConnectAgeMs');
-      _activateCalleeAudio().catchError((e) {
+      _roomAdapter.activateCalleeAudio().catchError((e) {
         _cpLog('IN', 'acceptCall _activateCalleeAudio ERROR | $e');
       });
-    } else if (_isJoiningRoom) {
+    } else if (_roomAdapter.isJoiningRoom) {
       // Pre-connect room.connect() devam ediyor (_room null veya non-null olabilir).
       // _joinRoom else bloğu status=connecting + callStatusAtEntry=ringing detektörü devralacak.
       _cpLog('IN', 'acceptCall: callee pre-connect IN PROGRESS (_joinRoom running) → _activateCalleeAudio deferred | preConnectAgeMs=$preConnectAgeMs');
@@ -761,7 +705,7 @@ class CallService {
       // Token hazır ama _joinRoom henüz başlamadı → callee rolüyle başlat.
       // Bu yol: token fetch tamam ama pre-connect başlatılamamış (edge case).
       _cpLog('IN', 'acceptCall: token ready, room NULL → _joinRoom now (isCallee=true) | preConnectAgeMs=$preConnectAgeMs');
-      _joinRoom(livekitUrl: preConnectUrl, token: preConnectToken).catchError((e) {
+      _roomAdapter.joinRoom(livekitUrl: preConnectUrl, token: preConnectToken).catchError((e) {
         _cpLog('IN', 'acceptCall _joinRoom (callee token) ERROR | $e');
       });
     } else {
@@ -787,12 +731,12 @@ class CallService {
       }
 
       // FALLBACK: hiç pre-connect başlamadıysa response token ile LiveKit'e bağlan.
-      if (_room == null && !_isJoiningRoom) {
+      if (_roomAdapter.room == null && !_roomAdapter.isJoiningRoom) {
         final responseToken = acceptResult.token;
         final responseLkUrl = acceptResult.livekitUrl ?? preConnectUrl;
         _cpLog('IN', 'acceptCall FALLBACK: _joinRoom with RESPONSE token | tokenLen=${responseToken?.length} url=$responseLkUrl');
         if (responseToken != null && responseLkUrl != null) {
-          _joinRoom(livekitUrl: responseLkUrl, token: responseToken).catchError((e) {
+          _roomAdapter.joinRoom(livekitUrl: responseLkUrl, token: responseToken).catchError((e) {
             _cpLog('IN', 'acceptCall _joinRoom (response token) ERROR | $e');
           });
         } else {
@@ -885,8 +829,8 @@ class CallService {
     // Caller mic activation: two paths
     // FAST PATH: If a pre-published muted track exists (legacy/fallback), unmute it.
     // STANDARD PATH: setMicrophoneEnabled(true) — used by both iOS and Android.
-    if (_room != null) {
-      final micPubs = _room!.localParticipant?.audioTrackPublications;
+    if (_roomAdapter.room != null) {
+      final micPubs = _roomAdapter.room!.localParticipant?.audioTrackPublications;
       if (micPubs != null && micPubs.isNotEmpty) {
         final pub = micPubs.first;
         if (pub.muted) {
@@ -896,7 +840,7 @@ class CallService {
           pub.unmute(stopOnMute: false).catchError((e) {
             _cpLog('OUT', 'caller mic unmute ERROR | $e → fallback to setMicEnabled');
             _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=onCallAccepted-caller');
-            _room!.localParticipant?.setMicrophoneEnabled(true);
+            _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true);
             return null;
           });
         } else {
@@ -906,7 +850,7 @@ class CallService {
       } else {
         _cpLog('OUT', 'call_accepted → STANDARD PATH: setMicrophoneEnabled | no pre-publish');
         _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller standardPath=true');
-        _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+        _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
           _cpLog('OUT', 'caller mic enable ERROR | $e');
           return null;
         });
@@ -920,14 +864,14 @@ class CallService {
   /// iOS caller race condition recovery için kullanılır: WS geç geldiğinde
   /// mic zaten açıksa no-op, muted pre-publish varsa unmute, yoksa setMicEnabled.
   void _ensureMicEnabled(String context) {
-    if (_room == null) {
+    if (_roomAdapter.room == null) {
       _cpLog('HW', 'microphone ENSURE SKIPPED | context=$context room=null');
       return;
     }
-    final micPubs = _room!.localParticipant?.audioTrackPublications;
+    final micPubs = _roomAdapter.room!.localParticipant?.audioTrackPublications;
     if (micPubs == null || micPubs.isEmpty) {
       _cpLog('HW', 'microphone ENABLE | context=$context standardPath=true (no publications)');
-      _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+      _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
         _cpLog('HW', 'microphone ENABLE ERROR | context=$context $e');
         return null;
       });
@@ -938,7 +882,7 @@ class CallService {
       _cpLog('HW', 'microphone UNMUTE | context=$context fastPath=true pub.sid=${pub.sid}');
       pub.unmute(stopOnMute: false).catchError((e) {
         _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=$context $e');
-        _room!.localParticipant?.setMicrophoneEnabled(true);
+        _roomAdapter.room!.localParticipant?.setMicrophoneEnabled(true);
         return null;
       });
     } else {
@@ -998,421 +942,6 @@ class CallService {
     _scheduleReset();
   }
 
-  // ── LiveKit Room ──────────────────────────────────────────────────────────
-
-  Future<void> _joinRoom({
-    required String livekitUrl,
-    required String token,
-  }) async {
-    if (_isJoiningRoom) {
-      _cpLog('LK', '_joinRoom SKIPPED — already joining (double call guard)');
-      return;
-    }
-    _isJoiningRoom = true;
-    _room = Room();
-
-    // callStatus'u snapshot alıyoruz — async boyunca değişebilir
-    final callStatusAtEntry = state.value.status;
-    final isCalleeRole = callStatusAtEntry == CallStatus.connecting;
-
-    try {
-      _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=$callStatusAtEntry isCallee=$isCalleeRole');
-
-      // ── Android Callee: notify CallKit UI that call is connected ───────────
-      // iOS: CallKit audio session lifecycle is handled by the adapter's waitForCallkitAudio().
-      if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
-        final uuid = CallNotifAdapter.formatCallId(state.value.callId!.toString());
-        _cpLog('LK', 'Android callee: onCallConnected | uuid=$uuid');
-        await _hardware.onCallConnected(uuid);
-      }
-
-      // ── Ağ bağlantısı (audio session gerektirmez) ────────────────────────────
-      // Opus DTX (Discontinuous Transmission): sessizlikte paket gönderilmez → %40 bant genişliği tasarrufu.
-      // audioBitrate=16000: WhatsApp-grade voice quality (12kbps telephone / 16kbps HD voice / 48kbps music).
-      const audioPublishOpts = AudioPublishOptions(dtx: true, audioBitrate: 16000);
-      _cpLog('LK', 'room.connect() → calling LiveKit | dtx=true bitrate=16kbps e2ee=false');
-
-      await _room!.connect(
-        livekitUrl,
-        token,
-        roomOptions: RoomOptions(
-          defaultAudioOutputOptions: const AudioOutputOptions(speakerOn: false),
-          defaultAudioPublishOptions: audioPublishOpts,
-        ),
-      );
-      _cpLog('LK', 'room.connect() SUCCESS');
-
-      // ── iOS Callee: wait for CallKit didActivateAudioSession ───────────────
-      if (Platform.isIOS && isCalleeRole) {
-        _cpLog('LK', 'iOS callee: waitForCallkitAudio');
-        await _hardware.waitForCallkitAudio();
-      }
-
-      // ── Audio session + mic: Rol bazlı aktivasyon ─────────────────────────────
-      // CALLEE: LK bağlantısından sonra hemen ses oturumunu yapılandır ve miki aç.
-      // CALLER pre-connect: ATLA — ringtone ses oturumu aktifken voice-chat ayarı
-      //   onu keser. Mikrofon ve ses oturumu, callee kabul ettikten sonra
-      //   onCallAccepted() içinde etkinleştirilir.
-      if (isCalleeRole) {
-        try {
-          final speakerTarget = preventCallScreenAutoOpen.value;
-          _cpLog('LK', 'configureVoiceChat | role=callee speakerEnabled=$speakerTarget');
-          await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
-          _cpLog('LK', 'configureVoiceChat OK | role=callee');
-        } catch (e) {
-          _cpLog('LK', 'configureVoiceChat ERROR | role=callee $e');
-        }
-        _cpLog('LK', 'setMicrophoneEnabled(true) calling | role=callee');
-        _cpLog('HW', 'microphone ENABLE | context=_joinRoom-callee');
-        await _room!.localParticipant?.setMicrophoneEnabled(true);
-        _cpLog('LK', 'setMicrophoneEnabled(true) done | role=callee');
-        await Future.delayed(const Duration(milliseconds: 300));
-        final speakerTargetPostMic = preventCallScreenAutoOpen.value;
-        _cpLog('HW', 'speakerphone SET | enabled=$speakerTargetPostMic context=_joinRoom-callee-post-mic');
-        await _hardware.setSpeaker(speakerTargetPostMic);
-      } else {
-        // Network-only pre-connect (caller=calling veya callee=ringing): standart ses atlandı.
-        // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
-
-        if (callStatusAtEntry == CallStatus.waiting) {
-          // Both platforms: network-only pre-connect — mic starts on acceptance via standard path.
-          // Android pre-publish (muted track for fast unmute) was removed: it took
-          // AUDIOFOCUS_GAIN via STREAM_VOICE_CALL which starved the ringback player, causing
-          // it to stop after one loop. The ~1s acceptance latency is preferable to broken audio.
-          // iOS: room.connect() overrides AVAudioSession → ringback restore needed.
-          // Android: room.connect() has no audio-session effect → no restore needed.
-          _cpLog('LK', 'caller pre-connect: network-only (no mic pre-publish) | callId=${state.value.callId}');
-          _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | ringback=preserved mic-will-start-on-acceptance');
-          if (Platform.isIOS) {
-            // room.connect() internally overrides AVAudioSession to SoloAmbient → ringback stops.
-            // resumeAfterRoomConnect() restores playAndRecord/voiceChat and resumes ringback.
-            final postConnectStatus = state.value.status;
-            if (postConnectStatus == CallStatus.waiting || postConnectStatus == CallStatus.connecting) {
-              await _hardware.resumeAfterRoomConnect();
-            }
-          }
-        } else {
-          // callee pre-connect (ringing): ringtone korunuyor, mic yok
-          _cpLog('LK', 'AudioSession/mic SKIPPED | preConnectRole=${callStatusAtEntry.name} (ringtone preserved)');
-        }
-
-        // Kenar durum: accept/onCallAccepted bu room.connect() sırasında tetiklendiyse.
-        if (state.value.status == CallStatus.connecting) {
-          if (callStatusAtEntry == CallStatus.ringing) {
-            // Callee pre-connect: acceptCall, room.connect() sırasında geldi.
-            // _activateCalleeAudio iOS audio session + mic'i doğru sırayla açar.
-            _cpLog('LK', 'callee pre-connect: accept fired during room.connect() → _activateCalleeAudio');
-            _activateCalleeAudio().catchError((e) {
-              _cpLog('LK', '_activateCalleeAudio ERROR (pre-connect edge case) | $e');
-            });
-          } else {
-            // Caller: onCallAccepted, room.connect() sırasında geldi.
-            // Pre-publish yoksa (standard path) setMicrophoneEnabled çağrılır.
-            _cpLog('LK', 'caller: call_accepted already received during pre-connect → enabling mic');
-            final micPubs = _room!.localParticipant?.audioTrackPublications;
-            if (micPubs != null && micPubs.isNotEmpty) {
-              final pub = micPubs.first;
-              if (pub.muted) {
-                _cpLog('HW', 'microphone UNMUTE | context=_joinRoom-caller-late-accept fastPath=true stopOnMute=false');
-                await pub.unmute(stopOnMute: false);
-                _cpLog('LK', 'caller mic unmuted (late-accept-during-preconnect) | done');
-              } else {
-                _cpLog('LK', 'caller: pre-published track already unmuted | done');
-              }
-            } else {
-              // Pre-publish çalışmadıysa standard yol
-              _cpLog('LK', 'caller late-accept: no pre-published track → standard setMicEnabled');
-              _cpLog('HW', 'microphone ENABLE | context=_joinRoom-caller-late-accept standardPath=true');
-              await _room!.localParticipant?.setMicrophoneEnabled(true);
-              _cpLog('LK', 'caller mic enabled (late, accepted-during-preconnect, standard) | done');
-            }
-          }
-        }
-      }
-
-      _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
-
-      bool peerAlreadyJoined = _room!.remoteParticipants.isNotEmpty;
-      _cpLog('LK', 'peerAlreadyJoined=$peerAlreadyJoined status=${state.value.status.name}');
-      if (peerAlreadyJoined) {
-        _peerTimeoutTimer?.cancel();
-        // Callee pre-connect sırasında (ringing) arayan oda da olabilir.
-        // Kullanıcı kabul etmeden connected set etme.
-        if (state.value.status == CallStatus.ringing) {
-          _cpLog('LK', 'peerAlreadyJoined during callee pre-connect (ringing) → waiting for acceptCall');
-        } else {
-          // Peer odada ama ses track'ı henüz subscribe edilmemiş olabilir.
-          // connected state'i TrackSubscribed'da set edilecek — gerçek ses akışını bekle.
-          final anyAudioSubscribed = _room!.remoteParticipants.values.any(
-            (p) => p.trackPublications.values.any(
-              (pub) => pub.subscribed && pub.kind == TrackType.AUDIO,
-            ),
-          );
-          if (anyAudioSubscribed) {
-            _cpLog('LK', 'peerAlreadyJoined + audioSubscribed → connected immediately');
-            _transitionToConnected(context: 'peerAlreadyJoined');
-          } else {
-            _cpLog('LK', 'peerAlreadyJoined but audio not yet subscribed → waiting for TrackSubscribed');
-          }
-        }
-      } else {
-        _cpLog('LK', 'joined LiveKit → waiting for peer (ParticipantConnectedEvent)');
-        _peerTimeoutTimer?.cancel();
-        // Callee pre-connect sırasında (ringing) peer timeout başlatma.
-        // Kullanıcı reddetse zaten reset() timeout'u iptal eder; gereksiz endCall riski var.
-        if (state.value.status != CallStatus.ringing) {
-          _cpLog('LK', 'peerTimeoutTimer started | 40s');
-          _peerTimeoutTimer = Timer(const Duration(seconds: 40), () {
-            if (_room != null && _room!.remoteParticipants.isEmpty) {
-              _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 40s → endCall | status=${state.value.status}');
-              endCall();
-            }
-          });
-        } else {
-          _cpLog('LK', 'peerTimeoutTimer SKIPPED during callee pre-connect (ringing)');
-        }
-      }
-
-      _cpLog('HW', 'wakelock ENABLE | reason=_joinRoom-complete status=${state.value.status.name}');
-      await WakelockPlus.enable();
-
-      _isJoiningRoom = false;
-      _cpLog('LK', '_joinRoom complete | _isJoiningRoom reset');
-      await _setupAudioInterruptionListener();
-    } catch (e) {
-      _cpLog('LK', '_joinRoom EXCEPTION | $e');
-      _isJoiningRoom = false;
-      // Pre-connect failure (ringing/calling): user hasn't accepted yet — preserve the call.
-      // The CallKit screen stays visible; acceptCall() will retry _joinRoom with a fresh token.
-      if (callStatusAtEntry == CallStatus.ringing || callStatusAtEntry == CallStatus.waiting) {
-        _cpLog('LK', '_joinRoom EXCEPTION in pre-connect ($callStatusAtEntry) — call preserved');
-      } else {
-        endCall();
-      }
-    }
-  }
-
-  void _onRoomEvent(RoomEvent event) {
-    _cpLog('LK', 'roomEvent | ${event.runtimeType}');
-    if (event is RoomDisconnectedEvent) {
-      final s = state.value.status;
-      // Only call endCall() from an active-call state. Terminal states (ended, idle)
-      // and callee pre-connect (ringing) reach here via reset()/_disconnectRoom()
-      // cleanup — calling endCall() would double-post /end.
-      if (s == CallStatus.idle ||
-          s == CallStatus.ended ||
-          s == CallStatus.ringing) {
-        _cpLog('LK', 'RoomDisconnected SKIPPED | status=${s.name} (terminal or pre-connect — cleanup-triggered disconnect)');
-        return;
-      }
-      _cpLog('LK', 'RoomDisconnected → endCall | status=${s.name}');
-      endCall();
-    } else if (event is RoomReconnectingEvent) {
-      _setState(state.value.copyWith(status: CallStatus.reconnecting));
-    } else if (event is RoomReconnectedEvent) {
-      if (state.value.status == CallStatus.reconnecting) {
-        _setState(state.value.copyWith(status: CallStatus.active));
-      }
-    } else if (event is ParticipantConnectedEvent) {
-      _cpLog('LK', 'ParticipantConnected → peer joined | peerCount=${_room?.remoteParticipants.length} status=${state.value.status.name}');
-      _peerTimeoutTimer?.cancel();
-      // Mic sadece connecting state'inde açılır — kabul sonrası ses aktivasyon aşaması.
-      // calling: caller pre-connect (kabul bekleniyor) → mic kapalı kalmalı.
-      // ringing: callee pre-connect (kullanıcı henüz kabul etmedi) → mic kapalı kalmalı.
-      // connecting: call_accepted geldi, ses aktivasyonu başladı → mic açılabilir.
-      // connected: mic zaten açık, tekrar açmaya gerek yok.
-      if (state.value.status == CallStatus.connecting) {
-        final micPubs = _room?.localParticipant?.audioTrackPublications;
-        if (micPubs == null || micPubs.isEmpty) {
-          _cpLog('LK', 'ParticipantConnected: mic not yet published → enabling now');
-          _cpLog('HW', 'microphone ENABLE | context=ParticipantConnected-mic-not-published status=connecting');
-          _room?.localParticipant?.setMicrophoneEnabled(true);
-        } else {
-          _cpLog('HW', 'microphone ALREADY ENABLED | context=ParticipantConnected pubCount=${micPubs.length}');
-        }
-      } else {
-        _cpLog('LK', 'ParticipantConnected: mic enable SKIPPED | status=${state.value.status.name} (pre-connect guard)');
-        _cpLog('HW', 'microphone ENABLE SKIPPED | context=ParticipantConnected status=${state.value.status.name}');
-      }
-    } else if (event is TrackSubscribedEvent) {
-      // Uzak ses track'ı abone oldu → callee'nin sesi gerçekten akıyor.
-      // 1. AudioSession → voice-chat mode (ringtone session'dan geçiş)
-      // 2. Ringtone durdur
-      // 3. connected state → _handleStatusChange stops _audioPlayer (ringing.wav)
-      _cpLog('LK', 'TrackSubscribed | kind=${event.track.kind} status=${state.value.status.name}');
-      if (event.track.kind == TrackType.AUDIO) {
-        // ringing: callee pre-connect — caller'ın muted track'i subscribe edildi.
-        // calling: callee pre-connect sırasında arayan bekliyorken callee muted track publish eder.
-        // Her iki durumda da AudioSession ve ringtone'a dokunma — callee henüz kabul etmedi.
-        // Gerçek geçiş: calling→connecting (call_accepted WS), ringing→connecting (acceptCall).
-        // connecting→connected TrackUnmutedEvent (callee unmutes) veya yeni TrackSubscribed ile olur.
-        if (state.value.status == CallStatus.ringing || state.value.status == CallStatus.waiting) {
-          _cpLog('LK', 'TrackSubscribed AUDIO during ${state.value.status.name} (pre-connect) | muted track subscribed → skip AudioSession configure + ringtone stop');
-          return;
-        }
-
-        // Muted track subscription: gerçek ses henüz akmıyor → TrackUnmuted'ı bekle.
-        // Nadir senaryo: ağ gecikmesi veya callee mic warmup sırasında track muted gelebilir.
-        if (event.publication.muted) {
-          _cpLog('LK', 'TrackSubscribed AUDIO but muted | status=${state.value.status.name} → wait for TrackUnmuted');
-          return;
-        }
-
-        _cpLog('LK', 'TrackSubscribed AUDIO (unmuted) → voice AudioSession → ringing stop → connected');
-        // Configure audio session asynchronously before transition so audio routing is ready.
-        // iOS: speakerphone state update happens inside configureVoiceChat callback.
-        // Android: speakerphone is set synchronously in the block below.
-        Future(() async {
-          try {
-            final speakerTarget = preventCallScreenAutoOpen.value;
-            _cpLog('HW', 'configureVoiceChat | context=TrackSubscribed speakerEnabled=$speakerTarget');
-            await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
-            if (Platform.isIOS) {
-              _setState(state.value.copyWith(isSpeaker: speakerTarget));
-            }
-            _cpLog('LK', 'TrackSubscribed: configureVoiceChat OK');
-          } catch (e) {
-            _cpLog('LK', 'TrackSubscribed: configureVoiceChat ERROR | $e');
-          }
-        });
-        if (state.value.status == CallStatus.waiting || state.value.status == CallStatus.connecting) {
-          final preTransitionStatus = state.value.status;
-          _transitionToConnected(context: 'TrackSubscribed-${preTransitionStatus.name}');
-          // P0 FIX: iOS caller mic race.
-          // iOS skips mic pre-publish during pre-connect (to preserve ringback AVAudioSession).
-          // call_accepted WS arrives ~1.65s AFTER TrackSubscribed, so we must enable mic HERE
-          // instead of waiting for the WS. onCallAccepted will see status=connected and call
-          // _ensureMicEnabled as a safety net when the WS finally arrives.
-          if (Platform.isIOS && preTransitionStatus == CallStatus.waiting) {
-            _cpLog('LK', 'TrackSubscribed: iOS caller mic pre-enable (before WS) | callId=${state.value.callId}');
-            _cpLog('HW', 'microphone ENABLE | context=TrackSubscribed-iOS-caller-preemptive platform=iOS');
-            _room?.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
-              _cpLog('LK', 'TrackSubscribed iOS caller mic ERROR | $e');
-              return null;
-            });
-          }
-          if (Platform.isAndroid) {
-            final speakerTarget = preventCallScreenAutoOpen.value;
-            _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackSubscribed-Android swipeLive=$speakerTarget');
-            _hardware.setSpeaker(speakerTarget);
-            _setState(state.value.copyWith(isSpeaker: speakerTarget));
-          }
-        }
-      } else if (event.track.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'TrackSubscribed VIDEO | participant=${event.participant.identity}');
-        _setState(state.value.copyWith(remoteVideoEnabled: true));
-      }
-    } else if (event is TrackUnsubscribedEvent) {
-      if (event.track.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'TrackUnsubscribed VIDEO | participant=${event.participant.identity}');
-        _setState(state.value.copyWith(remoteVideoEnabled: false));
-      }
-    } else if (event is TrackMutedEvent) {
-      final isRemote = event.participant != _room?.localParticipant;
-      _cpLog('LK', 'TrackMuted | kind=${event.publication.kind} isRemote=$isRemote');
-      if (isRemote && event.publication.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'TrackMuted remote VIDEO → remoteVideoEnabled=false');
-        _setState(state.value.copyWith(remoteVideoEnabled: false));
-      }
-    } else if (event is TrackUnmutedEvent) {
-      // Fallback: a previously-subscribed muted track was unmuted.
-      // Android no longer pre-publishes during calling state, so this path is rare.
-      // Still handles edge cases (e.g. track re-negotiation, network recovery).
-      final isRemote = event.participant != _room?.localParticipant;
-      _cpLog('LK', 'TrackUnmuted | kind=${event.publication.kind} isRemote=$isRemote status=${state.value.status.name}');
-      if (isRemote && event.publication.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'TrackUnmuted remote VIDEO → remoteVideoEnabled=true');
-        _setState(state.value.copyWith(remoteVideoEnabled: true));
-      } else if (isRemote && event.publication.kind == TrackType.AUDIO && state.value.status == CallStatus.connecting) {
-        _cpLog('LK', 'TrackUnmuted AUDIO remote → connecting→connected (Android unmuted pre-published track)');
-        Future(() async {
-          try {
-            final speakerTarget = preventCallScreenAutoOpen.value;
-            _cpLog('HW', 'configureVoiceChat | context=TrackUnmuted speakerEnabled=$speakerTarget');
-            await _hardware.configureVoiceChat(speakerEnabled: speakerTarget);
-            if (Platform.isIOS) {
-              _setState(state.value.copyWith(isSpeaker: speakerTarget));
-            }
-            _cpLog('LK', 'TrackUnmuted: configureVoiceChat OK');
-          } catch (e) {
-            _cpLog('LK', 'TrackUnmuted: configureVoiceChat ERROR | $e');
-          }
-        });
-        _transitionToConnected(context: 'TrackUnmuted');
-        if (Platform.isAndroid) {
-          final speakerTarget = preventCallScreenAutoOpen.value;
-          _cpLog('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackUnmuted-Android swipeLive=$speakerTarget');
-          _hardware.setSpeaker(speakerTarget);
-          _setState(state.value.copyWith(isSpeaker: speakerTarget));
-        }
-      }
-    } else if (event is LocalTrackPublishedEvent) {
-      if (event.publication.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'LocalTrackPublished VIDEO');
-        _setState(state.value.copyWith(localVideoEnabled: true));
-      }
-    } else if (event is TrackPublishedEvent) {
-      if (event.publication.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'RemoteTrackPublished VIDEO | participant=${event.participant.identity}');
-        // remoteVideoEnabled is set in TrackSubscribedEvent when track is actually receivable
-      }
-    } else if (event is LocalTrackUnpublishedEvent) {
-      if (event.publication.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'LocalTrackUnpublished VIDEO');
-        _setState(state.value.copyWith(localVideoEnabled: false));
-      }
-    } else if (event is TrackUnpublishedEvent) {
-      if (event.publication.kind == TrackType.VIDEO) {
-        _cpLog('LK', 'RemoteTrackUnpublished VIDEO | participant=${event.participant.identity}');
-        _setState(state.value.copyWith(remoteVideoEnabled: false));
-      }
-    } else if (event is ParticipantConnectionQualityUpdatedEvent) {
-      final isLocal = event.participant == _room?.localParticipant;
-      final isLost = event.connectionQuality == ConnectionQuality.lost;
-      final isPoor = event.connectionQuality == ConnectionQuality.poor || isLost;
-      if (isLocal) {
-        if (state.value.isPoorConnection != isPoor) {
-          _cpLog('LK', 'LocalQuality=${event.connectionQuality.name} isPoor=$isPoor');
-          _setState(state.value.copyWith(isPoorConnection: isPoor));
-        }
-      } else {
-        // T9: Remote katılımcının bağlantısı kesiliyorsa peer tarafında da göster.
-        // LiveKit RoomReconnecting kendi tarafı için status=reconnecting seti yapıyor.
-        // Karşı taraf için isPoorConnection zaten varsa onu yeniden kullan.
-        if (state.value.isPoorConnection != isPoor) {
-          _cpLog('LK', 'RemoteQuality=${event.connectionQuality.name} isPoor=$isPoor → updating isPoorConnection for peer');
-          _setState(state.value.copyWith(isPoorConnection: isPoor));
-        }
-      }
-    }
-  }
-
-  Future<void> _setupAudioInterruptionListener() async {
-    _audioInterruptionSubscription?.cancel();
-    final session = await AudioSession.instance;
-    _audioInterruptionSubscription = session.interruptionEventStream.listen((
-      event,
-    ) {
-      if (event.begin) {
-        // Only save/restore mic during active call states where mic is expected to be on.
-        // During ringing/calling, isMuted defaults to false but mic was never activated —
-        // blindly setting isMuted=true here would cause interruption-end to re-enable the mic.
-        final micIsActive = state.value.status == CallStatus.active ||
-            state.value.status == CallStatus.connecting;
-        if (micIsActive && !state.value.isMuted) {
-          _cpLog('HW', 'microphone DISABLE | context=audioInterruption-begin isMuted=false→true');
-          _room?.localParticipant?.setMicrophoneEnabled(false);
-          _setState(state.value.copyWith(isMuted: true));
-        }
-      } else {
-        if (state.value.isMuted) {
-          _cpLog('HW', 'microphone ENABLE | context=audioInterruption-end isMuted=true→false');
-          _room?.localParticipant?.setMicrophoneEnabled(true);
-          _setState(state.value.copyWith(isMuted: false));
-        }
-      }
-    });
-  }
 
   // ── Connected State Transition (T12 — single source of truth) ────────────
 
@@ -1479,11 +1008,11 @@ class CallService {
     _statsTimer?.cancel();
     _cpLog('LK', 'statsMonitor START | interval=5s callId=${state.value.callId}');
     _statsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (state.value.status != CallStatus.active || _room == null) {
+      if (state.value.status != CallStatus.active || _roomAdapter.room == null) {
         _statsTimer?.cancel();
         return;
       }
-      final remotePeerCount = _room!.remoteParticipants.length;
+      final remotePeerCount = _roomAdapter.room!.remoteParticipants.length;
       final quality = state.value.isPoorConnection ? 'POOR' : 'OK';
       _cpLog('LK', 'healthTick | remotePeers=$remotePeerCount quality=$quality callId=${state.value.callId}');
       if (remotePeerCount == 0 && state.value.status == CallStatus.active) {
@@ -1560,7 +1089,7 @@ class CallService {
     final muted = !state.value.isMuted;
     _cpLog('UI', 'toggleMute | newMuted=$muted');
     _cpLog('HW', 'microphone ${muted ? "DISABLE" : "ENABLE"} | context=toggleMute userAction=true');
-    await _room?.localParticipant?.setMicrophoneEnabled(!muted);
+    await _roomAdapter.room?.localParticipant?.setMicrophoneEnabled(!muted);
     _setState(state.value.copyWith(isMuted: muted));
   }
 
@@ -1667,27 +1196,13 @@ class CallService {
 
   Future<void> _disconnectRoom() async {
     _elapsedTimer?.cancel();
-    _peerTimeoutTimer?.cancel();
     _callerStatusPollTimer?.cancel();
     _connectingTimeoutTimer?.cancel();
-    _roomEventsSubscription?.call();
-    _audioInterruptionSubscription?.cancel();
     _stopStatsMonitor();
     _stopProximitySensor();
     _stopNetworkMonitor();
     _hardware.stopAllSounds(); // Safety net: stop ringback + any one-shot sounds
-
-    _isJoiningRoom = false;
-    if (_room != null) {
-      _cpLog('LK', 'room.disconnect() calling');
-      await _room!.disconnect();
-      _cpLog('LK', 'room.disconnect() done → dispose()');
-      await _room!.dispose();
-      _room = null;
-      _cpLog('LK', 'room disposed | _room=null _isJoiningRoom=false');
-    } else {
-      _cpLog('LK', '_disconnectRoom: room was already null | _isJoiningRoom=false');
-    }
+    await _roomAdapter.disconnect();
   }
 
   // Called by IncomingCallScreen when user taps [Ayarlar'a Git] on the
@@ -1704,7 +1219,6 @@ class CallService {
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
-    _peerTimeoutTimer?.cancel();
     _disconnectRoom();
     // Safety net: release WS lock if still held (error path bypassed _handleStatusChange).
     if (_wsLockHeld) {
@@ -1858,7 +1372,7 @@ class CallService {
           if (alreadyElapsed.inMilliseconds > 0) elapsed.value = alreadyElapsed;
           _cpLog('RECOVERY', 'checkActiveCall → elapsed synced | ${alreadyElapsed.inSeconds}s');
         }
-        _joinRoom(livekitUrl: lkUrl, token: freshToken).catchError((e) {
+        _roomAdapter.joinRoom(livekitUrl: lkUrl, token: freshToken).catchError((e) {
           _cpLog('RECOVERY', 'checkActiveCall _joinRoom ERROR | $e — forcing ended');
           _hangUpLocally(status: CallStatus.ended);
         });
@@ -1921,12 +1435,12 @@ class CallService {
     }
   }
 
-  Room? get room => _room;
+  Room? get room => _roomAdapter.room;
 
   // ── Video ──────────────────────────────────────────────────────────────────
 
   Future<void> toggleCamera() async {
-    final room = _room;
+    final room = _roomAdapter.room;
     if (room == null || state.value.status != CallStatus.active) {
       _cpLog('VIDEO', 'toggleCamera: SKIPPED | room=${room != null} status=${state.value.status.name}');
       return;
@@ -1945,7 +1459,7 @@ class CallService {
   }
 
   Future<void> switchCamera() async {
-    final room = _room;
+    final room = _roomAdapter.room;
     if (room == null || !state.value.localVideoEnabled) {
       _cpLog('VIDEO', 'switchCamera: SKIPPED | roomNull=${room == null} videoEnabled=${state.value.localVideoEnabled}');
       return;
@@ -2020,7 +1534,7 @@ class CallService {
       _hardware.onAudioSessionActivated();
 
       // LiveKit odasına bağlan (callee yolu: audio session configure + mic aç)
-      await _joinRoom(
+      await _roomAdapter.joinRoom(
         livekitUrl: invite.livekitUrl,
         token: invite.livekitToken,
       );

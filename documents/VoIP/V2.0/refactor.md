@@ -67,7 +67,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 7** | `CallNotifAdapter` | Push layer izole | ✅ |
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | ✅ |
 | **Step 9** | Grup call HTTP → `CallRepository` | Step 4 additive extension | ✅ |
-| **Step 10** | `CallRoomAdapter` | Step 9 tamamlanmış olmalı | 🔴 |
+| **Step 10** | `CallRoomAdapter` | Step 9 tamamlanmış olmalı | ✅ |
 
 ---
 
@@ -986,63 +986,58 @@ Her `_post('/calls/...')` grup çağrısı `_repository.*` ile değiştirilir.
 
 ## Step 10: `CallRoomAdapter`
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-02  
+**Tamamlanma:** 2026-08-02  
+**Commit:** (bu commit)
 
 **Bağımlılık:** Step 9 tamamlanmış olmalı.
 
-LiveKit room yönetimini `CallService`'ten izole eder. Önceki cycle'da ertelenmişti — bkz. erteleme gerekçesi için Karar Logu.
+LiveKit room yönetimini `CallService`'ten izole eder.
 
 ```
 mobile/lib/call/
   room/
-    call_room_adapter.dart    ← interface + callback contract
-    livekit_room_adapter.dart ← Room bağımlı impl
+    call_room_adapter.dart    ← tüm LiveKit room mantığı burada
 ```
 
-### 10.1 Interface
+**Mimari karar:** Tek dosya, callback-based coupling. Adapter constructor'ı 6 parametre alır: `hardware`, `preventCallScreenAutoOpen`, `getState`, `setState`, `onConnected`, `endCall`. Bu yeterli izolasyon sağladı; ayrı interface dosyası gerekmedi.
+
+**Kapsam dışı bırakılanlar** (iç içe geçmiş bağımlılık nedeniyle):
+- `_transitionToConnected` — `stopRingtoneAndVibration`, `_startProximitySensor`, `_repository.reportConnected` çağırıyor; CallService'te kaldı
+- `_startStatsMonitor/Network/ProximitySensor` — `setSpeaker()` döngüsü nedeniyle CallService'te kaldı
+- `toggleMute`, `setSpeaker`, `toggleCamera`, `switchCamera` — public API, `_roomAdapter.room` getter üzerinden erişiyor
+
+### 10.1 Gerçekleştirilen Interface
 
 ```dart
 class CallRoomAdapter {
   CallRoomAdapter({
     required CallHardwareAdapter hardware,
     required ValueNotifier<bool> preventCallScreenAutoOpen,
+    required CallState Function() getState,
+    required void Function(CallState) setState,
     required void Function(String context) onConnected,
-    required void Function() onDisconnected,
-    required void Function() onReconnecting,
-    required void Function() onReconnected,
-    required void Function() onPeerJoined,
-    required void Function(bool isPoor) onConnectionQuality,
+    required void Function() endCall,
   });
 
-  Future<void> joinRoom({
-    required String livekitUrl,
-    required String token,
-    required CallRole role,
-    required int? callId,
-  });
-  Future<void> disconnect();
-  Future<void> setMicEnabled(bool enabled);
-  Future<void> setCameraEnabled(bool enabled);
-  Future<void> switchCamera();
   Room? get room;
+  bool get isJoiningRoom;
+
+  Future<void> joinRoom({required String livekitUrl, required String token});
+  Future<void> activateCalleeAudio();
+  Future<void> disconnect();
 }
 ```
 
-### 10.2 `call_service.dart`'tan Taşınacaklar
+### 10.2 `call_service.dart`'tan Taşınanlar
 
-- `_joinRoom()` (~190 satır)
-- `_onRoomEvent()` (~100 satır)
-- `_disconnectRoom()` (~30 satır)
-- `_transitionToConnected()` (~20 satır)
-- `_setupAudioInterruptionListener()` (~25 satır)
-- `_startStatsMonitor()` / `_stopStatsMonitor()` (~20 satır)
-- `_startNetworkMonitor()` / `_stopNetworkMonitor()` (~15 satır)
-- `_startProximitySensor()` / `_stopProximitySensor()` (~20 satır)
-- `_ensureMicEnabled()` (~25 satır)
-- `toggleMute()`, `setSpeaker()`, `toggleCamera()`, `switchCamera()` (~50 satır)
+- `_joinRoom()` (~190 satır) → `joinRoom()` ✅
+- `_onRoomEvent()` (~195 satır) → `_onRoomEvent()` (private) ✅
+- `_activateCalleeAudio()` (~57 satır) → `activateCalleeAudio()` ✅
+- `_setupAudioInterruptionListener()` (~25 satır) → private, `joinRoom()` sonunda çağrılır ✅
+- `_room`, `_roomEventsSubscription`, `_audioInterruptionSubscription`, `_peerTimeoutTimer`, `_isJoiningRoom` → adapter'a taşındı ✅
+- `_disconnectRoom()` → timer'ları iptal edip `_roomAdapter.disconnect()` çağırır ✅
 
 ### 10.3 Kritik Test Senaryoları
 
@@ -1055,12 +1050,15 @@ class CallRoomAdapter {
 
 ### 10.4 Checklist
 
-- [ ] `call_room_adapter.dart` interface + callback contract oluşturuldu
-- [ ] `livekit_room_adapter.dart` impl yazıldı
-- [ ] `call_service.dart`: `_room` field kaldırıldı, `_roomAdapter` eklendi
-- [ ] Tüm LiveKit çağrıları `_roomAdapter.*`'e delegate edildi
-- [ ] `dart analyze` 0 warning
-- [ ] Tüm kritik test senaryoları (§10.3) her iki platformda doğrulandı
+- [x] `call_room_adapter.dart` oluşturuldu (`mobile/lib/call/room/`)
+- [x] `call_service.dart`: `_room` ve ilgili field'lar kaldırıldı, `_roomAdapter` eklendi
+- [x] Constructor'da `_roomAdapter` initialize edildi (6 callback)
+- [x] Tüm `_joinRoom()` → `_roomAdapter.joinRoom()` delegate edildi
+- [x] Tüm `_activateCalleeAudio()` → `_roomAdapter.activateCalleeAudio()` delegate edildi
+- [x] `_room` referansları → `_roomAdapter.room` güncellendi (37+ yer)
+- [x] `_disconnectRoom()` → orchestration sadece, room cleanup `adapter.disconnect()`'e
+- [x] `dart analyze` 0 warning ✅
+- [ ] Tüm kritik test senaryoları (§10.3) her iki platformda doğrulanacak
 
 ---
 
