@@ -903,35 +903,43 @@ elif callee.fcm_token:
 
 ---
 
-## Step 8: `CallService` İnce Orchestrator
+## Step 8: `CallState` Ekstraksiyonu + Dead Code Temizliği
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Başlangıç:** 2026-08-02  
+**Tamamlanma:** 2026-08-02  
+**Commit:** `(aşağıda)`
 
 **Bağımlılık:** Step 1–7 tamamlanmış olmalı.
 
-Bu adımda `call_service.dart` ~2645 satırdan ~300 satıra iner. Tek işi: event gelince doğru modüle iletmek.
+**Orijinal hedef (aspirasyonel):** `call_service.dart` ~2645 → ~300 satır.  
+**Gerçekleşen:** 2297 → 2186 satır. LiveKit room yönetimi (`_joinRoom`, `_onRoomEvent`, ~600 satır) audio session kırılganlığı nedeniyle V3.0'a ertelendi — bkz. `documents/VoIP/V3.0/deferred.md`.
 
-```dart
-class CallService {
-  // Not: CallStateMachine pure static — instance field değil, CallStateMachine.transition() direkt çağrılır.
-  final CallRepository _repository;
-  final CallHardwareAdapter _hardware;
-  final CallNotifAdapter _notif;
-  final CallScreenRouter _router;
+**Yapılanlar:**
 
-  // Dışarıya: tek API noktası
-  Future<void> startCall(...);
-  Future<void> acceptCall();
-  Future<void> rejectCall();
-  Future<void> endCall();
-  void onWsEvent(Map<String, dynamic> data);
-  void onPushReceived(Map<String, dynamic> data);
-  void onCallkitEvent(CallKitEvent event);
-}
-```
+- `CallState` → `call/state/call_state.dart` ayrı dosyaya taşındı (111 satır azalma)
+- `CallApiException` kaldırıldı (dosya dışında hiçbir yerde kullanılmıyordu, dead code)
+- `call_service.dart`: `import + export '../call/state/call_state.dart'` eklendi — tüm mevcut importlar kırılmadan çalışıyor
+
+### Checklist
+
+- [x] `call/state/call_state.dart` oluşturuldu — `CallStatus`, `EndReason`, `CallParticipant`/`GroupInvite` bağımlılıkları doğru import edildi
+- [x] `CallApiException` kaldırıldı (dead code — dosya dışında referans yoktu)
+- [x] `call_service.dart` → `export '../call/state/call_state.dart'` eklendi, tüketici dosyalar değişmedi
+- [x] `dart analyze` 0 warning (2 pre-existing info: unnecessary_import + deprecated_member_use)
+- [x] V3.0 ertelenen kapsam `documents/VoIP/V3.0/deferred.md`'de belgelendi
+
+**V2.0 refactoring cycle tamamlandı.** Çıkarılan modüller:
+
+| Modül | Dosya | Satır |
+|---|---|---|
+| `CallStateMachine` + `CallRole` | `call/state/call_state_machine.dart` | Step 1 |
+| `EndReason` | `call/state/end_reason.dart` | Step 3 |
+| `CallRepository` | `call/repository/call_repository.dart` | Step 4 |
+| `CallHardwareAdapter` (iOS + Android) | `call/hardware/` | Step 5 |
+| `CallScreenRouter` | `call/routing/call_screen_router.dart` | Step 6 |
+| `CallNotifAdapter` (iOS + Android) | `call/notif/` | Step 7 |
+| `CallState` | `call/state/call_state.dart` | Step 8 |
 
 ---
 
