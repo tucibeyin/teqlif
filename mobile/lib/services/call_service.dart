@@ -29,6 +29,9 @@ import '../call/repository/call_repository.dart';
 import '../call/hardware/call_hardware_adapter.dart';
 import '../call/hardware/ios_call_hardware_adapter.dart';
 import '../call/hardware/android_call_hardware_adapter.dart';
+import '../call/notif/call_notif_adapter.dart';
+import '../call/notif/ios_call_notif_adapter.dart';
+import '../call/notif/android_call_notif_adapter.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
@@ -201,6 +204,14 @@ class CallService {
   final CallHardwareAdapter _hardware = Platform.isIOS
       ? IosCallHardwareAdapter()
       : AndroidCallHardwareAdapter();
+
+  // Platform-specific notification / token adapter (Step 7).
+  final CallNotifAdapter _notif = Platform.isIOS
+      ? IosCallNotifAdapter()
+      : AndroidCallNotifAdapter();
+
+  /// Exposed for PushNotificationService token registration delegation (Step 7).
+  CallNotifAdapter get notifAdapter => _notif;
 
   bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
@@ -428,7 +439,7 @@ class CallService {
 
       if (Platform.isIOS) {
         try {
-          final uuid = _formatToUuid(startResult.callId.toString());
+          final uuid = CallNotifAdapter.formatCallId(startResult.callId.toString());
           final params = CallKitParams(
             id: uuid,
             nameCaller: calleeUsername,
@@ -567,7 +578,7 @@ class CallService {
     if (incomingCallId != null && _lastEndedCallId != null && incomingCallId <= _lastEndedCallId!) {
       _cpLog('IN', 'ghostCall BLOCKED | incoming=$incomingCallId <= lastEnded=$_lastEndedCallId (stale FCM/delayed push)');
       try {
-        final formattedUuid = _formatToUuid(incomingCallId.toString());
+        final formattedUuid = CallNotifAdapter.formatCallId(incomingCallId.toString());
         await FlutterCallkitIncoming.endCall(formattedUuid);
         _cpLog('IN', 'ghostCall BLOCKED → notification dismissed | callId=$incomingCallId uuid=$formattedUuid');
       } catch (e) {
@@ -584,7 +595,7 @@ class CallService {
         // Dismiss the stale incoming notification so the user cannot tap Accept/Decline
         // on it later (which would fire duplicate call_rejected events to the caller).
         try {
-          final formattedUuid = _formatToUuid(incomingCallId.toString());
+          final formattedUuid = CallNotifAdapter.formatCallId(incomingCallId.toString());
           await FlutterCallkitIncoming.endCall(formattedUuid);
           _cpLog('IN', 'hasActiveCall BUSY_REJECT → notification dismissed | callId=$incomingCallId');
         } catch (e) {
@@ -606,7 +617,7 @@ class CallService {
           // can tap "Accept" minutes later and get a phantom CallScreen (the "tekrar arama
           // geliyor" UX bug).
           try {
-            final formattedUuid = _formatToUuid(incomingCallId.toString());
+            final formattedUuid = CallNotifAdapter.formatCallId(incomingCallId.toString());
             await FlutterCallkitIncoming.endCall(formattedUuid);
             _cpLog('IN', 'backendStatus TERMINATED → notification dismissed | callId=$incomingCallId uuid=$formattedUuid');
           } catch (e) {
@@ -731,7 +742,7 @@ class CallService {
         return;
       }
     } else if (Platform.isAndroid && state.value.callId != null) {
-      final uuid = _formatToUuid(state.value.callId!.toString());
+      final uuid = CallNotifAdapter.formatCallId(state.value.callId!.toString());
       _cpLog('IN', '_activateCalleeAudio: Android onCallConnected | uuid=$uuid');
       await _hardware.onCallConnected(uuid);
     }
@@ -1134,7 +1145,7 @@ class CallService {
       // ── Android Callee: notify CallKit UI that call is connected ───────────
       // iOS: CallKit audio session lifecycle is handled by the adapter's waitForCallkitAudio().
       if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
-        final uuid = _formatToUuid(state.value.callId!.toString());
+        final uuid = CallNotifAdapter.formatCallId(state.value.callId!.toString());
         _cpLog('LK', 'Android callee: onCallConnected | uuid=$uuid');
         await _hardware.onCallConnected(uuid);
       }
@@ -1706,11 +1717,6 @@ class CallService {
 
   // ── Internal Cleanup ──────────────────────────────────────────────────────
 
-  String _formatToUuid(String id) {
-    final padded = id.padLeft(32, '0');
-    return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
-  }
-
   Future<void> _hangUpLocally({
     required CallStatus status,
     EndReason? endReason,
@@ -1753,11 +1759,9 @@ class CallService {
       _cpLog('HW', 'wakelock DISABLE | context=_hangUpLocally');
       WakelockPlus.disable();
 
-      _cpLog('END', 'CallKit.endCall | callId=${state.value.callId}');
-      if (state.value.callId != null) {
-        await FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
-      }
-      await FlutterCallkitIncoming.endAllCalls();
+      // §16.2.5 — platform bildir (CallNotifAdapter)
+      await _notif.reportCallEnded(callId: state.value.callId?.toString());
+      await _notif.endAllCalls();
 
       // SwipeLiveScreen bağlamında arama bitti → stream hoparlörden devam etmeli.
       // reset() preventCallScreenAutoOpen'ı temizlemeden önce flag'i oku.
@@ -1833,7 +1837,7 @@ class CallService {
     }
     _cpLog('HW', 'wakelock DISABLE | context=reset');
     WakelockPlus.disable();
-    FlutterCallkitIncoming.endAllCalls();
+    _notif.endAllCalls();
     _hardware.resetAfterCall(); // iOS: _audioSessionActivated flag + Completer sıfırla
     _preConnectStartedAt = null;
     _activeIncomingCallId = null; // Dedup guard sıfırla — yeni aramalara açık

@@ -9,7 +9,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:http/http.dart' as http;
-import 'auth_service.dart';
 import 'storage_service.dart';
 import 'call_service.dart';
 import 'localization_service.dart';
@@ -509,15 +508,10 @@ class PushNotificationService {
           CallService.instance.reset();
         }
       } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
+        _cpLog('TOKEN', 'VoIP token async update (PKPushRegistry) → notifAdapter.registerTokens');
         try {
-          final voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-          final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
-          _cpLog('TOKEN', 'VoIP token async update (PKPushRegistry) | ${shortVoip ?? "NULL"}');
-          if (voipToken != null && voipToken.isNotEmpty) {
-            final fcmToken = await FirebaseMessaging.instance.getToken();
-            await AuthService.saveDeviceTokens(fcmToken: fcmToken, voipToken: voipToken);
-            _cpLog('TOKEN', 'VoIP async update → backend SUCCESS');
-          }
+          await CallService.instance.notifAdapter.registerTokens();
+          _cpLog('TOKEN', 'VoIP async update → notifAdapter done');
         } catch (e) {
           _cpLog('TOKEN', 'VoIP async update FAILED | $e');
         }
@@ -674,84 +668,16 @@ class PushNotificationService {
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
       _messaging.onTokenRefresh.listen((t) {
-        _cpLog('TOKEN', 'FCM onTokenRefresh → re-registering backend');
-        _sendTokenToBackend(t);
+        _cpLog('TOKEN', 'FCM onTokenRefresh → re-registering via notifAdapter');
+        CallService.instance.notifAdapter.registerTokens(fcmToken: t);
       });
-      await _registerToken();
+      await CallService.instance.notifAdapter.registerTokens();
     }
   }
 
   static Future<void> refreshToken() async {
-    _cpLog('TOKEN', 'refreshToken called → _registerToken');
-    await _registerToken();
+    _cpLog('TOKEN', 'refreshToken called → notifAdapter.registerTokens');
+    await CallService.instance.notifAdapter.registerTokens();
   }
 
-  static Future<void> _registerToken() async {
-    _cpLog('TOKEN', '_registerToken start');
-    try {
-      if (!kIsWeb) {
-        try {
-          final apns = await _messaging.getAPNSToken();
-          _cpLog('TOKEN', 'APNS token | ${apns != null ? "${apns.substring(0, 12)}… (${apns.length} chars)" : "NULL"}');
-        } catch (e) {
-          _cpLog('TOKEN', 'APNS token FAILED | $e');
-        }
-      }
-      final token = await _messaging.getToken();
-      _cpLog('TOKEN', 'FCM token | ${token != null ? "${token.substring(0, 20)}… (${token.length} chars)" : "NULL"}');
-      if (token != null) {
-        await _sendTokenToBackend(token);
-      } else {
-        _cpLog('TOKEN', 'FCM token NULL — backend registration SKIPPED');
-      }
-    } catch (e) {
-      _cpLog('TOKEN', '_registerToken FAILED | $e');
-    }
-  }
-
-  static Future<void> _sendTokenToBackend(String token) async {
-    _cpLog('TOKEN', '_sendTokenToBackend start | fcmLen=${token.length}');
-    try {
-      String? voipToken;
-      if (Platform.isIOS) {
-        try {
-          voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-          final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
-          _cpLog('TOKEN', 'VoIP token (attempt 1) | ${shortVoip ?? "NULL"}');
-
-          if (voipToken == null || voipToken.isEmpty) {
-            _cpLog('TOKEN', 'VoIP token NULL — retrying after 3s (PKPushRegistry may not have fired yet)');
-            await Future.delayed(const Duration(seconds: 3));
-            voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-            final shortRetry = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
-            _cpLog('TOKEN', 'VoIP token (attempt 2) | ${shortRetry ?? "STILL NULL"}');
-          }
-        } catch (e) {
-          _cpLog('TOKEN', 'VoIP token FAILED | $e');
-        }
-      }
-
-      // 429 Rate Limited için exponential backoff: 10s, 30s, vazgeç.
-      const delays = [10, 30];
-      for (int attempt = 1; attempt <= delays.length + 1; attempt++) {
-        try {
-          await AuthService.saveDeviceTokens(fcmToken: token, voipToken: voipToken);
-          _cpLog('TOKEN', 'backend registration SUCCESS | attempt=$attempt voip=${voipToken != null ? "present" : "absent"}');
-          return;
-        } catch (e) {
-          final isRateLimited = e.toString().contains('429') || e.toString().contains('RATE_LIMITED') || e.toString().contains('rate_limited');
-          if (isRateLimited && attempt <= delays.length) {
-            final waitSecs = delays[attempt - 1];
-            _cpLog('TOKEN', 'backend registration 429 RATE_LIMITED | attempt=$attempt → retrying in ${waitSecs}s');
-            await Future.delayed(Duration(seconds: waitSecs));
-          } else {
-            _cpLog('TOKEN', '_sendTokenToBackend FAILED | attempt=$attempt error=$e');
-            return;
-          }
-        }
-      }
-    } catch (e) {
-      _cpLog('TOKEN', '_sendTokenToBackend OUTER FAILED | $e');
-    }
-  }
 }
