@@ -245,9 +245,6 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       ),
       body: Column(
         children: [
-          // ── Çevrimdışı bilgi bandı ─────────────────────────────
-          const OfflineBanner(),
-
           // ── Video Hikayeler (Story Tray) ────────────────────────
           const StoryTray(),
 

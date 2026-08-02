@@ -5,10 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Cihazın internete bağlı olup olmadığını anlık olarak takip eder.
 class ConnectivityService {
   final Connectivity _connectivity = Connectivity();
+  static bool isDeviceOnline = true;
+
+  ConnectivityService() {
+    _connectivity.checkConnectivity().then((res) => isDeviceOnline = _isOnline(res));
+  }
 
   /// Her bağlantı değişikliğinde bool yayınlar: true = çevrimiçi.
   Stream<bool> get onConnectivityChanged => _connectivity.onConnectivityChanged
-      .map((results) => _isOnline(results));
+      .map((results) {
+        final online = _isOnline(results);
+        isDeviceOnline = online;
+        return online;
+      });
 
   /// Anlık bağlantı durumunu döner.
   Future<bool> get isConnected async {

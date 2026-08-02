@@ -642,6 +642,25 @@ result.when(
 
 ---
 
+### 2.9 Çifte Uyarı Orkestrasyonu (Network Errors)
+
+**Kural: Reaktif state varken, Toast susturulur.**
+
+Eğer kullanıcı cihazında internet kesikse, ana ekranlarda `ConnectivityService` üzerinden tetiklenen kalıcı bir `OfflineBanner` görünür (Reaktif State). Aynı esnada arka planda veya kullanıcının tetiklemesiyle fail olan API çağrıları `NetworkException` fırlatır.
+
+Bu gibi durumlarda kullanıcının aynı anda hem kalıcı Banner'ı hem de geçici Toast pop-up'ını (Redundancy) görmemesi için `handleError` içerisine bir susturma (Supression) mekanizması eklenmiştir:
+
+```dart
+if (error is NetworkException && !ConnectivityService.isDeviceOnline) {
+  // OfflineBanner zaten görünür olduğu için Toast basma
+  return;
+}
+```
+
+Bu sayede, kullanıcının UI üzerinden aynı anda çifte uyarı görmesi engellenmiş ve kullanıcı deneyimi (UX) pürüzsüz hale getirilmiştir. `OfflineBanner` sadece `main_screen.dart` gibi kök (root) yapıların içinde yer alır, sekme içeriklerine (örneğin `live_list_screen`) tekrar tekrar eklenmez.
+
+---
+
 ## 3. ML / Analytics / ClickHouse
 
 ### 3.1 ClickHouse Schema Değişikliği: ALTER TABLE

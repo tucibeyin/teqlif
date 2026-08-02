@@ -4,6 +4,7 @@ import '../core/logger_service.dart';
 import '../services/auth_service.dart';
 import '../services/localization_service.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../services/connectivity_service.dart';
 
 /// OTA-localized ekranlar için: hata yakala → lokalize et → göster → logla.
 ///
@@ -24,7 +25,12 @@ void handleError(Object error, TranslationPack loc) {
   }
 
   final message = ErrorMapper.toMessage(error, loc);
-  TeqToast.error(message);
+  
+  if (error is NetworkException && !ConnectivityService.isDeviceOnline) {
+    // OfflineBanner devrede olduğu için çifte uyarıyı (redundancy) engelle
+  } else {
+    TeqToast.error(message);
+  }
   if (ErrorMapper.shouldLog(error)) {
     LoggerService.instance.captureException(error);
   }
