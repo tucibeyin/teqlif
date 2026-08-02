@@ -50,7 +50,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     if (box != null) {
       if (initialPack != null && !initialPack.isEmpty) {
         // Pack hazır — ready'yi hemen tamamla, stale kontrolü arka planda.
-        _readyCompleter.complete();
+        if (!_readyCompleter.isCompleted) _readyCompleter.complete();
         _checkStale(lang, box).ignore();
       } else {
         // Cache yok (ilk kurulum) — API'den çek, bitince ready'yi tamamla.
@@ -59,7 +59,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
         });
       }
     } else {
-      _readyCompleter.complete();
+      if (!_readyCompleter.isCompleted) _readyCompleter.complete();
     }
 
     _ref.listen<Locale>(localeProvider, (_, next) {
