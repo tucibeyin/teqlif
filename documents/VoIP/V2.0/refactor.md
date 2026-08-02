@@ -66,7 +66,7 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | ✅ |
 | **Step 7** | `CallNotifAdapter` | Push layer izole | ✅ |
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | ✅ |
-| **Step 9** | Grup call HTTP → `CallRepository` | Step 4 additive extension | 🔴 |
+| **Step 9** | Grup call HTTP → `CallRepository` | Step 4 additive extension | ✅ |
 | **Step 10** | `CallRoomAdapter` | Step 9 tamamlanmış olmalı | 🔴 |
 
 ---
@@ -974,11 +974,13 @@ Her `_post('/calls/...')` grup çağrısı `_repository.*` ile değiştirilir.
 
 ### 9.3 Checklist
 
-- [ ] `call_repository.dart`: 5 grup endpoint metodu eklendi
-- [ ] `call_service.dart`: grup call `_post()` çağrıları `_repository.*`'e migrate edildi
-- [ ] `call_service.dart`: `_post()` ve `_authHeaders()` kaldırıldı (artık kullanılmıyor)
-- [ ] `dart analyze` 0 warning
+- [x] `call_repository.dart`: 5 grup endpoint metodu eklendi (inviteParticipant, acceptGroupParticipant, rejectGroupParticipant, leaveGroupCall, removeParticipant)
+- [x] `call_service.dart`: grup call `_post()` çağrıları `_repository.*`'e migrate edildi
+- [x] `call_service.dart`: `_post()` kaldırıldı; `_authHeaders()` + `_getList()` `fetchFollowingForInvite` için kaldı
+- [x] `dart analyze` 0 warning (2 pre-existing info)
 - [ ] Grup davet alma / kabul / red / ayrılma / çıkarma senaryoları manuel test edildi
+
+**Commit:** `6e03ee03`
 
 ---
 
