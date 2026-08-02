@@ -591,7 +591,7 @@ Group call endpoint'leri (`/invite`, `/participants/*`) — bunlar farklı flow,
 **Durum:** ✅ Tamamlandı  
 **Başlangıç:** 2026-08-02  
 **Tamamlanma:** 2026-08-02  
-**Commit:** `8159d4d6`
+**Commit (ilk):** `8159d4d6`
 
 **Bağımlılık:** Step 4 tamamlanmış olmalı.
 
@@ -750,6 +750,10 @@ Connect tamamlandıktan sonra `resumeAudioAfterRoomConnect()` çağrılır:
 - [x] Callee mic check `ringing` state'ine taşındı (`.request()` ile, `connecting`'e girmeden önce)
 - [x] `room.connect()` sonrası `_hardware.resumeAfterRoomConnect()` çağrılıyor (iOS)
 - [x] `CallService` `_hardware.*` çağırıyor; platform kodu service'den tamamen ayrıldı
+- [x] **[BUG FIX]** Callee `permanentlyDenied`: state `ringing` kalıyor, `permPermanentlyDenied=true` set ediliyor (VoIP.md §15.3)
+- [x] **[BUG FIX]** Callee mic `denied`: `_repository.rejectCall(callId)` çağrılıyor, caller beklemiyor (VoIP.md §15.2)
+- [x] **[EKSIK UI FIX]** Caller `permanentlyDenied` → `GlobalCallOverlay._handleCallerPermissionDenied()` eklendi: Snackbar/AlertDialog (VoIP.md §7.3 Kural 5)
+- [x] **[EKSIK UI FIX]** Callee `permanentlyDenied` → `IncomingCallScreen._showPermPermanentlyDeniedModal()` + `IncomingCallBar` await+check eklendi (VoIP.md §15.3)
 - [ ] iOS + Android'de ses routing, izin senaryoları manuel test edildi
 
 **Test notu:** dart analyze 0 error. Manuel test: ses routing (earpiece/speaker), mic permission dialog, iOS ringback restore, Android setCallConnected davranışı doğrulanmalı.

@@ -30,6 +30,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   late AnimationController _pulseCtrl;
   late Animation<double> _pulse;
   bool _hasNavigated = false;
+  bool _permDialogOpen = false;
 
   @override
   void initState() {
@@ -53,42 +54,23 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   }
 
   Future<void> _onStateChange() async {
-    final status = CallService.instance.state.value.status;
-    _cpLog('UI', 'IncomingCallScreen._onStateChange | status=${status.name} hasNavigated=$_hasNavigated');
+    final cs = CallService.instance.state.value;
+    _cpLog('UI', 'IncomingCallScreen._onStateChange | status=${cs.status.name} hasNavigated=$_hasNavigated permPerm=${cs.permPermanentlyDenied}');
+
+    // Callee permanentlyDenied: state stays ringing, show modal in-place (VoIP.md §15.3).
+    if (cs.status == CallStatus.ringing && cs.permPermanentlyDenied && !_permDialogOpen) {
+      _cpLog('UI', 'IncomingCallScreen → permanentlyDenied modal');
+      await _showPermPermanentlyDeniedModal();
+      return;
+    }
 
     if (_hasNavigated || !mounted) return;
 
-    if (status == CallStatus.ended || status == CallStatus.idle) {
-      _cpLog('UI', 'IncomingCallScreen → pop | reason=${status.name}');
+    if (cs.status == CallStatus.ended || cs.status == CallStatus.idle) {
+      _cpLog('UI', 'IncomingCallScreen → pop | reason=${cs.status.name}');
       _hasNavigated = true;
       Navigator.of(context).pop();
-      final endReason = CallService.instance.state.value.endReason;
-      if (endReason == EndReason.permissionDenied && mounted) {
-        final isPermanent = CallService.instance.state.value.permPermanentlyDenied;
-        if (isPermanent) {
-          await showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(ref.read(localizationProvider).t('callPermissionDenied')),
-              content: Text(ref.read(localizationProvider).t('voicePermissionDenied')),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(ref.read(localizationProvider).t('btnCancel')),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    await openAppSettings();
-                  },
-                  child: Text(ref.read(localizationProvider).t('navSettings')),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } else if (status == CallStatus.connecting) {
+    } else if (cs.status == CallStatus.connecting) {
       _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen | status=connecting');
       _hasNavigated = true;
       Navigator.of(context).pushReplacement(
@@ -99,6 +81,40 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
         ),
       );
     }
+  }
+
+  Future<void> _showPermPermanentlyDeniedModal() async {
+    if (!mounted || _permDialogOpen) return;
+    _permDialogOpen = true;
+    final loc = ref.read(localizationProvider);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.t('callPermissionDenied')),
+        content: Text(loc.t('voicePermissionDenied')),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _cpLog('UI', 'IncomingCallScreen permPermanentlyDenied → İptal → rejectCall');
+              CallService.instance.rejectCall();
+            },
+            child: Text(loc.t('btnCancel')),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _cpLog('UI', 'IncomingCallScreen permPermanentlyDenied → Ayarlar\'a Git → clearFlag');
+              CallService.instance.clearPermPermanentlyDenied();
+              await openAppSettings();
+            },
+            child: Text(loc.t('navSettings')),
+          ),
+        ],
+      ),
+    );
+    _permDialogOpen = false;
   }
 
   @override
@@ -114,14 +130,20 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
     _uiLog('INCOMING_SCREEN', 'ACCEPT_TAP', 'callId=${CallService.instance.state.value.callId}');
     await CallService.instance.acceptCall();
     if (!mounted) return;
-    _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen after acceptCall');
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/call_screen'),
-        builder: (_) => const CallScreen(),
-        fullscreenDialog: true,
-      ),
-    );
+    // Only navigate if mic was granted and state moved to connecting.
+    // - denied → ended: _onStateChange pops the screen
+    // - permanentlyDenied → ringing: _onStateChange shows the modal
+    if (CallService.instance.state.value.status == CallStatus.connecting) {
+      _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen after acceptCall');
+      _hasNavigated = true;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/call_screen'),
+          builder: (_) => const CallScreen(),
+          fullscreenDialog: true,
+        ),
+      );
+    }
   }
 
   Future<void> _decline() async {

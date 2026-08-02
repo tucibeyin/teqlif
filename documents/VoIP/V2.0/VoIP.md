@@ -1664,7 +1664,7 @@ Her resource yalnızca acquire edildiyse release edilir.
 
 | Senaryo | LK disconnect | /end | CallKit reportCall | Wakelock |
 |---|---|---|---|---|
-| `idle → permissionDenied → ended` | Hayır (LK hiç bağlanmadı) | Hayır (callId yok) | Hayır (CallKit raporlanmadı) | Hayır |
+| `idle → ended` (endReason=permissionDenied) | Hayır (LK hiç bağlanmadı) | Hayır (callId yok) | Hayır (CallKit raporlanmadı) | Hayır |
 | `dialing → ended` (/start 4xx) | Hayır | Hayır (callId yok) | Hayır | Hayır |
 | `waiting → ended` (caller cancel) | Evet (pre-connect yapılmış olabilir) | Evet | Hayır (caller) | Hayır |
 | `ringing → ended` (callee reject) | Hayır | Evet | Evet (iOS CallKit raporlanmıştı) | Hayır |

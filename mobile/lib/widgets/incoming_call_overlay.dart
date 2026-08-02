@@ -234,8 +234,19 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     _cpLog('UI', 'IncomingCallBar → user ACCEPT tap | callId=$callId caller=$caller nowUtc=${nowUtc.toIso8601String()}');
     _cpLog('TIMER', 'IncomingCallBar: ACCEPT tapped | callId=$callId caller=$caller nowUtc=${nowUtc.toIso8601String()} preConnectTokenReady=$preConnectReady');
     _uiLog('INCOMING_BAR', 'ACCEPT_TAP', 'callId=$callId caller=$caller');
-    CallService.instance.acceptCall();
-    _openCallScreen();
+    await CallService.instance.acceptCall();
+    if (!mounted) return;
+    final status = CallService.instance.state.value.status;
+    if (status == CallStatus.connecting) {
+      // Mic granted → open CallScreen.
+      _openCallScreen();
+    } else if (status == CallStatus.ringing &&
+        CallService.instance.state.value.permPermanentlyDenied) {
+      // permanentlyDenied → open IncomingCallScreen so the modal can be shown there.
+      _cpLog('UI', 'IncomingCallBar: permanentlyDenied → openIncomingScreen for modal');
+      _openIncomingScreen();
+    }
+    // denied → ended: _onCallState will rebuild, bar disappears automatically.
   }
 
   @override

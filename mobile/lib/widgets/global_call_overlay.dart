@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/call_service.dart';
 import '../screens/call_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,7 @@ class GlobalCallOverlay extends ConsumerStatefulWidget {
 class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
   final _cs = CallService.instance;
   bool _prevPillVisible = false;
+  bool _permDialogShown = false;
 
   @override
   void initState() {
@@ -66,7 +68,56 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
 
   void _onStateChange() {
     _checkPillTransition();
+    _handleCallerPermissionDenied();
     setState(() {});
+  }
+
+  // §7.3 Kural 5 — caller mic denied: no screen was open, overlay shows feedback.
+  void _handleCallerPermissionDenied() {
+    final cs = _cs.state.value;
+    if (cs.status != CallStatus.ended) return;
+    if (cs.endReason != EndReason.permissionDenied) return;
+    if (_cs.isCallScreenVisible.value) return;
+    if (_permDialogShown) return;
+
+    _permDialogShown = true;
+    final ctx = widget.navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) {
+      _permDialogShown = false;
+      return;
+    }
+
+    if (cs.permPermanentlyDenied) {
+      final loc = ref.read(localizationProvider);
+      showDialog<void>(
+        context: ctx,
+        builder: (dctx) => AlertDialog(
+          title: Text(loc.t('callPermissionDenied')),
+          content: Text(loc.t('voicePermissionDenied')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx),
+              child: Text(loc.t('btnCancel')),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dctx);
+                await openAppSettings();
+              },
+              child: Text(loc.t('navSettings')),
+            ),
+          ],
+        ),
+      ).whenComplete(() => _permDialogShown = false);
+    } else {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: Text(ref.read(localizationProvider).t('callPermissionDenied')),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _permDialogShown = false;
+    }
   }
 
   void _onElapsedChange() => setState(() {});

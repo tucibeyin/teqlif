@@ -812,20 +812,30 @@ class CallService {
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
 
-    // Mic permission check BEFORE connecting transition:
+    // Mic permission check BEFORE connecting transition (VoIP.md §15.2):
     // - .request() shows OS dialog (vs .status which is silent) → user sees the prompt
-    // - If denied, we can _hangUpLocally from ringing state (cleaner than connecting→ended)
+    // - denied: ringing → ended + /reject fire-and-forget (caller notified immediately)
+    // - permanentlyDenied: state stays ringing; UI shows modal (§15.3); user can go to Settings
     final permStatus = await _hardware.requestMicPermission();
     _cpLog('IN', 'mic permission | status=$permStatus');
     if (!permStatus.isGranted) {
-      _hangUpLocally(
-        status: CallStatus.ended,
-        endReason: EndReason.permissionDenied,
-        permPermanentlyDenied: permStatus.isPermanentlyDenied,
-      );
-      try {
-        await PushNotificationService.showWarningNotification();
-      } catch (_) {}
+      if (permStatus.isPermanentlyDenied) {
+        // State stays at ringing — UI (IncomingCallScreen/IncomingCallBar) shows modal.
+        // Ringtone was already stopped above; restart not needed.
+        _cpLog('IN', 'mic permanentlyDenied | ringing stays, permPermanentlyDenied=true → UI modal');
+        _setState(state.value.copyWith(permPermanentlyDenied: true));
+      } else {
+        // denied: end the call immediately, notify caller via /reject.
+        _cpLog('IN', 'mic denied | ringing → ended, /reject fire-and-forget');
+        _repository.rejectCall(callId);
+        _hangUpLocally(
+          status: CallStatus.ended,
+          endReason: EndReason.permissionDenied,
+        );
+        try {
+          await PushNotificationService.showWarningNotification();
+        } catch (_) {}
+      }
       return;
     }
 
@@ -1795,6 +1805,12 @@ class CallService {
     } else {
       _cpLog('LK', '_disconnectRoom: room was already null | _isJoiningRoom=false');
     }
+  }
+
+  // Called by IncomingCallScreen when user taps [Ayarlar'a Git] on the
+  // permanentlyDenied modal. Clears the flag so accept can be retried on return.
+  void clearPermPermanentlyDenied() {
+    _setState(state.value.copyWith(permPermanentlyDenied: false));
   }
 
   void reset() {
