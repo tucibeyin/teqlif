@@ -164,6 +164,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                         text: loc.t('blockedUnblock'),
                         size: TeqButtonSize.small,
                         customColor: const Color(0xFFEF4444),
+                        isExpanded: false,
                       ),
                     );
                   },
