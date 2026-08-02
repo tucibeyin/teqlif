@@ -765,7 +765,7 @@ Connect tamamlandıktan sonra `resumeAudioAfterRoomConnect()` çağrılır:
 **Durum:** ✅ Tamamlandı  
 **Başlangıç:** 2026-08-02  
 **Tamamlanma:** 2026-08-02  
-**Commit:** —  ← commit hash eklenecek
+**Commit:** `adf96514`
 
 **Bağımlılık:** Step 3 tamamlanmış olmalı (CallStatus + EndReason stabil).
 
