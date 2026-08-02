@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
@@ -410,13 +409,8 @@ class CallService {
 
     if (incomingCallId != null && _lastEndedCallId != null && incomingCallId <= _lastEndedCallId!) {
       _cpLog('IN', 'ghostCall BLOCKED | incoming=$incomingCallId <= lastEnded=$_lastEndedCallId (stale FCM/delayed push)');
-      try {
-        final formattedUuid = CallNotifAdapter.formatCallId(incomingCallId.toString());
-        await FlutterCallkitIncoming.endCall(formattedUuid);
-        _cpLog('IN', 'ghostCall BLOCKED → notification dismissed | callId=$incomingCallId uuid=$formattedUuid');
-      } catch (e) {
-        _cpLog('IN', 'ghostCall BLOCKED endCall ERROR | $e');
-      }
+      await _notif.reportCallEnded(callId: incomingCallId.toString());
+      _cpLog('IN', 'ghostCall BLOCKED → notification dismissed | callId=$incomingCallId');
       _activeIncomingCallId = null; // Blocked — reset so next real call can proceed
       return;
     }
@@ -427,13 +421,8 @@ class CallService {
         _repository.rejectCall(incomingCallId);
         // Dismiss the stale incoming notification so the user cannot tap Accept/Decline
         // on it later (which would fire duplicate call_rejected events to the caller).
-        try {
-          final formattedUuid = CallNotifAdapter.formatCallId(incomingCallId.toString());
-          await FlutterCallkitIncoming.endCall(formattedUuid);
-          _cpLog('IN', 'hasActiveCall BUSY_REJECT → notification dismissed | callId=$incomingCallId');
-        } catch (e) {
-          _cpLog('IN', 'hasActiveCall BUSY_REJECT endCall ERROR | $e');
-        }
+        await _notif.reportCallEnded(callId: incomingCallId.toString());
+        _cpLog('IN', 'hasActiveCall BUSY_REJECT → notification dismissed | callId=$incomingCallId');
       }
       _activeIncomingCallId = null; // Rejected — reset so future calls aren't blocked
       return;
@@ -449,13 +438,8 @@ class CallService {
           // notification is visible even though we won't ring. Without this endCall the user
           // can tap "Accept" minutes later and get a phantom CallScreen (the "tekrar arama
           // geliyor" UX bug).
-          try {
-            final formattedUuid = CallNotifAdapter.formatCallId(incomingCallId.toString());
-            await FlutterCallkitIncoming.endCall(formattedUuid);
-            _cpLog('IN', 'backendStatus TERMINATED → notification dismissed | callId=$incomingCallId uuid=$formattedUuid');
-          } catch (e) {
-            _cpLog('IN', 'backendStatus TERMINATED endCall ERROR | $e');
-          }
+          await _notif.reportCallEnded(callId: incomingCallId.toString());
+          _cpLog('IN', 'backendStatus TERMINATED → notification dismissed | callId=$incomingCallId');
           _activeIncomingCallId = null;
           return;
         }
@@ -1088,9 +1072,8 @@ class CallService {
       await _hardware.setSpeaker(wasInSwipeLive);
       // iOS: voiceChat modu ile playAndRecord session'ı açık kalır → turuncu nokta göstergesi.
       // Arama sonrası deactivate et; SwipeLiveScreen ve diğer ses kaynakları session'ı devralabilir.
-      if (Platform.isIOS) {
-        await _hardware.teardownAudioSession();
-      }
+      // Android impl is a no-op — call unconditionally.
+      await _hardware.teardownAudioSession();
 
       // Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
       // Böylece UI katmanı (SwipeLiveScreen) tepki verdiğinde her şey hazır oluyor.
