@@ -160,19 +160,6 @@ class CallService {
     };
   }
 
-  Future<Map<String, dynamic>> _post(
-    String path, [
-    Map<String, dynamic>? body,
-  ]) async {
-    return await apiCall(
-      () async => http.post(
-        Uri.parse('$kBaseUrl$path'),
-        headers: await _authHeaders(),
-        body: body != null ? jsonEncode(body) : null,
-      ),
-    );
-  }
-
   Future<List<dynamic>> _getList(String path) async {
     final headers = await _authHeaders();
     final response = await http.get(Uri.parse('$kBaseUrl$path'), headers: headers);
@@ -1994,7 +1981,7 @@ class CallService {
     }
     _cpLog('GROUP', 'inviteToCall | callId=$callId inviteeId=$inviteeId');
     try {
-      await _post('/calls/$callId/invite', {'invitee_id': inviteeId});
+      await _repository.inviteParticipant(callId, inviteeId);
       _cpLog('GROUP', 'inviteToCall OK | callId=$callId inviteeId=$inviteeId');
     } catch (e) {
       _cpLog('GROUP', 'inviteToCall ERROR | $e');
@@ -2039,11 +2026,7 @@ class CallService {
       );
 
       // Backen'de "joined" olarak işaretle ve güncel katılımcı listesini al
-      final resp = await _post('/calls/${invite.callId}/participants/$myId/accept');
-      final rawParticipants = resp['participants'] as List<dynamic>? ?? [];
-      final participants = rawParticipants
-          .map((p) => CallParticipant.fromJson(p as Map<String, dynamic>))
-          .toList();
+      final participants = await _repository.acceptGroupParticipant(invite.callId, myId);
       _setState(state.value.copyWith(participants: participants));
 
       _cpLog('GROUP', 'acceptGroupInvite OK | callId=${invite.callId} participants=${participants.length}');
@@ -2063,7 +2046,7 @@ class CallService {
     try {
       final myId = await StorageService.getCurrentUserId();
       if (myId == null) return;
-      await _post('/calls/${invite.callId}/participants/$myId/reject');
+      await _repository.rejectGroupParticipant(invite.callId, myId);
       _setState(state.value.copyWith(pendingGroupInvite: () => null));
       _cpLog('GROUP', 'rejectGroupInvite OK | callId=${invite.callId}');
     } catch (e) {
@@ -2080,10 +2063,7 @@ class CallService {
     final myId = await StorageService.getCurrentUserId();
     _cpLog('GROUP', 'leaveGroupCall | callId=$callId myId=$myId');
     if (callId != null && myId != null) {
-      _post('/calls/$callId/participants/$myId/leave').catchError((e) {
-        _cpLog('GROUP', 'leaveGroupCall HTTP FAILED (non-fatal) | $e');
-        return <String, dynamic>{};
-      });
+      _repository.leaveGroupCall(callId, myId);
     }
     await _hangUpLocally(status: CallStatus.ended);
   }
@@ -2095,7 +2075,7 @@ class CallService {
     if (callId == null) return;
     _cpLog('GROUP', 'removeParticipant | callId=$callId userId=$userId');
     try {
-      await _post('/calls/$callId/participants/$userId/remove');
+      await _repository.removeParticipant(callId, userId);
       // Local state update handled by WS call_participant_removed broadcast
       _cpLog('GROUP', 'removeParticipant OK | callId=$callId userId=$userId');
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../config/api.dart';
 import '../../core/app_exception.dart';
 import '../../services/storage_service.dart';
+import '../../models/call_participant.dart';
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
@@ -242,5 +243,45 @@ class CallRepository {
     );
     _log('API', '← GET /calls/$callId/callee-token | tokenLen=${result.token?.length} urlOk=${result.livekitUrl != null}');
     return result;
+  }
+
+  // ── Group call endpoints ──────────────────────────────────────────────────
+
+  Future<void> inviteParticipant(int callId, int inviteeId) async {
+    _log('API', '→ POST /calls/$callId/invite | inviteeId=$inviteeId');
+    await _post('/calls/$callId/invite', {'invitee_id': inviteeId});
+    _log('API', '← POST /calls/$callId/invite OK');
+  }
+
+  Future<List<CallParticipant>> acceptGroupParticipant(int callId, int participantId) async {
+    _log('API', '→ POST /calls/$callId/participants/$participantId/accept');
+    final data = await _post('/calls/$callId/participants/$participantId/accept');
+    final raw = data['participants'] as List<dynamic>? ?? [];
+    final participants = raw
+        .map((p) => CallParticipant.fromJson(p as Map<String, dynamic>))
+        .toList();
+    _log('API', '← POST /calls/$callId/participants/$participantId/accept | participants=${participants.length}');
+    return participants;
+  }
+
+  Future<void> rejectGroupParticipant(int callId, int participantId) async {
+    _log('API', '→ POST /calls/$callId/participants/$participantId/reject');
+    await _post('/calls/$callId/participants/$participantId/reject');
+    _log('API', '← POST /calls/$callId/participants/$participantId/reject OK');
+  }
+
+  void leaveGroupCall(int callId, int participantId) {
+    _log('API', '→ POST /calls/$callId/participants/$participantId/leave (fire-and-forget)');
+    _post('/calls/$callId/participants/$participantId/leave').then((_) {
+      _log('API', '← POST /calls/$callId/participants/$participantId/leave OK');
+    }).catchError((Object e) {
+      _log('API', '← POST /calls/$callId/participants/$participantId/leave FAILED (non-fatal) | $e');
+    });
+  }
+
+  Future<void> removeParticipant(int callId, int userId) async {
+    _log('API', '→ POST /calls/$callId/participants/$userId/remove | userId=$userId');
+    await _post('/calls/$callId/participants/$userId/remove');
+    _log('API', '← POST /calls/$callId/participants/$userId/remove OK');
   }
 }
