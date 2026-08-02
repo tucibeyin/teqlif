@@ -18,7 +18,10 @@ Her bir ekran için şu adımlar izlenmelidir:
 4. Test edilir ve aşağıdaki listeye `[x]` atılır.
 
 ## 💡 Öğrenilenler ve MVVM Standartları (Pilot Ekrandan Sonra Doldurulacak)
-- *Pilot ekran (Login Screen) refactor edildikten sonra, Riverpod kullanımı, form yönetimi ve hata yakalama standartlarımız buraya madde madde eklenecektir.*
+- **State Yönetimi:** ViewModel (`AsyncNotifier`), `build()` metodundan bir şey döndürmez (`void`). Yüklenme durumu (loading) asenkron metodun başında `state = const AsyncValue.loading()` ve bittiğinde `state = const AsyncValue.data(null)` yapılarak otomatik sağlanır. UI tarafında `ref.watch(viewModelProvider).isLoading` kullanılır.
+- **UI Yönlendirmeleri (Routing):** ViewModel asla `BuildContext` almaz. Metodlar bir Enum (örn: `LoginResult`) döner. UI katmanındaki butonun `onPressed` fonksiyonu bu Enum'a göre sayfaları yönlendirir (`Navigator.push...`).
+- **Hata Yönetimi (Error Handling):** Hatalar (API hataları vs.) UI'a fırlatılmadan önce ViewModel içinde `handleError(e, loc)` ile yakalanır (Bu kural `architectural_decisions.md`'den gelir). ViewModel hata durumunda `state = AsyncValue.error(e, st)` yapar ve geriye `LoginResult.error` döner.
+- **UI Durumları (Pure UI State):** `TextEditingController`, `FocusNode` ve sadece görsel bir özelliği değiştiren `isObscure` gibi durumlar UI sınıfı (ConsumerStatefulWidget) içinde kalır. ViewModel'e taşınmaz.
 
 ---
 
@@ -27,7 +30,7 @@ Her bir ekran için şu adımlar izlenmelidir:
 ### Auth (Kimlik Doğrulama)
 - [ ] `mobile/lib/screens/auth/category_onboarding_screen.dart`
 - [ ] `mobile/lib/screens/auth/forgot_password_screen.dart`
-- [ ] `mobile/lib/screens/auth/login_screen.dart` (Pilot Ekran)
+- [x] `mobile/lib/screens/auth/login_screen.dart` (Pilot Ekran)
 - [ ] `mobile/lib/screens/auth/register_screen.dart`
 - [ ] `mobile/lib/screens/auth/reset_password_screen.dart`
 - [ ] `mobile/lib/screens/auth/verify_screen.dart`

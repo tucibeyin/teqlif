@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/app_exception.dart';
 import '../../services/localization_service.dart';
-import '../../utils/error_helper.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../providers/locale_provider.dart';
-import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
-import '../../services/push_notification_service.dart';
 import '../../services/storage_service.dart';
+import 'viewmodels/login_view_model.dart';
 import 'register_screen.dart';
 import 'verify_screen.dart';
 import 'forgot_password_screen.dart';
@@ -30,7 +27,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _identifierCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _passFocus = FocusNode();
-  bool _loading = false;
   bool _obscure = true;
   late String _displayedLang;
   bool _isSwitching = false;
@@ -57,11 +53,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _isSwitching = true;
       _displayedLang = newLang;
     });
-    final ok = await ref.read(localizationProvider.notifier).switchLanguage(newLang);
+    
+    final ok = await ref.read(loginViewModelProvider.notifier).changeLanguage(newLang);
+    
     if (!mounted) return;
     if (ok) {
-      await ref.read(localeProvider.notifier).setLocale(Locale(newLang));
-      if (!mounted) return;
       _userChangedLang = true;
       setState(() => _isSwitching = false);
       TeqToast.success(ref.read(localizationProvider).t('langSwitchSuccess'));
@@ -76,31 +72,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _loading = true;
-    });
-    try {
-      await AuthService.login(
-        identifier: _identifierCtrl.text.trim(),
-        password: _passCtrl.text,
-      );
+    
+    final result = await ref.read(loginViewModelProvider.notifier).login(
+      identifier: _identifierCtrl.text.trim(),
+      password: _passCtrl.text,
+      userChangedLang: _userChangedLang,
+      displayedLang: _displayedLang,
+    );
 
-      try {
-        final user = await AuthService.me();
-        if (user.locale != null && user.locale!.isNotEmpty && mounted) {
-          if (_userChangedLang) {
-            // User explicitly picked a language on the login screen;
-            // their choice wins and gets synced to the server.
-            ref.read(localeProvider.notifier).setLocale(Locale(_displayedLang)).ignore();
-          } else {
-            // No explicit choice — restore server-stored preference.
-            ref.read(localeProvider.notifier).setLocaleLocally(Locale(user.locale!));
-          }
-        }
-      } catch (_) {}
-
-      PushNotificationService.initialize();
-      if (!mounted) return;
+    if (!mounted) return;
+    
+    if (result == LoginResult.success) {
       final alreadyEnabled = await StorageService.isBiometricEnabled();
       if (!alreadyEnabled && await BiometricService.isAvailable() && mounted) {
         await _offerBiometric();
@@ -108,29 +90,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
-    } catch (e) {
-      if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED' && mounted) {
-        final email = e.extra['email']?.toString() ?? _identifierCtrl.text.trim();
-        try {
-          await AuthService.resendCode(email);
-        } catch (_) {}
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => VerifyScreen(email: email, resent: true),
-            ),
-          );
-        }
-      } else if (mounted) {
-        handleError(e, ref.read(localizationProvider));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
+    } else if (result == LoginResult.unverified) {
+      final email = _identifierCtrl.text.trim();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VerifyScreen(email: email, resent: true),
+        ),
+      );
     }
+    // Hata durumu zaten ViewModel'de Toast olarak gösteriliyor (LoginResult.error)
   }
 
   Future<void> _offerBiometric() async {
@@ -257,7 +225,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 24),
                           TeqButton(
                             text: loc.t('btnLogin'),
-                            isLoading: _loading,
+                            isLoading: ref.watch(loginViewModelProvider).isLoading,
                             onPressed: _submit,
                           ),
                         ],
