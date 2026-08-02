@@ -83,11 +83,12 @@ Future<void> showStartStreamDialog(
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setStateDialog) => AlertDialog(
         title: Text(loc.t('liveStartStreamDialogTitle')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
               key: const Key('live_dialog_input_yayin_basligi'),
               controller: titleController,
               autofocus: true,
@@ -263,6 +264,7 @@ Future<void> showStartStreamDialog(
               ),
             ],
           ],
+        ),
         ),
         actions: [
           TextButton(
