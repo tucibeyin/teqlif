@@ -14,6 +14,7 @@ import '../widgets/offline_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../config/theme.dart';
 import 'viewmodels/main_view_model.dart';
 
 /// Global visibility notifier for the Live tab.
@@ -30,8 +31,6 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
-  int _currentIndex = 0;
-
   final GlobalKey<LiveListScreenState> _liveListKey = GlobalKey();
   final GlobalKey<HomeScreenState> _homeKey = GlobalKey();
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey();
@@ -39,28 +38,15 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
   final GlobalKey<ProfileScreenState> _profileKey = GlobalKey();
   late final List<Widget> _screens;
 
-  // Tab başına son SWR yenileme zamanı
   final Map<int, DateTime> _lastTabRefresh = {};
 
-  // Tab TTL'leri: bu süreden önce geçilmişse ağ isteği atılmaz, cache gösterilir
   static const Map<int, Duration> _kTabTtl = {
-    0: Duration(seconds: 30),   // Canlı — yayınlar sık değişir
-    1: Duration(seconds: 60),   // İlanlar
-    2: Duration(seconds: 60),   // Keşfet
-    3: Duration(seconds: 120),  // Mesajlar
-    4: Duration(seconds: 120),  // Profil
+    0: Duration(seconds: 30),
+    1: Duration(seconds: 60),
+    2: Duration(seconds: 60),
+    3: Duration(seconds: 120),
+    4: Duration(seconds: 120),
   };
-
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      LiveListScreen(key: _liveListKey),
-      HomeScreen(key: _homeKey),
-      SearchScreen(key: _searchKey),
-      MessagesScreen(key: _messagesKey),
-      ProfileScreen(key: _profileKey),
-    ];
   @override
   void initState() {
     super.initState();
@@ -106,16 +92,14 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     if (last == null || DateTime.now().difference(last) > ttl) {
       if (_currentIndex == 0) _liveListKey.currentState?.refresh(bypassCache: false);
       if (_currentIndex == 1) _homeKey.currentState?.refresh(bypassCache: false);
-      if (_currentIndex == 2) _searchKey.currentState?.refresh(bypassCache: false);
+      // if (_currentIndex == 2) SearchScreen handles own refresh via view model
       if (_currentIndex == 3) _messagesKey.currentState?.refresh(bypassCache: false);
       if (_currentIndex == 4) _profileKey.currentState?.refresh(bypassCache: false);
       _lastTabRefresh[_currentIndex] = DateTime.now();
     }
   }
 
-
-
-  static const _kTabNames = ['live', 'home', 'search', 'messages', 'profile'];
+  final _kTabNames = const ['live', 'home', 'search', 'messages', 'profile'];
 
   void _onNavTap(int index) {
     if (index != _currentIndex) {
@@ -127,7 +111,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
           // TTL dolmuş: SWR — cache'i anında göster, arka planda API'yi çek
           if (index == 0) _liveListKey.currentState?.refresh(bypassCache: false);
           if (index == 1) _homeKey.currentState?.refresh(bypassCache: false);
-          if (index == 2) _searchKey.currentState?.refresh(bypassCache: false);
+          // if (index == 2) SearchScreen handles own refresh via view model
           if (index == 3) _messagesKey.currentState?.refresh(bypassCache: false);
           if (index == 4) _profileKey.currentState?.refresh(bypassCache: false);
           _lastTabRefresh[index] = DateTime.now();
@@ -347,7 +331,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.videocam_outlined, color: Colors.red),
-            activeIcon: const Icon(Icons.videocam, color: kPrimary),
+            activeIcon: Icon(Icons.videocam, color: kPrimary),
             label: loc.t('navLive'),
           ),
           BottomNavigationBarItem(
