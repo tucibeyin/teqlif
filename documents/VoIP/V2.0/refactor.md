@@ -66,6 +66,8 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 6** | `CallScreenRouter` | Routing merkezlenir | ✅ |
 | **Step 7** | `CallNotifAdapter` | Push layer izole | ✅ |
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | ✅ |
+| **Step 9** | Grup call HTTP → `CallRepository` | Step 4 additive extension | 🔴 |
+| **Step 10** | `CallRoomAdapter` | Step 9 tamamlanmış olmalı | 🔴 |
 
 ---
 
@@ -940,6 +942,123 @@ elif callee.fcm_token:
 | `CallScreenRouter` | `call/routing/call_screen_router.dart` | Step 6 |
 | `CallNotifAdapter` (iOS + Android) | `call/notif/` | Step 7 |
 | `CallState` | `call/state/call_state.dart` | Step 8 |
+
+---
+
+## Step 9: Grup Call HTTP → `CallRepository`
+
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
+
+**Bağımlılık:** Step 4 tamamlanmış olmalı (additive extension).
+
+Step 4'te yalnızca 1:1 çağrı endpoint'leri `CallRepository`'ye taşındı. Grup çağrısı endpoint'leri hâlâ `CallService._post()` üzerinden çağrılıyor. Bu step'te 5 grup endpoint'i repository'ye taşınır; ardından `CallService._post()` ve `_authHeaders()` helper'ları kaldırılabilir.
+
+### 9.1 `CallRepository`'ye Eklenecek Metodlar
+
+| Metot | HTTP | Fire-and-forget? |
+|---|---|---|
+| `inviteParticipant(callId, inviteeId)` | `POST /calls/$id/invite` | Hayır (rethrow) |
+| `acceptGroupParticipant(callId, participantId)` | `POST /calls/$id/participants/$pid/accept` | Hayır (response döner) |
+| `rejectGroupParticipant(callId, participantId)` | `POST /calls/$id/participants/$pid/reject` | Evet |
+| `leaveGroupCall(callId, participantId)` | `POST /calls/$id/participants/$pid/leave` | Evet |
+| `removeParticipant(callId, userId)` | `POST /calls/$id/participants/$uid/remove` | Hayır (rethrow) |
+
+### 9.2 `call_service.dart` Değişiklikleri
+
+Her `_post('/calls/...')` grup çağrısı `_repository.*` ile değiştirilir.
+
+`_getList('/follows/$myId/following')` çağrısı `fetchFollowingForInvite()` içinde kullanılıyor — follows verisi call repository'nin sorumluluğu değil, ayrı bir endpoint. `_getList` + `_authHeaders` bu step'te **kaldırılmaz** (Step 10 kapsamında değerlendirmeye alınır).
+
+### 9.3 Checklist
+
+- [ ] `call_repository.dart`: 5 grup endpoint metodu eklendi
+- [ ] `call_service.dart`: grup call `_post()` çağrıları `_repository.*`'e migrate edildi
+- [ ] `call_service.dart`: `_post()` ve `_authHeaders()` kaldırıldı (artık kullanılmıyor)
+- [ ] `dart analyze` 0 warning
+- [ ] Grup davet alma / kabul / red / ayrılma / çıkarma senaryoları manuel test edildi
+
+---
+
+## Step 10: `CallRoomAdapter`
+
+**Durum:** 🔴 Başlamadı  
+**Başlangıç:** —  
+**Tamamlanma:** —  
+**Commit:** —
+
+**Bağımlılık:** Step 9 tamamlanmış olmalı.
+
+LiveKit room yönetimini `CallService`'ten izole eder. Önceki cycle'da ertelenmişti — bkz. erteleme gerekçesi için Karar Logu.
+
+```
+mobile/lib/call/
+  room/
+    call_room_adapter.dart    ← interface + callback contract
+    livekit_room_adapter.dart ← Room bağımlı impl
+```
+
+### 10.1 Interface
+
+```dart
+class CallRoomAdapter {
+  CallRoomAdapter({
+    required CallHardwareAdapter hardware,
+    required ValueNotifier<bool> preventCallScreenAutoOpen,
+    required void Function(String context) onConnected,
+    required void Function() onDisconnected,
+    required void Function() onReconnecting,
+    required void Function() onReconnected,
+    required void Function() onPeerJoined,
+    required void Function(bool isPoor) onConnectionQuality,
+  });
+
+  Future<void> joinRoom({
+    required String livekitUrl,
+    required String token,
+    required CallRole role,
+    required int? callId,
+  });
+  Future<void> disconnect();
+  Future<void> setMicEnabled(bool enabled);
+  Future<void> setCameraEnabled(bool enabled);
+  Future<void> switchCamera();
+  Room? get room;
+}
+```
+
+### 10.2 `call_service.dart`'tan Taşınacaklar
+
+- `_joinRoom()` (~190 satır)
+- `_onRoomEvent()` (~100 satır)
+- `_disconnectRoom()` (~30 satır)
+- `_transitionToConnected()` (~20 satır)
+- `_setupAudioInterruptionListener()` (~25 satır)
+- `_startStatsMonitor()` / `_stopStatsMonitor()` (~20 satır)
+- `_startNetworkMonitor()` / `_stopNetworkMonitor()` (~15 satır)
+- `_startProximitySensor()` / `_stopProximitySensor()` (~20 satır)
+- `_ensureMicEnabled()` (~25 satır)
+- `toggleMute()`, `setSpeaker()`, `toggleCamera()`, `switchCamera()` (~50 satır)
+
+### 10.3 Kritik Test Senaryoları
+
+- iOS caller: ringback → pre-connect → `resumeAfterRoomConnect()` → kabul → mic açılması
+- iOS callee: `waitForCallkitAudio()` sıralaması → mic → speaker
+- Android callee: `onCallConnected()` zamanlaması
+- Pre-connect sırasında `room.connect()` hatası → çağrı korunuyor mu?
+- Reconnecting → active geçişinde ses kesiliyor mu?
+- Group invite (iOS): `onAudioSessionActivated()` simülasyonu çalışıyor mu?
+
+### 10.4 Checklist
+
+- [ ] `call_room_adapter.dart` interface + callback contract oluşturuldu
+- [ ] `livekit_room_adapter.dart` impl yazıldı
+- [ ] `call_service.dart`: `_room` field kaldırıldı, `_roomAdapter` eklendi
+- [ ] Tüm LiveKit çağrıları `_roomAdapter.*`'e delegate edildi
+- [ ] `dart analyze` 0 warning
+- [ ] Tüm kritik test senaryoları (§10.3) her iki platformda doğrulandı
 
 ---
 

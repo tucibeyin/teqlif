@@ -1789,14 +1789,10 @@ Flutter tarafında ek stale cleanup mekanizmasına gerek yoktur.
 
 ---
 
-## V3.0 Ertelenen Kapsam
+## Tamamlanmamış Adımlar (Step 9–10)
 
-V2.0 refactoring cycle'ında bilinçli olarak kapsam dışı bırakılan konular ayrı bir dosyada kayıt altına alındı:
+Step 8 sonrası refactoring cycle'da ele alınacak iki ek adım `refactor.md`'de Step 9 ve Step 10 olarak tanımlandı:
 
-**`documents/VoIP/V3.0/deferred.md`**
+1. **Step 9 — Grup call HTTP → `CallRepository`** — 5 grup endpoint'i hâlâ `CallService._post()` üzerinden çağrılıyor. Repository'ye taşındığında `_post()` ve `_authHeaders()` `CallService`'ten kaldırılabilir.
 
-Öne çıkan iki başlık:
-
-1. **`CallRoomAdapter` ekstraksiyonu** — `_joinRoom` + `_onRoomEvent` + monitoring (`call_service.dart`'tan ~500 satır). LiveKit room yönetimini izole eder. Erteleme gerekçesi: iOS `AVAudioSession` sıralaması kırılgan; test maliyeti (2 cihaz, ~4 saat) mevcut kazanımla orantılı değil. Unit test için LiveKit mock ihtiyacı doğduğunda anlamlı hale gelir.
-
-2. **Grup çağrısı HTTP → `CallRepository`** — Beş grup endpoint'i hâlâ `CallService._post()` üzerinden çağrılıyor. `CallRepository`'ye taşındığında `_post()` ve `_authHeaders()` helper'ları `CallService`'ten kaldırılabilir.
+2. **Step 10 — `CallRoomAdapter`** — `_joinRoom` + `_onRoomEvent` + monitoring (`call_service.dart`'tan ~500 satır). LiveKit room yönetimini izole eder. iOS `AVAudioSession` sıralaması kırılgan — §10.3 kritik test senaryoları ekstraksiyondan önce ve sonra doğrulanmalı.
