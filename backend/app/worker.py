@@ -588,12 +588,18 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
 
         now = datetime.now(timezone.utc)
         events = []
+        import math
         for row in rows:
             uid, category, dwells, avg_dwell_ms, hearts, strong_eng, listing_taps = row
             try:
                 uid = int(uid)
                 if not category:
                     continue
+                
+                f_avg_dwell = float(avg_dwell_ms or 0)
+                if math.isnan(f_avg_dwell):
+                    f_avg_dwell = 0.0
+
                 events.append(AnalyticsEvent(
                     session_id=f"worker_{uid}_{int(now.timestamp())}",
                     user_id=uid,
@@ -601,7 +607,7 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
                     event_metadata={
                         "category": str(category),
                         "dwells": int(dwells or 0),
-                        "avg_dwell_ms": float(avg_dwell_ms or 0),
+                        "avg_dwell_ms": f_avg_dwell,
                         "hearts": int(hearts or 0),
                         "strong_eng": int(strong_eng or 0),
                         "listing_taps": int(listing_taps or 0),

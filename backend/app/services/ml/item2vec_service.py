@@ -152,7 +152,7 @@ async def _fetch_sessions(db_session, days: int = 90) -> list[list[str]]:
                 WHERE event_type IN ('listing_view', 'detail_dwell', 'listing_impression')
                   AND item_id IS NOT NULL
                   AND user_id IS NOT NULL
-                  AND created_at > NOW() - INTERVAL :days
+                  AND created_at > NOW() - CAST(:days AS INTERVAL)
             ),
             session_markers AS (
                 SELECT
