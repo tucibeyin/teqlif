@@ -36,6 +36,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
     _cs.isCallScreenVisible.addListener(_onVisibilityChange);
     _cs.state.addListener(_onStateChange);
     _cs.elapsed.addListener(_onElapsedChange);
+    _cs.isSpeaker.addListener(_onAdapterStateChange);
   }
 
   @override
@@ -43,6 +44,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
     _cs.isCallScreenVisible.removeListener(_onVisibilityChange);
     _cs.state.removeListener(_onStateChange);
     _cs.elapsed.removeListener(_onElapsedChange);
+    _cs.isSpeaker.removeListener(_onAdapterStateChange);
     super.dispose();
   }
 
@@ -122,6 +124,10 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
 
   void _onElapsedChange() => setState(() {});
 
+  void _onAdapterStateChange() {
+    if (mounted) setState(() {});
+  }
+
   String _formatElapsed(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -133,6 +139,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
     final loc = ref.watch(localizationProvider);
     final isVisible = _cs.isCallScreenVisible.value;
     final cs = _cs.state.value;
+    final isSpeaker = _cs.isSpeaker.value;
 
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -248,22 +255,22 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
                               const SizedBox(width: 20),
                               GestureDetector(
                                 onTap: () {
-                                  _cs.setSpeaker(!cs.isSpeaker);
+                                  _cs.setSpeaker(!isSpeaker);
                                 },
                                 behavior: HitTestBehavior.opaque,
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: cs.isSpeaker
+                                    color: isSpeaker
                                         ? Colors.white
                                         : Colors.white24,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    cs.isSpeaker
+                                    isSpeaker
                                         ? Icons.volume_up
                                         : Icons.volume_down,
-                                    color: cs.isSpeaker
+                                    color: isSpeaker
                                         ? Colors.black87
                                         : Colors.white,
                                     size: 20,

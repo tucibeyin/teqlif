@@ -290,6 +290,9 @@ Bu bölümdeki tablolar aşağıdaki kararlara dayanır.
 | D-3 | `lk_peer_left` in `active` timeout | **10s** | Endüstri standardı (WhatsApp/Zoom pattern) |
 | D-4 | `audio_focus_lost` state etkisi | **State değişmez** | Adapter içinde yönetilir; state machine görmez |
 | D-5 | `reset()` — herhangi state'ten doğrudan `idle` | `reset()` herhangi bir state'ten direkt `idle`'a geçer, `ended`'ı atlar. `rejectCall()` ve `noAnswer` timer şu an bu yolu kullanıyor. State machine `→ idle` geçişlerine izin verir. | Step 8 hedefi: `reject` ve `noAnswer` akışları önce `ended`'a geçip sonra 2s sonra `idle`'a geçecek. Şimdilik `reset()` direkt geçiş için güvenli çünkü ringing/noAnswer'da temizlenecek LK/audio kaynağı yok. |
+| D-6 | System event routing politikası | **Network olayları `processEvent` üzerinden geçer** — `audio_focus_lost`/`gained` D-4 istisnasıdır (adapter-only) | Unified event bus: state değiştiren her dış olay tek giriş noktasından geçmelidir. İzleme-only monitor (sadece log) yeterli değil. |
+| D-7 | Hardware/media state domain state'e ait değil | **`isSpeaker` → `CallHardwareAdapter`; `localVideoEnabled`/`remoteVideoEnabled` → `CallRoomAdapter`** | D-4 prensibinin genelleştirilmesi: `CallState` yalnızca domain state (kim arıyor, hangi oda, bağlı mı) taşır; hardware routing ve LiveKit track state adapter sınırında kalır. |
+| D-8 | UI routing state CallService'te yer almaz | **`isCallScreenVisible`, `preventCallScreenAutoOpen` → `CallScreenRouter`** | Single responsibility: hangi ekranın açık olduğunu ve SwipeLive bağlamını CallScreenRouter bilir. CallService bu routing kararlarını görmemeli. |
 
 ---
 
@@ -444,6 +447,66 @@ Arama sonlandı. 2s cleanup penceresi.
 |---|---|---|---|
 | `timer_reset_ready` | both | `idle` | 2s doldu, reset tamamlandı |
 | diğer | both | `ended` | Geç gelen event'ler yoksayılır |
+
+---
+
+### 5.9 System Event Routing Politikası
+
+§4.7 system event'leri iki gruba ayrılır. Hangi grubun hangi yoldan işleneceği D-6 kararına dayanır.
+
+#### Grup A — `processEvent` üzerinden geçen event'ler
+
+Bu event'ler state geçişi üretebilir; unified event bus'tan geçmelidir.
+
+| Event | Tetikleyici | Hangi state'lerde anlamlı | Davranış |
+|---|---|---|---|
+| `network_lost` | Connectivity plugin | `dialing`, `waiting`, `connecting`, `active`, `reconnecting` | State'e göre §5.2–5.7 tabloları; `waiting`'de D-1 (20s timer) |
+| `network_restored` | Connectivity plugin | `waiting`, `reconnecting` | `waiting`: D-1 timer'ı iptal et; `reconnecting`: LiveKit retry devam eder |
+| `app_launch` | Flutter lifecycle | `idle` | `/calls/active` sorgusu — crash recovery |
+| `ws_connected` | WS manager | herhangi | `/calls/active` sorgusu — state doğrulama |
+
+#### Grup B — Adapter-only event'ler (D-4 istisnası)
+
+Bu event'ler state machine'e ulaşmaz; adapter kendi içinde yönetir.
+
+| Event | Adapter | Davranış |
+|---|---|---|
+| `audio_focus_lost` | `CallHardwareAdapter` | Ses duraklatılır, state değişmez (D-4) |
+| `audio_focus_gained` | `CallHardwareAdapter` | Ses devam ettirilir, state değişmez |
+| `audio_session_active` | `CallHardwareAdapter` (iOS) | `_callkitAudioReady` Completer tamamlanır → `connecting → active` tetikler |
+
+#### Grup C — Passif event'ler (no-op)
+
+State değişmez, log alınır.
+
+| Event | Gerekçe |
+|---|---|
+| `app_background` | Arama arka planda devam eder — OS ve LK yönetir |
+| `app_foreground` | Herhangi bir aksiyon tetiklenmez — WS reconnect zaten `ws_connected` üretir |
+| `app_crash` | Flutter catch edemez; recovery yolu `app_launch` → `/calls/active` |
+
+#### Network monitor kapsamı
+
+`_startNetworkMonitor` tüm aktif arama state'lerinde çalışır (`dialing`, `waiting`, `connecting`, `active`, `reconnecting`) ve Grup A event'lerini `processEvent` üzerinden iletir. Sadece `active`/`reconnecting`'i izlemek D-1'i işlevsiz bırakır.
+
+```
+network change → processEvent({type: 'network_lost'})   → state machine
+network change → processEvent({type: 'network_restored'}) → state machine
+```
+
+#### D-1 implementasyon detayı (`waiting` + `network_lost`)
+
+```
+network_lost geldiğinde state = waiting:
+  _networkLostInWaitingTimer = Timer(20s, () {
+    if (state.status == waiting) {
+      _setState(ended, endReason: error);
+    }
+  });
+
+network_restored geldiğinde state = waiting:
+  _networkLostInWaitingTimer?.cancel();
+```
 
 ---
 
@@ -617,6 +680,14 @@ Caller mic izni reddedilince CallScreen hiç açılmadığından `GlobalCallOver
 
 `GlobalCallOverlay`, `state.status == ended && state.endReason == permissionDenied && !isCallScreenVisible` koşulunu dinler. 2s `timer_reset_ready` bitince `idle`'a geçilir — dialog zaten dismiss edilmiş olur. Bu kural yalnızca **caller** içindir; callee `permanentlyDenied` zaten `ringing` state'inde modal açar (§15.3).
 
+**Kural 6 — `isCallScreenVisible` ve `preventCallScreenAutoOpen` sahipliği (D-8):**  
+Bu iki değer `CallScreenRouter`'a aittir — `CallService`'te yaşamaz.
+
+- **`isCallScreenVisible`**: `CallScreenRouter`'ın ekranı açtığını/kapattığını bildiği bir `ValueNotifier<bool>`. Yalnızca router set eder; `GlobalCallOverlay` okur (Kural 5 koşulu).
+- **`preventCallScreenAutoOpen`**: SwipeLive bağlamını taşıyan `ValueNotifier<bool>`. SwipeLive widget'ı set eder; `CallScreenRouter` okuyarak `active` state'inde `CallScreen` mi `MinimizedCallBar` mı açılacağına karar verir. `CallService` bu değeri doğrudan okumaz — routing kararı router'a aittir.
+
+`CallService` her ikisini de `CallScreenRouter`'dan getter üzerinden açıksa erişebilir.
+
 ---
 
 ## 8. Modül Mimarisi
@@ -660,11 +731,27 @@ CallService
 | Modül | Evet | Hayır |
 |---|---|---|
 | `CallStateMachine` | State değiştir, transition tanımla | Platform API, UI, network |
-| `CallHardwareAdapter` | AVAudioSession, AudioFocus, speakerphone | State değiştir |
+| `CallHardwareAdapter` | AVAudioSession, AudioFocus, speakerphone; `isSpeaker: ValueNotifier<bool>` | State değiştir, ekran kararı |
+| `CallRoomAdapter` | LiveKit room lifecycle; `localVideoEnabled`/`remoteVideoEnabled: ValueNotifier<bool>` | State değiştir, hardware |
 | `CallNotifAdapter` | Push gönder/al, CallKit raporla | State değiştir |
-| `CallScreenRouter` | Ekran aç/kapat kararı ver | State değiştir, iş mantığı |
-| `CallRepository` | HTTP istek yap, yanıt parse et | İş mantığı kararı |
-| `CallService` | Modülleri orkestra et | Doğrudan platform API'ye ulaş |
+| `CallScreenRouter` | Ekran aç/kapat kararı ver; `isCallScreenVisible`, `preventCallScreenAutoOpen` ValueNotifier'larını tut | State değiştir, iş mantığı |
+| `CallRepository` | HTTP istek yap, yanıt parse et | İş mantığı kararı, sosyal veri |
+| `CallService` | Modülleri orkestra et; sistem event'lerini `processEvent` ile state machine'e ilet | Doğrudan platform API'ye ulaş, UI routing state tut, sosyal veri getir |
+
+---
+
+### 8.4 State Sahipliği Referans Tablosu
+
+Hangi değer hangi modüle ait, UI nasıl okur.
+
+| Alan | Mevcut yer | Hedef yer | UI erişim yolu |
+|---|---|---|---|
+| `status`, `endReason`, `callId`, `roomName`, `token`, `calleeToken`, `otherUsername`, `otherAvatar`, `otherUserId`, `acceptedAt`, `isMuted`, `isPoorConnection`, `permPermanentlyDenied`, `participants`, `pendingGroupInvite`, `isGroupGuest` | `CallState` | `CallState` (kalır) | `cs.state.value.*` |
+| `isSpeaker` | `CallState` | `CallHardwareAdapter` | `cs.isSpeaker` (getter → `_hardware.isSpeaker`) |
+| `localVideoEnabled` | `CallState` | `CallRoomAdapter` | `cs.localVideoEnabled` (getter → `_roomAdapter.localVideoEnabled`) |
+| `remoteVideoEnabled` | `CallState` | `CallRoomAdapter` | `cs.remoteVideoEnabled` (getter → `_roomAdapter.remoteVideoEnabled`) |
+| `isCallScreenVisible` | `CallService` | `CallScreenRouter` | `cs.router.isCallScreenVisible` |
+| `preventCallScreenAutoOpen` | `CallService` | `CallScreenRouter` | `cs.router.preventCallScreenAutoOpen` |
 
 ---
 
@@ -1789,10 +1876,14 @@ Flutter tarafında ek stale cleanup mekanizmasına gerek yoktur.
 
 ---
 
-## Tamamlanmamış Adımlar (Step 9–10)
+## Tamamlanmamış Adımlar (Step 11–14)
 
-Step 8 sonrası refactoring cycle'da ele alınacak iki ek adım `refactor.md`'de Step 9 ve Step 10 olarak tanımlandı:
+Step 9 ve Step 10 tamamlandı. Mimari audit sonrası `refactor.md`'de 4 yeni adım tanımlandı:
 
-1. **Step 9 — Grup call HTTP → `CallRepository`** — 5 grup endpoint'i hâlâ `CallService._post()` üzerinden çağrılıyor. Repository'ye taşındığında `_post()` ve `_authHeaders()` `CallService`'ten kaldırılabilir.
+1. **Step 11 — System event routing + D-1 impl** — `_startNetworkMonitor` tüm aktif state'leri kapsayacak ve `processEvent` üzerinden iletecek şekilde refaktör edilir. D-1 (20s timer for `network_lost` in `waiting`) ilk kez implement edilir. Bkz. §5.9.
 
-2. **Step 10 — `CallRoomAdapter`** — `_joinRoom` + `_onRoomEvent` + monitoring (`call_service.dart`'tan ~500 satır). LiveKit room yönetimini izole eder. iOS `AVAudioSession` sıralaması kırılgan — §10.3 kritik test senaryoları ekstraksiyondan önce ve sonra doğrulanmalı.
+2. **Step 12 — Hardware/media state → adapter'lara** — `CallState.isSpeaker` → `CallHardwareAdapter.isSpeaker: ValueNotifier`; `CallState.localVideoEnabled`/`remoteVideoEnabled` → `CallRoomAdapter`. D-7 kararı. `CallService` getter'lar aracılığıyla UI erişimini açıkta tutar.
+
+3. **Step 13 — UI routing state → `CallScreenRouter`** — `CallService.isCallScreenVisible` ve `preventCallScreenAutoOpen` → `CallScreenRouter`. D-8 kararı. `CallService` getter üzerinden backwards-compatible kalır.
+
+4. **Step 14 — `fetchFollowingForInvite` → sosyal servis** — `CallService._post`/`_get`/`_authHeaders`'ın kaldırılabilmesi için son engel. Sosyal domain verisi arama servisinden ayrılır.

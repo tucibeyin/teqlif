@@ -22,7 +22,10 @@ enum CallScreenDecision {
 }
 
 class CallScreenRouter {
-  const CallScreenRouter._();
+  // D-8: UI routing state lives here, not in CallService.
+  final ValueNotifier<bool> isCallScreenVisible = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> preventCallScreenAutoOpen = ValueNotifier<bool>(false);
+
 
   /// Returns the in-app screen decision for the given call context.
   /// Logs the resolution with [CALL_ROUTER] tag.

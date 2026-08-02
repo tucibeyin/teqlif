@@ -14,6 +14,10 @@ import '../state/end_reason.dart';
 // branches live in the concrete implementations.
 
 abstract class CallHardwareAdapter {
+  // ── Hardware state notifier (D-7) ─────────────────────────────────────────
+  // Owned by adapter; CallService exposes via getter. UI listens directly.
+  final ValueNotifier<bool> isSpeaker = ValueNotifier<bool>(false);
+
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
   /// Preload ringback player, configure audio context, prewarm AudioSession.

@@ -284,6 +284,7 @@ class IosCallHardwareAdapter extends CallHardwareAdapter {
     try {
       log('HW', 'speakerphone SET | enabled=$enabled');
       await Hardware.instance.setSpeakerphoneOn(enabled);
+      isSpeaker.value = enabled;
     } catch (e) {
       log('HW', 'speakerphone SET ERROR | enabled=$enabled $e');
     }

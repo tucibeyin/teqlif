@@ -10,6 +10,7 @@ import '../config/api.dart';
 import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import '../services/call_service.dart';
+import '../services/follows_service.dart';
 import '../models/call_participant.dart';
 import 'messages_screen.dart';
 
@@ -51,7 +52,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (_isTogglingCamera) return;
     setState(() => _isTogglingCamera = true);
     try {
-      _cpLog('UI', 'Camera toggle tap | localVideo=${CallService.instance.state.value.localVideoEnabled}');
+      _cpLog('UI', 'Camera toggle tap | localVideo=${CallService.instance.localVideoEnabled.value}');
       await CallService.instance.toggleCamera();
       await Future.delayed(const Duration(milliseconds: 500));
     } finally {
@@ -82,6 +83,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     });
     CallService.instance.state.addListener(_onStateChange);
     CallService.instance.state.addListener(_onParticipantStateChange);
+    // D-7: adapter notifier'ları doğrudan dinle — isSpeaker/video artık CallState'te değil.
+    CallService.instance.isSpeaker.addListener(_onAdapterStateChange);
+    CallService.instance.localVideoEnabled.addListener(_onAdapterStateChange);
+    CallService.instance.remoteVideoEnabled.addListener(_onAdapterStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
         final isNear = event > 0;
@@ -116,9 +121,13 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     }
   }
 
+  void _onAdapterStateChange() {
+    if (mounted) setState(() {});
+  }
+
   void _onStateChange() {
     final s = CallService.instance.state.value.status;
-    final isVideoNow = CallService.instance.state.value.remoteVideoEnabled &&
+    final isVideoNow = CallService.instance.remoteVideoEnabled.value &&
         s == CallStatus.active;
     if (isVideoNow && !_wasVideoMode) {
       _wasVideoMode = true;
@@ -173,6 +182,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     }
     CallService.instance.state.removeListener(_onStateChange);
     CallService.instance.state.removeListener(_onParticipantStateChange);
+    CallService.instance.isSpeaker.removeListener(_onAdapterStateChange);
+    CallService.instance.localVideoEnabled.removeListener(_onAdapterStateChange);
+    CallService.instance.remoteVideoEnabled.removeListener(_onAdapterStateChange);
     _toastTimer?.cancel();
     _autoHideTimer?.cancel();
     // isCallScreenVisible → Navigator.pop tetikler didPop → CallRouteObserver false set eder.
@@ -283,7 +295,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             ? imgUrl(cs.otherAvatar)
             : null;
         final username = cs.otherUsername ?? '';
-        final isVideoMode = cs.remoteVideoEnabled && cs.status == CallStatus.active;
+        // D-7: video/speaker state from adapter notifiers (not CallState)
+        final isSpeaker = CallService.instance.isSpeaker.value;
+        final localVideoEnabled = CallService.instance.localVideoEnabled.value;
+        final remoteVideoEnabled = CallService.instance.remoteVideoEnabled.value;
+        final isVideoMode = remoteVideoEnabled && cs.status == CallStatus.active;
 
         return Scaffold(
           backgroundColor: Colors.black,
@@ -306,7 +322,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
 
               // Remote video — BEFORE SafeArea so controls always render on top
-              if (cs.remoteVideoEnabled && cs.status == CallStatus.active) ...[
+              if (remoteVideoEnabled && cs.status == CallStatus.active) ...[
                 Positioned.fill(
                   child: _RemoteVideoView(
                     room: CallService.instance.room,
@@ -399,7 +415,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     Column(
                       children: [
                         // Hide avatar/name/status when remote video is fullscreen
-                        if (!cs.remoteVideoEnabled || cs.status != CallStatus.active) ...[
+                        if (!remoteVideoEnabled || cs.status != CallStatus.active) ...[
                           const SizedBox(height: 64),
 
                           // Avatar
@@ -570,13 +586,13 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                                 onTap: _handleMicToggle,
                                               ),
                                               _ControlButton(
-                                                icon: cs.localVideoEnabled
+                                                icon: localVideoEnabled
                                                     ? FontAwesomeIcons.videoSlash
                                                     : FontAwesomeIcons.video,
-                                                label: cs.localVideoEnabled
+                                                label: localVideoEnabled
                                                     ? loc.t('callCameraOff')
                                                     : loc.t('callCameraOn'),
-                                                color: cs.localVideoEnabled
+                                                color: localVideoEnabled
                                                     ? const Color(0xFF22C55E).withValues(alpha: 0.25)
                                                     : AppColors.isDark(context)
                                                     ? Colors.white.withValues(alpha: 0.2)
@@ -587,13 +603,13 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                               _ControlButton(
                                                 icon: FontAwesomeIcons.volumeHigh,
                                                 label: loc.t('callSpeaker'),
-                                                color: cs.isSpeaker
+                                                color: isSpeaker
                                                     ? const Color(0xFF22C55E).withValues(alpha: 0.25)
                                                     : AppColors.isDark(context)
                                                     ? Colors.white.withValues(alpha: 0.2)
                                                     : Colors.black.withValues(alpha: 0.05),
                                                 onTap: () => CallService.instance
-                                                    .setSpeaker(!cs.isSpeaker),
+                                                    .setSpeaker(!isSpeaker),
                                               ),
                                             ],
                                           ),
@@ -711,7 +727,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
 
               // Local video PiP — freely draggable anywhere on screen
-              if (cs.localVideoEnabled && cs.status == CallStatus.active)
+              if (localVideoEnabled && cs.status == CallStatus.active)
                 Builder(builder: (context) {
                   const double pipW = 100, pipH = 140, pad = 8;
                   final size = MediaQuery.of(context).size;
@@ -749,7 +765,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 }),
 
               // Camera switch button — top-right when local video active
-              if (cs.localVideoEnabled && cs.status == CallStatus.active)
+              if (localVideoEnabled && cs.status == CallStatus.active)
                 Positioned(
                   top: 16,
                   right: 16,
@@ -1079,7 +1095,7 @@ class _InviteToCallModalState extends State<InviteToCallModal> {
 
   Future<void> _loadFollowing() async {
     try {
-      final data = await CallService.instance.fetchFollowingForInvite();
+      final data = await FollowsService.fetchFollowingForInvite();
       if (mounted) {
         setState(() {
           _following = data;

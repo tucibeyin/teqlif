@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -33,6 +31,7 @@ import '../call/notif/ios_call_notif_adapter.dart';
 import '../call/notif/android_call_notif_adapter.dart';
 import '../call/state/call_state.dart';
 import '../call/room/call_room_adapter.dart';
+import '../call/routing/call_screen_router.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
@@ -63,10 +62,11 @@ class CallService {
   static final CallService instance = CallService._();
 
   final _repository = CallRepository();
+  final _router = CallScreenRouter();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
-  final isCallScreenVisible = ValueNotifier<bool>(false);
-  final preventCallScreenAutoOpen = ValueNotifier<bool>(false);
+  ValueNotifier<bool> get isCallScreenVisible => _router.isCallScreenVisible;
+  ValueNotifier<bool> get preventCallScreenAutoOpen => _router.preventCallScreenAutoOpen;
 
   // Arama sayacı: CallState'ten bağımsız notifier — her saniye setState() tetiklemez.
   // CallScreen bu notifier'ı doğrudan dinler; overlay ve diğer listener'lar etkilenmez.
@@ -89,6 +89,7 @@ class CallService {
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
   Timer? _connectingTimeoutTimer; // 15s guard: connecting → endCall if TrackSubscribed never fires
+  Timer? _networkLostInWaitingTimer; // D-1: 20s after network_lost in waiting → ended
 
   // V2.0 CallStateMachine: role-aware transition guard.
   // startCall → caller, onIncomingCall → callee, reset → null.
@@ -147,31 +148,6 @@ class CallService {
   ConnectivityResult? _prevNetworkType;  // For networkChange false-positive suppression
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-
-  Future<Map<String, String>> _authHeaders() async {
-    final token = await StorageService.getToken();
-    // StorageService.getToken() returns from in-memory cache first; the null
-    // path is only reached when the cache is empty AND all storage retries
-    // failed (genuine logout, first cold-start before any login, or severe
-    // Keystore corruption). Fail fast here — never send a tokenless request
-    // that would bounce as a 401 and trigger the refresh→logout chain.
-    if (token == null) {
-      throw AppException('Oturum bilgisi bulunamadı', code: 'NO_TOKEN', statusCode: 401);
-    }
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
-  Future<List<dynamic>> _getList(String path) async {
-    final headers = await _authHeaders();
-    final response = await http.get(Uri.parse('$kBaseUrl$path'), headers: headers);
-    if (response.statusCode != 200) {
-      throw Exception('GET $path failed: ${response.statusCode}');
-    }
-    return jsonDecode(response.body) as List<dynamic>;
-  }
 
   void _setState(CallState s) {
     final oldStatus = state.value.status;
@@ -304,6 +280,7 @@ class CallService {
       ),
     );
 
+    _startNetworkMonitor(); // D-6: dialing/waiting network_lost'u kapsasın
     try {
       final startResult = await _repository.startCall(calleeId);
       _cpLog('OUT', 'POST /calls/start e2ee=NO');
@@ -975,7 +952,7 @@ class CallService {
     _proximitySub = ProximitySensor.events.listen((int value) {
       if (state.value.status != CallStatus.active) return;
       final isNear = value == 0;
-      if (isNear && state.value.isSpeaker) {
+      if (isNear && _hardware.isSpeaker.value) {
         _cpLog('HW', 'proximitySensor NEAR → auto speakerOff (phone at ear)');
         setSpeaker(false);
       }
@@ -1033,13 +1010,61 @@ class CallService {
     _prevNetworkType = null;
     _cpLog('LK', 'networkMonitor START | callId=${state.value.callId}');
     _networkSub = Connectivity().onConnectivityChanged.listen((results) {
-      if (state.value.status == CallStatus.active || state.value.status == CallStatus.reconnecting) {
-        final newType = results.isNotEmpty ? results.first : ConnectivityResult.none;
-        if (newType == _prevNetworkType) return; // same type → connectivity_plus false positive
-        _prevNetworkType = newType;
-        _cpLog('LK', 'networkChange during call | network=${newType.name} status=${state.value.status.name} callId=${state.value.callId}');
+      const activeStatuses = {
+        CallStatus.dialing,
+        CallStatus.waiting,
+        CallStatus.connecting,
+        CallStatus.active,
+        CallStatus.reconnecting,
+      };
+      if (!activeStatuses.contains(state.value.status)) return;
+
+      final newType = results.isNotEmpty ? results.first : ConnectivityResult.none;
+      if (newType == _prevNetworkType) return; // same type → connectivity_plus false positive
+      final prevType = _prevNetworkType;
+      _prevNetworkType = newType;
+
+      if (newType == ConnectivityResult.none) {
+        _cpLog('LK', 'networkChange → network_lost | status=${state.value.status.name} callId=${state.value.callId}');
+        _handleNetworkLost();
+      } else if (prevType == ConnectivityResult.none) {
+        _cpLog('LK', 'networkChange → network_restored | status=${state.value.status.name} callId=${state.value.callId}');
+        _handleNetworkRestored();
       }
     });
+  }
+
+  void _handleNetworkLost() {
+    final status = state.value.status;
+    switch (status) {
+      case CallStatus.dialing:
+      case CallStatus.connecting:
+        _cpLog('LK', 'network_lost in $status → ended');
+        _hangUpLocally(status: CallStatus.ended, endReason: EndReason.error);
+      case CallStatus.waiting:
+        // D-1: 20s bekle; hiccup ise network_restored iptal eder
+        _cpLog('TIMER', 'D-1 network_lost in waiting → 20s timer started');
+        _networkLostInWaitingTimer?.cancel();
+        _networkLostInWaitingTimer = Timer(const Duration(seconds: 20), () {
+          if (state.value.status == CallStatus.waiting) {
+            _cpLog('TIMER', 'D-1 timer fired: waiting + network_lost timeout → ended');
+            _hangUpLocally(status: CallStatus.ended, endReason: EndReason.error);
+          }
+        });
+      default:
+        // active → reconnecting: LiveKit kendi reconnect mekanizması, müdahale etme
+        // reconnecting: timer_peer_expired zaten yönetiyor
+        break;
+    }
+  }
+
+  void _handleNetworkRestored() {
+    if (state.value.status == CallStatus.waiting) {
+      _networkLostInWaitingTimer?.cancel();
+      _networkLostInWaitingTimer = null;
+      _cpLog('TIMER', 'D-1 timer CANCELLED — network restored in waiting');
+    }
+    // reconnecting: LiveKit retry kendi devam eder, ek aksiyon yok
   }
 
   void _stopNetworkMonitor() {
@@ -1096,8 +1121,7 @@ class CallService {
   Future<void> setSpeaker(bool enabled) async {
     _cpLog('UI', 'setSpeaker | enabled=$enabled');
     _cpLog('HW', 'speakerphone SET | enabled=$enabled context=setSpeaker userAction=true');
-    await _hardware.setSpeaker(enabled);
-    _setState(state.value.copyWith(isSpeaker: enabled));
+    await _hardware.setSpeaker(enabled); // sets _hardware.isSpeaker.value
   }
   Future<void> endCall() async {
     _cpLog('END', 'endCall TRIGGERED by user | prevStatus=${state.value.status} callId=${state.value.callId}');
@@ -1198,6 +1222,8 @@ class CallService {
     _elapsedTimer?.cancel();
     _callerStatusPollTimer?.cancel();
     _connectingTimeoutTimer?.cancel();
+    _networkLostInWaitingTimer?.cancel();
+    _networkLostInWaitingTimer = null;
     _stopStatsMonitor();
     _stopProximitySensor();
     _stopNetworkMonitor();
@@ -1216,6 +1242,8 @@ class CallService {
     _resetTimer?.cancel();
     _callerStatusPollTimer?.cancel();
     _connectingTimeoutTimer?.cancel();
+    _networkLostInWaitingTimer?.cancel();
+    _networkLostInWaitingTimer = null;
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
@@ -1421,21 +1449,13 @@ class CallService {
 
   // ── Following list for invite modal ───────────────────────────────────────
 
-  Future<List<Map<String, dynamic>>> fetchFollowingForInvite() async {
-    try {
-      final myId = await StorageService.getCurrentUserId();
-      if (myId == null) return [];
-      _cpLog('GROUP', 'fetchFollowingForInvite | userId=$myId');
-      final items = await _getList('/follows/$myId/following');
-      _cpLog('GROUP', 'fetchFollowingForInvite | count=${items.length}');
-      return items.map((u) => Map<String, dynamic>.from(u as Map)).toList();
-    } catch (e) {
-      _cpLog('GROUP', 'fetchFollowingForInvite ERROR | $e');
-      return [];
-    }
-  }
-
   Room? get room => _roomAdapter.room;
+
+  // ── Adapter state notifiers (D-7) ─────────────────────────────────────────
+  // UI listens to these instead of reading from CallState.
+  ValueNotifier<bool> get isSpeaker => _hardware.isSpeaker;
+  ValueNotifier<bool> get localVideoEnabled => _roomAdapter.localVideoEnabled;
+  ValueNotifier<bool> get remoteVideoEnabled => _roomAdapter.remoteVideoEnabled;
 
   // ── Video ──────────────────────────────────────────────────────────────────
 
@@ -1445,23 +1465,23 @@ class CallService {
       _cpLog('VIDEO', 'toggleCamera: SKIPPED | room=${room != null} status=${state.value.status.name}');
       return;
     }
-    final enabled = state.value.localVideoEnabled;
+    final enabled = _roomAdapter.localVideoEnabled.value;
     _cpLog('VIDEO', 'toggleCamera | current=$enabled → ${!enabled}');
     // Optimistic update — setCameraEnabled fires TrackMutedEvent (not Unpublished),
     // so the event handler alone would never clear localVideoEnabled.
-    _setState(state.value.copyWith(localVideoEnabled: !enabled));
+    _roomAdapter.localVideoEnabled.value = !enabled;
     try {
       await room.localParticipant?.setCameraEnabled(!enabled);
     } catch (e) {
       _cpLog('VIDEO', 'toggleCamera ERROR | $e');
-      _setState(state.value.copyWith(localVideoEnabled: enabled)); // revert
+      _roomAdapter.localVideoEnabled.value = enabled; // revert
     }
   }
 
   Future<void> switchCamera() async {
     final room = _roomAdapter.room;
-    if (room == null || !state.value.localVideoEnabled) {
-      _cpLog('VIDEO', 'switchCamera: SKIPPED | roomNull=${room == null} videoEnabled=${state.value.localVideoEnabled}');
+    if (room == null || !_roomAdapter.localVideoEnabled.value) {
+      _cpLog('VIDEO', 'switchCamera: SKIPPED | roomNull=${room == null} videoEnabled=${_roomAdapter.localVideoEnabled.value}');
       return;
     }
     _cpLog('VIDEO', 'switchCamera invoked');

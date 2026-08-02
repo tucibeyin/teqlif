@@ -28,6 +28,11 @@ class CallRoomAdapter {
     required this.endCall,
   });
 
+  // ── Media state notifiers (D-7) ───────────────────────────────────────────
+  // Owned by adapter; CallService exposes via getters. UI listens directly.
+  final ValueNotifier<bool> localVideoEnabled = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> remoteVideoEnabled = ValueNotifier<bool>(false);
+
   Room? _room;
   Function? _roomEventsSubscription;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSub;
@@ -291,7 +296,7 @@ class CallRoomAdapter {
           final speakerTarget = preventCallScreenAutoOpen.value;
           _log('HW', 'speakerphone SET | enabled=$speakerTarget context=_activateCalleeAudio-already-subscribed swipeLive=$speakerTarget');
           Hardware.instance.setSpeakerphoneOn(speakerTarget);
-          setState(getState().copyWith(isSpeaker: speakerTarget));
+          hardware.isSpeaker.value = speakerTarget;
         }
       }
     }
@@ -375,7 +380,7 @@ class CallRoomAdapter {
             _log('HW', 'configureVoiceChat | context=TrackSubscribed speakerEnabled=$speakerTarget');
             await hardware.configureVoiceChat(speakerEnabled: speakerTarget);
             if (Platform.isIOS) {
-              setState(getState().copyWith(isSpeaker: speakerTarget));
+              hardware.isSpeaker.value = speakerTarget;
             }
             _log('LK', 'TrackSubscribed: configureVoiceChat OK');
           } catch (e) {
@@ -401,25 +406,24 @@ class CallRoomAdapter {
           if (Platform.isAndroid) {
             final speakerTarget = preventCallScreenAutoOpen.value;
             _log('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackSubscribed-Android swipeLive=$speakerTarget');
-            hardware.setSpeaker(speakerTarget);
-            setState(getState().copyWith(isSpeaker: speakerTarget));
+            hardware.setSpeaker(speakerTarget); // sets hardware.isSpeaker.value
           }
         }
       } else if (event.track.kind == TrackType.VIDEO) {
         _log('LK', 'TrackSubscribed VIDEO | participant=${event.participant.identity}');
-        setState(getState().copyWith(remoteVideoEnabled: true));
+        remoteVideoEnabled.value = true;
       }
     } else if (event is TrackUnsubscribedEvent) {
       if (event.track.kind == TrackType.VIDEO) {
         _log('LK', 'TrackUnsubscribed VIDEO | participant=${event.participant.identity}');
-        setState(getState().copyWith(remoteVideoEnabled: false));
+        remoteVideoEnabled.value = false;
       }
     } else if (event is TrackMutedEvent) {
       final isRemote = event.participant != _room?.localParticipant;
       _log('LK', 'TrackMuted | kind=${event.publication.kind} isRemote=$isRemote');
       if (isRemote && event.publication.kind == TrackType.VIDEO) {
         _log('LK', 'TrackMuted remote VIDEO → remoteVideoEnabled=false');
-        setState(getState().copyWith(remoteVideoEnabled: false));
+        remoteVideoEnabled.value = false;
       }
     } else if (event is TrackUnmutedEvent) {
       // Fallback: a previously-subscribed muted track was unmuted.
@@ -429,7 +433,7 @@ class CallRoomAdapter {
       _log('LK', 'TrackUnmuted | kind=${event.publication.kind} isRemote=$isRemote status=${getState().status.name}');
       if (isRemote && event.publication.kind == TrackType.VIDEO) {
         _log('LK', 'TrackUnmuted remote VIDEO → remoteVideoEnabled=true');
-        setState(getState().copyWith(remoteVideoEnabled: true));
+        remoteVideoEnabled.value = true;
       } else if (isRemote && event.publication.kind == TrackType.AUDIO && getState().status == CallStatus.connecting) {
         _log('LK', 'TrackUnmuted AUDIO remote → connecting→connected (Android unmuted pre-published track)');
         Future(() async {
@@ -437,8 +441,9 @@ class CallRoomAdapter {
             final speakerTarget = preventCallScreenAutoOpen.value;
             _log('HW', 'configureVoiceChat | context=TrackUnmuted speakerEnabled=$speakerTarget');
             await hardware.configureVoiceChat(speakerEnabled: speakerTarget);
+            // configureVoiceChat does not call setSpeaker internally — isSpeaker set below
             if (Platform.isIOS) {
-              setState(getState().copyWith(isSpeaker: speakerTarget));
+              hardware.isSpeaker.value = speakerTarget;
             }
             _log('LK', 'TrackUnmuted: configureVoiceChat OK');
           } catch (e) {
@@ -449,14 +454,13 @@ class CallRoomAdapter {
         if (Platform.isAndroid) {
           final speakerTarget = preventCallScreenAutoOpen.value;
           _log('HW', 'speakerphone SET | enabled=$speakerTarget context=TrackUnmuted-Android swipeLive=$speakerTarget');
-          hardware.setSpeaker(speakerTarget);
-          setState(getState().copyWith(isSpeaker: speakerTarget));
+          hardware.setSpeaker(speakerTarget); // sets hardware.isSpeaker.value
         }
       }
     } else if (event is LocalTrackPublishedEvent) {
       if (event.publication.kind == TrackType.VIDEO) {
         _log('LK', 'LocalTrackPublished VIDEO');
-        setState(getState().copyWith(localVideoEnabled: true));
+        localVideoEnabled.value = true;
       }
     } else if (event is TrackPublishedEvent) {
       if (event.publication.kind == TrackType.VIDEO) {
@@ -466,12 +470,12 @@ class CallRoomAdapter {
     } else if (event is LocalTrackUnpublishedEvent) {
       if (event.publication.kind == TrackType.VIDEO) {
         _log('LK', 'LocalTrackUnpublished VIDEO');
-        setState(getState().copyWith(localVideoEnabled: false));
+        localVideoEnabled.value = false;
       }
     } else if (event is TrackUnpublishedEvent) {
       if (event.publication.kind == TrackType.VIDEO) {
         _log('LK', 'RemoteTrackUnpublished VIDEO | participant=${event.participant.identity}');
-        setState(getState().copyWith(remoteVideoEnabled: false));
+        remoteVideoEnabled.value = false;
       }
     } else if (event is ParticipantConnectionQualityUpdatedEvent) {
       final isLocal = event.participant == _room?.localParticipant;
@@ -528,6 +532,8 @@ class CallRoomAdapter {
     _roomEventsSubscription?.call();
     _audioInterruptionSub?.cancel();
     _isJoiningRoom = false;
+    localVideoEnabled.value = false;
+    remoteVideoEnabled.value = false;
     if (_room != null) {
       _log('LK', 'room.disconnect() calling');
       await _room!.disconnect();

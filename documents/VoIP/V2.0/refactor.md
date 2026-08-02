@@ -68,6 +68,10 @@ Her adım bir öncekine bağımlı, ama mevcut sistemi bozmadan production'a al�
 | **Step 8** | `CallService` ince orchestrator | Diğerleri hazır olunca | ✅ |
 | **Step 9** | Grup call HTTP → `CallRepository` | Step 4 additive extension | ✅ |
 | **Step 10** | `CallRoomAdapter` | Step 9 tamamlanmış olmalı | ✅ |
+| **Step 11** | System event routing + D-1 impl | `CallRoomAdapter` sonrası; network monitor refaktörü | ✅ |
+| **Step 12** | Hardware/media state → adapter'lara taşı | Step 5 + Step 10 tamamlanmış olmalı | ✅ |
+| **Step 13** | UI routing state → `CallScreenRouter` | Step 6 tamamlanmış olmalı | ✅ |
+| **Step 14** | `fetchFollowingForInvite` → sosyal servis | Step 4 tabanına ihtiyaç var | ✅ |
 
 ---
 
@@ -947,14 +951,12 @@ elif callee.fcm_token:
 
 ## Step 9: Grup Call HTTP → `CallRepository`
 
-**Durum:** 🔴 Başlamadı  
-**Başlangıç:** —  
-**Tamamlanma:** —  
-**Commit:** —
+**Durum:** ✅ Tamamlandı  
+**Commit:** `6e03ee03`
 
 **Bağımlılık:** Step 4 tamamlanmış olmalı (additive extension).
 
-Step 4'te yalnızca 1:1 çağrı endpoint'leri `CallRepository`'ye taşındı. Grup çağrısı endpoint'leri hâlâ `CallService._post()` üzerinden çağrılıyor. Bu step'te 5 grup endpoint'i repository'ye taşınır; ardından `CallService._post()` ve `_authHeaders()` helper'ları kaldırılabilir.
+Step 4'te yalnızca 1:1 çağrı endpoint'leri `CallRepository`'ye taşındı. Grup çağrısı endpoint'leri `CallService._post()` üzerinden çağrılıyordu. Bu step'te 5 grup endpoint'i repository'ye taşındı; `_post()` kaldırıldı, `_authHeaders()` + `_getList()` `fetchFollowingForInvite` için kaldı (Step 14'te temizlenecek).
 
 ### 9.1 `CallRepository`'ye Eklenecek Metodlar
 
@@ -979,8 +981,6 @@ Her `_post('/calls/...')` grup çağrısı `_repository.*` ile değiştirilir.
 - [x] `call_service.dart`: `_post()` kaldırıldı; `_authHeaders()` + `_getList()` `fetchFollowingForInvite` için kaldı
 - [x] `dart analyze` 0 warning (2 pre-existing info)
 - [ ] Grup davet alma / kabul / red / ayrılma / çıkarma senaryoları manuel test edildi
-
-**Commit:** `6e03ee03`
 
 ---
 
@@ -1062,6 +1062,317 @@ class CallRoomAdapter {
 
 ---
 
+## Step 11: System Event Routing + D-1 Implementation
+
+**Durum:** 🔴 Başlamadı  
+**Bağımlılık:** Step 10 tamamlanmış olmalı.
+
+VoIP.md §5.9 (D-6) kararının implementasyonu. Mevcut `_startNetworkMonitor` sadece `active`/`reconnecting`'i izliyor ve sadece log yazıyor — processEvent çağırmıyor. D-1 (20s timer for `network_lost` in `waiting`) hiç implement edilmemiş.
+
+### 11.1 Değişiklikler
+
+**`call_service.dart` — `_startNetworkMonitor` refaktörü:**
+
+```dart
+void _startNetworkMonitor() {
+  _networkSub?.cancel();
+  _prevNetworkType = null;
+  _cpLog('LK', 'networkMonitor START | callId=${state.value.callId}');
+  _networkSub = Connectivity().onConnectivityChanged.listen((results) {
+    final activeStatuses = {
+      CallStatus.dialing, CallStatus.waiting, CallStatus.connecting,
+      CallStatus.active, CallStatus.reconnecting,
+    };
+    if (!activeStatuses.contains(state.value.status)) return;
+
+    final newType = results.isNotEmpty ? results.first : ConnectivityResult.none;
+    if (newType == _prevNetworkType) return;
+    final prevType = _prevNetworkType;
+    _prevNetworkType = newType;
+
+    if (newType == ConnectivityResult.none) {
+      _cpLog('LK', 'networkChange → network_lost | status=${state.value.status.name}');
+      _handleSystemEvent('network_lost');
+    } else if (prevType == ConnectivityResult.none) {
+      _cpLog('LK', 'networkChange → network_restored | status=${state.value.status.name}');
+      _handleSystemEvent('network_restored');
+    }
+  });
+}
+
+void _handleSystemEvent(String type) {
+  final status = state.value.status;
+  switch (type) {
+    case 'network_lost':
+      if (status == CallStatus.waiting) {
+        // D-1: 20s bekle, sonra ended
+        _networkLostInWaitingTimer?.cancel();
+        _networkLostInWaitingTimer = Timer(const Duration(seconds: 20), () {
+          if (state.value.status == CallStatus.waiting) {
+            _cpLog('TIMER', 'D-1 timer fired: waiting + network_lost → ended');
+            _hangUpLocally(endReason: EndReason.error);
+          }
+        });
+      } else if (status == CallStatus.dialing) {
+        _hangUpLocally(endReason: EndReason.error);
+      } else if (status == CallStatus.connecting) {
+        _hangUpLocally(endReason: EndReason.error);
+      }
+      // active → reconnecting zaten LiveKit'in kendi reconnect mekanizması
+      // reconnecting → LK retry devam eder, timer_peer_expired ile zaten yönetiliyor
+    case 'network_restored':
+      if (status == CallStatus.waiting) {
+        _networkLostInWaitingTimer?.cancel();
+        _networkLostInWaitingTimer = null;
+        _cpLog('LK', 'D-1 timer CANCELLED — network restored in waiting');
+      }
+      // reconnecting: LK retry kendisi devam eder
+  }
+}
+```
+
+**Yeni field:**
+```dart
+Timer? _networkLostInWaitingTimer;
+```
+
+**`_disconnectRoom()` veya `reset()` içinde:**
+```dart
+_networkLostInWaitingTimer?.cancel();
+_networkLostInWaitingTimer = null;
+```
+
+### 11.2 Transition Tablosu Doğrulaması
+
+§5.2 `dialing` + `network_lost` → `ended` ✅ (yeni kod)  
+§5.3 `waiting` + `network_lost` → 20s timer → `ended` ✅ (D-1, yeni kod)  
+§5.3 `waiting` + `network_restored` → timer iptal ✅ (yeni kod)  
+§5.5 `connecting` + `network_lost` → `ended` ✅ (yeni kod)  
+§5.6 `active` + `network_lost` → `reconnecting` — LK kendi halleder, kod yok (doğru)  
+§5.7 `reconnecting` + `network_restored` → `reconnecting` — LK retry devam, kod yok (doğru)  
+
+### 11.3 Checklist
+
+- [x] `_startNetworkMonitor` tüm aktif state'leri kapsıyor (`dialing`, `waiting`, `connecting`, `active`, `reconnecting`)
+- [x] `_handleNetworkLost` ve `_handleNetworkRestored` metodları eklendi
+- [x] `_networkLostInWaitingTimer` field eklendi
+- [x] `_disconnectRoom()` içinde timer iptal ediliyor
+- [x] `reset()` içinde timer iptal ediliyor
+- [x] `startCall` başında `_startNetworkMonitor()` çağrısı — `dialing` state'ini de kapsar
+- [x] D-1: `waiting` + `network_lost` → 20s → `ended` implement edildi
+- [x] `waiting` + `network_restored` → D-1 timer iptal
+- [x] `dialing` + `network_lost` → `ended` implement edildi
+- [x] `connecting` + `network_lost` → `ended` implement edildi
+- [x] `dart analyze` 0 warning ✅
+
+---
+
+## Step 12: Hardware/Media State → Adapter'lara Taşı
+
+**Durum:** ✅ Tamamlandı  
+**Bağımlılık:** Step 5 (`CallHardwareAdapter`) + Step 10 (`CallRoomAdapter`) tamamlanmış olmalı.
+
+VoIP.md D-7 kararının implementasyonu. `CallState.isSpeaker`, `CallState.localVideoEnabled`, `CallState.remoteVideoEnabled` domain state'ten çıkar; ilgili adapter'lara `ValueNotifier<bool>` olarak taşınır.
+
+### 12.1 `isSpeaker` → `CallHardwareAdapter`
+
+**`call_hardware_adapter.dart`'a ekle:**
+```dart
+final ValueNotifier<bool> isSpeaker = ValueNotifier<bool>(false);
+```
+
+**`setSpeaker()` metodu güncellemesi (adapter içinde):**
+```dart
+Future<void> setSpeaker(bool enabled) async {
+  // mevcut platform kodu...
+  isSpeaker.value = enabled;
+}
+```
+
+**`call_service.dart` — `setSpeaker()` değişikliği:**
+```dart
+// ÖNCE:
+Future<void> setSpeaker(bool enabled) async {
+  await _hardware.setSpeaker(enabled);
+  _setState(state.value.copyWith(isSpeaker: enabled));  // ← kaldırılacak
+}
+
+// SONRA:
+Future<void> setSpeaker(bool enabled) async {
+  await _hardware.setSpeaker(enabled);
+  // isSpeaker artık _hardware.isSpeaker ValueNotifier üzerinden
+}
+```
+
+**`call_service.dart` — UI erişim için getter:**
+```dart
+ValueNotifier<bool> get isSpeaker => _hardware.isSpeaker;
+```
+
+**Proximity sensor güncelleme:**
+```dart
+// Mevcut: state.value.isSpeaker
+// Yeni:   _hardware.isSpeaker.value
+if (isNear && _hardware.isSpeaker.value) { ... }
+```
+
+### 12.2 `localVideoEnabled`/`remoteVideoEnabled` → `CallRoomAdapter`
+
+**`call_room_adapter.dart`'a ekle:**
+```dart
+final ValueNotifier<bool> localVideoEnabled = ValueNotifier<bool>(false);
+final ValueNotifier<bool> remoteVideoEnabled = ValueNotifier<bool>(false);
+```
+
+**Güncelleme noktaları (`call_room_adapter.dart` içinde `_onRoomEvent`):**
+- `lk_peer_joined` / track update → `remoteVideoEnabled.value = ...`
+- `lk_peer_left` → `remoteVideoEnabled.value = false`
+
+**`call_service.dart` — `toggleCamera()` değişikliği:**
+```dart
+// ÖNCE:
+_setState(state.value.copyWith(localVideoEnabled: !enabled));
+
+// SONRA:
+_roomAdapter.localVideoEnabled.value = !enabled;
+```
+
+**`call_service.dart` — UI erişim için getter'lar:**
+```dart
+ValueNotifier<bool> get localVideoEnabled => _roomAdapter.localVideoEnabled;
+ValueNotifier<bool> get remoteVideoEnabled => _roomAdapter.remoteVideoEnabled;
+```
+
+### 12.3 `CallState` Temizliği
+
+`CallState` sınıfından kaldırılacak field'lar:
+- `isSpeaker`
+- `localVideoEnabled`
+- `remoteVideoEnabled`
+
+`copyWith` parametrelerinden de kaldırılır.
+
+**UI consumer güncellemesi:**
+```dart
+// ÖNCE: cs.state.value.isSpeaker
+// SONRA: cs.isSpeaker.value
+
+// ÖNCE: cs.state.value.localVideoEnabled
+// SONRA: cs.localVideoEnabled.value
+
+// ÖNCE: cs.state.value.remoteVideoEnabled
+// SONRA: cs.remoteVideoEnabled.value
+```
+
+UI widget'larında `ValueListenableBuilder` veya `.addListener` kullanarak güncel değer okunur.
+
+### 12.4 Checklist
+
+- [x] `CallHardwareAdapter.isSpeaker: ValueNotifier<bool>` eklendi
+- [x] `CallHardwareAdapter.setSpeaker()` notifier'ı günceller
+- [x] `CallRoomAdapter.localVideoEnabled: ValueNotifier<bool>` eklendi
+- [x] `CallRoomAdapter.remoteVideoEnabled: ValueNotifier<bool>` eklendi
+- [x] `CallState` — `isSpeaker`, `localVideoEnabled`, `remoteVideoEnabled` kaldırıldı
+- [x] `CallService` — `isSpeaker`, `localVideoEnabled`, `remoteVideoEnabled` getter'ları eklendi
+- [x] `CallService._startProximitySensor` → `_hardware.isSpeaker.value` güncellendi
+- [x] `CallService.setSpeaker()` → `_setState` satırı kaldırıldı
+- [x] `CallService.toggleCamera()` → `_roomAdapter.localVideoEnabled.value` güncellendi
+- [x] Tüm UI consumer'lar güncellendi (`call_screen.dart`, `global_call_overlay.dart`)
+- [x] `dart analyze` 0 error ✅
+
+---
+
+## Step 13: UI Routing State → `CallScreenRouter`
+
+**Durum:** ✅ Tamamlandı  
+**Bağımlılık:** Step 6 (`CallScreenRouter`) tamamlanmış olmalı.
+
+VoIP.md D-8 kararının implementasyonu. `isCallScreenVisible` ve `preventCallScreenAutoOpen` `CallService`'ten `CallScreenRouter`'a taşınır.
+
+### 13.1 `isCallScreenVisible` → `CallScreenRouter`
+
+Bu notifier `CallScreenRouter` tarafından set edilir — ekranın açılıp kapandığını router bilir.
+
+**`call_screen_router.dart`'a taşı:**
+```dart
+final ValueNotifier<bool> isCallScreenVisible = ValueNotifier<bool>(false);
+```
+
+**`call_service.dart`:**
+```dart
+// Kaldırılır:
+// final isCallScreenVisible = ValueNotifier<bool>(false);
+
+// Eklenir (geriye dönük uyumluluk için getter):
+ValueNotifier<bool> get isCallScreenVisible => _router.isCallScreenVisible;
+```
+
+### 13.2 `preventCallScreenAutoOpen` → `CallScreenRouter`
+
+Bu notifier SwipeLive widget'ı tarafından set edilir; `CallScreenRouter`'ın routing kararını etkiler.
+
+**`call_screen_router.dart`'a taşı:**
+```dart
+final ValueNotifier<bool> preventCallScreenAutoOpen = ValueNotifier<bool>(false);
+```
+
+**`call_service.dart`:**
+```dart
+// Kaldırılır:
+// final preventCallScreenAutoOpen = ValueNotifier<bool>(false);
+
+// Getter — SwipeLive ve CallRoomAdapter hâlâ erişebilsin:
+ValueNotifier<bool> get preventCallScreenAutoOpen => _router.preventCallScreenAutoOpen;
+```
+
+**`CallRoomAdapter` bağımlılığı:**  
+`CallRoomAdapter` constructor'ı şu an `preventCallScreenAutoOpen` alıyor. Step 13 sonrasında bu parametre hâlâ geçilebilir — değer `_router.preventCallScreenAutoOpen`'dan gelir; interface değişmez.
+
+### 13.3 `reset()` güncelleme
+
+Mevcut `reset()` içinde:
+```dart
+preventCallScreenAutoOpen.value = false;
+```
+Bu satır Step 13 sonrasında otomatik olarak `_router.preventCallScreenAutoOpen.value = false` ile eşdeğer olur (getter üzerinden).
+
+### 13.4 Checklist
+
+- [x] `CallScreenRouter.isCallScreenVisible` eklendi
+- [x] `CallScreenRouter.preventCallScreenAutoOpen` eklendi
+- [x] `CallService.isCallScreenVisible` — field kaldırıldı, getter eklendi
+- [x] `CallService.preventCallScreenAutoOpen` — field kaldırıldı, getter eklendi
+- [x] Tüm consumer'lar hâlâ `cs.isCallScreenVisible` / `cs.preventCallScreenAutoOpen` üzerinden erişiyor (getter sayesinde arayüz değişmez)
+- [x] `dart analyze` 0 error ✅
+
+---
+
+## Step 14: `fetchFollowingForInvite` → Sosyal Servis
+
+**Durum:** ✅ Tamamlandı  
+**Bağımlılık:** `_post`/`_get`/`_authHeaders` metodları `CallService`'ten hâlâ kaldırılmamış olabilir — Step 9'dan sonra sadece `fetchFollowingForInvite` bunu kullanıyor.
+
+### 14.1 Sorun
+
+`CallService.fetchFollowingForInvite()` `/follows/$myId/following` endpoint'ini çağırıyor. Bu sosyal domain verisi — arama servisiyle ilgisi yok. Step 9'da `_post`/`_get`/`_authHeaders` kaldırılması planlanmıştı ama bu metod yüzünden yapılamadı.
+
+### 14.2 Çözüm
+
+**Option A (tercih edilen):** `fetchFollowingForInvite` `CallRepository`'ye değil, yeni bir `FollowsRepository` veya mevcut bir sosyal servise taşınır. Grup arama UI'ı bu servisi doğrudan çağırır.
+
+**Option B (minimal):** `fetchFollowingForInvite` `CallRepository`'ye geçici olarak taşınır (diğer call API çağrıları ile aynı yerde), `CallService`'ten kaldırılır. Tam ayrıştırma ayrı bir adımda yapılır.
+
+### 14.3 Checklist
+
+- [x] `fetchFollowingForInvite` `CallService`'ten kaldırıldı
+- [x] `FollowsService` olarak `mobile/lib/services/follows_service.dart`'a taşındı (Option A)
+- [x] `_getList`, `_authHeaders` `CallService`'ten kaldırıldı (artık kullanan yok)
+- [x] `dart:convert`, `package:http/http.dart` `CallService`'ten kaldırıldı
+- [x] `call_screen.dart` → `FollowsService.fetchFollowingForInvite()` kullanıyor
+- [x] `dart analyze` 0 error ✅
+
+---
+
 ## Karar Logu
 
 Refactoring sırasında alınan kararlar buraya kaydedilir.
@@ -1084,3 +1395,6 @@ Refactoring sırasında alınan kararlar buraya kaydedilir.
 | 2026-08-01 | `connecting → permissionDenied` callee geçici | Step 5'te kaldırılacak (mic check `connecting`'e girmeden olacak) | Şimdilik mevcut code ile uyumlu; Step 5 sonrası dead code olur |
 | 2026-08-01 | Ghost cleanup Redis gap (backend bug) | `cleanup_ghost_calls_task` içine `clear_call_redis(call_id)` çağrısı eklenmeli | §16.10 spec review sırasında tespit edildi: ghost temizlenince `call:{id}:participants` key (3h TTL) temizlenmiyor; `delayed_call_timeout_task` bunu yapıyor ama ghost task yapmıyor — stale Redis state 3 saate kadar kalabilir |
 | 2026-08-02 | Caller mic denied UI kararı | `GlobalCallOverlay` handle eder — CallScreen açılmaz | `idle → ended (permissionDenied)` case'inde `isCallScreenVisible=false`; CallScreen açmak semantik olarak yanlış ("arama başlamadı"); Overlay zaten `!isCallScreenVisible` durumunda call UI fallback görevi yapıyor |
+| 2026-08-02 | D-6 system event routing | Network olayları `processEvent` üzerinden geçer | Mevcut `_startNetworkMonitor` sadece logluyor ve sadece `active`/`reconnecting`'i izliyor; D-1 implement edilmemiş; unified event bus prensibi state geçişi üretebilecek her olayın tek noktadan girmesini gerektirir |
+| 2026-08-02 | D-7 hardware/media state ownership | `isSpeaker`, `localVideoEnabled`, `remoteVideoEnabled` domain state'ten çıkar | D-4'ün genelleştirilmesi; `CallState` yalnızca domain state taşımalı; adapter'larda `ValueNotifier` + `CallService` getter pattern |
+| 2026-08-02 | D-8 UI routing state ownership | `isCallScreenVisible`, `preventCallScreenAutoOpen` CallScreenRouter'a taşınır | CallService'in bu routing flag'lerini tutması single responsibility ihlali; CallScreenRouter zaten ekran kararını veriyor — bu flag'leri de o yönetmeli |
