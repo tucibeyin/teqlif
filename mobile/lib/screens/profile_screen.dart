@@ -1578,17 +1578,22 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ),
           ),
           actions: [
-            TeqButton.text(
-              text: loc.t('btnCancel'),
-              onPressed: loading ? null : () => Navigator.pop(ctx),
-            ),
-            TeqButton(
-              text: codeSent ? loc.t('btnChangePassword') : loc.t('btnSendCode'),
-              isLoading: loading,
-              isExpanded: false,
-              onPressed: loading
-                  ? null
-                  : () async {
+            Row(
+              children: [
+                Expanded(
+                  child: TeqButton.outline(
+                    text: loc.t('btnCancel'),
+                    onPressed: loading ? null : () => Navigator.pop(ctx),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TeqButton(
+                    text: codeSent ? loc.t('btnChangePassword') : loc.t('btnSendCode'),
+                    isLoading: loading,
+                    onPressed: loading
+                        ? null
+                        : () async {
                       setS(() {
                         error = null;
                         loading = true;
