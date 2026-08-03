@@ -44,7 +44,7 @@ Her bir ekran için şu adımlar izlenmelidir:
 - [x] **Profile Screen:** `lib/screens/profile_screen.dart` -> `lib/screens/viewmodels/profile_view_model.dart`
 
 ### Canlı Yayın (Live & Story)
-- [ ] `mobile/lib/screens/live/host_stream_screen.dart`
+- [x] `mobile/lib/screens/live/host_stream_screen.dart`
 - [x] `mobile/lib/screens/live/live_list_screen.dart`
 - [x] `mobile/lib/screens/live/seller_report_screen.dart`
 - [x] `mobile/lib/screens/live/swipe_live_screen.dart`

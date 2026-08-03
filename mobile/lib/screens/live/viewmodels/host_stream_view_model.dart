@@ -6,8 +6,7 @@ import '../../../services/analytics_service.dart';
 import '../../../services/auction_service.dart';
 import '../../../services/moderation_service.dart';
 import '../../../services/stream_service.dart';
-import '../../../services/upload_service.dart';
-import '../../../models/stream.dart';
+
 
 class HostStreamViewModel {
   // Analytics
@@ -87,8 +86,8 @@ class HostStreamViewModel {
   }
 
   // Stream Actions
-  Future<void> confirmLive(int streamId, bool notify) async {
-    await StreamService.confirmLive(streamId, notify);
+  Future<void> confirmLive(int streamId) async {
+    await StreamService.confirmLive(streamId);
   }
 
   Future<void> endStream(int streamId) async {
@@ -135,12 +134,8 @@ class HostStreamViewModel {
 
   Future<bool> uploadThumbnail(int streamId, Uint8List imageBytes) async {
     try {
-      final url = await UploadService.uploadBytes(imageBytes, 'image/jpeg');
-      if (url != null) {
-        await StreamService.uploadThumbnail(streamId, url);
-        return true;
-      }
-      return false;
+      await StreamService.uploadThumbnail(streamId, imageBytes, 'thumb.png');
+      return true;
     } catch (_) {
       return false;
     }

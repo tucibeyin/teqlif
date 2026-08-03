@@ -367,7 +367,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       if (mounted) {
         final loc = ref.read(localizationProvider);
         setState(() {
-          _permPermanentlyDenied = permanent;
           _error = permanent
               ? loc.tOr('permPermanentlyDenied', 'Bu özellik için izin gerekli. Ayarlardan etkinleştir.')
               : loc.t('livePermissionRequired');
@@ -713,10 +712,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       final image = await boundary.toImage(pixelRatio: 0.5);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
-      await StreamService.uploadThumbnail(
+      await ref.read(hostStreamViewModelProvider).uploadThumbnail(
         widget.streamToken.streamId,
         byteData.buffer.asUint8List(),
-        'thumb.png',
       );
       // Her 60 saniyede bir güncelle
       if (mounted) {
