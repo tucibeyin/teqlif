@@ -36,7 +36,7 @@ FEATURE_COUNT = 18
 # ── Özellik çıkarımı ─────────────────────────────────────────────────────────
 
 _VEHICLE_FIELDS = {"mileage", "year", "fuel_type", "transmission"}
-_REALESTATE_FIELDS = {"room_count", "gross_sqm", "floor"}
+_REALESTATE_FIELDS = {"listing_type", "room_count", "gross_sqm", "floor"}
 _ELECTRONICS_FIELDS = {"ram", "processor"}
 
 
