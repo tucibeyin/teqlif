@@ -2261,9 +2261,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     'mobile_phone':      ['brand', 'model', 'storage', 'ram', 'color'],
     'laptop':            ['brand', 'model', 'processor', 'ram', 'storage'],
     'tablet':            ['brand', 'model', 'storage', 'screen_size', 'color'],
-    'apartment':         ['room_count', 'net_sqm', 'gross_sqm', 'floor', 'heating'],
-    'house_villa':       ['net_sqm', 'gross_sqm', 'room_count', 'building_age', 'heating'],
-    'land':              ['land_sqm', 'title_deed', 'land_use'],
+    'apartment':         ['listing_type', 'room_count', 'net_sqm', 'gross_sqm', 'floor', 'heating'],
+    'house_villa':       ['listing_type', 'net_sqm', 'gross_sqm', 'room_count', 'building_age', 'heating'],
+    'land':              ['listing_type', 'land_sqm', 'title_deed', 'land_use'],
+    'office':            ['listing_type', 'gross_sqm', 'net_sqm', 'floor'],
+    'field_garden':      ['listing_type', 'sqm', 'title_deed', 'land_use'],
+    'building':          ['listing_type', 'floor_count', 'unit_count', 'gross_sqm'],
+    'warehouse':         ['listing_type', 'gross_sqm', 'floor'],
   };
 
   /// Extra fields'ten öncelik sırasına göre en fazla [maxCount] satır döndürür.
