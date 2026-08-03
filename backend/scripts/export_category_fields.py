@@ -24,7 +24,7 @@ from collections import defaultdict
 # backend/ içinden çalıştırılır
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.database import async_session_maker
+from app.database import AsyncSessionLocal
 from app.models.category_field import CategoryField, FieldOption
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -80,7 +80,7 @@ async def export_fields():
     os.makedirs(output_base, exist_ok=True)
     print(f"Cikti dizini: {output_base}\n")
 
-    async with async_session_maker() as session:
+    async with AsyncSessionLocal() as session:
         # Tüm aktif field'ları options ile birlikte çek
         result = await session.execute(
             select(CategoryField)

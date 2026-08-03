@@ -5,7 +5,7 @@ import sys
 # Bu script backend/ içinden çalıştırılır: python scripts/seed_emlak_listing_types.py
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.database import async_session_maker
+from app.database import AsyncSessionLocal
 from app.models.category_field import CategoryField, FieldOption
 from sqlalchemy import select, delete
 
@@ -37,7 +37,7 @@ async def seed_emlak_fields():
     print("Emlak kategorisi 'İlan Durumu' alanları güncelleniyor...")
     print(f"Hedef subcategory'ler: {SUBCATEGORIES}\n")
 
-    async with async_session_maker() as session:
+    async with AsyncSessionLocal() as session:
 
         # 1. Önce DB'de mevcut subcategory'leri doğrula
         existing_result = await session.execute(
