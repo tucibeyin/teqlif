@@ -518,7 +518,7 @@ Siyah · Beyaz · Mavi · Yeşil · Mor · Sarı · Pembe · Kırmızı · Güm�
 | Sıra | Alan        | Tip           | Detay                                              |
 |------|-------------|---------------|----------------------------------------------------|
 | 1    | Title       | Serbest metin | Kullanıcı elle girer                               |
-| 2    | İlan Tipi   | Dropdown      | Satılık / Kiralık                                  |
+| 2    | İlan Tipi   | Dropdown      | Satılık / Kiralık / Kat Karşılığı                  |
 | 3    | m²          | Serbest metin | Yalnızca sayı, max 7 rakam                         |
 | 4    | İmar Durumu | Dropdown      | İmarlı / İmarsız / Konut İmarlı / Ticari İmarlı   |
 | 5    | Tapu Durumu | Dropdown      | Kat Mülkiyeti / Kat İrtifakı / Hisseli / Müstakil |
@@ -535,7 +535,7 @@ Siyah · Beyaz · Mavi · Yeşil · Mor · Sarı · Pembe · Kırmızı · Güm�
 | Sıra | Alan        | Tip           | Detay                                                    |
 |------|-------------|---------------|----------------------------------------------------------|
 | 1    | Title       | Serbest metin | Kullanıcı elle girer                                     |
-| 2    | İlan Tipi   | Dropdown      | Satılık / Kiralık                                        |
+| 2    | İlan Tipi   | Dropdown      | Satılık / Kiralık / Kat Karşılığı                        |
 | 3    | Tip         | Dropdown      | Tarla / Bahçe / Zeytinlik / Bağ / Meyve Bahçesi / Diğer |
 | 4    | m²          | Serbest metin | Yalnızca sayı, max 9 rakam                               |
 | 5    | İmar Durumu | Dropdown      | İmarlı / İmarsız / Tarım Arazisi / Orman Vasfı          |
@@ -551,7 +551,7 @@ Siyah · Beyaz · Mavi · Yeşil · Mor · Sarı · Pembe · Kırmızı · Güm�
 | Sıra | Alan         | Tip           | Detay                                                     |
 |------|--------------|---------------|-----------------------------------------------------------|
 | 1    | Title        | Serbest metin | Kullanıcı elle girer                                      |
-| 2    | İlan Tipi    | Dropdown      | Satılık / Kiralık                                         |
+| 2    | İlan Tipi    | Dropdown      | Satılık / Kiralık / Devren Satılık / Devren Kiralık       |
 | 3    | Tip          | Dropdown      | Ofis / Dükkan / Restoran & Kafe / Depo / Atölye / Diğer |
 | 4    | Brüt m²      | Serbest metin | Yalnızca sayı, max 6 rakam                                |
 | 5    | Net m²       | Serbest metin | Opsiyonel                                                 |
@@ -572,7 +572,7 @@ Siyah · Beyaz · Mavi · Yeşil · Mor · Sarı · Pembe · Kırmızı · Güm�
 | Sıra | Alan             | Tip           | Detay                                                  |
 |------|------------------|---------------|--------------------------------------------------------|
 | 1    | Title            | Serbest metin | Kullanıcı elle girer                                   |
-| 2    | İlan Tipi        | Dropdown      | Satılık / Kiralık                                      |
+| 2    | İlan Tipi        | Dropdown      | Satılık / Kiralık / Devren Satılık / Devren Kiralık    |
 | 3    | Tip              | Dropdown      | Depo / Fabrika / Hangar / Soğuk Hava Deposu / Diğer   |
 | 4    | Brüt m²          | Serbest metin | Yalnızca sayı, max 7 rakam                             |
 | 5    | Tavan Yüksekliği | Dropdown      | 3-5m / 5-8m / 8-12m / 12m+                            |

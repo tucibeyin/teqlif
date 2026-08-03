@@ -1393,7 +1393,9 @@
   "proReactivationWindowHint": "{count} объявл. в рамках 30-дневного окна",
   "@proReactivationWindowHint": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "proCreditsUsedFormat": "{used} использовано, осталось {remaining}",
@@ -4222,5 +4224,11 @@
     }
   },
   "notifSettingsRatingsTitle": "Уведомления об оценках",
-  "notifSettingsRatingsDesc": "При обновлении оценки или ответе на неё"
+  "notifSettingsRatingsDesc": "При обновлении оценки или ответе на неё",
+  "fieldListingType": "Статус объявления",
+  "optSatilik": "Продажа",
+  "optKiralik": "Аренда",
+  "optDevrenSatilik": "Продажа по переуступке",
+  "optDevrenKiralik": "Аренда по переуступке",
+  "optKatKarsiligi": "В обмен на квартиру"
 }

@@ -825,7 +825,9 @@
   "proReactivationWindowHint": "{count} إعلان ضمن نافذة 30 يوماً",
   "@proReactivationWindowHint": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "proCreditsUsedFormat": "تم استخدام {used}، {remaining} متبقٍ",
@@ -4221,5 +4223,11 @@
     }
   },
   "notifSettingsRatingsTitle": "إشعارات التقييم",
-  "notifSettingsRatingsDesc": "عند تحديث تقييم أو الرد عليه"
+  "notifSettingsRatingsDesc": "عند تحديث تقييم أو الرد عليه",
+  "fieldListingType": "حالة الإعلان",
+  "optSatilik": "للبيع",
+  "optKiralik": "للإيجار",
+  "optDevrenSatilik": "للبيع بالتحويل",
+  "optDevrenKiralik": "للإيجار بالتحويل",
+  "optKatKarsiligi": "مقابل شقة"
 }

@@ -826,7 +826,9 @@
   "proReactivationWindowHint": "{count} listing(s) within 30-day window",
   "@proReactivationWindowHint": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "proCreditsUsedFormat": "{used} used, {remaining} remaining",
@@ -4260,5 +4262,11 @@
     }
   },
   "notifSettingsRatingsTitle": "Rating Notifications",
-  "notifSettingsRatingsDesc": "When a rating is updated or replied to"
+  "notifSettingsRatingsDesc": "When a rating is updated or replied to",
+  "fieldListingType": "Listing Status",
+  "optSatilik": "For Sale",
+  "optKiralik": "For Rent",
+  "optDevrenSatilik": "For Sale by Transfer",
+  "optDevrenKiralik": "For Rent by Transfer",
+  "optKatKarsiligi": "In Exchange for Flat"
 }
