@@ -81,7 +81,8 @@ async def seed_emlak_fields():
                 type='dropdown',
                 required=True,
                 position=1,   # İlan tipinin ilk sırada çıkması UX açısından doğru
-                is_active=True
+                is_active=True,
+                category_key='real_estate',  # aaa_slug_unification migration ile eklendi
             )
             session.add(field)
             await session.flush()  # ID almak için
