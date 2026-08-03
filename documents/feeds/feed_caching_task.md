@@ -28,7 +28,7 @@ Bu belge, yukarıdaki bağımlılık zinciri uyarınca backend ve mobil tarafta 
 - [x] **Telemetri (ClickHouse) Koruması:** Redis'ten veri dönülse dahi, `architectural_decisions.md`'de belirtilen `feed_telemetry` loglarının (kullanıcıların hangi alt-kategorileri gördüğü) kaybolmaması için ClickHouse sinyal akışının korunması. *(04.08.2026 - efa77b0c)*
 
 ## 4. Mobile (Frontend) Entegrasyonu
-- [ ] **Pull-to-Refresh Güncellemesi:** Keşfet ve İlanlar sayfalarındaki "Aşağı çekerek yenileme" aksiyonunun tüm listeyi sıfırlamak yerine `since_id=<ekrandaki_en_yeni_ilan_id>` parametresiyle API isteği atması.
-- [ ] **Delta Merging (State Management):** API'den sadece yeni ilanlar geldiğinde, MobX/Provider/BLoC state yöneticisinin bu yeni ilanları mevcut listenin en üstüne (prepend) sorunsuzca eklemesi.
-- [ ] **Infinite Scroll Uyumu:** Liste sonuna gelindiğinde standart pagination (sayfa + 1) isteğinin atılmaya devam etmesi ve State listesinin sonuna (append) yeni sayfaların eklenmesi.
-- [ ] **UI Loading State Uyumu:** Refresh veya Scroll sırasında ekranda gösterilecek "Yükleniyor" durumlarının, `architectural_decisions.md` "5. Async Buton Loading Pattern" bölümündeki kurallara sadık kalarak, manuel `_loading = true` (setState) yerine standart Provider State (`isLoading: notifier.isSending`) ile yönetilmesi.
+- [x] **Pull-to-Refresh Güncellemesi:** Keşfet ve İlanlar sayfalarındaki "Aşağı çekerek yenileme" aksiyonunun tüm listeyi sıfırlamak yerine `since_id=<ekrandaki_en_yeni_ilan_id>` parametresiyle API isteği atması. *(04.08.2026 - 4d69568e)*
+- [x] **Delta Merging (State Management):** API'den sadece yeni ilanlar geldiğinde, MobX/Provider/BLoC state yöneticisinin bu yeni ilanları mevcut listenin en üstüne (prepend) sorunsuzca eklemesi. *(04.08.2026 - 4d69568e)*
+- [x] **Infinite Scroll Uyumu:** Liste sonuna gelindiğinde standart pagination (sayfa + 1) isteğinin atılmaya devam etmesi ve State listesinin sonuna (append) yeni sayfaların eklenmesi. *(04.08.2026 - 4d69568e)*
+- [x] **UI Loading State Uyumu:** Refresh veya Scroll sırasında ekranda gösterilecek "Yükleniyor" durumlarının, `architectural_decisions.md` "5. Async Buton Loading Pattern" bölümündeki kurallara sadık kalarak, manuel `_loading = true` (setState) yerine standart Provider State (`isLoading: notifier.isSending`) ile yönetilmesi. *(04.08.2026 - 4d69568e)*
