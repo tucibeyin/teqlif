@@ -69,6 +69,10 @@ async def get_listings(
     offset: int = 0,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    condition: Optional[str] = None,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -98,6 +102,10 @@ async def get_listings(
             current_user_id=current_user.id if current_user else None,
             date_from=date_from,
             date_to=date_to,
+            sort_by=sort_by,
+            min_price=min_price,
+            max_price=max_price,
+            condition=condition,
         )
 
 

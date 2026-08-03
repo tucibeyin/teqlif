@@ -27,8 +27,12 @@ class SearchListingsQuery:
         offset: int = 0,
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        min_price: Optional[float] = None,
+        max_price: Optional[float] = None,
+        condition: Optional[str] = None,
     ) -> list:
-        logger.info("[SearchListingsQuery] Başlatıldı | q=%s category=%s date_from=%s date_to=%s", q, category, date_from, date_to)
+        logger.info("[SearchListingsQuery] Başlatıldı | q=%s category=%s date_from=%s date_to=%s sort_by=%s", q, category, date_from, date_to, sort_by)
         
         q_stmt = (
             select(Listing, User)
@@ -50,6 +54,12 @@ class SearchListingsQuery:
             q_stmt = q_stmt.where(Listing.subcategory == subcategory)
         if location:
             q_stmt = q_stmt.where(Listing.location.ilike(f"%{location}%"))
+        if condition:
+            q_stmt = q_stmt.where(Listing.condition == condition)
+        if min_price is not None:
+            q_stmt = q_stmt.where(Listing.price >= min_price)
+        if max_price is not None:
+            q_stmt = q_stmt.where(Listing.price <= max_price)
         if date_from:
             try:
                 sd = datetime.strptime(date_from, '%Y-%m-%d')
@@ -74,16 +84,31 @@ class SearchListingsQuery:
                     func.similarity(Listing.description, q) > 0.15
                 )
             )
-            q_stmt = q_stmt.order_by(
-                func.greatest(
-                    func.similarity(Listing.title, q),
-                    func.similarity(Listing.description, q)
-                ).desc(),
-                User.is_premium.desc(), 
-                Listing.created_at.desc()
-            ).limit(limit).offset(offset)
+
+        # Apply Sorting
+        if sort_by == "newest":
+            q_stmt = q_stmt.order_by(Listing.created_at.desc())
+        elif sort_by == "oldest":
+            q_stmt = q_stmt.order_by(Listing.created_at.asc())
+        elif sort_by == "price_asc":
+            q_stmt = q_stmt.order_by(Listing.price.asc(), Listing.created_at.desc())
+        elif sort_by == "price_desc":
+            q_stmt = q_stmt.order_by(Listing.price.desc(), Listing.created_at.desc())
         else:
-            q_stmt = q_stmt.order_by(User.is_premium.desc(), Listing.created_at.desc()).limit(limit).offset(offset)
+            # Default sorting if no explicit sort is provided
+            if q:
+                q_stmt = q_stmt.order_by(
+                    func.greatest(
+                        func.similarity(Listing.title, q),
+                        func.similarity(Listing.description, q)
+                    ).desc(),
+                    User.is_premium.desc(), 
+                    Listing.created_at.desc()
+                )
+            else:
+                q_stmt = q_stmt.order_by(User.is_premium.desc(), Listing.created_at.desc())
+
+        q_stmt = q_stmt.limit(limit).offset(offset)
             
         result = await db_session.execute(q_stmt)
         rows = result.all()
