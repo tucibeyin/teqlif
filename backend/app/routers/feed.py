@@ -102,6 +102,8 @@ async def mark_not_interested(
 @router.get("/recent")
 async def get_recent_mixed_feed(
     page: int = Query(default=0, ge=0, le=50),
+    since_id: int | None = Query(default=None, description="Delta fetching (pull-to-refresh) için en son bilinen ID"),
+    max_id: int | None = Query(default=None, description="Eski sayfalara giderken (infinite scroll) kullanılan en küçük ID"),
     exclude_ids: str = Query(default=""),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User | None = Depends(get_current_user_optional),
@@ -118,7 +120,7 @@ async def get_recent_mixed_feed(
             parsed_exclude = [int(x) for x in exclude_ids.split(",") if x.strip().isdigit()]
         except (ValueError, AttributeError):
             parsed_exclude = []
-    return await FeedQueries(uow).get_mixed_recent_feed(user_id, page, exclude_ids=parsed_exclude or None)
+    return await FeedQueries(uow).get_mixed_recent_feed(user_id, page, since_id, max_id, exclude_ids=parsed_exclude or None)
 
 
 @router.get("/for-you")

@@ -1217,55 +1217,119 @@ class FeedQueries:
     async def get_mixed_recent_feed(self,
         user_id: Optional[int],
         page: int,
+        since_id: Optional[int] = None,
+        max_id: Optional[int] = None,
         exclude_ids: list[int] | None = None,
     ) -> list[dict]:
         """
         'Son İlanlar' karışık feed.
-
-        Base: en son eklenen ilanlar (created_at DESC), sayfalama.
-        Enjeksiyonlar:
-          - pos 5, 10, 15 → kullanıcı ilgi kategorilerinden birer ilan
-          - pos 2, 7, 12  → sponsored (yalnızca page 0, mevcut _inject_ads mantığıyla)
+        
+        Redis Cache + Delta Fetching Mimarisini kullanır:
+          - Delta (since_id): ZREVRANGEBYSCORE feed:recent +inf (since_id
+          - Infinite Scroll (max_id): ZREVRANGEBYSCORE feed:recent (max_id -inf LIMIT 0 20
+          - Fallback: Eğer Redis'ten yeterli (veya hiç) veri gelmezse SQL'e düşer.
+          - Cache Refill: SQL'den veri çekildiğinde lazy olarak Redis'e geri yazılır.
         """
-        offset = page * self._RECENT_PAGE_SIZE
-        params: dict = {"lim": self._RECENT_PAGE_SIZE, "off": offset}
-        uid_clause = ""
-        if user_id:
-            params["uid"] = user_id
-            uid_clause = "AND l.user_id != :uid"
+        import asyncio
+        from app.utils.redis_client import get_redis
+        from app.services.feed.listing_cache_service import get_listings_from_cache
+        
+        redis = await get_redis()
+        base_ids = []
+        is_fallback = False
+        
+        # 1. Redis'ten çekmeyi dene
+        if since_id:
+            # Sadece yeni verileri çek (pull-to-refresh)
+            # ZREVRANGEBYSCORE key max min -> +inf ile (since_id aralığı
+            raw_ids = await redis.zrevrangebyscore("feed:recent", "+inf", f"({since_id}", start=0, num=self._RECENT_PAGE_SIZE)
+            if raw_ids:
+                base_ids = [int(x) for x in raw_ids]
+        elif max_id:
+            # Eski verilere iniyoruz (scroll down)
+            raw_ids = await redis.zrevrangebyscore("feed:recent", f"({max_id}", "-inf", start=0, num=self._RECENT_PAGE_SIZE)
+            if raw_ids:
+                base_ids = [int(x) for x in raw_ids]
+        else:
+            # İlk yükleme (page 0) - en yüksek score'lu X ilan
+            offset = page * self._RECENT_PAGE_SIZE
+            raw_ids = await redis.zrevrange("feed:recent", offset, offset + self._RECENT_PAGE_SIZE - 1)
+            if raw_ids:
+                base_ids = [int(x) for x in raw_ids]
 
-        # for-you bölümünde zaten görünen ilanları tekrar gösterme
-        excl_clause = ""
-        if exclude_ids:
-            excl_clause = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})"
+        # Filter excluded ve user's own listings before deciding if we need fallback
+        # Aslında excluded_ids user-specific, cache genel. Bu yüzden cache'ten gelen ID'leri filtreleyeceğiz.
+        if base_ids and exclude_ids:
+            base_ids = [lid for lid in base_ids if lid not in exclude_ids]
+            
+        # 2. Redis'te veri yoksa veya yetersizse DB Fallback
+        if not base_ids:
+            is_fallback = True
+            
+            uid_clause = ""
+            params: dict = {"lim": self._RECENT_PAGE_SIZE}
+            if user_id:
+                params["uid"] = user_id
+                uid_clause = "AND l.user_id != :uid"
+                
+            excl_clause = ""
+            if exclude_ids:
+                excl_clause = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})"
+                
+            id_clause = ""
+            if since_id:
+                id_clause = "AND l.id > :since_id"
+                params["since_id"] = since_id
+            elif max_id:
+                id_clause = "AND l.id < :max_id"
+                params["max_id"] = max_id
+            else:
+                params["off"] = page * self._RECENT_PAGE_SIZE
+                id_clause = "OFFSET :off"
+                
+            order_clause = "ORDER BY l.id DESC"
+            if since_id:
+                 order_clause = "ORDER BY l.id ASC" # Yeni ilanları eskiden yeniye alacağız (sonra ters çeviririz)
 
-        base_result = await self.uow.session.execute(
-            text(f"""
+            sql = f"""
                 SELECT l.id
                 FROM listings l
                 WHERE l.status = 'active'
                   AND l.status != 'deleted'
                   {uid_clause}
                   {excl_clause}
-                ORDER BY l.created_at DESC
-                LIMIT :lim OFFSET :off
-            """),
-            params,
-        )
-        base_ids = [r.id for r in base_result]
-        if not base_ids:
-            return []
+                  {id_clause}
+                {order_clause}
+                LIMIT :lim
+            """
+            
+            base_result = await self.uow.session.execute(text(sql), params)
+            base_ids = [r.id for r in base_result]
+            
+            if since_id:
+                 base_ids.reverse() # Arayüze en yeniden eskiye dönsün diye
 
+            if not base_ids:
+                return []
+                
+        # 3. İlan datalarını DB'den (veya data cache'den) al
         rows_result = await self.uow.session.execute(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
                 Listing.id.in_(base_ids),
-                Listing.status == ListingStatus.ACTIVE,    # noqa: E712
-                Listing.status != ListingStatus.DELETED,  # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,
+                Listing.status != ListingStatus.DELETED,
             )
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
+        
+        # Sadece session'a ait olmayan listing'leri filtrele (DB'den gelse de auth varsa filtrelemek gerekebilir)
+        if user_id:
+             base_ids = [lid for lid in base_ids if lid in rows and rows[lid][0].user_id != user_id]
+        else:
+             base_ids = [lid for lid in base_ids if lid in rows]
+
         counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, base_ids, user_id)
 
         recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
@@ -1281,6 +1345,16 @@ class FeedQueries:
             if lid in rows
             for listing, user in [rows[lid]]
         ]
+        
+        # 4. Lazy Cache Refill (Sadece Fallback yapıldıysa)
+        if is_fallback and result:
+             try:
+                 # Bulduğumuz active ilanları feed:recent'e score=id olarak ekliyoruz
+                 mapping = {str(r["id"]): r["id"] for r in result}
+                 if mapping:
+                     await redis.zadd("feed:recent", mapping)
+             except Exception as e:
+                 logger.error(f"[FeedQueries] Lazy Cache Refill hatası: {e}")
 
         # ── İlgi enjeksiyonu (tüm sayfalar) ──────────────────────────────────────
         if user_id:

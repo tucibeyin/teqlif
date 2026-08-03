@@ -101,6 +101,15 @@ class CreateListingCommand:
                 price=price,
             )
         )
+        
+        try:
+            from app.services.feed.listing_cache_service import cache_listing, push_to_recent_feed_cache
+            import asyncio
+            asyncio.create_task(cache_listing(new_listing))
+            if new_listing.status == ListingStatus.ACTIVE:
+                asyncio.create_task(push_to_recent_feed_cache(new_listing))
+        except Exception as e:
+            logger.error(f"[CreateListingCommand] cache_listing hatası: {e}")
 
         logger.info("[CreateListingCommand] Başarılı | listing_id=%s", new_listing.id)
         return {"id": new_listing.id, "status": "created"}

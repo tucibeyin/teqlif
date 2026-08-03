@@ -84,6 +84,9 @@ async def cleanup_listing_redis(listing_id: int) -> None:
         deleted = await redis.delete(f"feed:als:item_vec:{listing_id}")
         if deleted:
             logger.info("[LISTING CLEANUP] Redis ALS vektörü silindi | listing_id=%d", listing_id)
+            
+        from app.services.feed.listing_cache_service import invalidate_listing
+        await invalidate_listing(listing_id)
     except Exception as exc:
         logger.warning("[LISTING CLEANUP] Redis ALS temizliği başarısız | listing_id=%d | %s", listing_id, exc)
 
@@ -96,8 +99,9 @@ async def cleanup_listings_redis_batch(listing_ids: list[int]) -> None:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
         keys = [f"feed:als:item_vec:{lid}" for lid in listing_ids]
-        deleted = await redis.delete(*keys)
-        logger.info("[LISTING CLEANUP] %d Redis ALS vektörü silindi | batch", deleted)
+        cache_keys = [f"listing:{lid}" for lid in listing_ids]
+        deleted = await redis.delete(*keys, *cache_keys)
+        logger.info("[LISTING CLEANUP] %d Redis ALS vektörü ve cache silindi | batch", deleted)
     except Exception as exc:
         logger.warning("[LISTING CLEANUP] Toplu Redis temizliği başarısız | %s", exc)
 

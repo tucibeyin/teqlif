@@ -141,5 +141,20 @@ class UpdateListingCommand:
             except Exception as exc:
                 logger.warning("[UpdateListing] MinIO silme başarısız: key=%s | %s", key, exc)
 
+        try:
+            from app.services.feed.listing_cache_service import cache_listing, push_to_recent_feed_cache, remove_from_recent_feed_cache
+            from app.models.enums import ListingStatus
+            import asyncio
+            # listing objesi DB commit'inden sonra detached olabileceğinden, burada UoW session dışındayız.
+            # Ancak verilerini önceden değiştirdiğimiz için primitive property'leri hala okuyabiliriz (lazy loading hariç).
+            # Listing objesinde relationship fetch etmiyoruz, dolayısıyla çalışması gerekir.
+            asyncio.create_task(cache_listing(listing))
+            if listing.status == ListingStatus.ACTIVE:
+                asyncio.create_task(push_to_recent_feed_cache(listing))
+            else:
+                asyncio.create_task(remove_from_recent_feed_cache(listing.id))
+        except Exception as e:
+            logger.error(f"[UpdateListingCommand] cache_listing hatası: {e}")
+
         logger.info("[UpdateListingCommand] Başarılı | listing_id=%s | silinen_dosya=%d", listing_id, len(files_to_delete))
         return {"id": listing_id, "status": "updated"}

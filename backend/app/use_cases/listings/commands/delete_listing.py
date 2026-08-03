@@ -24,6 +24,14 @@ class DeleteListingCommand:
                 raise ForbiddenException(code="LISTING_DELETE_FORBIDDEN")
 
             listing.status = ListingStatus.DELETED
+            
+            try:
+                from app.services.feed.listing_cache_service import invalidate_listing
+                import asyncio
+                asyncio.create_task(invalidate_listing(listing_id))
+            except Exception as e:
+                logger.error(f"[DeleteListingCommand] invalidate_listing hatası: {e}")
+            
             # TODO: EventBus publish ListingDeletedEvent
 
         logger.info("[DeleteListingCommand] Başarılı | listing_id=%s", listing_id)
