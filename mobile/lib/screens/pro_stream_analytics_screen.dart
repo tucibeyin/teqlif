@@ -1,34 +1,10 @@
-import 'dart:convert';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-
-import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../services/storage_service.dart';
-
-Future<Map<String, dynamic>> _fetchBestStreamTime() async {
-  final token = await StorageService.getToken();
-  final resp = await http.get(
-    Uri.parse('$kBaseUrl/analytics/pro/best-stream-time'),
-    headers: await buildApiHeaders(token),
-  );
-  if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
-  throw Exception('Veri alınamadı');
-}
-
-Future<List<dynamic>> _fetchConversionBreakdown() async {
-  final token = await StorageService.getToken();
-  final resp = await http.get(
-    Uri.parse('$kBaseUrl/analytics/pro/conversion-breakdown'),
-    headers: await buildApiHeaders(token),
-  );
-  if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
-  throw Exception('Veri alınamadı');
-}
+import 'viewmodels/pro_stream_analytics_view_model.dart';
 
 // ── En İyi Yayın Saati ────────────────────────────────────────────────────
 
@@ -41,34 +17,17 @@ class BestStreamTimeScreen extends ConsumerStatefulWidget {
 }
 
 class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-  bool _hasError = false;
-  bool _showAllSlots = false;
   static const int _kMax = 5;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
-    try {
-      final d = await _fetchBestStreamTime();
-      if (mounted) setState(() { _data = d; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _hasError = true; _loading = false; });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final content = _loading
+    final state = ref.watch(bestStreamTimeProvider);
+    final viewModel = ref.read(bestStreamTimeProvider.notifier);
+
+    final content = state.loading
           ? const Center(child: CircularProgressIndicator())
-          : _hasError
+          : state.hasError
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -77,11 +36,11 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
                       const SizedBox(height: 12),
                       Text(loc.t("proLoadError"), style: TextStyle(color: AppColors.textSecondary(context))),
                       const SizedBox(height: 16),
-                      FilledButton(onPressed: _load, child: Text(loc.t("btnRetry"))),
+                      FilledButton(onPressed: () => viewModel.load(), child: Text(loc.t("btnRetry"))),
                     ],
                   ),
                 )
-              : _buildContent(context);
+              : _buildContent(context, state, viewModel);
 
     if (widget.isEmbedded) {
       return content;
@@ -93,16 +52,16 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
         title: Text(loc.t("proToolBestTimeTitle")),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: () => viewModel.load())],
       ),
       body: content,
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, BestStreamTimeState state, BestStreamTimeViewModel viewModel) {
     final loc = ref.read(localizationProvider);
-    final slots = (_data!['slots'] as List? ?? []);
-    final recommendation = _data!['recommendation'] as String? ?? '';
+    final slots = (state.data!['slots'] as List? ?? []);
+    final recommendation = state.data!['recommendation'] as String? ?? '';
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(16),
@@ -148,7 +107,7 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
           ),
           const SizedBox(height: 12),
-          ...(_showAllSlots ? slots : slots.take(_kMax).toList()).asMap().entries.map((e) {
+          ...(state.showAllSlots ? slots : slots.take(_kMax).toList()).asMap().entries.map((e) {
             final i = e.key;
             final s = e.value as Map<String, dynamic>;
             final conv = s['conversion_rate'] as num? ?? 0;
@@ -227,18 +186,18 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
           }),
           if (slots.length > _kMax)
             GestureDetector(
-              onTap: () => setState(() => _showAllSlots = !_showAllSlots),
+              onTap: () => viewModel.toggleShowAllSlots(),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _showAllSlots ? loc.t("proShowLess") : loc.t("proShowAll", {"count": (slots.length - _kMax).toString()}),
+                      state.showAllSlots ? loc.t("proShowLess") : loc.t("proShowAll", {"count": (slots.length - _kMax).toString()}),
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
                     ),
                     const SizedBox(width: 4),
-                    Icon(_showAllSlots ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    Icon(state.showAllSlots ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                         size: 16, color: AppColors.textSecondary(context)),
                   ],
                 ),
@@ -261,34 +220,17 @@ class ConversionBreakdownScreen extends ConsumerStatefulWidget {
 }
 
 class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownScreen> {
-  List<dynamic> _data = [];
-  bool _loading = true;
-  bool _hasError = false;
-  bool _showAll = false;
   static const int _kMax = 5;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
-    try {
-      final d = await _fetchConversionBreakdown();
-      if (mounted) setState(() { _data = d; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _hasError = true; _loading = false; });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final content = _loading
+    final state = ref.watch(conversionBreakdownProvider);
+    final viewModel = ref.read(conversionBreakdownProvider.notifier);
+
+    final content = state.loading
           ? const Center(child: CircularProgressIndicator())
-          : _hasError
+          : state.hasError
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -297,11 +239,11 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
                       const SizedBox(height: 12),
                       Text(loc.t("proLoadError"), style: TextStyle(color: AppColors.textSecondary(context))),
                       const SizedBox(height: 16),
-                      FilledButton(onPressed: _load, child: Text(loc.t("btnRetry"))),
+                      FilledButton(onPressed: () => viewModel.load(), child: Text(loc.t("btnRetry"))),
                     ],
                   ),
                 )
-              : _buildContent(context, loc);
+              : _buildContent(context, loc, state, viewModel);
 
     if (widget.isEmbedded) {
       return content;
@@ -313,14 +255,14 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
         title: Text(loc.t("proToolConversionTitle")),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: () => viewModel.load())],
       ),
       body: content,
     );
   }
 
-  Widget _buildContent(BuildContext context, TranslationPack loc) {
-    if (_data.isEmpty) {
+  Widget _buildContent(BuildContext context, TranslationPack loc, ConversionBreakdownState state, ConversionBreakdownViewModel viewModel) {
+    if (state.data.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -335,8 +277,8 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
       );
     }
 
-    final visible = _showAll ? _data : _data.take(_kMax).toList();
-    final maxConv = (_data.map((r) => (r['conversion_rate'] as num? ?? 0).toDouble()).reduce((a, b) => a > b ? a : b)).toDouble();
+    final visible = state.showAll ? state.data : state.data.take(_kMax).toList();
+    final maxConv = (state.data.map((r) => (r['conversion_rate'] as num? ?? 0).toDouble()).reduce((a, b) => a > b ? a : b)).toDouble();
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(16),
@@ -344,7 +286,7 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
         Text(loc.t("conversionSectionHeader"),
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
         const SizedBox(height: 4),
-        Text(loc.t("conversionCategoryCount", {"count": _data.length.toString()}),
+        Text(loc.t("conversionCategoryCount", {"count": state.data.length.toString()}),
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
         const SizedBox(height: 16),
         ...visible.map((row) {
@@ -404,20 +346,20 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
             ),
           );
         }),
-        if (_data.length > _kMax)
+        if (state.data.length > _kMax)
           GestureDetector(
-            onTap: () => setState(() => _showAll = !_showAll),
+            onTap: () => viewModel.toggleShowAll(),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _showAll ? loc.t("proShowLess") : loc.t("proShowAll", {"count": (_data.length - _kMax).toString()}),
+                    state.showAll ? loc.t("proShowLess") : loc.t("proShowAll", {"count": (state.data.length - _kMax).toString()}),
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
                   ),
                   const SizedBox(width: 4),
-                  Icon(_showAll ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  Icon(state.showAll ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                       size: 16, color: AppColors.textSecondary(context)),
                 ],
               ),

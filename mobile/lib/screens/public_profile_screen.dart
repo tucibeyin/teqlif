@@ -1,21 +1,17 @@
 import 'package:intl/intl.dart';
-import 'dart:convert';
 import '../widgets/ratings/expandable_comment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/analytics_service.dart';
 import '../services/share_service.dart';
-import 'package:http/http.dart' as http;
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../config/api.dart';
-import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
-import '../services/notification_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import 'messages_screen.dart';
@@ -26,6 +22,7 @@ import 'live/swipe_live_screen.dart';
 import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'viewmodels/public_profile_view_model.dart';
 
 const _starColor = Color(0xFFF59E0B);
 
@@ -82,154 +79,8 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
   void dispose() {
     super.dispose();
-  }
-
-  Future<Map<String, String>> _authHeaders() async {
-    final token = await StorageService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-  }
-
-  Future<void> _load() async {
-    final data = await NotificationService.getUserByUsername(widget.username);
-    final info = await StorageService.getUserInfo();
-    final isOwn = info != null && info['username'] == widget.username;
-
-    List<dynamic> listings = [];
-    String followStatus = 'none';
-    bool isPrivate = false;
-    bool isBlocked = false;
-
-    if (data != null) {
-      final userId = data['id'] as int;
-
-      try {
-        final headers = await _authHeaders();
-        final resp = await http.get(
-          Uri.parse('$kBaseUrl/listings?user_id=$userId'),
-          headers: headers,
-        );
-        if (resp.statusCode == 200) listings = jsonDecode(resp.body) as List;
-      } catch (_) {}
-
-      if (!isOwn && info != null) {
-        followStatus = (data['follow_status'] as String?) ?? 'none';
-        isPrivate = (data['is_private'] as bool?) ?? false;
-        isBlocked = (data['is_blocked'] as bool?) ?? false;
-      }
-
-      try {
-        final headers = await _authHeaders();
-        final resp = await http.get(
-          Uri.parse('$kBaseUrl/ratings/$userId/summary'),
-          headers: headers,
-        );
-        if (resp.statusCode == 200 && mounted) {
-          final summary = jsonDecode(resp.body) as Map<String, dynamic>;
-          if (mounted) setState(() => _ratingSummary = summary);
-        }
-      } catch (_) {}
-    }
-
-    if (mounted) {
-      setState(() {
-        _user = data;
-        _listings = listings;
-        _isOwnProfile = isOwn;
-        _followStatus = followStatus;
-        _isPrivate = isPrivate;
-        _isBlocked = isBlocked;
-        _loading = false;
-      });
-    }
-  }
-
-  Future<void> _loadRatingSummary() async {
-    if (_user == null) return;
-    final userId = _user!['id'] as int;
-    try {
-      final headers = await _authHeaders();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/ratings/$userId/summary'),
-        headers: headers,
-      );
-      if (resp.statusCode == 200 && mounted) {
-        setState(
-          () => _ratingSummary = jsonDecode(resp.body) as Map<String, dynamic>,
-        );
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _toggleFollow() async {
-    if (_user == null) return;
-    final userId = _user!['id'] as int;
-    setState(() => _followLoading = true);
-    try {
-      final headers = await _authHeaders();
-      if (_followStatus != 'none') {
-        await http.delete(
-          Uri.parse('$kBaseUrl/follows/$userId'),
-          headers: headers,
-        );
-        setState(() => _followStatus = 'none');
-      } else {
-        final resp = await http.post(
-          Uri.parse('$kBaseUrl/follows/$userId'),
-          headers: headers,
-        );
-        if (resp.statusCode == 200) {
-           final body = jsonDecode(resp.body);
-           setState(() => _followStatus = body['status'] as String? ?? 'accepted');
-        }
-      }
-      final fresh = await NotificationService.getUserByUsername(
-        widget.username,
-      );
-      if (mounted && fresh != null) setState(() => _user = fresh);
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _followLoading = false);
-    }
-  }
-
-  Future<void> _toggleBlock() async {
-    if (_user == null) return;
-    try {
-      final headers = await _authHeaders();
-      if (_isBlocked) {
-        await http.delete(
-          Uri.parse(
-            '$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block',
-          ),
-          headers: headers,
-        );
-        if (mounted) setState(() => _isBlocked = false);
-      } else {
-        await http.post(
-          Uri.parse(
-            '$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block',
-          ),
-          headers: headers,
-        );
-        if (mounted) setState(() => _isBlocked = true);
-      }
-    } catch (_) {
-      if (mounted) {
-        final loc = ref.read(localizationProvider);
-        TeqSnackBar.show(message: loc.t('pubProfileActionFailed'), type: TeqSnackBarType.error);
-      }
-    } finally {}
   }
 
   void _showRatingForm() {
@@ -247,12 +98,13 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       ),
       builder: (ctx) => _RatingFormSheet(
         userId: userId,
-        authHeaders: _authHeaders,
         existingScore: existingRating?['score'] as int?,
         existingComment: existingRating?['comment'] as String?,
-        onSaved: () {
+        onSaved: (score, comment) async {
           Navigator.pop(ctx);
-          _loadRatingSummary();
+          final args = PublicProfileArgs(username: widget.username, userId: widget.userId);
+          await ref.read(publicProfileProvider(args).notifier).saveRating(score, comment);
+          ref.read(publicProfileProvider(args).notifier).reloadRatingSummary();
         },
       ),
     );
@@ -271,7 +123,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       builder: (ctx) => _RatingsListSheet(
         userId: userId,
         summary: _ratingSummary,
-        authHeaders: _authHeaders,
       ),
     );
   }
@@ -279,7 +130,23 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    return Scaffold(
+    final args = PublicProfileArgs(username: widget.username, userId: widget.userId);
+    final stateAsync = ref.watch(publicProfileProvider(args));
+
+    return stateAsync.when(
+      data: (state) {
+        _user = state.user;
+        _listings = state.listings;
+        _isOwnProfile = state.isOwnProfile;
+        _followStatus = state.followStatus;
+        _isPrivate = state.isPrivate;
+        _isBlocked = state.isBlocked;
+        _ratingSummary = state.ratingSummary;
+        _filter = state.filter;
+        _followLoading = state.followLoading;
+        _loading = false;
+        
+        return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         title: Text('@${widget.username}'),
@@ -338,11 +205,19 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: kPrimary))
-          : _user == null
+      body: _user == null
           ? Center(child: Text(loc.t('pubProfileUserNotFound')))
           : _buildBody(),
+        );
+      },
+      loading: () => Scaffold(
+        appBar: AppBar(title: Text('@${widget.username}')),
+        body: const Center(child: CircularProgressIndicator(color: kPrimary)),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(title: Text('@${widget.username}')),
+        body: const Center(child: Text('Error loading profile')),
+      ),
     );
   }
 
@@ -549,12 +424,18 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        onSelected: (value) {
+                        onSelected: (value) async {
+                          final args = PublicProfileArgs(username: widget.username, userId: widget.userId);
                           switch (value) {
                             case 'rate':
                               _showRatingForm();
                             case 'block':
-                              _toggleBlock();
+                              try {
+                                await ref.read(publicProfileProvider(args).notifier).toggleBlock();
+                              } catch (_) {
+                                final loc = ref.read(localizationProvider);
+                                TeqSnackBar.show(message: loc.t('pubProfileActionFailed'), type: TeqSnackBarType.error);
+                              }
                           }
                         },
                         itemBuilder: (_) => [
@@ -633,7 +514,10 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       ),
                       // ── Takip Et / Takip Ediliyor ──────────────────────
                       GestureDetector(
-                        onTap: _followLoading ? null : _toggleFollow,
+                        onTap: _followLoading ? null : () {
+                           final args = PublicProfileArgs(username: widget.username, userId: widget.userId);
+                           ref.read(publicProfileProvider(args).notifier).toggleFollow();
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
@@ -747,7 +631,10 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
             SliverToBoxAdapter(
               child: TeqFilterBar(
                 filter: _filter,
-                onChanged: (f) => setState(() => _filter = f),
+                onChanged: (f) {
+                  final args = PublicProfileArgs(username: widget.username, userId: widget.userId);
+                  ref.read(publicProfileProvider(args).notifier).updateFilter(f);
+                },
                 showSubcategory: true,
                 showCity: false,
                 showCondition: false,
@@ -1107,14 +994,12 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
 class _RatingFormSheet extends ConsumerStatefulWidget {
   final int userId;
-  final Future<Map<String, String>> Function() authHeaders;
   final int? existingScore;
   final String? existingComment;
-  final VoidCallback onSaved;
+  final Function(int score, String comment) onSaved;
 
   const _RatingFormSheet({
     required this.userId,
-    required this.authHeaders,
     this.existingScore,
     this.existingComment,
     required this.onSaved,
@@ -1158,29 +1043,12 @@ class _RatingFormSheetState extends ConsumerState<_RatingFormSheet> {
     if (_selected == 0) return;
     setState(() => _saving = true);
     try {
-      final headers = await widget.authHeaders();
       final comment = _commentCtrl.text.trim();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/ratings/${widget.userId}'),
-        headers: headers,
-        body: jsonEncode({
-          'score': _selected,
-          'comment': comment.isEmpty ? null : comment,
-        }),
-      );
-      if (resp.statusCode == 200) {
-        widget.onSaved();
-      } else {
-        if (mounted) {
-          final loc = ref.read(localizationProvider);
-          TeqSnackBar.show(message: loc.t('ratingSaveFailed'), type: TeqSnackBarType.error);
-          setState(() => _saving = false);
-        }
-      }
+      widget.onSaved(_selected, comment);
     } catch (_) {
       if (mounted) {
         final loc = ref.read(localizationProvider);
-        TeqSnackBar.show(message: loc.t('errorConnection'), type: TeqSnackBarType.error);
+        TeqSnackBar.show(message: loc.t('ratingSaveFailed'), type: TeqSnackBarType.error);
         setState(() => _saving = false);
       }
     }
@@ -1293,52 +1161,16 @@ class _RatingFormSheetState extends ConsumerState<_RatingFormSheet> {
 
 // ── Ratings list bottom sheet ────────────────────────────────────────────────
 
-class _RatingsListSheet extends ConsumerStatefulWidget {
+class _RatingsListSheet extends ConsumerWidget {
   final int userId;
   final Map<String, dynamic>? summary;
-  final Future<Map<String, String>> Function() authHeaders;
 
   const _RatingsListSheet({
     required this.userId,
     required this.summary,
-    required this.authHeaders,
   });
 
-  @override
-  ConsumerState<_RatingsListSheet> createState() => _RatingsListSheetState();
-}
-
-class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
-  List<dynamic>? _ratings;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRatings();
-  }
-
-  Future<void> _loadRatings() async {
-    try {
-      final headers = await widget.authHeaders();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/ratings/${widget.userId}'),
-        headers: headers,
-      );
-      if (resp.statusCode == 200 && mounted) {
-        setState(() {
-          _ratings = jsonDecode(resp.body) as List;
-          _loading = false;
-        });
-      } else if (mounted) {
-        setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  String _formatDate(String iso) {
+  String _formatDate(BuildContext context, WidgetRef ref, String iso) {
     try {
       final d = DateTime.parse(iso).toLocal();
       return DateFormat.yMMMd(
@@ -1350,12 +1182,14 @@ class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final avgRaw = widget.summary?['average'];
-    final count = widget.summary?['count'] as int? ?? 0;
+    final avgRaw = summary?['average'];
+    final count = summary?['count'] as int? ?? 0;
     final avg = avgRaw != null ? (avgRaw as num).toDouble() : null;
     final filled = avg != null ? avg.round().clamp(0, 5) : 0;
+    
+    final ratingsAsync = ref.watch(ratingsListProvider(RatingsListArgs(userId)));
 
     return DraggableScrollableSheet(
       expand: false,
@@ -1433,12 +1267,10 @@ class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
 
           // Ratings list
           Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: kPrimary),
-                  )
-                : (_ratings == null || _ratings!.isEmpty)
-                ? Center(
+            child: ratingsAsync.when(
+              data: (ratings) {
+                if (ratings.isEmpty) {
+                  return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Text(
@@ -1448,21 +1280,26 @@ class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
                         ),
                       ),
                     ),
-                  )
-                : ListView.separated(
-                    controller: controller,
-                    itemCount: _ratings!.length,
-                    separatorBuilder: (_, _) =>
-                        Divider(height: 1, color: AppColors.divider(context)),
-                    itemBuilder: (_, i) {
-                      final r = _ratings![i] as Map<String, dynamic>;
-                      return _PublicRatingItem(
-                        key: ValueKey(r['id']),
-                        rating: r,
-                        formatDate: _formatDate,
-                      );
-                    },
-                  ),
+                  );
+                }
+                return ListView.separated(
+                  controller: controller,
+                  itemCount: ratings.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: AppColors.divider(context)),
+                  itemBuilder: (_, i) {
+                    final r = ratings[i] as Map<String, dynamic>;
+                    return _PublicRatingItem(
+                      key: ValueKey(r['id']),
+                      rating: r,
+                      formatDate: (iso) => _formatDate(context, ref, iso),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator(color: kPrimary)),
+              error: (e, _) => Center(child: Text(loc.t('errorGenericRetry'))),
+            ),
           ),
         ],
       ),

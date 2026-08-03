@@ -1,124 +1,21 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../services/localization_service.dart';
-import '../services/storage_service.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
-import '../utils/error_helper.dart';
 import 'public_profile_screen.dart';
+import 'viewmodels/follow_requests_view_model.dart';
 
-class FollowRequestsScreen extends ConsumerStatefulWidget {
+class FollowRequestsScreen extends ConsumerWidget {
   const FollowRequestsScreen({super.key});
 
   @override
-  ConsumerState<FollowRequestsScreen> createState() => _FollowRequestsScreenState();
-}
-
-class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
-  bool _loading = true;
-  List<dynamic> _receivedRequests = [];
-  List<dynamic> _sentRequests = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRequests();
-  }
-
-  Future<void> _loadRequests() async {
-    setState(() => _loading = true);
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        if (mounted) setState(() => _loading = false);
-        return;
-      }
-
-      final futures = await Future.wait([
-        http.get(
-          Uri.parse('$kBaseUrl/follows/requests'),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-        http.get(
-          Uri.parse('$kBaseUrl/follows/requests/sent'),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      ]);
-
-      if (mounted) {
-        if (futures[0].statusCode == 200) {
-          _receivedRequests = jsonDecode(futures[0].body) as List;
-        }
-        if (futures[1].statusCode == 200) {
-          _sentRequests = jsonDecode(futures[1].body) as List;
-        }
-      }
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _handleReceivedAction(int followerId, String action) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final uri = Uri.parse('$kBaseUrl/follows/$followerId/$action');
-      final resp = await http.post(
-        uri,
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200) {
-        setState(() {
-          _receivedRequests.removeWhere((req) => req['id'] == followerId);
-        });
-      } else {
-        TeqToast.error("Hata oluştu.");
-      }
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    }
-  }
-
-  Future<void> _handleSentWithdraw(int targetUserId) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final uri = Uri.parse('$kBaseUrl/follows/$targetUserId');
-      final resp = await http.delete(
-        uri,
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200) {
-        setState(() {
-          _sentRequests.removeWhere((req) => req['id'] == targetUserId);
-        });
-      } else {
-        TeqToast.error("İptal edilemedi.");
-      }
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    }
-  }
-
-  void _goToProfile(String username) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PublicProfileScreen(username: username),
-      ),
-    ).then((_) => _loadRequests());
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(followRequestsProvider);
 
     return DefaultTabController(
       length: 2,
@@ -140,20 +37,35 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
             ],
           ),
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [
-                  _buildReceivedList(loc),
-                  _buildSentList(loc),
-                ],
-              ),
+        body: stateAsync.when(
+          data: (state) => TabBarView(
+            children: [
+              _buildReceivedList(context, ref, state.receivedRequests),
+              _buildSentList(context, ref, state.sentRequests),
+            ],
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(loc.t('errorGenericRetry'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ref.read(followRequestsProvider.notifier).reload(),
+                  child: const Text('Tekrar Dene'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildReceivedList(TranslationPack loc) {
-    if (_receivedRequests.isEmpty) {
+  Widget _buildReceivedList(BuildContext context, WidgetRef ref, List<dynamic> receivedRequests) {
+    final loc = ref.watch(localizationProvider);
+    if (receivedRequests.isEmpty) {
       return Center(
         child: Text(
           loc.t('noFollowRequests'),
@@ -163,15 +75,17 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _receivedRequests.length,
+      itemCount: receivedRequests.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final user = _receivedRequests[index];
+        final user = receivedRequests[index];
         final String username = user['username'];
         final String fullName = user['full_name'];
         final String? avatarUrl = user['profile_image_thumb_url'];
 
         return _buildUserCard(
+          context: context,
+          ref: ref,
           username: username,
           fullName: fullName,
           avatarUrl: avatarUrl,
@@ -179,7 +93,13 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextButton(
-                onPressed: () => _handleReceivedAction(user['id'], 'accept'),
+                onPressed: () async {
+                  try {
+                    await ref.read(followRequestsProvider.notifier).handleReceivedAction(user['id'], 'accept');
+                  } catch (e) {
+                    TeqToast.error("Hata oluştu.");
+                  }
+                },
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
@@ -190,7 +110,13 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
               ),
               const SizedBox(width: 8),
               TextButton(
-                onPressed: () => _handleReceivedAction(user['id'], 'reject'),
+                onPressed: () async {
+                  try {
+                    await ref.read(followRequestsProvider.notifier).handleReceivedAction(user['id'], 'reject');
+                  } catch (e) {
+                    TeqToast.error("Hata oluştu.");
+                  }
+                },
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.surfaceVariant(context),
                   foregroundColor: AppColors.textPrimary(context),
@@ -206,8 +132,9 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
     );
   }
 
-  Widget _buildSentList(TranslationPack loc) {
-    if (_sentRequests.isEmpty) {
+  Widget _buildSentList(BuildContext context, WidgetRef ref, List<dynamic> sentRequests) {
+    final loc = ref.watch(localizationProvider);
+    if (sentRequests.isEmpty) {
       return Center(
         child: Text(
           "Gönderilen istek yok.",
@@ -217,20 +144,28 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _sentRequests.length,
+      itemCount: sentRequests.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final user = _sentRequests[index];
+        final user = sentRequests[index];
         final String username = user['username'];
         final String fullName = user['full_name'];
         final String? avatarUrl = user['profile_image_thumb_url'];
 
         return _buildUserCard(
+          context: context,
+          ref: ref,
           username: username,
           fullName: fullName,
           avatarUrl: avatarUrl,
           actions: TextButton(
-            onPressed: () => _handleSentWithdraw(user['id']),
+            onPressed: () async {
+              try {
+                await ref.read(followRequestsProvider.notifier).handleSentWithdraw(user['id']);
+              } catch (e) {
+                TeqToast.error("İptal edilemedi.");
+              }
+            },
             style: TextButton.styleFrom(
               backgroundColor: AppColors.surfaceVariant(context),
               foregroundColor: AppColors.textPrimary(context),
@@ -244,7 +179,20 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
     );
   }
 
+  void _goToProfile(BuildContext context, WidgetRef ref, String username) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicProfileScreen(username: username),
+      ),
+    ).then((_) {
+      ref.read(followRequestsProvider.notifier).reload();
+    });
+  }
+
   Widget _buildUserCard({
+    required BuildContext context,
+    required WidgetRef ref,
     required String username,
     required String fullName,
     required String? avatarUrl,
@@ -265,7 +213,7 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _goToProfile(username),
+          onTap: () => _goToProfile(context, ref, username),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(12),

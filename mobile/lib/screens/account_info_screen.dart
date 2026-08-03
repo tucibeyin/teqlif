@@ -1,17 +1,13 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:http/http.dart' as http;
-import '../config/api.dart';
 import '../config/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
-import '../services/auth_service.dart';
-import '../services/storage_service.dart';
 import '../widgets/phone_input_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import 'viewmodels/account_info_view_model.dart';
 
 class AccountInfoScreen extends ConsumerStatefulWidget {
   const AccountInfoScreen({super.key});
@@ -21,14 +17,10 @@ class AccountInfoScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with WidgetsBindingObserver {
-  Map<String, dynamic>? _user;
-  bool _loading = true;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadUser();
   }
 
   @override
@@ -39,44 +31,18 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Kullanıcı tarayıcıdan (telefon doğrulama linki) uygulamaya döndüğünde yenile
-    if (state == AppLifecycleState.resumed) _loadUser();
-  }
-
-  Future<void> _loadUser() async {
-    if (_user == null) {
-      setState(() => _loading = true);
-    }
-    try {
-      final u = await AuthService.me();
-      if (mounted) {
-        setState(() {
-          _user = {
-            'id': u.id,
-            'email': u.email,
-            'username': u.username,
-            'full_name': u.fullName,
-            'phone': u.phone,
-            'phone_verified': u.phoneVerified,
-          };
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _loading = false);
-        TeqSnackBar.show(message: ref.read(localizationProvider).t('errorGenericRetry'),
-          type: TeqSnackBarType.error,
-        );
-      }
+    if (state == AppLifecycleState.resumed) {
+      ref.read(accountInfoProvider.notifier).reload();
     }
   }
 
-  void _reload() => _loadUser();
+  void _reload() => ref.read(accountInfoProvider.notifier).reload();
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(accountInfoProvider);
+    
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -85,14 +51,17 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
         centerTitle: true,
         elevation: 0,
       ),
-      body: _loading && _user == null
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadUser,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: [
+      body: stateAsync.when(
+        data: (state) {
+          final user = state.user;
+          if (user == null) return const Center(child: Text('Kullanıcı bilgisi bulunamadı.'));
+          
+          return RefreshIndicator(
+            onRefresh: ref.read(accountInfoProvider.notifier).reload,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              children: [
                 _SectionCard(
                   title: loc.t('accountInfoSecuritySection'),
                   child: Column(
@@ -100,28 +69,44 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
                       _InfoRow(
                         icon: Icons.email_outlined,
                         label: loc.t('accountInfoEmail'),
-                        value: _user?['email'] as String? ?? '',
+                        value: user['email'] as String? ?? '',
                         verified: true,
-                        onTap: () => _showEmailChangeSheet(),
+                        onTap: () => _showEmailChangeSheet(user['email'] as String? ?? ''),
                       ),
                       const Divider(height: 1, indent: 16),
                       _InfoRow(
                         icon: Icons.phone_outlined,
                         label: loc.t('accountInfoPhone'),
-                        value: _user?['phone'] as String? ?? loc.t('accountInfoPhoneEmpty'),
-                        verified: _user?['phone_verified'] as bool? ?? false,
-                        onTap: () => _showPhoneSheet(),
+                        value: user['phone'] as String? ?? loc.t('accountInfoPhoneEmpty'),
+                        verified: user['phone_verified'] as bool? ?? false,
+                        onTap: () => _showPhoneSheet(user['phone'] as String?),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(loc.t('errorGenericRetry'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: ref.read(accountInfoProvider.notifier).reload,
+                child: const Text('Tekrar Dene'),
+              ),
+            ],
           ),
+        ),
+      ),
     );
   }
 
-  void _showEmailChangeSheet() {
+  void _showEmailChangeSheet(String currentEmail) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -130,13 +115,13 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _EmailChangeSheet(
-        currentEmail: _user?['email'] as String? ?? '',
+        currentEmail: currentEmail,
         onChanged: _reload,
       ),
     );
   }
 
-  void _showPhoneSheet() {
+  void _showPhoneSheet(String? currentPhone) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -145,7 +130,7 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => _PhoneSheet(
-        currentPhone: _user?['phone'] as String?,
+        currentPhone: currentPhone,
         onChanged: _reload,
         onClose: () => Navigator.pop(ctx),
       ),
@@ -276,22 +261,15 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
       return;
     }
     setState(() { _loading = true; _error = null; });
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/email-change/request'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'new_email': email}),
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 202) {
-        setState(() { _codeSent = true; _loading = false; });
-      } else {
-        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Hata';
-        setState(() { _error = msg; _loading = false; });
-      }
-    } catch (_) {
-      if (mounted) setState(() { _error = ref.read(localizationProvider).t('accountInfoConnectError'); _loading = false; });
+    
+    final errStr = await ref.read(emailChangeProvider.notifier).requestCode(email);
+    if (!mounted) return;
+    
+    if (errStr == null) {
+      setState(() { _codeSent = true; _loading = false; });
+    } else {
+      final msg = errStr == 'network_error' ? loc.t('accountInfoConnectError') : errStr;
+      setState(() { _error = msg; _loading = false; });
     }
   }
 
@@ -303,26 +281,17 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
       return;
     }
     setState(() { _loading = true; _error = null; });
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/email-change/verify'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'new_email': _emailCtrl.text.trim(), 'code': code}),
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        Navigator.pop(context);
-        widget.onChanged();
-        TeqSnackBar.show(message: loc.t('accountInfoEmailUpdated'),
-          type: TeqSnackBarType.success,
-        );
-      } else {
-        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Hata';
-        setState(() { _error = msg; _loading = false; });
-      }
-    } catch (_) {
-      if (mounted) setState(() { _error = ref.read(localizationProvider).t('accountInfoConnectError'); _loading = false; });
+    
+    final errStr = await ref.read(emailChangeProvider.notifier).verifyCode(_emailCtrl.text.trim(), code);
+    if (!mounted) return;
+    
+    if (errStr == null) {
+      Navigator.pop(context);
+      widget.onChanged();
+      TeqSnackBar.show(message: loc.t('accountInfoEmailUpdated'), type: TeqSnackBarType.success);
+    } else {
+      final msg = errStr == 'network_error' ? loc.t('accountInfoConnectError') : errStr;
+      setState(() { _error = msg; _loading = false; });
     }
   }
 
@@ -392,11 +361,10 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
       ),
     );
   }
-
 }
 
 // ---------------------------------------------------------------------------
-// Phone sheet (reuses the same email-based verification flow)
+// Phone sheet
 // ---------------------------------------------------------------------------
 
 class _PhoneSheet extends ConsumerStatefulWidget {
@@ -423,27 +391,21 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
 
   Future<void> _send() async {
     final phone = _phoneE164;
+    final loc = ref.read(localizationProvider);
     if (phone == null || phone.length < 8) {
-      setState(() => _error = ref.read(localizationProvider).t('accountInfoPhone'));
+      setState(() => _error = loc.t('accountInfoPhone'));
       return;
     }
     setState(() { _loading = true; _error = null; });
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/phone-verify/request'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'phone': phone}),
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 202) {
-        setState(() { _sent = true; _loading = false; });
-      } else {
-        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Hata';
-        setState(() { _error = msg; _loading = false; });
-      }
-    } catch (_) {
-      if (mounted) setState(() { _error = ref.read(localizationProvider).t('accountInfoConnectError'); _loading = false; });
+    
+    final errStr = await ref.read(phoneChangeProvider.notifier).requestVerification(phone);
+    if (!mounted) return;
+    
+    if (errStr == null) {
+      setState(() { _sent = true; _loading = false; });
+    } else {
+      final msg = errStr == 'network_error' ? loc.t('accountInfoConnectError') : errStr;
+      setState(() { _error = msg; _loading = false; });
     }
   }
 

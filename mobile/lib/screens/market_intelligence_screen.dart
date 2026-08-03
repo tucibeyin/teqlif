@@ -4,7 +4,7 @@ import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
-import '../services/analytics_service.dart';
+import 'viewmodels/market_intelligence_view_model.dart';
 
 class MarketIntelligenceScreen extends ConsumerStatefulWidget {
   final bool isPremium;
@@ -16,59 +16,27 @@ class MarketIntelligenceScreen extends ConsumerStatefulWidget {
 }
 
 class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScreen> {
-  int _searchDays = 7;
-  bool _loading = true;
-  bool _hasError = false;
-
-  Map<String, dynamic>? _trends;
-  Map<String, dynamic>? _demand;
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
-
-    final results = await Future.wait([
-      AnalyticsService.getMarketTrends(),
-      AnalyticsService.getDemandRadar(days: _searchDays),
-    ]);
-
-    if (!mounted) return;
-    final trends = results[0];
-    final demand = results[1];
-
-    if (trends == null && demand == null) {
-      setState(() { _loading = false; _hasError = true; });
-      return;
+    if (widget.isPremium) {
+      Future.microtask(() => ref.read(marketIntelligenceProvider.notifier).load());
     }
-
-    setState(() {
-      _loading = false;
-      _hasError = false;
-      _trends = trends;
-      _demand = demand;
-    });
-  }
-
-  Future<void> _reloadDemand() async {
-    final data = await AnalyticsService.getDemandRadar(days: _searchDays);
-    if (mounted) setState(() => _demand = data);
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final bodyContent = _loading
+    final state = ref.watch(marketIntelligenceProvider);
+    final viewModel = ref.read(marketIntelligenceProvider.notifier);
+
+    final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : _hasError
-            ? _buildError(loc)
+        : (state.hasError && widget.isPremium)
+            ? _buildError(loc, viewModel)
             : Stack(
                 children: [
-                  _buildContent(loc),
+                  _buildContent(loc, state, viewModel),
                   if (!widget.isPremium) _buildPaywall(context, loc),
                 ],
               );
@@ -88,7 +56,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
     );
   }
 
-  Widget _buildError(TranslationPack loc) {
+  Widget _buildError(TranslationPack loc, MarketIntelligenceViewModel viewModel) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -97,25 +65,25 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
           const SizedBox(height: 12),
           Text(loc.t("proLoadFailed"), style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          TextButton(onPressed: _load, child: Text(loc.t("btnRetry"))),
+          TextButton(onPressed: () => viewModel.load(), child: Text(loc.t("btnRetry"))),
         ],
       ),
     );
   }
 
-  Widget _buildContent(TranslationPack loc) {
-    final queries     = (_demand?['top_queries']          as List? ?? []).cast<Map<String, dynamic>>();
-    final catSearch   = (_demand?['by_category']          as List? ?? []).cast<Map<String, dynamic>>();
-    final peakHours   = (_trends?['peak_hours']           as List? ?? []).cast<Map<String, dynamic>>();
-    final trendCats   = (_trends?['trending_categories']  as List? ?? []).cast<Map<String, dynamic>>();
-    final growth      = _trends?['average_spend_growth']  as double?;
+  Widget _buildContent(TranslationPack loc, MarketIntelligenceState state, MarketIntelligenceViewModel viewModel) {
+    final queries     = (state.demand?['top_queries']          as List? ?? []).cast<Map<String, dynamic>>();
+    final catSearch   = (state.demand?['by_category']          as List? ?? []).cast<Map<String, dynamic>>();
+    final peakHours   = (state.trends?['peak_hours']           as List? ?? []).cast<Map<String, dynamic>>();
+    final trendCats   = (state.trends?['trending_categories']  as List? ?? []).cast<Map<String, dynamic>>();
+    final growth      = state.trends?['average_spend_growth']  as double?;
 
     final maxQCount  = queries.isEmpty  ? 1 : (queries.map((q) => (q['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b));
     final maxHrCount = peakHours.isEmpty ? 1 : (peakHours.map((h) => (h['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b));
 
     return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
+      onRefresh: () => viewModel.load(),
+      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           if (growth != null)
@@ -130,9 +98,8 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
                 ),
               ),
-              _SmallDayFilter(days: _searchDays, loc: loc, onChanged: (d) {
-                setState(() => _searchDays = d);
-                _reloadDemand();
+              _SmallDayFilter(days: state.searchDays, loc: loc, onChanged: (d) {
+                viewModel.reloadDemand(d);
               }),
             ],
           ),
@@ -442,6 +409,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
     );
   }
 }
+
 
 // ── Alt Widgetlar ─────────────────────────────────────────────────────────────
 

@@ -1,14 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import '../config/api.dart';
 import '../config/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/listing_filter_state.dart';
 import '../services/localization_service.dart';
-import '../services/storage_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
+import 'viewmodels/live_stream_history_view_model.dart';
 import 'live_stream_analytics_screen.dart';
 
 class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
@@ -21,50 +17,16 @@ class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScreen> {
-  final List<dynamic> _streams = [];
-  bool _isLoading = true;
-  bool _isLoadingMore = false;
-  bool _hasMore = true;
-  bool _hasError = false;
-  int? _selectedStreamId;
-  String? _cursor;
   final ScrollController _scrollController = ScrollController();
-
-  ListingFilterState _filter = const ListingFilterState();
-
-  List<dynamic> get _filtered {
-    var result = _streams;
-    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-      final q = _filter.searchQuery!.toLowerCase();
-      result = result.where((s) => (s['title'] as String? ?? '').toLowerCase().contains(q)).toList();
-    }
-    if (_filter.category != null && _filter.category!.isNotEmpty) {
-      result = result.where((s) => s['category'] == _filter.category).toList();
-    }
-    if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
-      result = result.where((s) => s['subcategory'] == _filter.subcategory).toList();
-    }
-    if (_filter.dateFrom != null && _filter.dateTo != null) {
-      final start = _filter.dateFrom!;
-      final end = _filter.dateTo!.add(const Duration(days: 1));
-      result = result.where((s) {
-        final raw = s['started_at'] as String?;
-        if (raw == null) return false;
-        final dt = DateTime.tryParse(raw)?.toLocal();
-        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
-      }).toList();
-    }
-    return result;
-  }
 
   @override
   void initState() {
     super.initState();
-    _fetchHistory();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
-        if (!_isLoading && !_isLoadingMore && _hasMore) {
-          _fetchHistory(loadMore: true);
+        final state = ref.read(liveStreamHistoryProvider);
+        if (!state.isLoading && !state.isLoadingMore && state.hasMore) {
+          ref.read(liveStreamHistoryProvider.notifier).fetchHistory(loadMore: true);
         }
       }
     });
@@ -76,66 +38,16 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
     super.dispose();
   }
 
-  Future<void> _fetchHistory({bool loadMore = false}) async {
-    if (!loadMore) {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-        _streams.clear();
-        _cursor = null;
-        _hasMore = true;
-      });
-    } else {
-      setState(() => _isLoadingMore = true);
-    }
-
-    try {
-      final token = await StorageService.getToken();
-      String url = '$kBaseUrl/streams/my-history?limit=20';
-      if (_cursor != null) url += '&cursor=$_cursor';
-
-      final resp = await http.get(
-        Uri.parse(url),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (resp.statusCode == 200) {
-        if (mounted) {
-          final newStreams = jsonDecode(resp.body) as List;
-          setState(() {
-            if (newStreams.isNotEmpty) {
-              _streams.addAll(newStreams);
-              _cursor = newStreams.last['started_at'] as String?;
-            }
-            if (newStreams.length < 20) {
-              _hasMore = false;
-            }
-            _isLoading = false;
-            _isLoadingMore = false;
-          });
-        }
-      } else {
-        throw Exception('Failed to load');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          if (!loadMore) _hasError = true;
-          _isLoading = false;
-          _isLoadingMore = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final state = ref.watch(liveStreamHistoryProvider);
+    final viewModel = ref.read(liveStreamHistoryProvider.notifier);
 
     Widget bodyContent;
-    if (_isLoading) {
+    if (state.isLoading) {
       bodyContent = const Center(child: CircularProgressIndicator());
-    } else if (_hasError) {
+    } else if (state.hasError) {
       bodyContent = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -151,11 +63,11 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: _fetchHistory, child: Text(loc.t("btnRetry"))),
+            FilledButton(onPressed: () => viewModel.fetchHistory(), child: Text(loc.t("btnRetry"))),
           ],
         ),
       );
-    } else if (_streams.isEmpty) {
+    } else if (state.streams.isEmpty) {
       bodyContent = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -176,20 +88,20 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
     } else {
       int totalViewers = 0;
       double totalRev = 0;
-      for (var s in _streams) {
+      for (var s in state.streams) {
         totalViewers += (s['viewer_count'] as int? ?? 0);
         totalRev += (s['revenue'] as num? ?? 0);
       }
 
-      final filtered = _filtered;
+      final filtered = viewModel.filteredStreams;
 
       bodyContent = Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TeqFilterBar(
-              filter: _filter,
-              onChanged: (f) => setState(() => _filter = f),
+              filter: state.filter,
+              onChanged: (f) => viewModel.updateFilter(f),
               showSubcategory: false,
               showCity: false,
               showCondition: false,
@@ -205,12 +117,12 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: filtered.length + 1 + (_hasMore ? 1 : 0),
+              itemCount: filtered.length + 1 + (state.hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == 0) {
-                  final isSelected = _selectedStreamId == null;
+                  final isSelected = state.selectedStreamId == null;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedStreamId = null),
+                    onTap: () => viewModel.selectStream(null),
                     child: Container(
                       width: 90,
                       margin: const EdgeInsets.only(right: 12),
@@ -270,11 +182,11 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
 
                 final s = filtered[index - 1];
                 final sid = s['id'] as int;
-                final isSelected = _selectedStreamId == sid;
+                final isSelected = state.selectedStreamId == sid;
                 final title = s['title'] as String? ?? 'Untitled';
 
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedStreamId = sid),
+                  onTap: () => viewModel.selectStream(sid),
                   child: Container(
                     width: 140,
                     margin: const EdgeInsets.only(right: 12),
@@ -323,9 +235,9 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
 
           // Details Area
           Expanded(
-            child: _selectedStreamId != null
+            child: state.selectedStreamId != null
                 ? LiveStreamAnalyticsScreen(
-                    streamId: _selectedStreamId!,
+                    streamId: state.selectedStreamId!,
                     isEmbedded: true,
                   )
                 : Column(
@@ -400,9 +312,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
                                 color: Colors.transparent,
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(16),
-                                  onTap: () => setState(
-                                    () => _selectedStreamId = s['id'],
-                                  ),
+                                  onTap: () => viewModel.selectStream(s['id']),
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Row(
@@ -516,15 +426,12 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
         backgroundColor: AppColors.bg(context),
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchHistory),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () => viewModel.fetchHistory()),
         ],
       ),
       body: bodyContent,
     );
   }
-
-
-
   Widget _buildSummaryCard(
     String title,
     String value,

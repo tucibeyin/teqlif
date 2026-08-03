@@ -971,7 +971,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!mounted || _isCoHost) return;
     setState(() => _isCoHost = true);
     if (!widget.isActive) return;
-    TeqToast.success(ref.read(localizationProvider).t('swipeMadeModeratorBy'), duration: const Duration(seconds: 5));
+    TeqToast.success('$promotedBy ${ref.read(localizationProvider).t('swipeMadeModeratorBy')}', duration: const Duration(seconds: 5));
   }
 
   void _handleModDemotedSelf(String demotedBy) {

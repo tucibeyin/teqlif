@@ -1,15 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../services/localization_service.dart';
-import '../services/storage_service.dart';
+import 'viewmodels/live_stream_analytics_view_model.dart';
 
-class LiveStreamAnalyticsScreen extends ConsumerStatefulWidget {
+class LiveStreamAnalyticsScreen extends ConsumerWidget {
   final int streamId;
   final bool isEmbedded;
   const LiveStreamAnalyticsScreen({
@@ -19,59 +16,14 @@ class LiveStreamAnalyticsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<LiveStreamAnalyticsScreen> createState() =>
-      _LiveStreamAnalyticsScreenState();
-}
-
-class _LiveStreamAnalyticsScreenState extends ConsumerState<LiveStreamAnalyticsScreen> {
-  Map<String, dynamic>? _data;
-  bool _isLoading = true;
-  bool _hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAnalytics();
-  }
-
-  Future<void> _fetchAnalytics() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/seller-report/${widget.streamId}'),
-        headers: await buildApiHeaders(token),
-      );
-      if (resp.statusCode == 200) {
-        if (mounted) {
-          setState(() {
-            _data = jsonDecode(resp.body) as Map<String, dynamic>;
-            _isLoading = false;
-          });
-        }
-      } else {
-        throw Exception('Failed to load');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+    final state = ref.watch(liveStreamAnalyticsProvider(streamId));
+    final viewModel = ref.read(liveStreamAnalyticsProvider(streamId).notifier);
 
-    final bodyContent = _isLoading
+    final bodyContent = state.isLoading
         ? const Center(child: CircularProgressIndicator())
-        : _hasError
+        : state.hasError
         ? Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -88,15 +40,15 @@ class _LiveStreamAnalyticsScreenState extends ConsumerState<LiveStreamAnalyticsS
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: _fetchAnalytics,
+                  onPressed: () => viewModel.fetchAnalytics(),
                   child: Text(loc.t('btnRetry')),
                 ),
               ],
             ),
           )
-        : _buildDashboard(context, loc);
+        : _buildDashboard(context, loc, state);
 
-    if (widget.isEmbedded) {
+    if (isEmbedded) {
       return bodyContent;
     }
 
@@ -114,8 +66,8 @@ class _LiveStreamAnalyticsScreenState extends ConsumerState<LiveStreamAnalyticsS
     );
   }
 
-  Widget _buildDashboard(BuildContext context, TranslationPack loc) {
-    final d = _data!;
+  Widget _buildDashboard(BuildContext context, TranslationPack loc, LiveStreamAnalyticsState state) {
+    final d = state.data!;
     final revenue = d['auction_summary']?['total_revenue'] ?? 0.0;
     final recommendation = d['recommendation'] as String? ?? '';
     final duration = d['duration_minutes'] as int? ?? 0;
@@ -329,12 +281,12 @@ class _LiveStreamAnalyticsScreenState extends ConsumerState<LiveStreamAnalyticsS
             ),
           ),
         ),
-        _buildAuctionList(loc, d['auction_summary']?['items'] as List? ?? []),
+        _buildAuctionList(context, loc, d['auction_summary']?['items'] as List? ?? []),
       ],
     );
   }
 
-  Widget _buildAuctionList(TranslationPack loc, List items) {
+  Widget _buildAuctionList(BuildContext context, TranslationPack loc, List items) {
     if (items.isEmpty) {
       return SliverToBoxAdapter(
         child: Padding(

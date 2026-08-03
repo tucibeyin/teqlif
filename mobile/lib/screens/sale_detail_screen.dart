@@ -1,3 +1,4 @@
+import 'viewmodels/sale_detail_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,8 +6,6 @@ import '../../services/localization_service.dart';
 import '../../utils/number_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
-import '../../services/listing_service.dart';
-import '../../services/category_service.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
@@ -111,10 +110,10 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   if (category != null)
-                    FutureBuilder<List<(String, String)>>(
-                      future: CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode),
-                      builder: (context, snap) {
-                        final label = snap.data?.firstWhere(
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final catsAsync = ref.watch(saleDetailProvider(Localizations.localeOf(context).languageCode));
+                        final label = catsAsync.valueOrNull?.firstWhere(
                           (p) => p.$1 == category,
                           orElse: () => (category, category),
                         ).$2 ?? category;
@@ -127,8 +126,9 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
                           ),
                           child: Text(label, style: const TextStyle(color: kPrimary, fontSize: 12)),
                         );
-                      },
+                      }
                     ),
+
                   Text(
                     '${loc.t('saleBuyerLabel')}: @$buyerUsername',
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
@@ -203,7 +203,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
                 child: TeqButton(
                   onPressed: () async {
                     setState(() => _isListingLoading = true);
-                    final listing = await ListingService.getListingById(listingId);
+                    final listing = await ref.read(saleDetailProvider(Localizations.localeOf(context).languageCode).notifier).getListing(listingId);
                     if (!context.mounted) return;
                     setState(() => _isListingLoading = false);
                     if (listing != null) {

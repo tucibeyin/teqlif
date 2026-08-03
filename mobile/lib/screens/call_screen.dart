@@ -12,6 +12,7 @@ import '../config/app_colors.dart';
 import '../services/call_service.dart';
 import '../services/follows_service.dart';
 import '../models/call_participant.dart';
+import 'viewmodels/invite_to_call_view_model.dart';
 import 'messages_screen.dart';
 
 void _cpLog(String phase, String msg) {
@@ -1052,25 +1053,21 @@ class _ParticipantStrip extends StatelessWidget {
 
 // ── InviteToCallModal ─────────────────────────────────────────────────────────
 
-class InviteToCallModal extends StatefulWidget {
+class InviteToCallModal extends ConsumerStatefulWidget {
   final int callId;
   const InviteToCallModal({super.key, required this.callId});
 
   @override
-  State<InviteToCallModal> createState() => _InviteToCallModalState();
+  ConsumerState<InviteToCallModal> createState() => _InviteToCallModalState();
 }
 
-class _InviteToCallModalState extends State<InviteToCallModal> {
+class _InviteToCallModalState extends ConsumerState<InviteToCallModal> {
   final TextEditingController _search = TextEditingController();
-  List<Map<String, dynamic>> _following = [];
-  List<Map<String, dynamic>> _filtered = [];
-  bool _loading = true;
-  final Map<int, String> _inviteState = {}; // userId → 'pending'|'sent'
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _loadFollowing();
     _search.addListener(_onSearch);
   }
 
@@ -1082,34 +1079,15 @@ class _InviteToCallModalState extends State<InviteToCallModal> {
   }
 
   void _onSearch() {
-    final q = _search.text.toLowerCase();
     setState(() {
-      _filtered = q.isEmpty
-          ? _following
-          : _following.where((u) {
-              final name = (u['username'] as String? ?? '').toLowerCase();
-              return name.contains(q);
-            }).toList();
+      _searchQuery = _search.text.toLowerCase();
     });
-  }
-
-  Future<void> _loadFollowing() async {
-    try {
-      final data = await FollowsService.fetchFollowingForInvite();
-      if (mounted) {
-        setState(() {
-          _following = data;
-          _filtered = data;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _loading = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final stateAsync = ref.watch(inviteToCallProvider);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface(context),
@@ -1155,64 +1133,74 @@ class _InviteToCallModalState extends State<InviteToCallModal> {
             ),
           ),
           const SizedBox(height: 12),
-          if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else if (_filtered.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text('Kimse bulunamadı', style: TextStyle(color: AppColors.textSecondary(context))),
-              ),
-            )
-          else
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 320),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _filtered.length,
-                itemBuilder: (_, i) {
-                  final u = _filtered[i];
-                  final uid = u['id'] as int;
-                  final username = u['username'] as String? ?? '';
-                  final avatar = u['avatar'] as String?;
-                  final state = _inviteState[uid];
-                  final isInThisCall = u['in_this_call'] == true;
-                  final isInOtherCall = u['in_other_call'] == true;
+          stateAsync.when(
+            data: (state) {
+              if (state.loading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              final filtered = _searchQuery.isEmpty
+                  ? state.following
+                  : state.following.where((u) {
+                      final name = (u['username'] as String? ?? '').toLowerCase();
+                      return name.contains(_searchQuery);
+                    }).toList();
+                    
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text('Kimse bulunamadı', style: TextStyle(color: AppColors.textSecondary(context))),
+                  ),
+                );
+              }
+              
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: filtered.length,
+                  itemBuilder: (_, i) {
+                    final u = filtered[i];
+                    final uid = u['id'] as int;
+                    final username = u['username'] as String? ?? '';
+                    final avatar = u['avatar'] as String?;
+                    final inviteStatus = state.inviteState[uid];
+                    final isInThisCall = u['in_this_call'] == true;
+                    final isInOtherCall = u['in_other_call'] == true;
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: (avatar != null && avatar.isNotEmpty)
-                          ? CachedNetworkImageProvider(imgUrl(avatar))
-                          : null,
-                      child: (avatar == null || avatar.isEmpty)
-                          ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?')
-                          : null,
-                    ),
-                    title: Text('@$username'),
-                    trailing: isInThisCall
-                        ? Text('Aramada', style: TextStyle(color: Colors.grey, fontSize: 12))
-                        : isInOtherCall
-                        ? Text('Meşgul', style: TextStyle(color: Colors.red, fontSize: 12))
-                        : state == 'pending'
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : state == 'sent'
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : TextButton(
-                            onPressed: () async {
-                              setState(() => _inviteState[uid] = 'pending');
-                              try {
-                                await CallService.instance.inviteToCall(uid);
-                                if (mounted) setState(() => _inviteState[uid] = 'sent');
-                              } catch (e) {
-                                if (mounted) setState(() => _inviteState.remove(uid));
-                              }
-                            },
-                            child: const Text('Davet Gönder'),
-                          ),
-                  );
-                },
-              ),
-            ),
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: (avatar != null && avatar.isNotEmpty)
+                            ? CachedNetworkImageProvider(imgUrl(avatar))
+                            : null,
+                        child: (avatar == null || avatar.isEmpty)
+                            ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?')
+                            : null,
+                      ),
+                      title: Text('@$username'),
+                      trailing: isInThisCall
+                          ? const Text('Aramada', style: TextStyle(color: Colors.grey, fontSize: 12))
+                          : isInOtherCall
+                          ? const Text('Meşgul', style: TextStyle(color: Colors.red, fontSize: 12))
+                          : inviteStatus == 'pending'
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : inviteStatus == 'sent'
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : TextButton(
+                              onPressed: () {
+                                ref.read(inviteToCallProvider.notifier).sendInvite(widget.callId, uid);
+                              },
+                              child: const Text('Davet Gönder'),
+                            ),
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => const Center(child: Text('Bir hata oluştu')),
+          ),
         ],
       ),
     );

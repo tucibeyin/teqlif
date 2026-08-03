@@ -1,45 +1,14 @@
-import 'dart:convert';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
-import 'package:http/http.dart' as http;
-import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import 'viewmodels/notification_settings_view_model.dart';
 
-class NotificationSettingsScreen extends ConsumerStatefulWidget {
+class NotificationSettingsScreen extends ConsumerWidget {
   final bool isPremium;
   const NotificationSettingsScreen({super.key, this.isPremium = false});
-
-  @override
-  ConsumerState<NotificationSettingsScreen> createState() =>
-      _NotificationSettingsScreenState();
-}
-
-class _NotificationSettingsScreenState
-    extends ConsumerState<NotificationSettingsScreen> {
-  bool _loading = true;
-  String? _error;
-
-  final Map<String, bool> _prefs = {
-    'messages': true,
-    'follows': true,
-    'auction_won': true,
-    'stream_started': true,
-    'new_listing': true,
-    'new_bid': true,
-    'outbid': true,
-    'ratings': true,
-  };
-
-  // Pro ayarları
-  int _bidThreshold = 0;
-  bool _quietEnabled = false;
-  bool _receiveBlastNotifications = true;
-  TimeOfDay _quietFrom = const TimeOfDay(hour: 22, minute: 0);
-  TimeOfDay _quietTo = const TimeOfDay(hour: 8, minute: 0);
 
   Map<String, (String, String, IconData)> _buildLabels(TranslationPack loc) => {
     'messages': (
@@ -84,140 +53,7 @@ class _NotificationSettingsScreenState
     ),
   };
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final token = await StorageService.getToken();
-    if (token == null) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/auth/notification-prefs'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        if (mounted) {
-          setState(() {
-            for (final k in _prefs.keys) {
-              _prefs[k] = data[k] as bool? ?? true;
-            }
-            _bidThreshold = (data['bid_threshold_tl'] as int?) ?? 0;
-            _quietEnabled = (data['quiet_hours_enabled'] as bool?) ?? false;
-            _quietFrom = _parseTime(data['quiet_from'] as String? ?? '22:00');
-            _quietTo = _parseTime(data['quiet_to'] as String? ?? '08:00');
-            _receiveBlastNotifications =
-                (data['receive_blast_notifications'] as bool?) ?? true;
-            _loading = false;
-          });
-        }
-      } else {
-        if (mounted) setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  TimeOfDay _parseTime(String hhmm) {
-    try {
-      final parts = hhmm.split(':');
-      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-    } catch (_) {
-      return const TimeOfDay(hour: 0, minute: 0);
-    }
-  }
-
-  String _formatTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  Map<String, dynamic> _buildPayload() => {
-    ..._prefs,
-    'bid_threshold_tl': _bidThreshold,
-    'quiet_hours_enabled': _quietEnabled,
-    'quiet_from': _formatTime(_quietFrom),
-    'quiet_to': _formatTime(_quietTo),
-    'receive_blast_notifications': _receiveBlastNotifications,
-  };
-
-  Future<void> _patch(Map<String, dynamic> payload) async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    try {
-      await http.patch(
-        Uri.parse('$kBaseUrl/auth/notification-prefs'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(payload),
-      );
-    } catch (_) {}
-  }
-
-  Future<void> _toggle(String key, bool value) async {
-    setState(() => _prefs[key] = value);
-    final payload = _buildPayload();
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    try {
-      await http.patch(
-        Uri.parse('$kBaseUrl/auth/notification-prefs'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(payload),
-      );
-    } catch (_) {
-      if (mounted) setState(() => _prefs[key] = !value);
-    }
-  }
-
-  Future<void> _setBidThreshold(int value) async {
-    setState(() => _bidThreshold = value);
-    await _patch(_buildPayload());
-  }
-
-  Future<void> _setQuietEnabled(bool value) async {
-    setState(() => _quietEnabled = value);
-    await _patch(_buildPayload());
-  }
-
-  Future<void> _setBlastNotifications(bool value) async {
-    setState(() => _receiveBlastNotifications = value);
-    await _patch(_buildPayload());
-  }
-
-  Future<void> _pickTime({required bool isFrom}) async {
-    final initial = isFrom ? _quietFrom : _quietTo;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-      builder: (ctx, child) => MediaQuery(
-        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
-      ),
-    );
-    if (picked == null || !mounted) return;
-    setState(() {
-      if (isFrom) {
-        _quietFrom = picked;
-      } else {
-        _quietTo = picked;
-      }
-    });
-    await _patch(_buildPayload());
-  }
-
-  void _showUpgradeSheet() {
-    final loc = ref.read(localizationProvider);
+  void _showUpgradeSheet(BuildContext context, TranslationPack loc) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -262,10 +98,27 @@ class _NotificationSettingsScreenState
     );
   }
 
+  Future<void> _pickTime(BuildContext context, WidgetRef ref, NotificationSettingsState state, {required bool isFrom}) async {
+    final initial = isFrom ? state.quietFrom : state.quietTo;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      builder: (ctx, child) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      ref.read(notificationSettingsProvider.notifier).setQuietTime(isFrom: isFrom, time: picked);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     final labels = _buildLabels(loc);
+    final stateAsync = ref.watch(notificationSettingsProvider);
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -281,50 +134,59 @@ class _NotificationSettingsScreenState
           ),
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
-          : ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                // ── Temel bildirimler ──────────────────────────────────
-                ..._prefs.keys.map((key) {
-                  final info = labels[key]!;
-                  return _NotifTile(
-                    key: Key('notif_tile_$key'),
-                    icon: info.$3,
-                    label: info.$1,
-                    subtitle: info.$2,
-                    value: _prefs[key]!,
-                    onChanged: (v) => _toggle(key, v),
-                  );
-                }),
-                const SizedBox(height: 12),
-                // ── Pro Bildirim Ayarları ─────────────────────────────
-                _ProSection(
-                  isPremium: widget.isPremium,
-                  bidThreshold: _bidThreshold,
-                  quietEnabled: _quietEnabled,
-                  quietFrom: _quietFrom,
-                  quietTo: _quietTo,
-                  receiveBlastNotifications: _receiveBlastNotifications,
-                  onBidThreshold: widget.isPremium ? _setBidThreshold : null,
-                  onQuietEnabled: widget.isPremium ? _setQuietEnabled : null,
-                  onPickFrom: widget.isPremium
-                      ? () => _pickTime(isFrom: true)
-                      : null,
-                  onPickTo: widget.isPremium
-                      ? () => _pickTime(isFrom: false)
-                      : null,
-                  onBlastNotifChanged: widget.isPremium
-                      ? _setBlastNotifications
-                      : null,
-                  onUpgradeTap: _showUpgradeSheet,
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
+      body: stateAsync.when(
+        data: (state) {
+          return ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              // ── Temel bildirimler ──────────────────────────────────
+              ...state.prefs.keys.map((key) {
+                final info = labels[key]!;
+                return _NotifTile(
+                  key: Key('notif_tile_$key'),
+                  icon: info.$3,
+                  label: info.$1,
+                  subtitle: info.$2,
+                  value: state.prefs[key]!,
+                  onChanged: (v) => ref.read(notificationSettingsProvider.notifier).togglePref(key, v),
+                );
+              }),
+              const SizedBox(height: 12),
+              // ── Pro Bildirim Ayarları ─────────────────────────────
+              _ProSection(
+                isPremium: isPremium,
+                bidThreshold: state.bidThreshold,
+                quietEnabled: state.quietEnabled,
+                quietFrom: state.quietFrom,
+                quietTo: state.quietTo,
+                receiveBlastNotifications: state.receiveBlastNotifications,
+                onBidThreshold: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setBidThreshold(v) : null,
+                onQuietEnabled: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setQuietEnabled(v) : null,
+                onPickFrom: isPremium ? () => _pickTime(context, ref, state, isFrom: true) : null,
+                onPickTo: isPremium ? () => _pickTime(context, ref, state, isFrom: false) : null,
+                onBlastNotifChanged: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
+                onUpgradeTap: () => _showUpgradeSheet(context, loc),
+              ),
+              const SizedBox(height: 24),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(loc.t('errorGenericRetry'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                // In a real app we'd trigger a reload here.
+                onPressed: () {},
+                child: const Text('Tekrar Dene'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -770,7 +632,7 @@ class _NotifTile extends ConsumerWidget {
         ),
         trailing: Switch(
           value: value,
-          activeColor: kPrimary,
+          activeThumbColor: kPrimary,
           onChanged: onChanged,
         ),
       ),

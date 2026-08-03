@@ -1,3 +1,4 @@
+import 'viewmodels/purchase_detail_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
@@ -6,8 +7,6 @@ import '../../services/localization_service.dart';
 import '../../utils/number_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
-import '../../services/listing_service.dart';
-import '../../services/category_service.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
@@ -116,39 +115,28 @@ class PurchaseDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   if (category != null)
-                    FutureBuilder<List<(String, String)>>(
-                      future: CategoryService.getCategories(
-                        locale: Localizations.localeOf(context).languageCode,
-                      ),
-                      builder: (context, snap) {
-                        final label =
-                            snap.data
-                                ?.firstWhere(
-                                  (p) => p.$1 == category,
-                                  orElse: () => (category, category),
-                                )
-                                .$2 ??
-                            category;
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final catsAsync = ref.watch(purchaseDetailProvider(Localizations.localeOf(context).languageCode));
+                        final label = catsAsync.valueOrNull?.firstWhere(
+                          (p) => p.$1 == category,
+                          orElse: () => (category, category),
+                        ).$2 ?? category;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: kPrimary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             label,
-                            style: const TextStyle(
-                              color: kPrimary,
-                              fontSize: 12,
-                            ),
+                            style: const TextStyle(color: kPrimary, fontSize: 12),
                           ),
                         );
-                      },
+                      }
                     ),
+
                   Text(
                     '${loc.t('purchaseSeller')}: @$sellerUsername',
                     style: TextStyle(
@@ -240,9 +228,7 @@ class PurchaseDetailScreen extends ConsumerWidget {
                 child: TeqButton.outline(
                   isExpanded: true,
                   onPressed: () async {
-                    final listing = await ListingService.getListingById(
-                      listingId,
-                    );
+                    final listing = await ref.read(purchaseDetailProvider(Localizations.localeOf(context).languageCode).notifier).getListing(listingId);
                     if (!context.mounted) return;
                     if (listing != null) {
                       Navigator.push(

@@ -1,7 +1,5 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../ui_library/components/buttons/teq_button.dart';
-import '../core/event_bus.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,8 +7,7 @@ import '../config/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../services/analytics_service.dart';
-import '../services/auth_service.dart';
-import '../services/storage_service.dart';
+import 'viewmodels/pro_hub_view_model.dart';
 import 'competitor_radar_screen.dart';
 import 'demand_trends_screen.dart';
 import 'listing_analytics_screen.dart';
@@ -30,92 +27,26 @@ class ProHubScreen extends ConsumerStatefulWidget {
 }
 
 class _ProHubScreenState extends ConsumerState<ProHubScreen> {
-  Map<String, dynamic>? _credits;
-  Map<String, dynamic>? _boostCredits;
-  Map<String, dynamic>? _aiCredits;
-  Map<String, dynamic>? _aiDescCredits;
-  Map<String, dynamic>? _reactivationCredits;
-  bool _isLoading = true;
-  bool _isPremium = false;
-  String? _planType;
-  StreamSubscription<CreditsChangedEvent>? _creditsSub;
-
-  @override
-  void initState() {
-    super.initState();
-    _isPremium = widget.isPremium;
-    _loadCredits();
-    _verifyPremium();
-    _loadLocalPlanType();
-    AnalyticsService.trackEvent('pro_hub_view', {'is_premium': widget.isPremium});
-    _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) => _loadCredits());
-  }
-
-  Future<void> _loadLocalPlanType() async {
-    final info = await StorageService.getUserInfo();
-    if (info != null && mounted) {
-      setState(() => _planType = info['plan_type'] as String?);
-    }
-  }
-
-  Future<void> _verifyPremium() async {
-    try {
-      final user = await AuthService.me();
-      if (mounted) {
-        if (user.isPremium != _isPremium || user.planType != _planType) {
-          setState(() {
-            _isPremium = user.isPremium;
-            _planType = user.planType;
-          });
-        }
-        // Profil bilgisini locale kaydet ki kalıcı olsun
-        await StorageService.saveUserInfo(
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          fullName: user.fullName,
-          isPremium: user.isPremium,
-          planType: user.planType,
-          onboardingCompleted: user.onboardingCompleted,
-          isVerified: user.isVerified,
-          phoneVerified: user.phoneVerified,
-        );
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _loadCredits() async {
-    if (mounted) setState(() => _isLoading = true);
-    final results = await Future.wait([
-      AnalyticsService.getBlastCredits(),
-      AnalyticsService.getBoostCredits(),
-      AnalyticsService.getAiPriceCredits(),
-      AnalyticsService.getAiDescCredits(),
-      AnalyticsService.getReactivationCredits(),
-    ]);
-
-    if (mounted) {
-      setState(() {
-        _credits             = results[0];
-        _boostCredits        = results[1];
-        _aiCredits           = results[2];
-        _aiDescCredits       = results[3];
-        _reactivationCredits = results[4];
-        _isLoading           = false;
-      });
-    }
-  }
-
   @override
   void dispose() {
-    _creditsSub?.cancel();
+    // Only cleanup if we are sure it's okay to do so, AutoDispose will take care of the ViewModel.
+    // However, event stream subscriptions should be handled gracefully. AutoDispose destroys state.
+    // Provider handles onDispose if we use ref.onDispose, but our VM has `cleanup`. We don't have direct access here easily to call it before destruction. 
+    // Actually, we don't need to do anything here if AutoDispose destroys it and garbage collector removes the StreamSubscription, but it's better to add ref.onDispose to build. Let's do it in ViewModel instead.
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final isPremium = _isPremium;
+    final state = ref.watch(proHubProvider(widget.isPremium));
+    final viewModel = ref.read(proHubProvider(widget.isPremium).notifier);
+
+    // To handle cleanup
+    ref.listenManual(proHubProvider(widget.isPremium), (prev, next) {}, fireImmediately: true); // Keep it alive or whatever
+    // We should probably rely on AutoDispose to garbage collect, or we can use ref.onDispose in the Provider definition.
+
+    final isPremium = state.isPremium;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -124,21 +55,21 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
         elevation: 0,
       ),
       body: RefreshIndicator(
-        onRefresh: _loadCredits,
+        onRefresh: () => viewModel.loadCredits(),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard(renewalDate: _credits?['renewal_date'] as String?, planType: _planType) else _UpgradeBanner(),
+          if (isPremium) _ProStatusCard(renewalDate: state.blastCredits?['renewal_date'] as String?, planType: state.planType) else _UpgradeBanner(),
           const SizedBox(height: 24),
           _CreditsSummaryCard(
-            blastCredits: _credits,
-            boostCredits: _boostCredits,
-            aiCredits: _aiCredits,
-            aiDescCredits: _aiDescCredits,
-            reactivationCredits: _reactivationCredits,
+            blastCredits: state.blastCredits,
+            boostCredits: state.boostCredits,
+            aiCredits: state.aiCredits,
+            aiDescCredits: state.aiDescCredits,
+            reactivationCredits: state.reactivationCredits,
             isPremium: isPremium,
-            isLoading: _isLoading,
+            isLoading: state.isLoading,
           ),
           const SizedBox(height: 24),
           // ── Araçlar Başlığı ────────────────────────────────────────────────

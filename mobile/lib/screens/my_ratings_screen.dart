@@ -1,13 +1,10 @@
-import 'dart:convert';
+import 'viewmodels/my_ratings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../services/storage_service.dart';
 import '../services/localization_service.dart';
-import '../utils/error_helper.dart';
 import '../widgets/ratings/expandable_comment.dart';
 import 'public_profile_screen.dart';
 
@@ -19,60 +16,10 @@ class MyRatingsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
-  bool _isLoading = true;
-  List<dynamic> _receivedRatings = [];
-  List<dynamic> _givenRatings = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-    _markAsRead();
-  }
-
-  Future<void> _markAsRead() async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    try {
-      await http.patch(
-        Uri.parse('$kBaseUrl/ratings/me/mark-read'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-    } catch (_) {}
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    final token = await StorageService.getToken();
-    if (token == null) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
-    }
-    try {
-      final futures = await Future.wait([
-        http.get(Uri.parse('$kBaseUrl/ratings/me/received'),
-            headers: {'Authorization': 'Bearer $token'}),
-        http.get(Uri.parse('$kBaseUrl/ratings/me/given'),
-            headers: {'Authorization': 'Bearer $token'}),
-      ]);
-      if (mounted) {
-        if (futures[0].statusCode == 200) {
-          _receivedRatings = jsonDecode(futures[0].body);
-        }
-        if (futures[1].statusCode == 200) {
-          _givenRatings = jsonDecode(futures[1].body);
-        }
-      }
-    } catch (e) {
-      handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(myRatingsProvider);
 
     return DefaultTabController(
       length: 2,
@@ -94,14 +41,16 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
             ],
           ),
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [
-                  _buildList(_receivedRatings, isReceived: true),
-                  _buildList(_givenRatings, isReceived: false),
-                ],
-              ),
+        body: stateAsync.when(
+          data: (state) => TabBarView(
+            children: [
+              _buildList(state.receivedRatings, isReceived: true),
+              _buildList(state.givenRatings, isReceived: false),
+            ],
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, st) => Center(child: Text('Hata: $e')),
+        ),
       ),
     );
   }
@@ -137,7 +86,6 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
           history: (item['history'] as List?)?.cast<Map<String, dynamic>>() ?? [],
           isReceived: isReceived,
           ratedUserId: isReceived ? null : (item['rated']?['id'] as int?),
-          onReloadRequested: _loadData,
         );
       },
     );
@@ -158,7 +106,7 @@ class _RatingCard extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> history;
   final bool isReceived;
   final int? ratedUserId; // sadece given tab (isReceived=false) için dolu
-  final VoidCallback onReloadRequested;
+  
 
   const _RatingCard({
     super.key,
@@ -173,7 +121,7 @@ class _RatingCard extends ConsumerStatefulWidget {
     required this.history,
     required this.isReceived,
     required this.ratedUserId,
-    required this.onReloadRequested,
+    
   });
 
   @override
@@ -206,8 +154,6 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
   Future<void> _openEditSheet() async {
     final ratedId = widget.ratedUserId;
     if (ratedId == null) return;
-    final token = await StorageService.getToken();
-    if (token == null || !mounted) return;
 
     await showModalBottomSheet(
       context: context,
@@ -218,10 +164,8 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
       ),
       builder: (_) => _EditRatingSheet(
         userId: ratedId,
-        token: token,
         existingScore: widget.score,
         existingComment: widget.comment,
-        onSaved: widget.onReloadRequested,
       ),
     );
   }
@@ -230,27 +174,15 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
     final text = _replyCtrl.text.trim();
     if (text.isEmpty) return;
     setState(() => _replySending = true);
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/ratings/reply/${widget.ratingId}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'reply': text}),
-      );
-      if (resp.statusCode == 200 && mounted) {
+    final success = await ref.read(myRatingsProvider.notifier).submitReply(widget.ratingId, text);
+    if (mounted) {
+      setState(() => _replySending = false);
+      if (success) {
         setState(() {
           _replyFormVisible = false;
           _replyCtrl.clear();
         });
-        widget.onReloadRequested();
       }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _replySending = false);
     }
   }
 
@@ -613,17 +545,13 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
 
 class _EditRatingSheet extends ConsumerStatefulWidget {
   final int userId;
-  final String token;
   final int existingScore;
   final String? existingComment;
-  final VoidCallback onSaved;
 
   const _EditRatingSheet({
     required this.userId,
-    required this.token,
     required this.existingScore,
     required this.existingComment,
-    required this.onSaved,
   });
 
   @override
@@ -652,26 +580,13 @@ class _EditRatingSheetState extends ConsumerState<_EditRatingSheet> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    try {
-      final comment = _commentCtrl.text.trim();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/ratings/${widget.userId}'),
-        headers: {
-          'Authorization': 'Bearer ${widget.token}',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'score': _score,
-          'comment': comment.isEmpty ? null : comment,
-        }),
-      );
-      if (resp.statusCode == 200 && mounted) {
-        widget.onSaved();
+    final comment = _commentCtrl.text.trim();
+    final success = await ref.read(myRatingsProvider.notifier).saveRating(widget.userId, _score, comment);
+    if (mounted) {
+      setState(() => _saving = false);
+      if (success) {
         Navigator.pop(context);
       }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _saving = false);
     }
   }
 

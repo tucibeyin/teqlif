@@ -2,8 +2,8 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import '../config/theme.dart';
-import '../services/analytics_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import 'viewmodels/ad_report_view_model.dart';
 
 class AdReportScreen extends ConsumerStatefulWidget {
   final int campaignId;
@@ -21,10 +21,6 @@ class AdReportScreen extends ConsumerStatefulWidget {
 
 class _AdReportScreenState extends ConsumerState<AdReportScreen>
     with SingleTickerProviderStateMixin {
-  Map<String, dynamic>? _report;
-  bool _loading = true;
-  bool _hasError = false;
-
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -36,24 +32,12 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
       duration: const Duration(milliseconds: 650),
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _loadReport();
   }
 
   @override
   void dispose() {
     _fadeCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadReport() async {
-    final report = await AnalyticsService.getCampaignReport(widget.campaignId);
-    if (!mounted) return;
-    setState(() {
-      _report = report;
-      _loading = false;
-      _hasError = report == null;
-    });
-    if (report != null) _fadeCtrl.forward();
   }
 
   // ── Formatters ──────────────────────────────────────────────────────────────
@@ -106,14 +90,22 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
 
   @override
   Widget build(BuildContext context) {
+    final reportAsync = ref.watch(adReportProvider(widget.campaignId));
+    
+    ref.listen(adReportProvider(widget.campaignId), (prev, next) {
+      if (next.hasValue && next.value != null && (prev == null || prev.value == null)) {
+        _fadeCtrl.forward();
+      }
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0F1E),
       body: SafeArea(
-        child: _loading
-            ? _buildLoading()
-            : _hasError
-            ? _buildError()
-            : _buildReport(),
+        child: reportAsync.when(
+          data: (report) => report == null ? _buildError() : _buildReport(report),
+          loading: () => _buildLoading(),
+          error: (e, st) => _buildError(),
+        ),
       ),
     );
   }
@@ -159,11 +151,7 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
               label: loc.t("btnRetry"),
               color: kPrimary,
               onTap: () {
-                setState(() {
-                  _loading = true;
-                  _hasError = false;
-                });
-                _loadReport();
+                ref.read(adReportProvider(widget.campaignId).notifier).reload();
               },
             ),
             const SizedBox(height: 12),
@@ -178,9 +166,8 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
     );
   }
 
-  Widget _buildReport() {
+  Widget _buildReport(Map<String, dynamic> r) {
     final loc = ref.read(localizationProvider);
-    final r = _report!;
     final status = r['status'] as String?;
     final impressions = r['impressions'] as int? ?? 0;
     final clicks = r['clicks'] as int? ?? 0;

@@ -1,56 +1,11 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api.dart';
 import '../services/localization_service.dart';
-import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
-
-// ── Data model ────────────────────────────────────────────────────────────────
-
-class _CallHistoryItem {
-  final int callId;
-  final String status;
-  final String role;
-  final int? durationSeconds;
-  final DateTime? startedAt;
-  final int? otherUserId;
-  final String? otherUsername;
-  final String? otherAvatar;
-
-  const _CallHistoryItem({
-    required this.callId,
-    required this.status,
-    required this.role,
-    this.durationSeconds,
-    this.startedAt,
-    this.otherUserId,
-    this.otherUsername,
-    this.otherAvatar,
-  });
-
-  factory _CallHistoryItem.fromMap(Map<String, dynamic> m) {
-    final other = m['other_user'] as Map<String, dynamic>?;
-    return _CallHistoryItem(
-      callId: m['call_id'] as int,
-      status: m['status'] as String,
-      role: m['role'] as String,
-      durationSeconds: m['duration_seconds'] as int?,
-      startedAt: m['started_at'] != null
-          ? DateTime.tryParse(m['started_at'] as String)
-          : null,
-      otherUserId: other?['id'] as int?,
-      otherUsername: other?['username'] as String?,
-      otherAvatar: other?['avatar'] as String?,
-    );
-  }
-
-  bool get isMissed =>
-      status == 'missed' || (status == 'ended' && role == 'callee' && (durationSeconds ?? 0) == 0);
-  bool get isOutgoing => role == 'caller';
-}
+import '../models/call_history_item.dart';
+import 'viewmodels/call_history_view_model.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -67,117 +22,21 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen>
 
   static const _filters = ['all', 'missed', 'incoming', 'outgoing'];
 
-  final Map<String, List<_CallHistoryItem>> _items = {
-    'all': [],
-    'missed': [],
-    'incoming': [],
-    'outgoing': [],
-  };
-  final Map<String, bool> _loading = {
-    'all': false,
-    'missed': false,
-    'incoming': false,
-    'outgoing': false,
-  };
-  final Map<String, bool> _hasMore = {
-    'all': true,
-    'missed': true,
-    'incoming': true,
-    'outgoing': true,
-  };
-  final Map<String, int> _page = {
-    'all': 1,
-    'missed': 1,
-    'incoming': 1,
-    'outgoing': 1,
-  };
-  String? _errorMessage;
-
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: _filters.length, vsync: this);
-    _tabs.addListener(_onTabChange);
-    _fetchPage('all');
   }
 
   @override
   void dispose() {
-    _tabs.removeListener(_onTabChange);
     _tabs.dispose();
     super.dispose();
-  }
-
-  void _onTabChange() {
-    if (_tabs.indexIsChanging) return;
-    final filter = _filters[_tabs.index];
-    if (_items[filter]!.isEmpty && _hasMore[filter]! && !_loading[filter]!) {
-      _fetchPage(filter);
-    }
-  }
-
-  Future<void> _fetchPage(String filter, {bool refresh = false}) async {
-    if (_loading[filter]! && !refresh) return;
-    if (!_hasMore[filter]! && !refresh) return;
-
-    if (refresh) {
-      setState(() {
-        _items[filter] = [];
-        _page[filter] = 1;
-        _hasMore[filter] = true;
-        _errorMessage = null;
-      });
-    }
-
-    setState(() => _loading[filter] = true);
-
-    try {
-      final token = await StorageService.getToken();
-      final page = _page[filter]!;
-      final uri = Uri.parse(
-          '$kBaseUrl/calls/history?page=$page&per_page=20&filter=$filter');
-      final resp = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = json.decode(resp.body) as Map<String, dynamic>;
-        final newItems = (data['items'] as List)
-            .map((e) => _CallHistoryItem.fromMap(e as Map<String, dynamic>))
-            .toList();
-
-        setState(() {
-          _items[filter] = [..._items[filter]!, ...newItems];
-          _hasMore[filter] = data['has_more'] as bool;
-          _page[filter] = page + 1;
-          _loading[filter] = false;
-          _errorMessage = null;
-        });
-      } else {
-        setState(() {
-          _loading[filter] = false;
-          _errorMessage = ref.read(localizationProvider).t('errorCallHistoryLoad');
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading[filter] = false;
-        _errorMessage = ref.read(localizationProvider).t('errorNetworkMessage');
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -193,71 +52,35 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen>
           ],
         ),
       ),
-      body: _errorMessage != null
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.error_outline,
-                      color: colorScheme.error, size: 48),
-                  const SizedBox(height: 12),
-                  Text(_errorMessage!,
-                      style: TextStyle(color: colorScheme.error)),
-                  const SizedBox(height: 16),
-                  FilledButton.tonal(
-                    onPressed: () {
-                      final filter = _filters[_tabs.index];
-                      _fetchPage(filter, refresh: true);
-                    },
-                    child: Text(loc.t('callHistoryRetry')),
-                  ),
-                ],
-              ),
-            )
-          : TabBarView(
-              controller: _tabs,
-              children: _filters
-                  .map((f) => _FilteredList(
-                        filter: f,
-                        items: _items[f]!,
-                        loading: _loading[f]!,
-                        hasMore: _hasMore[f]!,
-                        emptyLabel: loc.t('callHistoryEmpty'),
-                        onLoadMore: () => _fetchPage(f),
-                        onRefresh: () => _fetchPage(f, refresh: true),
-                      ))
-                  .toList(),
-            ),
+      body: TabBarView(
+        controller: _tabs,
+        children: _filters
+            .map((f) => _FilteredList(
+                  filter: f,
+                  emptyLabel: loc.t('callHistoryEmpty'),
+                ))
+            .toList(),
+      ),
     );
   }
 }
 
 // ── Per-tab list ──────────────────────────────────────────────────────────────
 
-class _FilteredList extends StatefulWidget {
+class _FilteredList extends ConsumerStatefulWidget {
   final String filter;
-  final List<_CallHistoryItem> items;
-  final bool loading;
-  final bool hasMore;
   final String emptyLabel;
-  final VoidCallback onLoadMore;
-  final Future<void> Function() onRefresh;
 
   const _FilteredList({
     required this.filter,
-    required this.items,
-    required this.loading,
-    required this.hasMore,
     required this.emptyLabel,
-    required this.onLoadMore,
-    required this.onRefresh,
   });
 
   @override
-  State<_FilteredList> createState() => _FilteredListState();
+  ConsumerState<_FilteredList> createState() => _FilteredListState();
 }
 
-class _FilteredListState extends State<_FilteredList> {
+class _FilteredListState extends ConsumerState<_FilteredList> {
   final _scroll = ScrollController();
 
   @override
@@ -274,48 +97,67 @@ class _FilteredListState extends State<_FilteredList> {
   }
 
   void _onScroll() {
-    if (_scroll.position.pixels >=
-        _scroll.position.maxScrollExtent - 200) {
-      if (widget.hasMore && !widget.loading) {
-        widget.onLoadMore();
-      }
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 200) {
+      ref.read(callHistoryProvider(widget.filter).notifier).loadMore();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.loading && widget.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final stateAsync = ref.watch(callHistoryProvider(widget.filter));
 
-    if (widget.items.isEmpty) {
-      return Center(
-        child: Text(
-          widget.emptyLabel,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+    return stateAsync.when(
+      data: (state) {
+        if (state.items.isEmpty) {
+          return Center(
+            child: Text(
+              widget.emptyLabel,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => ref.read(callHistoryProvider(widget.filter).notifier).refresh(),
+          child: ListView.separated(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: state.items.length + (state.hasMore ? 1 : 0),
+            separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
+            itemBuilder: (context, i) {
+              if (i == state.items.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                );
+              }
+              return _CallTile(item: state.items[i]);
+            },
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) {
+        final loc = ref.watch(localizationProvider);
+        final colorScheme = Theme.of(context).colorScheme;
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, color: colorScheme.error, size: 48),
+              const SizedBox(height: 12),
+              Text(loc.t('errorNetworkMessage'), style: TextStyle(color: colorScheme.error)),
+              const SizedBox(height: 16),
+              FilledButton.tonal(
+                onPressed: () => ref.read(callHistoryProvider(widget.filter).notifier).refresh(),
+                child: Text(loc.t('callHistoryRetry')),
               ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: widget.onRefresh,
-      child: ListView.separated(
-        controller: _scroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: widget.items.length + (widget.hasMore ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
-        itemBuilder: (context, i) {
-          if (i == widget.items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
-          return _CallTile(item: widget.items[i]);
-        },
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -323,7 +165,7 @@ class _FilteredListState extends State<_FilteredList> {
 // ── Single call row ───────────────────────────────────────────────────────────
 
 class _CallTile extends ConsumerWidget {
-  final _CallHistoryItem item;
+  final CallHistoryItem item;
   const _CallTile({required this.item});
 
   String _formatDuration(int? seconds) {

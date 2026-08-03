@@ -7,10 +7,8 @@ import '../ui_library/components/buttons/teq_button.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
-import '../config/api.dart';
-import '../models/listing_filter_state.dart';
-import '../services/analytics_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
+import 'viewmodels/listing_analytics_view_model.dart';
 
 class ListingAnalyticsScreen extends ConsumerStatefulWidget {
   final bool isPremium;
@@ -26,131 +24,36 @@ class ListingAnalyticsScreen extends ConsumerStatefulWidget {
 }
 
 class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen> {
-  bool _loading = true;
-  bool _hasError = false;
-  String? _selectedListingId;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isPremium) {
+      Future.microtask(() => ref.read(listingAnalyticsProvider.notifier).load());
+    }
+  }
 
-  List<_ListingMetric> _listings = [];
-  double _videoCtr = 0;
-  double _photoCtr = 0;
-  int _videoImp = 0;
-  int _photoImp = 0;
-
-  ListingFilterState _filter = const ListingFilterState();
-
-  List<_ListingMetric> get _filteredListings {
-    var res = _listings;
-    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-      final q = _filter.searchQuery!.toLowerCase();
+  List<ListingMetric> _filteredListings(ListingAnalyticsState state) {
+    var res = state.listings;
+    if (state.filter.searchQuery != null && state.filter.searchQuery!.isNotEmpty) {
+      final q = state.filter.searchQuery!.toLowerCase();
       res = res.where((m) => m.title.toLowerCase().contains(q)).toList();
     }
     return res;
   }
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.isPremium) {
-      _load();
-    } else {
-      setState(() => _loading = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _hasError = false;
-    });
-
-    final sd = _filter.dateFrom?.toIso8601String().substring(0, 10);
-    final ed = _filter.dateTo?.toIso8601String().substring(0, 10);
-    final cat = (_filter.category != null && _filter.category!.isNotEmpty) ? _filter.category : null;
-
-    final results = await Future.wait([
-      AnalyticsService.getVideoRoi(startDate: sd, endDate: ed, category: cat),
-      AnalyticsService.getVideoPerformance(startDate: sd, endDate: ed, category: cat),
-      AnalyticsService.getGalleryStats(startDate: sd, endDate: ed, category: cat),
-    ]);
-    final roi = results[0];
-    final videoPerf = results[1];
-    final gallery = results[2];
-
-    if (!mounted) return;
-
-    if (roi == null && videoPerf == null && gallery == null) {
-      setState(() {
-        _loading = false;
-        _hasError = true;
-      });
-      return;
-    }
-
-    final videoMap = <String, Map<String, dynamic>>{
-      for (final s
-          in (videoPerf?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
-        s['listing_id'].toString(): s,
-    };
-    final galleryMap = <String, Map<String, dynamic>>{
-      for (final s
-          in (gallery?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
-        s['listing_id'].toString(): s,
-    };
-
-    final byListing = (roi?['by_listing'] as List? ?? [])
-        .cast<Map<String, dynamic>>();
-    final merged = byListing.map((l) {
-      final lid = l['listing_id'].toString();
-      final isVideo = (l['content_type'] as String?) == 'video';
-      final rawImg = l['image_url'] as String?;
-      final resolvedImg = (rawImg != null && rawImg.isNotEmpty)
-          ? (rawImg.startsWith('/uploads') ? '$kBaseHost$rawImg' : '$kBaseUrl$rawImg')
-          : null;
-      return _ListingMetric(
-        id: lid,
-        title: l['title'] as String? ?? '—',
-        imageUrl: resolvedImg,
-        isVideo: isVideo,
-        impressions: l['impressions'] as int? ?? 0,
-        ctr: (l['ctr'] as num?)?.toDouble() ?? 0,
-        completionPct: isVideo
-            ? (videoMap[lid]?['avg_completion_pct'] as num?)?.toDouble()
-            : null,
-        avgPhotoDepth: !isVideo
-            ? (galleryMap[lid]?['avg_swipe_depth'] as num?)?.toDouble()
-            : null,
-      );
-    }).toList()..sort((a, b) => b.impressions.compareTo(a.impressions));
-
-    final seenIds = <String>{};
-    final deduped = merged.where((m) => seenIds.add(m.id)).toList();
-
-    setState(() {
-      _loading = false;
-      _hasError = false;
-      _listings = deduped;
-      _videoCtr = (roi?['video']?['ctr'] as num?)?.toDouble() ?? 0;
-      _photoCtr = (roi?['photo']?['ctr'] as num?)?.toDouble() ?? 0;
-      _videoImp = roi?['video']?['impressions'] as int? ?? 0;
-      _photoImp = roi?['photo']?['impressions'] as int? ?? 0;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final bodyContent = _loading
+    final state = ref.watch(listingAnalyticsProvider);
+    final viewModel = ref.read(listingAnalyticsProvider.notifier);
+    
+    final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : (_hasError && widget.isPremium)
-        ? _buildError(loc)
+        : (state.hasError && widget.isPremium)
+        ? _buildError(loc, viewModel)
         : Stack(
             children: [
-              _buildContent(loc),
+              _buildContent(loc, state, viewModel),
               if (!widget.isPremium) _buildPaywall(context, loc),
             ],
           );
@@ -170,7 +73,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
     );
   }
 
-  Widget _buildError(TranslationPack loc) {
+  Widget _buildError(TranslationPack loc, ListingAnalyticsViewModel viewModel) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -186,29 +89,31 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             style: TextStyle(color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 16),
-          TeqButton.text(onPressed: _load, text: loc.t("btnRetry"), isExpanded: false),
+          TeqButton.text(onPressed: () => viewModel.load(), text: loc.t("btnRetry"), isExpanded: false),
         ],
       ),
     );
   }
 
-  Widget _buildContent(TranslationPack loc) {
-    final _ListingMetric? selectedItem = _selectedListingId == null
+  Widget _buildContent(TranslationPack loc, ListingAnalyticsState state, ListingAnalyticsViewModel viewModel) {
+    final selectedItem = state.selectedListingId == null
         ? null
-        : _listings.where((m) => m.id == _selectedListingId).firstOrNull;
+        : state.listings.where((m) => m.id == state.selectedListingId).firstOrNull;
 
     final displayImp = selectedItem != null
         ? selectedItem.impressions
-        : (_videoImp + _photoImp);
+        : (state.videoImp + state.photoImp);
     final displayCtr = selectedItem != null
         ? selectedItem.ctr
-        : (_videoImp + _photoImp > 0
-              ? ((_videoCtr * _videoImp + _photoCtr * _photoImp) /
-                    (_videoImp + _photoImp))
+        : (state.videoImp + state.photoImp > 0
+              ? ((state.videoCtr * state.videoImp + state.photoCtr * state.photoImp) /
+                    (state.videoImp + state.photoImp))
               : 0.0);
+              
+    final filtered = _filteredListings(state);
 
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => viewModel.load(),
       child: ListView(
         shrinkWrap: widget.isEmbedded,
         physics: widget.isEmbedded
@@ -217,16 +122,9 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           TeqFilterBar(
-            filter: _filter,
+            filter: state.filter,
             onChanged: (f) {
-              setState(() {
-                _filter = f;
-                if (_selectedListingId != null &&
-                    !_filteredListings.any((m) => m.id == _selectedListingId)) {
-                  _selectedListingId = null;
-                }
-              });
-              _load();
+              viewModel.updateFilter(f);
             },
             showSubcategory: false,
             showCity: false,
@@ -236,18 +134,18 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
           ),
           const SizedBox(height: 10),
 
-          if (_listings.isNotEmpty) ...[
+          if (state.listings.isNotEmpty) ...[
             // Horizontal Carousel for Selection
             SizedBox(
               height: 100,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: _filteredListings.length + 1,
+                itemCount: filtered.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0) {
-                    final isSelected = _selectedListingId == null;
+                    final isSelected = state.selectedListingId == null;
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedListingId = null),
+                      onTap: () => viewModel.selectListing(null),
                       child: Container(
                         width: 90,
                         margin: const EdgeInsets.only(right: 12),
@@ -293,10 +191,10 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                     );
                   }
 
-                  final metric = _filteredListings[index - 1];
-                  final isSelected = _selectedListingId == metric.id;
+                  final metric = filtered[index - 1];
+                  final isSelected = state.selectedListingId == metric.id;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedListingId = metric.id),
+                    onTap: () => viewModel.selectListing(metric.id),
                     child: Container(
                       width: 120,
                       margin: const EdgeInsets.only(right: 12),
@@ -314,7 +212,6 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // Arka plan: resim varsa göster, yoksa gri
                           if (metric.imageUrl != null)
                             CachedNetworkImage(
                               imageUrl: metric.imageUrl!,
@@ -325,7 +222,6 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                             )
                           else
                             Container(color: AppColors.surfaceVariant(context)),
-                          // Gradient + başlık
                           Positioned(
                             left: 0, right: 0, bottom: 0,
                             child: Container(
@@ -349,7 +245,6 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                               ),
                             ),
                           ),
-                          // Video rozeti
                           if (metric.isVideo)
                             Positioned(
                               top: 6, right: 6,
@@ -362,7 +257,6 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                                 child: const Icon(Icons.play_arrow, size: 12, color: Colors.white),
                               ),
                             ),
-                          // Seçim halkas
                           if (isSelected)
                             Positioned.fill(
                               child: DecoratedBox(
@@ -401,8 +295,8 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             ),
             const SizedBox(height: 12),
 
-            if (selectedItem == null && _videoImp > 0 && _photoImp > 0)
-              _ComparisonCard(videoCtr: _videoCtr, photoCtr: _photoCtr, loc: loc),
+            if (selectedItem == null && state.videoImp > 0 && state.photoImp > 0)
+              _ComparisonCard(videoCtr: state.videoCtr, photoCtr: state.photoCtr, loc: loc),
 
             if (selectedItem != null) ...[
               const SizedBox(height: 16),
@@ -511,7 +405,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             ],
           ],
 
-          if (_listings.isEmpty)
+          if (state.listings.isEmpty)
             _EmptyState(
               icon: Icons.bar_chart_outlined,
               title: loc.t("listingNoDataTitle"),
@@ -636,28 +530,6 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
   }
 }
 
-// ── Data model ────────────────────────────────────────────────────────────────
-
-class _ListingMetric {
-  final String id;
-  final String title;
-  final String? imageUrl;
-  final bool isVideo;
-  final int impressions;
-  final double ctr;
-  final double? completionPct;
-  final double? avgPhotoDepth;
-  const _ListingMetric({
-    required this.id,
-    required this.title,
-    this.imageUrl,
-    required this.isVideo,
-    required this.impressions,
-    required this.ctr,
-    this.completionPct,
-    this.avgPhotoDepth,
-  });
-}
 
 // ── Reusable Widgets ──────────────────────────────────────────────────────────
 

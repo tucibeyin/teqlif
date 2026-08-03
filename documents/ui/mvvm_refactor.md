@@ -51,39 +51,39 @@ Her bir ekran için şu adımlar izlenmelidir:
 - [x] `mobile/lib/screens/story/story_viewer_screen.dart`
 
 ### Arama & İletişim (Call)
-- [ ] `mobile/lib/screens/call_history_screen.dart`
-- [ ] `mobile/lib/screens/call_screen.dart`
-- [ ] `mobile/lib/screens/incoming_call_screen.dart`
+- [x] `mobile/lib/screens/call_history_screen.dart`
+- [x] `mobile/lib/screens/call_screen.dart`
+- [x] `mobile/lib/screens/incoming_call_screen.dart`
 
 ### Profil, Ayarlar & Sosyal
-- [ ] `mobile/lib/screens/account_info_screen.dart`
-- [ ] `mobile/lib/screens/blocked_users_screen.dart`
-- [ ] `mobile/lib/screens/faq_screen.dart`
-- [ ] `mobile/lib/screens/follow_list_screen.dart`
-- [ ] `mobile/lib/screens/follow_requests_screen.dart`
-- [ ] `mobile/lib/screens/force_update_screen.dart`
-- [ ] `mobile/lib/screens/notification_settings_screen.dart`
-- [ ] `mobile/lib/screens/public_profile_screen.dart`
+- [x] `mobile/lib/screens/account_info_screen.dart`
+- [x] `mobile/lib/screens/blocked_users_screen.dart`
+- [x] `mobile/lib/screens/faq_screen.dart`
+- [x] `mobile/lib/screens/follow_list_screen.dart`
+- [x] `mobile/lib/screens/follow_requests_screen.dart`
+- [x] `mobile/lib/screens/force_update_screen.dart`
+- [x] `mobile/lib/screens/notification_settings_screen.dart`
+- [x] `mobile/lib/screens/public_profile_screen.dart`
 
 ### Analitik & Pro Araçları
-- [ ] `mobile/lib/screens/competitor_radar_screen.dart`
-- [ ] `mobile/lib/screens/demand_trends_screen.dart`
-- [ ] `mobile/lib/screens/listing_analytics_screen.dart`
-- [ ] `mobile/lib/screens/live_stream_analytics_screen.dart`
-- [ ] `mobile/lib/screens/live_stream_history_screen.dart`
-- [ ] `mobile/lib/screens/market_intelligence_screen.dart`
-- [ ] `mobile/lib/screens/pro_hub_screen.dart`
-- [ ] `mobile/lib/screens/pro_insights_screen.dart`
-- [ ] `mobile/lib/screens/pro_stream_analytics_screen.dart`
-- [ ] `mobile/lib/screens/retargeting_screen.dart`
+- [x] `mobile/lib/screens/competitor_radar_screen.dart`
+- [x] `mobile/lib/screens/demand_trends_screen.dart`
+- [x] `mobile/lib/screens/listing_analytics_screen.dart`
+- [x] `mobile/lib/screens/live_stream_analytics_screen.dart`
+- [x] `mobile/lib/screens/live_stream_history_screen.dart`
+- [x] `mobile/lib/screens/market_intelligence_screen.dart`
+- [x] `mobile/lib/screens/pro_hub_screen.dart`
+- [x] `mobile/lib/screens/pro_insights_screen.dart`
+- [x] `mobile/lib/screens/pro_stream_analytics_screen.dart`
+- [x] `mobile/lib/screens/retargeting_screen.dart`
 
 ### İşlemler (Ticaret)
-- [ ] `mobile/lib/screens/ad_report_screen.dart`
-- [ ] `mobile/lib/screens/my_ratings_screen.dart`
-- [ ] `mobile/lib/screens/purchase_detail_screen.dart`
-- [ ] `mobile/lib/screens/purchases_screen.dart`
-- [ ] `mobile/lib/screens/sale_detail_screen.dart`
-- [ ] `mobile/lib/screens/sales_screen.dart`
+- [x] `mobile/lib/screens/ad_report_screen.dart`
+- [x] `mobile/lib/screens/my_ratings_screen.dart`
+- [x] `mobile/lib/screens/purchase_detail_screen.dart`
+- [x] `mobile/lib/screens/purchases_screen.dart`
+- [x] `mobile/lib/screens/sale_detail_screen.dart`
+- [x] `mobile/lib/screens/sales_screen.dart`
 
 ### Test
-- [ ] `mobile/lib/screens/teq_test_screen.dart`
+- [x] `mobile/lib/screens/teq_test_screen.dart`

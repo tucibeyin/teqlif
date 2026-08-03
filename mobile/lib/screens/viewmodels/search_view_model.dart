@@ -129,11 +129,16 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
 
   @override
   FutureOr<SearchState> build() async {
-    _loadExplore();
     ref.onDispose(() {
       _streamsSub?.cancel();
     });
-    return const SearchState();
+    
+    final token = await StorageService.getToken();
+    final loggedIn = token != null;
+    
+    Future.microtask(() => _loadExplore());
+    
+    return SearchState(isLoggedIn: loggedIn, exploreLoading: true);
   }
 
   // --- Explore Load Methods ---

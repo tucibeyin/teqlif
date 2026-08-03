@@ -4,11 +4,9 @@ import "../services/localization_service.dart";
 import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../models/listing_filter_state.dart';
 import '../models/pro_insights_data.dart';
-import '../services/analytics_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
-import '../utils/error_helper.dart';
+import 'viewmodels/pro_insights_view_model.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
@@ -19,101 +17,19 @@ class ProInsightsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
-  ProInsightsData? _data;
-  ProMetrics? _metrics;
-  bool _loading = true;
-  bool _hasError = false;
-  final Map<String, bool> _showAll = {};
-
   static const int _kMaxVisible = 5;
-
-  // ── Filtre state ─────────────────────────────────────────────────────────
-  ListingFilterState _hotLeadsFilter = const ListingFilterState();
-  ListingFilterState _priceIntelFilter = const ListingFilterState();
-  String _priceIntelSignal = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  void _onHotLeadsFilterChanged(ListingFilterState f) {
-    final dateChanged = f.dateFrom != _hotLeadsFilter.dateFrom || f.dateTo != _hotLeadsFilter.dateTo;
-    setState(() {
-      _hotLeadsFilter = f;
-      if (dateChanged) {
-        _priceIntelFilter = _priceIntelFilter.copyWith(dateFrom: f.dateFrom, dateTo: f.dateTo);
-        _data = null;
-        _metrics = null;
-      }
-      _showAll['hotLeads'] = false;
-    });
-    if (dateChanged) _load();
-  }
-
-  void _onPriceIntelFilterChanged(ListingFilterState f) {
-    final dateChanged = f.dateFrom != _priceIntelFilter.dateFrom || f.dateTo != _priceIntelFilter.dateTo;
-    setState(() {
-      _priceIntelFilter = f;
-      if (dateChanged) {
-        _hotLeadsFilter = _hotLeadsFilter.copyWith(dateFrom: f.dateFrom, dateTo: f.dateTo);
-        _data = null;
-        _metrics = null;
-      }
-      _showAll['priceIntel'] = false;
-    });
-    if (dateChanged) _load();
-  }
-
-  Future<void> _load({bool bypassCache = false}) async {
-    setState(() {
-      if (_data == null) _loading = true;
-      _hasError = false;
-    });
-    final sd = _hotLeadsFilter.dateFrom?.toIso8601String().substring(0, 10);
-    final ed = _hotLeadsFilter.dateTo?.toIso8601String().substring(0, 10);
-    await Future.wait([
-      _loadInsights(sd, ed, bypassCache),
-      _loadMetrics(bypassCache),
-    ]);
-  }
-
-  Future<void> _loadInsights(String? sd, String? ed, bool bypassCache) async {
-    try {
-      await for (final data in AnalyticsService.getProInsights(startDate: sd, endDate: ed, bypassCache: bypassCache)) {
-        if (!mounted) return;
-        setState(() { _data = data; _loading = false; });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _loading = false; if (_data == null) _hasError = true; });
-      if (_data == null) handleError(e, ref.read(localizationProvider));
-    }
-  }
-
-  Future<void> _loadMetrics(bool bypassCache) async {
-    try {
-      await for (final met in AnalyticsService.getProMetrics(bypassCache: bypassCache)) {
-        if (!mounted) return;
-        setState(() { _metrics = met; });
-      }
-    } catch (_) {}
-  }
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final bodyContent = _loading
+    final state = ref.watch(proInsightsProvider);
+    final viewModel = ref.read(proInsightsProvider.notifier);
+
+    final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : _hasError
-            ? _buildError(loc)
-            : RefreshIndicator(onRefresh: () => _load(bypassCache: true), child: _buildBody(loc));
+        : state.hasError
+            ? _buildError(loc, viewModel)
+            : RefreshIndicator(onRefresh: () => viewModel.load(bypassCache: true), child: _buildBody(loc, state, viewModel));
 
     if (widget.isEmbedded) {
       return bodyContent;
@@ -128,7 +44,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _load(bypassCache: true),
+            onPressed: () => viewModel.load(bypassCache: true),
           ),
         ],
       ),
@@ -136,7 +52,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     );
   }
 
-  Widget _buildError(TranslationPack loc) {
+  Widget _buildError(TranslationPack loc, ProInsightsViewModel viewModel) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -145,42 +61,42 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
           const SizedBox(height: 12),
           Text(loc.t("proLoadFailed"), style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          FilledButton(onPressed: () => _load(bypassCache: true), child: Text(loc.t("btnRetry"))),
+          FilledButton(onPressed: () => viewModel.load(bypassCache: true), child: Text(loc.t("btnRetry"))),
         ],
       ),
     );
   }
 
   // ── Filtre yardımcıları ──────────────────────────────────────────────────
-  List<HotLead> _applyHotLeadsFilter(List<HotLead> raw) {
+  List<HotLead> _applyHotLeadsFilter(List<HotLead> raw, ProInsightsState state) {
     var r = raw;
-    if (_hotLeadsFilter.searchQuery != null && _hotLeadsFilter.searchQuery!.isNotEmpty) {
-      final q = _hotLeadsFilter.searchQuery!.toLowerCase();
+    if (state.hotLeadsFilter.searchQuery != null && state.hotLeadsFilter.searchQuery!.isNotEmpty) {
+      final q = state.hotLeadsFilter.searchQuery!.toLowerCase();
       r = r.where((m) => m.title.toLowerCase().contains(q)).toList();
     }
-    if (_hotLeadsFilter.category != null && _hotLeadsFilter.category!.isNotEmpty) {
-      r = r.where((m) => m.category == _hotLeadsFilter.category).toList();
+    if (state.hotLeadsFilter.category != null && state.hotLeadsFilter.category!.isNotEmpty) {
+      r = r.where((m) => m.category == state.hotLeadsFilter.category).toList();
     }
-    if (_hotLeadsFilter.subcategory != null && _hotLeadsFilter.subcategory!.isNotEmpty) {
-      r = r.where((m) => m.subcategory == _hotLeadsFilter.subcategory).toList();
+    if (state.hotLeadsFilter.subcategory != null && state.hotLeadsFilter.subcategory!.isNotEmpty) {
+      r = r.where((m) => m.subcategory == state.hotLeadsFilter.subcategory).toList();
     }
     return r;
   }
 
-  List<PriceIntel> _applyPriceIntelFilter(List<PriceIntel> raw) {
+  List<PriceIntel> _applyPriceIntelFilter(List<PriceIntel> raw, ProInsightsState state) {
     var r = raw;
-    if (_priceIntelFilter.searchQuery != null && _priceIntelFilter.searchQuery!.isNotEmpty) {
-      final q = _priceIntelFilter.searchQuery!.toLowerCase();
+    if (state.priceIntelFilter.searchQuery != null && state.priceIntelFilter.searchQuery!.isNotEmpty) {
+      final q = state.priceIntelFilter.searchQuery!.toLowerCase();
       r = r.where((m) => m.title.toLowerCase().contains(q)).toList();
     }
-    if (_priceIntelFilter.category != null && _priceIntelFilter.category!.isNotEmpty) {
-      r = r.where((m) => m.category == _priceIntelFilter.category).toList();
+    if (state.priceIntelFilter.category != null && state.priceIntelFilter.category!.isNotEmpty) {
+      r = r.where((m) => m.category == state.priceIntelFilter.category).toList();
     }
-    if (_priceIntelFilter.subcategory != null && _priceIntelFilter.subcategory!.isNotEmpty) {
-      r = r.where((m) => m.subcategory == _priceIntelFilter.subcategory).toList();
+    if (state.priceIntelFilter.subcategory != null && state.priceIntelFilter.subcategory!.isNotEmpty) {
+      r = r.where((m) => m.subcategory == state.priceIntelFilter.subcategory).toList();
     }
-    if (_priceIntelSignal.isNotEmpty) {
-      r = r.where((m) => m.signal == _priceIntelSignal).toList();
+    if (state.priceIntelSignal.isNotEmpty) {
+      r = r.where((m) => m.signal == state.priceIntelSignal).toList();
     }
     return r;
   }
@@ -200,20 +116,20 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     );
   }
 
-  Widget _buildBody(TranslationPack loc) {
-    final kpis        = _data?.kpis ?? ProKpis.empty;
-    final funnel      = _data?.funnel ?? ProFunnel.empty;
-    final allHotLeads = _data?.hotLeads ?? <HotLead>[];
-    final allPriceIntel = _data?.priceIntel ?? <PriceIntel>[];
-    final streamStats = _data?.streamStats ?? StreamStats.empty;
-    final peakHours   = _data?.peakHours ?? <PeakHour>[];
-    final tips        = _data?.tips ?? <ProTip>[];
+  Widget _buildBody(TranslationPack loc, ProInsightsState state, ProInsightsViewModel viewModel) {
+    final kpis        = state.data?.kpis ?? ProKpis.empty;
+    final funnel      = state.data?.funnel ?? ProFunnel.empty;
+    final allHotLeads = state.data?.hotLeads ?? <HotLead>[];
+    final allPriceIntel = state.data?.priceIntel ?? <PriceIntel>[];
+    final streamStats = state.data?.streamStats ?? StreamStats.empty;
+    final peakHours   = state.data?.peakHours ?? <PeakHour>[];
+    final tips        = state.data?.tips ?? <ProTip>[];
 
-    final hotLeads   = _applyHotLeadsFilter(allHotLeads);
-    final priceIntel = _applyPriceIntelFilter(allPriceIntel);
+    final hotLeads   = _applyHotLeadsFilter(allHotLeads, state);
+    final priceIntel = _applyPriceIntelFilter(allPriceIntel, state);
 
-    final bool hlFiltered = !_hotLeadsFilter.isEmpty;
-    final bool piFiltered = !_priceIntelFilter.isEmpty || _priceIntelSignal.isNotEmpty;
+    final bool hlFiltered = !state.hotLeadsFilter.isEmpty;
+    final bool piFiltered = !state.priceIntelFilter.isEmpty || state.priceIntelSignal.isNotEmpty;
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
@@ -239,8 +155,8 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TeqFilterBar(
-                filter: _hotLeadsFilter,
-                onChanged: _onHotLeadsFilterChanged,
+                filter: state.hotLeadsFilter,
+                onChanged: (f) => viewModel.updateHotLeadsFilter(f),
                 showSubcategory: false,
                 showCity: false,
                 showCondition: false,
@@ -268,8 +184,8 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TeqFilterBar(
-                filter: _priceIntelFilter,
-                onChanged: _onPriceIntelFilterChanged,
+                filter: state.priceIntelFilter,
+                onChanged: (f) => viewModel.updatePriceIntelFilter(f),
                 showSubcategory: false,
                 showCity: false,
                 showCondition: false,
@@ -282,14 +198,14 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _filterChip(loc.t("profileFilterAll"), _priceIntelSignal.isEmpty,
-                        () => setState(() { _priceIntelSignal = ''; _showAll['priceIntel'] = false; })),
-                    _filterChip(loc.t("priceSignalExpensive"), _priceIntelSignal == 'pahalı',
-                        () => setState(() { _priceIntelSignal = _priceIntelSignal == 'pahalı' ? '' : 'pahalı'; _showAll['priceIntel'] = false; })),
-                    _filterChip(loc.t("priceSignalCheap"), _priceIntelSignal == 'ucuz',
-                        () => setState(() { _priceIntelSignal = _priceIntelSignal == 'ucuz' ? '' : 'ucuz'; _showAll['priceIntel'] = false; })),
-                    _filterChip(loc.t("priceSignalFair"), _priceIntelSignal == 'uygun',
-                        () => setState(() { _priceIntelSignal = _priceIntelSignal == 'uygun' ? '' : 'uygun'; _showAll['priceIntel'] = false; })),
+                    _filterChip(loc.t("profileFilterAll"), state.priceIntelSignal.isEmpty,
+                        () => viewModel.updatePriceIntelSignal('')),
+                    _filterChip(loc.t("priceSignalExpensive"), state.priceIntelSignal == 'pahalı',
+                        () => viewModel.updatePriceIntelSignal(state.priceIntelSignal == 'pahalı' ? '' : 'pahalı')),
+                    _filterChip(loc.t("priceSignalCheap"), state.priceIntelSignal == 'ucuz',
+                        () => viewModel.updatePriceIntelSignal(state.priceIntelSignal == 'ucuz' ? '' : 'ucuz')),
+                    _filterChip(loc.t("priceSignalFair"), state.priceIntelSignal == 'uygun',
+                        () => viewModel.updatePriceIntelSignal(state.priceIntelSignal == 'uygun' ? '' : 'uygun')),
                   ],
                 ),
               ),
@@ -308,41 +224,41 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
         ],
 
         _SectionLabel(loc.t("proSectionStreamPerf")),
-        _StreamStatsCard(stats: streamStats, loc: loc, showAll: _showAll['streams'] ?? false,
-          onToggleAll: () => setState(() => _showAll['streams'] = !(_showAll['streams'] ?? false))),
+        _StreamStatsCard(stats: streamStats, loc: loc, showAll: state.showAll['streams'] ?? false,
+          onToggleAll: () => viewModel.toggleShowAll('streams')),
         const SizedBox(height: 20),
 
         if (peakHours.isNotEmpty) ...[
           _SectionLabel(loc.t("proSectionPeakHours")),
           _SubLabel(loc.t("proPeakHoursDesc")),
-          ..._buildPeakBars(_limited('peakHours', peakHours), loc),
+          ..._buildPeakBars(_limited('peakHours', peakHours, state), loc),
           _ShowMoreBtn(
             total: peakHours.length,
-            visible: _visibleCount('peakHours', peakHours.length),
+            visible: _visibleCount('peakHours', peakHours.length, state),
             sectionKey: 'peakHours',
-            showAll: _showAll['peakHours'] ?? false,
-            onToggle: () => setState(() => _showAll['peakHours'] = !(_showAll['peakHours'] ?? false)),
+            showAll: state.showAll['peakHours'] ?? false,
+            onToggle: () => viewModel.toggleShowAll('peakHours'),
             loc: loc,
           ),
           const SizedBox(height: 20),
         ],
 
-        if (_metrics != null) ...[
+        if (state.metrics != null) ...[
           _SectionLabel(loc.t("proSectionAIMetrics")),
-          _ProMetricsCard(metrics: _metrics!, loc: loc),
+          _ProMetricsCard(metrics: state.metrics!, loc: loc),
           const SizedBox(height: 20),
         ],
       ],
     );
   }
 
-  List<T> _limited<T>(String key, List<T> items) {
-    if (_showAll[key] == true) return items;
+  List<T> _limited<T>(String key, List<T> items, ProInsightsState state) {
+    if (state.showAll[key] == true) return items;
     return items.take(_kMaxVisible).toList();
   }
 
-  int _visibleCount(String key, int total) =>
-      _showAll[key] == true ? total : total.clamp(0, _kMaxVisible);
+  int _visibleCount(String key, int total, ProInsightsState state) =>
+      state.showAll[key] == true ? total : total.clamp(0, _kMaxVisible);
 
   Widget _buildHotLeadsCarousel(List<HotLead> items, TranslationPack loc) {
     if (items.isEmpty) return const SizedBox.shrink();

@@ -1,149 +1,72 @@
-import 'dart:async';
-import 'dart:convert';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../models/listing_filter_state.dart';
-import '../services/analytics_service.dart';
-import '../services/storage_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/number_formatter.dart';
+import 'viewmodels/competitor_radar_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class CompetitorRadarScreen extends ConsumerStatefulWidget {
+class CompetitorRadarScreen extends ConsumerWidget {
   final bool isEmbedded;
   const CompetitorRadarScreen({super.key, this.isEmbedded = false});
 
   @override
-  ConsumerState<CompetitorRadarScreen> createState() => _CompetitorRadarScreenState();
-}
-
-class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
-  Map<String, dynamic>? _selectedListing;
-  Map<String, dynamic>? _radarData;
-  Map<String, dynamic>? _velocityData;
-  bool _loadingData = false;
-
-  ListingFilterState _filter = const ListingFilterState();
-
-  List<Map<String, dynamic>> _listings = [];
-  bool _listingsLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadListings();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
-    final token = await StorageService.getToken();
-    if (token == null) return [];
-    var url = '$kBaseUrl/listings/my?limit=50&offset=$offset&active=true';
-    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-      url += '&q=${Uri.encodeComponent(_filter.searchQuery!)}';
-    }
-    if (_filter.category != null && _filter.category!.isNotEmpty) {
-      url += '&category=${Uri.encodeComponent(_filter.category!)}';
-    }
-    if (_filter.dateFrom != null && _filter.dateTo != null) {
-      url += '&date_from=${_filter.dateFrom!.toIso8601String().substring(0, 10)}';
-      url += '&date_to=${_filter.dateTo!.toIso8601String().substring(0, 10)}';
-    }
-    final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
-    if (resp.statusCode == 200) {
-      return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
-    }
-    return [];
-  }
-
-  Future<void> _loadData() async {
-    final listing = _selectedListing;
-    if (listing == null) return;
-    final id = listing['id'] as int;
-    final category = listing['category'] as String? ?? '';
-    setState(() {
-      _loadingData = true;
-      _radarData = null;
-      _velocityData = null;
-    });
-    final results = await Future.wait([
-      AnalyticsService.competitorRadar(id),
-      AnalyticsService.categoryVelocity(category, listingId: id),
-    ]);
-    if (mounted) {
-      setState(() {
-        _radarData = results[0];
-        _velocityData = results[1];
-        _loadingData = false;
-      });
-    }
-  }
-
-  List<Map<String, dynamic>> get _filteredListings {
-    var result = _listings;
-    if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-      final q = _filter.searchQuery!.toLowerCase();
-      result = result.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
-    }
-    if (_filter.category != null && _filter.category!.isNotEmpty) {
-      result = result.where((l) => l['category'] == _filter.category).toList();
-    }
-    if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
-      result = result.where((l) => l['subcategory'] == _filter.subcategory).toList();
-    }
-    if (_filter.dateFrom != null && _filter.dateTo != null) {
-      final start = _filter.dateFrom!;
-      final end = _filter.dateTo!.add(const Duration(days: 1));
-      result = result.where((l) {
-        final raw = l['created_at'] as String?;
-        if (raw == null) return false;
-        final dt = DateTime.tryParse(raw)?.toLocal();
-        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
-      }).toList();
-    }
-    return result;
-  }
-
-  Future<void> _loadListings() async {
-    if (mounted) setState(() => _listingsLoading = true);
-    final results = await _fetchListingsPage(0);
-    if (!mounted) return;
-    final prevId = _selectedListing?['id'];
-    final stillHere = prevId != null ? results.any((r) => r['id'] == prevId) : false;
-    setState(() {
-      _listings = results;
-      _listingsLoading = false;
-      if (!stillHere) _selectedListing = results.isNotEmpty ? results.first : null;
-    });
-    if (_selectedListing != null) _loadData();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+    final state = ref.watch(competitorRadarProvider);
+    final viewModel = ref.read(competitorRadarProvider.notifier);
+
+    // Helpers to access state instead of modifying instance variables
+    final _selectedListing = state.selectedListing;
+    final _radarData = state.radarData;
+    final _velocityData = state.velocityData;
+    final _loadingData = state.loadingData;
+    final _filter = state.filter;
+    final _listingsLoading = state.listingsLoading;
+    
+    // The getter logic for _filteredListings:
+    List<Map<String, dynamic>> _filteredListings() {
+      var result = state.listings;
+      if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
+        final q = _filter.searchQuery!.toLowerCase();
+        result = result.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+      }
+      if (_filter.category != null && _filter.category!.isNotEmpty) {
+        result = result.where((l) => l['category'] == _filter.category).toList();
+      }
+      if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
+        result = result.where((l) => l['subcategory'] == _filter.subcategory).toList();
+      }
+      if (_filter.dateFrom != null && _filter.dateTo != null) {
+        final start = _filter.dateFrom!;
+        final end = _filter.dateTo!.add(const Duration(days: 1));
+        result = result.where((l) {
+          final raw = l['created_at'] as String?;
+          if (raw == null) return false;
+          final dt = DateTime.tryParse(raw)?.toLocal();
+          return dt != null && !dt.isBefore(start) && dt.isBefore(end);
+        }).toList();
+      }
+      return result;
+    }
+
     final bodyContent = RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: () => viewModel.loadData(),
       child: ListView(
-        shrinkWrap: widget.isEmbedded, 
-        physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
+        shrinkWrap: isEmbedded, 
+        physics: isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           TeqFilterBar(
             filter: _filter,
             onChanged: (f) {
-              setState(() => _filter = f);
-              _loadListings();
+              viewModel.updateFilter(f);
             },
             showSubcategory: false,
             showCity: false,
@@ -152,19 +75,19 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
             showPriceRange: false,
           ),
           const SizedBox(height: 8),
-          _buildHorizontalCarousel(loc),
+          _buildHorizontalCarousel(context, _listingsLoading, _filteredListings(), _selectedListing, viewModel, loc),
           const SizedBox(height: 20),
           if (_loadingData)
             const _RadarSkeleton()
           else if (_selectedListing != null) ...[
             if (_radarData != null)
               _RadarSection(
-                data: _radarData!,
-                listingTitle: _selectedListing!['title'] as String? ?? '',
+                data: _radarData,
+                listingTitle: _selectedListing['title'] as String? ?? '',
               ),
             if (_velocityData != null) ...[
               const SizedBox(height: 16),
-              _VelocitySection(data: _velocityData!),
+              _VelocitySection(data: _velocityData),
             ],
             if (_radarData == null && _velocityData == null)
               Padding(
@@ -181,7 +104,7 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
       ),
     );
 
-    if (widget.isEmbedded) {
+    if (isEmbedded) {
       return bodyContent;
     }
 
@@ -195,7 +118,7 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
           if (_selectedListing != null && !_loadingData)
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: _loadData,
+              onPressed: () => viewModel.loadData(),
             ),
         ],
       ),
@@ -203,15 +126,14 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
     );
   }
 
-  Widget _buildHorizontalCarousel(TranslationPack loc) {
+  Widget _buildHorizontalCarousel(BuildContext context, bool _listingsLoading, List<Map<String, dynamic>> items, Map<String, dynamic>? _selectedListing, CompetitorRadarViewModel viewModel, var loc) {
     if (_listingsLoading) {
       return const SizedBox(
         height: 112,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
-    final items = _filteredListings;
-    if (items.isEmpty) return _emptyState();
+    if (items.isEmpty) return _emptyState(context, loc);
     return SizedBox(
       height: 112,
       child: ListView.builder(
@@ -219,16 +141,13 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
         itemCount: items.length,
         itemBuilder: (ctx, i) {
           final item = items[i];
-          final isSelected = _selectedListing != null && item['id'] == _selectedListing!['id'];
+          final isSelected = _selectedListing != null && item['id'] == _selectedListing['id'];
           final imageUrls = item['image_urls'] as List? ?? [];
           final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : item['image_url'] as String?;
           final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
           return GestureDetector(
             onTap: () {
-              if (!isSelected) {
-                setState(() => _selectedListing = item);
-                _loadData();
-              }
+              viewModel.selectListing(item);
             },
             child: Container(
               width: 128,
@@ -298,8 +217,7 @@ class _CompetitorRadarScreenState extends ConsumerState<CompetitorRadarScreen> {
     );
   }
 
-  Widget _emptyState() {
-    final loc = ref.read(localizationProvider);
+  Widget _emptyState(BuildContext context, var loc) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,

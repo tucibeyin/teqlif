@@ -5,60 +5,32 @@ import '../ui_library/components/cards/teq_card.dart';
 
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../models/listing_filter_state.dart';
-import '../services/analytics_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
+import 'viewmodels/demand_trends_view_model.dart';
 
-class DemandTrendsScreen extends ConsumerStatefulWidget {
+class DemandTrendsScreen extends ConsumerWidget {
   const DemandTrendsScreen({super.key});
 
   @override
-  ConsumerState<DemandTrendsScreen> createState() => _DemandTrendsScreenState();
-}
-
-class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
-  bool _loading = true;
-  String? _error;
-  List<Map<String, dynamic>> _trends = [];
-  ListingFilterState _filter = const ListingFilterState();
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
-    try {
-      final data = await AnalyticsService.demandTrends(weeks: 8);
-      if (!mounted) return;
-      if (data == null) {
-        setState(() { _error = 'no_data'; _loading = false; });
-        return;
-      }
-      final raw = (data['trends'] as List?) ?? [];
-      setState(() {
-        _trends = raw.cast<Map<String, dynamic>>();
-        _loading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() { _error = 'error'; _loading = false; });
-    }
-  }
-
-  List<Map<String, dynamic>> get _filteredTrends {
-    if (_filter.category == null) return _trends;
-    return _trends.where((t) => 
-      t['category'] == _filter.category &&
-      (_filter.subcategory == null || t['subcategory'] == _filter.subcategory)
-    ).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final filtered = _filteredTrends;
+    final state = ref.watch(demandTrendsProvider);
+    final viewModel = ref.read(demandTrendsProvider.notifier);
+    
+    final _loading = state.loading;
+    final _error = state.error;
+    final _trends = state.trends;
+    final _filter = state.filter;
+
+    List<Map<String, dynamic>> _filteredTrends() {
+      if (_filter.category == null) return _trends;
+      return _trends.where((t) => 
+        t['category'] == _filter.category &&
+        (_filter.subcategory == null || t['subcategory'] == _filter.subcategory)
+      ).toList();
+    }
+
+    final filtered = _filteredTrends();
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.t("demandTrendsTitle")),
@@ -67,10 +39,10 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _error != null || _trends.isEmpty
-              ? _Empty(loc: loc, onRetry: _load)
+              ? _Empty(loc: loc, onRetry: () => viewModel.load())
               : RefreshIndicator(
                   color: kPrimary,
-                  onRefresh: _load,
+                  onRefresh: () => viewModel.load(),
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -81,7 +53,7 @@ class _DemandTrendsScreenState extends ConsumerState<DemandTrendsScreen> {
                       const SizedBox(height: 10),
                       TeqFilterBar(
                         filter: _filter,
-                        onChanged: (f) => setState(() => _filter = f),
+                        onChanged: (f) => viewModel.updateFilter(f),
                         showSearchBar: false,
                         showSubcategory: false,
                         showCity: false,
