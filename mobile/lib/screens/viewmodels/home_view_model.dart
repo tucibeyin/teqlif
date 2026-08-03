@@ -144,7 +144,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<void> _fetchRecent(String token) async {
-    final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?page=1'), headers: {
+    final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?page=0'), headers: {
       'Authorization': 'Bearer $token',
     });
 
@@ -159,7 +159,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
       state = AsyncValue.data(state.value!.copyWith(
         recentListings: listings,
         totalPages: totalP,
-        currentPage: 1,
+        currentPage: 0,
         isLoading: false,
         hasError: false,
       ));
