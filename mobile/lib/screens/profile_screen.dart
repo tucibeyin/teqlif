@@ -496,14 +496,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ],
                           ],
                         ),
-                        if (email.isNotEmpty)
-                          Text(
-                            email,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textTertiary(context),
-                            ),
-                          ),
+
                         if ((user?['bio'] as String?)?.isNotEmpty == true) ...[
                           const SizedBox(height: 6),
                           Text(
