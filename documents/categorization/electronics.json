@@ -1,0 +1,2575 @@
+{
+  "category": "electronics",
+  "subcategories": {
+    "audio_system": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "camera": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "canon",
+            "label": "Canon",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "nikon",
+            "label": "Nikon",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "sony",
+            "label": "Sony",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "fujifilm",
+            "label": "Fujifilm",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "panasonic",
+            "label": "Panasonic",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "olympus",
+            "label": "Olympus",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "gopro",
+            "label": "GoPro",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          }
+        ]
+      },
+      {
+        "key": "type",
+        "label_key": "extraField_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "dslr",
+            "label": "DSLR",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "mirrorless",
+            "label": "Mirrorless",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "compact",
+            "label": "Kompakt",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "action",
+            "label": "Action Kamera",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "video",
+            "label": "Video Kamera",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "text",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "gaming_console": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "playstation",
+            "label": "PlayStation",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "xbox",
+            "label": "Xbox",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "nintendo",
+            "label": "Nintendo",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "ps5",
+            "label": "PlayStation 5",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "ps4",
+            "label": "PlayStation 4",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "ps4_pro",
+            "label": "PlayStation 4 Pro",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "xbox_series_x",
+            "label": "Xbox Series X",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "xbox_series_s",
+            "label": "Xbox Series S",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "xbox_one",
+            "label": "Xbox One",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "nintendo_switch",
+            "label": "Nintendo Switch",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "nintendo_switch_lite",
+            "label": "Nintendo Switch Lite",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      }
+    ],
+    "laptop": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "apple",
+            "label": "Apple",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "asus",
+            "label": "Asus",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "lenovo",
+            "label": "Lenovo",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "dell",
+            "label": "Dell",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "hp",
+            "label": "HP",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "msi",
+            "label": "MSI",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "acer",
+            "label": "Acer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "toshiba",
+            "label": "Toshiba",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "samsung",
+            "label": "Samsung",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "huawei",
+            "label": "Huawei",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "dropdown",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": "brand",
+        "options": [
+          {
+            "value": "xps_13",
+            "label": "XPS 13",
+            "parent_option_value": "dell",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "thinkpad_e15",
+            "label": "ThinkPad E15",
+            "parent_option_value": "lenovo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "zenbook_14",
+            "label": "ZenBook 14 OLED",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "macbook_air_m2",
+            "label": "MacBook Air M2",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "matebook_d15",
+            "label": "MateBook D15",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "galaxy_book3",
+            "label": "Galaxy Book3",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "satellite_pro",
+            "label": "Satellite Pro",
+            "parent_option_value": "toshiba",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "swift_3",
+            "label": "Swift 3",
+            "parent_option_value": "acer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "stealth_15",
+            "label": "Stealth 15",
+            "parent_option_value": "msi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "pavilion_15",
+            "label": "Pavilion 15",
+            "parent_option_value": "hp",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "matebook_14",
+            "label": "MateBook 14",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "galaxy_book3_pro",
+            "label": "Galaxy Book3 Pro",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "tecra_a50",
+            "label": "Tecra A50",
+            "parent_option_value": "toshiba",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "predator_helios",
+            "label": "Predator Helios 300",
+            "parent_option_value": "acer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "creator_m16",
+            "label": "Creator M16",
+            "parent_option_value": "msi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "elitebook_840",
+            "label": "EliteBook 840",
+            "parent_option_value": "hp",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "xps_15",
+            "label": "XPS 15",
+            "parent_option_value": "dell",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "ideapad_5",
+            "label": "IdeaPad 5",
+            "parent_option_value": "lenovo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "rog_strix_g15",
+            "label": "ROG Strix G15",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "macbook_air_m3",
+            "label": "MacBook Air M3",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "macbook_pro_14_m3",
+            "label": "MacBook Pro 14\" M3",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "vivobook_15",
+            "label": "VivoBook 15",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "legion_5",
+            "label": "Legion 5",
+            "parent_option_value": "lenovo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "inspiron_15",
+            "label": "Inspiron 15",
+            "parent_option_value": "dell",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "victus_16",
+            "label": "Victus 16",
+            "parent_option_value": "hp",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "katana_15",
+            "label": "Katana 15",
+            "parent_option_value": "msi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "aspire_5",
+            "label": "Aspire 5",
+            "parent_option_value": "acer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "portege_x30",
+            "label": "Portégé X30",
+            "parent_option_value": "toshiba",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "galaxy_book3_ultra",
+            "label": "Galaxy Book3 Ultra",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "matebook_x_pro",
+            "label": "MateBook X Pro",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "macbook_pro_16_m3",
+            "label": "MacBook Pro 16\" M3",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tuf_gaming_a15",
+            "label": "TUF Gaming A15",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "yoga_9i",
+            "label": "Yoga 9i",
+            "parent_option_value": "lenovo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "latitude_5440",
+            "label": "Latitude 5440",
+            "parent_option_value": "dell",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "omen_16",
+            "label": "Omen 16",
+            "parent_option_value": "hp",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "gf63_thin",
+            "label": "GF63 Thin",
+            "parent_option_value": "msi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "nitro_5",
+            "label": "Nitro 5",
+            "parent_option_value": "acer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "dynabook_e10",
+            "label": "Dynabook E10",
+            "parent_option_value": "toshiba",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "galaxy_book3_360",
+            "label": "Galaxy Book3 360",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "matebook_d14",
+            "label": "MateBook D14",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "macbook_air_15_m2",
+            "label": "MacBook Air 15\" M2",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "proart_studiobook",
+            "label": "ProArt Studiobook",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "thinkpad_x1_carbon",
+            "label": "ThinkPad X1 Carbon",
+            "parent_option_value": "lenovo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "g15_gaming",
+            "label": "G15 Gaming",
+            "parent_option_value": "dell",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "probook_450",
+            "label": "ProBook 450",
+            "parent_option_value": "hp",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "stealth_16",
+            "label": "Stealth 16",
+            "parent_option_value": "msi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "swift_x",
+            "label": "Swift X",
+            "parent_option_value": "acer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "dynabook_cs50",
+            "label": "Dynabook CS50",
+            "parent_option_value": "toshiba",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "galaxy_book2_pro",
+            "label": "Galaxy Book2 Pro",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "matebook_e",
+            "label": "MateBook E",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "processor",
+        "label_key": "extraField_processor",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "intel_i3",
+            "label": "Intel Core i3",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "intel_i5",
+            "label": "Intel Core i5",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "intel_i7",
+            "label": "Intel Core i7",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "intel_i9",
+            "label": "Intel Core i9",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "amd_r5",
+            "label": "AMD Ryzen 5",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "amd_r7",
+            "label": "AMD Ryzen 7",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "amd_r9",
+            "label": "AMD Ryzen 9",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "apple_m1",
+            "label": "Apple M1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "apple_m2",
+            "label": "Apple M2",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "apple_m3",
+            "label": "Apple M3",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "apple_m4",
+            "label": "Apple M4",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          }
+        ]
+      },
+      {
+        "key": "ram",
+        "label_key": "extraField_ram",
+        "type": "dropdown",
+        "required": true,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "2gb",
+            "label": "2 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "3gb",
+            "label": "3 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "4gb",
+            "label": "4 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "6gb",
+            "label": "6 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "8gb",
+            "label": "8 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "12gb",
+            "label": "12 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "16gb",
+            "label": "16 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "32gb",
+            "label": "32 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "64gb",
+            "label": "64 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      },
+      {
+        "key": "storage",
+        "label_key": "extraField_storage",
+        "type": "dropdown",
+        "required": true,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "16gb",
+            "label": "16 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "32gb",
+            "label": "32 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "64gb",
+            "label": "64 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "128gb",
+            "label": "128 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "256gb",
+            "label": "256 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "512gb",
+            "label": "512 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "1tb",
+            "label": "1 TB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "2tb",
+            "label": "2 TB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          }
+        ]
+      },
+      {
+        "key": "screen_size",
+        "label_key": "extraField_screen_size",
+        "type": "dropdown",
+        "required": false,
+        "position": 5,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "11",
+            "label": "11\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "13",
+            "label": "13\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "14",
+            "label": "14\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "15",
+            "label": "15\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "16",
+            "label": "16\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "17",
+            "label": "17\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "24",
+            "label": "24\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "27",
+            "label": "27\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "32",
+            "label": "32\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          }
+        ]
+      }
+    ],
+    "mobile_phone": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "apple",
+            "label": "Apple",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "samsung",
+            "label": "Samsung",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "xiaomi",
+            "label": "Xiaomi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "huawei",
+            "label": "Huawei",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "oneplus",
+            "label": "OnePlus",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "google",
+            "label": "Google",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "oppo",
+            "label": "Oppo",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "realme",
+            "label": "Realme",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "nokia",
+            "label": "Nokia",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "motorola",
+            "label": "Motorola",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": "brand",
+        "options": [
+          {
+            "value": "iphone_13",
+            "label": "iPhone 13",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "moto_g84",
+            "label": "Moto G84",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "galaxy_s23",
+            "label": "Galaxy S23",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "g42",
+            "label": "G42",
+            "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "12_pro_plus",
+            "label": "12 Pro+",
+            "parent_option_value": "realme",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "find_x7",
+            "label": "Find X7",
+            "parent_option_value": "oppo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "pixel_7a",
+            "label": "Pixel 7a",
+            "parent_option_value": "google",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "oneplus_12",
+            "label": "OnePlus 12",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "p50",
+            "label": "P50",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "redmi_note_13",
+            "label": "Redmi Note 13",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "iphone_14",
+            "label": "iPhone 14",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "edge_40",
+            "label": "Edge 40",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "c32",
+            "label": "C32",
+            "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "gt_5",
+            "label": "GT 5",
+            "parent_option_value": "realme",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "reno_11",
+            "label": "Reno 11",
+            "parent_option_value": "oppo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "pixel_8",
+            "label": "Pixel 8",
+            "parent_option_value": "google",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "oneplus_11",
+            "label": "OnePlus 11",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "p60_pro",
+            "label": "P60 Pro",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "poco_x6_pro",
+            "label": "Poco X6 Pro",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "galaxy_s24",
+            "label": "Galaxy S24",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "iphone_15",
+            "label": "iPhone 15",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "galaxy_s24_ultra",
+            "label": "Galaxy S24 Ultra",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "14t_pro",
+            "label": "14T Pro",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "nova_11",
+            "label": "Nova 11",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "nord_3",
+            "label": "Nord 3",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "pixel_8_pro",
+            "label": "Pixel 8 Pro",
+            "parent_option_value": "google",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "a78",
+            "label": "A78",
+            "parent_option_value": "oppo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "c67",
+            "label": "C67",
+            "parent_option_value": "realme",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "g21",
+            "label": "G21",
+            "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "moto_g54",
+            "label": "Moto G54",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "iphone_15_pro",
+            "label": "iPhone 15 Pro",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "galaxy_a54",
+            "label": "Galaxy A54",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "redmi_12",
+            "label": "Redmi 12",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "mate_60_pro",
+            "label": "Mate 60 Pro",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "oneplus_12r",
+            "label": "OnePlus 12R",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "pixel_9",
+            "label": "Pixel 9",
+            "parent_option_value": "google",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "find_x6",
+            "label": "Find X6",
+            "parent_option_value": "oppo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "11_pro_plus",
+            "label": "11 Pro+",
+            "parent_option_value": "realme",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "xr21",
+            "label": "XR21",
+            "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "edge_50_pro",
+            "label": "Edge 50 Pro",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "iphone_16",
+            "label": "iPhone 16",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "galaxy_a35",
+            "label": "Galaxy A35",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "poco_m6_pro",
+            "label": "Poco M6 Pro",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "p40_lite",
+            "label": "P40 Lite",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "nord_ce3",
+            "label": "Nord CE 3",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "pixel_9_pro",
+            "label": "Pixel 9 Pro",
+            "parent_option_value": "google",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "reno_10_pro",
+            "label": "Reno 10 Pro",
+            "parent_option_value": "oppo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "gt_neo_5",
+            "label": "GT Neo 5",
+            "parent_option_value": "realme",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "g60",
+            "label": "G60",
+            "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "razr_40",
+            "label": "Razr 40",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "storage",
+        "label_key": "extraField_storage",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "16gb",
+            "label": "16 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "32gb",
+            "label": "32 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "64gb",
+            "label": "64 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "128gb",
+            "label": "128 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "256gb",
+            "label": "256 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "512gb",
+            "label": "512 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "1tb",
+            "label": "1 TB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "2tb",
+            "label": "2 TB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          }
+        ]
+      },
+      {
+        "key": "ram",
+        "label_key": "extraField_ram",
+        "type": "dropdown",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "2gb",
+            "label": "2 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "3gb",
+            "label": "3 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "4gb",
+            "label": "4 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "6gb",
+            "label": "6 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "8gb",
+            "label": "8 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "12gb",
+            "label": "12 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "16gb",
+            "label": "16 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "32gb",
+            "label": "32 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "64gb",
+            "label": "64 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "smartwatch": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "tablet": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "apple",
+            "label": "Apple",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "samsung",
+            "label": "Samsung",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "xiaomi",
+            "label": "Xiaomi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "huawei",
+            "label": "Huawei",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "oneplus",
+            "label": "OnePlus",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "google",
+            "label": "Google",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "oppo",
+            "label": "Oppo",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "realme",
+            "label": "Realme",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "nokia",
+            "label": "Nokia",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "motorola",
+            "label": "Motorola",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": "brand",
+        "options": [
+          {
+            "value": "matepad_11",
+            "label": "MatePad 11",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "tab_s9",
+            "label": "Galaxy Tab S9",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "pad_6",
+            "label": "Pad 6",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "pad",
+            "label": "OnePlus Pad",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "ipad_air_m1",
+            "label": "iPad Air M1",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "matepad_pro_13",
+            "label": "MatePad Pro 13.2\"",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "tab_a8",
+            "label": "Galaxy Tab A8",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "pad_go",
+            "label": "OnePlus Pad Go",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "ipad_pro_11_m4",
+            "label": "iPad Pro 11\" M4",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "redmi_pad_se",
+            "label": "Redmi Pad SE",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "matepad_t10s",
+            "label": "MatePad T10s",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "pad_2",
+            "label": "OnePlus Pad 2",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "ipad_10",
+            "label": "iPad 10. Nesil",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "tab_s8_plus",
+            "label": "Galaxy Tab S8+",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "pad_6_pro",
+            "label": "Pad 6 Pro",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "redmi_pad_2",
+            "label": "Redmi Pad 2",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tab_s9_fe",
+            "label": "Galaxy Tab S9 FE",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "pad_pro",
+            "label": "OnePlus Pad Pro",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "matepad_se",
+            "label": "MatePad SE",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "ipad_mini_6",
+            "label": "iPad Mini 6",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "ipad_pro_13_m4",
+            "label": "iPad Pro 13\" M4",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "tab_a9_plus",
+            "label": "Galaxy Tab A9+",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "pad_5",
+            "label": "Pad 5",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "matepad_10_4",
+            "label": "MatePad 10.4",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "tab_r16",
+            "label": "Tab R16",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "storage",
+        "label_key": "extraField_storage",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "16gb",
+            "label": "16 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "32gb",
+            "label": "32 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "64gb",
+            "label": "64 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "128gb",
+            "label": "128 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "256gb",
+            "label": "256 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "512gb",
+            "label": "512 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "1tb",
+            "label": "1 TB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "2tb",
+            "label": "2 TB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          }
+        ]
+      },
+      {
+        "key": "ram",
+        "label_key": "extraField_ram",
+        "type": "dropdown",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "2gb",
+            "label": "2 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "3gb",
+            "label": "3 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "4gb",
+            "label": "4 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "6gb",
+            "label": "6 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "8gb",
+            "label": "8 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "12gb",
+            "label": "12 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "16gb",
+            "label": "16 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "32gb",
+            "label": "32 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "64gb",
+            "label": "64 GB",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      }
+    ],
+    "tv_monitor": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "screen_size",
+        "label_key": "extraField_screen_size",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "11",
+            "label": "11\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "13",
+            "label": "13\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "14",
+            "label": "14\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "15",
+            "label": "15\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "16",
+            "label": "16\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "17",
+            "label": "17\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "24",
+            "label": "24\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "27",
+            "label": "27\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "32",
+            "label": "32\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          }
+        ]
+      }
+    ]
+  }
+}

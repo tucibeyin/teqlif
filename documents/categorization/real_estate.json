@@ -1,0 +1,981 @@
+{
+  "category": "real_estate",
+  "subcategories": {
+    "apartment": [
+      {
+        "key": "room_count",
+        "label_key": "extraField_room_count",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "1+0",
+            "label": "1+0 Stüdyo",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "1+1",
+            "label": "1+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "2+1",
+            "label": "2+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "3+1",
+            "label": "3+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "4+1",
+            "label": "4+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "5+1",
+            "label": "5+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "6+1",
+            "label": "6+1 ve üzeri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          }
+        ]
+      },
+      {
+        "key": "gross_sqm",
+        "label_key": "extraField_gross_sqm",
+        "type": "number",
+        "required": true,
+        "position": 1,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "net_sqm",
+        "label_key": "extraField_net_sqm",
+        "type": "number",
+        "required": false,
+        "position": 2,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "building_age",
+        "label_key": "extraField_building_age",
+        "type": "dropdown",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "new_build",
+            "label": "Sıfır (0)",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "1_5",
+            "label": "1–5 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "6_10",
+            "label": "6–10 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "11_15",
+            "label": "11–15 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "16_20",
+            "label": "16–20 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "21_plus",
+            "label": "21 yıl ve üzeri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "floor",
+        "label_key": "extraField_floor",
+        "type": "number",
+        "required": false,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "floor_count",
+        "label_key": "extraField_floor_count",
+        "type": "number",
+        "required": false,
+        "position": 5,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "heating",
+        "label_key": "extraField_heating",
+        "type": "dropdown",
+        "required": false,
+        "position": 6,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "combi_boiler",
+            "label": "Kombi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "central_gas",
+            "label": "Doğalgaz (Merkezi)",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "stove",
+            "label": "Soba",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "air_conditioning",
+            "label": "Klima",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "underfloor_heating",
+            "label": "Yerden Isıtma",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "none",
+            "label": "Yok",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "furnishing",
+        "label_key": "extraField_furnishing",
+        "type": "dropdown",
+        "required": true,
+        "position": 7,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "furnished",
+            "label": "Eşyalı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "semi_furnished",
+            "label": "Yarı Eşyalı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "empty",
+            "label": "Boş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      },
+      {
+        "key": "elevator",
+        "label_key": "extraField_elevator",
+        "type": "dropdown",
+        "required": false,
+        "position": 8,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "yes",
+            "label": "Var",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "no",
+            "label": "Yok",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          }
+        ]
+      },
+      {
+        "key": "parking",
+        "label_key": "extraField_parking",
+        "type": "dropdown",
+        "required": false,
+        "position": 9,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "yes",
+            "label": "Var",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "no",
+            "label": "Yok",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          }
+        ]
+      }
+    ],
+    "building": [
+      {
+        "key": "floor_count",
+        "label_key": "extraField_floor_count",
+        "type": "number",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "unit_count",
+        "label_key": "extraField_unit_count",
+        "type": "number",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "gross_sqm",
+        "label_key": "extraField_gross_sqm",
+        "type": "number",
+        "required": false,
+        "position": 2,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "field_garden": [
+      {
+        "key": "sqm",
+        "label_key": "extraField_sqm",
+        "type": "number",
+        "required": true,
+        "position": 0,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "title_deed",
+        "label_key": "extraField_title_deed",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "condominium",
+            "label": "Kat Mülkiyeti",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "floor_easement",
+            "label": "Kat İrtifakı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "shared_ownership",
+            "label": "Hisseli Tapu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "land_title",
+            "label": "Arsa Tapusu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "land_use",
+        "label_key": "extraField_land_use",
+        "type": "dropdown",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "residential",
+            "label": "Konut İmarlı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "commercial",
+            "label": "Ticari İmarlı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "agricultural",
+            "label": "Tarımsal",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "industrial",
+            "label": "Sanayi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      }
+    ],
+    "house_villa": [
+      {
+        "key": "room_count",
+        "label_key": "extraField_room_count",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "1+0",
+            "label": "1+0 Stüdyo",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "1+1",
+            "label": "1+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "2+1",
+            "label": "2+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "3+1",
+            "label": "3+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "4+1",
+            "label": "4+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "5+1",
+            "label": "5+1",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "6+1",
+            "label": "6+1 ve üzeri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          }
+        ]
+      },
+      {
+        "key": "gross_sqm",
+        "label_key": "extraField_gross_sqm",
+        "type": "number",
+        "required": true,
+        "position": 1,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "net_sqm",
+        "label_key": "extraField_net_sqm",
+        "type": "number",
+        "required": false,
+        "position": 2,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "land_sqm",
+        "label_key": "extraField_land_sqm",
+        "type": "number",
+        "required": false,
+        "position": 3,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "building_age",
+        "label_key": "extraField_building_age",
+        "type": "dropdown",
+        "required": false,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "new_build",
+            "label": "Sıfır (0)",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "1_5",
+            "label": "1–5 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "6_10",
+            "label": "6–10 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "11_15",
+            "label": "11–15 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "16_20",
+            "label": "16–20 yıl",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "21_plus",
+            "label": "21 yıl ve üzeri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "heating",
+        "label_key": "extraField_heating",
+        "type": "dropdown",
+        "required": false,
+        "position": 5,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "combi_boiler",
+            "label": "Kombi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "central_gas",
+            "label": "Doğalgaz (Merkezi)",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "stove",
+            "label": "Soba",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "air_conditioning",
+            "label": "Klima",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "underfloor_heating",
+            "label": "Yerden Isıtma",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "none",
+            "label": "Yok",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "furnishing",
+        "label_key": "extraField_furnishing",
+        "type": "dropdown",
+        "required": true,
+        "position": 6,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "furnished",
+            "label": "Eşyalı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "semi_furnished",
+            "label": "Yarı Eşyalı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "empty",
+            "label": "Boş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      }
+    ],
+    "land": [
+      {
+        "key": "sqm",
+        "label_key": "extraField_sqm",
+        "type": "number",
+        "required": true,
+        "position": 0,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "title_deed",
+        "label_key": "extraField_title_deed",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "condominium",
+            "label": "Kat Mülkiyeti",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "floor_easement",
+            "label": "Kat İrtifakı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "shared_ownership",
+            "label": "Hisseli Tapu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "land_title",
+            "label": "Arsa Tapusu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "land_use",
+        "label_key": "extraField_land_use",
+        "type": "dropdown",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "residential",
+            "label": "Konut İmarlı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "commercial",
+            "label": "Ticari İmarlı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "agricultural",
+            "label": "Tarımsal",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "industrial",
+            "label": "Sanayi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      }
+    ],
+    "office": [
+      {
+        "key": "gross_sqm",
+        "label_key": "extraField_gross_sqm",
+        "type": "number",
+        "required": true,
+        "position": 0,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "net_sqm",
+        "label_key": "extraField_net_sqm",
+        "type": "number",
+        "required": false,
+        "position": 1,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "floor",
+        "label_key": "extraField_floor",
+        "type": "number",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "heating",
+        "label_key": "extraField_heating",
+        "type": "dropdown",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "combi_boiler",
+            "label": "Kombi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "central_gas",
+            "label": "Doğalgaz (Merkezi)",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "stove",
+            "label": "Soba",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "air_conditioning",
+            "label": "Klima",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "underfloor_heating",
+            "label": "Yerden Isıtma",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "none",
+            "label": "Yok",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "furnishing",
+        "label_key": "extraField_furnishing",
+        "type": "dropdown",
+        "required": false,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "furnished",
+            "label": "Eşyalı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "semi_furnished",
+            "label": "Yarı Eşyalı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "empty",
+            "label": "Boş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      }
+    ],
+    "warehouse": [
+      {
+        "key": "gross_sqm",
+        "label_key": "extraField_gross_sqm",
+        "type": "number",
+        "required": true,
+        "position": 0,
+        "unit": "m²",
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "floor",
+        "label_key": "extraField_floor",
+        "type": "number",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ]
+  }
+}

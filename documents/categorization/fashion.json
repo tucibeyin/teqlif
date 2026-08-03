@@ -1,0 +1,2042 @@
+{
+  "category": "fashion",
+  "subcategories": {
+    "accessories": [
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "bag": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": false,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      },
+      {
+        "key": "material",
+        "label_key": "extraField_material",
+        "type": "dropdown",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "leather",
+            "label": "Deri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "faux_leather",
+            "label": "Suni Deri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "fabric",
+            "label": "Kumaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "canvas",
+            "label": "Kanvas",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      }
+    ],
+    "jewelry": [
+      {
+        "key": "material",
+        "label_key": "extraField_material",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "platinum",
+            "label": "Platin",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "diamond",
+            "label": "Elmas",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "natural_stone",
+            "label": "Doğal Taş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "gold_carat",
+        "label_key": "extraField_gold_carat",
+        "type": "dropdown",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "8",
+            "label": "8 Ayar",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "14",
+            "label": "14 Ayar",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "18",
+            "label": "18 Ayar",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "22",
+            "label": "22 Ayar",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "24",
+            "label": "24 Ayar",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "silver_purity",
+        "label_key": "extraField_silver_purity",
+        "type": "dropdown",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "925",
+            "label": "925 Ayar (Sterlin)",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "800",
+            "label": "800 Ayar",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "kids_clothing": [
+      {
+        "key": "size",
+        "label_key": "extraField_size",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "0_3m",
+            "label": "0–3 Ay",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "3_6m",
+            "label": "3–6 Ay",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "6_12m",
+            "label": "6–12 Ay",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "1_2y",
+            "label": "1–2 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "3_4y",
+            "label": "3–4 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "5_6y",
+            "label": "5–6 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "7_8y",
+            "label": "7–8 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "9_10y",
+            "label": "9–10 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "11_12y",
+            "label": "11–12 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "13_14y",
+            "label": "13–14 Yaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "mens_clothing": [
+      {
+        "key": "size",
+        "label_key": "extraField_size",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "xxs",
+            "label": "XXS",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "xs",
+            "label": "XS",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "s",
+            "label": "S",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "m",
+            "label": "M",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "l",
+            "label": "L",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "xl",
+            "label": "XL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "xxl",
+            "label": "XXL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "xxxl",
+            "label": "XXXL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "4xl",
+            "label": "4XL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "shoes": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": false,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "type",
+        "label_key": "extraField_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "sneaker",
+            "label": "Spor / Sneaker",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "formal",
+            "label": "Klasik",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "boot",
+            "label": "Bot",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "sandal",
+            "label": "Sandalet",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "slipper",
+            "label": "Terlik",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "heeled",
+            "label": "Topuklu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          }
+        ]
+      },
+      {
+        "key": "shoe_size",
+        "label_key": "extraField_shoe_size",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "35",
+            "label": "35",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "36",
+            "label": "36",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "37",
+            "label": "37",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "38",
+            "label": "38",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "39",
+            "label": "39",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "40",
+            "label": "40",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "41",
+            "label": "41",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "42",
+            "label": "42",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "43",
+            "label": "43",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "44",
+            "label": "44",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "45",
+            "label": "45",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "46",
+            "label": "46",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "47",
+            "label": "47",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "rolex",
+            "label": "Rolex",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "omega",
+            "label": "Omega",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "seiko",
+            "label": "Seiko",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "casio",
+            "label": "Casio",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tissot",
+            "label": "Tissot",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "tag_heuer",
+            "label": "TAG Heuer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "fossil",
+            "label": "Fossil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "swatch",
+            "label": "Swatch",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "dropdown",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": "brand",
+        "options": [
+          {
+            "value": "seamaster",
+            "label": "Seamaster",
+            "parent_option_value": "omega",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "presage",
+            "label": "Presage",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "g_shock",
+            "label": "G-Shock",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "prx",
+            "label": "PRX",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "carrera",
+            "label": "Carrera",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "minimalist",
+            "label": "Minimalist",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "big_bold",
+            "label": "Big Bold",
+            "parent_option_value": "swatch",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "submariner",
+            "label": "Submariner",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "sistem51",
+            "label": "Sistem51",
+            "parent_option_value": "swatch",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "datejust",
+            "label": "Datejust",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "speedmaster",
+            "label": "Speedmaster",
+            "parent_option_value": "omega",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "prospex",
+            "label": "Prospex",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "edifice",
+            "label": "Edifice",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "t_race",
+            "label": "T-Race",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "monaco",
+            "label": "Monaco",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "carlyle",
+            "label": "Carlyle",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "skin",
+            "label": "Skin",
+            "parent_option_value": "swatch",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "neutra",
+            "label": "Neutra",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "aquaracer",
+            "label": "Aquaracer",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "seastar",
+            "label": "Seastar",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "pro_trek",
+            "label": "Pro Trek",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "5_sports",
+            "label": "5 Sports",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "constellation",
+            "label": "Constellation",
+            "parent_option_value": "omega",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "day_date",
+            "label": "Day-Date",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "formula_1",
+            "label": "Formula 1",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "le_locle",
+            "label": "Le Locle",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "wave_ceptor",
+            "label": "Wave Ceptor",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "astron",
+            "label": "Astron",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "de_ville",
+            "label": "De Ville",
+            "parent_option_value": "omega",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "gmt_master_ii",
+            "label": "GMT-Master II",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "irony",
+            "label": "Irony",
+            "parent_option_value": "swatch",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "fenmore",
+            "label": "Fenmore",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "daytona",
+            "label": "Daytona",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "aqua_terra",
+            "label": "Aqua Terra",
+            "parent_option_value": "omega",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "alpinist",
+            "label": "Alpinist",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "baby_g",
+            "label": "Baby-G",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "chemin_tourelles",
+            "label": "Chemin des Tourelles",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "link",
+            "label": "Link",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "gen_6",
+            "label": "Gen 6",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "gent",
+            "label": "Gent",
+            "parent_option_value": "swatch",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "gender",
+        "label_key": "extraField_gender",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "male",
+            "label": "Erkek",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "female",
+            "label": "Kadın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "unisex",
+            "label": "Unisex",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      }
+    ],
+    "womens_clothing": [
+      {
+        "key": "size",
+        "label_key": "extraField_size",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "xxs",
+            "label": "XXS",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "xs",
+            "label": "XS",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "s",
+            "label": "S",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "m",
+            "label": "M",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "l",
+            "label": "L",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "xl",
+            "label": "XL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "xxl",
+            "label": "XXL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "xxxl",
+            "label": "XXXL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "4xl",
+            "label": "4XL",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ]
+  }
+}

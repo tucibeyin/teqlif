@@ -1,0 +1,717 @@
+{
+  "category": "sports",
+  "subcategories": {
+    "bicycle": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "giant",
+            "label": "Giant",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "trek",
+            "label": "Trek",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "specialized",
+            "label": "Specialized",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "bianchi",
+            "label": "Bianchi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "scott",
+            "label": "Scott",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "merida",
+            "label": "Merida",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "cannondale",
+            "label": "Cannondale",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "label_key": "extraField_model",
+        "type": "dropdown",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": "brand",
+        "options": [
+          {
+            "value": "contend",
+            "label": "Contend",
+            "parent_option_value": "giant",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "quick",
+            "label": "Quick",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "big_nine",
+            "label": "Big Nine",
+            "parent_option_value": "merida",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "speedster",
+            "label": "Speedster",
+            "parent_option_value": "scott",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "c_sport",
+            "label": "C-Sport",
+            "parent_option_value": "bianchi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "allez",
+            "label": "Allez",
+            "parent_option_value": "specialized",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "fx",
+            "label": "FX",
+            "parent_option_value": "trek",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "defy",
+            "label": "Defy",
+            "parent_option_value": "giant",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "trail",
+            "label": "Trail",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "one_twenty",
+            "label": "One-Twenty",
+            "parent_option_value": "merida",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "sub_cross",
+            "label": "Sub Cross",
+            "parent_option_value": "scott",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "sprint",
+            "label": "Sprint",
+            "parent_option_value": "bianchi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "diverge",
+            "label": "Diverge",
+            "parent_option_value": "specialized",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "marlin",
+            "label": "Marlin",
+            "parent_option_value": "trek",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "topstone",
+            "label": "Topstone",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "scultura",
+            "label": "Scultura",
+            "parent_option_value": "merida",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "aspect",
+            "label": "Aspect",
+            "parent_option_value": "scott",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "oltre_xr4",
+            "label": "Oltre XR4",
+            "parent_option_value": "bianchi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "stumpjumper",
+            "label": "Stumpjumper",
+            "parent_option_value": "specialized",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "domane",
+            "label": "Domane",
+            "parent_option_value": "trek",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "tcx",
+            "label": "TCX",
+            "parent_option_value": "giant",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "anthem",
+            "label": "Anthem",
+            "parent_option_value": "giant",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "emonda",
+            "label": "Émonda",
+            "parent_option_value": "trek",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "roubaix",
+            "label": "Roubaix",
+            "parent_option_value": "specialized",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "infinito",
+            "label": "Infinito",
+            "parent_option_value": "bianchi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "contessa",
+            "label": "Contessa",
+            "parent_option_value": "scott",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "speeder",
+            "label": "Speeder",
+            "parent_option_value": "merida",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "supersix_evo",
+            "label": "SuperSix EVO",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "trance",
+            "label": "Trance",
+            "parent_option_value": "giant",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "checkpoint",
+            "label": "Checkpoint",
+            "parent_option_value": "trek",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "rockhopper",
+            "label": "Rockhopper",
+            "parent_option_value": "specialized",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "impulso",
+            "label": "Impulso",
+            "parent_option_value": "bianchi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "scale",
+            "label": "Scale",
+            "parent_option_value": "scott",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "reacto",
+            "label": "Reacto",
+            "parent_option_value": "merida",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "synapse",
+            "label": "Synapse",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
+      },
+      {
+        "key": "type",
+        "label_key": "extraField_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "mountain",
+            "label": "Dağ Bisikleti",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "road",
+            "label": "Yol Bisikleti",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "city",
+            "label": "Şehir Bisikleti",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "bmx",
+            "label": "BMX",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "electric_bike",
+            "label": "Elektrikli Bisiklet",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "folding",
+            "label": "Katlanan Bisiklet",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          }
+        ]
+      },
+      {
+        "key": "wheel_size",
+        "label_key": "extraField_wheel_size",
+        "type": "dropdown",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "20",
+            "label": "20\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "24",
+            "label": "24\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "26",
+            "label": "26\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "27.5",
+            "label": "27.5\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "28",
+            "label": "28\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "29",
+            "label": "29\"",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      }
+    ],
+    "fitness_equipment": [
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": false,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "outdoor_sports": [
+      {
+        "key": "sport_type",
+        "label_key": "extraField_sport_type",
+        "type": "dropdown",
+        "required": false,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "football",
+            "label": "Futbol",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "basketball",
+            "label": "Basketbol",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "volleyball",
+            "label": "Voleybol",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "tennis",
+            "label": "Tenis",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "swimming",
+            "label": "Yüzme",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "running",
+            "label": "Koşu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "boxing",
+            "label": "Boks / Muay Thai",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "yoga",
+            "label": "Yoga / Pilates",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "outdoor",
+            "label": "Doğa Sporları",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          }
+        ]
+      },
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "team_sports": [
+      {
+        "key": "sport_type",
+        "label_key": "extraField_sport_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "football",
+            "label": "Futbol",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "basketball",
+            "label": "Basketbol",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "volleyball",
+            "label": "Voleybol",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "tennis",
+            "label": "Tenis",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "swimming",
+            "label": "Yüzme",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "running",
+            "label": "Koşu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "boxing",
+            "label": "Boks / Muay Thai",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "yoga",
+            "label": "Yoga / Pilates",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "outdoor",
+            "label": "Doğa Sporları",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          }
+        ]
+      },
+      {
+        "key": "brand",
+        "label_key": "extraField_brand",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ]
+  }
+}

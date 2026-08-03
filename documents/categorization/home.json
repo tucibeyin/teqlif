@@ -1,0 +1,684 @@
+{
+  "category": "home",
+  "subcategories": {
+    "antique": [
+      {
+        "key": "year",
+        "label_key": "extraField_year",
+        "type": "dropdown",
+        "required": false,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "furniture": [
+      {
+        "key": "type",
+        "label_key": "extraField_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "sofa",
+            "label": "Koltuk / Kanepe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "bed",
+            "label": "Yatak",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "table",
+            "label": "Masa",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "chair",
+            "label": "Sandalye",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "wardrobe",
+            "label": "Dolap / Gardırop",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "shelf",
+            "label": "Raf / Kitaplık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "coffee_table",
+            "label": "Sehpa",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          }
+        ]
+      },
+      {
+        "key": "material",
+        "label_key": "extraField_material",
+        "type": "dropdown",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "wood",
+            "label": "Ahşap",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "metal",
+            "label": "Metal",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "plastic",
+            "label": "Plastik",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "glass",
+            "label": "Cam",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "leather",
+            "label": "Deri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "fabric",
+            "label": "Kumaş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "home_textile": [
+      {
+        "key": "type",
+        "label_key": "extraField_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "bedding_set",
+            "label": "Nevresim Takımı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "quilt",
+            "label": "Yorgan",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "pillow",
+            "label": "Yastık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "towel",
+            "label": "Havlu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "curtain",
+            "label": "Perde",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "rug",
+            "label": "Halı / Kilim",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ],
+    "lighting": [
+      {
+        "key": "type",
+        "label_key": "extraField_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "chandelier",
+            "label": "Avize",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "lampshade",
+            "label": "Abajur",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "desk_lamp",
+            "label": "Masa Lambası",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "wall_lamp",
+            "label": "Aplik",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "floor_lamp",
+            "label": "Ayak Lambası",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "label_key": "extraField_color",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "white",
+            "label": "Beyaz",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "gray",
+            "label": "Gri",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "black",
+            "label": "Siyah",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "blue",
+            "label": "Mavi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "red",
+            "label": "Kırmızı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "green",
+            "label": "Yeşil",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 5
+          },
+          {
+            "value": "yellow",
+            "label": "Sarı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 6
+          },
+          {
+            "value": "orange",
+            "label": "Turuncu",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 7
+          },
+          {
+            "value": "purple",
+            "label": "Mor",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 8
+          },
+          {
+            "value": "pink",
+            "label": "Pembe",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 9
+          },
+          {
+            "value": "brown",
+            "label": "Kahverengi",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 10
+          },
+          {
+            "value": "beige",
+            "label": "Bej",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 11
+          },
+          {
+            "value": "gold",
+            "label": "Altın",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 12
+          },
+          {
+            "value": "silver",
+            "label": "Gümüş",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 13
+          },
+          {
+            "value": "other",
+            "label": "Diğer",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 14
+          }
+        ]
+      }
+    ]
+  }
+}

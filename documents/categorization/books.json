@@ -1,0 +1,209 @@
+{
+  "category": "books",
+  "subcategories": {
+    "arts_books": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "author",
+        "label_key": "extraField_author",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "fiction": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "author",
+        "label_key": "extraField_author",
+        "type": "text",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "publisher",
+        "label_key": "extraField_publisher",
+        "type": "text",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "kids_books": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "author",
+        "label_key": "extraField_author",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "publisher",
+        "label_key": "extraField_publisher",
+        "type": "text",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "magazine": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "publisher",
+        "label_key": "extraField_publisher",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "school_books": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "publisher",
+        "label_key": "extraField_publisher",
+        "type": "text",
+        "required": false,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "author",
+        "label_key": "extraField_author",
+        "type": "text",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "sci_fi": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "author",
+        "label_key": "extraField_author",
+        "type": "text",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "publisher",
+        "label_key": "extraField_publisher",
+        "type": "text",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ],
+    "self_development": [
+      {
+        "key": "book_title",
+        "label_key": "extraField_book_title",
+        "type": "text",
+        "required": true,
+        "position": 0,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "author",
+        "label_key": "extraField_author",
+        "type": "text",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "publisher",
+        "label_key": "extraField_publisher",
+        "type": "text",
+        "required": false,
+        "position": 2,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      }
+    ]
+  }
+}
