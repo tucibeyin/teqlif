@@ -323,27 +323,28 @@ if (_userChangedLang) {
 
 ---
 
-## 2. Dinamik Field Konfigürasyonu
+## 2. Dinamik Field Konfigürasyonu (Declarative)
 
 ### Problem
 
-Form alanları (marka, yıl, renk, vb.) subkategoriye göre değişiyor. Eski yaklaşımda bunlar Flutter tarafında `kSubcategoryFields` Dart sabitleri olarak hardcode edilmişti — yeni alan eklemek için uygulama güncellemesi gerekiyordu, label çevirisi ARB'a bağlıydı.
+Form alanları (marka, yıl, renk, vb.) subkategoriye göre değişiyor. Eskiden bu alanları ve seçeneklerini (options) veritabanına eklemek veya sıralarını (position) değiştirmek için her defasında özel Python "seeder" scriptleri (örn: `seed_emlak_listing_types.py`) yazıp DB'ye manuel kayıt atmak zorundaydık. Bu hem hata yapmaya açık hem de takip edilmesi zor bir yöntemdi.
 
 ### Karar
 
-Alan tanımları ve seçenekleri PostgreSQL'de tutulur, API'den serve edilir.  
-Label'lar OTA Localization ile çevrilir. Yeni alan = DB satırı + ARB key + deploy.
+**Declarative (Bildirimsel) JSON Mimarisini** benimsedik.  
+Tıpkı OTA çevirilerinde (ARB dosyaları) olduğu gibi, **kategori alanlarının (extra fields) Tek Gerçek Kaynağı (Source of Truth) artık repodaki `documents/categorization/*.json` dosyalarıdır.** Veritabanı manuel olarak düzenlenmez; deploy sırasında bir sync scripti JSON'dan okuyup DB'ye yansıtır.
 
 ### Mimari
 
 ```
-category_fields (key, label_key, type, required, position, depends_on, ...)
-      │  1:N
-field_options   (value, label, parent_option_value, position, ...)
+documents/categorization/*.json (Tüm alanlar ve seçenekler, git'te)
+      │  [deploy: python3 scripts/sync_category_fields.py]
+      ▼
+category_fields & field_options (PostgreSQL — Upsert & Soft Delete)
       │
-      ▼  GET /api/field-config/{subcategory}  [24h server cache]
+      ▼  GET /api/field-config/{subcategory}  [24h server cache, otomatik silinir]
       │
-FieldConfigService.getFields(subcategory)  [in-memory cache]
+FieldConfigService.getFields(subcategory)  [Flutter, Hive cache]
       │
 ExtraFieldDef(key, labelKey, type, options, dependsOn, ...)
       │
