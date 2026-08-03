@@ -1465,41 +1465,9 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "seamaster",
-            "label": "Seamaster",
-            "parent_option_value": "omega",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "presage",
-            "label": "Presage",
-            "parent_option_value": "seiko",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "g_shock",
-            "label": "G-Shock",
-            "parent_option_value": "casio",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "prx",
-            "label": "PRX",
-            "parent_option_value": "tissot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "carrera",
-            "label": "Carrera",
-            "parent_option_value": "tag_heuer",
+            "value": "big_bold",
+            "label": "Big Bold",
+            "parent_option_value": "swatch",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -1513,9 +1481,41 @@
             "position": 0
           },
           {
-            "value": "big_bold",
-            "label": "Big Bold",
-            "parent_option_value": "swatch",
+            "value": "carrera",
+            "label": "Carrera",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "prx",
+            "label": "PRX",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "g_shock",
+            "label": "G-Shock",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "presage",
+            "label": "Presage",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "seamaster",
+            "label": "Seamaster",
+            "parent_option_value": "omega",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -1537,41 +1537,9 @@
             "position": 1
           },
           {
-            "value": "datejust",
-            "label": "Datejust",
-            "parent_option_value": "rolex",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "speedmaster",
-            "label": "Speedmaster",
-            "parent_option_value": "omega",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "prospex",
-            "label": "Prospex",
-            "parent_option_value": "seiko",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "edifice",
-            "label": "Edifice",
-            "parent_option_value": "casio",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "t_race",
-            "label": "T-Race",
-            "parent_option_value": "tissot",
+            "value": "carlyle",
+            "label": "Carlyle",
+            "parent_option_value": "fossil",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -1585,57 +1553,49 @@
             "position": 1
           },
           {
-            "value": "carlyle",
-            "label": "Carlyle",
-            "parent_option_value": "fossil",
+            "value": "t_race",
+            "label": "T-Race",
+            "parent_option_value": "tissot",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
           },
           {
-            "value": "skin",
-            "label": "Skin",
-            "parent_option_value": "swatch",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "neutra",
-            "label": "Neutra",
-            "parent_option_value": "fossil",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "aquaracer",
-            "label": "Aquaracer",
-            "parent_option_value": "tag_heuer",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "seastar",
-            "label": "Seastar",
-            "parent_option_value": "tissot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "pro_trek",
-            "label": "Pro Trek",
+            "value": "edifice",
+            "label": "Edifice",
             "parent_option_value": "casio",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 2
+            "position": 1
           },
           {
-            "value": "5_sports",
-            "label": "5 Sports",
+            "value": "prospex",
+            "label": "Prospex",
             "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "speedmaster",
+            "label": "Speedmaster",
+            "parent_option_value": "omega",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "datejust",
+            "label": "Datejust",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "day_date",
+            "label": "Day-Date",
+            "parent_option_value": "rolex",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 2
@@ -1649,57 +1609,57 @@
             "position": 2
           },
           {
-            "value": "day_date",
-            "label": "Day-Date",
-            "parent_option_value": "rolex",
+            "value": "5_sports",
+            "label": "5 Sports",
+            "parent_option_value": "seiko",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 2
           },
           {
-            "value": "formula_1",
-            "label": "Formula 1",
-            "parent_option_value": "tag_heuer",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "le_locle",
-            "label": "Le Locle",
-            "parent_option_value": "tissot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "wave_ceptor",
-            "label": "Wave Ceptor",
+            "value": "pro_trek",
+            "label": "Pro Trek",
             "parent_option_value": "casio",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
           },
           {
-            "value": "astron",
-            "label": "Astron",
-            "parent_option_value": "seiko",
+            "value": "seastar",
+            "label": "Seastar",
+            "parent_option_value": "tissot",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
+          },
+          {
+            "value": "aquaracer",
+            "label": "Aquaracer",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "neutra",
+            "label": "Neutra",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "skin",
+            "label": "Skin",
+            "parent_option_value": "swatch",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
           },
           {
             "value": "de_ville",
             "label": "De Ville",
             "parent_option_value": "omega",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "gmt_master_ii",
-            "label": "GMT-Master II",
-            "parent_option_value": "rolex",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1713,12 +1673,68 @@
             "position": 3
           },
           {
+            "value": "astron",
+            "label": "Astron",
+            "parent_option_value": "seiko",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "formula_1",
+            "label": "Formula 1",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "wave_ceptor",
+            "label": "Wave Ceptor",
+            "parent_option_value": "casio",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
             "value": "fenmore",
             "label": "Fenmore",
             "parent_option_value": "fossil",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
+          },
+          {
+            "value": "gmt_master_ii",
+            "label": "GMT-Master II",
+            "parent_option_value": "rolex",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "le_locle",
+            "label": "Le Locle",
+            "parent_option_value": "tissot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "gen_6",
+            "label": "Gen 6",
+            "parent_option_value": "fossil",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "link",
+            "label": "Link",
+            "parent_option_value": "tag_heuer",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
           },
           {
             "value": "daytona",
@@ -1756,22 +1772,6 @@
             "value": "chemin_tourelles",
             "label": "Chemin des Tourelles",
             "parent_option_value": "tissot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "link",
-            "label": "Link",
-            "parent_option_value": "tag_heuer",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "gen_6",
-            "label": "Gen 6",
-            "parent_option_value": "fossil",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4

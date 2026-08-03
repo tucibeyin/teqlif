@@ -80,6 +80,33 @@
         "options": []
       },
       {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      },
+      {
         "key": "net_sqm",
         "label_key": "extraField_net_sqm",
         "type": "number",
@@ -329,6 +356,33 @@
         "options": []
       },
       {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          }
+        ]
+      },
+      {
         "key": "unit_count",
         "label_key": "extraField_unit_count",
         "type": "number",
@@ -359,6 +413,41 @@
         "unit": "m²",
         "depends_on": null,
         "options": []
+      },
+      {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "in_exchange",
+            "label": "Kat Karşılığı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          }
+        ]
       },
       {
         "key": "title_deed",
@@ -528,6 +617,33 @@
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 6
+          }
+        ]
+      },
+      {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
           }
         ]
       },
@@ -778,6 +894,41 @@
         ]
       },
       {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "in_exchange",
+            "label": "Kat Karşılığı",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          }
+        ]
+      },
+      {
         "key": "land_use",
         "label_key": "extraField_land_use",
         "type": "dropdown",
@@ -839,6 +990,49 @@
         "unit": "m²",
         "depends_on": null,
         "options": []
+      },
+      {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "transfer_sale",
+            "label": "Devren Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "transfer_rent",
+            "label": "Devren Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
       },
       {
         "key": "net_sqm",
@@ -975,6 +1169,49 @@
         "unit": null,
         "depends_on": null,
         "options": []
+      },
+      {
+        "key": "listing_type",
+        "label_key": "extraField_listing_type",
+        "type": "dropdown",
+        "required": true,
+        "position": 1,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "for_sale",
+            "label": "Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "for_rent",
+            "label": "Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "transfer_sale",
+            "label": "Devren Satılık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "transfer_rent",
+            "label": "Devren Kiralık",
+            "parent_option_value": null,
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          }
+        ]
       }
     ]
   }

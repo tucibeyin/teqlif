@@ -407,38 +407,6 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "xps_13",
-            "label": "XPS 13",
-            "parent_option_value": "dell",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "thinkpad_e15",
-            "label": "ThinkPad E15",
-            "parent_option_value": "lenovo",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "zenbook_14",
-            "label": "ZenBook 14 OLED",
-            "parent_option_value": "asus",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "macbook_air_m2",
-            "label": "MacBook Air M2",
-            "parent_option_value": "apple",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "matebook_d15",
             "label": "MateBook D15",
             "parent_option_value": "huawei",
@@ -482,6 +450,38 @@
             "value": "pavilion_15",
             "label": "Pavilion 15",
             "parent_option_value": "hp",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "xps_13",
+            "label": "XPS 13",
+            "parent_option_value": "dell",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "thinkpad_e15",
+            "label": "ThinkPad E15",
+            "parent_option_value": "lenovo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "zenbook_14",
+            "label": "ZenBook 14 OLED",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "macbook_air_m2",
+            "label": "MacBook Air M2",
+            "parent_option_value": "apple",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -647,30 +647,6 @@
             "position": 2
           },
           {
-            "value": "macbook_pro_16_m3",
-            "label": "MacBook Pro 16\" M3",
-            "parent_option_value": "apple",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "tuf_gaming_a15",
-            "label": "TUF Gaming A15",
-            "parent_option_value": "asus",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "yoga_9i",
-            "label": "Yoga 9i",
-            "parent_option_value": "lenovo",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
             "value": "latitude_5440",
             "label": "Latitude 5440",
             "parent_option_value": "dell",
@@ -722,6 +698,30 @@
             "value": "matebook_d14",
             "label": "MateBook D14",
             "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "macbook_pro_16_m3",
+            "label": "MacBook Pro 16\" M3",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tuf_gaming_a15",
+            "label": "TUF Gaming A15",
+            "parent_option_value": "asus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "yoga_9i",
+            "label": "Yoga 9i",
+            "parent_option_value": "lenovo",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1275,6 +1275,38 @@
         "depends_on": "brand",
         "options": [
           {
+            "value": "galaxy_s23",
+            "label": "Galaxy S23",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "oneplus_12",
+            "label": "OnePlus 12",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "redmi_note_13",
+            "label": "Redmi Note 13",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "p50",
+            "label": "P50",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
             "value": "iphone_13",
             "label": "iPhone 13",
             "parent_option_value": "apple",
@@ -1286,14 +1318,6 @@
             "value": "moto_g84",
             "label": "Moto G84",
             "parent_option_value": "motorola",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "galaxy_s23",
-            "label": "Galaxy S23",
-            "parent_option_value": "samsung",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -1329,62 +1353,6 @@
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
-          },
-          {
-            "value": "oneplus_12",
-            "label": "OnePlus 12",
-            "parent_option_value": "oneplus",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "p50",
-            "label": "P50",
-            "parent_option_value": "huawei",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "redmi_note_13",
-            "label": "Redmi Note 13",
-            "parent_option_value": "xiaomi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "iphone_14",
-            "label": "iPhone 14",
-            "parent_option_value": "apple",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "edge_40",
-            "label": "Edge 40",
-            "parent_option_value": "motorola",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "c32",
-            "label": "C32",
-            "parent_option_value": "nokia",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "gt_5",
-            "label": "GT 5",
-            "parent_option_value": "realme",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
           },
           {
             "value": "reno_11",
@@ -1430,6 +1398,38 @@
             "value": "galaxy_s24",
             "label": "Galaxy S24",
             "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "iphone_14",
+            "label": "iPhone 14",
+            "parent_option_value": "apple",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "edge_40",
+            "label": "Edge 40",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "c32",
+            "label": "C32",
+            "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "gt_5",
+            "label": "GT 5",
+            "parent_option_value": "realme",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -1515,49 +1515,9 @@
             "position": 2
           },
           {
-            "value": "iphone_15_pro",
-            "label": "iPhone 15 Pro",
-            "parent_option_value": "apple",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "galaxy_a54",
-            "label": "Galaxy A54",
-            "parent_option_value": "samsung",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "redmi_12",
-            "label": "Redmi 12",
-            "parent_option_value": "xiaomi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
             "value": "mate_60_pro",
             "label": "Mate 60 Pro",
             "parent_option_value": "huawei",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "oneplus_12r",
-            "label": "OnePlus 12R",
-            "parent_option_value": "oneplus",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "pixel_9",
-            "label": "Pixel 9",
-            "parent_option_value": "google",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1571,9 +1531,41 @@
             "position": 3
           },
           {
+            "value": "edge_50_pro",
+            "label": "Edge 50 Pro",
+            "parent_option_value": "motorola",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "oneplus_12r",
+            "label": "OnePlus 12R",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "galaxy_a54",
+            "label": "Galaxy A54",
+            "parent_option_value": "samsung",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
             "value": "11_pro_plus",
             "label": "11 Pro+",
             "parent_option_value": "realme",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "iphone_15_pro",
+            "label": "iPhone 15 Pro",
+            "parent_option_value": "apple",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1587,17 +1579,25 @@
             "position": 3
           },
           {
-            "value": "edge_50_pro",
-            "label": "Edge 50 Pro",
-            "parent_option_value": "motorola",
+            "value": "pixel_9",
+            "label": "Pixel 9",
+            "parent_option_value": "google",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
           },
           {
-            "value": "iphone_16",
-            "label": "iPhone 16",
-            "parent_option_value": "apple",
+            "value": "redmi_12",
+            "label": "Redmi 12",
+            "parent_option_value": "xiaomi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "p40_lite",
+            "label": "P40 Lite",
+            "parent_option_value": "huawei",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -1611,17 +1611,9 @@
             "position": 4
           },
           {
-            "value": "poco_m6_pro",
-            "label": "Poco M6 Pro",
-            "parent_option_value": "xiaomi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "p40_lite",
-            "label": "P40 Lite",
-            "parent_option_value": "huawei",
+            "value": "iphone_16",
+            "label": "iPhone 16",
+            "parent_option_value": "apple",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -1662,6 +1654,14 @@
             "value": "g60",
             "label": "G60",
             "parent_option_value": "nokia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "poco_m6_pro",
+            "label": "Poco M6 Pro",
+            "parent_option_value": "xiaomi",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -2098,17 +2098,17 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "matepad_11",
-            "label": "MatePad 11",
-            "parent_option_value": "huawei",
+            "value": "pad",
+            "label": "OnePlus Pad",
+            "parent_option_value": "oneplus",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
           },
           {
-            "value": "tab_s9",
-            "label": "Galaxy Tab S9",
-            "parent_option_value": "samsung",
+            "value": "matepad_11",
+            "label": "MatePad 11",
+            "parent_option_value": "huawei",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -2122,9 +2122,9 @@
             "position": 0
           },
           {
-            "value": "pad",
-            "label": "OnePlus Pad",
-            "parent_option_value": "oneplus",
+            "value": "tab_s9",
+            "label": "Galaxy Tab S9",
+            "parent_option_value": "samsung",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -2138,22 +2138,6 @@
             "position": 0
           },
           {
-            "value": "matepad_pro_13",
-            "label": "MatePad Pro 13.2\"",
-            "parent_option_value": "huawei",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "tab_a8",
-            "label": "Galaxy Tab A8",
-            "parent_option_value": "samsung",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
             "value": "pad_go",
             "label": "OnePlus Pad Go",
             "parent_option_value": "oneplus",
@@ -2162,9 +2146,9 @@
             "position": 1
           },
           {
-            "value": "ipad_pro_11_m4",
-            "label": "iPad Pro 11\" M4",
-            "parent_option_value": "apple",
+            "value": "matepad_pro_13",
+            "label": "MatePad Pro 13.2\"",
+            "parent_option_value": "huawei",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -2178,20 +2162,20 @@
             "position": 1
           },
           {
-            "value": "matepad_t10s",
-            "label": "MatePad T10s",
-            "parent_option_value": "huawei",
+            "value": "tab_a8",
+            "label": "Galaxy Tab A8",
+            "parent_option_value": "samsung",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 2
+            "position": 1
           },
           {
-            "value": "pad_2",
-            "label": "OnePlus Pad 2",
-            "parent_option_value": "oneplus",
+            "value": "ipad_pro_11_m4",
+            "label": "iPad Pro 11\" M4",
+            "parent_option_value": "apple",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 2
+            "position": 1
           },
           {
             "value": "ipad_10",
@@ -2218,9 +2202,25 @@
             "position": 2
           },
           {
-            "value": "redmi_pad_2",
-            "label": "Redmi Pad 2",
-            "parent_option_value": "xiaomi",
+            "value": "matepad_t10s",
+            "label": "MatePad T10s",
+            "parent_option_value": "huawei",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "pad_2",
+            "label": "OnePlus Pad 2",
+            "parent_option_value": "oneplus",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "ipad_mini_6",
+            "label": "iPad Mini 6",
+            "parent_option_value": "apple",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -2234,9 +2234,9 @@
             "position": 3
           },
           {
-            "value": "pad_pro",
-            "label": "OnePlus Pad Pro",
-            "parent_option_value": "oneplus",
+            "value": "redmi_pad_2",
+            "label": "Redmi Pad 2",
+            "parent_option_value": "xiaomi",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -2250,9 +2250,9 @@
             "position": 3
           },
           {
-            "value": "ipad_mini_6",
-            "label": "iPad Mini 6",
-            "parent_option_value": "apple",
+            "value": "pad_pro",
+            "label": "OnePlus Pad Pro",
+            "parent_option_value": "oneplus",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3

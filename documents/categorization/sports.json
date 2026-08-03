@@ -87,9 +87,9 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "contend",
-            "label": "Contend",
-            "parent_option_value": "giant",
+            "value": "fx",
+            "label": "FX",
+            "parent_option_value": "trek",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -98,6 +98,14 @@
             "value": "quick",
             "label": "Quick",
             "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "contend",
+            "label": "Contend",
+            "parent_option_value": "giant",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -135,12 +143,12 @@
             "position": 0
           },
           {
-            "value": "fx",
-            "label": "FX",
+            "value": "marlin",
+            "label": "Marlin",
             "parent_option_value": "trek",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 0
+            "position": 1
           },
           {
             "value": "defy",
@@ -191,49 +199,9 @@
             "position": 1
           },
           {
-            "value": "marlin",
-            "label": "Marlin",
-            "parent_option_value": "trek",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "topstone",
-            "label": "Topstone",
-            "parent_option_value": "cannondale",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "scultura",
-            "label": "Scultura",
-            "parent_option_value": "merida",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "aspect",
-            "label": "Aspect",
-            "parent_option_value": "scott",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "oltre_xr4",
-            "label": "Oltre XR4",
-            "parent_option_value": "bianchi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "stumpjumper",
-            "label": "Stumpjumper",
-            "parent_option_value": "specialized",
+            "value": "tcx",
+            "label": "TCX",
+            "parent_option_value": "giant",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 2
@@ -247,28 +215,44 @@
             "position": 2
           },
           {
-            "value": "tcx",
-            "label": "TCX",
-            "parent_option_value": "giant",
+            "value": "stumpjumper",
+            "label": "Stumpjumper",
+            "parent_option_value": "specialized",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 2
           },
           {
-            "value": "anthem",
-            "label": "Anthem",
-            "parent_option_value": "giant",
+            "value": "oltre_xr4",
+            "label": "Oltre XR4",
+            "parent_option_value": "bianchi",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
           },
           {
-            "value": "emonda",
-            "label": "Émonda",
-            "parent_option_value": "trek",
+            "value": "aspect",
+            "label": "Aspect",
+            "parent_option_value": "scott",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
+          },
+          {
+            "value": "scultura",
+            "label": "Scultura",
+            "parent_option_value": "merida",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "topstone",
+            "label": "Topstone",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
           },
           {
             "value": "roubaix",
@@ -287,9 +271,17 @@
             "position": 3
           },
           {
-            "value": "contessa",
-            "label": "Contessa",
-            "parent_option_value": "scott",
+            "value": "supersix_evo",
+            "label": "SuperSix EVO",
+            "parent_option_value": "cannondale",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "emonda",
+            "label": "Émonda",
+            "parent_option_value": "trek",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -303,41 +295,25 @@
             "position": 3
           },
           {
-            "value": "supersix_evo",
-            "label": "SuperSix EVO",
-            "parent_option_value": "cannondale",
+            "value": "anthem",
+            "label": "Anthem",
+            "parent_option_value": "giant",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
           },
           {
-            "value": "trance",
-            "label": "Trance",
-            "parent_option_value": "giant",
+            "value": "contessa",
+            "label": "Contessa",
+            "parent_option_value": "scott",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "checkpoint",
-            "label": "Checkpoint",
-            "parent_option_value": "trek",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "rockhopper",
-            "label": "Rockhopper",
-            "parent_option_value": "specialized",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "impulso",
-            "label": "Impulso",
-            "parent_option_value": "bianchi",
+            "value": "synapse",
+            "label": "Synapse",
+            "parent_option_value": "cannondale",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -351,6 +327,22 @@
             "position": 4
           },
           {
+            "value": "impulso",
+            "label": "Impulso",
+            "parent_option_value": "bianchi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "rockhopper",
+            "label": "Rockhopper",
+            "parent_option_value": "specialized",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
             "value": "reacto",
             "label": "Reacto",
             "parent_option_value": "merida",
@@ -359,9 +351,17 @@
             "position": 4
           },
           {
-            "value": "synapse",
-            "label": "Synapse",
-            "parent_option_value": "cannondale",
+            "value": "checkpoint",
+            "label": "Checkpoint",
+            "parent_option_value": "trek",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "trance",
+            "label": "Trance",
+            "parent_option_value": "giant",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4

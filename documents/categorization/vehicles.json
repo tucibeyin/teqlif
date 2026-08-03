@@ -263,62 +263,6 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "911",
-            "label": "911",
-            "parent_option_value": "porsche",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "a3",
-            "label": "A3",
-            "parent_option_value": "audi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "ibiza",
-            "label": "Ibiza",
-            "parent_option_value": "seat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "t10x",
-            "label": "T10X",
-            "parent_option_value": "togg",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "cx_5",
-            "label": "CX-5",
-            "parent_option_value": "mazda",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "captiva",
-            "label": "Captiva",
-            "parent_option_value": "chevrolet",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "c3",
-            "label": "C3",
-            "parent_option_value": "citroen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "208",
             "label": "208",
             "parent_option_value": "peugeot",
@@ -327,33 +271,9 @@
             "position": 0
           },
           {
-            "value": "sportage",
-            "label": "Sportage",
-            "parent_option_value": "kia",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "golf",
-            "label": "Golf",
-            "parent_option_value": "volkswagen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "fabia",
-            "label": "Fabia",
-            "parent_option_value": "skoda",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "xc40",
-            "label": "XC40",
-            "parent_option_value": "volvo",
+            "value": "911",
+            "label": "911",
+            "parent_option_value": "porsche",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -367,9 +287,105 @@
             "position": 0
           },
           {
+            "value": "ibiza",
+            "label": "Ibiza",
+            "parent_option_value": "seat",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "captiva",
+            "label": "Captiva",
+            "parent_option_value": "chevrolet",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "fabia",
+            "label": "Fabia",
+            "parent_option_value": "skoda",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "forester",
+            "label": "Forester",
+            "parent_option_value": "subaru",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "c3",
+            "label": "C3",
+            "parent_option_value": "citroen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "model_3",
+            "label": "Model 3",
+            "parent_option_value": "tesla",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "t10x",
+            "label": "T10X",
+            "parent_option_value": "togg",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "corolla",
+            "label": "Corolla",
+            "parent_option_value": "toyota",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "renegade",
+            "label": "Renegade",
+            "parent_option_value": "jeep",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "defender",
+            "label": "Defender",
+            "parent_option_value": "land_rover",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "golf",
+            "label": "Golf",
+            "parent_option_value": "volkswagen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
             "value": "duster",
             "label": "Duster",
             "parent_option_value": "dacia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "xc40",
+            "label": "XC40",
+            "parent_option_value": "volvo",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -407,33 +423,9 @@
             "position": 0
           },
           {
-            "value": "astra",
-            "label": "Astra",
-            "parent_option_value": "opel",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "model_3",
-            "label": "Model 3",
-            "parent_option_value": "tesla",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "forester",
-            "label": "Forester",
-            "parent_option_value": "subaru",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "i20",
-            "label": "i20",
-            "parent_option_value": "hyundai",
+            "value": "cx_5",
+            "label": "CX-5",
+            "parent_option_value": "mazda",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -455,9 +447,9 @@
             "position": 0
           },
           {
-            "value": "defender",
-            "label": "Defender",
-            "parent_option_value": "land_rover",
+            "value": "sportage",
+            "label": "Sportage",
+            "parent_option_value": "kia",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -471,14 +463,6 @@
             "position": 0
           },
           {
-            "value": "renegade",
-            "label": "Renegade",
-            "parent_option_value": "jeep",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "civic",
             "label": "Civic",
             "parent_option_value": "honda",
@@ -487,20 +471,28 @@
             "position": 0
           },
           {
-            "value": "corolla",
-            "label": "Corolla",
-            "parent_option_value": "toyota",
+            "value": "a3",
+            "label": "A3",
+            "parent_option_value": "audi",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
           },
           {
-            "value": "octavia",
-            "label": "Octavia",
-            "parent_option_value": "skoda",
+            "value": "astra",
+            "label": "Astra",
+            "parent_option_value": "opel",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 1
+            "position": 0
+          },
+          {
+            "value": "i20",
+            "label": "i20",
+            "parent_option_value": "hyundai",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
           },
           {
             "value": "i30",
@@ -527,22 +519,6 @@
             "position": 1
           },
           {
-            "value": "t10f",
-            "label": "T10F",
-            "parent_option_value": "togg",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "eclipse_cross",
-            "label": "Eclipse Cross",
-            "parent_option_value": "mitsubishi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
             "value": "discovery",
             "label": "Discovery",
             "parent_option_value": "land_rover",
@@ -559,9 +535,41 @@
             "position": 1
           },
           {
-            "value": "yaris",
-            "label": "Yaris",
-            "parent_option_value": "toyota",
+            "value": "eclipse_cross",
+            "label": "Eclipse Cross",
+            "parent_option_value": "mitsubishi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "juke",
+            "label": "Juke",
+            "parent_option_value": "nissan",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "corsa",
+            "label": "Corsa",
+            "parent_option_value": "opel",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "308",
+            "label": "308",
+            "parent_option_value": "peugeot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "cayenne",
+            "label": "Cayenne",
+            "parent_option_value": "porsche",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -570,6 +578,54 @@
             "value": "megane",
             "label": "Megane",
             "parent_option_value": "renault",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "leon",
+            "label": "Leon",
+            "parent_option_value": "seat",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "octavia",
+            "label": "Octavia",
+            "parent_option_value": "skoda",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "outback",
+            "label": "Outback",
+            "parent_option_value": "subaru",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "model_y",
+            "label": "Model Y",
+            "parent_option_value": "tesla",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "t10f",
+            "label": "T10F",
+            "parent_option_value": "togg",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "yaris",
+            "label": "Yaris",
+            "parent_option_value": "toyota",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -599,14 +655,6 @@
             "position": 1
           },
           {
-            "value": "leon",
-            "label": "Leon",
-            "parent_option_value": "seat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
             "value": "c_series",
             "label": "C Serisi",
             "parent_option_value": "mercedes",
@@ -623,33 +671,9 @@
             "position": 1
           },
           {
-            "value": "cayenne",
-            "label": "Cayenne",
-            "parent_option_value": "porsche",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "outback",
-            "label": "Outback",
-            "parent_option_value": "subaru",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
             "value": "a4",
             "label": "A4",
             "parent_option_value": "audi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "308",
-            "label": "308",
-            "parent_option_value": "peugeot",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -679,33 +703,9 @@
             "position": 1
           },
           {
-            "value": "corsa",
-            "label": "Corsa",
-            "parent_option_value": "opel",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
             "value": "panda",
             "label": "Panda",
             "parent_option_value": "fiat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "model_y",
-            "label": "Model Y",
-            "parent_option_value": "tesla",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "juke",
-            "label": "Juke",
-            "parent_option_value": "nissan",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -725,70 +725,6 @@
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
-          },
-          {
-            "value": "karoq",
-            "label": "Karoq",
-            "parent_option_value": "skoda",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "xv",
-            "label": "XV",
-            "parent_option_value": "subaru",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "model_s",
-            "label": "Model S",
-            "parent_option_value": "tesla",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "yaris_cross",
-            "label": "Yaris Cross",
-            "parent_option_value": "toyota",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "polo",
-            "label": "Polo",
-            "parent_option_value": "volkswagen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "xc90",
-            "label": "XC90",
-            "parent_option_value": "volvo",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "5_series",
-            "label": "5 Serisi",
-            "parent_option_value": "bmw",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
-          },
-          {
-            "value": "e_series",
-            "label": "E Serisi",
-            "parent_option_value": "mercedes",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
           },
           {
             "value": "giulietta",
@@ -951,113 +887,73 @@
             "position": 2
           },
           {
-            "value": "l200",
-            "label": "L200",
-            "parent_option_value": "mitsubishi",
+            "value": "karoq",
+            "label": "Karoq",
+            "parent_option_value": "skoda",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
           },
           {
-            "value": "kadjar",
-            "label": "Kadjar",
-            "parent_option_value": "renault",
+            "value": "xv",
+            "label": "XV",
+            "parent_option_value": "subaru",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
           },
           {
-            "value": "puma",
-            "label": "Puma",
-            "parent_option_value": "ford",
+            "value": "model_s",
+            "label": "Model S",
+            "parent_option_value": "tesla",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 3
+            "position": 2
+          },
+          {
+            "value": "yaris_cross",
+            "label": "Yaris Cross",
+            "parent_option_value": "toyota",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "polo",
+            "label": "Polo",
+            "parent_option_value": "volkswagen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "xc90",
+            "label": "XC90",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "5_series",
+            "label": "5 Serisi",
+            "parent_option_value": "bmw",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
+            "value": "e_series",
+            "label": "E Serisi",
+            "parent_option_value": "mercedes",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
           },
           {
             "value": "x_trail",
             "label": "X-Trail",
             "parent_option_value": "nissan",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "tipo",
-            "label": "Tipo",
-            "parent_option_value": "fiat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "jogger",
-            "label": "Jogger",
-            "parent_option_value": "dacia",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "crossland",
-            "label": "Crossland",
-            "parent_option_value": "opel",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "c5_aircross",
-            "label": "C5 Aircross",
-            "parent_option_value": "citroen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "impreza",
-            "label": "Impreza",
-            "parent_option_value": "subaru",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "spark",
-            "label": "Spark",
-            "parent_option_value": "chevrolet",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "x3",
-            "label": "X3",
-            "parent_option_value": "bmw",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "q3",
-            "label": "Q3",
-            "parent_option_value": "audi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "3008",
-            "label": "3008",
-            "parent_option_value": "peugeot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "ateca",
-            "label": "Ateca",
-            "parent_option_value": "seat",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1071,17 +967,49 @@
             "position": 3
           },
           {
-            "value": "panamera",
-            "label": "Panamera",
-            "parent_option_value": "porsche",
+            "value": "kodiaq",
+            "label": "Kodiaq",
+            "parent_option_value": "skoda",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
           },
           {
-            "value": "s60",
-            "label": "S60",
-            "parent_option_value": "volvo",
+            "value": "l200",
+            "label": "L200",
+            "parent_option_value": "mitsubishi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "x3",
+            "label": "X3",
+            "parent_option_value": "bmw",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "jogger",
+            "label": "Jogger",
+            "parent_option_value": "dacia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "glc",
+            "label": "GLC",
+            "parent_option_value": "mercedes",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tipo",
+            "label": "Tipo",
+            "parent_option_value": "fiat",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1103,65 +1031,9 @@
             "position": 3
           },
           {
-            "value": "discovery_sport",
-            "label": "Discovery Sport",
-            "parent_option_value": "land_rover",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "rav4",
-            "label": "RAV4",
-            "parent_option_value": "toyota",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "glc",
-            "label": "GLC",
-            "parent_option_value": "mercedes",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "rio",
-            "label": "Rio",
-            "parent_option_value": "kia",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "kodiaq",
-            "label": "Kodiaq",
-            "parent_option_value": "skoda",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "cherokee",
-            "label": "Cherokee",
-            "parent_option_value": "jeep",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "kona",
-            "label": "Kona",
-            "parent_option_value": "hyundai",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "model_x",
-            "label": "Model X",
-            "parent_option_value": "tesla",
+            "value": "c5_aircross",
+            "label": "C5 Aircross",
+            "parent_option_value": "citroen",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -1175,33 +1047,193 @@
             "position": 3
           },
           {
-            "value": "156",
-            "label": "156",
-            "parent_option_value": "alfa_romeo",
+            "value": "3008",
+            "label": "3008",
+            "parent_option_value": "peugeot",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "q5",
-            "label": "Q5",
+            "value": "discovery_sport",
+            "label": "Discovery Sport",
+            "parent_option_value": "land_rover",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "ateca",
+            "label": "Ateca",
+            "parent_option_value": "seat",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "rav4",
+            "label": "RAV4",
+            "parent_option_value": "toyota",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "spark",
+            "label": "Spark",
+            "parent_option_value": "chevrolet",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "q3",
+            "label": "Q3",
             "parent_option_value": "audi",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "x5",
-            "label": "X5",
-            "parent_option_value": "bmw",
+            "value": "rio",
+            "label": "Rio",
+            "parent_option_value": "kia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "kona",
+            "label": "Kona",
+            "parent_option_value": "hyundai",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "kadjar",
+            "label": "Kadjar",
+            "parent_option_value": "renault",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "cherokee",
+            "label": "Cherokee",
+            "parent_option_value": "jeep",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "crossland",
+            "label": "Crossland",
+            "parent_option_value": "opel",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "puma",
+            "label": "Puma",
+            "parent_option_value": "ford",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "model_x",
+            "label": "Model X",
+            "parent_option_value": "tesla",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "impreza",
+            "label": "Impreza",
+            "parent_option_value": "subaru",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "panamera",
+            "label": "Panamera",
+            "parent_option_value": "porsche",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "s60",
+            "label": "S60",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "symbol",
+            "label": "Symbol",
+            "parent_option_value": "renault",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
           },
           {
-            "value": "orlando",
-            "label": "Orlando",
-            "parent_option_value": "chevrolet",
+            "value": "tarraco",
+            "label": "Tarraco",
+            "parent_option_value": "seat",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "v60",
+            "label": "V60",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "t_roc",
+            "label": "T-Roc",
+            "parent_option_value": "volkswagen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "c_hr",
+            "label": "C-HR",
+            "parent_option_value": "toyota",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "cybertruck",
+            "label": "Cybertruck",
+            "parent_option_value": "tesla",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "superb",
+            "label": "Superb",
+            "parent_option_value": "skoda",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "legacy",
+            "label": "Legacy",
+            "parent_option_value": "subaru",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -1215,9 +1247,33 @@
             "position": 4
           },
           {
+            "value": "x5",
+            "label": "X5",
+            "parent_option_value": "bmw",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
             "value": "spring",
             "label": "Spring",
             "parent_option_value": "dacia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "q5",
+            "label": "Q5",
+            "parent_option_value": "audi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "156",
+            "label": "156",
+            "parent_option_value": "alfa_romeo",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -1234,6 +1290,14 @@
             "value": "transit_custom",
             "label": "Transit Custom",
             "parent_option_value": "ford",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "orlando",
+            "label": "Orlando",
+            "parent_option_value": "chevrolet",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -1330,70 +1394,6 @@
             "value": "taycan",
             "label": "Taycan",
             "parent_option_value": "porsche",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "symbol",
-            "label": "Symbol",
-            "parent_option_value": "renault",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "tarraco",
-            "label": "Tarraco",
-            "parent_option_value": "seat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "superb",
-            "label": "Superb",
-            "parent_option_value": "skoda",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "legacy",
-            "label": "Legacy",
-            "parent_option_value": "subaru",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "cybertruck",
-            "label": "Cybertruck",
-            "parent_option_value": "tesla",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "c_hr",
-            "label": "C-HR",
-            "parent_option_value": "toyota",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "t_roc",
-            "label": "T-Roc",
-            "parent_option_value": "volkswagen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "v60",
-            "label": "V60",
-            "parent_option_value": "volvo",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -2447,6 +2447,22 @@
             "position": 2
           },
           {
+            "value": "i5",
+            "label": "i5",
+            "parent_option_value": "bmw",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "model_x",
+            "label": "Model X",
+            "parent_option_value": "tesla",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
             "value": "e3008",
             "label": "e-3008",
             "parent_option_value": "peugeot",
@@ -2519,89 +2535,9 @@
             "position": 3
           },
           {
-            "value": "i5",
-            "label": "i5",
-            "parent_option_value": "bmw",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "model_x",
-            "label": "Model X",
-            "parent_option_value": "tesla",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "cybertruck",
-            "label": "Cybertruck",
-            "parent_option_value": "tesla",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "i3",
-            "label": "i3",
-            "parent_option_value": "bmw",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "q6_etron",
-            "label": "Q6 e-tron",
-            "parent_option_value": "audi",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "santa_fe_phev",
-            "label": "Santa Fe PHEV",
-            "parent_option_value": "hyundai",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "ev3",
-            "label": "EV3",
-            "parent_option_value": "kia",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "id_buzz",
-            "label": "ID. Buzz",
-            "parent_option_value": "volkswagen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "qashqai_epower",
-            "label": "Qashqai e-POWER",
-            "parent_option_value": "nissan",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "5_etech",
-            "label": "5 E-Tech",
-            "parent_option_value": "renault",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "panamera_e_hybrid",
-            "label": "Panamera E-Hybrid",
-            "parent_option_value": "porsche",
+            "value": "e_expert",
+            "label": "e-Expert",
+            "parent_option_value": "peugeot",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -2615,9 +2551,73 @@
             "position": 4
           },
           {
-            "value": "e_expert",
-            "label": "e-Expert",
-            "parent_option_value": "peugeot",
+            "value": "panamera_e_hybrid",
+            "label": "Panamera E-Hybrid",
+            "parent_option_value": "porsche",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "5_etech",
+            "label": "5 E-Tech",
+            "parent_option_value": "renault",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "qashqai_epower",
+            "label": "Qashqai e-POWER",
+            "parent_option_value": "nissan",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "id_buzz",
+            "label": "ID. Buzz",
+            "parent_option_value": "volkswagen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "ev3",
+            "label": "EV3",
+            "parent_option_value": "kia",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "santa_fe_phev",
+            "label": "Santa Fe PHEV",
+            "parent_option_value": "hyundai",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "q6_etron",
+            "label": "Q6 e-tron",
+            "parent_option_value": "audi",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "i3",
+            "label": "i3",
+            "parent_option_value": "bmw",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "cybertruck",
+            "label": "Cybertruck",
+            "parent_option_value": "tesla",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -3382,73 +3382,9 @@
             "position": 3
           },
           {
-            "value": "cb125r",
-            "label": "CB125R",
-            "parent_option_value": "honda",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "tracer_9",
-            "label": "Tracer 9",
-            "parent_option_value": "yamaha",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "ninja_zx10r",
-            "label": "Ninja ZX-10R",
-            "parent_option_value": "kawasaki",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "burgman_400",
-            "label": "Burgman 400",
-            "parent_option_value": "suzuki",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "s1000xr",
-            "label": "S 1000 XR",
-            "parent_option_value": "bmw",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "supersport_950",
-            "label": "SuperSport 950",
-            "parent_option_value": "ducati",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "pan_america",
-            "label": "Pan America 1250",
-            "parent_option_value": "harley",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "hunter_350",
-            "label": "Hunter 350",
-            "parent_option_value": "royal_enfield",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "super_duke_r",
-            "label": "1290 Super Duke R",
-            "parent_option_value": "ktm",
+            "value": "sr_gt",
+            "label": "SR GT",
+            "parent_option_value": "aprilia",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -3462,9 +3398,73 @@
             "position": 4
           },
           {
-            "value": "sr_gt",
-            "label": "SR GT",
-            "parent_option_value": "aprilia",
+            "value": "super_duke_r",
+            "label": "1290 Super Duke R",
+            "parent_option_value": "ktm",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "hunter_350",
+            "label": "Hunter 350",
+            "parent_option_value": "royal_enfield",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "pan_america",
+            "label": "Pan America 1250",
+            "parent_option_value": "harley",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "supersport_950",
+            "label": "SuperSport 950",
+            "parent_option_value": "ducati",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "s1000xr",
+            "label": "S 1000 XR",
+            "parent_option_value": "bmw",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "burgman_400",
+            "label": "Burgman 400",
+            "parent_option_value": "suzuki",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "ninja_zx10r",
+            "label": "Ninja ZX-10R",
+            "parent_option_value": "kawasaki",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "tracer_9",
+            "label": "Tracer 9",
+            "parent_option_value": "yamaha",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "cb125r",
+            "label": "CB125R",
+            "parent_option_value": "honda",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -3912,9 +3912,9 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "b_series",
-            "label": "B Serisi",
-            "parent_option_value": "kubota",
+            "value": "5075e",
+            "label": "5075E",
+            "parent_option_value": "john_deere",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -3928,17 +3928,9 @@
             "position": 0
           },
           {
-            "value": "5075e",
-            "label": "5075E",
-            "parent_option_value": "john_deere",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "mf4700",
-            "label": "4700 Serisi",
-            "parent_option_value": "massey_ferguson",
+            "value": "b_series",
+            "label": "B Serisi",
+            "parent_option_value": "kubota",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -3952,14 +3944,6 @@
             "position": 0
           },
           {
-            "value": "200_vario",
-            "label": "200 Vario",
-            "parent_option_value": "fendt",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "farmall_a",
             "label": "Farmall A",
             "parent_option_value": "case",
@@ -3968,25 +3952,25 @@
             "position": 0
           },
           {
-            "value": "t6",
-            "label": "T6",
-            "parent_option_value": "new_holland",
+            "value": "200_vario",
+            "label": "200 Vario",
+            "parent_option_value": "fendt",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 1
+            "position": 0
+          },
+          {
+            "value": "mf4700",
+            "label": "4700 Serisi",
+            "parent_option_value": "massey_ferguson",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
           },
           {
             "value": "l_series",
             "label": "L Serisi",
             "parent_option_value": "kubota",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "5090r",
-            "label": "5090R",
-            "parent_option_value": "john_deere",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -4000,9 +3984,9 @@
             "position": 1
           },
           {
-            "value": "mf5700",
-            "label": "5700 Serisi",
-            "parent_option_value": "massey_ferguson",
+            "value": "farmall_c",
+            "label": "Farmall C",
+            "parent_option_value": "case",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -4016,9 +4000,25 @@
             "position": 1
           },
           {
-            "value": "farmall_c",
-            "label": "Farmall C",
-            "parent_option_value": "case",
+            "value": "mf5700",
+            "label": "5700 Serisi",
+            "parent_option_value": "massey_ferguson",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "5090r",
+            "label": "5090R",
+            "parent_option_value": "john_deere",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "t6",
+            "label": "T6",
+            "parent_option_value": "new_holland",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -4080,41 +4080,9 @@
             "position": 2
           },
           {
-            "value": "700_vario",
-            "label": "700 Vario",
-            "parent_option_value": "fendt",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "puma",
-            "label": "Puma",
-            "parent_option_value": "case",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "mf7700",
-            "label": "7700 Serisi",
-            "parent_option_value": "massey_ferguson",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
             "value": "6130r",
             "label": "6130R",
             "parent_option_value": "john_deere",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "90hp",
-            "label": "90 HP",
-            "parent_option_value": "tumosan",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -4136,41 +4104,41 @@
             "position": 3
           },
           {
-            "value": "td5",
-            "label": "TD5",
-            "parent_option_value": "new_holland",
+            "value": "90hp",
+            "label": "90 HP",
+            "parent_option_value": "tumosan",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "7r",
-            "label": "7R",
-            "parent_option_value": "john_deere",
+            "value": "puma",
+            "label": "Puma",
+            "parent_option_value": "case",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "mf8700",
-            "label": "8700 Serisi",
-            "parent_option_value": "massey_ferguson",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "900_vario",
-            "label": "900 Vario",
+            "value": "700_vario",
+            "label": "700 Vario",
             "parent_option_value": "fendt",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "optum",
-            "label": "Optum",
-            "parent_option_value": "case",
+            "value": "mf7700",
+            "label": "7700 Serisi",
+            "parent_option_value": "massey_ferguson",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "st_series",
+            "label": "ST Serisi",
+            "parent_option_value": "kubota",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -4184,9 +4152,41 @@
             "position": 4
           },
           {
-            "value": "st_series",
-            "label": "ST Serisi",
-            "parent_option_value": "kubota",
+            "value": "optum",
+            "label": "Optum",
+            "parent_option_value": "case",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "900_vario",
+            "label": "900 Vario",
+            "parent_option_value": "fendt",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "mf8700",
+            "label": "8700 Serisi",
+            "parent_option_value": "massey_ferguson",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "7r",
+            "label": "7R",
+            "parent_option_value": "john_deere",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "td5",
+            "label": "TD5",
+            "parent_option_value": "new_holland",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -4409,22 +4409,6 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "sprinter",
-            "label": "Sprinter",
-            "parent_option_value": "mercedes",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "master",
-            "label": "Master",
-            "parent_option_value": "renault",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "vivaro",
             "label": "Vivaro",
             "parent_option_value": "opel",
@@ -4449,17 +4433,17 @@
             "position": 0
           },
           {
-            "value": "daily",
-            "label": "Daily",
-            "parent_option_value": "iveco",
+            "value": "transit_custom",
+            "label": "Transit Custom",
+            "parent_option_value": "ford",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
           },
           {
-            "value": "transit_custom",
-            "label": "Transit Custom",
-            "parent_option_value": "ford",
+            "value": "daily",
+            "label": "Daily",
+            "parent_option_value": "iveco",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -4473,25 +4457,9 @@
             "position": 0
           },
           {
-            "value": "xf",
-            "label": "XF",
-            "parent_option_value": "daf",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "fiorino",
             "label": "Fiorino",
             "parent_option_value": "fiat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "fh",
-            "label": "FH",
-            "parent_option_value": "volvo",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -4505,9 +4473,41 @@
             "position": 0
           },
           {
+            "value": "xf",
+            "label": "XF",
+            "parent_option_value": "daf",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
             "value": "caddy",
             "label": "Caddy",
             "parent_option_value": "volkswagen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "fh",
+            "label": "FH",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "sprinter",
+            "label": "Sprinter",
+            "parent_option_value": "mercedes",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "master",
+            "label": "Master",
+            "parent_option_value": "renault",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -4593,6 +4593,14 @@
             "position": 1
           },
           {
+            "value": "s_series",
+            "label": "S Serisi",
+            "parent_option_value": "scania",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
             "value": "xg",
             "label": "XG",
             "parent_option_value": "daf",
@@ -4607,22 +4615,6 @@
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
-          },
-          {
-            "value": "s_series",
-            "label": "S Serisi",
-            "parent_option_value": "scania",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "fmx",
-            "label": "FMX",
-            "parent_option_value": "volvo",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 2
           },
           {
             "value": "transit_connect",
@@ -4713,6 +4705,14 @@
             "position": 2
           },
           {
+            "value": "fmx",
+            "label": "FMX",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 2
+          },
+          {
             "value": "p_series",
             "label": "P Serisi",
             "parent_option_value": "scania",
@@ -4721,9 +4721,73 @@
             "position": 2
           },
           {
+            "value": "v_klasse",
+            "label": "V-Klasse",
+            "parent_option_value": "mercedes",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "express",
+            "label": "Express",
+            "parent_option_value": "renault",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "zafira_life",
+            "label": "Zafira Life",
+            "parent_option_value": "opel",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "traveller",
+            "label": "Traveller",
+            "parent_option_value": "peugeot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "mu_x",
+            "label": "MU-X",
+            "parent_option_value": "isuzu",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "transit_courier",
+            "label": "Transit Courier",
+            "parent_option_value": "ford",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "s_way",
+            "label": "S-Way",
+            "parent_option_value": "iveco",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
             "value": "g_series",
             "label": "G Serisi",
             "parent_option_value": "scania",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tgs",
+            "label": "TGS",
+            "parent_option_value": "man",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -4745,70 +4809,6 @@
             "position": 3
           },
           {
-            "value": "tgs",
-            "label": "TGS",
-            "parent_option_value": "man",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "s_way",
-            "label": "S-Way",
-            "parent_option_value": "iveco",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "mu_x",
-            "label": "MU-X",
-            "parent_option_value": "isuzu",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "traveller",
-            "label": "Traveller",
-            "parent_option_value": "peugeot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "zafira_life",
-            "label": "Zafira Life",
-            "parent_option_value": "opel",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "express",
-            "label": "Express",
-            "parent_option_value": "renault",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "v_klasse",
-            "label": "V-Klasse",
-            "parent_option_value": "mercedes",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "multivan",
-            "label": "Multivan",
-            "parent_option_value": "volkswagen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
             "value": "scudo",
             "label": "Scudo",
             "parent_option_value": "fiat",
@@ -4817,9 +4817,9 @@
             "position": 3
           },
           {
-            "value": "transit_courier",
-            "label": "Transit Courier",
-            "parent_option_value": "ford",
+            "value": "multivan",
+            "label": "Multivan",
+            "parent_option_value": "volkswagen",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -4897,17 +4897,17 @@
             "position": 4
           },
           {
-            "value": "tgx",
-            "label": "TGX",
-            "parent_option_value": "man",
+            "value": "l_series",
+            "label": "L Serisi",
+            "parent_option_value": "scania",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
           },
           {
-            "value": "xg_plus",
-            "label": "XG+",
-            "parent_option_value": "daf",
+            "value": "tgx",
+            "label": "TGX",
+            "parent_option_value": "man",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -4921,9 +4921,9 @@
             "position": 4
           },
           {
-            "value": "l_series",
-            "label": "L Serisi",
-            "parent_option_value": "scania",
+            "value": "xg_plus",
+            "label": "XG+",
+            "parent_option_value": "daf",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -5230,22 +5230,6 @@
         "depends_on": "brand",
         "options": [
           {
-            "value": "fh",
-            "label": "FH",
-            "parent_option_value": "volvo",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
-            "value": "xf",
-            "label": "XF",
-            "parent_option_value": "daf",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "transit_custom",
             "label": "Transit Custom",
             "parent_option_value": "ford",
@@ -5270,14 +5254,6 @@
             "position": 0
           },
           {
-            "value": "r_series",
-            "label": "R Serisi",
-            "parent_option_value": "scania",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 0
-          },
-          {
             "value": "sprinter",
             "label": "Sprinter",
             "parent_option_value": "mercedes",
@@ -5289,6 +5265,14 @@
             "value": "master",
             "label": "Master",
             "parent_option_value": "renault",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "r_series",
+            "label": "R Serisi",
+            "parent_option_value": "scania",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 0
@@ -5334,6 +5318,38 @@
             "position": 0
           },
           {
+            "value": "xf",
+            "label": "XF",
+            "parent_option_value": "daf",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "fh",
+            "label": "FH",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 0
+          },
+          {
+            "value": "eurocargo",
+            "label": "Eurocargo",
+            "parent_option_value": "iveco",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
+            "value": "tgl",
+            "label": "TGL",
+            "parent_option_value": "man",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 1
+          },
+          {
             "value": "xg",
             "label": "XG",
             "parent_option_value": "daf",
@@ -5353,14 +5369,6 @@
             "value": "s_series",
             "label": "S Serisi",
             "parent_option_value": "scania",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "tgl",
-            "label": "TGL",
-            "parent_option_value": "man",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -5425,14 +5433,6 @@
             "value": "n_series",
             "label": "N-Series",
             "parent_option_value": "isuzu",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 1
-          },
-          {
-            "value": "eurocargo",
-            "label": "Eurocargo",
-            "parent_option_value": "iveco",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 1
@@ -5542,97 +5542,9 @@
             "position": 2
           },
           {
-            "value": "tgs",
-            "label": "TGS",
-            "parent_option_value": "man",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "s_way",
-            "label": "S-Way",
-            "parent_option_value": "iveco",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "mu_x",
-            "label": "MU-X",
-            "parent_option_value": "isuzu",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "traveller",
-            "label": "Traveller",
-            "parent_option_value": "peugeot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "zafira_life",
-            "label": "Zafira Life",
-            "parent_option_value": "opel",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "express",
-            "label": "Express",
-            "parent_option_value": "renault",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
             "value": "v_klasse",
             "label": "V-Klasse",
             "parent_option_value": "mercedes",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "multivan",
-            "label": "Multivan",
-            "parent_option_value": "volkswagen",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "scudo",
-            "label": "Scudo",
-            "parent_option_value": "fiat",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "transit_courier",
-            "label": "Transit Courier",
-            "parent_option_value": "ford",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "g_series",
-            "label": "G Serisi",
-            "parent_option_value": "scania",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 3
-          },
-          {
-            "value": "fl",
-            "label": "FL",
-            "parent_option_value": "volvo",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 3
@@ -5646,17 +5558,97 @@
             "position": 3
           },
           {
-            "value": "tourneo",
-            "label": "Tourneo",
+            "value": "s_way",
+            "label": "S-Way",
+            "parent_option_value": "iveco",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "g_series",
+            "label": "G Serisi",
+            "parent_option_value": "scania",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "mu_x",
+            "label": "MU-X",
+            "parent_option_value": "isuzu",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "multivan",
+            "label": "Multivan",
+            "parent_option_value": "volkswagen",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "zafira_life",
+            "label": "Zafira Life",
+            "parent_option_value": "opel",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "scudo",
+            "label": "Scudo",
+            "parent_option_value": "fiat",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "traveller",
+            "label": "Traveller",
+            "parent_option_value": "peugeot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "tgs",
+            "label": "TGS",
+            "parent_option_value": "man",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "express",
+            "label": "Express",
+            "parent_option_value": "renault",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "transit_courier",
+            "label": "Transit Courier",
             "parent_option_value": "ford",
             "exclusion_group": null,
             "is_exclusive": false,
-            "position": 4
+            "position": 3
           },
           {
-            "value": "talento",
-            "label": "Talento",
-            "parent_option_value": "fiat",
+            "value": "fl",
+            "label": "FL",
+            "parent_option_value": "volvo",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 3
+          },
+          {
+            "value": "citan",
+            "label": "Citan",
+            "parent_option_value": "mercedes",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -5670,57 +5662,17 @@
             "position": 4
           },
           {
-            "value": "citan",
-            "label": "Citan",
-            "parent_option_value": "mercedes",
+            "value": "l_series",
+            "label": "L Serisi",
+            "parent_option_value": "scania",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
           },
           {
-            "value": "rapid",
-            "label": "Rapid",
-            "parent_option_value": "renault",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "crossland_cargo",
-            "label": "Crossland Cargo",
-            "parent_option_value": "opel",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "e_expert",
-            "label": "e-Expert",
-            "parent_option_value": "peugeot",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "elf",
-            "label": "Elf",
-            "parent_option_value": "isuzu",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "hi_way",
-            "label": "Hi-Way",
-            "parent_option_value": "iveco",
-            "exclusion_group": null,
-            "is_exclusive": false,
-            "position": 4
-          },
-          {
-            "value": "tgx",
-            "label": "TGX",
-            "parent_option_value": "man",
+            "value": "talento",
+            "label": "Talento",
+            "parent_option_value": "fiat",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
@@ -5734,6 +5686,14 @@
             "position": 4
           },
           {
+            "value": "tourneo",
+            "label": "Tourneo",
+            "parent_option_value": "ford",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
             "value": "fe",
             "label": "FE",
             "parent_option_value": "volvo",
@@ -5742,9 +5702,49 @@
             "position": 4
           },
           {
-            "value": "l_series",
-            "label": "L Serisi",
-            "parent_option_value": "scania",
+            "value": "tgx",
+            "label": "TGX",
+            "parent_option_value": "man",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "hi_way",
+            "label": "Hi-Way",
+            "parent_option_value": "iveco",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "elf",
+            "label": "Elf",
+            "parent_option_value": "isuzu",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "e_expert",
+            "label": "e-Expert",
+            "parent_option_value": "peugeot",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "crossland_cargo",
+            "label": "Crossland Cargo",
+            "parent_option_value": "opel",
+            "exclusion_group": null,
+            "is_exclusive": false,
+            "position": 4
+          },
+          {
+            "value": "rapid",
+            "label": "Rapid",
+            "parent_option_value": "renault",
             "exclusion_group": null,
             "is_exclusive": false,
             "position": 4
