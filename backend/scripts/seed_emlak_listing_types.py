@@ -2,82 +2,106 @@ import asyncio
 import os
 import sys
 
-# Backend dizinini yola ekle ki 'app' modülü bulunabilsin
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+# Bu script backend/ içinden çalıştırılır: python scripts/seed_emlak_listing_types.py
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import async_session_maker
 from app.models.category_field import CategoryField, FieldOption
 from sqlalchemy import select, delete
 
+
+# Slug unification migration'ından sonra DB'deki gerçek subcategory slug'ları
+SUBCATEGORIES = [
+    'apartment',      # daire
+    'house_villa',    # mustakil-ev-villa
+    'land',           # arsa
+    'field_garden',   # tarla-bahce
+    'office',         # is-yeri-ofis
+    'warehouse',      # depo-fabrika
+    'building',       # bina
+]
+
+# Alt kategoriye göre hangi listing_type opsiyonları gösterilsin
+OPTS_MAP = {
+    'apartment':    [('satilik', 'optSatilik'), ('kiralik', 'optKiralik')],
+    'house_villa':  [('satilik', 'optSatilik'), ('kiralik', 'optKiralik')],
+    'building':     [('satilik', 'optSatilik'), ('kiralik', 'optKiralik')],
+    'land':         [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('kat_karsiligi', 'optKatKarsiligi')],
+    'field_garden': [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('kat_karsiligi', 'optKatKarsiligi')],
+    'office':       [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('devren_satilik', 'optDevrenSatilik'), ('devren_kiralik', 'optDevrenKiralik')],
+    'warehouse':    [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('devren_satilik', 'optDevrenSatilik'), ('devren_kiralik', 'optDevrenKiralik')],
+}
+
+
 async def seed_emlak_fields():
     print("Emlak kategorisi 'İlan Durumu' alanları güncelleniyor...")
-    
+    print(f"Hedef subcategory'ler: {SUBCATEGORIES}\n")
+
     async with async_session_maker() as session:
-        # Etkilenen alt kategoriler
-        subcategories = [
-            'daire', 'mustakil-ev-villa', 'arsa', 'tarla-bahce',
-            'is-yeri-ofis', 'depo-fabrika', 'bina'
-        ]
-        
-        # 1. Eski 'listing_type' kayıtlarını (eğer varsa) temizle
-        print("Eski kayıtlar temizleniyor...")
+
+        # 1. Önce DB'de mevcut subcategory'leri doğrula
+        existing_result = await session.execute(
+            select(CategoryField.subcategory)
+            .where(CategoryField.subcategory.in_(SUBCATEGORIES))
+            .distinct()
+        )
+        found_subcats = {row[0] for row in existing_result.all()}
+        missing = set(SUBCATEGORIES) - found_subcats
+        if missing:
+            print(f"⚠️  Uyarı: Bu subcategory'ler DB'de hiç kayıt içermiyor: {missing}")
+            print("   Yine de devam ediliyor...\n")
+
+        # 2. Eski 'listing_type' kayıtlarını temizle
+        print("Eski 'listing_type' kayıtları temizleniyor...")
         stmt_fields = select(CategoryField).where(
-            CategoryField.subcategory.in_(subcategories),
+            CategoryField.subcategory.in_(SUBCATEGORIES),
             CategoryField.key == 'listing_type'
         )
         result = await session.execute(stmt_fields)
         old_fields = result.scalars().all()
-        
+
         if old_fields:
             old_field_ids = [f.id for f in old_fields]
             await session.execute(delete(FieldOption).where(FieldOption.field_id.in_(old_field_ids)))
             await session.execute(delete(CategoryField).where(CategoryField.id.in_(old_field_ids)))
             await session.flush()
+            print(f"  {len(old_fields)} eski kayıt temizlendi.\n")
+        else:
+            print("  Temizlenecek eski kayıt yok.\n")
 
-        # 2. Yeni alanları ve opsiyonları ekle
-        for subcat in subcategories:
-            print(f"[{subcat}] işleniyor...")
-            # Field oluştur
+        # 3. Yeni alanları ve opsiyonları ekle
+        for subcat in SUBCATEGORIES:
+            opts = OPTS_MAP[subcat]
+            print(f"[{subcat}] -> {len(opts)} opsiyon ekleniyor: {[o[0] for o in opts]}")
+
             field = CategoryField(
                 subcategory=subcat,
                 key='listing_type',
                 label_key='fieldListingType',
                 type='dropdown',
                 required=True,
-                position=1,
+                position=1,   # İlan tipinin ilk sırada çıkması UX açısından doğru
                 is_active=True
             )
             session.add(field)
-            await session.flush()  # ID alabilmek için flush
-            
-            # Alt kategoriye göre eklenecek opsiyonlar
-            opts = [
-                ('satilik', 'optSatilik'),
-                ('kiralik', 'optKiralik')
-            ]
-            
-            if subcat in ['is-yeri-ofis', 'depo-fabrika']:
-                opts.extend([
-                    ('devren_satilik', 'optDevrenSatilik'),
-                    ('devren_kiralik', 'optDevrenKiralik')
-                ])
-            elif subcat in ['arsa', 'tarla-bahce']:
-                opts.append(('kat_karsiligi', 'optKatKarsiligi'))
-                
-            # Opsiyonları ekle
+            await session.flush()  # ID almak için
+
             for i, (val, label) in enumerate(opts, start=1):
-                opt = FieldOption(
+                session.add(FieldOption(
                     field_id=field.id,
                     value=val,
                     label=label,
                     position=i,
                     is_active=True
-                )
-                session.add(opt)
-                
-        # 3. Değişiklikleri kaydet
+                ))
+
+        # 4. Commit
         await session.commit()
-        print("✅ Başarıyla tamamlandı!")
+        print("\n✅ Başarıyla tamamlandı!")
+        print("Not: field-config endpoint cache'i (24h) otomatik expire olmadan görünmez.")
+        print("Hızlı doğrulama için Redis cache'i temizleyebilirsin:")
+        print("  redis-cli -n 0 KEYS 'fastapi-cache:*' | xargs redis-cli -n 0 DEL")
+
 
 if __name__ == "__main__":
     asyncio.run(seed_emlak_fields())
