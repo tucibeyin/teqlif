@@ -84,7 +84,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
@@ -360,7 +360,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
@@ -419,7 +419,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
@@ -625,7 +625,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
@@ -898,7 +898,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
@@ -996,7 +996,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
@@ -1175,7 +1175,7 @@
         "label_key": "extraField_listing_type",
         "type": "dropdown",
         "required": true,
-        "position": 1,
+        "position": -1,
         "unit": null,
         "depends_on": null,
         "options": [
