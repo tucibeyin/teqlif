@@ -187,8 +187,73 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     }
   }
 
-  void refreshExplore({bool bypassCache = true}) {
-    _loadExplore(bypassCache: bypassCache);
+  Future<void> refreshExplore({bool bypassCache = true}) async {
+    final current = state.value;
+    final token = await StorageService.getToken();
+    final loggedIn = token != null;
+    
+    // Eğer veriler boşsa fallback olarak tam yükleme yap
+    if (current == null || 
+        (loggedIn && current.exploreListings.isEmpty) || 
+        (!loggedIn && current.recentListings.isEmpty)) {
+      _loadExplore(bypassCache: bypassCache);
+      return;
+    }
+    
+    // Canlı yayınları ve önerilen satıcıları asenkron olarak arka planda yenile
+    _loadExploreStreams(bypassCache, () {});
+    if (loggedIn) {
+      _loadSuggestedSellers();
+      StreamService.getSuggestedStreamers().then((streamers) {
+        final current = state.value;
+        if (current != null) {
+          state = AsyncValue.data(current.copyWith(suggestedStreamers: streamers));
+        }
+      });
+    }
+
+    try {
+      if (loggedIn) {
+        // 1. Delta Fetching: For-You Feed (Giriş yapmış kullanıcılar)
+        final sinceId = current.exploreListings.first['id'];
+        final resp = await http.get(Uri.parse('$kBaseUrl/feed/for-you?since_id=$sinceId'), headers: {
+          'Authorization': 'Bearer $token',
+        });
+        
+        if (resp.statusCode == 200) {
+          final parsed = jsonDecode(resp.body);
+          final delta = parsed is List ? parsed : parsed['listings'] ?? [];
+          if (delta.isNotEmpty) {
+            // Yeni ilanları listenin en üstüne ekle (prepend)
+            state = AsyncValue.data(state.value!.copyWith(
+              exploreListings: [...delta, ...state.value!.exploreListings],
+            ));
+          }
+        } else {
+           _loadExplore(bypassCache: bypassCache);
+        }
+      } else {
+        // 2. Delta Fetching: Recent Feed (Misafir kullanıcılar)
+        final sinceId = current.recentListings.first['id'];
+        final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?since_id=$sinceId'));
+        
+        if (resp.statusCode == 200) {
+          final parsed = jsonDecode(resp.body);
+          final delta = parsed is List ? parsed : parsed['listings'] ?? [];
+          if (delta.isNotEmpty) {
+            // Yeni ilanları listenin en üstüne ekle (prepend)
+            state = AsyncValue.data(state.value!.copyWith(
+              recentListings: [...delta, ...state.value!.recentListings],
+            ));
+          }
+        } else {
+           _loadExplore(bypassCache: bypassCache);
+        }
+      }
+    } catch (e) {
+      // Herhangi bir ağ hatasında tam yüklemeye fallback yap
+      _loadExplore(bypassCache: bypassCache);
+    }
   }
 
   void _loadExploreStreams(bool bypassCache, void Function() onData) {

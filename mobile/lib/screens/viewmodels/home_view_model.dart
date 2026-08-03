@@ -222,7 +222,47 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<void> refresh({bool bypassCache = true}) async {
-    await _fetchInitial(bypassCache: bypassCache);
+    final current = state.value;
+    final token = await StorageService.getToken();
+    
+    // Eğer filtre varsa, liste boşsa veya token yoksa baştan tam yükleme (fallback) yap
+    if (current == null || token == null || current.hasFilter || current.recentListings.isEmpty) {
+      await _fetchInitial(bypassCache: bypassCache);
+      return;
+    }
+
+    try {
+      // 1. Delta Fetching: Sadece yeni ilanları getir
+      final sinceId = current.recentListings.first['id'];
+      final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?since_id=$sinceId'), headers: {
+        'Authorization': 'Bearer $token',
+      });
+      
+      if (resp.statusCode == 200) {
+        final parsed = jsonDecode(resp.body);
+        final delta = parsed is List ? parsed : parsed['listings'] ?? [];
+        if (delta.isNotEmpty) {
+          // Yeni ilanları (delta) mevcut listenin en üstüne ekle (prepend)
+          final newListings = [...delta, ...current.recentListings];
+          
+          state = AsyncValue.data(current.copyWith(
+            recentListings: newListings,
+          ));
+          
+          // Cache'i güncelle
+          final cacheBox = await Hive.openBox('homeCache');
+          cacheBox.put(_kCacheKeyFeed, jsonEncode(newListings));
+        }
+      } else {
+        await _fetchInitial(bypassCache: bypassCache);
+      }
+      
+      // 2. Hesitated ilanlarını da (varsa) güncelle
+      await _fetchHesitated(token);
+    } catch (e) {
+      // Hata olursa (timeout vs) fallback olarak tam yükleme yap
+      await _fetchInitial(bypassCache: bypassCache);
+    }
   }
 
   Future<void> loadMore() async {
