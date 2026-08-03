@@ -12,13 +12,13 @@ import '../../models/stream.dart';
 import '../../services/analytics_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/stream_service.dart';
+import 'viewmodels/host_stream_view_model.dart';
 import 'seller_report_screen.dart';
 import '../../utils/number_formatter.dart';
 import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
-import '../../services/auction_service.dart';
 import '../../services/upload_service.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/gift_hud.dart';
@@ -70,7 +70,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   bool _cameraEnabled = true;
   bool _isFrontCamera = true;
   String? _error;
-  bool _permPermanentlyDenied = false;
+
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
@@ -177,10 +177,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _loadAudienceSize() async {
-    final result = await AnalyticsService.getAudienceSize(
-      title: widget.title,
-      category: widget.streamToken.category,
-    );
+    final result = await ref.read(hostStreamViewModelProvider).getAudienceSize(widget.title, widget.streamToken.category);
     if (!mounted || result == null) return;
     final size = result['audience_size'] as int? ?? 0;
     final cost = (result['estimated_cost'] as num?)?.toInt() ?? 0;
@@ -218,11 +215,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
     setState(() => _blastSending = true);
     try {
-      final result = await AnalyticsService.sendLeadBlast(
-        title: widget.title,
-        category: widget.streamToken.category,
-        estimatedCost: _audienceCost.toInt(),
-      );
+      final result = await ref.read(hostStreamViewModelProvider).sendLeadBlast(widget.title, widget.streamToken.category, _audienceCost.toInt());
       if (!mounted) return;
       if (result != null && result['error'] == null) {
         CacheService.clearData('user_wallet_data');
@@ -257,7 +250,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             if (loading) {
               () async {
                 try {
-                  final d = await StreamService.fetchAudienceInsights(streamId);
+                  final d = await ref.read(hostStreamViewModelProvider).fetchAudienceInsights(streamId);
                   setSt(() { data = d; loading = false; });
                 } catch (_) {
                   setSt(() => loading = false);
@@ -548,7 +541,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
   Future<void> _loadBidHistory() async {
     try {
-      final bids = await AuctionService.fetchBids(widget.streamToken.streamId);
+      final bids = await ref.read(hostStreamViewModelProvider).fetchBids(widget.streamToken.streamId);
       if (!mounted || bids.isEmpty) return;
       setState(() {
         for (final b in bids) {
@@ -572,7 +565,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Future<void> _showViewers() async {
     List<String> viewers = [];
     try {
-      viewers = await StreamService.getViewers(widget.streamToken.streamId);
+      viewers = await ref.read(hostStreamViewModelProvider).getViewers(widget.streamToken.streamId);
     } catch (e, st) {
       _log.captureException(e, stackTrace: st, tag: 'HostStream.showViewers');
     }
@@ -615,7 +608,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
   Future<void> _inviteCoHost(String username) async {
     try {
-      await StreamService.inviteCoHost(widget.streamToken.streamId, username);
+      await ref.read(hostStreamViewModelProvider).inviteCoHost(widget.streamToken.streamId, username);
       if (mounted) {
         TeqToast.info(ref.read(localizationProvider).t('hostInvitedToStage'));
       }
@@ -637,7 +630,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         currentCoHostUsername: _coHostUsername,
         onRemoveCoHost: _coHostUsername == username ? () async {
           try {
-            await StreamService.removeCoHost(widget.streamToken.streamId, username);
+            await ref.read(hostStreamViewModelProvider).removeCoHost(widget.streamToken.streamId, username);
             setState(() => _coHostUsername = null);
           } catch (e, st) {
             _log.captureException(e, stackTrace: st, tag: 'HostStream.removeCoHost');
@@ -686,7 +679,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (confirm != true) return;
 
     try {
-      await StreamService.endStream(widget.streamToken.streamId);
+      await ref.read(hostStreamViewModelProvider).endStream(widget.streamToken.streamId);
     } catch (e, st) {
       // Ağ hatası olsa bile yayın ekranından çıkmaya devam et
       _log.captureException(e, stackTrace: st, tag: 'HostStream.endStream');

@@ -47,7 +47,7 @@ Her bir ekran için şu adımlar izlenmelidir:
 - [ ] `mobile/lib/screens/live/host_stream_screen.dart`
 - [x] `mobile/lib/screens/live/live_list_screen.dart`
 - [x] `mobile/lib/screens/live/seller_report_screen.dart`
-- [ ] `mobile/lib/screens/live/swipe_live_screen.dart`
+- [x] `mobile/lib/screens/live/swipe_live_screen.dart`
 - [x] `mobile/lib/screens/story/story_viewer_screen.dart`
 
 ### Arama & İletişim (Call)

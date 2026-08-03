@@ -42,6 +42,7 @@ import '../../services/analytics_service.dart';
 import '../../services/feed_manager.dart';
 import '../../services/listing_video_manager.dart';
 import '../../services/stream_connection_manager.dart';
+import 'viewmodels/swipe_live_view_model.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/category_service.dart';
 
@@ -196,7 +197,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
   }
 
   Future<void> _fetchPersonalizedConfig() async {
-    final config = await StreamService.getSwipeLiveConfig();
+    final config = await ref.read(swipeLiveViewModelProvider.notifier).getSwipeLiveConfig();
     if (!mounted || config == null) return;
     final isSingle = widget.streams.length == 1 && widget.streams[0].roomName.isEmpty;
     setState(() {
@@ -518,7 +519,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     if (_isRefreshingLive) return;
     try {
       _isRefreshingLive = true;
-      final fresh = await StreamService.getActiveStreams();
+      final fresh = await ref.read(swipeLiveViewModelProvider.notifier).getActiveStreams();
       if (mounted) {
         setState(() {
           _feedManager.updateConfig(
@@ -538,7 +539,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
 
   Future<void> _expandFromSingleMode(int targetId) async {
     try {
-      final fresh = await StreamService.getActiveStreams();
+      final fresh = await ref.read(swipeLiveViewModelProvider.notifier).getActiveStreams();
       final target = fresh.firstWhere(
         (s) => s.id == targetId,
         orElse: () => widget.streams[0],
@@ -1034,7 +1035,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   Future<void> _acceptCoHostInvite() async {
     try {
-      final newToken = await StreamService.acceptCoHostInvite(widget.stream.id);
+      final newToken = await ref.read(swipeLivePageViewModelProvider(widget.stream.id).notifier).acceptCoHostInvite();
       await StreamConnectionManager.instance.upgradeToCoHost(widget.stream.id, newToken);
       if (mounted) {
         setState(() {
@@ -1086,7 +1087,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   void _fireLikeRequest() {
-    StreamService.likeStream(widget.stream.id).catchError((_) {});
+    ref.read(swipeLivePageViewModelProvider(widget.stream.id).notifier).likeStream();
     widget.onEngagementEvent?.call('stream_heart');
   }
 
