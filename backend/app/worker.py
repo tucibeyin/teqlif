@@ -23,7 +23,7 @@ from app.config import settings
 from app.core.logger import get_logger, capture_exception
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
 from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
-
+from app.services.feed.foryou_worker import populate_foryou_feed_task
 logger = get_logger(__name__)
 
 # Embedding metninde kullanılan Türkçe condition etiketleri
@@ -3370,6 +3370,7 @@ class WorkerSettings:
         compute_influence_scores_task,
         notify_outbid_task,
         notify_auction_losers_task,
+        populate_foryou_feed_task,
     ]
 
     cron_jobs = [
@@ -3387,6 +3388,8 @@ class WorkerSettings:
         cron(cleanup_old_analytics_task, weekday=0, hour=4, minute=0),
         # Her 15 dakikada kullanıcı ilgi skorlarını güncelle
         cron(compute_user_interests_task, minute={0, 15, 30, 45}),
+        # Her saat başında For-You feed listesini yeniden oluştur
+        cron(populate_foryou_feed_task, minute=0),
         # Her 15 dakikada kullanıcı condition tercihlerini hesapla (Redis: condition_pref:{uid})
         cron(compute_user_condition_preferences_task, minute={3, 18, 33, 48}),
         # Her 15 dakikada SwipeLive config cache'lerini sıfırla (yeni event gelenlerin)
