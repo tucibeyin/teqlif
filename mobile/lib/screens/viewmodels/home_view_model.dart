@@ -151,7 +151,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     if (resp.statusCode == 200) {
       final parsed = jsonDecode(resp.body);
       final listings = parsed is List ? parsed : parsed['listings'] ?? [];
-      final totalP = parsed is List ? 1 : parsed['pagination']?['total_pages'] ?? 1;
+      final totalP = parsed is List ? (listings.length < 20 ? 0 : 9999) : parsed['pagination']?['total_pages'] ?? 1;
 
       final cacheBox = await Hive.openBox('homeCache');
       cacheBox.put(_kCacheKeyFeed, resp.body);
@@ -248,7 +248,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
       if (resp.statusCode == 200) {
         final parsed = jsonDecode(resp.body);
         final moreListings = parsed is List ? parsed : parsed['listings'] ?? [];
-        final newTotal = parsed is List ? 1 : parsed['pagination']?['total_pages'] ?? current.totalPages;
+        final newTotal = parsed is List ? (moreListings.length < 20 ? nextPage : 9999) : parsed['pagination']?['total_pages'] ?? current.totalPages;
 
         state = AsyncValue.data(current.copyWith(
           recentListings: [...current.recentListings, ...moreListings],
