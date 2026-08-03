@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app.database import AsyncSessionLocal
 from app.models.category_field import CategoryField, FieldOption
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text
 
 
 # Slug unification migration'ından sonra DB'deki gerçek subcategory slug'ları
@@ -74,22 +74,31 @@ async def seed_emlak_fields():
             opts = OPTS_MAP[subcat]
             print(f"[{subcat}] -> {len(opts)} opsiyon ekleniyor: {[o[0] for o in opts]}")
 
-            field = CategoryField(
-                subcategory=subcat,
-                key='listing_type',
-                label_key='fieldListingType',
-                type='dropdown',
-                required=True,
-                position=1,   # İlan tipinin ilk sırada çıkması UX açısından doğru
-                is_active=True,
-                category_key='real_estate',  # aaa_slug_unification migration ile eklendi
+            # ORM yerine raw SQL — category_key modelde yok ama DB'de NOT NULL
+            result = await session.execute(
+                text("""
+                    INSERT INTO category_fields
+                        (subcategory, category_key, key, label_key, type, required, position, is_active)
+                    VALUES
+                        (:subcategory, :category_key, :key, :label_key, :type, :required, :position, :is_active)
+                    RETURNING id
+                """),
+                {
+                    'subcategory': subcat,
+                    'category_key': 'real_estate',
+                    'key': 'listing_type',
+                    'label_key': 'fieldListingType',
+                    'type': 'dropdown',
+                    'required': True,
+                    'position': 1,
+                    'is_active': True,
+                }
             )
-            session.add(field)
-            await session.flush()  # ID almak için
+            field_id = result.scalar_one()
 
             for i, (val, label) in enumerate(opts, start=1):
                 session.add(FieldOption(
-                    field_id=field.id,
+                    field_id=field_id,
                     value=val,
                     label=label,
                     position=i,
