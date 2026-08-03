@@ -103,7 +103,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
           child: TeqFilterBar(
             filter: state.reportFilter,
             onChanged: (f) => viewModel.updateReportFilter(f),
-            showSubcategory: false,
+            showExtraFields: false,
             showCity: false,
             showCondition: false,
             showSort: false,
@@ -968,7 +968,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
           child: TeqFilterBar(
             filter: state.campaignFilter,
             onChanged: (f) => viewModel.updateCampaignFilter(f),
-            showSubcategory: false,
+            showExtraFields: false,
             showCity: false,
             showCondition: false,
             showSort: false,

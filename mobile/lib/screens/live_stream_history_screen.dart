@@ -102,7 +102,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
             child: TeqFilterBar(
               filter: state.filter,
               onChanged: (f) => viewModel.updateFilter(f),
-              showSubcategory: false,
+              showExtraFields: false,
               showCity: false,
               showCondition: false,
               showSort: false,

@@ -55,7 +55,7 @@ class DemandTrendsScreen extends ConsumerWidget {
                         filter: _filter,
                         onChanged: (f) => viewModel.updateFilter(f),
                         showSearchBar: false,
-                        showSubcategory: false,
+                        showExtraFields: false,
                         showCity: false,
                         showCondition: false,
                         showSort: false,

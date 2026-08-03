@@ -126,7 +126,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             onChanged: (f) {
               viewModel.updateFilter(f);
             },
-            showSubcategory: false,
+            showExtraFields: false,
             showCity: false,
             showCondition: false,
             showSort: false,

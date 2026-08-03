@@ -157,7 +157,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
               TeqFilterBar(
                 filter: state.hotLeadsFilter,
                 onChanged: (f) => viewModel.updateHotLeadsFilter(f),
-                showSubcategory: false,
+                showExtraFields: false,
                 showCity: false,
                 showCondition: false,
                 showSort: false,
@@ -186,7 +186,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
               TeqFilterBar(
                 filter: state.priceIntelFilter,
                 onChanged: (f) => viewModel.updatePriceIntelFilter(f),
-                showSubcategory: false,
+                showExtraFields: false,
                 showCity: false,
                 showCondition: false,
                 showSort: false,

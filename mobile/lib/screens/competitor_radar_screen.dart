@@ -68,7 +68,7 @@ class CompetitorRadarScreen extends ConsumerWidget {
             onChanged: (f) {
               viewModel.updateFilter(f);
             },
-            showSubcategory: false,
+            showExtraFields: false,
             showCity: false,
             showCondition: false,
             showSort: false,

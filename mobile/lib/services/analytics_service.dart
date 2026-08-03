@@ -481,7 +481,7 @@ class AnalyticsService {
     } catch (_) {}
   }
 
-  static Future<Map<String, dynamic>?> getVideoRoi({String? startDate, String? endDate, String? category}) async {
+  static Future<Map<String, dynamic>?> getVideoRoi({String? startDate, String? endDate, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
@@ -490,6 +490,7 @@ class AnalyticsService {
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
+      if (subcategory != null && subcategory.isNotEmpty) params.add('subcategory=$subcategory');
       if (params.isNotEmpty) url += '?${params.join('&')}';
       final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -497,7 +498,7 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getGalleryStats({String? startDate, String? endDate, String? category}) async {
+  static Future<Map<String, dynamic>?> getGalleryStats({String? startDate, String? endDate, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
@@ -506,6 +507,7 @@ class AnalyticsService {
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
+      if (subcategory != null && subcategory.isNotEmpty) params.add('subcategory=$subcategory');
       if (params.isNotEmpty) url += '?${params.join('&')}';
       final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -513,7 +515,7 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getVideoPerformance({String? startDate, String? endDate, String? category}) async {
+  static Future<Map<String, dynamic>?> getVideoPerformance({String? startDate, String? endDate, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
@@ -522,6 +524,7 @@ class AnalyticsService {
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
+      if (subcategory != null && subcategory.isNotEmpty) params.add('subcategory=$subcategory');
       if (params.isNotEmpty) url += '?${params.join('&')}';
       final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -750,12 +753,15 @@ class AnalyticsService {
     }
   }
 
-  static Future<Map<String, dynamic>?> demandTrends({int weeks = 8}) async {
+  static Future<Map<String, dynamic>?> demandTrends({int weeks = 8, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
+      var url = '$kBaseUrl/analytics/demand-trends?weeks=$weeks';
+      if (category != null && category.isNotEmpty) url += '&category=${Uri.encodeComponent(category)}';
+      if (subcategory != null && subcategory.isNotEmpty) url += '&subcategory=${Uri.encodeComponent(subcategory)}';
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/demand-trends?weeks=$weeks'),
+        Uri.parse(url),
         headers: await buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {

@@ -87,12 +87,13 @@ class ListingAnalyticsViewModel extends AutoDisposeNotifier<ListingAnalyticsStat
     final sd = state.filter.dateFrom?.toIso8601String().substring(0, 10);
     final ed = state.filter.dateTo?.toIso8601String().substring(0, 10);
     final cat = (state.filter.category != null && state.filter.category!.isNotEmpty) ? state.filter.category : null;
+    final subcat = (state.filter.subcategory != null && state.filter.subcategory!.isNotEmpty) ? state.filter.subcategory : null;
 
     try {
       final results = await Future.wait([
-        AnalyticsService.getVideoRoi(startDate: sd, endDate: ed, category: cat),
-        AnalyticsService.getVideoPerformance(startDate: sd, endDate: ed, category: cat),
-        AnalyticsService.getGalleryStats(startDate: sd, endDate: ed, category: cat),
+        AnalyticsService.getVideoRoi(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
+        AnalyticsService.getVideoPerformance(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
+        AnalyticsService.getGalleryStats(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
       ]);
       final roi = results[0];
       final videoPerf = results[1];

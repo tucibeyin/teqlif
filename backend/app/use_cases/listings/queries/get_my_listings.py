@@ -13,7 +13,7 @@ class GetMyListingsQuery:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0, date_from: Optional[str] = None, date_to: Optional[str] = None) -> list:
+    async def execute(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, subcategory: Optional[str] = None, limit: int = 50, offset: int = 0, date_from: Optional[str] = None, date_to: Optional[str] = None) -> list:
         query = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
@@ -23,6 +23,8 @@ class GetMyListingsQuery:
             query = query.where(Listing.status == ListingStatus.ACTIVE if active else Listing.status != ListingStatus.ACTIVE)
         if category:
             query = query.where(Listing.category == category)
+        if subcategory:
+            query = query.where(Listing.subcategory == subcategory)
         if q:
             search_term = f"%{q}%"
             query = query.where(

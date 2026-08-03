@@ -67,6 +67,9 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
     if (state.filter.category != null && state.filter.category!.isNotEmpty) {
       url += '&category=${Uri.encodeComponent(state.filter.category!)}';
     }
+    if (state.filter.subcategory != null && state.filter.subcategory!.isNotEmpty) {
+      url += '&subcategory=${Uri.encodeComponent(state.filter.subcategory!)}';
+    }
     if (state.filter.dateFrom != null && state.filter.dateTo != null) {
       url += '&date_from=${state.filter.dateFrom!.toIso8601String().substring(0, 10)}';
       url += '&date_to=${state.filter.dateTo!.toIso8601String().substring(0, 10)}';

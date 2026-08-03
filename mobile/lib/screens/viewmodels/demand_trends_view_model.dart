@@ -42,7 +42,11 @@ class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
   Future<void> load() async {
     state = state.copyWith(loading: true, clearError: true);
     try {
-      final data = await AnalyticsService.demandTrends(weeks: 8);
+      final data = await AnalyticsService.demandTrends(
+        weeks: 8,
+        category: state.filter.category,
+        subcategory: state.filter.subcategory,
+      );
       if (data == null) {
         state = state.copyWith(error: 'no_data', loading: false);
         return;
@@ -59,6 +63,7 @@ class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
 
   void updateFilter(ListingFilterState filter) {
     state = state.copyWith(filter: filter);
+    load();
   }
 }
 
