@@ -1247,6 +1247,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   }
 
   Widget _buildConditionSection(TranslationPack loc) {
+    if (_selectedCategory == 'real_estate') return const SizedBox.shrink();
+
     final isVasita = _selectedCategory == 'vehicles';
     final items = isVasita
         ? [

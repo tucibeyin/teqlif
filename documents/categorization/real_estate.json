@@ -342,6 +342,71 @@
             "position": 1
           }
         ]
+      },
+      {
+        "key": "bathroom_count",
+        "label_key": "extraField_bathroom_count",
+        "type": "dropdown",
+        "required": true,
+        "position": 10,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "1",
+            "label": "1"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          },
+          {
+            "value": "3",
+            "label": "3"
+          },
+          {
+            "value": "4_plus",
+            "label": "4+"
+          }
+        ]
+      },
+      {
+        "key": "balcony",
+        "label_key": "extraField_balcony",
+        "type": "dropdown",
+        "required": true,
+        "position": 11,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "yes",
+            "label": "Var"
+          },
+          {
+            "value": "no",
+            "label": "Yok"
+          }
+        ]
+      },
+      {
+        "key": "eligible_for_credit",
+        "label_key": "extraField_eligible_for_credit",
+        "type": "dropdown",
+        "required": true,
+        "position": 12,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "yes",
+            "label": "Evet"
+          },
+          {
+            "value": "no",
+            "label": "Hayır"
+          }
+        ]
       }
     ],
     "building": [
@@ -550,6 +615,26 @@
             "position": 4
           }
         ]
+      },
+      {
+        "key": "ada_no",
+        "label_key": "extraField_ada_no",
+        "type": "number",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "parcel_no",
+        "label_key": "extraField_parcel_no",
+        "type": "number",
+        "required": false,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": []
       }
     ],
     "house_villa": [
@@ -829,6 +914,60 @@
             "position": 2
           }
         ]
+      },
+      {
+        "key": "floor_count",
+        "label_key": "extraField_floor_count",
+        "type": "dropdown",
+        "required": true,
+        "position": 7,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "1",
+            "label": "1"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          },
+          {
+            "value": "3",
+            "label": "3"
+          },
+          {
+            "value": "4_plus",
+            "label": "4+"
+          }
+        ]
+      },
+      {
+        "key": "bathroom_count",
+        "label_key": "extraField_bathroom_count",
+        "type": "dropdown",
+        "required": true,
+        "position": 8,
+        "unit": null,
+        "depends_on": null,
+        "options": [
+          {
+            "value": "1",
+            "label": "1"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          },
+          {
+            "value": "3",
+            "label": "3"
+          },
+          {
+            "value": "4_plus",
+            "label": "4+"
+          }
+        ]
       }
     ],
     "land": [
@@ -978,6 +1117,26 @@
             "position": 4
           }
         ]
+      },
+      {
+        "key": "ada_no",
+        "label_key": "extraField_ada_no",
+        "type": "number",
+        "required": false,
+        "position": 3,
+        "unit": null,
+        "depends_on": null,
+        "options": []
+      },
+      {
+        "key": "parcel_no",
+        "label_key": "extraField_parcel_no",
+        "type": "number",
+        "required": false,
+        "position": 4,
+        "unit": null,
+        "depends_on": null,
+        "options": []
       }
     ],
     "office": [
@@ -1147,6 +1306,16 @@
             "position": 2
           }
         ]
+      },
+      {
+        "key": "dues",
+        "label_key": "extraField_dues",
+        "type": "number",
+        "required": false,
+        "position": 5,
+        "unit": "TL",
+        "depends_on": null,
+        "options": []
       }
     ],
     "warehouse": [
@@ -1212,6 +1381,16 @@
             "position": 4
           }
         ]
+      },
+      {
+        "key": "dues",
+        "label_key": "extraField_dues",
+        "type": "number",
+        "required": false,
+        "position": 2,
+        "unit": "TL",
+        "depends_on": null,
+        "options": []
       }
     ]
   }

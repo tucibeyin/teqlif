@@ -4268,5 +4268,15 @@
   "opt_for_rent": "For Rent",
   "opt_transfer_sale": "For Sale by Transfer",
   "opt_transfer_rent": "For Rent by Transfer",
-  "opt_in_exchange": "In Exchange for Flat"
+  "opt_in_exchange": "In Exchange for Flat",
+  "extraField_bathroom_count": "Bathrooms",
+  "extraField_balcony": "Balcony",
+  "extraField_eligible_for_credit": "Eligible for Credit",
+  "extraField_ada_no": "Block No",
+  "extraField_parcel_no": "Parcel No",
+  "extraField_dues": "Dues (Monthly)",
+  "opt_1": "1",
+  "opt_2": "2",
+  "opt_3": "3",
+  "opt_4_plus": "4+"
 }

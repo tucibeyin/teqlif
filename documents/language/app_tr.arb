@@ -3197,9 +3197,9 @@
   "opt_gumus": "Gümüş",
   "opt_other": "Diğer",
   "opt_diger": "Diğer",
-  "opt_yes": "Var",
+  "opt_yes": "Evet/Var",
   "opt_var": "Var",
-  "opt_no": "Yok",
+  "opt_no": "Hayır/Yok",
   "opt_yok": "Yok",
   "opt_none": "Yok",
   "opt_gasoline": "Benzin",
@@ -4231,5 +4231,15 @@
   "opt_for_rent": "Kiralık",
   "opt_transfer_sale": "Devren Satılık",
   "opt_transfer_rent": "Devren Kiralık",
-  "opt_in_exchange": "Kat Karşılığı"
+  "opt_in_exchange": "Kat Karşılığı",
+  "extraField_bathroom_count": "Banyo Sayısı",
+  "extraField_balcony": "Balkon",
+  "extraField_eligible_for_credit": "Krediye Uygunluk",
+  "extraField_ada_no": "Ada No",
+  "extraField_parcel_no": "Parsel No",
+  "extraField_dues": "Aidat Tutarı",
+  "opt_1": "1",
+  "opt_2": "2",
+  "opt_3": "3",
+  "opt_4_plus": "4+"
 }

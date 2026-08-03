@@ -441,16 +441,21 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
                   _SectionHeader(loc.tOr('filterCitySection', 'Şehir')),
                   _buildCityDropdown(loc),
                 ],
-                if (widget.showCondition) ...[
+                if (widget.showCondition && _pending.category != 'real_estate') ...[
                   _SectionHeader(loc.tOr('filterConditionSection', 'Durum')),
                   _ChipRow(
-                    items: [
-                      ('new', loc.tOr('conditionNew', 'Sıfır')),
-                      ('like_new', loc.tOr('conditionLikeNew', 'Yeni Gibi')),
-                      ('good', loc.tOr('conditionGood', 'İyi')),
-                      ('fair', loc.tOr('conditionFair', 'Orta')),
-                      ('needs_repair', loc.tOr('conditionNeedsRepair', 'Tamir Gerekli')),
-                    ],
+                    items: (_pending.category == 'vehicles')
+                        ? [
+                            ('new', loc.t('conditionNew')),
+                            ('used', loc.t('conditionUsed')),
+                          ]
+                        : [
+                            ('new', loc.t('conditionNew')),
+                            ('like_new', loc.t('conditionLikeNew')),
+                            ('used', loc.t('conditionUsed')),
+                            ('refurbished', loc.t('conditionRefurbished')),
+                            ('damaged', loc.t('conditionDamaged')),
+                          ],
                     selected: _pending.condition,
                     onSelect: (v) => setState(() {
                       _pending = _pending.copyWith(

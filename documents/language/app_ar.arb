@@ -4229,5 +4229,15 @@
   "opt_for_rent": "للإيجار",
   "opt_transfer_sale": "للبيع بالتحويل",
   "opt_transfer_rent": "للإيجار بالتحويل",
-  "opt_in_exchange": "مقابل شقة"
+  "opt_in_exchange": "مقابل شقة",
+  "extraField_bathroom_count": "عدد الحمامات",
+  "extraField_balcony": "شرفة",
+  "extraField_eligible_for_credit": "مؤهل للحصول على ائتمان",
+  "extraField_ada_no": "رقم المربع",
+  "extraField_parcel_no": "رقم القطعة",
+  "extraField_dues": "الرسوم",
+  "opt_1": "1",
+  "opt_2": "2",
+  "opt_3": "3",
+  "opt_4_plus": "+4"
 }
