@@ -22,6 +22,7 @@ class CategoryField(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category_key: Mapped[str] = mapped_column(String(60), nullable=False, default="other")
     subcategory: Mapped[str] = mapped_column(String(80), nullable=False)
     key: Mapped[str] = mapped_column(String(60), nullable=False)
     label_key: Mapped[str] = mapped_column(String(80), nullable=False)
