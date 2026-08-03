@@ -4263,10 +4263,10 @@
   },
   "notifSettingsRatingsTitle": "Rating Notifications",
   "notifSettingsRatingsDesc": "When a rating is updated or replied to",
-  "fieldListingType": "Listing Status",
-  "optSatilik": "For Sale",
-  "optKiralik": "For Rent",
-  "optDevrenSatilik": "For Sale by Transfer",
-  "optDevrenKiralik": "For Rent by Transfer",
-  "optKatKarsiligi": "In Exchange for Flat"
+  "extraField_listing_type": "Listing Status",
+  "opt_for_sale": "For Sale",
+  "opt_for_rent": "For Rent",
+  "opt_transfer_sale": "For Sale by Transfer",
+  "opt_transfer_rent": "For Rent by Transfer",
+  "opt_in_exchange": "In Exchange for Flat"
 }

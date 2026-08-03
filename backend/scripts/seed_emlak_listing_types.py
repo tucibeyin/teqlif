@@ -22,14 +22,16 @@ SUBCATEGORIES = [
 ]
 
 # Alt kategoriye göre hangi listing_type opsiyonları gösterilsin
+# value → İngilizce slug (Flutter: opt_{value} → ARB key)
+# label → Türkçe fallback (ARB yoksa gösterilir)
 OPTS_MAP = {
-    'apartment':    [('satilik', 'optSatilik'), ('kiralik', 'optKiralik')],
-    'house_villa':  [('satilik', 'optSatilik'), ('kiralik', 'optKiralik')],
-    'building':     [('satilik', 'optSatilik'), ('kiralik', 'optKiralik')],
-    'land':         [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('kat_karsiligi', 'optKatKarsiligi')],
-    'field_garden': [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('kat_karsiligi', 'optKatKarsiligi')],
-    'office':       [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('devren_satilik', 'optDevrenSatilik'), ('devren_kiralik', 'optDevrenKiralik')],
-    'warehouse':    [('satilik', 'optSatilik'), ('kiralik', 'optKiralik'), ('devren_satilik', 'optDevrenSatilik'), ('devren_kiralik', 'optDevrenKiralik')],
+    'apartment':    [('for_sale', 'Satılık'), ('for_rent', 'Kiralık')],
+    'house_villa':  [('for_sale', 'Satılık'), ('for_rent', 'Kiralık')],
+    'building':     [('for_sale', 'Satılık'), ('for_rent', 'Kiralık')],
+    'land':         [('for_sale', 'Satılık'), ('for_rent', 'Kiralık'), ('in_exchange', 'Kat Karşılığı')],
+    'field_garden': [('for_sale', 'Satılık'), ('for_rent', 'Kiralık'), ('in_exchange', 'Kat Karşılığı')],
+    'office':       [('for_sale', 'Satılık'), ('for_rent', 'Kiralık'), ('transfer_sale', 'Devren Satılık'), ('transfer_rent', 'Devren Kiralık')],
+    'warehouse':    [('for_sale', 'Satılık'), ('for_rent', 'Kiralık'), ('transfer_sale', 'Devren Satılık'), ('transfer_rent', 'Devren Kiralık')],
 }
 
 
@@ -87,7 +89,7 @@ async def seed_emlak_fields():
                     'subcategory': subcat,
                     'category_key': 'real_estate',
                     'key': 'listing_type',
-                    'label_key': 'fieldListingType',
+                    'label_key': 'extraField_listing_type',
                     'type': 'dropdown',
                     'required': True,
                     'position': 1,

@@ -4224,10 +4224,10 @@
   },
   "notifSettingsRatingsTitle": "إشعارات التقييم",
   "notifSettingsRatingsDesc": "عند تحديث تقييم أو الرد عليه",
-  "fieldListingType": "حالة الإعلان",
-  "optSatilik": "للبيع",
-  "optKiralik": "للإيجار",
-  "optDevrenSatilik": "للبيع بالتحويل",
-  "optDevrenKiralik": "للإيجار بالتحويل",
-  "optKatKarsiligi": "مقابل شقة"
+  "extraField_listing_type": "حالة الإعلان",
+  "opt_for_sale": "للبيع",
+  "opt_for_rent": "للإيجار",
+  "opt_transfer_sale": "للبيع بالتحويل",
+  "opt_transfer_rent": "للإيجار بالتحويل",
+  "opt_in_exchange": "مقابل شقة"
 }

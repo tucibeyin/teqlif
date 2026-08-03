@@ -4226,10 +4226,10 @@
   },
   "notifSettingsRatingsTitle": "Değerlendirme Bildirimleri",
   "notifSettingsRatingsDesc": "Değerlendirme güncellendiğinde veya yanıtlandığında",
-  "fieldListingType": "İlan Durumu",
-  "optSatilik": "Satılık",
-  "optKiralik": "Kiralık",
-  "optDevrenSatilik": "Devren Satılık",
-  "optDevrenKiralik": "Devren Kiralık",
-  "optKatKarsiligi": "Kat Karşılığı"
+  "extraField_listing_type": "İlan Durumu",
+  "opt_for_sale": "Satılık",
+  "opt_for_rent": "Kiralık",
+  "opt_transfer_sale": "Devren Satılık",
+  "opt_transfer_rent": "Devren Kiralık",
+  "opt_in_exchange": "Kat Karşılığı"
 }
