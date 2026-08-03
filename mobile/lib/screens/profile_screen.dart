@@ -2038,12 +2038,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       label: Text(ref.read(localizationProvider).t('langEN')),
                     ),
                     ButtonSegment(
-                      value: 'ar',
-                      label: Text(ref.read(localizationProvider).t('langAR')),
-                    ),
-                    ButtonSegment(
                       value: 'ru',
                       label: Text(ref.read(localizationProvider).t('langRU')),
+                    ),
+                    ButtonSegment(
+                      value: 'ar',
+                      label: Text(ref.read(localizationProvider).t('langAR')),
                     ),
                   ],
                   selected: {_displayedLang},

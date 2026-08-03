@@ -291,8 +291,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     segments: [
                       ButtonSegment(value: 'tr', label: Text(loc.t('langTR'))),
                       ButtonSegment(value: 'en', label: Text(loc.t('langEN'))),
-                      ButtonSegment(value: 'ar', label: Text(loc.t('langAR'))),
                       ButtonSegment(value: 'ru', label: Text(loc.t('langRU'))),
+                      ButtonSegment(value: 'ar', label: Text(loc.t('langAR'))),
                     ],
                     selected: {_displayedLang},
                     showSelectedIcon: false,
