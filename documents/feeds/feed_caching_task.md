@@ -17,7 +17,7 @@ Bu belge, yukarıdaki bağımlılık zinciri uyarınca backend ve mobil tarafta 
 
 ## 2. Arka Plan Görevleri (Workers / Fan-out)
 - [x] **Recent Feed Worker:** Sisteme yeni bir ilan eklendiğinde (Fan-out on write), misafirlerin ve genel kullanıcıların "Son İlanlar" (Recent) listesine bu ID'nin `LPUSH` edilmesi. Limit 500 ile sınırlandırılmalı (`LTRIM`). *(04.08.2026 - efa77b0c)*
-- [ ] **For-You Feed Worker (Cron):** Her aktif kullanıcının ilgi alanlarını (interests) ve pgvector puanlarını değerlendirip saatte/günde bir "Sana Özel" (For You) Redis listesini (min 500 ID) baştan dolduran arq/celery görevinin yazılması.
+- [x] **For-You Feed Worker (Cron):** Her aktif kullanıcının ilgi alanlarını (interests) ve pgvector puanlarını değerlendirip saatte/günde bir "Sana Özel" (For You) Redis listesini (min 500 ID) baştan dolduran arq/celery görevinin yazılması. *(04.08.2026 - a4e431e6)*
 - [x] **Lazy Cache Refill (Watermark):** Feed üzerinden okuma yapılırken liste sonuna yaklaşıldığında (örneğin %80'i bittiğinde), sıradaki 500 ilanı asenkron olarak liste ucuna ekleyen trigger (tetikleyici) yapısının kurulması. *(04.08.2026 - efa77b0c)*
 
 ## 3. Backend API Güncellemeleri (Delta Fetching & Fallback)
