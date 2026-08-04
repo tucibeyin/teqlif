@@ -7,7 +7,7 @@ Create Date: 2026-08-04
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "zzzze_add_is_listable_to_categories"
+revision: str = "zzzze_category_is_listable"
 down_revision = "zzzzc_rating_history_and_reply"
 branch_labels = None
 depends_on = None
