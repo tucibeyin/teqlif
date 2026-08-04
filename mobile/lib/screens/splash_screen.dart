@@ -61,7 +61,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
         );
         return;
-      } else if (state.result == SplashResult.softUpdate) {
+      }
+      
+      if (state.hasSoftUpdate) {
         if (Platform.isAndroid) {
           try {
             final info = await InAppUpdate.checkForUpdate();

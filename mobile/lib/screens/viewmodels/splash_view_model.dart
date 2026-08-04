@@ -18,13 +18,13 @@ import '../../services/version_service.dart';
 enum SplashResult {
   pending,
   forceUpdate,
-  softUpdate,
   unauthenticated,
   authenticated
 }
 
 class SplashState {
   final SplashResult result;
+  final bool hasSoftUpdate;
   final String? locale;
   final String? localeUpdatedAt;
   final Map<String, dynamic>? user;
@@ -32,6 +32,7 @@ class SplashState {
 
   SplashState({
     this.result = SplashResult.pending,
+    this.hasSoftUpdate = false,
     this.locale,
     this.localeUpdatedAt,
     this.user,
@@ -40,6 +41,7 @@ class SplashState {
 
   SplashState copyWith({
     SplashResult? result,
+    bool? hasSoftUpdate,
     String? locale,
     String? localeUpdatedAt,
     Map<String, dynamic>? user,
@@ -47,6 +49,7 @@ class SplashState {
   }) {
     return SplashState(
       result: result ?? this.result,
+      hasSoftUpdate: hasSoftUpdate ?? this.hasSoftUpdate,
       locale: locale ?? this.locale,
       localeUpdatedAt: localeUpdatedAt ?? this.localeUpdatedAt,
       user: user ?? this.user,
@@ -69,14 +72,14 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
       await localizationReadyFuture.timeout(const Duration(seconds: 5), onTimeout: () {});
       FlutterNativeSplash.remove();
 
+      bool isSoftUpdate = false;
       final updateStatus = await VersionService.checkVersion();
       if (updateStatus == VersionStatus.forceUpdate) {
         final st = state.value?.copyWith(result: SplashResult.forceUpdate) ?? SplashState(result: SplashResult.forceUpdate);
         state = AsyncValue.data(st);
         return st;
       } else if (updateStatus == VersionStatus.softUpdate) {
-        // Will show soft update but continue to boot
-        state = AsyncValue.data(SplashState(result: SplashResult.softUpdate));
+        isSoftUpdate = true;
       }
 
       await AnalyticsService.setConsent(true);
@@ -89,7 +92,7 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
       await DeepLinkService.captureInitialLink();
 
       if (token == null) {
-        final st = state.value?.copyWith(result: SplashResult.unauthenticated) ?? SplashState(result: SplashResult.unauthenticated);
+        final st = state.value?.copyWith(result: SplashResult.unauthenticated, hasSoftUpdate: isSoftUpdate) ?? SplashState(result: SplashResult.unauthenticated, hasSoftUpdate: isSoftUpdate);
         state = AsyncValue.data(st);
         return st;
       }
@@ -131,12 +134,14 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
 
       final st = state.value?.copyWith(
         result: SplashResult.authenticated,
+        hasSoftUpdate: isSoftUpdate,
         locale: locale,
         localeUpdatedAt: localeUpdatedAt,
         user: user,
         listings: listings,
       ) ?? SplashState(
         result: SplashResult.authenticated,
+        hasSoftUpdate: isSoftUpdate,
         locale: locale,
         localeUpdatedAt: localeUpdatedAt,
         user: user,
