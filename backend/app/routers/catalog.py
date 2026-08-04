@@ -9,6 +9,7 @@ from app.database import AsyncSessionLocal
 from app.models.category import Category
 from app.models.category_field import CategoryField, FieldOption
 from app.models.subcategory import Subcategory
+from app.utils.schema_cache import static_schema_key_builder
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -102,14 +103,14 @@ def _compute_version(data: dict) -> str:
 
 
 @router.get("/version")
-@cache(expire=86400)
+@cache(expire=86400, key_builder=static_schema_key_builder)
 async def get_catalog_version() -> dict:
     data = await _build_catalog()
     return {"version": _compute_version(data)}
 
 
 @router.get("")
-@cache(expire=86400)
+@cache(expire=86400, key_builder=static_schema_key_builder)
 async def get_catalog() -> dict:
     data = await _build_catalog()
     return {"version": _compute_version(data), **data}

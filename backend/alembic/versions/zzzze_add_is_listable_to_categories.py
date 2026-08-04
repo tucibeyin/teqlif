@@ -6,6 +6,7 @@ Create Date: 2026-08-04
 """
 from alembic import op
 import sqlalchemy as sa
+from app.utils.migration_utils import bump_schema_version
 
 revision: str = "zzzze_category_is_listable"
 down_revision = "zzzzc_rating_history_and_reply"
@@ -28,6 +29,11 @@ def upgrade() -> None:
     # 2. Data migration — chat kategorisi ilan yapılamaz
     op.execute("UPDATE categories SET is_listable = FALSE WHERE key = 'chat'")
 
+    # 3. Şema değişti → catalog cache'ini geçersiz kıl
+    bump_schema_version()
+
 
 def downgrade() -> None:
     op.drop_column("categories", "is_listable")
+    # Şema değişti → catalog cache'ini geçersiz kıl
+    bump_schema_version()

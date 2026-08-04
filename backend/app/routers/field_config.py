@@ -9,6 +9,7 @@ from app.core.exceptions import NotFoundException
 from app.database import get_db
 from app.models.category_field import CategoryField, FieldOption
 from app.schemas.field_config import ExtraFieldSchema, FieldConfigResponse, FieldOptionSchema
+from app.utils.schema_cache import static_schema_key_builder
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/api/field-config", tags=["field-config"])
 
 
 @router.get("/{subcategory}", response_model=FieldConfigResponse)
-@cache(expire=86400)  # 24h — field schema değişmez, admin deploy'da cache sıfırlanır
+@cache(expire=86400, key_builder=static_schema_key_builder)  # 24h — migration'la değişir, schema version bump ile invalidate edilir
 async def get_field_config(
     subcategory: str,
     request: Request,

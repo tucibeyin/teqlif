@@ -184,6 +184,9 @@ async def lifespan(app: FastAPI):
     # FastAPI Cache — Redis backend (decode_responses=False: JsonCoder bytes bekler)
     _cache_redis = aioredis.from_url(settings.redis_url, decode_responses=False)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
+    # Schema-versioned cache — statik endpoint key builder'ları için versiyon belirleme
+    from app.utils.schema_cache import init_schema_version
+    await init_schema_version()
     # ARQ Task Queue pool
     arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url), default_queue_name="default")
     app.state.arq_pool = arq_pool
