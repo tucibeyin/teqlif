@@ -44,6 +44,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] mesaj geldi | type=${message.data['type']} | keys=${message.data.keys.toList()}');
 
   if (message.data['type'] == 'incoming_call') {
+    if (Platform.isIOS) {
+      debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call on iOS ignored. VoIP PushKit handles it natively.');
+      return;
+    }
     debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call işleniyor | call_id=${message.data['call_id']}');
     // Flutter binding'i background isolate için başlat
     WidgetsFlutterBinding.ensureInitialized();
