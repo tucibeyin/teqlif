@@ -606,7 +606,10 @@ class _HotLeadCard extends ConsumerWidget {
     final hes       = lead.hesitations30d;
     final heat      = lead.heatScore;
     final price     = lead.price;
-    final catLabel  = lead.category;
+    final rawCat    = lead.category;
+    final catLabel  = (rawCat.isEmpty || rawCat == "diğer") 
+        ? loc.t("lblOther") 
+        : loc.t("cat_$rawCat");
     final isBoosted = lead.isBoosted;
     final heatColor = heat > 15
         ? const Color(0xFFEF4444)
@@ -1019,7 +1022,7 @@ class _ProMetricsCard extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
                 Expanded(child: Text(
-                  e.category,
+                  (e.category.isEmpty || e.category == "diğer") ? loc.t("lblOther") : loc.t("cat_${e.category}"),
                   style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
                 Text(loc.t("proSearchCount", {"count": e.searchCount.toString()}), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ]),
