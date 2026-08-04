@@ -1237,6 +1237,17 @@ class FeedQueries:
         base_ids = []
         is_fallback = False
         
+        # -- Backend Seen Tracker --
+        seen_key = f"feed:seen:{user_id}" if user_id else None
+        if user_id:
+            if page == 0 and not since_id:
+                await redis.delete(seen_key)
+            else:
+                seen_raw = await redis.smembers(seen_key)
+                if seen_raw:
+                    seen_ids = [int(x) for x in seen_raw]
+                    exclude_ids = list(set((exclude_ids or []) + seen_ids))
+        
         # 1. Redis'ten çekmeyi dene
         if since_id:
             # Sadece yeni verileri çek (pull-to-refresh)
@@ -1383,6 +1394,16 @@ class FeedQueries:
                 result = self._inject_ads(result, ad_items)
             except Exception as exc:
                 logger.warning("[MixedRecent] Sponsored enjeksiyonu atlandı: %s", exc)
+
+        # -- Track Seen IDs --
+        if user_id and result:
+            result_ids = [r["id"] for r in result]
+            if result_ids:
+                try:
+                    await redis.sadd(seen_key, *result_ids)
+                    await redis.expire(seen_key, 900)
+                except Exception as exc:
+                    logger.warning("[MixedRecent] Seen tracker hatası: %s", exc)
 
         return result
 

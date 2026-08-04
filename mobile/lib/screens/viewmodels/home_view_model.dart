@@ -242,8 +242,11 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
         final parsed = jsonDecode(resp.body);
         final delta = parsed is List ? parsed : parsed['listings'] ?? [];
         if (delta.isNotEmpty) {
+          final existingIds = current.recentListings.map((e) => e['id']).toSet();
+          final uniqueDelta = delta.where((e) => !existingIds.contains(e['id'])).toList();
+          
           // Yeni ilanları (delta) mevcut listenin en üstüne ekle (prepend)
-          final newListings = [...delta, ...current.recentListings];
+          final newListings = [...uniqueDelta, ...current.recentListings];
           
           state = AsyncValue.data(current.copyWith(
             recentListings: newListings,
@@ -290,8 +293,11 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
         final moreListings = parsed is List ? parsed : parsed['listings'] ?? [];
         final newTotal = parsed is List ? (moreListings.length < 20 ? nextPage : 9999) : parsed['pagination']?['total_pages'] ?? current.totalPages;
 
+        final existingIds = current.recentListings.map((e) => e['id']).toSet();
+        final uniqueMoreListings = moreListings.where((e) => !existingIds.contains(e['id'])).toList();
+
         state = AsyncValue.data(current.copyWith(
-          recentListings: [...current.recentListings, ...moreListings],
+          recentListings: [...current.recentListings, ...uniqueMoreListings],
           currentPage: nextPage,
           totalPages: newTotal,
           isLoadingMore: false,
