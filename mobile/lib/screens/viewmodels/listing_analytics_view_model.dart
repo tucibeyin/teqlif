@@ -121,9 +121,7 @@ class ListingAnalyticsViewModel extends AutoDisposeNotifier<ListingAnalyticsStat
         final lid = l['listing_id'].toString();
         final isVideo = (l['content_type'] as String?) == 'video';
         final rawImg = l['image_url'] as String?;
-        final resolvedImg = (rawImg != null && rawImg.isNotEmpty)
-            ? (rawImg.startsWith('/uploads') ? '$kBaseHost$rawImg' : '$kBaseUrl$rawImg')
-            : null;
+        final resolvedImg = rawImg != null && rawImg.isNotEmpty ? imgUrl(rawImg) : null;
         return ListingMetric(
           id: lid,
           title: l['title'] as String? ?? '—',

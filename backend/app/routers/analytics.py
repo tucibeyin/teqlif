@@ -2064,7 +2064,7 @@ async def competitor_radar(
     if listing.embedding is None:
         # Embedding yoksa kategori + subcategory bazlı karşılaştırmaya dön
         rows = (await db.execute(sql_text("""
-            SELECT id, title, price, user_id
+            SELECT id, title, price, user_id, image_url, image_urls
             FROM listings
             WHERE status = 'active'
               AND category = :cat AND id != :lid AND user_id != :uid
@@ -2078,7 +2078,7 @@ async def competitor_radar(
     else:
         emb_str = "[" + ",".join(f"{v:.6f}" for v in listing.embedding) + "]"
         rows = (await db.execute(sql_text("""
-            SELECT l.id, l.title, l.price, l.user_id
+            SELECT l.id, l.title, l.price, l.user_id, l.image_url, l.image_urls
             FROM listings l
             WHERE l.status = 'active'
               AND l.embedding IS NOT NULL
@@ -2121,8 +2121,20 @@ async def competitor_radar(
         suggested_price = round(avg_price * 0.97)
     diff_pct = round(((my_price - avg_price) / avg_price) * 100, 1)
 
+    import json as _json
+    def _parse_imgs(raw_str):
+        if not raw_str: return []
+        try: return _json.loads(raw_str)
+        except: return []
+
     competitors = [
-        {"id": r[0], "title": r[1][:40], "price": float(r[2])}
+        {
+            "id": r[0], 
+            "title": r[1][:40], 
+            "price": float(r[2]),
+            "image_url": r[4],
+            "image_urls": _parse_imgs(r[5])
+        }
         for r in rows[:8]
     ]
 

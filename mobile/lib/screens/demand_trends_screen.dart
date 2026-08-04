@@ -130,6 +130,9 @@ class _TrendCard extends ConsumerWidget {
         ? 1
         : weekly.map((w) => (w['count'] as num?)?.toInt() ?? 0).reduce((a, b) => a > b ? a : b);
 
+    final trCat = loc.t('cat_$category');
+    final displayCat = trCat == 'cat_$category' ? category : trCat;
+
     return TeqCard(
       margin: const EdgeInsets.only(bottom: 12),
 
@@ -142,7 +145,7 @@ class _TrendCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    category,
+                    displayCat,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
