@@ -77,7 +77,7 @@ class IosCallNotifAdapter extends CallNotifAdapter {
         nameCaller: calleeName,
         appName: 'teqlif',
         avatar: calleeAvatar ?? 'https://i.pravatar.cc/100',
-        handle: 'Teqlif Voice Call',
+        handle: 'teqlif Voice Call',
         type: 0,
         duration: 45000,
         extra: {'call_id': callId},
