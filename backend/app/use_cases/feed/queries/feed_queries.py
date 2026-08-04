@@ -264,7 +264,7 @@ class FeedQueries:
 
         # ── Saat dilimi bağlam sinyali ────────────────────────────────────────────
         hour = datetime.now().hour
-        if user_embedding:
+        if user_embedding is not None and len(user_embedding) > 0:
             freshness_w = 0.22 if 6 <= hour <= 10 else 0.15
             social_w    = 0.12 if 19 <= hour <= 23 else 0.08
             cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.22, 0.15, 0.08, 0.04, 0.04, 0.06, 0.25

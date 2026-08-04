@@ -3,6 +3,7 @@ import json
 from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.user import User
+from app.models.enums import UserStatus
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ async def populate_foryou_feed_task(ctx: dict) -> None:
         
         async with AsyncSessionLocal() as db:
             # Sadece aktif kullanıcıları al (gerçek bir senaryoda son 1 ayda girenler vb. filtrelenebilir)
-            result = await db.execute(select(User.id).where(User.is_active == True))
+            result = await db.execute(select(User.id).where(User.status == UserStatus.ACTIVE))
             users = result.scalars().all()
             
             for uid in users:
