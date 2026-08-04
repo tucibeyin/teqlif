@@ -84,10 +84,10 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
     super.initState();
     _pending = widget.initial;
     if (_pending.minPrice != null) {
-      _minController.text = TeqNumberFormatter.format(_pending.minPrice, allowDecimal: false);
+      _minController.text = TeqNumberFormatter.format(_pending.minPrice);
     }
     if (_pending.maxPrice != null) {
-      _maxController.text = TeqNumberFormatter.format(_pending.maxPrice, allowDecimal: false);
+      _maxController.text = TeqNumberFormatter.format(_pending.maxPrice);
     }
     if (widget.showCity) {
       CityService.getCities().then((c) {
