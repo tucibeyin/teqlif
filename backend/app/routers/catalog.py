@@ -89,6 +89,7 @@ async def _build_catalog() -> dict:
         catalog_categories.append({
             "key": cat.key,
             "sort_order": cat.sort_order,
+            "is_listable": cat.is_listable,
             "subcategories": subs_by_cat.get(cat.key, []),
         })
 

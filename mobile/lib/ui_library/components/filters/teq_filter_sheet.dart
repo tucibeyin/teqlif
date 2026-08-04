@@ -175,7 +175,7 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
             value: null,
             child: Text(loc.tOr('filterCategoryAll', 'Tüm Kategoriler'), style: TextStyle(color: AppColors.textPrimary(context))),
           ),
-          ...categories.map((c) => DropdownMenuItem(
+          ...categories.where((c) => c.isListable).map((c) => DropdownMenuItem(
                 value: c.key,
                 child: Text(loc.t(c.labelKey), style: TextStyle(color: AppColors.textPrimary(context))),
               )),

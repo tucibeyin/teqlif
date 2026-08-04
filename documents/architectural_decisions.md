@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Temmuz 2026 — TeqAsyncButton, async buton loading pattern'i eklendi
+**Son güncelleme:** Ağustos 2026 — `is_listable` kategori flag'i eklendi
 
 ---
 
@@ -17,6 +17,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 5. [Async Buton Loading Pattern](#5-async-buton-loading-pattern)
 6. [Deploy Pipeline](#6-deploy-pipeline)
 7. [Ekran Migration Checklist](#7-ekran-migration-checklist)
+8. [Kategori `is_listable` Flag](#8-kategori-is_listable-flag)
 
 ---
 
@@ -902,3 +903,33 @@ Flutter tarafında yeni geliştirilen veya refactor edilen karmaşık ekranlarda
 
 **Neden MVVM?**
 `messages_screen.dart` ve `profile_screen.dart` gibi karmaşık sayfalardaki iş mantığı Widget'lardan soyutlandığında; kod temizleşir, sayfalar hafifler, test edilebilirlik artar ve aynı state başka widget'lar tarafından da kolaylıkla tüketilebilir hale gelir.
+
+---
+
+## 8. Kategori `is_listable` Flag
+
+### Problem
+
+`chat` gibi bazı ana kategoriler yalnızca canlı yayın / stream sistemi içinde anlam taşır; hiçbir ilan bu kategoriye bağlanamaz. Eski yaklaşımda bu kategori filtre ekranında görünüyor ve kullanıcının seçmesi halinde anlamsız boş sonuçlar üretiyordu.
+
+### Alternatifler Değerlendirildi
+
+| Yaklaşım | Avantaj | Dezavantaj |
+|---|---|---|
+| Flutter'da sabit slug filtresi (`where key != 'chat'`) | Tek satır, anlık | Yeni sistem kategorisi geldiğinde koda dokunmak şart |
+| DB'de `is_listable` flag | Kod değişikliği gerekmez, server-driven | Küçük bir migration gerektirir |
+
+### Karar
+
+`categories` tablosuna `is_listable BOOLEAN NOT NULL DEFAULT TRUE` sütunu eklendi. Yalnızca ilan bağlanamayacak sistem kategorileri `FALSE` yapılır; bu sayede Flutter tarafında hiçbir slug sabit kodlanmaz.
+
+### Uygulama
+
+- **Migration:** `zzzze_add_is_listable_to_categories.py` — sütunu ekler, `chat` kategorisini `FALSE` yapar.
+- **Backend:** `category.py` modeli + `/api/catalog` response'u `is_listable` alanını içerir.
+- **Flutter:** `CatalogCategory.isListable` alanı; `TeqFilterSheet` dropdown'u `where((c) => c.isListable)` ile filtreler.
+
+### Kural
+
+Gelecekte ilan bağlanamayan yeni bir sistem kategorisi eklendiğinde **kod değişikliği gerekmez.** Yalnızca DB'de `UPDATE categories SET is_listable = FALSE WHERE key = 'yeni_kategori'` çalıştırmak yeterlidir.
+

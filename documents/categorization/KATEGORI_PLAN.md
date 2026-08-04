@@ -1,6 +1,6 @@
 # Teqlif — Kategori & İlan Verisi Genişletme Planı
 
-Son güncelleme: 2026-07-23
+Son güncelleme: 2026-08-04
 
 ---
 
@@ -12,6 +12,10 @@ Son güncelleme: 2026-07-23
 - Marka → Model zincirleme filtreli dropdown
 - Kondisyon seti alt kategoriye göre dinamik
 - Renk alanı şimdilik yalnızca Apple / iPhone için
+- **`is_listable` flag:** `categories` tablosundaki her kategoride bu alan bulunur.
+  - `true` → ilan oluşturma ekranı ve filtre dropdown'unda görünür (varsayılan).
+  - `false` → yalnızca sistem/stream kontekstinde kullanılır; ilan bağlanamaz, filtrede gizlenir.
+  - Örnek: `chat` kategorisi `is_listable = FALSE`; canlı yayın sırasında kullanılır ancak kullanıcılar bu kategoriye ilan açamaz.
 
 ---
 

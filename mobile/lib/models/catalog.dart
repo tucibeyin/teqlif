@@ -115,15 +115,20 @@ class CatalogCategory {
   const CatalogCategory({
     required this.key,
     required this.subcategories,
+    this.isListable = true,
   });
 
   final String key;
   final List<CatalogSubcategory> subcategories;
+  /// Eğer false ise bu kategori ilan oluşturma ve filtre ekranlarında gösterilmez.
+  /// Örn: chat kategorisi yalnızca canlı yayın kontekstinde kullanılır.
+  final bool isListable;
 
   String get labelKey => 'cat_$key';
 
   factory CatalogCategory.fromJson(Map<String, dynamic> j) => CatalogCategory(
         key: j['key'] as String,
+        isListable: j['is_listable'] as bool? ?? true,
         subcategories: (j['subcategories'] as List<dynamic>? ?? [])
             .map((s) => CatalogSubcategory.fromJson(s as Map<String, dynamic>))
             .toList(),
