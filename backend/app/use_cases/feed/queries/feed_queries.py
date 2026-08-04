@@ -1276,6 +1276,7 @@ class FeedQueries:
                 excl_clause = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})"
                 
             id_clause = ""
+            offset_clause = ""
             if since_id:
                 id_clause = "AND l.id > :since_id"
                 params["since_id"] = since_id
@@ -1284,7 +1285,7 @@ class FeedQueries:
                 params["max_id"] = max_id
             else:
                 params["off"] = page * self._RECENT_PAGE_SIZE
-                id_clause = "OFFSET :off"
+                offset_clause = "OFFSET :off"
                 
             order_clause = "ORDER BY l.id DESC"
             if since_id:
@@ -1300,6 +1301,7 @@ class FeedQueries:
                   {id_clause}
                 {order_clause}
                 LIMIT :lim
+                {offset_clause}
             """
             
             base_result = await self.uow.session.execute(text(sql), params)
