@@ -1786,9 +1786,9 @@ async def demand_radar(
         q_top = """
             SELECT lowerUTF8(trim(query)) AS normalized_query, COUNT(*) AS cnt
             FROM search_events
-            WHERE timestamp >= now() - INTERVAL {days} DAY
+            WHERE timestamp >= now() - INTERVAL %(days)s DAY
               AND length(trim(query)) >= 2
-              AND ({cat} = '' OR category = {cat})
+              AND (%(cat)s = '' OR category = %(cat)s)
             GROUP BY normalized_query
             HAVING cnt >= 2
             ORDER BY cnt DESC
@@ -1798,7 +1798,7 @@ async def demand_radar(
         q_cat = """
             SELECT category, COUNT(*) AS cnt
             FROM search_events
-            WHERE timestamp >= now() - INTERVAL {days} DAY
+            WHERE timestamp >= now() - INTERVAL %(days)s DAY
               AND category != ''
             GROUP BY category
             HAVING cnt >= 2
@@ -1809,9 +1809,9 @@ async def demand_radar(
         q_subcat = """
             SELECT category, subcategory, COUNT(*) AS cnt
             FROM search_events
-            WHERE timestamp >= now() - INTERVAL {days} DAY
+            WHERE timestamp >= now() - INTERVAL %(days)s DAY
               AND subcategory != ''
-              AND ({cat} = '' OR category = {cat})
+              AND (%(cat)s = '' OR category = %(cat)s)
             GROUP BY category, subcategory
             HAVING cnt >= 2
             ORDER BY cnt DESC
@@ -1821,8 +1821,8 @@ async def demand_radar(
         q_vol = """
             SELECT toDate(timestamp) AS day, COUNT(*) AS cnt
             FROM search_events
-            WHERE timestamp >= now() - INTERVAL {days} DAY
-              AND ({cat} = '' OR category = {cat})
+            WHERE timestamp >= now() - INTERVAL %(days)s DAY
+              AND (%(cat)s = '' OR category = %(cat)s)
             GROUP BY day
             ORDER BY day
         """
