@@ -182,7 +182,10 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
             Wrap(
               spacing: 8, runSpacing: 8,
               children: catSearch.map((c) {
-                final cat = c['category'] as String? ?? loc.t("lblOther");
+                final catStr = c['category'] as String?;
+                final cat = (catStr == null || catStr.isEmpty || catStr == "diğer") 
+                    ? loc.t("lblOther") 
+                    : loc.t("cat_$catStr");
                 final cnt = c['count'] as int? ?? 0;
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
