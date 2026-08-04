@@ -1232,7 +1232,6 @@ class FeedQueries:
         """
         import asyncio
         from app.utils.redis_client import get_redis
-        from app.services.feed.listing_cache_service import get_listings_from_cache
         
         redis = await get_redis()
         base_ids = []
