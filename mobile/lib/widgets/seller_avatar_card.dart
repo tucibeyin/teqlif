@@ -24,7 +24,7 @@ class SellerAvatarCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 72,
-        margin: const EdgeInsets.only(right: 12),
+        margin: const EdgeInsetsDirectional.only(end: 12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -37,8 +37,8 @@ class SellerAvatarCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      begin: AlignmentDirectional.topStart,
+                      end: AlignmentDirectional.bottomEnd,
                     ),
                   ),
                   padding: const EdgeInsets.all(2.5),
@@ -98,7 +98,7 @@ class SellerAvatarCard extends StatelessWidget {
                 ),
                 if (isVerified)
                   const Padding(
-                    padding: EdgeInsets.only(left: 3),
+                    padding: EdgeInsetsDirectional.only(start: 3),
                     child: Icon(Icons.verified, size: 12, color: Color(0xFF2563EB)),
                   ),
               ],

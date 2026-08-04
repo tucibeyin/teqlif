@@ -97,9 +97,9 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
               children: [
                 // ── Kapat butonu ────────────────────────────────────────────
                 Align(
-                  alignment: Alignment.topRight,
+                  alignment: AlignmentDirectional.topEnd,
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 8, top: 4),
+                    padding: const EdgeInsetsDirectional.only(end: 8, top: 4),
                     child: IconButton(
                       onPressed: widget.onClose,
                       icon: const Icon(Icons.close_rounded,

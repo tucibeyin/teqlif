@@ -219,7 +219,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             ),
           ],
         ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
         actions: [
           Row(
             children: [
@@ -561,7 +561,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -616,7 +616,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                         // Pure viewer: pinlenmiş ilan varsa ikon göster
                         if (!_isHostLike && state.listingId != null)
                           Padding(
-                            padding: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsetsDirectional.only(start: 4),
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
@@ -649,7 +649,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           // Mesaj/hata çıktısı
           if (_msg != null)
             Padding(
-              padding: const EdgeInsets.only(top: 4, left: 14),
+              padding: const EdgeInsetsDirectional.only(top: 4, start: 14),
               child: Text(
                 _msg!,
                 style: TextStyle(
@@ -711,7 +711,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             builder: (_, setSt) {
               return ListView(
                 controller: scrollCtrl,
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 32),
                 children: [
                   // Handle bar
                   Center(
@@ -1099,7 +1099,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   ),
                 ],
               ),
-              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
               actions: [
                 Row(
                   children: [
@@ -1222,7 +1222,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             ),
           ],
         ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
         actions: [
           Row(
             children: [
@@ -1725,7 +1725,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     if (liveState.isPending && !liveState.isBoughtItNow) {
       final isBuyer = widget.iAmBinBuyer;
       return Padding(
-        padding: EdgeInsets.fromLTRB(
+        padding: EdgeInsetsDirectional.fromSTEB(
           20,
           16,
           20,
@@ -1815,7 +1815,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     // Hemen Al ile satın alındıysa özel ekran göster
     if (liveState.isBoughtItNow && liveState.isEnded) {
       return Padding(
-        padding: EdgeInsets.fromLTRB(
+        padding: EdgeInsetsDirectional.fromSTEB(
           20,
           16,
           20,
@@ -1890,7 +1890,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     }
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         20,
         16,
         20,
@@ -2264,7 +2264,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
         loc.t("auctionStartTitle"),
         style: const TextStyle(color: Colors.white, fontSize: 16),
       ),
-      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      contentPadding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 0),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -2422,7 +2422,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
           ],
         ),
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -2640,7 +2640,7 @@ class _BidBlockedSheet extends ConsumerWidget {
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
@@ -2792,7 +2792,7 @@ class _PhoneVerifySheetState extends ConsumerState<_PhoneVerifySheet> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         24,
         8,
         24,

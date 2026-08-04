@@ -77,8 +77,8 @@ class _GiftHudState extends ConsumerState<GiftHud> with SingleTickerProviderStat
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF6D28D9), Color(0xFF2563EB)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+                  begin: AlignmentDirectional.centerStart,
+                  end: AlignmentDirectional.centerEnd,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [

@@ -331,7 +331,7 @@ class _AccessoryBarState extends ConsumerState<_AccessoryBar> {
                         builder: (context, value, _) {
                           if (value.text.isEmpty) {
                             return Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: AlignmentDirectional.centerStart,
                               child: Text(
                                 loc.t("kbdTypingHint"),
                                 style: _textStyle.copyWith(

@@ -528,7 +528,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
                   backgroundColor: Colors.red.shade700,
                   duration: const Duration(seconds: 2),
                   behavior: SnackBarBehavior.floating,
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  margin: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 80),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -715,8 +715,8 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
   Widget _buildPinBanner({required bool bottomMargin}) {
     return Container(
       margin: bottomMargin
-          ? const EdgeInsets.fromLTRB(12, 4, 12, 0)
-          : const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          ? const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 0)
+          : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.transparent,
@@ -757,7 +757,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
                 sendHostPin('');
               },
               child: const Padding(
-                padding: EdgeInsets.only(left: 6),
+                padding: EdgeInsetsDirectional.only(start: 6),
                 child: Icon(Icons.close, color: Colors.white38, size: 14),
               ),
             ),
@@ -799,7 +799,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
               child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
-                padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 4, 14, 0),
                 // Scroll alanı: history'nin son 20'si
                 itemCount: min(_history.length, _kMaxVisibleMessages),
                 itemBuilder: (_, i) {
@@ -832,13 +832,13 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 0),
           child: Row(
             children: [
               if (_token != null) ...[
                 if (_history.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsetsDirectional.only(end: 6),
                     child: GestureDetector(
                       key: const Key('chat_panel_btn_gecmis'),
                       onTap: _showHistory,
@@ -981,7 +981,7 @@ class _HistorySheet extends ConsumerWidget {
             ),
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
               child: Row(
                 children: [
                   const Icon(
@@ -1194,7 +1194,7 @@ class _MessageItem extends StatelessWidget {
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 3),
+                  padding: const EdgeInsetsDirectional.only(end: 3),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 4,
@@ -1223,7 +1223,7 @@ class _MessageItem extends StatelessWidget {
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 3),
+                  padding: const EdgeInsetsDirectional.only(end: 3),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 4,
@@ -1293,7 +1293,7 @@ class _MessageItem extends StatelessWidget {
           left: BorderSide(color: Color(0xFFFACC15), width: 3),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+      padding: const EdgeInsetsDirectional.fromSTEB(8, 5, 8, 5),
       child: content,
     );
   }

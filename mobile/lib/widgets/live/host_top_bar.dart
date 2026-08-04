@@ -37,10 +37,10 @@ class HostTopBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     return Container(
-      padding: EdgeInsets.only(
+      padding: EdgeInsetsDirectional.only(
         top: topPad + 14,
-        left: 16,
-        right: 16,
+        start: 16,
+        end: 16,
         bottom: 32,
       ),
       decoration: const BoxDecoration(

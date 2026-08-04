@@ -28,7 +28,7 @@ class StreamerAvatarCard extends ConsumerWidget {
       child: SizedBox(
         width: 72,
         child: Padding(
-          padding: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsetsDirectional.only(end: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -43,8 +43,8 @@ class StreamerAvatarCard extends ConsumerWidget {
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
                       ),
                     ),
                     padding: const EdgeInsets.all(2.5),
@@ -135,7 +135,7 @@ class StreamerAvatarCard extends ConsumerWidget {
                   ),
                   if (isVerified)
                     const Padding(
-                      padding: EdgeInsets.only(left: 3),
+                      padding: EdgeInsetsDirectional.only(start: 3),
                       child: Icon(Icons.verified, size: 12, color: Color(0xFF2563EB)),
                     ),
                 ],

@@ -76,7 +76,7 @@ class ShimmerGridCard extends StatelessWidget {
             ),
             // Başlık + fiyat satırları
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 6, 6, 5),
+              padding: const EdgeInsetsDirectional.fromSTEB(6, 6, 6, 5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

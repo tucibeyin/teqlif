@@ -79,7 +79,7 @@ class _PhoneInputFieldState extends ConsumerState<PhoneInputField> {
       style: TextStyle(color: textColor, fontSize: 15),
       dropdownTextStyle: TextStyle(color: textColor, fontSize: 14),
       dropdownIcon: Icon(Icons.arrow_drop_down, color: hintColor, size: 20),
-      flagsButtonPadding: const EdgeInsets.only(left: 12, right: 4),
+      flagsButtonPadding: const EdgeInsetsDirectional.only(start: 12, end: 4),
       showDropdownIcon: true,
       autofocus: false,
       invalidNumberMessage: null, // kendi hata mesajımızı kullanacağız

@@ -294,8 +294,8 @@ class _ShimmerText extends StatelessWidget {
         return ShaderMask(
           blendMode: BlendMode.srcIn,
           shaderCallback: (bounds) => LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
+            begin: AlignmentDirectional.centerStart,
+            end: AlignmentDirectional.centerEnd,
             colors: const [
               Color(0x70FFFFFF),
               Color(0xCCFFFFFF),

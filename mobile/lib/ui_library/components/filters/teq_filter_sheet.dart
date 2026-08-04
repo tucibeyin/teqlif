@@ -374,9 +374,9 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
         children: [
           const _DragHandle(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 12),
             child: Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Text(
                 loc.tOr('filterTitle', 'Filtreler'),
                 style: TextStyle(
@@ -562,7 +562,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
         child: Text(
           title,
           style: TextStyle(
@@ -594,7 +594,7 @@ class _ChipRow extends StatelessWidget {
           children: items.map((item) {
             final isSel = item.$1 == selected;
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsetsDirectional.only(end: 8),
               child: GestureDetector(
                 onTap: () => onSelect(item.$1),
                 child: AnimatedContainer(
@@ -644,7 +644,7 @@ class _Footer extends StatelessWidget {
         : loc.tOr('filterApply', 'Uygula');
 
     return Container(
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         16, 12, 16, 12 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(

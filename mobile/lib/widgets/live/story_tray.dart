@@ -262,7 +262,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
 
   Widget _buildShimmerItem(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 14),
+      padding: const EdgeInsetsDirectional.only(end: 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -368,8 +368,8 @@ class _MyStoryItem extends ConsumerWidget {
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
                       ),
                     ),
                     padding: const EdgeInsets.all(2.5),
@@ -529,14 +529,14 @@ class _StoryGroupItem extends ConsumerWidget {
                         // Canlı yayın varsa kırmızı-turuncu halka
                         ? const LinearGradient(
                             colors: [Color(0xFFFF4136), Color(0xFFFF851B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                            begin: AlignmentDirectional.topStart,
+                            end: AlignmentDirectional.bottomEnd,
                           )
                         // Sadece video hikayesi varsa normal gradient
                         : const LinearGradient(
                             colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                            begin: AlignmentDirectional.topStart,
+                            end: AlignmentDirectional.bottomEnd,
                           ),
                   ),
                   padding: const EdgeInsets.all(2.5),
