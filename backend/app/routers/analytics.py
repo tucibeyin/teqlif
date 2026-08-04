@@ -1784,10 +1784,10 @@ async def demand_radar(
         _dr_params = {"days": days, "cat": _cat_param}
 
         q_top = """
-            SELECT lowerUTF8(trimBoth(query)) AS normalized_query, COUNT(*) AS cnt
+            SELECT lowerUTF8(trim(query)) AS normalized_query, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
-              AND length(trimBoth(query)) >= 2
+              AND length(trim(query)) >= 2
               AND ({cat} = '' OR category = {cat})
             GROUP BY normalized_query
             HAVING cnt >= 2
