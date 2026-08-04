@@ -477,7 +477,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                         ] else ...[
                           // Video mode: show name + timer in a compact top bar
                           Padding(
-                            padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
+                            padding: const EdgeInsetsDirectional.only(top: 16, start: 16, end: 16),
                             child: Row(
                               children: [
                                 const SizedBox(width: 48), // space for minimize button
@@ -1034,7 +1034,7 @@ class _ParticipantStrip extends StatelessWidget {
             ),
           if (extra > 0)
             Container(
-              margin: const EdgeInsets.only(left: 4),
+              margin: const EdgeInsetsDirectional.only(start: 4),
               width: 40,
               height: 40,
               decoration: BoxDecoration(

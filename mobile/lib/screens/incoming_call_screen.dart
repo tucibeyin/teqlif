@@ -183,7 +183,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
                   onTap: () => Navigator.of(context).pop(),
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 12, 0, 4),
+                    padding: const EdgeInsetsDirectional.fromSTEB(0, 12, 0, 4),
                     child: Icon(
                       Icons.keyboard_arrow_down,
                       size: 32,
