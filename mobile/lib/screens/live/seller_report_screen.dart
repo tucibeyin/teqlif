@@ -209,7 +209,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
           if (swipeImpressions > 0) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 16, 0),
                 child: _SectionHeader(
                   icon: Icons.swipe_rounded,
                   label: loc.t("reportSectionSwipeFeed"),
@@ -218,7 +218,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
               sliver: SliverGrid(
                 delegate: SliverChildListDelegate([
                   _MetricCard(
@@ -248,7 +248,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
           if (totalAuctions > 0) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 16, 0),
                 child: _SectionHeader(
                   icon: Icons.gavel_rounded,
                   label: loc.t("reportSectionAuction"),
@@ -257,7 +257,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
               sliver: SliverGrid(
                 delegate: SliverChildListDelegate([
                   _MetricCard(
@@ -297,7 +297,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
             // ── Ürün listesi ──────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 0),
                 child: Column(
                   children: auctionItems.map<Widget>((item) {
                     final m = item as Map<String, dynamic>;
@@ -320,7 +320,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
           if (hesitations > 0)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 0),
                 child: _HesitationHint(count: hesitations, loc: loc),
               ),
             ),
@@ -329,7 +329,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
           if (recommendation.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
                 child: _InsightCard(text: recommendation, insightLabel: loc.t("reportSmartInsight")),
               ),
             ),
@@ -337,7 +337,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
           // ── Aksiyon butonları ──────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 24, 16, 40),
               child: _PrimaryButton(label: loc.t("reportGoHome"), onTap: _goHome),
             ),
           ),
@@ -368,11 +368,11 @@ class _Header extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 20, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
           colors: [Color(0xFF1E1B4B), Color(0xFF0A0F1E)],
         ),
       ),
@@ -513,8 +513,8 @@ class _InsightCard extends ConsumerWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
           colors: [
             kPrimary.withValues(alpha: 0.18),
             const Color(0xFF1E1B4B).withValues(alpha: 0.80),

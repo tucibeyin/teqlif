@@ -799,8 +799,8 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
                       colors: [Color(0xFFFF4136), Color(0xFFFF851B)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      begin: AlignmentDirectional.topStart,
+                      end: AlignmentDirectional.bottomEnd,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -945,7 +945,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
           final isActive = barState == _BarState.active;
           return Expanded(
             child: Padding(
-              padding: EdgeInsets.only(right: i < total - 1 ? 3.0 : 0),
+              padding: EdgeInsetsDirectional.only(end: i < total - 1 ? 3.0 : 0),
               child: _StoryProgressBar(
                 state: barState,
                 // Video öğesi aktifse controller, canlı ise timer animasyonu ver

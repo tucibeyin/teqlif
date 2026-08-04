@@ -247,7 +247,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
         if (hasSuggestedStreamers) ...[
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 8),
               child: Row(
                 children: [
                   const Icon(
@@ -296,7 +296,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
         if (hasRec) ...[
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 6),
               child: Row(
                 children: [
                   const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
@@ -322,7 +322,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 itemBuilder: (_, i) => SizedBox(
                   width: 150,
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsetsDirectional.only(end: 10),
                     child: _StreamGridTile(
                       stream: rec[i],
                       onTap: () => _joinStream(rec[i], isOffline),
@@ -340,7 +340,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
         // ── En Son Canlı Yayınlar ──────────────────────────────
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 12, 6),
             child: Row(
               children: [
                 Container(
@@ -369,7 +369,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
         // Düz grid veya section'lı — kategori seçiliyse düz
         if (_selectedCategory != null || cats.length < 2)
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -401,7 +401,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
         if (groups[c]!.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 12, 6),
               child: Text(
                 loc.t('cat_$c'),
                 style: const TextStyle(
@@ -414,7 +414,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 4),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -456,7 +456,7 @@ class _CategoryChip extends ConsumerWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(right: 8),
+        margin: const EdgeInsetsDirectional.only(end: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active ? kPrimary : Colors.transparent,
@@ -512,7 +512,7 @@ class _SubcategoryChip extends ConsumerWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(right: 8),
+        margin: const EdgeInsetsDirectional.only(end: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: active ? kPrimary.withValues(alpha: 0.15) : Colors.transparent,
@@ -604,7 +604,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
       child: SizedBox(
         width: 72,
         child: Padding(
-          padding: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsetsDirectional.only(end: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -619,8 +619,8 @@ class _StreamerAvatarCard extends ConsumerWidget {
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
                       ),
                     ),
                     padding: const EdgeInsets.all(2.5),
@@ -872,7 +872,7 @@ class _StreamGridTile extends ConsumerWidget {
               ),
               // Info section
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(8, 7, 8, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -912,8 +912,8 @@ class _StreamGridTile extends ConsumerWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [kPrimaryDark, kPrimaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
         ),
       ),
       child: const Center(

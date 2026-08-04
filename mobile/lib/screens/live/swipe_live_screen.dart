@@ -1586,7 +1586,7 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
     final loc = ref.watch(localizationProvider);
     final botPad = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, botPad + 16),
+      padding: EdgeInsetsDirectional.fromSTEB(16, 12, 16, botPad + 16),
       decoration: const BoxDecoration(
         color: Color(0xFF1E293B),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1667,8 +1667,8 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                            begin: AlignmentDirectional.topStart,
+                            end: AlignmentDirectional.bottomEnd,
                           ),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: Colors.white12),
@@ -2002,7 +2002,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
             left: 0,
             right: 0,
             child: Container(
-              padding: EdgeInsets.fromLTRB(16, 40, 16, botPad + 16),
+              padding: EdgeInsetsDirectional.fromSTEB(16, 40, 16, botPad + 16),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,

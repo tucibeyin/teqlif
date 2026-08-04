@@ -262,7 +262,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                 color: Color(0xFF1A2332),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 20, 32),
               child: loading
                   ? const SizedBox(
                       height: 180,
@@ -971,7 +971,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                     // ── Lead blast butonu ──────────────────────────────────
                     if (_audienceSize > 0 && !_blastDismissed)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                        padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -1068,7 +1068,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                       ),
                     // ── Audience Insights butonu ───────────────────────
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                      padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 4),
                       child: GestureDetector(
                         onTap: () => _showAudienceInsights(context),
                         child: Container(
@@ -1250,7 +1250,7 @@ class _ViewersBottomSheet extends ConsumerWidget {
         color: Color(0xFF1E293B),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1596,7 +1596,7 @@ class _BidsToggleTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Toggle listenin solunda, sol kenarı yuvarlak; sağ kenarı listeye yapışık
-    const radius = BorderRadius.horizontal(left: Radius.circular(12));
+    const radius = BorderRadiusDirectional.horizontal(start: Radius.circular(12));
     final borderColor = Colors.white.withValues(alpha: isOpen ? 0.10 : 0.15);
 
     return GestureDetector(
@@ -1758,7 +1758,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
         color: Color(0xFF1E293B),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2159,8 +2159,8 @@ class _WhaleHudState extends ConsumerState<_WhaleHud>
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFB8860B)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+                  begin: AlignmentDirectional.centerStart,
+                  end: AlignmentDirectional.centerEnd,
                 ),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
