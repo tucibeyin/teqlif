@@ -609,7 +609,7 @@ class _HotLeadCard extends ConsumerWidget {
     final rawCat    = lead.category;
     final catLabel  = (rawCat.isEmpty || rawCat == "diğer") 
         ? loc.t("lblOther") 
-        : loc.t("cat_$rawCat");
+        : loc.tOr("cat_$rawCat", rawCat);
     final isBoosted = lead.isBoosted;
     final heatColor = heat > 15
         ? const Color(0xFFEF4444)
