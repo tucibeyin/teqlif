@@ -352,7 +352,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
                       ),
                       if (unread > 0)
                         Container(
-                          margin: const EdgeInsets.only(left: 6),
+                          margin: const EdgeInsetsDirectional.only(start: 6),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 2,
@@ -1606,9 +1606,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 ),
               ),
               if (dur != null)
-                Positioned(
+                Positioned.directional(
+                  textDirection: Directionality.of(context),
                   bottom: 6,
-                  right: 10,
+                  end: 10,
                   child: Text(
                     '${dur}s',
                     style: const TextStyle(
@@ -1939,8 +1940,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                   final msgId = msg['id'] as int? ?? -1;
                                   return Align(
                                     alignment: isMe
-                                        ? Alignment.centerRight
-                                        : Alignment.centerLeft,
+                                        ? AlignmentDirectional.centerEnd
+                                        : AlignmentDirectional.centerStart,
                                     child: GestureDetector(
                                       onLongPress: (isMe && msgId > 0)
                                           ? () => _deleteMessage(msgId)
@@ -1966,13 +1967,13 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                           color: isMe
                                               ? kPrimary
                                               : AppColors.card(context),
-                                          borderRadius: BorderRadius.only(
-                                            topLeft: const Radius.circular(16),
-                                            topRight: const Radius.circular(16),
-                                            bottomLeft: isMe
+                                          borderRadius: BorderRadiusDirectional.only(
+                                            topStart: const Radius.circular(16),
+                                            topEnd: const Radius.circular(16),
+                                            bottomStart: isMe
                                                 ? const Radius.circular(16)
                                                 : const Radius.circular(4),
-                                            bottomRight: isMe
+                                            bottomEnd: isMe
                                                 ? const Radius.circular(4)
                                                 : const Radius.circular(16),
                                           ),
@@ -2042,7 +2043,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           // Yazıyor göstergesi
           if (_isOtherTyping)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
               child: Row(
                 children: [
                   const _TypingIndicator(),
@@ -2059,7 +2060,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               ),
             ),
           Container(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 10),
             decoration: BoxDecoration(
               color: AppColors.surface(context),
               border: Border(top: BorderSide(color: AppColors.border(context))),
@@ -2082,7 +2083,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         GestureDetector(
           onTap: _uploadingMedia ? null : _showAttachSheet,
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 10, right: 4),
+            padding: const EdgeInsetsDirectional.only(bottom: 10, end: 4),
             child: _uploadingMedia
                 ? const SizedBox(
                     width: 24,
@@ -2184,7 +2185,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         Container(
           width: 10,
           height: 10,
-          margin: const EdgeInsets.only(right: 6),
+          margin: const EdgeInsetsDirectional.only(end: 6),
           decoration: const BoxDecoration(
             color: Colors.red,
             shape: BoxShape.circle,
@@ -2547,7 +2548,7 @@ class _TypingIndicatorState extends ConsumerState<_TypingIndicator>
               1.0,
             );
             return Container(
-              margin: const EdgeInsets.only(right: 3),
+              margin: const EdgeInsetsDirectional.only(end: 3),
               width: 6,
               height: 6,
               decoration: BoxDecoration(

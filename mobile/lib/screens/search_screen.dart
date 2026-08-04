@@ -212,7 +212,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           children: [
             // ── Arama kutusu ─────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 8),
               child: TeqTextField(
                 key: const Key('search_input_arama'),
                 controller: _controller,
@@ -325,7 +325,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
         if (state.isSemanticSearch)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 2),
               child: Row(
                 children: [
                   Container(
@@ -431,7 +431,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               child: InkWell(
                 onTap: () => ref.read(searchViewModelProvider.notifier).setShowAllUsers(true),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(72, 4, 16, 8),
+                  padding: const EdgeInsetsDirectional.fromSTEB(72, 4, 16, 8),
                   child: Row(
                     children: [
                       Text(
@@ -556,7 +556,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           if (state.exploreStreams.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 8),
                 child: Row(
                   children: [
                     const Icon(
@@ -602,7 +602,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           if (state.suggestedStreamers.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 8),
                 child: Row(
                   children: [
                     const Icon(
@@ -652,7 +652,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           if (state.suggestedSellers.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
                 child: Row(
                   children: [
                     const Icon(Icons.store_rounded, color: kPrimary, size: 15),
@@ -698,7 +698,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               (state.exploreLoading && state.isLoggedIn)) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
                 child: Row(
                   children: [
                     const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
@@ -734,7 +734,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                         itemCount: 4,
                         itemBuilder: (_, _) => Container(
                           width: 120,
-                          margin: const EdgeInsets.only(right: 10),
+                          margin: const EdgeInsetsDirectional.only(end: 10),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             color: Colors.grey.withValues(alpha: 0.15),
@@ -827,7 +827,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
                 child: Row(
                   children: [
                     const Icon(
@@ -948,7 +948,7 @@ class _SectionHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 18, 16, 8),
       child: Row(
         children: [
           Icon(icon, size: 16, color: iconColor ?? const Color(0xFF6B7280)),
@@ -983,7 +983,7 @@ class _StreamCard extends ConsumerWidget {
       onTap: onTap,
       child: Container(
         width: 140,
-        margin: const EdgeInsets.only(right: 10),
+        margin: const EdgeInsetsDirectional.only(end: 10),
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.circular(12),
@@ -1038,7 +1038,7 @@ class _StreamCard extends ConsumerWidget {
               right: 0,
               bottom: 0,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(8, 20, 8, 8),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -1079,8 +1079,8 @@ class _StreamCard extends ConsumerWidget {
     decoration: const BoxDecoration(
       gradient: LinearGradient(
         colors: [kPrimaryDark, kPrimaryLight],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        begin: AlignmentDirectional.topStart,
+        end: AlignmentDirectional.bottomEnd,
       ),
     ),
     child: const Center(
@@ -1187,7 +1187,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
       },
       child: Container(
         width: 120,
-        margin: const EdgeInsets.only(right: 10),
+        margin: const EdgeInsetsDirectional.only(end: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: AppColors.card(context),
@@ -1282,7 +1282,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
                                 ),
                               ),
                             const Padding(
-                              padding: EdgeInsets.fromLTRB(4, 0, 4, 6),
+                              padding: EdgeInsetsDirectional.fromSTEB(4, 0, 4, 6),
                               child: Text(
                                 '🔴 Alev\nAlev!',
                                 textAlign: TextAlign.center,
@@ -1318,7 +1318,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
               )
             else
               Padding(
-                padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
+                padding: const EdgeInsetsDirectional.fromSTEB(6, 5, 6, 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1406,7 +1406,7 @@ class _ListingTile extends ConsumerWidget {
                 right: 0,
                 bottom: 0,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                  padding: const EdgeInsetsDirectional.fromSTEB(5, 14, 5, 5),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,

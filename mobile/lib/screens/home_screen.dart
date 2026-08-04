@@ -181,7 +181,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   if (state.hasFilter) ...[
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 8),
                         child: Text(
                           _filteredHeader(loc, state),
                           style: const TextStyle(
@@ -290,7 +290,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                              padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
                               child: Row(
                                 children: [
                                   const Icon(Icons.history, size: 16, color: Colors.orange),
@@ -316,7 +316,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                       itemCount: 4,
                                       itemBuilder: (_, __) => Container(
                                         width: 100,
-                                        margin: const EdgeInsets.only(right: 8),
+                                        margin: const EdgeInsetsDirectional.only(end: 8),
                                         child: ShimmerBox(
                                           borderRadius: BorderRadius.circular(10),
                                         ),
@@ -359,7 +359,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                     },
                                     child: Container(
                                       width: 100,
-                                      margin: const EdgeInsets.only(right: 8),
+                                      margin: const EdgeInsetsDirectional.only(end: 8),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(10),
                                         color: AppColors.card(context),
@@ -376,7 +376,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                             Positioned(
                                               left: 0, right: 0, bottom: 0,
                                               child: Container(
-                                                padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+                                                padding: const EdgeInsetsDirectional.fromSTEB(4, 10, 4, 4),
                                                 decoration: const BoxDecoration(
                                                   gradient: LinearGradient(
                                                     begin: Alignment.topCenter,
@@ -450,7 +450,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                     // ── En Son Eklenenler ──────────────────────────────────
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                        padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
                         child: Row(
                           children: [
                             const Icon(
@@ -750,7 +750,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
                 right: 0,
                 bottom: 0,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                  padding: const EdgeInsetsDirectional.fromSTEB(5, 14, 5, 5),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -938,7 +938,7 @@ class _OnboardingBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      margin: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF06B6D4).withValues(alpha: 0.08),

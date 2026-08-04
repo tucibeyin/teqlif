@@ -314,7 +314,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
             key: const Key('profile_btn_ayarlar'),
             onTap: () => _openSettings(user),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 0, 12, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(6, 0, 12, 0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
@@ -337,7 +337,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   // ── Profil başlık bölümü ──
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -450,7 +450,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   // Ad ve email
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -560,7 +560,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   // Profili Düzenle butonu
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
                     child: TeqButton.outline(
                       key: const Key('profile_btn_profil_duzenle'),
                       text: ref.read(localizationProvider).t('btnEditProfile'),
@@ -815,7 +815,7 @@ class _ListingGridItem extends ConsumerWidget {
               right: 0,
               bottom: 0,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                padding: const EdgeInsetsDirectional.fromSTEB(5, 14, 5, 5),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -2161,7 +2161,7 @@ class _SettingsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 4),
             child: Text(
               title.toUpperCase(),
               style: TextStyle(
@@ -2697,7 +2697,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
             ),
             const SizedBox(height: 20),
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Text(
                 'Sosyal Medya',
                 style: TextStyle(
@@ -3556,12 +3556,12 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
     return GestureDetector(
       onTap: _openSheet,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        margin: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFA500)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
           ),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
@@ -3633,7 +3633,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
               onTap: _handleRefresh,
               behavior: HitTestBehavior.opaque,
               child: Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsetsDirectional.only(end: 8),
                 child: _refreshing
                     ? const SizedBox(
                         width: 20,
@@ -3676,7 +3676,7 @@ class _TuciWalletSheet extends ConsumerWidget {
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -3701,8 +3701,8 @@ class _TuciWalletSheet extends ConsumerWidget {
                   Color(0xFFFFD700),
                   Color(0xFFFFA500),
                 ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
@@ -3735,7 +3735,7 @@ class _TuciWalletSheet extends ConsumerWidget {
           // Son işlemler
           if (history.isNotEmpty) ...[
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Text(
                 ref.read(localizationProvider).t('walletRecentTxns'),
                 style: const TextStyle(
@@ -3958,7 +3958,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             ),
             // Başlık
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 8, 8),
               child: Row(
                 children: [
                   Text(
@@ -3981,7 +3981,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             Expanded(
               child: ListView.builder(
                 controller: scrollCtrl,
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 32),
                 itemCount: _txns.length,
                 itemBuilder: (_, i) => _buildTxnRow(_txns[i], loc),
               ),
@@ -4032,7 +4032,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 32),
           children: [
             const SizedBox(height: 16),
 
@@ -4047,8 +4047,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     Color(0xFFFFD700),
                     Color(0xFFFFA500),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  begin: AlignmentDirectional.topStart,
+                  end: AlignmentDirectional.bottomEnd,
                 ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
@@ -4373,7 +4373,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
           ),
           // Header row
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 8, 8),
             child: Row(
               children: [
                 Text(
@@ -4411,7 +4411,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
             // Listing thumbnail (collapse if none)
             if (hasImage)
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
@@ -5038,7 +5038,7 @@ class _ScoreBadge extends StatelessWidget {
       onTap: () => _showInfo(context),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(9, 4, 9, 4),
+        padding: const EdgeInsetsDirectional.fromSTEB(9, 4, 9, 4),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(20),
