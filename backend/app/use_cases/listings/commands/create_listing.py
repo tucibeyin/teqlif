@@ -4,6 +4,7 @@ from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, ContentPolicyException
 from app.core.auto_mod import analyze_listing_text
+from app.models.enums import ListingStatus
 
 logger = get_logger(__name__)
 
