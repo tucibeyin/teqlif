@@ -701,7 +701,7 @@
   "walletTxnSpendLeadGen": "Mass Notification",
   "walletTxnSpendAdCampaign": "Ad campaign",
   "walletTxnSpendAi": "AI pricing",
-  "walletTxnSpendAiDesc": "Usage of AI analysis and pricing tool",
+  "walletTxnSpendAiDesc": "AI listing description generation",
   "walletTxnWebTopup": "Web top-up",
   "walletTxnSendGift": "Live gift sent",
   "walletTxnReferralBonus": "Referral bonus",

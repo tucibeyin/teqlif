@@ -700,7 +700,7 @@
   "walletTxnSpendLeadGen": "بث الطلبات الساخنة",
   "walletTxnSpendAdCampaign": "حملة إعلانية",
   "walletTxnSpendAi": "تسعير الذكاء الاصطناعي",
-  "walletTxnSpendAiDesc": "استخدام أداة تحليل وتسعير الذكاء الاصطناعي",
+  "walletTxnSpendAiDesc": "كتابة وصف الإعلان بالذكاء الاصطناعي",
   "walletTxnWebTopup": "شحن الرصيد عبر الويب",
   "walletTxnSendGift": "تم إرسال هدية مباشرة",
   "walletTxnReferralBonus": "مكافأة الإحالة",
