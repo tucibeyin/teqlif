@@ -794,7 +794,8 @@ async def end_call(
         conn = connected_at if connected_at.tzinfo else connected_at.replace(tzinfo=timezone.utc)
         duration_seconds = max(0, int((ended_at - conn).total_seconds()))
 
-    call.status = "ended"
+    final_status = "ended" if accepted_at else "missed"
+    call.status = final_status
     call.ended_at = ended_at
     call.duration_seconds = duration_seconds
     await db.commit()
@@ -815,16 +816,17 @@ async def end_call(
     except Exception:
         pass  # Redis failure is non-fatal — proceed without webhook dedup
 
-    await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call_id_val})
+    ws_type = f"call_{final_status}"
+    await _ws_broadcast(other_id, {"type": ws_type, "call_id": call_id_val})
     other_user = await db.get(User, other_id)
     if other_user and other_user.fcm_token:
-        logger.info(f"[Calls] Sending 'call_ended' FCM push to {other_user.username} from end_call endpoint (call_id={call_id})")
+        logger.info(f"[Calls] Sending '{ws_type}' FCM push to {other_user.username} from end_call endpoint (call_id={call_id})")
         try:
             await send_push(
                 token=other_user.fcm_token,
                 title="",
                 body="",
-                notif_type="call_ended",
+                notif_type=ws_type,
                 extra_data={"call_id": str(call_id_val)},
                 is_silent=True
             )

@@ -200,14 +200,7 @@ class AndroidCallHardwareAdapter extends CallHardwareAdapter {
 
   @override
   void startRinger() {
-    log('SOUND', 'startRingtoneAndVibration CALLED (Android)');
-    FlutterRingtonePlayer().playRingtone(looping: true);
-    Vibration.hasVibrator().then((has) {
-      if (has == true) {
-        log('HW', 'haptic VIBRATE | pattern=[2000,500,2000,500] repeat=0 platform=Android');
-        Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
-      }
-    });
+    log('SOUND', 'startRingtoneAndVibration CALLED (Android) -> NO-OP (Handled natively by flutter_callkit_incoming)');
   }
 
   @override

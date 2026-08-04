@@ -55,6 +55,14 @@ class IosCallHardwareAdapter extends CallHardwareAdapter {
         ),
       ));
       await _ringbackPlayer.setSource(ap.AssetSource('sounds/ringing.wav'));
+      
+      // Fallback for iOS audioplayers bug where ReleaseMode.loop sometimes fails
+      _ringbackPlayer.onPlayerComplete.listen((_) {
+        log('SOUND', 'ringbackPlayer COMPLETED | Triggering manual loop resume');
+        _ringbackPlayer.seek(Duration.zero);
+        _ringbackPlayer.resume();
+      });
+
       _ringbackPreloaded = true;
       log('SOUND', 'ringing.wav PRE-LOADED in ringbackPlayer | ready for instant resume()');
     } catch (e) {
@@ -226,12 +234,8 @@ class IosCallHardwareAdapter extends CallHardwareAdapter {
 
   @override
   void startRinger() {
-    log('SOUND', 'startRingtoneAndVibration CALLED (iOS)');
-    FlutterRingtonePlayer().playRingtone(looping: true);
+    log('SOUND', 'startRingtoneAndVibration CALLED (iOS) -> NO-OP (Handled natively by flutter_callkit_incoming)');
     _ringtoneLoopTimer?.cancel();
-    _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      FlutterRingtonePlayer().playRingtone();
-    });
   }
 
   @override
