@@ -26,6 +26,7 @@ from app.routers.messages import dm_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads, wallet
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
+from app.security.middleware_context import LogContextMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.defender import AntiBotMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -247,6 +248,7 @@ setup_exception_handlers(app)
 
 app.add_middleware(AntiBotMiddleware)
 app.add_middleware(InputSanitizationMiddleware)
+app.add_middleware(LogContextMiddleware)
 
 _CORS_ORIGINS = [
     "https://teqlif.com",

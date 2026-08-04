@@ -5,8 +5,15 @@ from pythonjsonlogger import jsonlogger
 
 LOGS_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
 
-# JSON alanları: timestamp, level, logger, message + varsa exc_info
-_JSON_FIELDS = "%(asctime)s %(levelname)s %(name)s %(message)s"
+# JSON alanları: timestamp, level, logger, message + varsa exc_info + user_id
+_JSON_FIELDS = "%(asctime)s %(levelname)s %(name)s %(user_id)s %(message)s"
+
+from app.core.log_context import user_id_var
+
+class UserIdFilter(logging.Filter):
+    def filter(self, record):
+        record.user_id = user_id_var.get() or "guest"
+        return True
 
 
 def _make_json_handler(path: str, level: int) -> TimedRotatingFileHandler:
@@ -24,6 +31,7 @@ def _make_json_handler(path: str, level: int) -> TimedRotatingFileHandler:
         rename_fields={"asctime": "timestamp", "levelname": "level", "name": "logger"},
         json_ensure_ascii=False,
     ))
+    handler.addFilter(UserIdFilter())
     return handler
 
 
@@ -32,12 +40,13 @@ def setup_logging() -> logging.Logger:
 
     # Konsol — uvicorn zaten basar, WARNING+ göster (düz metin yeterli)
     console_fmt = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        "%(asctime)s [%(levelname)s] [%(user_id)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.WARNING)
     console_handler.setFormatter(console_fmt)
+    console_handler.addFilter(UserIdFilter())
 
     root = logging.getLogger()
     root.setLevel(logging.INFO)
