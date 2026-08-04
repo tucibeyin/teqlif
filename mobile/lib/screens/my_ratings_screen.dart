@@ -387,7 +387,7 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
               )
             else
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -492,7 +492,7 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
                     borderRadius: const BorderRadius.vertical(
                         bottom: Radius.circular(12)),
                   ),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -595,9 +595,9 @@ class _EditRatingSheetState extends ConsumerState<_EditRatingSheet> {
     final label = _score > 0 ? _labels[_score - 1] : '';
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
+      padding: EdgeInsetsDirectional.only(
+        start: 20,
+        end: 20,
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),

@@ -191,7 +191,7 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
           // ── Durum Chip ──────────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
               child: Row(
                 children: [
                   Container(
@@ -283,7 +283,7 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
           // ── Akıllı Analiz kartı ───────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
               child: _CtrInsight(
                 ctr: ctrD,
                 clicks: clicks,
@@ -295,7 +295,7 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
           // ── Gelişmiş metrikler ────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
               child: _AdvancedMetrics(report: r, loc: loc),
             ),
           ),
@@ -303,7 +303,7 @@ class _AdReportScreenState extends ConsumerState<AdReportScreen>
           // ── Geri Dön butonu ───────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 24, 16, 32),
               child: _AdButton(
                 label: loc.t("btnGoBack"),
                 color: const Color(0xFF1E293B),
@@ -333,11 +333,11 @@ class _AdHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
           colors: [Color(0xFF1A1040), Color(0xFF0A0F1E)],
         ),
       ),
@@ -440,7 +440,7 @@ class _MetricCard extends ConsumerWidget {
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        alignment: Alignment.topLeft,
+        alignment: AlignmentDirectional.topStart,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -519,8 +519,8 @@ class _CtrInsight extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
           colors: [
             kPrimary.withValues(alpha: 0.16),
             const Color(0xFF1E1B4B).withValues(alpha: 0.75),
