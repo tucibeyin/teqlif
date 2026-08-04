@@ -57,7 +57,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
       body: RefreshIndicator(
         onRefresh: () => viewModel.loadCredits(),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
           if (isPremium) _ProStatusCard(renewalDate: state.blastCredits?['renewal_date'] as String?, planType: state.planType) else _UpgradeBanner(),
@@ -74,7 +74,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           const SizedBox(height: 24),
           // ── Araçlar Başlığı ────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            padding: const EdgeInsetsDirectional.only(start: 2, bottom: 12),
             child: Text(
               loc.t('proHubTitle'),
               style: TextStyle(
@@ -221,7 +221,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           if (!isPremium) ...[
             const SizedBox(height: 28),
             Padding(
-              padding: const EdgeInsets.only(left: 2, bottom: 12),
+              padding: const EdgeInsetsDirectional.only(start: 2, bottom: 12),
               child: Text(
                 loc.t('proBenefitsTitle'),
                 style: TextStyle(
@@ -262,7 +262,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          childrenPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -320,8 +320,8 @@ class _ProStatusCard extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -416,8 +416,8 @@ class _UpgradeBanner extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF92400E), Color(0xFFB45309)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -596,7 +596,7 @@ class _UpgradeSheet extends ConsumerWidget {
         color: AppColors.card(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+      padding: const EdgeInsetsDirectional.fromSTEB(24, 16, 24, 40),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

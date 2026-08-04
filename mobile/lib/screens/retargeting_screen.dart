@@ -99,7 +99,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 8),
           child: TeqFilterBar(
             filter: state.reportFilter,
             onChanged: (f) => viewModel.updateReportFilter(f),
@@ -124,7 +124,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                   onTap: () => viewModel.selectReportListing(null),
                   child: Container(
                     width: 88,
-                    margin: const EdgeInsets.only(right: 10),
+                    margin: const EdgeInsetsDirectional.only(end: 10),
                     decoration: BoxDecoration(
                       color: sel ? const Color(0xFF14B8A6).withValues(alpha: 0.12) : AppColors.card(context),
                       borderRadius: BorderRadius.circular(12),
@@ -153,7 +153,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                 onTap: () => viewModel.selectReportListing(lid),
                 child: Container(
                   width: 128,
-                  margin: const EdgeInsets.only(right: 10),
+                  margin: const EdgeInsetsDirectional.only(end: 10),
                   decoration: BoxDecoration(
                     color: AppColors.card(context),
                     borderRadius: BorderRadius.circular(12),
@@ -420,12 +420,12 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
       padding: EdgeInsets.zero,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),
           child: Text(loc.t("reportMassNotificationTitle"),
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
           child: Text(loc.t("reportMassNotificationDesc"),
             style: TextStyle(color: AppColors.textSecondary(context))),
         ),
@@ -450,7 +450,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     final Widget retargetingTab = ListView(
       shrinkWrap: widget.isEmbedded, 
       physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
       children: [
         _infoCard(),
         const SizedBox(height: 16),
@@ -964,7 +964,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 8),
           child: TeqFilterBar(
             filter: state.campaignFilter,
             onChanged: (f) => viewModel.updateCampaignFilter(f),
@@ -994,7 +994,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                 onTap: () => viewModel.selectCampaignListing(item),
                 child: Container(
                   width: 128,
-                  margin: const EdgeInsets.only(right: 10),
+                  margin: const EdgeInsetsDirectional.only(end: 10),
                   decoration: BoxDecoration(
                     color: AppColors.card(context),
                     borderRadius: BorderRadius.circular(12),

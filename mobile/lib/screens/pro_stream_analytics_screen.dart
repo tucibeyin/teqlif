@@ -177,7 +177,7 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
                     ],
                   ),
                   if (isTop) const Padding(
-                    padding: EdgeInsets.only(left: 8),
+                    padding: EdgeInsetsDirectional.only(start: 8),
                     child: Text('🏆', style: TextStyle(fontSize: 18)),
                   ),
                 ],

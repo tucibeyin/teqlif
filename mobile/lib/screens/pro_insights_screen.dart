@@ -103,7 +103,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsetsDirectional.only(end: 6),
       child: FilterChip(
         label: Text(label, style: const TextStyle(fontSize: 12)),
         selected: selected,
@@ -132,7 +132,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
     final bool piFiltered = !state.priceIntelFilter.isEmpty || state.priceIntelSignal.isNotEmpty;
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 40),
       children: [
         _SectionLabel(loc.t("proSectionOverview")),
         _KpiGrid(kpis: kpis, loc: loc),
@@ -406,7 +406,7 @@ class _KpiCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: gradient, begin: AlignmentDirectional.topStart, end: AlignmentDirectional.bottomEnd),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: gradient.last.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
       ),
@@ -516,7 +516,7 @@ class _FunnelRow extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 8),
-        SizedBox(width: 36, child: Text('$count', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)), textAlign: TextAlign.right)),
+        SizedBox(width: 36, child: Text('$count', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)), textAlign: TextAlign.end)),
       ],
     );
   }
@@ -614,7 +614,7 @@ class _HotLeadCard extends ConsumerWidget {
 
     return Container(
       width: 170,
-      margin: const EdgeInsets.only(right: 10),
+      margin: const EdgeInsetsDirectional.only(end: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.card(context),
@@ -700,7 +700,7 @@ class _PriceIntelCard extends ConsumerWidget {
 
     return Container(
       width: 170,
-      margin: const EdgeInsets.only(right: 10),
+      margin: const EdgeInsetsDirectional.only(end: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.card(context),

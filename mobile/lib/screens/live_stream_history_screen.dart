@@ -98,7 +98,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
       bodyContent = Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
             child: TeqFilterBar(
               filter: state.filter,
               onChanged: (f) => viewModel.updateFilter(f),
@@ -125,7 +125,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
                     onTap: () => viewModel.selectStream(null),
                     child: Container(
                       width: 90,
-                      margin: const EdgeInsets.only(right: 12),
+                      margin: const EdgeInsetsDirectional.only(end: 12),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF8B5CF6).withValues(alpha: 0.1)
@@ -189,7 +189,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
                   onTap: () => viewModel.selectStream(sid),
                   child: Container(
                     width: 140,
-                    margin: const EdgeInsets.only(right: 12),
+                    margin: const EdgeInsetsDirectional.only(end: 12),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isSelected

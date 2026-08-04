@@ -84,7 +84,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
     return RefreshIndicator(
       onRefresh: () => viewModel.load(),
       child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
         children: [
           if (growth != null)
             _GrowthBanner(growth: growth, loc: loc),
@@ -121,7 +121,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
                   final rankLabel = i < 3 ? ['🥇', '🥈', '🥉'][i] : '${i + 1}.';
                   return Container(
                     width: 148,
-                    margin: const EdgeInsets.only(right: 10),
+                    margin: const EdgeInsetsDirectional.only(end: 10),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.card(context),
@@ -480,7 +480,7 @@ class _SmallDayFilter extends ConsumerWidget {
           onTap: () { if (days != d) onChanged(d); },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(left: 6),
+            margin: const EdgeInsetsDirectional.only(start: 6),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: active ? const Color(0xFFF59E0B) : AppColors.card(context),

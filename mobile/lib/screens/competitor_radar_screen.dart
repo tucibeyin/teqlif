@@ -61,7 +61,7 @@ class CompetitorRadarScreen extends ConsumerWidget {
       child: ListView(
         shrinkWrap: isEmbedded, 
         physics: isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           TeqFilterBar(
             filter: _filter,
@@ -151,7 +151,7 @@ class CompetitorRadarScreen extends ConsumerWidget {
             },
             child: Container(
               width: 128,
-              margin: const EdgeInsets.only(right: 10),
+              margin: const EdgeInsetsDirectional.only(end: 10),
               decoration: BoxDecoration(
                 color: AppColors.card(context),
                 borderRadius: BorderRadius.circular(12),
@@ -544,7 +544,7 @@ class _VelocitySection extends ConsumerWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 4, left: 6),
+                    padding: const EdgeInsetsDirectional.only(bottom: 4, start: 6),
                     child: Text(
                       loc.t("radarDaysAvg"),
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),

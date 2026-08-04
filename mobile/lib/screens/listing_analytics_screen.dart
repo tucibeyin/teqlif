@@ -119,7 +119,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
         physics: widget.isEmbedded
             ? const NeverScrollableScrollPhysics()
             : const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
         children: [
           TeqFilterBar(
             filter: state.filter,
@@ -148,7 +148,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                       onTap: () => viewModel.selectListing(null),
                       child: Container(
                         width: 90,
-                        margin: const EdgeInsets.only(right: 12),
+                        margin: const EdgeInsetsDirectional.only(end: 12),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF6366F1).withValues(alpha: 0.1)
@@ -197,7 +197,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                     onTap: () => viewModel.selectListing(metric.id),
                     child: Container(
                       width: 120,
-                      margin: const EdgeInsets.only(right: 12),
+                      margin: const EdgeInsetsDirectional.only(end: 12),
                       decoration: BoxDecoration(
                         color: AppColors.card(context),
                         borderRadius: BorderRadius.circular(16),
@@ -225,7 +225,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                           Positioned(
                             left: 0, right: 0, bottom: 0,
                             child: Container(
-                              padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+                              padding: const EdgeInsetsDirectional.fromSTEB(8, 20, 8, 8),
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
