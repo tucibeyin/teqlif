@@ -86,10 +86,6 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
       child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
         children: [
-          if (growth != null)
-            _GrowthBanner(growth: growth, loc: loc),
-          if (growth != null) const SizedBox(height: 16),
-
           Row(
             children: [
               Expanded(
@@ -412,58 +408,6 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
 
 
 // ── Alt Widgetlar ─────────────────────────────────────────────────────────────
-
-class _GrowthBanner extends ConsumerWidget {
-  final double growth;
-  final TranslationPack loc;
-  const _GrowthBanner({required this.growth, required this.loc});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isPos = growth >= 0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isPos
-            ? const Color(0xFF22C55E).withValues(alpha: 0.08)
-            : const Color(0xFFEF4444).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isPos
-              ? const Color(0xFF22C55E).withValues(alpha: 0.25)
-              : const Color(0xFFEF4444).withValues(alpha: 0.25),
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(isPos ? '📈' : '📉', style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isPos
-                      ? loc.t("marketGrowthPos", {"pct": growth.toStringAsFixed(1)})
-                      : loc.t("marketGrowthNeg", {"pct": growth.toStringAsFixed(1)}),
-                  style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700,
-                    color: isPos ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  loc.t("marketGrowthSub"),
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SmallDayFilter extends ConsumerWidget {
   final int days;
