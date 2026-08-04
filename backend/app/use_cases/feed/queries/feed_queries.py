@@ -1363,7 +1363,7 @@ class FeedQueries:
             if interests:
                 top_cats = list(interests.keys())[:3]
                 interest_items = await self._fetch_interest_items(
-                    user_id, top_cats, base_ids, len(self._INTEREST_SLOTS)
+                    user_id, top_cats, base_ids, len(self._INTEREST_SLOTS), page
                 )
                 result = self._inject_at_slots(result, interest_items, self._INTEREST_SLOTS)
 
@@ -1392,9 +1392,11 @@ class FeedQueries:
         categories: list[str],
         exclude_ids: list[int],
         count: int,
+        page: int = 0,
     ) -> list[dict]:
         """Kullanıcının ilgi kategorilerinden, base listesinde olmayan ilanlar."""
         excl = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})" if exclude_ids else ""
+        offset = page * count
         res = await self.uow.session.execute(
             text(f"""
                 SELECT l.id FROM listings l
@@ -1404,9 +1406,9 @@ class FeedQueries:
                   AND l.category = ANY(:cats)
                   {excl}
                 ORDER BY l.created_at DESC
-                LIMIT :lim
+                LIMIT :lim OFFSET :off
             """),
-            {"uid": user_id, "cats": categories, "lim": count},
+            {"uid": user_id, "cats": categories, "lim": count, "off": offset},
         )
         ids = [r.id for r in res]
         if not ids:
