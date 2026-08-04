@@ -202,7 +202,7 @@ class FeedQueries:
             result.append(_row_dict(
                 listing, user, counts.get(lid, 0), lid in liked_set,
                 seller_badge=badge_map.get(user.id),
-                is_trending=listing.category in trending_cats or listing.id in trending_lids,
+                is_trending=listing.id in trending_lids,
                 impression_count=impression_map.get(lid, 0) if user.id == user_id else None,
                 seller_trust_score=trust_map.get(user.id),
                 seller_influence_rank=influence_map.get(user.id),
@@ -686,7 +686,7 @@ class FeedQueries:
             result.append(_row_dict(
                 listing, user, counts.get(lid, 0), lid in liked_set,
                 seller_badge=badge_map_fy.get(user.id),
-                is_trending=listing.category in trending_cats_fy or listing.id in trending_lids_fy,
+                is_trending=listing.id in trending_lids_fy,
                 impression_count=impression_map.get(lid, 0) if user.id == user_id else None,
                 seller_trust_score=trust_map_fy.get(user.id),
                 seller_influence_rank=influence_map_fy.get(user.id),
@@ -1182,7 +1182,7 @@ class FeedQueries:
                 is_sponsored=True,
                 campaign_id=campaign.id,
                 seller_badge=badge_map_sp.get(user.id),
-                is_trending=listing.category in trending_cats_sp or listing.id in trending_lids_sp,
+                is_trending=listing.id in trending_lids_sp,
                 seller_trust_score=trust_map_sp.get(user.id),
                 seller_influence_rank=influence_map_sp.get(user.id),
             )
@@ -1339,7 +1339,7 @@ class FeedQueries:
         result = [
             _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
                       seller_badge=badge_map_r.get(user.id),
-                      is_trending=listing.category in trending_cats_r or listing.id in trending_lids_r,
+                      is_trending=listing.id in trending_lids_r,
                       seller_trust_score=trust_map_r.get(user.id),
                       seller_influence_rank=influence_map_r.get(user.id))
             for lid in base_ids
@@ -1430,7 +1430,7 @@ class FeedQueries:
         return [
             _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
                       seller_badge=badge_map_i.get(user.id),
-                      is_trending=listing.category in trending_cats_i or listing.id in trending_lids_i,
+                      is_trending=listing.id in trending_lids_i,
                       seller_trust_score=trust_map_i.get(user.id),
                       seller_influence_rank=influence_map_i.get(user.id))
             for lid in ids

@@ -78,7 +78,7 @@ class GetMyListingsQuery:
                 is_sponsored=listing.id in campaign_map,
                 campaign_id=campaign_map.get(listing.id),
                 seller_badge=badge_map.get(user.id),
-                is_trending=listing.category in trending_cats or listing.id in trending_lids,
+                is_trending=listing.id in trending_lids,
                 impression_count=impression_map.get(listing.id, 0),
                 seller_trust_score=trust_map.get(user.id),
                 seller_influence_rank=influence_map.get(user.id),
