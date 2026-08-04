@@ -84,10 +84,10 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
     super.initState();
     _pending = widget.initial;
     if (_pending.minPrice != null) {
-      _minController.text = _pending.minPrice!.toStringAsFixed(0);
+      _minController.text = TeqNumberFormatter.format(_pending.minPrice, allowDecimal: false);
     }
     if (_pending.maxPrice != null) {
-      _maxController.text = _pending.maxPrice!.toStringAsFixed(0);
+      _maxController.text = TeqNumberFormatter.format(_pending.maxPrice, allowDecimal: false);
     }
     if (widget.showCity) {
       CityService.getCities().then((c) {
@@ -475,7 +475,7 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
                           child: TextField(
                             controller: _minController,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [const TeqNumericInputFormatter(allowDecimal: true)],
+                            inputFormatters: [const TeqNumericInputFormatter(allowDecimal: false)],
                             decoration: _fieldDecor(loc.tOr('filterPriceMin', 'En Az')),
                             onChanged: (v) {
                               final val = TeqNumberFormatter.parse(v)?.toDouble();
@@ -488,7 +488,7 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
                           child: TextField(
                             controller: _maxController,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [const TeqNumericInputFormatter(allowDecimal: true)],
+                            inputFormatters: [const TeqNumericInputFormatter(allowDecimal: false)],
                             decoration: _fieldDecor(loc.tOr('filterPriceMax', 'En Çok')),
                             onChanged: (v) {
                               final val = TeqNumberFormatter.parse(v)?.toDouble();
