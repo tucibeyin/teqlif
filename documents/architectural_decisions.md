@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ağustos 2026 — `is_listable` kategori flag'i eklendi
+**Son güncelleme:** Ağustos 2026 — Cache Taksonomi ADR eklendi
 
 ---
 
@@ -18,6 +18,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 6. [Deploy Pipeline](#6-deploy-pipeline)
 7. [Ekran Migration Checklist](#7-ekran-migration-checklist)
 8. [Kategori `is_listable` Flag](#8-kategori-is_listable-flag)
+9. [Cache Taksonomisi ve Schema-Versioned İnvalidasyon](#9-cache-taksonomisi-ve-schema-versioned-i̇nvalidasyon)
 
 ---
 
@@ -932,4 +933,34 @@ Flutter tarafında yeni geliştirilen veya refactor edilen karmaşık ekranlarda
 ### Kural
 
 Gelecekte ilan bağlanamayan yeni bir sistem kategorisi eklendiğinde **kod değişikliği gerekmez.** Yalnızca DB'de `UPDATE categories SET is_listable = FALSE WHERE key = 'yeni_kategori'` çalıştırmak yeterlidir.
+
+---
+
+## 9. Cache Taksonomisi ve Schema-Versioned İnvalidasyon
+
+### Problem
+
+Sistemde çok sayıda farklı doğaya sahip veri cacheleniyordu (fastapi-cache, manuel redis set/zadd, arq vb.). "Servis yeniden başlatıldığında hangi cache silinmeli?" sorusu sürekli karışıklık yaratıyor, yanlışlıkla silinen pahalı cache'ler veya silinmediği için eski kalan statik veriler (`/api/catalog`, `/api/cities` gibi) hatalara yol açıyordu.
+
+### Karar
+
+"Restart'ta ne silinsin?" sorusunun yanlış olduğu, doğru sorunun "Bu veriyi ne tetiklemeli?" olduğuna karar verildi. Sistemdeki tüm cache'ler 5 kategoriye ayrıldı:
+
+1. **SCHEMA_VERSIONED:** Verinin şeması değiştiğinde geçerliliğini yitiren statik veriler. (Catalog, Cities, Fields). Migration ile tetiklenir.
+2. **ALGORITHMIC:** Üretilmesi pahalı, periyodik veya olay bazlı güncellenen veriler. Kendi TTL'i ve cron'u vardır. (Trending, Feed).
+3. **LIFECYCLE:** Stream veya Auction gibi bir olayın yaşam döngüsüne bağlı veriler. Olayın bitişiyle tetiklenir.
+4. **SECURITY_CRITICAL:** Oturum, rate limit gibi güvenlikle veya maddi süreçlerle (Ad Campaign) ilgili veriler. Asla müdahale edilmez.
+5. **EPHEMERAL:** Kısa TTL'li geçici veriler.
+
+### Uygulama (Schema-Versioned)
+
+- Redis'te `schema:static_version` adında bir anahtar tutulur.
+- FastAPI uygulaması ayağa kalktığında (`init_schema_version()`) bu değeri okur.
+- Statik verileri dönen endpoint'ler (`/api/catalog`, `/api/cities`, vs.) `fastapi-cache` key'ini üretirken bu versiyonu namespace olarak ekler (örn: `teqlif:cache:schema:v2:/api/catalog`).
+- Veritabanında (Alembic migration) bu verileri değiştiren bir şema güncellemesi yapıldığında `bump_schema_version()` çağrılır. Versiyon 3 olur.
+- Yeni gelen API istekleri "v3" aradığı için cache miss olur ve taze veriyi çeker. Eski "v2" verileri TTL (86400) süresince eriyip kaybolur. Manuel hiçbir cache temizleme (örn: `redis-cli DEL`) komutuna gerek kalmaz.
+
+### Kural
+
+Veritabanı şemasını (özellikle `catalog`, `cities` veya `field_config` etkileyen) değiştiren bir migration yazıldığında, mutlaka `upgrade()` ve `downgrade()` metodlarının en sonuna `bump_schema_version()` eklenmelidir.
 
