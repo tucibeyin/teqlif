@@ -11,17 +11,6 @@ from app.database_clickhouse import get_clickhouse_client
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MUTATIONS = [
-    "ALTER TABLE search_events UPDATE category = 'books' WHERE category IN ('kitap', 'kitap-hobi')",
-    "ALTER TABLE search_events UPDATE category = 'home' WHERE category IN ('ev', 'ev-yasam', 'ev_esyalari')",
-    "ALTER TABLE search_events UPDATE category = 'sports' WHERE category IN ('spor', 'spor-outdoor')",
-    "ALTER TABLE search_events UPDATE category = 'other' WHERE category IN ('diger', 'oyuncak', 'koleksiyonluk', 'muzik_aleti')",
-    "ALTER TABLE search_events UPDATE category = 'real_estate' WHERE category = 'emlak'",
-    "ALTER TABLE search_events UPDATE category = 'fashion' WHERE category IN ('giyim-aksesuar', 'giyim')",
-    "ALTER TABLE search_events UPDATE category = 'vehicles' WHERE category = 'vasita'",
-    "ALTER TABLE search_events UPDATE category = 'electronics' WHERE category = 'elektronik'"
-]
-
 async def main():
     logger.info("ClickHouse'a bağlanılıyor...")
     ch = await get_clickhouse_client()
@@ -29,14 +18,37 @@ async def main():
         logger.error("ClickHouse bağlantısı başarısız oldu!")
         return
 
-    logger.info("Mutasyonlar başlatılıyor...")
-    for query in MUTATIONS:
-        logger.info(f"Çalıştırılıyor: {query}")
-        await ch.command(query)
+    logger.info("Geçici tablo (search_events_new) oluşturuluyor...")
+    await ch.command("CREATE TABLE IF NOT EXISTS search_events_new AS search_events")
     
-    logger.info("Tüm mutasyon komutları başarıyla ClickHouse'a iletildi.")
-    logger.info("Not: ClickHouse mutasyonları arka planda (background) asenkron olarak gerçekleştirir.")
-    logger.info("Büyük tablolarda verilerin tamamen değişmesi birkaç saniye/dakika sürebilir.")
+    logger.info("Eski tablodaki veriler dönüştürülerek yeni tabloya kopyalanıyor...")
+    # ClickHouse transform() fonksiyonu ile category primary/sorting key olduğu için
+    # veriyi taşırken kopyalıyoruz (Cannot UPDATE key column hatasını aşmak için)
+    query = """
+    INSERT INTO search_events_new
+    SELECT 
+        timestamp, 
+        user_id, 
+        query, 
+        transform(category, 
+            ['kitap', 'kitap-hobi', 'ev', 'ev-yasam', 'ev_esyalari', 'spor', 'spor-outdoor', 'diger', 'oyuncak', 'koleksiyonluk', 'muzik_aleti', 'emlak', 'giyim-aksesuar', 'giyim', 'vasita', 'elektronik'], 
+            ['books', 'books', 'home', 'home', 'home', 'sports', 'sports', 'other', 'other', 'other', 'other', 'real_estate', 'fashion', 'fashion', 'vehicles', 'electronics'], 
+            category
+        ) AS category,
+        result_count,
+        intent,
+        subcategory
+    FROM search_events
+    """
+    await ch.command(query)
+
+    logger.info("Tabloların isimleri (swap) değiştiriliyor...")
+    await ch.command("RENAME TABLE search_events TO search_events_old, search_events_new TO search_events")
+    
+    logger.info("Eski (eski kategorili) tablo siliniyor...")
+    await ch.command("DROP TABLE search_events_old")
+    
+    logger.info("İşlem başarıyla tamamlandı! Tüm veriler yeni kategorileriyle güncellendi.")
 
 if __name__ == "__main__":
     asyncio.run(main())
