@@ -11,6 +11,7 @@ import '../../../services/localization_service.dart';
 import '../../../utils/listing_fields.dart';
 import '../../foundation/teq_colors.dart';
 import '../buttons/teq_button.dart';
+import '../../../utils/number_formatter.dart';
 
 class TeqFilterSheet extends ConsumerStatefulWidget {
   const TeqFilterSheet._({
@@ -474,9 +475,10 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
                           child: TextField(
                             controller: _minController,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [const TeqNumericInputFormatter(allowDecimal: true)],
                             decoration: _fieldDecor(loc.tOr('filterPriceMin', 'En Az')),
                             onChanged: (v) {
-                              final val = double.tryParse(v);
+                              final val = TeqNumberFormatter.parse(v)?.toDouble();
                               setState(() => _pending = _pending.copyWith(minPrice: val));
                             },
                           ),
@@ -486,9 +488,10 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
                           child: TextField(
                             controller: _maxController,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [const TeqNumericInputFormatter(allowDecimal: true)],
                             decoration: _fieldDecor(loc.tOr('filterPriceMax', 'En Çok')),
                             onChanged: (v) {
-                              final val = double.tryParse(v);
+                              final val = TeqNumberFormatter.parse(v)?.toDouble();
                               setState(() => _pending = _pending.copyWith(maxPrice: val));
                             },
                           ),
