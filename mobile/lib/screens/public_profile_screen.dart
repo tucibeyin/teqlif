@@ -237,7 +237,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(24, 28, 24, 0),
             child: Column(
               children: [
                 // Avatar
@@ -574,7 +574,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 ],
                 const SizedBox(height: 16),
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: Text(
                     loc.t('pubProfileListingsCount', {'count': _listings.length.toString()}),
                     style: const TextStyle(
@@ -754,7 +754,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                           right: 0,
                           bottom: 0,
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                            padding: const EdgeInsetsDirectional.fromSTEB(5, 14, 5, 5),
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
@@ -1077,7 +1077,7 @@ class _RatingFormSheetState extends ConsumerState<_RatingFormSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 0),
             child: Text(
               isUpdate ? loc.t('pubProfileUpdateRating') : loc.t('pubProfileGiveRating'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -1132,7 +1132,7 @@ class _RatingFormSheetState extends ConsumerState<_RatingFormSheet> {
 
           // Action buttons
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 28),
             child: Row(
               children: [
                 Expanded(
@@ -1209,7 +1209,7 @@ class _RatingsListSheet extends ConsumerWidget {
           ),
           // Title
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 20, 14),
             child: Text(
               loc.t('ratingReviews'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -1219,7 +1219,7 @@ class _RatingsListSheet extends ConsumerWidget {
           // Summary bar
           if (avg != null) ...[
             Container(
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              margin: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 14),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.surfaceVariant(context),
@@ -1837,7 +1837,7 @@ class _ProfileBadge extends StatelessWidget {
       onTap: () => _showInfo(context),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(9, 4, 9, 4),
+        padding: const EdgeInsetsDirectional.fromSTEB(9, 4, 9, 4),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(20),

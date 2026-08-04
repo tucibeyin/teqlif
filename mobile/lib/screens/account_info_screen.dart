@@ -151,7 +151,7 @@ class _SectionCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 8),
           child: Text(
             title.toUpperCase(),
             style: TextStyle(
@@ -299,7 +299,7 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      padding: EdgeInsetsDirectional.fromSTEB(24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,7 +413,7 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      padding: EdgeInsetsDirectional.fromSTEB(24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -442,7 +442,7 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
             ),
           ] else ...[
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Text(
                 widget.currentPhone != null ? loc.t('accountInfoPhoneChangeTitle') : loc.t('accountInfoPhoneAddTitle'),
                 style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800),
@@ -451,7 +451,7 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
             if (widget.currentPhone != null) ...[
               const SizedBox(height: 6),
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: Text(
                   loc.t('accountInfoPhoneCurrent', {'phone': widget.currentPhone!}),
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
