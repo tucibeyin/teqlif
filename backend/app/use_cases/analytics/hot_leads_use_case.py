@@ -92,11 +92,6 @@ class HotLeadsUseCase:
                 pass
 
             _now_ts = _time_mod.time()
-            _CAT_LABELS = {
-                "electronics": "Elektronik", "vehicles": "Araç", "real_estate": "Emlak",
-                "fashion": "Moda", "home": "Ev & Yaşam", "sports": "Spor",
-                "books": "Kitap & Hobi", "other": "Diğer",
-            }
 
             def _heat(lid: int) -> float:
                 age_h = max((_now_ts - ts_map.get(lid, _now_ts)) / 3600, 0.0)
@@ -114,7 +109,7 @@ class HotLeadsUseCase:
                     "listing_id": r.id,
                     "title": r.title,
                     "price": r.price,
-                    "category": self.t.get(f"cat_{r.category or 'other'}", _CAT_LABELS.get(r.category or "other", r.category or "Diğer")),
+                    "category": r.category or "other",
                     "views_30d": view_map.get(r.id, 0),
                     "hesitations_30d": hes_map.get(r.id, 0),
                     "heat_score": round(_heat(r.id), 2),
