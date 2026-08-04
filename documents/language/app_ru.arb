@@ -1282,6 +1282,7 @@
   "walletTxnSpendLeadGen": "Массовое уведомление",
   "walletTxnSpendAdCampaign": "Рекламная кампания",
   "walletTxnSpendAi": "Цены на ИИ",
+  "walletTxnSpendAiDesc": "Использование инструмента ИИ-анализа и ценообразования",
   "walletTxnWebTopup": "Пополнение счета через Интернет",
   "walletTxnSendGift": "Живой подарок отправлен",
   "walletTxnReferralBonus": "Реферальный бонус",
