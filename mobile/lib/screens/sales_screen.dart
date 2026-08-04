@@ -226,10 +226,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                                   BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              state.categories?.firstWhere(
-                                                (p) => p.$1 == category,
-                                                orElse: () => (category, category),
-                                              ).$2 ?? category,
+                                              CategoryService.localizedLabelFor(loc, category),
                                               style: const TextStyle(
                                                 color: kPrimary,
                                                 fontSize: 11,
