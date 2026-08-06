@@ -11,12 +11,13 @@
 ## İçindekiler
 
 1. [State Machine (Durum Makinesi)](#1-state-machine)
-2. [WS Event Sözleşmesi](#2-ws-event-sözleşmesi)
+2. [Host'tan Alınan Veriler](#2-hosttan-alınan-veriler-form-kararları)
 3. [API Endpoint Listesi](#3-api-endpoint-listesi)
 4. [Veritabanı Şeması](#4-veritabanı-şeması)
 5. [Redis Key Şeması](#5-redis-key-şeması)
-6. [ClickHouse Tracking](#6-clickhouse-tracking)
-7. [Geliştirme Fazları](#7-geliştirme-fazları)
+6. [WS Event Sözleşmesi](#6-ws-event-sözleşmesi)
+7. [ClickHouse Tracking](#7-clickhouse-tracking)
+8. [Geliştirme Fazları](#8-geliştirme-fazları)
 
 ---
 
@@ -157,74 +158,326 @@ Her iki sistem de aynı temel pattern'i izler. Tutarlılık korundu.
 
 ---
 
-## 2. WS Event Sözleşmesi
+## 2. Host'tan Alınan Veriler (Form Kararları)
 
-*Bu bölüm Faz 0 tamamlandığında doldurulacak.*
+### 2.1 İki Giriş Modu
 
-Tanımlanacak event'ler:
-- `direct_sale_started` — `active` geçişi; ürün bilgileri, fiyat, stok
-- `direct_sale_paused` — `paused` geçişi
-- `direct_sale_resumed` — `active` geri dönüşü
-- `direct_sale_purchased` — bir satın alma gerçekleşti; kalan stok, alıcı adı
-- `direct_sale_sold_out` — `sold_out` geçişi
-- `direct_sale_ended` — `ended` geçişi; `end_reason`
+Host satış başlatırken iki yoldan birini seçer:
+
+| Mod | Açıklama |
+|---|---|
+| **Listing seç** | Host'un aktif ilanlarından biri seçilir. `title` ve `price` otomatik dolar, düzenlenebilir. Stok her zaman manuel girilir. |
+| **Manuel giriş** | İlan bağlantısı yoktur. `title` ve `price` boş açılır, host yazar. |
+
+### 2.2 Her Field için Kural
+
+| Field | Zorunlu | Listing seçilince | Manuel modda | Kural |
+|---|---|---|---|---|
+| `title` | ✅ | `listing.title` ile dolar, düzenlenebilir | Boş, host yazar | Max 100 karakter (`listing.title` limiti ile tutarlı) |
+| `price` | ✅ | `listing.price` ile dolar, düzenlenebilir | Boş, host yazar | `listing.price` her zaman dolu — create_listing zorunlu tutar. Null check gerekmez. |
+| `stock_quantity` | ✅ | **Her zaman manuel** — listing'de stok field'i yok | Manuel | Min 1, integer |
+| `product_image_url` | ❌ | `listing.image_url` (start anında kopyalanır) | `null` | Yükleme akışı yok. Listing seçilmezse görsel yok. |
+| `listing_id` | ❌ | FK referansı — sadece kayıt amaçlı | `null` | Listing'i etkilemez — bağımsız yaşar. |
+
+### 2.3 Listing Bağımsızlığı Kuralı
+
+> **Karar (Seçenek B):** Direct sale, listing'in bir satış kanalıdır. Satış `ended` veya `sold_out` olduğunda `listing.status` **değişmez**. İkisi bağımsız yaşar.
+
+**Gerekçe:** Aynı ilan birden fazla direct sale'de kullanılabilir. Listing yönetimi host'un sorumluluğundadır.
+
+**Sonuç:** `purchase` endpoint'i asla `listings` tablosuna yazmaz.
+
+### 2.4 Görsel Kuralı
+
+> `product_image_url`, satış **başlatıldığı anda** listing'den kopyalanır ve `direct_sales` tablosuna yazılır.
+
+Listing sonradan silinse veya görseli değişse bile satış kaydı etkilenmez. Viewer WS event'inden bu URL'yi direkt alır — ikinci bir API çağrısına gerek yoktur.
 
 ---
 
 ## 3. API Endpoint Listesi
 
-*Bu bölüm Faz 0 tamamlandığında doldurulacak.*
+### 3.1 Endpoint Tablosu
 
-Planlanan endpoint'ler:
-- `POST /direct-sales/start` — yeni satış başlat
-- `GET /direct-sales/{stream_id}/state` — güncel state sorgula
-- `POST /direct-sales/{id}/pause` — duraklat
-- `POST /direct-sales/{id}/resume` — devam et
-- `POST /direct-sales/{id}/end` — sonlandır
-- `POST /direct-sales/{id}/purchase` — satın al (viewer)
+| Method | Path | Kim çağırır | Açıklama |
+|---|---|---|---|
+| `POST` | `/direct-sales/start` | Host | Yeni satış başlat → `active` |
+| `GET` | `/direct-sales/{stream_id}/state` | Host + Viewer | Güncel state sorgula (WS reconnect sonrası) |
+| `POST` | `/direct-sales/{id}/pause` | Host | `active` → `paused` |
+| `POST` | `/direct-sales/{id}/resume` | Host | `paused` → `active` |
+| `POST` | `/direct-sales/{id}/end` | Host | `active`/`paused` → `ended` (end_reason: `host_ended`) |
+| `POST` | `/direct-sales/{id}/purchase` | Viewer | Satın al — atomik stok azalt |
+
+### 3.2 `POST /direct-sales/start` Payload
+
+```json
+{
+  "listing_id": 123,
+  "title": "Kırmızı Çanta",
+  "price": 450.0,
+  "stock_quantity": 5
+}
+```
+
+**Validasyon kuralları:**
+- `listing_id` null ise `title` zorunlu
+- `listing_id` varsa `title` opsiyonel (gelirse override eder, gelmezse `listing.title` kullanılır)
+- `price` her zaman zorunlu (listing seçilse bile override edilebilir)
+- `stock_quantity` ≥ 1, integer, zorunlu
+- Aynı stream'de zaten `active` veya `paused` bir satış varsa → `DIRECT_SALE_ALREADY_ACTIVE` hatası
+
+### 3.3 `POST /direct-sales/{id}/purchase` Payload
+
+```json
+{
+  "quantity": 1
+}
+```
+
+**Validasyon kuralları:**
+- `quantity` ≥ 1, integer
+- Satış `active` değilse → `DIRECT_SALE_NOT_ACTIVE` hatası
+- Stok yetersizse → `DIRECT_SALE_INSUFFICIENT_STOCK` hatası
+- Stok = 0 ise → `DIRECT_SALE_SOLD_OUT` hatası
+
+### 3.4 `GET /direct-sales/{stream_id}/state` Response
+
+```json
+{
+  "status": "active",
+  "sale_id": 42,
+  "title": "Kırmızı Çanta",
+  "price": 450.0,
+  "total_stock": 5,
+  "remaining_stock": 3,
+  "product_image_url": "https://...",
+  "end_reason": null
+}
+```
 
 ---
 
 ## 4. Veritabanı Şeması
 
-*Bu bölüm Faz 0 tamamlandığında doldurulacak.*
+### 4.1 Karar
 
-Planlanan tablolar:
-- `direct_sales` — satış kaydı (stream_id, status, end_reason, price, total_stock, remaining_stock, ...)
-- `direct_sale_orders` — her satın alma kaydı (sale_id, buyer_id, quantity, created_at, ...)
+> Auction tablosundan **ayrı** iki tablo. İki sistemin kolonları örtüşmüyor — bid tracking vs. stock management tamamen farklı kavramlar.
 
-**Karar:** Auction tablosundan ayrı tablo. İki sistemin kolonları örtüşmüyor (bid tracking vs. stock management).
+### 4.2 `direct_sales` Tablosu
+
+```sql
+CREATE TABLE direct_sales (
+    id               SERIAL PRIMARY KEY,
+    stream_id        INTEGER NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    host_id          INTEGER NOT NULL REFERENCES users(id),
+    listing_id       INTEGER REFERENCES listings(id) ON DELETE SET NULL,  -- kayıt amaçlı, zorunlu değil
+
+    title            VARCHAR(100) NOT NULL,
+    price            NUMERIC(10, 2) NOT NULL,
+    product_image_url VARCHAR(500),              -- start anında listing'den kopyalanır, sonra bağımsız
+
+    total_stock      INTEGER NOT NULL CHECK (total_stock >= 1),
+    remaining_stock  INTEGER NOT NULL CHECK (remaining_stock >= 0),
+
+    status           VARCHAR(20) NOT NULL DEFAULT 'active',
+    end_reason       VARCHAR(30),                -- sold_out | host_ended | stream_closed
+
+    started_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    ended_at         TIMESTAMP WITH TIME ZONE,
+
+    CONSTRAINT chk_remaining_lte_total CHECK (remaining_stock <= total_stock),
+    CONSTRAINT chk_end_reason CHECK (
+        end_reason IN ('sold_out', 'host_ended', 'stream_closed') OR end_reason IS NULL
+    )
+);
+
+CREATE INDEX ix_direct_sales_stream_id ON direct_sales(stream_id);
+CREATE INDEX ix_direct_sales_status    ON direct_sales(status);
+```
+
+**`listing_id` neden nullable?** Manuel modda listing bağlantısı yok. `ON DELETE SET NULL`: listing silinirse satış kaydı kaybolmaz, referans null olur.
+
+**`product_image_url` neden kopyalanır?** Listing sonradan değişse veya silinse bile satış geçmişi bozulmaz.
+
+### 4.3 `direct_sale_orders` Tablosu
+
+```sql
+CREATE TABLE direct_sale_orders (
+    id          SERIAL PRIMARY KEY,
+    sale_id     INTEGER NOT NULL REFERENCES direct_sales(id) ON DELETE CASCADE,
+    buyer_id    INTEGER NOT NULL REFERENCES users(id),
+    quantity    INTEGER NOT NULL CHECK (quantity >= 1),
+    unit_price  NUMERIC(10, 2) NOT NULL,   -- satış anındaki fiyat snapshot'ı
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ix_direct_sale_orders_sale_id   ON direct_sale_orders(sale_id);
+CREATE INDEX ix_direct_sale_orders_buyer_id  ON direct_sale_orders(buyer_id);
+```
+
+**`unit_price` neden var?** Host satış sırasında fiyatı değiştiremez, ama ileride bu kapı açılırsa order'da o anki fiyat saklı kalır. Muhasebe kaydı için de doğru pratik.
+
+### 4.4 Listing Tablosuna Dokunulmaz
+
+> **Kural:** `direct_sale_orders` tablosu asla `listings` tablosuna yazmaz. `listing.status` direct sale tarafından değiştirilmez.
 
 ---
 
 ## 5. Redis Key Şeması
 
-*Bu bölüm Faz 0 tamamlandığında doldurulacak.*
+### 5.1 Key Listesi
 
-Planlanan key'ler:
-- `direct_sale:{stream_id}:state` — mevcut state hash
-- `direct_sale:{stream_id}:stock` — kalan stok (integer, Lua atomik)
+| Key | Tip | İçerik | TTL |
+|---|---|---|---|
+| `direct_sale:{stream_id}:state` | Hash | Tüm aktif satış state'i | LIFECYCLE — satış bitince silinir |
+| `direct_sale:{stream_id}:stock` | String (int) | Kalan stok — Lua atomik azaltma | LIFECYCLE |
 
-**Karar:** Stok azaltma Lua script ile atomik yapılacak — aynı açık artırma teklif pattern'i. Race condition yok.
+### 5.2 `direct_sale:{stream_id}:state` Hash Alanları
 
-**Cache Taksonomisi:** LIFECYCLE (architectural_decisions.md §9 — stream/auction gibi, olayın bitişiyle temizlenir).
+```
+sale_id           → "42"
+status            → "active"
+title             → "Kırmızı Çanta"
+price             → "450.00"
+total_stock       → "5"
+remaining_stock   → "3"
+product_image_url → "https://..."
+end_reason        → ""
+```
+
+### 5.3 Atomik Stok Azaltma — Lua Script
+
+```lua
+-- KEYS[1] = "direct_sale:{stream_id}:stock"
+-- ARGV[1] = istenen miktar (quantity)
+local current = tonumber(redis.call('GET', KEYS[1]))
+if current == nil then return -1 end      -- satış bulunamadı
+if current < tonumber(ARGV[1]) then return 0 end  -- yetersiz stok
+redis.call('DECRBY', KEYS[1], ARGV[1])
+return redis.call('GET', KEYS[1])         -- kalan stok
+```
+
+**Return değerleri:**
+- `-1` → satış Redis'te yok (hata)
+- `0` → yetersiz stok
+- `>0` → başarılı, dönen değer kalan stok
+- `"0"` (string sıfır) → son adet satıldı → `sold_out` akışı başlar
+
+### 5.4 Cache Taksonomisi
+
+> **LIFECYCLE** (`architectural_decisions.md §9`) — stream veya auction ile aynı. Satış bitince Redis key'leri temizlenir. Manuel müdahale gerekmez.
 
 ---
 
-## 6. ClickHouse Tracking
+---
 
-*Bu bölüm Faz 0 tamamlandığında doldurulacak.*
+## 6. WS Event Sözleşmesi
+
+Tüm event'ler `stream_id` bazlı topic'e yayınlanır: `stream:{stream_id}`.  
+Pattern: auction event'leri ile tutarlı — aynı WS bağlantısı, aynı topic.
+
+### 6.1 Event Tablosu
+
+| Event Type | Tetikleyici | Alıcı |
+|---|---|---|
+| `direct_sale_started` | `POST /start` başarılı | Tüm viewer'lar + host |
+| `direct_sale_paused` | `POST /pause` | Tüm viewer'lar + host |
+| `direct_sale_resumed` | `POST /resume` | Tüm viewer'lar + host |
+| `direct_sale_purchased` | `POST /purchase` başarılı | Tüm viewer'lar + host |
+| `direct_sale_sold_out` | `remaining_stock` = 0 | Tüm viewer'lar + host |
+| `direct_sale_ended` | `POST /end` veya otomatik (5 sn sold_out timer) | Tüm viewer'lar + host |
+
+### 6.2 Event Payload'ları
+
+#### `direct_sale_started`
+```json
+{
+  "type": "direct_sale_started",
+  "sale_id": 42,
+  "title": "Kırmızı Çanta",
+  "price": 450.0,
+  "total_stock": 5,
+  "remaining_stock": 5,
+  "product_image_url": "https://..."
+}
+```
+
+#### `direct_sale_paused`
+```json
+{
+  "type": "direct_sale_paused",
+  "sale_id": 42
+}
+```
+
+#### `direct_sale_resumed`
+```json
+{
+  "type": "direct_sale_resumed",
+  "sale_id": 42,
+  "remaining_stock": 3
+}
+```
+
+#### `direct_sale_purchased`
+```json
+{
+  "type": "direct_sale_purchased",
+  "sale_id": 42,
+  "buyer_username": "ahmet_k",
+  "quantity": 1,
+  "remaining_stock": 2
+}
+```
+> `buyer_id` payload'a **girmez** — privacy. Sadece `buyer_username`.
+
+#### `direct_sale_sold_out`
+```json
+{
+  "type": "direct_sale_sold_out",
+  "sale_id": 42
+}
+```
+
+#### `direct_sale_ended`
+```json
+{
+  "type": "direct_sale_ended",
+  "sale_id": 42,
+  "end_reason": "host_ended",
+  "total_sold": 3,
+  "total_revenue": 1350.0
+}
+```
+> `end_reason`: `sold_out` | `host_ended` | `stream_closed`
+
+### 6.3 CommercePanelWrapper Dinleme Kuralı
+
+| Alınan Event | Wrapper Davranışı |
+|---|---|
+| `direct_sale_started` | `idle` → `DirectSalePanel` (active) göster |
+| `direct_sale_ended` | Panel kapat → `idle` mod seçimine dön |
+| `auction_started` (mevcut) | `idle` → `AuctionPanel` göster |
+| `auction_ended` (mevcut) | Panel kapat → `idle` mod seçimine dön |
+
+---
+
+## 7. ClickHouse Tracking
+
+*Bu bölüm Faz 5'te doldurulacak — event'ler netleştikten sonra.*
 
 Planlanan event'ler:
 - `sale_started` — host satış başlattı
-- `sale_impression` — viewer paneli gördü
-- `purchase_intent` — "Satın Al" butonuna bastı
+- `sale_impression` — viewer paneli gördü (scroll yüzdesi ≥ %80)
+- `purchase_intent` — "Satın Al" butonuna dokundu
 - `purchase_completed` — satın alma tamamlandı
 - `sale_ended` — satış bitti (`end_reason` ile)
 
+**Kural:** `architectural_decisions.md §3.3` — veri birikmeden ML modelleri güncellenmez.
+
 ---
 
-## 7. Geliştirme Fazları
+## 8. Geliştirme Fazları
 
 ### Faz 0 — Kontrat (Kod Yok)
 Tüm sözleşmelerin kağıt üzerinde tamamlanması. Bu dosyanın §2–§6 bölümlerini doldur.
