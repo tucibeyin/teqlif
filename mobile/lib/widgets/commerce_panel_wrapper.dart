@@ -67,15 +67,22 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Provider state non-idle'a geçince force bayraklarını temizle.
-    // ref.listen build() içinde çağrılır ama Riverpod bunu güvenli yönetir —
-    // mutation build sırasında değil, bir sonraki frame'de tetiklenir.
-    ref.listen<AuctionState>(auctionProvider(widget.streamId), (_, next) {
-      if (_forceAuction && !next.isIdle) {
+    // Force bayraklarını yalnızca satış/artırma ÇALIŞIR hale gelince temizle.
+    // Biten (ended/cancelled) state'ler force'u temizlemez — idle chip'e dönüş
+    // _resolveMode üzerinden olur; ended state biter bitmez mode=idle döner.
+    ref.listen<AuctionState>(auctionProvider(widget.streamId), (prev, next) {
+      // Artırma aktif hale gelince force'u kaldır
+      if (_forceAuction && !next.isIdle && !next.isEnded) {
         setState(() => _forceAuction = false);
+      }
+      // Artırma bitti → parent'ı bilgilendir (AuctionPanel artık render edilmeyeceği için
+      // kendi onAuctionReset callback'ini tetikleyemez)
+      if (prev != null && next.isEnded && !(prev.isEnded)) {
+        widget.onAuctionReset?.call();
       }
     });
     ref.listen<DirectSaleState>(directSaleHostProvider(widget.streamId), (_, next) {
+      // Direkt satış aktif hale gelince force'u kaldır
       if (_forceDirectSale && !next.isIdle && !next.isTerminal) {
         setState(() => _forceDirectSale = false);
       }
@@ -112,19 +119,28 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
       _CommerceMode.idle => _IdleChip(
           isHost: _isHostLike,
           onStartAuction: () => setState(() => _forceAuction = true),
-          onStartDirectSale: () => setState(() => _forceDirectSale = true),
+          onStartDirectSale: () {
+            // Terminal state'teki direkt satış provider'ı idle'a sıfırla,
+            // aksi hâlde DirectSalePanel start form yerine TerminalBanner gösterir.
+            final dsState = ref.read(directSaleHostProvider(widget.streamId));
+            if (dsState.isTerminal) {
+              ref.read(directSaleHostProvider(widget.streamId).notifier).reset();
+            }
+            setState(() => _forceDirectSale = true);
+          },
         ),
     };
   }
 
   _CommerceMode _resolveMode(AuctionState auctionState, DirectSaleState dsState) {
-    // Force bayrakları: host paneli henüz başlamamışken açmak için
+    // Force bayrakları: host yeni bir satış başlatmak için butona bastı
     if (_forceDirectSale) return _CommerceMode.directSale;
     if (_forceAuction) return _CommerceMode.auction;
 
-    // Direct sale öncelikli — aynı anda ikisi aktif olmamalı ama guard ekle
+    // Biten (terminal/ended) state'ler idle chip'e dönüş sağlar;
+    // yalnızca gerçekten ÇALIŞAN durumlar kendi panellerini gösterir.
     if (!dsState.isIdle && !dsState.isTerminal) return _CommerceMode.directSale;
-    if (!auctionState.isIdle) return _CommerceMode.auction;
+    if (!auctionState.isIdle && !auctionState.isEnded) return _CommerceMode.auction;
     return _CommerceMode.idle;
   }
 }
