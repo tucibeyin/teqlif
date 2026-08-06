@@ -2,6 +2,7 @@ import 'viewmodels/sales_view_model.dart';
 import '../../services/category_service.dart';
 import '../services/direct_sale_service.dart';
 import '../models/direct_sale.dart';
+import '../utils/error_helper.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -412,7 +413,7 @@ class _DirectSaleCard extends ConsumerWidget {
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              builder: (_) => _BuyersSheet(saleId: saleId, itemName: itemName, loc: loc),
+              builder: (_) => _BuyersSheet(saleId: saleId, itemName: itemName),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -446,18 +447,17 @@ class _DirectSaleCard extends ConsumerWidget {
 
 // ── Alıcılar Bottom Sheet ─────────────────────────────────────────────────────
 
-class _BuyersSheet extends StatefulWidget {
+class _BuyersSheet extends ConsumerStatefulWidget {
   final int saleId;
   final String itemName;
-  final TranslationPack loc;
 
-  const _BuyersSheet({required this.saleId, required this.itemName, required this.loc});
+  const _BuyersSheet({required this.saleId, required this.itemName});
 
   @override
-  State<_BuyersSheet> createState() => _BuyersSheetState();
+  ConsumerState<_BuyersSheet> createState() => _BuyersSheetState();
 }
 
-class _BuyersSheetState extends State<_BuyersSheet> {
+class _BuyersSheetState extends ConsumerState<_BuyersSheet> {
   List<DirectSaleOrder>? _orders;
   bool _loading = true;
 
@@ -471,8 +471,11 @@ class _BuyersSheetState extends State<_BuyersSheet> {
     try {
       final orders = await DirectSaleService.getOrders(widget.saleId);
       if (mounted) setState(() { _orders = orders; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _orders = []; _loading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() { _orders = []; _loading = false; });
+        handleError(e, ref.read(localizationProvider));
+      }
     }
   }
 
@@ -482,7 +485,7 @@ class _BuyersSheetState extends State<_BuyersSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = widget.loc;
+    final loc = ref.watch(localizationProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
@@ -513,7 +516,7 @@ class _BuyersSheetState extends State<_BuyersSheet> {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: _orders!.length,
-                separatorBuilder: (_, __) => Divider(
+                separatorBuilder: (_, _) => Divider(
                   height: 1,
                   color: AppColors.textTertiary(context).withValues(alpha: 0.15),
                 ),

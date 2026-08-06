@@ -9,6 +9,7 @@ import '../models/direct_sale.dart';
 import '../providers/direct_sale_provider.dart';
 import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
+import '../utils/error_helper.dart';
 import '../utils/number_formatter.dart';
 
 class DirectSaleDetailScreen extends ConsumerWidget {
@@ -78,7 +79,6 @@ class _Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
           if (imageUrl != null && imageUrl.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -94,7 +94,6 @@ class _Body extends StatelessWidget {
           else
             _imagePlaceholder(context),
           const SizedBox(height: 16),
-          // Title
           Text(
             summary.itemName,
             style: TextStyle(
@@ -111,29 +110,24 @@ class _Body extends StatelessWidget {
             ),
           const SizedBox(height: 16),
           _Divider(),
-          // Role-based info rows
           if (summary.isSeller) ...[
             _InfoRow(
               label: loc.t('directSaleSaleStatusLabel'),
               value: _statusLabel(summary.status),
-              context: context,
             ),
             _InfoRow(
               label: loc.t('directSaleQuantityLabel'),
               value: '${summary.totalQuantitySold ?? 0}',
-              context: context,
             ),
             _InfoRow(
               label: loc.t('directSaleTotalLabel'),
               value: TeqNumberFormatter.format(summary.totalRevenue ?? 0, fieldKey: 'price', unit: '₺'),
               valueColor: const Color(0xFF4ADE80),
-              context: context,
             ),
             if ((summary.orderCount ?? 0) > 0) ...[
               _InfoRow(
                 label: loc.t('directSaleBuyerCount').replaceFirst('{count}', '${summary.orderCount}'),
                 value: '',
-                context: context,
                 hideDivider: true,
               ),
               const SizedBox(height: 16),
@@ -157,14 +151,12 @@ class _Body extends StatelessWidget {
               _InfoRow(
                 label: '@${summary.sellerUsername}',
                 value: '',
-                context: context,
                 hideDivider: true,
                 isHeader: true,
               ),
             _InfoRow(
               label: loc.t('directSaleSaleStatusLabel'),
               value: _statusLabel(summary.status),
-              context: context,
             ),
             _InfoRow(
               label: loc.t('directSaleOrderStatusLabel'),
@@ -173,23 +165,19 @@ class _Body extends StatelessWidget {
                   : summary.buyerOrderStatus == 'cancelled'
                       ? loc.t('directSaleOrderCancelled')
                       : (summary.buyerOrderStatus ?? ''),
-              context: context,
             ),
             _InfoRow(
               label: loc.t('directSaleQuantityLabel'),
               value: '${summary.buyerQuantity ?? 0}',
-              context: context,
             ),
             _InfoRow(
               label: loc.t('directSaleUnitPriceLabel'),
               value: TeqNumberFormatter.format(summary.buyerUnitPrice ?? 0, fieldKey: 'price', unit: '₺'),
-              context: context,
             ),
             _InfoRow(
               label: loc.t('directSaleTotalLabel'),
               value: TeqNumberFormatter.format(summary.buyerTotal ?? 0, fieldKey: 'price', unit: '₺'),
               valueColor: const Color(0xFF4ADE80),
-              context: context,
             ),
           ],
         ],
@@ -225,19 +213,17 @@ class _InfoRow extends StatelessWidget {
   final Color? valueColor;
   final bool hideDivider;
   final bool isHeader;
-  final BuildContext context;
 
   const _InfoRow({
     required this.label,
     required this.value,
-    required this.context,
     this.valueColor,
     this.hideDivider = false,
     this.isHeader = false,
   });
 
   @override
-  Widget build(BuildContext _) {
+  Widget build(BuildContext context) {
     return Column(
       children: [
         Padding(
@@ -284,31 +270,40 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _BuyersSheet extends StatefulWidget {
+class _BuyersSheet extends ConsumerStatefulWidget {
   final int saleId;
 
   const _BuyersSheet({required this.saleId});
 
   @override
-  State<_BuyersSheet> createState() => _BuyersSheetState();
+  ConsumerState<_BuyersSheet> createState() => _BuyersSheetState();
 }
 
-class _BuyersSheetState extends State<_BuyersSheet> {
+class _BuyersSheetState extends ConsumerState<_BuyersSheet> {
   List<DirectSaleOrder>? _orders;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    DirectSaleService.getOrders(widget.saleId).then((orders) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final orders = await DirectSaleService.getOrders(widget.saleId);
       if (mounted) setState(() { _orders = orders; _loading = false; });
-    }).catchError((_) {
-      if (mounted) setState(() { _loading = false; });
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() { _loading = false; });
+        handleError(e, ref.read(localizationProvider));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -335,18 +330,13 @@ class _BuyersSheetState extends State<_BuyersSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Consumer(
-                      builder: (_, ref, _) {
-                        final loc = ref.watch(localizationProvider);
-                        return Text(
-                          loc.t('directSaleOrdersTitle'),
-                          style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        );
-                      },
+                    child: Text(
+                      loc.t('directSaleOrdersTitle'),
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -362,14 +352,9 @@ class _BuyersSheetState extends State<_BuyersSheet> {
                   ? const Center(child: CircularProgressIndicator(color: kPrimary))
                   : _orders == null || _orders!.isEmpty
                       ? Center(
-                          child: Consumer(
-                            builder: (_, ref, _) {
-                              final loc = ref.watch(localizationProvider);
-                              return Text(
-                                loc.t('searchNoResults'),
-                                style: TextStyle(color: AppColors.textSecondary(context)),
-                              );
-                            },
+                          child: Text(
+                            loc.t('searchNoResults'),
+                            style: TextStyle(color: AppColors.textSecondary(context)),
                           ),
                         )
                       : ListView.separated(
@@ -395,14 +380,9 @@ class _BuyersSheetState extends State<_BuyersSheet> {
                                           ),
                                         ),
                                         const SizedBox(height: 2),
-                                        Consumer(
-                                          builder: (_, ref, _) {
-                                            final loc = ref.watch(localizationProvider);
-                                            return Text(
-                                              loc.t('directSaleOrderQuantity').replaceFirst('{count}', '${o.quantity}'),
-                                              style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
-                                            );
-                                          },
+                                        Text(
+                                          loc.t('directSaleOrderQuantity').replaceFirst('{count}', '${o.quantity}'),
+                                          style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -418,14 +398,9 @@ class _BuyersSheetState extends State<_BuyersSheet> {
                                         ),
                                       ),
                                       if (o.isCancelled)
-                                        Consumer(
-                                          builder: (_, ref, _) {
-                                            final loc = ref.watch(localizationProvider);
-                                            return Text(
-                                              loc.t('directSaleOrderCancelled'),
-                                              style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12),
-                                            );
-                                          },
+                                        Text(
+                                          loc.t('directSaleOrderCancelled'),
+                                          style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12),
                                         ),
                                     ],
                                   ),
