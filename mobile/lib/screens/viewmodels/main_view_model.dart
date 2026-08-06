@@ -21,7 +21,8 @@ enum MainNavigationEvent {
   toProfile,
   toDirectChat,
   toFollowRequests,
-  toLogin
+  toLogin,
+  toDirectSaleDetail,
 }
 
 class MainNavigationData {
@@ -202,6 +203,12 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
           _navigate(MainNavigationEvent.toLiveStream, id);
         }
         break;
+      case 'direct-sale':
+        final id = int.tryParse(param);
+        if (id != null) {
+          _navigate(MainNavigationEvent.toDirectSaleDetail, id);
+        }
+        break;
     }
   }
 
@@ -301,6 +308,15 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         final username = data['caller_username'] as String?;
         if (username != null && username.isNotEmpty) {
           _navigate(MainNavigationEvent.toProfile, username);
+        }
+        break;
+
+      case 'direct_sale_purchased':
+        final saleId = int.tryParse(data['sale_id']?.toString() ?? '');
+        if (saleId != null) {
+          _navigate(MainNavigationEvent.toDirectSaleDetail, saleId);
+        } else {
+          _navigate(MainNavigationEvent.toNotificationsTab, null);
         }
         break;
 

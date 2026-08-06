@@ -73,7 +73,7 @@
 - [x] 2026-08-06 — 4.6 `CommercePanelWrapper` — `_CommerceMode` local state + force bayrakları, idle host chip (açık artırma / direkt satış), viewer hint — `mobile/lib/widgets/commerce_panel_wrapper.dart`
 - [x] 2026-08-06 — 4.7+4.8 `DirectSalePanel` — host: başlat formu (listing seç / manuel + proof dialog), aktif kontroller (duraklat/devam/bitir/iptal dialoglı); viewer: ürün kartı, adet seçici, satın alma bottom sheet — `mobile/lib/widgets/direct_sale_panel.dart`
 - [x] 2026-08-06 — 4.9 `/me/commerce/purchases` + `/me/commerce/sales` ekranları — `PurchasesScreen` ve `SalesScreen` unified model ile güncelle, badge mantığı + Alıcılar bottom sheet (→ §10.1, §10.2, §10.5)
-- [ ] 4.10 `DirectSaleDetailScreen` — `teqlif://direct-sale/{id}` deep link, rol bazlı görünüm (buyer/seller), "Alıcılar" bottom sheet (→ §14.2, §10.4)
+- [x] 2026-08-06 — 4.10 `DirectSaleDetailScreen` — `teqlif://direct-sale/{id}` deep link, rol bazlı görünüm (buyer/seller), "Alıcılar" bottom sheet (→ §14.2, §10.4)
 
 ---
 

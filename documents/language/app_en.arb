@@ -4397,6 +4397,13 @@
       "count": { "type": "int" }
     }
   },
+  "directSaleSaleStatusLabel": "Sale Status",
+  "directSaleOrderCompleted": "Completed",
+  "directSaleQuantityLabel": "Quantity",
+  "directSaleUnitPriceLabel": "Unit Price",
+  "directSaleTotalLabel": "Total",
+  "directSaleOrderStatusLabel": "Order Status",
+  "directSaleViewBuyersBtn": "View Buyers",
 
   "notifDirectSalePurchased": "Purchase Completed",
   "notifDirectSalePurchasedBody": "Payment of {price} received for {item}."

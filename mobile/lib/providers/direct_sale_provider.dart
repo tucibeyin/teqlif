@@ -401,3 +401,8 @@ final directSaleViewerProvider = StateNotifierProvider.family
     .autoDispose<DirectSaleViewerNotifier, DirectSaleViewerState, int>(
   (ref, streamId) => DirectSaleViewerNotifier(streamId),
 );
+
+final directSaleDetailProvider = FutureProvider.family
+    .autoDispose<DirectSaleSummary, int>((ref, saleId) async {
+  return DirectSaleService.getSummary(saleId);
+});

@@ -32,6 +32,7 @@ import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
 import 'follow_requests_screen.dart';
 import 'listing_detail_screen.dart';
+import 'direct_sale_detail_screen.dart';
 import 'purchase_detail_screen.dart';
 import 'sale_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
@@ -2379,9 +2380,9 @@ class _MessageText extends ConsumerWidget {
 
   const _MessageText({required this.content, required this.isMe});
 
-  // teqlif.com/ilan/{id} veya teqlif://auction/{id} linklerini tespit et
+  // teqlif.com/ilan/{id}, teqlif://auction/{id} veya teqlif://direct-sale/{id} linklerini tespit et
   static final _linkRegex = RegExp(
-    r'(https?://[^\s]+/ilan/(\d+)|teqlif://auction/(\d+))',
+    r'(https?://[^\s]+/ilan/(\d+)|teqlif://auction/(\d+)|teqlif://direct-sale/(\d+))',
   );
 
   Future<void> _openListing(BuildContext context, int listingId) async {
@@ -2426,6 +2427,14 @@ class _MessageText extends ConsumerWidget {
         }
       }
     } catch (_) {}
+  }
+
+  Future<void> _openDirectSaleDetail(BuildContext context, int saleId) async {
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => DirectSaleDetailScreen(saleId: saleId)),
+    );
   }
 
   @override
@@ -2488,6 +2497,24 @@ class _MessageText extends ConsumerWidget {
             ),
             recognizer: TapGestureRecognizer()
               ..onTap = () => _openAuctionDetail(context, auctionId),
+          ),
+        );
+      } else if (match.group(4) != null) {
+        // Direkt satış detay linki
+        const directSaleLinkColor = Color(0xFF6366F1);
+        final saleId = int.parse(match.group(4)!);
+        spans.add(
+          TextSpan(
+            text: loc.t("saleTypeDirect"),
+            style: const TextStyle(
+              color: directSaleLinkColor,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.underline,
+              decorationColor: directSaleLinkColor,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => _openDirectSaleDetail(context, saleId),
           ),
         );
       }

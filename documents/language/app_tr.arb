@@ -4360,6 +4360,13 @@
       "count": { "type": "int" }
     }
   },
+  "directSaleSaleStatusLabel": "Satış Durumu",
+  "directSaleOrderCompleted": "Tamamlandı",
+  "directSaleQuantityLabel": "Adet",
+  "directSaleUnitPriceLabel": "Birim Fiyat",
+  "directSaleTotalLabel": "Toplam",
+  "directSaleOrderStatusLabel": "Sipariş Durumu",
+  "directSaleViewBuyersBtn": "Alıcıları Gör",
 
   "notifDirectSalePurchased": "Satın Alma Tamamlandı",
   "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı."

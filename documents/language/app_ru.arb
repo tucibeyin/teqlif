@@ -4359,6 +4359,13 @@
       "count": { "type": "int" }
     }
   },
+  "directSaleSaleStatusLabel": "Статус продажи",
+  "directSaleOrderCompleted": "Завершено",
+  "directSaleQuantityLabel": "Количество",
+  "directSaleUnitPriceLabel": "Цена за единицу",
+  "directSaleTotalLabel": "Итого",
+  "directSaleOrderStatusLabel": "Статус заказа",
+  "directSaleViewBuyersBtn": "Посмотреть покупателей",
 
   "notifDirectSalePurchased": "Покупка завершена",
   "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}."

@@ -1,4 +1,5 @@
 import '../services/analytics_service.dart';
+import 'direct_sale_detail_screen.dart';
 import 'home_screen.dart';
 import 'listing_detail_screen.dart';
 import 'profile_screen.dart';
@@ -303,6 +304,14 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
               break;
             case MainNavigationEvent.toLogin:
               Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+              break;
+            case MainNavigationEvent.toDirectSaleDetail:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DirectSaleDetailScreen(saleId: navData.payload as int),
+                ),
+              );
               break;
             case MainNavigationEvent.none:
               break;
