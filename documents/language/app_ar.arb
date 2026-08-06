@@ -4352,6 +4352,12 @@
       "count": { "type": "int" }
     }
   },
+  "directSaleBuyerCount": "{count} buyers",
+  "@directSaleBuyerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "notifDirectSalePurchased": "Purchase Completed",
   "notifDirectSalePurchasedBody": "Payment of {price} received for {item}."

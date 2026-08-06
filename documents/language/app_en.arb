@@ -4386,6 +4386,12 @@
   "directSaleOrdersTitle": "Buyers",
   "directSaleOrderCancelled": "Cancelled",
   "directSaleOrderQuantity": "{count} pcs",
+  "directSaleBuyerCount": "{count} buyers",
+  "@directSaleBuyerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "@directSaleOrderQuantity": {
     "placeholders": {
       "count": { "type": "int" }

@@ -4353,6 +4353,12 @@
       "count": { "type": "int" }
     }
   },
+  "directSaleBuyerCount": "{count} покупателей",
+  "@directSaleBuyerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "notifDirectSalePurchased": "Покупка завершена",
   "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}."

@@ -4354,6 +4354,12 @@
       "count": { "type": "int" }
     }
   },
+  "directSaleBuyerCount": "{count} alıcı",
+  "@directSaleBuyerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "notifDirectSalePurchased": "Satın Alma Tamamlandı",
   "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı."

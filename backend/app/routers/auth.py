@@ -553,6 +553,195 @@ async def my_sales(
     ]
 
 
+@router.get("/me/commerce/purchases")
+async def my_commerce_purchases(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Açık artırma + direkt satış alımlarını birleştirerek döndürür (son 50)."""
+    from app.models.auction import Auction
+    from app.models.direct_sale import DirectSale, DirectSaleOrder
+    from app.models.listing import Listing as ListingModel
+    from app.models.stream import LiveStream
+    from app.models.user import User as UserModel
+
+    # Açık artırma kazanımları
+    auction_rows = (await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.final_price,
+            Auction.is_bought_it_now,
+            Auction.ended_at,
+            Auction.proof_image_url,
+            ListingModel.image_url,
+            ListingModel.thumbnail_url,
+            UserModel.username.label("seller_username"),
+        )
+        .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
+        .join(UserModel, UserModel.id == LiveStream.host_id, isouter=True)
+        .where(Auction.winner_id == current_user.id, Auction.status == "completed")
+        .order_by(Auction.ended_at.desc())
+        .limit(50)
+    )).fetchall()
+
+    # Direkt satış siparişleri
+    ds_rows = (await db.execute(
+        select(
+            DirectSaleOrder.id,
+            DirectSaleOrder.sale_id,
+            DirectSaleOrder.quantity,
+            DirectSaleOrder.unit_price,
+            DirectSaleOrder.status.label("order_status"),
+            DirectSaleOrder.created_at,
+            DirectSale.title.label("item_name"),
+            DirectSale.proof_image_url,
+            DirectSale.product_image_url.label("image_url"),
+            UserModel.username.label("seller_username"),
+        )
+        .join(DirectSale, DirectSale.id == DirectSaleOrder.sale_id)
+        .join(UserModel, UserModel.id == DirectSaleOrder.seller_id)
+        .where(DirectSaleOrder.buyer_id == current_user.id)
+        .order_by(DirectSaleOrder.created_at.desc())
+        .limit(50)
+    )).fetchall()
+
+    items = []
+    for r in auction_rows:
+        items.append({
+            "type": "auction",
+            "id": r.id,
+            "sale_id": None,
+            "item_name": r.item_name,
+            "unit_price": None,
+            "quantity": None,
+            "final_price": float(r.final_price) if r.final_price else 0.0,
+            "seller_username": r.seller_username,
+            "image_url": r.thumbnail_url or r.image_url,
+            "proof_image_url": r.proof_image_url,
+            "order_status": "completed",
+            "is_bought_it_now": r.is_bought_it_now,
+            "ended_at": r.ended_at.isoformat() if r.ended_at else None,
+        })
+    for r in ds_rows:
+        total = float(r.unit_price * r.quantity) if r.unit_price else 0.0
+        items.append({
+            "type": "direct",
+            "id": r.id,
+            "sale_id": r.sale_id,
+            "item_name": r.item_name,
+            "unit_price": float(r.unit_price) if r.unit_price else None,
+            "quantity": r.quantity,
+            "final_price": total,
+            "seller_username": r.seller_username,
+            "image_url": r.image_url,
+            "proof_image_url": r.proof_image_url,
+            "order_status": r.order_status,
+            "is_bought_it_now": None,
+            "ended_at": r.created_at.isoformat() if r.created_at else None,
+        })
+
+    items.sort(key=lambda x: x["ended_at"] or "", reverse=True)
+    return items[:50]
+
+
+@router.get("/me/commerce/sales")
+async def my_commerce_sales(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Açık artırma + direkt satış satışlarını birleştirerek döndürür (son 50)."""
+    from app.models.auction import Auction
+    from app.models.direct_sale import DirectSale, DirectSaleOrder
+    from app.models.listing import Listing as ListingModel
+    from app.models.stream import LiveStream
+    from app.models.user import User as UserModel
+
+    # Açık artırma satışları (host)
+    auction_rows = (await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.final_price,
+            Auction.is_bought_it_now,
+            Auction.ended_at,
+            Auction.proof_image_url,
+            ListingModel.image_url,
+            ListingModel.thumbnail_url,
+            UserModel.username.label("buyer_username"),
+        )
+        .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
+        .join(UserModel, UserModel.id == Auction.winner_id, isouter=True)
+        .where(
+            or_(LiveStream.host_id == current_user.id, ListingModel.user_id == current_user.id),
+            Auction.status == "completed",
+            Auction.winner_id.is_not(None),
+        )
+        .order_by(Auction.ended_at.desc())
+        .limit(50)
+    )).fetchall()
+
+    # Direkt satışlar (host) — satış başına özet
+    ds_rows = (await db.execute(
+        select(
+            DirectSale.id,
+            DirectSale.title.label("item_name"),
+            DirectSale.product_image_url.label("image_url"),
+            DirectSale.ended_at,
+            DirectSale.end_reason,
+            DirectSale.orders_voided,
+            func.coalesce(
+                func.sum(DirectSaleOrder.unit_price * DirectSaleOrder.quantity), 0
+            ).label("total_revenue"),
+            func.coalesce(func.sum(DirectSaleOrder.quantity), 0).label("total_quantity_sold"),
+            func.count(DirectSaleOrder.id).label("order_count"),
+        )
+        .join(DirectSaleOrder, DirectSaleOrder.sale_id == DirectSale.id, isouter=True)
+        .where(
+            DirectSale.host_id == current_user.id,
+            DirectSale.status.in_(["ended", "cancelled", "sold_out"]),
+        )
+        .group_by(DirectSale.id)
+        .order_by(DirectSale.ended_at.desc())
+        .limit(50)
+    )).fetchall()
+
+    items = []
+    for r in auction_rows:
+        items.append({
+            "type": "auction",
+            "id": r.id,
+            "item_name": r.item_name,
+            "total_revenue": float(r.final_price) if r.final_price else 0.0,
+            "total_quantity_sold": None,
+            "order_count": None,
+            "buyer_username": r.buyer_username,
+            "image_url": r.thumbnail_url or r.image_url,
+            "ended_at": r.ended_at.isoformat() if r.ended_at else None,
+            "end_reason": None,
+            "orders_voided": None,
+        })
+    for r in ds_rows:
+        items.append({
+            "type": "direct",
+            "id": r.id,
+            "item_name": r.item_name,
+            "total_revenue": float(r.total_revenue) if r.total_revenue else 0.0,
+            "total_quantity_sold": int(r.total_quantity_sold) if r.total_quantity_sold else 0,
+            "order_count": int(r.order_count) if r.order_count else 0,
+            "buyer_username": None,
+            "image_url": r.image_url,
+            "ended_at": r.ended_at.isoformat() if r.ended_at else None,
+            "end_reason": r.end_reason,
+            "orders_voided": r.orders_voided,
+        })
+
+    items.sort(key=lambda x: x["ended_at"] or "", reverse=True)
+    return items[:50]
+
+
 @router.get("/me/auction/{auction_id}")
 async def my_auction_context(
     auction_id: int,

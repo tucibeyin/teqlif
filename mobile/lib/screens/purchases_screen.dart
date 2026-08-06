@@ -14,6 +14,38 @@ import 'purchase_detail_screen.dart';
 import "../../ui_library/components/cards/teq_card.dart";
 import '../../ui_library/components/filters/teq_filter_bar.dart';
 
+class _TypeBadge extends StatelessWidget {
+  final String itemType;
+  final bool isBuyItNow;
+  final TranslationPack loc;
+
+  const _TypeBadge({
+    required this.itemType,
+    required this.isBuyItNow,
+    required this.loc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = itemType == 'direct'
+        ? (loc.t('saleTypeDirect'), const Color(0xFF6366F1))
+        : isBuyItNow
+            ? (loc.t('saleTypeBuyNow'), const Color(0xFF16A34A))
+            : (loc.t('saleTypeBid'), const Color(0xFFF97316));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 11),
+      ),
+    );
+  }
+}
+
 class PurchasesScreen extends ConsumerStatefulWidget {
   const PurchasesScreen({super.key});
 
@@ -133,7 +165,8 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
                         final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
                         final seller = item['seller_username'] as String? ?? loc.t("purchaseUnknownSeller");
                         final category = item['category'] as String?;
-                        final thumbnailUrl = item['thumbnail_url'] as String? ?? item['image_url'] as String?;
+                        final thumbnailUrl = item['image_url'] as String?;
+                        final itemType = item['type'] as String? ?? 'auction';
                         final isBuyItNow = (item['is_bought_it_now'] as bool?) ?? false;
                         final endedAt = item['ended_at'] as String?;
 
@@ -207,23 +240,10 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
                                               ),
                                               const SizedBox(width: 6),
                                             ],
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: isBuyItNow
-                                                    ? const Color(0xFF16A34A).withValues(alpha: 0.12)
-                                                    : const Color(0xFFF97316).withValues(alpha: 0.12),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                isBuyItNow ? loc.t("saleTypeBuyNow") : loc.t("saleTypeBid"),
-                                                style: TextStyle(
-                                                  color: isBuyItNow
-                                                      ? const Color(0xFF16A34A)
-                                                      : const Color(0xFFF97316),
-                                                  fontSize: 11,
-                                                ),
-                                              ),
+                                            _TypeBadge(
+                                              itemType: itemType,
+                                              isBuyItNow: isBuyItNow,
+                                              loc: loc,
                                             ),
                                           ],
                                         ),
