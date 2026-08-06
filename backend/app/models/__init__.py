@@ -31,3 +31,4 @@ from .search_alert import SearchAlert
 from .user_interest import UserInterest
 from .market_index import ExchangeRates
 from .call import Call, CallParticipant
+from .direct_sale import DirectSale, DirectSaleOrder
