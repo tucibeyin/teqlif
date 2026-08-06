@@ -51,11 +51,11 @@
 >
 > **Bağımlılık:** Faz 2 ✅
 
-- [ ] 3.1 `POST /direct-sales/{id}/purchase` endpoint — Lua atomik stok azalt, `direct_sale_orders` kaydı oluştur, `direct_sale_purchased` WS broadcast (→ §3.3, §5.3); rate limit: 10/min per user
-- [ ] 3.2 `sold_out` otomatik geçiş — `remaining_stock == 0` sonrası `direct_sale_sold_out` broadcast, 5 sn timer → `direct_sale_ended` (end_reason: `sold_out`) (→ §1.2)
-- [ ] 3.3 Satın alma DirectMessage — buyer + host'a DM, WS broadcast her iki kanala, deep link formatı (→ §9.2, §9.4)
-- [ ] 3.4 `GET /direct-sales/{id}/summary` endpoint — rol bazlı (buyer/seller) response (→ §14.2)
-- [ ] 3.5 `GET /direct-sales/{id}/orders` endpoint — sadece host yetkisi (→ §10.4)
+- [x] 2026-08-06 — 3.1 `POST /direct-sales/{id}/purchase` — Lua atomik stok, order kaydı, `direct_sale_purchased` WS broadcast; rate limit 10/min
+- [x] 2026-08-06 — 3.2 `sold_out` otomatik geçiş — stok=0 → `set_sold_out()` Redis + DB, `direct_sale_sold_out` broadcast; `asyncio.create_task` 5s timer → `_auto_end_on_sold_out`
+- [x] 2026-08-06 — 3.3 Satın alma DM — aynı commit'te `DirectMessage(host→buyer)`, WS broadcast `dm:{buyer}` + `dm:{host}`, `push_notification`, deep link formatı
+- [x] 2026-08-06 — 3.4 `GET /direct-sales/{id}/summary` — rol bazlı (seller: toplam gelir/adet/order sayısı; buyer: kendi siparişleri özeti)
+- [x] 2026-08-06 — 3.5 `GET /direct-sales/{id}/orders` — sadece host, buyer JOIN, `DirectSaleOrderOut` listesi
 
 ---
 
