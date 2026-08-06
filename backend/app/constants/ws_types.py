@@ -49,6 +49,15 @@ GIFT = "gift"  # Tüm odaya broadcast — gönderen, gift_name, cost
 HYPE_UPDATE = "hype_update"   # Tüm odaya: {"type": "hype_update", "score": 85}
 HYPE_ALERT  = "hype_alert"    # Sadece host'a: {"type": "hype_alert", "message": "..."}
 
+# ── Direkt Satış ─────────────────────────────────────────────────────────────
+DIRECT_SALE_STARTED    = "direct_sale_started"
+DIRECT_SALE_PAUSED     = "direct_sale_paused"
+DIRECT_SALE_RESUMED    = "direct_sale_resumed"
+DIRECT_SALE_ENDED      = "direct_sale_ended"
+DIRECT_SALE_CANCELLED  = "direct_sale_cancelled"
+DIRECT_SALE_PURCHASED  = "direct_sale_purchased"
+DIRECT_SALE_SOLD_OUT   = "direct_sale_sold_out"
+
 # ── Grup Sesli/Görüntülü Arama ────────────────────────────────────────────────
 # Davete çağrılan kişiye
 CALL_GROUP_INVITE         = "call_group_invite"

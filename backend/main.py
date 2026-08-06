@@ -18,7 +18,7 @@ from app.logging_config import setup_logging
 from app.core.exceptions import AppException
 from app.core.error_handlers import setup_exception_handlers
 from app.core.idempotency import _IdempotencyReplay
-from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding
+from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding, direct_sale
 from app.routers import search_alerts
 from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
@@ -43,7 +43,8 @@ from app.models.listing import Listing
 from app.models.user import User
 from app.models.enums import UserStatus
 from app.models.stream import LiveStream
-import app.models.auction  # noqa: F401 — tablo kaydı için
+import app.models.auction       # noqa: F401 — tablo kaydı için
+import app.models.direct_sale  # noqa: F401 — tablo kaydı için
 import app.models.bid  # noqa: F401 — tablo kaydı için
 import app.models.notification  # noqa: F401 — tablo kaydı için
 import app.models.message  # noqa: F401 — tablo kaydı için
@@ -305,6 +306,7 @@ app.include_router(calls.router)
 app.include_router(field_config.router)
 app.include_router(i18n.router)
 app.include_router(catalog.router)
+app.include_router(direct_sale.router)
 
 
 # Frontend dosyalarını sun
