@@ -3,7 +3,6 @@ Direct Sale iş mantığı — Clean Command Pattern.
 Router sadece bu fonksiyonları çağırır; tüm DB/Redis/WS işlemleri burada.
 """
 from __future__ import annotations
-import asyncio
 import logging
 from typing import Optional, List
 
@@ -187,7 +186,7 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
     sale = await _get_sale(sale_id, uow.session)
     await _require_host(sale.stream_id, user, uow.session)
 
-    if sale.status not in ("active", "paused"):
+    if sale.status not in ("active", "paused", "sold_out"):
         raise DirectSaleNotActiveException()
 
     from datetime import datetime, timezone
@@ -197,6 +196,7 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
     sale.status = "ended"
     sale.end_reason = end_reason
     sale.ended_at = datetime.now(timezone.utc)
+    sale.scheduled_end_at = None  # scheduler artık işleme almayacak
     await uow.session.commit()
 
     # Toplam satış özeti
@@ -311,8 +311,9 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
 
     # remaining >= 0: başarılı
 
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     unit_price = float(sale.price)
+    stream_id = sale.stream_id
 
     # DB: order oluştur, satış stoğunu güncelle
     order = DirectSaleOrder(
@@ -328,6 +329,8 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     sale.remaining_stock = remaining
     if remaining == 0:
         sale.status = "sold_out"
+        # Scheduler 5 sn sonra ended'a geçirecek — DB'ye yazıyoruz (durable)
+        sale.scheduled_end_at = datetime.now(timezone.utc) + timedelta(seconds=5)
 
     # DM: host → buyer (aynı commit'te)
     dm_content = _build_purchase_dm(
@@ -347,14 +350,13 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     await uow.session.flush()  # order.id + dm.id alınır
 
     # Redis hash sync
-    await redis_mgr.update_remaining_stock(sale.stream_id, remaining)
+    await redis_mgr.update_remaining_stock(stream_id, remaining)
     if remaining == 0:
-        await redis_mgr.set_sold_out(sale.stream_id)
+        await redis_mgr.set_sold_out(stream_id)
 
     await uow.session.commit()
 
     # Stream WS: direct_sale_purchased
-    stream_id = sale.stream_id
     fire_and_forget(redis_mgr.publish_direct_sale(stream_id, {
         "type": WS.DIRECT_SALE_PURCHASED,
         "sale_id": sale_id,
@@ -368,7 +370,6 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
             "type": WS.DIRECT_SALE_SOLD_OUT,
             "sale_id": sale_id,
         }))
-        asyncio.create_task(_auto_end_on_sold_out(sale_id, stream_id))
 
     # DM WS broadcast (buyer + host her ikisine)
     from datetime import datetime, timezone as _tz
@@ -415,40 +416,6 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
         "total_price": data.quantity * unit_price,
         "remaining_stock": remaining,
     }
-
-
-async def _auto_end_on_sold_out(sale_id: int, stream_id: int) -> None:
-    """Stok tükendikten 5 saniye sonra satışı 'ended' state'ine geçir."""
-    await asyncio.sleep(5)
-    from datetime import datetime, timezone
-    from app.database import AsyncSessionLocal
-    from app.core.uow import SqlAlchemyUnitOfWork
-
-    try:
-        async with AsyncSessionLocal() as session:
-            sale = await session.scalar(select(DirectSale).where(DirectSale.id == sale_id))
-            if not sale or sale.status != "sold_out":
-                return  # host zaten bitirmiş/iptal etmiş
-
-            end_reason = "sold_out"
-            await redis_mgr.end_sale(stream_id, end_reason)
-            sale.status = "ended"
-            sale.end_reason = end_reason
-            sale.ended_at = datetime.now(timezone.utc)
-            await session.commit()
-
-            total_sold = sale.total_stock  # sold_out = tüm stok tükendi
-            total_revenue = total_sold * float(sale.price)
-            fire_and_forget(redis_mgr.publish_direct_sale(stream_id, {
-                "type": WS.DIRECT_SALE_ENDED,
-                "sale_id": sale_id,
-                "end_reason": end_reason,
-                "total_sold": total_sold,
-                "total_revenue": total_revenue,
-            }))
-            logger.info("[SATIN ALMA] sold_out timer tamamlandı → ended | sale_id=%s", sale_id)
-    except Exception as exc:
-        logger.error("[SATIN ALMA] _auto_end_on_sold_out HATASI | sale_id=%s | %s", sale_id, exc)
 
 
 # ── GET /direct-sales/{id}/summary ───────────────────────────────────────────

@@ -23,6 +23,7 @@ from app.routers import search_alerts
 from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers.messages import dm_pubsub_listener
+from app.use_cases.direct_sales.direct_sale_scheduler import direct_sale_scheduler
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads, wallet
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
@@ -198,6 +199,7 @@ async def lifespan(app: FastAPI):
     chat_task = asyncio.create_task(chat_pubsub_listener())
     mod_task = asyncio.create_task(moderation_pubsub_listener())
     dm_task = asyncio.create_task(dm_pubsub_listener())
+    ds_scheduler_task = asyncio.create_task(direct_sale_scheduler())
     # Hype Meter sönümleme döngüsü
     from app.core.hype_manager import hype_manager
     hype_manager.start_decay()
@@ -206,7 +208,8 @@ async def lifespan(app: FastAPI):
     chat_task.cancel()
     mod_task.cancel()
     dm_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, return_exceptions=True)
+    ds_scheduler_task.cancel()
+    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()
