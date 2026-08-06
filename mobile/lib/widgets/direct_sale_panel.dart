@@ -6,6 +6,7 @@ import '../config/api.dart';
 import '../config/theme.dart' show kPrimary;
 import '../models/direct_sale.dart';
 import '../providers/direct_sale_provider.dart';
+import '../services/analytics_service.dart';
 import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
@@ -34,6 +35,8 @@ class DirectSalePanel extends ConsumerStatefulWidget {
 }
 
 class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
+  bool _impressionFired = false;
+
   // ── Dialog orchestration ───────────────────────────────────────────────────
   // API çağrıları ViewModel'de; View yalnızca dialog akışını yönetir.
 
@@ -85,6 +88,16 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
           if (mounted) widget.onSaleEnded?.call();
         });
       }
+      // Viewer'ın satışı ilk gördüğü an — impression (Faz 5.3)
+      if (!widget.isHost && !_impressionFired && !next.isIdle && next.saleId > 0) {
+        _impressionFired = true;
+        AnalyticsService.logInteraction(
+          itemId: next.saleId,
+          itemType: 'direct_sale',
+          interactionType: 'sale_impression',
+          pricePoint: next.price,
+        );
+      }
     });
 
     final dsState = ref.watch(directSaleHostProvider(widget.streamId));
@@ -122,6 +135,12 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
   }
 
   void _showBuySheet(BuildContext context, DirectSaleState state) {
+    AnalyticsService.logInteraction(
+      itemId: state.saleId,
+      itemType: 'direct_sale',
+      interactionType: 'purchase_intent',
+      pricePoint: state.price,
+    );
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E293B),

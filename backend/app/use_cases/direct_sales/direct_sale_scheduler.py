@@ -21,6 +21,7 @@ from app.models.direct_sale import DirectSale
 from app.core.logger import fire_and_forget
 from app.use_cases.direct_sales import direct_sale_redis as redis_mgr
 from app.constants import ws_types as WS
+from app.database_clickhouse import buffer_direct_sale_event
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +85,15 @@ async def _process_overdue_sales() -> None:
                 "total_sold": total_sold,
                 "total_revenue": total_revenue,
             }))
+            fire_and_forget(buffer_direct_sale_event(
+                event_type="sale_ended",
+                sale_id=sale.id,
+                stream_id=sale.stream_id,
+                host_id=sale.host_id,
+                user_id=0,  # sistem otomatik geçiş
+                listing_id=sale.listing_id,
+                category=sale.category,
+                unit_price=float(sale.price),
+                remaining_stock_after=0,
+                end_reason=end_reason,
+            ))

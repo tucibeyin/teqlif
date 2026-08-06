@@ -294,6 +294,41 @@ async def buffer_search_event(
         logger.warning("[ClickHouse] buffer_search_event başarısız: %s", exc)
 
 
+async def buffer_direct_sale_event(
+    *,
+    event_type: str,
+    sale_id: int,
+    stream_id: int,
+    host_id: int,
+    user_id: int = 0,
+    order_id: Optional[int] = None,
+    listing_id: Optional[int] = None,
+    category: Optional[str] = None,
+    quantity: Optional[int] = None,
+    unit_price: Optional[float] = None,
+    total_price: Optional[float] = None,
+    remaining_stock_before: Optional[int] = None,
+    remaining_stock_after: Optional[int] = None,
+    viewer_count: Optional[int] = None,
+    end_reason: Optional[str] = None,
+    orders_voided: Optional[bool] = None,
+) -> None:
+    """direct_sale_events Redis buffer'ına ekler (< 1ms). Fire-and-forget."""
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        row = [
+            event_type, sale_id, stream_id, host_id, user_id,
+            order_id, listing_id, category, quantity,
+            unit_price, total_price, remaining_stock_before,
+            remaining_stock_after, viewer_count, end_reason,
+            orders_voided, _now_str(),
+        ]
+        await redis.rpush(_BUF_DIRECT_SALE_EVENTS, json.dumps(row))
+    except Exception as exc:
+        logger.warning("[ClickHouse] buffer_direct_sale_event başarısız: %s", exc)
+
+
 # Backward-compat alias — eski call site'ları kırmaz
 async def track_user_event(
     *,
@@ -438,6 +473,48 @@ async def flush_all_buffers() -> None:
                 column_names=["timestamp", "user_id", "query", "category", "result_count", "intent", "subcategory"],
             )
             logger.debug("[ClickHouse] search_events flush | %d satır", len(data))
+
+        # ── direct_sale_events ────────────────────────────────────────────────
+        # Row format: [event_type, sale_id, stream_id, host_id, user_id, order_id,
+        #              listing_id, category, quantity, unit_price, total_price,
+        #              remaining_stock_before, remaining_stock_after, viewer_count,
+        #              end_reason, orders_voided, created_at]
+        rows = await _drain(redis, _BUF_DIRECT_SALE_EVENTS)
+        if rows:
+            data = [
+                [
+                    str(r[0]),                                        # event_type
+                    int(r[1]),                                        # sale_id
+                    int(r[2]),                                        # stream_id
+                    int(r[3]),                                        # host_id
+                    int(r[4]),                                        # user_id
+                    int(r[5]) if r[5] is not None else None,          # order_id
+                    int(r[6]) if r[6] is not None else None,          # listing_id
+                    str(r[7]) if r[7] else None,                      # category
+                    int(r[8]) if r[8] is not None else None,          # quantity
+                    float(r[9]) if r[9] is not None else None,        # unit_price
+                    float(r[10]) if r[10] is not None else None,      # total_price
+                    int(r[11]) if r[11] is not None else None,        # remaining_stock_before
+                    int(r[12]) if r[12] is not None else None,        # remaining_stock_after
+                    int(r[13]) if r[13] is not None else None,        # viewer_count
+                    str(r[14]) if r[14] else None,                    # end_reason
+                    bool(r[15]) if r[15] is not None else None,       # orders_voided
+                    _parse_dt(r[16]),                                  # created_at
+                ]
+                for r in rows
+            ]
+            await _client.insert(
+                "direct_sale_events",
+                data,
+                column_names=[
+                    "event_type", "sale_id", "stream_id", "host_id", "user_id",
+                    "order_id", "listing_id", "category", "quantity",
+                    "unit_price", "total_price", "remaining_stock_before",
+                    "remaining_stock_after", "viewer_count", "end_reason",
+                    "orders_voided", "created_at",
+                ],
+            )
+            logger.debug("[ClickHouse] direct_sale_events flush | %d satır", len(data))
 
     except Exception as exc:
         logger.warning("[ClickHouse] flush_all_buffers başarısız: %s", exc)

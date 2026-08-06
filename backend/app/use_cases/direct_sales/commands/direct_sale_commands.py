@@ -29,6 +29,7 @@ from app.core.uow import SqlAlchemyUnitOfWork
 from app.core.ws_manager import ws_manager
 from app.use_cases.direct_sales import direct_sale_redis as redis_mgr
 from app.constants import ws_types as WS
+from app.database_clickhouse import buffer_direct_sale_event, buffer_user_event
 
 _DM_CHANNEL = "dm_broadcast"
 
@@ -131,6 +132,18 @@ async def start_sale(stream_id: int, data: DirectSaleStartIn,
         "proof_image_url": data.proof_image_url,
     }
     fire_and_forget(redis_mgr.publish_direct_sale(stream_id, payload))
+    fire_and_forget(buffer_direct_sale_event(
+        event_type="sale_started",
+        sale_id=sale.id,
+        stream_id=stream_id,
+        host_id=sale.host_id,
+        user_id=sale.host_id,
+        listing_id=sale.listing_id,
+        category=sale.category,
+        unit_price=float(data.price),
+        remaining_stock_after=data.stock_quantity,
+        viewer_count=stream.viewer_count,
+    ))
 
     logger.info("[DIREKT SATIŞ] BAŞLADI | stream=%s sale_id=%s title=%r price=%s stock=%s",
                 stream_id, sale.id, title, data.price, data.stock_quantity)
@@ -210,6 +223,18 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
         "total_sold": total_sold,
         "total_revenue": total_revenue,
     }))
+    fire_and_forget(buffer_direct_sale_event(
+        event_type="sale_ended",
+        sale_id=sale_id,
+        stream_id=sale.stream_id,
+        host_id=sale.host_id,
+        user_id=sale.host_id,
+        listing_id=sale.listing_id,
+        category=sale.category,
+        unit_price=float(sale.price),
+        remaining_stock_after=sale.remaining_stock,
+        end_reason=end_reason,
+    ))
     logger.info("[DIREKT SATIŞ] BİTTİ | sale_id=%s end_reason=%s total_sold=%s",
                 sale_id, end_reason, total_sold)
 
@@ -249,6 +274,19 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
         "sale_id": sale_id,
         "orders_voided": data.orders_voided,
     }))
+    fire_and_forget(buffer_direct_sale_event(
+        event_type="sale_cancelled",
+        sale_id=sale_id,
+        stream_id=sale.stream_id,
+        host_id=sale.host_id,
+        user_id=sale.host_id,
+        listing_id=sale.listing_id,
+        category=sale.category,
+        unit_price=float(sale.price),
+        remaining_stock_after=sale.remaining_stock,
+        end_reason="host_cancelled",
+        orders_voided=data.orders_voided,
+    ))
     logger.info("[DIREKT SATIŞ] İPTAL | sale_id=%s orders_voided=%s", sale_id, data.orders_voided)
 
 
@@ -355,6 +393,31 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
         await redis_mgr.set_sold_out(stream_id)
 
     await uow.session.commit()
+
+    # ClickHouse: purchase_completed (Faz 5.1) + user_events ML sinyali (Faz 5.2)
+    remaining_before = remaining + data.quantity
+    fire_and_forget(buffer_direct_sale_event(
+        event_type="purchase_completed",
+        sale_id=sale_id,
+        stream_id=stream_id,
+        host_id=sale.host_id,
+        user_id=user.id,
+        order_id=order.id,
+        listing_id=sale.listing_id,
+        category=sale.category,
+        quantity=data.quantity,
+        unit_price=unit_price,
+        total_price=unit_price * data.quantity,
+        remaining_stock_before=remaining_before,
+        remaining_stock_after=remaining,
+    ))
+    fire_and_forget(buffer_user_event(
+        event_type="purchase_completed",
+        item_id=sale.listing_id or sale_id,
+        item_type="direct_sale",
+        user_id=user.id,
+        price_point=unit_price,
+    ))
 
     # Stream WS: direct_sale_purchased
     fire_and_forget(redis_mgr.publish_direct_sale(stream_id, {
