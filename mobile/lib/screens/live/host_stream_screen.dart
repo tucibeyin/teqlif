@@ -17,6 +17,7 @@ import 'seller_report_screen.dart';
 import '../../utils/number_formatter.dart';
 import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
+import '../../widgets/commerce_panel_wrapper.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
 import '../../services/upload_service.dart';
@@ -1091,9 +1092,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                         ),
                       ),
                     ),
-                    // Açık artırma şeridi — Canlı Sohbet kategorisinde gizle
+                    // Commerce şeridi (açık artırma / direkt satış) — Canlı Sohbet kategorisinde gizle
                     if (widget.streamToken.category != 'chat')
-                      AuctionPanel(
+                      CommercePanelWrapper(
                         streamId: widget.streamToken.streamId,
                         isHost: true,
                         onBidAdded: _onBidAdded,

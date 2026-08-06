@@ -26,6 +26,7 @@ import '../../widgets/live/gift_hud.dart';
 import '../main_screen.dart';
 import '../../widgets/live/hype_meter_widget.dart';
 import '../../widgets/auction_panel.dart';
+import '../../widgets/commerce_panel_wrapper.dart';
 import '../../widgets/chat_panel.dart';
 import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
@@ -1474,14 +1475,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     ),
                   ),
                   if ((widget.session.token?.category ?? widget.stream.category) != 'chat')
-                    AuctionPanel(
+                    CommercePanelWrapper(
                       streamId: widget.stream.id,
                       isHost: false,
                       isCoHost: _isCoHost,
                       enabled: !_selfMuted,
                       hostUserId: int.tryParse(widget.session.token?.hostLivekitIdentity ?? ''),
                       myUsername: _myUsername,
-                      onWin: _onAuctionWon,
+                      onAuctionWin: _onAuctionWon,
                     ),
                   const SizedBox(height: 4),
                 ],

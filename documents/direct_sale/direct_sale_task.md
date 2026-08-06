@@ -65,14 +65,13 @@
 >
 > **Bağımlılık:** Faz 3 ✅
 
-- [x] 2026-08-06 — 4.1 ARB key'leri eklendi — 63 key, 14 grup, TR/EN/RU/AR (AR şimdilik EN fallback) → `[VPS]` `git pull && python sync_translations.py` bekliyor
-- [ ] 4.2 Dart modelleri: `DirectSale`, `DirectSaleOrder`, `CommercePurchase`, `CommerceSale` (→ §10.3)
-- [ ] 4.3 `DirectSaleService` — tüm endpoint çağrıları (start, pause, resume, end, cancel, purchase, state, summary, orders)
-- [ ] 4.4 `DirectSaleViewModel` (`AsyncNotifier`) — host state machine: form, proof dialog, kontrol butonları (→ §12; MVVM ADR §8)
-- [ ] 4.5 `DirectSaleViewerViewModel` (`AsyncNotifier`) — viewer state machine: lokal purchase state, stok sayacı (→ §2.B.4)
-- [ ] 4.6 `CommercePanelWrapper` — `_CommerceMode` lokal state, WS event yönlendirme, idle chip (→ §12.2, §12.3, §12.6)
-- [ ] 4.7 `DirectSalePanel` host view — başlat formu (listing seç / manuel), proof dialog, aktif satış kontrolleri (duraklat/devam/bitir/iptal), özet kart (→ §2, §11)
-- [ ] 4.8 `DirectSalePanel` viewer view — tıklanabilir ürün kartı, satın alma bottom sheet (stepper + fiyat + badge), state bazlı animasyonlar (→ §2.B, §2.C)
+- [x] 2026-08-06 — 4.1 ARB key'leri eklendi — 63 key, 14 grup, TR/EN/RU/AR (AR şimdilik EN fallback) → `[VPS]` `git pull && python sync_translations.py` tamamlandı
+- [x] 2026-08-06 — 4.2 Dart modelleri: `DirectSaleState`, `DirectSaleOrder`, `DirectSaleSummary`, `CommercePurchase`, `CommerceSale`, `CommerceType` — `mobile/lib/models/direct_sale.dart`
+- [x] 2026-08-06 — 4.3 `DirectSaleService` — start/pause/resume/end/cancel/purchase/getState/getSummary/getOrders — `mobile/lib/services/direct_sale_service.dart`
+- [x] 2026-08-06 — 4.4 `DirectSaleHostNotifier` (`StateNotifier`) — WS bağlantısı + host state machine — `mobile/lib/providers/direct_sale_provider.dart`
+- [x] 2026-08-06 — 4.5 `DirectSaleViewerNotifier` + `DirectSaleViewerState` (`StateNotifier`) — viewer purchase flow + stok sayacı — `mobile/lib/providers/direct_sale_provider.dart`
+- [x] 2026-08-06 — 4.6 `CommercePanelWrapper` — `_CommerceMode` local state + force bayrakları, idle host chip (açık artırma / direkt satış), viewer hint — `mobile/lib/widgets/commerce_panel_wrapper.dart`
+- [x] 2026-08-06 — 4.7+4.8 `DirectSalePanel` — host: başlat formu (listing seç / manuel + proof dialog), aktif kontroller (duraklat/devam/bitir/iptal dialoglı); viewer: ürün kartı, adet seçici, satın alma bottom sheet — `mobile/lib/widgets/direct_sale_panel.dart`
 - [ ] 4.9 `/me/commerce/purchases` + `/me/commerce/sales` ekranları — `PurchasesScreen` ve `SalesScreen` unified model ile güncelle, badge mantığı (→ §10.1, §10.2, §10.5)
 - [ ] 4.10 `DirectSaleDetailScreen` — `teqlif://direct-sale/{id}` deep link, rol bazlı görünüm (buyer/seller), "Alıcılar" bottom sheet (→ §14.2, §10.4)
 
