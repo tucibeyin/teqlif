@@ -110,6 +110,7 @@
 |---|------|-------|-----------|-------------|
 | T-1 | `auction_utils.publish_auction()` → `broadcast_to_stream_viewers()` olarak yeniden adlandırılmalı | `direct_sale_redis.py` şu an auction modülüne isim bağımlılığıyla bağlı; fonksiyon aslında stream'e WS yayını yapıyor, auction'a özgü değil | 🟢 | Faz 2 |
 | T-2 | Flutter `CommercePanelWrapper` WS event routing'i — aynı kanaldan gelen `auction_*` ve `direct_sale_*` type'larının doğru switch'lenmesi | İkisi aynı WS kanalını kullanıyor; Faz 4'te yanlış routing UI'ı kırar | 🔴 | Faz 2 |
+| T-3 | **[SİSTEM GENELİ]** Tüm codebase'de `asyncio.create_task + sleep → state değişikliği` pattern'ini audit et | Direct sale'de bu pattern ephemeral olduğu için durable `scheduled_at` + DB poller mimarisiyle değiştirildi. Aynı zafiyet auction `buy_it_now_pending` timeout'u veya gelecek feature'larda da olabilir. Kural: iş etkisi taşıyan delayed state transition'lar her zaman DB-backed olmalı. | 🟡 | Faz 3 |
 
 ---
 
