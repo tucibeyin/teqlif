@@ -195,6 +195,85 @@ Listing sonradan silinse veya görseli değişse bile satış kaydı etkilenmez.
 
 ---
 
+## 2.B Alıcı (Viewer) Deneyimi
+
+### 2.B.1 Satın Alma Akışı — Bottom Sheet Pattern
+
+Viewer "Hemen Al" butonuna bastığında **basit bir dialog değil, bottom sheet** açılır. Sektör standardı (Shopee Live, TikTok Shop Live).
+
+```
+"Hemen Al" butonu
+    ↓
+Bottom sheet (aşağıdan süzülür):
+  ┌─────────────────────────────┐
+  │ [Ürün görseli]              │
+  │ Kırmızı Çanta               │
+  │ 450 TL      ✓ 2 adet aldın │  ← sadece daha önce aldıysa görünür
+  │                             │
+  │ Adet:  [−]  1  [+]         │
+  │ Toplam: 450 TL              │
+  │                             │
+  │  [  Satın Al  ]             │
+  └─────────────────────────────┘
+  Dışarı tap veya aşağı sürükle → kapanır
+```
+
+**"Hayır" senaryosu:** Bottom sheet'i kapatmak. API çağrısı yapılmaz, stok değişmez, backend haberdar olmaz.
+
+### 2.B.2 Adet (Quantity) Kuralları
+
+| Kural | Değer | Gerekçe |
+|---|---|---|
+| Varsayılan | 1 | Impulse purchase — en hızlı akış |
+| Minimum | 1 | — |
+| Maksimum | `min(remaining_stock, 10)` | Sistem limiti: 10. Kalan stok daha azsa stok limiti geçerli. |
+| Tipi | Integer stepper `[−] n [+]` | Sayısal keyboard yerine stepper — hata oranı düşük |
+
+> **Sistem limiti = 10.** Host bu limiti değiştiremez (şimdilik). İleride host kontrolüne taşımak: tek bir DB kolonu + form field'i — mevcut validasyon değişmez.
+
+### 2.B.3 Tekrar Satın Alma
+
+> **Karar: İzin verilir.** Viewer aynı satıştan birden fazla order verebilir.
+
+**Gerekçe:** Max 10/order limiti zaten var. Birden fazla order ile birden fazla kişiye alabileceği durum geçerli bir kullanım senaryosudur. Kısıtlamak için ekstra backend logic ve DB constraint yazılması orantısız efor.
+
+**Şeffaflık:** Viewer önceki alımını bottom sheet'te görür — "✓ X adet aldın" badge'i. Flutter **lokal state**'te tutulur, backend'e ekstra sorgu atılmaz. Satış `ended` olunca sıfırlanır.
+
+### 2.B.4 Viewer Lokal State Machine
+
+Backend'e yansımaz — tamamen Flutter widget state'i.
+
+```
+browsing
+  │ "Hemen Al" tap
+  ▼
+confirming  (bottom sheet açık)
+  │ dışarı tap / swipe down
+  ├──────────────────► browsing   (API yok, stok değişmez)
+  │
+  │ "Satın Al" tap
+  ▼
+purchasing  (API in-flight, spinner)
+  │ başarı
+  ├──────────────────► purchased  (badge güncellenir, bottom sheet kapanır)
+  │ hata
+  └──────────────────► error      (toast: stok bitti / ağ hatası vb.)
+                            │ toast kapanınca
+                            ▼
+                         confirming veya browsing
+```
+
+### 2.B.5 State'e Göre Viewer UI Özeti
+
+| Satış State | "Hemen Al" Butonu | Açıklama |
+|---|---|---|
+| `active` | ✅ Aktif | Normal akış |
+| `paused` | ❌ Devre dışı | "Satış duraklatıldı" label'ı |
+| `sold_out` | ❌ Gizli | "Stok tükendi" banneri |
+| `ended` | ❌ Gizli | Panel kapanıyor, `end_reason` mesajı |
+
+---
+
 ## 3. API Endpoint Listesi
 
 ### 3.1 Endpoint Tablosu
@@ -235,10 +314,12 @@ Listing sonradan silinse veya görseli değişse bile satış kaydı etkilenmez.
 ```
 
 **Validasyon kuralları:**
-- `quantity` ≥ 1, integer
+- `quantity` ≥ 1, ≤ 10 (sistem limiti), integer
 - Satış `active` değilse → `DIRECT_SALE_NOT_ACTIVE` hatası
-- Stok yetersizse → `DIRECT_SALE_INSUFFICIENT_STOCK` hatası
-- Stok = 0 ise → `DIRECT_SALE_SOLD_OUT` hatası
+- `quantity` > `remaining_stock` → `DIRECT_SALE_INSUFFICIENT_STOCK` hatası
+- `remaining_stock` = 0 → `DIRECT_SALE_SOLD_OUT` hatası
+
+**Tekrar satın alma:** Aynı viewer aynı satıştan birden fazla order verebilir. Backend bu kontrolü yapmaz — stok yeterli olduğu sürece her istek işlenir.
 
 ### 3.4 `GET /direct-sales/{stream_id}/state` Response
 
@@ -316,6 +397,8 @@ CREATE INDEX ix_direct_sale_orders_buyer_id  ON direct_sale_orders(buyer_id);
 ```
 
 **`unit_price` neden var?** Host satış sırasında fiyatı değiştiremez, ama ileride bu kapı açılırsa order'da o anki fiyat saklı kalır. Muhasebe kaydı için de doğru pratik.
+
+**`UNIQUE(sale_id, buyer_id)` neden yok?** Tekrar satın almaya izin veriliyor — aynı viewer aynı satıştan birden fazla order verebilir. Her order bağımsız bir kayıt.
 
 ### 4.4 Listing Tablosuna Dokunulmaz
 
