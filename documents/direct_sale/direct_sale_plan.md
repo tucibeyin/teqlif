@@ -589,10 +589,12 @@ return redis.call('GET', KEYS[1])         -- kalan stok
 ```
 
 **Return değerleri:**
-- `-1` → satış Redis'te yok (hata)
-- `0` → yetersiz stok
+- `-1` → satış Redis'te yok
+- `-2` → yetersiz stok (purchase reddedildi, stok değişmedi)
+- `0` → son adet satıldı → `sold_out` akışı başlar
 - `>0` → başarılı, dönen değer kalan stok
-- `"0"` (string sıfır) → son adet satıldı → `sold_out` akışı başlar
+
+> **Not:** Orijinal tasarımda `0=insufficient` / `"0"=son adet` ayrımı Python `int` vs `bytes` farkına dayanıyordu — brittle. Uygulama `-2` sentinel'i kullanır.
 
 ### 5.4 Cache Taksonomisi
 
