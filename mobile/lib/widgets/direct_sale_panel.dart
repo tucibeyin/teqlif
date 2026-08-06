@@ -37,6 +37,21 @@ class DirectSalePanel extends ConsumerStatefulWidget {
 class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
   bool _impressionFired = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Panel mount edildiğinde provider terminal state'teyse sıfırla.
+    // CommercePanelWrapper bu paneli yalnızca "yeni satış başlat" amacıyla
+    // açar; terminal state bu bağlamda geçersizdir.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = ref.read(directSaleHostProvider(widget.streamId));
+      if (state.isTerminal) {
+        ref.read(directSaleHostProvider(widget.streamId).notifier).reset();
+      }
+    });
+  }
+
   // ── Dialog orchestration ───────────────────────────────────────────────────
   // API çağrıları ViewModel'de; View yalnızca dialog akışını yönetir.
 

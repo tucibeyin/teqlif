@@ -119,15 +119,7 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
       _CommerceMode.idle => _IdleChip(
           isHost: _isHostLike,
           onStartAuction: () => setState(() => _forceAuction = true),
-          onStartDirectSale: () {
-            // Terminal state'teki direkt satış provider'ı idle'a sıfırla,
-            // aksi hâlde DirectSalePanel start form yerine TerminalBanner gösterir.
-            final dsState = ref.read(directSaleHostProvider(widget.streamId));
-            if (dsState.isTerminal) {
-              ref.read(directSaleHostProvider(widget.streamId).notifier).reset();
-            }
-            setState(() => _forceDirectSale = true);
-          },
+          onStartDirectSale: () => setState(() => _forceDirectSale = true),
         ),
     };
   }
