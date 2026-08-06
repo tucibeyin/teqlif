@@ -65,7 +65,7 @@
 >
 > **Bağımlılık:** Faz 3 ✅
 
-- [ ] 4.1 ARB key'leri ekle — TR/EN/RU (~60 key, 13 grup) → `sync_translations.py` çalıştır (→ §13); `[VPS]`
+- [x] 2026-08-06 — 4.1 ARB key'leri eklendi — 63 key, 14 grup, TR/EN/RU/AR (AR şimdilik EN fallback) → `[VPS]` `git pull && python sync_translations.py` bekliyor
 - [ ] 4.2 Dart modelleri: `DirectSale`, `DirectSaleOrder`, `CommercePurchase`, `CommerceSale` (→ §10.3)
 - [ ] 4.3 `DirectSaleService` — tüm endpoint çağrıları (start, pause, resume, end, cancel, purchase, state, summary, orders)
 - [ ] 4.4 `DirectSaleViewModel` (`AsyncNotifier`) — host state machine: form, proof dialog, kontrol butonları (→ §12; MVVM ADR §8)
