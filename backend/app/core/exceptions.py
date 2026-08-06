@@ -143,3 +143,40 @@ class InsufficientFundsException(AppException):
 
     def __init__(self, message: str | None = None, code: str = "INSUFFICIENT_FUNDS"):
         super().__init__(status_code=402, message=message, code=code)
+
+
+# ── Direct Sale ────────────────────────────────────────────────────────────────
+
+class DirectSaleNotFoundException(AppException):
+    """404 — Direkt satış bulunamadı."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=404, message=message, code="DIRECT_SALE_NOT_FOUND")
+
+
+class DirectSaleNotActiveException(AppException):
+    """409 — Satış aktif değil, işlem yapılamaz (paused/ended/cancelled)."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=409, message=message, code="DIRECT_SALE_NOT_ACTIVE")
+
+
+class DirectSaleSoldOutException(AppException):
+    """409 — Stok tükendi."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=409, message=message, code="DIRECT_SALE_SOLD_OUT")
+
+
+class DirectSaleInsufficientStockException(AppException):
+    """409 — İstenen miktar kalan stoktan fazla."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=409, message=message, code="DIRECT_SALE_INSUFFICIENT_STOCK")
+
+
+class DirectSaleAlreadyActiveException(AppException):
+    """409 — Bu stream'de zaten aktif/paused bir satış var."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=409, message=message, code="DIRECT_SALE_ALREADY_ACTIVE")

@@ -25,7 +25,7 @@
 
 - [x] 2026-08-06 — 1.1+1.2 `[VPS]` `direct_sales` + `direct_sale_orders` tabloları — migration: `zzzzf_add_direct_sales.py`, model: `direct_sale.py`
 - [x] 2026-08-06 — 1.3 ClickHouse `direct_sale_events` DDL — `database_clickhouse.py`'e eklendi, servis restart'ında `CREATE TABLE IF NOT EXISTS` otomatik çalışır `[VPS deploy gerekir]`
-- [ ] 1.4 Pydantic şemaları: `StartSaleRequest`, `PurchaseRequest`, `DirectSaleStateResponse`, `DirectSaleSummaryResponse`, `DirectSaleOrderResponse`
+- [x] 2026-08-06 — 1.4 Pydantic şemaları: `DirectSaleStartIn`, `DirectSalePurchaseIn`, `DirectSaleCancelIn`, `DirectSaleStateOut`, `DirectSaleSummaryOut`, `DirectSaleOrderOut` — `schemas/direct_sale.py`
 
 ---
 
