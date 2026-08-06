@@ -124,7 +124,9 @@ class DirectSaleService {
         () async => http.get(uri, headers: await buildApiHeaders(token)),
       );
       if (body is List) {
-        return body.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return (body as List<dynamic>)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
       }
     } catch (_) {}
     return [];
@@ -136,7 +138,7 @@ class DirectSaleService {
       () async => http.get(Uri.parse(_url('$saleId/orders')), headers: await _headers()),
     );
     if (body is List) {
-      return body
+      return (body as List<dynamic>)
           .map((e) => DirectSaleOrder.fromJson(e as Map<String, dynamic>))
           .toList();
     }

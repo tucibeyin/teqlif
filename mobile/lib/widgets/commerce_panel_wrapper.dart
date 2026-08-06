@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart' show kPrimary;
 import '../models/auction.dart';
+import '../models/direct_sale.dart';
 import '../providers/auction_provider.dart';
 import '../providers/direct_sale_provider.dart';
 import '../services/localization_service.dart';
