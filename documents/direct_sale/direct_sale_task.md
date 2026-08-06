@@ -35,13 +35,13 @@
 >
 > **Bağımlılık:** Faz 1 ✅
 
-- [ ] 2.1 `AppException` subclass'ları: `DirectSaleNotFound`, `DirectSaleNotActive`, `DirectSaleSoldOut`, `DirectSaleInsufficientStock`, `DirectSaleAlreadyActive` — `ErrorMapper`'a ekle (→ §15.1)
-- [ ] 2.2 `DirectSaleRedisManager`: `start()`, `pause()`, `resume()`, `end()` state geçişleri + Lua stok script'i (→ §5.3)
-- [ ] 2.3 `POST /direct-sales/start` endpoint — satış başlat, Redis LIFECYCLE key yükle, `direct_sale_started` WS broadcast (→ §3.2, §6.2)
-- [ ] 2.4 `POST /direct-sales/{id}/pause` + `POST /direct-sales/{id}/resume` endpoint'leri — WS broadcast (→ §3.1, §6.2)
-- [ ] 2.5 `POST /direct-sales/{id}/end` endpoint — LIFECYCLE cache temizle, `direct_sale_ended` WS broadcast (→ §3.1, §6.2)
-- [ ] 2.6 `POST /direct-sales/{id}/cancel` endpoint — `orders_voided` logic, sipariş status güncelle, `direct_sale_cancelled` WS broadcast (→ §1.2, §6.2)
-- [ ] 2.7 `GET /direct-sales/{stream_id}/state` endpoint — Redis hash'ten direkt oku, cache yok (→ §3.4, §5.4)
+- [x] 2026-08-06 — 2.1 `AppException` subclass'ları: `DirectSaleNotFound`, `DirectSaleNotActive`, `DirectSaleSoldOut`, `DirectSaleInsufficientStock`, `DirectSaleAlreadyActive` — `exceptions.py`'e eklendi
+- [x] 2026-08-06 — 2.2 `DirectSaleRedisManager`: `start()`, `pause()`, `resume()`, `end()`, `cancel()`, `decrement_stock()` (Lua), `get_state()`, `publish_direct_sale()` — `direct_sale_redis.py`
+- [x] 2026-08-06 — 2.3 `POST /direct-sales/{stream_id}/start` — DB kaydı + Redis LIFECYCLE + `direct_sale_started` WS broadcast — `direct_sale_commands.py` + `direct_sale.py` router
+- [x] 2026-08-06 — 2.4 `POST /direct-sales/{id}/pause` + `/resume` — WS broadcast ile birlikte
+- [x] 2026-08-06 — 2.5 `POST /direct-sales/{id}/end` — Redis temizle, `direct_sale_ended` WS broadcast
+- [x] 2026-08-06 — 2.6 `POST /direct-sales/{id}/cancel` — `orders_voided` logic (order status güncelle), `direct_sale_cancelled` WS broadcast
+- [x] 2026-08-06 — 2.7 `GET /direct-sales/{stream_id}/state` — Redis hash'ten direkt oku, `idle` fallback
 
 ---
 
