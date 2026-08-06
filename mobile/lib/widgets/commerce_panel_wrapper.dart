@@ -66,13 +66,22 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // Provider state non-idle'a geçince force bayraklarını temizle.
+    // ref.listen build() içinde çağrılır ama Riverpod bunu güvenli yönetir —
+    // mutation build sırasında değil, bir sonraki frame'de tetiklenir.
+    ref.listen<AuctionState>(auctionProvider(widget.streamId), (_, next) {
+      if (_forceAuction && !next.isIdle) {
+        setState(() => _forceAuction = false);
+      }
+    });
+    ref.listen<DirectSaleState>(directSaleHostProvider(widget.streamId), (_, next) {
+      if (_forceDirectSale && !next.isIdle && !next.isTerminal) {
+        setState(() => _forceDirectSale = false);
+      }
+    });
+
     final auctionState = ref.watch(auctionProvider(widget.streamId));
     final dsState = ref.watch(directSaleHostProvider(widget.streamId));
-
-    // Provider state non-idle'a geçince force bayraklarını temizle
-    if (!auctionState.isIdle) _forceAuction = false;
-    if (!dsState.isIdle && !dsState.isTerminal) _forceDirectSale = false;
-
     final mode = _resolveMode(auctionState, dsState);
 
     return switch (mode) {

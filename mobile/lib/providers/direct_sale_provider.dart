@@ -6,7 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../models/direct_sale.dart';
+import '../services/direct_sale_service.dart';
+import '../services/localization_service.dart';
 import '../services/storage_service.dart';
+import '../utils/error_helper.dart';
 
 // ── Host ViewModel (Task 4.4) ─────────────────────────────────────────────────
 
@@ -116,6 +119,95 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
 
   void reset() => state = DirectSaleState.idle();
 
+  // ── Action metodları (View'dan çağrılır, BuildContext almaz) ───────────────
+
+  bool _busy = false;
+
+  Future<void> pause(TranslationPack loc) async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      state = await DirectSaleService.pauseSale(state.saleId);
+    } catch (e) {
+      handleError(e, loc);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  Future<void> resume(TranslationPack loc) async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      state = await DirectSaleService.resumeSale(state.saleId);
+    } catch (e) {
+      handleError(e, loc);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  Future<void> end(TranslationPack loc) async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      state = await DirectSaleService.endSale(state.saleId);
+    } catch (e) {
+      handleError(e, loc);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  Future<void> cancel(TranslationPack loc, {required bool ordersVoided}) async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      await DirectSaleService.cancelSale(state.saleId, ordersVoided: ordersVoided);
+      state = state.copyWith(status: 'cancelled');
+    } catch (e) {
+      handleError(e, loc);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  /// Satış başlatıldıktan sonra state'i günceller (start dialog'dan dönen değer).
+  Future<void> startSale(
+    int streamId, {
+    int? listingId,
+    String? title,
+    double? price,
+    int? stock,
+    String? proofImageUrl,
+    String? productImageUrl,
+    required TranslationPack loc,
+  }) async {
+    try {
+      state = await DirectSaleService.startSale(
+        streamId,
+        listingId: listingId,
+        title: title,
+        price: price,
+        stock: stock,
+        proofImageUrl: proofImageUrl,
+        productImageUrl: productImageUrl,
+      );
+    } catch (e) {
+      handleError(e, loc);
+    }
+  }
+
+  /// Dialog öncesi sipariş sayısını çekmek için kullanılır.
+  Future<int> fetchOrderCount() async {
+    try {
+      final orders = await DirectSaleService.getOrders(state.saleId);
+      return orders.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   @override
   void dispose() {
     _reconnecting = false;
@@ -198,7 +290,6 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
         state = state.copyWith(
           saleState: DirectSaleState.fromJson(j),
           purchaseStatus: ViewerPurchaseStatus.idle,
-          errorMessage: null,
         );
       case 'direct_sale_paused':
         state = state.copyWith(
@@ -252,21 +343,20 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
     });
   }
 
-  /// Purchase başlatılırken loading state'e geç; sonuç gelince güncelle.
-  void beginPurchase() {
-    state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.loading, errorMessage: null);
-  }
-
-  void purchaseSuccess() {
-    state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.success);
-  }
-
-  void purchaseError(String message) {
-    state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.error, errorMessage: message);
+  /// Satın alma işlemi — loading state + API çağrısı + hata yönetimi.
+  Future<void> purchase(int saleId, int quantity, TranslationPack loc) async {
+    state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.loading);
+    try {
+      await DirectSaleService.purchase(saleId, quantity: quantity);
+      state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.success);
+    } catch (e) {
+      handleError(e, loc);
+      state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.idle);
+    }
   }
 
   void resetPurchase() {
-    state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.idle, errorMessage: null);
+    state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.idle);
   }
 
   @override
@@ -282,34 +372,29 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
   }
 }
 
-enum ViewerPurchaseStatus { idle, loading, success, error }
+enum ViewerPurchaseStatus { idle, loading, success }
 
 class DirectSaleViewerState {
   final DirectSaleState? saleState; // null → henüz idle (WS bağlandı ama satış yok)
   final ViewerPurchaseStatus purchaseStatus;
-  final String? errorMessage;
 
   const DirectSaleViewerState({
     this.saleState,
     this.purchaseStatus = ViewerPurchaseStatus.idle,
-    this.errorMessage,
   });
 
   DirectSaleViewerState copyWith({
     DirectSaleState? saleState,
     ViewerPurchaseStatus? purchaseStatus,
-    String? errorMessage,
   }) =>
       DirectSaleViewerState(
         saleState: saleState ?? this.saleState,
         purchaseStatus: purchaseStatus ?? this.purchaseStatus,
-        errorMessage: errorMessage ?? this.errorMessage,
       );
 
   bool get hasSale => saleState != null && !saleState!.isIdle;
   bool get isLoading => purchaseStatus == ViewerPurchaseStatus.loading;
   bool get isPurchaseSuccess => purchaseStatus == ViewerPurchaseStatus.success;
-  bool get isPurchaseError => purchaseStatus == ViewerPurchaseStatus.error;
 }
 
 final directSaleViewerProvider = StateNotifierProvider.family
