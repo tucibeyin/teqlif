@@ -4277,6 +4277,7 @@
   "directSaleFormSelectListing": "Выбрать объявление",
   "directSaleFormManual": "Ввод вручную",
   "directSaleFormNoListing": "Без объявления",
+  "directSaleFormValidationError": "Пожалуйста, заполните все обязательные поля.",
 
   "directSaleStartBtn": "▶ Начать",
   "directSalePauseBtn": "Пауза",

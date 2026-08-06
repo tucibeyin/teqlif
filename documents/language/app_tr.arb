@@ -4278,6 +4278,7 @@
   "directSaleFormSelectListing": "İlan Seç",
   "directSaleFormManual": "Manuel Giriş",
   "directSaleFormNoListing": "İlan bağlantısı yok",
+  "directSaleFormValidationError": "Lütfen tüm zorunlu alanları doldurun.",
 
   "directSaleStartBtn": "▶ Başlat",
   "directSalePauseBtn": "Duraklat",

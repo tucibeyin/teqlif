@@ -104,6 +104,32 @@ class DirectSaleService {
     return DirectSaleSummary.fromJson(body as Map<String, dynamic>);
   }
 
+  /// Start dialog'da listing seçimi için kullanılır.
+  /// Hata durumunda boş liste döner (dialog gracefully degrades).
+  static Future<List<Map<String, dynamic>>> fetchListingsForDialog({
+    int? hostUserId,
+    required int offset,
+  }) async {
+    final token = await StorageService.getToken();
+    if (token == null) return [];
+    final uri = hostUserId != null
+        ? Uri.parse(
+            '$kBaseUrl/listings?user_id=$hostUserId&active=true&limit=20&offset=$offset',
+          )
+        : Uri.parse(
+            '$kBaseUrl/listings/my?active=true&limit=20&offset=$offset',
+          );
+    try {
+      final body = await apiCall(
+        () async => http.get(uri, headers: await buildApiHeaders(token)),
+      );
+      if (body is List) {
+        return body.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// Sadece host erişebilir.
   static Future<List<DirectSaleOrder>> getOrders(int saleId) async {
     final body = await apiCall(

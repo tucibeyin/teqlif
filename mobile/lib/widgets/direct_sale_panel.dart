@@ -1,16 +1,13 @@
 // ignore_for_file: use_build_context_synchronously
-import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart' show kPrimary;
 import '../models/direct_sale.dart';
 import '../providers/direct_sale_provider.dart';
+import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
-import '../services/storage_service.dart';
-import '../utils/error_helper.dart';
 import '../utils/number_formatter.dart';
 import 'swipe_paginated_list.dart';
 
@@ -81,13 +78,19 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
 
   @override
   Widget build(BuildContext context) {
+    // Yalnızca terminal'e ilk geçişte onSaleEnded tetiklenir (her rebuild'de değil).
+    ref.listen<DirectSaleState>(directSaleHostProvider(widget.streamId), (prev, next) {
+      if (next.isTerminal && !(prev?.isTerminal ?? false)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onSaleEnded?.call();
+        });
+      }
+    });
+
     final dsState = ref.watch(directSaleHostProvider(widget.streamId));
     final loc = ref.watch(localizationProvider);
 
     if (dsState.isTerminal) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) widget.onSaleEnded?.call();
-      });
       return _TerminalBanner(state: dsState, loc: loc);
     }
 
@@ -740,8 +743,12 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                             _qty,
                             ref.read(localizationProvider),
                           );
-                      widget.onWin?.call();
-                      if (context.mounted) Navigator.pop(context);
+                      if (ref
+                          .read(directSaleViewerProvider(widget.streamId))
+                          .isPurchaseSuccess) {
+                        widget.onWin?.call();
+                        if (context.mounted) Navigator.pop(context);
+                      }
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimary,
@@ -823,6 +830,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
   final _priceCtrl = TextEditingController();
   final _stockCtrl = TextEditingController();
   bool _loading = false;
+  String? _formError;
 
   @override
   void dispose() {
@@ -832,33 +840,15 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
     super.dispose();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchListings(int offset) async {
-    final token = await StorageService.getToken();
-    if (token == null) return [];
-    final uri = widget.hostUserId != null
-        ? Uri.parse(
-            '$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true&limit=20&offset=$offset',
-          )
-        : Uri.parse(
-            '$kBaseUrl/listings/my?active=true&limit=20&offset=$offset',
-          );
-    try {
-      final resp = await http.get(
-        uri,
-        headers: {'Authorization': 'Bearer $token'},
+  Future<List<Map<String, dynamic>>> _fetchListings(int offset) =>
+      DirectSaleService.fetchListingsForDialog(
+        hostUserId: widget.hostUserId,
+        offset: offset,
       );
-      if (resp.statusCode == 200) {
-        return (jsonDecode(resp.body) as List)
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-      }
-    } catch (_) {}
-    return [];
-  }
 
   Future<void> _submit() async {
     final loc = ref.read(localizationProvider);
-    setState(() => _loading = true);
+    setState(() { _loading = true; _formError = null; });
 
     String? proofUrl;
     if (widget.captureProofImage != null) {
@@ -870,7 +860,11 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
       proofUrl = confirmed as String?;
     }
 
-    if (_fromListing && _selectedListing != null) {
+    if (_fromListing) {
+      if (_selectedListing == null) {
+        setState(() { _loading = false; _formError = loc.t('directSaleFormValidationError'); });
+        return;
+      }
       await ref.read(directSaleHostProvider(widget.streamId).notifier).startSale(
             widget.streamId,
             listingId: _selectedListing!['id'] as int,
@@ -882,11 +876,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
       final price = double.tryParse(_priceCtrl.text.trim());
       final stock = int.tryParse(_stockCtrl.text.trim());
       if (title.isEmpty || price == null || stock == null || stock < 1) {
-        setState(() => _loading = false);
-        handleError(
-          Exception(loc.t('directSaleFormTitle')),
-          loc,
-        );
+        setState(() { _loading = false; _formError = loc.t('directSaleFormValidationError'); });
         return;
       }
       await ref.read(directSaleHostProvider(widget.streamId).notifier).startSale(
@@ -967,6 +957,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                     () => setState(() {
                       _fromListing = false;
                       _selectedListing = null;
+                      _formError = null;
                     }),
                   ),
                 ),
@@ -975,7 +966,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   child: _modeBtn(
                     loc.t('directSaleFormSelectListing'),
                     _fromListing,
-                    () => setState(() => _fromListing = true),
+                    () => setState(() { _fromListing = true; _formError = null; }),
                   ),
                 ),
               ],
@@ -1016,6 +1007,13 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
               _field(loc.t('directSaleFormPrice'), _priceCtrl, number: true),
               const SizedBox(height: 8),
               _field(loc.t('directSaleFormStock'), _stockCtrl, number: true),
+            ],
+            if (_formError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _formError!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
             ],
           ],
         ),

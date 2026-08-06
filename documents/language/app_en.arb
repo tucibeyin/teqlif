@@ -4315,6 +4315,7 @@
   "directSaleFormSelectListing": "Select Listing",
   "directSaleFormManual": "Manual Entry",
   "directSaleFormNoListing": "No listing linked",
+  "directSaleFormValidationError": "Please fill in all required fields.",
 
   "directSaleStartBtn": "▶ Start",
   "directSalePauseBtn": "Pause",
