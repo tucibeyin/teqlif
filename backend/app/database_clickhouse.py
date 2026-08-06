@@ -36,8 +36,9 @@ FLUSH_INTERVAL: int = 5    # saniye — her 5s bir flush
 MAX_BATCH: int = 2000      # flush başına tablo başına max satır
 
 # Redis buffer key'leri
-_BUF_USER_EVENTS   = "ch_buf:user_events"
-_BUF_SEARCH_EVENTS = "ch_buf:search_events"
+_BUF_USER_EVENTS         = "ch_buf:user_events"
+_BUF_SEARCH_EVENTS       = "ch_buf:search_events"
+_BUF_DIRECT_SALE_EVENTS  = "ch_buf:direct_sale_events"
 
 # ── Tablo DDL ─────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,34 @@ ORDER BY (user_id, timestamp)
 SETTINGS index_granularity = 8192
 """
 
+_CREATE_DIRECT_SALE_EVENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS direct_sale_events
+(
+    event_id                UUID DEFAULT generateUUIDv4(),
+    event_type              LowCardinality(String),
+    sale_id                 UInt32,
+    stream_id               UInt32,
+    host_id                 UInt32,
+    user_id                 UInt32,
+    order_id                Nullable(UInt32),
+    listing_id              Nullable(UInt32),
+    category                LowCardinality(Nullable(String)),
+    quantity                Nullable(UInt8),
+    unit_price              Nullable(Decimal(10, 2)),
+    total_price             Nullable(Decimal(10, 2)),
+    remaining_stock_before  Nullable(UInt16),
+    remaining_stock_after   Nullable(UInt16),
+    viewer_count            Nullable(UInt32),
+    end_reason              LowCardinality(Nullable(String)),
+    orders_voided           Nullable(Bool),
+    created_at              DateTime DEFAULT now()
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(created_at)
+ORDER BY (sale_id, created_at, event_type)
+SETTINGS index_granularity = 8192
+"""
+
 _ALTER_SWIPE_LIVE_EVENTS = [
     "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS listing_condition LowCardinality(String) DEFAULT ''",
     "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS stream_subcategory LowCardinality(String) DEFAULT ''",
@@ -193,6 +222,7 @@ async def init_clickhouse() -> None:
         await _client.command(_CREATE_SWIPE_LIVE_EVENTS_TABLE)
         for stmt in _ALTER_SWIPE_LIVE_EVENTS:
             await _client.command(stmt)
+        await _client.command(_CREATE_DIRECT_SALE_EVENTS_TABLE)
         logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
         logger.warning(
