@@ -4241,5 +4241,118 @@
   "opt_1": "1",
   "opt_2": "2",
   "opt_3": "3",
-  "opt_4_plus": "4+"
+  "opt_4_plus": "4+",
+
+  "commerceSelectTitle": "Выберите тип продажи",
+  "commerceSelectAuction": "Аукцион",
+  "commerceSelectDirectSale": "Прямая продажа",
+
+  "directSaleIdleChip": "Нет активной продажи",
+
+  "directSaleStatusActive": "АКТИВНА",
+  "directSaleStatusPaused": "ПРИОСТАНОВЛЕНА",
+  "directSaleStatusSoldOut": "РАСПРОДАНО",
+  "directSaleStatusEnded": "ЗАВЕРШЕНА",
+  "directSaleStatusCancelled": "ОТМЕНЕНА",
+
+  "directSalePausedLabel": "Продажа приостановлена",
+  "directSaleSoldOutBanner": "Распродано 🎉",
+  "directSaleEndedSoldOut": "Всё распродано! 🎉",
+  "directSaleEndedByHost": "Продажа завершена.",
+  "directSaleEndedStreamClosed": "Трансляция завершена.",
+  "directSaleCancelledNeutral": "Продажа отменена.",
+  "directSaleCancelledOrderKept": "Продажа отменена, ваш заказ в силе.",
+  "directSaleCancelledOrderVoided": "Продажа отменена, ваш заказ аннулирован.",
+  "directSaleStockUrgency": "Осталось {count}!",
+  "@directSaleStockUrgency": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "directSaleFormTitle": "Начать продажу",
+  "directSaleFormProductTitle": "Название товара",
+  "directSaleFormPrice": "Цена (₺)",
+  "directSaleFormStock": "Количество",
+  "directSaleFormSelectListing": "Выбрать объявление",
+  "directSaleFormManual": "Ввод вручную",
+  "directSaleFormNoListing": "Без объявления",
+
+  "directSaleStartBtn": "▶ Начать",
+  "directSalePauseBtn": "Пауза",
+  "directSaleResumeBtn": "Продолжить",
+  "directSaleEndBtn": "Завершить",
+  "directSaleCancelBtn": "Отменить",
+
+  "directSaleStockLabel": "Остаток",
+  "directSaleSoldLabel": "Продано",
+  "directSaleRevenueLabel": "Общий доход",
+
+  "directSaleEndDialogTitle": "Завершить продажу",
+  "directSaleEndDialogBody": "Размещено {count} заказов. Они останутся в силе.",
+  "@directSaleEndDialogBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleEndDialogBodyNoOrders": "Вы уверены, что хотите завершить продажу?",
+
+  "directSaleCancelDialogTitle": "Отменить продажу",
+  "directSaleCancelDialogBody": "Поступило {count} заказов. Что делать с ними?",
+  "@directSaleCancelDialogBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleCancelDialogBodyNoOrders": "Вы уверены, что хотите отменить продажу?",
+  "directSaleCancelVoidOrders": "Отменить заказы",
+  "directSaleCancelKeepOrders": "Сохранить заказы",
+
+  "directSaleSummaryTitle": "Продажа завершена",
+  "directSaleSummarySold": "Продано {count}",
+  "@directSaleSummarySold": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleSummaryRevenue": "Итого: {amount}",
+  "@directSaleSummaryRevenue": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "directSaleNewSaleBtn": "Начать новую продажу",
+
+  "directSaleBuyBtn": "Купить",
+  "directSaleBuySheetTitle": "Купить",
+  "directSaleBuySheetQuantity": "Количество",
+  "directSaleBuySheetTotal": "Итого",
+  "directSaleBuySheetPreviousBadge": "✓ Вы купили {count}",
+  "@directSaleBuySheetPreviousBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleBuySheetConfirm": "Купить",
+
+  "directSaleProofDialogTitle": "Начало продажи",
+  "directSaleProofDialogBody": "Покажите товар на камеру и сделайте фото перед началом продажи.",
+
+  "directSaleNotActive": "Продажа больше не активна.",
+  "directSaleSoldOutError": "К сожалению, товар распродан.",
+  "directSaleInsufficientStock": "Недостаточно товара.",
+  "directSaleAlreadyActive": "Продажа уже активна.",
+
+  "saleTypeDirect": "Прямая продажа",
+  "directSaleOrdersTitle": "Покупатели",
+  "directSaleOrderCancelled": "Отменён",
+  "directSaleOrderQuantity": "{count} шт.",
+  "@directSaleOrderQuantity": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "notifDirectSalePurchased": "Покупка завершена",
+  "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}."
 }

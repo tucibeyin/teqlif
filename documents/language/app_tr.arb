@@ -4242,5 +4242,118 @@
   "opt_1": "1",
   "opt_2": "2",
   "opt_3": "3",
-  "opt_4_plus": "4+"
+  "opt_4_plus": "4+",
+
+  "commerceSelectTitle": "Satış Türü Seç",
+  "commerceSelectAuction": "Açık Artırma",
+  "commerceSelectDirectSale": "Direkt Satış",
+
+  "directSaleIdleChip": "Henüz satış yok",
+
+  "directSaleStatusActive": "AKTİF",
+  "directSaleStatusPaused": "DURAKLADI",
+  "directSaleStatusSoldOut": "STOK TÜKENDİ",
+  "directSaleStatusEnded": "BİTTİ",
+  "directSaleStatusCancelled": "İPTAL",
+
+  "directSalePausedLabel": "Satış duraklatıldı",
+  "directSaleSoldOutBanner": "Stok tükendi 🎉",
+  "directSaleEndedSoldOut": "Tüm ürünler satıldı! 🎉",
+  "directSaleEndedByHost": "Satış sonlandırıldı.",
+  "directSaleEndedStreamClosed": "Yayın sona erdi.",
+  "directSaleCancelledNeutral": "Satış iptal edildi.",
+  "directSaleCancelledOrderKept": "Satış iptal edildi, siparişiniz geçerli.",
+  "directSaleCancelledOrderVoided": "Satış iptal edildi, siparişiniz geçersiz sayıldı.",
+  "directSaleStockUrgency": "Son {count} adet!",
+  "@directSaleStockUrgency": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "directSaleFormTitle": "Satış Başlat",
+  "directSaleFormProductTitle": "Ürün Adı",
+  "directSaleFormPrice": "Fiyat (₺)",
+  "directSaleFormStock": "Stok Adedi",
+  "directSaleFormSelectListing": "İlan Seç",
+  "directSaleFormManual": "Manuel Giriş",
+  "directSaleFormNoListing": "İlan bağlantısı yok",
+
+  "directSaleStartBtn": "▶ Başlat",
+  "directSalePauseBtn": "Duraklat",
+  "directSaleResumeBtn": "Devam Et",
+  "directSaleEndBtn": "Bitir",
+  "directSaleCancelBtn": "İptal Et",
+
+  "directSaleStockLabel": "Kalan Stok",
+  "directSaleSoldLabel": "Satıldı",
+  "directSaleRevenueLabel": "Toplam Gelir",
+
+  "directSaleEndDialogTitle": "Satışı Bitir",
+  "directSaleEndDialogBody": "Şimdiye kadar {count} sipariş verildi. Bu siparişler geçerli kalacak.",
+  "@directSaleEndDialogBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleEndDialogBodyNoOrders": "Satışı bitirmek istediğinizden emin misiniz?",
+
+  "directSaleCancelDialogTitle": "Satışı İptal Et",
+  "directSaleCancelDialogBody": "Bu ana kadar {count} sipariş verildi. Mevcut siparişler ne olsun?",
+  "@directSaleCancelDialogBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleCancelDialogBodyNoOrders": "Satışı iptal etmek istediğinizden emin misiniz?",
+  "directSaleCancelVoidOrders": "Siparişleri İptal Et",
+  "directSaleCancelKeepOrders": "Siparişleri Geçerli Tut",
+
+  "directSaleSummaryTitle": "Satış Tamamlandı",
+  "directSaleSummarySold": "{count} adet satıldı",
+  "@directSaleSummarySold": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleSummaryRevenue": "Toplam: {amount}",
+  "@directSaleSummaryRevenue": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "directSaleNewSaleBtn": "Yeni Satış Başlat",
+
+  "directSaleBuyBtn": "Hemen Al",
+  "directSaleBuySheetTitle": "Satın Al",
+  "directSaleBuySheetQuantity": "Adet",
+  "directSaleBuySheetTotal": "Toplam",
+  "directSaleBuySheetPreviousBadge": "✓ {count} adet aldın",
+  "@directSaleBuySheetPreviousBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "directSaleBuySheetConfirm": "Satın Al",
+
+  "directSaleProofDialogTitle": "Satışa Başlıyorsunuz",
+  "directSaleProofDialogBody": "Satışa başlamadan önce ürünü kameraya gösterin ve onay fotoğrafını çekin.",
+
+  "directSaleNotActive": "Satış artık aktif değil.",
+  "directSaleSoldOutError": "Üzgünüz, stok tükendi.",
+  "directSaleInsufficientStock": "Yeterli stok yok.",
+  "directSaleAlreadyActive": "Zaten aktif bir satış var.",
+
+  "saleTypeDirect": "Direkt Satış",
+  "directSaleOrdersTitle": "Alıcılar",
+  "directSaleOrderCancelled": "İptal edildi",
+  "directSaleOrderQuantity": "{count} adet",
+  "@directSaleOrderQuantity": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "notifDirectSalePurchased": "Satın Alma Tamamlandı",
+  "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı."
 }
