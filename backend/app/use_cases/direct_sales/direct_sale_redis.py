@@ -161,5 +161,5 @@ async def publish_direct_sale(stream_id: int, payload: dict) -> None:
     Auction broadcast kanalını yeniden kullanır — aynı WS bağlantısı,
     event type field'i ile ayrışır.
     """
-    from app.use_cases.auctions.auction_utils import publish_auction
-    await publish_auction(stream_id, payload)
+    from app.use_cases.auctions.auction_utils import broadcast_to_stream_viewers
+    await broadcast_to_stream_viewers(stream_id, payload)

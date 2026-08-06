@@ -94,6 +94,15 @@ class DirectSaleSummaryOut(BaseModel):
     buyer_order_status: Optional[str] = None
 
 
+class DirectSaleSuggestionsOut(BaseModel):
+    suggested_price: Optional[float] = None
+    avg_conversion_rate: Optional[float] = None
+    avg_demand: Optional[float] = None
+    recommended_stock: Optional[int] = None
+    sample_count: int = 0
+    confidence: str = "low"          # "low" | "medium" | "high"
+
+
 class DirectSaleOrderOut(BaseModel):
     id: int
     buyer_username: str

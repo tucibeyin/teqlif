@@ -1,7 +1,7 @@
 """
 Auction Event Outbox — Redis Stream tabanlı.
 
-Sorun: publish_auction() DB commit'ten sonra çağrılır. Aralarında process
+Sorun: broadcast_to_stream_viewers() DB commit'ten sonra çağrılır. Aralarında process
 crash olursa WebSocket client'lar güncellemeyi kaçırır.
 
 Çözüm: İki katmanlı yayın:
@@ -47,7 +47,7 @@ def _stream_key(stream_id: int) -> str:
 async def outbox_publish(stream_id: int, payload: dict) -> None:
     """
     Event'i Redis Stream'e yazar (XADD).
-    publish_auction() ile birlikte çağrılır; pub/sub başarısız olsa bile
+    broadcast_to_stream_viewers() ile birlikte çağrılır; pub/sub başarısız olsa bile
     event stream'de durur, reconnect sırasında replay edilir.
     """
     try:

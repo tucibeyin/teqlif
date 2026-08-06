@@ -104,7 +104,7 @@ async def pubsub_listener():
             await manager.local_broadcast(stream_id, data)
     await stream_listener(_PUBSUB_CHANNEL, _on_message)
 
-async def publish_auction(stream_id: int, payload: dict):
+async def broadcast_to_stream_viewers(stream_id: int, payload: dict):
     from app.core.auction_outbox import outbox_publish
     from app.core.stream_listener import STREAM_MAXLEN
     from app.utils.redis_client import get_redis

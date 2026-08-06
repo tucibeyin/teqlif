@@ -645,7 +645,8 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     final viewerState = ref.watch(directSaleViewerProvider(widget.streamId));
-    final maxQty = widget.state.remainingStock.clamp(1, 10);
+    final liveStock = ref.watch(directSaleHostProvider(widget.streamId)).remainingStock;
+    final maxQty = liveStock.clamp(1, 10);
     final total = _qty * widget.state.price;
 
     return Padding(
@@ -1026,6 +1027,12 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
               _field(loc.t('directSaleFormPrice'), _priceCtrl, number: true),
               const SizedBox(height: 8),
               _field(loc.t('directSaleFormStock'), _stockCtrl, number: true),
+              const SizedBox(height: 8),
+              _SuggestionChip(
+                priceCtrl: _priceCtrl,
+                stockCtrl: _stockCtrl,
+                onApply: () => setState(() {}),
+              ),
             ],
             if (_formError != null) ...[
               const SizedBox(height: 8),
@@ -1111,6 +1118,81 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
         ),
         isDense: true,
       ),
+    );
+  }
+}
+
+// ── Faz 6 — Fiyat + stok öneri chip'i ────────────────────────────────────────
+
+class _SuggestionChip extends ConsumerWidget {
+  final TextEditingController priceCtrl;
+  final TextEditingController stockCtrl;
+  final VoidCallback onApply;
+
+  const _SuggestionChip({
+    required this.priceCtrl,
+    required this.stockCtrl,
+    required this.onApply,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final async = ref.watch(directSaleSuggestionsProvider(0));
+
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (s) {
+        if (!s.hasData) return const SizedBox.shrink();
+
+        final priceStr = TeqNumberFormatter.format(s.suggestedPrice!, fieldKey: 'price');
+        final stockStr = s.recommendedStock != null ? '${s.recommendedStock}' : null;
+
+        String label = loc.t('directSaleSuggestionPrice', {'price': priceStr});
+        if (stockStr != null) {
+          label += '  ·  ${loc.t('directSaleSuggestionStock', {'stock': stockStr})}';
+        }
+
+        return GestureDetector(
+          onTap: () {
+            priceCtrl.text = s.suggestedPrice!.toStringAsFixed(2);
+            if (s.recommendedStock != null) {
+              stockCtrl.text = '${s.recommendedStock}';
+            }
+            onApply();
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: kPrimary.withValues(alpha: 0.08),
+              border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: kPrimary, size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(color: kPrimary, fontSize: 12),
+                  ),
+                ),
+                Text(
+                  loc.t('directSaleSuggestionApply'),
+                  style: const TextStyle(
+                    color: kPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

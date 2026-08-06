@@ -291,3 +291,35 @@ class CommerceSale {
 
   bool get isDirectSale => type == CommerceType.directSale;
 }
+
+// ── Faz 6 — Fiyat önerisi + Talep tahmini ────────────────────────────────────
+
+class DirectSaleSuggestion {
+  final double? suggestedPrice;
+  final double? avgConversionRate;
+  final double? avgDemand;
+  final int? recommendedStock;
+  final int sampleCount;
+  final String confidence; // "low" | "medium" | "high"
+
+  const DirectSaleSuggestion({
+    this.suggestedPrice,
+    this.avgConversionRate,
+    this.avgDemand,
+    this.recommendedStock,
+    required this.sampleCount,
+    required this.confidence,
+  });
+
+  bool get hasData => suggestedPrice != null && sampleCount > 0;
+
+  factory DirectSaleSuggestion.fromJson(Map<String, dynamic> j) =>
+      DirectSaleSuggestion(
+        suggestedPrice: (j['suggested_price'] as num?)?.toDouble(),
+        avgConversionRate: (j['avg_conversion_rate'] as num?)?.toDouble(),
+        avgDemand: (j['avg_demand'] as num?)?.toDouble(),
+        recommendedStock: (j['recommended_stock'] as num?)?.toInt(),
+        sampleCount: (j['sample_count'] as num?)?.toInt() ?? 0,
+        confidence: j['confidence'] as String? ?? 'low',
+      );
+}

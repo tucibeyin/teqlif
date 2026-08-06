@@ -4367,6 +4367,9 @@
   "directSaleTotalLabel": "Toplam",
   "directSaleOrderStatusLabel": "Sipariş Durumu",
   "directSaleViewBuyersBtn": "Alıcıları Gör",
+  "directSaleSuggestionPrice": "Önerilen fiyat: ₺{price}",
+  "directSaleSuggestionStock": "Tahmini talep: {stock} adet",
+  "directSaleSuggestionApply": "Uygula",
 
   "notifDirectSalePurchased": "Satın Alma Tamamlandı",
   "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı."

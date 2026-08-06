@@ -228,120 +228,11 @@ final directSaleHostProvider = StateNotifierProvider.family
 
 // ── Viewer ViewModel (Task 4.5) ───────────────────────────────────────────────
 
-/// Viewer durumu — purchase akışı ve lokal stok sayacını yönetir.
-/// WS aynı kanaldan izlenir; purchase sonrası yerel state anında güncellenir.
+/// Viewer purchase akışını yönetir.
+/// Satış durumu için DirectSaleHostNotifier tek kaynak; bu notifier yalnızca
+/// purchase işleminin loading/success/error geçişini tutar (T-2: no duplicate WS).
 class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
-  final int streamId;
-
-  WebSocketChannel? _channel;
-  StreamSubscription<dynamic>? _sub;
-  Timer? _heartbeat;
-  bool _reconnecting = false;
-  int _reconnectAttempt = 0;
-
-  DirectSaleViewerNotifier(this.streamId) : super(const DirectSaleViewerState()) {
-    unawaited(_connect());
-  }
-
-  String get _wsBase => kBaseUrl
-      .replaceFirst('https://', 'wss://')
-      .replaceFirst('http://', 'ws://');
-
-  Future<void> _connect() async {
-    _heartbeat?.cancel();
-    final token = await StorageService.getToken();
-    try {
-      final uri = Uri.parse('$_wsBase/auction/$streamId/ws');
-      _channel = WebSocketChannel.connect(uri);
-      if (token != null) {
-        _channel!.sink.add(jsonEncode({'token': token}));
-      }
-      _reconnectAttempt = 0;
-      _sub = _channel!.stream.listen(
-        _onEvent,
-        onDone: _scheduleReconnect,
-        onError: (_) => _scheduleReconnect(),
-        cancelOnError: false,
-      );
-      _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
-        try {
-          _channel?.sink.add('ping');
-        } catch (_) {}
-      });
-    } catch (_) {
-      _scheduleReconnect();
-    }
-  }
-
-  void _onEvent(dynamic data) {
-    try {
-      final json = jsonDecode(data as String) as Map<String, dynamic>;
-      final type = json['type'] as String?;
-      if (type == null || !type.startsWith('direct_sale_')) return;
-      _applyWsEvent(type, json);
-    } catch (e) {
-      debugPrint('[DirectSaleViewerNotifier] WS ayrıştırma hatası: $e');
-    }
-  }
-
-  void _applyWsEvent(String type, Map<String, dynamic> j) {
-    switch (type) {
-      case 'direct_sale_started':
-        state = state.copyWith(
-          saleState: DirectSaleState.fromJson(j),
-          purchaseStatus: ViewerPurchaseStatus.idle,
-        );
-      case 'direct_sale_paused':
-        state = state.copyWith(
-          saleState: state.saleState?.copyWith(status: 'paused'),
-        );
-      case 'direct_sale_resumed':
-        state = state.copyWith(
-          saleState: state.saleState?.copyWith(status: 'active'),
-        );
-      case 'direct_sale_sold_out':
-        state = state.copyWith(
-          saleState: state.saleState?.copyWith(status: 'sold_out', remainingStock: 0),
-        );
-      case 'direct_sale_purchased':
-        final remaining = (j['remaining_stock'] as num?)?.toInt();
-        if (remaining != null) {
-          state = state.copyWith(
-            saleState: state.saleState?.copyWith(remainingStock: remaining),
-          );
-        }
-      case 'direct_sale_ended':
-        state = state.copyWith(
-          saleState: state.saleState?.copyWith(
-            status: 'ended',
-            endReason: j['end_reason'] as String?,
-          ),
-          purchaseStatus: ViewerPurchaseStatus.idle,
-        );
-      case 'direct_sale_cancelled':
-        state = state.copyWith(
-          saleState: state.saleState?.copyWith(status: 'cancelled'),
-          purchaseStatus: ViewerPurchaseStatus.idle,
-        );
-    }
-  }
-
-  void _scheduleReconnect() {
-    if (_reconnecting) return;
-    _reconnecting = true;
-    _heartbeat?.cancel();
-    final delayMs = (1000 * pow(1.5, _reconnectAttempt)).clamp(1000, 60000).toInt();
-    _reconnectAttempt++;
-    Future.delayed(Duration(milliseconds: delayMs), () {
-      if (!mounted) return;
-      _reconnecting = false;
-      _sub?.cancel();
-      try {
-        _channel?.sink.close();
-      } catch (_) {}
-      unawaited(_connect());
-    });
-  }
+  DirectSaleViewerNotifier() : super(const DirectSaleViewerState());
 
   /// Satın alma işlemi — loading state + API çağrısı + hata yönetimi.
   Future<void> purchase(int saleId, int quantity, TranslationPack loc) async {
@@ -358,51 +249,40 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
   void resetPurchase() {
     state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.idle);
   }
-
-  @override
-  void dispose() {
-    _reconnecting = false;
-    _heartbeat?.cancel();
-    _sub?.cancel();
-    try {
-      _channel?.sink.close();
-    } catch (_) {}
-    debugPrint('[DirectSaleViewerNotifier] disposed (streamId=$streamId)');
-    super.dispose();
-  }
 }
 
 enum ViewerPurchaseStatus { idle, loading, success }
 
 class DirectSaleViewerState {
-  final DirectSaleState? saleState; // null → henüz idle (WS bağlandı ama satış yok)
   final ViewerPurchaseStatus purchaseStatus;
 
   const DirectSaleViewerState({
-    this.saleState,
     this.purchaseStatus = ViewerPurchaseStatus.idle,
   });
 
-  DirectSaleViewerState copyWith({
-    DirectSaleState? saleState,
-    ViewerPurchaseStatus? purchaseStatus,
-  }) =>
+  DirectSaleViewerState copyWith({ViewerPurchaseStatus? purchaseStatus}) =>
       DirectSaleViewerState(
-        saleState: saleState ?? this.saleState,
         purchaseStatus: purchaseStatus ?? this.purchaseStatus,
       );
 
-  bool get hasSale => saleState != null && !saleState!.isIdle;
   bool get isLoading => purchaseStatus == ViewerPurchaseStatus.loading;
   bool get isPurchaseSuccess => purchaseStatus == ViewerPurchaseStatus.success;
 }
 
 final directSaleViewerProvider = StateNotifierProvider.family
     .autoDispose<DirectSaleViewerNotifier, DirectSaleViewerState, int>(
-  (ref, streamId) => DirectSaleViewerNotifier(streamId),
+  (ref, _) => DirectSaleViewerNotifier(),
 );
 
 final directSaleDetailProvider = FutureProvider.family
     .autoDispose<DirectSaleSummary, int>((ref, saleId) async {
   return DirectSaleService.getSummary(saleId);
+});
+
+// listingId == 0 → listing filtresi yok (host geneli)
+final directSaleSuggestionsProvider = FutureProvider.family
+    .autoDispose<DirectSaleSuggestion, int>((ref, listingId) async {
+  return DirectSaleService.getSuggestions(
+    listingId: listingId > 0 ? listingId : null,
+  );
 });

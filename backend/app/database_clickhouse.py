@@ -552,3 +552,90 @@ async def stop_flush_loop() -> None:
         _flush_task = None
     await flush_all_buffers()
     logger.info("[ClickHouse] Flush loop durduruldu, son flush tamamlandı.")
+
+
+# ── Faz 6 — Fiyat önerisi + Talep tahmini ────────────────────────────────────
+
+async def get_direct_sale_suggestions(
+    host_id: int,
+    listing_id: Optional[int] = None,
+    lookback_days: int = 90,
+    min_samples: int = 3,
+) -> dict:
+    """
+    Faz 6.1 + 6.2: host'un geçmiş direct satışlarından fiyat önerisi ve talep
+    tahmini hesaplar. ClickHouse devre dışıysa veya veri yoksa boş döner.
+
+    Dönen dict:
+      suggested_price      - geçmiş satış ortalama fiyatı (float | None)
+      avg_conversion_rate  - ort. dönüşüm oranı 0-1 (float | None)
+      avg_demand           - ort. satılan adet (float | None)
+      recommended_stock    - önerilen stok = avg_demand * 1.3 (int | None)
+      sample_count         - analiz edilen satış sayısı (int)
+      confidence           - "low" | "medium" | "high"
+    """
+    empty = {
+        "suggested_price": None,
+        "avg_conversion_rate": None,
+        "avg_demand": None,
+        "recommended_stock": None,
+        "sample_count": 0,
+        "confidence": "low",
+    }
+    ch = await get_clickhouse_client()
+    if ch is None:
+        return empty
+
+    # listing_id bazlı veya host geneli
+    listing_filter = f"AND listing_id = {int(listing_id)}" if listing_id else ""
+
+    sql = f"""
+        WITH sales AS (
+            SELECT
+                sale_id,
+                argMaxIf(toFloat64OrNull(toString(viewer_count)), created_at,
+                         event_type = 'sale_started')                       AS start_viewers,
+                sumIf(toFloat64OrNull(toString(quantity)), event_type = 'purchase_completed')
+                                                                            AS total_sold,
+                avgIf(toFloat64OrNull(toString(unit_price)), event_type = 'purchase_completed')
+                                                                            AS avg_price
+            FROM direct_sale_events
+            WHERE host_id  = {int(host_id)}
+              AND created_at >= now() - INTERVAL {int(lookback_days)} DAY
+              {listing_filter}
+            GROUP BY sale_id
+            HAVING isNotNull(avg_price) AND total_sold > 0
+        )
+        SELECT
+            avg(avg_price)                                                  AS suggested_price,
+            avg(if(start_viewers > 0, total_sold / start_viewers, 0))      AS avg_conversion_rate,
+            avg(total_sold)                                                 AS avg_demand,
+            count()                                                         AS sample_count
+        FROM sales
+    """
+    try:
+        result = await ch.query(sql)
+        rows = result.result_rows
+        if not rows or rows[0][3] == 0:
+            # listing bazlı yetersizse host geneline düş
+            if listing_id:
+                return await get_direct_sale_suggestions(host_id, listing_id=None,
+                                                         lookback_days=lookback_days)
+            return empty
+
+        suggested_price, avg_cr, avg_demand, sample_count = rows[0]
+        sample_count = int(sample_count)
+        confidence = "high" if sample_count >= 10 else "medium" if sample_count >= min_samples else "low"
+        recommended_stock = max(1, round(float(avg_demand) * 1.3)) if avg_demand else None
+
+        return {
+            "suggested_price": round(float(suggested_price), 2) if suggested_price else None,
+            "avg_conversion_rate": round(float(avg_cr), 4) if avg_cr else None,
+            "avg_demand": round(float(avg_demand), 1) if avg_demand else None,
+            "recommended_stock": recommended_stock,
+            "sample_count": sample_count,
+            "confidence": confidence,
+        }
+    except Exception as exc:
+        logger.warning("[ClickHouse] get_direct_sale_suggestions başarısız: %s", exc)
+        return empty

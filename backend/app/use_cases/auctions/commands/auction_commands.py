@@ -1,7 +1,7 @@
 from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
 
 from app.core.uow import AbstractUnitOfWork
-from app.use_cases.auctions.auction_utils import manager, fmt_price, auction_key, publish_auction, _require_host
+from app.use_cases.auctions.auction_utils import manager, fmt_price, auction_key, broadcast_to_stream_viewers, _require_host
 """
 Açık artırma servisi — iş mantığını router'dan ayırır.
 
@@ -311,7 +311,7 @@ class AuctionCommands:
         await redis.expire(key, 24 * 3600)
 
         state = await GetAuctionStateQuery().execute(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
             stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
@@ -330,7 +330,7 @@ class AuctionCommands:
 
         await redis.hset(key, "status", "paused")
         state = await GetAuctionStateQuery().execute(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
                     stream_id, manager.conn_count(stream_id))
         from app.database_clickhouse import track_user_event
@@ -355,7 +355,7 @@ class AuctionCommands:
 
         await redis.hset(key, "status", "active")
         state = await GetAuctionStateQuery().execute(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
                     stream_id, manager.conn_count(stream_id))
         from app.database_clickhouse import track_user_event
@@ -452,7 +452,7 @@ class AuctionCommands:
             "current_bidder": data.get("current_bidder_name") or None,
             "start_price": float(data.get("start_price", 0)),
         }
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] BİTTİ | stream_id=%s winner=%s price=%s bid_count=%s",
             stream_id, state["current_bidder"], state["current_bid"], state["bid_count"],
@@ -586,7 +586,7 @@ class AuctionCommands:
             raise BadRequestException(code="CONCURRENT_BID_OUTBID")
 
         state = await GetAuctionStateQuery().execute(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[TEKLİF] KAYDEDILDI+YAYINLANDI | stream_id=%s user=%s amount=%s | ws_hedef=%s",
             stream_id, user.username, data.amount, manager.conn_count(stream_id),
@@ -697,8 +697,8 @@ class AuctionCommands:
         item_name = redis_data.get("item_name", "")
 
         state = await GetAuctionStateQuery().execute(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
-        await publish_auction(stream_id, {
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {
             "type": WS.BUY_IT_NOW_REQUESTED,
             "buyer": {"id": user.id, "username": user.username},
             "price": bin_price,
@@ -878,8 +878,8 @@ class AuctionCommands:
             "buy_it_now_price": bin_price,
             "listing_id": listing_id,
         }
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
-        await publish_auction(stream_id, {
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {
             "type": WS.AUCTION_ENDED_BY_BUY_IT_NOW,
             "listing_id": listing_id,
             "buyer": {"id": buyer_id, "username": buyer_username},
@@ -959,8 +959,8 @@ class AuctionCommands:
             await redis.set(f"bin_cooldown:{stream_id}:{buyer_id}", "1", ex=60)
 
         state = await GetAuctionStateQuery().execute(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
-        await publish_auction(stream_id, {
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {
             "type": WS.BUY_IT_NOW_REJECTED,
             "buyer_username": buyer_username,
         })
@@ -1229,7 +1229,7 @@ class AuctionCommands:
             "start_price": float(data.get("start_price", 0)),
             "listing_id": listing_id,
         }
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] TEKLİF KABUL EDİLDİ | stream_id=%s winner=%s price=%s",
             stream_id, winner_name, final_price,

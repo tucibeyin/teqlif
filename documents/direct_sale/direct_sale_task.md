@@ -83,9 +83,9 @@
 >
 > **Bağımlılık:** Faz 4 ✅
 
-- [ ] 5.1 Backend dual-write — `sale_started`, `purchase_completed`, `sale_ended`, `sale_cancelled` event'leri `direct_sale_events`'e `fire_and_forget` yaz (→ §7.4)
-- [ ] 5.2 Backend `user_events` dual-write — `purchase_completed` → `user_events` ML sinyali + `update_user_preference_embedding` kuyruğu (→ §7.2)
-- [ ] 5.3 Flutter client-side events — `sale_impression` (panel görününce) + `purchase_intent` (bottom sheet açılınca) → mevcut `POST /api/analytics/user-events` (→ §7.4)
+- [x] 2026-08-06 — 5.1 Backend dual-write — `sale_started`, `purchase_completed`, `sale_ended`, `sale_cancelled` event'leri `direct_sale_events`'e `fire_and_forget` yaz (→ §7.4)
+- [x] 2026-08-06 — 5.2 Backend `user_events` dual-write — `purchase_completed` → `user_events` ML sinyali + `update_user_preference_embedding` kuyruğu (→ §7.2)
+- [x] 2026-08-06 — 5.3 Flutter client-side events — `sale_impression` (panel görününce) + `purchase_intent` (bottom sheet açılınca) → mevcut `POST /api/analytics/user-events` (→ §7.4)
 
 ---
 
@@ -95,8 +95,8 @@
 >
 > **Bağımlılık:** Faz 5 ✅ + minimum 2-4 hafta gerçek satış verisi (ADR §3.3)
 
-- [ ] 6.1 Fiyat önerisi modeli — geçmiş `unit_price` + dönüşüm oranı bazlı
-- [ ] 6.2 Talep tahmini — geçmiş `viewer_count` + satılan adet bazlı
+- [x] 6.1 Fiyat önerisi modeli — geçmiş `unit_price` + dönüşüm oranı bazlı — 2026-08-07
+- [x] 6.2 Talep tahmini — geçmiş `viewer_count` + satılan adet bazlı — 2026-08-07
 
 ---
 
@@ -107,9 +107,9 @@
 
 | # | Konu | Neden | Kritiklik | Tespit Fazı |
 |---|------|-------|-----------|-------------|
-| T-1 | `auction_utils.publish_auction()` → `broadcast_to_stream_viewers()` olarak yeniden adlandırılmalı | `direct_sale_redis.py` şu an auction modülüne isim bağımlılığıyla bağlı; fonksiyon aslında stream'e WS yayını yapıyor, auction'a özgü değil | 🟢 | Faz 2 |
-| T-2 | Flutter `CommercePanelWrapper` WS event routing'i — aynı kanaldan gelen `auction_*` ve `direct_sale_*` type'larının doğru switch'lenmesi | İkisi aynı WS kanalını kullanıyor; Faz 4'te yanlış routing UI'ı kırar | 🔴 | Faz 2 |
-| T-3 | **[SİSTEM GENELİ]** Tüm codebase'de `asyncio.create_task + sleep → state değişikliği` pattern'ini audit et | Direct sale'de bu pattern ephemeral olduğu için durable `scheduled_at` + DB poller mimarisiyle değiştirildi. Aynı zafiyet auction `buy_it_now_pending` timeout'u veya gelecek feature'larda da olabilir. Kural: iş etkisi taşıyan delayed state transition'lar her zaman DB-backed olmalı. | 🟡 | Faz 3 |
+| T-1 | ~~`auction_utils.publish_auction()` → `broadcast_to_stream_viewers()` olarak yeniden adlandırılmalı~~ | ✅ 2026-08-07 | 🟢 | Faz 2 |
+| T-2 | ~~Flutter `CommercePanelWrapper` WS event routing'i — `DirectSaleViewerNotifier` üçüncü duplicate WS bağlantısı açıyordu~~ | ✅ 2026-08-07 — viewer notifier'dan WS kaldırıldı; `purchaseStatus` tek kaynak | 🔴 | Faz 2 |
+| T-3 | ~~**[SİSTEM GENELİ]** Tüm codebase'de `asyncio.create_task + sleep → state değişikliği` pattern'ini audit et~~ | ✅ 2026-08-07 — ihlal yok; `webhooks.py` dev-only fallback olarak belgelenmiş | 🟡 | Faz 3 |
 
 ---
 

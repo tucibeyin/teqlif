@@ -4366,6 +4366,9 @@
   "directSaleTotalLabel": "Итого",
   "directSaleOrderStatusLabel": "Статус заказа",
   "directSaleViewBuyersBtn": "Посмотреть покупателей",
+  "directSaleSuggestionPrice": "Рекомендуемая цена: ₺{price}",
+  "directSaleSuggestionStock": "Прогноз спроса: {stock} шт.",
+  "directSaleSuggestionApply": "Применить",
 
   "notifDirectSalePurchased": "Покупка завершена",
   "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}."
