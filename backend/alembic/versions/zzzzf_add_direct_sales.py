@@ -45,12 +45,11 @@ def upgrade() -> None:
             CONSTRAINT chk_direct_sale_status CHECK (
                 status IN ('active', 'paused', 'sold_out', 'ended', 'cancelled')
             )
-        );
-
-        CREATE INDEX ix_direct_sales_stream_id ON direct_sales(stream_id);
-        CREATE INDEX ix_direct_sales_host_id   ON direct_sales(host_id);
-        CREATE INDEX ix_direct_sales_status    ON direct_sales(status);
+        )
     """)
+    op.execute("CREATE INDEX ix_direct_sales_stream_id ON direct_sales(stream_id)")
+    op.execute("CREATE INDEX ix_direct_sales_host_id   ON direct_sales(host_id)")
+    op.execute("CREATE INDEX ix_direct_sales_status    ON direct_sales(status)")
 
     op.execute("""
         CREATE TABLE direct_sale_orders (
@@ -67,12 +66,11 @@ def upgrade() -> None:
             CONSTRAINT chk_direct_sale_order_status CHECK (
                 status IN ('completed', 'cancelled')
             )
-        );
-
-        CREATE INDEX ix_direct_sale_orders_sale_id   ON direct_sale_orders(sale_id);
-        CREATE INDEX ix_direct_sale_orders_buyer_id  ON direct_sale_orders(buyer_id);
-        CREATE INDEX ix_direct_sale_orders_seller_id ON direct_sale_orders(seller_id);
+        )
     """)
+    op.execute("CREATE INDEX ix_direct_sale_orders_sale_id   ON direct_sale_orders(sale_id)")
+    op.execute("CREATE INDEX ix_direct_sale_orders_buyer_id  ON direct_sale_orders(buyer_id)")
+    op.execute("CREATE INDEX ix_direct_sale_orders_seller_id ON direct_sale_orders(seller_id)")
 
 
 def downgrade() -> None:
