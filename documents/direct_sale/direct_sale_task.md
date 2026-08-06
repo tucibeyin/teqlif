@@ -101,6 +101,18 @@
 
 ---
 
+## Teknik Borç (Daha Sonra Yapılacaklar)
+
+> Her faz sonunda tespit edilen bağımlılıklar ve refactor ihtiyaçları buraya eklenir.
+> Kritiklik: 🔴 Yayına çıkmadan önce | 🟡 Faz tamamlanmadan önce | 🟢 Fırsatta
+
+| # | Konu | Neden | Kritiklik | Tespit Fazı |
+|---|------|-------|-----------|-------------|
+| T-1 | `auction_utils.publish_auction()` → `broadcast_to_stream_viewers()` olarak yeniden adlandırılmalı | `direct_sale_redis.py` şu an auction modülüne isim bağımlılığıyla bağlı; fonksiyon aslında stream'e WS yayını yapıyor, auction'a özgü değil | 🟢 | Faz 2 |
+| T-2 | Flutter `CommercePanelWrapper` WS event routing'i — aynı kanaldan gelen `auction_*` ve `direct_sale_*` type'larının doğru switch'lenmesi | İkisi aynı WS kanalını kullanıyor; Faz 4'te yanlış routing UI'ı kırar | 🔴 | Faz 2 |
+
+---
+
 ## Açık Kalan Kararlar (Faz Başında Kapatılacak)
 
 > **Referans:** `direct_sale_plan.md §15.4`
