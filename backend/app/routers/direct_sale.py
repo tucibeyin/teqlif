@@ -8,17 +8,19 @@ Her endpoint sadece:
 İş mantığı tamamen use_cases/direct_sales/commands/direct_sale_commands.py içindedir.
 """
 from fastapi import APIRouter, Depends, Request
+from typing import List
 
-from app.database import get_uow
+from app.database import get_uow, get_db
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
 from app.schemas.direct_sale import (
-    DirectSaleStartIn, DirectSaleCancelIn,
-    DirectSaleStateOut,
+    DirectSaleStartIn, DirectSaleCancelIn, DirectSalePurchaseIn,
+    DirectSaleStateOut, DirectSaleSummaryOut, DirectSaleOrderOut,
 )
 from app.utils.auth import get_current_user
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from app.use_cases.direct_sales.commands import direct_sale_commands as cmd
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/direct-sales", tags=["direct-sales"])
 
@@ -84,3 +86,37 @@ async def cancel_sale(
 ):
     await cmd.cancel_sale(sale_id, data, current_user, uow)
     return {"success": True}
+
+
+# ── Satın alma ────────────────────────────────────────────────────────────────
+
+@router.post("/{sale_id}/purchase")
+@limiter.limit("10/minute", key_func=get_user_id_or_ip)
+async def purchase_sale(
+    request: Request,
+    sale_id: int,
+    data: DirectSalePurchaseIn,
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+    current_user: User = Depends(get_current_user),
+):
+    return await cmd.purchase_sale(sale_id, data, current_user, uow)
+
+
+# ── Özet ve siparişler ────────────────────────────────────────────────────────
+
+@router.get("/{sale_id}/summary", response_model=DirectSaleSummaryOut)
+async def get_sale_summary(
+    sale_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await cmd.get_sale_summary(sale_id, current_user, db)
+
+
+@router.get("/{sale_id}/orders", response_model=List[DirectSaleOrderOut])
+async def get_sale_orders(
+    sale_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await cmd.get_sale_orders(sale_id, current_user, db)

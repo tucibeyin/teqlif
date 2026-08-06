@@ -81,6 +81,13 @@ async def resume_sale(stream_id: int) -> None:
     await redis.hset(_state_key(stream_id), "status", "active")
 
 
+async def set_sold_out(stream_id: int) -> None:
+    """Stok sıfırlandı — status'u sold_out yap (key'ler henüz silinmez)."""
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    await redis.hset(_state_key(stream_id), "status", "sold_out")
+
+
 async def end_sale(stream_id: int, end_reason: str) -> None:
     """Satışı sonlandır ve LIFECYCLE key'lerini temizle."""
     from app.utils.redis_client import get_redis
