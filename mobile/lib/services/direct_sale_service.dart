@@ -106,6 +106,9 @@ class DirectSaleService {
 
   /// Start dialog'da listing seçimi için kullanılır.
   /// Hata durumunda boş liste döner (dialog gracefully degrades).
+  // apiCall() Map<String,dynamic> döndürdüğü için List endpoint'leri
+  // doğrudan http.get + jsonDecode kullanmalı.
+
   static Future<List<Map<String, dynamic>>> fetchListingsForDialog({
     int? hostUserId,
     required int offset,
@@ -120,13 +123,14 @@ class DirectSaleService {
             '$kBaseUrl/listings/my?active=true&limit=20&offset=$offset',
           );
     try {
-      final body = await apiCall(
-        () async => http.get(uri, headers: await buildApiHeaders(token)),
-      );
-      if (body is List) {
-        return (body as List<dynamic>)
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
+      final response = await http.get(uri, headers: await buildApiHeaders(token));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          return decoded
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+        }
       }
     } catch (_) {}
     return [];
@@ -134,13 +138,17 @@ class DirectSaleService {
 
   /// Sadece host erişebilir.
   static Future<List<DirectSaleOrder>> getOrders(int saleId) async {
-    final body = await apiCall(
-      () async => http.get(Uri.parse(_url('$saleId/orders')), headers: await _headers()),
+    final response = await http.get(
+      Uri.parse(_url('$saleId/orders')),
+      headers: await _headers(),
     );
-    if (body is List) {
-      return (body as List<dynamic>)
-          .map((e) => DirectSaleOrder.fromJson(e as Map<String, dynamic>))
-          .toList();
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return (decoded as List<dynamic>)
+            .map((e) => DirectSaleOrder.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
     }
     return [];
   }
