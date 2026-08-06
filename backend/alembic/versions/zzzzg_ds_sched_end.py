@@ -1,12 +1,12 @@
 """Add scheduled_end_at to direct_sales
 
-Revision ID: zzzzg_add_direct_sale_scheduled_end
+Revision ID: zzzzg_ds_sched_end
 Revises: zzzzf_add_direct_sales
 Create Date: 2026-08-06
 """
 from alembic import op
 
-revision = 'zzzzg_add_direct_sale_scheduled_end'
+revision = 'zzzzg_ds_sched_end'
 down_revision = 'zzzzf_add_direct_sales'
 branch_labels = None
 depends_on = None
