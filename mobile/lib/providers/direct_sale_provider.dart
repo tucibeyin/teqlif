@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/direct_sale.dart';
@@ -16,7 +17,16 @@ void _dsLog(String phase, String msg) {
 /// WS bağlantısı ve reconnect altyapısı [StreamCommerceNotifier]'da; bu sınıf
 /// yalnızca direct sale domain logic'ini içerir.
 class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
-  DirectSaleHostNotifier(int streamId) : super(streamId, DirectSaleState.idle());
+  DirectSaleHostNotifier(int streamId) : super(streamId, DirectSaleState.idle()) {
+    unawaited(_prefetch());
+  }
+
+  Future<void> _prefetch() async {
+    try {
+      final s = await DirectSaleService.getState(streamId);
+      if (mounted && !s.isIdle) applyState(s);
+    } catch (_) {}
+  }
 
   @override
   void onCommerceEvent(String type, Map<String, dynamic> json) {

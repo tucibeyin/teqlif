@@ -1,13 +1,23 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/auction.dart';
+import '../services/auction_service.dart';
 import 'stream_commerce_notifier.dart';
 
 /// Bir [streamId] için açık artırma state'ini yönetir.
 /// WS altyapısı [StreamCommerceNotifier] base class'ında; bu sınıf yalnızca
 /// auction domain logic'ini içerir.
 class AuctionNotifier extends StreamCommerceNotifier<AuctionState> {
-  AuctionNotifier(int streamId) : super(streamId, AuctionState.idle());
+  AuctionNotifier(int streamId) : super(streamId, AuctionState.idle()) {
+    unawaited(_prefetch());
+  }
+
+  Future<void> _prefetch() async {
+    try {
+      final s = await AuctionService.getState(streamId);
+      if (mounted && !s.isIdle) applyState(s);
+    } catch (_) {}
+  }
 
   @override
   void onCommerceEvent(String type, Map<String, dynamic> json) {
