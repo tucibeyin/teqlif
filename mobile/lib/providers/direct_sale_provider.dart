@@ -1,15 +1,10 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import '../config/api.dart';
 import '../models/direct_sale.dart';
 import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
-import '../services/storage_service.dart';
 import '../utils/error_helper.dart';
+import 'stream_commerce_notifier.dart';
 
 void _dsLog(String phase, String msg) {
   debugPrint('[DIRECT_SALE][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -18,68 +13,16 @@ void _dsLog(String phase, String msg) {
 // ── Host ViewModel (Task 4.4) ─────────────────────────────────────────────────
 
 /// Host tarafı — satış yaşam döngüsünü (start/pause/resume/end/cancel) yönetir.
-/// WS bağlantısı auction kanalından (aynı Redis stream) direct_sale_* event'leri alır.
-/// Host API çağrısı başarılıysa [applyState] ile anında state'i günceller;
-/// WS event'i eşzamanlı gelebilir ama override etmez (sonuncusu kazanır).
-class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
-  final int streamId;
+/// WS bağlantısı ve reconnect altyapısı [StreamCommerceNotifier]'da; bu sınıf
+/// yalnızca direct sale domain logic'ini içerir.
+class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
+  DirectSaleHostNotifier(int streamId) : super(streamId, DirectSaleState.idle());
 
-  WebSocketChannel? _channel;
-  StreamSubscription<dynamic>? _sub;
-  Timer? _heartbeat;
-  bool _reconnecting = false;
-  int _reconnectAttempt = 0;
-
-  DirectSaleHostNotifier(this.streamId) : super(DirectSaleState.idle()) {
-    unawaited(_connect());
-  }
-
-  String get _wsBase => kBaseUrl
-      .replaceFirst('https://', 'wss://')
-      .replaceFirst('http://', 'ws://');
-
-  Future<void> _connect() async {
-    _heartbeat?.cancel();
-    final token = await StorageService.getToken();
-    _dsLog('WS', 'connecting | streamId=$streamId attempt=$_reconnectAttempt');
-    try {
-      // Auction WS kanalı — direct_sale_* event'leri de buradan gelir (T-2)
-      final uri = Uri.parse('$_wsBase/auction/$streamId/ws');
-      _channel = WebSocketChannel.connect(uri);
-      if (token != null) {
-        _channel!.sink.add(jsonEncode({'token': token}));
-        _dsLog('WS', 'connected, auth sent | streamId=$streamId');
-      } else {
-        _dsLog('WS', 'connected, no token (anonymous) | streamId=$streamId');
-      }
-      _reconnectAttempt = 0;
-      _sub = _channel!.stream.listen(
-        _onEvent,
-        onDone: _scheduleReconnect,
-        onError: (_) => _scheduleReconnect(),
-        cancelOnError: false,
-      );
-      _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
-        try {
-          _channel?.sink.add('ping');
-        } catch (_) {}
-      });
-    } catch (e) {
-      _dsLog('WS', 'connect error | streamId=$streamId $e');
-      _scheduleReconnect();
-    }
-  }
-
-  void _onEvent(dynamic data) {
-    try {
-      final json = jsonDecode(data as String) as Map<String, dynamic>;
-      final type = json['type'] as String?;
-      if (type == null || !type.startsWith('direct_sale_')) return;
-      _dsLog('WS', 'event received | type=$type streamId=$streamId');
-      _applyWsEvent(type, json);
-    } catch (e) {
-      _dsLog('WS', 'parse error | streamId=$streamId $e');
-    }
+  @override
+  void onCommerceEvent(String type, Map<String, dynamic> json) {
+    if (!type.startsWith('direct_sale_')) return;
+    _dsLog('WS', 'event received | type=$type streamId=$streamId');
+    _applyWsEvent(type, json);
   }
 
   void _applyWsEvent(String type, Map<String, dynamic> j) {
@@ -107,24 +50,6 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
         state = state.copyWith(status: 'cancelled');
     }
     _dsLog('STATE', '$type → $prevStatus → ${state.status} | saleId=${state.saleId}');
-  }
-
-  void _scheduleReconnect() {
-    if (_reconnecting) return;
-    _reconnecting = true;
-    _heartbeat?.cancel();
-    final delayMs = (1000 * pow(1.5, _reconnectAttempt)).clamp(1000, 60000).toInt();
-    _reconnectAttempt++;
-    _dsLog('WS', 'reconnect scheduled | streamId=$streamId delay=${delayMs}ms attempt=$_reconnectAttempt');
-    Future.delayed(Duration(milliseconds: delayMs), () {
-      if (!mounted) return;
-      _reconnecting = false;
-      _sub?.cancel();
-      try {
-        _channel?.sink.close();
-      } catch (_) {}
-      unawaited(_connect());
-    });
   }
 
   /// API çağrısı başarılıysa WS broadcast beklenmeden anında güncelle.
@@ -246,17 +171,6 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     }
   }
 
-  @override
-  void dispose() {
-    _reconnecting = false;
-    _heartbeat?.cancel();
-    _sub?.cancel();
-    try {
-      _channel?.sink.close();
-    } catch (_) {}
-    debugPrint('[DirectSaleHostNotifier] disposed (streamId=$streamId)');
-    super.dispose();
-  }
 }
 
 final directSaleHostProvider = StateNotifierProvider.family

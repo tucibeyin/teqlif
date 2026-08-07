@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ağustos 2026 — Cache Taksonomi ADR eklendi
+**Son güncelleme:** Ağustos 2026 — Commerce WS Altyapısı ADR eklendi
 
 ---
 
@@ -963,4 +963,55 @@ Sistemde çok sayıda farklı doğaya sahip veri cacheleniyordu (fastapi-cache, 
 ### Kural
 
 Veritabanı şemasını (özellikle `catalog`, `cities` veya `field_config` etkileyen) değiştiren bir migration yazıldığında, mutlaka `upgrade()` ve `downgrade()` metodlarının en sonuna `bump_schema_version()` eklenmelidir.
+
+---
+
+## 10. Commerce WS Altyapısı — `StreamCommerceNotifier<S>`
+
+### Problem
+
+Auction ve Direct Sale sistemlerinin her ikisi de aynı WS kanalını (`/auction/{id}/ws`) kullanıyor; ancak WS bağlantısı, heartbeat ve exponential backoff reconnect mantığı iki ayrı notifier'da (~80 satır) neredeyse birebir kopyalanmış durumda. Her bug veya iyileştirme iki yerde ayrı ayrı düzeltilmek zorunda.
+
+Ek olarak, `auction.py` router doğrudan `direct_sale_redis` domain'ini import ediyordu — Router → Domain Use Case bağımlılığı, Dependency Rule ihlali.
+
+### Karar
+
+**`StreamCommerceNotifier<S>`** abstract base class oluşturuldu. Tüm commerce ViewModel'leri bu class'ı extend eder.
+
+```
+StreamCommerceNotifier<S>          ← WS bağlantısı, heartbeat, reconnect, dispose
+    ├── AuctionNotifier             ← auction domain logic + onCommerceEvent()
+    └── DirectSaleHostNotifier     ← direct sale domain logic + onCommerceEvent()
+```
+
+### Kural
+
+**WS altyapısı:** `_channel`, `_sub`, `_heartbeat`, `_connect()`, `_scheduleReconnect()`, `dispose()` yalnızca base class'ta bulunur. Notifier'larda bu kod bloklarına yer yoktur.
+
+**Domain ayrımı:** Alt sınıf `onCommerceEvent(type, json)` metodunu implement eder. Kendi domain'iyle ilgili olmayan event tiplerini `return` ile atar.
+
+**Viewer notifier istisnası:** `DirectSaleViewerNotifier` bu class'ı extend etmez. Viewer tarafı WS bağlantısı açmaz; state'i `DirectSaleHostNotifier`'dan (veya auction notifier üzerinden gelen event'lerden) okur. İkinci bir WS bağlantısı açılması veri tutarsızlığına ve gereksiz kaynak kullanımına yol açar.
+
+**Router temizliği:** WS bağlantısında başlangıç state snapshot'ı `get_stream_commerce_snapshot(stream_id)` use-case fonksiyonu üzerinden alınır. Router hiçbir domain katmanına doğrudan bağımlı değildir.
+
+### 3. Commerce Tipi Eklemek
+
+Flash Sale veya benzeri yeni bir commerce tipi eklemek şu adımlara indirgenir:
+
+**Backend:**
+1. `flash_sale_redis.py` — state yönetimi
+2. `flash_sale_commands.py` — iş mantığı
+3. `commerce_snapshot.py` — flash sale state'ini snapshot'a ekle
+4. `commerce_outbox.py` — flash sale event'lerini outbox'a kaydet
+
+**Flutter:**
+1. `FlashSaleState` model
+2. `FlashSaleNotifier extends StreamCommerceNotifier<FlashSaleState>` — sadece `onCommerceEvent` implement edilir
+3. `FlashSalePanel` widget — pure view
+4. `CommercePanelWrapper._CommerceMode` enum'una `flashSale` değeri ekle
+5. `_resolveMode()` ve `_forceFlashSale` bayrağı ekle
+
+WS altyapısına, router'a veya outbox'ın temel mekanizmasına dokunulmaz.
+
+**Referans:** `documents/commerce/PLAN.md`
 

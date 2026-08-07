@@ -22,6 +22,8 @@ from app.core.logger import get_logger
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from app.core.idempotency import idempotency_key, store_idempotency_result
 from app.core.auction_outbox import outbox_replay
+from app.core.commerce_outbox import ds_outbox_replay
+from app.use_cases.stream.commerce_snapshot import get_stream_commerce_snapshot
 from app.database_clickhouse import buffer_user_event
 from app.use_cases.auctions.commands.auction_commands import AuctionCommands
 from app.use_cases.auctions.queries.auction_queries import GetBidsQuery, GetAuctionStateQuery
@@ -189,23 +191,24 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
     manager.connect(websocket, stream_id)
     logger.info("[AUCTION WS] BAĞLANDI | stream_id=%s user_id=%s", stream_id, user_id or "anonim")
     try:
-        state = await GetAuctionStateQuery().execute(stream_id)
-        logger.info("[WS] İLK STATE GÖNDERİLDİ | stream_id=%s status=%s", stream_id, state.get("status"))
-        await websocket.send_json({"type": WS.AUCTION_STATE, **state})
-
-        # Direct sale aktifse bağlanan izleyiciye mevcut state'i hemen ilet.
-        # Aynı WS kanalını paylaştığından burada gönderilmesi en doğal yer.
-        from app.use_cases.direct_sales import direct_sale_redis as ds_redis
-        ds_state = await ds_redis.get_state(stream_id)
-        if ds_state and ds_state.get("status") not in (None, "ended", "cancelled"):
-            logger.info(
-                "[DIRECT_SALE][WS] initial state sent | stream=%s status=%s",
-                stream_id, ds_state.get("status"),
-            )
-            await websocket.send_json({"type": WS.DIRECT_SALE_STARTED, **ds_state})
+        snapshot = await get_stream_commerce_snapshot(stream_id)
+        logger.info("[WS] İLK STATE GÖNDERİLDİ | stream_id=%s auction_status=%s ds_status=%s",
+                    stream_id,
+                    snapshot["auction"].get("status"),
+                    snapshot["direct_sale"].get("status") if snapshot["direct_sale"] else "idle")
+        await websocket.send_json({"type": WS.AUCTION_STATE, **snapshot["auction"]})
+        if snapshot["direct_sale"]:
+            await websocket.send_json({"type": WS.DIRECT_SALE_STARTED, **snapshot["direct_sale"]})
 
         missed = await outbox_replay(stream_id, count=10)
         for event in reversed(missed):
+            try:
+                await websocket.send_json({**event, "replayed": True})
+            except Exception:
+                break
+
+        ds_missed = await ds_outbox_replay(stream_id, count=10)
+        for event in reversed(ds_missed):
             try:
                 await websocket.send_json({**event, "replayed": True})
             except Exception:

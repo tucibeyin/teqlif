@@ -25,6 +25,7 @@ from app.core.exceptions import (
     DirectSaleAlreadyActiveException, DirectSaleInsufficientStockException,
 )
 from app.core.logger import fire_and_forget
+from app.core.commerce_outbox import ds_outbox_push
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.core.ws_manager import ws_manager
 from app.use_cases.direct_sales import direct_sale_redis as redis_mgr
@@ -172,10 +173,9 @@ async def pause_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> Non
     sale.status = "paused"
     await uow.session.commit()
 
-    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, {
-        "type": WS.DIRECT_SALE_PAUSED,
-        "sale_id": sale_id,
-    }))
+    paused_payload = {"type": WS.DIRECT_SALE_PAUSED, "sale_id": sale_id}
+    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, paused_payload))
+    fire_and_forget(ds_outbox_push(sale.stream_id, paused_payload))
     logger.info("[DIRECT_SALE][PAUSE] OK | sale_id=%s stream=%s", sale_id, sale.stream_id)
 
 
@@ -195,11 +195,9 @@ async def resume_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> No
 
     # Resume'de kalan stoğu da gönder
     remaining = sale.remaining_stock
-    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, {
-        "type": WS.DIRECT_SALE_RESUMED,
-        "sale_id": sale_id,
-        "remaining_stock": remaining,
-    }))
+    resumed_payload = {"type": WS.DIRECT_SALE_RESUMED, "sale_id": sale_id, "remaining_stock": remaining}
+    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, resumed_payload))
+    fire_and_forget(ds_outbox_push(sale.stream_id, resumed_payload))
     logger.info(
         "[DIRECT_SALE][RESUME] OK | sale_id=%s stream=%s remaining=%s",
         sale_id, sale.stream_id, remaining,
@@ -230,13 +228,15 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
     total_sold = sale.total_stock - sale.remaining_stock
     total_revenue = total_sold * float(sale.price)
 
-    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, {
+    ended_payload = {
         "type": WS.DIRECT_SALE_ENDED,
         "sale_id": sale_id,
         "end_reason": end_reason,
         "total_sold": total_sold,
         "total_revenue": total_revenue,
-    }))
+    }
+    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, ended_payload))
+    fire_and_forget(ds_outbox_push(sale.stream_id, ended_payload))
     fire_and_forget(buffer_direct_sale_event(
         event_type="sale_ended",
         sale_id=sale_id,
@@ -289,11 +289,13 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
 
     await uow.session.commit()
 
-    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, {
+    cancelled_payload = {
         "type": WS.DIRECT_SALE_CANCELLED,
         "sale_id": sale_id,
         "orders_voided": data.orders_voided,
-    }))
+    }
+    fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, cancelled_payload))
+    fire_and_forget(ds_outbox_push(sale.stream_id, cancelled_payload))
     fire_and_forget(buffer_direct_sale_event(
         event_type="sale_cancelled",
         sale_id=sale_id,
@@ -466,19 +468,20 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     ))
 
     # Stream WS: direct_sale_purchased
-    fire_and_forget(redis_mgr.publish_direct_sale(stream_id, {
+    purchased_payload = {
         "type": WS.DIRECT_SALE_PURCHASED,
         "sale_id": sale_id,
         "buyer_username": user.username,
         "quantity": data.quantity,
         "remaining_stock": remaining,
-    }))
+    }
+    fire_and_forget(redis_mgr.publish_direct_sale(stream_id, purchased_payload))
+    fire_and_forget(ds_outbox_push(stream_id, purchased_payload))
 
     if remaining == 0:
-        fire_and_forget(redis_mgr.publish_direct_sale(stream_id, {
-            "type": WS.DIRECT_SALE_SOLD_OUT,
-            "sale_id": sale_id,
-        }))
+        sold_out_payload = {"type": WS.DIRECT_SALE_SOLD_OUT, "sale_id": sale_id}
+        fire_and_forget(redis_mgr.publish_direct_sale(stream_id, sold_out_payload))
+        fire_and_forget(ds_outbox_push(stream_id, sold_out_payload))
 
     # DM WS broadcast (buyer + host her ikisine)
     from datetime import datetime, timezone as _tz
