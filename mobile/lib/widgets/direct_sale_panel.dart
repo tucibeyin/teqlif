@@ -1129,7 +1129,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
           );
     } else {
       final title = _titleCtrl.text.trim();
-      final price = double.tryParse(_priceCtrl.text.trim().replaceAll(',', '.'));
+      final price = TeqNumberFormatter.parse(_priceCtrl.text.trim())?.toDouble();
       final stock = int.tryParse(_stockCtrl.text.trim());
       if (title.isEmpty || price == null || stock == null || stock < 1) {
         setState(() { _loading = false; _formError = loc.t('directSaleFormValidationError'); });
@@ -1226,7 +1226,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                 _priceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 prefixText: '₺ ',
-                inputFormatters: [_PriceInputFormatter()],
+                inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
               ),
               const SizedBox(height: 8),
               _field(
@@ -1337,24 +1337,6 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
 
 /// Ondalık ayracı olarak hem nokta hem virgülü kabul eder (Türkçe klavye uyumu).
 /// En fazla 2 ondalık basamağa izin verir.
-class _PriceInputFormatter extends TextInputFormatter {
-  static final _valid = RegExp(r'^\d*\.?\d{0,2}$');
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final normalized = newValue.text.replaceAll(',', '.');
-    if (!_valid.hasMatch(normalized)) return oldValue;
-    if (normalized == newValue.text) return newValue;
-    return TextEditingValue(
-      text: normalized,
-      selection: newValue.selection,
-    );
-  }
-}
-
 // ── Faz 6 — Fiyat + stok öneri chip'i ────────────────────────────────────────
 
 class _SuggestionChip extends ConsumerWidget {
@@ -1389,7 +1371,7 @@ class _SuggestionChip extends ConsumerWidget {
 
         return GestureDetector(
           onTap: () {
-            priceCtrl.text = s.suggestedPrice!.toStringAsFixed(2);
+            priceCtrl.text = TeqNumberFormatter.format(s.suggestedPrice!, fieldKey: 'price');
             if (s.recommendedStock != null) {
               stockCtrl.text = '${s.recommendedStock}';
             }
