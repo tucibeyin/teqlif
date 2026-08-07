@@ -11,6 +11,10 @@ import '../services/localization_service.dart';
 import '../services/storage_service.dart';
 import '../utils/error_helper.dart';
 
+void _dsLog(String phase, String msg) {
+  debugPrint('[DIRECT_SALE][${DateTime.now().toIso8601String()}][$phase] $msg');
+}
+
 // ── Host ViewModel (Task 4.4) ─────────────────────────────────────────────────
 
 /// Host tarafı — satış yaşam döngüsünü (start/pause/resume/end/cancel) yönetir.
@@ -37,12 +41,16 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
   Future<void> _connect() async {
     _heartbeat?.cancel();
     final token = await StorageService.getToken();
+    _dsLog('WS', 'connecting | streamId=$streamId attempt=$_reconnectAttempt');
     try {
       // Auction WS kanalı — direct_sale_* event'leri de buradan gelir (T-2)
       final uri = Uri.parse('$_wsBase/auction/$streamId/ws');
       _channel = WebSocketChannel.connect(uri);
       if (token != null) {
         _channel!.sink.add(jsonEncode({'token': token}));
+        _dsLog('WS', 'connected, auth sent | streamId=$streamId');
+      } else {
+        _dsLog('WS', 'connected, no token (anonymous) | streamId=$streamId');
       }
       _reconnectAttempt = 0;
       _sub = _channel!.stream.listen(
@@ -56,7 +64,8 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
           _channel?.sink.add('ping');
         } catch (_) {}
       });
-    } catch (_) {
+    } catch (e) {
+      _dsLog('WS', 'connect error | streamId=$streamId $e');
       _scheduleReconnect();
     }
   }
@@ -66,13 +75,15 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
       final json = jsonDecode(data as String) as Map<String, dynamic>;
       final type = json['type'] as String?;
       if (type == null || !type.startsWith('direct_sale_')) return;
+      _dsLog('WS', 'event received | type=$type streamId=$streamId');
       _applyWsEvent(type, json);
     } catch (e) {
-      debugPrint('[DirectSaleHostNotifier] WS ayrıştırma hatası: $e');
+      _dsLog('WS', 'parse error | streamId=$streamId $e');
     }
   }
 
   void _applyWsEvent(String type, Map<String, dynamic> j) {
+    final prevStatus = state.status;
     switch (type) {
       case 'direct_sale_started':
         state = DirectSaleState.fromJson(j);
@@ -93,6 +104,7 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
       case 'direct_sale_cancelled':
         state = state.copyWith(status: 'cancelled');
     }
+    _dsLog('STATE', '$type → $prevStatus → ${state.status} | saleId=${state.saleId}');
   }
 
   void _scheduleReconnect() {
@@ -101,6 +113,7 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     _heartbeat?.cancel();
     final delayMs = (1000 * pow(1.5, _reconnectAttempt)).clamp(1000, 60000).toInt();
     _reconnectAttempt++;
+    _dsLog('WS', 'reconnect scheduled | streamId=$streamId delay=${delayMs}ms attempt=$_reconnectAttempt');
     Future.delayed(Duration(milliseconds: delayMs), () {
       if (!mounted) return;
       _reconnecting = false;
@@ -114,10 +127,14 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
 
   /// API çağrısı başarılıysa WS broadcast beklenmeden anında güncelle.
   void applyState(DirectSaleState newState) {
+    _dsLog('STATE', 'applyState | ${state.status} → ${newState.status} saleId=${newState.saleId}');
     state = newState;
   }
 
-  void reset() => state = DirectSaleState.idle();
+  void reset() {
+    _dsLog('STATE', 'reset | streamId=$streamId');
+    state = DirectSaleState.idle();
+  }
 
   // ── Action metodları (View'dan çağrılır, BuildContext almaz) ───────────────
 
@@ -126,9 +143,12 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
   Future<void> pause(TranslationPack loc) async {
     if (_busy) return;
     _busy = true;
+    _dsLog('API', 'pause | saleId=${state.saleId}');
     try {
       state = await DirectSaleService.pauseSale(state.saleId);
+      _dsLog('API', 'pause OK | status=${state.status}');
     } catch (e) {
+      _dsLog('API', 'pause ERROR | $e');
       handleError(e, loc);
     } finally {
       _busy = false;
@@ -138,9 +158,12 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
   Future<void> resume(TranslationPack loc) async {
     if (_busy) return;
     _busy = true;
+    _dsLog('API', 'resume | saleId=${state.saleId}');
     try {
       state = await DirectSaleService.resumeSale(state.saleId);
+      _dsLog('API', 'resume OK | status=${state.status}');
     } catch (e) {
+      _dsLog('API', 'resume ERROR | $e');
       handleError(e, loc);
     } finally {
       _busy = false;
@@ -150,9 +173,12 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
   Future<void> end(TranslationPack loc) async {
     if (_busy) return;
     _busy = true;
+    _dsLog('API', 'end | saleId=${state.saleId}');
     try {
       state = await DirectSaleService.endSale(state.saleId);
+      _dsLog('API', 'end OK | status=${state.status}');
     } catch (e) {
+      _dsLog('API', 'end ERROR | $e');
       handleError(e, loc);
     } finally {
       _busy = false;
@@ -162,10 +188,13 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
   Future<void> cancel(TranslationPack loc, {required bool ordersVoided}) async {
     if (_busy) return;
     _busy = true;
+    _dsLog('API', 'cancel | saleId=${state.saleId} ordersVoided=$ordersVoided');
     try {
       await DirectSaleService.cancelSale(state.saleId, ordersVoided: ordersVoided);
       state = state.copyWith(status: 'cancelled');
+      _dsLog('API', 'cancel OK');
     } catch (e) {
+      _dsLog('API', 'cancel ERROR | $e');
       handleError(e, loc);
     } finally {
       _busy = false;
@@ -183,6 +212,11 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     String? productImageUrl,
     required TranslationPack loc,
   }) async {
+    _dsLog(
+      'API',
+      'startSale | streamId=$streamId mode=${listingId != null ? "listing($listingId)" : "manual"}'
+      ' price=$price stock=$stock',
+    );
     try {
       state = await DirectSaleService.startSale(
         streamId,
@@ -193,7 +227,9 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
         proofImageUrl: proofImageUrl,
         productImageUrl: productImageUrl,
       );
+      _dsLog('API', 'startSale OK | status=${state.status} saleId=${state.saleId}');
     } catch (e) {
+      _dsLog('API', 'startSale ERROR | $e');
       handleError(e, loc);
     }
   }
@@ -236,11 +272,14 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
 
   /// Satın alma işlemi — loading state + API çağrısı + hata yönetimi.
   Future<void> purchase(int saleId, int quantity, TranslationPack loc) async {
+    _dsLog('PURCHASE', 'attempt | saleId=$saleId qty=$quantity');
     state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.loading);
     try {
       await DirectSaleService.purchase(saleId, quantity: quantity);
       state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.success);
+      _dsLog('PURCHASE', 'OK | saleId=$saleId qty=$quantity');
     } catch (e) {
+      _dsLog('PURCHASE', 'ERROR | saleId=$saleId $e');
       handleError(e, loc);
       state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.idle);
     }

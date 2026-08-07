@@ -27,7 +27,7 @@ class DirectSaleService {
   }) async {
     final Map<String, dynamic> payload = listingId != null
         ? {'listing_id': listingId}
-        : {'title': title!, 'price': price!, 'stock': stock!};
+        : {'title': title!, 'price': price!, 'stock_quantity': stock!};
     if (proofImageUrl != null) payload['proof_image_url'] = proofImageUrl;
     if (productImageUrl != null) payload['product_image_url'] = productImageUrl;
     final body = await apiCall(

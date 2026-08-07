@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api.dart';
 import '../config/theme.dart' show kPrimary;
@@ -908,7 +909,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
           );
     } else {
       final title = _titleCtrl.text.trim();
-      final price = double.tryParse(_priceCtrl.text.trim());
+      final price = double.tryParse(_priceCtrl.text.trim().replaceAll(',', '.'));
       final stock = int.tryParse(_stockCtrl.text.trim());
       if (title.isEmpty || price == null || stock == null || stock < 1) {
         setState(() { _loading = false; _formError = loc.t('directSaleFormValidationError'); });
@@ -1039,9 +1040,20 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
             else ...[
               _field(loc.t('directSaleFormProductTitle'), _titleCtrl),
               const SizedBox(height: 8),
-              _field(loc.t('directSaleFormPrice'), _priceCtrl, number: true),
+              _field(
+                loc.t('directSaleFormPrice'),
+                _priceCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                prefixText: '₺ ',
+                inputFormatters: [_PriceInputFormatter()],
+              ),
               const SizedBox(height: 8),
-              _field(loc.t('directSaleFormStock'), _stockCtrl, number: true),
+              _field(
+                loc.t('directSaleFormStock'),
+                _stockCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
               const SizedBox(height: 8),
               _SuggestionChip(
                 priceCtrl: _priceCtrl,
@@ -1112,16 +1124,19 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
   Widget _field(
     String label,
     TextEditingController ctrl, {
-    bool number = false,
+    TextInputType keyboardType = TextInputType.text,
+    String? prefixText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: ctrl,
-      keyboardType: number
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
+        prefixText: prefixText,
+        prefixStyle: const TextStyle(color: Colors.white),
         labelStyle: const TextStyle(color: Colors.white54),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white24),
@@ -1133,6 +1148,28 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
         ),
         isDense: true,
       ),
+    );
+  }
+}
+
+// ── Fiyat alanı formatter ─────────────────────────────────────────────────────
+
+/// Ondalık ayracı olarak hem nokta hem virgülü kabul eder (Türkçe klavye uyumu).
+/// En fazla 2 ondalık basamağa izin verir.
+class _PriceInputFormatter extends TextInputFormatter {
+  static final _valid = RegExp(r'^\d*\.?\d{0,2}$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final normalized = newValue.text.replaceAll(',', '.');
+    if (!_valid.hasMatch(normalized)) return oldValue;
+    if (normalized == newValue.text) return newValue;
+    return TextEditingValue(
+      text: normalized,
+      selection: newValue.selection,
     );
   }
 }

@@ -33,13 +33,13 @@ async def direct_sale_scheduler() -> None:
     Periyodik olarak scheduled_end_at süresi dolmuş sold_out satışları
     ended state'ine geçirir ve WS broadcast atar.
     """
-    logger.info("[SCHEDULER] Direct sale scheduler başladı (interval=%ds)", _POLL_INTERVAL_SECS)
+    logger.info("[DIRECT_SALE][SCHEDULER] start | interval=%ds", _POLL_INTERVAL_SECS)
     while True:
         await asyncio.sleep(_POLL_INTERVAL_SECS)
         try:
             await _process_overdue_sales()
         except Exception as exc:
-            logger.error("[SCHEDULER] İşlem döngüsü hatası: %s", exc, exc_info=True)
+            logger.error("[DIRECT_SALE][SCHEDULER] poll error | %s", exc, exc_info=True)
 
 
 async def _process_overdue_sales() -> None:
@@ -59,6 +59,7 @@ async def _process_overdue_sales() -> None:
         if not sales:
             return
 
+        logger.info("[DIRECT_SALE][SCHEDULER] poll | overdue=%d", len(sales))
         end_reason = "sold_out"
         for sale in sales:
             try:
@@ -67,10 +68,15 @@ async def _process_overdue_sales() -> None:
                 sale.end_reason = end_reason
                 sale.ended_at = now
                 sale.scheduled_end_at = None
-                logger.info("[SCHEDULER] sold_out → ended | sale_id=%s stream=%s",
-                            sale.id, sale.stream_id)
+                logger.info(
+                    "[DIRECT_SALE][SCHEDULER] auto-end | sale_id=%s stream=%s",
+                    sale.id, sale.stream_id,
+                )
             except Exception as exc:
-                logger.error("[SCHEDULER] sale_id=%s Redis end_sale hatası: %s", sale.id, exc)
+                logger.error(
+                    "[DIRECT_SALE][SCHEDULER] end_sale failed | sale_id=%s | %s",
+                    sale.id, exc,
+                )
 
         await session.commit()
 

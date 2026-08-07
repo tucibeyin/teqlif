@@ -60,6 +60,10 @@ async def _get_sale(sale_id: int, session: AsyncSession) -> DirectSale:
 
 async def start_sale(stream_id: int, data: DirectSaleStartIn,
                      user: User, uow: SqlAlchemyUnitOfWork) -> dict:
+    logger.info(
+        "[DIRECT_SALE][START] ENTRY | stream=%s host=%s listing_id=%s price=%s stock=%s",
+        stream_id, user.id, data.listing_id, data.price, data.stock_quantity,
+    )
     stream = await _require_host(stream_id, user, uow.session)
 
     # Aynı stream'de aktif/paused satış var mı?
@@ -145,14 +149,18 @@ async def start_sale(stream_id: int, data: DirectSaleStartIn,
         viewer_count=stream.viewer_count,
     ))
 
-    logger.info("[DIREKT SATIŞ] BAŞLADI | stream=%s sale_id=%s title=%r price=%s stock=%s",
-                stream_id, sale.id, title, data.price, data.stock_quantity)
+    logger.info(
+        "[DIRECT_SALE][START] OK | stream=%s sale_id=%s mode=%s title=%r price=%s stock=%s",
+        stream_id, sale.id, "listing" if data.listing_id else "manual",
+        title, data.price, data.stock_quantity,
+    )
     return payload
 
 
 # ── POST /direct-sales/{id}/pause ────────────────────────────────────────────
 
 async def pause_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
+    logger.info("[DIRECT_SALE][PAUSE] ENTRY | sale_id=%s host=%s", sale_id, user.id)
     sale = await _get_sale(sale_id, uow.session)
     await _require_host(sale.stream_id, user, uow.session)
 
@@ -167,12 +175,13 @@ async def pause_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> Non
         "type": WS.DIRECT_SALE_PAUSED,
         "sale_id": sale_id,
     }))
-    logger.info("[DIREKT SATIŞ] DURAKLADI | sale_id=%s stream=%s", sale_id, sale.stream_id)
+    logger.info("[DIRECT_SALE][PAUSE] OK | sale_id=%s stream=%s", sale_id, sale.stream_id)
 
 
 # ── POST /direct-sales/{id}/resume ───────────────────────────────────────────
 
 async def resume_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
+    logger.info("[DIRECT_SALE][RESUME] ENTRY | sale_id=%s host=%s", sale_id, user.id)
     sale = await _get_sale(sale_id, uow.session)
     await _require_host(sale.stream_id, user, uow.session)
 
@@ -190,12 +199,16 @@ async def resume_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> No
         "sale_id": sale_id,
         "remaining_stock": remaining,
     }))
-    logger.info("[DIREKT SATIŞ] DEVAM ETTİ | sale_id=%s stream=%s", sale_id, sale.stream_id)
+    logger.info(
+        "[DIRECT_SALE][RESUME] OK | sale_id=%s stream=%s remaining=%s",
+        sale_id, sale.stream_id, remaining,
+    )
 
 
 # ── POST /direct-sales/{id}/end ──────────────────────────────────────────────
 
 async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
+    logger.info("[DIRECT_SALE][END] ENTRY | sale_id=%s host=%s", sale_id, user.id)
     sale = await _get_sale(sale_id, uow.session)
     await _require_host(sale.stream_id, user, uow.session)
 
@@ -235,14 +248,20 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
         remaining_stock_after=sale.remaining_stock,
         end_reason=end_reason,
     ))
-    logger.info("[DIREKT SATIŞ] BİTTİ | sale_id=%s end_reason=%s total_sold=%s",
-                sale_id, end_reason, total_sold)
+    logger.info(
+        "[DIRECT_SALE][END] OK | sale_id=%s stream=%s reason=%s total_sold=%s revenue=%.0f",
+        sale_id, sale.stream_id, end_reason, total_sold, total_revenue,
+    )
 
 
 # ── POST /direct-sales/{id}/cancel ───────────────────────────────────────────
 
 async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
                       user: User, uow: SqlAlchemyUnitOfWork) -> None:
+    logger.info(
+        "[DIRECT_SALE][CANCEL] ENTRY | sale_id=%s host=%s orders_voided=%s",
+        sale_id, user.id, data.orders_voided,
+    )
     sale = await _get_sale(sale_id, uow.session)
     await _require_host(sale.stream_id, user, uow.session)
 
@@ -287,7 +306,10 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
         end_reason="host_cancelled",
         orders_voided=data.orders_voided,
     ))
-    logger.info("[DIREKT SATIŞ] İPTAL | sale_id=%s orders_voided=%s", sale_id, data.orders_voided)
+    logger.info(
+        "[DIRECT_SALE][CANCEL] OK | sale_id=%s stream=%s orders_voided=%s",
+        sale_id, sale.stream_id, data.orders_voided,
+    )
 
 
 # ── GET /direct-sales/{stream_id}/state ──────────────────────────────────────
@@ -333,18 +355,38 @@ def _build_purchase_dm(title: str, listing_id: Optional[int],
 
 async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
                         user: User, uow: SqlAlchemyUnitOfWork) -> dict:
+    logger.info(
+        "[DIRECT_SALE][PURCHASE] ENTRY | sale_id=%s buyer=%s qty=%s",
+        sale_id, user.id, data.quantity,
+    )
     sale = await _get_sale(sale_id, uow.session)
 
     if sale.status != "active":
+        logger.warning(
+            "[DIRECT_SALE][PURCHASE] REJECTED — not active | sale_id=%s status=%s buyer=%s",
+            sale_id, sale.status, user.id,
+        )
         raise DirectSaleNotActiveException()
 
     # Lua atomik stok azaltma
     remaining = await redis_mgr.decrement_stock(sale.stream_id, data.quantity)
+    logger.info(
+        "[DIRECT_SALE][PURCHASE] Lua result | sale_id=%s qty=%s remaining=%s",
+        sale_id, data.quantity, remaining,
+    )
 
     if remaining == -1:
         # Redis key yok — nadir race, satışı aktif sayma
+        logger.warning(
+            "[DIRECT_SALE][PURCHASE] Redis key missing (race) | sale_id=%s stream=%s",
+            sale_id, sale.stream_id,
+        )
         raise DirectSaleNotActiveException()
     if remaining == -2:
+        logger.warning(
+            "[DIRECT_SALE][PURCHASE] Insufficient stock | sale_id=%s buyer=%s qty=%s",
+            sale_id, user.id, data.quantity,
+        )
         raise DirectSaleInsufficientStockException()
 
     # remaining >= 0: başarılı
@@ -367,8 +409,11 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     sale.remaining_stock = remaining
     if remaining == 0:
         sale.status = "sold_out"
-        # Scheduler 5 sn sonra ended'a geçirecek — DB'ye yazıyoruz (durable)
         sale.scheduled_end_at = datetime.now(timezone.utc) + timedelta(seconds=5)
+        logger.info(
+            "[DIRECT_SALE][PURCHASE] SOLD OUT triggered | sale_id=%s scheduled_end_at=%s",
+            sale_id, sale.scheduled_end_at,
+        )
 
     # DM: host → buyer (aynı commit'te)
     dm_content = _build_purchase_dm(
@@ -466,10 +511,14 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
             pref_key="direct_sale_purchased",
         ))
     except Exception as exc:
-        logger.warning("[SATIN ALMA] push_notification başarısız | buyer=%s | %s", user.id, exc)
+        logger.warning(
+            "[DIRECT_SALE][PURCHASE] push failed | buyer=%s | %s", user.id, exc,
+        )
 
-    logger.info("[SATIN ALMA] | sale_id=%s buyer=%s qty=%s remaining=%s",
-                sale_id, user.id, data.quantity, remaining)
+    logger.info(
+        "[DIRECT_SALE][PURCHASE] OK | sale_id=%s order_id=%s buyer=%s qty=%s remaining=%s",
+        sale_id, order.id, user.id, data.quantity, remaining,
+    )
 
     return {
         "order_id": order.id,

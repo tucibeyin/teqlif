@@ -46,6 +46,10 @@ async def start_sale(stream_id: int, sale_id: int, title: str, price: float,
                      proof_image_url: Optional[str]) -> None:
     """Yeni satış başlat: hash + stock key'lerini yükle."""
     from app.utils.redis_client import get_redis
+    logger.debug(
+        "[DIRECT_SALE][REDIS] start | stream=%s sale_id=%s stock=%s",
+        stream_id, sale_id, total_stock,
+    )
     redis = await get_redis()
     state_key = _state_key(stream_id)
     stock_key = _stock_key(stream_id)
@@ -70,12 +74,14 @@ async def start_sale(stream_id: int, sale_id: int, title: str, price: float,
 
 
 async def pause_sale(stream_id: int) -> None:
+    logger.debug("[DIRECT_SALE][REDIS] pause | stream=%s", stream_id)
     from app.utils.redis_client import get_redis
     redis = await get_redis()
     await redis.hset(_state_key(stream_id), "status", "paused")
 
 
 async def resume_sale(stream_id: int) -> None:
+    logger.debug("[DIRECT_SALE][REDIS] resume | stream=%s", stream_id)
     from app.utils.redis_client import get_redis
     redis = await get_redis()
     await redis.hset(_state_key(stream_id), "status", "active")
@@ -83,6 +89,7 @@ async def resume_sale(stream_id: int) -> None:
 
 async def set_sold_out(stream_id: int) -> None:
     """Stok sıfırlandı — status'u sold_out yap (key'ler henüz silinmez)."""
+    logger.debug("[DIRECT_SALE][REDIS] set_sold_out | stream=%s", stream_id)
     from app.utils.redis_client import get_redis
     redis = await get_redis()
     await redis.hset(_state_key(stream_id), "status", "sold_out")
@@ -90,6 +97,7 @@ async def set_sold_out(stream_id: int) -> None:
 
 async def end_sale(stream_id: int, end_reason: str) -> None:
     """Satışı sonlandır ve LIFECYCLE key'lerini temizle."""
+    logger.debug("[DIRECT_SALE][REDIS] end | stream=%s reason=%s", stream_id, end_reason)
     from app.utils.redis_client import get_redis
     redis = await get_redis()
     await redis.hset(_state_key(stream_id), mapping={
@@ -101,6 +109,7 @@ async def end_sale(stream_id: int, end_reason: str) -> None:
 
 async def cancel_sale(stream_id: int) -> None:
     """Satışı iptal et ve LIFECYCLE key'lerini temizle."""
+    logger.debug("[DIRECT_SALE][REDIS] cancel | stream=%s", stream_id)
     from app.utils.redis_client import get_redis
     redis = await get_redis()
     await redis.hset(_state_key(stream_id), "status", "cancelled")
@@ -118,7 +127,12 @@ async def decrement_stock(stream_id: int, quantity: int) -> int:
     redis = await get_redis()
     script = redis.register_script(_DECREMENT_STOCK_SCRIPT)
     result = await script(keys=[_stock_key(stream_id)], args=[quantity])
-    return int(result)
+    remaining = int(result)
+    logger.debug(
+        "[DIRECT_SALE][REDIS] decrement | stream=%s qty=%s → remaining=%s",
+        stream_id, quantity, remaining,
+    )
+    return remaining
 
 
 async def update_remaining_stock(stream_id: int, remaining: int) -> None:
@@ -161,5 +175,9 @@ async def publish_direct_sale(stream_id: int, payload: dict) -> None:
     Auction broadcast kanalını yeniden kullanır — aynı WS bağlantısı,
     event type field'i ile ayrışır.
     """
+    logger.debug(
+        "[DIRECT_SALE][REDIS] publish | stream=%s type=%s",
+        stream_id, payload.get("type"),
+    )
     from app.use_cases.auctions.auction_utils import broadcast_to_stream_viewers
     await broadcast_to_stream_viewers(stream_id, payload)
