@@ -86,7 +86,9 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     final prevStatus = state.status;
     switch (type) {
       case 'direct_sale_started':
-        state = DirectSaleState.fromJson(j);
+        final parsed = DirectSaleState.fromJson(j);
+        _dsLog('STATE', 'direct_sale_started parsed | status=${parsed.status} saleId=${parsed.saleId}');
+        state = parsed;
       case 'direct_sale_paused':
         state = state.copyWith(status: 'paused');
       case 'direct_sale_resumed':

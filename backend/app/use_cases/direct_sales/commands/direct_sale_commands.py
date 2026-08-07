@@ -128,6 +128,7 @@ async def start_sale(stream_id: int, data: DirectSaleStartIn,
     payload = {
         "type": WS.DIRECT_SALE_STARTED,
         "sale_id": sale.id,
+        "status": "active",
         "title": title,
         "price": float(data.price),
         "total_stock": data.stock_quantity,
