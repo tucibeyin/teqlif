@@ -147,8 +147,8 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'pause | saleId=${state.saleId}');
     try {
-      state = await DirectSaleService.pauseSale(state.saleId);
-      _dsLog('API', 'pause OK | status=${state.status}');
+      await DirectSaleService.pauseSale(state.saleId);
+      _dsLog('API', 'pause OK (WS will update state)');
     } catch (e) {
       _dsLog('API', 'pause ERROR | $e');
       handleError(e, loc);
@@ -162,8 +162,8 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'resume | saleId=${state.saleId}');
     try {
-      state = await DirectSaleService.resumeSale(state.saleId);
-      _dsLog('API', 'resume OK | status=${state.status}');
+      await DirectSaleService.resumeSale(state.saleId);
+      _dsLog('API', 'resume OK (WS will update state)');
     } catch (e) {
       _dsLog('API', 'resume ERROR | $e');
       handleError(e, loc);
@@ -177,8 +177,8 @@ class DirectSaleHostNotifier extends StateNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'end | saleId=${state.saleId}');
     try {
-      state = await DirectSaleService.endSale(state.saleId);
-      _dsLog('API', 'end OK | status=${state.status}');
+      await DirectSaleService.endSale(state.saleId);
+      _dsLog('API', 'end OK (WS will update state)');
     } catch (e) {
       _dsLog('API', 'end ERROR | $e');
       handleError(e, loc);

@@ -40,25 +40,22 @@ class DirectSaleService {
     return DirectSaleState.fromJson(body as Map<String, dynamic>);
   }
 
-  static Future<DirectSaleState> pauseSale(int saleId) async {
-    final body = await apiCall(
+  static Future<void> pauseSale(int saleId) async {
+    await apiCall(
       () async => http.post(Uri.parse(_url('$saleId/pause')), headers: await _headers()),
     );
-    return DirectSaleState.fromJson(body as Map<String, dynamic>);
   }
 
-  static Future<DirectSaleState> resumeSale(int saleId) async {
-    final body = await apiCall(
+  static Future<void> resumeSale(int saleId) async {
+    await apiCall(
       () async => http.post(Uri.parse(_url('$saleId/resume')), headers: await _headers()),
     );
-    return DirectSaleState.fromJson(body as Map<String, dynamic>);
   }
 
-  static Future<DirectSaleState> endSale(int saleId) async {
-    final body = await apiCall(
+  static Future<void> endSale(int saleId) async {
+    await apiCall(
       () async => http.post(Uri.parse(_url('$saleId/end')), headers: await _headers()),
     );
-    return DirectSaleState.fromJson(body as Map<String, dynamic>);
   }
 
   /// [ordersVoided] true → mevcut siparişler iptal edilir; false → geçerli kalır.
