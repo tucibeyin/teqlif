@@ -155,15 +155,15 @@ async def get_state(stream_id: int) -> Optional[dict]:
     if not data:
         return None
     return {
-        "sale_id":           int(data[b"sale_id"]),
-        "status":            data[b"status"].decode(),
-        "title":             data[b"title"].decode(),
-        "price":             float(data[b"price"]),
-        "total_stock":       int(data[b"total_stock"]),
-        "remaining_stock":   int(data[b"remaining_stock"]),
-        "product_image_url": data[b"product_image_url"].decode() or None,
-        "proof_image_url":   data[b"proof_image_url"].decode() or None,
-        "end_reason":        data[b"end_reason"].decode() or None,
+        "sale_id":           int(data["sale_id"]),
+        "status":            data["status"],
+        "title":             data["title"],
+        "price":             float(data["price"]),
+        "total_stock":       int(data["total_stock"]),
+        "remaining_stock":   int(data["remaining_stock"]),
+        "product_image_url": data["product_image_url"] or None,
+        "proof_image_url":   data["proof_image_url"] or None,
+        "end_reason":        data["end_reason"] or None,
     }
 
 
