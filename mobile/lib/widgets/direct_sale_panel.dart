@@ -1315,9 +1315,17 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
         setState(() { _loading = false; _formError = loc.t('directSaleFormValidationError'); });
         return;
       }
+      final price = TeqNumberFormatter.parse(_priceCtrl.text.trim())?.toDouble();
+      final stock = int.tryParse(_stockCtrl.text.trim());
+      if (price == null || price <= 0 || stock == null || stock < 1) {
+        setState(() { _loading = false; _formError = loc.t('directSaleFormValidationError'); });
+        return;
+      }
       await ref.read(directSaleHostProvider(widget.streamId).notifier).startSale(
             widget.streamId,
             listingId: _selectedListing!['id'] as int,
+            price: price,
+            stock: stock,
             proofImageUrl: proofUrl,
             loc: loc,
           );
@@ -1396,7 +1404,12 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                       : item['image_url'] as String?;
                   final thumbUrl = rawImg != null ? imgUrl(rawImg) : null;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedListing = item),
+                    onTap: () => setState(() {
+                      _selectedListing = item;
+                      if (item['price'] != null) {
+                        _priceCtrl.text = TeqNumberFormatter.format(item['price'], fieldKey: 'price');
+                      }
+                    }),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1466,7 +1479,24 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-              )
+              ),
+              if (_fromListing) ...[
+                const SizedBox(height: 8),
+                _field(
+                  loc.t('directSaleFormPrice'),
+                  _priceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  prefixText: '₺ ',
+                  inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
+                ),
+                const SizedBox(height: 8),
+                _field(
+                  loc.t('directSaleFormStock'),
+                  _stockCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+              ]
             else ...[
               _field(loc.t('directSaleFormProductTitle'), _titleCtrl),
               const SizedBox(height: 8),
