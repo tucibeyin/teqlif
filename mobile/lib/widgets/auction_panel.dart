@@ -17,6 +17,7 @@ import '../services/auction_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/number_formatter.dart';
+import 'proof_capture_sheet.dart';
 import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
@@ -268,10 +269,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
     String? proofUrl;
     if (widget.captureProofImage != null) {
-      proofUrl = await _showProofCaptureDialog();
-      // If proofUrl is null, user pressed outside or cancelled.
+      proofUrl = await showProofCaptureSheet(
+        context,
+        captureProofImage: widget.captureProofImage!,
+        loc: loc,
+      );
       if (proofUrl == null) return;
-      if (proofUrl.isEmpty) proofUrl = null; // Skipped
+      if (proofUrl.isEmpty) proofUrl = null;
     }
 
     try {
@@ -284,140 +288,6 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
-  }
-
-  Future<String?> _showProofCaptureDialog() async {
-    final loc = ref.watch(localizationProvider);
-    return showModalBottomSheet<String?>(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        bool isLoading = false;
-        return StatefulBuilder(
-          builder: (ctx, setLocalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-                left: 20,
-                right: 20,
-                top: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '📷 ${loc.t("hostAcceptSaleDialogTitle")}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C).withValues(alpha: 0.15),
-                      border: Border.all(
-                        color: const Color(0xFFEA580C).withValues(alpha: 0.5),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.camera_alt,
-                          color: Color(0xFFEA580C),
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            loc.t("hostAcceptSaleDialogBody"),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  if (isLoading)
-                    const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFEA580C),
-                      ),
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEA580C),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: widget.captureProofImage == null
-                              ? null
-                              : () async {
-                                  setLocalState(() => isLoading = true);
-                                  try {
-                                    final url = await widget.captureProofImage!
-                                        .call();
-                                    if (context.mounted)
-                                      Navigator.pop(ctx, url ?? '');
-                                  } catch (e) {
-                                    setLocalState(() => isLoading = false);
-                                    _setMsg(loc.t("errorPhotoCapture"), error: true);
-                                  }
-                                },
-                          child: Text(
-                            loc.t("hostAcceptSaleBtnCapture"),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF475569)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () => Navigator.pop(ctx, ''),
-                          child: Text(
-                            loc.t("hostAcceptSaleBtnSkip"),
-                            style: const TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   Future<void> _endAuction() async {
@@ -1271,7 +1141,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       // Satış kanıtı popup'ı
       String? proofUrl;
       if (widget.captureProofImage != null) {
-        proofUrl = await _showProofCaptureDialog();
+        proofUrl = await showProofCaptureSheet(
+          context,
+          captureProofImage: widget.captureProofImage!,
+          loc: loc,
+        );
         if (proofUrl == null) return;
         if (proofUrl.isEmpty) proofUrl = null;
       }
@@ -1451,15 +1325,20 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   Future<void> _buyItNowAccept() async {
     if (_binLoading) return;
 
+    final loc = ref.read(localizationProvider);
     debugPrint('[DEBUG_PROOF] _buyItNowAccept started');
     String? proofUrl;
     if (widget.captureProofImage != null) {
       debugPrint(
-        '[DEBUG_PROOF] Calling _showProofCaptureDialog from _buyItNowAccept',
+        '[DEBUG_PROOF] Calling showProofCaptureSheet from _buyItNowAccept',
       );
-      proofUrl = await _showProofCaptureDialog();
-      debugPrint('[DEBUG_PROOF] _showProofCaptureDialog returned: $proofUrl');
-      // If proofUrl is null, user pressed outside or cancelled.
+      proofUrl = await showProofCaptureSheet(
+        context,
+        captureProofImage: widget.captureProofImage!,
+        loc: loc,
+      );
+      debugPrint('[DEBUG_PROOF] showProofCaptureSheet returned: $proofUrl');
+      // If proofUrl is null, user cancelled (isDismissible:false — shouldn't happen).
       if (proofUrl == null) {
         debugPrint('[DEBUG_PROOF] User cancelled proof capture for Buy It Now');
         return;

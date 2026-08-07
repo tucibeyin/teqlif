@@ -11,6 +11,8 @@ import '../services/analytics_service.dart';
 import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
+import 'fullscreen_image_viewer.dart';
+import 'proof_capture_sheet.dart';
 import 'swipe_paginated_list.dart';
 
 class DirectSalePanel extends ConsumerStatefulWidget {
@@ -487,25 +489,31 @@ class _ProductDetailSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // Büyük ürün görseli
+            // Büyük ürün görseli — tam ekran için dokunulabilir
             if (initialState.displayImageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: imgUrl(initialState.displayImageUrl),
-                  width: double.infinity,
-                  height: 220,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Container(
+              GestureDetector(
+                onTap: () => showFullscreenImage(
+                  context,
+                  imgUrl(initialState.displayImageUrl),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImage(
+                    imageUrl: imgUrl(initialState.displayImageUrl),
+                    width: double.infinity,
                     height: 220,
-                    decoration: BoxDecoration(
-                      color: Colors.white10,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.white38,
-                      size: 48,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => Container(
+                      height: 220,
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white38,
+                        size: 48,
+                      ),
                     ),
                   ),
                 ),
@@ -1096,12 +1104,16 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
 
     String? proofUrl;
     if (widget.captureProofImage != null) {
-      final confirmed = await _showProofDialog(loc);
-      if (confirmed == false) {
+      final result = await showProofCaptureSheet(
+        context,
+        captureProofImage: widget.captureProofImage!,
+        loc: loc,
+      );
+      if (result == null) {
         setState(() => _loading = false);
         return;
       }
-      proofUrl = confirmed as String?;
+      proofUrl = result.isEmpty ? null : result;
     }
 
     if (_fromListing) {
@@ -1135,45 +1147,6 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
 
     setState(() => _loading = false);
     if (context.mounted) Navigator.pop(context);
-  }
-
-  Future<dynamic> _showProofDialog(TranslationPack loc) {
-    return showDialog<dynamic>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: Text(
-          loc.t('directSaleProofDialogTitle'),
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          loc.t('directSaleProofDialogBody'),
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              loc.t('cancel'),
-              style: const TextStyle(color: Colors.white54),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              final url = await widget.captureProofImage!();
-              if (context.mounted) Navigator.pop(context, url);
-            },
-            child: Text(
-              loc.t('directSaleStartBtn'),
-              style: const TextStyle(
-                color: kPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
