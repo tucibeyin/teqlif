@@ -193,6 +193,17 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
         logger.info("[WS] İLK STATE GÖNDERİLDİ | stream_id=%s status=%s", stream_id, state.get("status"))
         await websocket.send_json({"type": WS.AUCTION_STATE, **state})
 
+        # Direct sale aktifse bağlanan izleyiciye mevcut state'i hemen ilet.
+        # Aynı WS kanalını paylaştığından burada gönderilmesi en doğal yer.
+        from app.use_cases.direct_sales import direct_sale_redis as ds_redis
+        ds_state = await ds_redis.get_state(stream_id)
+        if ds_state and ds_state.get("status") not in (None, "ended", "cancelled"):
+            logger.info(
+                "[DIRECT_SALE][WS] initial state sent | stream=%s status=%s",
+                stream_id, ds_state.get("status"),
+            )
+            await websocket.send_json({"type": WS.DIRECT_SALE_STARTED, **ds_state})
+
         missed = await outbox_replay(stream_id, count=10)
         for event in reversed(missed):
             try:
