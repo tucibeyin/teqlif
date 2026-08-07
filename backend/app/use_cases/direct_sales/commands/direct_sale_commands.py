@@ -122,6 +122,7 @@ async def start_sale(stream_id: int, data: DirectSaleStartIn,
         total_stock=data.stock_quantity,
         product_image_url=product_image_url,
         proof_image_url=data.proof_image_url,
+        listing_id=data.listing_id,
     )
 
     await uow.session.commit()
@@ -136,6 +137,7 @@ async def start_sale(stream_id: int, data: DirectSaleStartIn,
         "remaining_stock": data.stock_quantity,
         "product_image_url": product_image_url,
         "proof_image_url": data.proof_image_url,
+        "listing_id": data.listing_id,
     }
     fire_and_forget(redis_mgr.publish_direct_sale(stream_id, payload))
     fire_and_forget(buffer_direct_sale_event(

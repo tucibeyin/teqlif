@@ -9,6 +9,7 @@ class DirectSaleState {
   final String? productImageUrl;
   final String? proofImageUrl;
   final String? endReason; // sold_out | host_ended | stream_closed
+  final int? listingId;
 
   const DirectSaleState({
     required this.status,
@@ -20,6 +21,7 @@ class DirectSaleState {
     this.productImageUrl,
     this.proofImageUrl,
     this.endReason,
+    this.listingId,
   });
 
   factory DirectSaleState.idle() => const DirectSaleState(
@@ -41,6 +43,7 @@ class DirectSaleState {
         productImageUrl: j['product_image_url'] as String?,
         proofImageUrl: j['proof_image_url'] as String?,
         endReason: j['end_reason'] as String?,
+        listingId: (j['listing_id'] as num?)?.toInt(),
       );
 
   DirectSaleState copyWith({
@@ -53,6 +56,7 @@ class DirectSaleState {
     String? productImageUrl,
     String? proofImageUrl,
     String? endReason,
+    int? listingId,
   }) =>
       DirectSaleState(
         status: status ?? this.status,
@@ -64,6 +68,7 @@ class DirectSaleState {
         productImageUrl: productImageUrl ?? this.productImageUrl,
         proofImageUrl: proofImageUrl ?? this.proofImageUrl,
         endReason: endReason ?? this.endReason,
+        listingId: listingId ?? this.listingId,
       );
 
   bool get isIdle => status == 'idle';

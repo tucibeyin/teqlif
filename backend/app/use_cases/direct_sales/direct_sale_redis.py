@@ -43,12 +43,13 @@ return remaining
 
 async def start_sale(stream_id: int, sale_id: int, title: str, price: float,
                      total_stock: int, product_image_url: Optional[str],
-                     proof_image_url: Optional[str]) -> None:
+                     proof_image_url: Optional[str],
+                     listing_id: Optional[int] = None) -> None:
     """Yeni satış başlat: hash + stock key'lerini yükle."""
     from app.utils.redis_client import get_redis
     logger.debug(
-        "[DIRECT_SALE][REDIS] start | stream=%s sale_id=%s stock=%s",
-        stream_id, sale_id, total_stock,
+        "[DIRECT_SALE][REDIS] start | stream=%s sale_id=%s stock=%s listing_id=%s",
+        stream_id, sale_id, total_stock, listing_id,
     )
     redis = await get_redis()
     state_key = _state_key(stream_id)
@@ -64,6 +65,7 @@ async def start_sale(stream_id: int, sale_id: int, title: str, price: float,
         "product_image_url": product_image_url or "",
         "proof_image_url":   proof_image_url or "",
         "end_reason":        "",
+        "listing_id":        str(listing_id) if listing_id else "",
     })
     await redis.set(stock_key, total_stock)
 
@@ -154,6 +156,7 @@ async def get_state(stream_id: int) -> Optional[dict]:
     data = await redis.hgetall(_state_key(stream_id))
     if not data:
         return None
+    raw_lid = data.get("listing_id", "")
     return {
         "sale_id":           int(data["sale_id"]),
         "status":            data["status"],
@@ -164,6 +167,7 @@ async def get_state(stream_id: int) -> Optional[dict]:
         "product_image_url": data["product_image_url"] or None,
         "proof_image_url":   data["proof_image_url"] or None,
         "end_reason":        data["end_reason"] or None,
+        "listing_id":        int(raw_lid) if raw_lid else None,
     }
 
 

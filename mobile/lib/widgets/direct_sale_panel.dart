@@ -11,9 +11,14 @@ import '../services/analytics_service.dart';
 import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
+import '../services/listing_service.dart';
 import 'fullscreen_image_viewer.dart';
 import 'proof_capture_sheet.dart';
 import 'swipe_paginated_list.dart';
+
+final _listingDetailProvider = FutureProvider.family.autoDispose<Map<String, dynamic>?, int>(
+  (ref, listingId) => ListingService.getListingById(listingId),
+);
 
 class DirectSalePanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -444,7 +449,7 @@ class _ActivePanel extends ConsumerWidget {
 
 // ── Ürün Detay Modal ──────────────────────────────────────────────────────────
 
-class _ProductDetailSheet extends ConsumerWidget {
+class _ProductDetailSheet extends ConsumerStatefulWidget {
   final int streamId;
   final DirectSaleState initialState;
   final bool isHost;
@@ -460,20 +465,33 @@ class _ProductDetailSheet extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ProductDetailSheet> createState() => _ProductDetailSheetState();
+}
+
+class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
+  final PageController _pageCtrl = PageController();
+  int _pageIndex = 0;
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    // Stok ve durum anlık izleniyor — satıldıkça güncellenir
-    final live = ref.watch(directSaleHostProvider(streamId));
+    final live = ref.watch(directSaleHostProvider(widget.streamId));
     final remaining = live.remainingStock;
-    final total = live.totalStock > 0 ? live.totalStock : initialState.totalStock;
+    final total = live.totalStock > 0 ? live.totalStock : widget.initialState.totalStock;
     final stockFraction = total > 0 ? remaining / total : 0.0;
-    final canBuy = live.canPurchase && !isHost;
+    final canBuy = live.canPurchase && !widget.isHost;
+    final listingId = widget.initialState.listingId;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Tutamak çizgisi
@@ -489,40 +507,28 @@ class _ProductDetailSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // Büyük ürün görseli — tam ekran için dokunulabilir
-            if (initialState.displayImageUrl != null)
+            // Görsel alanı
+            if (listingId != null)
+              _ListingImageGallery(
+                listingId: listingId,
+                fallbackUrl: widget.initialState.displayImageUrl,
+                pageCtrl: _pageCtrl,
+                pageIndex: _pageIndex,
+                onPageChanged: (i) => setState(() => _pageIndex = i),
+              )
+            else if (widget.initialState.displayImageUrl != null)
               GestureDetector(
                 onTap: () => showFullscreenImage(
                   context,
-                  imgUrl(initialState.displayImageUrl),
+                  imgUrl(widget.initialState.displayImageUrl),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: imgUrl(initialState.displayImageUrl),
-                    width: double.infinity,
-                    height: 220,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      height: 220,
-                      decoration: BoxDecoration(
-                        color: Colors.white10,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.white38,
-                        size: 48,
-                      ),
-                    ),
-                  ),
-                ),
+                child: _singleImage(imgUrl(widget.initialState.displayImageUrl)),
               ),
             const SizedBox(height: 16),
 
             // Başlık
             Text(
-              initialState.title,
+              widget.initialState.title,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -533,13 +539,17 @@ class _ProductDetailSheet extends ConsumerWidget {
 
             // Fiyat
             Text(
-              '₺ ${TeqNumberFormatter.format(initialState.price, fieldKey: 'price')}',
+              '₺ ${TeqNumberFormatter.format(widget.initialState.price, fieldKey: 'price')}',
               style: const TextStyle(
                 color: kPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),
             ),
+
+            // İlan detayları (kategori, durum, açıklama)
+            if (listingId != null) _ListingDetails(listingId: listingId),
+
             const SizedBox(height: 16),
 
             // Stok çubuğu
@@ -576,14 +586,13 @@ class _ProductDetailSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // Satın al butonu (sadece izleyici)
             if (canBuy)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    onBuy?.call();
+                    widget.onBuy?.call();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimary,
@@ -618,6 +627,190 @@ class _ProductDetailSheet extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _singleImage(String url) => ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          width: double.infinity,
+          height: 220,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => _imagePlaceholder(),
+        ),
+      );
+
+  Widget _imagePlaceholder() => Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.image_not_supported, color: Colors.white38, size: 48),
+      );
+}
+
+// ── Listing image gallery (PageView + dots) ───────────────────────────────────
+
+class _ListingImageGallery extends ConsumerWidget {
+  final int listingId;
+  final String? fallbackUrl;
+  final PageController pageCtrl;
+  final int pageIndex;
+  final ValueChanged<int> onPageChanged;
+
+  const _ListingImageGallery({
+    required this.listingId,
+    required this.fallbackUrl,
+    required this.pageCtrl,
+    required this.pageIndex,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final listingAsync = ref.watch(_listingDetailProvider(listingId));
+    return listingAsync.when(
+      loading: () => _buildGallery(context, fallbackUrl != null ? [fallbackUrl!] : []),
+      error: (_, __) => _buildGallery(context, fallbackUrl != null ? [fallbackUrl!] : []),
+      data: (listing) {
+        final rawUrls = (listing?['image_urls'] as List?)
+                ?.map((e) => e as String)
+                .where((u) => u.isNotEmpty)
+                .toList() ??
+            [];
+        final primary = listing?['image_url'] as String? ?? fallbackUrl;
+        // Deduplicate: image_urls may or may not include primary
+        final all = rawUrls.isNotEmpty
+            ? rawUrls
+            : (primary != null ? [primary] : <String>[]);
+        return _buildGallery(context, all);
+      },
+    );
+  }
+
+  Widget _buildGallery(BuildContext context, List<String> urls) {
+    if (urls.isEmpty) {
+      return Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.image_not_supported, color: Colors.white38, size: 48),
+      );
+    }
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 220,
+            child: PageView.builder(
+              controller: pageCtrl,
+              onPageChanged: onPageChanged,
+              itemCount: urls.length,
+              itemBuilder: (ctx, i) => GestureDetector(
+                onTap: () => showFullscreenImage(ctx, imgUrl(urls[i])),
+                child: CachedNetworkImage(
+                  imageUrl: imgUrl(urls[i]),
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => const Center(
+                    child: Icon(Icons.image_not_supported, color: Colors.white38, size: 48),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (urls.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              urls.length,
+              (i) => AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == pageIndex ? 16 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == pageIndex ? kPrimary : Colors.white30,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Listing details section (kategori, durum, açıklama) ──────────────────────
+
+class _ListingDetails extends ConsumerWidget {
+  final int listingId;
+  const _ListingDetails({required this.listingId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final listingAsync = ref.watch(_listingDetailProvider(listingId));
+    return listingAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (listing) {
+        if (listing == null) return const SizedBox.shrink();
+        final category = listing['category'] as String?;
+        final subcategory = listing['subcategory'] as String?;
+        final condition = listing['condition'] as String?;
+        final description = (listing['description'] as String?)?.trim();
+        final hasChips = category != null || condition != null;
+        if (!hasChips && (description == null || description.isEmpty)) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12),
+            if (hasChips)
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  if (category != null)
+                    _chip(subcategory != null ? '$category · $subcategory' : category),
+                  if (condition != null) _chip(condition),
+                ],
+              ),
+            if (description != null && description.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                description,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _chip(String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
+        ),
+      );
 }
 
 // ── Banner ─────────────────────────────────────────────────────────────────────
@@ -1102,8 +1295,9 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
     final loc = ref.read(localizationProvider);
     setState(() { _loading = true; _formError = null; });
 
+    // İlanlı modda zaten ilan fotosu var — ispat fotoğrafı gerekmez
     String? proofUrl;
-    if (widget.captureProofImage != null) {
+    if (widget.captureProofImage != null && !_fromListing) {
       final result = await showProofCaptureSheet(
         context,
         captureProofImage: widget.captureProofImage!,

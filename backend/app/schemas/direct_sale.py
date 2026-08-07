@@ -69,6 +69,7 @@ class DirectSaleStateOut(BaseModel):
     product_image_url: Optional[str] = None
     proof_image_url: Optional[str] = None
     end_reason: Optional[str] = None
+    listing_id: Optional[int] = None
 
 
 class DirectSaleSummaryOut(BaseModel):
