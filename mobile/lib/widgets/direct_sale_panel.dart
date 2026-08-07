@@ -134,8 +134,10 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
 
     if (!dsState.isIdle) {
       return _ActivePanel(
+        streamId: widget.streamId,
         state: dsState,
         isHost: widget.isHost,
+        onWin: widget.onWin,
         onPause: () => ref
             .read(directSaleHostProvider(widget.streamId).notifier)
             .pause(ref.read(localizationProvider)),
@@ -248,8 +250,10 @@ class _StartFormTriggerState extends ConsumerState<_StartFormTrigger> {
 // ── Active Panel ───────────────────────────────────────────────────────────────
 
 class _ActivePanel extends ConsumerWidget {
+  final int streamId;
   final DirectSaleState state;
   final bool isHost;
+  final VoidCallback? onWin;
   final VoidCallback onPause;
   final VoidCallback onResume;
   final void Function(BuildContext) onEnd;
@@ -257,8 +261,10 @@ class _ActivePanel extends ConsumerWidget {
   final VoidCallback onBuy;
 
   const _ActivePanel({
+    required this.streamId,
     required this.state,
     required this.isHost,
+    this.onWin,
     required this.onPause,
     required this.onResume,
     required this.onEnd,
@@ -279,63 +285,68 @@ class _ActivePanel extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Ürün kartı ──────────────────────────────────────────────────
-          Row(
-            children: [
-              if (state.displayImageUrl != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: imgUrl(state.displayImageUrl),
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.white38,
-                      size: 52,
+          // ── Ürün kartı (tıklanabilir → detay modal) ──────────────────────
+          GestureDetector(
+            onTap: () => _showProductDetail(context),
+            child: Row(
+              children: [
+                if (state.displayImageUrl != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: imgUrl(state.displayImageUrl),
+                      width: 52,
+                      height: 52,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white38,
+                        size: 52,
+                      ),
                     ),
                   ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '₺ ${TeqNumberFormatter.format(state.price, fieldKey: 'price')}',
+                        style: const TextStyle(
+                          color: kPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    _StatusBadge(state: state, loc: loc),
+                    const SizedBox(height: 4),
                     Text(
-                      state.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '₺ ${TeqNumberFormatter.format(state.price, fieldKey: 'price')}',
-                      style: const TextStyle(
-                        color: kPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      '${state.remainingStock}/${state.totalStock}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _StatusBadge(state: state, loc: loc),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${state.remainingStock}/${state.totalStock}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(width: 4),
+                const Icon(Icons.expand_more, color: Colors.white38, size: 16),
+              ],
+            ),
           ),
 
           if (state.isSoldOut)
@@ -406,6 +417,196 @@ class _ActivePanel extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  void _showProductDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (_) => _ProductDetailSheet(
+        streamId: streamId,
+        initialState: state,
+        isHost: isHost,
+        onBuy: isHost ? null : onBuy,
+        onWin: onWin,
+      ),
+    );
+  }
+}
+
+// ── Ürün Detay Modal ──────────────────────────────────────────────────────────
+
+class _ProductDetailSheet extends ConsumerWidget {
+  final int streamId;
+  final DirectSaleState initialState;
+  final bool isHost;
+  final VoidCallback? onBuy;
+  final VoidCallback? onWin;
+
+  const _ProductDetailSheet({
+    required this.streamId,
+    required this.initialState,
+    required this.isHost,
+    this.onBuy,
+    this.onWin,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    // Stok ve durum anlık izleniyor — satıldıkça güncellenir
+    final live = ref.watch(directSaleHostProvider(streamId));
+    final remaining = live.remainingStock;
+    final total = live.totalStock > 0 ? live.totalStock : initialState.totalStock;
+    final stockFraction = total > 0 ? remaining / total : 0.0;
+    final canBuy = live.canPurchase && !isHost;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Tutamak çizgisi
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Büyük ürün görseli
+            if (initialState.displayImageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: imgUrl(initialState.displayImageUrl),
+                  width: double.infinity,
+                  height: 220,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.image_not_supported,
+                      color: Colors.white38,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+
+            // Başlık
+            Text(
+              initialState.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // Fiyat
+            Text(
+              '₺ ${TeqNumberFormatter.format(initialState.price, fieldKey: 'price')}',
+              style: const TextStyle(
+                color: kPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Stok çubuğu
+            Row(
+              children: [
+                Text(
+                  loc.t('directSaleFormStock'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                ),
+                const Spacer(),
+                Text(
+                  '$remaining / $total',
+                  style: TextStyle(
+                    color: remaining <= (total * 0.2).ceil()
+                        ? Colors.redAccent
+                        : Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: stockFraction.clamp(0.0, 1.0),
+                minHeight: 6,
+                backgroundColor: Colors.white12,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  stockFraction > 0.2 ? kPrimary : Colors.redAccent,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Satın al butonu (sadece izleyici)
+            if (canBuy)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onBuy?.call();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    loc.t('directSaleBuyBtn'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+
+            if (!canBuy && live.isSoldOut)
+              Center(
+                child: Text(
+                  loc.t('directSaleSoldOutBanner'),
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
