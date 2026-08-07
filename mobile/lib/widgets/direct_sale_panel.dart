@@ -128,6 +128,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
         streamId: widget.streamId,
         hostUserId: null,
         captureProofImage: widget.captureProofImage,
+        onCancelled: widget.onSaleEnded,
       );
     }
 
@@ -178,11 +179,13 @@ class _StartFormTrigger extends ConsumerStatefulWidget {
   final int streamId;
   final int? hostUserId;
   final Future<String?> Function()? captureProofImage;
+  final VoidCallback? onCancelled;
 
   const _StartFormTrigger({
     required this.streamId,
     required this.hostUserId,
     required this.captureProofImage,
+    this.onCancelled,
   });
 
   @override
@@ -208,6 +211,10 @@ class _StartFormTriggerState extends ConsumerState<_StartFormTrigger> {
         captureProofImage: widget.captureProofImage,
       ),
     );
+    // Dialog iptal edildi ve satış başlamadıysa commerce panele geri dön.
+    if (!mounted) return;
+    final dsState = ref.read(directSaleHostProvider(widget.streamId));
+    if (dsState.isIdle) widget.onCancelled?.call();
   }
 
   @override
