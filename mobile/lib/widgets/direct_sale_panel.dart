@@ -1192,28 +1192,83 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
             if (_fromListing)
               SwipePaginatedList<Map<String, dynamic>>(
                 fetchPage: _fetchListings,
-                itemHeight: 64,
-                itemBuilder: (ctx, item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    item['title'] as String? ?? '',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    item['price'] != null
-                        ? '₺${item['price']}'
-                        : loc.t('directSaleFormNoListing'),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                  selected: _selectedListing?['id'] == item['id'],
-                  selectedTileColor: kPrimary.withOpacity(0.1),
-                  onTap: () => setState(() => _selectedListing = item),
-                ),
+                itemHeight: 60,
+                maxVisible: 4,
+                itemBuilder: (ctx, item) {
+                  final isSelected = _selectedListing?['id'] == item['id'];
+                  final imgs = item['image_urls'] as List? ?? [];
+                  final rawImg = imgs.isNotEmpty
+                      ? imgs[0] as String?
+                      : item['image_url'] as String?;
+                  final thumbUrl = rawImg != null ? imgUrl(rawImg) : null;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedListing = item),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? kPrimary.withValues(alpha: 0.15)
+                            : const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? kPrimary : const Color(0xFF334155),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: thumbUrl != null && thumbUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: thumbUrl,
+                                    width: 38,
+                                    height: 38,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, __, ___) => const _ListingThumbPlaceholder(),
+                                  )
+                                : const _ListingThumbPlaceholder(),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  item['title'] as String? ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                if (item['price'] != null)
+                                  Text(
+                                    '₺ ${TeqNumberFormatter.format(item['price'], fieldKey: 'price')}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF4ADE80),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle, color: kPrimary, size: 18),
+                        ],
+                      ),
+                    ),
+                  );
+                },
                 emptyWidget: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Text(
                     loc.t('directSaleFormNoListing'),
-                    style: const TextStyle(color: Colors.white54),
+                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -1410,4 +1465,15 @@ class _SuggestionChip extends ConsumerWidget {
       },
     );
   }
+}
+
+class _ListingThumbPlaceholder extends StatelessWidget {
+  const _ListingThumbPlaceholder();
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 38,
+        height: 38,
+        color: const Color(0xFF1E293B),
+        child: const Icon(Icons.image, color: Color(0xFF475569), size: 18),
+      );
 }
