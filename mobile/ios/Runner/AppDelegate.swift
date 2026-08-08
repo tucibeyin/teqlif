@@ -240,7 +240,9 @@ import Security
       // Capture BEFORE creating data so it can be embedded in extra.
       // Must be read before showCallkitIncoming — CallKit UI appearance drives the app to
       // inactive, so any check done after that point would return the wrong state.
-      let appIsActive = UIApplication.shared.applicationState == .active
+      let appState = UIApplication.shared.applicationState
+      let appIsActive = appState == .active
+      print("[CALL_PROCESS][\(ts())][PUSH][DBG] applicationState=\(appState.rawValue) (0=active,1=inactive,2=background) appIsActive=\(appIsActive)")
 
       let data = flutter_callkit_incoming.Data(id: uuidStr, nameCaller: callerUsername, handle: handleText, type: 0)
       data.avatar = callerAvatar
@@ -262,7 +264,7 @@ import Security
       // saveEndCall uses provider.reportCall directly (no CXCallController round-trip),
       // which is ~67ms faster than the CXEndCallAction transaction path.
 
-      print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
+      print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive) extra.app_was_foreground=\(data.extra["app_was_foreground"] ?? "nil")")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) { [weak self] in
           guard let self = self else { completion(); return }
           print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId) appIsActive=\(appIsActive)")

@@ -41,7 +41,7 @@ bool _callKitAutoDismissExpected = false;
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] mesaj geldi | type=${message.data['type']} | keys=${message.data.keys.toList()}');
+  debugPrint('[FCM][BG][DBG][${DateTime.now().toIso8601String()}] mesaj geldi | type=${message.data['type']} | call_id=${message.data['call_id']} | keys=${message.data.keys.toList()} | hasNotification=${message.notification != null} | notifTitle=${message.notification?.title}');
 
   if (message.data['type'] == 'incoming_call') {
     if (Platform.isIOS) {
@@ -331,11 +331,11 @@ class PushNotificationService {
     // Foreground FCM
     FirebaseMessaging.onMessage.listen((msg) {
       final type = msg.data['type'] as String? ?? 'unknown';
-      debugPrint('[FCM] Foreground | type=$type');
+      _cpLog('FCM', '[DBG] Foreground onMessage | type=$type keys=${msg.data.keys.toList()} callId=${msg.data['call_id']} lifecycle=${WidgetsBinding.instance.lifecycleState}');
       // iOS: VoIP PushKit already handles incoming_call via CallKit + CallEventActionCallIncoming.
       // FCM delivery is a backend duplicate — suppress to prevent double IncomingCallBar/notification.
       if (Platform.isIOS && type == 'incoming_call') {
-        debugPrint('[FCM] Foreground incoming_call on iOS SUPPRESSED — VoIP PushKit handles it');
+        _cpLog('FCM', '[DBG] Foreground incoming_call on iOS SUPPRESSED — VoIP PushKit handles it');
         return;
       }
       final data = Map<String, dynamic>.from(msg.data);
@@ -399,17 +399,14 @@ class PushNotificationService {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? 'NULL';
         final caller = data['caller_username']?.toString() ?? 'NULL';
-        _cpLog('PUSH', 'CallEventActionCallIncoming | callId=$callId caller=$caller nowUtc=${DateTime.now().toUtc().toIso8601String()} → onIncomingCall (pre-connect trigger)');
-        // Track whether AppDelegate will auto-dismiss (only when app is foreground).
-        // Read the native flag set in AppDelegate BEFORE showCallkitIncoming was called.
-        // Do NOT use WidgetsBinding.lifecycleState — by the time this event fires, the
-        // CallKit UI has already appeared and driven the app to `inactive`. That lifecycle
-        // race is what causes _callKitAutoDismissExpected to be wrongly false on fresh install.
+        _cpLog('PUSH', '[DBG] CallEventActionCallIncoming | callId=$callId caller=$caller lifecycle=${WidgetsBinding.instance.lifecycleState} extraKeys=${data.keys.toList()}');
+        _cpLog('PUSH', '[DBG] CallEventActionCallIncoming extra dump | app_was_foreground=${data['app_was_foreground']} call_id=${data['call_id']} room_name=${data['room_name']}');
         if (Platform.isIOS) {
-          final appWasForeground = data['app_was_foreground'] as bool? ?? false;
+          final rawFlag = data['app_was_foreground'];
+          final appWasForeground = rawFlag as bool? ?? false;
           _callKitAutoDismissExpected = appWasForeground;
-          _cpLog('PUSH', 'CallEventActionCallIncoming: autoDismissExpected=$_callKitAutoDismissExpected '
-              '(nativeFlag=$appWasForeground lifecycle=${WidgetsBinding.instance.lifecycleState})');
+          _cpLog('PUSH', '[DBG] autoDismissExpected=$_callKitAutoDismissExpected '
+              '(rawFlag=$rawFlag type=${rawFlag.runtimeType} lifecycle=${WidgetsBinding.instance.lifecycleState})');
         }
         await CallService.instance.onIncomingCall({
           ...data,
@@ -454,7 +451,7 @@ class PushNotificationService {
         final callIdInt = int.tryParse(callId);
         final cs = CallService.instance;
         final currentStatus = cs.state.value.status;
-        _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId status=$currentStatus activeIncomingId=${cs.activeIncomingCallId} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        _cpLog('PUSH', '[DBG] CallEventActionCallDecline | callId=$callId status=$currentStatus autoDismissExpected=$_callKitAutoDismissExpected activeIncomingId=${cs.activeIncomingCallId}');
 
         // Guard 1: iOS foreground VoIP push → AppDelegate sends CXEndCallAction to suppress
         // full-screen CallKit UI. Call is handled by WS/IncomingCallBar — don't reject.
@@ -462,9 +459,10 @@ class PushNotificationService {
         // Background declines (lock screen Decline button) must NOT be skipped.
         if (Platform.isIOS && currentStatus == CallStatus.ringing && _callKitAutoDismissExpected) {
           _callKitAutoDismissExpected = false;
-          _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=ringing (iOS foreground auto-dismiss)');
+          _cpLog('PUSH', '[DBG] CallEventActionCallDecline SKIPPED guard1 | status=ringing + autoDismiss');
           return;
         }
+        _cpLog('PUSH', '[DBG] CallEventActionCallDecline guard1 FAILED | iOS=${Platform.isIOS} status=$currentStatus autoDismiss=$_callKitAutoDismissExpected → continuing');
         _callKitAutoDismissExpected = false;
 
         // Guard 2: Call already accepted — stale dismiss after accept must not re-reject.
@@ -495,19 +493,16 @@ class PushNotificationService {
         final data = Map<String, dynamic>.from(params?.extra ?? {});
         final callIdStr = data['call_id']?.toString() ?? '';
         final currentStatus = CallService.instance.state.value.status;
-        _cpLog('PUSH', '${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr activeCallId=${CallService.instance.state.value.callId} status=$currentStatus nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        _cpLog('PUSH', '[DBG] ${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr status=$currentStatus autoDismissExpected=$_callKitAutoDismissExpected activeCallId=${CallService.instance.state.value.callId}');
 
         // Skip if ringing OR if AppDelegate will auto-dismiss (foreground VoIP push).
-        // Two-condition guard because of a race: _callKitAutoDismissExpected is set
-        // synchronously at the start of CallEventActionCallIncoming (before the await),
-        // but onIncomingCall() is async — status may still be idle when this event fires.
-        // Checking _callKitAutoDismissExpected covers that in-flight window.
         if (currentStatus == CallStatus.ringing || _callKitAutoDismissExpected) {
           final wasExpected = _callKitAutoDismissExpected;
           _callKitAutoDismissExpected = false;
-          _cpLog('PUSH', 'CallEventActionCallEnded SKIPPED | status=$currentStatus autoDismissWasExpected=$wasExpected callId=$callIdStr');
+          _cpLog('PUSH', '[DBG] CallEventActionCallEnded SKIPPED | status=$currentStatus wasExpected=$wasExpected callId=$callIdStr');
           return;
         }
+        _cpLog('PUSH', '[DBG] CallEventActionCallEnded PROCEEDING | status=$currentStatus callId=$callIdStr → will endCall/reset');
 
         // LOCK1 guard: CallKit fires ACTION_CALL_TIMEOUT ~30s after the notification was
         // shown, even if the user already accepted via IncomingCallBar (not the native CK UI).
