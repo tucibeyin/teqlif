@@ -4413,10 +4413,15 @@
   "notifDirectSalePurchased": "Purchase Completed",
   "notifDirectSalePurchasedBody": "Payment of {price} received for {item}.",
 
-  "announcementAuctionWinner": "{winner} won · {price}",
+  "announcementAuctionWinner": "{winner} won at {price}",
+  "announcementAuctionWinnerBids": "{bidCount} bids · {startPrice}→{price} · {winner} won",
   "announcementBinAccepted": "{buyer} bought it now · {price}",
+  "announcementBinAcceptedBids": "{buyer} snatched it mid-bidding · {price} ({bidCount} bids)",
   "announcementDsPurchase": "{buyer} purchased",
+  "announcementDsPurchaseMany": "{buyer} bought {quantity} units",
+  "announcementDsFirstBuyer": "🥇 First buyer {buyer}",
   "announcementDsPurchaseBatch": "{buyers} and {count} more purchased",
   "announcementDsRemaining": "Left: {remaining}",
-  "announcementDsSoldOut": "Sold out!"
+  "announcementDsSoldOut": "Sold out!",
+  "announcementStockWarning": "⚠️ Only {remaining} left!"
 }

@@ -4376,10 +4376,15 @@
   "notifDirectSalePurchased": "Satın Alma Tamamlandı",
   "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı.",
 
-  "announcementAuctionWinner": "{winner} kazandı · {price}",
+  "announcementAuctionWinner": "{winner} {price}'ye kazandı",
+  "announcementAuctionWinnerBids": "{bidCount} teklif · {startPrice}→{price} · {winner} kazandı",
   "announcementBinAccepted": "{buyer} hemen satın aldı · {price}",
+  "announcementBinAcceptedBids": "{buyer} {bidCount} teklifin ortasında kapıştı · {price}",
   "announcementDsPurchase": "{buyer} satın aldı",
+  "announcementDsPurchaseMany": "{buyer} {quantity} adet satın aldı",
+  "announcementDsFirstBuyer": "🥇 İlk alıcı {buyer}",
   "announcementDsPurchaseBatch": "{buyers} ve {count} kişi daha satın aldı",
   "announcementDsRemaining": "Kalan: {remaining}",
-  "announcementDsSoldOut": "Tükendi!"
+  "announcementDsSoldOut": "Tükendi!",
+  "announcementStockWarning": "⚠️ Son {remaining} adet kaldı!"
 }

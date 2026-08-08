@@ -908,6 +908,7 @@ class AuctionCommands:
             "buyer": buyer_username,
             "item": item_name,
             "price": bin_price,
+            "bid_count": bid_count,
             **({"listing_id": listing_id} if listing_id else {}),
         })
 
@@ -1182,6 +1183,8 @@ class AuctionCommands:
             "winner": winner_name,
             "price": final_price,
             "item": item_name,
+            "bid_count": int(data.get("bid_count", 0)),
+            "start_price": float(data.get("start_price", 0)),
             **({"listing_id": listing_id} if listing_id else {}),
         })
 

@@ -4376,9 +4376,14 @@
   "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}.",
 
   "announcementAuctionWinner": "{winner} победил · {price}",
+  "announcementAuctionWinnerBids": "{bidCount} ставок · {startPrice}→{price} · {winner} победил",
   "announcementBinAccepted": "{buyer} купил сразу · {price}",
+  "announcementBinAcceptedBids": "{buyer} перехватил в ходе торгов · {price} ({bidCount} ставок)",
   "announcementDsPurchase": "{buyer} купил",
+  "announcementDsPurchaseMany": "{buyer} купил {quantity} шт.",
+  "announcementDsFirstBuyer": "🥇 Первый покупатель {buyer}",
   "announcementDsPurchaseBatch": "{buyers} и ещё {count} купили",
   "announcementDsRemaining": "Осталось: {remaining}",
-  "announcementDsSoldOut": "Распродано!"
+  "announcementDsSoldOut": "Распродано!",
+  "announcementStockWarning": "⚠️ Осталось {remaining} шт.!"
 }

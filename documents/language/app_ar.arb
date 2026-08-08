@@ -4374,10 +4374,15 @@
   "notifDirectSalePurchased": "اكتملت عملية الشراء",
   "notifDirectSalePurchasedBody": "تم استلام دفعة {price} مقابل {item}.",
 
-  "announcementAuctionWinner": "فاز {winner} · {price}",
+  "announcementAuctionWinner": "فاز {winner} بـ{price}",
+  "announcementAuctionWinnerBids": "{bidCount} عروض · {startPrice}→{price} · فاز {winner}",
   "announcementBinAccepted": "{buyer} اشترى فوراً · {price}",
+  "announcementBinAcceptedBids": "{buyer} اختطفه وسط {bidCount} عروض · {price}",
   "announcementDsPurchase": "{buyer} اشترى",
+  "announcementDsPurchaseMany": "{buyer} اشترى {quantity} قطعة",
+  "announcementDsFirstBuyer": "🥇 أول مشترٍ {buyer}",
   "announcementDsPurchaseBatch": "{buyers} و{count} آخرون اشتروا",
   "announcementDsRemaining": "المتبقي: {remaining}",
-  "announcementDsSoldOut": "نفذت الكمية!"
+  "announcementDsSoldOut": "نفذت الكمية!",
+  "announcementStockWarning": "⚠️ تبقّى {remaining} فقط!"
 }

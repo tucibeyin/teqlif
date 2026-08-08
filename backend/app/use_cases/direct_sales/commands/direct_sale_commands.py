@@ -493,13 +493,25 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
         fire_and_forget(redis_mgr.publish_direct_sale(stream_id, sold_out_payload))
         fire_and_forget(ds_outbox_push(stream_id, sold_out_payload))
 
+    remaining_before = remaining + data.quantity
+    is_first_buyer = remaining_before == sale.total_stock
+
     from app.use_cases.chat.chat_utils import chat_announcement
     fire_and_forget(chat_announcement(stream_id, "ds_purchase", {
         "buyer": user.username,
         "item": sale.title,
         "price": unit_price,
         "remaining": remaining,
+        "quantity": data.quantity,
+        "is_first": is_first_buyer,
     }))
+
+    _STOCK_WARNING_THRESHOLD = 3
+    if remaining_before > _STOCK_WARNING_THRESHOLD >= remaining > 0:
+        fire_and_forget(chat_announcement(stream_id, "stock_warning", {
+            "remaining": remaining,
+            "item": sale.title,
+        }, persist=False))
 
     # DM WS broadcast (buyer + host her ikisine)
     from datetime import datetime, timezone as _tz

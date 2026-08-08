@@ -1356,34 +1356,8 @@ class _AnnouncementItem extends ConsumerWidget {
     final type = message.announcementType ?? '';
     final p = message.announcementPayload ?? {};
 
-    final (IconData icon, Color color, String text) = switch (type) {
-      'auction_winner' => (
-          Icons.emoji_events_rounded,
-          const Color(0xFFFACC15),
-          loc.t('announcementAuctionWinner', {
-            'winner': '@${p['winner'] ?? '?'}',
-            'price': _fmtPrice(p['price']),
-          }),
-        ),
-      'bin_accepted' => (
-          Icons.shopping_cart_rounded,
-          const Color(0xFF60A5FA),
-          loc.t('announcementBinAccepted', {
-            'buyer': '@${p['buyer'] ?? '?'}',
-            'price': _fmtPrice(p['price']),
-          }),
-        ),
-      'ds_purchase' => (
-          Icons.shopping_bag_rounded,
-          const Color(0xFF4ADE80),
-          _buildDsText(p, loc),
-        ),
-      _ => (
-          Icons.info_outline_rounded,
-          Colors.white54,
-          p['message'] as String? ?? type,
-        ),
-    };
+    final (IconData icon, Color color, String text, String? tappableUser) =
+        _resolve(type, p, loc);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
@@ -1398,46 +1372,163 @@ class _AnnouncementItem extends ConsumerWidget {
         children: [
           Icon(icon, color: color, size: 13),
           const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: color,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-                shadows: const [Shadow(blurRadius: 6, color: Colors.black)],
-              ),
-            ),
-          ),
+          Flexible(child: _richText(text, tappableUser, color, context)),
         ],
       ),
     );
   }
 
-  String _buildDsText(Map<String, dynamic> p, TranslationPack loc) {
-    final batchBuyers = (p['_batch_buyers'] as List?)?.cast<String>();
+  (IconData, Color, String, String?) _resolve(
+      String type, Map<String, dynamic> p, TranslationPack loc) {
+    switch (type) {
+      case 'auction_winner':
+        final winner = p['winner'] as String? ?? '?';
+        final price = _fmt(p['price']);
+        final bidCount = (p['bid_count'] as num?)?.toInt() ?? 0;
+        final startPrice = _fmt(p['start_price']);
+        final text = bidCount > 0
+            ? loc.t('announcementAuctionWinnerBids', {
+                'winner': '@$winner',
+                'price': price,
+                'bidCount': bidCount.toString(),
+                'startPrice': startPrice,
+              })
+            : loc.t('announcementAuctionWinner', {
+                'winner': '@$winner',
+                'price': price,
+              });
+        return (Icons.emoji_events_rounded, const Color(0xFFFACC15), text, winner);
+
+      case 'bin_accepted':
+        final buyer = p['buyer'] as String? ?? '?';
+        final price = _fmt(p['price']);
+        final bidCount = (p['bid_count'] as num?)?.toInt() ?? 0;
+        final text = bidCount > 0
+            ? loc.t('announcementBinAcceptedBids', {
+                'buyer': '@$buyer',
+                'price': price,
+                'bidCount': bidCount.toString(),
+              })
+            : loc.t('announcementBinAccepted', {
+                'buyer': '@$buyer',
+                'price': price,
+              });
+        return (Icons.shopping_cart_rounded, const Color(0xFF60A5FA), text, buyer);
+
+      case 'ds_purchase':
+        return _resolveDsPurchase(p, loc);
+
+      case 'stock_warning':
+        final remaining = (p['remaining'] as num?)?.toInt() ?? 0;
+        return (
+          Icons.warning_amber_rounded,
+          const Color(0xFFFB923C),
+          loc.t('announcementStockWarning', {'remaining': remaining.toString()}),
+          null,
+        );
+
+      default:
+        return (
+          Icons.info_outline_rounded,
+          Colors.white54,
+          p['message'] as String? ?? type,
+          null,
+        );
+    }
+  }
+
+  (IconData, Color, String, String?) _resolveDsPurchase(
+      Map<String, dynamic> p, TranslationPack loc) {
     final remaining = (p['remaining'] as num?)?.toInt() ?? 0;
+    final isFirst = p['is_first'] as bool? ?? false;
+    final quantity = (p['quantity'] as num?)?.toInt() ?? 1;
+    final batchBuyers = (p['_batch_buyers'] as List?)?.cast<String>();
+
+    final color = remaining == 0
+        ? const Color(0xFFF87171)
+        : remaining <= 3
+            ? const Color(0xFFFB923C)
+            : const Color(0xFF4ADE80);
+
     final remainingSuffix = remaining > 0
         ? ' · ${loc.t('announcementDsRemaining', {'remaining': remaining.toString()})}'
         : ' · ${loc.t('announcementDsSoldOut')}';
 
     if (batchBuyers != null && batchBuyers.length > 1) {
-      return loc.t('announcementDsPurchaseBatch', {
-        'buyers': '@${batchBuyers.first}',
-        'count': (batchBuyers.length - 1).toString(),
-      }) + remainingSuffix;
+      final text = loc.t('announcementDsPurchaseBatch', {
+            'buyers': '@${batchBuyers.first}',
+            'count': (batchBuyers.length - 1).toString(),
+          }) +
+          remainingSuffix;
+      return (Icons.shopping_bag_rounded, color, text, batchBuyers.first);
     }
+
     final buyer = p['buyer'] as String? ?? '?';
-    return loc.t('announcementDsPurchase', {'buyer': '@$buyer'}) + remainingSuffix;
+
+    if (isFirst) {
+      final text = loc.t('announcementDsFirstBuyer', {'buyer': '@$buyer'}) +
+          remainingSuffix;
+      return (Icons.shopping_bag_rounded, color, text, buyer);
+    }
+
+    if (quantity > 1) {
+      final text = loc.t('announcementDsPurchaseMany', {
+            'buyer': '@$buyer',
+            'quantity': quantity.toString(),
+          }) +
+          remainingSuffix;
+      return (Icons.shopping_bag_rounded, color, text, buyer);
+    }
+
+    final text =
+        loc.t('announcementDsPurchase', {'buyer': '@$buyer'}) + remainingSuffix;
+    return (Icons.shopping_bag_rounded, color, text, buyer);
   }
 
-  String _fmtPrice(dynamic val) {
+  Widget _richText(
+      String text, String? tappableUser, Color color, BuildContext context) {
+    const style = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      height: 1.35,
+      shadows: [Shadow(blurRadius: 6, color: Colors.black)],
+    );
+    if (tappableUser == null) {
+      return Text(text, style: style.copyWith(color: color));
+    }
+    final tag = '@$tappableUser';
+    final parts = text.split(tag);
+    if (parts.length < 2) {
+      return Text(text, style: style.copyWith(color: color));
+    }
+    return Text.rich(
+      TextSpan(
+        style: style.copyWith(color: color),
+        children: [
+          TextSpan(text: parts[0]),
+          TextSpan(
+            text: tag,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PublicProfileScreen(username: tappableUser),
+                    ),
+                  ),
+          ),
+          TextSpan(text: parts.sublist(1).join(tag)),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(dynamic val) {
     if (val == null) return '?';
     final d = (val as num).toDouble();
-    if (d == d.truncateToDouble()) {
-      return '${d.toInt()} TL';
-    }
-    return '${d.toStringAsFixed(2)} TL';
+    return d == d.truncateToDouble()
+        ? '${d.toInt()} TL'
+        : '${d.toStringAsFixed(2)} TL';
   }
 }
