@@ -191,7 +191,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (!mounted || result == null) return;
     final size = result['audience_size'] as int? ?? 0;
     final cost = (result['estimated_cost'] as num?)?.toInt() ?? 0;
-    if (size > 0) setState(() { _audienceSize = size; _audienceCost = cost.toDouble(); });
+    if (size > 0) {
+      debugPrint('[HOST] setState: _audienceSize=$size _audienceCost=$cost → build() tetiklenecek');
+      setState(() { _audienceSize = size; _audienceCost = cost.toDouble(); });
+    }
   }
 
   Future<void> _sendLeadBlast() async {
@@ -402,11 +405,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       // Sahneye çıkan izleyicinin video track'ini PiP'e bağla
       _listener!.on<TrackSubscribedEvent>((event) {
         if (event.track is VideoTrack && mounted) {
+          debugPrint('[HOST] setState: _coHostTrack=VideoTrack (TrackSubscribed) → build() tetiklenecek');
           setState(() => _coHostTrack = event.track as VideoTrack);
         }
       });
       _listener!.on<TrackUnsubscribedEvent>((event) {
         if (event.track is VideoTrack && event.track == _coHostTrack && mounted) {
+          debugPrint('[HOST] setState: _coHostTrack=null (TrackUnsubscribed) → build() tetiklenecek');
           setState(() => _coHostTrack = null);
         }
       });
@@ -473,7 +478,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         _room = room;
         _localVideoTrack = foundTrack;
       });
-      debugPrint('[HOST_CAM] ✓ live=true, _localVideoTrack=${_localVideoTrack?.runtimeType}');
+      debugPrint('[HOST_CAM] ✓ live=true, _localVideoTrack=${_localVideoTrack?.runtimeType} → HOST build() tetiklenecek');
 
       // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
       if (foundTrack == null) _waitForTrack();
@@ -547,7 +552,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     final target = !_cameraEnabled;
     try {
       await _room?.localParticipant?.setCameraEnabled(target);
-      if (mounted) setState(() => _cameraEnabled = target);
+      if (mounted) {
+        debugPrint('[HOST] setState: _cameraEnabled=$target → build() tetiklenecek');
+        setState(() => _cameraEnabled = target);
+      }
     } catch (e) {
       _log.captureException(e, tag: 'HostStream.toggleCamera');
       if (mounted) {
@@ -559,6 +567,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
+    debugPrint('[HOST] setState: _switchCamera → _isFrontCamera=${!_isFrontCamera} → build() tetiklenecek');
     setState(() {
       _isFrontCamera = !_isFrontCamera;
       _currentZoom = 1.0;
@@ -726,12 +735,18 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _autoCaptureThumbnail() async {
+    debugPrint('[THUMB] _autoCaptureThumbnail çağrıldı — mounted=$mounted _localVideoTrack=${_localVideoTrack?.runtimeType}');
     if (!mounted || _localVideoTrack == null) return;
     try {
+      final ctx = _videoKey.currentContext;
+      debugPrint('[THUMB] _videoKey.currentContext=${ctx == null ? "NULL" : "ok"} _videoKey=${_videoKey.hashCode}');
       final boundary =
-          _videoKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+          ctx?.findRenderObject() as RenderRepaintBoundary?;
+      debugPrint('[THUMB] boundary=${boundary == null ? "NULL" : "ok"} hasSize=${boundary?.hasSize} size=${boundary?.size} debugNeedsPaint=${boundary?.debugNeedsPaint}');
       if (boundary == null) return;
+      debugPrint('[THUMB] toImage() çağrılıyor...');
       final image = await boundary.toImage(pixelRatio: 0.5);
+      debugPrint('[THUMB] toImage() tamamlandı — ${image.width}×${image.height}');
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
       await ref.read(hostStreamViewModelProvider).uploadThumbnail(
@@ -789,6 +804,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     });
     // Oda bağlıysa UI her zaman gösterilir — _connecting flag'ine bağımlı değil
     final live = _room != null && _error == null;
+    debugPrint('[HOST] build() — live=$live _room=${_room != null} _localVideoTrack=${_localVideoTrack?.runtimeType} _viewerCount=$_viewerCount _cameraEnabled=$_cameraEnabled _isFrontCamera=$_isFrontCamera _currentZoom=$_currentZoom _coHostTrack=${_coHostTrack?.runtimeType}');
 
     return PopScope(
       canPop: false,
@@ -923,8 +939,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                     ChatPanel(
                       key: _chatKey,
                       streamId: widget.streamToken.streamId,
-                      onViewerCountChanged: (n) =>
-                          setState(() => _viewerCount = n),
+                      onViewerCountChanged: (n) {
+                        debugPrint('[HOST] setState: _viewerCount $n (eski=$_viewerCount) → build() tetiklenecek');
+                        setState(() => _viewerCount = n);
+                      },
                       onUsernameTap: _showModSheet,
                       // İzleyiciler kalp gönderdiğinde host ekranında uçsun
                       onStreamLike: (_, _) =>
