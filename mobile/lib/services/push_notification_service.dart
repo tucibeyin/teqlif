@@ -51,8 +51,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call işleniyor | call_id=${message.data['call_id']}');
     // Flutter binding'i background isolate için başlat
     WidgetsFlutterBinding.ensureInitialized();
+    final callId = message.data['call_id'] ?? '';
     await _showCallNotification(
-      callId:         message.data['call_id']         ?? '',
+      callId:         callId,
       callerUsername: message.data['caller_username'] ?? '',
       callerAvatar:   message.data['caller_avatar']   ?? '',
       callerId:       message.data['caller_id']       ?? '',
@@ -60,6 +61,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       livekitUrl:     message.data['livekit_url']     ?? '',
       calleeToken:    message.data['callee_token']    ?? '',
     );
+    // WS bağlantısı yokken ACK'i HTTP üzerinden bildir; iOS VoIP path'i WS üzerinden ACK gönderir.
+    if (callId.isNotEmpty) {
+      try {
+        await http.post(Uri.parse('$kBaseUrl/calls/$callId/ack')).timeout(const Duration(seconds: 5));
+        debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
+      } catch (e) {
+        debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
+      }
+    }
   } else if (message.data['type'] == 'call_ended' || message.data['type'] == 'call_missed' || message.data['type'] == 'call_rejected') {
     debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
     final callId = message.data['call_id']?.toString() ?? '';
@@ -166,18 +176,6 @@ Future<void> _showCallNotification({
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → calling | callId=$callId caller=$callerUsername');
   await FlutterCallkitIncoming.showCallkitIncoming(params);
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → done | callId=$callId');
-
-  // Android background: WS bağlantısı yok, ACK'i HTTP üzerinden gönder.
-  // Böylece backend call_ringing gönderebilir (iOS bu ACK'i WS üzerinden gönderir).
-  if (Platform.isAndroid && callId.isNotEmpty) {
-    try {
-      final ackUri = Uri.parse('$kBaseUrl/calls/$callId/ack');
-      await http.post(ackUri).timeout(const Duration(seconds: 5));
-      debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
-    } catch (e) {
-      debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
-    }
-  }
 }
 
 // ─── Background notification action handler (separate isolate) ───────────────
