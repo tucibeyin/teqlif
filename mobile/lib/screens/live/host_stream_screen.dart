@@ -78,7 +78,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   String? _error;
 
   final _videoKey = GlobalKey();
-  final _stackKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
   bool _activityVisible = true;
@@ -199,9 +198,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     final size = result['audience_size'] as int? ?? 0;
     final cost = (result['estimated_cost'] as num?)?.toInt() ?? 0;
     if (size > 0) {
-      debugPrint(
-        '[HOST] setState: _audienceSize=$size _audienceCost=$cost → build() tetiklenecek',
-      );
       setState(() {
         _audienceSize = size;
         _audienceCost = cost.toDouble();
@@ -497,9 +493,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       _listener = room.createListener();
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
-        debugPrint(
-          '[HOST_CAM] LocalTrackPublishedEvent fired: kind=${event.publication.kind}, track=${event.publication.track?.runtimeType}, sid=${event.publication.sid}',
-        );
         // setState burada kasıtlı olarak yok: _localVideoTrack yalnızca
         // _room ile birlikte tek setState'te set edilir (aşağıda).
         // Erken setState → VideoTrackRenderer ilk build'i başlatır →
@@ -510,9 +503,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       // Sahneye çıkan izleyicinin video track'ini PiP'e bağla
       _listener!.on<TrackSubscribedEvent>((event) {
         if (event.track is VideoTrack && mounted) {
-          debugPrint(
-            '[HOST] setState: _coHostTrack=VideoTrack (TrackSubscribed) → build() tetiklenecek',
-          );
           setState(() => _coHostTrack = event.track as VideoTrack);
         }
       });
@@ -520,9 +510,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         if (event.track is VideoTrack &&
             event.track == _coHostTrack &&
             mounted) {
-          debugPrint(
-            '[HOST] setState: _coHostTrack=null (TrackUnsubscribed) → build() tetiklenecek',
-          );
           setState(() => _coHostTrack = null);
         }
       });
@@ -533,29 +520,14 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         }
       });
 
-      debugPrint(
-        '[HOST_CAM] room.connect() başlıyor: ${widget.streamToken.livekitUrl}',
-      );
       await room.connect(
         widget.streamToken.livekitUrl,
         widget.streamToken.token,
       );
-      debugPrint(
-        '[HOST_CAM] room.connect() tamamlandı — localParticipant=${room.localParticipant?.sid}, identity=${room.localParticipant?.identity}',
-      );
 
       // T-HC-05: Bağlantı başarılı ama kamera/mikrofon başlatma ayrı hata verebilir
       try {
-        debugPrint('[HOST_CAM] setCameraEnabled(true) çağrılıyor...');
         await room.localParticipant?.setCameraEnabled(true);
-        debugPrint(
-          '[HOST_CAM] setCameraEnabled(true) döndü — videoTrackPublications.length=${room.localParticipant?.videoTrackPublications.length}',
-        );
-        for (final pub in room.localParticipant?.videoTrackPublications ?? []) {
-          debugPrint(
-            '[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}, muted=${pub.muted}',
-          );
-        }
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
         _log.captureException(e, tag: 'HostConnect.trackEnable');
@@ -581,9 +553,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       }
 
       // LiveKit bağlantısı başarılı — yayını canlıya al ve bildirimleri gönder
-      debugPrint('[HOST_CAM] confirmLive() çağrılıyor...');
       await StreamService.confirmLive(widget.streamToken.streamId);
-      debugPrint('[HOST_CAM] confirmLive() döndü ✓');
 
       // Blast onaylandıysa şimdi gönder (LiveKit bağlantısı kesinleşti)
       if (widget.blastApproved) {
@@ -598,16 +568,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       // _room set edilince live = true → UI hemen görünür.
       // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
       // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
-      debugPrint(
-        '[HOST_CAM] setState _room set ediliyor, foundTrack=${foundTrack?.runtimeType}',
-      );
       setState(() {
         _room = room;
         _localVideoTrack = foundTrack;
       });
-      debugPrint(
-        '[HOST_CAM] ✓ live=true, _localVideoTrack=${_localVideoTrack?.runtimeType} → HOST build() tetiklenecek',
-      );
 
       // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
       if (foundTrack == null) _waitForTrack();
@@ -617,7 +581,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         _autoCaptureThumbnail,
       );
     } catch (e, st) {
-      debugPrint('[HOST_CAM] ✗ _connect() HATA yakalandı: $e');
       // Bağlantı başarısız — pending kaydı temizle
       StreamService.cancelStream(widget.streamToken.streamId).ignore();
       ClientLogger.report(
@@ -641,42 +604,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   /// LocalTrackPublishedEvent bazen geç gelir; bu metod event gelene kadar
   /// kısa aralıklarla yayınlamaları kontrol eder, max [_kTrackPollMaxAttempts]×[_kTrackPollIntervalMs]ms bekler.
   Future<void> _waitForTrack() async {
-    debugPrint(
-      '[HOST_CAM] _waitForTrack başladı (${_kTrackPollMaxAttempts}×${_kTrackPollIntervalMs}ms)',
-    );
     for (int attempt = 0; attempt < _kTrackPollMaxAttempts; attempt++) {
       await Future.delayed(const Duration(milliseconds: _kTrackPollIntervalMs));
-      if (!mounted || _localVideoTrack != null) {
-        debugPrint(
-          '[HOST_CAM] _waitForTrack erken çıkış attempt=$attempt mounted=$mounted hasTrack=${_localVideoTrack != null}',
-        );
-        return;
-      }
-      if (attempt % 10 == 0) {
-        final pubs = _room?.localParticipant?.videoTrackPublications ?? [];
-        debugPrint(
-          '[HOST_CAM] _waitForTrack attempt=$attempt, pubs.length=${pubs.length}',
-        );
-        for (final pub in pubs) {
-          debugPrint(
-            '[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}',
-          );
-        }
-      }
+      if (!mounted || _localVideoTrack != null) return;
       for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
         if (pub.track != null) {
-          debugPrint(
-            '[HOST_CAM] ✓ _waitForTrack attempt=$attempt track bulundu',
-          );
           if (mounted)
             setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
           return;
         }
       }
     }
-    debugPrint(
-      '[HOST_CAM] ✗ _waitForTrack tüm ${_kTrackPollMaxAttempts} deneme bitti, track bulunamadı',
-    );
   }
 
   // T-HC-03: State flip'i başarılı await sonrasına taşındı — hata olursa UI önceki durumda kalır
@@ -701,12 +639,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     final target = !_cameraEnabled;
     try {
       await _room?.localParticipant?.setCameraEnabled(target);
-      if (mounted) {
-        debugPrint(
-          '[HOST] setState: _cameraEnabled=$target → build() tetiklenecek',
-        );
-        setState(() => _cameraEnabled = target);
-      }
+      if (mounted) setState(() => _cameraEnabled = target);
     } catch (e) {
       _log.captureException(e, tag: 'HostStream.toggleCamera');
       if (mounted) {
@@ -722,9 +655,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
-    debugPrint(
-      '[HOST] setState: _switchCamera → _isFrontCamera=${!_isFrontCamera} → build() tetiklenecek',
-    );
     setState(() {
       _isFrontCamera = !_isFrontCamera;
       _currentZoom = 1.0;
@@ -913,49 +843,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _autoCaptureThumbnail() async {
-    debugPrint(
-      '[THUMB] _autoCaptureThumbnail çağrıldı — mounted=$mounted _localVideoTrack=${_localVideoTrack?.runtimeType}',
-    );
     if (!mounted || _localVideoTrack == null) return;
     try {
-      final stackRo =
-          _stackKey.currentContext?.findRenderObject() as RenderBox?;
-      debugPrint(
-        '[THUMB] Stack.hasSize=${stackRo?.hasSize} Stack.size=${stackRo?.size} Stack.constraints=${stackRo?.constraints}',
-      );
-      // Stack render child'larını say — hangileri positioned, boyutları nedir?
-      final stackRs = stackRo as RenderStack?;
-      if (stackRs != null) {
-        int idx = 0;
-        RenderBox? child = stackRs.firstChild;
-        while (child != null) {
-          final pd = child.parentData;
-          debugPrint(
-            '[STACK_CHILD] [$idx] type=${child.runtimeType} size=${child.size} parentData=$pd',
-          );
-          child = stackRs.childAfter(child);
-          idx++;
-        }
-      }
-      final heartsRo =
-          _heartsKey.currentContext?.findRenderObject() as RenderBox?;
-      debugPrint(
-        '[THUMB] FloatingHearts.hasSize=${heartsRo?.hasSize} FloatingHearts.size=${heartsRo?.size} FloatingHearts.parentData=${heartsRo?.parentData}',
-      );
-      final ctx = _videoKey.currentContext;
-      debugPrint(
-        '[THUMB] _videoKey.currentContext=${ctx == null ? "NULL" : "ok"} _videoKey=${_videoKey.hashCode}',
-      );
-      final boundary = ctx?.findRenderObject() as RenderRepaintBoundary?;
-      debugPrint(
-        '[THUMB] boundary=${boundary == null ? "NULL" : "ok"} hasSize=${boundary?.hasSize} size=${boundary?.size} debugNeedsPaint=${boundary?.debugNeedsPaint}',
-      );
+      final boundary =
+          _videoKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return;
-      debugPrint('[THUMB] toImage() çağrılıyor...');
       final image = await boundary.toImage(pixelRatio: 0.5);
-      debugPrint(
-        '[THUMB] toImage() tamamlandı — ${image.width}×${image.height}',
-      );
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
       await ref
@@ -1026,9 +920,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     });
     // Oda bağlıysa UI her zaman gösterilir — _connecting flag'ine bağımlı değil
     final live = _room != null && _error == null;
-    debugPrint(
-      '[HOST] build() — live=$live _room=${_room != null} _localVideoTrack=${_localVideoTrack?.runtimeType} _viewerCount=$_viewerCount _cameraEnabled=$_cameraEnabled _isFrontCamera=$_isFrontCamera _currentZoom=$_currentZoom _coHostTrack=${_coHostTrack?.runtimeType}',
-    );
 
     return PopScope(
       canPop: false,
@@ -1036,7 +927,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         backgroundColor: Colors.black,
         resizeToAvoidBottomInset: false,
         body: Stack(
-          key: _stackKey,
           children: [
             // ── Video katmanı (tam ekran) — Transform.scale ile anlık zoom ──
             Positioned.fill(
@@ -1188,9 +1078,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                         key: _chatKey,
                         streamId: widget.streamToken.streamId,
                         onViewerCountChanged: (n) {
-                          debugPrint(
-                            '[HOST] setState: _viewerCount $n (eski=$_viewerCount) → build() tetiklenecek',
-                          );
                           setState(() => _viewerCount = n);
                         },
                         onUsernameTap: _showModSheet,

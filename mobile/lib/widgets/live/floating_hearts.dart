@@ -87,13 +87,6 @@ class FloatingHeartsState extends State<FloatingHearts>
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final ro = context.findRenderObject() as RenderBox?;
-      debugPrint(
-        '[FloatingHearts] size=${ro?.size} parentData=${ro?.parentData}',
-      );
-    });
     // Her zaman Positioned.fill döndür — non-positioned↔positioned geçişi
     // parent Stack'te layout reset'e neden oluyor.
     return Positioned.fill(
