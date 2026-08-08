@@ -2760,6 +2760,7 @@
   "callReconnecting": "Yeniden Bağlanıyor...",
   "poorConnection": "Zayıf Bağlantı",
   "callMissed": "Cevapsız Arama",
+  "callUnreachable": "Kullanıcıya ulaşılamıyor",
   "callNoAnswer": "Cevap Verilmedi",
   "callAccept": "Kabul Et",
   "callDecline": "Reddet",

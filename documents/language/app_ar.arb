@@ -2761,6 +2761,7 @@
   "callReconnecting": "جارِ إعادة الاتصال...",
   "poorConnection": "اتصال ضعيف",
   "callMissed": "مكالمة فائتة",
+  "callUnreachable": "المستخدم غير متاح",
   "callNoAnswer": "لا يوجد رد",
   "callAccept": "قبول",
   "callDecline": "رفض",

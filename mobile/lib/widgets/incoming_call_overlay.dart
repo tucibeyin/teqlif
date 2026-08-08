@@ -111,6 +111,14 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
         _cpLog('UI', 'call_missed WS → onCallMissed | callId=$missedCallId');
         CallService.instance.onCallMissed(callId: missedCallId);
         break;
+      case 'call_ringing':
+        _cpLog('UI', 'call_ringing WS → onCallRinging | callId=${data['call_id']}');
+        CallService.instance.onCallRinging();
+        break;
+      case 'call_unreachable':
+        _cpLog('UI', 'call_unreachable WS → onCallUnreachable | callId=${data['call_id']}');
+        CallService.instance.onCallUnreachable();
+        break;
 
       // ── Grup Arama ────────────────────────────────────────────────────────
       case 'call_group_invite':

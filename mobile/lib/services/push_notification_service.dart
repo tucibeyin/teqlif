@@ -166,6 +166,18 @@ Future<void> _showCallNotification({
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → calling | callId=$callId caller=$callerUsername');
   await FlutterCallkitIncoming.showCallkitIncoming(params);
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → done | callId=$callId');
+
+  // Android background: WS bağlantısı yok, ACK'i HTTP üzerinden gönder.
+  // Böylece backend call_ringing gönderebilir (iOS bu ACK'i WS üzerinden gönderir).
+  if (Platform.isAndroid && callId.isNotEmpty) {
+    try {
+      final ackUri = Uri.parse('$kBaseUrl/calls/$callId/ack');
+      await http.post(ackUri).timeout(const Duration(seconds: 5));
+      debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
+    } catch (e) {
+      debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
+    }
+  }
 }
 
 // ─── Background notification action handler (separate isolate) ───────────────

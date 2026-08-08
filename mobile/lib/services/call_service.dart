@@ -227,11 +227,7 @@ class CallService {
     }
 
     if (newStatus == CallStatus.dialing) {
-      _hardware.setupAudioSession().then((_) {
-        if (state.value.status == CallStatus.dialing || state.value.status == CallStatus.waiting) {
-          _hardware.startRingback();
-        }
-      });
+      _hardware.setupAudioSession(); // audio session hazırla; ringback call_ringing'de başlar
     } else if (newStatus == CallStatus.ended) {
       _hardware.stopRingback();
       final endReason = state.value.endReason;
@@ -785,6 +781,27 @@ class CallService {
   void onCallEnded() {
     _cpLog('END', 'call_ended WS event received → hangUpLocally');
     _hangUpLocally(status: CallStatus.ended);
+  }
+
+  void onCallRinging() {
+    if (state.value.status != CallStatus.waiting && state.value.status != CallStatus.dialing) {
+      _cpLog('RING', 'onCallRinging SKIPPED | status=${state.value.status} (not waiting/dialing)');
+      return;
+    }
+    _cpLog('RING', 'call_ringing WS → startRingback | callId=${state.value.callId}');
+    _hardware.startRingback();
+  }
+
+  void onCallUnreachable() {
+    if (!hasActiveCall) {
+      _cpLog('RING', 'onCallUnreachable SKIPPED | no active call');
+      return;
+    }
+    _cpLog('RING', 'call_unreachable WS → ended+unreachable | callId=${state.value.callId}');
+    _ringTimer?.cancel();
+    _callerStatusPollTimer?.cancel();
+    _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.unreachable));
+    _scheduleReset();
   }
 
   void onCallMissed({int? callId}) async {

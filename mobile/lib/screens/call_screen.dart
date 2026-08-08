@@ -152,7 +152,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       final isNamedEnd = endReason == EndReason.rejected ||
           endReason == EndReason.missed ||
           endReason == EndReason.busy ||
-          endReason == EndReason.noAnswer;
+          endReason == EndReason.noAnswer ||
+          endReason == EndReason.unreachable;
       if (s == CallStatus.ended && isNamedEnd) {
         _cpLog('UI', 'CallScreen → delayed pop (2s) | endReason=${endReason?.name}');
         Future.delayed(const Duration(seconds: 2), () {
@@ -851,6 +852,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         EndReason.missed => loc.t('callMissed'),
         EndReason.noAnswer => loc.t('callNoAnswer'),
         EndReason.busy => loc.t('callBusy'),
+        EndReason.unreachable => loc.t('callUnreachable'),
         EndReason.permissionDenied => loc.t('callEnded'),
         _ => loc.t('callEnded'),
       };

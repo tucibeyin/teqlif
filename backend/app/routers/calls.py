@@ -7,6 +7,7 @@ Flow:
   POST /{id}/reject  → caller gets WS call_rejected
   POST /{id}/end     → other party gets WS call_ended; LK room deleted
   POST /{id}/missed  → callee gets WS call_missed (caller-side 30s timeout)
+  POST /{id}/ack     → (unauthenticated) Android FCM bg isolate ACK; triggers call_ringing to caller
   GET  /active       → returns current user's active/calling call (crash/reconnect recovery)
   GET  /history      → paginated call history for the current user
 """
@@ -206,9 +207,9 @@ async def get_active_call(
 async def _ws_broadcast(user_id: int, payload: dict) -> None:
     await ws_manager.publish(_DM_CHANNEL, f"dm:{user_id}", payload)
     event_type = payload.get("type", "")
-    # Only replay non-terminal events — terminal events (call_ended/rejected/missed) are
+    # Only replay non-terminal events — terminal events (call_ended/rejected/missed/unreachable) are
     # handled by backendStatus check on reconnect; storing them causes replay duplicates.
-    if event_type.startswith("call_") and event_type not in ("call_ended", "call_rejected", "call_missed"):
+    if event_type.startswith("call_") and event_type not in ("call_ended", "call_rejected", "call_missed", "call_unreachable"):
         await ws_manager.store_call_event(user_id, payload)
 
 
@@ -221,21 +222,111 @@ async def _push_unless_acked(
 ) -> None:
     """
     Background task: WS online görünen callee için ACK bekler (max 500ms).
-    ACK gelirse uygulama foreground'da, WS teslim edildi → push gereksiz.
-    Timeout → WS race condition veya arka plan → push fallback.
+    ACK gelirse uygulama foreground'da → call_ringing caller'a gönderilir, push atlanır.
+    Timeout → WS race condition veya arka plan → push gönder + uzun ACK bekle.
     """
     ack = await ws_manager.wait_for_call_ack(call_id, timeout=0.5)
     if ack:
         logger.info(
-            "[CALL_PROCESS][OUT] _push_unless_acked: ACK received — push SKIPPED | call_id=%d callee=%d",
-            call_id, callee_id,
+            "[CALL_PROCESS][RING] _push_unless_acked: WS ACK → call_ringing | call_id=%d caller=%d",
+            call_id, caller_id,
         )
+        await _ws_broadcast(caller_id, {"type": "call_ringing", "call_id": call_id})
     else:
         logger.info(
-            "[CALL_PROCESS][OUT] _push_unless_acked: no ACK (WS race/background) — push fallback | call_id=%d callee=%d",
+            "[CALL_PROCESS][RING] _push_unless_acked: no ACK (WS race/background) — push fallback | call_id=%d callee=%d",
             call_id, callee_id,
         )
-        await _send_call_push_bg(callee_id, caller_id, call_id, room_name, callee_token)
+        await _push_await_ring(callee_id, caller_id, call_id, room_name, callee_token)
+
+
+async def _push_await_ring(
+    callee_id: int,
+    caller_id: int,
+    call_id: int,
+    room_name: str,
+    callee_lk_token: str,
+) -> None:
+    """
+    Push gönderir, ardından 8 saniye boyunca ACK bekler.
+    ACK gelirse (callee cihazı teslim aldı) → call_ringing caller'a bildirilir.
+    Timeout (callee ulaşılamaz) → call_unreachable caller'a gönderilir, call DB'de missed'a çekilir.
+    Android: FCM bg handler POST /calls/{id}/ack → ACK (hızlı, ~1s).
+    iOS VoIP: uyanır → WS reconnect → call_incoming_ack → ACK (2-4s).
+    """
+    try:
+        async with AsyncSessionLocal() as db:
+            callee = await db.get(User, callee_id)
+            caller = await db.get(User, caller_id)
+            if callee and caller:
+                await _send_call_push(callee, caller, call_id, room_name, callee_lk_token, db)
+            else:
+                logger.warning(
+                    "[CALL_PROCESS][RING] _push_await_ring: user not found | callee=%d caller=%d",
+                    callee_id, caller_id,
+                )
+                return
+    except Exception as exc:
+        logger.exception("[CALL_PROCESS][RING] _push_await_ring send push UNHANDLED | call_id=%d %s", call_id, exc)
+
+    ack = await ws_manager.wait_for_call_ack(call_id, timeout=8.0)
+    if ack:
+        logger.info(
+            "[CALL_PROCESS][RING] _push_await_ring: push ACK → call_ringing | call_id=%d caller=%d",
+            call_id, caller_id,
+        )
+        await _ws_broadcast(caller_id, {"type": "call_ringing", "call_id": call_id})
+    else:
+        logger.info(
+            "[CALL_PROCESS][RING] _push_await_ring: 8s timeout → call_unreachable | call_id=%d caller=%d",
+            call_id, caller_id,
+        )
+        await _ws_broadcast(caller_id, {"type": "call_unreachable", "call_id": call_id})
+        await _mark_call_unreachable(call_id, caller_id, callee_id)
+
+
+async def _mark_call_unreachable(call_id: int, caller_id: int, callee_id: int) -> None:
+    """Callee ulaşılamaz durumunda çağrıyı DB'de missed'a çeker, LiveKit odasını siler."""
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(Call).where(Call.id == call_id).with_for_update()
+            )
+            call = result.scalar_one_or_none()
+            if not call or call.status != "calling":
+                return
+            room_name = call.room_name
+            call.status = "missed"
+            call.ended_at = datetime.now(timezone.utc)
+            caller = await db.get(User, caller_id)
+            callee = await db.get(User, callee_id)
+            if callee and caller:
+                locale = get_locale(callee)
+                t = _get_t(locale)
+                title_raw = t.get("notifCallMissed", "")
+                body_raw = t.get("notifCallMissedBody", "")
+                try:
+                    title = title_raw.format_map({"username": caller.username})
+                    body = body_raw.format_map({"username": caller.username})
+                except (KeyError, ValueError):
+                    title = title_raw
+                    body = body_raw
+                db.add(Notification(
+                    user_id=callee_id,
+                    type="call_missed",
+                    title=title,
+                    body=body,
+                    related_id=caller_id,
+                ))
+            await db.commit()
+            try:
+                await clear_call_redis(call_id)
+            except Exception as _e:
+                logger.warning("[CALL_PROCESS][RING] clear_call_redis FAILED | call_id=%d %s", call_id, _e)
+            await _delete_lk_room(room_name)
+            logger.info("[CALL_PROCESS][RING] call marked missed (unreachable) | call_id=%d", call_id)
+    except Exception as exc:
+        logger.exception("[CALL_PROCESS][RING] _mark_call_unreachable UNHANDLED | call_id=%d %s", call_id, exc)
 
 
 async def _send_call_push_bg(
@@ -531,11 +622,12 @@ async def start_call(
     else:
         # Callee offline — push tek güvenilir teslimat yolu.
         # Fire-and-forget: APNs/FCM gecikmesi (1-3s) /start'ı engellemez.
+        # ACK gelirse call_ringing; 8s timeout → call_unreachable.
         asyncio.create_task(
-            _send_call_push_bg(callee_id, current_user.id, call.id, room_name, callee_token)
+            _push_await_ring(callee_id, current_user.id, call.id, room_name, callee_token)
         )
         logger.info(
-            "[CALL_PROCESS][OUT] start_call: push scheduled (bg task) | call_id=%d callee=%d voip=%s fcm=%s",
+            "[CALL_PROCESS][OUT] start_call: push+ring-wait scheduled | call_id=%d callee=%d voip=%s fcm=%s",
             call.id, callee_id,
             "YES" if callee.voip_token else "NO",
             "YES" if callee.fcm_token else "NO",
@@ -567,6 +659,22 @@ async def start_call(
         "livekit_url": settings.livekit_url,
         "token": token,
     }
+
+
+# ── POST /api/calls/{id}/ack ─────────────────────────────────────────────────
+
+@router.post("/{call_id}/ack")
+async def call_incoming_ack_http(call_id: int):
+    """
+    Unauthenticated. Android FCM background isolate bu endpoint'i push alındıktan
+    sonra çağırır — auth token'a background isolate'den erişilemez; call_id payload'da
+    gömülü olduğundan kimlik doğrulama görevi görür (yanlış call_id'yi yalnızca
+    push'u alan kişi bilebilir). Kötüye kullanım etkisi minimumdur: 10 saniyelik
+    Redis key'ini tetikler.
+    """
+    await ws_manager.store_call_ack(call_id)
+    logger.info("[CALL_PROCESS][ACK] HTTP call_incoming_ack | call_id=%d", call_id)
+    return {"ok": True}
 
 
 # ── POST /api/calls/{id}/accept ───────────────────────────────────────────────

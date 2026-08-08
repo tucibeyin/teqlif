@@ -2762,6 +2762,7 @@
   "callReconnecting": "Переподключение...",
   "poorConnection": "Слабое соединение",
   "callMissed": "Пропущенный звонок",
+  "callUnreachable": "Пользователь недоступен",
   "callNoAnswer": "Нет ответа",
   "callAccept": "Принять",
   "callDecline": "Отклонить",

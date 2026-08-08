@@ -2797,6 +2797,7 @@
   "callReconnecting": "Reconnecting...",
   "poorConnection": "Poor Connection",
   "callMissed": "Missed Call",
+  "callUnreachable": "User unreachable",
   "callNoAnswer": "No Answer",
   "callAccept": "Accept",
   "callDecline": "Decline",
