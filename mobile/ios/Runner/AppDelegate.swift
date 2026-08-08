@@ -257,12 +257,13 @@ import Security
           "callee_token":      calleeToken,   // self-contained → pre-connect hemen başlar
           "app_was_foreground": appIsActive,  // read by Flutter to set _callKitAutoDismissExpected
       ]
-      // Missed call notification is undesirable for VoIP pushes — the app handles the call
-      // UI via IncomingCallBar. The plugin schedules a local notification on timeout
-      // regardless of how the call was dismissed (provider.reportCall bypasses its timer),
-      // so we must explicitly disable it here.
-      data.missedCallNotification = ["showNotification": false]
-      print("[CALL_PROCESS][\(ts())][PUSH][DBG] missedCallNotification set to showNotification=false")
+      // flutter_callkit_incoming Data.isShowMissedCallNotification defaults to true, which
+      // schedules a local notification when the 30s timeout fires. For VoIP pushes the app
+      // shows its own IncomingCallBar — we never want a system missed-call notification here.
+      // saveEndCall (provider.reportCall) bypasses the plugin's CXCallController path, so
+      // the internal 30s timer is NOT cancelled; we must disable the notification explicitly.
+      data.isShowMissedCallNotification = false
+      print("[CALL_PROCESS][\(ts())][PUSH][DBG] isShowMissedCallNotification=false set")
 
       // Apple requires reportNewIncomingCall for every VoIP push regardless of app state.
       // When app is foreground, WS + IncomingCallBar already handles the call UI, so we
