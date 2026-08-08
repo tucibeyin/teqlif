@@ -240,9 +240,9 @@ import Security
       // Capture BEFORE creating data so it can be embedded in extra.
       // Must be read before showCallkitIncoming — CallKit UI appearance drives the app to
       // inactive, so any check done after that point would return the wrong state.
-      let appState = UIApplication.shared.applicationState
-      let appIsActive = appState == .active
-      print("[CALL_PROCESS][\(ts())][PUSH][DBG] applicationState=\(appState.rawValue) (0=active,1=inactive,2=background) appIsActive=\(appIsActive)")
+      // Capture BEFORE showCallkitIncoming — CallKit UI appearance drives app to inactive,
+      // so any check done inside the event handler would return the wrong lifecycle state.
+      let appIsActive = UIApplication.shared.applicationState == .active
 
       let data = flutter_callkit_incoming.Data(id: uuidStr, nameCaller: callerUsername, handle: handleText, type: 0)
       data.avatar = callerAvatar
@@ -257,30 +257,23 @@ import Security
           "callee_token":      calleeToken,   // self-contained → pre-connect hemen başlar
           "app_was_foreground": appIsActive,  // read by Flutter to set _callKitAutoDismissExpected
       ]
-      // flutter_callkit_incoming Data.isShowMissedCallNotification defaults to true, which
-      // schedules a local notification when the 30s timeout fires. For VoIP pushes the app
-      // shows its own IncomingCallBar — we never want a system missed-call notification here.
-      // saveEndCall (provider.reportCall) bypasses the plugin's CXCallController path, so
-      // the internal 30s timer is NOT cancelled; we must disable the notification explicitly.
+      // isShowMissedCallNotification defaults to true in the plugin. saveEndCall uses
+      // provider.reportCall (not CXCallController), so the plugin's 30s timer is never
+      // cancelled — it fires ACTION_CALL_TIMEOUT and would schedule a local notification.
+      // Disable it: the app uses IncomingCallBar instead of native missed-call banners.
       data.isShowMissedCallNotification = false
-      print("[CALL_PROCESS][\(ts())][PUSH][DBG] isShowMissedCallNotification=false set")
 
       // Apple requires reportNewIncomingCall for every VoIP push regardless of app state.
       // When app is foreground, WS + IncomingCallBar already handles the call UI, so we
       // dismiss the native CallKit screen immediately after reportNewIncomingCall completes.
       // saveEndCall uses provider.reportCall directly (no CXCallController round-trip),
-      // which is ~67ms faster than the CXEndCallAction transaction path.
-
-      print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive) extra.app_was_foreground=\(data.extra["app_was_foreground"] ?? "nil")")
+      // which is ~92ms faster than the CXEndCallAction transaction path.
+      print("[CALL_PROCESS][\(ts())][PUSH] VoIP push | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) { [weak self] in
           guard let self = self else { completion(); return }
-          print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId) appIsActive=\(appIsActive)")
           completion()
           guard appIsActive else { return }
-          // provider.reportCall(reason: .unanswered) — synchronous, no delegate callback
-          // chain. callManager.addCall already ran (inside reportNewIncomingCall completion
-          // before this block), so the UUID is registered and saveEndCall succeeds.
-          print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit instant-dismiss (saveEndCall) | callId=\(callId)")
+          print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit instant-dismiss (foreground) | callId=\(callId)")
           SwiftFlutterCallkitIncomingPlugin.sharedInstance?.saveEndCall(data.uuid, 3)
       }
   }
