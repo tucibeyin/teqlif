@@ -392,14 +392,11 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
         debugPrint('[HOST_CAM] LocalTrackPublishedEvent fired: kind=${event.publication.kind}, track=${event.publication.track?.runtimeType}, sid=${event.publication.sid}');
-        if (event.publication.track is LocalVideoTrack && mounted) {
-          debugPrint('[HOST_CAM] ✓ _localVideoTrack set from event');
-          setState(() {
-            _localVideoTrack = event.publication.track as LocalVideoTrack;
-          });
-        } else {
-          debugPrint('[HOST_CAM] ✗ event fired but track is NOT LocalVideoTrack (track=${event.publication.track})');
-        }
+        // setState burada kasıtlı olarak yok: _localVideoTrack yalnızca
+        // _room ile birlikte tek setState'te set edilir (aşağıda).
+        // Erken setState → VideoTrackRenderer ilk build'i başlatır →
+        // confirmLive'dan gelen ikinci setState tetiklendiğinde
+        // RTCVideoRenderer.initialize() henüz bitmemiş olabilir → srcObject kaybolur.
       });
 
       // Sahneye çıkan izleyicinin video track'ini PiP'e bağla
@@ -1210,14 +1207,15 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             ),
 
           // ── Aktivite Paneli (Teklif + DS) — en üstte, sürüklenebilir ─────────
+          // live=false iken Builder ağaca girmez → ref.watch(commerceActivityProvider)
+          // kaydı olmaz → loadHistory bitişinden gelen erken rebuild engellenir.
+          if (live && widget.streamToken.category != 'chat')
           Builder(builder: (context) {
             final activityGroups = ref.watch(
                 commerceActivityProvider(widget.streamToken.streamId));
             final totalEvents = activityGroups.fold<int>(
                 0, (s, g) => s + g.events.length);
-            if (!live ||
-                totalEvents == 0 ||
-                widget.streamToken.category == 'chat') {
+            if (totalEvents == 0) {
               return const SizedBox.shrink();
             }
             return Positioned(
