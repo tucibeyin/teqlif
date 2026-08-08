@@ -739,6 +739,7 @@ async def messages_ws(websocket: WebSocket):
                 text = await asyncio.wait_for(websocket.receive_text(), timeout=40.0)
                 if text.strip() == "ping":
                     await websocket.send_text("pong")
+                    await ws_manager.mark_dm_online(user_id)
                 else:
                     try:
                         import json as _json
