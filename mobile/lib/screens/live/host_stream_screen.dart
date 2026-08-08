@@ -454,7 +454,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       }
 
       // LiveKit bağlantısı başarılı — yayını canlıya al ve bildirimleri gönder
+      debugPrint('[HOST_CAM] confirmLive() çağrılıyor...');
       await StreamService.confirmLive(widget.streamToken.streamId);
+      debugPrint('[HOST_CAM] confirmLive() döndü ✓');
 
       // Blast onaylandıysa şimdi gönder (LiveKit bağlantısı kesinleşti)
       if (widget.blastApproved) {
@@ -469,16 +471,19 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       // _room set edilince live = true → UI hemen görünür.
       // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
       // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
+      debugPrint('[HOST_CAM] setState _room set ediliyor, foundTrack=${foundTrack?.runtimeType}');
       setState(() {
         _room = room;
         _localVideoTrack = foundTrack;
       });
+      debugPrint('[HOST_CAM] ✓ live=true, _localVideoTrack=${_localVideoTrack?.runtimeType}');
 
       // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
       if (foundTrack == null) _waitForTrack();
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
       _thumbTimer = Timer(const Duration(seconds: _kThumbnailInitialDelaySeconds), _autoCaptureThumbnail);
     } catch (e, st) {
+      debugPrint('[HOST_CAM] ✗ _connect() HATA yakalandı: $e');
       // Bağlantı başarısız — pending kaydı temizle
       StreamService.cancelStream(widget.streamToken.streamId).ignore();
       ClientLogger.report(

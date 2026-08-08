@@ -48,6 +48,7 @@ class LiveVideoPlayer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // ── Durum 1: Aktif video track ──────────────────────────────────────────
     if (track != null) {
+      debugPrint('[LVP] Durum 1 — track=${track.runtimeType} isFrontCamera=$isFrontCamera');
       final renderer = VideoTrackRenderer(
         track!,
         fit: VideoViewFit.contain,
@@ -126,6 +127,7 @@ class LiveVideoPlayer extends ConsumerWidget {
     }
 
     // ── Durum 4: Siyah arka plan (track henüz publish edilmedi) ────────────
+    debugPrint('[LVP] Durum 4 — track=null cameraEnabled=$cameraEnabled waitingLabel=$waitingLabel');
     return const ColoredBox(color: Colors.black);
   }
 }
