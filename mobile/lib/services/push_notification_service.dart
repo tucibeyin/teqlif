@@ -332,6 +332,12 @@ class PushNotificationService {
     FirebaseMessaging.onMessage.listen((msg) {
       final type = msg.data['type'] as String? ?? 'unknown';
       debugPrint('[FCM] Foreground | type=$type');
+      // iOS: VoIP PushKit already handles incoming_call via CallKit + CallEventActionCallIncoming.
+      // FCM delivery is a backend duplicate — suppress to prevent double IncomingCallBar/notification.
+      if (Platform.isIOS && type == 'incoming_call') {
+        debugPrint('[FCM] Foreground incoming_call on iOS SUPPRESSED — VoIP PushKit handles it');
+        return;
+      }
       final data = Map<String, dynamic>.from(msg.data);
       data['is_foreground_receive'] = true;
       if (type == 'incoming_call') {
@@ -395,9 +401,15 @@ class PushNotificationService {
         final caller = data['caller_username']?.toString() ?? 'NULL';
         _cpLog('PUSH', 'CallEventActionCallIncoming | callId=$callId caller=$caller nowUtc=${DateTime.now().toUtc().toIso8601String()} → onIncomingCall (pre-connect trigger)');
         // Track whether AppDelegate will auto-dismiss (only when app is foreground).
+        // Read the native flag set in AppDelegate BEFORE showCallkitIncoming was called.
+        // Do NOT use WidgetsBinding.lifecycleState — by the time this event fires, the
+        // CallKit UI has already appeared and driven the app to `inactive`. That lifecycle
+        // race is what causes _callKitAutoDismissExpected to be wrongly false on fresh install.
         if (Platform.isIOS) {
-          _callKitAutoDismissExpected = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
-          _cpLog('PUSH', 'CallEventActionCallIncoming: autoDismissExpected=$_callKitAutoDismissExpected');
+          final appWasForeground = data['app_was_foreground'] as bool? ?? false;
+          _callKitAutoDismissExpected = appWasForeground;
+          _cpLog('PUSH', 'CallEventActionCallIncoming: autoDismissExpected=$_callKitAutoDismissExpected '
+              '(nativeFlag=$appWasForeground lifecycle=${WidgetsBinding.instance.lifecycleState})');
         }
         await CallService.instance.onIncomingCall({
           ...data,
@@ -485,11 +497,15 @@ class PushNotificationService {
         final currentStatus = CallService.instance.state.value.status;
         _cpLog('PUSH', '${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr activeCallId=${CallService.instance.state.value.callId} status=$currentStatus nowUtc=${DateTime.now().toUtc().toIso8601String()}');
 
-        // Skip if ringing: this fires from the foreground CallKit auto-dismissal
-        // (VoIP push arrives while app is active → we end CX call in native to prevent
-        // UI takeover). The actual call is handled by WS/IncomingCallBar — don't end it.
-        if (currentStatus == CallStatus.ringing) {
-          _cpLog('PUSH', 'CallEventActionCallEnded SKIPPED | status=ringing (foreground CallKit suppress) | callId=$callIdStr');
+        // Skip if ringing OR if AppDelegate will auto-dismiss (foreground VoIP push).
+        // Two-condition guard because of a race: _callKitAutoDismissExpected is set
+        // synchronously at the start of CallEventActionCallIncoming (before the await),
+        // but onIncomingCall() is async — status may still be idle when this event fires.
+        // Checking _callKitAutoDismissExpected covers that in-flight window.
+        if (currentStatus == CallStatus.ringing || _callKitAutoDismissExpected) {
+          final wasExpected = _callKitAutoDismissExpected;
+          _callKitAutoDismissExpected = false;
+          _cpLog('PUSH', 'CallEventActionCallEnded SKIPPED | status=$currentStatus autoDismissWasExpected=$wasExpected callId=$callIdStr');
           return;
         }
 

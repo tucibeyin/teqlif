@@ -255,7 +255,12 @@ import Security
       // dismiss the native CallKit screen immediately after reportNewIncomingCall completes.
       // saveEndCall uses provider.reportCall directly (no CXCallController round-trip),
       // which is ~67ms faster than the CXEndCallAction transaction path.
+      // Capture BEFORE showCallkitIncoming so CallKit UI appearance (inactive transition) can't race.
       let appIsActive = UIApplication.shared.applicationState == .active
+      // Pass to Flutter via extra so Dart doesn't have to re-check lifecycle (which is already
+      // inactive by the time CallEventActionCallIncoming fires).
+      data.extra?["app_was_foreground"] = appIsActive
+
       print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) { [weak self] in
           guard let self = self else { completion(); return }
@@ -276,6 +281,14 @@ import Security
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
+    // Suppress incoming_call FCM notification — VoIP PushKit / CallKit handles it natively.
+    // Prevents a duplicate banner from appearing alongside the CallKit UI (or IncomingCallBar).
+    let userInfo = notification.request.content.userInfo
+    if (userInfo["type"] as? String) == "incoming_call" {
+      print("[PUSH] willPresent: incoming_call FCM suppressed (VoIP handles it)")
+      completionHandler([])
+      return
+    }
     if #available(iOS 14.0, *) {
       completionHandler([.banner, .badge, .sound])
     } else {
