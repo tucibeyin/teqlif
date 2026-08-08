@@ -40,14 +40,16 @@ import '../../services/client_logger.dart';
 final _log = LoggerService.instance;
 
 // ── Host stream sabitleri ──────────────────────────────────────────────────────
-const _kThumbnailInitialDelaySeconds  = 5;    // yayın başlayınca ilk thumbnail gecikmesi
-const _kThumbnailRefreshSeconds       = 60;   // thumbnail yenileme aralığı
-const _kTrackPollIntervalMs           = 100;  // video track kontrol aralığı (ms)
-const _kTrackPollMaxAttempts          = 50;   // max kontrol sayısı (= 5 saniye)
+const _kThumbnailInitialDelaySeconds =
+    5; // yayın başlayınca ilk thumbnail gecikmesi
+const _kThumbnailRefreshSeconds = 60; // thumbnail yenileme aralığı
+const _kTrackPollIntervalMs = 100; // video track kontrol aralığı (ms)
+const _kTrackPollMaxAttempts = 50; // max kontrol sayısı (= 5 saniye)
 
 class HostStreamScreen extends ConsumerStatefulWidget {
   final StreamTokenOut streamToken;
   final String title;
+
   /// Kullanıcı blast özelliğini onayladı ama henüz gönderilmedi.
   /// LiveKit bağlantısı kurulunca confirmLive'dan sonra blast gönderilir.
   final bool blastApproved;
@@ -76,6 +78,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   String? _error;
 
   final _videoKey = GlobalKey();
+  final _stackKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
   bool _activityVisible = true;
@@ -84,7 +87,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   final Set<String> _mutedUsers = {};
   double _currentZoom = 1.0;
   static const double _maxZoom = 8.0;
-  final Set<String> _modUsers   = {};
+  final Set<String> _modUsers = {};
   VideoTrack? _coHostTrack;
   String? _coHostUsername;
   double? _pipTop;
@@ -114,7 +117,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (widget.streamToken.category != 'chat') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
-            .read(commerceActivityProvider(widget.streamToken.streamId).notifier)
+            .read(
+              commerceActivityProvider(widget.streamToken.streamId).notifier,
+            )
             .loadHistory(widget.streamToken.streamId);
       });
     }
@@ -187,13 +192,20 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _loadAudienceSize() async {
-    final result = await ref.read(hostStreamViewModelProvider).getAudienceSize(widget.title, widget.streamToken.category);
+    final result = await ref
+        .read(hostStreamViewModelProvider)
+        .getAudienceSize(widget.title, widget.streamToken.category);
     if (!mounted || result == null) return;
     final size = result['audience_size'] as int? ?? 0;
     final cost = (result['estimated_cost'] as num?)?.toInt() ?? 0;
     if (size > 0) {
-      debugPrint('[HOST] setState: _audienceSize=$size _audienceCost=$cost → build() tetiklenecek');
-      setState(() { _audienceSize = size; _audienceCost = cost.toDouble(); });
+      debugPrint(
+        '[HOST] setState: _audienceSize=$size _audienceCost=$cost → build() tetiklenecek',
+      );
+      setState(() {
+        _audienceSize = size;
+        _audienceCost = cost.toDouble();
+      });
     }
   }
 
@@ -204,22 +216,41 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(loc.t('hostNotifDialogTitle'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        title: Text(
+          loc.t('hostNotifDialogTitle'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         content: Text(
           _audienceCost == 0
-              ? loc.t('blastConfirmBodyFree', {'count': _audienceSize.toString()})
-              : loc.t('blastConfirmBodyPaid', {'count': _audienceSize.toString(), 'cost': _audienceCost.toInt().toString()}),
+              ? loc.t('blastConfirmBodyFree', {
+                  'count': _audienceSize.toString(),
+                })
+              : loc.t('blastConfirmBodyPaid', {
+                  'count': _audienceSize.toString(),
+                  'cost': _audienceCost.toInt().toString(),
+                }),
           style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(loc.t('btnDismiss'), style: const TextStyle(color: Color(0xFF64748B))),
+            child: Text(
+              loc.t('btnDismiss'),
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
-            child: Text(loc.t('btnSend'), style: const TextStyle(fontWeight: FontWeight.w700)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+            child: Text(
+              loc.t('btnSend'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -228,7 +259,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
     setState(() => _blastSending = true);
     try {
-      final result = await ref.read(hostStreamViewModelProvider).sendLeadBlast(widget.title, widget.streamToken.category, _audienceCost.toInt());
+      final result = await ref
+          .read(hostStreamViewModelProvider)
+          .sendLeadBlast(
+            widget.title,
+            widget.streamToken.category,
+            _audienceCost.toInt(),
+          );
       if (!mounted) return;
       if (result != null && result['error'] == null) {
         CacheService.clearData('user_wallet_data');
@@ -237,7 +274,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             ? loc.t('blastSent', {'count': sent.toString()})
             : loc.t('blastStarted');
         TeqToast.success(msg);
-        setState(() { _audienceSize = 0; _audienceCost = 0.0; });
+        setState(() {
+          _audienceSize = 0;
+          _audienceCost = 0.0;
+        });
       } else {
         final errMsg = result?['error'] as String? ?? loc.t('blastError');
         TeqToast.error(errMsg);
@@ -263,8 +303,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             if (loading) {
               () async {
                 try {
-                  final d = await ref.read(hostStreamViewModelProvider).fetchAudienceInsights(streamId);
-                  setSt(() { data = d; loading = false; });
+                  final d = await ref
+                      .read(hostStreamViewModelProvider)
+                      .fetchAudienceInsights(streamId);
+                  setSt(() {
+                    data = d;
+                    loading = false;
+                  });
                 } catch (_) {
                   setSt(() => loading = false);
                 }
@@ -279,58 +324,112 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
               child: loading
                   ? const SizedBox(
                       height: 180,
-                      child: Center(child: CircularProgressIndicator(color: Colors.white54)),
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.white54),
+                      ),
                     )
                   : data == null
-                      ? SizedBox(
-                          height: 120,
-                          child: Center(child: Text(loc.t('hostStreamDataError'), style: const TextStyle(color: Colors.white60))),
-                        )
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  ? SizedBox(
+                      height: 120,
+                      child: Center(
+                        child: Text(
+                          loc.t('hostStreamDataError'),
+                          style: const TextStyle(color: Colors.white60),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(children: [
-                              const Icon(Icons.people, color: Colors.white, size: 18),
-                              const SizedBox(width: 8),
-                              Text(loc.t('audienceInsightsTitle'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                              const Spacer(),
-                              Text(loc.t('audienceInsightsViewers', {'count': (data!['viewer_count'] as int? ?? 0).toString()}), style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                            ]),
-                            const SizedBox(height: 16),
-                            if (data!['avg_budget'] != null)
-                              _InsightTile(
-                                icon: '💰',
-                                label: loc.t('audienceAvgBudget'),
-                                value: '${(data!['avg_budget'] as num).toStringAsFixed(0)} ₺',
-                                color: const Color(0xFF10B981),
+                            const Icon(
+                              Icons.people,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              loc.t('audienceInsightsTitle'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                               ),
-                            const SizedBox(height: 8),
-                            ...(data!['segments'] as List? ?? []).map((s) {
-                              final seg = s as Map<String, dynamic>;
-                              final color = _hexToColor(seg['color'] as String? ?? '#6B7280');
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(children: [
-                                  Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                                  const SizedBox(width: 8),
-                                  Text(seg['label'] as String? ?? '', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                                  const Spacer(),
-                                  Text('${seg['count']}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-                                ]),
-                              );
-                            }),
-                            if ((data!['ready_buyers_count'] as int? ?? 0) > 0) ...[
-                              const SizedBox(height: 8),
-                              _InsightTile(
-                                icon: '🎯',
-                                label: loc.t('audienceProViewers'),
-                                value: '${data!['ready_buyers_count']}',
-                                color: const Color(0xFF3B82F6),
+                            ),
+                            const Spacer(),
+                            Text(
+                              loc.t('audienceInsightsViewers', {
+                                'count': (data!['viewer_count'] as int? ?? 0)
+                                    .toString(),
+                              }),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
                               ),
-                            ],
+                            ),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        if (data!['avg_budget'] != null)
+                          _InsightTile(
+                            icon: '💰',
+                            label: loc.t('audienceAvgBudget'),
+                            value:
+                                '${(data!['avg_budget'] as num).toStringAsFixed(0)} ₺',
+                            color: const Color(0xFF10B981),
+                          ),
+                        const SizedBox(height: 8),
+                        ...(data!['segments'] as List? ?? []).map((s) {
+                          final seg = s as Map<String, dynamic>;
+                          final color = _hexToColor(
+                            seg['color'] as String? ?? '#6B7280',
+                          );
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  seg['label'] as String? ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '${seg['count']}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        if ((data!['ready_buyers_count'] as int? ?? 0) > 0) ...[
+                          const SizedBox(height: 8),
+                          _InsightTile(
+                            icon: '🎯',
+                            label: loc.t('audienceProViewers'),
+                            value: '${data!['ready_buyers_count']}',
+                            color: const Color(0xFF3B82F6),
+                          ),
+                        ],
+                      ],
+                    ),
             );
           },
         );
@@ -376,13 +475,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     // T-HC-01: isDenied vs isPermanentlyDenied ayrımı
     final anyDenied = !camStatus.isGranted || !micStatus.isGranted;
     if (anyDenied) {
-      final permanent = camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
+      final permanent =
+          camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
       StreamService.cancelStream(widget.streamToken.streamId).ignore();
       if (mounted) {
         final loc = ref.read(localizationProvider);
         setState(() {
           _error = permanent
-              ? loc.tOr('permPermanentlyDenied', 'Bu özellik için izin gerekli. Ayarlardan etkinleştir.')
+              ? loc.tOr(
+                  'permPermanentlyDenied',
+                  'Bu özellik için izin gerekli. Ayarlardan etkinleştir.',
+                )
               : loc.t('livePermissionRequired');
         });
       }
@@ -394,7 +497,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       _listener = room.createListener();
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
-        debugPrint('[HOST_CAM] LocalTrackPublishedEvent fired: kind=${event.publication.kind}, track=${event.publication.track?.runtimeType}, sid=${event.publication.sid}');
+        debugPrint(
+          '[HOST_CAM] LocalTrackPublishedEvent fired: kind=${event.publication.kind}, track=${event.publication.track?.runtimeType}, sid=${event.publication.sid}',
+        );
         // setState burada kasıtlı olarak yok: _localVideoTrack yalnızca
         // _room ile birlikte tek setState'te set edilir (aşağıda).
         // Erken setState → VideoTrackRenderer ilk build'i başlatır →
@@ -405,13 +510,19 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       // Sahneye çıkan izleyicinin video track'ini PiP'e bağla
       _listener!.on<TrackSubscribedEvent>((event) {
         if (event.track is VideoTrack && mounted) {
-          debugPrint('[HOST] setState: _coHostTrack=VideoTrack (TrackSubscribed) → build() tetiklenecek');
+          debugPrint(
+            '[HOST] setState: _coHostTrack=VideoTrack (TrackSubscribed) → build() tetiklenecek',
+          );
           setState(() => _coHostTrack = event.track as VideoTrack);
         }
       });
       _listener!.on<TrackUnsubscribedEvent>((event) {
-        if (event.track is VideoTrack && event.track == _coHostTrack && mounted) {
-          debugPrint('[HOST] setState: _coHostTrack=null (TrackUnsubscribed) → build() tetiklenecek');
+        if (event.track is VideoTrack &&
+            event.track == _coHostTrack &&
+            mounted) {
+          debugPrint(
+            '[HOST] setState: _coHostTrack=null (TrackUnsubscribed) → build() tetiklenecek',
+          );
           setState(() => _coHostTrack = null);
         }
       });
@@ -422,27 +533,41 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         }
       });
 
-      debugPrint('[HOST_CAM] room.connect() başlıyor: ${widget.streamToken.livekitUrl}');
+      debugPrint(
+        '[HOST_CAM] room.connect() başlıyor: ${widget.streamToken.livekitUrl}',
+      );
       await room.connect(
         widget.streamToken.livekitUrl,
         widget.streamToken.token,
       );
-      debugPrint('[HOST_CAM] room.connect() tamamlandı — localParticipant=${room.localParticipant?.sid}, identity=${room.localParticipant?.identity}');
+      debugPrint(
+        '[HOST_CAM] room.connect() tamamlandı — localParticipant=${room.localParticipant?.sid}, identity=${room.localParticipant?.identity}',
+      );
 
       // T-HC-05: Bağlantı başarılı ama kamera/mikrofon başlatma ayrı hata verebilir
       try {
         debugPrint('[HOST_CAM] setCameraEnabled(true) çağrılıyor...');
         await room.localParticipant?.setCameraEnabled(true);
-        debugPrint('[HOST_CAM] setCameraEnabled(true) döndü — videoTrackPublications.length=${room.localParticipant?.videoTrackPublications.length}');
+        debugPrint(
+          '[HOST_CAM] setCameraEnabled(true) döndü — videoTrackPublications.length=${room.localParticipant?.videoTrackPublications.length}',
+        );
         for (final pub in room.localParticipant?.videoTrackPublications ?? []) {
-          debugPrint('[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}, muted=${pub.muted}');
+          debugPrint(
+            '[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}, muted=${pub.muted}',
+          );
         }
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
         _log.captureException(e, tag: 'HostConnect.trackEnable');
         if (mounted) {
-          TeqToast.warning(ref.read(localizationProvider).tOr(
-              'cameraToggleFailed', 'Kamera başlatılamadı, yayın devam ediyor'));
+          TeqToast.warning(
+            ref
+                .read(localizationProvider)
+                .tOr(
+                  'cameraToggleFailed',
+                  'Kamera başlatılamadı, yayın devam ediyor',
+                ),
+          );
         }
       }
 
@@ -473,17 +598,24 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       // _room set edilince live = true → UI hemen görünür.
       // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
       // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
-      debugPrint('[HOST_CAM] setState _room set ediliyor, foundTrack=${foundTrack?.runtimeType}');
+      debugPrint(
+        '[HOST_CAM] setState _room set ediliyor, foundTrack=${foundTrack?.runtimeType}',
+      );
       setState(() {
         _room = room;
         _localVideoTrack = foundTrack;
       });
-      debugPrint('[HOST_CAM] ✓ live=true, _localVideoTrack=${_localVideoTrack?.runtimeType} → HOST build() tetiklenecek');
+      debugPrint(
+        '[HOST_CAM] ✓ live=true, _localVideoTrack=${_localVideoTrack?.runtimeType} → HOST build() tetiklenecek',
+      );
 
       // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
       if (foundTrack == null) _waitForTrack();
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
-      _thumbTimer = Timer(const Duration(seconds: _kThumbnailInitialDelaySeconds), _autoCaptureThumbnail);
+      _thumbTimer = Timer(
+        const Duration(seconds: _kThumbnailInitialDelaySeconds),
+        _autoCaptureThumbnail,
+      );
     } catch (e, st) {
       debugPrint('[HOST_CAM] ✗ _connect() HATA yakalandı: $e');
       // Bağlantı başarısız — pending kaydı temizle
@@ -509,29 +641,42 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   /// LocalTrackPublishedEvent bazen geç gelir; bu metod event gelene kadar
   /// kısa aralıklarla yayınlamaları kontrol eder, max [_kTrackPollMaxAttempts]×[_kTrackPollIntervalMs]ms bekler.
   Future<void> _waitForTrack() async {
-    debugPrint('[HOST_CAM] _waitForTrack başladı (${_kTrackPollMaxAttempts}×${_kTrackPollIntervalMs}ms)');
+    debugPrint(
+      '[HOST_CAM] _waitForTrack başladı (${_kTrackPollMaxAttempts}×${_kTrackPollIntervalMs}ms)',
+    );
     for (int attempt = 0; attempt < _kTrackPollMaxAttempts; attempt++) {
       await Future.delayed(const Duration(milliseconds: _kTrackPollIntervalMs));
       if (!mounted || _localVideoTrack != null) {
-        debugPrint('[HOST_CAM] _waitForTrack erken çıkış attempt=$attempt mounted=$mounted hasTrack=${_localVideoTrack != null}');
+        debugPrint(
+          '[HOST_CAM] _waitForTrack erken çıkış attempt=$attempt mounted=$mounted hasTrack=${_localVideoTrack != null}',
+        );
         return;
       }
       if (attempt % 10 == 0) {
         final pubs = _room?.localParticipant?.videoTrackPublications ?? [];
-        debugPrint('[HOST_CAM] _waitForTrack attempt=$attempt, pubs.length=${pubs.length}');
+        debugPrint(
+          '[HOST_CAM] _waitForTrack attempt=$attempt, pubs.length=${pubs.length}',
+        );
         for (final pub in pubs) {
-          debugPrint('[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}');
+          debugPrint(
+            '[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}',
+          );
         }
       }
       for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
         if (pub.track != null) {
-          debugPrint('[HOST_CAM] ✓ _waitForTrack attempt=$attempt track bulundu');
-          if (mounted) setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
+          debugPrint(
+            '[HOST_CAM] ✓ _waitForTrack attempt=$attempt track bulundu',
+          );
+          if (mounted)
+            setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
           return;
         }
       }
     }
-    debugPrint('[HOST_CAM] ✗ _waitForTrack tüm ${_kTrackPollMaxAttempts} deneme bitti, track bulunamadı');
+    debugPrint(
+      '[HOST_CAM] ✗ _waitForTrack tüm ${_kTrackPollMaxAttempts} deneme bitti, track bulunamadı',
+    );
   }
 
   // T-HC-03: State flip'i başarılı await sonrasına taşındı — hata olursa UI önceki durumda kalır
@@ -543,7 +688,11 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     } catch (e) {
       _log.captureException(e, tag: 'HostStream.toggleMic');
       if (mounted) {
-        TeqToast.error(ref.read(localizationProvider).tOr('micToggleFailed', 'Mikrofon değiştirilemedi'));
+        TeqToast.error(
+          ref
+              .read(localizationProvider)
+              .tOr('micToggleFailed', 'Mikrofon değiştirilemedi'),
+        );
       }
     }
   }
@@ -553,13 +702,19 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     try {
       await _room?.localParticipant?.setCameraEnabled(target);
       if (mounted) {
-        debugPrint('[HOST] setState: _cameraEnabled=$target → build() tetiklenecek');
+        debugPrint(
+          '[HOST] setState: _cameraEnabled=$target → build() tetiklenecek',
+        );
         setState(() => _cameraEnabled = target);
       }
     } catch (e) {
       _log.captureException(e, tag: 'HostStream.toggleCamera');
       if (mounted) {
-        TeqToast.error(ref.read(localizationProvider).tOr('cameraToggleFailed', 'Kamera değiştirilemedi'));
+        TeqToast.error(
+          ref
+              .read(localizationProvider)
+              .tOr('cameraToggleFailed', 'Kamera değiştirilemedi'),
+        );
       }
     }
   }
@@ -567,13 +722,14 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
-    debugPrint('[HOST] setState: _switchCamera → _isFrontCamera=${!_isFrontCamera} → build() tetiklenecek');
+    debugPrint(
+      '[HOST] setState: _switchCamera → _isFrontCamera=${!_isFrontCamera} → build() tetiklenecek',
+    );
     setState(() {
       _isFrontCamera = !_isFrontCamera;
       _currentZoom = 1.0;
     });
   }
-
 
   void _onBidAdded(String bidder, double amount, String? itemName) {
     ref
@@ -581,8 +737,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         .addBidEvent(bidder, amount, itemName);
   }
 
-  void _onPurchaseAdded(
-      String buyer, double price, int qty, String? title) {
+  void _onPurchaseAdded(String buyer, double price, int qty, String? title) {
     ref
         .read(commerceActivityProvider(widget.streamToken.streamId).notifier)
         .addPurchaseEvent(buyer, price, qty, title);
@@ -595,7 +750,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Future<void> _showViewers() async {
     List<String> viewers = [];
     try {
-      viewers = await ref.read(hostStreamViewModelProvider).getViewers(widget.streamToken.streamId);
+      viewers = await ref
+          .read(hostStreamViewModelProvider)
+          .getViewers(widget.streamToken.streamId);
     } catch (e, st) {
       _log.captureException(e, stackTrace: st, tag: 'HostStream.showViewers');
     }
@@ -638,7 +795,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
   Future<void> _inviteCoHost(String username) async {
     try {
-      await ref.read(hostStreamViewModelProvider).inviteCoHost(widget.streamToken.streamId, username);
+      await ref
+          .read(hostStreamViewModelProvider)
+          .inviteCoHost(widget.streamToken.streamId, username);
       if (mounted) {
         TeqToast.info(ref.read(localizationProvider).t('hostInvitedToStage'));
       }
@@ -658,14 +817,22 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         username: username,
         isMuted: _mutedUsers.contains(username),
         currentCoHostUsername: _coHostUsername,
-        onRemoveCoHost: _coHostUsername == username ? () async {
-          try {
-            await ref.read(hostStreamViewModelProvider).removeCoHost(widget.streamToken.streamId, username);
-            setState(() => _coHostUsername = null);
-          } catch (e, st) {
-            _log.captureException(e, stackTrace: st, tag: 'HostStream.removeCoHost');
-          }
-        } : null,
+        onRemoveCoHost: _coHostUsername == username
+            ? () async {
+                try {
+                  await ref
+                      .read(hostStreamViewModelProvider)
+                      .removeCoHost(widget.streamToken.streamId, username);
+                  setState(() => _coHostUsername = null);
+                } catch (e, st) {
+                  _log.captureException(
+                    e,
+                    stackTrace: st,
+                    tag: 'HostStream.removeCoHost',
+                  );
+                }
+              }
+            : null,
         isMod: _modUsers.contains(username),
         onMuted: () => setState(() => _mutedUsers.add(username)),
         onUnmuted: () => setState(() => _mutedUsers.remove(username)),
@@ -682,25 +849,34 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: Text(loc.t('liveEndStreamTitle'),
-            style: const TextStyle(color: Colors.white, fontSize: 16)),
-        content: Text(loc.t('liveEndStreamConfirm'),
-            style: const TextStyle(color: Color(0xFF94A3B8))),
+        title: Text(
+          loc.t('liveEndStreamTitle'),
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        content: Text(
+          loc.t('liveEndStreamConfirm'),
+          style: const TextStyle(color: Color(0xFF94A3B8)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(loc.t('btnCancel'),
-                style: const TextStyle(color: Color(0xFF64748B))),
+            child: Text(
+              loc.t('btnCancel'),
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(loc.t('liveEndStreamBtn'),
-                style: const TextStyle(color: Colors.white)),
+            child: Text(
+              loc.t('liveEndStreamBtn'),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -709,7 +885,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (confirm != true) return;
 
     try {
-      await ref.read(hostStreamViewModelProvider).endStream(widget.streamToken.streamId);
+      await ref
+          .read(hostStreamViewModelProvider)
+          .endStream(widget.streamToken.streamId);
     } catch (e, st) {
       // Ağ hatası olsa bile yayın ekranından çıkmaya devam et
       _log.captureException(e, stackTrace: st, tag: 'HostStream.endStream');
@@ -735,31 +913,57 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _autoCaptureThumbnail() async {
-    debugPrint('[THUMB] _autoCaptureThumbnail çağrıldı — mounted=$mounted _localVideoTrack=${_localVideoTrack?.runtimeType}');
+    debugPrint(
+      '[THUMB] _autoCaptureThumbnail çağrıldı — mounted=$mounted _localVideoTrack=${_localVideoTrack?.runtimeType}',
+    );
     if (!mounted || _localVideoTrack == null) return;
     try {
+      final stackRo =
+          _stackKey.currentContext?.findRenderObject() as RenderBox?;
+      debugPrint(
+        '[THUMB] Stack.hasSize=${stackRo?.hasSize} Stack.size=${stackRo?.size}',
+      );
+      final heartsRo =
+          _heartsKey.currentContext?.findRenderObject() as RenderBox?;
+      debugPrint(
+        '[THUMB] FloatingHearts.hasSize=${heartsRo?.hasSize} FloatingHearts.size=${heartsRo?.size} FloatingHearts.parentData=${heartsRo?.parentData}',
+      );
       final ctx = _videoKey.currentContext;
-      debugPrint('[THUMB] _videoKey.currentContext=${ctx == null ? "NULL" : "ok"} _videoKey=${_videoKey.hashCode}');
-      final boundary =
-          ctx?.findRenderObject() as RenderRepaintBoundary?;
-      debugPrint('[THUMB] boundary=${boundary == null ? "NULL" : "ok"} hasSize=${boundary?.hasSize} size=${boundary?.size} debugNeedsPaint=${boundary?.debugNeedsPaint}');
+      debugPrint(
+        '[THUMB] _videoKey.currentContext=${ctx == null ? "NULL" : "ok"} _videoKey=${_videoKey.hashCode}',
+      );
+      final boundary = ctx?.findRenderObject() as RenderRepaintBoundary?;
+      debugPrint(
+        '[THUMB] boundary=${boundary == null ? "NULL" : "ok"} hasSize=${boundary?.hasSize} size=${boundary?.size} debugNeedsPaint=${boundary?.debugNeedsPaint}',
+      );
       if (boundary == null) return;
       debugPrint('[THUMB] toImage() çağrılıyor...');
       final image = await boundary.toImage(pixelRatio: 0.5);
-      debugPrint('[THUMB] toImage() tamamlandı — ${image.width}×${image.height}');
+      debugPrint(
+        '[THUMB] toImage() tamamlandı — ${image.width}×${image.height}',
+      );
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
-      await ref.read(hostStreamViewModelProvider).uploadThumbnail(
-        widget.streamToken.streamId,
-        byteData.buffer.asUint8List(),
-      );
+      await ref
+          .read(hostStreamViewModelProvider)
+          .uploadThumbnail(
+            widget.streamToken.streamId,
+            byteData.buffer.asUint8List(),
+          );
       // Her 60 saniyede bir güncelle
       if (mounted) {
-        _thumbTimer = Timer(const Duration(seconds: _kThumbnailRefreshSeconds), _autoCaptureThumbnail);
+        _thumbTimer = Timer(
+          const Duration(seconds: _kThumbnailRefreshSeconds),
+          _autoCaptureThumbnail,
+        );
       }
     } catch (e, st) {
-      _log.captureException(e,
-          stackTrace: st, tag: 'HostStream.thumbnail', shouldCapture: false);
+      _log.captureException(
+        e,
+        stackTrace: st,
+        tag: 'HostStream.thumbnail',
+        shouldCapture: false,
+      );
     }
   }
 
@@ -767,20 +971,25 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (!mounted || _localVideoTrack == null) return null;
     try {
       final boundary =
-          _videoKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+          _videoKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return null;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return null;
-      
+
       final result = await UploadService.uploadBytes(
         byteData.buffer.asUint8List(),
         'proof.jpg',
       );
       return result.url;
     } catch (e, st) {
-      _log.captureException(e,
-          stackTrace: st, tag: 'HostStream.proofCapture', shouldCapture: true);
+      _log.captureException(
+        e,
+        stackTrace: st,
+        tag: 'HostStream.proofCapture',
+        shouldCapture: true,
+      );
       return null;
     }
   }
@@ -794,8 +1003,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     _activityPanelTop ??= topPad + 66;
 
     // Auto-scroll to top whenever new activity arrives
-    ref.listen(
-        commerceActivityProvider(widget.streamToken.streamId), (_, __) {
+    ref.listen(commerceActivityProvider(widget.streamToken.streamId), (_, __) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_activityScrollCtrl.hasClients) {
           _activityScrollCtrl.jumpTo(0);
@@ -804,7 +1012,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     });
     // Oda bağlıysa UI her zaman gösterilir — _connecting flag'ine bağımlı değil
     final live = _room != null && _error == null;
-    debugPrint('[HOST] build() — live=$live _room=${_room != null} _localVideoTrack=${_localVideoTrack?.runtimeType} _viewerCount=$_viewerCount _cameraEnabled=$_cameraEnabled _isFrontCamera=$_isFrontCamera _currentZoom=$_currentZoom _coHostTrack=${_coHostTrack?.runtimeType}');
+    debugPrint(
+      '[HOST] build() — live=$live _room=${_room != null} _localVideoTrack=${_localVideoTrack?.runtimeType} _viewerCount=$_viewerCount _cameraEnabled=$_cameraEnabled _isFrontCamera=$_isFrontCamera _currentZoom=$_currentZoom _coHostTrack=${_coHostTrack?.runtimeType}',
+    );
 
     return PopScope(
       canPop: false,
@@ -812,483 +1022,593 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         backgroundColor: Colors.black,
         resizeToAvoidBottomInset: false,
         body: Stack(
-        children: [
-          // ── Video katmanı (tam ekran) — Transform.scale ile anlık zoom ──
-          Positioned.fill(
-            child: ClipRect(
-              child: Transform.scale(
-                scale: _currentZoom,
-                child: LiveVideoPlayer(
-                  track: _localVideoTrack,
-                  cameraEnabled: _cameraEnabled,
-                  repaintKey: _videoKey,
-                  isFrontCamera: _isFrontCamera,
-                ),
-              ),
-            ),
-          ),
-
-          // ── Uçuşan kalpler katmanı ────────────────────────────────────
-          FloatingHearts(key: _heartsKey),
-
-          // ── Bağlanıyor — sadece oda henüz bağlı değilken ───────────────
-          if (_room == null && _error == null)
+          key: _stackKey,
+          children: [
+            // ── Video katmanı (tam ekran) — Transform.scale ile anlık zoom ──
             Positioned.fill(
-              child: ColoredBox(
-                color: Colors.black,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(color: kPrimary),
-                      const SizedBox(height: 16),
-                      Text(ref.read(localizationProvider).t('liveConnecting'),
-                          style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                    ],
+              child: ClipRect(
+                child: Transform.scale(
+                  scale: _currentZoom,
+                  child: LiveVideoPlayer(
+                    track: _localVideoTrack,
+                    cameraEnabled: _cameraEnabled,
+                    repaintKey: _videoKey,
+                    isFrontCamera: _isFrontCamera,
                   ),
                 ),
               ),
             ),
 
-          // ── Hata ────────────────────────────────────────────────────────
-          if (_error != null)
-            Positioned.fill(
-              child: ColoredBox(
-                color: Colors.black,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
+            // ── Uçuşan kalpler katmanı ────────────────────────────────────
+            FloatingHearts(key: _heartsKey),
+
+            // ── Bağlanıyor — sadece oda henüz bağlı değilken ───────────────
+            if (_room == null && _error == null)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.error_outline,
-                            color: Colors.red, size: 52),
-                        const SizedBox(height: 12),
-                        Text(_error!,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 14),
-                            textAlign: TextAlign.center),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () async { await openAppSettings(); },
-                          child: Text(ref.read(localizationProvider).tOr('permOpenSettings', 'Ayarları Aç')),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                              context, '/home', (route) => false),
-                          child: Text(ref.read(localizationProvider).t('btnGoBack'),
-                              style: const TextStyle(color: Colors.white54)),
+                        const CircularProgressIndicator(color: kPrimary),
+                        const SizedBox(height: 16),
+                        Text(
+                          ref.read(localizationProvider).t('liveConnecting'),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
 
-          // ── Üst bar: CANLI rozeti + izleyici + başlık + Bitir ──────────
-          if (live)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: HostTopBar(
-                topPad: topPad,
-                viewerCount: _viewerCount,
-                title: widget.title,
-                micEnabled: _micEnabled,
-                cameraEnabled: _cameraEnabled,
-                onViewersTap: _showViewers,
-                onToggleMic: _toggleMic,
-                onToggleCamera: _toggleCamera,
-                onSwitchCamera: _switchCamera,
-                onEndStream: _endStream,
-              ),
-            ),
-
-          // ── Hype Meter — sağ üst köşe, top bar altında ─────────────────
-          if (live)
-            Positioned(
-              top: topPad + 64,
-              right: 8,
-              child: HypeMeterWidget(hypeScore: _hypeScore),
-            ),
-
-          // ── Alt panel: sohbet + açık artırma ───────────────────────────
-          if (live)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.only(bottom: botPad + 8),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Color(0xCC000000), Colors.transparent],
-                    stops: [0.0, 1.0],
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Sohbet (mesajlar üstte yüzer)
-                    ChatPanel(
-                      key: _chatKey,
-                      streamId: widget.streamToken.streamId,
-                      onViewerCountChanged: (n) {
-                        debugPrint('[HOST] setState: _viewerCount $n (eski=$_viewerCount) → build() tetiklenecek');
-                        setState(() => _viewerCount = n);
-                      },
-                      onUsernameTap: _showModSheet,
-                      // İzleyiciler kalp gönderdiğinde host ekranında uçsun
-                      onStreamLike: (_, _) =>
-                          _heartsKey.currentState?.addHeart(isLocal: false),
-                      onCoHostAccepted: (username) =>
-                          setState(() => _coHostUsername = username),
-                      onCoHostRemoved: (_) =>
-                          setState(() => _coHostUsername = null),
-                      onWhaleAlert: _showWhaleHud,
-                      onGift: _showGiftHud,
-                      onHypeUpdate: (s) => _hypeScore.value = s,
-                      onHypeAlert: _showHypeAlert,
-                      pinAtBottom: true,
-                      pinDismissible: true,
-                    ),
-                    // ── Pin butonları ─────────────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 2),
-                      child: Row(
+            // ── Hata ────────────────────────────────────────────────────────
+            if (_error != null)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Sabitle
-                          GestureDetector(
-                            onTap: _showPinInput,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: const Color(0x88000000),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                    color: Colors.amber.withValues(alpha: 0.5)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.push_pin_rounded,
-                                      size: 13, color: Colors.amber),
-                                  const SizedBox(width: 4),
-                                  Text(ref.read(localizationProvider).t('btnPin'),
-                                      style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500)),
-                                ],
-                              ),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 52,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await openAppSettings();
+                            },
+                            child: Text(
+                              ref
+                                  .read(localizationProvider)
+                                  .tOr('permOpenSettings', 'Ayarları Aç'),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          // Sabiti Kaldır
-                          GestureDetector(
-                            onTap: () =>
-                                _chatKey.currentState?.sendHostPin(''),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: const Color(0x55000000),
-                                borderRadius: BorderRadius.circular(16),
-                                border:
-                                    Border.all(color: Colors.white24),
-                              ),
-                              child: Text(
-                                loc.t('btnRemovePin'),
-                                style: const TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500),
-                              ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/home',
+                              (route) => false,
+                            ),
+                            child: Text(
+                              ref.read(localizationProvider).t('btnGoBack'),
+                              style: const TextStyle(color: Colors.white54),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    // ── Lead blast butonu ──────────────────────────────────
-                    if (_audienceSize > 0 && !_blastDismissed)
+                  ),
+                ),
+              ),
+
+            // ── Üst bar: CANLI rozeti + izleyici + başlık + Bitir ──────────
+            if (live)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: HostTopBar(
+                  topPad: topPad,
+                  viewerCount: _viewerCount,
+                  title: widget.title,
+                  micEnabled: _micEnabled,
+                  cameraEnabled: _cameraEnabled,
+                  onViewersTap: _showViewers,
+                  onToggleMic: _toggleMic,
+                  onToggleCamera: _toggleCamera,
+                  onSwitchCamera: _switchCamera,
+                  onEndStream: _endStream,
+                ),
+              ),
+
+            // ── Hype Meter — sağ üst köşe, top bar altında ─────────────────
+            if (live)
+              Positioned(
+                top: topPad + 64,
+                right: 8,
+                child: HypeMeterWidget(hypeScore: _hypeScore),
+              ),
+
+            // ── Alt panel: sohbet + açık artırma ───────────────────────────
+            if (live)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.only(bottom: botPad + 8),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Color(0xCC000000), Colors.transparent],
+                      stops: [0.0, 1.0],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Sohbet (mesajlar üstte yüzer)
+                      ChatPanel(
+                        key: _chatKey,
+                        streamId: widget.streamToken.streamId,
+                        onViewerCountChanged: (n) {
+                          debugPrint(
+                            '[HOST] setState: _viewerCount $n (eski=$_viewerCount) → build() tetiklenecek',
+                          );
+                          setState(() => _viewerCount = n);
+                        },
+                        onUsernameTap: _showModSheet,
+                        // İzleyiciler kalp gönderdiğinde host ekranında uçsun
+                        onStreamLike: (_, _) =>
+                            _heartsKey.currentState?.addHeart(isLocal: false),
+                        onCoHostAccepted: (username) =>
+                            setState(() => _coHostUsername = username),
+                        onCoHostRemoved: (_) =>
+                            setState(() => _coHostUsername = null),
+                        onWhaleAlert: _showWhaleHud,
+                        onGift: _showGiftHud,
+                        onHypeUpdate: (s) => _hypeScore.value = s,
+                        onHypeAlert: _showHypeAlert,
+                        pinAtBottom: true,
+                        pinDismissible: true,
+                      ),
+                      // ── Pin butonları ─────────────────────────────────────
                       Padding(
-                        padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                        GestureDetector(
-                          onTap: _blastSending ? null : _sendLeadBlast,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              gradient: _blastSending
-                                  ? null
-                                  : const LinearGradient(
-                                      colors: [
-                                        Color(0xFFDC2626),
-                                        Color(0xFFEF4444)
-                                      ],
-                                    ),
-                              color: _blastSending
-                                  ? const Color(0x661E293B)
-                                  : null,
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: _blastSending
-                                  ? null
-                                  : [
-                                      BoxShadow(
-                                        color: const Color(0xFFEF4444)
-                                            .withValues(alpha: 0.4),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: _blastSending
-                                  ? [
-                                      const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white54,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        loc.t('blastSending'),
-                                        style: const TextStyle(
-                                          color: Colors.white54,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ]
-                                  : [
-                                      const Text('🎯',
-                                          style: TextStyle(fontSize: 14)),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        _audienceCost == 0
-                                            ? loc.t('blastBtnFree', {'count': _audienceSize.toString()})
-                                            : loc.t('blastBtnPaid', {'count': _audienceSize.toString(), 'cost': _audienceCost.toInt().toString()}),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
-                            ),
-                          ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 2,
                         ),
-                            // ── Kapat X ─────────────────────────────────
-                            Positioned(
-                              top: -6,
-                              right: -6,
-                              child: GestureDetector(
-                                onTap: () => setState(() => _blastDismissed = true),
-                                behavior: HitTestBehavior.opaque,
-                                child: Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF1E293B),
-                                    shape: BoxShape.circle,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Sabitle
+                            GestureDetector(
+                              onTap: _showPinInput,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x88000000),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.amber.withValues(alpha: 0.5),
                                   ),
-                                  child: const Icon(Icons.close_rounded,
-                                      color: Colors.white70, size: 12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.push_pin_rounded,
+                                      size: 13,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      ref
+                                          .read(localizationProvider)
+                                          .t('btnPin'),
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            // Sabiti Kaldır
+                            GestureDetector(
+                              onTap: () =>
+                                  _chatKey.currentState?.sendHostPin(''),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x55000000),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: Text(
+                                  loc.t('btnRemovePin'),
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    // ── Audience Insights butonu ───────────────────────
-                    Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 4),
-                      child: GestureDetector(
-                        onTap: () => _showAudienceInsights(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                      // ── Lead blast butonu ──────────────────────────────────
+                      if (_audienceSize > 0 && !_blastDismissed)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                            12,
+                            4,
+                            12,
+                            4,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          child: Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              const Icon(Icons.people_outline, color: Colors.white, size: 15),
-                              const SizedBox(width: 6),
-                              Text(ref.read(localizationProvider).t('audienceInsightsTitle'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                              const Spacer(),
-                              const Icon(Icons.chevron_right, color: Colors.white54, size: 15),
+                              GestureDetector(
+                                onTap: _blastSending ? null : _sendLeadBlast,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: _blastSending
+                                        ? null
+                                        : const LinearGradient(
+                                            colors: [
+                                              Color(0xFFDC2626),
+                                              Color(0xFFEF4444),
+                                            ],
+                                          ),
+                                    color: _blastSending
+                                        ? const Color(0x661E293B)
+                                        : null,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: _blastSending
+                                        ? null
+                                        : [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFEF4444,
+                                              ).withValues(alpha: 0.4),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: _blastSending
+                                        ? [
+                                            const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white54,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              loc.t('blastSending'),
+                                              style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ]
+                                        : [
+                                            const Text(
+                                              '🎯',
+                                              style: TextStyle(fontSize: 14),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              _audienceCost == 0
+                                                  ? loc.t('blastBtnFree', {
+                                                      'count': _audienceSize
+                                                          .toString(),
+                                                    })
+                                                  : loc.t('blastBtnPaid', {
+                                                      'count': _audienceSize
+                                                          .toString(),
+                                                      'cost': _audienceCost
+                                                          .toInt()
+                                                          .toString(),
+                                                    }),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ],
+                                  ),
+                                ),
+                              ),
+                              // ── Kapat X ─────────────────────────────────
+                              Positioned(
+                                top: -6,
+                                right: -6,
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _blastDismissed = true),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1E293B),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close_rounded,
+                                      color: Colors.white70,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                    // Commerce şeridi (açık artırma / direkt satış) — Canlı Sohbet kategorisinde gizle
-                    if (widget.streamToken.category != 'chat')
-                      CommercePanelWrapper(
-                        streamId: widget.streamToken.streamId,
-                        isHost: true,
-                        onBidAdded: _onBidAdded,
-                        onAuctionReset: _onAuctionReset,
-                        onPurchaseAdded: _onPurchaseAdded,
-                        captureProofImage: _captureProofImageHelper,
-                      ),
-                    const SizedBox(height: 4),
-                  ],
-                ),
-              ),
-            ),
-
-          // ── Co-Host PiP kutusu — sürüklenebilir ─────────────────────────
-          if (live && _coHostTrack != null)
-            Positioned(
-              top: _pipTop ?? (topPad + 70),
-              left: _pipLeft ?? (MediaQuery.of(context).size.width - 110 - 16),
-              child: GestureDetector(
-                onPanUpdate: (d) {
-                  final s = MediaQuery.of(context).size;
-                  setState(() {
-                    _pipTop  = ((_pipTop  ?? (topPad + 70)) + d.delta.dy).clamp(0.0, s.height - 160);
-                    _pipLeft = ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx).clamp(0.0, s.width - 110);
-                  });
-                },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 110,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Stack(
-                    children: [
-                      VideoTrackRenderer(
-                        _coHostTrack!,
-                        fit: VideoViewFit.contain,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
+                      // ── Audience Insights butonu ───────────────────────
+                      Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          12,
+                          0,
+                          12,
+                          4,
+                        ),
                         child: GestureDetector(
-                          onTap: () async {
-                            final target = _coHostUsername;
-                            if (target == null) return;
-                            try {
-                              await StreamService.removeCoHost(
-                                  widget.streamToken.streamId, target);
-                              setState(() => _coHostUsername = null);
-                            } catch (e, st) {
-                              _log.captureException(e,
-                                  stackTrace: st, tag: 'HostStream.removeCoHost.topBar');
-                            }
-                          },
+                          onTap: () => _showAudienceInsights(context),
                           child: Container(
-                            color: const Color(0xDDEF4444),
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            alignment: Alignment.center,
-                            child: Text(
-                              loc.t('hostRemoveFromStageBtn'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
                               ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.people_outline,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  ref
+                                      .read(localizationProvider)
+                                      .t('audienceInsightsTitle'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const Spacer(),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  color: Colors.white54,
+                                  size: 15,
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
+                      // Commerce şeridi (açık artırma / direkt satış) — Canlı Sohbet kategorisinde gizle
+                      if (widget.streamToken.category != 'chat')
+                        CommercePanelWrapper(
+                          streamId: widget.streamToken.streamId,
+                          isHost: true,
+                          onBidAdded: _onBidAdded,
+                          onAuctionReset: _onAuctionReset,
+                          onPurchaseAdded: _onPurchaseAdded,
+                          captureProofImage: _captureProofImageHelper,
+                        ),
+                      const SizedBox(height: 4),
                     ],
                   ),
                 ),
               ),
-            ),
-            ),
 
-          // ── Aktivite Paneli (Teklif + DS) — en üstte, sürüklenebilir ─────────
-          // live=false iken Builder ağaca girmez → ref.watch(commerceActivityProvider)
-          // kaydı olmaz → loadHistory bitişinden gelen erken rebuild engellenir.
-          if (live && widget.streamToken.category != 'chat')
-          Builder(builder: (context) {
-            final activityGroups = ref.watch(
-                commerceActivityProvider(widget.streamToken.streamId));
-            final totalEvents = activityGroups.fold<int>(
-                0, (s, g) => s + g.events.length);
-            if (totalEvents == 0) {
-              return const SizedBox.shrink();
-            }
-            return Positioned(
-              top: _activityPanelTop!,
-              right: 0,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanUpdate: (d) {
-                      setState(() {
-                        _activityPanelTop =
-                            (_activityPanelTop! + d.delta.dy).clamp(
-                          topPad + 50.0,
-                          screenH - botPad - 260.0,
-                        );
-                      });
-                    },
-                    child: CommerceActivityToggle(
-                      isOpen: _activityVisible,
-                      count: totalEvents,
-                      onToggle: () => setState(
-                          () => _activityVisible = !_activityVisible),
-                    ),
-                  ),
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity: _activityVisible ? 1.0 : 0.0,
-                    child: SizedBox(
-                      width: _activityVisible ? 148 : 0,
-                      height: kCommerceActivityH,
-                      child: CommerceActivityOverlay(
-                        groups: activityGroups,
-                        scrollController: _activityScrollCtrl,
-                        onUsernameTap: _showModSheet,
+            // ── Co-Host PiP kutusu — sürüklenebilir ─────────────────────────
+            if (live && _coHostTrack != null)
+              Positioned(
+                top: _pipTop ?? (topPad + 70),
+                left:
+                    _pipLeft ?? (MediaQuery.of(context).size.width - 110 - 16),
+                child: GestureDetector(
+                  onPanUpdate: (d) {
+                    final s = MediaQuery.of(context).size;
+                    setState(() {
+                      _pipTop = ((_pipTop ?? (topPad + 70)) + d.delta.dy).clamp(
+                        0.0,
+                        s.height - 160,
+                      );
+                      _pipLeft =
+                          ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx)
+                              .clamp(0.0, s.width - 110);
+                    });
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 110,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Stack(
+                        children: [
+                          VideoTrackRenderer(
+                            _coHostTrack!,
+                            fit: VideoViewFit.contain,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () async {
+                                final target = _coHostUsername;
+                                if (target == null) return;
+                                try {
+                                  await StreamService.removeCoHost(
+                                    widget.streamToken.streamId,
+                                    target,
+                                  );
+                                  setState(() => _coHostUsername = null);
+                                } catch (e, st) {
+                                  _log.captureException(
+                                    e,
+                                    stackTrace: st,
+                                    tag: 'HostStream.removeCoHost.topBar',
+                                  );
+                                }
+                              },
+                              child: Container(
+                                color: const Color(0xDDEF4444),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 5,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  loc.t('hostRemoveFromStageBtn'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            );
-          }),
 
-          // ── Pinch-to-zoom overlay — Listener kullanır, gesture arena'ya
-          //    katılmaz; tek parmak tıklamalar alt widget'lara geçer. ────────
-          Positioned.fill(
-            child: _PinchZoomListener(
-              getCurrentZoom: () => _currentZoom,
-              maxZoom: _maxZoom,
-              onZoomChanged: (z) => setState(() => _currentZoom = z),
+            // ── Aktivite Paneli (Teklif + DS) — en üstte, sürüklenebilir ─────────
+            // live=false iken Builder ağaca girmez → ref.watch(commerceActivityProvider)
+            // kaydı olmaz → loadHistory bitişinden gelen erken rebuild engellenir.
+            if (live && widget.streamToken.category != 'chat')
+              Builder(
+                builder: (context) {
+                  final activityGroups = ref.watch(
+                    commerceActivityProvider(widget.streamToken.streamId),
+                  );
+                  final totalEvents = activityGroups.fold<int>(
+                    0,
+                    (s, g) => s + g.events.length,
+                  );
+                  if (totalEvents == 0) {
+                    return const SizedBox.shrink();
+                  }
+                  return Positioned(
+                    top: _activityPanelTop!,
+                    right: 0,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onPanUpdate: (d) {
+                            setState(() {
+                              _activityPanelTop =
+                                  (_activityPanelTop! + d.delta.dy).clamp(
+                                    topPad + 50.0,
+                                    screenH - botPad - 260.0,
+                                  );
+                            });
+                          },
+                          child: CommerceActivityToggle(
+                            isOpen: _activityVisible,
+                            count: totalEvents,
+                            onToggle: () => setState(
+                              () => _activityVisible = !_activityVisible,
+                            ),
+                          ),
+                        ),
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: _activityVisible ? 1.0 : 0.0,
+                          child: SizedBox(
+                            width: _activityVisible ? 148 : 0,
+                            height: kCommerceActivityH,
+                            child: CommerceActivityOverlay(
+                              groups: activityGroups,
+                              scrollController: _activityScrollCtrl,
+                              onUsernameTap: _showModSheet,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+            // ── Pinch-to-zoom overlay — Listener kullanır, gesture arena'ya
+            //    katılmaz; tek parmak tıklamalar alt widget'lara geçer. ────────
+            Positioned.fill(
+              child: _PinchZoomListener(
+                getCurrentZoom: () => _currentZoom,
+                maxZoom: _maxZoom,
+                onZoomChanged: (z) => setState(() => _currentZoom = z),
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -1330,7 +1650,9 @@ class _ViewersBottomSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            ref.read(localizationProvider).t('hostViewersTitle', {'count': viewers.length.toString()}),
+            ref.read(localizationProvider).t('hostViewersTitle', {
+              'count': viewers.length.toString(),
+            }),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -1360,7 +1682,9 @@ class _ViewersBottomSheet extends ConsumerWidget {
                       children: [
                         CircleAvatar(
                           radius: 14,
-                          backgroundColor: usernameColor(uname).withValues(alpha: 0.25),
+                          backgroundColor: usernameColor(
+                            uname,
+                          ).withValues(alpha: 0.25),
                           child: Text(
                             uname.isNotEmpty ? uname[0].toUpperCase() : '?',
                             style: TextStyle(
@@ -1416,8 +1740,8 @@ class _PinchZoomListenerState extends ConsumerState<_PinchZoomListener> {
   // _startDistance, onDown'da DEĞİL ilk onMove'da set edilir.
   // Böylece parmakların "oturma" hareketi zoom'u etkilemez.
   double _startDistance = 0;
-  double _startZoom     = 1.0;
-  bool   _gestureActive = false; // iki parmak var mı?
+  double _startZoom = 1.0;
+  bool _gestureActive = false; // iki parmak var mı?
 
   double _dist(Offset a, Offset b) => (a - b).distance;
 
@@ -1425,7 +1749,7 @@ class _PinchZoomListenerState extends ConsumerState<_PinchZoomListener> {
     _pointers[e.pointer] = e.position;
     if (_pointers.length == 2) {
       // Başlangıç zoom'unu kaydet; mesafeyi ilk harekette alacağız.
-      _startZoom     = widget.getCurrentZoom();
+      _startZoom = widget.getCurrentZoom();
       _startDistance = 0; // lazy — ilk onMove'da set edilecek
       _gestureActive = true;
     } else if (_pointers.length > 2) {
@@ -1439,7 +1763,7 @@ class _PinchZoomListenerState extends ConsumerState<_PinchZoomListener> {
     _pointers[e.pointer] = e.position;
     if (!_gestureActive || _pointers.length != 2) return;
 
-    final pts  = _pointers.values.toList();
+    final pts = _pointers.values.toList();
     final dist = _dist(pts[0], pts[1]);
 
     if (_startDistance == 0) {
@@ -1449,7 +1773,7 @@ class _PinchZoomListenerState extends ConsumerState<_PinchZoomListener> {
     }
 
     final scale = dist / _startDistance;
-    final zoom  = (_startZoom * scale).clamp(1.0, widget.maxZoom);
+    final zoom = (_startZoom * scale).clamp(1.0, widget.maxZoom);
     widget.onZoomChanged(zoom);
   }
 
@@ -1495,6 +1819,7 @@ class _ModerationSheet extends ConsumerStatefulWidget {
   final VoidCallback onDemoted;
   final VoidCallback? onInviteCoHost;
   final VoidCallback? onRemoveCoHost;
+
   /// Şu an sahnede olan kullanıcının adı (null = kimse yok)
   final String? currentCoHostUsername;
 
@@ -1528,20 +1853,34 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
     _isMuted = widget.isMuted;
   }
 
-  Future<void> _act(Future<void> Function() fn, {
+  Future<void> _act(
+    Future<void> Function() fn, {
     required String successMsg,
     VoidCallback? onSuccess,
   }) async {
-    setState(() { _loading = true; _msg = null; });
+    setState(() {
+      _loading = true;
+      _msg = null;
+    });
     try {
       await fn();
       onSuccess?.call();
-      if (mounted) setState(() { _loading = false; _msg = successMsg; _isError = false; });
+      if (mounted)
+        setState(() {
+          _loading = false;
+          _msg = successMsg;
+          _isError = false;
+        });
       await Future.delayed(const Duration(milliseconds: 900));
       if (mounted) Navigator.pop(context);
     } catch (e) {
       final msg = e is AppException ? e.message : 'İşlem gerçekleştirilemedi.';
-      if (mounted) setState(() { _loading = false; _msg = msg; _isError = true; });
+      if (mounted)
+        setState(() {
+          _loading = false;
+          _msg = msg;
+          _isError = true;
+        });
     }
   }
 
@@ -1560,7 +1899,8 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
           // Handle
           Center(
             child: Container(
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.white24,
                 borderRadius: BorderRadius.circular(2),
@@ -1571,11 +1911,23 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
           // Başlık
           Row(
             children: [
-              Text(ref.read(localizationProvider).t('hostModeration'),
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              Text(
+                ref.read(localizationProvider).t('hostModeration'),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const Spacer(),
-              Text('@${widget.username}',
-                  style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                '@${widget.username}',
+                style: const TextStyle(
+                  color: Color(0xFF06B6D4),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1591,8 +1943,14 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.mute(widget.streamId, widget.username),
-                successMsg: ref.read(localizationProvider).t('hostMuteSuccess', {'username': widget.username}),
-                onSuccess: () { widget.onMuted(); setState(() => _isMuted = true); },
+                successMsg: ref.read(localizationProvider).t(
+                  'hostMuteSuccess',
+                  {'username': widget.username},
+                ),
+                onSuccess: () {
+                  widget.onMuted();
+                  setState(() => _isMuted = true);
+                },
               ),
             )
           else
@@ -1602,9 +1960,15 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               color: const Color(0xFF16A34A),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: ref.read(localizationProvider).t('hostUnmuteSuccess'),
-                onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
+                () =>
+                    ModerationService.unmute(widget.streamId, widget.username),
+                successMsg: ref
+                    .read(localizationProvider)
+                    .t('hostUnmuteSuccess'),
+                onSuccess: () {
+                  widget.onUnmuted();
+                  setState(() => _isMuted = false);
+                },
               ),
             ),
           const SizedBox(height: 10),
@@ -1617,13 +1981,23 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               color: const Color(0xFFF59E0B),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.promoteUser(widget.streamId, widget.username),
-                successMsg: ref.read(localizationProvider).t('hostPromoteSuccess', {'username': widget.username}),
+                () => ModerationService.promoteUser(
+                  widget.streamId,
+                  widget.username,
+                ),
+                successMsg: ref.read(localizationProvider).t(
+                  'hostPromoteSuccess',
+                  {'username': widget.username},
+                ),
                 onSuccess: () {
                   widget.onPromoted();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(ref.read(localizationProvider).t('hostMadeModeratorMsg')),
+                      content: Text(
+                        ref
+                            .read(localizationProvider)
+                            .t('hostMadeModeratorMsg'),
+                      ),
                       backgroundColor: const Color(0xFF16A34A),
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -1639,13 +2013,23 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               color: const Color(0xFF475569),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.demoteUser(widget.streamId, widget.username),
-                successMsg: ref.read(localizationProvider).t('hostDemoteSuccess', {'username': widget.username}),
+                () => ModerationService.demoteUser(
+                  widget.streamId,
+                  widget.username,
+                ),
+                successMsg: ref.read(localizationProvider).t(
+                  'hostDemoteSuccess',
+                  {'username': widget.username},
+                ),
                 onSuccess: () {
                   widget.onDemoted();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(ref.read(localizationProvider).t('hostModRemoved', {'username': widget.username})),
+                      content: Text(
+                        ref.read(localizationProvider).t('hostModRemoved', {
+                          'username': widget.username,
+                        }),
+                      ),
                       backgroundColor: const Color(0xFF475569),
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -1657,7 +2041,8 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
           const SizedBox(height: 10),
 
           // Sahneye Davet Et / Sahneden Al
-          if (widget.currentCoHostUsername == null && widget.onInviteCoHost != null) ...[
+          if (widget.currentCoHostUsername == null &&
+              widget.onInviteCoHost != null) ...[
             _ModBtn(
               icon: '🎬',
               label: ref.read(localizationProvider).t('hostInviteToStage'),
@@ -1669,7 +2054,8 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               },
             ),
             const SizedBox(height: 10),
-          ] else if (widget.currentCoHostUsername == widget.username && widget.onRemoveCoHost != null) ...[
+          ] else if (widget.currentCoHostUsername == widget.username &&
+              widget.onRemoveCoHost != null) ...[
             _ModBtn(
               icon: '📵',
               label: ref.read(localizationProvider).t('hostRemoveFromStage'),
@@ -1691,7 +2077,9 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
             loading: _loading,
             onTap: () => _act(
               () => ModerationService.kick(widget.streamId, widget.username),
-              successMsg: ref.read(localizationProvider).t('hostKickSuccess', {'username': widget.username}),
+              successMsg: ref.read(localizationProvider).t('hostKickSuccess', {
+                'username': widget.username,
+              }),
             ),
           ),
           const SizedBox(height: 10),
@@ -1708,8 +2096,10 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
                   side: const BorderSide(color: Colors.white12),
                 ),
               ),
-              child: Text(ref.read(localizationProvider).t('btnCancel'),
-                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+              child: Text(
+                ref.read(localizationProvider).t('btnCancel'),
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+              ),
             ),
           ),
 
@@ -1721,7 +2111,9 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
                 child: Text(
                   _msg!,
                   style: TextStyle(
-                    color: _isError ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+                    color: _isError
+                        ? const Color(0xFFF87171)
+                        : const Color(0xFF4ADE80),
                     fontSize: 13,
                   ),
                 ),
@@ -1758,11 +2150,19 @@ class _ModBtn extends StatelessWidget {
           backgroundColor: color,
           disabledBackgroundColor: color.withValues(alpha: 0.4),
           padding: const EdgeInsets.symmetric(vertical: 13),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           elevation: 0,
         ),
-        child: Text('$icon  $label',
-            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+        child: Text(
+          '$icon  $label',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -1793,7 +2193,9 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
     return SizedBox(
       width: double.infinity,
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(16),
@@ -1808,13 +2210,20 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 16),
+                  const Icon(
+                    Icons.push_pin_rounded,
+                    color: Colors.amber,
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
-                  Text(ref.read(localizationProvider).t('btnPin'),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    ref.read(localizationProvider).t('btnPin'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1826,9 +2235,13 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
                 maxLength: 120,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: ref.read(localizationProvider).t('hostShowToAllViewersHint'),
-                  hintStyle:
-                      const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  hintText: ref
+                      .read(localizationProvider)
+                      .t('hostShowToAllViewersHint'),
+                  hintStyle: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFF0F0F1E),
                   border: OutlineInputBorder(
@@ -1841,12 +2254,15 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: Colors.amber.withValues(alpha: 0.6)),
+                    borderSide: BorderSide(
+                      color: Colors.amber.withValues(alpha: 0.6),
+                    ),
                   ),
                   contentPadding: const EdgeInsets.all(12),
-                  counterStyle:
-                      const TextStyle(color: Colors.white38, fontSize: 10),
+                  counterStyle: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1855,8 +2271,10 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
                 children: [
                   TextButton(
                     onPressed: widget.onCancel,
-                    child: Text(ref.read(localizationProvider).t('btnCancel'),
-                        style: const TextStyle(color: Colors.white38)),
+                    child: Text(
+                      ref.read(localizationProvider).t('btnCancel'),
+                      style: const TextStyle(color: Colors.white38),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   TextButton(
@@ -1869,16 +2287,22 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
                       backgroundColor: Colors.amber,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.push_pin_rounded, size: 14),
                         const SizedBox(width: 4),
-                        Text(ref.read(localizationProvider).t('btnPin'), style: const TextStyle(fontSize: 13)),
+                        Text(
+                          ref.read(localizationProvider).t('btnPin'),
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       ],
                     ),
                   ),
@@ -1917,9 +2341,9 @@ class _WhaleHudState extends ConsumerState<_WhaleHud>
       duration: const Duration(milliseconds: 400),
     );
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _slide   = Tween<Offset>(
+    _slide = Tween<Offset>(
       begin: const Offset(0, -0.3),
-      end:   Offset.zero,
+      end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
 
     _ctrl.forward();
@@ -1952,7 +2376,11 @@ class _WhaleHudState extends ConsumerState<_WhaleHud>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFB8860B)],
+                  colors: [
+                    Color(0xFFB8860B),
+                    Color(0xFFFFD700),
+                    Color(0xFFB8860B),
+                  ],
                   begin: AlignmentDirectional.centerStart,
                   end: AlignmentDirectional.centerEnd,
                 ),
@@ -1975,7 +2403,9 @@ class _WhaleHudState extends ConsumerState<_WhaleHud>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          ref.read(localizationProvider).t('whaleInRoom', {'tier': widget.tier}),
+                          ref.read(localizationProvider).t('whaleInRoom', {
+                            'tier': widget.tier,
+                          }),
                           style: const TextStyle(
                             color: Color(0xFF3B2A00),
                             fontSize: 11,
@@ -1994,7 +2424,9 @@ class _WhaleHudState extends ConsumerState<_WhaleHud>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          ref.read(localizationProvider).t('whaleShowBestItems'),
+                          ref
+                              .read(localizationProvider)
+                              .t('whaleShowBestItems'),
                           style: const TextStyle(
                             color: Color(0xFF3B2A00),
                             fontSize: 11,
@@ -2018,7 +2450,12 @@ class _InsightTile extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _InsightTile({required this.icon, required this.label, required this.value, required this.color});
+  const _InsightTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2033,12 +2470,21 @@ class _InsightTile extends StatelessWidget {
         children: [
           Text(icon, style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 10),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
           const Spacer(),
-          Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
   }
 }
-

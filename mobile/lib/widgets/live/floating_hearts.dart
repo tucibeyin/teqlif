@@ -87,6 +87,13 @@ class FloatingHeartsState extends State<FloatingHearts>
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ro = context.findRenderObject() as RenderBox?;
+      debugPrint(
+        '[FloatingHearts] size=${ro?.size} parentData=${ro?.parentData}',
+      );
+    });
     // Her zaman Positioned.fill döndür — non-positioned↔positioned geçişi
     // parent Stack'te layout reset'e neden oluyor.
     return Positioned.fill(
@@ -94,8 +101,9 @@ class FloatingHeartsState extends State<FloatingHearts>
         child: _hearts.isEmpty
             ? const SizedBox.shrink()
             : Stack(
-                children:
-                    _hearts.map((h) => _HeartWidget(particle: h)).toList(),
+                children: _hearts
+                    .map((h) => _HeartWidget(particle: h))
+                    .toList(),
               ),
       ),
     );
@@ -173,7 +181,9 @@ class _HeartWidget extends StatelessWidget {
           }
 
           // Opaklık: 0.6'ya kadar tam, sonra yavaş sil
-          final opacity = t < 0.6 ? 1.0 : 1.0 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
+          final opacity = t < 0.6
+              ? 1.0
+              : 1.0 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
 
           return Transform.translate(
             offset: Offset(dx, dy),
@@ -185,9 +195,7 @@ class _HeartWidget extends StatelessWidget {
                   Icons.favorite,
                   color: particle.color,
                   size: 32,
-                  shadows: const [
-                    Shadow(color: Colors.black38, blurRadius: 6),
-                  ],
+                  shadows: const [Shadow(color: Colors.black38, blurRadius: 6)],
                 ),
               ),
             ),
