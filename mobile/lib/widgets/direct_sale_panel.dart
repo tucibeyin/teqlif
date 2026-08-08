@@ -1496,7 +1496,13 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
-              ]
+              const SizedBox(height: 8),
+              _SuggestionChip(
+                listingId: _selectedListing!['id'] as int,
+                priceCtrl: _priceCtrl,
+                onApply: () => setState(() {}),
+              ),
+            ]
             else ...[
               _field(loc.t('directSaleFormProductTitle'), _titleCtrl),
               const SizedBox(height: 8),
@@ -1513,12 +1519,6 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                 _stockCtrl,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              ),
-              const SizedBox(height: 8),
-              _SuggestionChip(
-                priceCtrl: _priceCtrl,
-                stockCtrl: _stockCtrl,
-                onApply: () => setState(() {}),
               ),
             ],
             if (_formError != null) ...[
@@ -1619,20 +1619,20 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
 // ── Faz 6 — Fiyat + stok öneri chip'i ────────────────────────────────────────
 
 class _SuggestionChip extends ConsumerWidget {
+  final int listingId;
   final TextEditingController priceCtrl;
-  final TextEditingController stockCtrl;
   final VoidCallback onApply;
 
   const _SuggestionChip({
+    required this.listingId,
     required this.priceCtrl,
-    required this.stockCtrl,
     required this.onApply,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final async = ref.watch(directSaleSuggestionsProvider(0));
+    final async = ref.watch(listingPriceSignalProvider(listingId));
 
     return async.when(
       loading: () => const SizedBox.shrink(),
@@ -1641,19 +1641,11 @@ class _SuggestionChip extends ConsumerWidget {
         if (!s.hasData) return const SizedBox.shrink();
 
         final priceStr = TeqNumberFormatter.format(s.suggestedPrice!, fieldKey: 'price');
-        final stockStr = s.recommendedStock != null ? '${s.recommendedStock}' : null;
-
-        String label = loc.t('directSaleSuggestionPrice', {'price': priceStr});
-        if (stockStr != null) {
-          label += '  ·  ${loc.t('directSaleSuggestionStock', {'stock': stockStr})}';
-        }
+        final label = loc.t('directSaleSuggestionPrice', {'price': priceStr});
 
         return GestureDetector(
           onTap: () {
             priceCtrl.text = TeqNumberFormatter.format(s.suggestedPrice!, fieldKey: 'price');
-            if (s.recommendedStock != null) {
-              stockCtrl.text = '${s.recommendedStock}';
-            }
             onApply();
           },
           child: Container(

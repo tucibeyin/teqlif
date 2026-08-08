@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Optional, List
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update as sql_update
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -224,6 +224,14 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
     sale.end_reason = end_reason
     sale.ended_at = datetime.now(timezone.utc)
     sale.scheduled_end_at = None  # scheduler artık işleme almayacak
+
+    if sale.listing_id and sale.remaining_stock < sale.total_stock:
+        await uow.session.execute(
+            sql_update(Listing)
+            .where(Listing.id == sale.listing_id)
+            .values(last_sold_price=float(sale.price), last_start_price=float(sale.price))
+        )
+
     await uow.session.commit()
 
     # Toplam satış özeti

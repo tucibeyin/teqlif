@@ -297,33 +297,30 @@ class CommerceSale {
   bool get isDirectSale => type == CommerceType.directSale;
 }
 
-// ── Faz 6 — Fiyat önerisi + Talep tahmini ────────────────────────────────────
+// ── Fiyat Sinyali (GET /listings/{id}/price-signal) ──────────────────────────
 
-class DirectSaleSuggestion {
+class ListingPriceSignal {
   final double? suggestedPrice;
-  final double? avgConversionRate;
-  final double? avgDemand;
-  final int? recommendedStock;
+  final double? dsAvg;
+  final double? auctionAvg;
   final int sampleCount;
   final String confidence; // "low" | "medium" | "high"
 
-  const DirectSaleSuggestion({
+  const ListingPriceSignal({
     this.suggestedPrice,
-    this.avgConversionRate,
-    this.avgDemand,
-    this.recommendedStock,
+    this.dsAvg,
+    this.auctionAvg,
     required this.sampleCount,
     required this.confidence,
   });
 
   bool get hasData => suggestedPrice != null && sampleCount > 0;
 
-  factory DirectSaleSuggestion.fromJson(Map<String, dynamic> j) =>
-      DirectSaleSuggestion(
+  factory ListingPriceSignal.fromJson(Map<String, dynamic> j) =>
+      ListingPriceSignal(
         suggestedPrice: (j['suggested_price'] as num?)?.toDouble(),
-        avgConversionRate: (j['avg_conversion_rate'] as num?)?.toDouble(),
-        avgDemand: (j['avg_demand'] as num?)?.toDouble(),
-        recommendedStock: (j['recommended_stock'] as num?)?.toInt(),
+        dsAvg: (j['ds_avg'] as num?)?.toDouble(),
+        auctionAvg: (j['auction_avg'] as num?)?.toDouble(),
         sampleCount: (j['sample_count'] as num?)?.toInt() ?? 0,
         confidence: j['confidence'] as String? ?? 'low',
       );

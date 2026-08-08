@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/direct_sale.dart';
 import '../services/direct_sale_service.dart';
+import '../services/listing_service.dart';
 import '../services/localization_service.dart';
 import '../utils/error_helper.dart';
 import 'stream_commerce_notifier.dart';
@@ -244,10 +245,9 @@ final directSaleDetailProvider = FutureProvider.family
   return DirectSaleService.getSummary(saleId);
 });
 
-// listingId == 0 → listing filtresi yok (host geneli)
-final directSaleSuggestionsProvider = FutureProvider.family
-    .autoDispose<DirectSaleSuggestion, int>((ref, listingId) async {
-  return DirectSaleService.getSuggestions(
-    listingId: listingId > 0 ? listingId : null,
-  );
+final listingPriceSignalProvider = FutureProvider.family
+    .autoDispose<ListingPriceSignal, int>((ref, listingId) async {
+  final raw = await ListingService.getPriceSignal(listingId);
+  if (raw == null) return const ListingPriceSignal(sampleCount: 0, confidence: 'low');
+  return ListingPriceSignal.fromJson(raw);
 });

@@ -185,4 +185,22 @@ class ListingService {
       rethrow;
     }
   }
+
+  /// İlanlı DS / Auction start için fiyat sinyali.
+  /// Teqlif'in organik satış verisinden beslenir — TUCi harcanmaz.
+  /// Veri yoksa null döner.
+  static Future<Map<String, dynamic>?> getPriceSignal(int listingId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/$listingId/price-signal'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
 }

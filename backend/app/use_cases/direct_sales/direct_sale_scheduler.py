@@ -14,10 +14,11 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update as sql_update
 
 from app.database import AsyncSessionLocal
 from app.models.direct_sale import DirectSale
+from app.models.listing import Listing
 from app.core.logger import fire_and_forget
 from app.use_cases.direct_sales import direct_sale_redis as redis_mgr
 from app.constants import ws_types as WS
@@ -61,6 +62,7 @@ async def _process_overdue_sales() -> None:
 
         logger.info("[DIRECT_SALE][SCHEDULER] poll | overdue=%d", len(sales))
         end_reason = "sold_out"
+        listing_updates: list[tuple[int, float]] = []
         for sale in sales:
             try:
                 await redis_mgr.end_sale(sale.stream_id, end_reason)
@@ -68,6 +70,8 @@ async def _process_overdue_sales() -> None:
                 sale.end_reason = end_reason
                 sale.ended_at = now
                 sale.scheduled_end_at = None
+                if sale.listing_id:
+                    listing_updates.append((sale.listing_id, float(sale.price)))
                 logger.info(
                     "[DIRECT_SALE][SCHEDULER] auto-end | sale_id=%s stream=%s",
                     sale.id, sale.stream_id,
@@ -77,6 +81,13 @@ async def _process_overdue_sales() -> None:
                     "[DIRECT_SALE][SCHEDULER] end_sale failed | sale_id=%s | %s",
                     sale.id, exc,
                 )
+
+        for listing_id, price in listing_updates:
+            await session.execute(
+                sql_update(Listing)
+                .where(Listing.id == listing_id)
+                .values(last_sold_price=price, last_start_price=price)
+            )
 
         await session.commit()
 

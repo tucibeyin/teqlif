@@ -8,7 +8,7 @@ Her endpoint sadece:
 İş mantığı tamamen use_cases/direct_sales/commands/direct_sale_commands.py içindedir.
 """
 from fastapi import APIRouter, Depends, Request
-from typing import List, Optional
+from typing import List
 
 from app.database import get_uow, get_db
 from app.core.uow import SqlAlchemyUnitOfWork
@@ -16,7 +16,6 @@ from app.models.user import User
 from app.schemas.direct_sale import (
     DirectSaleStartIn, DirectSaleCancelIn, DirectSalePurchaseIn,
     DirectSaleStateOut, DirectSaleSummaryOut, DirectSaleOrderOut,
-    DirectSaleSuggestionsOut,
 )
 from app.utils.auth import get_current_user
 from app.core.rate_limit import limiter, get_user_id_or_ip
@@ -27,16 +26,6 @@ router = APIRouter(prefix="/api/direct-sales", tags=["direct-sales"])
 
 
 # ── GET ───────────────────────────────────────────────────────────────────────
-
-@router.get("/suggestions", response_model=DirectSaleSuggestionsOut)
-async def get_suggestions(
-    listing_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user),
-):
-    """Faz 6: Host için fiyat önerisi + talep tahmini (ClickHouse)."""
-    from app.database_clickhouse import get_direct_sale_suggestions
-    data = await get_direct_sale_suggestions(current_user.id, listing_id=listing_id)
-    return DirectSaleSuggestionsOut(**data)
 
 
 @router.get("/{stream_id}/state", response_model=DirectSaleStateOut)

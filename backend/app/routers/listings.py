@@ -501,6 +501,150 @@ async def audience_estimate(
     }
 
 
+# ── Fiyat Sinyali (DS / Auction start için) ──────────────────────────────────
+
+class ListingPriceSignalOut(BaseModel):
+    suggested_price: Optional[float] = None
+    ds_avg: Optional[float] = None
+    auction_avg: Optional[float] = None
+    sample_count: int = 0
+    confidence: str = "low"  # "low" | "medium" | "high"
+
+
+_EMPTY_SIGNAL = ListingPriceSignalOut()
+
+_SIMILAR_ATTRS_SQL = text("""
+    SELECT price, sale_type FROM (
+        SELECT a.final_price AS price, 'auction' AS sale_type
+        FROM auctions a
+        JOIN listings l ON a.listing_id = l.id
+        WHERE a.listing_id != :listing_id
+          AND a.winner_id IS NOT NULL
+          AND a.final_price IS NOT NULL
+          AND a.ended_at >= NOW() - INTERVAL '180 days'
+          AND l.subcategory = :subcategory
+          AND (:brand   = '' OR l.brand      = :brand)
+          AND (:model   = '' OR l.model_name = :model)
+          AND (:cond    = '' OR l.condition  = :cond)
+
+        UNION ALL
+
+        SELECT dso.unit_price, 'ds'
+        FROM direct_sale_orders dso
+        JOIN listings l ON dso.listing_id = l.id
+        WHERE dso.listing_id != :listing_id
+          AND dso.status = 'completed'
+          AND dso.created_at >= NOW() - INTERVAL '180 days'
+          AND l.subcategory = :subcategory
+          AND (:brand   = '' OR l.brand      = :brand)
+          AND (:model   = '' OR l.model_name = :model)
+          AND (:cond    = '' OR l.condition  = :cond)
+    ) sub
+""")
+
+_EXACT_SALES_SQL = text("""
+    SELECT final_price AS price, 'auction' AS sale_type
+    FROM auctions
+    WHERE listing_id = :listing_id
+      AND winner_id IS NOT NULL
+      AND final_price IS NOT NULL
+      AND ended_at >= NOW() - INTERVAL '365 days'
+
+    UNION ALL
+
+    SELECT unit_price, 'ds'
+    FROM direct_sale_orders
+    WHERE listing_id = :listing_id
+      AND status = 'completed'
+      AND created_at >= NOW() - INTERVAL '365 days'
+""")
+
+
+def _compute_signal(rows: list, confidence: str) -> ListingPriceSignalOut:
+    ds_prices     = [float(p) for p, t in rows if t == 'ds']
+    auction_prices = [float(p) for p, t in rows if t == 'auction']
+    ds_avg     = round(sum(ds_prices) / len(ds_prices), 2)     if ds_prices     else None
+    auction_avg = round(sum(auction_prices) / len(auction_prices), 2) if auction_prices else None
+
+    if ds_avg is not None and auction_avg is not None:
+        suggested = round(ds_avg * 0.70 + auction_avg * 0.30, 2)
+    elif ds_avg is not None:
+        suggested = ds_avg
+    else:
+        # Auction-only: DS genellikle auction'dan ~%10 daha ucuz
+        suggested = round(auction_avg * 0.90, 2)  # type: ignore[operator]
+
+    return ListingPriceSignalOut(
+        suggested_price=suggested,
+        ds_avg=ds_avg,
+        auction_avg=auction_avg,
+        sample_count=len(rows),
+        confidence=confidence,
+    )
+
+
+@router.get("/{listing_id}/price-signal", response_model=ListingPriceSignalOut)
+async def listing_price_signal(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    İlanlı DS / Auction start için fiyat sinyali.
+    Teqlif'in organik satış verisinden beslenir — TUCi harcanmaz.
+    Yeterli veri yoksa boş döner (öneri gösterilmez).
+    """
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise NotFoundException(code="LISTING_NOT_FOUND")
+
+    MIN_EXACT    = 2
+    MIN_SIMILAR  = 5
+    MIN_BROAD    = 10
+
+    # 1. Aynı ilanın geçmiş satışları
+    result = await db.execute(_EXACT_SALES_SQL, {"listing_id": listing_id})
+    rows = result.fetchall()
+    if len(rows) >= MIN_EXACT:
+        conf = "high" if len(rows) >= 5 else "medium"
+        return _compute_signal(rows, conf)
+
+    # 2. Benzer ilanlar — subcategory + brand + model + condition
+    subcat = listing.subcategory or ""
+    brand  = listing.brand or ""
+    model  = listing.model_name or ""
+    cond   = listing.condition or ""
+
+    if not subcat:
+        return _EMPTY_SIGNAL
+
+    params = {"listing_id": listing_id, "subcategory": subcat,
+              "brand": brand, "model": model, "cond": cond}
+
+    result = await db.execute(_SIMILAR_ATTRS_SQL, params)
+    rows = result.fetchall()
+    if len(rows) >= MIN_SIMILAR:
+        return _compute_signal(rows, "medium")
+
+    # 3. Kondisyon olmadan — subcategory + brand + model
+    if cond:
+        result = await db.execute(_SIMILAR_ATTRS_SQL, {**params, "cond": ""})
+        rows = result.fetchall()
+        if len(rows) >= MIN_SIMILAR:
+            return _compute_signal(rows, "low")
+
+    # 4. Model olmadan — subcategory + brand
+    if model:
+        result = await db.execute(_SIMILAR_ATTRS_SQL, {**params, "model": "", "cond": ""})
+        rows = result.fetchall()
+        if len(rows) >= MIN_BROAD:
+            return _compute_signal(rows, "low")
+
+    return _EMPTY_SIGNAL
+
+
 # ── AI Listing Description ────────────────────────────────────────────────────
 
 class GenerateDescriptionRequest(BaseModel):

@@ -153,16 +153,4 @@ class DirectSaleService {
     return [];
   }
 
-  // ── Faz 6 — Fiyat önerisi + Talep tahmini ─────────────────────────────────
-
-  static Future<DirectSaleSuggestion> getSuggestions({int? listingId}) async {
-    final query = listingId != null ? '?listing_id=$listingId' : '';
-    final body = await apiCall(
-      () async => http.get(
-        Uri.parse(_url('suggestions$query')),
-        headers: await _headers(),
-      ),
-    );
-    return DirectSaleSuggestion.fromJson(body as Map<String, dynamic>);
-  }
 }
