@@ -237,17 +237,23 @@ import Security
       default: handleText = "Sesli Arama"
       }
       
+      // Capture BEFORE creating data so it can be embedded in extra.
+      // Must be read before showCallkitIncoming — CallKit UI appearance drives the app to
+      // inactive, so any check done after that point would return the wrong state.
+      let appIsActive = UIApplication.shared.applicationState == .active
+
       let data = flutter_callkit_incoming.Data(id: uuidStr, nameCaller: callerUsername, handle: handleText, type: 0)
       data.avatar = callerAvatar
       data.extra = [
-          "call_id":        callId,
-          "call_uuid":      uuidStr,
-          "caller_id":      callerId,
-          "caller_username": callerUsername,
-          "caller_avatar":  callerAvatar,
-          "room_name":      roomName,
-          "livekit_url":    livekitUrl,   // self-contained → Dart HTTP fetch'ini atlar
-          "callee_token":   calleeToken,  // self-contained → pre-connect hemen başlar
+          "call_id":           callId,
+          "call_uuid":         uuidStr,
+          "caller_id":         callerId,
+          "caller_username":   callerUsername,
+          "caller_avatar":     callerAvatar,
+          "room_name":         roomName,
+          "livekit_url":       livekitUrl,    // self-contained → Dart HTTP fetch'ini atlar
+          "callee_token":      calleeToken,   // self-contained → pre-connect hemen başlar
+          "app_was_foreground": appIsActive,  // read by Flutter to set _callKitAutoDismissExpected
       ]
 
       // Apple requires reportNewIncomingCall for every VoIP push regardless of app state.
@@ -255,11 +261,6 @@ import Security
       // dismiss the native CallKit screen immediately after reportNewIncomingCall completes.
       // saveEndCall uses provider.reportCall directly (no CXCallController round-trip),
       // which is ~67ms faster than the CXEndCallAction transaction path.
-      // Capture BEFORE showCallkitIncoming so CallKit UI appearance (inactive transition) can't race.
-      let appIsActive = UIApplication.shared.applicationState == .active
-      // Pass to Flutter via extra so Dart doesn't have to re-check lifecycle (which is already
-      // inactive by the time CallEventActionCallIncoming fires).
-      data.extra?["app_was_foreground"] = appIsActive
 
       print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) { [weak self] in
