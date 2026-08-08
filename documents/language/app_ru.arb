@@ -4373,5 +4373,12 @@
   "directSaleSuggestionApply": "Применить",
 
   "notifDirectSalePurchased": "Покупка завершена",
-  "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}."
+  "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}.",
+
+  "announcementAuctionWinner": "{winner} победил · {price}",
+  "announcementBinAccepted": "{buyer} купил сразу · {price}",
+  "announcementDsPurchase": "{buyer} купил",
+  "announcementDsPurchaseBatch": "{buyers} и ещё {count} купили",
+  "announcementDsRemaining": "Осталось: {remaining}",
+  "announcementDsSoldOut": "Распродано!"
 }

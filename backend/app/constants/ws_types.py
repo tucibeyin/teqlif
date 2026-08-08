@@ -11,6 +11,7 @@ Eşdeğer sabitler:
 
 # ── Chat ─────────────────────────────────────────────────────────────────────
 MESSAGE          = "message"
+ANNOUNCEMENT     = "announcement"  # typed system announcements (auction_winner, bin_accepted, ds_purchase, ...)
 SYSTEM_JOIN      = "system_join"
 HISTORY          = "history"
 VIEWER_COUNT     = "viewer_count"

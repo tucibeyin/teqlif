@@ -758,6 +758,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (state.isIdle && widget.onAuctionReset != null) ...[
+            _iconBtn(Icons.close_rounded, Colors.white54, widget.onAuctionReset!),
+            const SizedBox(width: 6),
+          ],
           _pillIconBtn(
             Icons.bolt_rounded,
             loc.t("quickAuctionBtn"),

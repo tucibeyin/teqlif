@@ -903,26 +903,13 @@ class AuctionCommands:
                     _queue_name="critical",
                 )
 
-        # Chat'e herkese görünür özet mesajı
-        chat_msg = {
-            "type": WS.MESSAGE,
-            "id": str(uuid.uuid4())[:8],
-            "username": buyer_username,
-            "content": (
-                f"🛒 Hemen Alındı! "
-                f"📦 {item_name} — {fmt_price(bin_price)} — "
-                f"🏅 @{buyer_username}"
-            ),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        if listing_id:
-            chat_msg["url"] = f"/ilan/{listing_id}"
-        _CHAT_KEY = f"chat:{stream_id}:messages"
-        await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))
-        await redis.ltrim(_CHAT_KEY, -50, -1)
-        await redis.expire(_CHAT_KEY, 24 * 3600)
-        from app.use_cases.chat.chat_utils import publish_chat
-        await publish_chat(stream_id, chat_msg)
+        from app.use_cases.chat.chat_utils import chat_announcement
+        await chat_announcement(stream_id, "bin_accepted", {
+            "buyer": buyer_username,
+            "item": item_name,
+            "price": bin_price,
+            **({"listing_id": listing_id} if listing_id else {}),
+        })
 
         from app.database_clickhouse import track_user_event
         fire_and_forget(track_user_event(
@@ -1190,34 +1177,13 @@ class AuctionCommands:
             except Exception as exc:
                 logger.error("[ACCEPT] Bildirim gönderilemedi | winner_id=%s | %s", winner_user_id, exc)
 
-        # Chat'e herkese görünür özet mesajı
-        chat_summary = (
-            f"🏆 Teklif kabul edildi! "
-            f"📦 {item_name} — {fmt_price(final_price)} — 🏅 @{winner_name}"
-        )
-        chat_msg = {
-            "type": WS.MESSAGE,
-            "id": str(uuid.uuid4())[:8],
-            "username": user.username,
-            "content": chat_summary,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "is_host": True,
-            "is_auction_result": True,
-        }
-        if listing_id:
-            chat_msg["url"] = f"/ilan/{listing_id}"
-        from app.use_cases.chat.chat_utils import publish_chat
-        _CHAT_KEY = f"chat:{stream_id}:messages"
-        # History'ye is_auction_result bayrağı olmadan kaydet —
-        # servis yeniden başlayıp history replay edildiğinde tekrar
-        # gold highlight tetiklenmemesi için.
-        history_msg = {k: v for k, v in chat_msg.items() if k != "is_auction_result"}
-        await redis.rpush(_CHAT_KEY, json.dumps(history_msg))
-        await redis.ltrim(_CHAT_KEY, -50, -1)
-        await redis.expire(_CHAT_KEY, 24 * 3600)
-        # Gerçek zamanlı yayına publish_chat ile gönder —
-        # _topic formatını doğru paketler; direkt redis.publish değil.
-        await publish_chat(stream_id, chat_msg)
+        from app.use_cases.chat.chat_utils import chat_announcement
+        await chat_announcement(stream_id, "auction_winner", {
+            "winner": winner_name,
+            "price": final_price,
+            "item": item_name,
+            **({"listing_id": listing_id} if listing_id else {}),
+        })
 
         state = {
             "status": "ended",

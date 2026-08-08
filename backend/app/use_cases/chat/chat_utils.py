@@ -26,6 +26,30 @@ def chat_key(stream_id: int) -> str:
 async def publish_chat(stream_id: int, payload: dict) -> None:
     await ws_manager.publish(_CHAT_CHANNEL, f"chat:{stream_id}", payload)
 
+async def chat_announcement(
+    stream_id: int,
+    announcement_type: str,
+    payload: dict,
+    *,
+    persist: bool = True,
+) -> None:
+    """Tüm sistem duyurularının tek giriş noktası. announcement_type örnekleri:
+    'auction_winner', 'bin_accepted', 'ds_purchase'
+    """
+    msg = {
+        "type": WS.ANNOUNCEMENT,
+        "id": str(uuid.uuid4())[:8],
+        "announcement_type": announcement_type,
+        "payload": payload,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if persist:
+        redis = await get_redis()
+        await redis.rpush(chat_key(stream_id), json.dumps(msg))
+        await redis.ltrim(chat_key(stream_id), -50, -1)
+        await redis.expire(chat_key(stream_id), 24 * 3600)
+    await publish_chat(stream_id, msg)
+
 async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> None:
     try:
         redis = await get_redis()

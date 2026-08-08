@@ -4371,6 +4371,13 @@
   "directSaleSuggestionStock": "الطلب المتوقع: {stock} قطعة",
   "directSaleSuggestionApply": "تطبيق",
 
-  "notifDirectSalePurchased": "Purchase Completed",
-  "notifDirectSalePurchasedBody": "Payment of {price} received for {item}."
+  "notifDirectSalePurchased": "اكتملت عملية الشراء",
+  "notifDirectSalePurchasedBody": "تم استلام دفعة {price} مقابل {item}.",
+
+  "announcementAuctionWinner": "فاز {winner} · {price}",
+  "announcementBinAccepted": "{buyer} اشترى فوراً · {price}",
+  "announcementDsPurchase": "{buyer} اشترى",
+  "announcementDsPurchaseBatch": "{buyers} و{count} آخرون اشتروا",
+  "announcementDsRemaining": "المتبقي: {remaining}",
+  "announcementDsSoldOut": "نفذت الكمية!"
 }

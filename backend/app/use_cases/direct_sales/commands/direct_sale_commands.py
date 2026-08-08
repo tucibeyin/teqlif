@@ -493,6 +493,14 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
         fire_and_forget(redis_mgr.publish_direct_sale(stream_id, sold_out_payload))
         fire_and_forget(ds_outbox_push(stream_id, sold_out_payload))
 
+    from app.use_cases.chat.chat_utils import chat_announcement
+    fire_and_forget(chat_announcement(stream_id, "ds_purchase", {
+        "buyer": user.username,
+        "item": sale.title,
+        "price": unit_price,
+        "remaining": remaining,
+    }))
+
     # DM WS broadcast (buyer + host her ikisine)
     from datetime import datetime, timezone as _tz
     dm_payload = {

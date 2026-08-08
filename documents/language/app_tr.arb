@@ -4374,5 +4374,12 @@
   "directSaleSuggestionApply": "Uygula",
 
   "notifDirectSalePurchased": "Satın Alma Tamamlandı",
-  "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı."
+  "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı.",
+
+  "announcementAuctionWinner": "{winner} kazandı · {price}",
+  "announcementBinAccepted": "{buyer} hemen satın aldı · {price}",
+  "announcementDsPurchase": "{buyer} satın aldı",
+  "announcementDsPurchaseBatch": "{buyers} ve {count} kişi daha satın aldı",
+  "announcementDsRemaining": "Kalan: {remaining}",
+  "announcementDsSoldOut": "Tükendi!"
 }

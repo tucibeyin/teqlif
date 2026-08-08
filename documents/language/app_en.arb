@@ -4411,5 +4411,12 @@
   "directSaleSuggestionApply": "Apply",
 
   "notifDirectSalePurchased": "Purchase Completed",
-  "notifDirectSalePurchasedBody": "Payment of {price} received for {item}."
+  "notifDirectSalePurchasedBody": "Payment of {price} received for {item}.",
+
+  "announcementAuctionWinner": "{winner} won · {price}",
+  "announcementBinAccepted": "{buyer} bought it now · {price}",
+  "announcementDsPurchase": "{buyer} purchased",
+  "announcementDsPurchaseBatch": "{buyers} and {count} more purchased",
+  "announcementDsRemaining": "Left: {remaining}",
+  "announcementDsSoldOut": "Sold out!"
 }

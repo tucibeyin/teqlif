@@ -121,7 +121,7 @@ const _kReconnectSeconds = 4; // bağlantı kopunca yeniden bağlanma gecikmesi
 const _kMessageRowHeight = 22.0; // chat satırı yüksekliği (piksel)
 
 class _TimedMessage {
-  final ChatMessage message;
+  ChatMessage message;
   final ValueNotifier<double> opacity = ValueNotifier(1.0);
   bool _disposed = false;
   bool _permanent = false; // true → timer expired but last-3 protection kept it
@@ -257,6 +257,8 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
   final _inputScrollCtrl = ScrollController();
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
+  String? _dsBatchId;
+  Timer? _dsBatchTimer;
   bool _autoScroll = true;
   bool _selfMuted = false;
   // Rate-limit gelince metni geri yüklemek için son gönderilen içerik
@@ -352,6 +354,47 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
     _scrollToBottom();
   }
 
+  void _handleAnnouncement(ChatMessage msg) {
+    if (msg.announcementType == 'ds_purchase') {
+      _dsBatchTimer?.cancel();
+      if (_dsBatchId != null) {
+        final timedIdx = _messages.indexWhere((t) => t.message.id == _dsBatchId);
+        final histIdx = _history.indexWhere((h) => h.id == _dsBatchId);
+        if (timedIdx >= 0) {
+          final prev = _messages[timedIdx].message;
+          final prevPayload = Map<String, dynamic>.from(prev.announcementPayload ?? {});
+          final prevBuyers = (prevPayload['_batch_buyers'] as List?)?.cast<String>()
+                             ?? [prevPayload['buyer'] as String? ?? ''];
+          final newBuyer = msg.announcementPayload?['buyer'] as String? ?? '';
+          if (!prevBuyers.contains(newBuyer)) {
+            prevPayload['_batch_buyers'] = [...prevBuyers, newBuyer];
+            if (msg.announcementPayload?['remaining'] != null) {
+              prevPayload['remaining'] = msg.announcementPayload!['remaining'];
+            }
+            final updated = prev.copyWith(announcementPayload: prevPayload);
+            setState(() {
+              _messages[timedIdx].message = updated;
+              if (histIdx >= 0) _history[histIdx] = updated;
+            });
+          }
+          _dsBatchTimer = Timer(
+            const Duration(seconds: 4),
+            () => setState(() => _dsBatchId = null),
+          );
+          return;
+        }
+      }
+      _addMessage(msg);
+      _dsBatchId = msg.id;
+      _dsBatchTimer = Timer(
+        const Duration(seconds: 4),
+        () => setState(() => _dsBatchId = null),
+      );
+    } else {
+      _addMessage(msg);
+    }
+  }
+
   /// Yeni mesaj gelince: _permanent işaretli ama artık son 3'te olmayan
   /// mesajları fade-out yaparak listeden temizler.
   void _evictStalePermanents() {
@@ -389,6 +432,8 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
           final json = jsonDecode(data as String) as Map<String, dynamic>;
           if (json['type'] == 'message') {
             _addMessage(ChatMessage.fromJson(json));
+          } else if (json['type'] == 'announcement') {
+            _handleAnnouncement(ChatMessage.fromJson(json));
           } else if (json['type'] == 'system_join') {
             final uname = json['username'] as String? ?? '';
             _addMessage(
@@ -1141,6 +1186,8 @@ class _MessageItem extends StatelessWidget {
       Shadow(blurRadius: 12, color: Colors.black),
     ];
 
+    if (message.isAnnouncement) return _AnnouncementItem(message);
+
     // Sistem mesajları (katılma bildirimi): avatar yok, italik stil
     if (message.isSystem) {
       return Padding(
@@ -1283,7 +1330,7 @@ class _MessageItem extends StatelessWidget {
 
     if (!message.isAuctionResult) return content;
 
-    // Açık artırma kazanan duyurusu — altın sol kenar + hafif vurgu
+    // Açık artırma kazanan duyurusu — altın sol kenar + hafif vurgu (eski format, geriye dönük uyumluluk)
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       decoration: BoxDecoration(
@@ -1296,5 +1343,101 @@ class _MessageItem extends StatelessWidget {
       padding: const EdgeInsetsDirectional.fromSTEB(8, 5, 8, 5),
       child: content,
     );
+  }
+}
+
+class _AnnouncementItem extends ConsumerWidget {
+  const _AnnouncementItem(this.message);
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final type = message.announcementType ?? '';
+    final p = message.announcementPayload ?? {};
+
+    final (IconData icon, Color color, String text) = switch (type) {
+      'auction_winner' => (
+          Icons.emoji_events_rounded,
+          const Color(0xFFFACC15),
+          loc.t('announcementAuctionWinner', {
+            'winner': '@${p['winner'] ?? '?'}',
+            'price': _fmtPrice(p['price']),
+          }),
+        ),
+      'bin_accepted' => (
+          Icons.shopping_cart_rounded,
+          const Color(0xFF60A5FA),
+          loc.t('announcementBinAccepted', {
+            'buyer': '@${p['buyer'] ?? '?'}',
+            'price': _fmtPrice(p['price']),
+          }),
+        ),
+      'ds_purchase' => (
+          Icons.shopping_bag_rounded,
+          const Color(0xFF4ADE80),
+          _buildDsText(p, loc),
+        ),
+      _ => (
+          Icons.info_outline_rounded,
+          Colors.white54,
+          p['message'] as String? ?? type,
+        ),
+    };
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsetsDirectional.fromSTEB(8, 5, 8, 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: color, width: 3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+                shadows: const [Shadow(blurRadius: 6, color: Colors.black)],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildDsText(Map<String, dynamic> p, TranslationPack loc) {
+    final batchBuyers = (p['_batch_buyers'] as List?)?.cast<String>();
+    final remaining = (p['remaining'] as num?)?.toInt() ?? 0;
+    final remainingSuffix = remaining > 0
+        ? ' · ${loc.t('announcementDsRemaining', {'remaining': remaining.toString()})}'
+        : ' · ${loc.t('announcementDsSoldOut')}';
+
+    if (batchBuyers != null && batchBuyers.length > 1) {
+      return loc.t('announcementDsPurchaseBatch', {
+        'buyers': '@${batchBuyers.first}',
+        'count': (batchBuyers.length - 1).toString(),
+      }) + remainingSuffix;
+    }
+    final buyer = p['buyer'] as String? ?? '?';
+    return loc.t('announcementDsPurchase', {'buyer': '@$buyer'}) + remainingSuffix;
+  }
+
+  String _fmtPrice(dynamic val) {
+    if (val == null) return '?';
+    final d = (val as num).toDouble();
+    if (d == d.truncateToDouble()) {
+      return '${d.toInt()} TL';
+    }
+    return '${d.toStringAsFixed(2)} TL';
   }
 }
