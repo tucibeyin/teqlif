@@ -1496,12 +1496,14 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
-              const SizedBox(height: 8),
-              _SuggestionChip(
-                listingId: _selectedListing!['id'] as int,
-                priceCtrl: _priceCtrl,
-                onApply: () => setState(() {}),
-              ),
+              if (_selectedListing != null) ...[
+                const SizedBox(height: 8),
+                _SuggestionChip(
+                  listingId: _selectedListing!['id'] as int,
+                  priceCtrl: _priceCtrl,
+                  onApply: () => setState(() {}),
+                ),
+              ],
             ]
             else ...[
               _field(loc.t('directSaleFormProductTitle'), _titleCtrl),
