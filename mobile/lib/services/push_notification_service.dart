@@ -489,11 +489,14 @@ class PushNotificationService {
         CallKitParams? params;
         final isTimeout = event is CallEventActionCallTimeout;
         if (event is CallEventActionCallEnded) params = event.callKitParams;
+        // CallEventActionCallTimeout does not expose callKitParams — extra is empty for timeout.
 
         final data = Map<String, dynamic>.from(params?.extra ?? {});
         final callIdStr = data['call_id']?.toString() ?? '';
         final currentStatus = CallService.instance.state.value.status;
-        _cpLog('PUSH', '[DBG] ${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr status=$currentStatus autoDismissExpected=$_callKitAutoDismissExpected activeCallId=${CallService.instance.state.value.callId}');
+        // Log missedCallNotification when available (Ended path only — Timeout has no callKitParams).
+        final missedNotif = params?.missedCallNotification;
+        _cpLog('PUSH', '[DBG] ${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr status=$currentStatus autoDismissExpected=$_callKitAutoDismissExpected missedCallNotif=${isTimeout ? "N/A(timeout)" : "showNotification=${missedNotif?.showNotification}"}');
 
         // Skip if ringing OR if AppDelegate will auto-dismiss (foreground VoIP push).
         if (currentStatus == CallStatus.ringing || _callKitAutoDismissExpected) {
