@@ -1566,7 +1566,11 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                     (s, g) => s + g.events.length,
                   );
                   if (totalEvents == 0) {
-                    return const SizedBox.shrink();
+                    return const Positioned(
+                      top: 0,
+                      right: 0,
+                      child: SizedBox.shrink(),
+                    );
                   }
                   return Positioned(
                     top: _activityPanelTop!,
