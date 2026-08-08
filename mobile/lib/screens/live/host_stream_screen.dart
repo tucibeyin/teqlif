@@ -391,10 +391,14 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       _listener = room.createListener();
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
+        debugPrint('[HOST_CAM] LocalTrackPublishedEvent fired: kind=${event.publication.kind}, track=${event.publication.track?.runtimeType}, sid=${event.publication.sid}');
         if (event.publication.track is LocalVideoTrack && mounted) {
+          debugPrint('[HOST_CAM] ✓ _localVideoTrack set from event');
           setState(() {
             _localVideoTrack = event.publication.track as LocalVideoTrack;
           });
+        } else {
+          debugPrint('[HOST_CAM] ✗ event fired but track is NOT LocalVideoTrack (track=${event.publication.track})');
         }
       });
 
@@ -416,14 +420,21 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         }
       });
 
+      debugPrint('[HOST_CAM] room.connect() başlıyor: ${widget.streamToken.livekitUrl}');
       await room.connect(
         widget.streamToken.livekitUrl,
         widget.streamToken.token,
       );
+      debugPrint('[HOST_CAM] room.connect() tamamlandı — localParticipant=${room.localParticipant?.sid}, identity=${room.localParticipant?.identity}');
 
       // T-HC-05: Bağlantı başarılı ama kamera/mikrofon başlatma ayrı hata verebilir
       try {
+        debugPrint('[HOST_CAM] setCameraEnabled(true) çağrılıyor...');
         await room.localParticipant?.setCameraEnabled(true);
+        debugPrint('[HOST_CAM] setCameraEnabled(true) döndü — videoTrackPublications.length=${room.localParticipant?.videoTrackPublications.length}');
+        for (final pub in room.localParticipant?.videoTrackPublications ?? []) {
+          debugPrint('[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}, muted=${pub.muted}');
+        }
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
         _log.captureException(e, tag: 'HostConnect.trackEnable');
@@ -491,16 +502,29 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   /// LocalTrackPublishedEvent bazen geç gelir; bu metod event gelene kadar
   /// kısa aralıklarla yayınlamaları kontrol eder, max [_kTrackPollMaxAttempts]×[_kTrackPollIntervalMs]ms bekler.
   Future<void> _waitForTrack() async {
+    debugPrint('[HOST_CAM] _waitForTrack başladı (${_kTrackPollMaxAttempts}×${_kTrackPollIntervalMs}ms)');
     for (int attempt = 0; attempt < _kTrackPollMaxAttempts; attempt++) {
       await Future.delayed(const Duration(milliseconds: _kTrackPollIntervalMs));
-      if (!mounted || _localVideoTrack != null) return;
+      if (!mounted || _localVideoTrack != null) {
+        debugPrint('[HOST_CAM] _waitForTrack erken çıkış attempt=$attempt mounted=$mounted hasTrack=${_localVideoTrack != null}');
+        return;
+      }
+      if (attempt % 10 == 0) {
+        final pubs = _room?.localParticipant?.videoTrackPublications ?? [];
+        debugPrint('[HOST_CAM] _waitForTrack attempt=$attempt, pubs.length=${pubs.length}');
+        for (final pub in pubs) {
+          debugPrint('[HOST_CAM]   pub ${pub.sid}: track=${pub.track?.runtimeType}');
+        }
+      }
       for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
         if (pub.track != null) {
+          debugPrint('[HOST_CAM] ✓ _waitForTrack attempt=$attempt track bulundu');
           if (mounted) setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
           return;
         }
       }
     }
+    debugPrint('[HOST_CAM] ✗ _waitForTrack tüm ${_kTrackPollMaxAttempts} deneme bitti, track bulunamadı');
   }
 
   // T-HC-03: State flip'i başarılı await sonrasına taşındı — hata olursa UI önceki durumda kalır
