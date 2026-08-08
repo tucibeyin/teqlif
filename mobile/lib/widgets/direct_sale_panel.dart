@@ -27,6 +27,8 @@ class DirectSalePanel extends ConsumerStatefulWidget {
   final Future<String?> Function()? captureProofImage;
   final VoidCallback? onSaleEnded;
   final VoidCallback? onWin;
+  final void Function(String buyer, double price, int qty, String? title)?
+      onPurchaseAdded;
 
   const DirectSalePanel({
     super.key,
@@ -36,6 +38,7 @@ class DirectSalePanel extends ConsumerStatefulWidget {
     this.captureProofImage,
     this.onSaleEnded,
     this.onWin,
+    this.onPurchaseAdded,
   });
 
   @override
@@ -119,6 +122,18 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
           itemType: 'direct_sale',
           interactionType: 'sale_impression',
           pricePoint: next.price,
+        );
+      }
+      // Yeni satın alım geldiğinde activity panel'e bildir
+      if (widget.isHost &&
+          widget.onPurchaseAdded != null &&
+          next.lastPurchaseBuyer != null &&
+          next.lastPurchaseBuyer != prev?.lastPurchaseBuyer) {
+        widget.onPurchaseAdded!(
+          next.lastPurchaseBuyer!,
+          next.price,
+          next.lastPurchaseQty ?? 1,
+          next.title.isEmpty ? null : next.title,
         );
       }
     });

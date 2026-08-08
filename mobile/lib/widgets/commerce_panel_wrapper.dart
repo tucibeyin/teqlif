@@ -34,6 +34,8 @@ class CommercePanelWrapper extends ConsumerStatefulWidget {
 
   // ── Direct Sale ──────────────────────────────────────────────────────────────
   final VoidCallback? onDirectSaleWin;
+  final void Function(String buyer, double price, int qty, String? title)?
+      onPurchaseAdded;
 
   // ── Proof image capture (ikisi de kullanır) ──────────────────────────────────
   final Future<String?> Function()? captureProofImage;
@@ -50,6 +52,7 @@ class CommercePanelWrapper extends ConsumerStatefulWidget {
     this.myUsername,
     this.onAuctionWin,
     this.onDirectSaleWin,
+    this.onPurchaseAdded,
     this.captureProofImage,
   });
 
@@ -115,6 +118,7 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
           captureProofImage: widget.captureProofImage,
           onSaleEnded: () => setState(() => _forceDirectSale = false),
           onWin: widget.onDirectSaleWin,
+          onPurchaseAdded: widget.onPurchaseAdded,
         ),
       _CommerceMode.idle => _IdleChip(
           isHost: _isHostLike,

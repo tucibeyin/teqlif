@@ -33,6 +33,7 @@ from app.use_cases.streams.commands.misc_commands import EndStreamCommand, Updat
 from app.use_cases.streams.commands.cohost_commands import InviteCohostCommand, AcceptCohostInviteCommand, RemoveCohostCommand, LeaveCohostCommand
 from app.use_cases.streams.queries.get_viewers import GetViewersQuery
 from app.use_cases.streams.queries.misc_queries import GetFollowedLiveStreamsQuery, GetActiveStreamsQuery
+from app.use_cases.streams.queries.get_commerce_activity import GetCommerceActivityQuery
 
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
@@ -108,6 +109,15 @@ async def get_my_stream_history(
         })
 
     return out
+
+@router.get("/{stream_id}/commerce-activity")
+async def get_commerce_activity(
+    stream_id: int,
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+    current_user: User = Depends(get_current_user),
+):
+    return await GetCommerceActivityQuery(uow).execute(stream_id)
+
 
 @router.get("/{stream_id}/check")
 async def check_stream_active(

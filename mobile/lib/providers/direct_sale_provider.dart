@@ -51,7 +51,13 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
         state = state.copyWith(status: 'sold_out', remainingStock: 0);
       case 'direct_sale_purchased':
         final remaining = (j['remaining_stock'] as num?)?.toInt();
-        if (remaining != null) state = state.copyWith(remainingStock: remaining);
+        final buyer = j['buyer_username'] as String?;
+        final qty = (j['quantity'] as num?)?.toInt();
+        state = state.copyWith(
+          remainingStock: remaining ?? state.remainingStock,
+          lastPurchaseBuyer: buyer,
+          lastPurchaseQty: qty,
+        );
       case 'direct_sale_ended':
         state = state.copyWith(
           status: 'ended',

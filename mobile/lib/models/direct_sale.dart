@@ -10,6 +10,9 @@ class DirectSaleState {
   final String? proofImageUrl;
   final String? endReason; // sold_out | host_ended | stream_closed
   final int? listingId;
+  // Populated on each direct_sale_purchased WS event for onPurchaseAdded callback
+  final String? lastPurchaseBuyer;
+  final int? lastPurchaseQty;
 
   const DirectSaleState({
     required this.status,
@@ -22,6 +25,8 @@ class DirectSaleState {
     this.proofImageUrl,
     this.endReason,
     this.listingId,
+    this.lastPurchaseBuyer,
+    this.lastPurchaseQty,
   });
 
   factory DirectSaleState.idle() => const DirectSaleState(
@@ -57,6 +62,8 @@ class DirectSaleState {
     String? proofImageUrl,
     String? endReason,
     int? listingId,
+    String? lastPurchaseBuyer,
+    int? lastPurchaseQty,
   }) =>
       DirectSaleState(
         status: status ?? this.status,
@@ -69,6 +76,8 @@ class DirectSaleState {
         proofImageUrl: proofImageUrl ?? this.proofImageUrl,
         endReason: endReason ?? this.endReason,
         listingId: listingId ?? this.listingId,
+        lastPurchaseBuyer: lastPurchaseBuyer ?? this.lastPurchaseBuyer,
+        lastPurchaseQty: lastPurchaseQty ?? this.lastPurchaseQty,
       );
 
   bool get isIdle => status == 'idle';

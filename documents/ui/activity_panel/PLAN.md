@@ -271,6 +271,60 @@ Bu noktaya `onPurchaseAdded?.call(...)` eklemek yeterli.
 
 ---
 
+## Feed Davranışı — Reverse-Chronological with Session Grouping
+
+> Endüstri standardı: Bloomberg terminal order blotter, Slack activity feed,
+> canlı trading platformları. Yeni veri her zaman en üstte; scroll gerekmez.
+
+### Görsel Yapı
+
+```
+┌─────────────────────────────┐
+│ AKTİVİTE              [12]  │  ← sabit header + toplam event sayısı
+├─────────────────────────────┤
+│ AÇIK ARTIRMA · iPhone 15   │  ← en yeni oturum başlığı  (en üstte)
+│ #1 @ali          1.200 ₺   │  ← o oturumdaki en yeni event (insert(0))
+│ #2 @veli           950 ₺   │
+├─────────────────────────────┤
+│ DİREKT SATIŞ · Çanta       │  ← önceki oturum başlığı
+│ 🛍 @ayşe  2×      450 ₺    │
+│ 🛍 @mehmet         450 ₺   │
+└─────────────────────────────┘
+```
+
+### Ekleme Kuralları
+
+| Durum | Aksiyon | Scroll |
+|---|---|---|
+| Mevcut oturumda yeni event | `group.events.insert(0, event)` — grubun başına | Gerekmez — en yeni oturum zaten tepede |
+| Yeni oturum başladı (yeni auction / DS) | `state.insert(0, newGroup)` — listenin başına | `scrollController.jumpTo(0)` |
+| Geçmiş yüklendi | Gruplar oluşturulur, en yeni üste gelecek şekilde sıralanır | `jumpTo(0)` |
+
+### Neden Bu Pattern
+
+- Panel 148px genişliğinde sabit bir overlay — kullanıcı scroll yapmak zorunda kalmamalı
+- Host yayın yönetirken dikkatini dağıtmadan anlık veriyi görmeli
+- Yeni oturum = yeni başlık → önceki oturum otomatik "aşağı iner", geçmiş kaybolmaz
+- `insert(0)` + `jumpTo(0)` kombinasyonu animation olmadan yeterince akıcı görünür;
+  gerekirse `AnimatedList` ile slide-in eklenebilir (ileride)
+
+### `ScrollController` Yönetimi
+
+`CommerceActivityOverlay`'e bir `ScrollController` inject edilir.
+`CommerceActivityNotifier.addBidEvent()` ve `addPurchaseEvent()` sonrası
+state değişimi View'a yansıdığında `WidgetsBinding.addPostFrameCallback`
+ile `scrollController.jumpTo(0)` çağrılır.
+
+```dart
+ref.listen(commerceActivityProvider, (_, __) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scrollCtrl.hasClients) _scrollCtrl.jumpTo(0);
+  });
+});
+```
+
+---
+
 ## Uygulama Sırası
 
 1. **Backend** — `GetCommerceActivityQuery` + `GET /streams/{id}/commerce-activity`

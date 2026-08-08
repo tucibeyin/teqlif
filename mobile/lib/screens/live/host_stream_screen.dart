@@ -32,6 +32,9 @@ import '../../core/app_exception.dart';
 import '../../services/localization_service.dart';
 import '../../utils/error_helper.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
+import '../../ui_library/components/live/commerce_activity_overlay.dart';
+import '../../ui_library/components/live/commerce_activity_toggle.dart';
+import '../../providers/commerce_activity_provider.dart';
 import '../../services/client_logger.dart';
 
 final _log = LoggerService.instance;
@@ -75,9 +78,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
-  final List<_BidGroup> _bidGroups = [];
-  bool _bidsVisible = true;
-  double? _bidsPanelTop;
+  bool _activityVisible = true;
+  double? _activityPanelTop;
+  final ScrollController _activityScrollCtrl = ScrollController();
   final Set<String> _mutedUsers = {};
   double _currentZoom = 1.0;
   static const double _maxZoom = 8.0;
@@ -108,7 +111,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
-    if (widget.streamToken.category != 'chat') _loadBidHistory();
+    if (widget.streamToken.category != 'chat') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(commerceActivityProvider(widget.streamToken.streamId).notifier)
+            .loadHistory(widget.streamToken.streamId);
+      });
+    }
     if (!widget.blastApproved) _loadAudienceSize();
   }
 
@@ -349,6 +358,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     _giftHudTimer?.cancel();
     _giftHudEntry?.remove();
     _hypeScore.dispose();
+    _activityScrollCtrl.dispose();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
@@ -531,34 +541,19 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
 
   void _onBidAdded(String bidder, double amount, String? itemName) {
-    setState(() {
-      if (_bidGroups.isEmpty || _bidGroups.last.title != itemName) {
-        _bidGroups.add(_BidGroup(title: itemName));
-      }
-      _bidGroups.last.bids.insert(0, (bidder: bidder, amount: amount));
-    });
+    ref
+        .read(commerceActivityProvider(widget.streamToken.streamId).notifier)
+        .addBidEvent(bidder, amount, itemName);
   }
 
-  Future<void> _loadBidHistory() async {
-    try {
-      final bids = await ref.read(hostStreamViewModelProvider).fetchBids(widget.streamToken.streamId);
-      if (!mounted || bids.isEmpty) return;
-      setState(() {
-        for (final b in bids) {
-          final bidder = b['bidder_username'] as String? ?? '';
-          final amount = (b['amount'] as num?)?.toDouble() ?? 0;
-          if (_bidGroups.isEmpty) _bidGroups.add(_BidGroup(title: null));
-          // En yeniden eskiye geliyor; insert(0) tersine çevirir — append kullan
-          _bidGroups.last.bids.add((bidder: bidder, amount: amount));
-        }
-      });
-    } catch (e) {
-      // Geçmiş yüklenemezse sessizce devam et
-    }
+  void _onPurchaseAdded(
+      String buyer, double price, int qty, String? title) {
+    ref
+        .read(commerceActivityProvider(widget.streamToken.streamId).notifier)
+        .addPurchaseEvent(buyer, price, qty, title);
   }
 
   void _onAuctionReset() {
-    // Grup sınırı bid gelince otomatik açılır — listeyi temizlemiyoruz
     setState(() {});
   }
 
@@ -755,7 +750,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
     final screenH = MediaQuery.of(context).size.height;
-    _bidsPanelTop ??= topPad + 66;
+    _activityPanelTop ??= topPad + 66;
+
+    // Auto-scroll to top whenever new activity arrives
+    ref.listen(
+        commerceActivityProvider(widget.streamToken.streamId), (_, __) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_activityScrollCtrl.hasClients) {
+          _activityScrollCtrl.jumpTo(0);
+        }
+      });
+    });
     // Oda bağlıysa UI her zaman gösterilir — _connecting flag'ine bağımlı değil
     final live = _room != null && _error == null;
 
@@ -1099,6 +1104,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                         isHost: true,
                         onBidAdded: _onBidAdded,
                         onAuctionReset: _onAuctionReset,
+                        onPurchaseAdded: _onPurchaseAdded,
                         captureProofImage: _captureProofImageHelper,
                       ),
                     const SizedBox(height: 4),
@@ -1174,48 +1180,59 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             ),
             ),
 
-          // ── Teklif Listesi — her zaman en üstte (alt panelin üstüne gelince tıklanabilir kalsın) ──
-          if (live && _bidGroups.isNotEmpty && widget.streamToken.category != 'chat')
-            Positioned(
-              top: _bidsPanelTop!,
+          // ── Aktivite Paneli (Teklif + DS) — en üstte, sürüklenebilir ─────────
+          Builder(builder: (context) {
+            final activityGroups = ref.watch(
+                commerceActivityProvider(widget.streamToken.streamId));
+            final totalEvents = activityGroups.fold<int>(
+                0, (s, g) => s + g.events.length);
+            if (!live ||
+                totalEvents == 0 ||
+                widget.streamToken.category == 'chat') {
+              return const SizedBox.shrink();
+            }
+            return Positioned(
+              top: _activityPanelTop!,
               right: 0,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Sadece toggle sürüklenebilir — scroll'la çakışmaz
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onPanUpdate: (d) {
                       setState(() {
-                        _bidsPanelTop = (_bidsPanelTop! + d.delta.dy).clamp(
+                        _activityPanelTop =
+                            (_activityPanelTop! + d.delta.dy).clamp(
                           topPad + 50.0,
                           screenH - botPad - 260.0,
                         );
                       });
                     },
-                    child: _BidsToggleTab(
-                      isOpen: _bidsVisible,
-                      count: _bidGroups.fold<int>(0, (s, g) => s + g.bids.length),
-                      onToggle: () =>
-                          setState(() => _bidsVisible = !_bidsVisible),
+                    child: CommerceActivityToggle(
+                      isOpen: _activityVisible,
+                      count: totalEvents,
+                      onToggle: () => setState(
+                          () => _activityVisible = !_activityVisible),
                     ),
                   ),
                   AnimatedOpacity(
                     duration: const Duration(milliseconds: 200),
-                    opacity: _bidsVisible ? 1.0 : 0.0,
+                    opacity: _activityVisible ? 1.0 : 0.0,
                     child: SizedBox(
-                      width: _bidsVisible ? 148 : 0,
-                      height: _kBidsH,
-                      child: _BidsOverlay(
-                        groups: _bidGroups,
+                      width: _activityVisible ? 148 : 0,
+                      height: kCommerceActivityH,
+                      child: CommerceActivityOverlay(
+                        groups: activityGroups,
+                        scrollController: _activityScrollCtrl,
                         onUsernameTap: _showModSheet,
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
+            );
+          }),
 
           // ── Pinch-to-zoom overlay — Listener kullanır, gesture arena'ya
           //    katılmaz; tek parmak tıklamalar alt widget'lara geçer. ────────
@@ -1415,279 +1432,10 @@ class _PinchZoomListenerState extends ConsumerState<_PinchZoomListener> {
   }
 }
 
-// Sabit panel yüksekliği — 5 satır × 36px + başlık 44px
-const double _kBidsH = 5 * 36.0 + 44; // 224px
-
-// ── Veri modeli ────────────────────────────────────────────────────────────
-
-class _BidGroup {
-  final String? title;
-  final List<({String bidder, double amount})> bids;
-  _BidGroup({this.title}) : bids = [];
-}
-
-// ── Yardımcı widget'lar ────────────────────────────────────────────────────
-
-class _BidsOverlay extends ConsumerWidget {
-  final List<_BidGroup> groups;
-  final void Function(String username)? onUsernameTap;
-
-  const _BidsOverlay({required this.groups, this.onUsernameTap});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final totalCount = groups.fold<int>(0, (s, g) => s + g.bids.length);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.48),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                child: Row(
-                  children: [
-                    Text(
-                      ref.read(localizationProvider).t('lblBidsUpper'),
-                      style: TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '$totalCount',
-                        style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
-              // Gruplu scrollable liste
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  physics: const BouncingScrollPhysics(),
-                  // Her grup: 1 başlık + n teklif satırı
-                  itemCount: groups.fold<int>(0, (s, g) => s + 1 + g.bids.length),
-                  itemBuilder: (_, flatIndex) {
-                    // flat index'i grup+satır'a çevir
-                    int cursor = 0;
-                    for (int gi = groups.length - 1; gi >= 0; gi--) {
-                      final g = groups[gi];
-                      if (flatIndex == cursor) {
-                        // Grup başlığı
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          color: Colors.white.withValues(alpha: 0.04),
-                          child: Text(
-                            g.title ?? ref.read(localizationProvider).t('auctionGroupFallback'),
-                            style: const TextStyle(
-                              color: Color(0xFF06B6D4),
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.4,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }
-                      cursor++;
-                      final bidIdx = flatIndex - cursor;
-                      if (bidIdx >= 0 && bidIdx < g.bids.length) {
-                        final bid = g.bids[bidIdx];
-                        final isFirst = bidIdx == 0;
-                        return GestureDetector(
-                          onTap: onUsernameTap != null
-                              ? () => onUsernameTap!(bid.bidder)
-                              : null,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  child: Text(
-                                    '#${bidIdx + 1}',
-                                    style: TextStyle(
-                                      color: isFirst
-                                          ? const Color(0xFFFBBF24)
-                                          : const Color(0xFF475569),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    '@${bid.bidder}',
-                                    style: TextStyle(
-                                      color: usernameColor(bid.bidder),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      decoration: onUsernameTap != null
-                                          ? TextDecoration.underline
-                                          : null,
-                                      decorationColor: usernameColor(bid.bidder)
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Text(
-                                  TeqNumberFormatter.format(bid.amount, fieldKey: 'price', unit: '₺'),
-                                  style: const TextStyle(
-                                    color: Color(0xFF4ADE80),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                      cursor += g.bids.length;
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BidsToggleTab extends ConsumerWidget {
-  final bool isOpen;
-  final int count;
-  final VoidCallback onToggle;
-
-  const _BidsToggleTab({
-    required this.isOpen,
-    required this.count,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Toggle listenin solunda, sol kenarı yuvarlak; sağ kenarı listeye yapışık
-    const radius = BorderRadiusDirectional.horizontal(start: Radius.circular(12));
-    final borderColor = Colors.white.withValues(alpha: isOpen ? 0.10 : 0.15);
-
-    return GestureDetector(
-      onTap: onToggle,
-      child: ClipRRect(
-        borderRadius: radius,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeInOut,
-            clipBehavior: Clip.hardEdge,
-            width: isOpen ? 32 : 38,
-            height: isOpen ? _kBidsH / 2 : 160,
-            padding: isOpen ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: isOpen ? 0.42 : 0.52),
-              borderRadius: radius,
-              border: Border(
-                left: BorderSide(color: borderColor),
-                top: BorderSide(color: borderColor),
-                bottom: BorderSide(color: borderColor),
-              ),
-            ),
-            child: isOpen ? _openChild() : _closedChild(context, ref.read(localizationProvider)),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Açıkken: liste yüksekliğini doldurur, ok ortada
-  Widget _openChild() {
-    return const Center(
-      child: Icon(
-        Icons.chevron_right_rounded,
-        color: Color(0xFF64748B),
-        size: 20,
-      ),
-    );
-  }
-
-  // Kapalıyken: sayı + dikey metin + ‹ (listeyi aç)
-  Widget _closedChild(BuildContext context, TranslationPack loc) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Teklif sayısı rozeti — koyu gri
-        Container(
-          width: 22,
-          height: 22,
-          decoration: const BoxDecoration(
-            color: Color(0xFF334155),
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$count',
-            style: const TextStyle(
-              color: Color(0xFFCBD5E1),
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Dikey "TEKLİFLER" yazısı — koyu
-        RotatedBox(
-          quarterTurns: 3,
-          child: Text(
-            loc.t('lblBidsUpper'),
-            style: TextStyle(
-              color: Color(0xFF475569),
-              fontSize: 7.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        // ‹ oku — listeyi aç
-        const Icon(
-          Icons.chevron_left_rounded,
-          color: Color(0xFF64748B),
-          size: 18,
-        ),
-      ],
-    );
-  }
-}
+// ── Yardımcı widget'lar ─────────────────────────────────────────────────────
+// CommerceActivityOverlay + CommerceActivityToggle:
+//   ui_library/components/live/commerce_activity_overlay.dart
+//   ui_library/components/live/commerce_activity_toggle.dart
 
 // ── Moderasyon BottomSheet ──────────────────────────────────────────────────
 

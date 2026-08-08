@@ -312,6 +312,20 @@ class StreamService {
     return null;
   }
 
+  static Future<List<Map<String, dynamic>>> fetchCommerceActivity(int streamId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(Uri.parse('$kBaseUrl/streams/$streamId/commerce-activity'), headers: headers)
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200) {
+        final list = jsonDecode(resp.body) as List<dynamic>;
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// SwipeLive davranış eventlerini batch olarak gönderir. Fire-and-forget.
   static Future<void> sendSwipeLiveEvents(
       List<Map<String, dynamic>> events) async {
