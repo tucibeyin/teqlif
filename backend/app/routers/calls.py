@@ -46,7 +46,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
 
 _DM_CHANNEL = "dm_broadcast"
-_CALL_RING_TIMEOUT = 30   # seconds — Flutter client fires missed after this many seconds
+_CALL_RING_TIMEOUT = 15   # seconds — Flutter client fires missed after this many seconds
 _CALL_RING_TIMEOUT_BACKUP = _CALL_RING_TIMEOUT + 10  # ARQ backup fires 10s after client timeout
 
 

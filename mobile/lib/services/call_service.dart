@@ -336,8 +336,8 @@ class CallService {
 
   void _startRingTimer() {
     _ringTimer?.cancel();
-    _cpLog('OUT', 'ringTimer started | timeout=30s callId=${state.value.callId}');
-    _ringTimer = Timer(const Duration(seconds: 30), () async {
+    _cpLog('OUT', 'ringTimer started | timeout=15s callId=${state.value.callId}');
+    _ringTimer = Timer(const Duration(seconds: 15), () async {
       if (state.value.status == CallStatus.waiting) {
         final callId = state.value.callId;
         _cpLog('OUT', 'ringTimer FIRED → noAnswer | callId=$callId');
