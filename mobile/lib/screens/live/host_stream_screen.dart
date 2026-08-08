@@ -921,8 +921,22 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       final stackRo =
           _stackKey.currentContext?.findRenderObject() as RenderBox?;
       debugPrint(
-        '[THUMB] Stack.hasSize=${stackRo?.hasSize} Stack.size=${stackRo?.size}',
+        '[THUMB] Stack.hasSize=${stackRo?.hasSize} Stack.size=${stackRo?.size} Stack.constraints=${stackRo?.constraints}',
       );
+      // Stack render child'larını say — hangileri positioned, boyutları nedir?
+      final stackRs = stackRo as RenderStack?;
+      if (stackRs != null) {
+        int idx = 0;
+        RenderBox? child = stackRs.firstChild;
+        while (child != null) {
+          final pd = child.parentData;
+          debugPrint(
+            '[STACK_CHILD] [$idx] type=${child.runtimeType} size=${child.size} parentData=$pd',
+          );
+          child = stackRs.childAfter(child);
+          idx++;
+        }
+      }
       final heartsRo =
           _heartsKey.currentContext?.findRenderObject() as RenderBox?;
       debugPrint(
