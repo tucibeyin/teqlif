@@ -4259,9 +4259,9 @@
   "directSaleEndedSoldOut": "Everything sold out! 🎉",
   "directSaleEndedByHost": "Sale ended.",
   "directSaleEndedStreamClosed": "Stream ended.",
-  "directSaleCancelledNeutral": "Sale cancelled.",
-  "directSaleCancelledOrderKept": "Sale cancelled, your order is valid.",
-  "directSaleCancelledOrderVoided": "Sale cancelled, your order has been voided.",
+  "directSaleCancelledNeutral": "تم إلغاء البيع.",
+  "directSaleCancelledOrderKept": "تم إلغاء البيع، طلبك لا يزال صالحاً.",
+  "directSaleCancelledOrderVoided": "تم إلغاء البيع، تم إلغاء طلبك.",
   "directSaleStockUrgency": "Only {count} left!",
   "@directSaleStockUrgency": {
     "placeholders": {
@@ -4269,20 +4269,22 @@
     }
   },
 
-  "directSaleFormTitle": "Start Sale",
-  "directSaleFormProductTitle": "Product Name",
-  "directSaleFormPrice": "Price (₺)",
-  "directSaleFormStock": "Stock Quantity",
-  "directSaleFormSelectListing": "Select Listing",
-  "directSaleFormManual": "Manual Entry",
-  "directSaleFormNoListing": "No listing linked",
-  "directSaleFormValidationError": "Please fill in all required fields.",
+  "directSaleFormTitle": "بدء البيع",
+  "directSaleFormProductTitle": "اسم المنتج",
+  "directSaleFormPrice": "السعر (₺)",
+  "directSaleFormStock": "الكمية المتاحة",
+  "directSaleFormSelectListing": "اختر الإعلان",
+  "directSaleFormManual": "إدخال يدوي",
+  "directSaleFormNoListing": "لا يوجد إعلان مرتبط",
+  "directSaleFormValidationError": "يرجى ملء جميع الحقول المطلوبة.",
 
-  "directSaleStartBtn": "▶ Start",
-  "directSalePauseBtn": "Pause",
-  "directSaleResumeBtn": "Resume",
-  "directSaleEndBtn": "End Sale",
-  "directSaleCancelBtn": "Cancel Sale",
+  "directSaleDialogCancel": "إلغاء",
+
+  "directSaleStartBtn": "▶ ابدأ",
+  "directSalePauseBtn": "إيقاف مؤقت",
+  "directSaleResumeBtn": "استئناف",
+  "directSaleEndBtn": "إنهاء البيع",
+  "directSaleCancelBtn": "إلغاء البيع",
 
   "directSaleStockLabel": "Remaining Stock",
   "directSaleSoldLabel": "Sold",
@@ -4297,16 +4299,16 @@
   },
   "directSaleEndDialogBodyNoOrders": "Are you sure you want to end the sale?",
 
-  "directSaleCancelDialogTitle": "Cancel Sale",
-  "directSaleCancelDialogBody": "{count} orders placed so far. What should happen to them?",
+  "directSaleCancelDialogTitle": "إلغاء البيع",
+  "directSaleCancelDialogBody": "تم تقديم {count} طلب حتى الآن. ماذا تريد أن يحدث لها؟",
   "@directSaleCancelDialogBody": {
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "directSaleCancelDialogBodyNoOrders": "Are you sure you want to cancel the sale?",
-  "directSaleCancelVoidOrders": "Cancel Orders",
-  "directSaleCancelKeepOrders": "Keep Orders",
+  "directSaleCancelDialogBodyNoOrders": "هل أنت متأكد من إلغاء البيع؟",
+  "directSaleCancelVoidOrders": "إلغاء الطلبات",
+  "directSaleCancelKeepOrders": "الإبقاء على الطلبات",
 
   "directSaleSummaryTitle": "Sale Completed",
   "directSaleSummarySold": "{count} sold",

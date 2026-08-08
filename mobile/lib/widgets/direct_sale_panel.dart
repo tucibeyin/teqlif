@@ -972,7 +972,7 @@ class _ConfirmDialog extends ConsumerWidget {
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(
-            loc.t('cancel'),
+            loc.t('directSaleDialogCancel'),
             style: const TextStyle(color: Colors.white54),
           ),
         ),
@@ -1013,7 +1013,7 @@ class _CancelDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(loc.t('cancel'), style: const TextStyle(color: Colors.white54)),
+          child: Text(loc.t('directSaleDialogCancel'), style: const TextStyle(color: Colors.white54)),
         ),
         if (orderCount > 0) ...[
           TextButton(
@@ -1537,7 +1537,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            loc.t('cancel'),
+            loc.t('directSaleDialogCancel'),
             style: const TextStyle(color: Colors.white54),
           ),
         ),

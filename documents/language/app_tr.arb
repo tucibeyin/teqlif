@@ -4280,6 +4280,8 @@
   "directSaleFormNoListing": "İlan bağlantısı yok",
   "directSaleFormValidationError": "Lütfen tüm zorunlu alanları doldurun.",
 
+  "directSaleDialogCancel": "İptal",
+
   "directSaleStartBtn": "▶ Başlat",
   "directSalePauseBtn": "Duraklat",
   "directSaleResumeBtn": "Devam Et",

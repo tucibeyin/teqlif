@@ -4279,6 +4279,8 @@
   "directSaleFormNoListing": "Без объявления",
   "directSaleFormValidationError": "Пожалуйста, заполните все обязательные поля.",
 
+  "directSaleDialogCancel": "Отмена",
+
   "directSaleStartBtn": "▶ Начать",
   "directSalePauseBtn": "Пауза",
   "directSaleResumeBtn": "Продолжить",
