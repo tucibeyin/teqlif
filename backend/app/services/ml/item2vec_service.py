@@ -143,14 +143,14 @@ async def _fetch_sessions(db_session, days: int = 90) -> list[list[str]]:
             WITH events AS (
                 SELECT
                     user_id,
-                    item_id::text                                                     AS listing_id,
+                    event_metadata->>'listing_id'                                    AS listing_id,
                     created_at,
                     created_at - LAG(created_at) OVER (
                         PARTITION BY user_id ORDER BY created_at
                     )                                                                AS gap
                 FROM analytics_events
                 WHERE event_type IN ('listing_view', 'detail_dwell', 'listing_impression')
-                  AND item_id IS NOT NULL
+                  AND event_metadata->>'listing_id' IS NOT NULL
                   AND user_id IS NOT NULL
                   AND created_at > NOW() - CAST(:days AS INTERVAL)
             ),
