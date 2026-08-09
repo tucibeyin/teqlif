@@ -148,6 +148,7 @@ class CallService {
   DateTime? _acceptedAt;
 
   Timer? _statsTimer;               // WebRTC audio stats polling (5s)
+  Timer? _ringbackFallbackTimer;    // Fallback: call_ringing WS gelmezse 3s sonra ringback başlat
   StreamSubscription<List<ConnectivityResult>>? _networkSub;  // Network change monitor
   ConnectivityResult? _prevNetworkType;  // For networkChange false-positive suppression
 
@@ -226,8 +227,23 @@ class CallService {
       });
     }
 
+    // Cancel fallback timer when leaving waiting/dialing
+    if (oldStatus == CallStatus.waiting || oldStatus == CallStatus.dialing) {
+      _ringbackFallbackTimer?.cancel();
+      _ringbackFallbackTimer = null;
+    }
+
     if (newStatus == CallStatus.dialing) {
       _hardware.setupAudioSession(); // audio session hazırla; ringback call_ringing'de başlar
+    } else if (newStatus == CallStatus.waiting) {
+      // call_ringing WS 3s içinde gelmezse ringback'i yine de başlat (WS delivery güvencesi)
+      _ringbackFallbackTimer?.cancel();
+      _ringbackFallbackTimer = Timer(const Duration(seconds: 3), () {
+        if (state.value.status == CallStatus.waiting || state.value.status == CallStatus.dialing) {
+          _cpLog('RING', 'ringbackFallbackTimer FIRED → startRingback (no call_ringing in 3s) | callId=${state.value.callId}');
+          _hardware.startRingback();
+        }
+      });
     } else if (newStatus == CallStatus.ended) {
       _hardware.stopRingback();
       final endReason = state.value.endReason;
@@ -788,6 +804,8 @@ class CallService {
       _cpLog('RING', 'onCallRinging SKIPPED | status=${state.value.status} (not waiting/dialing)');
       return;
     }
+    _ringbackFallbackTimer?.cancel();
+    _ringbackFallbackTimer = null;
     _cpLog('RING', 'call_ringing WS → startRingback | callId=${state.value.callId}');
     _hardware.startRingback();
   }
@@ -798,6 +816,8 @@ class CallService {
       return;
     }
     _cpLog('RING', 'call_unreachable WS → ended+unreachable | callId=${state.value.callId}');
+    _ringbackFallbackTimer?.cancel();
+    _ringbackFallbackTimer = null;
     _ringTimer?.cancel();
     _callerStatusPollTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.unreachable));
@@ -1132,6 +1152,8 @@ class CallService {
     _networkLostInWaitingTimer?.cancel();
     _networkLostInWaitingTimer = null;
     stopRingtoneAndVibration();
+    _ringbackFallbackTimer?.cancel();
+    _ringbackFallbackTimer = null;
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();
