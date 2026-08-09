@@ -319,6 +319,8 @@ async def _mark_call_unreachable(call_id: int, caller_id: int, callee_id: int) -
                     related_id=caller_id,
                 ))
             await db.commit()
+            # Callee'ye call_missed bildirimi — callee IncomingCallBar'ı kapatabilsin.
+            await _ws_broadcast(callee_id, {"type": "call_missed", "call_id": call_id})
             try:
                 await clear_call_redis(call_id)
             except Exception as _e:

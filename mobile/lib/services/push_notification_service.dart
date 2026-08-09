@@ -414,6 +414,14 @@ class PushNotificationService {
           final appWasForeground = data['app_was_foreground'] as bool? ?? false;
           _callKitAutoDismissExpected = appWasForeground;
           _cpLog('PUSH', 'CallEventActionCallIncoming | autoDismissExpected=$_callKitAutoDismissExpected');
+          // VoIP push alındı → hemen HTTP ACK gönder. WS bağlı olmayabilir (reconnecting),
+          // WS'e güvenmek yerine anlık HTTP ile backend'in BLPOP'unu tetikliyoruz.
+          if (callId != 'NULL') {
+            http.post(Uri.parse('$kBaseUrl/calls/$callId/ack'))
+                .timeout(const Duration(seconds: 5))
+                .catchError((_) {});
+            _cpLog('PUSH', 'CallEventActionCallIncoming | HTTP ACK fired | callId=$callId');
+          }
         }
         await CallService.instance.onIncomingCall({
           ...data,
