@@ -15,6 +15,7 @@ import 'localization_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
+import '../utils/china_market_detector.dart';
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -44,7 +45,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] type=${message.data['type']} | call_id=${message.data['call_id']}');
 
   if (message.data['type'] == 'incoming_call') {
-    if (Platform.isIOS) {
+    // iOS: VoIP PushKit CallKit ile çağrıyı yönetir — ancak Çin pazarında CallKit yasak.
+    // Çin tespiti background isolate'te MethodChannel kullanamaz; locale fallback kullanılır.
+    if (Platform.isIOS && !ChinaMarketDetector.isChinaSync()) {
       debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call on iOS ignored. VoIP PushKit handles it natively.');
       return;
     }
@@ -342,9 +345,9 @@ class PushNotificationService {
     FirebaseMessaging.onMessage.listen((msg) {
       final type = msg.data['type'] as String? ?? 'unknown';
       debugPrint('[FCM] Foreground | type=$type');
-      // iOS: VoIP PushKit already handles incoming_call via CallKit + CallEventActionCallIncoming.
-      // FCM delivery is a backend duplicate — suppress to prevent double IncomingCallBar/notification.
-      if (Platform.isIOS && type == 'incoming_call') {
+      // iOS (Çin dışı): VoIP PushKit, incoming_call'ı CallKit üzerinden yönetir.
+      // Çin'de CallKit yasak — FCM ile devam edilir.
+      if (Platform.isIOS && type == 'incoming_call' && !ChinaMarketDetector.isChinaSync()) {
         debugPrint('[FCM] Foreground incoming_call on iOS SUPPRESSED — VoIP PushKit handles it');
         return;
       }
@@ -394,8 +397,9 @@ class PushNotificationService {
       }
     }
 
-    // CallKit Listener
-    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
+    // CallKit Listener — Çin pazarında CallKit devre dışı (Apple Guideline 5)
+    final isChina = await ChinaMarketDetector.isChina();
+    if (!isChina) FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
       _cpLog('PUSH', 'CallKit onEvent | event=${event.eventName} platform=${Platform.isIOS ? "iOS" : "Android"} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
 
@@ -556,7 +560,7 @@ class PushNotificationService {
       // handler the exception surfaces in [PlatformDispatcher] HATA log on every audio session
       // activate/deactivate. Suppress silently — it's a plugin bug, not a call logic error.
       _cpLog('PUSH', 'CallKit onEvent stream error (suppressed) | $error');
-    });
+    }); // end CallKit onEvent listener (non-China only)
 
     debugPrint('[FCM] initEarly tamamlandı');
   }

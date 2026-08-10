@@ -6,6 +6,7 @@ import flutter_callkit_incoming
 import CallKit
 import AVFAudio
 import Security
+import StoreKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
@@ -13,17 +14,34 @@ import Security
   // Flutter'a audioSessionActivated sinyali göndermek için kanal referansı.
   var callkitChannel: FlutterMethodChannel?
 
+  // MARK: - China Market Detection (Apple Guideline 5: CallKit disabled in China)
+
+  /// Cihazın bağlı olduğu App Store'u Storefront API ile kontrol eder.
+  /// Storefront mevcut değilse cihaz locale'ine fallback yapar.
+  private func isChineseMarket() -> Bool {
+    if #available(iOS 13.0, *) {
+      if let storefront = SKPaymentQueue.default().storefront {
+        return storefront.countryCode == "CHN"
+      }
+    }
+    let regionCode = (Locale.current as NSLocale).object(forKey: .countryCode) as? String ?? ""
+    return regionCode == "CN"
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
 
-    // Setup VOIP
-    let mainQueue = DispatchQueue.main
-    let voipRegistry: PKPushRegistry = PKPushRegistry(queue: mainQueue)
-    voipRegistry.delegate = self
-    voipRegistry.desiredPushTypes = [PKPushType.voIP]
+    // VoIP (PushKit + CallKit) yalnızca Çin dışı pazarlarda aktif.
+    // Apple Guideline 5: MIIT, Çin App Store'undaki uygulamalarda CallKit kullanımını yasakladı.
+    if !isChineseMarket() {
+      let mainQueue = DispatchQueue.main
+      let voipRegistry: PKPushRegistry = PKPushRegistry(queue: mainQueue)
+      voipRegistry.delegate = self
+      voipRegistry.desiredPushTypes = [PKPushType.voIP]
+    }
 
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
@@ -32,10 +50,22 @@ import Security
                                            binaryMessenger: registrar.messenger())
         self.callkitChannel = channel
         channel.setMethodCallHandler({ (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
-          // fulfillAccept artık gerekmez — onAccept anında fulfill eder.
-          // Bu handler geriye dönük uyumluluk için korunuyor (no-op).
           if call.method == "fulfillAccept" {
               result(true)
+          } else {
+              result(FlutterMethodNotImplemented)
+          }
+        })
+    }
+
+    // Region channel: Dart tarafı Çin pazarı tespiti için sorgular
+    if let registrar = self.registrar(forPlugin: "com.teqlif/region") {
+        let regionChannel = FlutterMethodChannel(name: "com.teqlif/region",
+                                                 binaryMessenger: registrar.messenger())
+        let china = isChineseMarket()
+        regionChannel.setMethodCallHandler({ (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+          if call.method == "isChina" {
+              result(china)
           } else {
               result(FlutterMethodNotImplemented)
           }

@@ -2,12 +2,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import '../../services/auth_service.dart';
+import '../../utils/china_market_detector.dart';
 import 'call_notif_adapter.dart';
 
 class IosCallNotifAdapter extends CallNotifAdapter {
   @override
   Future<void> registerTokens({String? fcmToken}) async {
     notifLog('TOKEN | registerTokens iOS');
+    final isChina = await ChinaMarketDetector.isChina();
     try {
       final token = fcmToken ?? await FirebaseMessaging.instance.getToken();
       notifLog('TOKEN | FCM | ${token != null ? "${token.substring(0, 20)}…" : "NULL"}');
@@ -16,25 +18,29 @@ class IosCallNotifAdapter extends CallNotifAdapter {
         return;
       }
 
-      // VoIP token — retry once if PKPushRegistry hasn't fired yet
+      // Çin pazarında VoIP token kaydetme — CallKit Apple guideline 5 gereği devre dışı
       String? voipToken;
-      try {
-        voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-        notifLog('TOKEN | VoIP attempt 1 | ${_short(voipToken)}');
-        if (voipToken == null || voipToken.isEmpty) {
-          notifLog('TOKEN | VoIP NULL → retry 3s');
-          await Future.delayed(const Duration(seconds: 3));
+      if (!isChina) {
+        try {
           voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-          notifLog('TOKEN | VoIP attempt 2 | ${_short(voipToken)}');
+          notifLog('TOKEN | VoIP attempt 1 | ${_short(voipToken)}');
+          if (voipToken == null || voipToken.isEmpty) {
+            notifLog('TOKEN | VoIP NULL → retry 3s');
+            await Future.delayed(const Duration(seconds: 3));
+            voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+            notifLog('TOKEN | VoIP attempt 2 | ${_short(voipToken)}');
+          }
+        } catch (e) {
+          notifLog('TOKEN | VoIP FAILED | $e');
         }
-      } catch (e) {
-        notifLog('TOKEN | VoIP FAILED | $e');
+      } else {
+        notifLog('TOKEN | VoIP SKIPPED (China market — CallKit disabled)');
       }
 
       final captured = token;
       final capturedVoip = voipToken;
       await CallNotifAdapter.sendWithRetry(
-        context: 'iOS fcmLen=${captured.length} voip=${capturedVoip != null ? "present" : "absent"}',
+        context: 'iOS fcmLen=${captured.length} voip=${capturedVoip != null ? "present" : "absent"} china=$isChina',
         send: () => AuthService.saveDeviceTokens(fcmToken: captured, voipToken: capturedVoip),
       );
     } catch (e) {
@@ -44,6 +50,7 @@ class IosCallNotifAdapter extends CallNotifAdapter {
 
   @override
   Future<void> reportCallEnded({required String? callId}) async {
+    if (await ChinaMarketDetector.isChina()) return;
     if (callId != null) {
       try {
         await FlutterCallkitIncoming.endCall(CallNotifAdapter.formatCallId(callId));
@@ -56,6 +63,7 @@ class IosCallNotifAdapter extends CallNotifAdapter {
 
   @override
   Future<void> endAllCalls() async {
+    if (await ChinaMarketDetector.isChina()) return;
     try {
       await FlutterCallkitIncoming.endAllCalls();
       notifLog('NOTIF | endAllCalls');
@@ -70,6 +78,7 @@ class IosCallNotifAdapter extends CallNotifAdapter {
     required String calleeName,
     String? calleeAvatar,
   }) async {
+    if (await ChinaMarketDetector.isChina()) return;
     try {
       final uuid = CallNotifAdapter.formatCallId(callId.toString());
       final params = CallKitParams(
