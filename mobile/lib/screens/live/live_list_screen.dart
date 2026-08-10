@@ -114,9 +114,12 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              loc.t("liveStreamsTitle"),
-              style: const TextStyle(fontWeight: FontWeight.w700),
+            Flexible(
+              child: Text(
+                loc.t("liveStreamsTitle"),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
