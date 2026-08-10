@@ -147,6 +147,8 @@
   "validVerificationCode": "Doğrulama kodunu girin.",
   "validAllFields": "Tüm alanları doldurun.",
   "validTermsRequired": "Kullanım Şartları'nı kabul etmelisiniz.",
+  "validAgeConfirm": "13 yaşında veya daha büyüğüm.",
+  "validAgeRequired": "Devam etmek için yaşınızı onaylamalısınız.",
   "usernameChecking": "Kullanıcı adı kontrol ediliyor...",
   "usernameCheckingWait": "Kullanıcı adı kontrol ediliyor, lütfen bekleyin...",
   "fieldPhone": "Telefon Numarası (İsteğe Bağlı)",

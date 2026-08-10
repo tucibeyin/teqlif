@@ -149,6 +149,8 @@
   "validVerificationCode": "Enter the verification code.",
   "validAllFields": "Please fill in all fields.",
   "validTermsRequired": "You must accept the Terms of Service.",
+  "validAgeConfirm": "I am 13 years of age or older.",
+  "validAgeRequired": "You must confirm your age to continue.",
   "usernameChecking": "Checking username...",
   "usernameCheckingWait": "Checking username, please wait...",
   "emptyListings": "No listings yet",

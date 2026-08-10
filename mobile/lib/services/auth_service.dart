@@ -39,6 +39,7 @@ class AuthService {
     String? phone,
     String? referredBy,
     String lang = "tr",
+    bool ageConfirmed = false,
   }) async {
     final payload = {
       'email': email,
@@ -47,6 +48,7 @@ class AuthService {
       'password': password,
       'phone': phone,
       'lang': lang,
+      'age_confirmed': ageConfirmed,
       if (referredBy != null && referredBy.isNotEmpty) 'referred_by': referredBy,
     };
     final body = await apiCall(

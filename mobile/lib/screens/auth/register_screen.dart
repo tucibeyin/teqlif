@@ -29,6 +29,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _eulaAccepted = false;
+  bool _ageConfirmed = false;
 
   String? _usernameStatus;
   Timer? _usernameDebounce;
@@ -84,6 +85,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       return;
     }
+    if (!_ageConfirmed) {
+      TeqSnackBar.show(
+        message: ref.read(localizationProvider).t('validAgeRequired'),
+        type: TeqSnackBarType.error,
+      );
+      return;
+    }
     
     final referralCode = _referralCtrl.text.trim();
     final success = await ref.read(registerViewModelProvider.notifier).register(
@@ -93,6 +101,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       password: _passCtrl.text,
       phone: null,
       referredBy: referralCode.isEmpty ? null : referralCode,
+      ageConfirmed: _ageConfirmed,
     );
 
     if (success && mounted) {
@@ -275,6 +284,36 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                       text: '\'nı okudum, kabul ediyorum. Uygunsuz içeriklere sıfır tolerans politikasını anladım.',
                                     ),
                                   ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Checkbox(
+                          key: const Key('register_checkbox_age'),
+                          value: _ageConfirmed,
+                          activeColor: kPrimary,
+                          onChanged: (v) => setState(() => _ageConfirmed = v ?? false),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            key: const Key('register_gesture_age_text'),
+                            onTap: () => setState(() => _ageConfirmed = !_ageConfirmed),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Text(
+                                ref.read(localizationProvider).t('validAgeConfirm'),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.textSecondary(context),
                                 ),
                               ),
                             ),

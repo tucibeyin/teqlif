@@ -13,6 +13,7 @@ class UserRegister(BaseModel):
     phone: str | None = None
     referred_by: str | None = None  # davet kodu (isteğe bağlı)
     lang: str = "tr"
+    age_confirmed: bool = False
 
     @field_validator("username")
     @classmethod
