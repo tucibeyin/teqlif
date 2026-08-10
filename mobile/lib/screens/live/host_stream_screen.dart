@@ -530,7 +530,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         await room.localParticipant?.setCameraEnabled(true);
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
-        _log.captureException(e, tag: 'HostConnect.trackEnable');
+        // TrackCreateException: simülatörde kamera/mikrofon donanımı yok — beklenen, Sentry'e gönderme
+        if (e is! TrackCreateException) {
+          _log.captureException(e, tag: 'HostConnect.trackEnable');
+        }
         if (mounted) {
           TeqToast.warning(
             ref
