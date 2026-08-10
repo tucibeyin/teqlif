@@ -274,7 +274,8 @@ async def reset_password(request: Request, data: ResetPassword, db: AsyncSession
 
 
 @router.get("/check-username")
-async def check_username(username: str = "", exclude_id: int | None = None, db: AsyncSession = Depends(get_db)):
+@limiter.limit("30/minute")
+async def check_username(request: Request, username: str = "", exclude_id: int | None = None, db: AsyncSession = Depends(get_db)):
     if not _USERNAME_RE.match(username):
         return {"available": False, "reason": "format"}
     q = select(User).where(User.username == username)
