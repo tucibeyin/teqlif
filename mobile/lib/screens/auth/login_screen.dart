@@ -110,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         title: Row(
           children: [
             const Text('🔒 ', style: TextStyle(fontSize: 20)),
-            Text(loc.t('profileFaceId')),
+            Flexible(child: Text(loc.t('profileFaceId'))),
           ],
         ),
         content: Text(loc.t('loginFaceIdDesc'), style: const TextStyle(fontSize: 14)),
@@ -232,8 +232,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
                       children: [
                         Text(
                           loc.t('loginNoAccount'),
