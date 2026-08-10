@@ -68,7 +68,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _checkUsername(String val) async {
     final status = await ref.read(registerViewModelProvider.notifier).checkUsername(val);
-    if (mounted) setState(() => _usernameStatus = status);
+    if (mounted && _usernameCtrl.text.trim() == val) {
+      setState(() => _usernameStatus = status);
+    }
   }
 
   void _openUrl(String url) async {
