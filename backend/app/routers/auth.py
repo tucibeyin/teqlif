@@ -88,7 +88,7 @@ async def _create_user_and_send_code(
         pending_referred_by=data.referred_by.strip().upper() if data.referred_by else None,
         age_confirmed_at=datetime.now(timezone.utc) if data.age_confirmed else None,
         is_premium=True,
-        plan_type='founding',
+        plan_type='monthly',
     )
     db.add(user)
     await db.commit()
