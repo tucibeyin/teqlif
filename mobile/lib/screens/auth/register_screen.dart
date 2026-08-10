@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
@@ -55,8 +56,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _onUsernameChanged() {
     final val = _usernameCtrl.text.trim();
     _usernameDebounce?.cancel();
-    if (val.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(val)) {
+    if (val.length < 3) {
       setState(() => _usernameStatus = null);
+      return;
+    }
+    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(val)) {
+      setState(() => _usernameStatus = 'invalid');
       return;
     }
     setState(() => _usernameStatus = 'checking');
@@ -158,7 +163,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       controller: _usernameCtrl,
                       maxLength: 50,
                       labelText: loc.t('fieldUsername'),
+                      autocorrect: false,
                       helperText: loc.t('fieldUsernameSubtitle'),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
+                        TextInputFormatter.withFunction((old, val) => val.copyWith(
+                              text: val.text.toLowerCase(),
+                              selection: val.selection,
+                            )),
+                      ],
                       suffixIcon: _usernameStatus == 'checking'
                           ? const SizedBox(
                               width: 20,
@@ -170,7 +183,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             )
                           : _usernameStatus == 'available'
                               ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
-                              : _usernameStatus == 'taken'
+                              : (_usernameStatus == 'taken' || _usernameStatus == 'invalid')
                                   ? const Icon(Icons.cancel, color: Colors.red, size: 20)
                                   : null,
                       validator: (v) {

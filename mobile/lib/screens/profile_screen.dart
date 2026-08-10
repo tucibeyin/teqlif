@@ -2319,8 +2319,12 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       setState(() => _usernameStatus = null);
       return;
     }
-    if (val.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(val)) {
+    if (val.length < 3) {
       setState(() => _usernameStatus = null);
+      return;
+    }
+    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(val)) {
+      setState(() => _usernameStatus = 'invalid');
       return;
     }
     setState(() => _usernameStatus = 'checking');
@@ -2342,7 +2346,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
           ).replace(queryParameters: params),
         ),
       );
-      if (!mounted) return;
+      if (!mounted || _usernameCtrl.text.trim() != val) return;
       setState(
         () => _usernameStatus = (data['available'] as bool)
             ? 'available'
@@ -2647,7 +2651,14 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
                   controller: _usernameCtrl,
                   autocorrect: false,
                   labelText: loc.t('editProfileUsername'),
-                  helperText: loc.t('validUsernameChars'),
+                  helperText: loc.t('fieldUsernameSubtitle'),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
+                    TextInputFormatter.withFunction((old, val) => val.copyWith(
+                          text: val.text.toLowerCase(),
+                          selection: val.selection,
+                        )),
+                  ],
                   suffixIcon: _usernameStatus == 'checking'
                       ? const SizedBox(
                           width: 20,

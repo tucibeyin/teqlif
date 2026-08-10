@@ -68,6 +68,9 @@ async def _create_user_and_send_code(
     if result.scalar_one_or_none():
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailTaken", "Bu e-posta adresi zaten kullanılıyor"))
 
+    if not _USERNAME_RE.match(data.username):
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "validUsernameChars", "Kullanıcı adı yalnızca a-z, 0-9 ve _ içerebilir"))
+
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameTaken", "Bu kullanıcı adı zaten alınmış"))
