@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show SocketException;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_exception.dart';
@@ -165,12 +166,12 @@ Future<Map<String, dynamic>> apiCall(
   } on AppException {
     rethrow;
   } catch (e, stack) {
-    // Ağ hatası (timeout, DNS, VPS tamamen kapalı, vb.)
-    LoggerService.instance.captureException(
-      e,
-      stackTrace: stack,
-      tag: 'apiCall',
-    );
+    // Ağ hatası (timeout, DNS, VPS kapalı): beklenen hata → sadece warning, Sentry'e gönderme
+    if (e is SocketException || e is http.ClientException) {
+      LoggerService.instance.warning('apiCall', 'Ağ hatası: $e');
+    } else {
+      LoggerService.instance.captureException(e, stackTrace: stack, tag: 'apiCall');
+    }
     throw AppException(
       'Sunucuya ulaşılamıyor veya internet bağlantınız kopuk. Lütfen daha sonra tekrar deneyin.',
       code: 'NETWORK_ERROR',
@@ -265,11 +266,11 @@ Future<List<dynamic>> apiCallList(
   } on AppException {
     rethrow;
   } catch (e, stack) {
-    LoggerService.instance.captureException(
-      e,
-      stackTrace: stack,
-      tag: 'apiCallList',
-    );
+    if (e is SocketException || e is http.ClientException) {
+      LoggerService.instance.warning('apiCallList', 'Ağ hatası: $e');
+    } else {
+      LoggerService.instance.captureException(e, stackTrace: stack, tag: 'apiCallList');
+    }
     throw AppException(
       'Sunucuya ulaşılamıyor veya internet bağlantınız kopuk. Lütfen daha sonra tekrar deneyin.',
       code: 'NETWORK_ERROR',
