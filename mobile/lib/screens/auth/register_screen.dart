@@ -4,13 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/localization_service.dart';
-import '../../widgets/phone_input_field.dart';
 import 'verify_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../ui_library/components/overlays/teq_dialog.dart';
 import 'viewmodels/register_view_model.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -28,8 +26,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passCtrl = TextEditingController();
   final _passConfirmCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
-  String? _phoneE164;
-
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _eulaAccepted = false;
@@ -74,17 +70,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (mounted) setState(() => _usernameStatus = status);
   }
 
-  void _showPhoneInfoDialog() {
-    final loc = ref.read(localizationProvider);
-    TeqDialog.show(
-      context: context,
-      title: '🔒 ${loc.t('phoneInfoTitle')}',
-      message: loc.t('phoneInfoBody'),
-      primaryButtonText: loc.t('phoneInfoGotIt'),
-      onPrimaryPressed: () => Navigator.of(context).pop(),
-    );
-  }
-
   void _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -106,7 +91,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       username: _usernameCtrl.text.trim(),
       fullName: _fullNameCtrl.text.trim(),
       password: _passCtrl.text,
-      phone: _phoneE164,
+      phone: null,
       referredBy: referralCode.isEmpty ? null : referralCode,
     );
 
@@ -201,30 +186,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         }
                         return null;
                       },
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Text(
-                          loc.t('fieldPhone'),
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                        ),
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: _showPhoneInfoDialog,
-                          child: Icon(
-                            Icons.help_outline_rounded,
-                            size: 15,
-                            color: AppColors.textSecondary(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    PhoneInputField(
-                      key: const Key('register_input_telefon'),
-                      onChanged: (e164) => setState(() => _phoneE164 = e164),
-                      onReset: () => setState(() => _phoneE164 = null),
                     ),
                     const SizedBox(height: 14),
                     TeqTextField(

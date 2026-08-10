@@ -63,6 +63,7 @@ import 'faq_screen.dart';
 import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/profile_view_model.dart';
+import '../utils/snackbar_helper.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -132,6 +133,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       MaterialPageRoute(builder: (_) => _SettingsScreen(user: user)),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -2390,7 +2392,8 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
         if (!mounted) return;
-        await openAppSettings();
+        final loc = ref.read(localizationProvider);
+        showPermissionDeniedDialog(context, title: loc.t('attachCameraPermission'), message: loc.t('permPermanentlyDenied'), openSettingsLabel: loc.t('permOpenSettings'), cancelLabel: loc.t('btnCancel'));
         return;
       }
     }

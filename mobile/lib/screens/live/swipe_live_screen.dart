@@ -46,6 +46,7 @@ import '../../services/stream_connection_manager.dart';
 import 'viewmodels/swipe_live_view_model.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/category_service.dart';
+import '../../utils/snackbar_helper.dart';
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
@@ -1046,7 +1047,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       }
     } on CoHostPermissionException catch (_) {
       if (!mounted) return;
-      await openAppSettings();
+      final loc = ref.read(localizationProvider);
+      showPermissionDeniedDialog(context, title: loc.t('permCameraRequired'), message: loc.t('permPermanentlyDenied'), openSettingsLabel: loc.t('permOpenSettings'), cancelLabel: loc.t('btnCancel'));
     } catch (e) {
       if (mounted) {
         handleError(e, ref.read(localizationProvider));

@@ -45,6 +45,7 @@ import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
 import 'viewmodels/messages_view_model.dart';
 
@@ -1246,7 +1247,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           ? Permission.camera
           : Permission.photos;
       final status = await perm.status;
-      if (!status.isGranted) await openAppSettings();
+      if (!status.isGranted && mounted) {
+        showPermissionDeniedDialog(context, title: loc.t('attachCameraPermission'), message: loc.t('permPermanentlyDenied'), openSettingsLabel: loc.t('permOpenSettings'), cancelLabel: loc.t('btnCancel'));
+      }
       return;
     }
     final raw = await picked.readAsBytes();
@@ -1280,7 +1283,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (!mounted) return;
       final perm = source == ImageSource.camera ? Permission.camera : Permission.videos;
       final status = await perm.status;
-      if (!status.isGranted) await openAppSettings();
+      if (!status.isGranted) {
+        showPermissionDeniedDialog(context, title: loc.t('attachCameraPermission'), message: loc.t('permPermanentlyDenied'), openSettingsLabel: loc.t('permOpenSettings'), cancelLabel: loc.t('btnCancel'));
+      }
       return;
     }
     if (!mounted) return;
@@ -1388,7 +1393,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       final micStatus = await Permission.microphone.status;
       if (!mounted) return;
       if (!micStatus.isGranted) {
-        await openAppSettings();
+        showPermissionDeniedDialog(context, title: loc.t('voicePermissionDenied'), message: loc.t('permPermanentlyDenied'), openSettingsLabel: loc.t('permOpenSettings'), cancelLabel: loc.t('btnCancel'));
       } else {
         TeqSnackBar.show(message: loc.t("voiceRecordFailed"));
       }
