@@ -19,6 +19,7 @@ from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut, En
 from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
+from app.core.log_context import user_id_var
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from app.core.idempotency import idempotency_key, store_idempotency_result
 from app.core.auction_outbox import outbox_replay
@@ -178,6 +179,7 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
         pass
 
     if user_id:
+        user_id_var.set(str(user_id))
         session_count = await register_ws_session(user_id)
         if session_count > MAX_CONCURRENT_SESSIONS:
             await release_ws_session(user_id)

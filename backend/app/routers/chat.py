@@ -20,6 +20,7 @@ from app.models.enums import UserStatus
 from app.constants import ws_types as WS
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
+from app.core.log_context import user_id_var
 from app.core.ws_manager import ws_manager, safe_send_json
 from app.database import AsyncSessionLocal
 from app.models.user import User
@@ -296,6 +297,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         logger.warning("[CHAT WS] Geçersiz token, bağlantı kapatıldı | stream_id=%s", stream_id)
         await websocket.close(code=_WS_CODE_UNAUTHORIZED)
         return
+    user_id_var.set(str(user_id))
 
     # ── 3. DB doğrulama ───────────────────────────────────────────────────────
     is_host = False

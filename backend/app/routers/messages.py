@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func, or_, and_, delete
 from app.config import settings
 from app.database import get_db, AsyncSessionLocal
+from app.core.log_context import user_id_var
 from app.models.user import User
 from app.models.message import DirectMessage
 from app.models.block import UserBlock
@@ -685,6 +686,7 @@ async def messages_ws(websocket: WebSocket):
         except Exception:
             pass
         return
+    user_id_var.set(str(user_id))
 
     # ── 3. DB doğrulama ───────────────────────────────────────────────────────
     try:

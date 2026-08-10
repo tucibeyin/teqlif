@@ -15,6 +15,7 @@ from app.utils.auth import get_current_user, decode_token
 from app.services.notification_service import push_notification  # noqa: F401
 from app.core.exceptions import NotFoundException
 from app.core.logger import get_logger
+from app.core.log_context import user_id_var
 from app.core.task_queue import get_pool
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.ws_manager import ws_manager
@@ -110,6 +111,7 @@ async def notifications_ws(websocket: WebSocket):
         logger.warning("[NOTIF WS] Geçersiz token, bağlantı kapatıldı")
         await websocket.close(code=4001)
         return
+    user_id_var.set(str(user_id))
 
     # ── 3. DB doğrulama ───────────────────────────────────────────────────────
     try:
