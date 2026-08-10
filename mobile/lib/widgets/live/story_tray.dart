@@ -18,6 +18,7 @@ import '../../screens/story/story_viewer_screen.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 import '../../services/localization_service.dart';
+import '../../utils/snackbar_helper.dart';
 
 /// Takip edilen kullanıcıların hybrid hikaye tepsisini Instagram stilinde gösterir.
 ///
@@ -85,7 +86,13 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
         if (!mounted) return;
-        await openAppSettings();
+        showPermissionDeniedDialog(
+          context,
+          title: loc.t('attachCameraPermission'),
+          message: loc.t('permPermanentlyDenied'),
+          openSettingsLabel: loc.t('permOpenSettings'),
+          cancelLabel: loc.t('btnCancel'),
+        );
         return;
       }
     }
@@ -125,7 +132,13 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
         if (!mounted) return;
-        await openAppSettings();
+        showPermissionDeniedDialog(
+          context,
+          title: loc.t('attachCameraPermission'),
+          message: loc.t('permPermanentlyDenied'),
+          openSettingsLabel: loc.t('permOpenSettings'),
+          cancelLabel: loc.t('btnCancel'),
+        );
         return;
       }
     }

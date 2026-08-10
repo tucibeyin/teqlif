@@ -722,7 +722,14 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
         if (!mounted) return;
-        await openAppSettings();
+        final loc = ref.read(localizationProvider);
+        showPermissionDeniedDialog(
+          context,
+          title: loc.t('attachCameraPermission'),
+          message: loc.t('permPermanentlyDenied'),
+          openSettingsLabel: loc.t('permOpenSettings'),
+          cancelLabel: loc.t('btnCancel'),
+        );
         return;
       }
     }
