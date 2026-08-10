@@ -1394,6 +1394,7 @@
   "adMetricDailyTrend": "Daily CTR Trend",
   "adMetricBestHour": "Best Hour",
   "adMetricCategoryAvgCtr": "Similar Listings' Interest",
+  "adMetricBurnRate": "Remaining Time",
   "softUpdateTitle": "New Version Available",
   "softUpdateMessage": "A new version of the app is available. Please update for a better experience.",
   "softUpdateUpdateNow": "Update Now",

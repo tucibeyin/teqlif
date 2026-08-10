@@ -172,6 +172,7 @@
     }
   },
   "errorCallHistoryLoad": "Çağrı geçmişi yüklenemedi. Lütfen tekrar deneyin.",
+  "errorVideoProcessing": "Video işlenemedi. Lütfen tekrar deneyin.",
   "errorPhotoUpload": "Fotoğraf yüklenemedi. Tekrar deneyin.",
   "errorCaptchaFailed": "Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.",
   "errorTooFast": "Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.",
@@ -1393,6 +1394,7 @@
   "adMetricDailyTrend": "Günlük CTR Trendi",
   "adMetricBestHour": "En İyi Saat",
   "adMetricCategoryAvgCtr": "Benzer İlanların İlgi Oranı",
+  "adMetricBurnRate": "Kalan Süre",
   "softUpdateTitle": "Yeni Sürüm Mevcut",
   "softUpdateMessage": "Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.",
   "softUpdateUpdateNow": "Şimdi Güncelle",
