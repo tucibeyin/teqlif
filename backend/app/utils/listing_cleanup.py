@@ -2,14 +2,13 @@
 Listing resource cleanup — listing_service ve listing_tasks tarafından kullanılır.
 
 Silinen/pasife alınan ilanlar için:
-  - Disk dosyaları (image, video, thumbnail)
+  - MinIO dosyaları (image, video, thumbnail)
   - Redis ALS item vektörü
   - İlgili bildirimler (related_id eşleşmesi)
 """
 from __future__ import annotations
 
 import json
-import os
 
 from app.core.logger import get_logger
 
@@ -27,27 +26,6 @@ _LISTING_NOTIF_TYPES = (
 
 # ── Dosya Temizliği ───────────────────────────────────────────────────────────
 
-def _url_to_fs_path(url: str) -> str | None:
-    """'/uploads/...' URL'ini sunucu dosya yoluna çevirir."""
-    if not url or not url.startswith("/uploads"):
-        return None
-    from app.config import settings
-    return settings.upload_dir + url[len("/uploads"):]
-
-
-def _safe_remove(url: str, label: str, listing_id: int) -> None:
-    path = _url_to_fs_path(url)
-    if not path:
-        return
-    try:
-        os.remove(path)
-        logger.info("[LISTING CLEANUP] %s silindi | listing_id=%d | path=%s", label, listing_id, path)
-    except FileNotFoundError:
-        pass  # Zaten silinmiş
-    except OSError as exc:
-        logger.warning("[LISTING CLEANUP] %s silinemedi | listing_id=%d | %s", label, listing_id, exc)
-
-
 def delete_listing_files(
     listing_id: int,
     image_url: str | None,
@@ -55,23 +33,28 @@ def delete_listing_files(
     thumbnail_url: str | None,
     video_url: str | None,
 ) -> None:
-    """Bir ilanın tüm medya dosyalarını diskten siler."""
-    if image_url:
-        _safe_remove(image_url, "image_url", listing_id)
+    """Bir ilanın tüm medya dosyalarını MinIO'dan siler."""
+    from app.services import storage_service as storage
 
+    urls: list[str] = []
+    if image_url:
+        urls.append(image_url)
     if image_urls_json:
         try:
-            for i, url in enumerate(json.loads(image_urls_json)):
+            for url in json.loads(image_urls_json):
                 if url:
-                    _safe_remove(url, f"image_urls[{i}]", listing_id)
+                    urls.append(url)
         except (json.JSONDecodeError, TypeError, ValueError):
             logger.warning("[LISTING CLEANUP] image_urls parse hatası | listing_id=%d", listing_id)
-
     if thumbnail_url:
-        _safe_remove(thumbnail_url, "thumbnail_url", listing_id)
-
+        urls.append(thumbnail_url)
     if video_url:
-        _safe_remove(video_url, "video_url", listing_id)
+        urls.append(video_url)
+
+    for url in urls:
+        key = storage.url_to_key(url)
+        storage.delete_object(key)
+        logger.info("[LISTING CLEANUP] MinIO'dan silindi | listing_id=%d | key=%s", listing_id, key)
 
 
 # ── Redis Temizliği ───────────────────────────────────────────────────────────
