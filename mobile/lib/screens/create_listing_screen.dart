@@ -104,6 +104,14 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       if (mounted) setState(() => _provinces = c);
     });
     _loadProStatus();
+    // If catalog is being fetched in background, refresh subcategories when ready.
+    CatalogService.onRefreshed.then((_) {
+      if (!mounted) return;
+      final selected = _selectedCategory;
+      if (selected != null && selected.isNotEmpty) {
+        _updateSubcategories(selected);
+      }
+    });
   }
 
   Future<void> _loadCategories() async {

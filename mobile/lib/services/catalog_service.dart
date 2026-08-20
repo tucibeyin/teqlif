@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -14,6 +15,10 @@ const _kStaleDurationMs = 24 * 60 * 60 * 1000; // 24h
 class CatalogService {
   static Box<String>? _box;
   static List<CatalogCategory>? _categories;
+
+  // Completes the first time a fresh catalog is successfully fetched from server.
+  static final Completer<void> _refreshCompleter = Completer<void>();
+  static Future<void> get onRefreshed => _refreshCompleter.future;
 
   static bool get isReady => _categories != null;
 
@@ -122,6 +127,7 @@ class CatalogService {
       await box.put('cached_at', DateTime.now().millisecondsSinceEpoch.toString());
       _categories = _parse(resp.body);
       debugPrint('[catalog] fetched and cached (version: $version)');
+      if (!_refreshCompleter.isCompleted) _refreshCompleter.complete();
     } catch (e) {
       debugPrint('[catalog] fetch failed: $e');
     }
