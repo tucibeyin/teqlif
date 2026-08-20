@@ -161,6 +161,7 @@ async def get_recent_users(
                 "email": u.email,
                 "full_name": u.full_name,
                 "status": u.status.value if hasattr(u.status, 'value') else (u.status if u.status else "active"),
+                "is_active": u.status == UserStatus.ACTIVE,
                 "is_verified": u.is_verified,
                 "is_premium": u.is_premium,
                 "plan_type": u.plan_type,
