@@ -182,8 +182,9 @@ async def seed():
         for (key, cat_key, sort) in _SUBCATEGORIES:
             result = await db.execute(
                 text(
-                    "INSERT INTO subcategories (key, category_key, sort_order) "
-                    "VALUES (:key, :cat, :sort) ON CONFLICT (key) DO NOTHING"
+                    "INSERT INTO subcategories (key, category_key, sort_order, is_active) "
+                    "VALUES (:key, :cat, :sort, true) ON CONFLICT (key) DO UPDATE "
+                    "SET is_active = true"
                 ),
                 {"key": key, "cat": cat_key, "sort": sort},
             )
