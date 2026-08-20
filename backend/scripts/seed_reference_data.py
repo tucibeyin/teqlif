@@ -281,7 +281,7 @@ async def seed():
                                 "pov": opt.get("parent_option_value"),
                                 "eg":  opt.get("exclusion_group"),
                                 "ix":  opt.get("is_exclusive", False),
-                                "p":   opt["position"],
+                                "p":   opt.get("position", 0),
                             },
                         )
                         opt_total += 1
