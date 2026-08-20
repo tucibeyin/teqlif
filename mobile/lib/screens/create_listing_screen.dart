@@ -127,7 +127,9 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     setState(() {
       _subcategories = subs;
       _selectedSubcategory = null;
+      _currentFields = [];
       _extraValues.clear();
+      _extraMultiValues.clear();
       _disposeExtraCtrls();
     });
   }
