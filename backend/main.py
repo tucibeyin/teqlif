@@ -361,7 +361,7 @@ if os.path.exists(frontend_dir):
 
     @app.get("/", include_in_schema=False)
     async def serve_index():
-        return FileResponse(os.path.join(frontend_dir, "index.html"))
+        return FileResponse(os.path.join(frontend_dir, "app-landing.html"))
 
     @app.get("/.well-known/apple-app-site-association", include_in_schema=False)
     async def serve_aasa():
