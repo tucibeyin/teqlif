@@ -181,6 +181,10 @@ _DISTRICTS: dict[str, list[str]] = {
 }
 
 
+# subcategory key → category key lookup
+_SUBCAT_TO_CAT = {key: cat for key, cat, _ in _SUBCATEGORIES}
+
+
 async def seed():
     async with AsyncSessionLocal() as db:
         # ── Subcategories ──────────────────────────────────────────────────────
@@ -244,11 +248,12 @@ async def seed():
                     result = await db.execute(
                         text(
                             "INSERT INTO category_fields "
-                            "(subcategory, key, label_key, type, required, position, unit, depends_on) "
-                            "VALUES (:sub, :key, :lk, :t, :req, :pos, :unit, :dep) RETURNING id"
+                            "(subcategory, category_key, key, label_key, type, required, position, unit, depends_on) "
+                            "VALUES (:sub, :cat, :key, :lk, :t, :req, :pos, :unit, :dep) RETURNING id"
                         ),
                         {
                             "sub":  subcat_key,
+                            "cat":  _SUBCAT_TO_CAT.get(subcat_key),
                             "key":  field["key"],
                             "lk":   field["label_key"],
                             "t":    field["type"],
