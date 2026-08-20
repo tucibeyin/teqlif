@@ -3,154 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ og_title }}</title>
-
-  <!-- OpenGraph / Sosyal Medya Meta -->
-  <meta property="og:type"        content="website">
-  <meta property="og:site_name"   content="teqlif">
-  <meta property="og:locale"      content="tr_TR">
-  <meta property="og:title"       content="{{ og_title }}">
-  <meta property="og:description" content="{{ og_description }}">
-  <meta property="og:image"       content="{{ og_image }}">
-  <meta property="og:url"         content="{{ og_url }}">
-  <meta name="twitter:card"       content="summary_large_image">
-  <meta name="twitter:title"      content="{{ og_title }}">
-  <meta name="twitter:description" content="{{ og_description }}">
-  <meta name="twitter:image"      content="{{ og_image }}">
-  <meta name="description"        content="{{ og_description }}">
-
-  <meta name="apple-itunes-app" content="app-id=6744777483, app-argument={{ app_scheme }}">
-  <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
-  <link rel="apple-touch-icon"    href="/static/icons/icon-192.png">
-
+  <title>teqlif</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
+    :root {
+      --bg:        #edfaf9;
+      --bg-glow:   #c8f1ed;
+      --g1:        #0f766e;
+      --g2:        #0891b2;
+      --g3:        #06b6d4;
+      --g4:        #0891b2;
+      --g5:        #0f766e;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg:      #05100f;
+        --bg-glow: #0b1e1c;
+        --g1:      #2dd4bf;
+        --g2:      #06b6d4;
+        --g3:      #7dd3fc;
+        --g4:      #06b6d4;
+        --g5:      #2dd4bf;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg:      #05100f;
+      --bg-glow: #0b1e1c;
+      --g1:      #2dd4bf;
+      --g2:      #06b6d4;
+      --g3:      #7dd3fc;
+      --g4:      #06b6d4;
+      --g5:      #2dd4bf;
+    }
+
+    :root[data-theme="light"] {
+      --bg:      #edfaf9;
+      --bg-glow: #c8f1ed;
+      --g1:      #0f766e;
+      --g2:      #0891b2;
+      --g3:      #06b6d4;
+      --g4:      #0891b2;
+      --g5:      #0f766e;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
       height: 100%;
-      background: #0f172a;
-      color: #f1f5f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex; align-items: center; justify-content: center;
     }
-    .card {
-      max-width: 400px; width: 90%;
-      background: #1e293b;
-      border-radius: 20px;
+
+    body {
+      height: 100dvh;
       overflow: hidden;
-      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      background: radial-gradient(ellipse 75% 55% at 50% 50%, var(--bg-glow) 0%, var(--bg) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .thumb {
-      width: 100%; aspect-ratio: 16/9; object-fit: cover;
-      background: #334155;
-      display: block;
+
+    .wordmark {
+      font-family: system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      font-size: clamp(3.5rem, 13vw, 11rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      background: linear-gradient(
+        90deg,
+        var(--g1),
+        var(--g2),
+        var(--g3),
+        var(--g4),
+        var(--g5)
+      );
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation:
+        flow   10s linear                    infinite,
+        appear  0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+      user-select: none;
     }
-    .thumb-placeholder {
-      width: 100%; aspect-ratio: 16/9;
-      background: linear-gradient(135deg, #0891b2 0%, #7c3aed 100%);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 48px;
+
+    @keyframes flow {
+      from { background-position:   0% center; }
+      to   { background-position: 300% center; }
     }
-    .body { padding: 24px; }
-    .brand {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 16px;
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0);    }
     }
-    .brand img { width: 28px; height: 28px; border-radius: 7px; }
-    .brand span { font-size: 13px; color: #94a3b8; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
-    .title { font-size: 18px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
-    .desc  { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 24px;
-             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .btn-open {
-      display: block; width: 100%; padding: 14px;
-      background: #06b6d4; color: #fff; border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
-      text-decoration: none; margin-bottom: 10px;
-      transition: background .15s;
-    }
-    .btn-open:active { background: #0891b2; }
-    .btn-store {
-      display: block; width: 100%; padding: 14px;
-      background: #3b82f6; color: #fff; border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
-      text-decoration: none; margin-bottom: 10px;
-      transition: background .15s;
-    }
-    .btn-store:active { background: #2563eb; }
-    .btn-web {
-      display: block; width: 100%; padding: 13px;
-      background: transparent; color: #64748b; border: 1.5px solid #334155; border-radius: 12px;
-      font-size: 14px; font-weight: 600; cursor: pointer; text-align: center;
-      text-decoration: none;
-    }
-    .status { font-size: 12px; color: #475569; text-align: center; margin-top: 12px; min-height: 18px; }
-    .instruction-text {
-      font-size: 13px; color: #cbd5e1; text-align: center; margin-bottom: 16px; line-height: 1.4;
-      background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px;
+
+    @media (prefers-reduced-motion: reduce) {
+      .wordmark {
+        animation: appear 0.2s ease both;
+        background-position: 50% center;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    {% if og_image %}
-    <img class="thumb" src="{{ og_image }}" alt="{{ og_title }}" onerror="this.style.display='none'">
-    {% else %}
-    <div class="thumb-placeholder">📦</div>
-    {% endif %}
-    <div class="body">
-      <div class="brand">
-        <img src="/static/icons/icon-192.png" alt="teqlif">
-        <span>teqlif</span>
-      </div>
-      <div class="title">{{ og_title }}</div>
-      <div class="desc">{{ og_description }}</div>
-      <a class="btn-open" href="#" data-scheme="{{ app_scheme }}" id="btnOpen">Uygulamayı Aç</a>
-      <a class="btn-store" href="#" id="btnStore">App Store'dan İndir</a>
-      <p class="instruction-text">
-        <small>💡 <b>Not:</b> Uygulamayı ilk kez yüklüyorsanız, yükleme tamamlandıktan sonra davet kodunuzun geçerli olması için <b>bu linke tekrar tıklayın</b>.</small>
-      </p>
-      <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
-      <div class="status" id="status"></div>
-    </div>
-  </div>
-
-  <script src="/static/js/storage.js?v=1"></script>
-    <script>
-    (function () {
-      var IOS_STORE     = 'https://apps.apple.com/app/id6744777483';
-      var ANDROID_STORE = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
-
-      var ua        = navigator.userAgent || '';
-      var isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-      var isAndroid = /Android/i.test(ua);
-      var isMobile  = isIOS || isAndroid;
-
-      var storeUrl  = isIOS ? IOS_STORE : ANDROID_STORE;
-      var btnOpen   = document.getElementById('btnOpen');
-      var btnStore  = document.getElementById('btnStore');
-      var btnWeb    = document.getElementById('btnWeb');
-      var appScheme = btnOpen ? btnOpen.getAttribute('data-scheme') : null;
-
-      if (!isMobile) {
-        window.location.replace(btnWeb.href);
-        return;
-      }
-
-      btnStore.textContent = isIOS ? 'App Store\'dan İndir' : 'Play Store\'dan İndir';
-
-      // "Uygulamayı Aç" Butonu
-      btnOpen.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (appScheme && appScheme !== '') {
-          window.location.href = appScheme;
-        }
-      });
-
-      // "Mağazadan İndir" Butonu
-      btnStore.addEventListener('click', function (e) {
-        e.preventDefault();
-        window.location.href = storeUrl;
-      });
-    })();
-  </script>
+  <span class="wordmark">teqlif</span>
 </body>
 </html>
