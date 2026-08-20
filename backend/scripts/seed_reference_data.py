@@ -1,22 +1,28 @@
 """
-Subcategories ve districts tablolarını sıfırdan seed eder.
-TRUNCATE sonrasında veya temiz kurulumda çalıştırılır.
+Subcategories, districts, category_fields ve field_options tablolarını seed eder.
+TRUNCATE sonrasında veya temiz kurulumda çalıştırılır. Güvenli tekrar çalıştırılabilir.
 
 Kullanım (VPS'te):
-  cd /var/www/teqlif.com
-  source venv/bin/activate
+  cd /var/www/teqlif.com/backend
+  source ../venv/bin/activate
   python scripts/seed_reference_data.py
 """
 import asyncio
-import sys
+import json
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import text
 from app.database import AsyncSessionLocal
 
-# ── Subcategory data ──────────────────────────────────────────────────────────
+# ── Paths ──────────────────────────────────────────────────────────────────────
+
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_CAT_DIR   = os.path.join(_REPO_ROOT, "documents", "categorization")
+
+# ── Subcategory data ───────────────────────────────────────────────────────────
 
 _SUBCATEGORIES = [
     # vehicles
@@ -88,7 +94,7 @@ _SUBCATEGORIES = [
     ("misc",              "other",       5),
 ]
 
-# ── District data ─────────────────────────────────────────────────────────────
+# ── District data ──────────────────────────────────────────────────────────────
 
 _DISTRICTS: dict[str, list[str]] = {
     "Adana": ["Aladağ","Ceyhan","Çukurova","Feke","İmamoğlu","Karaisalı","Karataş","Kozan","Pozantı","Saimbeyli","Sarıçam","Seyhan","Tufanbeyli","Yumurtalık","Yüreğir"],
@@ -190,7 +196,7 @@ async def seed():
             )
             sub_inserted += result.rowcount
         await db.commit()
-        print(f"[SEED] Subcategories: {sub_inserted} kayıt eklendi.")
+        print(f"[SEED] Subcategories: {sub_inserted} kayıt işlendi.")
 
         # ── Districts ──────────────────────────────────────────────────────────
         dist_inserted = 0
@@ -200,7 +206,7 @@ async def seed():
                 {"name": province},
             )).first()
             if row is None:
-                print(f"[SEED] UYARI: '{province}' şehri cities tablosunda bulunamadı, atlandı.")
+                print(f"[SEED] UYARI: '{province}' şehri bulunamadı, atlandı.")
                 continue
             city_id = row[0]
             for district in districts:
@@ -214,6 +220,69 @@ async def seed():
                 dist_inserted += result.rowcount
         await db.commit()
         print(f"[SEED] Districts: {dist_inserted} kayıt eklendi.")
+
+        # ── Category fields + options (from JSON files) ────────────────────────
+        cat_files = [f for f in os.listdir(_CAT_DIR) if f.endswith(".json")]
+        field_total = 0
+        opt_total   = 0
+
+        for fname in sorted(cat_files):
+            fpath = os.path.join(_CAT_DIR, fname)
+            with open(fpath, encoding="utf-8") as f:
+                data = json.load(f)
+
+            subcategories: dict = data.get("subcategories", {})
+
+            for subcat_key, fields in subcategories.items():
+                # Delete existing fields for this subcategory (clean re-seed)
+                await db.execute(
+                    text("DELETE FROM category_fields WHERE subcategory = :s"),
+                    {"s": subcat_key},
+                )
+
+                for field in fields:
+                    result = await db.execute(
+                        text(
+                            "INSERT INTO category_fields "
+                            "(subcategory, key, label_key, type, required, position, unit, depends_on) "
+                            "VALUES (:sub, :key, :lk, :t, :req, :pos, :unit, :dep) RETURNING id"
+                        ),
+                        {
+                            "sub":  subcat_key,
+                            "key":  field["key"],
+                            "lk":   field["label_key"],
+                            "t":    field["type"],
+                            "req":  field["required"],
+                            "pos":  field["position"],
+                            "unit": field.get("unit"),
+                            "dep":  field.get("depends_on"),
+                        },
+                    )
+                    field_id = result.fetchone()[0]
+                    field_total += 1
+
+                    for opt in field.get("options", []):
+                        await db.execute(
+                            text(
+                                "INSERT INTO field_options "
+                                "(field_id, value, label, parent_option_value, "
+                                " exclusion_group, is_exclusive, position) "
+                                "VALUES (:fid, :v, :l, :pov, :eg, :ix, :p)"
+                            ),
+                            {
+                                "fid": field_id,
+                                "v":   opt["value"],
+                                "l":   opt["label"],
+                                "pov": opt.get("parent_option_value"),
+                                "eg":  opt.get("exclusion_group"),
+                                "ix":  opt.get("is_exclusive", False),
+                                "p":   opt["position"],
+                            },
+                        )
+                        opt_total += 1
+
+        await db.commit()
+        print(f"[SEED] Category fields: {field_total} alan, {opt_total} seçenek eklendi.")
         print("[SEED] Tamamlandı.")
 
 
