@@ -531,7 +531,14 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
             currentIndex: _currentPage,
           );
         });
-        _updateViewportConnections();
+        // Listing sayfasındayken _updateViewportConnections() çağırmıyoruz.
+        // Çağrılırsa ListingVideoManager aktif controller'ı dispose eder;
+        // kullanıcı ListingDetailScreen'den geri döndüğünde _ctrl null/dispose
+        // olur ve 10+ saniyelik ANR'a yol açar. Viewport, kullanıcı sayfa
+        // değiştirdiğinde zaten güncelleniyor; buradaki çağrı gereksiz.
+        if (_isWatchingLiveStream()) {
+          _updateViewportConnections();
+        }
       }
     } catch (_) {
     } finally {
@@ -1920,8 +1927,24 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
         builder: (_) => ListingDetailScreen(listing: widget.listing),
       ),
     ).then((_) {
-      // Kullanıcı geri döndüğünde ve hâlâ aktif sayfadaysak devam et
-      if (mounted && widget.isActive) _ctrl?.play();
+      if (!mounted || !widget.isActive) return;
+      final lidInt = int.tryParse(widget.listing['id']?.toString() ?? '0') ?? 0;
+      // ListingDetailScreen'deyken arka planda feed refresh tetiklenip
+      // _ctrl'ı dispose etmiş olabilir. ListingVideoManager'dan taze referans al.
+      final live = ListingVideoManager.instance.getController(lidInt);
+      if (live != null && live.value.isInitialized) {
+        _ctrl = live;
+        if (!_initialized) setState(() => _initialized = true);
+        _ctrl!.setVolume(1.0);
+        _ctrl!.play();
+      } else {
+        // Controller dispose edilmiş veya hazır değil — yeniden başlat.
+        // _initVideo() controller'ı yeniden oluşturur; hazırlanınca otomatik oynar.
+        _ctrl = null;
+        _initialized = false;
+        setState(() {});
+        _initVideo();
+      }
     });
   }
 
