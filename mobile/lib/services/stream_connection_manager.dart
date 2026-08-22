@@ -202,12 +202,19 @@ class StreamConnectionManager with WidgetsBindingObserver {
         token.token,
         connectOptions: const ConnectOptions(autoSubscribe: false),
       );
-      
+
+      // Bağlantı async olarak tamamlandı; bu sürede _deactivateSession çağrılmış
+      // olabilir (viewport değişimi). Eğer session artık aktif değilse room'u hemen kapat.
+      if (session.state == SessionState.none) {
+        room.disconnect();
+        return;
+      }
+
       session.room = room;
       session.token = token;
       session.isConnected = true;
       session.isConnecting = false;
-      
+
       // Bağlandıktan sonra mevcut state'e göre track'leri yönet
       _applyTrackSubscriptions(session);
       session.update();
