@@ -71,21 +71,16 @@ class ListingVideoManager {
     try {
       await ctrl.initialize();
       ctrl.setLooping(true);
-      
-      // Eğer bu video şuan izleniyorsa (hızlı swipe edildiyse), buffering hack'ini atla!
+
+      // Aktif video: _ListingVideoPage oynatacak, müdahale etme.
       if (_activeId == id) {
-        return; // Aktif video, müdahale etme, _ListingVideoPage oynatacak.
+        return;
       }
-      
-      // MP4 moov atom gecikmesini yenmek için arkaplanda sessizce oynatıp hemen durduruyoruz
-      // Böylece AVPlayer ağ üzerinden tamponlamaya (buffering) zorlanıyor
-      await ctrl.setVolume(0.0);
-      await ctrl.play();
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (_controllers.containsKey(id) && _activeId != id) {
-          ctrl.pause();
-        }
-      });
+
+      // nextIds: sadece initialize ile bırak — play() çağrısı Android'de hardware
+      // codec pipeline'ını tam buffer'ıyla başlatır ve WebRTC ile eş zamanlı
+      // çalıştığında OOM'a yol açar. VideoCacheManager dosyayı diske indiriyor;
+      // kullanıcı bu sayfaya geçtiğinde lokal dosyadan anında oynar.
     } catch (e) {
       debugPrint('[ListingVideoManager] Video başlatılamadı ($id): $e');
     }
