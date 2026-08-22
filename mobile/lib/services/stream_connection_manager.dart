@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/stream.dart';
 import 'stream_service.dart';
 import 'background_audio_handler.dart';
+import 'listing_video_manager.dart';
 
 enum SessionState {
   none,
@@ -58,9 +60,14 @@ class StreamConnectionManager with WidgetsBindingObserver {
   }
 
   final Map<int, LiveSession> _sessions = {};
-  
+
   // Her stream için bağımsız bir lock
   final Set<int> _connectionLocks = {};
+
+  // _applyTrackSubscriptions çağrılarını debounce eder.
+  // Hızlı ardışık state değişimlerinde (swipe, TrackPublishedEvent) platform
+  // channel flood'unu önler — 80ms içinde gelen tüm çağrılar tek bir çağrıya indirilir.
+  final Map<int, Timer> _subscriptionDebounceTimers = {};
   
   bool _isCallActive = false;
   
@@ -69,7 +76,20 @@ class StreamConnectionManager with WidgetsBindingObserver {
     _isCallActive = active;
     debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] StreamConnectionManager setCallActive: $_isCallActive');
     for (final session in _sessions.values) {
-      _applyTrackSubscriptions(session);
+      _scheduleTrackSubscriptions(session);
+    }
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    debugPrint('[StreamConnectionManager][${DateTime.now().toIso8601String()}] LOW MEMORY WARNING — deactivating non-active sessions');
+    for (final id in _sessions.keys.toList()) {
+      if (id != _currentActiveStreamId) {
+        _deactivateSession(id);
+      }
+    }
+    if (_currentActiveStreamId == -1) {
+      ListingVideoManager.instance.disposeAll();
     }
   }
 
@@ -96,11 +116,11 @@ class StreamConnectionManager with WidgetsBindingObserver {
       final session = _sessions[_currentActiveStreamId];
       if (session != null && session.isConnected) {
         bgAudioHandler.startService(
-          session.streamId, 
-          session.token?.title ?? 'Canlı Yayın', 
+          session.streamId,
+          session.token?.title ?? 'Canlı Yayın',
           session.token?.hostUsername ?? 'Yayıncı'
         );
-        _applyTrackSubscriptions(session);
+        _scheduleTrackSubscriptions(session);
       }
     }
   }
@@ -110,7 +130,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
     if (_currentActiveStreamId != -1) {
       final session = _sessions[_currentActiveStreamId];
       if (session != null && session.isConnected) {
-        _applyTrackSubscriptions(session);
+        _scheduleTrackSubscriptions(session);
       }
     }
   }
@@ -187,7 +207,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
       _connectRoom(session);
     } else if (session.isConnected) {
       // Zaten bağlıysa abonelikleri güncelle
-      _applyTrackSubscriptions(session);
+      _scheduleTrackSubscriptions(session);
     }
   }
 
@@ -224,7 +244,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.isConnecting = false;
 
       // Bağlandıktan sonra mevcut state'e göre track'leri yönet
-      _applyTrackSubscriptions(session);
+      _scheduleTrackSubscriptions(session);
       session.update();
       
     } catch (e) {
@@ -239,7 +259,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
 
   void _setupListeners(LiveSession session) {
     session.listener!.on<TrackPublishedEvent>((e) {
-       _applyTrackSubscriptions(session);
+      _scheduleTrackSubscriptions(session);
     });
     session.listener!.on<TrackSubscribedEvent>((e) {
       if (e.track is VideoTrack) {
@@ -269,6 +289,20 @@ class StreamConnectionManager with WidgetsBindingObserver {
     });
   }
 
+  // Hızlı ardışık çağrıları 80ms debounce ile birleştirir.
+  // Swipe sırasında veya birden fazla TrackPublishedEvent geldiğinde
+  // platform channel flood'unu önler.
+  void _scheduleTrackSubscriptions(LiveSession session) {
+    _subscriptionDebounceTimers[session.streamId]?.cancel();
+    _subscriptionDebounceTimers[session.streamId] = Timer(
+      const Duration(milliseconds: 80),
+      () {
+        _subscriptionDebounceTimers.remove(session.streamId);
+        _applyTrackSubscriptions(session);
+      },
+    );
+  }
+
   void _applyTrackSubscriptions(LiveSession session) {
     if (!session.isConnected || session.room == null) return;
     
@@ -294,10 +328,12 @@ class StreamConnectionManager with WidgetsBindingObserver {
     final session = _sessions[id];
     if (session != null) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Deactivating stream: $id');
-      
-      // state kontrolü (session.state != SessionState.none) YAPMIYORUZ!
-      // Çünkü LiveKit RoomDisconnectedEvent zaten none yapmış olabilir,
-      // yine de room'u null yapıp UI'ın Loading veya Overlay'a düşmesini sağlamalıyız.
+
+      // Bekleyen debounce timer'ını iptal et — geç gelen _applyTrackSubscriptions
+      // çağrısının zaten null olan room üzerinde işlem yapmasını önler.
+      _subscriptionDebounceTimers[id]?.cancel();
+      _subscriptionDebounceTimers.remove(id);
+
       session.state = SessionState.none;
       if (session.isConnected) {
         StreamService.leaveStream(id).catchError((_) {});
@@ -306,16 +342,24 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.isConnecting = false;
       session.listener?.dispose();
       session.listener = null;
-      session.room?.disconnect();
+
+      // room önce null'lanır, sonra disconnect çağrılır.
+      // Böylece disconnect'in tetiklediği LiveKit event'ları (RoomDisconnectedEvent vb.)
+      // _applyTrackSubscriptions'a ulaştığında room == null olduğundan hiçbir
+      // platform channel çağrısı yapılmaz — ANR kaynağı olan geç event flood'u kesilir.
+      final room = session.room;
       session.room = null;
       session.hostVideoTrack = null;
       session.coHostVideoTrack = null;
       session.hostParticipantSid = null;
       session.update();
+      room?.disconnect();
     }
   }
 
   void _disconnect(int id) {
+    _subscriptionDebounceTimers[id]?.cancel();
+    _subscriptionDebounceTimers.remove(id);
     final session = _sessions.remove(id);
     if (session != null) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Disconnecting stream: $id');
@@ -394,6 +438,10 @@ class StreamConnectionManager with WidgetsBindingObserver {
   }
 
   void dispose() {
+    for (final timer in _subscriptionDebounceTimers.values) {
+      timer.cancel();
+    }
+    _subscriptionDebounceTimers.clear();
     clearViewport();
   }
 }
