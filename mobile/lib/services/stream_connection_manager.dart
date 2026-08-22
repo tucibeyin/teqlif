@@ -151,9 +151,12 @@ class StreamConnectionManager with WidgetsBindingObserver {
     }
 
     // 3. ±1 (Yakın) yayınlar -> Prefetch (Video indir, Audio kapalı)
+    //    Ancak aktif sayfa bir listing ise (activeStreamId == -1) video decoder
+    //    açık tutmak OOM'a yol açar; o durumda sadece handshake yeterli.
+    final nearbyState = activeStreamId == -1 ? SessionState.connected : SessionState.prefetched;
     for (final id in nextStreamIds) {
       if (id == activeStreamId || id == -1) continue;
-      _setSessionState(id, SessionState.prefetched);
+      _setSessionState(id, nearbyState);
     }
 
     // 4. Ekranda olan (Aktif) yayın -> Active (Video ve Audio indir)
