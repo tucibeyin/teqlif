@@ -135,8 +135,18 @@ class StreamConnectionManager with WidgetsBindingObserver {
   }) async {
     _currentActiveStreamId = activeStreamId;
 
+    // Listing sayfası aktifken (activeStreamId == -1) tüm WebRTC session'larını
+    // tamamen kapat. ExoPlayer ile eş zamanlı çalışan video decoder OOM'a yol açar;
+    // stream'e dönüldüğünde 1-2 sn yeniden bağlantı yaşanır ama crash olmaz.
+    if (activeStreamId == -1) {
+      for (final id in _sessions.keys.toList()) {
+        _deactivateSession(id);
+      }
+      return;
+    }
+
     final toKeep = {activeStreamId, ...nextStreamIds, ...farStreamIds};
-    toKeep.remove(-1); // -1 geçerli değil
+    toKeep.remove(-1);
 
     // 1. Görüş alanından çıkan yayınları temizle (Dispose etme, sadece bağlantıyı kopar)
     final toRemove = _sessions.keys.where((id) => !toKeep.contains(id)).toList();
@@ -151,18 +161,13 @@ class StreamConnectionManager with WidgetsBindingObserver {
     }
 
     // 3. ±1 (Yakın) yayınlar -> Prefetch (Video indir, Audio kapalı)
-    //    Ancak aktif sayfa bir listing ise (activeStreamId == -1) video decoder
-    //    açık tutmak OOM'a yol açar; o durumda sadece handshake yeterli.
-    final nearbyState = activeStreamId == -1 ? SessionState.connected : SessionState.prefetched;
     for (final id in nextStreamIds) {
       if (id == activeStreamId || id == -1) continue;
-      _setSessionState(id, nearbyState);
+      _setSessionState(id, SessionState.prefetched);
     }
 
     // 4. Ekranda olan (Aktif) yayın -> Active (Video ve Audio indir)
-    if (activeStreamId != -1) {
-      _setSessionState(activeStreamId, SessionState.active);
-    }
+    _setSessionState(activeStreamId, SessionState.active);
   }
 
   Future<void> _setSessionState(int id, SessionState targetState) async {

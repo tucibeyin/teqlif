@@ -1787,8 +1787,11 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.isActive) _startWatch();
-    _initVideo();
+    if (widget.isActive) {
+      _startWatch();
+      _initVideo(); // Sadece aktifken başlat — erken WebRTC+ExoPlayer çakışmasını önler
+    }
+    // isActive=false ise didUpdateWidget isActive=true olduğunda başlatır
   }
 
   Future<void> _initVideo() async {
@@ -1851,14 +1854,17 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BECAME_ACTIVE] for listing: ${widget.listing['id']}');
-      if (_initialized) {
+      _startWatch();
+      if (_ctrl == null) {
+        // initState'te isActive=false idi, şimdi başlat
+        _initVideo();
+      } else if (_initialized) {
         debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_PLAY_COMMAND] Playing video for listing: ${widget.listing['id']}');
         _ctrl?.setVolume(1.0);
         _ctrl?.play();
       } else {
         debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_ACTIVE_BUT_NOT_READY] Video NOT INITIALIZED YET for listing: ${widget.listing['id']}');
       }
-      _startWatch();
     } else if (!widget.isActive && old.isActive) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BECAME_INACTIVE] for listing: ${widget.listing['id']}');
       _ctrl?.pause();
