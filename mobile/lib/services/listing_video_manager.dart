@@ -25,24 +25,24 @@ class ListingVideoManager {
     // 1. VideoCacheManager'a önbelleğe alınacakları bildir
     VideoCacheManager.instance.updateCache(cacheIds, urls);
 
-    // 2. Controller'ı RAM'de tutulacak olanlar (active + nextIds)
-    final keepIds = {activeId, ...nextIds};
+    // 2. Sadece aktif listing controller'ı RAM'de tut.
+    //    nextIds: VideoCacheManager disk'e indiriyor; controller on-demand oluşturulur.
+    //    VideoPlayerController.initialize() bile MediaCodec nesneleri açar (~30-50 MB);
+    //    WebRTC ile eş zamanlı çalıştığında OOM'a yol açar.
+    final keepIds = activeId > 0 ? {activeId} : <int>{};
 
-    // 3. Artık viewport'ta olmayanları temizle ama CacheManager diskte tutabilir
+    // 3. Artık aktif olmayan controller'ları temizle
     final toRemove = _controllers.keys.where((id) => !keepIds.contains(id)).toList();
     for (final id in toRemove) {
       final ctrl = _controllers.remove(id);
       ctrl?.dispose();
     }
 
-    // 4. Viewport'ta olup henüz controller'ı olmayanları oluştur
-    for (final id in keepIds) {
-      if (id <= 0) continue;
-      final url = urls[id];
-      if (url == null || url.isEmpty) continue;
-
-      if (!_controllers.containsKey(id)) {
-        _initController(id, url);
+    // 4. Sadece aktif listing için controller başlat
+    if (activeId > 0) {
+      final url = urls[activeId];
+      if (url != null && url.isNotEmpty && !_controllers.containsKey(activeId)) {
+        _initController(activeId, url);
       }
     }
   }
