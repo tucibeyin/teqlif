@@ -13,7 +13,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../widgets/offline_banner.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../config/theme.dart';
 import 'viewmodels/main_view_model.dart';
@@ -60,10 +59,6 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     ];
     WidgetsBinding.instance.addObserver(this);
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Proaktif mikrofon izni — reddetme durumunda redirect yok; kullanıcı kararına saygı duyulur
-      Permission.microphone.request();
-    });
   }
 
   @override
