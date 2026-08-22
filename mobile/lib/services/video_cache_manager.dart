@@ -57,8 +57,9 @@ class VideoCacheManager {
           });
         }
       }
+      _listeners.remove(id);
     }
-    
+
     // Ayrıca sıradan da çıkar
     _queue.removeWhere((id) => !cacheIds.contains(id));
     

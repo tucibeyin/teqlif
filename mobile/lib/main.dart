@@ -48,6 +48,10 @@ void main() async {
       WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
       FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
+      // Image cache default 100MB — SwipeLive ilan görselleri hızla doldurur.
+      // 25MB yeterli; OS bellek uyarısı gelince didHaveMemoryPressure() sıfırlar.
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 25 * 1024 * 1024;
+
       // Flutter/UI katmanındaki yakalanmamış hataları yakala
       PlatformDispatcher.instance.onError = (error, stack) {
         LoggerService.instance.captureException(

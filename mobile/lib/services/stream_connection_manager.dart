@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/stream.dart';
@@ -91,6 +92,9 @@ class StreamConnectionManager with WidgetsBindingObserver {
     if (_currentActiveStreamId == -1) {
       ListingVideoManager.instance.disposeAll();
     }
+    // Image cache OS uyarısında en ucuz atılabilecek bellektir.
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
   }
 
   int _currentActiveStreamId = -1;
