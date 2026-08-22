@@ -460,6 +460,8 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
+    // _endStream() çağrıldıysa _room zaten null — double disconnect olmaz.
+    // Kullanıcı geri tuşuyla çıktıysa (_endStream() atlandıysa) burada temizlenir.
     _room?.disconnect();
     super.dispose();
   }
@@ -829,7 +831,18 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     // Odayı bilerek kapattığımız için otomatik kapanma dinleyicisini kaldırıyoruz
     // Böylece RoomDisconnectedEvent tetiklenip bizi /home sayfasına yönlendirmeyecek
     _listener?.dispose();
+    _listener = null;
+
+    // Endüstri standardı sırası: önce kamera/mikrofonu kapat (LED hemen söner),
+    // sonra room disconnect. Ters sırada disconnect müzakeresi boyunca kamera LED'i
+    // açık kalır ve kullanıcıya hâlâ yayında olduğu hissini verir.
+    try {
+      await _room?.localParticipant?.setCameraEnabled(false);
+      await _room?.localParticipant?.setMicrophoneEnabled(false);
+    } catch (_) {}
     await _room?.disconnect();
+    _room = null;          // dispose()'daki çift disconnect çağrısını engeller
+    _localVideoTrack = null;
     if (mounted) {
       // Yayın analiz ekranına yönlendir; geri tuşu ana sayfaya döner
       Navigator.pushAndRemoveUntil(

@@ -257,7 +257,10 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] SwipeLiveScreen dispose. pipStreamId to exclude: $pipStreamId');
     
     if (activeScreenCount == 0) {
-      _connectionManager.clearViewport(excludeStreamId: pipStreamId); // Singleton olduğu için çıkışta temizle
+      _connectionManager.clearViewport(excludeStreamId: pipStreamId);
+      // ExoPlayer controller'larını da serbest bırak — dispose() zincirinde
+      // beklemeye gerek kalmadan MediaCodec pipeline'larını kapat.
+      ListingVideoManager.instance.disposeAll();
     } else {
       debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] SwipeLiveScreen dispose skipped clearViewport because activeScreenCount is $activeScreenCount');
     }
@@ -1103,6 +1106,19 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   Future<void> _leave({bool fromOverlay = false}) async {
     widget.onStreamEnded?.call();
+
+    // Navigasyondan ÖNCE kaynakları proaktif olarak serbest bırak.
+    // dispose() zinciri navigasyon animasyonu bitene kadar (~300ms) çalışmaz;
+    // bu sürede WebRTC, kamera ve ExoPlayer aktif kalmaya devam eder.
+
+    // Co-host ise kamera/mikrofonu önce kapat (LED hemen söner)
+    if (_isSelfCoHost) {
+      try {
+        await widget.session.room?.localParticipant?.setCameraEnabled(false);
+        await widget.session.room?.localParticipant?.setMicrophoneEnabled(false);
+      } catch (_) {}
+    }
+
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     }
