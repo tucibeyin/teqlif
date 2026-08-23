@@ -20,7 +20,7 @@ class VerifyViewModel extends AutoDisposeAsyncNotifier<void> {
         email: email,
         code: code,
       );
-      PushNotificationService.initialize();
+      await PushNotificationService.initialize();
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {

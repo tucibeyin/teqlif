@@ -45,8 +45,8 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
         // me() call failures should not block login success
       }
 
-      PushNotificationService.initialize();
-      
+      await PushNotificationService.initialize();
+
       state = const AsyncValue.data(null);
       return LoginResult.success;
     } catch (e, st) {

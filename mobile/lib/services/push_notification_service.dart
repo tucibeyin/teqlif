@@ -690,22 +690,26 @@ class PushNotificationService {
   static Future<void> initialize() async {
     debugPrint('[FCM] initialize çağrıldı | fullDone=$_fullDone');
     await initEarly();
-    if (_fullDone) return;
-    _fullDone = true;
 
-    final settings = await _messaging.requestPermission(
-      alert: true, badge: true, sound: true,
-    );
-    debugPrint('[FCM] İzin: ${settings.authorizationStatus}');
+    // requestPermission diyaloğu yalnızca bir kez gösterilmeli.
+    // Token kaydı ise izin durumundan bağımsız her zaman yapılır:
+    // Android FCM data mesajları (aramalar) bildirim izni olmadan da teslim edilir.
+    if (!_fullDone) {
+      _fullDone = true;
+      final settings = await _messaging.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+      debugPrint('[FCM] İzin: ${settings.authorizationStatus}');
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional) {
+      // onTokenRefresh listener yalnızca bir kez eklenmeli.
       _messaging.onTokenRefresh.listen((t) {
         _cpLog('TOKEN', 'FCM onTokenRefresh → re-registering via notifAdapter');
         CallService.instance.notifAdapter.registerTokens(fcmToken: t);
       });
-      await CallService.instance.notifAdapter.registerTokens();
     }
+
+    // Token kaydı her initialize() çağrısında yapılır — izin durumu fark etmez.
+    await CallService.instance.notifAdapter.registerTokens();
   }
 
   static Future<void> refreshToken() async {
