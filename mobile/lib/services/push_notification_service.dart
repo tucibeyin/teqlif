@@ -736,12 +736,6 @@ class PushNotificationService {
         CallService.instance.notifAdapter.registerTokens(fcmToken: t);
       });
 
-      // Android: mikrofon iznini login akışında önceden iste.
-      // Böylece gelen ilk arama sırasında sistem diyaloğu açılmaz.
-      if (Platform.isAndroid) {
-        final micStatus = await Permission.microphone.request();
-        debugPrint('[FCM] Mikrofon izni: $micStatus');
-      }
     }
 
     // Token kaydı her initialize() çağrısında yapılır — izin durumu fark etmez.
