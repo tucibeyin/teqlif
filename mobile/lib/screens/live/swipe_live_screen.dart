@@ -998,38 +998,41 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Text('🎬', style: TextStyle(fontSize: 22)),
-            SizedBox(width: 8),
-            Text(
-              'Sahneye Davet Edildiniz!',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+      builder: (ctx) {
+        final loc = ref.read(localizationProvider);
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Text('🎬', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 8),
+              Text(
+                loc.t('liveStageInviteTitle'),
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          content: Text(
+            loc.t('liveStageInviteBody', {'hostUsername': hostUsername}),
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(loc.t('auctionBuyNowReject'), style: const TextStyle(color: Color(0xFF64748B))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(loc.t('btnAcceptInvite'), style: const TextStyle(color: Colors.white)),
             ),
           ],
-        ),
-        content: Text(
-          '@$hostUsername sizi sahneye davet etti.\nKameranız açılacak — kabul ediyor musunuz?',
-          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(ref.read(localizationProvider).t('auctionBuyNowReject'), style: const TextStyle(color: Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(ref.read(localizationProvider).t('btnAcceptInvite'), style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      },
     ).then((accepted) {
       if (accepted == true) _acceptCoHostInvite();
     });

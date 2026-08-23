@@ -717,7 +717,7 @@ class _BarButton extends StatelessWidget {
 
 // ── Group Invite Banner ───────────────────────────────────────────────────────
 
-class _GroupInviteBanner extends StatelessWidget {
+class _GroupInviteBanner extends ConsumerWidget {
   final dynamic invite; // GroupInvite
   final VoidCallback onAccept;
   final VoidCallback onDecline;
@@ -729,7 +729,8 @@ class _GroupInviteBanner extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
     final inviterUsername = invite.inviterUsername as String;
     final inviterAvatar = invite.inviterAvatar as String?;
     return Material(
@@ -762,8 +763,8 @@ class _GroupInviteBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Aktif Aramaya Davet', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                  Text('@$inviterUsername sizi aramaya çağırıyor',
+                  Text(loc.t('callGroupInviteTitle'), style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(loc.t('callGroupInviteFrom', {'inviter': '@$inviterUsername'}),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

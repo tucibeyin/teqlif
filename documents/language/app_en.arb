@@ -1973,6 +1973,8 @@
   "hostShowToAllViewersHint": "Will be shown to all viewers...",
   "swipeMutedInStream": "You have been muted in this stream",
   "swipeMadeModeratorBy": "made you a moderator! You can now manage viewers.",
+  "liveStageInviteTitle": "You've Been Invited to the Stage!",
+  "liveStageInviteBody": "@{hostUsername} invited you to the stage.\nYour camera will turn on — do you accept?",
   "swipeRemovedFromStage": "You were removed from the stage",
   "swipeGiftSent": "sent! 🎉",
   "notificationStart": "Start",

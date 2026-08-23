@@ -1956,6 +1956,8 @@
   "hostShowToAllViewersHint": "سيتم عرضه لجميع المشاهدين...",
   "swipeMutedInStream": "لقد تم كتم صوتك في هذا البث",
   "swipeMadeModeratorBy": "جعلك مشرفاً! يمكنك الآن إدارة المشاهدين.",
+  "liveStageInviteTitle": "تمت دعوتك إلى المسرح!",
+  "liveStageInviteBody": "@{hostUsername} دعاك إلى المسرح.\nسيتم تشغيل الكاميرا — هل تقبل؟",
   "swipeRemovedFromStage": "تمت إزالتك من المسرح",
   "swipeGiftSent": "أرسلت! 🎉",
   "notificationStart": "البداية",

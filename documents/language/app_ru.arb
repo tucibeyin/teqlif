@@ -1976,6 +1976,8 @@
   "hostShowToAllViewersHint": "Будет показано всем зрителям...",
   "swipeMutedInStream": "Вас отключили в этом потоке",
   "swipeMadeModeratorBy": "сделал тебя модератором! Теперь вы можете управлять зрителями.",
+  "liveStageInviteTitle": "Вас пригласили на сцену!",
+  "liveStageInviteBody": "@{hostUsername} пригласил(а) вас на сцену.\nВаша камера включится — вы принимаете?",
   "swipeRemovedFromStage": "Вас сняли со сцены",
   "swipeGiftSent": "отправил! 🎉",
   "notificationStart": "Начать",

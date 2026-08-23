@@ -1973,6 +1973,8 @@
   "hostShowToAllViewersHint": "Tüm izleyicilere gösterilecek...",
   "swipeMutedInStream": "Bu yayında susturuldunuz",
   "swipeMadeModeratorBy": "sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.",
+  "liveStageInviteTitle": "Sahneye Davet Edildiniz!",
+  "liveStageInviteBody": "@{hostUsername} sizi sahneye davet etti.\nKameranız açılacak — kabul ediyor musunuz?",
   "swipeRemovedFromStage": "Sahneden kaldırıldınız",
   "swipeGiftSent": "gönderildi! 🎉",
   "notificationStart": "Başlangıç",
