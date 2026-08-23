@@ -710,6 +710,27 @@ class PushNotificationService {
 
     // Token kaydı her initialize() çağrısında yapılır — izin durumu fark etmez.
     await CallService.instance.notifAdapter.registerTokens();
+
+    // Android: OEM pil optimizasyonu FCM yüksek öncelikli mesajları engelleyebilir.
+    // Muafiyet istenmemişse sistem diyaloğunu göster (yalnızca bir kez).
+    if (Platform.isAndroid) {
+      await _requestBatteryOptimizationExemption();
+    }
+  }
+
+  static Future<void> _requestBatteryOptimizationExemption() async {
+    const channel = MethodChannel('teqlif/native');
+    try {
+      final isIgnoring = await channel.invokeMethod<bool>('checkBatteryOptimization') ?? true;
+      if (!isIgnoring) {
+        debugPrint('[FCM] Pil optimizasyonu muafiyeti isteniyor...');
+        await channel.invokeMethod('requestIgnoreBatteryOptimizations');
+      } else {
+        debugPrint('[FCM] Pil optimizasyonu muafiyeti zaten aktif.');
+      }
+    } catch (e) {
+      debugPrint('[FCM] Pil optimizasyonu muafiyeti isteği başarısız (non-fatal): $e');
+    }
   }
 
   static Future<void> refreshToken() async {

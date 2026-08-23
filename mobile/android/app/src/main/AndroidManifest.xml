@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <!-- Ekranı uyandırmak için (gelen arama ekranında) -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- FCM yüksek öncelikli mesajların OEM pil optimizasyonu tarafından engellenmesini önlemek için -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="teqlif"
