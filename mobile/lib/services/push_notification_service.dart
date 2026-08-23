@@ -384,6 +384,18 @@ class PushNotificationService {
       data['is_foreground_receive'] = true;
       if (type == 'incoming_call') {
         debugPrint('[FCM] Foreground incoming_call — stream\'e ekleniyor');
+        // Android foreground: background isolate çalışmaz, HTTP ACK gönderilmez.
+        // WS bağlı değilse backend 8s sonra call_unreachable tetikler.
+        // Background handler'daki pattern'le aynı: ACK fire-and-forget.
+        if (Platform.isAndroid) {
+          final callId = data['call_id']?.toString() ?? '';
+          if (callId.isNotEmpty) {
+            http.post(Uri.parse('$kBaseUrl/calls/$callId/ack'))
+                .timeout(const Duration(seconds: 5))
+                .catchError((_) {});
+            debugPrint('[FCM] Foreground Android ACK fired | callId=$callId');
+          }
+        }
       } else if (type == 'call_accepted') {
         // call_accepted FCM: caller was in foreground but WS may have been down.
         // notificationStream → IncomingCallOverlay._onData handles 'call_accepted'
