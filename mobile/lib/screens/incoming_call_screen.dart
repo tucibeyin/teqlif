@@ -26,7 +26,7 @@ class IncomingCallScreen extends ConsumerStatefulWidget {
 }
 
 class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _pulseCtrl;
   late Animation<double> _pulse;
   bool _hasNavigated = false;
@@ -44,6 +44,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
       end: 1.08,
     ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
+    WidgetsBinding.instance.addObserver(this);
     // If the caller ends before we answer, pop automatically
     CallService.instance.state.addListener(_onStateChange);
 
@@ -105,8 +106,9 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              _cpLog('UI', 'IncomingCallScreen permPermanentlyDenied → Ayarlar\'a Git → clearFlag');
-              CallService.instance.clearPermPermanentlyDenied();
+              _cpLog('UI', 'IncomingCallScreen permPermanentlyDenied → Ayarlar\'a Git');
+              // Flag temizlenmez — lifecycle hook (didChangeAppLifecycleState)
+              // dönüşte izni kontrol edip auto-accept veya modal'ı yeniden gösterir.
               await openAppSettings();
             },
             child: Text(loc.t('navSettings')),
@@ -118,7 +120,35 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_hasNavigated) {
+      _checkPermissionAfterSettings();
+    }
+  }
+
+  // Kullanıcı Ayarlar'dan döndüğünde mic iznini kontrol et.
+  // permPermanentlyDenied bayrağı ayarlıyken uygulama resume olursa devreye girer.
+  Future<void> _checkPermissionAfterSettings() async {
+    final cs = CallService.instance.state.value;
+    if (cs.status != CallStatus.ringing) return;
+    if (!cs.permPermanentlyDenied) return;
+
+    final micStatus = await Permission.microphone.status;
+    if (!mounted) return;
+
+    if (micStatus.isGranted) {
+      _cpLog('UI', 'IncomingCallScreen settings-return: mic granted → auto-accept');
+      CallService.instance.clearPermPermanentlyDenied();
+      await _accept();
+    } else {
+      _cpLog('UI', 'IncomingCallScreen settings-return: mic still denied → re-show modal');
+      await _showPermPermanentlyDeniedModal();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseCtrl.dispose();
     CallService.instance.stopRingtoneAndVibration();
     CallService.instance.state.removeListener(_onStateChange);

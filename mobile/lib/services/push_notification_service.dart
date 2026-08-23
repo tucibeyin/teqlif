@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
 import 'storage_service.dart';
 import 'call_service.dart';
 import 'localization_service.dart';
@@ -177,6 +178,34 @@ Future<void> _showCallNotification({
   );
 
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → calling | callId=$callId caller=$callerUsername');
+
+  // Android 14+: RECORD_AUDIO kalıcı reddedildiyse CallkitNotificationService
+  // (foregroundServiceType=microphone) SecurityException fırlatabilir.
+  // Bu durumda basit lokal bildirimle geri dön — kullanıcı bildirime tıklayıp
+  // uygulamayı açabilir ve izni Ayarlar'dan verebilir.
+  if (Platform.isAndroid) {
+    final micStatus = await Permission.microphone.status;
+    if (micStatus.isPermanentlyDenied) {
+      debugPrint('[FCM][BG] mic permanentlyDenied → fallback local notification');
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await _flnp.initialize(InitializationSettings(android: androidInit));
+      await _flnp.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(const AndroidNotificationChannel(
+            _kChannelCalls, 'Gelen Aramalar', importance: Importance.max));
+      await _flnp.show(
+        0,
+        callerUsername,
+        l.t('callIncomingTitle'),
+        const NotificationDetails(android: AndroidNotificationDetails(
+          _kChannelCalls, 'Gelen Aramalar',
+          importance: Importance.max,
+          priority: Priority.max,
+        )),
+      );
+      return;
+    }
+  }
+
   await FlutterCallkitIncoming.showCallkitIncoming(params);
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → done | callId=$callId');
 }
@@ -706,6 +735,13 @@ class PushNotificationService {
         _cpLog('TOKEN', 'FCM onTokenRefresh → re-registering via notifAdapter');
         CallService.instance.notifAdapter.registerTokens(fcmToken: t);
       });
+
+      // Android: mikrofon iznini login akışında önceden iste.
+      // Böylece gelen ilk arama sırasında sistem diyaloğu açılmaz.
+      if (Platform.isAndroid) {
+        final micStatus = await Permission.microphone.request();
+        debugPrint('[FCM] Mikrofon izni: $micStatus');
+      }
     }
 
     // Token kaydı her initialize() çağrısında yapılır — izin durumu fark etmez.
