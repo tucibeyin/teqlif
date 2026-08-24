@@ -17,8 +17,8 @@ class AndroidCallNotifAdapter extends CallNotifAdapter {
       final captured = token;
       await CallNotifAdapter.sendWithRetry(
         context: 'Android fcmLen=${captured.length}',
-        // Android: voipToken always null — no VoIP push channel on Android
-        send: () => AuthService.saveDeviceTokens(fcmToken: captured, voipToken: null),
+        // Android: no VoIP push channel — clear any stale VoIP token left by a prior iOS session
+        send: () => AuthService.saveDeviceTokens(fcmToken: captured, clearVoipToken: true),
       );
     } catch (e) {
       notifLog('TOKEN | registerTokens FAILED | $e');

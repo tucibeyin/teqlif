@@ -56,6 +56,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // Flutter binding'i background isolate için başlat
     WidgetsFlutterBinding.ensureInitialized();
     final callId = message.data['call_id'] ?? '';
+    // ACK önce gönderilir — backend 8s penceresi içinde kalmak için.
+    // _showCallNotification() Hive init + CallKit foreground service başlatır (2-4s),
+    // bu yüzden ACK ondan önce gitmelidir.
+    if (callId.isNotEmpty) {
+      try {
+        await http.post(Uri.parse('$kBaseUrl/calls/$callId/ack')).timeout(const Duration(seconds: 5));
+        debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
+      } catch (e) {
+        debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
+      }
+    }
     await _showCallNotification(
       callId:         callId,
       callerUsername: message.data['caller_username'] ?? '',
@@ -65,15 +76,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       livekitUrl:     message.data['livekit_url']     ?? '',
       calleeToken:    message.data['callee_token']    ?? '',
     );
-    // WS bağlantısı yokken ACK'i HTTP üzerinden bildir; iOS VoIP path'i WS üzerinden ACK gönderir.
-    if (callId.isNotEmpty) {
-      try {
-        await http.post(Uri.parse('$kBaseUrl/calls/$callId/ack')).timeout(const Duration(seconds: 5));
-        debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
-      } catch (e) {
-        debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
-      }
-    }
   } else if (message.data['type'] == 'call_ended' || message.data['type'] == 'call_missed' || message.data['type'] == 'call_rejected') {
     debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
     final callId = message.data['call_id']?.toString() ?? '';

@@ -228,10 +228,18 @@ class AuthService {
 
   /// FCM ve/veya VoIP token'ı backend'e kaydeder.
   /// En az biri non-null olmalıdır; ikisi de null ise istek atılmaz.
-  static Future<void> saveDeviceTokens({String? fcmToken, String? voipToken}) async {
+  static Future<void> saveDeviceTokens({
+    String? fcmToken,
+    String? voipToken,
+    bool clearVoipToken = false,
+  }) async {
     final body = <String, dynamic>{};
     if (fcmToken != null) body['token'] = fcmToken;
-    if (voipToken != null) body['voip_token'] = voipToken;
+    if (voipToken != null) {
+      body['voip_token'] = voipToken;
+    } else if (clearVoipToken) {
+      body['voip_token'] = null;
+    }
 
     if (body.isEmpty) return; // Gönderilebilecek bir şey yok
 

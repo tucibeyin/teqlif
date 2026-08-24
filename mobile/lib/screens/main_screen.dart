@@ -58,7 +58,9 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
       ProfileScreen(key: _profileKey),
     ];
     WidgetsBinding.instance.addObserver(this);
-    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(mainViewModelProvider.notifier).handleLifecycleResumed();
+    });
   }
 
   @override
