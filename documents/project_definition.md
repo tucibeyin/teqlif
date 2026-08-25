@@ -22,7 +22,7 @@ iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden f
 
 Mevcut sosyal ticaret platformlarında araçlara ve verilere erişim kullanıcı tipine, harcama düzeyine veya abonelik kademesine göre farklılaşmaktadır. Bu yapı aşağıdaki sorunları doğurmaktadır:
 
-- Retargeting, rakip analizi, fiyat zekası ve sıcak aday tespiti gibi veri odaklı araçlar ücretli planların veya yüksek harcama eşiklerinin arkasında tutulmaktadır; platforma yeni katılan veya küçük ölçekte çalışan satıcılar bu araçlara erişememektedir
+- Yeniden ulaşma, rakip analizi, fiyat zekası ve sıcak aday tespiti gibi veri odaklı araçlar ücretli planların veya yüksek harcama eşiklerinin arkasında tutulmaktadır; platforma yeni katılan veya küçük ölçekte çalışan satıcılar bu araçlara erişememektedir
 - Canlı yayın açık artırması, direkt satış ve statik ilan aynı hesap altında entegre ve paralel biçimde yönetilememektedir
 - Alıcı ile satıcı arasında platform içi doğrudan sesli veya görüntülü iletişim kanalı bulunmamaktadır; iletişim platform dışına taşmakta, güven ve takip sorunu doğurmaktadır
 - Canlı yayın keşfi ile statik ilan içeriği ayrı platformlarda yer almakta; kullanıcıya bütünleşik ve kişiselleştirilmiş bir alışveriş akışı sunulamamaktadır
@@ -68,7 +68,7 @@ teqlif, bu boşlukları aşağıdaki entegre modüllerle kapatır:
 teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirılmez. Platforma üye olan her satıcı aşağıdaki araçların tamamına eşit biçimde erişir:
 
 - Toplu bildirim gönderme (Blast): filtrelenmiş hedef kitleye kişiselleştirilmiş push bildirimi; Tuci kredi tabanlı erişim
-- Yeniden hedefleme (Retargeting): bir ilanla etkileşime geçmiş kullanıcılara otomatik kampanya; hedef kitle büyüklüğü ön gösterimi
+- Yeniden Ulaşma: bir ilanla etkileşime geçmiş kullanıcılara otomatik bildirim kampanyası; hedef kitle büyüklüğü ön gösterimi
 - Sıcak Aday (Hot Lead) tespiti: 24 saat içinde aynı ilana yönelik yüksek teklif tereddütü davranışı gösteren kullanıcılar tespit edilip satıcıya otomatik bildirim gönderilir
 - Öne çıkarma ve sponsorlu ilan (Boost): ilan ve yayın görünürlüğünü artırma; tıklama ve görüntüleme bazlı reklam kampanyası yönetimi
 - Canlı yayın analitiği ve satıcı raporu
@@ -113,7 +113,7 @@ teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirıl
 - **Kullanıcı ilgi alanı ve öneri motoru:** Kayıt sırasında beyan edilen kategorilerden başlayıp görüntüleme, teklif, satın alma ve tereddüt sinyalleriyle ClickHouse üzerinde sürekli güncellenen ilgi haritası; içerik kişiselleştirmenin temel motoru
 - **Sıcak Aday (Hot Lead) tespiti:** Teklif tereddütü olaylarını gerçek zamanlı sayarak 24 saat içindeki eşik geçiminde otomatik satıcı bildirimi tetikleme
 - **Hibrit anlık bildirim mimarisi:** iOS VoIP PushKit ve Android FCM kombinasyonuyla uygulama arka planda veya kapalıyken bile güvenilir ve düşük gecikmeli çağrı iletimi
-- **Retargeting motoru:** Davranışsal segmentasyonla etkileşim geçmişine sahip kullanıcıları tespit edip otomatik yeniden hedefleme kampanyası başlatma
+- **Yeniden Ulaşma motoru:** Davranışsal segmentasyonla etkileşim geçmişine sahip kullanıcıları tespit edip otomatik bildirim kampanyası başlatma
 - **Yapay zeka destekli fiyat tahmini:** Piyasa ve kategori verisine dayalı dinamik fiyat öneri motoru
 - **Rakip Radar ve piyasa zekası:** Rakip satıcı aktivitesi, kategori talep trendleri ve zirve saati analizinin gerçek zamanlı işlenmesi
 - **P2P ticaret iletişim entegrasyonu:** WebRTC tabanlı sesli/görüntülü çağrının ticaret akışına doğrudan entegrasyonu; iOS VoIP PushKit ile arka planda güvenilir çağrı alımı
@@ -170,7 +170,7 @@ Mevcut platformların tamamında araçlara ve verilere erişim hesap tipine, har
 - Üç satış kanalı tek platformda ve aynı hesap altında entegre: açık artırma, direkt satış, statik ilan
 - SwipeLive ile canlı yayın ve kişiselleştirilmiş ilanlar tek akışta; ilanda video varsa video, yoksa kapak fotoğrafı gösterilir; kullanıcının ilgi alanına dayalı karma içerik deneyimi
 - Platform içi sesli/görüntülü alıcı-satıcı iletişimi; hiçbir rakipte bulunmayan doğrudan iletişim kanalı
-- Pro araçların tamamı — retargeting, hot lead tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak tüm kullanıcılara açık
+- Pro araçların tamamı — yeniden ulaşma, sıcak aday tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak tüm kullanıcılara açık
 - Güven skoru ve etki sıralamasıyla şeffaf satıcı itibar sistemi
 - ClickHouse tabanlı gerçek zamanlı davranışsal analitik
 - Uygulama güncellemesi gerektirmeyen çok dilli OTA altyapısı
