@@ -12,15 +12,17 @@ teqlif – Sosyal Ticaret Platformu
 
 teqlif; ilan pazaryeri, canlı yayın açık artırması, canlı yayın üzerinden direkt satış, gerçek zamanlı mesajlaşma, sesli/görüntülü iletişim, kişiselleştirilmiş içerik akışı ve platform içi ticari veri ve pazarlama araçlarını tek bir dijital çatı altında birleştiren mobil tabanlı sosyal ticaret platformudur.
 
-Platformun temel felsefesi kullanıcı sınıflandırması yapmamaktır. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de teqlif'e üye olduğu andan itibaren tüm uygulama özelliklerine eşit biçimde erişir. Harcama düzeyi veya hesap tipi, bu özelliklere erişimi kısıtlamaz.
+teqlif'in felsefesi alışveriş deneyimini güven üzerine inşa etmektir. Platform bu amaca ulaşmak için canlı yayın, sesli ve görüntülü iletişim, şeffaf satıcı itibar sistemi ve kişiselleştirilmiş içerik akışını tek bir çatı altında bir araya getirir.
 
-iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden fazla satış kanalını paralel olarak yönetme, davranışsal veri ile doğrudan hedef kitleye ulaşma ve ilan ile satış verisi odaklı karar alma imkânı sunar. Alıcılara ise canlı yayınlar arasına kullanıcının ilgi alanına (afinite profili) göre yerleştirilmiş kişiselleştirilmiş ilanlar (video varsa video, yoksa kapak fotoğrafı), güvenli ticaret ortamı ve platform içi doğrudan iletişim sağlar.
+Bu felsefeyi hayata geçirmek için teqlif kullanıcı sınıflandırması yapmaz. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de platforma üye olduğu andan itibaren tüm özelliklere eşit biçimde erişir; harcama düzeyi veya hesap tipi bu erişimi kısıtlamaz.
+
+iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden fazla satış kanalını paralel olarak yönetme, davranışsal veri ile doğrudan hedef kitleye ulaşma ve ilan ile satış verisi odaklı karar alma imkânı sunar. Alıcılara ise canlı yayınlar arasına kullanıcının ilgi alanına (afinite profili) göre yerleştirilmiş kişiselleştirilmiş ilanlar (video varsa video, yoksa kapak fotoğrafı), güvenilir bir ticaret ortamı ve platform içi doğrudan iletişim sağlar.
 
 ---
 
 ## 3. PROBLEM TANIMI
 
-Mevcut sosyal ticaret platformlarında araçlara ve verilere erişim kullanıcı tipine, harcama düzeyine veya abonelik kademesine göre farklılaşmaktadır. Bu yapı aşağıdaki sorunları doğurmaktadır:
+Mevcut sosyal ticaret platformlarında alıcı ile satıcı arasındaki güven, erişim ve iletişim sorunları çözümsüz kalmaktadır:
 
 - Yeniden ulaşma, rakip analizi, fiyat zekası ve sıcak aday tespiti gibi veri odaklı araçlar ücretli planların veya yüksek harcama eşiklerinin arkasında tutulmaktadır; platforma yeni katılan veya küçük ölçekte çalışan satıcılar bu araçlara erişememektedir
 - Canlı yayın açık artırması, direkt satış ve ilan yayınlama aynı hesap altında entegre ve paralel biçimde yönetilememektedir
@@ -124,13 +126,13 @@ teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirilm
 
 ## 7. GÜVENLİ VE DİJİTAL TİCARET ALTYAPISI
 
-teqlif, kullanıcı sınıflandırması yapmayan ve tüm özellikleri herkese eşit biçimde açan yapısıyla:
+Alışveriş deneyimini güven üzerine inşa etme felsefesinin somut yansıması olarak teqlif:
 
 - Güven skoru ve etki sıralamasıyla şeffaf satıcı itibar sistemi
 - Otomatik açık artırma ve sipariş motoru
 - Platform içi alıcı-satıcı sesli/görüntülü iletişim kanalı
 - Canlı yayın moderasyon araçları ve topluluk yönetimi
-- Tüm özelliklere üye olan herkesin eşit erişimi
+- Tüm özelliklere eşit erişim; kullanıcı sınıflandırması yok
 - Merkezi işlem yönetimi ve denetlenebilir arşivleme
 
 ile güvenli, ölçeklenebilir ve denetlenebilir bir dijital ticaret altyapısı sunar.
@@ -163,15 +165,15 @@ ile güvenli, ölçeklenebilir ve denetlenebilir bir dijital ticaret altyapısı
 
 **Yerel rakipler:** Trendyol Canlı, Hepsiburada Canlı
 
-Mevcut platformların tamamında araçlara ve verilere erişim hesap tipine, harcama düzeyine veya abonelik kademesine göre farklılaşmaktadır. teqlif bu kademelendirmeyi kaldırır.
+Mevcut platformların tamamında araçlara erişim hesap tipine veya harcama düzeyine göre kademelenmekte; alıcı ile satıcı arasındaki güven ve iletişim boşluğu çözümsüz kalmaktadır. teqlif bu iki sorunu birden çözer.
 
 **teqlif'in farkı:**
 
+- Güveni görünür kılan şeffaf satıcı itibar sistemi: güven skoru ve etki sıralaması
 - Üç satış kanalı tek platformda ve aynı hesap altında entegre: açık artırma, direkt satış, ilan pazaryeri
-- SwipeLive ile canlı yayın ve kişiselleştirilmiş ilanlar tek akışta; ilanda video varsa video, yoksa kapak fotoğrafı gösterilir; kullanıcının ilgi alanına dayalı karma içerik deneyimi
+- SwipeLive ile canlı yayın ve kişiselleştirilmiş ilanlar tek akışta; kullanıcının ilgi alanına dayalı karma içerik deneyimi
 - Platform içi sesli/görüntülü alıcı-satıcı iletişimi; hiçbir rakipte bulunmayan doğrudan iletişim kanalı
 - Tüm özellikler — yeniden ulaşma, sıcak aday tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak her kullanıcıya açık
-- Güven skoru ve etki sıralamasıyla şeffaf satıcı itibar sistemi
 - ClickHouse tabanlı gerçek zamanlı davranışsal analitik
 - Uygulama güncellemesi gerektirmeyen çok dilli OTA altyapısı
 
@@ -191,12 +193,11 @@ Pilot kullanıcı grubuyla sistem test edilerek dönüşüm, sıcak aday tespiti
 
 ## 12. PROJE SONUCU
 
-teqlif, tüm özelliklerine eşit erişim sağlayan yapısıyla:
+Alışveriş deneyimini güven üzerine inşa etme felsefesiyle hareket eden teqlif:
 
 - Açık artırma, direkt satış ve ilan pazaryeri süreçlerini tek altyapıda ve aynı hesap altında entegre biçimde sunar
-- Veri ve pazarlama araçlarının tamamını platforma üye olan herkese eşit biçimde açar
+- Şeffaf itibar sistemi, sesli/görüntülü iletişim ve canlı yayın aracılığıyla alıcı ile satıcı arasındaki güven boşluğunu kapatır
 - Kullanıcının ilgi alanına göre kişiselleştirilmiş içerik akışı ve sıcak aday tespiti sağlar
-- Alıcı-satıcı iletişimini platform içi sesli/görüntülü kanalla doğrudan ve güvenli hale getirir
-- Güven skoru sistemiyle platformda şeffaf bir itibar ekonomisi oluşturur
+- Tüm veri ve pazarlama araçlarını platforma üye olan herkese eşit biçimde açar
 - Tuci kredi sistemiyle öne çıkarma, hedefleme ve canlı yayın hediye ekonomisini destekleyen; ilerleyen aşamada platform içi ödeme altyapısı ve abonelik modeline dönüşmesi planlanan çok katmanlı bir gelir yapısı oluşturur
 - Ölçeklenebilir, denetlenebilir ve çok gelir akışlı bir sosyal ticaret ekosistemi kurar
