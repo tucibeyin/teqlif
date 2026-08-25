@@ -12,7 +12,7 @@ teqlif – Sosyal Ticaret Platformu
 
 teqlif; ilan pazaryeri, canlı yayın açık artırması, canlı yayın üzerinden direkt satış, gerçek zamanlı mesajlaşma, sesli/görüntülü iletişim, kişiselleştirilmiş içerik akışı ve platform içi ticari veri ve pazarlama araçlarını tek bir dijital çatı altında birleştiren mobil tabanlı sosyal ticaret platformudur.
 
-Platformun temel felsefesi kullanıcı sınıflandırması yapmamaktır. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de teqlif'e üye olduğu andan itibaren tüm satış kanallarına, tüm iletişim araçlarına ve tüm Pro araçlarına eşit biçimde erişir. Harcama düzeyi veya hesap tipi, sunulan araçları kısıtlamaz.
+Platformun temel felsefesi kullanıcı sınıflandırması yapmamaktır. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de teqlif'e üye olduğu andan itibaren tüm uygulama özelliklerine eşit biçimde erişir. Harcama düzeyi veya hesap tipi, bu özelliklere erişimi kısıtlamaz.
 
 iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden fazla satış kanalını paralel olarak yönetme, davranışsal veri ile doğrudan hedef kitleye ulaşma ve ilan ile satış verisi odaklı karar alma imkânı sunar. Alıcılara ise canlı yayınlar arasına kullanıcının ilgi alanına (afinite profili) göre yerleştirilmiş kişiselleştirilmiş ilanlar (video varsa video, yoksa kapak fotoğrafı), güvenli ticaret ortamı ve platform içi doğrudan iletişim sağlar.
 
@@ -39,7 +39,7 @@ teqlif, bu boşlukları aşağıdaki entegre modüllerle kapatır:
 - İlan pazaryeri: ilan yayınlama, aktifleştirme, deaktifleştirme ve yeniden yayına alma
 - Canlı yayın açık artırma motoru: başlatma, duraklatma, devam ettirme, sonlandırma, teklif verme, anlık satın alma (buy-it-now) ve kazanan teklifi kabul etme
 - Canlı yayın üzerinden direkt satış: sabit fiyatlı, anlık sipariş oluşturma ve kuyruğa alma
-- SwipeLive: kaydırma tabanlı kişiselleştirilmiş canlı yayın keşif akışı; canlı yayınların arasına kullanıcının ilgi alanına göre belirlenen ilanlar yerleştirilir. İlanda video varsa video öncelikli olarak gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenir. Kullanıcı tek bir akış üzerinden hem canlı açık artırmaları hem kişiselleştirilmiş ilanları keşfeder.
+- SwipeLive: kaydırma tabanlı kişiselleştirilmiş canlı yayın keşif akışı; canlı yayınların arasına kullanıcının ilgi alanına göre belirlenen ilanlar yerleştirilir. İlanda video varsa video öncelikli olarak gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenir. Kullanıcı tek bir akış üzerinden hem canlı açık artırmaları ve direkt satışları hem de kişiselleştirilmiş ilanları keşfeder.
 
 ### İletişim
 
@@ -65,7 +65,7 @@ teqlif, bu boşlukları aşağıdaki entegre modüllerle kapatır:
 
 ### Pro Araçlar — Tüm Kullanıcılara Eşit Erişim
 
-teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirılmez. Platforma üye olan her satıcı aşağıdaki araçların tamamına eşit biçimde erişir:
+teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirilmez. Platforma üye olan her satıcı aşağıdaki araçların tamamına eşit biçimde erişir:
 
 - Toplu bildirim gönderme (Blast): filtrelenmiş hedef kitleye kişiselleştirilmiş push bildirimi; Tuci kredi tabanlı erişim
 - Yeniden Ulaşma: bir ilanla etkileşime geçmiş kullanıcılara otomatik bildirim kampanyası; hedef kitle büyüklüğü ön gösterimi
@@ -79,13 +79,13 @@ teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirıl
 - Talep Trendleri: piyasa talep analizi ve kategori bazlı yükselen ilgi tespiti
 - Piyasa Zekası: arama trendleri, zirve saatleri, kategori hacim verileri
 - Pro Insights: dönüşüm dağılımı, en iyi yayın saati önerileri, pro metrikler
-- Yapay zeka destekli fiyat tahmini: kategori ve piyasa verisine dayalı dinamik fiyat öneri motoru
+- Yapay zeka destekli fiyat tahmini: kategori ve platform içi verileri referans alan dinamik fiyat öneri motoru
 
 ### Platform Altyapısı
 
 - Platform içi Tuci kredi sistemi: yapay zeka destekli ilan açıklaması ve fiyatlama, ilan öne çıkarma, toplu bildirim gönderme ve canlı yayın sırasında izleyiciden yayıncıya hediye gönderme işlemleri için kullanılır
 - Satın alma ve satış yönetimi; sipariş detay ve geçmiş
-- Bildirim merkezi: gerçek zamanlı WebSocket bildirimleri ve push entegrasyonu
+- Bildirim merkezi: gerçek zamanlı bildirimler ve ileti entegrasyonu
 - Raporlama ve içerik moderasyonu
 - Favori ilan yönetimi
 - OTA (Over-The-Air) yerelleştirme: Türkçe, İngilizce, Rusça, Arapça
@@ -124,13 +124,13 @@ teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirıl
 
 ## 7. GÜVENLİ VE DİJİTAL TİCARET ALTYAPISI
 
-teqlif, kullanıcı sınıflandırması yapmayan ve tüm araçları herkese eşit biçimde açan yapısıyla:
+teqlif, kullanıcı sınıflandırması yapmayan ve tüm özellikleri herkese eşit biçimde açan yapısıyla:
 
 - Güven skoru ve etki sıralamasıyla şeffaf satıcı itibar sistemi
 - Otomatik açık artırma ve sipariş motoru
 - Platform içi alıcı-satıcı sesli/görüntülü iletişim kanalı
 - Canlı yayın moderasyon araçları ve topluluk yönetimi
-- Pro araçlara üye olan herkesin eşit erişimi
+- Tüm özelliklere üye olan herkesin eşit erişimi
 - Merkezi işlem yönetimi ve denetlenebilir arşivleme
 
 ile güvenli, ölçeklenebilir ve denetlenebilir bir dijital ticaret altyapısı sunar.
@@ -170,7 +170,7 @@ Mevcut platformların tamamında araçlara ve verilere erişim hesap tipine, har
 - Üç satış kanalı tek platformda ve aynı hesap altında entegre: açık artırma, direkt satış, ilan pazaryeri
 - SwipeLive ile canlı yayın ve kişiselleştirilmiş ilanlar tek akışta; ilanda video varsa video, yoksa kapak fotoğrafı gösterilir; kullanıcının ilgi alanına dayalı karma içerik deneyimi
 - Platform içi sesli/görüntülü alıcı-satıcı iletişimi; hiçbir rakipte bulunmayan doğrudan iletişim kanalı
-- Pro araçların tamamı — yeniden ulaşma, sıcak aday tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak tüm kullanıcılara açık
+- Tüm özellikler — yeniden ulaşma, sıcak aday tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak her kullanıcıya açık
 - Güven skoru ve etki sıralamasıyla şeffaf satıcı itibar sistemi
 - ClickHouse tabanlı gerçek zamanlı davranışsal analitik
 - Uygulama güncellemesi gerektirmeyen çok dilli OTA altyapısı
@@ -191,10 +191,10 @@ Pilot kullanıcı grubuyla sistem test edilerek dönüşüm, sıcak aday tespiti
 
 ## 12. PROJE SONUCU
 
-teqlif, araçlara erişimde kullanıcı sınıflandırması yapmayan yapısıyla:
+teqlif, tüm özelliklerine eşit erişim sağlayan yapısıyla:
 
 - Açık artırma, direkt satış ve ilan pazaryeri süreçlerini tek altyapıda ve aynı hesap altında entegre biçimde sunar
-- Pro araçların tamamını platforma üye olan herkese eşit biçimde açar
+- Veri ve pazarlama araçlarının tamamını platforma üye olan herkese eşit biçimde açar
 - Kullanıcının ilgi alanına göre kişiselleştirilmiş içerik akışı ve sıcak aday tespiti sağlar
 - Alıcı-satıcı iletişimini platform içi sesli/görüntülü kanalla doğrudan ve güvenli hale getirir
 - Güven skoru sistemiyle platformda şeffaf bir itibar ekonomisi oluşturur
