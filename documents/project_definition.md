@@ -10,11 +10,11 @@ teqlif – Sosyal Ticaret Platformu
 
 ## 2. PROJE ÖZETİ
 
-teqlif; statik ilan pazaryeri, canlı yayın açık artırması, canlı yayın üzerinden direkt satış, gerçek zamanlı mesajlaşma, sesli/görüntülü iletişim, kişiselleştirilmiş içerik akışı ve Pro analitik araçlarını tek bir dijital çatı altında birleştiren mobil tabanlı sosyal ticaret platformudur.
+teqlif; ilan pazaryeri, canlı yayın açık artırması, canlı yayın üzerinden direkt satış, gerçek zamanlı mesajlaşma, sesli/görüntülü iletişim, kişiselleştirilmiş içerik akışı ve platform içi ticari veri ve pazarlama araçlarını tek bir dijital çatı altında birleştiren mobil tabanlı sosyal ticaret platformudur.
 
-Platformun temel felsefesi kullanıcı sınıflandırması yapmamaktır. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de teqlif'e üye olduğu andan itibaren tüm satış kanallarına, tüm iletişim araçlarına ve tüm Pro analitik özelliklerine eşit biçimde erişir. Harcama düzeyi veya hesap tipi, sunulan araçları kısıtlamaz.
+Platformun temel felsefesi kullanıcı sınıflandırması yapmamaktır. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de teqlif'e üye olduğu andan itibaren tüm satış kanallarına, tüm iletişim araçlarına ve tüm Pro araçlarına eşit biçimde erişir. Harcama düzeyi veya hesap tipi, sunulan araçları kısıtlamaz.
 
-iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden fazla satış kanalını paralel olarak yönetme, davranışsal veri ile doğrudan hedef kitleye ulaşma ve ilan ile satış verisi odaklı karar alma imkânı sunar. Alıcılara ise canlı yayınlar arasına kullanıcının ilgi alanına (afinite profili) göre yerleştirilmiş kişiselleştirilmiş statik ilanlar (video varsa video, yoksa kapak fotoğrafı), güvenli ticaret ortamı ve platform içi doğrudan iletişim sağlar.
+iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden fazla satış kanalını paralel olarak yönetme, davranışsal veri ile doğrudan hedef kitleye ulaşma ve ilan ile satış verisi odaklı karar alma imkânı sunar. Alıcılara ise canlı yayınlar arasına kullanıcının ilgi alanına (afinite profili) göre yerleştirilmiş kişiselleştirilmiş ilanlar (video varsa video, yoksa kapak fotoğrafı), güvenli ticaret ortamı ve platform içi doğrudan iletişim sağlar.
 
 ---
 
@@ -23,9 +23,9 @@ iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden f
 Mevcut sosyal ticaret platformlarında araçlara ve verilere erişim kullanıcı tipine, harcama düzeyine veya abonelik kademesine göre farklılaşmaktadır. Bu yapı aşağıdaki sorunları doğurmaktadır:
 
 - Yeniden ulaşma, rakip analizi, fiyat zekası ve sıcak aday tespiti gibi veri odaklı araçlar ücretli planların veya yüksek harcama eşiklerinin arkasında tutulmaktadır; platforma yeni katılan veya küçük ölçekte çalışan satıcılar bu araçlara erişememektedir
-- Canlı yayın açık artırması, direkt satış ve statik ilan aynı hesap altında entegre ve paralel biçimde yönetilememektedir
+- Canlı yayın açık artırması, direkt satış ve ilan yayınlama aynı hesap altında entegre ve paralel biçimde yönetilememektedir
 - Alıcı ile satıcı arasında platform içi doğrudan sesli veya görüntülü iletişim kanalı bulunmamaktadır; iletişim platform dışına taşmakta, güven ve takip sorunu doğurmaktadır
-- Canlı yayın keşfi ile statik ilan içeriği ayrı platformlarda yer almakta; kullanıcıya bütünleşik ve kişiselleştirilmiş bir alışveriş akışı sunulamamaktadır
+- Canlı yayın keşfi ile ilan içeriği ayrı platformlarda yer almakta; kullanıcıya bütünleşik ve kişiselleştirilmiş bir alışveriş akışı sunulamamaktadır
 - Satıcı itibarını sayısal olarak ölçen ve alıcıya şeffaf biçimde sunan standart bir güven sistemi mevcut değildir
 
 ---
@@ -36,10 +36,10 @@ teqlif, bu boşlukları aşağıdaki entegre modüllerle kapatır:
 
 ### Satış Kanalları
 
-- Statik ilan yayınlama ve listeleme pazaryeri; ilan aktifleştirme, deaktifleştirme ve yeniden yayına alma
+- İlan pazaryeri: ilan yayınlama, aktifleştirme, deaktifleştirme ve yeniden yayına alma
 - Canlı yayın açık artırma motoru: başlatma, duraklatma, devam ettirme, sonlandırma, teklif verme, anlık satın alma (buy-it-now) ve kazanan teklifi kabul etme
 - Canlı yayın üzerinden direkt satış: sabit fiyatlı, anlık sipariş oluşturma ve kuyruğa alma
-- SwipeLive: kaydırma tabanlı kişiselleştirilmiş canlı yayın keşif akışı; canlı yayınların arasına kullanıcının ilgi alanına göre belirlenen statik ilanlar yerleştirilir. İlanda video varsa video öncelikli olarak gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenir. Kullanıcı tek bir akış üzerinden hem canlı açık artırmaları hem kişiselleştirilmiş ilanları keşfeder.
+- SwipeLive: kaydırma tabanlı kişiselleştirilmiş canlı yayın keşif akışı; canlı yayınların arasına kullanıcının ilgi alanına göre belirlenen ilanlar yerleştirilir. İlanda video varsa video öncelikli olarak gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenir. Kullanıcı tek bir akış üzerinden hem canlı açık artırmaları hem kişiselleştirilmiş ilanları keşfeder.
 
 ### İletişim
 
@@ -109,7 +109,7 @@ teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirıl
 ## 6. AR-GE YÖNLERİ
 
 - **Gerçek zamanlı açık artırma motoru:** Canlı video akışıyla teklif olaylarının milisaniye düzeyinde eşzamanlı yönetimi; açık artırma süresince anlık satın alma akışının paralel çalışması ve durum senkronizasyonu
-- **SwipeLive keşif algoritması:** Kullanıcı davranışına göre kişiselleştirilmiş kaydırma tabanlı canlı yayın sıralama ve öneri sistemi; canlı yayınlar arasına kullanıcının ilgi alanına dayalı statik ilanlar dinamik olarak yerleştirilir. İlanda video varsa video öncelikli gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenerek kesintisiz karma içerik akışı oluşturulur
+- **SwipeLive keşif algoritması:** Kullanıcı davranışına göre kişiselleştirilmiş kaydırma tabanlı canlı yayın sıralama ve öneri sistemi; canlı yayınlar arasına kullanıcının ilgi alanına dayalı ilanlar dinamik olarak yerleştirilir. İlanda video varsa video öncelikli gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenerek kesintisiz karma içerik akışı oluşturulur
 - **Kullanıcı ilgi alanı ve öneri motoru:** Kayıt sırasında beyan edilen kategorilerden başlayıp görüntüleme, teklif, satın alma ve tereddüt sinyalleriyle ClickHouse üzerinde sürekli güncellenen ilgi haritası; içerik kişiselleştirmenin temel motoru
 - **Sıcak Aday (Hot Lead) tespiti:** Teklif tereddütü olaylarını gerçek zamanlı sayarak 24 saat içindeki eşik geçiminde otomatik satıcı bildirimi tetikleme
 - **Hibrit anlık bildirim mimarisi:** iOS VoIP PushKit ve Android FCM kombinasyonuyla uygulama arka planda veya kapalıyken bile güvenilir ve düşük gecikmeli çağrı iletimi
@@ -149,7 +149,7 @@ ile güvenli, ölçeklenebilir ve denetlenebilir bir dijital ticaret altyapısı
 
 ## 9. GELİR MODELİ
 
-- İşlem başına komisyon: açık artırma, direkt satış ve statik ilan satışlarından
+- İşlem başına komisyon: açık artırma, direkt satış ve ilan satışlarından
 - Tuci kredisi satışı: ilan öne çıkarma, blast bildirimi kampanyaları ve yapay zeka araç kullanımı
 - Canlı yayın hediye ekonomisi: izleyicilerin yayıncıya Tuci ile hediye göndermesi
 - Sponsorlu ilan gelirleri: tıklama ve görüntüleme bazlı reklam kampanyaları
@@ -167,7 +167,7 @@ Mevcut platformların tamamında araçlara ve verilere erişim hesap tipine, har
 
 **teqlif'in farkı:**
 
-- Üç satış kanalı tek platformda ve aynı hesap altında entegre: açık artırma, direkt satış, statik ilan
+- Üç satış kanalı tek platformda ve aynı hesap altında entegre: açık artırma, direkt satış, ilan pazaryeri
 - SwipeLive ile canlı yayın ve kişiselleştirilmiş ilanlar tek akışta; ilanda video varsa video, yoksa kapak fotoğrafı gösterilir; kullanıcının ilgi alanına dayalı karma içerik deneyimi
 - Platform içi sesli/görüntülü alıcı-satıcı iletişimi; hiçbir rakipte bulunmayan doğrudan iletişim kanalı
 - Pro araçların tamamı — yeniden ulaşma, sıcak aday tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak tüm kullanıcılara açık
@@ -193,7 +193,7 @@ Pilot kullanıcı grubuyla sistem test edilerek dönüşüm, sıcak aday tespiti
 
 teqlif, araçlara erişimde kullanıcı sınıflandırması yapmayan yapısıyla:
 
-- Açık artırma, direkt satış ve statik ilan süreçlerini tek altyapıda ve aynı hesap altında entegre biçimde sunar
+- Açık artırma, direkt satış ve ilan pazaryeri süreçlerini tek altyapıda ve aynı hesap altında entegre biçimde sunar
 - Pro araçların tamamını platforma üye olan herkese eşit biçimde açar
 - Kullanıcının ilgi alanına göre kişiselleştirilmiş içerik akışı ve sıcak aday tespiti sağlar
 - Alıcı-satıcı iletişimini platform içi sesli/görüntülü kanalla doğrudan ve güvenli hale getirir
