@@ -1,7 +1,7 @@
 # KVKK Rıza Akışı — Görev Listesi
 
 > Referans plan: `documents/consent/plan.md`
-> Strateji: Madde 9/6/a (açık rıza) → birincil mekanizma | Madde 9/4/c (OVH sözleşmesi) → idari tamamlayıcı
+> Strateji: Madde 9/6/b (sözleşmesel zorunluluk) → birincil mekanizma | Madde 9/4/c (bulut sağlayıcı sözleşmesi) → idari tamamlayıcı
 
 ---
 
@@ -89,10 +89,10 @@
 > Teknik aşama tamamlandıktan sonra yapılacak. Kod değişikliği gerektirmez.
 
 - [ ] **ADM-1** KVKK Kurulu'nun yayımladığı standart sözleşme şablonu indirildi
-- [ ] **ADM-2** Şablon OVH'ye iletildi ve imzalandı
+- [ ] **ADM-2** Şablon bulut sağlayıcıya iletildi ve imzalandı
 - [ ] **ADM-3** İmza tarihinden itibaren 5 iş günü içinde KVKK Kurumu'na bildirim yapıldı
 - [ ] **ADM-4** VERBIS kaydı güncellendi:
-  - Yurt dışı aktarım: OVH / Virginia, ABD (US-EAST-VA)
+  - Yurt dışı aktarım: Virginia, ABD (US-EAST-VA)
   - Hukuki dayanak: Madde 9/4/c (standart sözleşme)
 
 ---

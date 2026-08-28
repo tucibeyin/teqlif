@@ -29,9 +29,9 @@ Kayıt ekranında kullanıcıya aydınlatma metni sunulur ve hukuki dayanak olar
 > **Checkbox metni:** "KVKK Aydınlatma Metni'ni okudum; hizmetin sunulabilmesi için kişisel verilerimin Virginia, ABD sunucularında işleneceğini anlıyorum." — Kayıt için zorunludur.
 
 **Aşama 2 — İdari süreçte yapılacak (Madde 9/4/c):**
-Bulut sağlayıcı OVH ile KVKK Kurulu'nun standart sözleşme şablonu imzalanır. Bu işlem kullanıcı rızasını ortadan kaldırmaz; mevcut checkpoint'i güçlendirir ve "arızi kullanım" riskini tamamen bertaraf eder. Sözleşme imzasından itibaren 5 iş günü içinde Kuruma bildirim yapılması zorunludur.
+Bulut sağlayıcı ile KVKK Kurulu'nun standart sözleşme şablonu imzalanır. Bu işlem kullanıcı rızasını ortadan kaldırmaz; mevcut checkpoint'i güçlendirir ve "arızi kullanım" riskini tamamen bertaraf eder. Sözleşme imzasından itibaren 5 iş günü içinde Kuruma bildirim yapılması zorunludur.
 
-**Sunucu Konumu:** Virginia, ABD (US-EAST-VA) — VPS (OVH). Tüm kullanıcı verileri bu lokasyonda depolanmaktadır. Başka bir lokasyonda yedek veya ikincil sunucu bulunmamaktadır.
+**Sunucu Konumu:** Virginia, ABD (US-EAST-VA). Tüm kullanıcı verileri bu lokasyonda depolanmaktadır. Başka bir lokasyonda yedek veya ikincil sunucu bulunmamaktadır.
 
 ---
 
@@ -142,9 +142,9 @@ Dört dilde (`app_tr.arb`, `app_en.arb`, `app_ru.arb`, `app_ar.arb`) aşağıdak
 8. [ ] Test — rıza verme, geri alma, versiyon güncellemesi senaryoları
 
 #### İdari (Aşama 2 — teknik tamamlandıktan sonra)
-9. [ ] OVH ile KVKK standart sözleşme şablonu imzalanması (Kurul'un yayımladığı şablon kullanılır)
+9. [ ] Bulut sağlayıcı ile KVKK standart sözleşme şablonu imzalanması (Kurul'un yayımladığı şablon kullanılır)
 10. [ ] Sözleşme imzasından itibaren 5 iş günü içinde KVKK Kurumu'na bildirim
-11. [ ] VERBIS kaydı güncellenmesi (yurt dışı aktarım: OVH / Virginia, ABD)
+11. [ ] VERBIS kaydı güncellenmesi (yurt dışı aktarım: Virginia, ABD)
 
 ---
 
