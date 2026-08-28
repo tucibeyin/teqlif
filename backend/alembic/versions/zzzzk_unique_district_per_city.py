@@ -13,6 +13,7 @@ Bu migration:
   2. (city_id, name) çiftine UNIQUE constraint ekler.
 """
 from alembic import op
+from app.utils.migration_utils import bump_schema_version
 
 revision = 'zzzzk_unique_district_city'
 down_revision = 'zzzzj_consent_ip_locale'
@@ -33,6 +34,7 @@ def upgrade() -> None:
         ALTER TABLE districts
         ADD CONSTRAINT uq_districts_city_id_name UNIQUE (city_id, name)
     """)
+    bump_schema_version()
 
 
 def downgrade() -> None:
@@ -40,3 +42,4 @@ def downgrade() -> None:
         ALTER TABLE districts
         DROP CONSTRAINT IF EXISTS uq_districts_city_id_name
     """)
+    bump_schema_version()
