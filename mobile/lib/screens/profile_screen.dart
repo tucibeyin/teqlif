@@ -919,7 +919,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _isSwitching = false;
   bool _consentGiven = false;
   DateTime? _consentAt;
-  bool _consentLoading = false;
 
   @override
   void initState() {
@@ -954,73 +953,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     } catch (e) {
       // sessiz hata — consent durumu boş kalır
     }
-  }
-
-  Future<void> _updateConsent(bool given) async {
-    if (_consentLoading) return;
-    setState(() => _consentLoading = true);
-    try {
-      final loc = ref.read(localizationProvider);
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final body = await apiCall(
-        () => http.patch(
-          Uri.parse('$kBaseUrl/auth/me/consent'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-          body: '{"given": $given}',
-        ),
-      );
-      if (!mounted) return;
-      setState(() {
-        _consentGiven = body['given'] == true;
-        final atStr = body['at'] as String?;
-        _consentAt = atStr != null ? DateTime.tryParse(atStr) : null;
-      });
-      TeqToast.success(
-        given ? loc.t('consentStatusActive').replaceFirst('{date}', '') : loc.t('consentStatusNone'),
-      );
-    } catch (e) {
-      if (mounted) handleError(e, ref.read(localizationProvider));
-    } finally {
-      if (mounted) setState(() => _consentLoading = false);
-    }
-  }
-
-  void _showRevokeConfirm() {
-    final loc = ref.read(localizationProvider);
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface(context),
-        title: Text(
-          loc.t('consentRevokeTitle'),
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        content: Text(
-          loc.t('consentRevokeConfirm'),
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        actions: [
-          TeqButton.text(
-            text: loc.t('btnCancel'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          TeqButton.text(
-            text: loc.t('consentRevokeTitle'),
-            onPressed: () {
-              Navigator.pop(context);
-              _updateConsent(false);
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _onLangChange(String newLang) async {
@@ -2044,23 +1976,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         : AppColors.textSecondary(context),
                   ),
                 ),
-                trailing: _consentLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Switch(
-                        value: _consentGiven,
-                        activeColor: kPrimary,
-                        onChanged: (v) {
-                          if (!v) {
-                            _showRevokeConfirm();
-                          } else {
-                            _updateConsent(true);
-                          }
-                        },
-                      ),
+                trailing: const Icon(Icons.chevron_right),
                 onTap: () => ConsentNoticeModal.show(context),
               ),
             ],
