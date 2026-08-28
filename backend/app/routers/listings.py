@@ -652,9 +652,7 @@ class GenerateDescriptionRequest(BaseModel):
     category: str = Field(..., min_length=1, max_length=50)
     condition: Optional[str] = Field(default=None)
     price: Optional[float] = Field(default=None, ge=0)
-    location: Optional[str] = Field(default=None)
     subcategory: Optional[str] = Field(default=None)
-    district: Optional[str] = Field(default=None)
     extra_fields: Optional[dict[str, str]] = Field(default=None)
     lang: str = Field(default="tr")
 
@@ -721,9 +719,7 @@ async def generate_description(
                     category=body.category,
                     condition=body.condition,
                     price=body.price,
-                    location=body.location,
                     subcategory=body.subcategory,
-                    district=body.district,
                     extra_fields=body.extra_fields,
                     lang=body.lang,
                 ):

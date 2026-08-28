@@ -56,57 +56,13 @@ _CONDITION_LABELS: dict[str, str] = {
     "damaged":   "damaged or defective",
 }
 
-# ── Fiyat + lokasyon şablonları (dil-farkında, teslimat yöntemi YOK) ─────────
+# ── Fiyat şablonları (lokasyon suffix'i artık mobile tarafında ekleniyor) ─────
 _PRICE_ONLY: list[str] = [
     "{price} TL'ye satıyorum, pazarlık payı var.",
     "Fiyatım {price} TL, ciddi alıcı beklerim.",
     "{price} TL istiyorum, fiyat konuşulur.",
     "{price} TL, sabit fiyat.",
 ]
-_LOCATION_ONLY: dict[str, list[str]] = {
-    "tr": [
-        "Ürün {city}'de bulunuyor.",
-        "{city}'de mevcut, yerinde görülebilir.",
-        "Ürün şu an {city}'de.",
-        "{city}'deyim.",
-    ],
-    "en": [
-        "Item is located in {city}.",
-        "Available in {city}, can be seen in person.",
-        "I'm based in {city}.",
-    ],
-    "ar": [
-        "المنتج موجود في {city}.",
-        "متاح في {city}، يمكن المعاينة.",
-        "أنا في {city}.",
-    ],
-    "ru": [
-        "Товар находится в {city}.",
-        "Нахожусь в {city}, можно посмотреть.",
-        "Товар в {city}.",
-    ],
-}
-_PRICE_AND_LOCATION: dict[str, list[str]] = {
-    "tr": [
-        "{price} TL. Ürün {city}'de bulunuyor.",
-        "{price} TL istiyorum. {city}'deyim.",
-        "Fiyatım {price} TL. {city}'deyim.",
-        "{price} TL, {city}'de.",
-    ],
-    "en": [
-        "{price} TL. Item is in {city}.",
-        "{price} TL. Located in {city}.",
-        "{price} TL — available in {city}.",
-    ],
-    "ar": [
-        "{price} TL. المنتج في {city}.",
-        "{price} TL. أنا في {city}.",
-    ],
-    "ru": [
-        "{price} TL. Товар в {city}.",
-        "{price} TL. Нахожусь в {city}.",
-    ],
-}
 
 # ── Yazım çeşitlendirme direktifleri ─────────────────────────────────────────
 # Her request'te rastgele seçilir → aynı (kategori, kondisyon) için farklı yapılar
@@ -147,17 +103,11 @@ _SENTENCE_END = frozenset({".", "!", "?"})
 
 
 # ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
-def _build_suffix(price: Optional[float], location: Optional[str], lang: str = "tr") -> str:
-    p = f"{int(price):,}".replace(",", ".") if price and price > 0 else None
-    c = location.strip() if location else None
-    loc_only = _LOCATION_ONLY.get(lang, _LOCATION_ONLY["tr"])
-    both = _PRICE_AND_LOCATION.get(lang, _PRICE_AND_LOCATION["tr"])
-    if p and c:
-        return random.choice(both).format(price=p, city=c)
-    if p:
+def _build_suffix(price: Optional[float]) -> str:
+    """Fiyat bilgisini suffix olarak döndürür. Lokasyon mobile tarafında eklenir."""
+    if price and price > 0:
+        p = f"{int(price):,}".replace(",", ".")
         return random.choice(_PRICE_ONLY).format(price=p)
-    if c:
-        return random.choice(loc_only).format(city=c)
     return ""
 
 
@@ -331,11 +281,9 @@ async def _tokens_gemini(system: str, user: str) -> AsyncGenerator[str, None]:
 async def _sentence_stream(
     token_gen: AsyncGenerator[str, None],
     price: Optional[float],
-    location: Optional[str],
     provider: str,
-    lang: str = "tr",
 ) -> AsyncGenerator[str, None]:
-    """Token stream'ini cümle sınırlarında flush eder, suffix ekler."""
+    """Token stream'ini cümle sınırlarında flush eder, fiyat suffix'i ekler."""
     sentence_buf = ""
     is_first = True
     total_chars = 0
@@ -357,7 +305,7 @@ async def _sentence_stream(
     if sentence_buf.strip():
         logger.info("[LLM] Dangling fragment yutuldu: %r", sentence_buf[:60])
 
-    suffix = _build_suffix(price, location, lang)
+    suffix = _build_suffix(price)
     if suffix:
         yield "\n\n"
         yield suffix
@@ -371,18 +319,16 @@ async def generate_listing_description_stream(
     category: str,
     condition: Optional[str] = None,
     price: Optional[float] = None,
-    location: Optional[str] = None,
     subcategory: Optional[str] = None,
-    district: Optional[str] = None,
     extra_fields: Optional[dict[str, str]] = None,
     lang: str = "tr",
 ) -> AsyncGenerator[str, None]:
     """
     Groq primary → Gemini fallback.
     Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
+    Lokasyon bilgisi bu fonksiyona gelmez — mobile client tarafında eklenir.
     """
     system_prompt, user_prompt = _build_prompt(title, category, condition, subcategory, extra_fields, lang)
-    full_location = ", ".join(filter(None, [district, location])) or None
 
     # ── Groq path ─────────────────────────────────────────────────────────────
     if settings.groq_api_key and await _quota_ok("groq", _GROQ_DAILY_LIMIT):
@@ -390,7 +336,7 @@ async def generate_listing_description_stream(
             logger.info("[LLM] Groq | title=%r", title[:60])
             yield "__META_groq__"
             async for chunk in _sentence_stream(
-                _tokens_groq(system_prompt, user_prompt), price, full_location, "groq", lang
+                _tokens_groq(system_prompt, user_prompt), price, "groq"
             ):
                 yield chunk
             return
@@ -403,7 +349,7 @@ async def generate_listing_description_stream(
             logger.info("[LLM] Gemini | title=%r", title[:60])
             yield "__META_gemini__"
             async for chunk in _sentence_stream(
-                _tokens_gemini(system_prompt, user_prompt), price, full_location, "gemini", lang
+                _tokens_gemini(system_prompt, user_prompt), price, "gemini"
             ):
                 yield chunk
             return

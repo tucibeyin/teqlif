@@ -303,6 +303,21 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     }
   }
 
+  void _appendLocationSuffix() {
+    final province = _selectedProvince;
+    if (province == null || province.isEmpty) return;
+    final district = _selectedDistrict;
+    final location = (district != null && district.isNotEmpty)
+        ? '$province, $district'
+        : province;
+    final suffix = '\n\nLokasyon; $location';
+    _descCtrl.value = _descCtrl.value.copyWith(
+      text: _descCtrl.text + suffix,
+      selection: TextSelection.collapsed(offset: _descCtrl.text.length + suffix.length),
+      composing: TextRange.empty,
+    );
+  }
+
   Future<void> _fetchAiDescription() async {
     final loc = ref.read(localizationProvider);
     if (!_aiReady) {
@@ -330,9 +345,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         'condition': _selectedCondition,
         'lang': ref.read(localizationProvider).lang,
         if (price != null && price > 0) 'price': price,
-        if (_selectedProvince != null) 'location': _selectedProvince,
         if (_selectedSubcategory != null) 'subcategory': _selectedSubcategory,
-        if (_selectedDistrict != null) 'district': _selectedDistrict,
         if (_extraValues.isNotEmpty || _extraMultiValues.isNotEmpty)
           'extra_fields': {
             ..._extraValues,
@@ -373,6 +386,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 );
                 await Future.delayed(const Duration(milliseconds: 30));
               } else if (json['done'] == true) {
+                _appendLocationSuffix();
                 final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
                 if (tuciSpent > 0) {
                   CacheService.clearData('user_wallet_data');
