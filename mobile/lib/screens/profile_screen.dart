@@ -1977,7 +1977,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => ConsentNoticeModal.show(context),
+                onTap: () async {
+                  final shouldDelete = await ConsentNoticeModal.show(context);
+                  if (shouldDelete == true && mounted) {
+                    _showDeleteAccountDialog(context);
+                  }
+                },
               ),
             ],
           ),
