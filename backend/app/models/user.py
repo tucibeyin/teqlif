@@ -58,3 +58,7 @@ class User(Base):
     locale_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_private: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     age_confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    cross_border_consent_given: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    cross_border_consent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    cross_border_consent_version: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, default=None)
+    cross_border_consent_revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)

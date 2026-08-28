@@ -64,6 +64,7 @@ import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/profile_view_model.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/consent_notice_modal.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -916,6 +917,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _isPrivate = false;
   late String _displayedLang;
   bool _isSwitching = false;
+  bool _consentGiven = false;
+  DateTime? _consentAt;
+  bool _consentLoading = false;
 
   @override
   void initState() {
@@ -928,6 +932,95 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     _loadPremiumStatus();
     _loadPendingRequests();
     _loadUnreadRatings();
+    _loadConsentStatus();
+  }
+
+  Future<void> _loadConsentStatus() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final body = await apiCall(
+        () => http.get(
+          Uri.parse('$kBaseUrl/auth/me/consent'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _consentGiven = body['given'] == true;
+        final atStr = body['at'] as String?;
+        _consentAt = atStr != null ? DateTime.tryParse(atStr) : null;
+      });
+    } catch (e) {
+      // sessiz hata — consent durumu boş kalır
+    }
+  }
+
+  Future<void> _updateConsent(bool given) async {
+    if (_consentLoading) return;
+    setState(() => _consentLoading = true);
+    try {
+      final loc = ref.read(localizationProvider);
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final body = await apiCall(
+        () => http.patch(
+          Uri.parse('$kBaseUrl/auth/me/consent'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: '{"given": $given}',
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _consentGiven = body['given'] == true;
+        final atStr = body['at'] as String?;
+        _consentAt = atStr != null ? DateTime.tryParse(atStr) : null;
+      });
+      TeqToast.success(
+        given ? loc.t('consentStatusActive').replaceFirst('{date}', '') : loc.t('consentStatusNone'),
+      );
+    } catch (e) {
+      if (mounted) handleError(e, ref.read(localizationProvider));
+    } finally {
+      if (mounted) setState(() => _consentLoading = false);
+    }
+  }
+
+  void _showRevokeConfirm() {
+    final loc = ref.read(localizationProvider);
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface(context),
+        title: Text(
+          loc.t('consentRevokeTitle'),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        content: Text(
+          loc.t('consentRevokeConfirm'),
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        actions: [
+          TeqButton.text(
+            text: loc.t('btnCancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TeqButton.text(
+            text: loc.t('consentRevokeTitle'),
+            onPressed: () {
+              Navigator.pop(context);
+              _updateConsent(false);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _onLangChange(String newLang) async {
@@ -1922,6 +2015,53 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
                 ),
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.language_outlined,
+                  color: AppColors.iconColor(context),
+                ),
+                title: Text(
+                  loc.t('consentPrivacyNoticeTitle'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                subtitle: Text(
+                  _consentGiven
+                      ? loc.t('consentStatusActive').replaceFirst(
+                          '{date}',
+                          _consentAt != null
+                              ? '${_consentAt!.day.toString().padLeft(2, '0')}.${_consentAt!.month.toString().padLeft(2, '0')}.${_consentAt!.year}'
+                              : '',
+                        )
+                      : loc.t('consentStatusNone'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _consentGiven
+                        ? Colors.green.shade600
+                        : AppColors.textSecondary(context),
+                  ),
+                ),
+                trailing: _consentLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Switch(
+                        value: _consentGiven,
+                        activeColor: kPrimary,
+                        onChanged: (v) {
+                          if (!v) {
+                            _showRevokeConfirm();
+                          } else {
+                            _updateConsent(true);
+                          }
+                        },
+                      ),
+                onTap: () => ConsentNoticeModal.show(context),
               ),
             ],
           ),

@@ -4396,5 +4396,14 @@
   "announcementDsPurchaseBatch": "{buyers} ve {count} kişi daha satın aldı",
   "announcementDsRemaining": "Kalan: {remaining}",
   "announcementDsSoldOut": "Tükendi!",
-  "announcementStockWarning": "⚠️ Son {remaining} adet kaldı!"
+  "announcementStockWarning": "⚠️ Son {remaining} adet kaldı!",
+  "consentCrossBorderTitle": "Kişisel verilerimin Virginia, ABD'deki sunuculara aktarıldığını ve ABD'nin KVKK kapsamında yeterlilik kararına sahip olmadığını okudum, anladım.",
+  "consentCrossBorderRiskNote": "ABD, Kişisel Verileri Koruma Kurulu tarafından yeterli koruma düzeyine sahip ülkeler listesinde yer almamaktadır. Bu nedenle verileriniz, Türkiye'deki düzenlemenin sağladığı güvencenin birebir karşılığıyla korunmayamayabilir. teqlif bu aktarımı yalnızca hizmetin sunulabilmesi amacıyla gerçekleştirmekte olup verilerinizi üçüncü taraflarla paylaşmamaktadır.",
+  "consentPrivacyNoticeLinkLabel": "Kişisel Verilerimin İşlenmesi hakkında bilgi al",
+  "consentPrivacyNoticeTitle": "KVKK Aydınlatma Metni",
+  "consentPrivacyNoticeBody": "Veri Sorumlusu: teqlif (şirket adı ve adres bilgisi daha sonra eklenecektir)\n\nİşleme Amacı: Hesap oluşturma, platform hizmetlerinin sunulması, güvenlik ve kimlik doğrulama işlemleri.\n\nYurt Dışı Aktarım: Hizmetlerimiz ABD'de, Virginia eyaletinde (US-EAST-VA) konumlanan OVH VPS sunucuları üzerinde çalışmaktadır. Kişisel verileriniz bu sunuculara aktarılmaktadır. ABD, KVKK kapsamında yeterlilik kararına sahip değildir.\n\nHaklarınız (KVKK Madde 11): Kişisel verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltme isteme, silinmesini talep etme ve kanuna aykırı işleme nedeniyle tazminat talep etme haklarına sahipsiniz.\n\nBaşvuru: kvkk@teqlif.com",
+  "consentRevokeTitle": "Rızamı Geri Al",
+  "consentRevokeConfirm": "Rızanızı geri aldığınızda verileriniz teknik olarak Virginia sunucularında işlenmeye devam eder. Verilerinizin silinmesini talep etmek için hesabınızı kapatmanız gerekir. Devam etmek istiyor musunuz?",
+  "consentStatusActive": "Rıza verildi — {date}",
+  "consentStatusNone": "Rıza verilmedi"
 }

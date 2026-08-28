@@ -40,6 +40,7 @@ class AuthService {
     String? referredBy,
     String lang = "tr",
     bool ageConfirmed = false,
+    bool crossBorderConsent = false,
   }) async {
     final payload = {
       'email': email,
@@ -49,6 +50,7 @@ class AuthService {
       'phone': phone,
       'lang': lang,
       'age_confirmed': ageConfirmed,
+      'cross_border_consent': crossBorderConsent,
       if (referredBy != null && referredBy.isNotEmpty) 'referred_by': referredBy,
     };
     final body = await apiCall(

@@ -1,4 +1,4 @@
-# teqlif – TEKNOPARK PROJE SUNUMU
+# teqlif – PROJE SUNUMU
 
 ---
 
@@ -10,13 +10,15 @@ teqlif – Sosyal Ticaret Platformu
 
 ## 2. PROJE ÖZETİ
 
-teqlif; ilan pazaryeri, canlı yayın açık artırması, canlı yayın üzerinden direkt satış, gerçek zamanlı mesajlaşma, sesli/görüntülü iletişim, kişiselleştirilmiş içerik akışı ve platform içi ticari veri ve pazarlama araçlarını tek bir dijital çatı altında birleştiren mobil tabanlı sosyal ticaret platformudur.
+teqlif, ilan pazaryeri, canlı yayın ve sosyal ticaret özelliklerini tek bir platformda bir araya getiren mobil tabanlı sosyal ticaret uygulamasıdır.
 
-teqlif'in felsefesi alışveriş deneyimini güven üzerine inşa etmektir. Platform bu amaca ulaşmak için canlı yayın, sesli ve görüntülü iletişim, şeffaf satıcı itibar sistemi ve kişiselleştirilmiş içerik akışını tek bir çatı altında bir araya getirir.
+teqlif'in felsefesi alışveriş deneyimini güven üzerine inşa etmektir. Mevcut platformlar alıcı ile satıcı arasındaki güven ve iletişim boşluğunu çözmemiştir; iletişim platform dışına taşmakta, satıcı itibarı ölçülememekte, satış kanalları birbirinden kopuk kalmaktadır. teqlif bu boşluğu canlı yayın, sesli ve görüntülü iletişim, şeffaf kullanıcı itibar sistemi ve kişiselleştirilmiş içerik akışıyla kapatır.
 
-Bu felsefeyi hayata geçirmek için teqlif kullanıcı sınıflandırması yapmaz. Bireysel bir satıcı da, küçük bir işletme de, orta ölçekli bir KOBİ de platforma üye olduğu andan itibaren tüm özelliklere eşit biçimde erişir; harcama düzeyi veya hesap tipi bu erişimi kısıtlamaz.
+Satıcılar aynı hesap üzerinden ilan yayınlayabilir, canlı yayında açık artırma açabilir ve anlık satış yapabilir. Alıcılar ise SwipeLive akışında canlı yayınlar ile kişiselleştirilmiş ilanları tek bir akışta keşfeder; satıcıyla platform içi sesli ve görüntülü iletişim kurabilir. Tüm bu deneyim, kullanıcının ilgi alanına (afinite profili) göre kişiselleştirilmiş içerik akışıyla desteklenir.
 
-iOS ve Android üzerinde çalışan platform; her ölçekten satıcıya birden fazla satış kanalını paralel olarak yönetme, davranışsal veri ile doğrudan hedef kitleye ulaşma ve ilan ile satış verisi odaklı karar alma imkânı sunar. Alıcılara ise canlı yayınlar arasına kullanıcının ilgi alanına (afinite profili) göre yerleştirilmiş kişiselleştirilmiş ilanlar (video varsa video, yoksa kapak fotoğrafı), güvenilir bir ticaret ortamı ve platform içi doğrudan iletişim sağlar.
+teqlif kullanıcı sınıflandırması yapmaz. Bireysel bir kullanıcıdan orta ölçekli bir KOBİ'ye kadar her ölçekten kullanıcı platforma üye olduğu andan itibaren tüm özelliklere eşit biçimde erişir; harcama düzeyi veya hesap tipi bu erişimi kısıtlamaz. İlan ve satış verisi odaklı karar alma araçlarının tamamı tüm kullanıcılara eşit biçimde sunulur.
+
+Üç satış kanalını, doğrudan alıcı-satıcı iletişimini ve veri odaklı pazarlama araçlarını tek çatı altında toplayan teqlif; araçlara erişimi kademelendiren mevcut platformlardan bu bütünleşik ve eşitlikçi yaklaşımıyla ayrılır.
 
 ---
 

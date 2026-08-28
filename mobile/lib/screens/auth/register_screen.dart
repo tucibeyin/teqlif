@@ -9,6 +9,7 @@ import 'verify_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../widgets/consent_notice_modal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'viewmodels/register_view_model.dart';
 
@@ -31,6 +32,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirm = true;
   bool _eulaAccepted = false;
   bool _ageConfirmed = false;
+  bool _crossBorderConsent = false;
+  bool _crossBorderExpanded = false;
 
   String? _usernameStatus;
   Timer? _usernameDebounce;
@@ -109,6 +112,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       phone: null,
       referredBy: referralCode.isEmpty ? null : referralCode,
       ageConfirmed: _ageConfirmed,
+      crossBorderConsent: _crossBorderConsent,
     );
 
     if (success && mounted) {
@@ -336,6 +340,82 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      key: const Key('register_link_privacy_notice'),
+                      onTap: () => ConsentNoticeModal.show(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          loc.t('consentPrivacyNoticeLinkLabel'),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: kPrimary,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Checkbox(
+                          key: const Key('register_checkbox_cross_border'),
+                          value: _crossBorderConsent,
+                          activeColor: kPrimary,
+                          onChanged: (v) {
+                            setState(() {
+                              _crossBorderConsent = v ?? false;
+                              if (_crossBorderConsent) _crossBorderExpanded = true;
+                            });
+                          },
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            key: const Key('register_gesture_cross_border_text'),
+                            onTap: () {
+                              setState(() {
+                                _crossBorderConsent = !_crossBorderConsent;
+                                if (_crossBorderConsent) _crossBorderExpanded = true;
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Text(
+                                loc.t('consentCrossBorderTitle'),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.textSecondary(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_crossBorderExpanded) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        margin: const EdgeInsets.only(left: 36),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary(context).withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          loc.t('consentCrossBorderRiskNote'),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textSecondary(context),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     TeqButton(
                       text: loc.t('registerTitle'),

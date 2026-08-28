@@ -14,6 +14,7 @@ class UserRegister(BaseModel):
     referred_by: str | None = None  # davet kodu (isteğe bağlı)
     lang: str = "tr"
     age_confirmed: bool = False
+    cross_border_consent: bool = False
 
     @field_validator("username")
     @classmethod
@@ -113,6 +114,17 @@ class TokenOut(BaseModel):
 class VerifyEmail(BaseModel):
     email: EmailStr
     code: str
+
+
+class ConsentOut(BaseModel):
+    given: bool
+    at: Optional[datetime] = None
+    version: Optional[str] = None
+    revoked_at: Optional[datetime] = None
+
+
+class ConsentUpdate(BaseModel):
+    given: bool
 
 
 class ResendCode(BaseModel):

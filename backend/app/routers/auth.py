@@ -11,7 +11,7 @@ from sqlalchemy import select, func, or_, case, update as sa_update
 from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword
+from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword, ConsentOut, ConsentUpdate
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies, invalidate_user_session_cache
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
 from app.utils.i18n import _get_t, _msg, get_locale
@@ -80,6 +80,7 @@ async def _create_user_and_send_code(
         if result.scalar_one_or_none():
             raise ConflictException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneTaken", "Bu telefon numarası zaten kayıtlı"))
 
+    now = datetime.now(timezone.utc)
     user = User(
         email=data.email,
         username=data.username,
@@ -89,9 +90,12 @@ async def _create_user_and_send_code(
         phone=data.phone or None,
         referral_code=None,
         pending_referred_by=data.referred_by.strip().upper() if data.referred_by else None,
-        age_confirmed_at=datetime.now(timezone.utc) if data.age_confirmed else None,
+        age_confirmed_at=now if data.age_confirmed else None,
         is_premium=True,
         plan_type='monthly',
+        cross_border_consent_given=data.cross_border_consent,
+        cross_border_consent_at=now if data.cross_border_consent else None,
+        cross_border_consent_version="v1" if data.cross_border_consent else None,
     )
     db.add(user)
     await db.commit()
@@ -911,6 +915,43 @@ async def logout(response: Response):
     """Cookie'leri temizler. Mobile token'ları frontend tarafından silinir."""
     clear_auth_cookies(response)
     return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgLogout", "Çıkış yapıldı")}
+
+
+@router.get("/me/consent", response_model=ConsentOut)
+async def get_consent(current_user: User = Depends(get_current_user)):
+    """Kullanıcının mevcut yurt dışı veri aktarım rızası durumunu döndürür."""
+    return ConsentOut(
+        given=current_user.cross_border_consent_given,
+        at=current_user.cross_border_consent_at,
+        version=current_user.cross_border_consent_version,
+        revoked_at=current_user.cross_border_consent_revoked_at,
+    )
+
+
+@router.patch("/me/consent", response_model=ConsentOut)
+async def update_consent(
+    data: ConsentUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcının yurt dışı veri aktarım rızasını günceller (verme veya geri alma)."""
+    now = datetime.now(timezone.utc)
+    if data.given:
+        current_user.cross_border_consent_given = True
+        current_user.cross_border_consent_at = now
+        current_user.cross_border_consent_version = "v1"
+        current_user.cross_border_consent_revoked_at = None
+    else:
+        current_user.cross_border_consent_given = False
+        current_user.cross_border_consent_revoked_at = now
+    await db.commit()
+    await db.refresh(current_user)
+    return ConsentOut(
+        given=current_user.cross_border_consent_given,
+        at=current_user.cross_border_consent_at,
+        version=current_user.cross_border_consent_version,
+        revoked_at=current_user.cross_border_consent_revoked_at,
+    )
 
 
 @router.post("/change-password/send-code")
