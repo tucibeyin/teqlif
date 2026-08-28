@@ -64,7 +64,7 @@ import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/profile_view_model.dart';
 import '../utils/snackbar_helper.dart';
-import '../widgets/consent_notice_modal.dart';
+import '../widgets/consent_settings_modal.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -919,6 +919,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _isSwitching = false;
   bool _consentGiven = false;
   DateTime? _consentAt;
+  String? _consentLocale;
 
   @override
   void initState() {
@@ -949,6 +950,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         _consentGiven = body['given'] == true;
         final atStr = body['at'] as String?;
         _consentAt = atStr != null ? DateTime.tryParse(atStr) : null;
+        _consentLocale = body['locale'] as String?;
       });
     } catch (e) {
       // sessiz hata — consent durumu boş kalır
@@ -1978,7 +1980,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
-                  final shouldDelete = await ConsentNoticeModal.show(context);
+                  final shouldDelete = await ConsentSettingsModal.show(
+                    context,
+                    consentAt: _consentAt,
+                    consentLocale: _consentLocale,
+                  );
                   if (shouldDelete == true && mounted) {
                     _showDeleteAccountDialog(context);
                   }

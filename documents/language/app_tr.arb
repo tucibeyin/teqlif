@@ -4406,5 +4406,7 @@
   "consentRevokeTitle": "Rızamı Geri Al",
   "consentRevokeConfirm": "Rızanızı geri aldığınızda verileriniz teknik olarak Virginia sunucularında işlenmeye devam eder. Verilerinizin silinmesini talep etmek için hesabınızı kapatmanız gerekir. Devam etmek istiyor musunuz?",
   "consentStatusActive": "Rıza verildi — {date}",
-  "consentStatusNone": "Rıza verilmedi"
+  "consentStatusNone": "Rıza verilmedi",
+  "consentGivenOn": "{date} tarihinde {locale} dilinde onaylandı",
+  "consentSettingsDeleteHint": "Verilerinizin silinmesi için hesabınızı kapatabilirsiniz."
 }

@@ -4406,5 +4406,7 @@
   "consentRevokeTitle": "سحب موافقتي",
   "consentRevokeConfirm": "بعد سحب موافقتك، ستستمر بياناتك من الناحية التقنية في المعالجة على خوادم فيرجينيا. لطلب حذف بياناتك، يجب إغلاق حسابك. هل تريد المتابعة؟",
   "consentStatusActive": "تمت الموافقة — {date}",
-  "consentStatusNone": "لم تُقدَّم أي موافقة"
+  "consentStatusNone": "لم تُقدَّم أي موافقة",
+  "consentGivenOn": "تم التأكيد في {date} باللغة {locale}",
+  "consentSettingsDeleteHint": "يمكنك إغلاق حسابك لحذف بياناتك."
 }

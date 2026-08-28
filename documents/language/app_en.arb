@@ -4442,5 +4442,7 @@
   "consentRevokeTitle": "Withdraw My Consent",
   "consentRevokeConfirm": "After withdrawing your consent, your data will technically continue to be processed on Virginia servers. To request deletion of your data, you must close your account. Do you want to continue?",
   "consentStatusActive": "Consent given — {date}",
-  "consentStatusNone": "No consent given"
+  "consentStatusNone": "No consent given",
+  "consentGivenOn": "Acknowledged on {date} in {locale}",
+  "consentSettingsDeleteHint": "You can close your account to have your data deleted."
 }
