@@ -110,6 +110,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
+    final loc = ref.read(localizationProvider);
     final referralCode = _referralCtrl.text.trim();
     final success = await ref.read(registerViewModelProvider.notifier).register(
       email: _emailCtrl.text.trim(),
@@ -120,6 +121,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       referredBy: referralCode.isEmpty ? null : referralCode,
       ageConfirmed: _ageConfirmed,
       crossBorderConsent: _crossBorderConsent,
+      consentLocale: _crossBorderConsent ? loc.lang : null,
     );
 
     if (success && mounted) {

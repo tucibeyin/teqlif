@@ -21,6 +21,7 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<void> {
     required String? referredBy,
     required bool ageConfirmed,
     required bool crossBorderConsent,
+    String? consentLocale,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -33,6 +34,7 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<void> {
         referredBy: referredBy,
         ageConfirmed: ageConfirmed,
         crossBorderConsent: crossBorderConsent,
+        consentLocale: consentLocale,
       );
       state = const AsyncValue.data(null);
       return true;

@@ -35,6 +35,13 @@ _SUPPORTED_LANGS = {"tr", "en", "ar"}
 
 
 
+def _get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+
 async def _send_verification_email(
     request: Request, email: str, full_name: str, code: str, *,
     raise_on_failure: bool = False, has_phone: bool = False, lang: str = "tr"
@@ -96,6 +103,8 @@ async def _create_user_and_send_code(
         cross_border_consent_given=data.cross_border_consent,
         cross_border_consent_at=now if data.cross_border_consent else None,
         cross_border_consent_version="v1" if data.cross_border_consent else None,
+        cross_border_consent_ip=_get_client_ip(request) if data.cross_border_consent else None,
+        cross_border_consent_locale=data.consent_locale if data.cross_border_consent else None,
     )
     db.add(user)
     await db.commit()
@@ -925,6 +934,8 @@ async def get_consent(current_user: User = Depends(get_current_user)):
         at=current_user.cross_border_consent_at,
         version=current_user.cross_border_consent_version,
         revoked_at=current_user.cross_border_consent_revoked_at,
+        ip=current_user.cross_border_consent_ip,
+        locale=current_user.cross_border_consent_locale,
     )
 
 
@@ -951,6 +962,8 @@ async def update_consent(
         at=current_user.cross_border_consent_at,
         version=current_user.cross_border_consent_version,
         revoked_at=current_user.cross_border_consent_revoked_at,
+        ip=current_user.cross_border_consent_ip,
+        locale=current_user.cross_border_consent_locale,
     )
 
 

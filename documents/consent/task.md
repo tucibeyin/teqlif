@@ -11,6 +11,8 @@
 
 - [x] **DB-1** `users` tablosuna migration yaz (`zzzzi_add_cross_border_consent.py`) — model güncellendi
 - [x] **DB-2** Migration VPS'te çalıştırıldı ve doğrulandı (`zzzzh_age_confirmed -> zzzzi_cross_border_consent`)
+- [ ] **DB-3** `cross_border_consent_ip` kolonu eklendi — kayıt anındaki IP adresi (ispat için)
+- [ ] **DB-4** `cross_border_consent_locale` kolonu eklendi — onay anındaki dil (tr/en/ru/ar)
 
 ---
 
@@ -21,6 +23,9 @@
 - [x] **BE-3** `PATCH /api/auth/me/consent` — rıza verme ve geri alma işleniyor
 - [ ] **BE-4** Her rıza değişikliği audit log'a yazılıyor (kim, ne zaman, ne yönde)
 - [x] **BE-5** Kayıt sırasında `cross_border_consent: false` ile kayıt kabul ediliyor (zorunlu değil)
+- [ ] **BE-6** Register endpoint'i IP adresini `X-Forwarded-For` header'ından alıp `cross_border_consent_ip`'e yazıyor
+- [ ] **BE-7** Register endpoint'i `consent_locale` payload'dan alıp `cross_border_consent_locale`'e yazıyor
+- [ ] **BE-8** `ConsentOut` schema'sına `ip` ve `locale` alanları eklendi
 
 ---
 
@@ -60,6 +65,8 @@
 - [x] **MOB-7** Checkbox işaretlendiğinde expandable risk özeti otomatik açılıyor
 - [x] **MOB-8** `AuthService.register()` ve `RegisterViewModel.register()` `crossBorderConsent` parametresi eklendi
 - [x] **MOB-9** Kayıt isteğine `cross_border_consent` alanı payload'a eklendi
+- [ ] **MOB-15** `AuthService.register()` ve `RegisterViewModel.register()` `consentLocale` parametresi eklendi
+- [ ] **MOB-16** Kayıt isteğine `consent_locale` (mevcut dil kodu) payload'a eklendi
 
 ---
 
@@ -101,12 +108,12 @@
 
 | Alan | Görev Sayısı | Durum |
 |------|-------------|-------|
-| Veritabanı | 2 | Tamamlandı |
-| Backend | 5 | 4 tamamlandı, 1 opsiyonel (audit log) |
+| Veritabanı | 4 | 2 tamamlandı, 2 bekliyor (IP + locale) |
+| Backend | 8 | 4 tamamlandı, 1 opsiyonel (audit log), 3 bekliyor |
 | Localization | 11 | Tamamlandı |
 | Mobile — Modal | 4 | Tamamlandı |
-| Mobile — Kayıt | 5 | Tamamlandı |
+| Mobile — Kayıt | 7 | 5 tamamlandı, 2 bekliyor (locale) |
 | Mobile — Ayarlar | 5 | Tamamlandı |
 | Test | 6 | Bekliyor |
 | İdari | 4 | Bekliyor |
-| **Toplam** | **42** | **32 tamamlandı** |
+| **Toplam** | **49** | **32 tamamlandı** |

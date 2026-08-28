@@ -15,6 +15,7 @@ class UserRegister(BaseModel):
     lang: str = "tr"
     age_confirmed: bool = False
     cross_border_consent: bool = False
+    consent_locale: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -121,6 +122,8 @@ class ConsentOut(BaseModel):
     at: Optional[datetime] = None
     version: Optional[str] = None
     revoked_at: Optional[datetime] = None
+    ip: Optional[str] = None
+    locale: Optional[str] = None
 
 
 class ConsentUpdate(BaseModel):
