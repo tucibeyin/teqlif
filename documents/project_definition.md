@@ -4,94 +4,84 @@
 
 ## 1. PROJE ADI
 
-teqlif – Sosyal Ticaret Platformu
-
+teqlif, Sosyal ve Canlı Yayın Odaklı E-Ticaret Pazar Yeri
 ---
 
 ## 2. PROJE ÖZETİ
 
-teqlif, ilan pazaryeri, canlı yayın ve sosyal ticaret özelliklerini tek bir platformda bir araya getiren mobil tabanlı sosyal ticaret uygulamasıdır.
-
-teqlif'in felsefesi alışveriş deneyimini güven üzerine inşa etmektir. Mevcut platformlar alıcı ile satıcı arasındaki güven ve iletişim boşluğunu çözmemiştir; iletişim platform dışına taşmakta, satıcı itibarı ölçülememekte, satış kanalları birbirinden kopuk kalmaktadır. teqlif bu boşluğu canlı yayın, sesli ve görüntülü iletişim, şeffaf kullanıcı itibar sistemi ve kişiselleştirilmiş içerik akışıyla kapatır.
-
-Satıcılar aynı hesap üzerinden ilan yayınlayabilir, canlı yayında açık artırma açabilir ve anlık satış yapabilir. Alıcılar ise SwipeLive akışında canlı yayınlar ile kişiselleştirilmiş ilanları tek bir akışta keşfeder; satıcıyla platform içi sesli ve görüntülü iletişim kurabilir. Tüm bu deneyim, kullanıcının ilgi alanına (afinite profili) göre kişiselleştirilmiş içerik akışıyla desteklenir.
-
-teqlif kullanıcı sınıflandırması yapmaz. Bireysel bir kullanıcıdan orta ölçekli bir KOBİ'ye kadar her ölçekten kullanıcı platforma üye olduğu andan itibaren tüm özelliklere eşit biçimde erişir; harcama düzeyi veya hesap tipi bu erişimi kısıtlamaz. İlan ve satış verisi odaklı karar alma araçlarının tamamı tüm kullanıcılara eşit biçimde sunulur.
-
-Üç satış kanalını, doğrudan alıcı-satıcı iletişimini ve veri odaklı pazarlama araçlarını tek çatı altında toplayan teqlif; araçlara erişimi kademelendiren mevcut platformlardan bu bütünleşik ve eşitlikçi yaklaşımıyla ayrılır.
+teqlif, literatürde "Canlı Yayın Ticareti" (Livestream Commerce) ve "Sosyal Ticaret" (Social Commerce) olarak adlandırılan iş modellerini merkeze alan, topluluk odaklı bir elektronik pazar yeridir. Proje, spesifik ilgi alanlarına sahip kitleleri düşük gecikmeli canlı video yayınları üzerinden gerçek zamanlı açık artırmalarla bir araya getirir. Amaç, geleneksel, statik e-ticaret deneyimini "alışveriş + eğlence" (Shoppertainment) konseptiyle dinamik, etkileşimli ve rekabetçi bir sosyal etkinliğe dönüştürmektir.
 
 ---
 
 ## 3. PROBLEM TANIMI
 
-Mevcut sosyal ticaret platformlarında alıcı ile satıcı arasındaki güven, erişim ve iletişim sorunları çözümsüz kalmaktadır:
+Geleneksel yatay pazar yerleri (Horizontal Marketplaces) ve C2C ilan platformları, pazarların bazı yapısal sorunlarını çözmekte yetersiz kalmaktadır. Projenin çıkış noktasındaki temel problemler şunlardır:
 
-- Yeniden ulaşma, rakip analizi, fiyat zekası ve sıcak aday tespiti gibi veri odaklı araçlar ücretli planların veya yüksek harcama eşiklerinin arkasında tutulmaktadır; platforma yeni katılan veya küçük ölçekte çalışan satıcılar bu araçlara erişememektedir
-- Canlı yayın açık artırması, direkt satış ve ilan yayınlama aynı hesap altında entegre ve paralel biçimde yönetilememektedir
-- Alıcı ile satıcı arasında platform içi doğrudan sesli veya görüntülü iletişim kanalı bulunmamaktadır; iletişim platform dışına taşmakta, güven ve takip sorunu doğurmaktadır
-- Canlı yayın keşfi ile ilan içeriği ayrı platformlarda yer almakta; kullanıcıya bütünleşik ve kişiselleştirilmiş bir alışveriş akışı sunulamamaktadır
-- Satıcı itibarını sayısal olarak ölçen ve alıcıya şeffaf biçimde sunan standart bir güven sistemi mevcut değildir
+Güven ve Orijinallik Açığı (Trust Deficit): Ürünlerin alım satımında, statik fotoğraflar ve metin açıklamaları ürünün kondisyonunu veya orijinalliğini kanıtlamak için yetersizdir. Bu durum, alıcılarda yüksek bir dolandırıcılık riski algısı yaratır.
+
+Parçalanmış Satış Süreci (Friction in Transactions): Sosyal ağlarda (Instagram Live, Twitch vb.) topluluk kuran satıcılar, canlı yayın sırasında ürün satmak istediklerinde ödeme alma, teklif takibi yapma ve envanter yönetme işlemlerini manuel olarak ve platform dışında yapmak zorunda kalmaktadır. Bu durum ciddi operasyonel hantallık yaratır.
+
+İzolasyon ve Etkileşim Eksikliği: Geleneksel e-ticaret siteleri "işlem" (transaction) odaklıdır. Hobidaşların fiziksel müzayedelerde veya fuarlarda yaşadığı sosyal aidiyet, anlık sohbet ve rekabet heyecanı dijital ortamda bulunmamaktadır.
 
 ---
 
 ## 4. ÇÖZÜM
 
-teqlif, bu boşlukları aşağıdaki entegre modüllerle kapatır:
+teqlif, bu problemleri e-ticaret ve anlık iletişim altyapılarını tek bir çatı altında birleştirerek çözer. Literatürdeki karşılığıyla "Çok Taraflı Platform" (MSP) olarak sunduğu çözüm mimarisi şu şekildedir:
 
-### Satış Kanalları
+Entegre Canlı Yayın Altyapısı: Satıcıların ürünlerini 360 derece gösterebildiği, alıcıların sorularını anında yanıtlayabildiği düşük gecikmeli (low-latency) WebRTC tabanlı bir video akış mimarisi sunulur. Bu şeffaflık, güven problemini ortadan kaldırır.
+
+Gerçek Zamanlı Teklif Motoru: Canlı yayın sırasında saniyeler içinde gerçekleşen anlık teklifleri (bidding) yönetebilmek için, eşzamanlılık (concurrency) sorunlarını çözen, yüksek performanslı arka plan iş kuyrukları (job queues) ve bellek içi veri yapıları kullanılır. Açık artırma bittiğinde ödeme eşzamanlı olarak provizyona alınır; böylece manuel ödeme takibi sorunu (friction) çözülür.
+
+Oyunlaştırma ve FOMO Üretimi: 15-30 saniyelik "ani ölüm" (sudden death) açık artırmaları ve "gizemli kutu açılışları" gibi kurgularla alışveriş oyunlaştırılır. Alıcılar arasındaki rekabet, Fırsatı Kaçırma Korkusunu (FOMO) tetikleyerek dönüşüm oranlarını (conversion rate) dramatik ölçüde artırır.
+
+Çapraz Platform (Cross-Platform) Mobil Deneyim: Video izleme, anlık sohbet (chat) ve ödeme altyapısı, kullanıcının uygulamadan çıkmasına gerek kalmadan, tek bir akış içinde pürüzsüz çalışacak şekilde tasarlanmıştır.
+
+### Temel Özellik Kümeleri
+
+**Satış Kanalları**
 
 - İlan pazaryeri: ilan yayınlama, aktifleştirme, deaktifleştirme ve yeniden yayına alma
 - Canlı yayın açık artırma motoru: başlatma, duraklatma, devam ettirme, sonlandırma, teklif verme, anlık satın alma (buy-it-now) ve kazanan teklifi kabul etme
 - Canlı yayın üzerinden direkt satış: sabit fiyatlı, anlık sipariş oluşturma ve kuyruğa alma
-- SwipeLive: kaydırma tabanlı kişiselleştirilmiş canlı yayın keşif akışı; canlı yayınların arasına kullanıcının ilgi alanına göre belirlenen ilanlar yerleştirilir. İlanda video varsa video öncelikli olarak gösterilir, video yoksa ilanın kapak fotoğrafı görüntülenir. Kullanıcı tek bir akış üzerinden hem canlı açık artırmaları ve direkt satışları hem de kişiselleştirilmiş ilanları keşfeder.
+- SwipeLive: kaydırma tabanlı kişiselleştirilmiş keşif akışı; canlı yayınların arasına kullanıcının ilgi alanına dayalı ilanlar dinamik olarak yerleştirilir. Kullanıcı tek akış üzerinden hem açık artırmaları, direkt satışları hem de kişiselleştirilmiş ilanları keşfeder
 
-### İletişim
+**İletişim**
 
 - Canlı yayın içi gerçek zamanlı sohbet
 - Bire bir mesajlaşma: metin, görsel, video ve dosya paylaşımı
 - WebRTC tabanlı sesli ve görüntülü çağrı; çağrı geçmişi
 - Hikayeler (Stories): beğeni, görüntülenme takibi ve 24 saatlik yaşam döngüsü
 
-### Topluluk ve Güven Sistemi
+**Topluluk ve Güven**
 
 - Kullanıcı ve işletme profili; takip/takipçi sistemi; özel hesap ve takip isteği yönetimi
-- Kullanıcı engelleme
-- Satıcı güven skoru (Trust Score) ve etki sıralaması (Influence Rank): ilan detay sayfasında alıcıya sayısal satıcı güvenilirliği gösterimi
-- Puanlama ve değerlendirme sistemi; satıcı yanıt hakkı ve puan güncelleme geçmişi
-- Canlı yayın moderasyon araçları: seyirciyi susturma, yayından atma, moderatör atama ve görevden alma
+- Satıcı güven skoru (Trust Score) ve etki sıralaması (Influence Rank): alıcıya sayısal satıcı güvenilirliği gösterimi
+- Puanlama ve değerlendirme sistemi; satıcı yanıt hakkı
+- Canlı yayın moderasyon araçları: susturma, yayından atma, moderatör atama
 
-### Kişiselleştirilmiş İçerik ve Keşif
+**Kişiselleştirilmiş İçerik ve Keşif**
 
-- Kullanıcı ilgi alanı: kayıt sırasında seçilen kategorilerle başlayan ve görüntüleme, teklif, satın alma, tereddüt gibi kullanım sinyalleriyle sürekli gelişen ilgi haritası; tüm içerik önerilerinin temel kaynağı
-- Sana Özel (For You) akışı: kullanıcının ilgi alanına dayalı ilan ve yayın önerileri
-- Kullanıcı geri bildirim sinyalleri: "İlgilenmiyorum" ve tereddüt edilen ilanlar; öneri motorunu gerçek zamanlı besler
-- Arama ve arama uyarıları: kayıtlı arama kriterlerine yeni ilan girildiğinde otomatik bildirim
+- Kullanıcı ilgi haritası: kayıt sırasında seçilen kategorilerle başlayan, görüntüleme, teklif, satın alma ve tereddüt sinyalleriyle sürekli gelişen öneri motoru
+- Sana Özel (For You) akışı: ilgi alanına dayalı ilan ve yayın önerileri
+- Arama ve arama uyarıları: kayıtlı kriterlere yeni ilan girildiğinde otomatik bildirim
 
-### Pro Araçlar — Tüm Kullanıcılara Eşit Erişim
+**Pro Araçlar — Hesap Tipinden Bağımsız, Herkese Eşit Erişim**
 
-teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirilmez. Platforma üye olan her satıcı aşağıdaki araçların tamamına eşit biçimde erişir:
-
-- Toplu bildirim gönderme (Blast): filtrelenmiş hedef kitleye kişiselleştirilmiş push bildirimi; Tuci kredi tabanlı erişim
-- Yeniden Ulaşma: bir ilanla etkileşime geçmiş kullanıcılara otomatik bildirim kampanyası; hedef kitle büyüklüğü ön gösterimi
-- Sıcak Aday (Hot Lead) tespiti: 24 saat içinde aynı ilana yönelik yüksek teklif tereddütü davranışı gösteren kullanıcılar tespit edilip satıcıya otomatik bildirim gönderilir
-- Öne çıkarma ve sponsorlu ilan (Boost): ilan ve yayın görünürlüğünü artırma; tıklama ve görüntüleme bazlı reklam kampanyası yönetimi
-- Canlı yayın analitiği ve satıcı raporu
-- İlan bazlı analitik; ilan karşılaştırma ve segment analizi
-- Dönüşüm hunisi analizi: görüntüleme, teklif tereddütü ve satın alma dönüşüm hattı; KPI gösterge paneli
-- Fiyat Zekası (Price Intelligence): rakip fiyat verisi ve kategori bazlı fiyat karşılaştırma
+- Toplu bildirim gönderme (Blast): filtrelenmiş hedef kitleye kişiselleştirilmiş push bildirimi
+- Yeniden Ulaşma (Retargeting): bir ilanla etkileşime geçmiş kullanıcılara otomatik bildirim kampanyası
+- Sıcak Aday (Hot Lead) tespiti: 24 saat içinde aynı ilana yönelik yüksek teklif tereddütü davranışı gösteren kullanıcıların otomatik tespiti ve satıcı bildirimi
+- Öne çıkarma ve sponsorlu ilan (Boost): tıklama ve görüntüleme bazlı reklam kampanyası yönetimi
+- Fiyat Zekası (Price Intelligence): rakip fiyat verisi ve kategori bazlı karşılaştırma
 - Rakip Radar: rakip satıcı aktivitesini izleme ve karşılaştırmalı analiz
-- Talep Trendleri: piyasa talep analizi ve kategori bazlı yükselen ilgi tespiti
-- Piyasa Zekası: arama trendleri, zirve saatleri, kategori hacim verileri
-- Pro Insights: dönüşüm dağılımı, en iyi yayın saati önerileri, pro metrikler
-- Yapay zeka destekli fiyat tahmini: kategori ve platform içi verileri referans alan dinamik fiyat öneri motoru
+- Dönüşüm hunisi analizi: görüntüleme → teklif tereddütü → satın alma hattı; KPI gösterge paneli
+- Yapay zeka destekli fiyat tahmini: kategori ve platform verilerine dayalı dinamik fiyat öneri motoru
 
-### Platform Altyapısı
+**Platform Altyapısı**
 
-- Platform içi Tuci kredi sistemi: yapay zeka destekli ilan açıklaması ve fiyatlama, ilan öne çıkarma, toplu bildirim gönderme ve canlı yayın sırasında izleyiciden yayıncıya hediye gönderme işlemleri için kullanılır
+- Platform içi Tuci kredi sistemi: yapay zeka araçları, ilan öne çıkarma, blast kampanyaları ve canlı yayın hediye işlemleri
 - Satın alma ve satış yönetimi; sipariş detay ve geçmiş
-- Bildirim merkezi: gerçek zamanlı bildirimler ve ileti entegrasyonu
-- Raporlama ve içerik moderasyonu
-- Favori ilan yönetimi
+- Bildirim merkezi: gerçek zamanlı bildirimler
 - OTA (Over-The-Air) yerelleştirme: Türkçe, İngilizce, Rusça, Arapça
 
 ---
@@ -126,28 +116,48 @@ teqlif'te Pro araçlar hesap tipine veya harcama düzeyine göre kademelendirilm
 
 ---
 
-## 7. GÜVENLİ VE DİJİTAL TİCARET ALTYAPISI
+## 7. VERİ YÖNETİMİ VE YASAL UYUMLULUK
 
-Alışveriş deneyimini güven üzerine inşa etme felsefesinin somut yansıması olarak teqlif:
+teqlif, kullanıcı verilerini Virginia, ABD'deki (US-EAST-VA) bulut altyapısı üzerinde işlemektedir. Bu yapı, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında yurt dışı veri aktarımı hükümlerine tabidir. Platform, bu yükümlülükleri aşağıdaki mimariyle karşılamaktadır:
 
-- Güven skoru ve etki sıralamasıyla şeffaf satıcı itibar sistemi
-- Otomatik açık artırma ve sipariş motoru
-- Platform içi alıcı-satıcı sesli/görüntülü iletişim kanalı
-- Canlı yayın moderasyon araçları ve topluluk yönetimi
-- Tüm özelliklere eşit erişim; kullanıcı sınıflandırması yok
-- Merkezi işlem yönetimi ve denetlenebilir arşivleme
+**Yasal Dayanak ve Aydınlatma**
 
-ile güvenli, ölçeklenebilir ve denetlenebilir bir dijital ticaret altyapısı sunar.
+- Veri aktarımı, hizmetin ifası için zorunlu olduğundan KVKK Madde 9/6/b (sözleşmesel zorunluluk) kapsamında gerçekleştirilmektedir
+- Kayıt sırasında kullanıcıya KVKK Madde 10 uyumlu aydınlatma metni sunulur; aktarımın Virginia, ABD'deki sunucularda gerçekleştiği açıkça belirtilir
+- Onay tarihi, dil ve IP adresi veritabanında kayıt altına alınır; olası bir denetimde ispat kaydı olarak kullanılabilir
+- Kullanıcı, Madde 11 hakları (bilgi, düzeltme, silme, itiraz) kapsamında hesabını silerek verilerinin kaldırılmasını talep edebilir
+
+**Teknik Güvenlik**
+
+- JWT tabanlı oturum yönetimi; token yenileme ve iptal mekanizması
+- Güvenli depolama: mobil cihazda hassas veriler Flutter Secure Storage ile şifrelenir
+- Rate limiting ve brute-force koruması kayıt, giriş ve doğrulama uç noktalarında aktiftir
+- İçerik güvenliği: CSP politikası ve XSS koruması web arayüzünde uygulanmaktadır
+
+**İdari Yol Haritası (Aşama 2)**
+
+- Bulut sağlayıcı ile KVKK Kurulu'nun standart sözleşme şablonu imzalanması (Madde 9/4/c)
+- İmza tarihinden itibaren 5 iş günü içinde KVKK Kurumu'na bildirim
+- VERBİS kaydının yurt dışı aktarım bilgisiyle güncellenmesi
 
 ---
 
 ## 8. HEDEF PAZAR
 
+**Satıcı Tarafı**
+
 - Canlı yayın üzerinden açık artırmayla satış yapan bireysel satıcılar
 - Koleksiyon, ikinci el, el yapımı ve niş ürün satıcıları
 - Küçük ve orta ölçekli işletmeler; butikler, atölyeler, yerel markalar
-- Sosyal medya tabanlı satış yapan mikro işletmeler ve girişimciler
+- Instagram Live, TikTok veya Twitch gibi platformlarda topluluk kurmuş ancak entegre bir ödeme ve teklif altyapısından yoksun satıcılar
 - Platforma yeni katılan ve büyümek isteyen her ölçekten satıcı
+
+**Alıcı Tarafı**
+
+- Niş ürün koleksiyoncuları: spor kartları, vintage elektronik, el yapımı takı, nadir kitap gibi spesifik ilgi alanlarına sahip kullanıcılar
+- Shoppertainment izleyicileri: alışverişi sosyal ve eğlenceli bir etkinlik olarak deneyimleyen, canlı yayın atmosferinden FOMO ile karar veren alıcılar
+- Güven odaklı alıcılar: ürünü satın almadan önce görüntülü veya sesli olarak satıcıyla iletişim kurmak isteyen kullanıcılar
+- İkinci el ve fırsat avcıları: kişiselleştirilmiş keşif akışında beklenmedik ürünlerle karşılaşmayı tercih eden alıcılar
 
 ---
 
@@ -167,17 +177,17 @@ ile güvenli, ölçeklenebilir ve denetlenebilir bir dijital ticaret altyapısı
 
 **Yerel rakipler:** Trendyol Canlı, Hepsiburada Canlı
 
-Mevcut platformların tamamında araçlara erişim hesap tipine veya harcama düzeyine göre kademelenmekte; alıcı ile satıcı arasındaki güven ve iletişim boşluğu çözümsüz kalmaktadır. teqlif bu iki sorunu birden çözer.
+Mevcut platformların tamamında analitik ve pazarlama araçlarına erişim hesap tipine veya harcama düzeyine göre kademelenmekte; alıcı ile satıcı arasındaki güven açığı (Trust Deficit) ve iletişim sürtünmesi (Friction) çözümsüz kalmaktadır. teqlif bu yapısal boşlukları aşağıdaki rekabetçi avantajlarla kapatır:
 
-**teqlif'in farkı:**
+**teqlif'in Rekabetçi Farklılaşması**
 
-- Güveni görünür kılan şeffaf satıcı itibar sistemi: güven skoru ve etki sıralaması
-- Üç satış kanalı tek platformda ve aynı hesap altında entegre: açık artırma, direkt satış, ilan pazaryeri
-- SwipeLive ile canlı yayın ve kişiselleştirilmiş ilanlar tek akışta; kullanıcının ilgi alanına dayalı karma içerik deneyimi
-- Platform içi sesli/görüntülü alıcı-satıcı iletişimi; hiçbir rakipte bulunmayan doğrudan iletişim kanalı
-- Tüm özellikler — yeniden ulaşma, sıcak aday tespiti, rakip radar, fiyat zekası — hesap tipinden bağımsız olarak her kullanıcıya açık
-- ClickHouse tabanlı gerçek zamanlı davranışsal analitik
-- Uygulama güncellemesi gerektirmeyen çok dilli OTA altyapısı
+- **Entegre üç satış kanalı:** Açık artırma, direkt satış ve ilan pazaryeri aynı hesap altında paralel çalışır; rakip platformlarda bu kanallar ayrı ürünler olarak konumlandırılmaktadır
+- **Platform içi P2P iletişim:** Sesli ve görüntülü alıcı-satıcı çağrısı doğrudan ticaret akışına entegre edilmiştir; incelenen global ve yerel rakiplerin hiçbirinde bu kanal mevcut değildir
+- **SwipeLive keşif akışı:** Canlı yayınlar ile kişiselleştirilmiş ilanların tek akışta sunulması, kullanıcı başına oturum süresini ve dönüşüm fırsatını artırır
+- **Araçlara demokratik erişim:** Yeniden ulaşma (Retargeting), Sıcak Aday (Hot Lead) tespiti, Rakip Radar ve Fiyat Zekası gibi kurumsal araçlar hesap tipinden bağımsız olarak tüm satıcılara açıktır
+- **Şeffaf itibar sistemi:** Güven skoru ve etki sıralaması, alıcıya ilan sayfasında sayısal satıcı güvenilirliği sunar
+- **Yerel yasal uyumluluk:** KVKK (6698 sayılı Kanun) gereklerini karşılayan veri işleme mimarisi; global rakiplerin Türkiye pazarında karşılamadığı yapısal bir avantajdır
+- **OTA yerelleştirme:** Uygulama mağazası güncellemesi gerektirmeden Türkçe, İngilizce, Rusça ve Arapça içerik dağıtımı
 
 ---
 
@@ -195,11 +205,15 @@ Pilot kullanıcı grubuyla sistem test edilerek dönüşüm, sıcak aday tespiti
 
 ## 12. PROJE SONUCU
 
-Alışveriş deneyimini güven üzerine inşa etme felsefesiyle hareket eden teqlif:
+teqlif, geleneksel e-ticaretin "işlem" (transaction) odaklı yapısını, canlı video ve topluluk dinamikleriyle "deneyim" (experience) odaklı bir sosyal ticaret ekosistemine dönüştürme iddiasıyla tasarlanmıştır.
 
-- Açık artırma, direkt satış ve ilan pazaryeri süreçlerini tek altyapıda ve aynı hesap altında entegre biçimde sunar
-- Şeffaf itibar sistemi, sesli/görüntülü iletişim ve canlı yayın aracılığıyla alıcı ile satıcı arasındaki güven boşluğunu kapatır
-- Kullanıcının ilgi alanına göre kişiselleştirilmiş içerik akışı ve sıcak aday tespiti sağlar
-- Tüm veri ve pazarlama araçlarını platforma üye olan herkese eşit biçimde açar
-- Tuci kredi sistemiyle öne çıkarma, hedefleme ve canlı yayın hediye ekonomisini destekleyen; ilerleyen aşamada platform içi ödeme altyapısı ve abonelik modeline dönüşmesi planlanan çok katmanlı bir gelir yapısı oluşturur
-- Ölçeklenebilir, denetlenebilir ve çok gelir akışlı bir sosyal ticaret ekosistemi kurar
+Platform bu iddiayı somut bir mimariyle desteklemektedir:
+
+- Açık artırma, direkt satış ve ilan pazaryerini tek altyapıda ve aynı hesap altında entegre eder; satıcı üç kanalı paralel yönetir
+- WebRTC tabanlı sesli/görüntülü iletişimle alıcı-satıcı güven açığını (Trust Deficit) platform içinde kapatır; iletişim platform dışına taşmaz
+- SwipeLive ile kişiselleştirilmiş karma içerik akışı ve FOMO mekanizmasıyla dönüşüm oranını (Conversion Rate) artırır
+- Retargeting, Hot Lead tespiti, Rakip Radar ve Fiyat Zekası gibi kurumsal araçları hesap sınıflaması olmaksızın tüm satıcılara açar
+- KVKK uyumlu veri işleme mimarisiyle yasal riski minimize eder; kullanıcı onay kaydı denetlenebilir düzeyde tutulur
+- Tuci kredi sistemi ve komisyon geliriyle çok katmanlı bir gelir yapısı oluşturur; ilerleyen aşamada platform içi ödeme altyapısı ve abonelik modeli planlanmaktadır
+
+Sonuç olarak teqlif; ölçeklenebilir, denetlenebilir, yasal uyumlu ve çok gelir akışlı bir "Livestream Commerce" platformu olarak konumlanmaktadır.
