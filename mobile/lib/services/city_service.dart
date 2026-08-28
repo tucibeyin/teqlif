@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -30,7 +31,7 @@ class CityService {
           await http.get(Uri.parse('$kBaseUrl/cities/$encoded/districts'));
       if (resp.statusCode == 200) {
         final list = jsonDecode(resp.body) as List;
-        _districtCache[province] = list.cast<String>();
+        _districtCache[province] = LinkedHashSet<String>.from(list.cast<String>()).toList();
         return _districtCache[province]!;
       }
     } catch (e) {

@@ -20,10 +20,11 @@ async def get_cities(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/{province}/districts")
 @cache(expire=86400, key_builder=static_schema_key_builder)
 async def get_districts(province: str, request: Request, db: AsyncSession = Depends(get_db)):
-    subq = select(City.id).where(City.name == province).scalar_subquery()
+    city_ids = select(City.id).where(City.name == province)
     result = await db.execute(
         select(District.name)
-        .where(District.city_id == subq)
+        .where(District.city_id.in_(city_ids))
+        .distinct()
         .order_by(District.name)
     )
     return [row[0] for row in result.all()]
