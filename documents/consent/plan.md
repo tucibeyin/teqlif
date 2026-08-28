@@ -23,10 +23,10 @@ teqlif'in altyapısı ABD'de, Virginia (US-EAST-VA) bölgesinde konumlanan VPS s
 
 ### Uygulanan Strateji: Önce Rıza, Sonra Sözleşme
 
-**Aşama 1 — Şu an uygulanacak (Madde 9/6/a + Madde 10):**
-Kayıt ekranında kullanıcıya aydınlatma metni sunulur ve yurt dışı aktarıma ilişkin açık rıza checkbox'ı gösterilir. KVKK Madde 9/6/a, muhtemel riskler bildirilmek kaydıyla kullanıcı rızasını bağımsız ve geçerli bir hukuki dayanak olarak tanımlar. Checkbox doğru kurgulandığında tek başına hukuki geçerliliği vardır.
+**Aşama 1 — Şu an uygulanacak (Madde 9/6/b + Madde 10):**
+Kayıt ekranında kullanıcıya aydınlatma metni sunulur ve hukuki dayanak olarak **sözleşmesel zorunluluk (Madde 9/6/b)** kullanılır. teqlif'in tüm altyapısı Virginia, ABD'de olduğundan veri aktarımı hizmetin ifası için kaçınılmazdır. Checkbox metni "onay veriyorum" yerine "anlıyorum" ile biter — bu bir rıza değil, bilgilendirme onayıdır. Zorunlu tutulması Madde 3/a'daki özgür irade şartını ihlal etmez çünkü "rıza" değil "sözleşmesel bilgilendirme" dayanağı kullanılmaktadır.
 
-> **Önemli kısıt:** Madde 9/6/a "arızi olmak kaydıyla" ifadesini taşır. Bu yolun tüm kullanıcılar için sürekli mekanizma olarak kullanılması Kurul önünde savunulması daha güç bir pozisyon oluşturur. Risk kabul edilebilir düzeyde, ancak aşağıdaki Aşama 2 ile pekiştirilmesi önerilir.
+> **Checkbox metni:** "KVKK Aydınlatma Metni'ni okudum; hizmetin sunulabilmesi için kişisel verilerimin Virginia, ABD sunucularında işleneceğini anlıyorum." — Kayıt için zorunludur.
 
 **Aşama 2 — İdari süreçte yapılacak (Madde 9/4/c):**
 Bulut sağlayıcı OVH ile KVKK Kurulu'nun standart sözleşme şablonu imzalanır. Bu işlem kullanıcı rızasını ortadan kaldırmaz; mevcut checkpoint'i güçlendirir ve "arızi kullanım" riskini tamamen bertaraf eder. Sözleşme imzasından itibaren 5 iş günü içinde Kuruma bildirim yapılması zorunludur.

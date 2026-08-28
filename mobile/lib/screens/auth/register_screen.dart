@@ -102,7 +102,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       return;
     }
-    
+    if (!_crossBorderConsent) {
+      TeqSnackBar.show(
+        message: ref.read(localizationProvider).t('consentCrossBorderRequired'),
+        type: TeqSnackBarType.error,
+      );
+      return;
+    }
+
     final referralCode = _referralCtrl.text.trim();
     final success = await ref.read(registerViewModelProvider.notifier).register(
       email: _emailCtrl.text.trim(),

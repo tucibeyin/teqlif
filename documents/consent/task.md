@@ -10,7 +10,7 @@
 ### 1. Veritabanı
 
 - [x] **DB-1** `users` tablosuna migration yaz (`zzzzi_add_cross_border_consent.py`) — model güncellendi
-- [ ] **DB-2** Migration VPS'te çalıştırıldı ve doğrulandı
+- [x] **DB-2** Migration VPS'te çalıştırıldı ve doğrulandı (`zzzzh_age_confirmed -> zzzzi_cross_border_consent`)
 
 ---
 
@@ -38,7 +38,7 @@
 - [x] **L10N-8** `consentStatusActive` — dört dilde eklendi (`{date}` parametreli)
 - [x] **L10N-9** `consentStatusNone` — dört dilde eklendi
 - [x] **L10N-10** Dört dil için metinler yazıldı (TR / EN / RU / AR)
-- [ ] **L10N-11** `sync_translations.py` çalıştırıldı, DB'de key'ler güncellendi
+- [x] **L10N-11** `sync_translations.py` çalıştırıldı — 4 dilde 2975 key, 11900 satır upsert
 
 ---
 
@@ -101,12 +101,12 @@
 
 | Alan | Görev Sayısı | Durum |
 |------|-------------|-------|
-| Veritabanı | 2 | 1 tamamlandı, 1 bekliyor (VPS deploy) |
-| Backend | 5 | 4 tamamlandı, 1 bekliyor (audit log) |
-| Localization | 11 | 10 tamamlandı, 1 bekliyor (sync_translations.py) |
+| Veritabanı | 2 | Tamamlandı |
+| Backend | 5 | 4 tamamlandı, 1 opsiyonel (audit log) |
+| Localization | 11 | Tamamlandı |
 | Mobile — Modal | 4 | Tamamlandı |
 | Mobile — Kayıt | 5 | Tamamlandı |
 | Mobile — Ayarlar | 5 | Tamamlandı |
 | Test | 6 | Bekliyor |
 | İdari | 4 | Bekliyor |
-| **Toplam** | **42** | **29 tamamlandı** |
+| **Toplam** | **42** | **32 tamamlandı** |
