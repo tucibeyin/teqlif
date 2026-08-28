@@ -100,9 +100,12 @@ class ConsentSettingsModal extends ConsumerWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      loc.t('consentGivenOn')
-                          .replaceFirst('{date}', _formatDate(consentAt!))
-                          .replaceFirst('{locale}', localeName),
+                      localeName.isNotEmpty
+                          ? loc.t('consentGivenOn')
+                              .replaceFirst('{date}', _formatDate(consentAt!))
+                              .replaceFirst('{locale}', localeName)
+                          : loc.t('consentGivenOnDateOnly')
+                              .replaceFirst('{date}', _formatDate(consentAt!)),
                       style: TextStyle(
                         fontSize: 12.5,
                         color: Colors.green.shade700,

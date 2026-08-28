@@ -4408,5 +4408,6 @@
   "consentStatusActive": "Согласие дано — {date}",
   "consentStatusNone": "Согласие не предоставлено",
   "consentGivenOn": "Подтверждено {date} на {locale}",
+  "consentGivenOnDateOnly": "Подтверждено {date}",
   "consentSettingsDeleteHint": "Вы можете закрыть аккаунт, чтобы удалить свои данные."
 }

@@ -4408,5 +4408,6 @@
   "consentStatusActive": "تمت الموافقة — {date}",
   "consentStatusNone": "لم تُقدَّم أي موافقة",
   "consentGivenOn": "تم التأكيد في {date} باللغة {locale}",
+  "consentGivenOnDateOnly": "تم التأكيد في {date}",
   "consentSettingsDeleteHint": "يمكنك إغلاق حسابك لحذف بياناتك."
 }

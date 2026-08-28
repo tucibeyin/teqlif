@@ -4408,5 +4408,6 @@
   "consentStatusActive": "Rıza verildi — {date}",
   "consentStatusNone": "Rıza verilmedi",
   "consentGivenOn": "{date} tarihinde {locale} dilinde onaylandı",
+  "consentGivenOnDateOnly": "{date} tarihinde onaylandı",
   "consentSettingsDeleteHint": "Verilerinizin silinmesi için hesabınızı kapatabilirsiniz."
 }

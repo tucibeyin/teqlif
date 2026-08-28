@@ -4444,5 +4444,6 @@
   "consentStatusActive": "Consent given — {date}",
   "consentStatusNone": "No consent given",
   "consentGivenOn": "Acknowledged on {date} in {locale}",
+  "consentGivenOnDateOnly": "Acknowledged on {date}",
   "consentSettingsDeleteHint": "You can close your account to have your data deleted."
 }
