@@ -2100,6 +2100,7 @@
   "apiErrCodeInvalid": "Код неверен или просрочен",
   "apiErrUserNotFound": "Пользователь не найден",
   "apiErrInvalidCredentials": "Неверный адрес электронной почты или пароль",
+  "errorInvalidPassword": "Неверный пароль",
   "apiErrAccountDisabled": "Ваш аккаунт отключен",
   "apiErrInvalidRequest": "Неверный запрос",
   "apiMsgCodeResent": "Код отправлен снова",

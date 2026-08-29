@@ -2097,6 +2097,7 @@
   "apiErrCodeInvalid": "Kod hatalı veya süresi dolmuş",
   "apiErrUserNotFound": "Kullanıcı bulunamadı",
   "apiErrInvalidCredentials": "E-posta veya şifre hatalı",
+  "errorInvalidPassword": "Şifre hatalı",
   "apiErrAccountDisabled": "Hesabınız devre dışı",
   "apiErrInvalidRequest": "Geçersiz istek",
   "apiMsgCodeResent": "Kod tekrar gönderildi",

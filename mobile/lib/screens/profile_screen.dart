@@ -32,6 +32,7 @@ import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/buttons/teq_async_button.dart';
 import '../ui_library/components/cards/teq_card.dart';
 import '../utils/error_helper.dart';
 
@@ -1554,21 +1555,21 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
 
   Future<void> _showDeleteAccountDialog(BuildContext context) async {
     final passCtrl = TextEditingController();
-    String? error;
-
+    final formKey = GlobalKey<FormState>();
     final loc = ref.read(localizationProvider);
 
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          backgroundColor: AppColors.card(ctx),
-          title: Text(
-            loc.t('profileDeleteAccount'),
-            style: const TextStyle(color: Color(0xFFEF4444), fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          content: Column(
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card(ctx),
+        title: Text(
+          loc.t('profileDeleteAccount'),
+          style: const TextStyle(color: Color(0xFFEF4444), fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1581,62 +1582,42 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 controller: passCtrl,
                 obscureText: true,
                 labelText: loc.t('fieldPassword'),
+                validator: (v) => (v == null || v.isEmpty) ? loc.t('fieldPassword') : null,
               ),
-              if (error != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  error!,
-                  style: const TextStyle(
-                    color: Color(0xFFEF4444),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
             ],
           ),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TeqButton.outline(
-                    text: loc.t('btnCancel'),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TeqButton.outline(
+                  text: loc.t('btnCancel'),
+                  onPressed: () => Navigator.pop(ctx),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TeqButton(
-                    text: loc.t('btnDeleteAccount'),
-                    customColor: const Color(0xFFEF4444),
-                    onPressed: () async {
-                if (passCtrl.text.isEmpty) {
-                  setS(() => error = loc.t('fieldPassword'));
-                  return;
-                }
-                try {
-                  await AuthService.deleteAccount(passCtrl.text);
-                  if (ctx.mounted) {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(
-                      context,
-                    ).pushNamedAndRemoveUntil('/login', (_) => false);
-                  }
-                } on AppException catch (e) {
-                  setS(() => error = e.message);
-                } catch (e) {
-                  LoggerService.instance.warning(
-                    'ProfileScreen',
-                    'Hesap silinemedi: $e',
-                  );
-                  setS(() => error = loc.t('errorNetworkMessage'));
-                }
-              },
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TeqAsyncButton(
+                  text: loc.t('btnDeleteAccount'),
+                  customColor: const Color(0xFFEF4444),
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) return;
+                    try {
+                      await AuthService.deleteAccount(passCtrl.text);
+                      if (ctx.mounted) {
+                        Navigator.of(ctx).pop();
+                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                      }
+                    } catch (e) {
+                      handleError(e, loc);
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ],
-      ),
-    ],
-        ),
       ),
     );
     passCtrl.dispose();

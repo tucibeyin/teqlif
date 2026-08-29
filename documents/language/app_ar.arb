@@ -2080,6 +2080,7 @@
   "apiErrCodeInvalid": "الرمز غير صحيح أو منتهي الصلاحية",
   "apiErrUserNotFound": "المستخدم غير موجود",
   "apiErrInvalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صالحة",
+  "errorInvalidPassword": "كلمة المرور غير صحيحة",
   "apiErrAccountDisabled": "حسابك معطل",
   "apiErrInvalidRequest": "طلب غير صالح",
   "apiMsgCodeResent": "تم إرسال الرمز مرة أخرى",

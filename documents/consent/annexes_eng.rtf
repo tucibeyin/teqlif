@@ -1,0 +1,175 @@
+APPENDIX
+
+ANNEX I
+DESCRIPTION OF TRANSFER
+
+Activities of the Data Exporter Regarding the Personal Data Transferred Under This Contract
+
+teqlif operates a consumer-to-consumer (C2C) marketplace platform accessible via a mobile application (iOS and Android). The platform allows registered users to publish listings for sale (new, refurbished, like-new, used, or damaged goods), browse and purchase listed goods, place bids in live auction sessions hosted via in-app live streams, send direct messages between users, make voice and video calls, and manage a TUCi in-app wallet for platform transactions. The data exporter acts as data controller, collecting personal data from registered users (sellers and buyers) during account registration, listing creation and management, in-app commerce, communication, and live-stream participation. All data is collected within the Republic of Turkey and transferred to the data importer's server infrastructure located in Virginia, United States of America, for the purpose of providing the contracted service.
+
+Activities of the Data Importer Regarding the Personal Data Transferred Under This Contract
+
+The data importer hosts and operates the backend API server (FastAPI/Python), relational database (PostgreSQL), in-memory cache (Redis), analytics database (ClickHouse), and object storage (MinIO) on a virtual private server (VPS) located in Virginia, United States of America. The data importer stores, processes, and serves personal data exclusively on behalf of and under the documented instructions of the data exporter. Processing activities include: user authentication and session management; storage of user profiles, listings, messages, bids, and transaction records; generation of vector embeddings for personalised content feed ranking; processing of behavioural analytics events; delivery of real-time WebRTC communication via a self-hosted LiveKit instance; and serving of user-uploaded media files (images, videos). The data importer does not use the personal data for any purpose other than providing the teqlif platform service.
+
+Group or Groups of Data Subjects
+
+1. Registered sellers: natural persons who create a teqlif account and publish listings of goods for sale.
+2. Registered buyers: natural persons who create a teqlif account and purchase or bid on listed goods.
+3. Live-stream participants: registered users who join or host live auction and commerce sessions within the application.
+
+All data subjects are natural persons who have confirmed at registration that they are aged 13 (thirteen) or above ("13 yaşında veya daha büyüğüm" checkbox, stored as age_confirmed_at timestamp).
+
+Categories of Personal Data Transferred
+
+Identity data: full name, username.
+Contact data: e-mail address, mobile phone number.
+Profile data: profile photograph, profile thumbnail photograph, biography (optional, max 150 characters), website URL (optional), social media profile URLs (optional: Instagram, YouTube, TikTok, Kick, Twitch, Facebook).
+Listing data: product title, description, asking price, buy-it-now price, product category, subcategory, brand, model, product condition (new / like-new / used / refurbished / damaged), province and district of listing, product images, product thumbnail, product video, category-specific extra attributes (JSONB).
+Transaction and wallet data: TUCi balance, premium plan type, subscription start date, offer amounts, purchase and direct-sale transaction records.
+Behavioural and preference data: user interaction events (swipes, views, likes, dwell time in live streams), machine-learning preference embedding vector (384 dimensions, PostgreSQL pgvector), estimated maximum budget (computed from ClickHouse interaction data), product condition preference scores (computed, Redis-cached).
+Device and session data: Firebase Cloud Messaging (FCM) token, Apple Push Notification Service (VoIP token), preferred application locale (language code), JWT session tokens (short-lived, 30-minute expiry).
+Consent audit data: cross-border data transfer consent flag, consent timestamp, consent version string, IP address at time of consent (IPv4/IPv6, max 45 characters), application locale at time of consent.
+Communication data: direct message content and metadata between users, voice/video call metadata (duration, status, start/end timestamps), live-stream session participation records.
+Error and diagnostic data: anonymised crash reports and error traces (stack traces, internal numeric user IDs) collected via Sentry SDK.
+Referral data: referral code and referral relationship between users (pending_referred_by field).
+
+Categories of Sensitive Personal Data Transferred (if applicable)
+
+No special categories of personal data as defined in Article 6 of Law No. 6698 (KVKK) are intentionally collected or processed. The platform does not require or solicit data regarding racial or ethnic origin, political opinion, philosophical belief, religion, sect, health, sexual life, criminal conviction, biometric data, or genetic data. Users may voluntarily include such information in free-text fields (listing descriptions, biography); however, the platform does not process it in a dedicated or targeted manner. No separate technical or organisational measures for sensitive personal data are currently implemented beyond the general measures set out in Annex II.
+
+Legal Basis for the Transfer
+
+The transfer is carried out on the basis of Article 9, paragraph 6, sub-paragraph (b) of the Personal Data Protection Law No. 6698 (KVKK): the transfer is necessary for the performance of a contract to which the data subject is a party. Users must acknowledge the cross-border transfer disclosure at the point of registration as a mandatory condition of using the service; the platform cannot be provided without processing on the Virginia server. Acknowledgement is recorded with a timestamp, application locale, and the registering device's IP address.
+
+Frequency of the Transfer
+
+Continuous. Personal data is transferred in real time from the mobile application to the backend server infrastructure throughout the user's active use of the platform. Transfers occur on every authenticated API request: account registration and login, listing creation and update, messaging, bidding, live-stream participation, push notification delivery, and background analytics event flushing.
+
+Nature of the Processing Activity
+
+Collection, recording, storage, organisation, retrieval, use, disclosure within the platform between users, and permanent erasure upon account deletion request. Processing is carried out exclusively by automated means (API server, relational database, cache, analytics database, object storage, background task queue). No solely automated decision-making with legal or similarly significant effects is applied to data subjects.
+
+Purposes of the Data Transfer and Further Processing
+
+1. Provision of the teqlif C2C marketplace service: account management, listing publication and management, product search, purchase, auction, and direct-sale transactions.
+2. User authentication and platform security: JWT-based session management, rate limiting, shadow-ban enforcement, automated content moderation (NSFW scoring, image perceptual hashing).
+3. Personalised content delivery: machine-learning feed ranking using behavioural embeddings (pgvector cosine similarity, ClickHouse analytics signals).
+4. In-app communication: direct messaging, voice/video calls via self-hosted LiveKit WebRTC, live-stream sessions.
+5. Push notification delivery: transactional and engagement notifications via Firebase Cloud Messaging (Android and iOS) and Apple Push Notification Service (iOS VoIP/call notifications).
+6. Transactional email delivery: account verification codes, password reset links, and system alerts delivered via Brevo (formerly Sendinblue).
+7. Platform analytics and performance monitoring: ClickHouse event analytics (feed engagement, live-stream dwell time, direct-sale events); Sentry error and crash monitoring.
+8. AI-assisted listing description generation: listing metadata only (title, category, condition, asking price) is transmitted to external AI inference APIs (Groq, Google Gemini). Personal identity data, location, and all other personal data are explicitly excluded from these API calls.
+9. Compliance with KVKK obligations: consent audit trail maintenance, data subject request handling.
+
+Personal Data Retention Period
+
+User account data (profile, credentials, wallet): retained for the duration of the active account. The in-app "Hesabı Sil" (Delete Account) flow initiates account deletion with password confirmation (mobile: DELETE /api/auth/delete-account); the backend implementation of user-initiated account deletion is not present in the current codebase version — deletion is currently performed administratively.
+Listing data: listings in "passive" status that were automatically deactivated are permanently deleted (status set to "deleted", media files removed from storage) after 60 (sixty) days from the deactivated_at timestamp, pursuant to the automated listing_tasks scheduled task (_INACTIVE_DELETE_DAYS = 60).
+Listings in "deleted" status: media files are removed immediately upon deletion; database records may be retained in anonymised or soft-deleted form for referential integrity.
+Message and call data: no explicit programmatic retention period is defined in the current codebase; retained for the duration of the account.
+Behavioural analytics events (PostgreSQL analytics_events table): deleted on a rolling basis by a scheduled worker task that runs every Monday at 04:00 and removes records older than 90 (ninety) days (DELETE FROM analytics_events WHERE created_at < NOW() - INTERVAL '90 days'). ClickHouse event tables (user_events, feed_analytics, search_events, swipe_live_events, direct_sale_events) do not currently have an explicit TTL or scheduled deletion policy defined.
+Error and diagnostic data (Sentry): retained for 90 (ninety) days per Sentry's standard data retention policy.
+Consent audit records (cross_border_consent_* fields): retained for the duration of the account; permanently erased with the user record upon account deletion.
+
+Note: A formal, cross-system data retention and deletion policy governing all categories above, including timelines for user-requested account deletion, is pending definition and implementation at the organisational level.
+
+Subject Matter, Nature and Duration of the Processing for Transfers to (Sub-)Processors
+
+Groq, Inc. (USA): AI language model inference (Llama 3.3 70B Versatile). Listing metadata (title, category, condition, asking price) is transmitted to generate AI-assisted listing description text. No personal identity data, location, or user identifiers are included in API calls. Processing is ephemeral; Groq does not persist data beyond request completion. Duration: for the active period of the platform's integration with the Groq API.
+
+Google LLC (USA): (a) Firebase Cloud Messaging (FCM) — device push tokens are transmitted to deliver in-app notifications. (b) Gemini API (gemini-3.1-flash-lite) — fallback AI inference for listing description generation under the same data scope as Groq (listing metadata only; no personal identity data). Duration: for the active period of the platform's use of these services.
+
+Apple Inc. (USA): Apple Push Notification Service (APNS) — VoIP push tokens are transmitted to deliver real-time call notifications to iOS devices. Duration: for the active period of the platform's use of APNS.
+
+Brevo SAS (France): Transactional email delivery. User e-mail addresses and message content (verification codes, system notifications) are transmitted. Duration: for the active period of the platform's use of Brevo.
+
+Functional Software, Inc. — Sentry (USA): Error and crash monitoring. Anonymised diagnostic data including stack traces and internal numeric user IDs (not e-mail addresses or names) may be transmitted from both the backend and the mobile application. Data is retained for 90 days per Sentry's standard retention policy. Duration: for the active period of the platform's use of Sentry.
+
+Recipients or Recipient Groups
+
+The personal data transferred is accessible only to:
+1. The data importer's server infrastructure (backend API, PostgreSQL, Redis, ClickHouse, MinIO — all on the same VPS in Virginia, USA).
+2. Sub-processors listed in Annex III, strictly within the scope of their contracted processing activity.
+3. Other registered teqlif users, solely for data that the data subject has voluntarily made visible within the platform (public profile fields, published listings, live-stream participation).
+4. Competent public authorities in the Republic of Turkey, where disclosure is required by applicable law.
+
+Data Controller Registry Information System (VERBIS) Details of the Data Exporter
+(If subject to registration obligation)
+
+To be completed. The data exporter is in the process of assessing its obligation to register with the Personal Data Protection Authority (KVKK Kurumu) Data Controllers' Registry Information System (VERBIS) pursuant to the Board decisions on registration thresholds and exemptions. This section will be updated upon completion of the VERBIS registration assessment.
+
+
+ANNEX II
+TECHNICAL AND ORGANISATIONAL MEASURES
+
+(In the event of the transfer of sensitive personal data, the technical and organisational measures implemented for such data must be specified separately. No sensitive personal data is intentionally collected; see Annex I.)
+
+A. Access Control and Authentication
+- All API endpoints require JWT Bearer token authentication (HS256 algorithm, 30-minute expiry). Unauthenticated requests are rejected.
+- Administrative endpoints require a separate admin credential layer enforced by the check_admin_access dependency.
+- Database credentials, API keys, JWT secret keys, and all sensitive configuration values are stored exclusively in environment variables (.env file) and are not committed to the source code repository.
+- The VPS is accessible only via SSH with public-key authentication. Password-based SSH authentication is disabled.
+- Rate limiting is enforced at both the nginx reverse proxy layer and the application layer (slowapi) to mitigate brute-force attacks.
+
+B. Data in Transit
+- All client-to-server communication is encrypted using TLS 1.2/1.3 (HTTPS enforced via nginx reverse proxy). HTTP requests are redirected to HTTPS.
+- WebSocket connections for LiveKit WebRTC signalling are encrypted via WSS (wss://teqlif.com/rtc).
+- Internal service-to-service communication (API server ↔ PostgreSQL, Redis, ClickHouse, MinIO) operates within the private loopback/internal network interface of the VPS.
+
+C. Data at Rest
+- PostgreSQL database files are stored on the VPS block storage volume. OS-level filesystem access is restricted to the teqlif system user.
+- MinIO object storage (user-uploaded images and videos) is accessible only via authenticated S3-compatible API calls; direct filesystem access requires OS-level credentials.
+- User passwords are stored exclusively as bcrypt hashes; plaintext passwords are never stored.
+- JWT secret keys and API credentials are stored as environment variables, not in the database.
+- Machine-learning preference embeddings are stored as floating-point vectors without linkage to identifiable content.
+
+D. Data Minimisation
+- User location data (province and district) is collected at the listing level only, not as a mandatory account-level field.
+- AI description generation transmits only listing metadata (title, category, condition, asking price) to external APIs; personal identity data, user location, and all user identifiers are explicitly excluded from all AI API calls.
+- ClickHouse analytics events reference internal numeric user IDs only, not e-mail addresses or names.
+- Sentry error reports contain internal numeric user IDs and stack traces; personally identifiable fields (name, email) are not explicitly included in error payloads.
+
+E. Content Moderation and Platform Security
+- Automated NSFW scoring and image perceptual hashing (pHash) are applied to user-uploaded media to detect policy-violating content.
+- Shadow-ban functionality allows silent removal of policy-violating accounts from platform visibility without alerting bad actors.
+- The platform applies input validation, SQL injection prevention (ORM-based parameterised queries via SQLAlchemy), and Content Security Policy headers.
+
+F. Data Deletion
+- Account deletion: the in-app "Hesabı Sil" flow (password confirmation required) calls DELETE /api/auth/delete-account on the mobile side; the corresponding backend endpoint is not implemented in the current codebase version. Account deletion is currently performed administratively. A user-facing backend implementation of this flow is pending.
+- Listings automatically deactivated and left in passive status for 60 days are permanently deleted by a scheduled background task, including removal of associated media files from MinIO storage.
+- Device push tokens (FCM, VoIP) are set to null upon account deletion to immediately stop notification delivery.
+
+G. Organisational Measures
+- Access to production server credentials is limited to the data controller's authorised personnel.
+- Sub-processors are selected on the basis of their own published data protection commitments and, where applicable, standard contractual safeguards applicable under GDPR (European Economic Area sub-processors) or equivalent frameworks (US-based sub-processors).
+
+
+ANNEX III
+LIST OF SUB-PROCESSORS
+
+The data controller has authorised the following sub-processors:
+
+1. Name: Groq, Inc.
+   Address: 4 Embarcadero Center, Suite 1400, San Francisco, CA 94111, United States of America
+   Contact: privacy@groq.com
+   Details of the Processing Activity: AI language model inference API (Llama 3.3 70B Versatile model). Receives listing metadata (title, category, condition, asking price) to generate listing description text on behalf of the user. No personal identity data, user identifiers, or location data are transmitted. Processing is ephemeral; no data is stored by Groq beyond request completion.
+
+2. Name: Google LLC
+   Address: 1600 Amphitheatre Parkway, Mountain View, CA 94043, United States of America
+   Contact: https://support.google.com/policies/contact/general_privacy_form
+   Details of the Processing Activity: (a) Firebase Cloud Messaging (FCM) — receives device push tokens (stored in the users.fcm_token field) to deliver in-app notifications (new messages, bids, system alerts) to Android and iOS devices. Firebase project: teqlif-a24ee. (b) Gemini API (gemini-3.1-flash-lite) — fallback AI inference for listing description generation, on the same data scope as Groq (listing metadata only; no personal data).
+
+3. Name: Apple Inc.
+   Address: One Apple Park Way, Cupertino, CA 95014, United States of America
+   Contact: https://www.apple.com/legal/privacy/contact/
+   Details of the Processing Activity: Apple Push Notification Service (APNS) — receives VoIP push tokens (stored in the users.voip_token field) to deliver real-time call notifications to iOS devices. Token-based authentication (.p8 key) is used.
+
+4. Name: Brevo SAS (formerly Sendinblue)
+   Address: 7 rue de Madrid, 75008 Paris, France
+   Contact: privacy@brevo.com
+   Details of the Processing Activity: Transactional email delivery. Receives user e-mail addresses and message content to send account verification codes, password reset links, and system notifications. Sender identity: noreply@teqlif.com ("teqlif").
+
+5. Name: Functional Software, Inc. (Sentry)
+   Address: 45 Fremont Street, 8th Floor, San Francisco, CA 94105, United States of America
+   Contact: privacy@sentry.io
+   Details of the Processing Activity: Error and crash monitoring for both the backend server (Python/FastAPI, DSN: sentry_backend_dsn setting) and the mobile application (Flutter, Sentry project: o4511052861538304). Receives anonymised diagnostic data including stack traces, error messages, and internal numeric user IDs. Personally identifiable fields (name, e-mail) are not included in error payloads. Data is retained for 90 days per Sentry's standard retention policy.

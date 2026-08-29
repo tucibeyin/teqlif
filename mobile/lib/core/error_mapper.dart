@@ -36,6 +36,8 @@ class ErrorMapper {
   static String _fromAppException(AppException e, TranslationPack loc) {
     // Kod bazlı eşleştirme — tüm bilinen backend hata kodları burada
     switch (e.code) {
+      case 'INVALID_PASSWORD':
+        return loc.t('errorInvalidPassword');
       case 'INVALID_CREDENTIALS':
       case 'UNAUTHORIZED':
         return loc.t('apiErrInvalidCredentials');

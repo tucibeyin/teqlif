@@ -1,0 +1,175 @@
+EK
+
+EK I
+AKTARIMIN TANIMI
+
+Aktarılan Kişisel Veriler Bakımından Veri Aktaranın Faaliyetleri
+
+teqlif, iOS ve Android mobil uygulaması üzerinden erişilebilen bir tüketiciden tüketiciye (C2C) pazar yeri platformudur. Platform; kayıtlı kullanıcıların sıfır, yenilenmiş, yeni gibi, ikinci el veya hasarlı ürünlere ilişkin ilan yayımlamasına, yayımlanan ürünleri inceleyip satın almasına, uygulama içi canlı yayımlar aracılığıyla düzenlenen canlı açık artırmalara teklif vermesine, kullanıcılar arasında doğrudan mesajlaşmasına, sesli ve görüntülü arama yapmasına ve platform işlemleri için TUCi uygulama içi cüzdanı yönetmesine olanak tanımaktadır. Veri aktaran, veri sorumlusu sıfatıyla; kayıtlı kullanıcılardan (satıcı ve alıcı) hesap oluşturma, ilan oluşturma ve yönetimi, uygulama içi ticaret, iletişim ve canlı yayıma katılım süreçlerinde kişisel veri toplamaktadır. Tüm veriler Türkiye Cumhuriyeti sınırları içinde toplanmakta ve hizmetin sağlanması amacıyla veri alanın Virginia, Amerika Birleşik Devletleri'nde bulunan sunucu altyapısına aktarılmaktadır.
+
+Aktarılan Kişisel Veriler Bakımından Veri Alanın Faaliyetleri
+
+Veri alan; arka uç API sunucusunu (FastAPI/Python), ilişkisel veritabanını (PostgreSQL), bellek içi önbelleği (Redis), analitik veritabanını (ClickHouse) ve nesne depolamayı (MinIO), Virginia, Amerika Birleşik Devletleri'nde bulunan bir sanal özel sunucuda (VPS) barındırmakta ve işletmektedir. Veri alan, kişisel verileri yalnızca ve yalnızca veri aktaranın adına ve belgelenmiş talimatları doğrultusunda depolamakta, işlemekte ve sunmaktadır. İşleme faaliyetleri şunları kapsamaktadır: kullanıcı kimlik doğrulama ve oturum yönetimi; kullanıcı profilleri, ilanlar, mesajlar, teklifler ve işlem kayıtlarının depolanması; kişiselleştirilmiş içerik akışı sıralaması için vektör gömülerinin oluşturulması; davranışsal analitik olayların işlenmesi; kendi altyapısında barındırılan LiveKit örneği aracılığıyla gerçek zamanlı WebRTC iletişiminin sağlanması; ve kullanıcı tarafından yüklenen medya dosyalarının (görsel, video) sunulması. Veri alan, kişisel verileri teqlif platform hizmetinin sağlanması dışında herhangi bir amaçla kullanmamaktadır.
+
+İlgili Kişi Grubu veya Grupları
+
+1. Kayıtlı satıcılar: teqlif hesabı oluşturarak satılık ürün ilanı yayımlayan gerçek kişiler.
+2. Kayıtlı alıcılar: teqlif hesabı oluşturarak yayımlanmış ürünleri satın alan veya teklif veren gerçek kişiler.
+3. Canlı yayım katılımcıları: Uygulama içi canlı açık artırma ve ticaret oturumlarına katılan veya bu oturumları düzenleyen kayıtlı kullanıcılar.
+
+Tüm ilgili kişiler, kayıt sırasında 13 (on üç) yaşında veya daha büyük olduklarını onaylayan ("13 yaşında veya daha büyüğüm" onay kutusu, age_confirmed_at zaman damgası olarak kaydedilmektedir) gerçek kişilerdir.
+
+Aktarılan Kişisel Veri Kategorileri
+
+Kimlik verileri: ad soyad, kullanıcı adı.
+İletişim verileri: e-posta adresi, cep telefonu numarası.
+Profil verileri: profil fotoğrafı, profil küçük resmi, biyografi (isteğe bağlı, azami 150 karakter), web sitesi URL'si (isteğe bağlı), sosyal medya profil URL'leri (isteğe bağlı: Instagram, YouTube, TikTok, Kick, Twitch, Facebook).
+İlan verileri: ürün başlığı, açıklaması, talep edilen fiyat, hemen al fiyatı, ürün kategorisi, alt kategori, marka, model, ürün durumu (sıfır / yeni gibi / ikinci el / yenilenmiş / hasarlı), ilanın yayımlandığı il ve ilçe, ürün görselleri, ürün küçük resmi, ürün videosu, kategoriye özgü ek özellikler (JSONB).
+İşlem ve cüzdan verileri: TUCi bakiyesi, premium plan türü, abonelik başlangıç tarihi, teklif tutarları, satın alma ve doğrudan satış işlem kayıtları.
+Davranışsal ve tercih verileri: kullanıcı etkileşim olayları (kaydırmalar, görüntülemeler, beğeniler, canlı yayımlarda geçirilen süre), makine öğrenimi tercih gömü vektörü (384 boyut, PostgreSQL pgvector), tahmini azami bütçe (ClickHouse etkileşim verilerinden hesaplanmaktadır), ürün durumu tercih puanları (hesaplanmış, Redis önbelleğinde tutulmaktadır).
+Cihaz ve oturum verileri: Firebase Cloud Messaging (FCM) jetonu, Apple Push Notification Service (VoIP jetonu), tercih edilen uygulama dil ayarı (dil kodu), JWT oturum jetonları (kısa ömürlü, 30 dakika geçerlilik süresi).
+Rıza denetim verileri: sınır ötesi veri aktarımı onay bayrağı, onay zaman damgası, onay sürüm dizesi, onay anındaki IP adresi (IPv4/IPv6, azami 45 karakter), onay anındaki uygulama dil ayarı.
+İletişim verileri: kullanıcılar arasındaki doğrudan mesaj içerikleri ve meta verileri, sesli/görüntülü arama meta verileri (süre, durum, başlangıç/bitiş zaman damgaları), canlı yayım oturumu katılım kayıtları.
+Hata ve tanılama verileri: Sentry SDK aracılığıyla toplanan anonimleştirilmiş çökme raporları ve hata izleri (yığın izleri, dahili sayısal kullanıcı kimlikleri).
+Referans verileri: referans kodu ve kullanıcılar arasındaki referans ilişkisi (pending_referred_by alanı).
+
+Aktarılan Özel Nitelikli Kişisel Veri Kategorileri (varsa)
+
+6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 6. maddesi kapsamındaki özel nitelikli kişisel veriler platform tarafından kasıtlı olarak toplanmamakta veya işlenmemektedir. Platform; ırk ya da etnik köken, siyasi düşünce, felsefi inanç, din, mezhep, sağlık, cinsel hayat, ceza mahkûmiyeti, biyometrik veri veya genetik veriye ilişkin herhangi bir bilgiyi talep etmemekte veya sormamaktadır. Kullanıcılar bu tür bilgileri serbest metin alanlarına (ilan açıklamaları, biyografi) isteğe bağlı olarak girebilir; ancak platform söz konusu bilgileri özel veya hedefli bir biçimde işlememektedir. Ek II'de belirtilen genel tedbirlerin ötesinde, özel nitelikli kişisel veriler için ayrı bir teknik ya da organizasyonel tedbir şu an itibarıyla uygulanmamaktadır.
+
+Aktarımın Hukuki Dayanağı
+
+Aktarım, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 9. maddesinin 6. fıkrasının (b) bendi uyarınca gerçekleştirilmektedir: aktarım, ilgili kişinin taraf olduğu sözleşmenin ifası için zorunludur. Kullanıcılar, hizmetin kullanımının zorunlu koşulu olarak kayıt aşamasında sınır ötesi aktarım bildirimini onaylamak zorundadır; hizmet Virginia sunucusunda işlem yapılmadan sağlanamamaktadır. Onay; zaman damgası, uygulama dil ayarı ve kayıt yapan cihazın IP adresiyle birlikte kayıt altına alınmaktadır.
+
+Aktarım Sıklığı
+
+Sürekli. Kişisel veriler, kullanıcının platformu aktif olarak kullandığı süre boyunca mobil uygulamadan arka uç sunucu altyapısına gerçek zamanlı olarak aktarılmaktadır. Aktarımlar; hesap oluşturma ve girişi, ilan oluşturma ve güncelleme, mesajlaşma, teklif verme, canlı yayıma katılım, anlık bildirim iletimi ve arka planda analitik olay gönderimleri dahil olmak üzere her kimlik doğrulamalı API isteğinde gerçekleşmektedir.
+
+İşleme Faaliyetinin Niteliği
+
+Toplama, kaydetme, depolama, düzenleme, erişim, kullanım, platform içinde kullanıcılar arasında ifşa etme ve hesap silme talebi üzerine kalıcı olarak silme. İşleme; yalnızca otomatik yollarla (API sunucusu, ilişkisel veritabanı, önbellek, analitik veritabanı, nesne depolama, arka plan görev kuyruğu) yürütülmektedir. İlgili kişiler üzerinde hukuki veya benzer nitelikte önemli sonuçlar doğuran münhasıran otomatik karar alma işlemi uygulanmamaktadır.
+
+Veri Aktarımının ve Sonraki İşlemenin Amaçları
+
+1. teqlif C2C pazar yeri hizmetinin sunulması: hesap yönetimi, ilan yayımlama ve yönetimi, ürün arama, satın alma, açık artırma ve doğrudan satış işlemleri.
+2. Kullanıcı kimlik doğrulama ve platform güvenliği: JWT tabanlı oturum yönetimi, hız sınırlama, gizli engelleme uygulaması, otomatik içerik denetimi (NSFW puanlama, görsel algısal karma).
+3. Kişiselleştirilmiş içerik iletimi: davranışsal gömüler kullanılarak makine öğrenimi akış sıralaması (pgvector kosinüs benzerliği, ClickHouse analitik sinyalleri).
+4. Uygulama içi iletişim: doğrudan mesajlaşma, kendi altyapısında barındırılan LiveKit WebRTC üzerinden sesli/görüntülü aramalar, canlı yayım oturumları.
+5. Anlık bildirim iletimi: Firebase Cloud Messaging (Android ve iOS) ve Apple Push Notification Service (iOS VoIP/arama bildirimleri) aracılığıyla işlemsel ve etkileşim bildirimleri.
+6. İşlemsel e-posta iletimi: Brevo (eski adıyla Sendinblue) üzerinden hesap doğrulama kodları, şifre sıfırlama bağlantıları ve sistem uyarıları.
+7. Platform analitiği ve performans izleme: ClickHouse olay analitiği (akış etkileşimi, canlı yayımda geçirilen süre, doğrudan satış olayları); Sentry hata ve çökme izleme.
+8. Yapay zeka destekli ilan açıklaması oluşturma: yalnızca ilan meta verisi (başlık, kategori, durum, talep edilen fiyat) harici yapay zeka çıkarım API'lerine (Groq, Google Gemini) iletilmektedir. Kişisel kimlik verileri, konum bilgisi ve diğer tüm kişisel veriler bu API çağrılarından açıkça hariç tutulmaktadır.
+9. KVKK yükümlülüklerinin yerine getirilmesi: rıza denetim kaydının tutulması, ilgili kişi başvurularının yönetimi.
+
+Kişisel Veri Saklama Süresi
+
+Kullanıcı hesap verileri (profil, kimlik bilgileri, cüzdan): aktif hesabın süresi boyunca saklanmaktadır. Uygulama içi "Hesabı Sil" akışı (şifre onayı zorunludur) mobil tarafta DELETE /api/auth/delete-account isteği göndermektedir; ancak ilgili backend endpoint'i mevcut kod tabanı sürümünde uygulanmamıştır. Hesap silme işlemi şu an itibarıyla idari olarak gerçekleştirilmektedir. Kullanıcıya açık backend implementasyonu henüz tamamlanmamıştır.
+İlan verileri: otomatik olarak pasif duruma alınan ve bu durumda kalan ilanlar, deactivated_at zaman damgasından itibaren 60 (altmış) gün sonra otomatik listing_tasks zamanlanmış görevi (_INACTIVE_DELETE_DAYS = 60) tarafından kalıcı olarak silinmektedir (durum "deleted" olarak güncellenmekte, medya dosyaları depodan kaldırılmaktadır).
+"Deleted" durumundaki ilanlar: medya dosyaları silinme anında kaldırılmaktadır; veritabanı kayıtları referans bütünlüğü için anonimleştirilmiş veya geçici silinmiş biçimde tutulabilir.
+Mesaj ve arama verileri: mevcut kod tabanında açık bir programatik saklama süresi tanımlanmamıştır; hesabın ömrü boyunca saklanmaktadır.
+Davranışsal analitik olayları (PostgreSQL analytics_events tablosu): her Pazartesi saat 04:00'da çalışan zamanlanmış bir worker görevi tarafından, 90 (doksan) günden eski kayıtlar yuvarlayan bazda silinmektedir (DELETE FROM analytics_events WHERE created_at < NOW() - INTERVAL '90 days'). ClickHouse olay tabloları (user_events, feed_analytics, search_events, swipe_live_events, direct_sale_events) için şu an itibarıyla tanımlanmış bir TTL veya zamanlanmış silme politikası bulunmamaktadır.
+Hata ve tanılama verileri (Sentry): Sentry'nin standart veri saklama politikası uyarınca 90 (doksan) gün süreyle saklanmaktadır.
+Rıza denetim kayıtları (cross_border_consent_* alanları): hesabın ömrü boyunca saklanmakta; hesap silme işlemiyle kullanıcı kaydıyla birlikte kalıcı olarak silinmektedir.
+
+Not: Kullanıcı tarafından talep edilen hesap silme süreleri de dahil olmak üzere yukarıdaki tüm kategorileri kapsayan resmi ve tüm sistemlere yayılan bir veri saklama ve silme politikası organizasyonel düzeyde henüz tanımlanmamış ve hayata geçirilmemiştir.
+
+(Alt) İşleyicilere Yapılan Aktarımlar Bakımından İşlemenin Konusu, Niteliği ve Süresi
+
+Groq, Inc. (ABD): Yapay zeka dil modeli çıkarım hizmeti (Llama 3.3 70B Versatile). Yapay zeka destekli ilan açıklaması metni oluşturmak amacıyla ilan meta verisi (başlık, kategori, durum, talep edilen fiyat) iletilmektedir. Kişisel kimlik verisi, konum bilgisi veya kullanıcı tanımlayıcısı API çağrılarına dahil edilmemektedir. İşleme geçicidir; Groq istek tamamlandıktan sonra veri saklamaz. Süre: platformun Groq API entegrasyonunun aktif olduğu dönem boyunca.
+
+Google LLC (ABD): (a) Firebase Cloud Messaging (FCM) — Android ve iOS cihazlara uygulama içi bildirimlerin iletilmesi için cihaz anlık bildirim jetonları iletilmektedir. (b) Gemini API (gemini-3.1-flash-lite) — Groq ile aynı veri kapsamında (yalnızca ilan meta verisi; kişisel kimlik verisi içermez) ilan açıklaması oluşturma için yedek yapay zeka çıkarım hizmeti. Süre: platformun bu hizmetleri kullandığı aktif dönem boyunca.
+
+Apple Inc. (ABD): Apple Push Notification Service (APNS) — iOS cihazlara gerçek zamanlı arama bildirimlerinin iletilmesi için VoIP anlık bildirim jetonları iletilmektedir. Süre: platformun APNS'i kullandığı aktif dönem boyunca.
+
+Brevo SAS (Fransa): İşlemsel e-posta iletimi. Hesap doğrulama kodları, şifre sıfırlama bağlantıları ve sistem bildirimleri göndermek için kullanıcı e-posta adresleri ve mesaj içerikleri iletilmektedir. Süre: platformun Brevo'yu kullandığı aktif dönem boyunca.
+
+Functional Software, Inc. — Sentry (ABD): Hata ve çökme izleme. Yığın izleri ve dahili sayısal kullanıcı kimlikleri (e-posta adresi veya ad değil) dahil anonimleştirilmiş tanılama verileri hem arka uç hem de mobil uygulamadan iletilebilmektedir. Veriler Sentry'nin standart saklama politikası uyarınca 90 gün süreyle saklanmaktadır. Süre: platformun Sentry'yi kullandığı aktif dönem boyunca.
+
+Alıcı veya Alıcı Grupları
+
+Aktarılan kişisel veriler yalnızca aşağıdakiler tarafından erişilebilmektedir:
+1. Veri alanın sunucu altyapısı (arka uç API, PostgreSQL, Redis, ClickHouse, MinIO — tamamı Virginia, ABD'deki aynı VPS üzerinde).
+2. Ek III'te listelenen alt işleyiciler, yalnızca sözleşmeyle belirlenen işleme faaliyetleri kapsamında.
+3. Diğer kayıtlı teqlif kullanıcıları, yalnızca ilgili kişinin platform içinde gönüllü olarak görünür kıldığı veriler için (kamuya açık profil alanları, yayımlanmış ilanlar, canlı yayıma katılım).
+4. Türkiye Cumhuriyeti'nin yetkili kamu kurumları, yürürlükteki mevzuatın gerektirdiği hallerde.
+
+Veri Aktaranın Veri Sorumluları Sicili Bilgi Sistemi (VERBİS) Kayıt Bilgileri
+(Kayıt yükümlülüğüne tabi olunması halinde)
+
+Tamamlanacaktır. Veri aktaran, Kişisel Verileri Koruma Kurumu'nun kayıt eşikleri ve muafiyetlere ilişkin Kurul kararları çerçevesinde VERBİS'e kayıt yükümlülüğünü değerlendirme sürecindedir. Bu bölüm, VERBİS kayıt değerlendirmesinin tamamlanmasının ardından güncellenecektir.
+
+
+EK II
+TEKNİK VE ORGANİZASYONEL TEDBİRLER
+
+(Özel nitelikli kişisel verilerin aktarılması halinde, bu veriler için uygulanan teknik ve organizasyonel tedbirler ayrıca belirtilmelidir. Özel nitelikli kişisel veri kasıtlı olarak toplanmamaktadır; bkz. Ek I.)
+
+A. Erişim Kontrolü ve Kimlik Doğrulama
+- Tüm API uç noktaları JWT Bearer token kimlik doğrulaması gerektirmektedir (HS256 algoritması, 30 dakika geçerlilik süresi). Kimlik doğrulanmamış istekler reddedilmektedir.
+- Yönetim uç noktaları, check_admin_access bağımlılığı tarafından uygulanan ayrı bir yönetici kimlik bilgisi katmanı gerektirmektedir.
+- Veritabanı kimlik bilgileri, API anahtarları, JWT gizli anahtarları ve tüm hassas yapılandırma değerleri yalnızca ortam değişkenlerinde (.env dosyası) saklanmakta; kaynak kod deposuna işlenmemektedir.
+- VPS'e yalnızca ortak anahtarlı SSH kimlik doğrulamasıyla erişilebilmektedir. Parola tabanlı SSH kimlik doğrulaması devre dışı bırakılmıştır.
+- Kaba kuvvet saldırılarına karşı hem nginx ters proxy katmanında hem de uygulama katmanında (slowapi) hız sınırlama uygulanmaktadır.
+
+B. İletim Halindeki Veriler
+- Tüm istemci-sunucu iletişimi TLS 1.2/1.3 ile şifrelenmektedir (nginx ters proxy aracılığıyla HTTPS zorunlu kılınmaktadır; HTTP istekleri HTTPS'e yönlendirilmektedir).
+- LiveKit WebRTC sinyalizasyonuna yönelik WebSocket bağlantıları WSS (wss://teqlif.com/rtc) ile şifrelenmektedir.
+- Dahili servisler arası iletişim (API sunucusu ↔ PostgreSQL, Redis, ClickHouse, MinIO) VPS'nin özel geri döngü/dahili ağ arabirimi üzerinden gerçekleşmektedir.
+
+C. Durağan Haldeki Veriler
+- PostgreSQL veritabanı dosyaları VPS blok depolama biriminde saklanmakta; işletim sistemi düzeyinde dosya sistemi erişimi teqlif sistem kullanıcısıyla sınırlandırılmaktadır.
+- MinIO nesne depolama (kullanıcı tarafından yüklenen görseller ve videolar) yalnızca kimlik doğrulamalı S3 uyumlu API çağrılarıyla erişilebilmektedir; doğrudan dosya sistemi erişimi işletim sistemi kimlik bilgisi gerektirmektedir.
+- Kullanıcı parolaları yalnızca bcrypt karması olarak saklanmakta; düz metin parola hiçbir zaman saklanmamaktadır.
+- JWT gizli anahtarları ve API kimlik bilgileri veritabanında değil ortam değişkenlerinde tutulmaktadır.
+- Makine öğrenimi tercih gömüleri, tanımlanabilir içerikle ilişkilendirme yapılmadan kayan noktalı vektörler olarak saklanmaktadır.
+
+D. Veri Minimizasyonu
+- Kullanıcı konum verisi (il ve ilçe) yalnızca ilan düzeyinde toplanmakta; zorunlu hesap düzeyi alanı olarak talep edilmemektedir.
+- Yapay zeka açıklaması oluşturma işlemi harici API'lere yalnızca ilan meta verisi (başlık, kategori, durum, talep edilen fiyat) iletmektedir; kişisel kimlik verileri, kullanıcı konumu ve tüm kullanıcı tanımlayıcıları tüm yapay zeka API çağrılarından açıkça hariç tutulmaktadır.
+- ClickHouse analitik olayları yalnızca dahili sayısal kullanıcı kimliklerine atıfta bulunmakta; e-posta adresi veya ad içermemektedir.
+- Sentry hata raporları dahili sayısal kullanıcı kimlikleri ve yığın izleri içermektedir; kişisel olarak tanımlanabilir alanlar (ad, e-posta) hata yüklerine açıkça eklenmemektedir.
+
+E. İçerik Denetimi ve Platform Güvenliği
+- Politikaya aykırı içeriklerin tespiti için kullanıcı tarafından yüklenen medyalara otomatik NSFW puanlama ve görsel algısal karma (pHash) uygulanmaktadır.
+- Gizli engelleme işlevi, kötü niyetli aktörleri uyarmadan politikayı ihlal eden hesapları platform görünürlüğünden sessizce kaldırabilmektedir.
+- Platform; girdi doğrulama, SQL enjeksiyon önleme (SQLAlchemy üzerinden ORM tabanlı parametreli sorgular) ve İçerik Güvenliği Politikası başlıkları uygulamaktadır.
+
+F. Veri Silme
+- Hesap silme: uygulama içi "Hesabı Sil" akışı (şifre onayı zorunludur) mobil tarafta DELETE /api/auth/delete-account isteği göndermektedir; karşılık gelen backend endpoint'i mevcut kod tabanı sürümünde uygulanmamıştır. Hesap silme işlemi şu an itibarıyla idari olarak gerçekleştirilmektedir. Kullanıcıya açık backend implementasyonu henüz tamamlanmamıştır.
+- Otomatik olarak pasif duruma alınan ve 60 gün bu şekilde kalan ilanlar, ilişkili medya dosyalarının MinIO depodan kaldırılması dahil zamanlanmış arka plan görevi tarafından kalıcı olarak silinmektedir.
+- Cihaz anlık bildirim jetonları (FCM, VoIP), bildirim iletimini derhal durdurmak amacıyla hesap silinme anında null olarak ayarlanmaktadır.
+
+G. Organizasyonel Tedbirler
+- Üretim sunucusu kimlik bilgilerine erişim, veri sorumlusunun yetkili personeli ile sınırlandırılmıştır.
+- Alt işleyiciler; kendi yayımladıkları veri koruma taahhütleri ve ilgili olduğu hallerde Avrupa Ekonomik Alanı alt işleyicileri için GDPR kapsamında geçerli standart sözleşme güvenceleri (veya ABD'de yerleşik alt işleyiciler için eşdeğer çerçeveler) esas alınarak seçilmektedir.
+
+
+EK III
+ALT İŞLEYİCİLER LİSTESİ
+
+Veri sorumlusu aşağıdaki alt işleyicileri yetkilendirmiştir:
+
+1. Adı: Groq, Inc.
+   Adresi: 4 Embarcadero Center, Suite 1400, San Francisco, CA 94111, Amerika Birleşik Devletleri
+   İletişim: privacy@groq.com
+   İşleme Faaliyetinin Ayrıntıları: Yapay zeka dil modeli çıkarım API'si (Llama 3.3 70B Versatile modeli). Kullanıcı adına ilan açıklaması metni oluşturmak için ilan meta verisi (başlık, kategori, durum, talep edilen fiyat) alınmaktadır. Kişisel kimlik verisi, kullanıcı tanımlayıcısı veya konum bilgisi iletilmemektedir. İşleme geçicidir; Groq istek tamamlandıktan sonra veri saklamaz.
+
+2. Adı: Google LLC
+   Adresi: 1600 Amphitheatre Parkway, Mountain View, CA 94043, Amerika Birleşik Devletleri
+   İletişim: https://support.google.com/policies/contact/general_privacy_form
+   İşleme Faaliyetinin Ayrıntıları: (a) Firebase Cloud Messaging (FCM) — Android ve iOS cihazlara uygulama içi bildirimlerin (yeni mesajlar, teklifler, sistem uyarıları) iletilmesi için cihaz anlık bildirim jetonları (users.fcm_token alanında saklanmaktadır) alınmaktadır. Firebase projesi: teqlif-a24ee. (b) Gemini API (gemini-3.1-flash-lite) — Groq ile aynı veri kapsamında (yalnızca ilan meta verisi; kişisel veri içermez) ilan açıklaması oluşturma için yedek yapay zeka çıkarım hizmeti.
+
+3. Adı: Apple Inc.
+   Adresi: One Apple Park Way, Cupertino, CA 95014, Amerika Birleşik Devletleri
+   İletişim: https://www.apple.com/legal/privacy/contact/
+   İşleme Faaliyetinin Ayrıntıları: Apple Push Notification Service (APNS) — iOS cihazlara gerçek zamanlı arama bildirimlerinin iletilmesi için VoIP anlık bildirim jetonları (users.voip_token alanında saklanmaktadır) alınmaktadır. Jeton tabanlı kimlik doğrulama (.p8 anahtarı) kullanılmaktadır.
+
+4. Adı: Brevo SAS (eski adıyla Sendinblue)
+   Adresi: 7 rue de Madrid, 75008 Paris, Fransa
+   İletişim: privacy@brevo.com
+   İşleme Faaliyetinin Ayrıntıları: İşlemsel e-posta iletimi. Hesap doğrulama kodları, şifre sıfırlama bağlantıları ve sistem bildirimleri göndermek için kullanıcı e-posta adresleri ve mesaj içerikleri alınmaktadır. Gönderici kimliği: noreply@teqlif.com ("teqlif").
+
+5. Adı: Functional Software, Inc. (Sentry)
+   Adresi: 45 Fremont Street, 8th Floor, San Francisco, CA 94105, Amerika Birleşik Devletleri
+   İletişim: privacy@sentry.io
+   İşleme Faaliyetinin Ayrıntıları: Hem arka uç sunucu (Python/FastAPI, DSN: sentry_backend_dsn ayarı) hem de mobil uygulama (Flutter, Sentry projesi: o4511052861538304) için hata ve çökme izleme. Yığın izleri, hata mesajları ve dahili sayısal kullanıcı kimlikleri dahil anonimleştirilmiş tanılama verileri alınmaktadır. Kişisel olarak tanımlanabilir alanlar (ad, e-posta) hata yüklerine dahil edilmemektedir. Veriler Sentry'nin standart saklama politikası uyarınca 90 gün süreyle saklanmaktadır.

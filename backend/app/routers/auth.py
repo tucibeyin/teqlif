@@ -21,6 +21,7 @@ from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.config import settings
 from app.services.referral_service import apply_referral
+from app.services import storage_service as storage
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -1405,6 +1406,85 @@ async def save_device_tokens(
         await db.commit()
         await invalidate_user_session_cache(current_user.id)
     return {"ok": True}
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
+@router.delete("/delete-account")
+async def delete_account(
+    body: DeleteAccountRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcı hesabını siler: kimlik bilgilerini anonimize eder, ilanları pasife alır, push token'larını temizler."""
+    from app.models.listing import Listing
+
+    if not verify_password(body.password, current_user.hashed_password):
+        raise BadRequestException(code="INVALID_PASSWORD")
+
+    if current_user.status == UserStatus.DELETED:
+        raise ConflictException(code="USER_ALREADY_DELETED")
+
+    uid = current_user.id
+    old_avatar = current_user.profile_image_url
+    old_thumb  = current_user.profile_image_thumb_url
+
+    current_user.email                   = f"purged_{uid}@deleted.invalid"
+    current_user.username                = f"deleted_{uid}"
+    current_user.full_name               = "Deleted Account"
+    current_user.phone                   = None
+    current_user.phone_verified          = False
+    current_user.hashed_password         = ""
+    current_user.profile_image_url       = None
+    current_user.profile_image_thumb_url = None
+    current_user.bio                     = None
+    current_user.website_url             = None
+    current_user.instagram_url           = None
+    current_user.kick_url                = None
+    current_user.twitch_url              = None
+    current_user.facebook_url            = None
+    current_user.youtube_url             = None
+    current_user.tiktok_url              = None
+    current_user.fcm_token               = None
+    current_user.voip_token              = None
+    current_user.preference_embedding    = None
+    current_user.max_budget              = None
+    current_user.is_premium              = False
+    current_user.plan_type               = None
+    current_user.referral_code           = None
+    current_user.pending_referred_by     = None
+    current_user.status                  = UserStatus.DELETED
+
+    await db.execute(
+        sa_update(Listing)
+        .where(Listing.user_id == uid, Listing.status == "active")
+        .values(status="passive")
+    )
+    await db.commit()
+
+    try:
+        if old_avatar:
+            storage.delete_object(storage.url_to_key(old_avatar))
+        if old_thumb:
+            storage.delete_object(storage.url_to_key(old_thumb))
+    except Exception:
+        pass
+
+    try:
+        redis = await get_redis()
+        await redis.delete(
+            f"interests:{uid}",
+            f"feed:{uid}:0",
+            f"shadowban:{uid}",
+            f"condition_pref:{uid}",
+            f"seller:badge:{uid}",
+        )
+    except Exception:
+        pass
+
+    return Response(status_code=204)
 
 
 @router.post("/fcm-token", deprecated=True)

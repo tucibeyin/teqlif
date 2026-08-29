@@ -2097,6 +2097,7 @@
   "apiErrCodeInvalid": "Code is incorrect or expired",
   "apiErrUserNotFound": "User not found",
   "apiErrInvalidCredentials": "Invalid email or password",
+  "errorInvalidPassword": "Incorrect password",
   "apiErrAccountDisabled": "Your account is disabled",
   "apiErrInvalidRequest": "Invalid request",
   "apiMsgCodeResent": "Code sent again",
