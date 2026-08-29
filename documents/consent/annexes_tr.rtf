@@ -47,7 +47,7 @@ Sürekli. Kişisel veriler, kullanıcının platformu aktif olarak kullandığı
 
 İşleme Faaliyetinin Niteliği
 
-Toplama, kaydetme, depolama, düzenleme, erişim, kullanım, platform içinde kullanıcılar arasında ifşa etme ve hesap silme talebi üzerine kalıcı olarak silme. İşleme; yalnızca otomatik yollarla (API sunucusu, ilişkisel veritabanı, önbellek, analitik veritabanı, nesne depolama, arka plan görev kuyruğu) yürütülmektedir. İlgili kişiler üzerinde hukuki veya benzer nitelikte önemli sonuçlar doğuran münhasıran otomatik karar alma işlemi uygulanmamaktadır.
+Toplama, kaydetme, depolama, düzenleme, erişim, kullanım, platform içinde kullanıcılar arasında ifşa etme ve kullanıcı tarafından başlatılan silme talebi üzerine kullanıcı kaydının anonimleştirilmesi. İşleme; yalnızca otomatik yollarla (API sunucusu, ilişkisel veritabanı, önbellek, analitik veritabanı, nesne depolama, arka plan görev kuyruğu) yürütülmektedir. İlgili kişiler üzerinde hukuki veya benzer nitelikte önemli sonuçlar doğuran münhasıran otomatik karar alma işlemi uygulanmamaktadır.
 
 Veri Aktarımının ve Sonraki İşlemenin Amaçları
 
@@ -63,13 +63,13 @@ Veri Aktarımının ve Sonraki İşlemenin Amaçları
 
 Kişisel Veri Saklama Süresi
 
-Kullanıcı hesap verileri (profil, kimlik bilgileri, cüzdan): aktif hesabın süresi boyunca saklanmaktadır. Uygulama içi "Hesabı Sil" akışı (şifre onayı zorunludur) mobil tarafta DELETE /api/auth/delete-account isteği göndermektedir; ancak ilgili backend endpoint'i mevcut kod tabanı sürümünde uygulanmamıştır. Hesap silme işlemi şu an itibarıyla idari olarak gerçekleştirilmektedir. Kullanıcıya açık backend implementasyonu henüz tamamlanmamıştır.
+Kullanıcı hesap verileri (profil, kimlik bilgileri, cüzdan): aktif hesabın süresi boyunca saklanmaktadır. Kullanıcının uygulama içi "Hesabı Sil" akışı aracılığıyla başlattığı silme işleminde (şifre onayı zorunludur, DELETE /api/auth/delete-account), backend kullanıcı kaydını anonimleştirir: e-posta adresi purged_{id}@deleted.invalid, kullanıcı adı deleted_{id}, tam ad "Deleted Account" olarak üzerine yazılır; kalan tüm kişisel veri alanları (telefon, profil görselleri, biyografi, sosyal medya URL'leri, FCM ve VoIP jetonları, tercih gömü vektörü, bütçe tahmini, premium durumu, referans verisi) null yapılır. Kullanıcı satırı, referans bütünlüğü (ilan ve mesaj yabancı anahtarları) için veritabanında tutulmaya devam eder. Aktif ilanlar pasif duruma alınır. Profil görselleri MinIO nesne depodan silinir. Kullanıcıya ait Redis önbellekleri (ilgi alanları, akış, durum tercihleri, satıcı rozeti) geçersiz kılınır. Mesajlar silinmez; gönderen "Deleted Account" olarak görünür (ikili iletişim verisi, karşı taraf ve olası hukuki ya da soruşturma amaçları için korunur). hashed_password alanı temizlenerek gelecekte oturum açılması engellenir.
 İlan verileri: otomatik olarak pasif duruma alınan ve bu durumda kalan ilanlar, deactivated_at zaman damgasından itibaren 60 (altmış) gün sonra otomatik listing_tasks zamanlanmış görevi (_INACTIVE_DELETE_DAYS = 60) tarafından kalıcı olarak silinmektedir (durum "deleted" olarak güncellenmekte, medya dosyaları depodan kaldırılmaktadır).
 "Deleted" durumundaki ilanlar: medya dosyaları silinme anında kaldırılmaktadır; veritabanı kayıtları referans bütünlüğü için anonimleştirilmiş veya geçici silinmiş biçimde tutulabilir.
 Mesaj ve arama verileri: mevcut kod tabanında açık bir programatik saklama süresi tanımlanmamıştır; hesabın ömrü boyunca saklanmaktadır.
 Davranışsal analitik olayları (PostgreSQL analytics_events tablosu): her Pazartesi saat 04:00'da çalışan zamanlanmış bir worker görevi tarafından, 90 (doksan) günden eski kayıtlar yuvarlayan bazda silinmektedir (DELETE FROM analytics_events WHERE created_at < NOW() - INTERVAL '90 days'). ClickHouse olay tabloları (user_events, feed_analytics, search_events, swipe_live_events, direct_sale_events) için şu an itibarıyla tanımlanmış bir TTL veya zamanlanmış silme politikası bulunmamaktadır.
 Hata ve tanılama verileri (Sentry): Sentry'nin standart veri saklama politikası uyarınca 90 (doksan) gün süreyle saklanmaktadır.
-Rıza denetim kayıtları (cross_border_consent_* alanları): hesabın ömrü boyunca saklanmakta; hesap silme işlemiyle kullanıcı kaydıyla birlikte kalıcı olarak silinmektedir.
+Rıza denetim kayıtları (cross_border_consent_* alanları: onay bayrağı, zaman damgası, sürüm dizesi, onay anındaki IP adresi, onay anındaki dil ayarı): kullanıcı tarafından başlatılan hesap silme işlemi dahil olmak üzere kalıcı olarak saklanmaktadır. Bu alanlar anonimleştirme sürecinde üzerine yazılmaz; ilgili kişinin sınır ötesi veri aktarımına ilişkin rızasının hukuki kaydı olarak korunur.
 
 Not: Kullanıcı tarafından talep edilen hesap silme süreleri de dahil olmak üzere yukarıdaki tüm kategorileri kapsayan resmi ve tüm sistemlere yayılan bir veri saklama ve silme politikası organizasyonel düzeyde henüz tanımlanmamış ve hayata geçirilmemiştir.
 
@@ -135,7 +135,7 @@ E. İçerik Denetimi ve Platform Güvenliği
 - Platform; girdi doğrulama, SQL enjeksiyon önleme (SQLAlchemy üzerinden ORM tabanlı parametreli sorgular) ve İçerik Güvenliği Politikası başlıkları uygulamaktadır.
 
 F. Veri Silme
-- Hesap silme: uygulama içi "Hesabı Sil" akışı (şifre onayı zorunludur) mobil tarafta DELETE /api/auth/delete-account isteği göndermektedir; karşılık gelen backend endpoint'i mevcut kod tabanı sürümünde uygulanmamıştır. Hesap silme işlemi şu an itibarıyla idari olarak gerçekleştirilmektedir. Kullanıcıya açık backend implementasyonu henüz tamamlanmamıştır.
+- Hesap silme: uygulama içi "Hesabı Sil" akışı (şifre onayı zorunludur) DELETE /api/auth/delete-account isteği gönderir. Backend, sağlanan parolayı saklanan bcrypt karması ile doğrular (uyuşmazlık halinde 400 Bad Request döner; 401 tabanlı otomatik çıkışı önler); kullanıcı kaydını anonimleştirir (e-posta, kullanıcı adı, tam ad üzerine yazılır; tüm kişisel veri alanları null yapılır; hashed_password temizlenir; durum DELETED olarak ayarlanır); aktif ilanları pasif duruma alır; profil görsellerini MinIO nesne depodan siler; kullanıcıya ait Redis önbelleklerini geçersiz kılar. Kullanıcı satırı referans bütünlüğü için veritabanında tutulur. Mesajlar silinmez (ikili veri; gönderen "Deleted Account" olarak görünür). Rıza denetim alanları (cross_border_consent_*) hukuki kayıt olarak korunur ve üzerine yazılmaz.
 - Otomatik olarak pasif duruma alınan ve 60 gün bu şekilde kalan ilanlar, ilişkili medya dosyalarının MinIO depodan kaldırılması dahil zamanlanmış arka plan görevi tarafından kalıcı olarak silinmektedir.
 - Cihaz anlık bildirim jetonları (FCM, VoIP), bildirim iletimini derhal durdurmak amacıyla hesap silinme anında null olarak ayarlanmaktadır.
 

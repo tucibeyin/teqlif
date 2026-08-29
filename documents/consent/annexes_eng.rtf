@@ -47,7 +47,7 @@ Continuous. Personal data is transferred in real time from the mobile applicatio
 
 Nature of the Processing Activity
 
-Collection, recording, storage, organisation, retrieval, use, disclosure within the platform between users, and permanent erasure upon account deletion request. Processing is carried out exclusively by automated means (API server, relational database, cache, analytics database, object storage, background task queue). No solely automated decision-making with legal or similarly significant effects is applied to data subjects.
+Collection, recording, storage, organisation, retrieval, use, disclosure within the platform between users, and anonymisation of the user record upon user-initiated deletion request. Processing is carried out exclusively by automated means (API server, relational database, cache, analytics database, object storage, background task queue). No solely automated decision-making with legal or similarly significant effects is applied to data subjects.
 
 Purposes of the Data Transfer and Further Processing
 
@@ -63,13 +63,13 @@ Purposes of the Data Transfer and Further Processing
 
 Personal Data Retention Period
 
-User account data (profile, credentials, wallet): retained for the duration of the active account. The in-app "Hesabı Sil" (Delete Account) flow initiates account deletion with password confirmation (mobile: DELETE /api/auth/delete-account); the backend implementation of user-initiated account deletion is not present in the current codebase version — deletion is currently performed administratively.
+User account data (profile, credentials, wallet): retained for the duration of the active account. Upon user-initiated deletion via the in-app "Hesabı Sil" (Delete Account) flow (password confirmation required, DELETE /api/auth/delete-account), the backend anonymises the user record: email is overwritten with purged_{id}@deleted.invalid, username with deleted_{id}, full_name with "Deleted Account", and all remaining personal data fields (phone, profile images, biography, social media URLs, FCM and VoIP tokens, preference embedding, budget estimate, premium status, referral data) are set to null. The user row is retained in the database for referential integrity (listing and message foreign keys). Active listings are set to passive status. Profile images are deleted from MinIO object storage. Redis caches for the user (interests, feed, condition preferences, seller badge) are invalidated. Messages are not deleted; the sender appears as "Deleted Account" (bilateral communication data retained for the counterparty and for potential legal or investigation purposes). The hashed_password field is cleared, preventing future login.
 Listing data: listings in "passive" status that were automatically deactivated are permanently deleted (status set to "deleted", media files removed from storage) after 60 (sixty) days from the deactivated_at timestamp, pursuant to the automated listing_tasks scheduled task (_INACTIVE_DELETE_DAYS = 60).
 Listings in "deleted" status: media files are removed immediately upon deletion; database records may be retained in anonymised or soft-deleted form for referential integrity.
 Message and call data: no explicit programmatic retention period is defined in the current codebase; retained for the duration of the account.
 Behavioural analytics events (PostgreSQL analytics_events table): deleted on a rolling basis by a scheduled worker task that runs every Monday at 04:00 and removes records older than 90 (ninety) days (DELETE FROM analytics_events WHERE created_at < NOW() - INTERVAL '90 days'). ClickHouse event tables (user_events, feed_analytics, search_events, swipe_live_events, direct_sale_events) do not currently have an explicit TTL or scheduled deletion policy defined.
 Error and diagnostic data (Sentry): retained for 90 (ninety) days per Sentry's standard data retention policy.
-Consent audit records (cross_border_consent_* fields): retained for the duration of the account; permanently erased with the user record upon account deletion.
+Consent audit records (cross_border_consent_* fields: consent flag, timestamp, version string, IP address at consent, locale at consent): retained permanently, including after user-initiated account deletion. These fields are not overwritten during the anonymisation process and serve as a legal record of the data subject's consent to cross-border data transfer.
 
 Note: A formal, cross-system data retention and deletion policy governing all categories above, including timelines for user-requested account deletion, is pending definition and implementation at the organisational level.
 
@@ -135,7 +135,7 @@ E. Content Moderation and Platform Security
 - The platform applies input validation, SQL injection prevention (ORM-based parameterised queries via SQLAlchemy), and Content Security Policy headers.
 
 F. Data Deletion
-- Account deletion: the in-app "Hesabı Sil" flow (password confirmation required) calls DELETE /api/auth/delete-account on the mobile side; the corresponding backend endpoint is not implemented in the current codebase version. Account deletion is currently performed administratively. A user-facing backend implementation of this flow is pending.
+- Account deletion: the in-app "Hesabı Sil" flow (password confirmation required) calls DELETE /api/auth/delete-account. The backend verifies the supplied password against the stored bcrypt hash (400 Bad Request on mismatch, preventing 401-triggered auto-logout); anonymises the user record (email, username, full_name overwritten; all personal data fields nulled; hashed_password cleared; status set to DELETED); sets all active listings to passive status; deletes profile images from MinIO object storage; and invalidates Redis caches for the user. The user row is retained in the database for referential integrity. Messages are not deleted (bilateral data; sender appears as "Deleted Account"). Consent audit fields (cross_border_consent_*) are preserved as a legal record and are not overwritten.
 - Listings automatically deactivated and left in passive status for 60 days are permanently deleted by a scheduled background task, including removal of associated media files from MinIO storage.
 - Device push tokens (FCM, VoIP) are set to null upon account deletion to immediately stop notification delivery.
 
