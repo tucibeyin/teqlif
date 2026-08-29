@@ -187,7 +187,6 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         final isPro = data['is_premium'] == true;
         setState(() => _isPro = isPro);
         if (isPro) {
-          _loadAiCredits();
           _loadAiDescCredits();
         }
       }
@@ -1499,13 +1498,6 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             prefixText: '₺ ',
             validator: (v) =>
                 v == null || v.isEmpty ? loc.t('validRequiredPrice') : null,
-          ),
-          const SizedBox(height: 10),
-          _AiPriceButton(
-            loading: _aiLoading,
-            isPro: _isPro,
-            creditsRemaining: _aiCreditsRemaining,
-            onTap: _fetchAiPriceEstimate,
           ),
         ],
       ),

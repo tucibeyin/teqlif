@@ -24,11 +24,6 @@
             if (tfVal)   tfVal.textContent    = '₺1.990';
             if (tfSub)   tfSub.textContent    = '/ yıl · ~₺166/ay · 2 ay bedava';
 
-            /* tablo: AI */
-            document.querySelector('tr[data-key="ai"] .td-pro span').textContent = '⚡ 72 adet / yıl';
-            document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺360/yıl';
-            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '72 sorgu × 5 TL<br>= 360 TL tasarruf';
-
             /* tablo: boost */
             document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / yıl';
             document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 36 adet / yıl';
@@ -54,14 +49,14 @@
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.680+ değer</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.320+ değer</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.680+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺360) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺600) + Yapay Zeka açıklama (₺720) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.320+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺600) + Yapay Zeka açıklama (₺720) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺4.680+';
+            if (totalVal) totalVal.textContent = '₺4.320+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'yıllık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
@@ -71,11 +66,6 @@
             if (tfLabel) tfLabel.textContent  = 'Aylık';
             if (tfVal)   tfVal.textContent    = '₺199';
             if (tfSub)   tfSub.textContent    = '/ ay · iptal istediğin an';
-
-            /* tablo: AI */
-            document.querySelector('tr[data-key="ai"] .td-pro span').textContent = '⚡ 6 adet / ay';
-            document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺30/ay';
-            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '6 sorgu × 5 TL<br>= 30 TL tasarruf';
 
             /* tablo: boost */
             document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / ay';
@@ -102,14 +92,14 @@
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺390+ değer</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺360+ değer</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺390+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺30) + Toplu Duyuru (~₺100) + Reaktivasyon (₺50) + Yapay Zeka açıklama (₺60) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺360+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + Toplu Duyuru (~₺100) + Reaktivasyon (₺50) + Yapay Zeka açıklama (₺60) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺390+';
+            if (totalVal) totalVal.textContent = '₺360+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'aylık avantaj değeri';
             var roiPill = document.getElementById('roiPill');

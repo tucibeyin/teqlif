@@ -65,7 +65,6 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           _CreditsSummaryCard(
             blastCredits: state.blastCredits,
             boostCredits: state.boostCredits,
-            aiCredits: state.aiCredits,
             aiDescCredits: state.aiDescCredits,
             reactivationCredits: state.reactivationCredits,
             isPremium: isPremium,
@@ -687,7 +686,6 @@ class CreditItemModel {
 class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
-  final Map<String, dynamic>? aiCredits;
   final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
   final bool isPremium;
@@ -696,7 +694,6 @@ class _CreditsSummaryCard extends ConsumerWidget {
   const _CreditsSummaryCard({
     required this.blastCredits,
     required this.boostCredits,
-    required this.aiCredits,
     required this.aiDescCredits,
     required this.reactivationCredits,
     required this.isPremium,
@@ -756,15 +753,6 @@ class _CreditsSummaryCard extends ConsumerWidget {
         descBuilder: (l) => loc.t('proCreditsBoostDesc'),
         data: boostCredits,
         defaultPremiumLimit: 3,
-        defaultFreeLimit: 0,
-      ),
-      CreditItemModel(
-        icon: Icons.psychology_outlined,
-        iconColor: const Color(0xFFF59E0B),
-        titleBuilder: (l) => loc.t('proCreditsAiName'),
-        descBuilder: (l) => loc.t('proCreditsAiDesc'),
-        data: aiCredits,
-        defaultPremiumLimit: 6,
         defaultFreeLimit: 0,
       ),
       CreditItemModel(

@@ -120,7 +120,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final isPro = data['is_premium'] == true;
         setState(() => _isPro = isPro);
-        if (isPro) _loadAiCredits();
       }
     } catch (_) {}
   }
@@ -1033,13 +1032,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                       prefixText: '₺ ',
                       validator: (v) =>
                           v == null || v.isEmpty ? loc.t('fieldPriceHint') : null,
-                    ),
-                    const SizedBox(height: 10),
-                    _AiPriceButton(
-                      loading: _aiLoading,
-                      isPro: _isPro,
-                      creditsRemaining: _aiCreditsRemaining,
-                      onTap: _fetchAiPriceEstimate,
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(

@@ -8,7 +8,6 @@ import '../../core/event_bus.dart';
 class ProHubState {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
-  final Map<String, dynamic>? aiCredits;
   final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
   final bool isLoading;
@@ -18,7 +17,6 @@ class ProHubState {
   const ProHubState({
     this.blastCredits,
     this.boostCredits,
-    this.aiCredits,
     this.aiDescCredits,
     this.reactivationCredits,
     this.isLoading = true,
@@ -29,7 +27,6 @@ class ProHubState {
   ProHubState copyWith({
     Map<String, dynamic>? blastCredits,
     Map<String, dynamic>? boostCredits,
-    Map<String, dynamic>? aiCredits,
     Map<String, dynamic>? aiDescCredits,
     Map<String, dynamic>? reactivationCredits,
     bool? isLoading,
@@ -39,7 +36,6 @@ class ProHubState {
     return ProHubState(
       blastCredits: blastCredits ?? this.blastCredits,
       boostCredits: boostCredits ?? this.boostCredits,
-      aiCredits: aiCredits ?? this.aiCredits,
       aiDescCredits: aiDescCredits ?? this.aiDescCredits,
       reactivationCredits: reactivationCredits ?? this.reactivationCredits,
       isLoading: isLoading ?? this.isLoading,
@@ -96,7 +92,6 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
     final results = await Future.wait([
       AnalyticsService.getBlastCredits(),
       AnalyticsService.getBoostCredits(),
-      AnalyticsService.getAiPriceCredits(),
       AnalyticsService.getAiDescCredits(),
       AnalyticsService.getReactivationCredits(),
     ]);
@@ -104,9 +99,8 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
     state = state.copyWith(
       blastCredits: results[0],
       boostCredits: results[1],
-      aiCredits: results[2],
-      aiDescCredits: results[3],
-      reactivationCredits: results[4],
+      aiDescCredits: results[2],
+      reactivationCredits: results[3],
       isLoading: false,
     );
   }
