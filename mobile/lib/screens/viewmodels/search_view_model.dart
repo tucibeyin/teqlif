@@ -224,10 +224,13 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
           final parsed = jsonDecode(resp.body);
           final delta = parsed is List ? parsed : parsed['listings'] ?? [];
           if (delta.isNotEmpty) {
-            // Yeni ilanları listenin en üstüne ekle (prepend)
-            state = AsyncValue.data(state.value!.copyWith(
-              exploreListings: [...delta, ...state.value!.exploreListings],
-            ));
+            final existingIds = state.value!.exploreListings.map((e) => e['id']).toSet();
+            final uniqueDelta = (delta as List).where((e) => !existingIds.contains(e['id'])).toList();
+            if (uniqueDelta.isNotEmpty) {
+              state = AsyncValue.data(state.value!.copyWith(
+                exploreListings: [...uniqueDelta, ...state.value!.exploreListings],
+              ));
+            }
           }
         } else {
            _loadExplore(bypassCache: bypassCache);
@@ -447,8 +450,10 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as List;
+        final existingIds = newState.exploreListings.map((e) => e['id']).toSet();
+        final uniqueData = data.where((e) => !existingIds.contains(e['id'])).toList();
         state = AsyncValue.data(newState.copyWith(
-          exploreListings: [...newState.exploreListings, ...data],
+          exploreListings: [...newState.exploreListings, ...uniqueData],
           forYouPage: newState.forYouPage + 1,
           forYouExhausted: data.length < 20,
           forYouLoadingMore: false,
