@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -170,7 +171,7 @@ async def _fetch_sessions(db_session, days: int = 90) -> list[list[str]]:
                AND COUNT(*) <= 100
             ORDER BY user_id, session_id
             LIMIT 500000
-        """), {"days": f"{days} days"})
+        """), {"days": timedelta(days=days)})
         data = rows.fetchall()
     except Exception as exc:
         logger.error("[Item2Vec] Oturum verisi çekilemedi: %s", exc)
