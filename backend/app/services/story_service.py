@@ -34,6 +34,7 @@ from app.models.story import Story, StoryView
 from app.models.user import User
 from app.models.follow import Follow
 from app.models.stream import LiveStream
+from app.models.block import UserBlock
 from app.schemas.story import StoryAuthorOut, StoryItemOut, UserStoryGroupResponse, StoryViewerOut, StoryViewersResponse, MyStoriesResponse
 from app.services.like_service import LikeService
 from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException, ForbiddenException
@@ -122,13 +123,21 @@ class StoryService:
         """
         # ── Adım A: Video hikayeleri ──────────────────────────────────────────
         try:
+            _blocked_users = (
+                select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
+                .union_all(
+                    select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
+                )
+            )
             video_query = (
                 select(Story, User)
                 .join(User, User.id == Story.user_id)
                 .join(Follow, Follow.followed_id == Story.user_id)
                 .where(
                     Follow.follower_id == current_user_id,
+                    Follow.status == "accepted",
                     Story.expires_at > func.now(),
+                    Story.user_id.not_in(_blocked_users),
                 )
                 .order_by(Story.created_at.asc())
             )
@@ -152,7 +161,9 @@ class StoryService:
                 .join(Follow, Follow.followed_id == LiveStream.host_id)
                 .where(
                     Follow.follower_id == current_user_id,
+                    Follow.status == "accepted",
                     LiveStream.is_live == True,  # noqa: E712
+                    LiveStream.host_id.not_in(_blocked_users),
                 )
             )
             live_result = await self.db.execute(live_query)
