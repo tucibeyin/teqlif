@@ -2841,6 +2841,7 @@
   "errAlreadyFollowing": "أنت تتابع بالفعل أو تم إرسال الطلب",
   "errFollowRecordNotFound": "سجل المتابعة غير موجود",
   "errFollowRequestNotFound": "طلب المتابعة غير موجود",
+  "errFollowListPrivate": "قائمة هذا الحساب خاصة",
   "badgeVerifiedHint": "تم التحقق من عنوان البريد الإلكتروني ورقم الهاتف لهذا المستخدم.",
   "badgeProHintPrefix": "هذا المستخدم هو عضو ",
   "badgeProHintSuffix": " حصري.",

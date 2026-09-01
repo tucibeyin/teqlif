@@ -45,6 +45,9 @@ class ErrorMapper {
       case 'RATE_LIMITED':
       case 'BID_RATE_LIMIT':
         return loc.t('errorTooFast');
+      case 'FOLLOWERS_LIST_PRIVATE':
+      case 'FOLLOWING_LIST_PRIVATE':
+        return loc.t('errFollowListPrivate');
       case 'FORBIDDEN':
       case 'CAPTCHA_FAILED':
         return loc.t('errorCaptchaFailed');

@@ -2841,6 +2841,7 @@
   "errAlreadyFollowing": "Вы уже подписаны или запрос отправлен",
   "errFollowRecordNotFound": "Запись о подписке не найдена",
   "errFollowRequestNotFound": "Запрос на подписку не найден",
+  "errFollowListPrivate": "Список этого аккаунта скрыт",
   "badgeVerifiedHint": "Адрес электронной почты и номер телефона этого пользователя подтверждены.",
   "badgeProHintPrefix": "Этот пользователь является эксклюзивным участником ",
   "badgeProHintSuffix": ".",

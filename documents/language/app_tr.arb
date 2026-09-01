@@ -2838,6 +2838,7 @@
   "errAlreadyFollowing": "Zaten takip ediyorsunuz veya istek gönderilmiş",
   "errFollowRecordNotFound": "Takip kaydı bulunamadı",
   "errFollowRequestNotFound": "Takip isteği bulunamadı",
+  "errFollowListPrivate": "Bu hesabın listesi gizlidir",
   "badgeVerifiedHint": "Bu kullanıcının e-mail adresi ve telefon numarası doğrulanmıştır.",
   "badgeProHintPrefix": "Bu kullanıcı ayrıcalıklı ",
   "badgeProHintSuffix": " kullanıcısıdır.",

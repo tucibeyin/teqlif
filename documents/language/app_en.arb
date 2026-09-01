@@ -2874,6 +2874,7 @@
   "errAlreadyFollowing": "Already following or request sent",
   "errFollowRecordNotFound": "Follow record not found",
   "errFollowRequestNotFound": "Follow request not found",
+  "errFollowListPrivate": "This account's list is private",
   "badgeVerifiedHint": "This user's email address and phone number are verified.",
   "badgeProHintPrefix": "This user is an exclusive ",
   "badgeProHintSuffix": " member.",
