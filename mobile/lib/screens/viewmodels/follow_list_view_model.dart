@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../config/api.dart';
+import '../../core/app_exception.dart';
 import '../../services/storage_service.dart';
 
 enum FollowListType { followers, following }
@@ -50,7 +51,13 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
     if (resp.statusCode == 200) {
       return FollowListState(users: jsonDecode(resp.body) as List);
     } else {
-      throw Exception('Failed to load');
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      final err = body['error'] as Map<String, dynamic>? ?? {};
+      throw AppException(
+        err['message'] as String? ?? '',
+        code: err['code'] as String? ?? 'ERR_UNKNOWN',
+        statusCode: resp.statusCode,
+      );
     }
   }
 

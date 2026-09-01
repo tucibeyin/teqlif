@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/error_mapper.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
 import 'viewmodels/follow_list_view_model.dart';
@@ -131,7 +132,7 @@ class FollowListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator(color: kPrimary)),
-        error: (e, _) => Center(child: Text(loc.t('errorGenericRetry'))),
+        error: (e, _) => Center(child: Text(ErrorMapper.map(e, loc))),
       ),
     );
   }
