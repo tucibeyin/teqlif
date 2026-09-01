@@ -6,11 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.enums import UserStatus
-from app.database import get_db
+from app.database import get_db, get_uow
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.follow import Follow
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, ConflictException
+from app.use_cases.follows.queries.get_followers_query import GetFollowersQuery
+from app.use_cases.follows.queries.get_following_query import GetFollowingQuery
 
 router = APIRouter(prefix="/api/follows", tags=["follows"])
 
@@ -154,75 +157,18 @@ async def unfollow_user(
 async def get_followers(
     user_id: int,
     current_user: Optional[User] = Depends(_optional_user),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    rows = await db.execute(
-        select(User)
-        .join(Follow, Follow.follower_id == User.id)
-        .where(Follow.followed_id == user_id, Follow.status == "accepted", User.status == UserStatus.ACTIVE)  # noqa: E712
-        .order_by(Follow.created_at.desc())
-    )
-    users = rows.scalars().all()
-
-    following_ids: set[int] = set()
-    if current_user and users:
-        ids = [u.id for u in users]
-        res = await db.execute(
-            select(Follow.followed_id).where(
-                Follow.follower_id == current_user.id,
-                Follow.followed_id.in_(ids),
-            )
-        )
-        following_ids = set(res.scalars())
-
-    return [
-        {
-            "id": u.id,
-            "username": u.username,
-            "full_name": u.full_name,
-            "is_following": u.id in following_ids,
-            "is_me": current_user is not None and u.id == current_user.id,
-        }
-        for u in users
-    ]
+    return await GetFollowersQuery(uow).execute(user_id, current_user)
 
 
 @router.get("/{user_id}/following")
 async def get_following(
     user_id: int,
     current_user: Optional[User] = Depends(_optional_user),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    rows = await db.execute(
-        select(User)
-        .join(Follow, Follow.followed_id == User.id)
-        .where(Follow.follower_id == user_id, Follow.status == "accepted", User.status == UserStatus.ACTIVE)  # noqa: E712
-        .order_by(Follow.created_at.desc())
-    )
-    users = rows.scalars().all()
-
-    following_ids: set[int] = set()
-    if current_user and users:
-        ids = [u.id for u in users]
-        res = await db.execute(
-            select(Follow.followed_id).where(
-                Follow.follower_id == current_user.id,
-                Follow.followed_id.in_(ids),
-            )
-        )
-        following_ids = set(res.scalars())
-
-    return [
-        {
-            "id": u.id,
-            "username": u.username,
-            "full_name": u.full_name,
-            "avatar": u.profile_image_thumb_url or u.profile_image_url,
-            "is_following": u.id in following_ids,
-            "is_me": current_user is not None and u.id == current_user.id,
-        }
-        for u in users
-    ]
+    return await GetFollowingQuery(uow).execute(user_id, current_user)
 @router.post("/{follower_id}/accept")
 async def accept_follow_request(
     follower_id: int,
