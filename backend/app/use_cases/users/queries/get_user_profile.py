@@ -93,4 +93,11 @@ class GetUserProfileQuery:
         )
         profile_data["active_listings_count"] = count_res.scalar_one_or_none() or 0
 
+        # Gizli hesap + takipçi olmayan → sosyal linkler gizlenir
+        is_own = current_user and current_user.id == target.id
+        if target.is_private and not is_own and not profile_data.get("is_following"):
+            for _field in ("instagram_url", "kick_url", "twitch_url",
+                           "facebook_url", "youtube_url", "tiktok_url", "website_url"):
+                profile_data[_field] = None
+
         return profile_data
