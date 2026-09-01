@@ -2842,6 +2842,7 @@
   "errFollowRecordNotFound": "Запись о подписке не найдена",
   "errFollowRequestNotFound": "Запрос на подписку не найден",
   "errFollowListPrivate": "Список этого аккаунта скрыт",
+  "errOfferForbidden": "Вы не можете сделать предложение этому пользователю",
   "badgeVerifiedHint": "Адрес электронной почты и номер телефона этого пользователя подтверждены.",
   "badgeProHintPrefix": "Этот пользователь является эксклюзивным участником ",
   "badgeProHintSuffix": ".",

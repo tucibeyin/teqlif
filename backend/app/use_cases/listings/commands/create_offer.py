@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_
 
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger, capture_exception
@@ -6,6 +6,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Database
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.listing_offer import ListingOffer
+from app.models.block import UserBlock
 from app.models.user import User
 
 logger = get_logger(__name__)
@@ -28,6 +29,17 @@ class CreateListingOfferCommand:
 
             if listing.user_id == current_user.id:
                 raise ForbiddenException(code="SELF_BID_FORBIDDEN")
+
+            block = await self.uow.session.scalar(
+                select(UserBlock).where(
+                    or_(
+                        and_(UserBlock.blocker_id == current_user.id, UserBlock.blocked_id == listing.user_id),
+                        and_(UserBlock.blocker_id == listing.user_id, UserBlock.blocked_id == current_user.id),
+                    )
+                ).limit(1)
+            )
+            if block:
+                raise ForbiddenException(code="OFFER_FORBIDDEN")
 
             offer = ListingOffer(
                 listing_id=listing_id,

@@ -48,6 +48,8 @@ class ErrorMapper {
       case 'FOLLOWERS_LIST_PRIVATE':
       case 'FOLLOWING_LIST_PRIVATE':
         return loc.t('errFollowListPrivate');
+      case 'OFFER_FORBIDDEN':
+        return loc.t('errOfferForbidden');
       case 'FORBIDDEN':
       case 'CAPTCHA_FAILED':
         return loc.t('errorCaptchaFailed');

@@ -2875,6 +2875,7 @@
   "errFollowRecordNotFound": "Follow record not found",
   "errFollowRequestNotFound": "Follow request not found",
   "errFollowListPrivate": "This account's list is private",
+  "errOfferForbidden": "You cannot make an offer to this user",
   "badgeVerifiedHint": "This user's email address and phone number are verified.",
   "badgeProHintPrefix": "This user is an exclusive ",
   "badgeProHintSuffix": " member.",

@@ -2839,6 +2839,7 @@
   "errFollowRecordNotFound": "Takip kaydı bulunamadı",
   "errFollowRequestNotFound": "Takip isteği bulunamadı",
   "errFollowListPrivate": "Bu hesabın listesi gizlidir",
+  "errOfferForbidden": "Bu kullanıcıya teklif veremezsiniz",
   "badgeVerifiedHint": "Bu kullanıcının e-mail adresi ve telefon numarası doğrulanmıştır.",
   "badgeProHintPrefix": "Bu kullanıcı ayrıcalıklı ",
   "badgeProHintSuffix": " kullanıcısıdır.",
