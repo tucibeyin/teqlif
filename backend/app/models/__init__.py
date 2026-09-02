@@ -32,3 +32,4 @@ from .user_interest import UserInterest
 from .market_index import ExchangeRates
 from .call import Call, CallParticipant
 from .direct_sale import DirectSale, DirectSaleOrder
+from .message_thread import MessageThread

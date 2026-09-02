@@ -1,59 +1,144 @@
-from pydantic import BaseModel
-from sqlalchemy.exc import IntegrityError
-
+from sqlalchemy import select, or_, and_
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
+from app.core.exceptions import NotFoundException, ForbiddenException
+from app.core.auto_mod import analyze_text_all
+from app.models.message import DirectMessage
+from app.models.message_thread import MessageThread
+from app.models.block import UserBlock
+from app.models.follow import Follow
+from app.schemas.message import MessageOut
+from app.services.dm_broadcast import broadcast_dm
+from app.utils.redis_client import get_redis
 
 logger = get_logger(__name__)
 
+
+def _thread_pair(a: int, b: int) -> tuple[int, int]:
+    return min(a, b), max(a, b)
+
+
 class SendDirectMessageCommand:
-    """
-    Direct Message (Özel Mesaj) gönderme Command'ı.
-    Sadece Unit of Work alır. Veritabanına yazar ve EventBus'a sinyal yollar.
-    """
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, sender_id: int, receiver_id: int, content: str, content_type: str = "text") -> dict:
-        logger.info("[SendDirectMessageCommand] İşlem başladı | sender=%s receiver=%s", sender_id, receiver_id)
-
-        if not content or not content.strip():
-            logger.warning("[SendDirectMessageCommand] Boş mesaj | sender=%s", sender_id)
-            raise BadRequestException(code="MESSAGE_CONTENT_EMPTY")
-
+    async def execute(
+        self,
+        sender_id: int,
+        receiver_id: int,
+        content: str,
+        listing_id: int | None,
+        sender_username: str,
+    ) -> MessageOut:
         if sender_id == receiver_id:
-            logger.warning("[SendDirectMessageCommand] Kendine mesaj atma | sender=%s", sender_id)
             raise ForbiddenException(code="SELF_MESSAGE_FORBIDDEN")
 
-        # Gerçekte EventBus'ı da inject edebiliriz
-        from app.core.event_bus import event_bus
-        from app.core.events import DirectMessageCreatedEvent
-
         async with self.uow:
-            # 1. Receiver var mı kontrolü
             receiver = await self.uow.users.get(receiver_id)
             if not receiver:
                 raise NotFoundException(code="USER_NOT_FOUND")
 
-            # 2. Mesaj oluştur ve repoya ekle
-            msg_data = {
-                "sender_id": sender_id,
-                "receiver_id": receiver_id,
-                "content": content,
-                "content_type": content_type
-            }
-            new_message = await self.uow.messages.create(obj_in=msg_data)
+            block = await self.uow.session.scalar(
+                select(UserBlock).where(
+                    or_(
+                        and_(UserBlock.blocker_id == sender_id, UserBlock.blocked_id == receiver_id),
+                        and_(UserBlock.blocker_id == receiver_id, UserBlock.blocked_id == sender_id),
+                    )
+                ).limit(1)
+            )
+            if block:
+                raise ForbiddenException(code="MESSAGING_FORBIDDEN")
 
-        # Event fırlat commit'ten sonra — projector/notifier kayıtlı veriyi okuyabilir
-        event_bus.publish(
-            DirectMessageCreatedEvent(
-                message_id=new_message.id,
+            is_shadowbanned = analyze_text_all(content)
+
+            msg = DirectMessage(
                 sender_id=sender_id,
                 receiver_id=receiver_id,
-                content=content
+                listing_id=listing_id,
+                content=content,
+                is_shadowbanned=is_shadowbanned,
             )
-        )
+            self.uow.session.add(msg)
 
-        logger.info("[SendDirectMessageCommand] Başarılı | message_id=%s", new_message.id)
-        return {"id": new_message.id, "status": "sent"}
+            # Thread kaydı — ilk mesajsa oluştur
+            user_a, user_b = _thread_pair(sender_id, receiver_id)
+            existing_thread = await self.uow.session.scalar(
+                select(MessageThread).where(
+                    MessageThread.user_a_id == user_a,
+                    MessageThread.user_b_id == user_b,
+                )
+            )
+            is_new_request = False
+            if not existing_thread:
+                is_req = False
+                if receiver.is_private:
+                    follow_accepted = await self.uow.session.scalar(
+                        select(Follow).where(
+                            Follow.follower_id == sender_id,
+                            Follow.followed_id == receiver_id,
+                            Follow.status == "accepted",
+                        )
+                    )
+                    if not follow_accepted:
+                        is_req = True
+                self.uow.session.add(MessageThread(
+                    user_a_id=user_a, user_b_id=user_b, is_request=is_req,
+                ))
+                is_new_request = is_req
+
+            await self.uow.session.flush()  # msg.id alınır
+            msg_id = msg.id
+
+        # commit sonrası — side effects
+        if is_new_request:
+            redis = await get_redis()
+            await redis.incr(f"msg:unread:request:{receiver_id}")
+
+        out = MessageOut(
+            id=msg_id,
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            sender_username=sender_username,
+            content=content,
+            content_type="text",
+            is_read=False,
+            created_at=msg.created_at,
+        )
+        dm_payload = {
+            "type": "message",
+            "id": msg_id,
+            "sender_id": sender_id,
+            "receiver_id": receiver_id,
+            "sender_username": sender_username,
+            "content": content,
+            "content_type": "text",
+            "is_read": False,
+            "created_at": msg.created_at.isoformat() if msg.created_at else None,
+        }
+        if not is_shadowbanned:
+            await broadcast_dm(receiver_id, dm_payload)
+        await broadcast_dm(sender_id, dm_payload)
+
+        if is_shadowbanned:
+            logger.info(
+                "[AUTO_MOD] DM shadowban | sender_id=%s receiver_id=%s", sender_id, receiver_id,
+            )
+        elif not is_new_request:
+            from app.routers.notifications import push_notification
+            await push_notification(
+                receiver_id,
+                {
+                    "type": "message",
+                    "i18n": {
+                        "title_key": "notifMessage",
+                        "title_params": {"username": sender_username},
+                    },
+                    "body": content[:100],
+                    "related_id": sender_id,
+                    "sender_username": sender_username,
+                },
+                pref_key="messages",
+            )
+
+        logger.info("[SendDirectMessageCommand] Başarılı | msg_id=%s", msg_id)
+        return out

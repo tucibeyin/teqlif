@@ -28,6 +28,8 @@ class ErrorMapper {
     return loc.t('errorGenericRetry');
   }
 
+  static String map(Object error, TranslationPack loc) => toMessage(error, loc);
+
   static bool shouldLog(Object error) {
     if (error is AppException) return error.shouldCapture;
     return true;
@@ -50,6 +52,24 @@ class ErrorMapper {
         return loc.t('errFollowListPrivate');
       case 'OFFER_FORBIDDEN':
         return loc.t('errOfferForbidden');
+      case 'MESSAGING_FORBIDDEN':
+        return loc.t('errMessagingForbidden');
+      case 'FILE_TOO_LARGE':
+        return loc.t('errFileTooLarge');
+      case 'AUDIO_TOO_LARGE':
+        return loc.t('errAudioTooLarge');
+      case 'UNSUPPORTED_AUDIO_FORMAT':
+        return loc.t('errUnsupportedAudioFormat');
+      case 'INVALID_IMAGE_FORMAT':
+        return loc.t('errInvalidImageFormat');
+      case 'INVALID_VIDEO_FORMAT':
+        return loc.t('errInvalidVideoFormat');
+      case 'VIDEO_TOO_LONG':
+        return loc.t('errVideoTooLong');
+      case 'UNSUPPORTED_FILE_TYPE':
+        return loc.t('errUnsupportedFileType');
+      case 'MEDIA_EMPTY':
+        return loc.t('errMediaEmpty');
       case 'FORBIDDEN':
       case 'CAPTCHA_FAILED':
         return loc.t('errorCaptchaFailed');

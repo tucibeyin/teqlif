@@ -182,7 +182,24 @@ async def accept_follow_request(
         raise NotFoundException(code="FOLLOW_REQUEST_NOT_FOUND")
     
     follow.status = "accepted"
+
+    # Follow kabul edilince mesaj isteği de normal konuşmaya dönüşür
+    from sqlalchemy import update as sa_update
+    from app.models.message_thread import MessageThread
+    from app.utils.redis_client import get_redis
+    user_a, user_b = min(follower_id, current_user.id), max(follower_id, current_user.id)
+    await db.execute(
+        sa_update(MessageThread)
+        .where(
+            MessageThread.user_a_id == user_a,
+            MessageThread.user_b_id == user_b,
+            MessageThread.is_request == True,
+        )
+        .values(is_request=False)
+    )
     await db.commit()
+    _redis = await get_redis()
+    await _redis.decr(f"msg:unread:request:{current_user.id}")
 
     from app.routers.notifications import push_notification
     asyncio.create_task(push_notification(

@@ -41,6 +41,8 @@ import '../services/pip_service.dart';
 import '../providers/pip_provider.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
+import '../core/app_exception.dart';
+import '../core/error_mapper.dart';
 import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
@@ -1152,8 +1154,15 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         String errMsg = loc.t("attachSendFailed");
         try {
           final errBody = jsonDecode(body) as Map<String, dynamic>?;
-          final detail = errBody?['detail'] as String?;
-          if (detail != null && detail.isNotEmpty) errMsg = detail;
+          final err = errBody?['error'] as Map<String, dynamic>?;
+          if (err != null) {
+            final ex = AppException(
+              err['message'] as String? ?? '',
+              code: err['code'] as String? ?? 'ERR_UNKNOWN',
+              statusCode: streamed.statusCode,
+            );
+            errMsg = ErrorMapper.map(ex, loc);
+          }
         } catch (_) {}
         if (mounted) {
           TeqSnackBar.show(message: errMsg);
