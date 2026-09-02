@@ -1,201 +1,134 @@
-# Teqlif VPS Taşıma Rehberi
+# Teqlif VPS Kurulum Rehberi
 
-**Eski VPS:** `51.81.34.27`  
-**Yeni VPS:** `135.125.175.223`  
-**Hazırlanma tarihi:** 2026-09-02
+**Referans VPS:** `135.125.175.223`  
+**İşletim Sistemi:** Debian 13 (trixie)  
+**Hazırlanma / Son Güncelleme:** 2026-09-02
 
----
-
-## Stack Özeti
-
-| Bileşen | Versiyon / Not |
-|---------|----------------|
-| Python | 3.13 |
-| FastAPI + Uvicorn | 4 worker, uvloop |
-| PostgreSQL | 16 |
-| Redis | local, AOF+RDB |
-| ClickHouse | local, port 8123 |
-| MinIO | local, port 9000 — kullanıcı uploadları |
-| LiveKit | self-hosted, Nginx → /rtc |
-| Nginx | reverse proxy + SSL |
-| ARQ workers | 2 adet: `teqlif-worker` + `teqlif-worker-critical` |
-| Monitoring | Promtail → Loki → Grafana |
-| Prometheus | `/metrics` endpoint |
-| Systemd | 4 birim: teqlif, teqlif-worker, teqlif-worker-critical, redis-backup |
+> Bu rehber, mevcut çalışan bir VPS'ten yeni bir VPS'e geçişi kapsar.
+> Eski VPS'e erişim varsayılır — config, binary ve veri oradan alınır.
 
 ---
 
-## Taşıma Sırası
+## Stack
 
-```
-Faz 0 → Eski VPS: yedek al
-Faz 1 → Yeni VPS: sistem kurulumu
-Faz 2 → Yeni VPS: servis kurulumları
-Faz 3 → Yeni VPS: uygulama kurulumu
-Faz 4 → Veri taşıma (PostgreSQL + MinIO)
-Faz 5 → Nginx + SSL
-Faz 6 → LiveKit
-Faz 7 → Monitoring
-Faz 8 → DNS geçişi (kesinti penceresi)
-Faz 9 → Dış servis IP güncellemeleri
-Faz 10 → Doğrulama + eski VPS kapatma
-```
-
----
-
-## Faz 0 — Eski VPS: Yedek Al
-
-Yeni VPS hazır olmadan önce eski VPS'te bu adımları tamamla.
-
-### 0.1 PostgreSQL Dump
-
-```bash
-# Eski VPS'te
-sudo -u postgres pg_dump teqlif | gzip > /tmp/teqlif_pg_$(date +%F).sql.gz
-ls -lh /tmp/teqlif_pg_*.sql.gz
-```
-
-### 0.2 Redis Dump
-
-```bash
-redis-cli BGSAVE
-sleep 3
-cp /var/lib/redis/dump.rdb /tmp/teqlif_redis_$(date +%F).rdb
-```
-
-### 0.3 .env Dosyasını Kaydet
-
-```bash
-cp /var/www/teqlif.com/backend/.env /tmp/teqlif_env_backup
-```
-
-### 0.4 Sertifika Dosyalarını Kaydet
-
-```bash
-ls /var/www/teqlif.com/backend/certificates/
-# APNs .p8 dosyası ve Firebase service account JSON burada olmalı
-```
-
-### 0.5 LiveKit Config
-
-```bash
-# LiveKit binary ve config nerede çalışıyor?
-which livekit-server || find /usr /opt /var -name "livekit*" 2>/dev/null | head -5
-cat /etc/livekit/config.yaml 2>/dev/null || \
-cat /opt/livekit/config.yaml 2>/dev/null || \
-systemctl cat livekit 2>/dev/null | grep -i "config\|exec"
-```
-
-### 0.6 Nginx Config
-
-```bash
-cat /etc/nginx/sites-available/teqlif
-# Bu dosyanın içeriğini sakla
-```
-
-### 0.7 MinIO Bucket İçeriği (Kritik)
-
-MinIO verisi yeni VPS'e taşınacak. Şimdilik boyutu not al:
-
-```bash
-du -sh /var/lib/minio 2>/dev/null || \
-du -sh /home/minio 2>/dev/null || \
-mc du local/teqlif 2>/dev/null
-```
+| Bileşen | Versiyon | Port |
+|---------|----------|------|
+| Python | 3.13 (Debian 13 native) | — |
+| FastAPI + Uvicorn | — | 8000 |
+| PostgreSQL | 17 + pgvector (Debian 13 native) | 5432 |
+| Redis | 8.x | 6379 |
+| ClickHouse | 26.x | 8123 / 9000 |
+| MinIO | latest | 9010 (API), 9011 (console) |
+| LiveKit | 1.13.3 | 7880, 7881, 7882 |
+| Nginx | — | 80, 443 |
+| Loki | 3.6.7 | 3100 |
+| Promtail | 3.0.0 | 9080 |
+| Prometheus | 2.51.0 | 9090 |
+| Grafana | 13.x | 3000 |
+| node_exporter | 1.8.2 | 9100 |
+| prometheus-postgres-exporter | 0.17.x | 9187 |
 
 ---
 
-## Faz 1 — Yeni VPS: Sistem Kurulumu
+## Faz 1 — Sistem Kurulumu
+
+### 1.1 SSH
 
 ```bash
-# Yeni VPS'e SSH ile bağlan
-ssh root@135.125.175.223
+ssh tucibeyin@YENİ_VPS_IP
 ```
 
-### 1.1 Sistem Güncelleme
+> Root ile değil, sudo yetkili kullanıcıyla giriş yap.
+
+### 1.2 Sistem Güncelleme ve Paketler
 
 ```bash
-apt update && apt upgrade -y
-apt install -y \
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y \
   build-essential curl wget git unzip \
   software-properties-common gnupg2 \
-  ufw fail2ban htop jq \
+  htop jq \
   libpq-dev libssl-dev libffi-dev \
-  libjpeg-dev zlib1g-dev
+  libjpeg-dev zlib1g-dev \
+  python3-venv python3-dev
 ```
 
-### 1.2 Python 3.13
+> **Not:** Debian 13 trixie'de Python 3.13 zaten kuruludur — PPA gerekmez.
+
+### 1.3 Dizin Yapısı
 
 ```bash
-add-apt-repository ppa:deadsnakes/ppa -y
-apt update
-apt install -y python3.13 python3.13-venv python3.13-dev python3-pip
-python3.13 --version   # 3.13.x çıkmalı
+sudo mkdir -p /var/www/teqlif.com/uploads
+sudo mkdir -p /var/www/teqlif.com/backend/logs
+sudo mkdir -p /var/www/teqlif.com/backend/certificates
+sudo mkdir -p /var/backups/redis
+
+sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 ```
 
-### 1.3 www-data Kullanıcısı ve Dizin Yapısı
+> İleride `www-data`'ya devredilecek; önce git işlemleri için tucibeyin sahibi olmalı.
+
+### 1.4 Güvenlik Duvarı (UFW)
 
 ```bash
-# www-data zaten mevcut olmalı (nginx ile gelir)
-id www-data
+sudo ufw allow 22/tcp
+sudo ufw allow 'Nginx Full'
+sudo ufw allow 3000/tcp comment 'Grafana'
 
-mkdir -p /var/www/teqlif.com/backend
-mkdir -p /var/www/teqlif.com/uploads
-mkdir -p /var/www/teqlif.com/backend/logs
-mkdir -p /var/www/teqlif.com/backend/certificates
-mkdir -p /var/backups/redis
+# LiveKit
+sudo ufw allow 50000:60000/udp comment 'LiveKit WebRTC medya'
+sudo ufw allow 7882/tcp comment 'LiveKit TCP fallback'
 
-chown -R www-data:www-data /var/www/teqlif.com
-chmod -R 755 /var/www/teqlif.com
-```
+# TURN / STUN
+sudo ufw allow 5349/tcp
+sudo ufw allow 5349/udp
+sudo ufw allow 3478/tcp
+sudo ufw allow 3478/udp
 
-### 1.4 UFW Güvenlik Duvarı
+# Ek WebRTC
+sudo ufw allow 30000:40000/udp
 
-```bash
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow 22/tcp      # SSH
-ufw allow 80/tcp      # HTTP (Let's Encrypt + redirect)
-ufw allow 443/tcp     # HTTPS
-ufw allow 443/udp     # QUIC (LiveKit WebRTC)
-ufw allow 7881/tcp    # LiveKit TCP fallback
-ufw allow 50000:60000/udp  # LiveKit ICE UDP range (eski VPS'teki aralığı kontrol et)
-ufw --force enable
-ufw status
+# Cloudflare IPv4
+for ip in 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 104.16.0.0/13 104.24.0.0/14 108.162.192.0/18 131.0.72.0/22 141.101.64.0/18 162.158.0.0/15 172.64.0.0/13 173.245.48.0/20 188.114.96.0/20 190.93.240.0/20 197.234.240.0/22 198.41.128.0/17; do
+  sudo ufw allow from $ip to any port 80,443 proto tcp
+done
+
+# Cloudflare IPv6
+for ip in 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32; do
+  sudo ufw allow from $ip to any port 80,443 proto tcp
+done
+
+sudo ufw --force enable
+sudo ufw status verbose
 ```
 
 ### 1.5 Fail2ban
 
 ```bash
-systemctl enable --now fail2ban
-# SSH brute-force koruması aktif
+# Kontrol et — zaten kuruluysa dokunma
+sudo systemctl status fail2ban
+# Aktif değilse:
+sudo apt install -y fail2ban
+sudo systemctl enable --now fail2ban
 ```
 
 ---
 
-## Faz 2 — Yeni VPS: Servis Kurulumları
+## Faz 2 — Servis Kurulumları
 
-### 2.1 PostgreSQL 16
+### 2.1 PostgreSQL 17
 
 ```bash
-curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-  | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
-
-echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] \
-  https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
-  > /etc/apt/sources.list.d/pgdg.list
-
-apt update
-apt install -y postgresql-16 postgresql-16-pgvector
-
-systemctl enable --now postgresql
+# Debian 13'te native olarak gelir — PGDG repo gerekmez
+sudo apt install -y postgresql postgresql-17-pgvector
+sudo systemctl enable --now postgresql
 ```
 
-#### PostgreSQL Kullanıcı ve Veritabanı Oluştur
+#### Veritabanı ve Kullanıcı Oluştur
 
 ```bash
 sudo -u postgres psql <<EOF
-CREATE USER teqlif WITH PASSWORD 'GUCLU_SIFRE_YAZ';
+CREATE USER teqlif WITH PASSWORD 'SIFRE_YAZ';
 CREATE DATABASE teqlif OWNER teqlif;
 \c teqlif
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -203,807 +136,698 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 EOF
 ```
 
-> **Not:** Şifreyi eski VPS'teki `.env` → `DATABASE_URL`'den al.
-
 ### 2.2 Redis
 
+Config'i eski VPS'ten kopyala:
+
 ```bash
-apt install -y redis-server
+# Eski VPS'te:
+scp /etc/redis/redis.conf tucibeyin@YENİ_VPS_IP:/tmp/redis.conf
 
-# /etc/redis/redis.conf — eski VPS ayarlarını uygula
-cat > /etc/redis/redis.conf <<'EOF'
-bind 127.0.0.1
-port 6379
-maxmemory 4gb
-maxmemory-policy allkeys-lru
-save 900 1
-save 300 10
-save 60 10000
-appendonly yes
-appendfsync everysec
-auto-aof-rewrite-percentage 100
-auto-aof-rewrite-min-size 64mb
-EOF
-
-systemctl enable --now redis-server
-redis-cli ping   # PONG çıkmalı
+# Yeni VPS'te:
+sudo cp /tmp/redis.conf /etc/redis/redis.conf
+sudo systemctl enable --now redis-server
+redis-cli ping   # PONG
 ```
 
 ### 2.3 ClickHouse
 
+> ⚠️ Debian 13'te APT repo GPG URL'leri 404 verebilir. Resmi install scripti kullan:
+
 ```bash
-curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | \
-  gpg --dearmor > /usr/share/keyrings/clickhouse.gpg
-
-echo "deb [signed-by=/usr/share/keyrings/clickhouse.gpg] \
-  https://packages.clickhouse.com/deb stable main" \
-  > /etc/apt/sources.list.d/clickhouse.list
-
-apt update
-apt install -y clickhouse-server clickhouse-client
-
-systemctl enable --now clickhouse-server
-clickhouse-client --query "SELECT version()"   # versiyon çıkmalı
+curl https://clickhouse.com/install.sh | sudo bash
 ```
 
-> **Not:** ClickHouse verisi sıfırdan başlıyor — tablolar uygulama startup'ında otomatik oluşturulur (`init_clickhouse()`).
+Systemd unit'i eski VPS'ten kopyala (install script farklı bir unit dosyası oluşturabilir):
+
+```bash
+# Eski VPS'te:
+sudo cat /etc/systemd/system/clickhouse-server.service > /tmp/clickhouse.service
+scp /tmp/clickhouse.service tucibeyin@YENİ_VPS_IP:/tmp/
+
+# Yeni VPS'te:
+sudo cp /tmp/clickhouse.service /etc/systemd/system/clickhouse-server.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now clickhouse-server
+clickhouse-client --query "SELECT version()"
+```
+
+> Tablolar uygulama ilk açılışında otomatik oluşturulur (`init_clickhouse()`).
 
 ### 2.4 MinIO
 
 ```bash
+# Binary
 wget -q https://dl.min.io/server/minio/release/linux-amd64/minio \
-  -O /usr/local/bin/minio
-chmod +x /usr/local/bin/minio
-
-wget -q https://dl.min.io/client/mc/release/linux-amd64/mc \
-  -O /usr/local/bin/mc
-chmod +x /usr/local/bin/mc
+  -O /tmp/minio
+sudo mv /tmp/minio /usr/local/bin/minio
+sudo chmod +x /usr/local/bin/minio
 
 # Veri dizini
-mkdir -p /var/lib/minio
-useradd -r -s /sbin/nologin minio-user 2>/dev/null || true
-chown minio-user:minio-user /var/lib/minio
+sudo mkdir -p /var/minio/data
+sudo useradd -r -s /sbin/nologin minio-user 2>/dev/null || true
+sudo chown minio-user:minio-user /var/minio/data
+```
 
-# Systemd unit
-cat > /etc/systemd/system/minio.service <<EOF
-[Unit]
-Description=MinIO Object Storage
-After=network.target
+EnvironmentFile (`.env`'deki MINIO_ACCESS_KEY ve MINIO_SECRET_KEY değerleri):
 
-[Service]
-User=minio-user
-Group=minio-user
-WorkingDirectory=/var/lib/minio
-EnvironmentFile=/etc/default/minio
-ExecStart=/usr/local/bin/minio server /var/lib/minio --console-address ":9001"
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+```bash
+sudo tee /etc/minio.env > /dev/null <<EOF
+MINIO_ROOT_USER=ACCESS_KEY_YAZ
+MINIO_ROOT_PASSWORD=SECRET_KEY_YAZ
+MINIO_VOLUMES="/var/minio/data"
 EOF
+sudo chmod 600 /etc/minio.env
+```
 
-# MinIO credentials — eski VPS'ten al: MINIO_ACCESS_KEY / MINIO_SECRET_KEY
-cat > /etc/default/minio <<EOF
-MINIO_ROOT_USER=ESKİ_ACCESS_KEY
-MINIO_ROOT_PASSWORD=ESKİ_SECRET_KEY
-MINIO_VOLUMES="/var/lib/minio"
-EOF
+Systemd unit'i eski VPS'ten kopyala:
 
-chmod 600 /etc/default/minio
-systemctl daemon-reload
-systemctl enable --now minio
+```bash
+# Eski VPS'te:
+sudo cat /etc/systemd/system/minio.service > /tmp/minio.service
+scp /tmp/minio.service tucibeyin@YENİ_VPS_IP:/tmp/
+
+# Yeni VPS'te:
+sudo cp /tmp/minio.service /etc/systemd/system/minio.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now minio
+```
+
+#### Bucket Oluştur
+
+```bash
+wget -q https://dl.min.io/client/mc/release/linux-amd64/mc \
+  -O /tmp/mc
+sudo mv /tmp/mc /usr/local/bin/mc
+sudo chmod +x /usr/local/bin/mc
+
+mc alias set local http://localhost:9010 ACCESS_KEY_YAZ SECRET_KEY_YAZ
+mc mb local/teqlif
 ```
 
 ### 2.5 Nginx
 
 ```bash
-apt install -y nginx
-systemctl enable nginx
+sudo apt install -y nginx
+sudo systemctl enable nginx
 ```
 
-### 2.6 Certbot
+Config'i eski VPS'ten kopyala:
 
 ```bash
-apt install -y certbot python3-certbot-nginx
+# Eski VPS'te:
+sudo scp /etc/nginx/sites-available/teqlif.com tucibeyin@YENİ_VPS_IP:/tmp/
+sudo scp /etc/nginx/nginx.conf tucibeyin@YENİ_VPS_IP:/tmp/nginx.conf
+
+# Yeni VPS'te:
+sudo cp /tmp/teqlif.com /etc/nginx/sites-available/teqlif.com
+sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf
+sudo ln -sf /etc/nginx/sites-available/teqlif.com /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 ```
 
 ---
 
 ## Faz 3 — Uygulama Kurulumu
 
-### 3.1 Kodu Çek
+### 3.1 Git ve SSH Anahtarı
 
 ```bash
-cd /var/www/teqlif.com
-git clone https://github.com/tucibeyin/teqlif.git .
-# veya belirli bir dizine:
-# git clone https://github.com/tucibeyin/teqlif.git /tmp/teqlif_repo
-# cp -r /tmp/teqlif_repo/backend /var/www/teqlif.com/backend
+# Yeni VPS'te SSH anahtarı oluştur
+ssh-keygen -t ed25519 -C "teqlif-vps"
+cat ~/.ssh/id_ed25519.pub
+# Public key'i GitHub → Settings → SSH Keys'e ekle
 ```
 
-### 3.2 Python Virtual Environment
+#### Repo'yu Klonla
+
+```bash
+git clone git@github.com:tucibeyin/teqlif.git /var/www/teqlif.com
+git config --global --add safe.directory /var/www/teqlif.com
+```
+
+### 3.2 Virtual Environment
 
 ```bash
 cd /var/www/teqlif.com
-python3.13 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
-
 pip install --upgrade pip wheel
 pip install -r backend/requirements.txt
 ```
 
-> **Not:** `sentence-transformers`, `faiss-cpu`, `nudenet` gibi ML paketleri büyük ve yavaş yüklenir. Sabırlı ol.
+> `sentence-transformers`, `faiss-cpu`, `nudenet` gibi ML paketleri büyük — 5-10 dakika sürebilir.
 
 ### 3.3 .env Dosyası
+
+```bash
+sudo tee /var/www/teqlif.com/backend/.env > /dev/null <<EOF
+DATABASE_URL=postgresql+asyncpg://teqlif:SIFRE@127.0.0.1:5432/teqlif
+REDIS_URL=redis://localhost:6379
+SECRET_KEY=UZUN_RASTGELE_STRING
+UPLOAD_DIR=/var/www/teqlif.com/uploads
+SITE_URL=https://www.teqlif.com
+
+FIREBASE_SERVICE_ACCOUNT=/var/www/teqlif.com/backend/firebase-service-account.json
+
+APNS_KEY_PATH=/var/www/teqlif.com/backend/certificates/AuthKey_XXXXXXXXXX.p8
+APNS_KEY_ID=XXXXXXXXXX
+APNS_TEAM_ID=XXXXXXXXXX
+APNS_CERT_PATH=/var/www/teqlif.com/backend/certificates/voip_cert.pem
+APNS_USE_SANDBOX=False
+
+LIVEKIT_URL=wss://live.teqlif.com
+LIVEKIT_API_KEY=API_KEY
+LIVEKIT_API_SECRET=API_SECRET
+
+MINIO_ENDPOINT=localhost:9010
+MINIO_ACCESS_KEY=ACCESS_KEY
+MINIO_SECRET_KEY=SECRET_KEY
+MINIO_BUCKET=teqlif
+MINIO_SECURE=false
+
+CLICKHOUSE_HOST=localhost
+CLICKHOUSE_PORT=8123
+
+ADMIN_PASSWORD_HASH=ESKİ_VPS_HASH_KOPYALA
+
+BREVO_API_KEY=
+SENTRY_BACKEND_DSN=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+GROQ_API_KEY=
+GEMINI_API_KEY=
+GOOGLE_CLIENT_ID=
+EOF
+
+sudo chmod 600 /var/www/teqlif.com/backend/.env
+sudo chown www-data:www-data /var/www/teqlif.com/backend/.env
+```
+
+> `ADMIN_PASSWORD_HASH` eski VPS'teki `.env`'den kopyala.
+
+### 3.4 Sertifika Dosyaları
 
 Eski VPS'ten kopyala:
 
 ```bash
-# Lokal makineden (ya da eski VPS'ten direkt):
-scp root@51.81.34.27:/var/www/teqlif.com/backend/.env \
-    /tmp/teqlif_env
+# Eski VPS'te:
+scp /var/www/teqlif.com/backend/certificates/AuthKey_*.p8 tucibeyin@YENİ_VPS_IP:/tmp/
+scp /var/www/teqlif.com/backend/certificates/voip_cert.pem tucibeyin@YENİ_VPS_IP:/tmp/
+scp /var/www/teqlif.com/backend/firebase-service-account.json tucibeyin@YENİ_VPS_IP:/tmp/
 
-scp /tmp/teqlif_env root@135.125.175.223:/var/www/teqlif.com/backend/.env
+# Yeni VPS'te:
+sudo mv /tmp/AuthKey_*.p8 /var/www/teqlif.com/backend/certificates/
+sudo mv /tmp/voip_cert.pem /var/www/teqlif.com/backend/certificates/
+sudo mv /tmp/firebase-service-account.json /var/www/teqlif.com/backend/
+sudo chmod 600 /var/www/teqlif.com/backend/certificates/*
+sudo chmod 600 /var/www/teqlif.com/backend/firebase-service-account.json
 ```
 
-Yeni VPS'te dosya izinlerini ayarla:
+> **Not:** `firebase-service-account.json` `backend/` altına gider — `backend/certificates/` değil.
+
+### 3.5 DB Şeması
+
+> ⚠️ `alembic upgrade head` kullanma — migration ordering hatası var. Eski VPS'ten schema dump al.
 
 ```bash
-chmod 600 /var/www/teqlif.com/backend/.env
-chown www-data:www-data /var/www/teqlif.com/backend/.env
-```
+# Eski VPS'te:
+sudo -u postgres pg_dump --schema-only teqlif > /tmp/teqlif_schema.sql
+scp /tmp/teqlif_schema.sql tucibeyin@YENİ_VPS_IP:/tmp/
 
-#### .env İçinde Güncellenmesi Gereken Satırlar
-
-Eski VPS'ten gelen `.env`'de aşağıdaki satırları kontrol et ve gerekirse güncelle:
-
-```bash
-nano /var/www/teqlif.com/backend/.env
-```
-
-| Değişken | Kontrol Notu |
-|----------|-------------|
-| `DATABASE_URL` | `localhost` kalır — değişmez |
-| `REDIS_URL` | `localhost` kalır — değişmez |
-| `UPLOAD_DIR` | `/var/www/teqlif.com/uploads` kalır — değişmez |
-| `SITE_URL` | `https://www.teqlif.com` kalır — değişmez |
-| `LIVEKIT_URL` | `wss://teqlif.com/rtc` kalır — değişmez |
-| `APNS_KEY_PATH` | `/var/www/teqlif.com/backend/certificates/AuthKey_...p8` — sertifika kopyalanınca geçerli olur |
-| `FIREBASE_SERVICE_ACCOUNT` | sertifika kopyalanınca geçerli olur |
-
-### 3.4 Sertifika Dosyalarını Kopyala
-
-```bash
-# Eski VPS'ten
-scp -r root@51.81.34.27:/var/www/teqlif.com/backend/certificates/ \
-    /var/www/teqlif.com/backend/
-
-chown -R www-data:www-data /var/www/teqlif.com/backend/certificates/
-chmod 600 /var/www/teqlif.com/backend/certificates/*
-```
-
-### 3.5 Alembic Migration
-
-```bash
+# Yeni VPS'te:
+sudo -u postgres psql teqlif < /tmp/teqlif_schema.sql
 cd /var/www/teqlif.com/backend
 source /var/www/teqlif.com/venv/bin/activate
-
-alembic upgrade head
+alembic stamp head
 ```
 
-### 3.6 Systemd Servisleri
+### 3.6 Production Verisini Taşı
+
+#### PostgreSQL Verisi
 
 ```bash
-cd /var/www/teqlif.com   # repo kökü
+# Eski VPS'te — data dump al:
+sudo -u postgres pg_dump \
+  --data-only \
+  --exclude-table=alembic_version \
+  -Fc teqlif \
+  -f /tmp/teqlif_data.dump
+scp /tmp/teqlif_data.dump tucibeyin@YENİ_VPS_IP:/tmp/
 
-# Teqlif ana servis
-cp deploy/systemd/teqlif.service /etc/systemd/system/
-cp deploy/systemd/teqlif-worker.service /etc/systemd/system/
-cp deploy/systemd/teqlif-worker-critical.service /etc/systemd/system/
+# Yeni VPS'te — tabloları temizle ve restore et:
+sudo -u postgres psql -d teqlif -c "
+DO \$\$ DECLARE r RECORD;
+BEGIN
+  FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename != 'alembic_version') LOOP
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+  END LOOP;
+END \$\$;
+"
 
-# Redis backup
-cp deploy/systemd/redis-backup.service /etc/systemd/system/
-cp deploy/systemd/redis-backup.timer /etc/systemd/system/
+sudo -u postgres pg_restore \
+  --data-only \
+  --disable-triggers \
+  -d teqlif \
+  /tmp/teqlif_data.dump
+```
 
-# Redis backup script
-bash deploy/scripts/redis-backup.sh --install
+#### MinIO Verisi
 
-systemctl daemon-reload
+```bash
+# Yeni VPS'te — hedef dizini oluştur:
+mkdir -p /tmp/minio-teqlif
 
-# Servisleri etkinleştir (henüz başlatma — DNS geçişinden sonra)
-systemctl enable teqlif
-systemctl enable teqlif-worker
-systemctl enable teqlif-worker-critical
+# Eski VPS'te — bucket dosyalarını kopyala:
+sudo scp -r /var/minio/data/teqlif/ tucibeyin@YENİ_VPS_IP:/tmp/minio-teqlif/
+
+# Yeni VPS'te — MinIO veri dizinine taşı:
+sudo cp -r /tmp/minio-teqlif/* /var/minio/data/teqlif/
+sudo chown -R minio-user:minio-user /var/minio/data/
+sudo systemctl restart minio
+```
+
+### 3.7 Systemd Servisleri
+
+Eski VPS'ten kopyala:
+
+```bash
+# Eski VPS'te:
+for svc in teqlif teqlif-worker teqlif-worker-critical redis-backup; do
+  sudo cat /etc/systemd/system/${svc}.service > /tmp/${svc}.service
+done
+sudo cat /etc/systemd/system/redis-backup.timer > /tmp/redis-backup.timer
+scp /tmp/teqlif*.service /tmp/redis-backup* tucibeyin@YENİ_VPS_IP:/tmp/
+
+# Yeni VPS'te:
+for svc in teqlif teqlif-worker teqlif-worker-critical redis-backup; do
+  sudo cp /tmp/${svc}.service /etc/systemd/system/
+done
+sudo cp /tmp/redis-backup.timer /etc/systemd/system/
+```
+
+#### Worker PartOf Override
+
+```bash
+for svc in teqlif-worker teqlif-worker-critical; do
+  sudo mkdir -p /etc/systemd/system/${svc}.service.d/
+  sudo tee /etc/systemd/system/${svc}.service.d/partof.conf > /dev/null <<EOF
+[Unit]
+PartOf=teqlif.service
+EOF
+done
+```
+
+#### www-data Sahibi ve Enable
+
+```bash
+sudo chown -R www-data:www-data /var/www/teqlif.com
+sudo usermod -aG www-data tucibeyin   # ssh yeniden bağlan
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now teqlif teqlif-worker teqlif-worker-critical
+sudo systemctl enable --now redis-backup.timer
 ```
 
 ---
 
-## Faz 4 — Veri Taşıma
+## Faz 4 — LiveKit
 
-### 4.1 PostgreSQL: Eski → Yeni
+### 4.1 Binary
+
+> ⚠️ GitHub release URL'leri değişebilir. Binary'yi doğrudan eski VPS'ten kopyala.
 
 ```bash
-# Eski VPS'te dump al (zaten aldıysan 0.1'i atla)
-sudo -u postgres pg_dump teqlif | gzip > /tmp/teqlif_pg_latest.sql.gz
+# Eski VPS'te:
+scp /usr/local/bin/livekit-server tucibeyin@YENİ_VPS_IP:/tmp/livekit-server
 
-# Dump'ı yeni VPS'e kopyala
-scp root@51.81.34.27:/tmp/teqlif_pg_latest.sql.gz /tmp/
-
-# Yeni VPS'te restore et
-gunzip -c /tmp/teqlif_pg_latest.sql.gz | sudo -u postgres psql teqlif
-
-# Doğrulama
-sudo -u postgres psql -d teqlif -c "\dt" | head -20
-sudo -u postgres psql -d teqlif -c "SELECT COUNT(*) FROM users;"
+# Yeni VPS'te:
+sudo mv /tmp/livekit-server /usr/local/bin/livekit-server
+sudo chmod +x /usr/local/bin/livekit-server
 ```
 
-### 4.2 MinIO: Eski → Yeni
-
-MinIO verisini `mc mirror` ile taşı. **Eski VPS çalışırken yap**, büyük dosyalar varsa birkaç saat sürebilir.
+### 4.2 Config
 
 ```bash
-# Yeni VPS'te — mc (MinIO Client) yapılandır
-mc alias set old-vps http://51.81.34.27:9000 ESKİ_ACCESS_KEY ESKİ_SECRET_KEY
-mc alias set new-vps http://127.0.0.1:9000 YENİ_ACCESS_KEY YENİ_SECRET_KEY
+# Eski VPS'te:
+sudo scp /etc/livekit/livekit.yaml tucibeyin@YENİ_VPS_IP:/tmp/
 
-# Bucket oluştur
-mc mb new-vps/teqlif
+# Yeni VPS'te:
+sudo mkdir -p /etc/livekit
+sudo cp /tmp/livekit.yaml /etc/livekit/livekit.yaml
 
-# Mirror (kopyala)
-mc mirror old-vps/teqlif new-vps/teqlif --overwrite --preserve
-
-# Doğrulama
-mc du old-vps/teqlif
-mc du new-vps/teqlif
-# İki taraf eşit boyut göstermeli
+# node_ip'yi yeni VPS'e güncelle:
+sudo sed -i 's/node_ip: .*/node_ip: "YENİ_VPS_IP"/' /etc/livekit/livekit.yaml
 ```
 
-> **Not:** DNS geçişinden hemen önce bir kez daha `mc mirror` çalıştırarak son değişiklikleri yakala.
-
-### 4.3 Redis Taşıma (Opsiyonel)
-
-Redis çoğunlukla ephemeral veri tutar (oturum cache, request counter). Taşımak istersen:
+TURN sertifikaları:
 
 ```bash
-# Eski VPS'te
-redis-cli BGSAVE
-sleep 5
-scp root@51.81.34.27:/var/lib/redis/dump.rdb /tmp/
+# Eski VPS'te:
+sudo scp -r /etc/livekit/certs/ tucibeyin@YENİ_VPS_IP:/tmp/livekit-certs/
 
-# Yeni VPS'te (Redis durdur → dosyayı koy → başlat)
-systemctl stop redis-server
-cp /tmp/dump.rdb /var/lib/redis/dump.rdb
-chown redis:redis /var/lib/redis/dump.rdb
-systemctl start redis-server
-redis-cli DBSIZE  # key sayısı çıkmalı
+# Yeni VPS'te:
+sudo mkdir -p /etc/livekit/certs
+sudo cp /tmp/livekit-certs/* /etc/livekit/certs/
+```
+
+### 4.3 Systemd
+
+```bash
+# Eski VPS'te:
+sudo cat /etc/systemd/system/livekit.service > /tmp/livekit.service
+scp /tmp/livekit.service tucibeyin@YENİ_VPS_IP:/tmp/
+
+# Yeni VPS'te:
+sudo useradd -r -s /sbin/nologin livekit 2>/dev/null || true
+sudo cp /tmp/livekit.service /etc/systemd/system/livekit.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now livekit
 ```
 
 ---
 
 ## Faz 5 — Nginx + SSL
 
-### 5.1 Geçici HTTP Config (SSL almadan önce)
+### 5.1 SSL Sertifikaları (DNS cutover öncesi)
+
+Eski VPS'teki mevcut sertifikaları taşı:
 
 ```bash
-cat > /etc/nginx/sites-available/teqlif <<'EOF'
-server {
-    listen 80;
-    server_name teqlif.com www.teqlif.com admin.teqlif.com;
+# Eski VPS'te:
+sudo tar czf /tmp/letsencrypt.tar.gz /etc/letsencrypt/
+scp /tmp/letsencrypt.tar.gz tucibeyin@YENİ_VPS_IP:/tmp/
 
-    # Let's Encrypt doğrulama
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-EOF
-
-ln -sf /etc/nginx/sites-available/teqlif /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
+# Yeni VPS'te:
+sudo tar xzf /tmp/letsencrypt.tar.gz -C /
 ```
 
-### 5.2 SSL Sertifikası Al
+### 5.2 Nginx Doğrulama
 
 ```bash
-certbot --nginx \
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 5.3 DNS Cutover Sonrası — Certbot
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+
+# Mevcut sertifikalar taşındıysa sadece yenileme ayarla:
+sudo systemctl status certbot.timer
+
+# Sertifikalar yoksa yeni al (DNS A kayıtları yeni VPS'e yönlenmiş olmalı):
+sudo certbot --nginx \
   -d teqlif.com \
   -d www.teqlif.com \
   -d admin.teqlif.com \
-  --non-interactive \
-  --agree-tos \
+  -d live.teqlif.com \
+  --non-interactive --agree-tos \
   -m admin@teqlif.com
 ```
 
-### 5.3 Tam Nginx Config
-
-```bash
-cat > /etc/nginx/sites-available/teqlif <<'NGINXEOF'
-# Rate limiting tanımları
-limit_req_zone $binary_remote_addr zone=api_limit:10m rate=60r/s;
-limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;
-limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
-
-# HTTP → HTTPS
-server {
-    listen 80;
-    server_name teqlif.com www.teqlif.com admin.teqlif.com;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# Ana site
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name teqlif.com www.teqlif.com;
-
-    ssl_certificate     /etc/letsencrypt/live/teqlif.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/teqlif.com/privkey.pem;
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
-    ssl_session_cache   shared:SSL:10m;
-
-    client_max_body_size 50M;
-
-    # Uploads (MinIO proxy veya statik)
-    location /uploads/ {
-        alias /var/www/teqlif.com/uploads/;
-        expires 7d;
-        add_header Cache-Control "public";
-    }
-
-    # API
-    location /api/ {
-        limit_req zone=api_limit burst=200 delay=100;
-
-        proxy_set_header X-Real-IP        $remote_addr;
-        proxy_set_header X-Forwarded-For  $remote_addr;
-        proxy_set_header Host             $host;
-        proxy_set_header Upgrade          $http_upgrade;
-        proxy_set_header Connection       "upgrade";
-
-        proxy_pass http://127.0.0.1:8000;
-        proxy_read_timeout 120s;
-        proxy_send_timeout 120s;
-    }
-
-    # Auth — daha sıkı rate limit
-    location /api/auth {
-        limit_req zone=auth_limit burst=5 nodelay;
-        limit_conn conn_limit 3;
-
-        proxy_set_header X-Real-IP        $remote_addr;
-        proxy_set_header X-Forwarded-For  $remote_addr;
-        proxy_set_header Host             $host;
-
-        proxy_pass http://127.0.0.1:8000;
-    }
-
-    # WebSocket (mesajlaşma, canlı yayın)
-    location /ws/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade    $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host       $host;
-        proxy_set_header X-Real-IP  $remote_addr;
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
-    }
-
-    # LiveKit
-    location /rtc/ {
-        proxy_pass http://127.0.0.1:7880/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade    $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host       $host;
-        proxy_set_header X-Real-IP  $remote_addr;
-        proxy_read_timeout 3600s;
-    }
-}
-NGINXEOF
-
-nginx -t && systemctl reload nginx
-```
-
-> **Not:** Eski VPS'teki `/etc/nginx/sites-available/teqlif` içeriğini kontrol et — özel location blokları varsa buraya ekle.
-
 ---
 
-## Faz 6 — LiveKit Kurulumu
+## Faz 6 — Monitoring
 
-### 6.1 Eski VPS'ten LiveKit Config'i Al
-
-```bash
-# Eski VPS'te
-find / -name "livekit*" 2>/dev/null | grep -v proc
-systemctl status livekit 2>/dev/null || systemctl status livekit-server 2>/dev/null
-```
-
-### 6.2 Yeni VPS'e LiveKit Kur
+### 6.1 Loki
 
 ```bash
-# Güncel sürümü kontrol et: https://github.com/livekit/livekit/releases
-LIVEKIT_VERSION="1.8.2"  # eski VPS'tekiyle eşleştir
+# Eski VPS'ten binary ve config kopyala:
+scp /usr/local/bin/loki tucibeyin@YENİ_VPS_IP:/tmp/
+sudo cat /etc/loki/config.yml > /tmp/loki.config.yml
+scp /tmp/loki.config.yml tucibeyin@YENİ_VPS_IP:/tmp/
 
-wget -q "https://github.com/livekit/livekit/releases/download/v${LIVEKIT_VERSION}/livekit_linux_amd64.tar.gz" \
-  -O /tmp/livekit.tar.gz
-tar xzf /tmp/livekit.tar.gz -C /usr/local/bin livekit-server
-chmod +x /usr/local/bin/livekit-server
-livekit-server --version
+# Yeni VPS'te:
+sudo mv /tmp/loki /usr/local/bin/loki
+sudo chmod +x /usr/local/bin/loki
+sudo mkdir -p /etc/loki /var/lib/loki
+sudo cp /tmp/loki.config.yml /etc/loki/config.yml
 ```
 
-### 6.3 LiveKit Config Dosyası
-
-Eski VPS'teki config'i kopyala ve `node_ip`'i güncelle:
+Systemd unit:
 
 ```bash
-# Eski VPS'ten al
-scp root@51.81.34.27:/etc/livekit/config.yaml /tmp/livekit_config.yaml
-
-# Yeni VPS'e kopyala
-mkdir -p /etc/livekit
-cp /tmp/livekit_config.yaml /etc/livekit/config.yaml
-
-# node_ip satırını yeni IP ile güncelle
-sed -i 's/51\.81\.34\.27/135.125.175.223/g' /etc/livekit/config.yaml
-nano /etc/livekit/config.yaml  # gözden geçir
-```
-
-Örnek config yapısı (eski config yoksa oluştur):
-
-```yaml
-# /etc/livekit/config.yaml
-port: 7880
-rtc:
-  tcp_port: 7881
-  port_range_start: 50000
-  port_range_end: 60000
-  use_external_ip: true
-  node_ip: "135.125.175.223"
-keys:
-  # .env'deki LIVEKIT_API_KEY / LIVEKIT_API_SECRET ile eşleşmeli
-  api_key_buraya: api_secret_buraya
-logging:
-  level: info
-```
-
-### 6.4 LiveKit Systemd
-
-```bash
-cat > /etc/systemd/system/livekit.service <<EOF
+sudo tee /etc/systemd/system/loki.service > /dev/null <<'EOF'
 [Unit]
-Description=LiveKit Server
+Description=Loki service
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/livekit-server --config /etc/livekit/config.yaml
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
+Type=simple
+ExecStart=/usr/local/bin/loki -config.file /etc/loki/config.yml
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable livekit
+sudo systemctl daemon-reload
+sudo systemctl enable --now loki
 ```
 
----
-
-## Faz 7 — Monitoring Kurulumu
-
-### 7.1 Loki
+### 6.2 Promtail
 
 ```bash
-LOKI_VERSION="3.3.2"
-wget -q "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip" \
-  -O /tmp/loki.zip
-unzip -q /tmp/loki.zip -d /usr/local/bin
-chmod +x /usr/local/bin/loki-linux-amd64
-ln -sf /usr/local/bin/loki-linux-amd64 /usr/local/bin/loki
+# Eski VPS'ten binary kopyala:
+scp /usr/local/bin/promtail tucibeyin@YENİ_VPS_IP:/tmp/
+sudo mv /tmp/promtail /usr/local/bin/promtail
+sudo chmod +x /usr/local/bin/promtail
 
-mkdir -p /etc/loki /var/lib/loki
+# GeoIP veritabanı (nginx-access geoip pipeline için gerekli):
+sudo mkdir -p /usr/share/GeoIP
+scp /usr/share/GeoIP/GeoLite2-City.mmdb tucibeyin@YENİ_VPS_IP:/tmp/
+sudo mv /tmp/GeoLite2-City.mmdb /usr/share/GeoIP/
 
-cat > /etc/loki/config.yaml <<'EOF'
-auth_enabled: false
-server:
-  http_listen_port: 3100
-ingester:
-  lifecycler:
-    ring:
-      kvstore:
-        store: inmemory
-      replication_factor: 1
-schema_config:
-  configs:
-    - from: 2024-01-01
-      store: tsdb
-      object_store: filesystem
-      schema: v13
-      index:
-        prefix: index_
-        period: 24h
-storage_config:
-  tsdb_shipper:
-    active_index_directory: /var/lib/loki/index
-    cache_location: /var/lib/loki/index_cache
-  filesystem:
-    directory: /var/lib/loki/chunks
-limits_config:
-  reject_old_samples: false
-EOF
+# Config — eski VPS'ten kopyala:
+sudo scp /etc/promtail-config.yml tucibeyin@YENİ_VPS_IP:/tmp/
+sudo cp /tmp/promtail-config.yml /etc/promtail-config.yml
+```
 
-cat > /etc/systemd/system/loki.service <<EOF
+Systemd unit:
+
+```bash
+sudo tee /etc/systemd/system/promtail.service > /dev/null <<'EOF'
 [Unit]
-Description=Loki Log Aggregation
+Description=Promtail log shipper
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/loki -config.file=/etc/loki/config.yaml
-Restart=always
-RestartSec=5
+ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail-config.yml
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable --now loki
+sudo systemctl daemon-reload
+sudo systemctl enable --now promtail
 ```
 
-### 7.2 Promtail
+> Config'de `worker.log` da dahil olmalı — promtail-config.yml içinde `teqlif-worker-log` job'ı mevcut olduğunu kontrol et.
+
+### 6.3 Prometheus
 
 ```bash
-PROMTAIL_VERSION="3.3.2"
-wget -q "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip" \
-  -O /tmp/promtail.zip
-unzip -q /tmp/promtail.zip -d /usr/local/bin
-chmod +x /usr/local/bin/promtail-linux-amd64
-ln -sf /usr/local/bin/promtail-linux-amd64 /usr/local/bin/promtail
+# Eski VPS'ten binary ve config kopyala:
+scp /usr/local/bin/prometheus tucibeyin@YENİ_VPS_IP:/tmp/
+sudo cat /etc/prometheus/prometheus.yml > /tmp/prometheus.yml
+scp /tmp/prometheus.yml tucibeyin@YENİ_VPS_IP:/tmp/
 
-mkdir -p /etc/promtail
+# Yeni VPS'te:
+sudo useradd -r -s /sbin/nologin prometheus 2>/dev/null || true
+sudo mv /tmp/prometheus /usr/local/bin/prometheus
+sudo chmod +x /usr/local/bin/prometheus
+sudo mkdir -p /etc/prometheus /var/lib/prometheus
+sudo chown prometheus:prometheus /var/lib/prometheus
+sudo cp /tmp/prometheus.yml /etc/prometheus/prometheus.yml
+```
 
-# Repo'daki config'i kopyala
-cp /var/www/teqlif.com/deploy/promtail-config.yml /etc/promtail/config.yml
+Systemd unit:
 
-cat > /etc/systemd/system/promtail.service <<EOF
+```bash
+sudo tee /etc/systemd/system/prometheus.service > /dev/null <<'EOF'
 [Unit]
-Description=Promtail Log Shipper
-After=network.target loki.service
+Description=Prometheus
+After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail/config.yml
-Restart=always
-RestartSec=5
+User=prometheus
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus \
+  --storage.tsdb.retention.time=15d
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable --now promtail
+sudo systemctl daemon-reload
+sudo systemctl enable --now prometheus
 ```
 
-### 7.3 Grafana
+### 6.4 Grafana
 
 ```bash
-wget -q https://dl.grafana.com/oss/release/grafana_11.4.0_amd64.deb \
-  -O /tmp/grafana.deb
-dpkg -i /tmp/grafana.deb
-
-systemctl enable --now grafana-server
-# Grafana: http://135.125.175.223:3000 (admin / admin)
-# → Loki datasource ekle: http://localhost:3100
+sudo apt install -y apt-transport-https
+wget -q -O - https://packages.grafana.com/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/grafana.gpg
+echo "deb [signed-by=/usr/share/keyrings/grafana.gpg] https://packages.grafana.com/oss/deb stable main" \
+  | sudo tee /etc/apt/sources.list.d/grafana.list
+sudo apt update
+sudo apt install -y grafana
+sudo systemctl enable --now grafana-server
 ```
 
-> **Güvenlik:** Grafana portunu (3000) UFW'da dışarıya kapatmalısın. Erişim için SSH tüneli kullan:
-> ```bash
-> ssh -L 3000:localhost:3000 root@135.125.175.223
-> # Sonra tarayıcıda: http://localhost:3000
-> ```
+#### Dashboard'ları Taşı (grafana.db kopyala)
+
+```bash
+# Eski VPS'te:
+sudo systemctl stop grafana-server
+sudo scp /var/lib/grafana/grafana.db tucibeyin@YENİ_VPS_IP:/tmp/
+
+# Yeni VPS'te:
+sudo systemctl stop grafana-server
+sudo cp /tmp/grafana.db /var/lib/grafana/grafana.db
+sudo chown grafana:grafana /var/lib/grafana/grafana.db
+sudo systemctl start grafana-server
+
+# Eski VPS'te tekrar başlat:
+sudo systemctl start grafana-server
+```
+
+#### ClickHouse Plugin
+
+```bash
+sudo GF_PATHS_HOME=/usr/share/grafana \
+  /usr/share/grafana/bin/grafana cli \
+  --homepath /usr/share/grafana \
+  plugins install grafana-clickhouse-datasource
+sudo systemctl restart grafana-server
+```
+
+### 6.5 node_exporter
+
+```bash
+# Eski VPS'ten binary kopyala:
+scp /usr/local/bin/node_exporter tucibeyin@YENİ_VPS_IP:/tmp/
+
+# Yeni VPS'te:
+sudo mv /tmp/node_exporter /usr/local/bin/node_exporter
+sudo chmod +x /usr/local/bin/node_exporter
+
+sudo tee /etc/systemd/system/node_exporter.service > /dev/null <<'EOF'
+[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+User=nobody
+Group=nogroup
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now node_exporter
+```
+
+### 6.6 prometheus-postgres-exporter
+
+```bash
+sudo apt install -y prometheus-postgres-exporter
+
+# PostgreSQL kullanıcısı oluştur (Unix socket ile bağlanır):
+sudo -u postgres psql -c "CREATE USER prometheus;"
+sudo -u postgres psql -c "GRANT pg_monitor TO prometheus;"
+
+# EnvironmentFile'ı yapılandır:
+sudo tee /etc/default/prometheus-postgres-exporter > /dev/null <<'EOF'
+DATA_SOURCE_NAME='user=prometheus host=/run/postgresql dbname=postgres'
+ARGS=""
+EOF
+
+# Override dosyası varsa kaldır (User=prometheus ile çalışmalı):
+sudo rm -f /etc/systemd/system/prometheus-postgres-exporter.service.d/override.conf
+sudo systemctl daemon-reload
+sudo systemctl enable --now prometheus-postgres-exporter
+
+# Doğrula:
+curl -s "http://localhost:9090/api/v1/query?query=pg_up" | python3 -c \
+  "import json,sys; d=json.load(sys.stdin); print('pg_up =', d['data']['result'][0]['value'][1])"
+```
+
+> **Not:** v0.17'de `DATA_SOURCE_NAME` env var hala desteklenir ama servis `prometheus` OS kullanıcısıyla çalışmalıdır — EnvironmentFile bu kullanıcıya ait (`prometheus:prometheus`). Override ile `User=postgres` gibi farklı bir kullanıcı ayarlanırsa dosya okunamaz ve "empty dsn" hatası çıkar.
 
 ---
 
-## Faz 8 — DNS Geçişi (Kesinti Penceresi)
+## Faz 7 — DNS Geçişi (Squarespace)
 
-Bu faz gerçek trafiği yönlendirir. **Servislerin yeni VPS'te çalıştığından emin olduktan sonra** yap.
+### 7.1 TTL'i Düşür (24 Saat Önce)
 
-### 8.1 Servisleri Başlat (Yeni VPS)
+DNS panelinde tüm kayıtların TTL'ini **60 saniye**'ye düşür.
 
-```bash
-# Önce test et
-cd /var/www/teqlif.com/backend
-source /var/www/teqlif.com/venv/bin/activate
-python -c "from app.config import settings; print('Config OK')"
+### 7.2 A Kayıtlarını Güncelle
 
-# Servisleri başlat
-systemctl start teqlif
-systemctl start teqlif-worker
-systemctl start teqlif-worker-critical
-systemctl start livekit
+| Host | Tip | Yeni Değer |
+|------|-----|------------|
+| `teqlif.com` | A | `YENİ_VPS_IP` |
+| `www.teqlif.com` | A | `YENİ_VPS_IP` |
+| `admin.teqlif.com` | A | `YENİ_VPS_IP` |
+| `live.teqlif.com` | A | `YENİ_VPS_IP` |
 
-# Durum kontrolü
-systemctl status teqlif --no-pager
-systemctl status teqlif-worker --no-pager
-journalctl -u teqlif -n 50 --no-pager
-```
-
-### 8.2 DNS TTL'i Düşür (geçişten 24 saat önce)
-
-DNS yönetim panelinde (Cloudflare veya domain registrar):
-- `teqlif.com` A kaydı TTL → **60 saniye**
-- `www.teqlif.com` A kaydı TTL → **60 saniye**
-- `admin.teqlif.com` A kaydı TTL → **60 saniye**
-
-### 8.3 DNS A Kayıtlarını Güncelle
-
-DNS panelinde tüm A kayıtlarını güncelle:
-
-| Host | Tip | Eski Değer | Yeni Değer |
-|------|-----|------------|------------|
-| `teqlif.com` | A | `51.81.34.27` | `135.125.175.223` |
-| `www.teqlif.com` | A | `51.81.34.27` | `135.125.175.223` |
-| `admin.teqlif.com` | A | `51.81.34.27` | `135.125.175.223` |
-
-### 8.4 Yayılmayı İzle
+### 7.3 Yayılmayı Doğrula
 
 ```bash
-# DNS yayılmasını kontrol et
 watch -n 10 "dig teqlif.com +short"
-# 135.125.175.223 çıkana kadar bekle
+# YENİ_VPS_IP çıkana kadar bekle
 
-# SSL sertifika geçerlilik kontrolü
 curl -I https://teqlif.com/api/health
 ```
 
-### 8.5 DNS'ten Hemen Sonra — Son MinIO Sync
+---
+
+## Faz 8 — Dış Servis Kontrolleri
+
+| Servis | Yapılacak |
+|--------|-----------|
+| Firebase | JSON kopyalandı — ek işlem yok |
+| APNs | `.p8` kopyalandı, `APNS_USE_SANDBOX=False` — kontrol et |
+| Brevo | SPF kaydında eski IP varsa güncelle |
+| LiveKit | `node_ip` config'de yeni IP'ye güncellendi |
+| Sentry | Otomatik çalışır |
+
+#### Brevo SPF
 
 ```bash
-# Yeni VPS'te — DNS geçişinden hemen sonra kalan dosyaları yakala
-mc mirror old-vps/teqlif new-vps/teqlif --overwrite --newer-than 1h
+dig TXT teqlif.com | grep spf
+# Eski IP (örn. 51.81.34.27) varsa DNS panelinden güncelle
 ```
 
 ---
 
-## Faz 9 — Dış Servis IP Güncellemeleri
-
-### 9.1 Firebase Console
-
-Firebase FCM giden bağlantılarda IP kısıtlaması **uygulamaz**. Ancak Service Account üzerinde IP kısıtı varsa:
-
-1. [Firebase Console](https://console.firebase.google.com) → Proje ayarları → Servis hesapları
-2. Google Cloud Console → IAM → Service Accounts → `firebase-adminsdk-...@...` → Keys sekmesi
-3. IP kısıtı yoksa işlem gerekmez.
-
-### 9.2 Google Cloud Console (OAuth)
-
-Google OAuth, sunucu IP'si ile ilgilenmez (sadece redirect URI doğrular). Değişiklik gerekmez.
-
-### 9.3 Apple APNs
-
-Apple APNs, sunucu IP kısıtlaması uygulamaz. `.p8` dosyası kopyalandıysa çalışır.
-
-### 9.4 Brevo (E-posta)
-
-Brevo outbound API çağrısıdır, IP kısıtlaması yoktur. Ancak e-posta **deliverability** için:
-- Yeni VPS IP'si için SPF kaydına eklenmiş mi kontrol et
-- Brevo panelinde → Senders → Domain Authentication → SPF/DKIM kayıtları
-
-Mevcut DNS SPF kaydı:
-```
-v=spf1 include:spf.brevo.com ... ip4:51.81.34.27 ...
-```
-
-Varsa `ip4:51.81.34.27` → `ip4:135.125.175.223` olarak güncelle.
-
-### 9.5 Sentry
-
-Sentry cloud tabanlıdır, IP kısıtlaması yoktur. Otomatik çalışır.
-
-### 9.6 Cloudflare (Captcha / Turnstile)
-
-Turnstile domain tabanlı doğrulama yapar, IP kısıtlaması yoktur. Domain adı aynı kaldığı için değişiklik gerekmez.
-
-### 9.7 LiveKit (Self-hosted)
-
-LiveKit config `node_ip`'i Faz 6'da güncellendi. Ek adım yok.
-
----
-
-## Faz 10 — Doğrulama
-
-### Servis Sağlık Kontrolleri
+## Günlük Kullanım
 
 ```bash
-# Yeni VPS'te
-systemctl status teqlif teqlif-worker teqlif-worker-critical livekit minio --no-pager
-journalctl -u teqlif --since "5 min ago" --no-pager
-
-# API sağlık
-curl -s https://teqlif.com/api/health | python3 -m json.tool
-
-# DB bağlantısı
-sudo -u postgres psql -d teqlif -c "SELECT COUNT(*) FROM users;"
-
-# Redis
-redis-cli PING && redis-cli DBSIZE
-
-# ClickHouse
-clickhouse-client --query "SHOW TABLES"
-
-# MinIO
-mc ls new-vps/teqlif | tail -5
-```
-
-### Test Scripti
-
-```bash
-cd /var/www/teqlif.com/backend
-python3 scripts/test_privacy_block.py
-# API endpoint'lerini gerçek kullanıcılarla test eder
-```
-
-### Eski VPS'i Kapat
-
-Her şey doğrulandıktan sonra (en az 48 saat bekle):
-
-```bash
-# Eski VPS'te servisleri durdur
-systemctl stop teqlif teqlif-worker teqlif-worker-critical livekit
-# Sonra VPS'i sil / kapat
-```
-
----
-
-## Sertifika Otomatik Yenileme
-
-Certbot yenileme zaten cron'a eklenir. Kontrol et:
-
-```bash
-systemctl status certbot.timer
-# veya
-crontab -l | grep certbot
-```
-
-Yoksa ekle:
-
-```bash
-echo "0 3 * * * root certbot renew --quiet && systemctl reload nginx" \
-  > /etc/cron.d/certbot-renew
-```
-
----
-
-## Hızlı Komut Referansı
-
-```bash
-# Teqlif güncelle (normal deploy)
-cd /var/www/teqlif.com && git pull && sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
+# Kod güncelle
+cd /var/www/teqlif.com
+git pull
+sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
 
 # Log izle
 journalctl -u teqlif -f
 
-# Servis durumu
-systemctl status teqlif teqlif-worker teqlif-worker-critical livekit minio --no-pager
-
 # Çeviri güncelle
-cd /var/www/teqlif.com/backend && source ../venv/bin/activate && python3 scripts/sync_translations.py
+cd /var/www/teqlif.com/backend
+source /var/www/teqlif.com/venv/bin/activate
+python3 scripts/sync_translations.py
 
-# Alembic migration
-cd /var/www/teqlif.com/backend && source ../venv/bin/activate && alembic upgrade head
+# Migration çalıştır
+alembic upgrade head
 ```
 
 ---
@@ -1011,69 +835,63 @@ cd /var/www/teqlif.com/backend && source ../venv/bin/activate && alembic upgrade
 ## Kontrol Listesi
 
 ```
-### Hazırlık
-[ ] PostgreSQL dump alındı
-[ ] Redis dump alındı
-[ ] .env yedeklendi
-[ ] Sertifika dosyaları yedeklendi
-[ ] LiveKit config kopyalandı
-[ ] Nginx config kopyalandı
-[ ] MinIO boyutu not edildi
+### Sistem
+[ ] apt upgrade tamamlandı
+[ ] Python 3.13 (Debian 13 native — PPA gerekmez)
+[ ] Dizin yapısı oluşturuldu
+[ ] UFW aktif (SSH, Nginx Full, LiveKit, TURN, Grafana, Cloudflare IP'leri)
+[ ] Fail2ban aktif
 
-### Yeni VPS Kurulum
-[ ] Sistem paketleri kuruldu
-[ ] Python 3.13 kuruldu
-[ ] PostgreSQL 16 + pgvector kuruldu
-[ ] Redis kuruldu ve yapılandırıldı
-[ ] ClickHouse kuruldu
-[ ] MinIO kuruldu
-[ ] Nginx kuruldu
-[ ] Certbot kuruldu
+### Servisler
+[ ] PostgreSQL 17 + pgvector
+[ ] DB ve kullanıcı oluşturuldu (vector + pg_trgm extension)
+[ ] Redis — config eski VPS'ten kopyalandı
+[ ] ClickHouse — resmi install script kullanıldı
+[ ] MinIO — /var/minio/data, port 9010, /etc/minio.env
+[ ] Nginx — config eski VPS'ten kopyalandı
 
 ### Uygulama
-[ ] Git repo klonlandı
-[ ] venv oluşturuldu, pip install tamamlandı
-[ ] .env kopyalandı ve izinler ayarlandı
-[ ] Sertifika dosyaları kopyalandı
-[ ] Alembic upgrade head çalıştı
-[ ] Systemd unit'ler kuruldu ve etkinleştirildi
-
-### Veri
-[ ] PostgreSQL restore edildi
-[ ] MinIO mirror tamamlandı ve boyutlar eşleşti
-[ ] Redis restore edildi (opsiyonel)
-
-### Nginx + SSL
-[ ] SSL sertifikası alındı
-[ ] Nginx config uygulandı
-[ ] nginx -t başarılı
+[ ] Git SSH anahtarı kuruldu, repo klonlandı
+[ ] venv + pip install (ML paketler dahil)
+[ ] .env oluşturuldu (ADMIN_PASSWORD_HASH dahil)
+[ ] Sertifika dosyaları kopyalandı (p8, voip_cert, firebase JSON)
+[ ] DB şeması pg_dump --schema-only ile uygulandı
+[ ] alembic stamp head çalıştırıldı
+[ ] PostgreSQL verisi taşındı (pg_dump --data-only)
+[ ] MinIO verisi taşındı (/var/minio/data/teqlif/)
+[ ] Systemd unit'ler kuruldu (teqlif, workers, redis-backup.timer)
+[ ] PartOf override'lar uygulandı (teqlif-worker, teqlif-worker-critical)
+[ ] www-data sahipliği ayarlandı
 
 ### LiveKit
-[ ] Binary kuruldu
-[ ] Config kopyalandı, node_ip güncellendi
+[ ] Binary eski VPS'ten kopyalandı
+[ ] /etc/livekit/livekit.yaml — node_ip güncellendi
+[ ] TURN sertifikaları kopyalandı
+[ ] livekit sistem kullanıcısı oluşturuldu
 [ ] Systemd unit kuruldu
 
-### Monitoring
-[ ] Loki kuruldu ve çalışıyor
-[ ] Promtail kuruldu ve çalışıyor
-[ ] Grafana kuruldu ve çalışıyor
+### Nginx + SSL
+[ ] Config eski VPS'ten kopyalandı
+[ ] SSL sertifikaları taşındı (/etc/letsencrypt/)
+[ ] nginx -t başarılı
 
-### DNS Geçişi
-[ ] TTL 60 saniyeye düşürüldü (24 saat önce)
-[ ] Tüm A kayıtları 135.125.175.223 olarak güncellendi
-[ ] DNS yayılması doğrulandı
-[ ] SSL çalışıyor
-[ ] Son MinIO sync yapıldı
+### Monitoring
+[ ] Loki — binary + config eski VPS'ten kopyalandı
+[ ] Promtail — binary + config + GeoIP DB kopyalandı (worker.log dahil)
+[ ] Prometheus — binary + config + prometheus kullanıcısı
+[ ] Grafana — grafana.db kopyalandı, ClickHouse plugin kuruldu
+[ ] node_exporter — binary eski VPS'ten kopyalandı
+[ ] prometheus-postgres-exporter — apt kurulum, Unix socket config
+
+### DNS Cutover
+[ ] TTL'ler 60 saniyeye düşürüldü (24 saat önce)
+[ ] A kayıtları güncellendi
+[ ] dig teqlif.com → yeni IP
+[ ] curl https://teqlif.com/api/health → 200
+[ ] Certbot kuruldu, timer aktif
 
 ### Dış Servisler
-[ ] Firebase Console kontrol edildi (IP kısıtı varsa güncellendi)
-[ ] SPF kaydı güncellendi (Brevo için)
-[ ] LiveKit node_ip güncellendi
-
-### Doğrulama
-[ ] Tüm servisler çalışıyor
-[ ] API sağlık kontrolü geçti
-[ ] Test scripti çalıştı
-[ ] 48 saat beklendi
-[ ] Eski VPS kapatıldı
+[ ] Brevo SPF kaydı kontrol edildi
+[ ] Firebase bağlantısı log'larda görünüyor
+[ ] APNs SANDBOX=False doğrulandı
 ```
