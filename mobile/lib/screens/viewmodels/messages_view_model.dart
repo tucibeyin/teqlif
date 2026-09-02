@@ -9,11 +9,14 @@ import '../../services/ws_service.dart';
 
 class MessagesUiState {
   final int unreadNotifs;
-  const MessagesUiState({this.unreadNotifs = 0});
-  
-  MessagesUiState copyWith({int? unreadNotifs}) {
+  final int requestCount;
+
+  const MessagesUiState({this.unreadNotifs = 0, this.requestCount = 0});
+
+  MessagesUiState copyWith({int? unreadNotifs, int? requestCount}) {
     return MessagesUiState(
       unreadNotifs: unreadNotifs ?? this.unreadNotifs,
+      requestCount: requestCount ?? this.requestCount,
     );
   }
 }
@@ -21,25 +24,42 @@ class MessagesUiState {
 class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> {
   StreamSubscription<void>? _badgeSub;
   StreamSubscription<Map<String, dynamic>>? _fcmSub;
+  StreamSubscription<Map<String, dynamic>>? _wsSub;
 
   @override
   FutureOr<MessagesUiState> build() async {
-    _badgeSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) => _loadUnreadNotifs());
-    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _loadUnreadNotifs());
-    
+    _badgeSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) => _loadCounts());
+    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _loadCounts());
+    _wsSub = WsService.messageStream.stream.listen((data) {
+      if (data['type'] == 'message') _loadCounts();
+    });
+
     ref.onDispose(() {
       _badgeSub?.cancel();
       _fcmSub?.cancel();
+      _wsSub?.cancel();
     });
-    
-    final count = await NotificationService.getUnreadNotifCount();
-    return MessagesUiState(unreadNotifs: count);
+
+    final results = await Future.wait([
+      NotificationService.getUnreadNotifCount(),
+      NotificationService.getMessageRequests(),
+    ]);
+    return MessagesUiState(
+      unreadNotifs: results[0] as int,
+      requestCount: (results[1] as List).length,
+    );
   }
 
-  Future<void> _loadUnreadNotifs() async {
-    final count = await NotificationService.getUnreadNotifCount();
+  Future<void> _loadCounts() async {
+    final results = await Future.wait([
+      NotificationService.getUnreadNotifCount(),
+      NotificationService.getMessageRequests(),
+    ]);
     if (state.hasValue) {
-      state = AsyncValue.data(state.value!.copyWith(unreadNotifs: count));
+      state = AsyncValue.data(state.value!.copyWith(
+        unreadNotifs: results[0] as int,
+        requestCount: (results[1] as List).length,
+      ));
     }
   }
 

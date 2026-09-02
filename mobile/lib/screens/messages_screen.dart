@@ -108,7 +108,25 @@ class MessagesScreenState extends ConsumerState<MessagesScreen>
           unselectedLabelColor: const Color(0xFF9CA3AF),
           indicatorColor: kPrimary,
           tabs: [
-            Tab(text: loc.t("msgTabMessages")),
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(loc.t("msgTabMessages")),
+                  if (state.requestCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
