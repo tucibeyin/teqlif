@@ -2366,6 +2366,14 @@
       }
     }
   },
+  "notifMsgRequestAccepted": "@{username} قبل طلب رسالتك",
+  "@notifMsgRequestAccepted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessageVoice": "🎵 رسالة صوتية",
   "notifMessageImage": "📷 صورة",
   "notifMessageVideo": "🎬 فيديو",

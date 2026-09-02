@@ -154,7 +154,7 @@ async def accept_message_request(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    await AcceptMessageRequestCommand(uow).execute(current_user.id, requester_id)
+    await AcceptMessageRequestCommand(uow).execute(current_user.id, requester_id, current_user.username)
 
 
 @router.post("/requests/{requester_id}/decline", status_code=204)

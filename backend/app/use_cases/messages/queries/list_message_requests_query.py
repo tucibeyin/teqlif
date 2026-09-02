@@ -14,7 +14,7 @@ class ListMessageRequestsQuery:
         threads_result = await self.uow.session.execute(
             select(MessageThread).where(
                 or_(MessageThread.user_a_id == uid, MessageThread.user_b_id == uid),
-                MessageThread.is_request == True,
+                MessageThread.status == "pending",
             )
         )
         threads = threads_result.scalars().all()

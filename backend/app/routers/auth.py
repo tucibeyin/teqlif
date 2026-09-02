@@ -375,9 +375,9 @@ async def update_me(
                         MessageThread.user_a_id == current_user.id,
                         MessageThread.user_b_id == current_user.id,
                     ),
-                    MessageThread.is_request == True,
+                    MessageThread.status == "pending",
                 )
-                .values(is_request=False)
+                .values(status="accepted")
             )
             _redis = await get_redis()
             await _redis.delete(f"msg:unread:request:{current_user.id}")

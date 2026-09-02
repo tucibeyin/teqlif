@@ -1,7 +1,6 @@
-from sqlalchemy import select, delete, or_, and_
+from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
-from app.models.message import DirectMessage
 from app.models.message_thread import MessageThread
 from app.utils.redis_client import get_redis
 
@@ -17,22 +16,14 @@ class DeclineMessageRequestCommand:
                 select(MessageThread).where(
                     MessageThread.user_a_id == user_a,
                     MessageThread.user_b_id == user_b,
-                    MessageThread.is_request == True,
+                    MessageThread.status == "pending",
                 )
             )
             if not thread:
                 raise NotFoundException(code="MESSAGE_REQUEST_NOT_FOUND")
 
-            # Delete thread + all messages in the conversation
-            await self.uow.session.execute(
-                delete(DirectMessage).where(
-                    or_(
-                        and_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == requester_id),
-                        and_(DirectMessage.sender_id == requester_id, DirectMessage.receiver_id == uid),
-                    )
-                )
-            )
-            await self.uow.session.delete(thread)
+            # Soft decline — conversation hidden, messages preserved, sender unaware
+            thread.status = "declined"
 
         redis = await get_redis()
         await redis.decr(f"msg:unread:request:{uid}")

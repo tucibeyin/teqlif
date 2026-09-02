@@ -193,9 +193,9 @@ async def accept_follow_request(
         .where(
             MessageThread.user_a_id == user_a,
             MessageThread.user_b_id == user_b,
-            MessageThread.is_request == True,
+            MessageThread.status == "pending",
         )
-        .values(is_request=False)
+        .values(status="accepted")
     )
     await db.commit()
     _redis = await get_redis()

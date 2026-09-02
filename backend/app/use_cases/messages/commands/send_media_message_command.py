@@ -166,6 +166,10 @@ class SendMediaMessageCommand:
                 )
             )
             is_new_request = False
+            auto_accepted = False
+            is_pending_for_initiator = False
+            initiator_id_for_notif: int | None = None
+
             if not existing_thread:
                 is_req = False
                 if receiver.is_private:
@@ -179,9 +183,20 @@ class SendMediaMessageCommand:
                     if not follow_accepted:
                         is_req = True
                 self.uow.session.add(MessageThread(
-                    user_a_id=user_a, user_b_id=user_b, is_request=is_req,
+                    user_a_id=user_a,
+                    user_b_id=user_b,
+                    initiator_id=sender_id,
+                    status="pending" if is_req else "accepted",
                 ))
                 is_new_request = is_req
+
+            elif existing_thread.status == "pending":
+                if existing_thread.initiator_id != sender_id:
+                    existing_thread.status = "accepted"
+                    auto_accepted = True
+                    initiator_id_for_notif = existing_thread.initiator_id
+                else:
+                    is_pending_for_initiator = True
 
             await self.uow.session.flush()
 
@@ -189,6 +204,10 @@ class SendMediaMessageCommand:
         if is_new_request:
             redis = await get_redis()
             await redis.incr(f"msg:unread:request:{receiver_id}")
+
+        if auto_accepted:
+            redis = await get_redis()
+            await redis.decr(f"msg:unread:request:{sender_id}")
 
         payload = _media_payload(msg, sender_username)
         await broadcast_dm(receiver_id, payload)
@@ -200,7 +219,22 @@ class SendMediaMessageCommand:
             "video": "notifMessageVideo",
             "file": "notifMessageFile",
         }
-        if not is_new_request:
+        if auto_accepted and initiator_id_for_notif:
+            from app.routers.notifications import push_notification
+            await push_notification(
+                initiator_id_for_notif,
+                {
+                    "type": "message",
+                    "i18n": {
+                        "title_key": "notifMsgRequestAccepted",
+                        "title_params": {"username": sender_username},
+                    },
+                    "related_id": sender_id,
+                    "sender_username": sender_username,
+                },
+                pref_key="messages",
+            )
+        elif not is_new_request and not is_pending_for_initiator:
             from app.routers.notifications import push_notification
             await push_notification(
                 receiver_id,

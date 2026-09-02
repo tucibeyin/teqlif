@@ -2383,6 +2383,14 @@
       }
     }
   },
+  "notifMsgRequestAccepted": "@{username} mesaj isteğinizi kabul etti",
+  "@notifMsgRequestAccepted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessageVoice": "🎵 Ses mesajı",
   "notifMessageImage": "📷 Fotoğraf",
   "notifMessageVideo": "🎬 Video",

@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
 from app.models.message_thread import MessageThread
@@ -9,19 +9,34 @@ class AcceptMessageRequestCommand:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, uid: int, requester_id: int) -> None:
+    async def execute(self, uid: int, requester_id: int, uid_username: str) -> None:
         user_a, user_b = min(uid, requester_id), max(uid, requester_id)
         async with self.uow:
             thread = await self.uow.session.scalar(
                 select(MessageThread).where(
                     MessageThread.user_a_id == user_a,
                     MessageThread.user_b_id == user_b,
-                    MessageThread.is_request == True,
+                    MessageThread.status == "pending",
                 )
             )
             if not thread:
                 raise NotFoundException(code="MESSAGE_REQUEST_NOT_FOUND")
-            thread.is_request = False
+            thread.status = "accepted"
 
         redis = await get_redis()
         await redis.decr(f"msg:unread:request:{uid}")
+
+        from app.routers.notifications import push_notification
+        await push_notification(
+            requester_id,
+            {
+                "type": "message",
+                "i18n": {
+                    "title_key": "notifMsgRequestAccepted",
+                    "title_params": {"username": uid_username},
+                },
+                "related_id": uid,
+                "sender_username": uid_username,
+            },
+            pref_key="messages",
+        )

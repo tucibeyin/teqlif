@@ -15,10 +15,13 @@ depends_on = None
 def upgrade() -> None:
     op.execute("""
         CREATE TABLE message_threads (
-            user_a_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            user_b_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            is_request BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            user_a_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            user_b_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            initiator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status       VARCHAR(20) NOT NULL DEFAULT 'accepted'
+                         CONSTRAINT valid_thread_status
+                         CHECK (status IN ('pending', 'accepted', 'declined')),
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             PRIMARY KEY (user_a_id, user_b_id),
             CONSTRAINT ordered_user_pair CHECK (user_a_id < user_b_id)
         )
