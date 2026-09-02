@@ -254,4 +254,16 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_darkModeKey, value);
   }
+
+  static const _privacyBannerShownKey = 'teqlif_privacy_banner_shown';
+
+  static Future<bool> getPrivacyBannerShown() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_privacyBannerShownKey) ?? false;
+  }
+
+  static Future<void> setPrivacyBannerShown(bool val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_privacyBannerShownKey, val);
+  }
 }
