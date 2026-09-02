@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # ── Sağlayıcı ayarları ────────────────────────────────────────────────────────
 GROQ_API_URL      = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL        = "groq/compound"
-_GROQ_DAILY_LIMIT = 14_000
+_GROQ_DAILY_LIMIT = 250  # Free plan RPD limit for groq/compound
 
 GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent"
 _GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
