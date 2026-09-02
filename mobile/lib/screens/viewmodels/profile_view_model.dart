@@ -18,6 +18,8 @@ class ProfileUiState {
   final List<dynamic> tuciHistory;
   final ListingFilterState filter;
 
+  final bool showPrivacyBanner;
+
   const ProfileUiState({
     this.user,
     this.listings = const [],
@@ -27,6 +29,7 @@ class ProfileUiState {
     this.tuciBalance,
     this.tuciHistory = const [],
     this.filter = const ListingFilterState(),
+    this.showPrivacyBanner = false,
   });
 
   ProfileUiState copyWith({
@@ -38,6 +41,7 @@ class ProfileUiState {
     int? tuciBalance,
     List<dynamic>? tuciHistory,
     ListingFilterState? filter,
+    bool? showPrivacyBanner,
   }) {
     return ProfileUiState(
       user: user ?? this.user,
@@ -48,6 +52,7 @@ class ProfileUiState {
       tuciBalance: tuciBalance ?? this.tuciBalance,
       tuciHistory: tuciHistory ?? this.tuciHistory,
       filter: filter ?? this.filter,
+      showPrivacyBanner: showPrivacyBanner ?? this.showPrivacyBanner,
     );
   }
 
@@ -171,7 +176,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
       bypassCache: bypassCache,
       fromJson: (raw) => Map<String, dynamic>.from(raw as Map),
     ).listen(
-      (user) {
+      (user) async {
         final avatarUrl = user['profile_image_url'] as String?;
         if (avatarUrl != null && avatarUrl.isNotEmpty) {
           StorageService.saveAvatarUrl(avatarUrl);
@@ -188,10 +193,14 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
           phoneVerified: user['phone_verified'] == true,
         );
 
+        final isPrivate = user['is_private'] == true;
+        final bannerShown = await StorageService.getPrivacyBannerShown();
+
         if (state.hasValue) {
           state = AsyncValue.data(state.value!.copyWith(
             user: user,
             loading: false,
+            showPrivacyBanner: !isPrivate && !bannerShown,
           ));
         }
       },
@@ -231,6 +240,13 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
 
     loadPurchases();
     loadWallet(bypassCache: bypassCache);
+  }
+
+  Future<void> dismissPrivacyBanner() async {
+    await StorageService.setPrivacyBannerShown(true);
+    if (state.hasValue) {
+      state = AsyncValue.data(state.value!.copyWith(showPrivacyBanner: false));
+    }
   }
 }
 

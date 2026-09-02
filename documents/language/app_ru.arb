@@ -4447,5 +4447,8 @@
   "consentStatusNone": "Согласие не предоставлено",
   "consentGivenOn": "Подтверждено {date} на {locale}",
   "consentGivenOnDateOnly": "Подтверждено {date}",
-  "consentSettingsDeleteHint": "Вы можете закрыть аккаунт, чтобы удалить свои данные."
+  "consentSettingsDeleteHint": "Вы можете закрыть аккаунт, чтобы удалить свои данные.",
+  "privacyBannerTitle": "Ваш профиль открыт",
+  "privacyBannerDesc": "Сделайте профиль закрытым — его увидят только подписчики.",
+  "privacyBannerAction": "Перейти в настройки"
 }

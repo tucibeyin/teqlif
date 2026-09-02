@@ -4447,5 +4447,8 @@
   "consentStatusNone": "لم تُقدَّم أي موافقة",
   "consentGivenOn": "تم التأكيد في {date} باللغة {locale}",
   "consentGivenOnDateOnly": "تم التأكيد في {date}",
-  "consentSettingsDeleteHint": "يمكنك إغلاق حسابك لحذف بياناتك."
+  "consentSettingsDeleteHint": "يمكنك إغلاق حسابك لحذف بياناتك.",
+  "privacyBannerTitle": "ملفك الشخصي عام",
+  "privacyBannerDesc": "اجعل ملفك الشخصي خاصاً ليظهر لمتابعيك فقط.",
+  "privacyBannerAction": "انتقل إلى الإعدادات"
 }

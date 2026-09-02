@@ -583,6 +583,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
 
+            // ── Gizlilik bildirim pankartı ──
+            SliverToBoxAdapter(child: const _PrivacyBanner()),
+
             // ── Stale veri uyarısı ──
             if (state.listingsError && state.listings.isNotEmpty)
               SliverToBoxAdapter(
@@ -5122,6 +5125,78 @@ class _ScoreBadge extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Gizlilik bildirim pankartı ────────────────────────────────────────────────
+
+class _PrivacyBanner extends ConsumerWidget {
+  const _PrivacyBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final show = ref.watch(
+      profileViewModelProvider.select((s) => s.value?.showPrivacyBanner ?? false),
+    );
+    if (!show) return const SizedBox.shrink();
+
+    final loc = ref.watch(localizationProvider);
+    final user = ref.read(profileViewModelProvider).value?.user;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: kPrimary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kPrimary.withOpacity(0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lock_outline, size: 20, color: kPrimary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loc.t('privacyBannerTitle'),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  loc.t('privacyBannerDesc'),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => _SettingsScreen(user: user),
+                    ),
+                  ),
+                  child: Text(
+                    loc.t('privacyBannerAction'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: kPrimary,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => ref.read(profileViewModelProvider.notifier).dismissPrivacyBanner(),
+            child: const Icon(Icons.close, size: 18, color: Color(0xFF9CA3AF)),
+          ),
+        ],
       ),
     );
   }

@@ -4483,5 +4483,8 @@
   "consentStatusNone": "No consent given",
   "consentGivenOn": "Acknowledged on {date} in {locale}",
   "consentGivenOnDateOnly": "Acknowledged on {date}",
-  "consentSettingsDeleteHint": "You can close your account to have your data deleted."
+  "consentSettingsDeleteHint": "You can close your account to have your data deleted.",
+  "privacyBannerTitle": "Your profile is public",
+  "privacyBannerDesc": "Make your profile private so only your followers can see it.",
+  "privacyBannerAction": "Go to settings"
 }

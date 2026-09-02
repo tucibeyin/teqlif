@@ -4447,5 +4447,8 @@
   "consentStatusNone": "Rıza verilmedi",
   "consentGivenOn": "{date} tarihinde {locale} dilinde onaylandı",
   "consentGivenOnDateOnly": "{date} tarihinde onaylandı",
-  "consentSettingsDeleteHint": "Verilerinizin silinmesi için hesabınızı kapatabilirsiniz."
+  "consentSettingsDeleteHint": "Verilerinizin silinmesi için hesabınızı kapatabilirsiniz.",
+  "privacyBannerTitle": "Profilin herkese açık",
+  "privacyBannerDesc": "Profilini gizleyerek sadece takipçilerine görünür olabilirsin.",
+  "privacyBannerAction": "Ayarlara git"
 }
