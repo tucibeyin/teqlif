@@ -2,7 +2,7 @@
 
 **Hedef VPS:** `135.125.175.223`  
 **Başlangıç:** 2026-09-02  
-**Durum:** 🔄 Devam ediyor
+**Durum:** ✅ Tamamlandı
 
 > Her adımı tamamladıktan sonra çıktıyı paylaş → birlikte doğrulayıp bir sonraki adıma geçeceğiz.
 
@@ -60,30 +60,30 @@
 
 ## Faz 6.5 — Squarespace DNS Yönetimi
 
-- [ ] **DNS.1** Squarespace DNS paneline gir
-- [ ] **DNS.2** TTL'leri 60 saniyeye düşür (cutover'dan 24 saat önce)
-- [ ] **DNS.3** A kayıtlarını `135.125.175.223`'e güncelle:
-  - `teqlif.com`
-  - `www.teqlif.com`
-  - `admin.teqlif.com`
-  - `live.teqlif.com`
-- [ ] **DNS.4** Yayılmayı doğrula: `dig teqlif.com +short` → `135.125.175.223`
+- [x] **DNS.1** DNS Cloudflare üzerinden yönetiliyor (Squarespace değil)
+- [x] **DNS.2** TTL — zaten 1 saat, trafik olmadığından direkt cutover yapıldı
+- [x] **DNS.3** A kayıtları `135.125.175.223`'e güncellendi (Cloudflare dashboard):
+  - `teqlif.com` (Proxied)
+  - `www.teqlif.com` (CNAME → teqlif.com, Proxied)
+  - `live.teqlif.com` (DNS only — WebRTC için)
+- [x] **DNS.4** Yayılma doğrulandı, `curl https://teqlif.com/api/health` → 200 OK
 
 > ⚠️ DNS cutover öncesi yeni VPS'teki tüm servisler çalışır durumda olmalı.
 
 ## Faz 7 — Canlıya Alma
 
-- [ ] **7.1** DNS TTL düşürüldü (24 saat önce)
+- [x] **7.1** DNS direkt cutover yapıldı (trafik olmadığından TTL beklenmedi)
 - [x] **7.2** Tüm servisler başlatıldı (teqlif, teqlif-worker, teqlif-worker-critical, livekit, minio, redis, postgresql, clickhouse)
-- [ ] **7.3** DNS A kayıtları güncellendi
-- [ ] **7.4** `curl -I https://teqlif.com/api/health` → 200
+- [x] **7.3** DNS A kayıtları Cloudflare'den güncellendi
+- [x] **7.4** `curl https://teqlif.com/api/health` → 200 OK
+- [x] **7.5** SSL sertifikaları geçerli, certbot.timer aktif (otomatik yenileme)
 
 ## Faz 8 — Dış Servis Kontrolleri
 
-- [ ] **8.1** Firebase service account → test
-- [ ] **8.2** APNs → test
-- [ ] **8.3** Brevo SPF kaydı kontrol
-- [ ] **8.4** LiveKit bağlantı testi
+- [x] **8.1** Firebase service account → loglardan doğrulandı (`[FirebaseAdapter] hazır | project=teqlif-a24ee`)
+- [ ] **8.2** APNs → production test (uygulama ile doğrulanacak)
+- [x] **8.3** Brevo SPF kaydı temiz (`include:spf.brevo.com`, eski IP yok)
+- [ ] **8.4** LiveKit bağlantı testi (uygulama ile doğrulanacak)
 
 ---
 
