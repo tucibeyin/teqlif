@@ -432,6 +432,7 @@
     }
   },
   "liveNoViewers": "No viewers yet",
+  "streamViewerMuted": "Muted",
   "liveEndStreamTitle": "End Stream",
   "liveEndStreamConfirm": "Are you sure you want to end the stream?",
   "liveEndStreamBtn": "End",

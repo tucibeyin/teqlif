@@ -198,14 +198,16 @@ class StreamService {
     } catch (_) {}
   }
 
-  static Future<List<String>> getViewers(int streamId) async {
+  static Future<List<Map<String, dynamic>>> getViewers(int streamId) async {
     final headers = await _headers();
     final resp = await http.get(Uri.parse('$kBaseUrl/streams/$streamId/viewers'), headers: headers);
     if (resp.statusCode >= 400) {
       throw AppException('İzleyiciler alınamadı', statusCode: resp.statusCode);
     }
     final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-    return List<String>.from(body['viewers'] as List);
+    return List<Map<String, dynamic>>.from(
+      (body['viewers'] as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
   }
 
   static Future<String> uploadThumbnail(int streamId, Uint8List bytes, String filename) async {

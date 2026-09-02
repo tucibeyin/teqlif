@@ -683,7 +683,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _showViewers() async {
-    List<String> viewers = [];
+    List<Map<String, dynamic>> viewers = [];
     try {
       viewers = await ref
           .read(hostStreamViewModelProvider)
@@ -1539,7 +1539,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 // ── İzleyiciler BottomSheet ────────────────────────────────────────────────
 
 class _ViewersBottomSheet extends ConsumerWidget {
-  final List<String> viewers;
+  final List<Map<String, dynamic>> viewers;
   final String noViewersText;
 
   const _ViewersBottomSheet({
@@ -1596,7 +1596,9 @@ class _ViewersBottomSheet extends ConsumerWidget {
                 shrinkWrap: true,
                 itemCount: viewers.length,
                 itemBuilder: (_, i) {
-                  final uname = viewers[i];
+                  final viewer = viewers[i];
+                  final uname = viewer['username'] as String? ?? '';
+                  final isMuted = viewer['is_muted'] as bool? ?? false;
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
@@ -1616,14 +1618,35 @@ class _ViewersBottomSheet extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Text(
-                          '@$uname',
-                          style: TextStyle(
-                            color: usernameColor(uname),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Text(
+                            '@$uname',
+                            style: TextStyle(
+                              color: usernameColor(uname),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
+                        if (isMuted)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              ref.read(localizationProvider).t('streamViewerMuted'),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   );

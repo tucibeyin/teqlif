@@ -433,6 +433,7 @@
     }
   },
   "liveNoViewers": "Henüz izleyici yok",
+  "streamViewerMuted": "Susturuldu",
   "liveEndStreamTitle": "Yayını Bitir",
   "liveEndStreamConfirm": "Yayını sonlandırmak istiyor musunuz?",
   "liveEndStreamBtn": "Bitir",

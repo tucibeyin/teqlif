@@ -436,6 +436,7 @@
     }
   },
   "liveNoViewers": "لا يوجد مشاهدون بعد",
+  "streamViewerMuted": "مكتوم الصوت",
   "liveEndStreamTitle": "إنهاء البث",
   "liveEndStreamConfirm": "هل تريد إنهاء البث؟",
   "liveEndStreamBtn": "إنهاء",

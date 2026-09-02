@@ -106,7 +106,7 @@ class HostStreamViewModel {
     }
   }
 
-  Future<List<String>> getViewers(int streamId) async {
+  Future<List<Map<String, dynamic>>> getViewers(int streamId) async {
     try {
       return await StreamService.getViewers(streamId);
     } catch (_) {

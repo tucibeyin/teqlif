@@ -1124,6 +1124,7 @@
   "livePermissionRequired": "Требуется разрешение на использование камеры и микрофона",
   "liveViewersTitle": "👁 Зрители ({count})",
   "liveNoViewers": "Зрителей пока нет",
+  "streamViewerMuted": "Заглушен",
   "liveEndStreamTitle": "Завершить поток",
   "liveEndStreamConfirm": "Вы уверены, что хотите завершить трансляцию?",
   "liveEndStreamBtn": "Конец",
