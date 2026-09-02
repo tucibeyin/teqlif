@@ -147,7 +147,53 @@ class _MessagesTab extends ConsumerStatefulWidget {
   ConsumerState<_MessagesTab> createState() => _MessagesTabState();
 }
 
-class _MessagesTabState extends ConsumerState<_MessagesTab> {
+// ─── Top-level helpers (shared by _MessagesTabState + _RequestsListTab) ──────
+
+String _convTimeAgo(String? isoStr, TranslationPack loc) {
+  if (isoStr == null) return '';
+  try {
+    final dt = DateTime.parse(isoStr).toLocal();
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return loc.t("timeNow");
+    if (diff.inMinutes < 60) return loc.t("timeMinAgo", {"n": diff.inMinutes.toString()});
+    if (diff.inHours < 24) return loc.t("timeHoursAgo", {"n": diff.inHours.toString()});
+    return loc.t("timeDaysAgo", {"n": diff.inDays.toString()});
+  } catch (_) {
+    return '';
+  }
+}
+
+String _convLastMsg(Map<String, dynamic> data, TranslationPack loc) {
+  final ct = data['content_type'] as String? ?? 'text';
+  if (ct != 'text') {
+    return switch (ct) {
+      'image' => loc.t("msgLastPhoto"),
+      'video' => loc.t("msgLastVideo"),
+      'voice' => loc.t("msgLastVoice"),
+      'file'  => loc.t("msgLastFile"),
+      _       => loc.t("msgLastFile"),
+    };
+  }
+  return (data['content'] as String?) ?? '';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MessagesTabState extends ConsumerState<_MessagesTab>
+    with SingleTickerProviderStateMixin {
+  late final TabController _innerTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _innerTab = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _innerTab.dispose();
+    super.dispose();
+  }
 
   /// WS üzerinden gelen mesajı HTTP isteği atmadan anında listeye yansıtır.
   /// Bilinmeyen gönderici (yeni konuşma) varsa API'ya fallback yapar.
@@ -243,7 +289,53 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
     final loc = ref.watch(localizationProvider);
     final stateAsync = ref.watch(messagesTabViewModelProvider);
     final state = stateAsync.value ?? const ConversationsUiState();
+    final requestCount = ref.watch(requestsTabViewModelProvider).value?.conversations.length ?? 0;
 
+    return Column(
+      children: [
+        TabBar(
+          controller: _innerTab,
+          labelColor: kPrimary,
+          unselectedLabelColor: const Color(0xFF9CA3AF),
+          indicatorColor: kPrimary,
+          tabs: [
+            Tab(text: loc.t('msgTabMessages')),
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(loc.t('msgTabRequests')),
+                  if (requestCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _innerTab,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              _buildConversationsContent(loc, state),
+              const _RequestsListTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConversationsContent(TranslationPack loc, ConversationsUiState state) {
     if (state.loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -333,7 +425,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
                         style: const TextStyle(
                           fontSize: 11,
                           color: Color(0xFF9CA3AF),
-                        ), // color handled by theme
+                        ),
                       ),
                     ],
                   ),
@@ -435,6 +527,155 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── İstekler Tab ─────────────────────────────────────────────────────────────
+
+class _RequestsListTab extends ConsumerWidget {
+  const _RequestsListTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final stateAsync = ref.watch(requestsTabViewModelProvider);
+    final state = stateAsync.value ?? const ConversationsUiState();
+
+    if (state.loading) {
+      return const Center(child: CircularProgressIndicator(color: kPrimary));
+    }
+    if (state.hasError && state.conversations.isEmpty) {
+      return NetworkErrorWidget(
+        scrollable: true,
+        onRetry: () => ref.read(requestsTabViewModelProvider.notifier).load(),
+      );
+    }
+    if (state.conversations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.mark_email_unread_outlined,
+              size: 64,
+              color: Color(0xFFD1D5DB),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              loc.t("msgNoRequests"),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(loc.t("msgNoRequestsDesc"), textAlign: TextAlign.center),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: kPrimary,
+      onRefresh: () async => ref.read(requestsTabViewModelProvider.notifier).load(silent: true),
+      child: ListView.separated(
+        itemCount: state.conversations.length,
+        separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
+        itemBuilder: (context, i) {
+          final conv = state.conversations[i];
+          final username = conv['username'] as String? ?? '';
+          final fullName = conv['full_name'] as String? ?? username;
+          final lastMsg = _convLastMsg({
+            'content_type': conv['last_message_type'] ?? 'text',
+            'content': conv['last_message'] ?? '',
+          }, loc);
+          final lastAt = conv['last_at'] as String?;
+          final unread = (conv['unread_count'] as int?) ?? 0;
+          final otherId = (conv['user_id'] as int?) ?? 0;
+          final initial = (fullName.isNotEmpty ? fullName[0] : '?').toUpperCase();
+          final otherAvatarUrl = conv['profile_image_thumb_url'] as String?;
+
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: kPrimary.withValues(alpha: 0.15),
+              backgroundImage:
+                  otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
+                  ? CachedNetworkImageProvider(imgUrl(otherAvatarUrl))
+                  : null,
+              child: otherAvatarUrl == null || otherAvatarUrl.isEmpty
+                  ? Text(
+                      initial,
+                      style: const TextStyle(
+                        color: kPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+            ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    fullName,
+                    style: TextStyle(
+                      fontWeight: unread > 0 ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Text(
+                  _convTimeAgo(lastAt, loc),
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                ),
+              ],
+            ),
+            subtitle: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    lastMsg,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: unread > 0
+                          ? const Color(0xFF374151)
+                          : const Color(0xFF9CA3AF),
+                      fontWeight: unread > 0 ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                if (unread > 0)
+                  Container(
+                    margin: const EdgeInsetsDirectional.only(start: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: const BoxDecoration(
+                      color: kPrimary,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Text(
+                      '$unread',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ),
+              ],
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DirectChatScreen(
+                    otherUserId: otherId,
+                    displayName: fullName,
+                    otherHandle: username,
+                    otherAvatarUrl: otherAvatarUrl,
+                    isRequest: true,
+                  ),
+                ),
+              ).then((_) {
+                ref.read(requestsTabViewModelProvider.notifier).load(silent: true);
+                ref.read(messagesTabViewModelProvider.notifier).load(silent: true);
+              });
+            },
+          );
+        },
       ),
     );
   }
@@ -861,6 +1102,8 @@ class DirectChatScreen extends ConsumerStatefulWidget {
   final int? listingId;
   final Map<String, dynamic>? contextPurchase;
   final Map<String, dynamic>? contextSale;
+  // Thread status from caller's perspective — true when opened from requests tab
+  final bool isRequest;
 
   const DirectChatScreen({
     super.key,
@@ -871,6 +1114,7 @@ class DirectChatScreen extends ConsumerStatefulWidget {
     this.listingId,
     this.contextPurchase,
     this.contextSale,
+    this.isRequest = false,
   });
 
   @override

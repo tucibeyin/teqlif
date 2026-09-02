@@ -283,3 +283,53 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
 final notificationsTabViewModelProvider = AutoDisposeAsyncNotifierProvider<NotificationsTabViewModel, NotificationsUiState>(
   () => NotificationsTabViewModel(),
 );
+
+// ─── Requests Tab View Model ──────────────────────────────────────────────────
+
+class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState> {
+  StreamSubscription<Map<String, dynamic>>? _fcmSub;
+  StreamSubscription<Map<String, dynamic>>? _wsSub;
+  bool _loadInProgress = false;
+
+  @override
+  FutureOr<ConversationsUiState> build() async {
+    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
+    _wsSub = WsService.messageStream.stream.listen((data) {
+      if (data['type'] == 'message') load(silent: true);
+    });
+    ref.onDispose(() {
+      _fcmSub?.cancel();
+      _wsSub?.cancel();
+    });
+
+    Future.microtask(() => load(silent: false));
+    return const ConversationsUiState(loading: true);
+  }
+
+  Future<void> load({bool silent = false}) async {
+    if (_loadInProgress || !state.hasValue) return;
+    _loadInProgress = true;
+    if (!silent) {
+      state = AsyncValue.data(state.value!.copyWith(loading: true));
+    }
+    try {
+      final data = await NotificationService.getMessageRequests();
+      state = AsyncValue.data(state.value!.copyWith(
+        conversations: data,
+        loading: false,
+        hasError: false,
+      ));
+    } catch (e) {
+      state = AsyncValue.data(state.value!.copyWith(
+        hasError: true,
+        loading: false,
+      ));
+    } finally {
+      _loadInProgress = false;
+    }
+  }
+}
+
+final requestsTabViewModelProvider = AutoDisposeAsyncNotifierProvider<RequestsTabViewModel, ConversationsUiState>(
+  () => RequestsTabViewModel(),
+);

@@ -61,6 +61,12 @@ class NotificationService {
     );
   }
 
+  static Future<List<dynamic>> getMessageRequests() async {
+    return apiCallList(
+      () async => http.get(Uri.parse('$kBaseUrl/messages/requests'), headers: await _headers()),
+    );
+  }
+
   /// Mesaj geçmişi — hata durumunda exception fırlatır; çağıran hata durumunu göstermelidir.
   static Future<List<dynamic>> getMessages(int otherUserId) {
     return apiCallList(
