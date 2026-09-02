@@ -1,11 +1,11 @@
 """
-Groq (compound) primary / Gemini (gemini-3.1-flash-lite) fallback LLM Servisi
+Groq model chain primary / Gemini (gemini-3.1-flash-lite) fallback LLM Servisi
 
-Provider seçimi:
-  1. Groq   — API key var ve günlük kota dolmamışsa (14,000 req/gün)
-  2. Gemini — Groq key yok, kota dolmuş veya hata (1,000 req/gün güvenli marj)
+Provider seçimi (sırayla, kota bitince sonraki modele geçilir):
+  1..N. Groq modelleri — _GROQ_MODELS listesinde tanımlı, her biri kendi RPD kotasıyla
+  N+1.  Gemini         — tüm Groq kotaları dolmuş ya da key yok (1,000 req/gün güvenli marj)
 
-Her iki path da aynı sentence-boundary streaming + Python-side suffix kullanır.
+Her path aynı sentence-boundary streaming + Python-side suffix kullanır.
 """
 import json
 import logging
@@ -22,9 +22,18 @@ from app.services.ml.llm_templates import ListingTemplates
 logger = logging.getLogger(__name__)
 
 # ── Sağlayıcı ayarları ────────────────────────────────────────────────────────
-GROQ_API_URL      = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL        = "groq/compound"
-_GROQ_DAILY_LIMIT = 250  # Free plan RPD limit for groq/compound
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+# Groq free-plan model chain (öncelik sırasına göre; RPD = requests per day)
+# Kota dolan model atlanır, bir sonraki denenir.
+_GROQ_MODELS: list[tuple[str, int]] = [
+    ("openai/gpt-oss-120b", 1_000),
+    ("openai/gpt-oss-20b",  1_000),
+    ("qwen/qwen3.6-27b",    1_000),
+    ("qwen/qwen3.8-27b",    1_000),
+    ("groq/compound",         250),
+    ("groq/compound-mini",    250),
+]
 
 GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent"
 _GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
@@ -201,13 +210,13 @@ async def _quota_ok(provider: str, daily_limit: int) -> bool:
 
 
 # ── Raw token async generatorlar ─────────────────────────────────────────────
-async def _tokens_groq(system: str, user: str) -> AsyncGenerator[str, None]:
+async def _tokens_groq(system: str, user: str, model: str) -> AsyncGenerator[str, None]:
     headers = {
         "Authorization": f"Bearer {settings.groq_api_key}",
         "Content-Type": "application/json",
     }
     payload = {
-        "model": GROQ_MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -324,24 +333,28 @@ async def generate_listing_description_stream(
     lang: str = "tr",
 ) -> AsyncGenerator[str, None]:
     """
-    Groq primary → Gemini fallback.
+    Groq model chain primary → Gemini fallback.
     Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
     Lokasyon bilgisi bu fonksiyona gelmez — mobile client tarafında eklenir.
     """
     system_prompt, user_prompt = _build_prompt(title, category, condition, subcategory, extra_fields, lang)
 
-    # ── Groq path ─────────────────────────────────────────────────────────────
-    if settings.groq_api_key and await _quota_ok("groq", _GROQ_DAILY_LIMIT):
-        try:
-            logger.info("[LLM] Groq | title=%r", title[:60])
-            yield "__META_groq__"
-            async for chunk in _sentence_stream(
-                _tokens_groq(system_prompt, user_prompt), price, "groq"
-            ):
-                yield chunk
-            return
-        except Exception as exc:
-            logger.error("[LLM] Groq başarısız, Gemini'ye fallback: %s", exc)
+    # ── Groq model chain ──────────────────────────────────────────────────────
+    if settings.groq_api_key:
+        for model_id, daily_limit in _GROQ_MODELS:
+            if not await _quota_ok(model_id, daily_limit):
+                continue
+            try:
+                logger.info("[LLM] %s | title=%r", model_id, title[:60])
+                yield "__META_groq__"
+                async for chunk in _sentence_stream(
+                    _tokens_groq(system_prompt, user_prompt, model_id), price, model_id
+                ):
+                    yield chunk
+                return
+            except Exception as exc:
+                logger.error("[LLM] %s başarısız, sonraki model deneniyor: %s", model_id, exc)
+                continue
 
     # ── Gemini fallback ────────────────────────────────────────────────────────
     if settings.gemini_api_key and await _quota_ok("gemini", _GEMINI_DAILY_LIMIT):
