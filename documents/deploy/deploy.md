@@ -836,62 +836,63 @@ alembic upgrade head
 
 ```
 ### Sistem
-[ ] apt upgrade tamamlandı
-[ ] Python 3.13 (Debian 13 native — PPA gerekmez)
-[ ] Dizin yapısı oluşturuldu
-[ ] UFW aktif (SSH, Nginx Full, LiveKit, TURN, Grafana, Cloudflare IP'leri)
-[ ] Fail2ban aktif
+[x] apt upgrade tamamlandı
+[x] Python 3.13 (Debian 13 native — PPA gerekmez)
+[x] Dizin yapısı oluşturuldu
+[x] UFW aktif (SSH, Nginx Full, LiveKit, TURN, Grafana, Cloudflare IP'leri)
+[x] Fail2ban aktif (3 jail: nginx-botscan, nginx-req-limit, sshd)
 
 ### Servisler
-[ ] PostgreSQL 17 + pgvector
-[ ] DB ve kullanıcı oluşturuldu (vector + pg_trgm extension)
-[ ] Redis — config eski VPS'ten kopyalandı
-[ ] ClickHouse — resmi install script kullanıldı
-[ ] MinIO — /var/minio/data, port 9010, /etc/minio.env
-[ ] Nginx — config eski VPS'ten kopyalandı
+[x] PostgreSQL 17 + pgvector
+[x] DB ve kullanıcı oluşturuldu (vector + pg_trgm extension)
+[x] Redis — config eski VPS'ten kopyalandı
+[x] ClickHouse — resmi install script kullanıldı
+[x] MinIO — /var/minio/data, port 9010, /etc/minio.env
+[x] Nginx — config eski VPS'ten kopyalandı
 
 ### Uygulama
-[ ] Git SSH anahtarı kuruldu, repo klonlandı
-[ ] venv + pip install (ML paketler dahil)
-[ ] .env oluşturuldu (ADMIN_PASSWORD_HASH dahil)
-[ ] Sertifika dosyaları kopyalandı (p8, voip_cert, firebase JSON)
-[ ] DB şeması pg_dump --schema-only ile uygulandı
-[ ] alembic stamp head çalıştırıldı
-[ ] PostgreSQL verisi taşındı (pg_dump --data-only)
-[ ] MinIO verisi taşındı (/var/minio/data/teqlif/)
-[ ] Systemd unit'ler kuruldu (teqlif, workers, redis-backup.timer)
-[ ] PartOf override'lar uygulandı (teqlif-worker, teqlif-worker-critical)
-[ ] www-data sahipliği ayarlandı
+[x] Git SSH anahtarı kuruldu, repo klonlandı
+[x] venv + pip install (ML paketler dahil)
+[x] .env oluşturuldu (ADMIN_PASSWORD_HASH dahil)
+[x] Sertifika dosyaları kopyalandı (p8, voip_cert, firebase JSON)
+[x] DB şeması pg_dump --schema-only ile uygulandı
+[x] alembic stamp head çalıştırıldı
+[x] PostgreSQL verisi taşındı (pg_dump --data-only — 8 kullanıcı, 12020 çeviri, 970 ilçe)
+[x] MinIO verisi taşındı (80 obje — /var/minio/data/teqlif/)
+[x] Systemd unit'ler kuruldu (teqlif, workers, redis-backup.timer)
+[x] PartOf override'lar uygulandı (teqlif-worker, teqlif-worker-critical)
+[x] www-data sahipliği ayarlandı
 
 ### LiveKit
-[ ] Binary eski VPS'ten kopyalandı
-[ ] /etc/livekit/livekit.yaml — node_ip güncellendi
-[ ] TURN sertifikaları kopyalandı
-[ ] livekit sistem kullanıcısı oluşturuldu
-[ ] Systemd unit kuruldu
+[x] Binary eski VPS'ten kopyalandı (v1.13.3)
+[x] /etc/livekit/livekit.yaml — node_ip 135.125.175.223 olarak güncellendi
+[x] TURN sertifikaları kopyalandı
+[x] livekit sistem kullanıcısı oluşturuldu
+[x] Systemd unit kuruldu, aktif
 
 ### Nginx + SSL
-[ ] Config eski VPS'ten kopyalandı
-[ ] SSL sertifikaları taşındı (/etc/letsencrypt/)
-[ ] nginx -t başarılı
+[x] Config eski VPS'ten kopyalandı
+[x] SSL sertifikaları taşındı (/etc/letsencrypt/)
+[x] nginx -t başarılı
 
 ### Monitoring
-[ ] Loki — binary + config eski VPS'ten kopyalandı
-[ ] Promtail — binary + config + GeoIP DB kopyalandı (worker.log dahil)
-[ ] Prometheus — binary + config + prometheus kullanıcısı
-[ ] Grafana — grafana.db kopyalandı, ClickHouse plugin kuruldu
-[ ] node_exporter — binary eski VPS'ten kopyalandı
-[ ] prometheus-postgres-exporter — apt kurulum, Unix socket config
+[x] Loki 3.6.7 — binary + config eski VPS'ten kopyalandı, retention_period=720h
+[x] Promtail 3.0.0 — binary + config + GeoIP DB kopyalandı (worker.log dahil)
+[x] Prometheus 2.51.0 — binary + config + prometheus kullanıcısı
+[x] Grafana 13.x — grafana.db kopyalandı, ClickHouse plugin kuruldu
+[x] node_exporter 1.8.2 — binary eski VPS'ten kopyalandı
+[x] prometheus-postgres-exporter 0.17.1 — apt kurulum, Unix socket (prometheus kullanıcısı)
 
-### DNS Cutover
-[ ] TTL'ler 60 saniyeye düşürüldü (24 saat önce)
-[ ] A kayıtları güncellendi
-[ ] dig teqlif.com → yeni IP
+### DNS Cutover (Squarespace) — BEKLIYOR
+[ ] TTL'ler 60 saniyeye düşürüldü (cutover'dan 24 saat önce)
+[ ] A kayıtları 135.125.175.223'e güncellendi:
+      teqlif.com / www.teqlif.com / admin.teqlif.com / live.teqlif.com
+[ ] dig teqlif.com +short → 135.125.175.223
 [ ] curl https://teqlif.com/api/health → 200
-[ ] Certbot kuruldu, timer aktif
+[ ] Certbot kuruldu, certbot.timer aktif
 
-### Dış Servisler
-[ ] Brevo SPF kaydı kontrol edildi
-[ ] Firebase bağlantısı log'larda görünüyor
+### Dış Servisler — BEKLIYOR
+[ ] Brevo SPF kaydında eski IP varsa güncelle
+[ ] Firebase bağlantısı log'larda görünüyor (app başladığında)
 [ ] APNs SANDBOX=False doğrulandı
 ```
