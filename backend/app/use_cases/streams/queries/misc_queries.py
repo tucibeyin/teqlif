@@ -3,7 +3,7 @@ from app.core.uow import AbstractUnitOfWork
 from app.models.stream import LiveStream
 from app.models.user import User
 from app.models.follow import Follow
-from app.use_cases.streams.stream_utils import _fill_viewer_counts, _apply_block_filter
+from app.use_cases.streams.stream_utils import _fill_viewer_counts
 from app.services.like_service import LikeService
 
 class GetFollowedLiveStreamsQuery:
@@ -53,9 +53,6 @@ class GetActiveStreamsQuery:
             .order_by(LiveStream.started_at.desc())
             .limit(100)
         )
-        if current_user_id:
-            query = _apply_block_filter(query, LiveStream.host_id, current_user_id)
-        
         result = await self.uow.session.execute(query)
         streams = result.scalars().all()
 
