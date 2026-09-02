@@ -896,3 +896,55 @@ alembic upgrade head
 [ ] Firebase bağlantısı log'larda görünüyor (app başladığında)
 [ ] APNs SANDBOX=False doğrulandı
 ```
+
+---
+
+## Sorun Giderme
+
+### `git pull` — Permission Denied (.git/objects)
+
+**Belirti:** `error: insufficient permission for adding an object to repository database .git/objects`
+
+**Neden:** Önceki bir `sudo git pull` ya da root işlemi `.git/objects` altında root'a ait dosya bırakmış.
+
+**Doğru düzeltme — sadece .git dizinini düzelt, tüm repo'yu değil:**
+
+```bash
+sudo chown -R www-data:www-data /var/www/teqlif.com/.git
+git pull   # tucibeyin www-data grubunda olduğu için çalışır
+```
+
+> ⚠️ `sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com` YAPMA.  
+> Tüm repo'yu `tucibeyin`'e bağlarsa `www-data` `.env`, `firebase-service-account.json`,  
+> `certificates/`, `logs/` gibi dosyalara erişemez — servis çöker.
+
+**Yanlış düzeltme sonrası kurtarma** (tüm repo `tucibeyin`'e bağlandıysa):
+
+```bash
+# Tüm repo'yu tekrar www-data'ya devret
+sudo chown -R www-data:www-data /var/www/teqlif.com
+
+# Hassas dosyalar: sadece www-data okuyabilmeli
+sudo chmod 600 /var/www/teqlif.com/backend/.env
+sudo chmod 600 /var/www/teqlif.com/backend/firebase-service-account.json
+sudo chmod 600 /var/www/teqlif.com/backend/certificates/*
+
+# Servisin yazma ihtiyacı olan dizinler
+sudo chown -R www-data:www-data /var/www/teqlif.com/backend/logs
+sudo chown -R www-data:www-data /var/www/teqlif.com/uploads
+
+sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
+```
+
+### Sahiplik Modeli Özeti
+
+| Yol | Sahip | İzin | Neden |
+|-----|-------|------|-------|
+| `/var/www/teqlif.com` (genel) | `www-data:www-data` | 755/644 | Servis `www-data` olarak çalışır |
+| `backend/.env` | `www-data:www-data` | 600 | Secret — sadece www-data |
+| `backend/firebase-service-account.json` | `www-data:www-data` | 600 | Secret — sadece www-data |
+| `backend/certificates/*` | `www-data:www-data` | 600 | Secret — sadece www-data |
+| `backend/logs/` | `www-data:www-data` | 755 | Servis buraya yazar |
+| `uploads/` | `www-data:www-data` | 755 | Servis buraya yazar |
+
+`tucibeyin` kullanıcısı `www-data` grubundadır (`usermod -aG www-data tucibeyin`) — bu sayede `git pull` ve dosya düzenlemeleri çalışır.
