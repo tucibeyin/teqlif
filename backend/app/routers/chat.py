@@ -32,7 +32,8 @@ from app.use_cases.chat.chat_utils import (
     moderation_pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
 )
 from app.use_cases.chat.commands.chat_commands import ChatCommands
-from app.services.moderation_service import kick_key
+from app.models.block import UserBlock
+from app.services.moderation_service import kick_key, mute_key
 from app.utils.auth import decode_token
 from app.utils.redis_client import get_redis
 
@@ -356,6 +357,30 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         except Exception as exc:
             logger.warning(
                 "[CHAT WS] Kick Redis kontrolü başarısız | stream_id=%s user_id=%s | %s",
+                stream_id, user_id, exc,
+            )
+
+    # ── 4.5. Block → auto-mute (bilateral) ──────────────────────────────────
+    # Host viewer'ı blockladıysa ya da viewer host'u blockladıysa → muted
+    if not is_host and host_id:
+        try:
+            async with AsyncSessionLocal() as _db:
+                block = await _db.scalar(
+                    select(UserBlock).where(
+                        (UserBlock.blocker_id == host_id) & (UserBlock.blocked_id == user_id)
+                        | (UserBlock.blocker_id == user_id) & (UserBlock.blocked_id == host_id)
+                    ).limit(1)
+                )
+                if block:
+                    _redis = await get_redis()
+                    await _redis.sadd(mute_key(stream_id), str(user_id))
+                    logger.info(
+                        "[CHAT WS] Auto-mute uygulandı | stream_id=%s user_id=%s host_id=%s",
+                        stream_id, user_id, host_id,
+                    )
+        except Exception as exc:
+            logger.warning(
+                "[CHAT WS] Auto-mute block kontrolü başarısız | stream_id=%s user_id=%s | %s",
                 stream_id, user_id, exc,
             )
 
