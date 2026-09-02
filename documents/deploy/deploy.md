@@ -246,6 +246,25 @@ sudo ln -sf /etc/nginx/sites-available/teqlif.com /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 ```
 
+> ⚠️ **`/uploads/` location'ı kopyaladıktan sonra mutlaka kontrol et.**  
+> Nginx config `alias /var/www/teqlif.com/uploads/` (yerel dizin) olarak geliyorsa  
+> MinIO'ya proxy'e çevir:
+>
+> ```nginx
+> location /uploads/ {
+>     proxy_pass http://127.0.0.1:9010/teqlif/;
+>     proxy_set_header Host $http_host;
+>     proxy_buffering off;
+>     expires 30d;
+>     add_header Cache-Control "public, no-transform";
+> }
+> ```
+>
+> Ve MinIO bucket'ı public-read yap:
+> ```bash
+> mc anonymous set download local/teqlif
+> ```
+
 ---
 
 ## Faz 3 — Uygulama Kurulumu
