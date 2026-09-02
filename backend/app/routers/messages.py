@@ -24,6 +24,7 @@ from app.use_cases.messages.queries.get_conversations_query import GetConversati
 from app.use_cases.messages.queries.get_unread_count_query import GetUnreadCountQuery
 from app.use_cases.messages.queries.get_messages_query import GetMessagesQuery
 from app.use_cases.messages.queries.list_message_requests_query import ListMessageRequestsQuery
+from app.use_cases.messages.queries.get_thread_status_query import GetThreadStatusQuery
 from app.use_cases.messages.commands.send_direct_message import SendDirectMessageCommand
 from app.use_cases.messages.commands.send_media_message_command import SendMediaMessageCommand
 from app.use_cases.messages.commands.delete_message_command import DeleteMessageCommand
@@ -62,6 +63,15 @@ async def unread_dm_count(
 ):
     count = await GetUnreadCountQuery(uow).execute(current_user.id)
     return UnreadCountOut(count=count)
+
+
+@router.get("/thread/{other_user_id}/status")
+async def get_thread_status(
+    other_user_id: int,
+    current_user: User = Depends(get_current_user),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    return await GetThreadStatusQuery(uow).execute(current_user.id, other_user_id)
 
 
 @router.get("/requests", response_model=List[ConversationOut])

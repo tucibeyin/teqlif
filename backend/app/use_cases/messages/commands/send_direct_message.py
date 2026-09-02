@@ -154,6 +154,7 @@ class SendDirectMessageCommand:
                         "title_key": "notifMsgRequestAccepted",
                         "title_params": {"username": sender_username},
                     },
+                    "body": content[:100],
                     "related_id": sender_id,
                     "sender_username": sender_username,
                 },

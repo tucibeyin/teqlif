@@ -50,6 +50,7 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
 import 'viewmodels/messages_view_model.dart';
+import 'viewmodels/direct_chat_request_view_model.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -2146,6 +2147,18 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               purchase: widget.contextPurchase,
               sale: widget.contextSale,
             ),
+          _RequestBanner(
+            otherUserId: widget.otherUserId,
+            otherHandle: widget.otherHandle,
+            onAccepted: () {
+              ref.read(requestsTabViewModelProvider.notifier).load(silent: true);
+              ref.read(messagesTabViewModelProvider.notifier).load(silent: true);
+            },
+            onDeclined: () {
+              ref.read(requestsTabViewModelProvider.notifier).load(silent: true);
+              Navigator.pop(context);
+            },
+          ),
           Expanded(
             child: _loading
                 ? const Center(
@@ -2504,6 +2517,114 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Mesaj isteği banner ───────────────────────────────────────────────────────
+
+class _RequestBanner extends ConsumerWidget {
+  final int otherUserId;
+  final String otherHandle;
+  final VoidCallback onAccepted;
+  final VoidCallback onDeclined;
+
+  const _RequestBanner({
+    required this.otherUserId,
+    required this.otherHandle,
+    required this.onAccepted,
+    required this.onDeclined,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final reqAsync = ref.watch(directChatRequestProvider(otherUserId));
+    final req = reqAsync.value;
+
+    if (req == null || req.isLoading || req.status != 'pending') {
+      return const SizedBox.shrink();
+    }
+
+    if (req.isInitiator) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          border: Border(bottom: BorderSide(color: const Color(0xFFE5E7EB))),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF9CA3AF)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                loc.t('msgReqBannerInitiator'),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Alıcı — Kabul Et / Reddet
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: kPrimary.withValues(alpha: 0.06),
+        border: Border(bottom: BorderSide(color: kPrimary.withValues(alpha: 0.15))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              loc.t('msgReqBannerReceiver', {'username': '@$otherHandle'}),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (req.isActioning)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary),
+            )
+          else ...[
+            TextButton(
+              onPressed: () async {
+                await ref.read(directChatRequestProvider(otherUserId).notifier).decline();
+                onDeclined();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6B7280),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(loc.t('msgReqBannerDecline'), style: const TextStyle(fontSize: 13)),
+            ),
+            const SizedBox(width: 4),
+            ElevatedButton(
+              onPressed: () async {
+                await ref.read(directChatRequestProvider(otherUserId).notifier).accept();
+                onAccepted();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text(loc.t('msgReqBannerAccept'), style: const TextStyle(fontSize: 13)),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

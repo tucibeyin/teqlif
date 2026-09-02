@@ -15,6 +15,7 @@ class ListMessageRequestsQuery:
             select(MessageThread).where(
                 or_(MessageThread.user_a_id == uid, MessageThread.user_b_id == uid),
                 MessageThread.status == "pending",
+                MessageThread.initiator_id != uid,
             )
         )
         threads = threads_result.scalars().all()

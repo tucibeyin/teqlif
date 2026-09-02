@@ -2377,6 +2377,17 @@
       }
     }
   },
+  "msgReqBannerReceiver": "{username} أرسل إليك طلب رسالة.",
+  "@msgReqBannerReceiver": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "msgReqBannerInitiator": "تم إرسال طلب رسالتك وهو في انتظار الرد.",
+  "msgReqBannerAccept": "قبول",
+  "msgReqBannerDecline": "رفض",
   "notifMessageVoice": "🎵 رسالة صوتية",
   "notifMessageImage": "📷 صورة",
   "notifMessageVideo": "🎬 فيديو",

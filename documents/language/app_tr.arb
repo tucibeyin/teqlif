@@ -2394,6 +2394,17 @@
       }
     }
   },
+  "msgReqBannerReceiver": "{username} sana mesaj gönderdi.",
+  "@msgReqBannerReceiver": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "msgReqBannerInitiator": "Mesaj isteğin iletildi, henüz kabul edilmedi.",
+  "msgReqBannerAccept": "Kabul Et",
+  "msgReqBannerDecline": "Reddet",
   "notifMessageVoice": "🎵 Ses mesajı",
   "notifMessageImage": "📷 Fotoğraf",
   "notifMessageVideo": "🎬 Video",

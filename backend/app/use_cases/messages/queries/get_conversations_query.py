@@ -57,13 +57,14 @@ class GetConversationsQuery:
         # Exclude pending requests and soft-declined threads from main inbox
         pairs = [(min(m.sender_id, m.receiver_id), max(m.sender_id, m.receiver_id)) for m in latest_msgs]
         thread_result = await self.uow.session.execute(
-            select(MessageThread.user_a_id, MessageThread.user_b_id, MessageThread.status)
+            select(MessageThread.user_a_id, MessageThread.user_b_id, MessageThread.status, MessageThread.initiator_id)
             .where(tuple_(MessageThread.user_a_id, MessageThread.user_b_id).in_(pairs))
         )
         hidden_pairs = {
             (row.user_a_id, row.user_b_id)
             for row in thread_result.all()
-            if row.status in ("pending", "declined")
+            if row.status == "declined"
+            or (row.status == "pending" and row.initiator_id != uid)
         }
         latest_msgs = [
             m for m in latest_msgs

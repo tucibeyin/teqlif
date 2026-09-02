@@ -2394,6 +2394,17 @@
       }
     }
   },
+  "msgReqBannerReceiver": "{username} sent you a message request.",
+  "@msgReqBannerReceiver": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "msgReqBannerInitiator": "Your message request was sent and is waiting for a response.",
+  "msgReqBannerAccept": "Accept",
+  "msgReqBannerDecline": "Decline",
   "notifMessageVoice": "🎵 Voice message",
   "notifMessageImage": "📷 Photo",
   "notifMessageVideo": "🎬 Video",

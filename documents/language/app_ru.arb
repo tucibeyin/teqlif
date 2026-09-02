@@ -2397,6 +2397,17 @@
       }
     }
   },
+  "msgReqBannerReceiver": "{username} отправил вам запрос на сообщение.",
+  "@msgReqBannerReceiver": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "msgReqBannerInitiator": "Ваш запрос на сообщение отправлен и ожидает ответа.",
+  "msgReqBannerAccept": "Принять",
+  "msgReqBannerDecline": "Отклонить",
   "notifMessageVoice": "🎵 Голосовое сообщение",
   "notifMessageImage": "📷 Фото",
   "notifMessageVideo": "🎬 Видео",

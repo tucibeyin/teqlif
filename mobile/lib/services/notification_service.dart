@@ -67,6 +67,24 @@ class NotificationService {
     );
   }
 
+  static Future<Map<String, dynamic>> getThreadStatus(int otherUserId) async {
+    return apiCall(
+      () async => http.get(Uri.parse('$kBaseUrl/messages/thread/$otherUserId/status'), headers: await _headers()),
+    );
+  }
+
+  static Future<void> acceptMessageRequest(int requesterId) async {
+    await apiCall(
+      () async => http.post(Uri.parse('$kBaseUrl/messages/requests/$requesterId/accept'), headers: await _headers()),
+    );
+  }
+
+  static Future<void> declineMessageRequest(int requesterId) async {
+    await apiCall(
+      () async => http.post(Uri.parse('$kBaseUrl/messages/requests/$requesterId/decline'), headers: await _headers()),
+    );
+  }
+
   /// Mesaj geçmişi — hata durumunda exception fırlatır; çağıran hata durumunu göstermelidir.
   static Future<List<dynamic>> getMessages(int otherUserId) {
     return apiCallList(
