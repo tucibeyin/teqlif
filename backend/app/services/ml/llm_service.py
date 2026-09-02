@@ -1,5 +1,5 @@
 """
-Groq (llama-3.3-70b) primary / Gemini (gemini-3.1-flash-lite) fallback LLM Servisi
+Groq (compound) primary / Gemini (gemini-3.1-flash-lite) fallback LLM Servisi
 
 Provider seçimi:
   1. Groq   — API key var ve günlük kota dolmamışsa (14,000 req/gün)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # ── Sağlayıcı ayarları ────────────────────────────────────────────────────────
 GROQ_API_URL      = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL        = "llama-3.3-70b-versatile"
+GROQ_MODEL        = "groq/compound"
 _GROQ_DAILY_LIMIT = 14_000
 
 GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent"
