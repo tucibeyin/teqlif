@@ -87,6 +87,307 @@
 
 ---
 
+---
+
+## Geliştirme Workflow'u
+
+Her task için sıra şu şekildedir:
+1. **Plan sun** — implementasyon öncesi ne yapılacağını özetle
+2. **Onay bekle** — kullanıcı onaylamadan implementasyona geçme
+3. **Implement et** — kodu yaz
+4. **Task'ı tamamlandı işaretle** — `[ ]` → `[x]`
+5. **Commit at** — açıklayıcı mesajla
+6. **Commit hash'ini task'a yaz** — `[x] **9.1** ... _(commit: abc1234)_`
+
+---
+
+## Faz 9 — Referans Veri & Deploy Pipeline Refactor
+
+**Hedef:** `main.py` lifespan'inden tüm seed verisini kaldır. Tek kaynak mimarisini tamamla.
+
+### 9.1 JSON Dosyalarına `meta` Bölümü Ekle
+
+Her `documents/categorization/*.json` dosyasına `meta` bölümü eklenir:
+
+```json
+{ "category": "vehicles", "meta": { "sort_order": 1, "is_listable": true }, "subcategories": {...} }
+```
+
+**Kararlar:**
+- `meta` sadece `sort_order` ve `is_listable` içerir — `label` yok.
+- Label OTA'dan gelir (`cat_{key}` → translations tablosu). DB `label` kolonu boş bırakılır.
+- Analiz: DB label sadece `/api/categories`'de son fallback olarak kullanılıyor; OTA'da tüm `cat_*` key'leri mevcut → DB label hiç devreye girmiyor.
+- ClickHouse, ML, feed, listing, search → yalnızca `key` kullanıyor, label'a bakmıyor.
+
+| Dosya | sort_order | is_listable |
+|-------|-----------|------------|
+| `electronics.json` | 0 | true |
+| `vehicles.json` | 1 | true |
+| `real_estate.json` | 2 | true |
+| `fashion.json` | 3 | true |
+| `sports.json` | 4 | true |
+| `books.json` | 5 | true |
+| `home.json` | 6 | true |
+| `other.json` | 7 | true |
+| `chat.json` (yeni) | 99 | false |
+
+- [x] **9.1** 8 mevcut JSON dosyasına `meta` bölümü ekle _(commit: c66d07d9)_
+- [ ] **9.2** `documents/stream/stream_categories.json` oluştur (`chat` stream-only kategorisi)
+
+**9.2 Kararlar:**
+- `chat` `documents/categorization/` içine **girmez** — listing kategorisi değil, stream-only
+- `documents/stream/stream_categories.json` → `[{"key": "chat", "sort_order": 99}]`
+- İleride yeni stream-only kategori = bu dosyaya satır ekle, başka değişiklik yok
+- `is_listable` flag tamamen kaldırıldı — context endpoint ile ayrım yapılır
+- Backend `/api/categories?context=stream` → listing kategorileri + stream_categories.json birleşimi döner
+- İlan Ver `/api/categories` (context yok) → sadece listing kategorileri, chat yok
+- Canlı sayfası filtreleri aktif yayınlardan türetilir (değişmez)
+- Yayın Aç modal `/api/categories?context=stream` çağırır
+
+### 9.2 `sync_category_fields.py` Genişlet
+
+Script, JSON dosyalarını tararken önce `meta` bölümünden kategoriyi upsert eder, sonra subcategory/field sync'ini yapar.
+
+**Kararlar:**
+- `sync_categories()` yeni async fonksiyon olarak aynı dosyaya eklenir — ayrı dosya değil; JSON'u iki kez okumaya gerek yok, kategoriler ve alanlar her zaman birlikte çalışır
+- `label` değeri `key` string'i olarak set edilir (`nullable=False` kısıtı nedeniyle boş bırakılamaz); OTA her zaman üstüne yazar, bu değer hiç görüntülenmez
+- JSON'da olmayan DB kategorileri `PASSIVE` yapılır — silinmez, veri kaybı riski yok
+- `sync_categories()` → `sync_fields()` sırasıyla çalışır (önce kategori, sonra alan sync)
+- Her ikisi de ayrı DB session'ı kullanır; bağımsız ve idempotent
+
+- [ ] **9.3** `sync_category_fields.py`'ye `sync_categories()` fonksiyonu ekle (meta → categories tablosu upsert, önce çalışır)
+- [ ] **9.4** Lokal test: `python3 scripts/sync_category_fields.py` — hata yok, kategori satırları güncellendi
+
+### 9.3 `Turkiye.json` Oluştur
+
+`documents/international/countries/Turkiye.json` — ülke → il (state) → ilçe (district) yapısı. Source of truth.
+
+```json
+{
+  "country": "Türkiye",
+  "code": "TR",
+  "sort_order": 1,
+  "states": [
+    {
+      "code": "TR-34",
+      "name": "İstanbul",
+      "sort_order": 34,
+      "districts": [
+        { "name": "Adalar", "sort_order": 1 },
+        { "name": "Arnavutköy", "sort_order": 2 }
+      ]
+    }
+  ]
+}
+```
+
+**Kararlar:**
+- `documents/international/countries/` dizini source of truth — `sync_locations.py` sadece bu dizine bakar, dosya varsa DB'ye yazar, yoksa PASSIVE yapar. Script hiçbir dış API bilmez.
+- Yeni ülke eklemek = dizine yeni JSON dosyası koymak; script otomatik alır.
+- `code` alanı: ülke için ISO 3166-1 alpha-2 (`TR`), il için ISO 3166-2 (`TR-34`)
+- `sort_order` il için plaka numarası — mevcut sistemle uyumlu, Türkiye'de standart
+- Tüm 81 il ve mevcut 970 ilçe bu dosyaya taşınır; veri kaynağı mevcut DB dump'ı (yeniden API'den çekilmez)
+- Aynı pattern `sync_category_fields.py`'nin `documents/categorization/*.json` ile kullandığı yaklaşımın birebiri
+
+**9.3 Ek Kararlar:**
+- `district.sort_order` yok — API zaten `ORDER BY name` (alfabetik) kullanıyor; 970 ilçeye anlamlı sıra vermek mümkün değil
+- `state.sort_order` var — plaka numarası; app-specific ama Türkiye'de bilinir, mevcut DB ile uyumlu, endüstri standardı değil ama bilinçli tercih
+- `country.sort_order` var — ileride "Türkiye ilk gelsin" gibi tercihe olanak tanır; kaldırmak migration gerektirir
+- Çok dilli ad (`name_en` vb.) şimdilik yok — yer adları proper noun, çeviri gerektirmez
+- JSON yapısı ISO 3166 uyumlu (`code: "TR"`, `code: "TR-34"`)
+
+- [ ] **9.5** `documents/international/countries/Turkiye.json` oluştur (81 il, 970 ilçe)
+
+### 9.4 DB Şeması Refactor — Uluslararası Lokasyon Modeli
+
+Mevcut `cities` tablosu `states` olarak rename edilir. `countries` tablosu eklenir. `listings` ve `users` tablolarına `country_id` eklenir.
+
+**Kararlar:**
+- `cities` → `states`: uluslararası terminoloji (ISO standardı); 0 gerçek kullanıcı, 3 ilan — kırılma riski kabul edilebilir
+- **`country_code` (VARCHAR 2, ISO 3166-1 alpha-2) integer FK yerine kullanılır** — `countries.code` PK olur, `listings.country_code`, `states.country_code` string referans taşır; JOIN gerektirmez, API/ClickHouse/Redis'te anlamlı okunur
+- `countries` tablosu: `code` (VARCHAR 2 PK), `sort_order`, `is_active` — `name` kolonu yok; ülke adı `babel` kütüphanesiyle türetilir
+- **`babel` (BSD 3-Clause, ücretsiz, ticari kullanım serbest)** `requirements.txt`'e eklenir; `Locale('tr').territories['TR']` → "Türkiye", `Locale('ru').territories['TR']` → "Турция"
+- Separation of concerns: **migration = şema + NOT NULL için minimum seed, sync_locations.py = tüm lokasyon verisi**
+- `listings.country_code` ve `states.country_code` → **NOT NULL** — migration'da nullable ekle → backfill `'TR'` → NOT NULL kısıtı
+- Migration minimum seed: `INSERT INTO countries (code, sort_order, is_active) VALUES ('TR', 1, true)`
+- `sync_locations.py` Turkey'yi tekrar upsert eder (`ON CONFLICT (code) DO NOTHING`) — idempotent
+- `users.country_code` nullable (VARCHAR 2) — Faz 10'da UI'dan set edilecek, backfill yapılmaz
+- `districts.city_id` → `districts.state_id` rename
+- asyncpg kuralı: her `op.execute()` tek SQL statement
+
+Migration `zzzzm_intl_location.py` sırası:
+1. `countries` tablosu oluştur (`code` VARCHAR 2 PK)
+2. Turkey minimal seed (`INSERT INTO countries (code, sort_order, is_active) VALUES ('TR', 1, true)`)
+3. `cities` → `states` rename
+4. `states.country_code` VARCHAR 2 nullable ekle → backfill `'TR'` → NOT NULL
+5. `districts.city_id` → `state_id` rename
+6. `listings.country_code` VARCHAR 2 nullable ekle → backfill `'TR'` → NOT NULL
+7. `users.country_code` VARCHAR 2 nullable ekle (backfill yok)
+
+- [ ] **9.6** Alembic migration `zzzzm_intl_location.py` yaz ve uygula
+- [ ] **9.7** Staging DB'de test: `alembic upgrade head` → hata yok, tablolar doğru şekilde oluştu
+
+### 9.4b `bootstrap.py` — Sıfırdan DB Kurulumu
+
+Yeni bir ortam (developer makinesi, yeni VPS, CI) için tek komutla doğru DB oluşturur. Mevcut ortamlar (VPS, staging) bu scripti kullanmaz — onlar `alembic upgrade head` kullanır.
+
+**Kararlar:**
+- SQLAlchemy modelleri şemanın source of truth'u — `Base.metadata.create_all()` modelleri okur, tüm tabloları tek adımda oluşturur
+- Alembic migration'lar incremental değişiklik geçmişidir; yeni DB'de tekrar oynatılmaz
+- Model değişikliği ve Alembic migration her zaman birlikte üretilir (geliştirme Claude üzerinden yürütüldüğünden ayrı bir kural gerektirmez)
+- `bootstrap.py` sonunda `alembic stamp head` çalışır → Alembic "zaten son versiyondayım" bilgisini alır
+
+`bootstrap.py` akışı:
+```
+1. Base.metadata.create_all(engine)   ← tüm tablolar modellerden oluşur
+2. alembic stamp head                 ← migration geçmişi işaretlenir
+3. sync_main()                        ← kategori, lokasyon, çeviri verisi yüklenir
+```
+
+| Ortam | Komut |
+|-------|-------|
+| Yeni DB (sıfırdan) | `python bootstrap.py` |
+| Mevcut DB (VPS/staging) | `alembic upgrade head` → restart → `sync_main.py` |
+
+- [ ] **9.7b** `backend/scripts/bootstrap.py` oluştur
+
+### 9.5 Backend Rename: `City` → `State`
+
+Model, router ve use case katmanlarında `City`/`city`/`cities` → `State`/`state`/`states`.
+
+**Etkilenen dosyalar (11 adet):**
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `app/models/city.py` | → `state.py`, `City` → `State` |
+| `app/models/district.py` | `city_id` → `state_id`, `City` import kaldır |
+| `app/models/__init__.py` | `City` → `State` import |
+| `app/routers/cities.py` | → `states.py`, endpoint prefix `/cities` → `/states` |
+| `app/routers/analytics.py` | `City` import → `State` |
+| `app/worker.py` | `City` referansları → `State` |
+| `app/routers/auth.py` | `City`/`city` referansları → `State`/`state` |
+| `app/utils/migration_utils.py` | `City` referansları → `State` |
+| `app/utils/schema_cache.py` | `City` referansları → `State` |
+| `app/use_cases/listings/queries/listing_utils.py` | `city` → `state` field referansları |
+| `app/use_cases/feed/queries/feed_queries.py` | `city` → `state` field referansları |
+
+- [ ] **9.8** Backend rename: tüm `City`/`city`/`cities` referansları `State`/`state`/`states` ile değiştirilir; `python -m py_compile` hata yok
+
+### 9.6 `sync_locations.py` Oluştur
+
+`documents/international/countries/*.json` → `countries` + `states` + `districts` tabloları. Idempotent.
+
+**Kararlar:**
+- Country tanımlayıcı: `code` (TR, US...) — upsert `ON CONFLICT (code)`; `code` PK olduğundan integer id lookup yok
+- State tanımlayıcı: `code` (TR-34...) — upsert `ON CONFLICT (code)`
+- District tanımlayıcı: `state_id + name` — bu combination unique; "Merkez" birçok ilde var, il+ad birlikte tekil
+- JSON'da olmayan state/district → **hard delete** (pasife alma yok — veri çöplüğü oluşmaz)
+- Hard delete korumalı: o state/district'e bağlı ilan varsa silme, log'a yaz (`"Kadıköy silinemedi — 3 aktif ilan var"`); ilan silindiğinde kayıt da temizlenir
+- Listings backfill: `UPDATE listings SET country_code = 'TR' WHERE country_code IS NULL`
+- Ülke adı türetme: `babel.Locale(lang).territories[country_code]` — DB'de name kolonu yok
+
+**Sync sırası:**
+1. `countries/*.json` dosyalarını tara
+2. Her dosya için `Country` upsert (code üzerinden)
+3. Her `state` için `State` upsert (code üzerinden, country_id ile)
+4. Her `district` için `District` upsert (state_id + name üzerinden)
+5. JSON'da olmayan district → ilan kontrolü → güvenli ise sil, değilse logla
+6. JSON'da olmayan state → ilan/district kontrolü → güvenli ise sil, değilse logla
+7. `listings` backfill (country_id NULL olanları Turkey ile doldur)
+
+- [ ] **9.9** `backend/scripts/sync_locations.py` oluştur
+
+### 9.7 `sync_main.py` Oluştur
+
+Tüm sync işlemlerinin merkezi orchestrator'ı. `ExecStartPre` ile çağrılır.
+
+```
+backend/scripts/
+  ├── sync_main.py            ← Orchestrator
+  ├── sync_category_fields.py ← JSON meta → categories + fields
+  ├── sync_locations.py       ← countries JSON → countries + states + districts
+  └── sync_translations.py    ← ARB → translations
+```
+
+`sync_main.py` çalışma sırası:
+1. `alembic upgrade head` — schema migration (idempotent)
+2. `sync_category_fields` — kategori + alan sync
+3. `sync_locations` — lokasyon sync
+4. `sync_translations` — çeviri sync
+
+- [ ] **9.10** `backend/scripts/sync_main.py` oluştur
+
+### 9.8 Systemd Güncelle
+
+`teqlif.service` ve `teqlif-staging.service` dosyalarına `ExecStartPre` ekle:
+
+```ini
+ExecStartPre=/var/www/teqlif.com/venv/bin/python3 /var/www/teqlif.com/backend/scripts/sync_main.py
+```
+
+- [ ] **9.11** VPS'te `teqlif.service`'e `ExecStartPre` ekle
+- [ ] **9.12** VPS'te `teqlif-staging.service`'e `ExecStartPre` ekle
+- [ ] **9.13** `sudo systemctl daemon-reload && sudo systemctl restart teqlif`
+- [ ] **9.14** `journalctl -u teqlif -n 80` — alembic, kategori, lokasyon, çeviri sync logları temiz
+
+### 9.9 `main.py` Temizle
+
+- [ ] **9.15** `_SEED_CATEGORIES`, `_SEED_CITIES`, `_seed_categories()`, `_seed_cities()` kaldır
+- [ ] **9.16** lifespan'den `await _seed_categories()` ve `await _seed_cities()` çağrıları kaldır
+- [ ] **9.17** `python -m py_compile main.py` → hata yok
+
+### 9.10 Flutter Rename: `city` → `state`
+
+`city_service.dart` → `state_service.dart`. Tüm modellerde `cityId`/`city` → `stateId`/`state`. API endpoint `/cities` → `/states`.
+
+**Etkilenen dosyalar:** `city_service.dart` + ~40 dosyada field referansları (çoğu `listing.city` → `listing.state` ve `filter.cityId` → `filter.stateId`)
+
+- [ ] **9.18** Flutter rename: `city_service.dart` → `state_service.dart`, tüm `cityId`/`city` field referansları güncellenir; `dart analyze` → 0 hata
+
+### 9.11 Hardcoded Label Temizliği
+
+**Backend — `analytics.py` (3 dict):**
+
+| Değişken | Satır | Kullanıldığı endpoint |
+|---|---|---|
+| `_PRICE_CAT_LABELS` | 471 | price-estimate |
+| `_CATEGORY_LABELS` | 850 | market-trends |
+| `_CAT_LABELS_MAP` | 1163 | auction stats |
+
+Her üçü `t.get("cat_{key}", fallback)` formatına dönüştürülür — `_get_t(lang)` zaten mevcut.
+
+**Flutter — `category_service.dart`:**
+
+`_fallbackLabels` hardcoded map → silinir. Fallback `CatalogCategory.labelKey = 'cat_$key'` üzerinden OTA'ya düşer.
+
+- [ ] **9.19** `analytics.py` — 3 hardcoded dict `t.get("cat_{key}", fallback)` ile değiştirilir
+- [ ] **9.20** `category_service.dart` temizliği:
+  - `_fallbackLabels` hardcoded map kaldırılır (OTA'ya bırakılır)
+  - `_listingExcluded = {'chat'}` hardcode kaldırılır (backend karar verir)
+  - `forStream: true` → `/api/categories?context=stream` çağırır; `forStream: false` → `/api/categories`
+- [ ] **9.21** Test: analytics endpoint'leri TR/EN döndürüyor, Flutter kategori isimleri doğru
+
+**Stream kategorileri kararları:**
+- `documents/stream/stream_categories.json` yeni dosya: `[{"key": "chat", "sort_order": 99}]`
+- Backend `/api/categories?context=stream` → listing kategorileri + stream_categories.json birleşimi döner
+- Canlı sayfası kategori filtreleri **değişmez** — aktif yayınlardan türetme doğru davranış (yayın yoksa filtre yok)
+- Yayın Aç modal `forStream: true` ile `/api/categories?context=stream` çağırır
+- İlan Ver `forStream: false` ile `/api/categories` çağırır — `chat` gelmez
+- `cat_chat` ARB key'i tüm dillerde (TR/EN/RU/AR) eklenecek
+
+### 9.12 Son Kontroller
+
+- [ ] **9.22** Commit + push
+- [ ] **9.23** VPS'te `git pull && sudo systemctl restart teqlif`
+- [ ] **9.24** `journalctl -u teqlif -n 80` — tüm sync adımları başarılı, servis ayakta
+- [ ] **9.25** `curl https://teqlif.com/api/categories` → 8 kategori; `curl https://teqlif.com/api/states` → 81 il
+
+---
+
+> **Faz 10'a not:** GPS reverse geocoding → Nominatim → DB match. Flutter'da ülke seçici (kayıt, ayarlar, İlan Ver). teqFilter'a ülke filtresi. Feed kişiselleştirme country_id'ye göre. ClickHouse/ML event'lerine country_code ekleme.
+
+---
+
 ## Tamamlananlar
 
 _(adımlar tamamlandıkça buraya taşınacak)_
