@@ -1171,6 +1171,11 @@ async def request_phone_verification(
     if existing:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneUsed", "Bu telefon numarası başka bir hesapta kayıtlı"))
 
+    redis = await get_redis()
+    ttl = await redis.ttl(f"phone_verify_req:{current_user.id}")
+    if ttl > 0:
+        raise CodeAlreadySentException(seconds_remaining=ttl)
+
     # Telefonu kaydet (henüz doğrulanmamış)
     current_user.phone = data.phone
     current_user.phone_verified = False
@@ -1179,7 +1184,7 @@ async def request_phone_verification(
 
     # Token üret ve Redis'e kaydet
     token = secrets.token_urlsafe(32)
-    redis = await get_redis()
+    await redis.setex(f"phone_verify_req:{current_user.id}", VERIFY_CODE_TTL, "1")
     import json as _json
     await redis.setex(
         f"phone_verify:{token}",

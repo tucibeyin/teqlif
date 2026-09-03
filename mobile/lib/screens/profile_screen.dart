@@ -1483,10 +1483,18 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                             loading = false;
                           });
                         } on AppException catch (e) {
-                          setS(() {
-                            error = e.message;
-                            loading = false;
-                          });
+                          if (e.code == 'CODE_ALREADY_SENT') {
+                            setS(() {
+                              codeSent = true;
+                              error = e.message;
+                              loading = false;
+                            });
+                          } else {
+                            setS(() {
+                              error = e.message;
+                              loading = false;
+                            });
+                          }
                         } catch (e) {
                           LoggerService.instance.warning(
                             'ProfileScreen',

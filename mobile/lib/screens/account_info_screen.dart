@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../config/app_colors.dart';
@@ -7,6 +8,7 @@ import '../widgets/phone_input_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../core/app_exception.dart';
 import 'viewmodels/account_info_view_model.dart';
 
 class AccountInfoScreen extends ConsumerStatefulWidget {
@@ -245,12 +247,33 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
   bool _codeSent = false;
   bool _loading = false;
   String? _error;
+  int _cooldown = 0;
+  Timer? _timer;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _codeCtrl.dispose();
+    _timer?.cancel();
     super.dispose();
+  }
+
+  void _startCooldown(int seconds) {
+    _timer?.cancel();
+    setState(() { _cooldown = seconds; _codeSent = true; _error = null; });
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() {
+        _cooldown--;
+        if (_cooldown <= 0) { _cooldown = 0; t.cancel(); }
+      });
+    });
+  }
+
+  String _formatCooldown(int s) {
+    final m = s ~/ 60;
+    final sec = s % 60;
+    return '${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
   }
 
   Future<void> _requestCode() async {
@@ -261,15 +284,23 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
       return;
     }
     setState(() { _loading = true; _error = null; });
-    
-    final errStr = await ref.read(emailChangeProvider.notifier).requestCode(email);
-    if (!mounted) return;
-    
-    if (errStr == null) {
+
+    try {
+      await ref.read(emailChangeProvider.notifier).requestCode(email);
+      if (!mounted) return;
       setState(() { _codeSent = true; _loading = false; });
-    } else {
-      final msg = errStr == 'network_error' ? loc.t('accountInfoConnectError') : errStr;
-      setState(() { _error = msg; _loading = false; });
+    } on AppException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'CODE_ALREADY_SENT') {
+        final secs = (e.extra['seconds_remaining'] as num?)?.toInt() ?? 600;
+        _startCooldown(secs);
+        setState(() => _loading = false);
+      } else {
+        setState(() { _error = e.message; _loading = false; });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _error = loc.t('accountInfoConnectError'); _loading = false; });
     }
   }
 
@@ -281,17 +312,19 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
       return;
     }
     setState(() { _loading = true; _error = null; });
-    
-    final errStr = await ref.read(emailChangeProvider.notifier).verifyCode(_emailCtrl.text.trim(), code);
-    if (!mounted) return;
-    
-    if (errStr == null) {
+
+    try {
+      await ref.read(emailChangeProvider.notifier).verifyCode(_emailCtrl.text.trim(), code);
+      if (!mounted) return;
       Navigator.pop(context);
       widget.onChanged();
       TeqSnackBar.show(message: loc.t('accountInfoEmailUpdated'), type: TeqSnackBarType.success);
-    } else {
-      final msg = errStr == 'network_error' ? loc.t('accountInfoConnectError') : errStr;
-      setState(() { _error = msg; _loading = false; });
+    } on AppException catch (e) {
+      if (!mounted) return;
+      setState(() { _error = e.message; _loading = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _error = loc.t('accountInfoConnectError'); _loading = false; });
     }
   }
 
@@ -351,10 +384,18 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
           if (_codeSent) ...[
             const SizedBox(height: 8),
             Center(
-              child: TeqButton.text(
-                text: loc.t('accountInfoDifferentEmail'),
-                onPressed: _loading ? null : () => setState(() { _codeSent = false; _codeCtrl.clear(); _error = null; }),
-              ),
+              child: _cooldown > 0
+                  ? Text(
+                      '${loc.t('authResendCodeIn')} ${_formatCooldown(_cooldown)}',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                    )
+                  : TeqButton.text(
+                      text: loc.t('accountInfoDifferentEmail'),
+                      onPressed: _loading ? null : () => setState(() {
+                        _codeSent = false; _codeCtrl.clear(); _error = null;
+                        _timer?.cancel(); _cooldown = 0;
+                      }),
+                    ),
             ),
           ],
         ],
@@ -397,15 +438,17 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
       return;
     }
     setState(() { _loading = true; _error = null; });
-    
-    final errStr = await ref.read(phoneChangeProvider.notifier).requestVerification(phone);
-    if (!mounted) return;
-    
-    if (errStr == null) {
+
+    try {
+      await ref.read(phoneChangeProvider.notifier).requestVerification(phone);
+      if (!mounted) return;
       setState(() { _sent = true; _loading = false; });
-    } else {
-      final msg = errStr == 'network_error' ? loc.t('accountInfoConnectError') : errStr;
-      setState(() { _error = msg; _loading = false; });
+    } on AppException catch (e) {
+      if (!mounted) return;
+      setState(() { _error = e.message; _loading = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _error = loc.t('accountInfoConnectError'); _loading = false; });
     }
   }
 

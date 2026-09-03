@@ -55,40 +55,22 @@ class EmailChangeViewModel extends AutoDisposeNotifier<void> {
   @override
   void build() {}
 
-  Future<String?> requestCode(String email) async {
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/email-change/request'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'new_email': email}),
-      );
-      if (resp.statusCode == 202) {
-        return null; // success
-      } else {
-        return (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Error';
-      }
-    } catch (_) {
-      return 'network_error';
-    }
+  Future<void> requestCode(String email) async {
+    final token = await StorageService.getToken();
+    await apiCall(() => http.post(
+      Uri.parse('$kBaseUrl/auth/email-change/request'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'new_email': email}),
+    ));
   }
 
-  Future<String?> verifyCode(String email, String code) async {
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/email-change/verify'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'new_email': email, 'code': code}),
-      );
-      if (resp.statusCode == 200) {
-        return null; // success
-      } else {
-        return (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Error';
-      }
-    } catch (_) {
-      return 'network_error';
-    }
+  Future<void> verifyCode(String email, String code) async {
+    final token = await StorageService.getToken();
+    await apiCall(() => http.post(
+      Uri.parse('$kBaseUrl/auth/email-change/verify'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'new_email': email, 'code': code}),
+    ));
   }
 }
 
@@ -102,22 +84,13 @@ class PhoneChangeViewModel extends AutoDisposeNotifier<void> {
   @override
   void build() {}
 
-  Future<String?> requestVerification(String phone) async {
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/phone-verify/request'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'phone': phone}),
-      );
-      if (resp.statusCode == 202) {
-        return null;
-      } else {
-        return (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Error';
-      }
-    } catch (_) {
-      return 'network_error';
-    }
+  Future<void> requestVerification(String phone) async {
+    final token = await StorageService.getToken();
+    await apiCall(() => http.post(
+      Uri.parse('$kBaseUrl/auth/phone-verify/request'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'phone': phone}),
+    ));
   }
 }
 
