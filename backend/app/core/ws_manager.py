@@ -43,7 +43,7 @@ from typing import Dict, Set
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from app.utils.redis_client import get_redis
+from app.utils.redis_client import get_redis, get_redis_blpop
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -310,7 +310,7 @@ class GlobalWSManager:
         False → timeout veya hata, push gönder (safe fallback).
         """
         try:
-            r = await get_redis()
+            r = await get_redis_blpop()
             result = await r.blpop(f"call_ack:{call_id}", timeout=timeout)
             return result is not None
         except Exception as exc:

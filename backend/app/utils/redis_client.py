@@ -32,6 +32,26 @@ async def get_redis_stream() -> aioredis.Redis:
     return _redis_stream
 
 
+_redis_blpop: aioredis.Redis | None = None
+
+
+async def get_redis_blpop() -> aioredis.Redis:
+    """Dedicated client for BLPOP commands.
+
+    socket_timeout=None prevents TimeoutError on long blocking reads.
+    Redis itself sends a nil reply after the blpop timeout expires, so the
+    blocking duration is always bounded — no risk of indefinite suspension.
+    """
+    global _redis_blpop
+    if _redis_blpop is None:
+        _redis_blpop = aioredis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=None,
+        )
+    return _redis_blpop
+
+
 async def get_redis_binary() -> aioredis.Redis:
     """decode_responses=False client — for storing/reading raw bytes (numpy vectors etc.)."""
     global _redis_binary
