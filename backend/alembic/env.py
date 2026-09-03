@@ -25,7 +25,7 @@ import app.models.notification  # noqa: F401
 import app.models.message  # noqa: F401
 import app.models.follow  # noqa: F401
 import app.models.category  # noqa: F401
-import app.models.city  # noqa: F401
+import app.models.state  # noqa: F401
 import app.models.report  # noqa: F401
 import app.models.favorite  # noqa: F401
 import app.models.rating  # noqa: F401

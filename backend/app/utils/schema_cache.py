@@ -1,7 +1,7 @@
 """
 Schema-versioned cache utilities for fastapi-cache.
 
-Schema-driven statik endpoint'ler (catalog, cities, field_config) bu modülü
+Schema-driven statik endpoint'ler (catalog, states, field_config) bu modülü
 kullanarak versiyon-isimli cache key'leri üretir.
 
 Mekanizma:
@@ -70,7 +70,7 @@ def static_schema_key_builder(
 
     FastAPICache prefix'i ("teqlif:cache") ile birleşince Redis'teki tam key:
         teqlif:cache:schema:v2:/api/catalog
-        teqlif:cache:schema:v2:/api/cities
+        teqlif:cache:schema:v2:/api/states
         teqlif:cache:schema:v2:/api/field-config/automobile
 
     Şema versiyonu arttığında:

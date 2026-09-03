@@ -24,7 +24,7 @@ from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers.messages import dm_pubsub_listener
 from app.use_cases.direct_sales.direct_sale_scheduler import direct_sale_scheduler
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads, wallet
+from app.routers import notifications, messages, users, listings, follows, categories, upload, states, reports, favorites, search, ratings, analytics, leads, wallet
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
 from app.security.middleware_context import LogContextMiddleware
@@ -52,7 +52,7 @@ import app.models.message  # noqa: F401 — tablo kaydı için
 import app.models.listing  # noqa: F401 — tablo kaydı için
 import app.models.follow  # noqa: F401 — tablo kaydı için
 import app.models.category  # noqa: F401 — tablo kaydı için
-import app.models.city  # noqa: F401 — tablo kaydı için
+import app.models.state  # noqa: F401 — tablo kaydı için
 import app.models.report  # noqa: F401 — tablo kaydı için
 import app.models.favorite  # noqa: F401 — tablo kaydı için
 import app.models.rating  # noqa: F401 — tablo kaydı için
@@ -139,12 +139,12 @@ async def _seed_categories():
 
 
 async def _seed_cities():
-    from app.models.city import City
+    from app.models.state import State
     async with AsyncSessionLocal() as db:
         for name, order in _SEED_CITIES:
-            existing = await db.scalar(select(City).where(City.name == name))
+            existing = await db.scalar(select(State).where(State.name == name))
             if not existing:
-                db.add(City(name=name, sort_order=order))
+                db.add(State(name=name, sort_order=order, country_code="TR"))
         await db.commit()
 
 
@@ -286,7 +286,7 @@ app.include_router(users.router)
 app.include_router(listings.router)
 app.include_router(follows.router)
 app.include_router(categories.router)
-app.include_router(cities.router)
+app.include_router(states.router)
 app.include_router(reports.router)
 app.include_router(favorites.router)
 app.include_router(search.router)

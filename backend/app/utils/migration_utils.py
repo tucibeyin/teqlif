@@ -27,7 +27,7 @@ def bump_schema_version() -> int:
     """
     Redis'teki schema:static_version sayacını atomik olarak artırır.
 
-    Bu işlem; catalog, cities ve field_config endpoint'lerinin cache'lerini
+    Bu işlem; catalog, states ve field_config endpoint'lerinin cache'lerini
     sonraki servis restart'ında otomatik olarak geçersiz kılar.
     (init_schema_version() yeni versiyonu okur → eski key'ler yetim kalır → TTL ile silinir.)
 
