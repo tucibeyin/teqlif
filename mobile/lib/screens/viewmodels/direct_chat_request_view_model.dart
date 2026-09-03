@@ -78,7 +78,7 @@ class DirectChatRequestNotifier
   }
 }
 
-final directChatRequestProvider = AutoDisposeFamilyAsyncNotifierProvider<
-    DirectChatRequestNotifier, DirectChatRequestState, int>(
-  () => DirectChatRequestNotifier(),
+final directChatRequestProvider = AsyncNotifierProvider.autoDispose
+    .family<DirectChatRequestNotifier, DirectChatRequestState, int>(
+  DirectChatRequestNotifier.new,
 );
