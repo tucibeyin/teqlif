@@ -1,5 +1,6 @@
 {
   "category": "vehicles",
+  "meta": { "sort_order": 1 },
   "subcategories": {
     "automobile": [
       {

@@ -1,5 +1,6 @@
 {
   "category": "electronics",
+  "meta": { "sort_order": 0 },
   "subcategories": {
     "audio_system": [
       {

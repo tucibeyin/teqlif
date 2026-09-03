@@ -1,5 +1,6 @@
 {
   "category": "books",
+  "meta": { "sort_order": 5 },
   "subcategories": {
     "arts_books": [
       {

@@ -1,5 +1,6 @@
 {
   "category": "home",
+  "meta": { "sort_order": 6 },
   "subcategories": {
     "antique": [
       {

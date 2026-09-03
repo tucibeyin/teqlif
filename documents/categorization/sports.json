@@ -1,5 +1,6 @@
 {
   "category": "sports",
+  "meta": { "sort_order": 4 },
   "subcategories": {
     "bicycle": [
       {

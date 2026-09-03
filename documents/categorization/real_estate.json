@@ -1,5 +1,6 @@
 {
   "category": "real_estate",
+  "meta": { "sort_order": 2 },
   "subcategories": {
     "apartment": [
       {

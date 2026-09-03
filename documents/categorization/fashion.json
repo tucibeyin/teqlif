@@ -1,5 +1,6 @@
 {
   "category": "fashion",
+  "meta": { "sort_order": 3 },
   "subcategories": {
     "accessories": [
       {
