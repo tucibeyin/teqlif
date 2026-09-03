@@ -38,7 +38,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 from app.core.task_queue import set_pool, clear_pool
 from app.core.ws_manager import ws_manager
-from app.database import engine, Base, AsyncSessionLocal
+from app.database import AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.user import User
@@ -88,65 +88,6 @@ if settings.sentry_backend_dsn:
 # ---------------------------
 
 
-_SEED_CATEGORIES = [
-    ("electronics", "📱 Elektronik", 0),
-    ("vehicles", "🚗 Vasıta", 1),
-    ("real_estate", "🏠 Emlak", 2),
-    ("fashion", "👗 Giyim", 3),
-    ("sports", "⚽ Spor", 4),
-    ("books", "📚 Kitap & Müzik", 5),
-    ("home", "🛋 Ev & Bahçe", 6),
-    ("other", "📦 Diğer", 7),
-]
-
-
-_SEED_CITIES = [
-    ("Adana", 1), ("Adıyaman", 2), ("Afyonkarahisar", 3), ("Ağrı", 4),
-    ("Amasya", 5), ("Ankara", 6), ("Antalya", 7), ("Artvin", 8),
-    ("Aydın", 9), ("Balıkesir", 10), ("Bilecik", 11), ("Bingöl", 12),
-    ("Bitlis", 13), ("Bolu", 14), ("Burdur", 15), ("Bursa", 16),
-    ("Çanakkale", 17), ("Çankırı", 18), ("Çorum", 19), ("Denizli", 20),
-    ("Diyarbakır", 21), ("Edirne", 22), ("Elazığ", 23), ("Erzincan", 24),
-    ("Erzurum", 25), ("Eskişehir", 26), ("Gaziantep", 27), ("Giresun", 28),
-    ("Gümüşhane", 29), ("Hakkari", 30), ("Hatay", 31), ("Isparta", 32),
-    ("Mersin", 33), ("İstanbul", 34), ("İzmir", 35), ("Kars", 36),
-    ("Kastamonu", 37), ("Kayseri", 38), ("Kırklareli", 39), ("Kırşehir", 40),
-    ("Kocaeli", 41), ("Konya", 42), ("Kütahya", 43), ("Malatya", 44),
-    ("Manisa", 45), ("Kahramanmaraş", 46), ("Mardin", 47), ("Muğla", 48),
-    ("Muş", 49), ("Nevşehir", 50), ("Niğde", 51), ("Ordu", 52),
-    ("Rize", 53), ("Sakarya", 54), ("Samsun", 55), ("Siirt", 56),
-    ("Sinop", 57), ("Sivas", 58), ("Tekirdağ", 59), ("Tokat", 60),
-    ("Trabzon", 61), ("Tunceli", 62), ("Şanlıurfa", 63), ("Uşak", 64),
-    ("Van", 65), ("Yozgat", 66), ("Zonguldak", 67), ("Aksaray", 68),
-    ("Bayburt", 69), ("Karaman", 70), ("Kırıkkale", 71), ("Batman", 72),
-    ("Şırnak", 73), ("Bartın", 74), ("Ardahan", 75), ("Iğdır", 76),
-    ("Yalova", 77), ("Karabük", 78), ("Kilis", 79), ("Osmaniye", 80),
-    ("Düzce", 81),
-]
-
-
-async def _seed_categories():
-    from app.models.category import Category
-    async with AsyncSessionLocal() as db:
-        for key, label, order in _SEED_CATEGORIES:
-            existing = await db.scalar(select(Category).where(Category.key == key))
-            if existing:
-                existing.label = label
-                existing.sort_order = order
-            else:
-                db.add(Category(key=key, label=label, sort_order=order))
-        await db.commit()
-
-
-async def _seed_cities():
-    from app.models.state import State
-    async with AsyncSessionLocal() as db:
-        for name, order in _SEED_CITIES:
-            existing = await db.scalar(select(State).where(State.name == name))
-            if not existing:
-                db.add(State(name=name, sort_order=order, country_code="TR"))
-        await db.commit()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -167,16 +108,6 @@ async def lifespan(app: FastAPI):
     init_di()
     
     await init_extensions()
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    except Exception as _create_all_exc:
-        import logging
-        logging.getLogger(__name__).warning(
-            "create_all atlandı (alembic şemayı yönetiyor): %s", _create_all_exc
-        )
-    await _seed_categories()
-    await _seed_cities()
     try:
         from app.services.tcmb_service import run_tcmb_job_once
         await run_tcmb_job_once()
