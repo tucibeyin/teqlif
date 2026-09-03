@@ -468,16 +468,6 @@ async def reactivation_credits(
     }
 
 
-_PRICE_CAT_LABELS: dict[str, str] = {
-    "electronics": "Elektronik ve Teknoloji",
-    "vehicles": "Araç ve Taşıt",
-    "real_estate": "Emlak ve Konut",
-    "fashion": "Giyim ve Moda",
-    "sports": "Spor ve Outdoor",
-    "books": "Kitap ve Eğitim",
-    "home": "Ev ve Yaşam",
-    "other": "Diğer",
-}
 
 
 class PriceEstimateRequest(BaseModel):
@@ -523,7 +513,7 @@ async def price_estimate(
 
     # 1. Embedding: kategori etiketi + başlık + açıklama (Redis Caching)
     import hashlib
-    cat_label = _PRICE_CAT_LABELS.get(body.category.strip(), body.category.strip())
+    cat_label = _get_t("tr").get(f"cat_{body.category.strip()}", body.category.strip())
     combined = " ".join(filter(None, [
         cat_label,
         body.title.strip(),
@@ -847,17 +837,6 @@ async def price_estimate(
 
 # ── Sektörel Pazar Trendleri ──────────────────────────────────────────────────
 
-_CATEGORY_LABELS: dict[str, str] = {
-    "electronics": "Elektronik",
-    "fashion": "Giyim & Moda",
-    "home": "Ev & Yaşam",
-    "vehicles": "Vasıta",
-    "sports": "Spor & Hobi",
-    "books": "Kitap & Kültür",
-    "real_estate": "Emlak",
-    "other": "Diğer",
-    "chat": "Sohbet",
-}
 
 
 @router.get("/market-trends")
@@ -954,7 +933,7 @@ async def market_trends(
             key = row.category or "other"
             trending_categories.append({
                 "key": key,
-                "label": t.get(f"cat_{key}", _CATEGORY_LABELS.get(key, key.capitalize())),
+                "label": t.get(f"cat_{key}", key.capitalize()),
                 "recent_count": int(row.recent_cnt),
                 "prev_count": int(row.prev_cnt),
                 "growth_pct": float(row.growth_pct) if row.growth_pct is not None else None,
@@ -1000,11 +979,6 @@ async def market_trends(
     return response_data
 
 
-_CAT_LABELS: dict[str, str] = {
-    "electronics": "📱 Elektronik", "fashion": "👗 Giyim", "home": "🏠 Ev & Yaşam",
-    "sports": "⚽ Spor", "books": "📚 Kitap", "oyun": "🎮 Oyun", "other": "📦 Diğer",
-    "chat": "🗣 Sohbet",
-}
 
 
 @router.get("/pro-insights")
@@ -1160,12 +1134,6 @@ async def conversion_breakdown(
     uid = current_user.id
     t = _get_t(get_locale(current_user, request))
 
-    _CAT_LABELS_MAP = {
-        "electronics": "Elektronik", "fashion": "Giyim", "home": "Ev & Yaşam",
-        "sports": "Spor", "books": "Kitap", "oyun": "Oyun",
-        "other": "Diğer", "chat": "Sohbet",
-    }
-
     result = await db.execute(sql_text("""
         SELECT
             COALESCE(l.category, 'other')                                              AS category,
@@ -1188,7 +1156,7 @@ async def conversion_breakdown(
     return [
         {
             "category": r.category,
-            "label": t.get(f"cat_{r.category}", _CAT_LABELS_MAP.get(r.category, r.category or "Diğer")),
+            "label": t.get(f"cat_{r.category}", r.category or "other"),
             "total_auctions": int(r.total_auctions),
             "won_auctions": int(r.won_auctions),
             "avg_final_price": round(float(r.avg_final_price), 2),
