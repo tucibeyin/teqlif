@@ -9,15 +9,18 @@ import '../../../../services/localization_service.dart';
 import '../../../../services/push_notification_service.dart';
 import '../../../../utils/error_helper.dart';
 
-enum LoginResult {
-  success,
-  unverified,
-  error,
+sealed class LoginResult {}
+
+class LoginSuccess extends LoginResult {}
+
+class LoginUnverified extends LoginResult {
+  final String email;
+  LoginUnverified(this.email);
 }
 
-class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
-  String? unverifiedEmail;
+class LoginError extends LoginResult {}
 
+class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
@@ -50,22 +53,21 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
       await PushNotificationService.initialize();
 
       state = const AsyncValue.data(null);
-      return LoginResult.success;
+      return LoginSuccess();
     } catch (e, st) {
       if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED') {
         final email = e.extra['email']?.toString() ?? identifier;
-        unverifiedEmail = email;
         try {
           await AuthService.resendCode(email);
         } catch (_) {}
         state = const AsyncValue.data(null);
-        return LoginResult.unverified;
+        return LoginUnverified(email);
       }
-      
+
       final loc = ref.read(localizationProvider);
       handleError(e, loc);
       state = AsyncValue.error(e, st);
-      return LoginResult.error;
+      return LoginError();
     }
   }
 

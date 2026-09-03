@@ -82,7 +82,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!mounted) return;
     
-    if (result == LoginResult.success) {
+    if (result is LoginSuccess) {
       final alreadyEnabled = await StorageService.isBiometricEnabled();
       if (!alreadyEnabled && await BiometricService.isAvailable() && mounted) {
         await _offerBiometric();
@@ -90,16 +90,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
-    } else if (result == LoginResult.unverified) {
-      final email = ref.read(loginViewModelProvider.notifier).unverifiedEmail
-          ?? _identifierCtrl.text.trim();
+    } else if (result is LoginUnverified) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => VerifyScreen(email: email, resent: true),
+          builder: (_) => VerifyScreen(email: result.email, resent: true),
         ),
       );
     }
-    // Hata durumu zaten ViewModel'de Toast olarak gösteriliyor (LoginResult.error)
+    // Hata durumu zaten ViewModel'de Toast olarak gösteriliyor (LoginError)
   }
 
   Future<void> _offerBiometric() async {
