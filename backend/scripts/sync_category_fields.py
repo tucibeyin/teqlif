@@ -6,14 +6,62 @@ import glob
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.database import AsyncSessionLocal
+from app.models.category import Category
 from app.models.category_field import CategoryField, FieldOption
+from app.models.enums import CategoryStatus
 from sqlalchemy import select
 from app.config import settings
 import redis.asyncio as aioredis
 
+_DOCS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'documents', 'categorization'))
+
+
+async def sync_categories():
+    json_files = glob.glob(os.path.join(_DOCS_PATH, '*.json'))
+    if not json_files:
+        print("[sync_categories] JSON dosyası bulunamadı.")
+        return
+
+    print("[sync_categories] Kategoriler DB ile senkronize ediliyor...")
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(Category))
+        db_categories = {c.key: c for c in res.scalars().all()}
+
+        seen_keys = set()
+        upserted = 0
+
+        for file_path in json_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            key = data.get("category")
+            if not key or key == "unmapped":
+                continue
+
+            meta = data.get("meta", {})
+            sort_order = meta.get("sort_order", 0)
+            seen_keys.add(key)
+
+            if key in db_categories:
+                cat = db_categories[key]
+                cat.sort_order = sort_order
+                cat.status = CategoryStatus.ACTIVE
+            else:
+                db.add(Category(key=key, label=key, sort_order=sort_order, status=CategoryStatus.ACTIVE))
+            upserted += 1
+
+        passived = 0
+        for key, cat in db_categories.items():
+            if key not in seen_keys and cat.status == CategoryStatus.ACTIVE:
+                cat.status = CategoryStatus.PASSIVE
+                passived += 1
+
+        await db.commit()
+        print(f"[sync_categories] {upserted} kategori upsert, {passived} pasife alındı.")
+
+
 async def sync_fields():
-    docs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'documents', 'categorization'))
-    json_files = glob.glob(os.path.join(docs_path, '*.json'))
+    json_files = glob.glob(os.path.join(_DOCS_PATH, '*.json'))
     
     if not json_files:
         print("Kategorizasyon JSON dosyaları bulunamadı.")
@@ -129,5 +177,9 @@ async def sync_fields():
     except Exception as e:
         print(f"Cache temizlenirken hata oluştu: {e}")
 
+async def sync_all():
+    await sync_categories()
+    await sync_fields()
+
 if __name__ == "__main__":
-    asyncio.run(sync_fields())
+    asyncio.run(sync_all())
