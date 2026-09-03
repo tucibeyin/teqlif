@@ -45,6 +45,7 @@ orjson>=3.9.0
 minio>=7.2.0
 aiohttp>=3.9.0
 numpy>=1.26.0
+Babel>=2.14.0
 
 Faker==25.0.1
 aioapns==3.2
