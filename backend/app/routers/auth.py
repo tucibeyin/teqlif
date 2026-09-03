@@ -124,8 +124,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     
     # Telegram Bildirimi (Asenkron)
     try:
-        phone_info = data.phone if data.phone else 'Yok'
-        msg = f"⏳ <b>Yeni Bir Kullanıcı Kayıt Oldu!</b> (Henüz Onaysız)\n\n👤 <b>İsim:</b> {data.full_name}\n📧 <b>E-posta:</b> {data.email}\n📱 <b>Telefon:</b> {phone_info}"
+        msg = f"⏳ <b>Yeni kayıt</b> (onay bekliyor)\n📱 Telefon: {'var' if data.phone else 'yok'}"
         await request.app.state.arq_pool.enqueue_job("send_telegram_notification_task", msg)
     except Exception as exc:
         logger.error("[Register] Telegram bildirimi kuyruğa eklenemedi: %s", exc)
@@ -174,7 +173,7 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
 
     # Telegram Bildirimi (Asenkron)
     try:
-        msg = f"✅ <b>Kullanıcı E-postasını Onayladı!</b>\n\n👤 <b>İsim:</b> {user.full_name}\n📧 <b>E-posta:</b> {user.email}"
+        msg = f"✅ <b>E-posta doğrulandı</b> | user_id={user.id}"
         await request.app.state.arq_pool.enqueue_job("send_telegram_notification_task", msg)
     except Exception as exc:
         logger.error("[Verify] Telegram bildirimi kuyruğa eklenemedi: %s", exc)
