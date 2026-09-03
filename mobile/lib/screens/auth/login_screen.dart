@@ -91,7 +91,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } else if (result == LoginResult.unverified) {
-      final email = _identifierCtrl.text.trim();
+      final email = ref.read(loginViewModelProvider.notifier).unverifiedEmail
+          ?? _identifierCtrl.text.trim();
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VerifyScreen(email: email, resent: true),

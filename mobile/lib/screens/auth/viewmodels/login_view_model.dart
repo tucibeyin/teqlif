@@ -16,6 +16,8 @@ enum LoginResult {
 }
 
 class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
+  String? unverifiedEmail;
+
   @override
   FutureOr<void> build() {}
 
@@ -52,6 +54,7 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
     } catch (e, st) {
       if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED') {
         final email = e.extra['email']?.toString() ?? identifier;
+        unverifiedEmail = email;
         try {
           await AuthService.resendCode(email);
         } catch (_) {}
