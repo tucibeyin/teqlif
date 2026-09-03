@@ -5,7 +5,7 @@ import '../../../config/app_colors.dart';
 import '../../../models/catalog.dart';
 import '../../../models/listing_filter_state.dart';
 import '../../../services/catalog_service.dart';
-import '../../../services/city_service.dart';
+import '../../../services/state_service.dart';
 import '../../../services/field_config_service.dart';
 import '../../../services/localization_service.dart';
 import '../../../utils/listing_fields.dart';
@@ -90,7 +90,7 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
       _maxController.text = TeqNumberFormatter.format(_pending.maxPrice);
     }
     if (widget.showCity) {
-      CityService.getCities().then((c) {
+      StateService.getStates().then((c) {
         if (mounted) setState(() { _cities = c; _citiesLoaded = true; });
       });
     }

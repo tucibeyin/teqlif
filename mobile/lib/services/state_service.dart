@@ -3,21 +3,21 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../core/logger_service.dart';
 
-class CityService {
+class StateService {
   static List<String>? _cache;
   static final Map<String, List<String>> _districtCache = {};
 
-  static Future<List<String>> getCities() async {
+  static Future<List<String>> getStates() async {
     if (_cache != null) return _cache!;
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/cities'));
+      final resp = await http.get(Uri.parse('$kBaseUrl/states'));
       if (resp.statusCode == 200) {
         final list = jsonDecode(resp.body) as List;
         _cache = list.cast<String>();
         return _cache!;
       }
     } catch (e) {
-      LoggerService.instance.warning('CityService', 'Şehirler alınamadı: $e');
+      LoggerService.instance.warning('StateService', 'İller alınamadı: $e');
     }
     return [];
   }
@@ -27,7 +27,7 @@ class CityService {
     try {
       final encoded = Uri.encodeComponent(province);
       final resp =
-          await http.get(Uri.parse('$kBaseUrl/cities/$encoded/districts'));
+          await http.get(Uri.parse('$kBaseUrl/states/$encoded/districts'));
       if (resp.statusCode == 200) {
         final list = jsonDecode(resp.body) as List;
         _districtCache[province] = list.cast<String>();
@@ -35,7 +35,7 @@ class CityService {
       }
     } catch (e) {
       LoggerService.instance
-          .warning('CityService', 'İlçeler alınamadı [$province]: $e');
+          .warning('StateService', 'İlçeler alınamadı [$province]: $e');
     }
     return [];
   }

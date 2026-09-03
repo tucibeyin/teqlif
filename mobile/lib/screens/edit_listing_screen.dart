@@ -18,7 +18,7 @@ import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
-import '../services/city_service.dart';
+import '../services/state_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -91,7 +91,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         });
       }
     });
-    CityService.getCities().then((c) {
+    StateService.getStates().then((c) {
       if (mounted) {
         setState(() {
           _cities = c;

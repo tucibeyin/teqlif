@@ -16,7 +16,7 @@ import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
-import '../services/city_service.dart';
+import '../services/state_service.dart';
 import '../services/catalog_service.dart';
 import '../services/field_config_service.dart';
 import '../services/storage_service.dart';
@@ -100,7 +100,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     super.initState();
     AnalyticsService.trackEvent('listing_create_start', {});
     _loadCategories();
-    CityService.getCities().then((c) {
+    StateService.getStates().then((c) {
       if (mounted) setState(() => _provinces = c);
     });
     _loadProStatus();
@@ -158,7 +158,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   }
 
   Future<void> _fetchDistricts(String province) async {
-    final districts = await CityService.getDistricts(province);
+    final districts = await StateService.getDistricts(province);
     if (!mounted) return;
     setState(() {
       _districts = districts;
