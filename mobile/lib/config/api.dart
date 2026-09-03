@@ -7,11 +7,14 @@ import '../core/logger_service.dart';
 import '../core/result.dart';
 import '../services/auth_service.dart' show AuthService, RefreshOutcome;
 
-const String kBaseUrl = 'https://www.teqlif.com/api';
+const String kBaseHost = String.fromEnvironment(
+  'BASE_HOST',
+  defaultValue: 'https://www.teqlif.com',
+);
+const String kBaseUrl = '$kBaseHost/api';
 
 // AuthService.tryRefresh() mutex'ini kullanarak çift refresh'i önler
 Future<RefreshOutcome> _tryRefreshOnce() => AuthService.tryRefresh();
-const String kBaseHost = 'https://www.teqlif.com';
 
 /// /uploads/... → https://teqlif.com/uploads/...
 String imgUrl(String? path) {
