@@ -11,6 +11,7 @@
   "SERVICE_ERROR": "Service is temporarily unavailable. Please try again.",
   "RATE_LIMIT_EXCEEDED": "Too many requests. Please wait a moment.",
   "COOLDOWN": "Please wait {readable_time} before trying again.",
+  "CODE_ALREADY_SENT": "A verification code was already sent. Please wait {readable_time} before requesting a new one.",
   "LISTING_NOT_ACTIVE": "This listing is currently inactive.",
   "INSUFFICIENT_FUNDS": "You don't have enough TUCi balance for this action.",
   "INSUFFICIENT_FUNDS_hint": "You can top up your balance from the TUCi Wallet page.",

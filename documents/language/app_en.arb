@@ -2091,6 +2091,7 @@
     }
   },
   "authResendCode": "Resend code",
+  "authResendCodeIn": "New code in:",
   "validPasswordEmpty": "Password cannot be empty",
   "validPasswordConfirmEmpty": "Password confirmation cannot be empty",
   "apiErrEmailFailed": "Failed to send email",

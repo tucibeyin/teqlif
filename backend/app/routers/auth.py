@@ -16,7 +16,7 @@ from app.utils.auth import hash_password, verify_password, create_access_token, 
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
 from app.utils.i18n import _get_t, _msg, get_locale
 from app.utils.redis_client import get_redis
-from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException, CodeAlreadySentException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.config import settings
@@ -236,8 +236,12 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     if not user or user.email_verified:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrInvalidRequest", "Geçersiz istek"))
 
-    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
+    ttl = await redis.ttl(f"verify:{data.email}")
+    if ttl > 0:
+        raise CodeAlreadySentException(seconds_remaining=ttl)
+
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
     lang = data.lang if hasattr(data, 'lang') and data.lang else get_locale(request=request)
     await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True, lang=lang)
@@ -253,9 +257,13 @@ async def forgot_password(request: Request, data: ForgotPassword, db: AsyncSessi
     # We return 200 even if user doesn't exist to prevent email enumeration
     if not user:
         return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgResetEmailSent", "Şifre sıfırlama e-postası gönderildi")}
-        
-    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
+
     redis = await get_redis()
+    ttl = await redis.ttl(f"reset_pwd:{data.email}")
+    if ttl > 0:
+        raise CodeAlreadySentException(seconds_remaining=ttl)
+
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     await redis.setex(f"reset_pwd:{data.email}", VERIFY_CODE_TTL, code)
     
     lang = data.lang if hasattr(data, 'lang') and data.lang else get_locale(request=request)
@@ -990,8 +998,12 @@ async def update_consent(
 async def change_password_send_code(
     current_user: User = Depends(get_current_user),
 ):
-    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
+    ttl = await redis.ttl(f"chpwd:{current_user.id}")
+    if ttl > 0:
+        raise CodeAlreadySentException(seconds_remaining=ttl)
+
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     await redis.setex(f"chpwd:{current_user.id}", VERIFY_CODE_TTL, code)
     try:
         await send_verification_code(current_user.email, current_user.full_name, code)
@@ -1076,8 +1088,12 @@ async def request_email_change(
     if existing:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailTaken", "Bu e-posta adresi zaten kullanılıyor"))
 
-    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
+    ttl = await redis.ttl(f"email_change:{current_user.id}")
+    if ttl > 0:
+        raise CodeAlreadySentException(seconds_remaining=ttl)
+
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     await redis.setex(
         f"email_change:{current_user.id}",
         VERIFY_CODE_TTL,

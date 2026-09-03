@@ -11,6 +11,7 @@
   "SERVICE_ERROR": "الخدمة غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى.",
   "RATE_LIMIT_EXCEEDED": "طلبات كثيرة جداً. يرجى الانتظار.",
   "COOLDOWN": "يرجى الانتظار {readable_time} قبل المحاولة مجدداً.",
+  "CODE_ALREADY_SENT": "تم إرسال رمز التحقق بالفعل. يرجى الانتظار {readable_time} قبل طلب رمز جديد.",
   "LISTING_NOT_ACTIVE": "هذا الإعلان غير نشط حالياً.",
   "INSUFFICIENT_FUNDS": "رصيد TUCi لديك غير كافٍ لهذا الإجراء.",
   "INSUFFICIENT_FUNDS_hint": "يمكنك شحن رصيدك من صفحة محفظة TUCi.",

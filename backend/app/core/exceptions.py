@@ -129,6 +129,15 @@ class CooldownException(AppException):
         self.retry_after = seconds_remaining
 
 
+class CodeAlreadySentException(AppException):
+    """429 — Doğrulama kodu zaten gönderildi, TTL dolmadı."""
+
+    def __init__(self, seconds_remaining: int):
+        super().__init__(status_code=429, message=None, code="CODE_ALREADY_SENT")
+        self.seconds_remaining = seconds_remaining
+        self.retry_after = seconds_remaining
+
+
 class ListingNotActiveException(AppException):
     """409 — İlan aktif değil, işlem yapılamaz."""
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,8 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   final _codeCtrl = TextEditingController();
   bool _resending = false;
   late String? _success;
+  int _cooldown = 0;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -40,7 +43,32 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   @override
   void dispose() {
     _codeCtrl.dispose();
+    _timer?.cancel();
     super.dispose();
+  }
+
+  void _startCooldown(int seconds) {
+    _timer?.cancel();
+    setState(() {
+      _cooldown = seconds;
+      _success = null;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() {
+        _cooldown--;
+        if (_cooldown <= 0) {
+          _cooldown = 0;
+          t.cancel();
+        }
+      });
+    });
+  }
+
+  String _formatCooldown(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   Future<void> _verify() async {
@@ -50,7 +78,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
       return;
     }
     setState(() => _success = null);
-    
+
     final success = await ref.read(verifyViewModelProvider.notifier).verify(
       email: widget.email,
       code: _codeCtrl.text.trim(),
@@ -67,12 +95,19 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
 
   Future<void> _resend() async {
     setState(() { _resending = true; _success = null; });
-    final msg = await ref.read(verifyViewModelProvider.notifier).resend(widget.email);
-    if (mounted) {
+    final result = await ref.read(verifyViewModelProvider.notifier).resend(widget.email);
+    if (!mounted) return;
+
+    if (result is ResendSent) {
       setState(() {
-        if (msg != null) _success = msg;
+        _success = result.message.isNotEmpty ? result.message : null;
         _resending = false;
       });
+    } else if (result is ResendCooldown) {
+      setState(() => _resending = false);
+      _startCooldown(result.seconds);
+    } else {
+      setState(() => _resending = false);
     }
   }
 
@@ -161,14 +196,22 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : TextButton(
-                      key: const Key('verify_btn_kodu_tekrar_gonder'),
-                      onPressed: _resend,
-                      child: Text(
-                        loc.t('authResendCode'),
-                        style: const TextStyle(color: kPrimary),
-                      ),
-                    ),
+                  : _cooldown > 0
+                      ? Text(
+                          '${loc.t('authResendCodeIn')} ${_formatCooldown(_cooldown)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        )
+                      : TextButton(
+                          key: const Key('verify_btn_kodu_tekrar_gonder'),
+                          onPressed: _resend,
+                          child: Text(
+                            loc.t('authResendCode'),
+                            style: const TextStyle(color: kPrimary),
+                          ),
+                        ),
             ),
           ],
         ),

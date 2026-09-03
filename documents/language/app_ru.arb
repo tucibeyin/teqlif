@@ -2094,6 +2094,7 @@
     }
   },
   "authResendCode": "Отправить код повторно",
+  "authResendCodeIn": "Новый код через:",
   "validPasswordEmpty": "Пароль не может быть пустым",
   "validPasswordConfirmEmpty": "Подтверждение пароля не может быть пустым",
   "apiErrEmailFailed": "Не удалось отправить электронное письмо",

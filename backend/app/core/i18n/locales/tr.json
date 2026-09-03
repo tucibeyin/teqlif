@@ -11,6 +11,7 @@
   "SERVICE_ERROR": "Servis geçici olarak kullanılamıyor. Lütfen tekrar deneyin.",
   "RATE_LIMIT_EXCEEDED": "Çok fazla istek gönderildi. Lütfen bekleyin.",
   "COOLDOWN": "Tekrar göndermek için {readable_time} beklemeniz gerekiyor.",
+  "CODE_ALREADY_SENT": "Doğrulama kodu zaten gönderildi. Yeni kod için {readable_time} beklemeniz gerekiyor.",
   "LISTING_NOT_ACTIVE": "İlan şu an aktif değil.",
   "INSUFFICIENT_FUNDS": "Bu işlem için yeterli TUCi bakiyeniz yok.",
   "INSUFFICIENT_FUNDS_hint": "TUCi Cüzdan sayfasından bakiye yükleyebilirsiniz.",

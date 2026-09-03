@@ -1,10 +1,25 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/app_exception.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/localization_service.dart';
 import '../../../../services/push_notification_service.dart';
 import '../../../../utils/error_helper.dart';
+
+sealed class ResendResult {}
+
+class ResendSent extends ResendResult {
+  final String message;
+  ResendSent(this.message);
+}
+
+class ResendCooldown extends ResendResult {
+  final int seconds;
+  ResendCooldown(this.seconds);
+}
+
+class ResendError extends ResendResult {}
 
 class VerifyViewModel extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -31,17 +46,20 @@ class VerifyViewModel extends AutoDisposeAsyncNotifier<void> {
     }
   }
 
-  Future<String?> resend(String email) async {
-    // We don't set loading state for resend here to not overlap with verify loading state.
-    // The UI handles its own `_resending` bool for the resend button specifically.
+  Future<ResendResult> resend(String email) async {
+    // UI handles its own `_resending` bool for the resend button.
     try {
       final lang = ref.read(localizationProvider).lang;
       final msg = await AuthService.resendCode(email, lang: lang);
-      return msg;
+      return ResendSent(msg ?? '');
     } catch (e) {
+      if (e is AppException && e.code == 'CODE_ALREADY_SENT') {
+        final secs = (e.extra['seconds_remaining'] as num?)?.toInt() ?? 600;
+        return ResendCooldown(secs);
+      }
       final loc = ref.read(localizationProvider);
       handleError(e, loc);
-      return null;
+      return ResendError();
     }
   }
 }

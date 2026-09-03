@@ -2091,6 +2091,7 @@
     }
   },
   "authResendCode": "Kodu tekrar gönder",
+  "authResendCodeIn": "Yeni kod için:",
   "validPasswordEmpty": "Şifre boş olamaz",
   "validPasswordConfirmEmpty": "Şifre tekrarı boş olamaz",
   "apiErrEmailFailed": "E-posta gönderilemedi",
