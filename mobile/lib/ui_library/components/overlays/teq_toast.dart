@@ -100,7 +100,7 @@ class _TeqToastWidgetState extends State<_TeqToastWidget>
 
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 1.2),
+      begin: const Offset(0, -1.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
 
@@ -131,21 +131,19 @@ class _TeqToastWidgetState extends State<_TeqToastWidget>
   @override
   Widget build(BuildContext context) {
     final (bg, icon) = _style;
-    final bottom = MediaQuery.of(context).padding.bottom +
-        MediaQuery.of(context).viewInsets.bottom +
-        TeqSpacing.m;
+    final top = MediaQuery.of(context).padding.top + TeqSpacing.m;
 
     return Positioned(
       left: TeqSpacing.m,
       right: TeqSpacing.m,
-      bottom: bottom,
+      top: top,
       child: FadeTransition(
         opacity: _opacity,
         child: SlideTransition(
           position: _slide,
           child: GestureDetector(
             onVerticalDragEnd: (d) {
-              if ((d.primaryVelocity ?? 0) > 200) _dismiss();
+              if ((d.primaryVelocity ?? 0) < -200) _dismiss();
             },
             child: Material(
               color: Colors.transparent,
