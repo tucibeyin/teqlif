@@ -1,0 +1,7 @@
+Şimdi şöyle bir durum var, teqlif uluslar arası bir uygulama olmasını istiyorum, desteklediği diller TR, ENG, RU ve ARB, yani bu kısaca dünyanın her yerinde kullanılsın istiyorum. Bu açıdan bakılında locasyon verisi, şimdilik GPS den alınan değil, yazılı olan ülke->il (state)-> ilçe (district) verisi bir json olsun ver oradan okunsun ve source of truth olsun istiyorum.
+
+Kısacası documents/location/ içerisinde bir Turkiye.json olsun, teqlif'in anlayacağı bir yapıda ve ilerde başka ülke->il (state) -> ilçe (district) verisi gelirse buradan yine generic olarak okunsun istiyorum.
+
+Şuan sadece sistem İl -> İlçe Seçilimi yapılıyor, bu geliştirme ile hem İlan Ver içinde Ülke -> İl (state)-> İlçe (district) seçilimi olsun, İlan Detay sayfasına Ülke bilgiside gelsin, yapay zeka, ML, tracking, clickhouse verisine ülke veriside girsin, UI teqFilter içerisinde Ülke filtresi de eklensin, kullanıcı lokasyon'unu ayarlar menüsünden değiştirebilsin, kullanıcının lokasyon verisine göre feed'leri değişsin, gerçek GPS verisine göre kullanıcı anlık Ülke -> İl -> İlçe bilgisi alınıp teqlif sistemi içerisinde eşleştirilsin ve hem REDIS'e hemde DB ye kayıt edilsin, hatta kayıt sırasında ülke seçsin gibi bir international yapı var aklımda.
+
+Onun için documents/international/countries/Turkiye.json içerisinde country -> state -> district yapsında olsun ve burası source of truth olsun istiyorum, script burayı okusun ve tüm city ve district verisi buradan gelsin istiyorum. Sence nasıl tasarlayabiliriz?

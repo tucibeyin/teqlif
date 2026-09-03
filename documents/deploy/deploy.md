@@ -829,24 +829,73 @@ dig TXT teqlif.com | grep spf
 
 ---
 
-## Günlük Kullanım
+## Deploy Pipeline Mimarisi
+
+### Servis Başlangıcında Otomatik Sync
+
+`teqlif.service` başladığında (restart dahil) `ExecStartPre` ile üç script sırasıyla çalışır:
+
+```
+teqlif.service restart
+  └── ExecStartPre: scripts/sync_main.py   ← merkezi orchestrator
+        ├── alembic upgrade head            (yeni migration varsa uygula, yoksa pass — ~0.1s)
+        ├── sync_category_fields.py         (kategori + subcategory + field sync — ~1s)
+        └── sync_translations.py            (7100+ çeviri upsert — ~3-5s)
+  └── ExecStart: uvicorn main:app
+```
+
+> İleride yeni sync ihtiyacı olursa `sync_main.py`'ye eklenir — systemd'e dokunmak gerekmez.
+
+**teqlif-staging.service** aynı script'i çalıştırır (`.env.staging` üzerinden).
+
+### Tek Kaynak Mimarisi
+
+| Veri | Source of Truth | Sync Mekanizması |
+|------|----------------|-----------------|
+| Kategoriler (8 + chat) | `documents/categorization/*.json` → `meta` bölümü | `pre_start.sh` → `sync_category_fields.py` |
+| Subcategory + fields | `documents/categorization/*.json` → `subcategories` bölümü | `pre_start.sh` → `sync_category_fields.py` |
+| Çeviriler | `documents/language/app_*.arb` | `pre_start.sh` → `sync_translations.py` |
+| Şehirler (81 il) | Alembic data migration (`zzzzm_seed_cities.py`) | `alembic upgrade head` — tek seferlik |
+
+### Günlük Deploy Komutu
 
 ```bash
-# Kod güncelle
-cd /var/www/teqlif.com
-git pull
-sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
+# Tek komut yeterli — script'ler otomatik çalışır
+git pull && sudo systemctl restart teqlif
+```
+
+### JSON Kategori Formatı
+
+`documents/categorization/*.json` dosyasına `meta` bölümü eklendi:
+
+```json
+{
+  "category": "vehicles",
+  "meta": {
+    "sort_order": 1,
+    "is_listable": true
+  },
+  "subcategories": { ... }
+}
+```
+
+**Yeni kategori eklemek:** `documents/categorization/` altına yeni bir JSON dosyası oluştur, `meta` bölümünü doldur → deploy komutu her şeyi DB'ye yansıtır.
+
+### Günlük Kullanım
+
+```bash
+# Deploy (tam pipeline — script'ler otomatik çalışır)
+git pull && sudo systemctl restart teqlif
 
 # Log izle
 journalctl -u teqlif -f
 
-# Çeviri güncelle
-cd /var/www/teqlif.com/backend
-source /var/www/teqlif.com/venv/bin/activate
-python3 scripts/sync_translations.py
+# Staging log
+journalctl -u teqlif-staging -f
 
-# Migration çalıştır
-alembic upgrade head
+# Manuel migration (gerekirse)
+cd /var/www/teqlif.com/backend
+sudo sh -c 'env $(grep -v "^#" .env | xargs) /var/www/teqlif.com/venv/bin/alembic upgrade head'
 ```
 
 ---
