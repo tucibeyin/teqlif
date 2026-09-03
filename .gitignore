@@ -14,9 +14,11 @@ firebase-key.json
 *serviceAccount*.json
 api-key.json
 
-# Firebase config dosyalarının kök klasördeki kopyaları
+# Firebase config dosyaları
 /GoogleService-Info.plist
 /google-services.json
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
 
 # Mac'e özgü gereksiz dosyalar
 .DS_Store
