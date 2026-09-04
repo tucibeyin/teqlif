@@ -5,7 +5,6 @@ import PushKit
 import flutter_callkit_incoming
 import CallKit
 import AVFAudio
-import Security
 import StoreKit
 
 @main
@@ -101,16 +100,18 @@ import StoreKit
   private var kBackendURL: String { "\(baseHost)/api/auth/device-tokens" }
   private var kRefreshURL: String { "\(baseHost)/api/auth/refresh" }
 
-  // APNs ortamını build sertifikasından runtime'da okur — hardcode yok.
-  // Development/AdHoc cert → "development" → sandbox=true
-  // Distribution cert (TestFlight/App Store) → "production" → sandbox=false
+  // APNs ortamını embedded.mobileprovision üzerinden okur.
+  // flutter run → dev cert → "development" → sandbox=true
+  // flutter build ipa (TestFlight) → dist cert → "production" → sandbox=false
+  // App Store (mobileprovision yok) → sandbox=false
+  // SecTaskCreateFromSelf/SecTaskCopyValueForEntitlement iOS'ta mevcut değil (macOS-only).
   private func apnsSandbox() -> Bool {
-    guard let task = SecTaskCreateFromSelf(nil),
-          let env = SecTaskCopyValueForEntitlement(
-            task, "aps-environment" as CFString, nil
-          ) as? String
+    guard let path = Bundle.main.path(forResource: "embedded", ofType: "mobileprovision"),
+          let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+          let text = String(data: data, encoding: .isoLatin1),
+          let keyRange = text.range(of: "aps-environment")
     else { return false }
-    return env == "development"
+    return text[keyRange.upperBound...].prefix(150).contains("development")
   }
 
   /// flutter_secure_storage Keychain'inden verilen key'e ait değeri okur.

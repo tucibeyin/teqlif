@@ -1891,3 +1891,59 @@ Step 9 ve Step 10 tamamlandı. Mimari audit sonrası `refactor.md`'de 4 yeni ad�
 3. **Step 13 — UI routing state → `CallScreenRouter`** — `CallService.isCallScreenVisible` ve `preventCallScreenAutoOpen` → `CallScreenRouter`. D-8 kararı. `CallService` getter üzerinden backwards-compatible kalır.
 
 4. **Step 14 — `fetchFollowingForInvite` → sosyal servis** — `CallService._post`/`_get`/`_authHeaders`'ın kaldırılabilmesi için son engel. Sosyal domain verisi arama servisinden ayrılır.
+
+---
+
+## 17. Build Ortamı Matrisi (iOS)
+
+Flutter build komutu, dart_defines ve iOS signing sertifikası birlikte APNs ortamını belirler.
+
+### 17.1 Temel Kurallar
+
+| Kural | Açıklama |
+|---|---|
+| `flutter run` → her zaman **Dev cert** | `--release` flag'i bunu değiştirmez; signing yalnızca `flutter build ipa` ile dağıtım sertifikasına geçer |
+| `flutter build ipa` → her zaman **Distribution cert** | App Store / TestFlight dağıtımı için zorunlu |
+| `apns_sandbox` = `SecTaskCopyValueForEntitlement("aps-environment")` | Runtime'da sertifikadan okunur: `"development"` → `true`, `"production"` → `false` |
+| `dart_defines` yalnızca **backend URL**'i etkiler | APNs ortamını belirlemez; signing certificate'ın yetkisi |
+| `xcconfig` fallback | `dart_defines` verilmezse `Debug.xcconfig → staging`, `Release.xcconfig → production` URL kullanılır |
+
+### 17.2 Build × Ortam Matrisi
+
+| # | Komut | dart_defines | iOS Signing | Backend URL | APNs Ortamı | `apns_sandbox` | Kullanım |
+|---|---|---|---|---|---|---|---|
+| 1 | `flutter run` | `staging.json` | Dev cert | staging | Sandbox | `true` | Local staging testi |
+| 2 | `flutter run` | `release.json` | Dev cert | production | Sandbox | `true` | Local — prod backend testi |
+| 3 | `flutter run --release` | `staging.json` | Dev cert | staging | Sandbox | `true` | Local staging (Dart release mode) |
+| 4 | `flutter run --release` | `release.json` | Dev cert | production | Sandbox | `true` | Local — prod backend, Dart release |
+| 5 | `flutter build ipa --release` | `release.json` | Distribution | production | Production | `false` | TestFlight → App Store |
+| 6 | `flutter build ipa --release` | `staging.json` | Distribution | staging | Production | `false` | Staging TestFlight (QA build) |
+| 7 | `flutter run` | (yok) | Dev cert | staging* | Sandbox | `true` | xcconfig fallback |
+| 8 | `flutter build ipa --release` | (yok) | Distribution | production* | Production | `false` | xcconfig fallback |
+
+> \* xcconfig fallback: `Debug.xcconfig → BASE_HOST=https://staging.teqlif.com`, `Release.xcconfig → BASE_HOST=https://www.teqlif.com`
+
+### 17.3 Önerilen IPA Build Komutu
+
+```bash
+flutter build ipa --release \
+  --build-name=x.y.z \
+  --build-number=N \
+  --dart-define-from-file=dart_defines/release.json
+```
+
+Staging TestFlight (QA) için:
+
+```bash
+flutter build ipa --release \
+  --build-name=x.y.z \
+  --build-number=N \
+  --dart-define-from-file=dart_defines/staging.json
+```
+
+### 17.4 Backend Davranışı
+
+- Her kullanıcı kaydında `apns_sandbox` alanı `users` tablosuna yazılır.
+- `send_voip_push()` per-token sandbox değerini kullanır; `None` ise `.env`'deki `APNS_USE_SANDBOX`'a fallback yapar.
+- Backend dual APNs client cache tutar: `{True: sandbox_client, False: production_client}`.
+- `BadDeviceToken` / `Unregistered` / `ExpiredToken` → `voip_token = NULL` yapılmalı.
