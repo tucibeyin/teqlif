@@ -370,24 +370,6 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     if data.is_private is not None:
-        if not data.is_private and current_user.is_private:
-            # Gizli hesap → açık hesap: bekleyen tüm mesaj isteklerini normal konuşmaya taşı
-            from sqlalchemy import update as sa_update, or_
-            from app.models.message_thread import MessageThread
-            from app.utils.redis_client import get_redis
-            await db.execute(
-                sa_update(MessageThread)
-                .where(
-                    or_(
-                        MessageThread.user_a_id == current_user.id,
-                        MessageThread.user_b_id == current_user.id,
-                    ),
-                    MessageThread.status == "pending",
-                )
-                .values(status="accepted")
-            )
-            _redis = await get_redis()
-            await _redis.delete(f"msg:unread:request:{current_user.id}")
         current_user.is_private = data.is_private
 
     if data.full_name is not None:
