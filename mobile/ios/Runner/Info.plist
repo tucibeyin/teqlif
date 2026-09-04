@@ -109,5 +109,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>APIBaseHost</key>
+	<string>$(BASE_HOST)</string>
 </dict>
 </plist>

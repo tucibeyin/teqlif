@@ -63,9 +63,12 @@ import StoreKit
         let regionChannel = FlutterMethodChannel(name: "com.teqlif/region",
                                                  binaryMessenger: registrar.messenger())
         let china = isChineseMarket()
+        let sandboxAPNs = apnsSandbox()
         regionChannel.setMethodCallHandler({ (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
           if call.method == "isChina" {
               result(china)
+          } else if call.method == "apnsSandbox" {
+              result(sandboxAPNs)
           } else {
               result(FlutterMethodNotImplemented)
           }
@@ -86,10 +89,29 @@ import StoreKit
   // auth token'ı okuyarak doğrudan URLSession ile backend'e kaydeder.
 
   private let kVoIPTokenKey    = "teqlif_voip_token"   // UserDefaults backup
-  private let kBackendURL      = "https://www.teqlif.com/api/auth/device-tokens"
-  private let kRefreshURL      = "https://www.teqlif.com/api/auth/refresh"
   private let kAuthTokenKey    = "teqlif_token"
   private let kRefreshTokenKey = "teqlif_refresh_token"
+
+  // Backend URL — Info.plist'ten okunur (dart_defines BASE_HOST inject eder).
+  // xcconfig fallback: Release=production, Debug=staging.
+  private var baseHost: String {
+    (Bundle.main.infoDictionary?["APIBaseHost"] as? String)
+      .flatMap { $0.isEmpty ? nil : $0 } ?? "https://www.teqlif.com"
+  }
+  private var kBackendURL: String { "\(baseHost)/api/auth/device-tokens" }
+  private var kRefreshURL: String { "\(baseHost)/api/auth/refresh" }
+
+  // APNs ortamını build sertifikasından runtime'da okur — hardcode yok.
+  // Development/AdHoc cert → "development" → sandbox=true
+  // Distribution cert (TestFlight/App Store) → "production" → sandbox=false
+  private func apnsSandbox() -> Bool {
+    guard let task = SecTaskCreateFromSelf(nil),
+          let env = SecTaskCopyValueForEntitlement(
+            task, "aps-environment" as CFString, nil
+          ) as? String
+    else { return false }
+    return env == "development"
+  }
 
   /// flutter_secure_storage Keychain'inden verilen key'e ait değeri okur.
   private func readKeychainValue(_ key: String) -> String? {
@@ -181,7 +203,7 @@ import StoreKit
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
 
-    let body: [String: Any] = ["voip_token": voipToken]
+    let body: [String: Any] = ["voip_token": voipToken, "apns_sandbox": apnsSandbox()]
     guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return }
     req.httpBody = bodyData
 

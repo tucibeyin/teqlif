@@ -442,7 +442,7 @@ async def _send_call_push(
             "aps": {"content-available": 1},
             **voip_extra_data,
         }
-        success, bad_token = await send_voip_push(callee.voip_token, payload)
+        success, bad_token = await send_voip_push(callee.voip_token, payload, sandbox=callee.apns_sandbox)
         logger.info(
             "[CALL_PROCESS][PUSH] VoIP push result | callee=%d success=%s bad_token=%s",
             callee.id, success, bad_token,

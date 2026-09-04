@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import '../../services/auth_service.dart';
@@ -19,17 +21,14 @@ class IosCallNotifAdapter extends CallNotifAdapter {
       }
 
       // Çin pazarında VoIP token kaydetme — CallKit Apple guideline 5 gereği devre dışı
+      // Single attempt only — no blocking retry.
+      // Native AppDelegate registers VoIP token independently via PKPushRegistry/URLSession,
+      // so a null here is recovered automatically when PushKit fires later.
       String? voipToken;
       if (!isChina) {
         try {
           voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-          notifLog('TOKEN | VoIP attempt 1 | ${_short(voipToken)}');
-          if (voipToken == null || voipToken.isEmpty) {
-            notifLog('TOKEN | VoIP NULL → retry 3s');
-            await Future.delayed(const Duration(seconds: 3));
-            voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-            notifLog('TOKEN | VoIP attempt 2 | ${_short(voipToken)}');
-          }
+          notifLog('TOKEN | VoIP | ${_short(voipToken)}');
         } catch (e) {
           notifLog('TOKEN | VoIP FAILED | $e');
         }
@@ -39,9 +38,14 @@ class IosCallNotifAdapter extends CallNotifAdapter {
 
       final captured = token;
       final capturedVoip = voipToken;
+      final sandbox = Platform.isIOS ? await _detectApnsSandbox() : null;
       await CallNotifAdapter.sendWithRetry(
-        context: 'iOS fcmLen=${captured.length} voip=${capturedVoip != null ? "present" : "absent"} china=$isChina',
-        send: () => AuthService.saveDeviceTokens(fcmToken: captured, voipToken: capturedVoip),
+        context: 'iOS fcmLen=${captured.length} voip=${capturedVoip != null ? "present" : "absent"} china=$isChina sandbox=$sandbox',
+        send: () => AuthService.saveDeviceTokens(
+          fcmToken: captured,
+          voipToken: capturedVoip,
+          apnsSandbox: sandbox,
+        ),
       );
     } catch (e) {
       notifLog('TOKEN | registerTokens FAILED | $e');
@@ -111,6 +115,17 @@ class IosCallNotifAdapter extends CallNotifAdapter {
       notifLog('NOTIF | reportCallStarted | callId=$callId uuid=$uuid');
     } catch (e) {
       notifLog('NOTIF | reportCallStarted ERROR | callId=$callId $e');
+    }
+  }
+
+  // AppDelegate'teki apnsSandbox() sonucunu okur — aps-environment entitlement'ı.
+  // Development cert → true (sandbox), Distribution cert → false (production).
+  static Future<bool?> _detectApnsSandbox() async {
+    try {
+      const channel = MethodChannel('com.teqlif/region');
+      return await channel.invokeMethod<bool>('apnsSandbox');
+    } catch (_) {
+      return null;
     }
   }
 

@@ -21,6 +21,7 @@ class User(Base):
     fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     voip_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     voip_token_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    apns_sandbox: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     profile_image_thumb_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notification_prefs: Mapped[dict | None] = mapped_column(JSON, nullable=True)

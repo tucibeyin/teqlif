@@ -1412,6 +1412,7 @@ async def save_device_tokens(
     token = payload.get("token")
     voip_token_sent = "voip_token" in payload
     voip_token = payload.get("voip_token")  # None ise explicit silme isteği
+    apns_sandbox = payload.get("apns_sandbox")  # bool | None — per-token APNs ortamı
     lang = get_locale(request=request)
 
     values: dict = {}
@@ -1422,6 +1423,8 @@ async def save_device_tokens(
         values["voip_token"] = voip_token or None
         # Token güncellenince yaşını da kaydet (None ise silme — timestamp da temizle)
         values["voip_token_updated_at"] = datetime.now(timezone.utc) if voip_token else None
+    if isinstance(apns_sandbox, bool):
+        values["apns_sandbox"] = apns_sandbox
 
     if not token and not voip_token_sent:
         logger.warning(

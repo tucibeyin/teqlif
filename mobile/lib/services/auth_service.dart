@@ -236,6 +236,7 @@ class AuthService {
     String? fcmToken,
     String? voipToken,
     bool clearVoipToken = false,
+    bool? apnsSandbox,
   }) async {
     final body = <String, dynamic>{};
     if (fcmToken != null) body['token'] = fcmToken;
@@ -244,6 +245,7 @@ class AuthService {
     } else if (clearVoipToken) {
       body['voip_token'] = null;
     }
+    if (apnsSandbox != null) body['apns_sandbox'] = apnsSandbox;
 
     if (body.isEmpty) return; // Gönderilebilecek bir şey yok
 
