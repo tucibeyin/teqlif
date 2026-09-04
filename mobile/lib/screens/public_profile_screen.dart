@@ -11,6 +11,7 @@ import '../config/api.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
@@ -44,6 +45,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   bool _isPrivate = false;
   bool _followLoading = false;
   bool _isBlocked = false;
+  bool _canCall = false;
   Map<String, dynamic>? _ratingSummary;
 
   ListingFilterState _filter = const ListingFilterState();
@@ -141,6 +143,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         _followStatus = state.followStatus;
         _isPrivate = state.isPrivate;
         _isBlocked = state.isBlocked;
+        _canCall = state.canCall;
         _ratingSummary = state.ratingSummary;
         _filter = state.filter;
         _followLoading = state.followLoading;
@@ -169,17 +172,27 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 );
               },
             ),
-            if (_followStatus == 'accepted')
+            IconButton(
+              icon: Icon(_canCall ? Icons.call : Icons.call_outlined),
+              color: _canCall ? null : Theme.of(context).disabledColor,
+              onPressed: _canCall
+                  ? () {
+                      if (CallService.instance.hasActiveCall) return;
+                      final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
+                      CallService.instance.startCall(
+                        calleeId: uid,
+                        calleeUsername: widget.username,
+                        calleeAvatar: _user?['profile_image_thumb_url'] as String?,
+                      );
+                    }
+                  : null,
+            ),
+            if (!_canCall)
               IconButton(
-                icon: const Icon(Icons.call),
+                icon: const Icon(Icons.info_outline, size: 20),
                 onPressed: () {
-                  if (CallService.instance.hasActiveCall) return;
-                  final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
-                  CallService.instance.startCall(
-                    calleeId: uid,
-                    calleeUsername: widget.username,
-                    calleeAvatar: _user?['profile_image_thumb_url'] as String?,
-                  );
+                  final loc = ref.read(localizationProvider);
+                  TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok'));
                 },
               ),
           ],

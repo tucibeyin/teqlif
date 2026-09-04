@@ -2787,6 +2787,7 @@
   "removeFromFavoritesTooltip": "إزالة من المفضلة",
   "callForbiddenNotFollowing": "يجب أن تتابعوا بعضكم البعض لإجراء مكالمة",
   "callForbiddenToast": "لا يمكنك الاتصال بهذا المستخدم الآن",
+  "callForbiddenInfo": "الاتصال غير مسموح — يلزم التابع المتبادل أو إذن الاتصال",
   "callVoiceCall": "مكالمة صوتية",
   "callCalling": "جارٍ الاتصال...",
   "callConnecting": "جارٍ الاتصال...",

@@ -2784,6 +2784,7 @@
   "removeFromFavoritesTooltip": "Favoriden Çıkar",
   "callForbiddenNotFollowing": "Arama yapabilmek için birbirinizi takip etmeniz gerekiyor",
   "callForbiddenToast": "Bu kullanıcıyı şu an arayamazsın",
+  "callForbiddenInfo": "Arama izni yok — karşılıklı takip veya arama izni gerekiyor",
   "callVoiceCall": "Sesli Arama",
   "callCalling": "Arıyor...",
   "callConnecting": "Bağlanıyor...",

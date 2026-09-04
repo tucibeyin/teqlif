@@ -2787,6 +2787,7 @@
   "removeFromFavoritesTooltip": "Удалить из избранного",
   "callForbiddenNotFollowing": "Чтобы позвонить, вы должны подписаться друг на друга",
   "callForbiddenToast": "Вы не можете позвонить этому пользователю сейчас",
+  "callForbiddenInfo": "Звонки недоступны — требуется взаимная подписка или разрешение",
   "callVoiceCall": "Голосовой звонок",
   "callCalling": "Звонок...",
   "callConnecting": "Подключение...",
