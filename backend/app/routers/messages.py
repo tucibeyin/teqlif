@@ -3,6 +3,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.enums import UserStatus
@@ -14,7 +15,8 @@ from app.models.user import User
 from app.schemas.message import MessageOut, ConversationOut, SendMessageIn, MediaContentType
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import NotFoundException, ForbiddenException
+from app.models.message_thread import MessageThread
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
@@ -174,6 +176,43 @@ async def decline_message_request(
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     await DeclineMessageRequestCommand(uow).execute(current_user.id, requester_id)
+
+
+class _CallPermissionBody(BaseModel):
+    call_allowed: bool
+
+
+@router.patch("/thread/{other_user_id}/call-permission", status_code=200)
+async def update_call_permission(
+    other_user_id: int,
+    body: _CallPermissionBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user_a = min(current_user.id, other_user_id)
+    user_b = max(current_user.id, other_user_id)
+    thread = await db.scalar(
+        select(MessageThread).where(
+            MessageThread.user_a_id == user_a,
+            MessageThread.user_b_id == user_b,
+            MessageThread.status == "accepted",
+        )
+    )
+    if not thread:
+        raise NotFoundException(code="THREAD_NOT_FOUND")
+    if thread.initiator_id == current_user.id:
+        raise ForbiddenException(code="CALL_PERMISSION_NOT_YOURS")
+
+    thread.call_allowed = body.call_allowed
+    await db.commit()
+
+    await broadcast_dm(thread.initiator_id, {
+        "type": "can_call_changed",
+        "user_id": current_user.id,
+        "can_call": body.call_allowed,
+    })
+
+    return {"call_allowed": thread.call_allowed}
 
 
 # ── WebSocket (infrastructure — router'da kalır) ──────────────────────────────
