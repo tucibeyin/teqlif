@@ -1327,7 +1327,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         if (userId == widget.otherUserId && mounted) {
           final canCall = (data['can_call'] as bool?) ?? false;
           final reason = data['reason'] as String?;
-          ref.read(directChatRequestProvider(widget.otherUserId).notifier).updateCanCall(canCall, reason);
+          final callPermissionEditable = data['call_permission_editable'] as bool?;
+          ref.read(directChatRequestProvider(widget.otherUserId).notifier)
+              .updateCanCall(canCall, reason, callPermissionEditable: callPermissionEditable);
         }
         return;
       }
@@ -2157,24 +2159,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 children: [
                   if (isAccepted) ...[
                     if (isAcceptor) ...[
-                      // Acceptor: toggle (callAllowed kontrolü)
-                      if (callAllowed)
-                        _GlowCallIcon(
-                          icon: Icons.phone,
-                          tooltip: loc.tOr('callPermissionToggleDisable', 'Aramayı kapat'),
-                          onPressed: () => ref
-                              .read(directChatRequestProvider(widget.otherUserId).notifier)
-                              .setCallAllowed(false),
-                        )
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.phone_disabled, size: 22),
-                          color: Theme.of(context).disabledColor,
-                          tooltip: loc.tOr('callPermissionToggleEnable', 'Aramayı aç'),
-                          onPressed: () => ref
-                              .read(directChatRequestProvider(widget.otherUserId).notifier)
-                              .setCallAllowed(true),
-                        ),
+                      // Acceptor: toggle bar'da, AppBar'da sadece bilgi iconu
                       IconButton(
                         icon: const Icon(Icons.info_outline, size: 20),
                         padding: EdgeInsets.zero,
@@ -2250,6 +2235,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               Navigator.pop(context);
             },
           ),
+          _CallPermissionRow(otherUserId: widget.otherUserId),
           Expanded(
             child: _loading
                 ? const Center(
@@ -3168,6 +3154,43 @@ class _FullScreenVideoPageState extends ConsumerState<_FullScreenVideoPage> {
                 ),
               )
             : const CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _CallPermissionRow extends ConsumerWidget {
+  final int otherUserId;
+  const _CallPermissionRow({required this.otherUserId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(directChatRequestProvider(otherUserId)).valueOrNull;
+    if (state == null) return const SizedBox.shrink();
+    if (state.isInitiator) return const SizedBox.shrink();
+    if (state.status != 'accepted') return const SizedBox.shrink();
+    if (!state.callPermissionEditable) return const SizedBox.shrink();
+
+    final loc = ref.read(localizationProvider);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              loc.tOr('callPermissionBarText', 'Karşı tarafa seni araması için izin ver ya da karşılıklı takipleşin'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: state.callAllowed,
+            onChanged: (v) => ref.read(directChatRequestProvider(otherUserId).notifier).setCallAllowed(v),
+          ),
+        ],
       ),
     );
   }

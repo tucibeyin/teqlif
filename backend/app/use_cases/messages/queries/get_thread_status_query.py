@@ -78,6 +78,18 @@ class GetThreadStatusQuery:
             call_allowed=thread.call_allowed if thread else False,
         )
 
+        # call_permission_editable: acceptor toggle'ini goster/gizle
+        # Gizle: mutual follow veya acceptor initiator'u takip ediyorsa
+        # (bu durumlarda call_allowed'in onemi yok)
+        if thread and thread.status == "accepted":
+            is_uid_initiator = thread.initiator_id == uid
+            acceptor_follows_initiator = (
+                followed_by_other is not None if is_uid_initiator else follows_other is not None
+            )
+            call_permission_editable = not acceptor_follows_initiator
+        else:
+            call_permission_editable = False
+
         if not thread:
             return {
                 "status": None,
@@ -85,6 +97,7 @@ class GetThreadStatusQuery:
                 "can_call": can_call,
                 "can_call_reason": can_call_reason,
                 "call_allowed": False,
+                "call_permission_editable": False,
             }
         return {
             "status": thread.status,
@@ -92,4 +105,5 @@ class GetThreadStatusQuery:
             "can_call": can_call,
             "can_call_reason": can_call_reason,
             "call_allowed": thread.call_allowed,
+            "call_permission_editable": call_permission_editable,
         }

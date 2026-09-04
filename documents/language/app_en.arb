@@ -2825,6 +2825,7 @@
   "callReasonPending": "Once the request is accepted, the other person can enable calls.",
   "callPermissionAcceptorLabel": "Call permission",
   "callPermissionInitiatorLabel": "Call permission",
+  "callPermissionBarText": "Allow the other person to call you, or follow each other",
   "callPermissionAcceptorInfo": "You control the call permission",
   "callPermissionInitiatorAllowed": "The other person allows calls",
   "callPermissionInitiatorInfo": "Call permission is set by the other person",

@@ -2792,6 +2792,7 @@
   "callReasonPending": "بعد قبول الطلب، يمكن للطرف الآخر تفعيل المكالمات.",
   "callPermissionAcceptorLabel": "إذن الاتصال",
   "callPermissionInitiatorLabel": "إذن الاتصال",
+  "callPermissionBarText": "اسمح للطرف الآخر بالاتصال بك، أو تابعا بعضكما",
   "callPermissionAcceptorInfo": "أنت تتحكم في إذن الاتصال",
   "callPermissionInitiatorAllowed": "الطرف الآخر يسمح بالمكالمات",
   "callPermissionInitiatorInfo": "يتم تعيين إذن الاتصال من قِبل الطرف الآخر",

@@ -12,6 +12,7 @@ class DirectChatRequestState {
   final bool canCall;
   final String? canCallReason; // "no_follow" | "call_disabled" | null
   final bool callAllowed; // acceptor'ün verdiği arama izni
+  final bool callPermissionEditable; // toggle bar'ı göster (mutual follow durumunda gizle)
 
   const DirectChatRequestState({
     this.status,
@@ -21,6 +22,7 @@ class DirectChatRequestState {
     this.canCall = false,
     this.canCallReason,
     this.callAllowed = false,
+    this.callPermissionEditable = false,
   });
 
   DirectChatRequestState copyWith({
@@ -32,6 +34,7 @@ class DirectChatRequestState {
     bool? canCall,
     String? canCallReason,
     bool? callAllowed,
+    bool? callPermissionEditable,
   }) {
     return DirectChatRequestState(
       status: clearStatus ? null : (status ?? this.status),
@@ -41,6 +44,7 @@ class DirectChatRequestState {
       canCall: canCall ?? this.canCall,
       canCallReason: canCallReason ?? this.canCallReason,
       callAllowed: callAllowed ?? this.callAllowed,
+      callPermissionEditable: callPermissionEditable ?? this.callPermissionEditable,
     );
   }
 }
@@ -59,6 +63,7 @@ class DirectChatRequestNotifier
         canCall: (data['can_call'] as bool?) ?? false,
         canCallReason: data['can_call_reason'] as String?,
         callAllowed: (data['call_allowed'] as bool?) ?? false,
+        callPermissionEditable: (data['call_permission_editable'] as bool?) ?? false,
         isLoading: false,
       );
     } catch (_) {
@@ -104,10 +109,14 @@ class DirectChatRequestNotifier
     }
   }
 
-  void updateCanCall(bool canCall, String? reason) {
+  void updateCanCall(bool canCall, String? reason, {bool? callPermissionEditable}) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncValue.data(current.copyWith(canCall: canCall, canCallReason: reason));
+    state = AsyncValue.data(current.copyWith(
+      canCall: canCall,
+      canCallReason: reason,
+      callPermissionEditable: callPermissionEditable,
+    ));
   }
 }
 
