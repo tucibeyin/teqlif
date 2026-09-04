@@ -43,7 +43,6 @@ import app.models.category_field  # noqa: F401
 import app.models.subcategory  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -51,16 +50,34 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def _collect_db_urls() -> list[str]:
+    """Production + staging DB URL'lerini toplar (tekrarları atar)."""
+    urls = [settings.database_url]
+
+    staging_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env.staging")
+    if os.path.exists(staging_env):
+        with open(staging_env) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("DATABASE_URL="):
+                    staging_url = line[len("DATABASE_URL="):]
+                    if staging_url and staging_url not in urls:
+                        urls.append(staging_url)
+                    break
+
+    return urls
+
+
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-    with context.begin_transaction():
-        context.run_migrations()
+    for url in _collect_db_urls():
+        context.configure(
+            url=url,
+            target_metadata=target_metadata,
+            literal_binds=True,
+            dialect_opts={"paramstyle": "named"},
+        )
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
@@ -69,19 +86,18 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 
-async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+async def run_async_migrations_for_url(url: str) -> None:
+    cfg = dict(config.get_section(config.config_ini_section, {}))
+    cfg["sqlalchemy.url"] = url
+    connectable = async_engine_from_config(cfg, prefix="sqlalchemy.", poolclass=pool.NullPool)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    for url in _collect_db_urls():
+        asyncio.run(run_async_migrations_for_url(url))
 
 
 if context.is_offline_mode():
