@@ -2163,9 +2163,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                       IconButton(
                         icon: const Icon(Icons.info_outline, size: 20),
                         padding: EdgeInsets.zero,
-                        tooltip: loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun'),
+                        tooltip: loc.t('callPermissionAcceptorInfo'),
                         onPressed: () => TeqToast.info(
-                          loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun'),
+                          loc.t('callPermissionAcceptorInfo'),
                         ),
                       ),
                     ] else ...[
@@ -2173,16 +2173,16 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                       if (canCall)
                         _GlowCallIcon(
                           icon: Icons.phone,
-                          tooltip: loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor'),
+                          tooltip: loc.t('callPermissionInitiatorAllowed'),
                           onPressed: () => TeqToast.info(
-                            loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor'),
+                            loc.t('callPermissionInitiatorAllowed'),
                           ),
                         )
                       else
                         IconButton(
                           icon: const Icon(Icons.phone_disabled, size: 22),
                           color: Theme.of(context).disabledColor,
-                          tooltip: loc.tOr('callReasonCallDisabled', 'Karşı taraf arama özelliğini size karşı kapattı.'),
+                          tooltip: loc.t('callReasonCallDisabled'),
                           onPressed: () => callPermissionToast(canCallReason, loc),
                         ),
                     ],
@@ -3181,7 +3181,7 @@ class _CallPermissionRow extends ConsumerWidget {
         children: [
           Expanded(
             child: Text(
-              loc.tOr('callPermissionBarText', 'Karşı tarafa seni araması için izin ver'),
+              loc.t('callPermissionBarText'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
