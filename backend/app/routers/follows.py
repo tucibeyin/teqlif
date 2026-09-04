@@ -10,10 +10,43 @@ from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.follow import Follow
 from app.models.user import User
+from app.models.message_thread import MessageThread
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, ConflictException
 from app.use_cases.follows.queries.get_followers_query import GetFollowersQuery
 from app.use_cases.follows.queries.get_following_query import GetFollowingQuery
+from app.use_cases.messages.queries.get_thread_status_query import _compute_can_call
+from app.services.dm_broadcast import broadcast_dm
+
+
+async def _broadcast_can_call_updated(uid_a: int, uid_b: int, db: AsyncSession) -> None:
+    """Follow değişiminden sonra her iki tarafa güncel can_call gönder."""
+    follows_ab = await db.scalar(
+        select(Follow).where(Follow.follower_id == uid_a, Follow.followed_id == uid_b, Follow.status == "accepted")
+    )
+    follows_ba = await db.scalar(
+        select(Follow).where(Follow.follower_id == uid_b, Follow.followed_id == uid_a, Follow.status == "accepted")
+    )
+    user_a, user_b = min(uid_a, uid_b), max(uid_a, uid_b)
+    thread = await db.scalar(
+        select(MessageThread).where(MessageThread.user_a_id == user_a, MessageThread.user_b_id == user_b)
+    )
+    # uid_a → uid_b can_call
+    can_call_ab = _compute_can_call(
+        viewer_follows_target=follows_ab is not None,
+        target_follows_viewer=follows_ba is not None,
+        thread_status=thread.status if thread else None,
+        call_allowed=thread.call_allowed if thread else False,
+    )
+    # uid_b → uid_a can_call
+    can_call_ba = _compute_can_call(
+        viewer_follows_target=follows_ba is not None,
+        target_follows_viewer=follows_ab is not None,
+        thread_status=thread.status if thread else None,
+        call_allowed=thread.call_allowed if thread else False,
+    )
+    asyncio.create_task(broadcast_dm(uid_a, {"type": "can_call_changed", "user_id": uid_b, "can_call": can_call_ab}))
+    asyncio.create_task(broadcast_dm(uid_b, {"type": "can_call_changed", "user_id": uid_a, "can_call": can_call_ba}))
 
 router = APIRouter(prefix="/api/follows", tags=["follows"])
 
@@ -148,8 +181,10 @@ async def unfollow_user(
     )
     if not follow:
         raise NotFoundException(code="FOLLOW_RECORD_NOT_FOUND")
+    unfollowed_id = user_id
     await db.delete(follow)
     await db.commit()
+    asyncio.create_task(_broadcast_can_call_updated(current_user.id, unfollowed_id, db))
     return {"ok": True}
 
 
@@ -200,6 +235,8 @@ async def accept_follow_request(
     await db.commit()
     _redis = await get_redis()
     await _redis.decr(f"msg:unread:request:{current_user.id}")
+
+    asyncio.create_task(_broadcast_can_call_updated(follower_id, current_user.id, db))
 
     from app.routers.notifications import push_notification
     asyncio.create_task(push_notification(
