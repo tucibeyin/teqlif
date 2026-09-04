@@ -2792,6 +2792,7 @@
   "callPermissionAcceptorLabel": "Разрешение на звонки",
   "callPermissionInitiatorLabel": "Разрешение на звонки",
   "callPermissionAcceptorInfo": "Вы управляете разрешением на звонки",
+  "callPermissionInitiatorAllowed": "Собеседник разрешил звонки",
   "callPermissionInitiatorInfo": "Разрешение на звонки устанавливается другой стороной",
   "callVoiceCall": "Голосовой звонок",
   "callCalling": "Звонок...",

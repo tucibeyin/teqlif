@@ -2792,6 +2792,7 @@
   "callPermissionAcceptorLabel": "إذن الاتصال",
   "callPermissionInitiatorLabel": "إذن الاتصال",
   "callPermissionAcceptorInfo": "أنت تتحكم في إذن الاتصال",
+  "callPermissionInitiatorAllowed": "الطرف الآخر يسمح بالمكالمات",
   "callPermissionInitiatorInfo": "يتم تعيين إذن الاتصال من قِبل الطرف الآخر",
   "callVoiceCall": "مكالمة صوتية",
   "callCalling": "جارٍ الاتصال...",

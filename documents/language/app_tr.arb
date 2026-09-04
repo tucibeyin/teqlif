@@ -2789,6 +2789,7 @@
   "callPermissionAcceptorLabel": "Arama izni",
   "callPermissionInitiatorLabel": "Arama izni",
   "callPermissionAcceptorInfo": "Arama iznini sen kontrol ediyorsun",
+  "callPermissionInitiatorAllowed": "Karşı taraf aramaya izin veriyor",
   "callPermissionInitiatorInfo": "Arama izni karşı taraf tarafından ayarlanır",
   "callVoiceCall": "Sesli Arama",
   "callCalling": "Arıyor...",

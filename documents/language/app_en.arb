@@ -2825,6 +2825,7 @@
   "callPermissionAcceptorLabel": "Call permission",
   "callPermissionInitiatorLabel": "Call permission",
   "callPermissionAcceptorInfo": "You control the call permission",
+  "callPermissionInitiatorAllowed": "The other person allows calls",
   "callPermissionInitiatorInfo": "Call permission is set by the other person",
   "callVoiceCall": "Voice Call",
   "callCalling": "Calling...",
