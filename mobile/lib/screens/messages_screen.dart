@@ -1321,6 +1321,15 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         return;
       }
 
+      if (type == 'can_call_changed') {
+        final userId = data['user_id'] as int?;
+        if (userId == widget.otherUserId && mounted) {
+          final canCall = (data['can_call'] as bool?) ?? false;
+          ref.read(directChatRequestProvider(widget.otherUserId).notifier).updateCanCall(canCall);
+        }
+        return;
+      }
+
       if (type != 'message') return;
       final senderId = data['sender_id'] as int?;
       final receiverId = data['receiver_id'] as int?;
@@ -2136,29 +2145,33 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             builder: (context, ref, _) {
               final requestState = ref.watch(directChatRequestProvider(widget.otherUserId));
               final canCall = requestState.valueOrNull?.canCall ?? false;
-              if (!canCall) return const SizedBox.shrink();
-              return IconButton(
-                icon: const Icon(Icons.call, size: 22),
-                tooltip: loc.t("callVoiceCall"),
-                onPressed: () {
-                  debugPrint(
-                    '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
-                  );
-                  if (CallService.instance.hasActiveCall) {
-                    debugPrint(
-                      '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen: hasActiveCall → overlay will open CallScreen',
-                    );
-                    return;
-                  }
-                  CallService.instance.startCall(
-                    calleeId: widget.otherUserId,
-                    calleeUsername: widget.otherHandle,
-                    calleeAvatar: widget.otherAvatarUrl,
-                  );
-                  debugPrint(
-                    '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen startCall fired — overlay will navigate to CallScreen',
-                  );
-                },
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(canCall ? Icons.call : Icons.call_outlined, size: 22),
+                    tooltip: loc.t("callVoiceCall"),
+                    color: canCall ? null : Theme.of(context).disabledColor,
+                    onPressed: canCall
+                        ? () {
+                            debugPrint(
+                              '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
+                            );
+                            if (CallService.instance.hasActiveCall) return;
+                            CallService.instance.startCall(
+                              calleeId: widget.otherUserId,
+                              calleeUsername: widget.otherHandle,
+                              calleeAvatar: widget.otherAvatarUrl,
+                            );
+                          }
+                        : null,
+                  ),
+                  if (!canCall)
+                    IconButton(
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      onPressed: () => TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok')),
+                    ),
+                ],
               );
             },
           ),
@@ -2183,6 +2196,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               Navigator.pop(context);
             },
           ),
+          _CallPermissionRow(otherUserId: widget.otherUserId),
           Expanded(
             child: _loading
                 ? const Center(
@@ -3101,6 +3115,58 @@ class _FullScreenVideoPageState extends ConsumerState<_FullScreenVideoPage> {
                 ),
               )
             : const CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _CallPermissionRow extends ConsumerWidget {
+  final int otherUserId;
+  const _CallPermissionRow({required this.otherUserId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestState = ref.watch(directChatRequestProvider(otherUserId));
+    final state = requestState.valueOrNull;
+    if (state == null || state.status != 'accepted') return const SizedBox.shrink();
+
+    final loc = ref.read(localizationProvider);
+    final isAcceptor = !state.isInitiator;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.call_outlined, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isAcceptor
+                  ? loc.tOr('callPermissionAcceptorLabel', 'Arama izni')
+                  : loc.tOr('callPermissionInitiatorLabel', 'Arama izni'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          if (isAcceptor) ...[
+            Switch.adaptive(
+              value: state.callAllowed,
+              onChanged: (v) => ref.read(directChatRequestProvider(otherUserId).notifier).setCallAllowed(v),
+            ),
+          ],
+          IconButton(
+            icon: const Icon(Icons.info_outline, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => TeqToast.info(
+              isAcceptor
+                  ? loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun')
+                  : loc.tOr('callPermissionInitiatorInfo', 'Arama izni karşı taraf tarafından ayarlanır'),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ class DirectChatRequestState {
   final bool isLoading;
   final bool isActioning;
   final bool canCall;
+  final bool callAllowed; // acceptor'ün verdiği arama izni
 
   const DirectChatRequestState({
     this.status,
@@ -17,6 +18,7 @@ class DirectChatRequestState {
     this.isLoading = true,
     this.isActioning = false,
     this.canCall = false,
+    this.callAllowed = false,
   });
 
   DirectChatRequestState copyWith({
@@ -26,6 +28,7 @@ class DirectChatRequestState {
     bool? isLoading,
     bool? isActioning,
     bool? canCall,
+    bool? callAllowed,
   }) {
     return DirectChatRequestState(
       status: clearStatus ? null : (status ?? this.status),
@@ -33,6 +36,7 @@ class DirectChatRequestState {
       isLoading: isLoading ?? this.isLoading,
       isActioning: isActioning ?? this.isActioning,
       canCall: canCall ?? this.canCall,
+      callAllowed: callAllowed ?? this.callAllowed,
     );
   }
 }
@@ -49,6 +53,7 @@ class DirectChatRequestNotifier
         status: data['status'] as String?,
         isInitiator: (data['is_initiator'] as bool?) ?? false,
         canCall: (data['can_call'] as bool?) ?? false,
+        callAllowed: (data['call_allowed'] as bool?) ?? false,
         isLoading: false,
       );
     } catch (_) {
@@ -80,6 +85,24 @@ class DirectChatRequestNotifier
       handleError(e, ref.read(localizationProvider));
       state = AsyncValue.data(current.copyWith(isActioning: false));
     }
+  }
+
+  Future<void> setCallAllowed(bool allowed) async {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(callAllowed: allowed));
+    try {
+      await NotificationService.updateCallPermission(arg, allowed);
+    } catch (e) {
+      handleError(e, ref.read(localizationProvider));
+      state = AsyncValue.data(current.copyWith(callAllowed: current.callAllowed));
+    }
+  }
+
+  void updateCanCall(bool canCall) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(canCall: canCall));
   }
 }
 

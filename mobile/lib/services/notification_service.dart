@@ -85,6 +85,14 @@ class NotificationService {
     );
   }
 
+  static Future<void> updateCallPermission(int otherUserId, bool allowed) async {
+    await apiCall(() async => http.patch(
+      Uri.parse('$kBaseUrl/messages/thread/$otherUserId/call-permission'),
+      headers: await _headers(),
+      body: jsonEncode({'call_allowed': allowed}),
+    ));
+  }
+
   /// Mesaj geçmişi — hata durumunda exception fırlatır; çağıran hata durumunu göstermelidir.
   static Future<List<dynamic>> getMessages(int otherUserId) {
     return apiCallList(
