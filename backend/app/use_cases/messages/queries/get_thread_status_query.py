@@ -4,6 +4,7 @@ from app.models.message_thread import MessageThread
 from app.models.follow import Follow
 
 _REASON_NO_FOLLOW     = "no_follow"
+_REASON_PENDING       = "pending"
 _REASON_CALL_DISABLED = "call_disabled"
 
 
@@ -27,10 +28,14 @@ def _compute_can_call(
     if viewer_follows_target and not target_follows_viewer:
         if thread_status == "accepted":
             return (True, None) if call_allowed else (False, _REASON_CALL_DISABLED)
+        if thread_status == "pending":
+            return False, _REASON_PENDING
         return False, _REASON_NO_FOLLOW
     # Follow yok -- kabul edilmis thread + toggle
     if thread_status == "accepted":
         return (True, None) if call_allowed else (False, _REASON_CALL_DISABLED)
+    if thread_status == "pending":
+        return False, _REASON_PENDING
     return False, _REASON_NO_FOLLOW
 
 
