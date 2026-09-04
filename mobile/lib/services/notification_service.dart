@@ -114,10 +114,13 @@ class NotificationService {
   }
 
   /// Tek mesajı sil — hata durumunda false döner.
-  static Future<bool> deleteMessage(int messageId) async {
+  static Future<bool> deleteMessage(int messageId, {String scope = 'everyone'}) async {
     try {
       await apiCall(
-        () async => http.delete(Uri.parse('$kBaseUrl/messages/$messageId'), headers: await _headers()),
+        () async => http.delete(
+          Uri.parse('$kBaseUrl/messages/$messageId?scope=$scope'),
+          headers: await _headers(),
+        ),
       );
       return true;
     } catch (e) {

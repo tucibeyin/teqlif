@@ -2,7 +2,7 @@ from typing import List
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -141,10 +141,11 @@ async def upload_media_message(
 async def delete_message(
     request: Request,
     message_id: int,
+    scope: str = Query("everyone", pattern="^(me|everyone)$"),
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    await DeleteMessageCommand(uow).execute(message_id, current_user.id)
+    await DeleteMessageCommand(uow).execute(message_id, current_user.id, scope)
 
 
 @router.delete("/conversation/{other_user_id}", status_code=204)

@@ -2,6 +2,7 @@ from sqlalchemy import select, update, or_, and_
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
 from app.models.message import DirectMessage
+from app.models.message_thread import MessageThread
 from app.models.user import User
 from app.schemas.message import MessageOut
 from app.services.dm_broadcast import broadcast_dm
@@ -19,18 +20,39 @@ class GetMessagesQuery:
         if not other_user:
             raise NotFoundException(code="USER_NOT_FOUND")
 
+        # Fetch thread to determine per-user deletion cutoff
+        user_a_id = min(uid, other_user_id)
+        user_b_id = max(uid, other_user_id)
+        thread_result = await self.uow.session.execute(
+            select(MessageThread.deleted_at_a, MessageThread.deleted_at_b).where(
+                MessageThread.user_a_id == user_a_id,
+                MessageThread.user_b_id == user_b_id,
+            )
+        )
+        thread_row = thread_result.first()
+        deleted_at_x = None
+        if thread_row:
+            deleted_at_x = thread_row.deleted_at_a if uid == user_a_id else thread_row.deleted_at_b
+
+        base_where = [
+            or_(
+                and_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == other_user_id),
+                and_(
+                    DirectMessage.sender_id == other_user_id,
+                    DirectMessage.receiver_id == uid,
+                    DirectMessage.is_shadowbanned == False,
+                ),
+            ),
+            # Exclude messages soft-deleted for this user
+            ~and_(DirectMessage.sender_id == uid, DirectMessage.deleted_for_sender == True),
+            ~and_(DirectMessage.receiver_id == uid, DirectMessage.deleted_for_receiver == True),
+        ]
+        if deleted_at_x:
+            base_where.append(DirectMessage.created_at > deleted_at_x)
+
         result = await self.uow.session.execute(
             select(DirectMessage)
-            .where(
-                or_(
-                    and_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == other_user_id),
-                    and_(
-                        DirectMessage.sender_id == other_user_id,
-                        DirectMessage.receiver_id == uid,
-                        DirectMessage.is_shadowbanned == False,
-                    ),
-                )
-            )
+            .where(*base_where)
             .order_by(DirectMessage.created_at.desc())
             .limit(100)
         )

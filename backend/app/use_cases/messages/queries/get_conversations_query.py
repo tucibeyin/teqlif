@@ -54,22 +54,41 @@ class GetConversationsQuery:
         if not latest_msgs:
             return []
 
-        # Exclude pending requests and soft-declined threads from main inbox
+        # Exclude pending requests, soft-declined, and user-deleted threads from main inbox
         pairs = [(min(m.sender_id, m.receiver_id), max(m.sender_id, m.receiver_id)) for m in latest_msgs]
         thread_result = await self.uow.session.execute(
-            select(MessageThread.user_a_id, MessageThread.user_b_id, MessageThread.status, MessageThread.initiator_id)
+            select(
+                MessageThread.user_a_id,
+                MessageThread.user_b_id,
+                MessageThread.status,
+                MessageThread.initiator_id,
+                MessageThread.deleted_at_a,
+                MessageThread.deleted_at_b,
+            )
             .where(tuple_(MessageThread.user_a_id, MessageThread.user_b_id).in_(pairs))
         )
+        thread_rows = thread_result.all()
         hidden_pairs = {
             (row.user_a_id, row.user_b_id)
-            for row in thread_result.all()
+            for row in thread_rows
             if row.status == "declined"
             or (row.status == "pending" and row.initiator_id != uid)
         }
-        latest_msgs = [
-            m for m in latest_msgs
-            if (min(m.sender_id, m.receiver_id), max(m.sender_id, m.receiver_id)) not in hidden_pairs
-        ]
+        deleted_map = {
+            (row.user_a_id, row.user_b_id): (row.deleted_at_a, row.deleted_at_b)
+            for row in thread_rows
+        }
+        filtered = []
+        for m in latest_msgs:
+            pair = (min(m.sender_id, m.receiver_id), max(m.sender_id, m.receiver_id))
+            if pair in hidden_pairs:
+                continue
+            del_a, del_b = deleted_map.get(pair, (None, None))
+            deleted_at_x = del_a if uid == pair[0] else del_b
+            if deleted_at_x and m.created_at <= deleted_at_x:
+                continue  # latest message predates or equals deletion — nothing new to show
+            filtered.append(m)
+        latest_msgs = filtered
 
         if not latest_msgs:
             return []

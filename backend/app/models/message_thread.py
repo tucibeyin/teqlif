@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from sqlalchemy import Boolean, DateTime, Integer, String, ForeignKey, func, false
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
@@ -17,3 +18,6 @@ class MessageThread(Base):
     # acceptor'ın arama toggle'ı — default OFF, yalnızca acceptor değiştirebilir
     call_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Per-user soft delete timestamps — never cleared; conversation reappears only when new messages arrive
+    deleted_at_a: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at_b: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

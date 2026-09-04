@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, Text, Integer, SmallInteger, String, ForeignKey, func, Index
+from sqlalchemy import Boolean, DateTime, Text, Integer, SmallInteger, String, ForeignKey, func, false, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -29,3 +29,6 @@ class DirectMessage(Base):
     is_shadowbanned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     flag_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Per-user soft delete flags — scope=me sets sender's or receiver's flag only
+    deleted_for_sender: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    deleted_for_receiver: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())

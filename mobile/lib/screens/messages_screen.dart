@@ -1965,9 +1965,21 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     }
   }
 
-  Future<void> _deleteMessage(int messageId) async {
+  Future<void> _deleteMessage(int messageId, {required bool isSender, required String? createdAtStr}) async {
     final loc = ref.read(localizationProvider);
-    final confirmed = await showModalBottomSheet<bool>(
+
+    // "Herkes için sil" only for sender within 48 hours
+    final canDeleteForEveryone = isSender && () {
+      if (createdAtStr == null) return false;
+      try {
+        final sent = DateTime.parse(createdAtStr).toLocal();
+        return DateTime.now().difference(sent).inSeconds < 48 * 3600;
+      } catch (_) {
+        return false;
+      }
+    }();
+
+    final scope = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -1982,44 +1994,39 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                loc.t("msgDeleteMessageConfirm"),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: Text(
-                loc.t("msgDeleteMessage"),
-                style: const TextStyle(color: Colors.red),
-              ),
-              onTap: () => Navigator.pop(ctx, true),
+              leading: const Icon(Icons.person_outline),
+              title: Text(loc.t("msgDeleteForMe")),
+              onTap: () => Navigator.pop(ctx, 'me'),
             ),
+            if (canDeleteForEveryone)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: Text(
+                  loc.t("msgDeleteForEveryone"),
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () => Navigator.pop(ctx, 'everyone'),
+              ),
             ListTile(
               leading: const Icon(Icons.close),
               title: Text(loc.t("btnCancel")),
-              onTap: () => Navigator.pop(ctx, false),
+              onTap: () => Navigator.pop(ctx, null),
             ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (scope == null || !mounted) return;
     // Optimistik kaldır
     setState(() => _messages.removeWhere((m) => m['id'] == messageId));
-    final ok = await NotificationService.deleteMessage(messageId);
+    final ok = await NotificationService.deleteMessage(messageId, scope: scope);
     if (!mounted) return;
     if (!ok) {
       TeqSnackBar.show(message: loc.t("msgDeleteMessageFailed"));
-      // Başarısız olursa listeyi yeniden yükle
       _loadMessages();
-    } else {
-      TeqSnackBar.show(message: loc.t("msgDeleteMessageSuccess"));
     }
   }
 
@@ -2262,8 +2269,12 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                         ? AlignmentDirectional.centerEnd
                                         : AlignmentDirectional.centerStart,
                                     child: GestureDetector(
-                                      onLongPress: (isMe && msgId > 0)
-                                          ? () => _deleteMessage(msgId)
+                                      onLongPress: msgId > 0
+                                          ? () => _deleteMessage(
+                                                msgId,
+                                                isSender: isMe,
+                                                createdAtStr: msg['created_at'] as String?,
+                                              )
                                           : null,
                                       child: Container(
                                         margin: const EdgeInsets.symmetric(
