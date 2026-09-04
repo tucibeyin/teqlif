@@ -2791,7 +2791,6 @@
   "callReasonCallDisabled": "الطرف الآخر أوقف المكالمات معك.",
   "callReasonPending": "بعد قبول الطلب، يمكن للطرف الآخر تفعيل المكالمات.",
   "callPermissionBarText": "اسمح للطرف الآخر بالاتصال بك",
-  "callPermissionInitiatorAllowed": "الطرف الآخر يسمح بالمكالمات",
   "callVoiceCall": "مكالمة صوتية",
   "callCalling": "جارٍ الاتصال...",
   "callConnecting": "جارٍ الاتصال...",

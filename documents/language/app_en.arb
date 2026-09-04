@@ -2824,7 +2824,6 @@
   "callReasonCallDisabled": "The other person has disabled calls for you.",
   "callReasonPending": "Once the request is accepted, the other person can enable calls.",
   "callPermissionBarText": "Allow the other person to call you",
-  "callPermissionInitiatorAllowed": "The other person allows calls",
   "callVoiceCall": "Voice Call",
   "callCalling": "Calling...",
   "callConnecting": "Connecting...",

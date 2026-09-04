@@ -2791,7 +2791,6 @@
   "callReasonCallDisabled": "Собеседник отключил звонки для вас.",
   "callReasonPending": "После принятия запроса другая сторона сможет включить звонки.",
   "callPermissionBarText": "Разрешите другой стороне звонить вам",
-  "callPermissionInitiatorAllowed": "Собеседник разрешил звонки",
   "callVoiceCall": "Голосовой звонок",
   "callCalling": "Звонок...",
   "callConnecting": "Подключение...",

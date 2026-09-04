@@ -2788,7 +2788,6 @@
   "callReasonCallDisabled": "Karşı taraf arama özelliğini size karşı kapattı.",
   "callReasonPending": "Mesaj isteği kabul edilince karşı taraf arama özelliğini açabilir.",
   "callPermissionBarText": "Karşı tarafa seni araması için izin ver",
-  "callPermissionInitiatorAllowed": "Karşı taraf aramaya izin veriyor",
   "callVoiceCall": "Sesli Arama",
   "callCalling": "Arıyor...",
   "callConnecting": "Bağlanıyor...",

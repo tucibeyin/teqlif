@@ -2157,26 +2157,6 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (isAccepted) ...[
-                    if (!isAcceptor) ...[
-                      // Initiator: canCall'a göre ikon; reason-based toast
-                      if (canCall)
-                        _GlowCallIcon(
-                          icon: Icons.phone,
-                          tooltip: loc.t('callPermissionInitiatorAllowed'),
-                          onPressed: () => TeqToast.info(
-                            loc.t('callPermissionInitiatorAllowed'),
-                          ),
-                        )
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.phone_disabled, size: 22),
-                          color: Theme.of(context).disabledColor,
-                          tooltip: loc.t('callReasonCallDisabled'),
-                          onPressed: () => callPermissionToast(canCallReason, loc),
-                        ),
-                    ],
-                  ],
                   if (canCall)
                     _GlowCallIcon(
                       icon: Icons.call,
