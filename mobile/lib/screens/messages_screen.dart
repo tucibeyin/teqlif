@@ -2158,17 +2158,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isAccepted) ...[
-                    if (isAcceptor) ...[
-                      // Acceptor: toggle bar'da, AppBar'da sadece bilgi iconu
-                      IconButton(
-                        icon: const Icon(Icons.info_outline, size: 20),
-                        padding: EdgeInsets.zero,
-                        tooltip: loc.t('callPermissionAcceptorInfo'),
-                        onPressed: () => TeqToast.info(
-                          loc.t('callPermissionAcceptorInfo'),
-                        ),
-                      ),
-                    ] else ...[
+                    if (!isAcceptor) ...[
                       // Initiator: canCall'a göre ikon; reason-based toast
                       if (canCall)
                         _GlowCallIcon(
