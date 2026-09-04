@@ -2164,13 +2164,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                               calleeAvatar: widget.otherAvatarUrl,
                             );
                           }
-                        : null,
+                        : () => TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok')),
                   ),
-                  if (!canCall)
-                    IconButton(
-                      icon: const Icon(Icons.info_outline, size: 18),
-                      onPressed: () => TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok')),
-                    ),
                 ],
               );
             },

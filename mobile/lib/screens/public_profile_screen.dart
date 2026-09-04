@@ -185,16 +185,11 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                         calleeAvatar: _user?['profile_image_thumb_url'] as String?,
                       );
                     }
-                  : null,
+                  : () {
+                      final loc = ref.read(localizationProvider);
+                      TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok'));
+                    },
             ),
-            if (!_canCall)
-              IconButton(
-                icon: const Icon(Icons.info_outline, size: 20),
-                onPressed: () {
-                  final loc = ref.read(localizationProvider);
-                  TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok'));
-                },
-              ),
           ],
           Builder(
             builder: (btnCtx) => IconButton(
