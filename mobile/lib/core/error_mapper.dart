@@ -91,6 +91,8 @@ class ErrorMapper {
         return loc.t('apiErrorAiServiceBusy');
       case 'AI_SERVICE_TIMEOUT':
         return loc.t('apiErrorAiServiceTimeout');
+      case 'CALL_FORBIDDEN':
+        return loc.t('callForbiddenNotFollowing');
     }
 
     // HTTP status bazlı fallback

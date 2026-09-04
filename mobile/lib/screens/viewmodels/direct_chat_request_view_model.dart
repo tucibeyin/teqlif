@@ -9,12 +9,14 @@ class DirectChatRequestState {
   final bool isInitiator;
   final bool isLoading;
   final bool isActioning;
+  final bool canCall;
 
   const DirectChatRequestState({
     this.status,
     this.isInitiator = false,
     this.isLoading = true,
     this.isActioning = false,
+    this.canCall = false,
   });
 
   DirectChatRequestState copyWith({
@@ -23,12 +25,14 @@ class DirectChatRequestState {
     bool? isInitiator,
     bool? isLoading,
     bool? isActioning,
+    bool? canCall,
   }) {
     return DirectChatRequestState(
       status: clearStatus ? null : (status ?? this.status),
       isInitiator: isInitiator ?? this.isInitiator,
       isLoading: isLoading ?? this.isLoading,
       isActioning: isActioning ?? this.isActioning,
+      canCall: canCall ?? this.canCall,
     );
   }
 }
@@ -44,6 +48,7 @@ class DirectChatRequestNotifier
       return DirectChatRequestState(
         status: data['status'] as String?,
         isInitiator: (data['is_initiator'] as bool?) ?? false,
+        canCall: (data['can_call'] as bool?) ?? false,
         isLoading: false,
       );
     } catch (_) {

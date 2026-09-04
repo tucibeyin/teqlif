@@ -2132,27 +2132,33 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         ),
         leading: const BackButton(),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.call, size: 22),
-            tooltip: loc.t("callVoiceCall"),
-            onPressed: () {
-              debugPrint(
-                '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
-              );
-              if (CallService.instance.hasActiveCall) {
-                debugPrint(
-                  '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen: hasActiveCall → overlay will open CallScreen',
-                );
-                return;
-              }
-              // CallScreen'i overlay açar: status → calling olunca _onCallState tetiklenir.
-              CallService.instance.startCall(
-                calleeId: widget.otherUserId,
-                calleeUsername: widget.otherHandle,
-                calleeAvatar: widget.otherAvatarUrl,
-              );
-              debugPrint(
-                '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen startCall fired — overlay will navigate to CallScreen',
+          Consumer(
+            builder: (context, ref, _) {
+              final requestState = ref.watch(directChatRequestProvider(widget.otherUserId));
+              final canCall = requestState.valueOrNull?.canCall ?? false;
+              if (!canCall) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.call, size: 22),
+                tooltip: loc.t("callVoiceCall"),
+                onPressed: () {
+                  debugPrint(
+                    '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
+                  );
+                  if (CallService.instance.hasActiveCall) {
+                    debugPrint(
+                      '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen: hasActiveCall → overlay will open CallScreen',
+                    );
+                    return;
+                  }
+                  CallService.instance.startCall(
+                    calleeId: widget.otherUserId,
+                    calleeUsername: widget.otherHandle,
+                    calleeAvatar: widget.otherAvatarUrl,
+                  );
+                  debugPrint(
+                    '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen startCall fired — overlay will navigate to CallScreen',
+                  );
+                },
               );
             },
           ),

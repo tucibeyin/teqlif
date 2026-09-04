@@ -517,6 +517,20 @@ async def start_call(
         logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=callee_not_found caller=%d callee_id=%d", current_user.id, callee_id)
         raise NotFoundException()
 
+    # Mutual follow guard: both parties must follow each other to call
+    follows_callee = await db.scalar(
+        select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == callee_id)
+    )
+    followed_by_callee = await db.scalar(
+        select(Follow).where(Follow.follower_id == callee_id, Follow.followed_id == current_user.id)
+    )
+    if follows_callee is None or followed_by_callee is None:
+        logger.warning(
+            "[CALL_PROCESS][OUT] start_call REJECTED | reason=not_mutual_followers caller=%d callee=%d",
+            current_user.id, callee_id,
+        )
+        raise AppException(status_code=403, code="CALL_FORBIDDEN")
+
     # Check if caller is already in an active call
     caller_busy = await db.scalar(
         select(Call).where(

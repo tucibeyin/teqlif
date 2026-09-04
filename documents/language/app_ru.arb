@@ -2785,6 +2785,7 @@
   "startLiveStreamOption": "Начать трансляцию",
   "noResultsFound": "Ничего не найдено",
   "removeFromFavoritesTooltip": "Удалить из избранного",
+  "callForbiddenNotFollowing": "Чтобы позвонить, вы должны подписаться друг на друга",
   "callVoiceCall": "Голосовой звонок",
   "callCalling": "Звонок...",
   "callConnecting": "Подключение...",

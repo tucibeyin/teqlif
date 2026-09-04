@@ -2782,6 +2782,7 @@
   "startLiveStreamOption": "Canlı Yayın Aç",
   "noResultsFound": "Sonuç bulunamadı",
   "removeFromFavoritesTooltip": "Favoriden Çıkar",
+  "callForbiddenNotFollowing": "Arama yapabilmek için birbirinizi takip etmeniz gerekiyor",
   "callVoiceCall": "Sesli Arama",
   "callCalling": "Arıyor...",
   "callConnecting": "Bağlanıyor...",

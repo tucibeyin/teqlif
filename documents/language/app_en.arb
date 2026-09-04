@@ -2818,6 +2818,7 @@
   "startLiveStreamOption": "Start Live Stream",
   "noResultsFound": "No results found",
   "removeFromFavoritesTooltip": "Remove from Favorites",
+  "callForbiddenNotFollowing": "You need to follow each other to make a call",
   "callVoiceCall": "Voice Call",
   "callCalling": "Calling...",
   "callConnecting": "Connecting...",
