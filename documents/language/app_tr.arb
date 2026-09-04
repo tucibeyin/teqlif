@@ -228,7 +228,7 @@
   "msgNoMessages": "Henüz mesajın yok",
   "msgNoMessagesDesc": "Bir ilanla ilgilendiğinde\nburada görüntülenecek",
   "msgNoRequests": "Mesaj isteği yok",
-  "msgNoRequestsDesc": "Sana mesaj isteği gönderenler\nburada görünecek",
+  "msgNoRequestsDesc": "Seni takip etmeyen kişilerden gelen mesajlar\nburada görünecek",
   "msgTabRequests": "Mesaj İstekleri",
   "msgSendFailed": "Mesaj gönderilemedi",
   "msgWriteHint": "Mesaj yaz...",
