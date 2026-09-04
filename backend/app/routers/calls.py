@@ -24,6 +24,8 @@ from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call, CallParticipant
 from app.models.user import User
 from app.models.follow import Follow
+from app.models.message_thread import MessageThread
+from app.use_cases.messages.queries.get_thread_status_query import _compute_can_call
 from app.models.notification import Notification
 from app.utils.auth import get_current_user
 from app.utils.i18n import _get_t, get_locale
@@ -517,16 +519,37 @@ async def start_call(
         logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=callee_not_found caller=%d callee_id=%d", current_user.id, callee_id)
         raise NotFoundException()
 
-    # Mutual follow guard: both parties must follow each other to call
+    # Call permission: follow-based + toggle
     follows_callee = await db.scalar(
-        select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == callee_id)
+        select(Follow).where(
+            Follow.follower_id == current_user.id,
+            Follow.followed_id == callee_id,
+            Follow.status == "accepted",
+        )
     )
     followed_by_callee = await db.scalar(
-        select(Follow).where(Follow.follower_id == callee_id, Follow.followed_id == current_user.id)
+        select(Follow).where(
+            Follow.follower_id == callee_id,
+            Follow.followed_id == current_user.id,
+            Follow.status == "accepted",
+        )
     )
-    if follows_callee is None or followed_by_callee is None:
+    _call_user_a = min(current_user.id, callee_id)
+    _call_user_b = max(current_user.id, callee_id)
+    _call_thread = await db.scalar(
+        select(MessageThread).where(
+            MessageThread.user_a_id == _call_user_a,
+            MessageThread.user_b_id == _call_user_b,
+        )
+    )
+    if not _compute_can_call(
+        viewer_follows_target=follows_callee is not None,
+        target_follows_viewer=followed_by_callee is not None,
+        thread_status=_call_thread.status if _call_thread else None,
+        call_allowed=_call_thread.call_allowed if _call_thread else False,
+    ):
         logger.warning(
-            "[CALL_PROCESS][OUT] start_call REJECTED | reason=not_mutual_followers caller=%d callee=%d",
+            "[CALL_PROCESS][OUT] start_call REJECTED | reason=call_forbidden caller=%d callee=%d",
             current_user.id, callee_id,
         )
         raise AppException(status_code=403, code="CALL_FORBIDDEN")
