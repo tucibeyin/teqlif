@@ -2792,7 +2792,7 @@
   "callReasonPending": "После принятия запроса другая сторона сможет включить звонки.",
   "callPermissionAcceptorLabel": "Разрешение на звонки",
   "callPermissionInitiatorLabel": "Разрешение на звонки",
-  "callPermissionBarText": "Разрешите другой стороне звонить вам или подпишитесь друг на друга",
+  "callPermissionBarText": "Разрешите другой стороне звонить вам",
   "callPermissionAcceptorInfo": "Вы управляете разрешением на звонки",
   "callPermissionInitiatorAllowed": "Собеседник разрешил звонки",
   "callPermissionInitiatorInfo": "Разрешение на звонки устанавливается другой стороной",

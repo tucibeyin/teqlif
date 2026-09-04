@@ -3181,7 +3181,7 @@ class _CallPermissionRow extends ConsumerWidget {
         children: [
           Expanded(
             child: Text(
-              loc.tOr('callPermissionBarText', 'Karşı tarafa seni araması için izin ver ya da karşılıklı takipleşin'),
+              loc.tOr('callPermissionBarText', 'Karşı tarafa seni araması için izin ver'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

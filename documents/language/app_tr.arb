@@ -2789,7 +2789,7 @@
   "callReasonPending": "Mesaj isteği kabul edilince karşı taraf arama özelliğini açabilir.",
   "callPermissionAcceptorLabel": "Arama izni",
   "callPermissionInitiatorLabel": "Arama izni",
-  "callPermissionBarText": "Karşı tarafa seni araması için izin ver ya da karşılıklı takipleşin",
+  "callPermissionBarText": "Karşı tarafa seni araması için izin ver",
   "callPermissionAcceptorInfo": "Arama iznini sen kontrol ediyorsun",
   "callPermissionInitiatorAllowed": "Karşı taraf aramaya izin veriyor",
   "callPermissionInitiatorInfo": "Arama izni karşı taraf tarafından ayarlanır",
