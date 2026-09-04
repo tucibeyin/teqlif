@@ -318,7 +318,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab>
           unselectedLabelColor: const Color(0xFF9CA3AF),
           indicatorColor: kPrimary,
           tabs: [
-            Tab(text: loc.t('msgTabMessages')),
+            Tab(text: loc.t('msgTabInbox')),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
