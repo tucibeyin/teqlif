@@ -2156,30 +2156,21 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isAccepted) ...[
-                    IconButton(
-                      icon: Icon(
-                        callAllowed ? Icons.phone : Icons.phone_disabled,
-                        size: 22,
+                    if (isAcceptor) ...[
+                      // Acceptor: toggle (callAllowed kontrolü)
+                      IconButton(
+                        icon: Icon(
+                          callAllowed ? Icons.phone : Icons.phone_disabled,
+                          size: 22,
+                        ),
+                        color: callAllowed ? null : Theme.of(context).disabledColor,
+                        tooltip: callAllowed
+                            ? loc.tOr('callPermissionToggleDisable', 'Aramayı kapat')
+                            : loc.tOr('callPermissionToggleEnable', 'Aramayı aç'),
+                        onPressed: () => ref
+                            .read(directChatRequestProvider(widget.otherUserId).notifier)
+                            .setCallAllowed(!callAllowed),
                       ),
-                      color: callAllowed ? null : Theme.of(context).disabledColor,
-                      tooltip: isAcceptor
-                          ? (callAllowed
-                              ? loc.tOr('callPermissionToggleDisable', 'Aramayı kapat')
-                              : loc.tOr('callPermissionToggleEnable', 'Aramayı aç'))
-                          : (callAllowed
-                              ? loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor')
-                              : loc.tOr('callReasonCallDisabled', 'Karşı taraf aramaya izin vermemiş')),
-                      onPressed: isAcceptor
-                          ? () => ref
-                              .read(directChatRequestProvider(widget.otherUserId).notifier)
-                              .setCallAllowed(!callAllowed)
-                          : () => TeqToast.info(
-                              callAllowed
-                                  ? loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor')
-                                  : loc.tOr('callReasonCallDisabled', 'Karşı taraf aramaya izin vermemiş'),
-                            ),
-                    ),
-                    if (isAcceptor)
                       IconButton(
                         icon: const Icon(Icons.info_outline, size: 20),
                         padding: EdgeInsets.zero,
@@ -2188,6 +2179,24 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                           loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun'),
                         ),
                       ),
+                    ] else ...[
+                      // Initiator: canCall'a göre ikon; reason-based toast (call_reason_plan.md)
+                      IconButton(
+                        icon: Icon(
+                          canCall ? Icons.phone : Icons.phone_disabled,
+                          size: 22,
+                        ),
+                        color: canCall ? null : Theme.of(context).disabledColor,
+                        tooltip: canCall
+                            ? loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor')
+                            : loc.tOr('callReasonCallDisabled', 'Karşı taraf aramaya izin vermemiş'),
+                        onPressed: () => canCall
+                            ? TeqToast.info(
+                                loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor'),
+                              )
+                            : callPermissionToast(canCallReason, loc),
+                      ),
+                    ],
                   ],
                   IconButton(
                     icon: Icon(canCall ? Icons.call : Icons.call_outlined, size: 22),
