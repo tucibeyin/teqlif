@@ -2158,19 +2158,23 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                   if (isAccepted) ...[
                     if (isAcceptor) ...[
                       // Acceptor: toggle (callAllowed kontrolü)
-                      IconButton(
-                        icon: Icon(
-                          callAllowed ? Icons.phone : Icons.phone_disabled,
-                          size: 22,
+                      if (callAllowed)
+                        _GlowCallIcon(
+                          icon: Icons.phone,
+                          tooltip: loc.tOr('callPermissionToggleDisable', 'Aramayı kapat'),
+                          onPressed: () => ref
+                              .read(directChatRequestProvider(widget.otherUserId).notifier)
+                              .setCallAllowed(false),
+                        )
+                      else
+                        IconButton(
+                          icon: const Icon(Icons.phone_disabled, size: 22),
+                          color: Theme.of(context).disabledColor,
+                          tooltip: loc.tOr('callPermissionToggleEnable', 'Aramayı aç'),
+                          onPressed: () => ref
+                              .read(directChatRequestProvider(widget.otherUserId).notifier)
+                              .setCallAllowed(true),
                         ),
-                        color: callAllowed ? null : Theme.of(context).disabledColor,
-                        tooltip: callAllowed
-                            ? loc.tOr('callPermissionToggleDisable', 'Aramayı kapat')
-                            : loc.tOr('callPermissionToggleEnable', 'Aramayı aç'),
-                        onPressed: () => ref
-                            .read(directChatRequestProvider(widget.otherUserId).notifier)
-                            .setCallAllowed(!callAllowed),
-                      ),
                       IconButton(
                         icon: const Icon(Icons.info_outline, size: 20),
                         padding: EdgeInsets.zero,
@@ -2180,42 +2184,47 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                         ),
                       ),
                     ] else ...[
-                      // Initiator: canCall'a göre ikon; reason-based toast (call_reason_plan.md)
-                      IconButton(
-                        icon: Icon(
-                          canCall ? Icons.phone : Icons.phone_disabled,
-                          size: 22,
+                      // Initiator: canCall'a göre ikon; reason-based toast
+                      if (canCall)
+                        _GlowCallIcon(
+                          icon: Icons.phone,
+                          tooltip: loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor'),
+                          onPressed: () => TeqToast.info(
+                            loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor'),
+                          ),
+                        )
+                      else
+                        IconButton(
+                          icon: const Icon(Icons.phone_disabled, size: 22),
+                          color: Theme.of(context).disabledColor,
+                          tooltip: loc.tOr('callReasonCallDisabled', 'Karşı taraf arama özelliğini size karşı kapattı.'),
+                          onPressed: () => callPermissionToast(canCallReason, loc),
                         ),
-                        color: canCall ? null : Theme.of(context).disabledColor,
-                        tooltip: canCall
-                            ? loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor')
-                            : loc.tOr('callReasonCallDisabled', 'Karşı taraf aramaya izin vermemiş'),
-                        onPressed: () => canCall
-                            ? TeqToast.info(
-                                loc.tOr('callPermissionInitiatorAllowed', 'Karşı taraf aramaya izin veriyor'),
-                              )
-                            : callPermissionToast(canCallReason, loc),
-                      ),
                     ],
                   ],
-                  IconButton(
-                    icon: Icon(canCall ? Icons.call : Icons.call_outlined, size: 22),
-                    tooltip: loc.t("callVoiceCall"),
-                    color: canCall ? null : Theme.of(context).disabledColor,
-                    onPressed: canCall
-                        ? () {
-                            debugPrint(
-                              '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
-                            );
-                            if (CallService.instance.hasActiveCall) return;
-                            CallService.instance.startCall(
-                              calleeId: widget.otherUserId,
-                              calleeUsername: widget.otherHandle,
-                              calleeAvatar: widget.otherAvatarUrl,
-                            );
-                          }
-                        : () => callPermissionToast(canCallReason, loc),
-                  ),
+                  if (canCall)
+                    _GlowCallIcon(
+                      icon: Icons.call,
+                      tooltip: loc.t("callVoiceCall"),
+                      onPressed: () {
+                        debugPrint(
+                          '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
+                        );
+                        if (CallService.instance.hasActiveCall) return;
+                        CallService.instance.startCall(
+                          calleeId: widget.otherUserId,
+                          calleeUsername: widget.otherHandle,
+                          calleeAvatar: widget.otherAvatarUrl,
+                        );
+                      },
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.call_outlined, size: 22),
+                      tooltip: loc.t("callVoiceCall"),
+                      color: Theme.of(context).disabledColor,
+                      onPressed: () => callPermissionToast(canCallReason, loc),
+                    ),
                 ],
               );
             },
@@ -3160,6 +3169,75 @@ class _FullScreenVideoPageState extends ConsumerState<_FullScreenVideoPage> {
               )
             : const CircularProgressIndicator(color: Colors.white),
       ),
+    );
+  }
+}
+
+class _GlowCallIcon extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  const _GlowCallIcon({required this.icon, required this.onPressed, this.tooltip});
+
+  @override
+  State<_GlowCallIcon> createState() => _GlowCallIconState();
+}
+
+class _GlowCallIconState extends State<_GlowCallIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) {
+        return Container(
+          width: 40,
+          height: 40,
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: kPrimary.withOpacity(0.12 + _anim.value * 0.28),
+                blurRadius: 6 + _anim.value * 10,
+                spreadRadius: _anim.value * 2,
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: widget.onPressed,
+              child: Tooltip(
+                message: widget.tooltip ?? '',
+                child: Icon(widget.icon, size: 22, color: kPrimary),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
