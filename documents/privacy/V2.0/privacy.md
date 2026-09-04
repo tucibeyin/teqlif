@@ -1,8 +1,9 @@
 # Teqlif — Privacy & Block Sistem Durumu
 
-> **Tarih:** 2026-09-01
+> **Tarih:** 2026-09-01 · **Son güncelleme:** 2026-09-04
 > **Kapsam:** Mevcut durum tabloları + alınan kararlar
 > **Kaynak:** Codebase taraması — backend + mobile tam analiz
+> **Güncelleme:** Karar 3 follow-based modele güncellendi; Karar 9 (arama izni modeli) eklendi
 
 ---
 
@@ -39,12 +40,12 @@ API: `PATCH /api/auth/me` → `{"is_private": true/false}`
 
 ### Karar Bekleyen Noktalar
 
-- [ ] Default `is_private` değeri `False` mu kalmalı, `True` mi olmalı?
-- [ ] Backend profil gating uygulanmalı mı? (bio, sosyal linkler, follower sayısı)
-- [ ] Mesaj butonu gizli hesapta sadece takipçiye mi görünmeli?
-- [ ] Follower/following listesi gizli hesapta sadece takipçiye mi görünmeli?
-- [ ] Story tray `Follow.status == 'accepted'` bug'ı düzeltilmeli (karar değil, bug)
-- [ ] Onboarding'de privacy sorusu eklenecek mi?
+- [x] Default `is_private` değeri → **False** (Karar 1)
+- [x] Backend profil gating → **uygulanacak** (Karar 2)
+- [ ] Mesaj butonu — `is_private` ile bağlantısı kesildi; artık follow-based (Karar 3 güncellendi)
+- [ ] Follower/following listesi gizliliği → **kararlaştırıldı** (Karar 4)
+- [ ] Story tray `Follow.status == 'accepted'` bug'ı → **düzeltilecek** (Bug Fix 1)
+- [ ] Onboarding'de privacy sorusu → **yok** (Karar 5)
 
 ---
 
@@ -205,26 +206,43 @@ Değişiklik yok — mobilde zaten `loc.t('thisAccountIsPrivate')` var.
 
 ---
 
-## Karar 3 — Mesaj İstekleri Sistemi
+## Karar 3 — Mesaj İstekleri Sistemi *(Güncellendi: Follow-Based Model)*
 
-**Karar:** `is_private=True` olan bir kullanıcıya takipçi olmayan biri mesaj gönderdiğinde, mesaj doğrudan ana "Mesajlar" listesine değil ayrı bir "Mesaj İstekleri" sekmesine düşer. Takip isteği kabul edildiğinde o konuşma otomatik olarak ana "Mesajlar" sekmesine taşınır.
+**Karar:** Mesaj türü `is_private` alanından bağımsız olarak tamamen **follow ilişkisine** göre belirlenir. Takip edilen kişi takipçisine direkt mesaj atabilir; takipçi takip ettiği kişiye mesaj isteği gönderir. Mutual follow her iki yönde de direkt mesajlaşmayı açar. Follow ilişkisi yoksa her iki yön de mesaj isteği üzerinden çalışır.
 
-**Gerekçe:** Marketplace'te alıcı satıcıya mesaj gönderebilmelidir — `is_private` bu kanalı tamamen kapatmamalı. Ama özel kullanıcıyı istenmeyen mesajlardan korumak gerekiyor. Instagram'ın "Message Requests" modeli bu dengeyi doğru kuruyor.
+**Gerekçe:** `is_private` artık mesaj türünü belirlemiyor — bu değişkeni tek gerçek etkisi follow isteği tipidir (pending/accepted). Mesajlaşmada güven sinyali follow ilişkisidir: takip edilen kişi takipçisine görünür olmayı zaten kabul etmiştir, bu yüzden takipçinin mesajı direkt gelmeli. Asimetrik ama tutarlı bir model.
+
+---
+
+### Mesajlaşma Matrisi
+
+| Follow Durumu | Mesaj Yönü | Thread Türü | Sonuç |
+|---|---|---|---|
+| Karşılıklı | A→B | Direkt | ✅ Serbest |
+| Karşılıklı | B→A | Direkt | ✅ Serbest |
+| A→B (tek yönlü) | A (takip eden) → B | İstek | ⏳ Kabul / Red |
+| A→B (tek yönlü) | B (takip edilen) → A | Direkt | ✅ Serbest |
+| Takip Yok | A→B | İstek | ⏳ Kabul / Red |
+| Takip Yok | B→A | İstek | ⏳ Kabul / Red |
+
+**Thread kalıcılığı:** Thread bir kez kabul/direkt olunca follow durumu değişse de **direkt kalır.** Tek yönlü follow → mutual follow geçişinde bekleyen istek **auto-accept** olur.
 
 ---
 
 ### UX Akışı
 
-**Gönderen (takipçi olmayan) tarafından:**
+**Gönderen (takipçi, veya follow yok) tarafından:**
 
 ```
-1. Gizli hesabın profilini açar
-2. Mesaj butonuna basar → mesaj gönderir (UI değişmez)
-3. Mesaj iletildi onayı gelir
-4. Konuşma kendi Mesajlar listesinde görünür (gönderen için normal görünür)
+1. Profili açar → mesaj butonuna basar
+2. Mesaj gönderir (UI değişmez)
+3. Konuşma kendi Mesajlar listesinde görünür
+4. Thread tipi:
+   - Alıcı göndereni takip ediyorsa → Direkt (alıcıda da Mesajlar'a düşer)
+   - Alıcı göndereni takip etmiyorsa → İstek (alıcıda Mesaj İstekleri'ne düşer)
 ```
 
-**Alıcı (gizli hesap sahibi) tarafından:**
+**Alıcı (takip etmediği kişiden istek geldiğinde):**
 
 ```
 1. Mesajlar ekranını açar
@@ -239,11 +257,11 @@ Değişiklik yok — mobilde zaten `loc.t('thisAccountIsPrivate')` var.
                    gönderene BİLDİRİM GİTMEZ (gizlilik)
 ```
 
-**Takip isteği kabul edildiğinde (follows ekranından):**
+**Tek yönlü follow → mutual follow geçişi:**
 
 ```
-1. Kullanıcı takip isteğini kabul eder
-2. Sistem otomatik kontrol: bu kişiden bekleyen mesaj isteği var mı?
+1. B, A'nın takip isteğini kabul eder (artık mutual follow)
+2. Sistem otomatik kontrol: A'dan bekleyen mesaj isteği var mı?
 3. Varsa → konuşma Mesajlar sekmesine otomatik taşınır
 4. Alıcıya ayrıca bildirim gitmez (takip kabulü yeterli)
 ```
@@ -287,41 +305,42 @@ Mesaj butonu gizli hesapta da görünür kalır — değişiklik yok. Arka pland
 
 ### DB
 
-Mevcut mesaj/konuşma tablosuna `is_request` kolonu eklenir:
+Mevcut mesaj/konuşma tablosuna `is_request` ve `initiator_id` kolonları eklenir:
 
 ```sql
--- Conversations / threads tablosu (tablo adı messages.py okunarak doğrulanacak)
-ALTER TABLE conversations ADD COLUMN is_request BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE message_threads ADD COLUMN is_request BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE message_threads ADD COLUMN initiator_id INTEGER REFERENCES users(id);
 ```
+
+`initiator_id`: thread oluşturulduktan sonra değişmez; arama izninde acceptor'ı belirlemek için kullanılır (bkz. Karar 9).
 
 Mesaj gönderimi sırasında `is_request` belirlenir:
 
 ```python
 # POST /api/messages/send içinde
-is_request = False
-if receiver.is_private:
-    follow = await db.scalar(
-        select(Follow).where(
-            Follow.follower_id == sender_id,
-            Follow.followed_id == receiver_id,
-            Follow.status == "accepted"
-        )
+# Kural: alıcı göndereni takip etmiyorsa → istek
+receiver_follows_sender = await db.scalar(
+    select(Follow).where(
+        Follow.follower_id == receiver_id,
+        Follow.followed_id == sender_id,
+        Follow.status == "accepted"
     )
-    if not follow:
-        is_request = True
-# conversation.is_request = is_request ile kaydedilir
+)
+is_request = not receiver_follows_sender
+# thread.is_request = is_request, thread.initiator_id = sender_id
 ```
 
-Follow kabul edildiğinde (`follows.py` — accept endpoint):
+Mutual follow geçişinde (`follows.py` — accept endpoint):
 
 ```python
-# Bekleyen mesaj isteğini ana inbox'a taşı
+# B, A'nın takip isteğini kabul ettiğinde (artık mutual follow):
+# A → B yönündeki bekleyen mesaj isteklerini auto-accept et
 await db.execute(
-    update(Conversation)
+    update(MessageThread)
     .where(
-        Conversation.participant_a == follower_id,
-        Conversation.participant_b == current_user.id,
-        Conversation.is_request == True
+        MessageThread.initiator_id == followed_user_id,  # A (isteği atan)
+        MessageThread.participant_b == current_user.id,  # B (kabul eden)
+        MessageThread.is_request == True
     )
     .values(is_request=False)
 )
@@ -338,9 +357,7 @@ msg:unread:{user_id}          →  mevcut key, regular mesajlar
 msg:unread:request:{user_id}  →  yeni key, request mesajlar
 ```
 
-Kullanıcı `is_private=False`'a geçtiğinde:
-- Tüm `is_request=True` konuşmalar DB'de `is_request=False` yapılır
-- `msg:unread:request:{user_id}` key'i silinir
+`is_private` değişiminde artık otomatik taşıma **yapılmaz** — thread tipi follow ilişkisine göre belirlenmiştir, `is_private` toggle'ı bunu etkilemez.
 
 ---
 
@@ -348,7 +365,7 @@ Kullanıcı `is_private=False`'a geçtiğinde:
 
 ```json
 "messageRequests":          "Mesaj İstekleri",
-"messageRequestsHint":      "Takipçi olmayan kişilerden gelen mesajlar",
+"messageRequestsHint":      "Seni takip etmeyen kişilerden gelen mesajlar",
 "messageRequestBanner":     "Bu kişiyi tanımıyor olabilirsin.",
 "acceptMessageRequest":     "Kabul Et",
 "declineMessageRequest":    "Reddet",
@@ -363,13 +380,13 @@ Kullanıcı `is_private=False`'a geçtiğinde:
 
 | Durum | Karar |
 |-------|-------|
-| Takip isteği **reddedilirse** | Mesaj isteği Mesaj İstekleri sekmesinde kalır — alıcı bağımsız kabul/red edebilir |
+| **Mutual follow** → önceden istek olarak başlamış thread var | Otomatik Mesajlar'a taşınır (auto-accept), ayrıca bildirim gitmez |
 | Mesaj isteği **reddedilirse** | Gönderen bildirim almaz; tekrar mesaj gönderemez (backend 7 gün cooldown) |
-| Kullanıcı **public'e geçerse** | Tüm bekleyen `is_request=True` konuşmalar otomatik Mesajlar'a taşınır |
-| **Takip kabul** → mesaj isteği de var | Konuşma otomatik Mesajlar'a taşınır, ayrıca bildirim gitmez |
+| Takip **kabul edilmiş** → sonra unfollowed | Thread Mesajlar'da kalır, `is_request=False` değişmez — thread kalıcı |
+| Unfollow → **yeni** mesaj gönderilirse | Yeni thread artık istek — eski thread kalıcı |
 | Aynı kişiden **birden fazla mesaj** | Tek thread — birden fazla mesaj ekler, birden fazla request oluşturmaz |
-| Takip **kabul edilmiş** → sonra unfollowed | Konuşma Mesajlar'da kalır, is_request=False değişmez |
 | **Block** → mesaj isteği varken | Mesaj isteği silinir; block bildirimi normal davranışı izler |
+| `is_private` **değişirse** | Thread tipi **değişmez** — follow ilişkisi belirler, is_private değil |
 
 ---
 
@@ -379,6 +396,192 @@ Kullanıcı `is_private=False`'a geçtiğinde:
 - **ClickHouse:** Mesaj event'lerine `is_request` alanı eklenmeli. Request mesajlarından gelen etkileşimler feed engagement analitiğine karıştırılmamalı.
 - **BPR / User interests:** `is_request=True` konuşmalarındaki etkileşimler (mesaj açma, yanıt) tercih sinyali üretmemeli — istenmeyen mesaj olabilir.
 - **Unread badge:** App badge sayısı (`app_badge_plus`) hesaplanırken `msg:unread:request:{user_id}` ayrı sayılmalı; ana badge'e dahil edilip edilmeyeceği ayrıca kararlaştırılacak.
+
+---
+
+## Karar 9 — Arama İzni Modeli (Follow-Based)
+
+**Karar:** Arama izni tamamen follow ilişkisine göre belirlenir. Takip edilen kişi takipçisini her zaman arayabilir. Takipçi, takip ettiği kişiyi yalnızca o kişi toggle'ı açarsa arayabilir. Mutual follow her iki yönde de serbest arama açar. Arama izni **dinamiktir** — follow durumu değiştiğinde anında güncellenir (messaging thread'in aksine kalıcı değil).
+
+**Gerekçe:** Sesli iletişim mesajlaşmaya göre daha doğrudan ve kişisel. Follow ilişkisi burada da güven katmanı işlevi görür. Takip edilen kişi (satıcı) takipçisini (müşteri) arayabilmeli; tersi durumda ise takip edilen kişinin izni gerekiyor. Mesaj isteği üzerinden başlayan iletişimlerde arama izni acceptor'da (thread'i kabul eden) kalır.
+
+---
+
+### Arama Matrisi
+
+| Follow Durumu | Thread Durumu | Arama Yönü | İzin |
+|---|---|---|---|
+| Karşılıklı | — | A→B | ✅ |
+| Karşılıklı | — | B→A | ✅ |
+| A→B (tek yönlü) | — | A (takip eden) → B | 🔒 B toggle |
+| A→B (tek yönlü) | — | B (takip edilen) → A | ✅ |
+| Takip Yok | Yok / Beklemede | Her iki yön | ❌ |
+| Takip Yok | Kabul | Initiator → Acceptor | 🔒 Acceptor toggle |
+| Takip Yok | Kabul | Acceptor → Initiator | 🔒 Acceptor toggle |
+
+**İki matris arasındaki temel fark:**
+
+| | Mesajlaşma | Arama |
+|---|---|---|
+| Takip edilen → Takip eden | ✅ Direkt | ✅ Direkt |
+| Takip eden → Takip edilen | ⏳ İstek | 🔒 Toggle |
+| Thread kabul sonrası | Kalıcı direkt | Follow durumuna bakar |
+| State kalıcılığı | Evet | Hayır — dinamik |
+
+---
+
+### Toggle Mekanizması
+
+Toggle sahibi: **acceptor** (mesaj isteğini kabul eden kişi veya tek yönlü follow'da takip edilen).
+
+- **Default:** OFF (kapalı)
+- Toggle ON → initiator da arayabilir, acceptor da arayabilir
+- Toggle OFF → her iki yön de kapalı
+
+**UI — Mesaj thread'i ekranı:**
+
+```
+Initiator (toggle OFF iken):
+  [ⓘ]  [📞 Disabled]
+  ⓘ ikonuna basınca: "Karşılıklı takip olmadığı için arama iznini karşı taraf verebilir"
+
+Acceptor (toggle OFF iken):
+  [ⓘ]  [🔘 Toggle: OFF]  [📞 Disabled]
+  ⓘ ikonuna basınca: "Arama özelliği varsayılan olarak kapalıdır"
+  Toggle ON yapılınca: her iki taraf da arayabilir, 📞 aktif olur
+```
+
+---
+
+### DB
+
+`message_threads` tablosuna `call_allowed` kolonu eklenir:
+
+```sql
+ALTER TABLE message_threads ADD COLUMN call_allowed BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+`call_allowed` yalnızca acceptor tarafından değiştirilebilir:
+
+```python
+# PATCH /api/messages/threads/{thread_id}/call-permission
+# Yalnızca acceptor (initiator_id != current_user.id) yapabilir
+if thread.initiator_id == current_user.id:
+    raise ForbiddenException(code="CALL_PERMISSION_NOT_YOURS")
+thread.call_allowed = body.call_allowed
+```
+
+`can_call` hesaplama mantığı (her sorguda dinamik):
+
+```python
+def compute_can_call(
+    viewer_id: int,
+    target_id: int,
+    viewer_follows_target: bool,
+    target_follows_viewer: bool,
+    thread: MessageThread | None,
+) -> bool:
+    # Mutual follow
+    if viewer_follows_target and target_follows_viewer:
+        return True
+    # Takip edilen → Takipçi (viewer = takip edilen)
+    if target_follows_viewer and not viewer_follows_target:
+        return True
+    # Takipçi → Takip edilen (toggle kontrolü)
+    if viewer_follows_target and not target_follows_viewer:
+        return thread.call_allowed if thread else False
+    # Takip yok — thread toggle kontrolü
+    if thread and thread.is_request is False:
+        return thread.call_allowed
+    return False
+```
+
+---
+
+### Real-time: `can_call_changed` WS Event
+
+Follow veya toggle değiştiğinde `can_call` yeniden hesaplanır ve karşı tarafa WS event'i gönderilir:
+
+**Tetikleyiciler:**
+- Follow kabul / iptal / unfollow
+- `call_allowed` toggle değişimi
+
+**Event şeması:**
+
+```json
+{
+  "type": "can_call_changed",
+  "user_id": 123,        // can_call durumu değişen kullanıcı ID'si
+  "can_call": true       // yeni değer (viewer'a göre)
+}
+```
+
+**Backend:** Her iki tetikleyicide de ilgili thread/follow'dan etkilenen kullanıcılara WS üzerinden event push edilir.
+
+**Mobile:** `CallService` veya `MessageThreadViewModel` event'i dinler → arama butonu UI'ı günceller.
+
+---
+
+### `can_call` — Profil Ekranı
+
+`GET /api/users/{username}` response'una `can_call: bool` eklenir:
+
+```python
+# get_user_profile.py içinde
+can_call = compute_can_call(
+    viewer_id=current_user.id,
+    target_id=target.id,
+    viewer_follows_target=is_following,
+    target_follows_viewer=is_followed_by,
+    thread=active_thread,  # None ise follow-only kontrol
+)
+```
+
+Mobile: profil ekranında arama butonu `can_call` değerine göre render edilir — mevcut `_followStatus == 'accepted'` kontrolü kaldırılır.
+
+---
+
+### Hata Yönetimi
+
+`CALL_FORBIDDEN` backend response'u artık frontend'de yakalanır:
+
+```dart
+// call_service.dart içinde
+case 'CALL_FORBIDDEN':
+  TeqToast.show('Bu kullanıcıyı şu an arayamazsın');
+  return;
+```
+
+---
+
+### ARB
+
+```json
+"callPermissionNotYours":     "Arama iznini yalnızca karşı taraf değiştirebilir",
+"callPermissionInfo":         "Karşılıklı takip olmadığı için arama iznini karşı taraf verebilir",
+"callPermissionDefaultOff":   "Arama özelliği varsayılan olarak kapalıdır",
+"callToggleLabel":            "Arama İzni",
+"callForbiddenToast":         "Bu kullanıcıyı şu an arayamazsın"
+```
+
+---
+
+### Edge Case Kararları
+
+| Durum | Karar |
+|-------|-------|
+| Mutual follow → unfollow | `can_call` dinamik olarak güncellenir; toggle durumu korunur |
+| Toggle ON → unfollow olur | `can_call` yeniden hesaplanır — toggle ON ama follow yok → follow kuralı geçerli |
+| Thread silinirse | `call_allowed` verisi kaybolur; yeni thread oluşursa default OFF |
+| Block yapılırsa | `can_call = false` override — block her şeyin üstünde |
+| Bekleyen istek (pending thread) | Arama yok — thread kabul edilene kadar `can_call = false` |
+
+### ⚠️ Etki Bayrakları
+
+- **`calls.py` router:** `/call/start` endpoint'inde `can_call` kontrolü — mevcut mutual-follow-only kontrolünü bu mantıkla değiştir.
+- **`public_profile_screen.dart:172`:** `_followStatus == 'accepted'` → `_canCall` (profil API'dan gelen `can_call` değeri).
+- **`call_service.dart:333`:** `CALL_FORBIDDEN` → `teqToast` ile kullanıcıya bilgi ver.
+- **Alembic:** `call_allowed` + `initiator_id` kolonları için yeni migration.
 
 ---
 
