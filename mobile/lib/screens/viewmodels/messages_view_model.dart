@@ -322,8 +322,14 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
       _wsSub?.cancel();
     });
 
-    Future.microtask(() => load(silent: false));
-    return const ConversationsUiState(loading: true);
+    final cached = await StorageService.getCachedData(StorageService.cacheMessageRequests);
+
+    Future.microtask(() => load(silent: cached != null));
+
+    return ConversationsUiState(
+      conversations: cached != null ? (cached as List) : [],
+      loading: cached == null,
+    );
   }
 
   Future<void> load({bool silent = false}) async {
@@ -334,6 +340,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
     try {
       final data = await NotificationService.getMessageRequests();
+      await StorageService.cacheData(StorageService.cacheMessageRequests, data);
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,

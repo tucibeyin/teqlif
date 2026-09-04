@@ -29,8 +29,9 @@ class StorageService {
   static String? _cachedRefreshToken;
 
   // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
-  static const cacheMessages      = 'cache_messages';
-  static const cacheNotifications = 'cache_notifications';
+  static const cacheMessages         = 'cache_messages';
+  static const cacheMessageRequests  = 'cache_message_requests';
+  static const cacheNotifications    = 'cache_notifications';
   static const cacheFeed          = 'cache_feed';
   static const cacheProfile       = 'cache_profile';       // tam user profili (profile_image_url dahil)
   static const cacheUserListings  = 'cache_user_listings'; // kendi ilanları
