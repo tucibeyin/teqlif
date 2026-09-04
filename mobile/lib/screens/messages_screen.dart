@@ -2146,11 +2146,38 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           Consumer(
             builder: (context, ref, _) {
               final requestState = ref.watch(directChatRequestProvider(widget.otherUserId));
-              final canCall = requestState.valueOrNull?.canCall ?? false;
-              final canCallReason = requestState.valueOrNull?.canCallReason;
+              final state = requestState.valueOrNull;
+              final canCall = state?.canCall ?? false;
+              final canCallReason = state?.canCallReason;
+              final isAcceptor = !(state?.isInitiator ?? true);
+              final isAccepted = state?.status == 'accepted';
+              final callAllowed = state?.callAllowed ?? false;
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (isAcceptor && isAccepted) ...[
+                    IconButton(
+                      icon: Icon(
+                        callAllowed ? Icons.phone : Icons.phone_disabled,
+                        size: 22,
+                      ),
+                      color: callAllowed ? null : Theme.of(context).disabledColor,
+                      tooltip: callAllowed
+                          ? loc.tOr('callPermissionToggleDisable', 'Aramayı kapat')
+                          : loc.tOr('callPermissionToggleEnable', 'Aramayı aç'),
+                      onPressed: () => ref
+                          .read(directChatRequestProvider(widget.otherUserId).notifier)
+                          .setCallAllowed(!callAllowed),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline, size: 20),
+                      padding: EdgeInsets.zero,
+                      tooltip: loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun'),
+                      onPressed: () => TeqToast.info(
+                        loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun'),
+                      ),
+                    ),
+                  ],
                   IconButton(
                     icon: Icon(canCall ? Icons.call : Icons.call_outlined, size: 22),
                     tooltip: loc.t("callVoiceCall"),
@@ -2194,7 +2221,6 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               Navigator.pop(context);
             },
           ),
-          _CallPermissionRow(otherUserId: widget.otherUserId),
           Expanded(
             child: _loading
                 ? const Center(
@@ -3118,54 +3144,3 @@ class _FullScreenVideoPageState extends ConsumerState<_FullScreenVideoPage> {
   }
 }
 
-class _CallPermissionRow extends ConsumerWidget {
-  final int otherUserId;
-  const _CallPermissionRow({required this.otherUserId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final requestState = ref.watch(directChatRequestProvider(otherUserId));
-    final state = requestState.valueOrNull;
-    if (state == null || state.status != 'accepted') return const SizedBox.shrink();
-
-    final loc = ref.read(localizationProvider);
-    final isAcceptor = !state.isInitiator;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.call_outlined, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              isAcceptor
-                  ? loc.tOr('callPermissionAcceptorLabel', 'Arama izni')
-                  : loc.tOr('callPermissionInitiatorLabel', 'Arama izni'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-          if (isAcceptor) ...[
-            Switch.adaptive(
-              value: state.callAllowed,
-              onChanged: (v) => ref.read(directChatRequestProvider(otherUserId).notifier).setCallAllowed(v),
-            ),
-          ],
-          IconButton(
-            icon: const Icon(Icons.info_outline, size: 18),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: () => TeqToast.info(
-              isAcceptor
-                  ? loc.tOr('callPermissionAcceptorInfo', 'Arama iznini sen kontrol ediyorsun')
-                  : loc.tOr('callPermissionInitiatorInfo', 'Arama izni karşı taraf tarafından ayarlanır'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
