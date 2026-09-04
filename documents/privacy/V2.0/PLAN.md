@@ -38,18 +38,18 @@ Her adımda sıra şu:
 
 | # | Alan | İş | Durum |
 |---|------|-----|-------|
-| 1 | DB | `message_threads` — `initiator_id` + `call_allowed` kolonları | ⬜ |
-| 2 | Backend | Mesajlaşma — `is_request` mantığı follow-based'e güncelle | ⬜ |
-| 3 | Backend | Follow kabul → pending thread auto-accept | ⬜ |
-| 4 | Backend | Arama — `compute_can_call()` + `calls.py` kontrolü güncelle | ⬜ |
-| 5 | Backend | Profil API — `can_call` + `is_followed_by` alanı ekle | ⬜ |
-| 6 | Backend | Thread call-permission endpoint (`PATCH`) | ⬜ |
-| 7 | Backend | WS — `can_call_changed` event | ⬜ |
-| 8 | Mobile | `call_service.dart` — `CALL_FORBIDDEN` → teqToast | ⬜ |
-| 9 | Mobile | `public_profile_screen.dart` — `can_call` kullan | ⬜ |
-| 10 | Mobile | Mesaj thread ekranı — toggle + ⓘ ikonu + disabled call butonu | ⬜ |
-| 11 | Mobile | Mesajlar ekranı — "Mesaj İstekleri" sekmesi | ⬜ |
-| 12 | Deploy | Alembic + restart | ⬜ |
+| 1 | DB | `message_threads` — `call_allowed` kolonu | ✅ `cf83ee11` |
+| 2 | Backend | Mesajlaşma — `is_request` mantığı follow-based'e güncelle | ✅ `cd123242` |
+| 3 | Backend | Follow kabul → pending thread auto-accept | ✅ `33f03230` |
+| 4 | Backend | Arama — `compute_can_call()` + `calls.py` kontrolü güncelle | ✅ `7f941600` |
+| 5 | Backend | Profil API — `can_call` + `is_followed_by` alanı ekle | ✅ `4b9883c0` |
+| 6 | Backend | Thread call-permission endpoint (`PATCH`) | ✅ `8a44afb9` |
+| 7 | Backend | WS — `can_call_changed` event | ✅ `ed348ba7` |
+| 8 | Mobile | `call_service.dart` — `CALL_FORBIDDEN` → teqToast | ✅ `24564706` |
+| 9 | Mobile | `public_profile_screen.dart` — `can_call` kullan | ✅ `8a9c994e` |
+| 10 | Mobile | Mesaj thread ekranı — toggle + ⓘ ikonu + disabled call butonu | ✅ `5d0f0728` |
+| 11 | Mobile | Mesajlar ekranı — "Mesaj İstekleri" sekmesi | ✅ `be7d63e9` |
+| 12 | Deploy | Alembic + restart | ✅ deployed |
 
 ---
 

@@ -1,12 +1,17 @@
 """
 Bildirim servisi — push notification iş mantığını router'dan ayırır.
 
-push_notification() fonksiyonu:
+push_notification(): Kalıcı bildirimler (follow, bid, vb.)
   - Kullanıcı bildirim tercihlerini kontrol eder
   - ARB anahtarlarını alıcı locale'ine göre çevirir
   - Bildirimi DB'ye kaydeder
   - FCM push'u ARQ kuyruğuna alır (veya direkt gönderir)
   - WebSocket bağlantılarına fan-out yapar
+
+send_message_push(): DM-özel push
+  - WS bağlıysa gönderme (DM zaten WS üzerinden iletiliyor)
+  - DB'ye Notification kaydı yazmaz
+  - Yalnızca messages pref'ini kontrol eder
 """
 from datetime import datetime, timezone, timedelta
 
@@ -15,6 +20,7 @@ from sqlalchemy import select, func
 from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.notification import Notification
+from app.models.message import DirectMessage
 from app.core.task_queue import get_pool
 from app.core.logger import get_logger
 from app.core.ws_manager import ws_manager
@@ -208,3 +214,111 @@ async def push_notification(
         "created_at": n.created_at.isoformat() if n.created_at else None,
     }
     await ws_manager.broadcast_local(f"notif:{user_id}", notif_payload)
+
+
+async def send_message_push(user_id: int, notif: dict) -> None:
+    """
+    DM-özel push: WS bağlıysa gönderme, DB'ye Notification kaydı yazmaz.
+
+    push_notification()'dan farkı:
+    - is_dm_online kontrolü — bağlıysa WS zaten teslim ediyor, FCM gereksiz
+    - notifications tablosuna kayıt yazmaz (DM'ler direct_messages'ta tutuluyor)
+    - Yalnızca "messages" bildirim tercihini kontrol eder
+    """
+    from app.schemas.user import DEFAULT_NOTIF_PREFS
+    from app.utils.i18n import _get_t
+
+    # 1. DM WS bağlıysa push gereksiz
+    if await ws_manager.is_dm_online(user_id):
+        logger.debug("[MSG_PUSH] DM WS aktif — push atlandı | user_id=%s", user_id)
+        return
+
+    async with AsyncSessionLocal() as db:
+        user = await db.get(User, user_id)
+        if not user or not user.fcm_token:
+            return
+
+        # 2. messages bildirim tercihi kontrolü
+        prefs = user.notification_prefs or {}
+        merged = {**DEFAULT_NOTIF_PREFS, **prefs}
+        if not merged.get("messages", True):
+            logger.debug("[MSG_PUSH] messages bildirimleri kapalı | user_id=%s", user_id)
+            return
+
+        # 3. i18n çözümle
+        user_locale = user.locale or "tr"
+        i18n = notif.get("i18n")
+        resolved: dict = {k: v for k, v in notif.items() if k != "i18n"}
+        if i18n:
+            t = _get_t(user_locale)
+
+            def _fmt(key: str, params: dict) -> str:
+                raw = t.get(key, "")
+                try:
+                    return raw.format_map(params) if raw else ""
+                except (KeyError, ValueError):
+                    return raw
+
+            title_key = i18n.get("title_key")
+            body_key = i18n.get("body_key")
+            if title_key:
+                resolved["title"] = _fmt(title_key, i18n.get("title_params") or {})
+            if body_key:
+                resolved["body"] = _fmt(body_key, i18n.get("body_params") or {})
+
+        # 4. Badge hesapla (unread notifs + unread DM'ler)
+        unread_notifs = await db.scalar(
+            select(func.count()).where(
+                Notification.user_id == user_id,
+                Notification.is_read == False,  # noqa: E712
+                Notification.type != "message",
+            )
+        ) or 0
+        unread_msgs = await db.scalar(
+            select(func.count()).where(
+                DirectMessage.receiver_id == user_id,
+                DirectMessage.is_read == False,  # noqa: E712
+            )
+        ) or 0
+        badge = unread_notifs + unread_msgs
+
+    # 5. FCM gönder (kuyruğa veya direkt) — DB işlemi kapandıktan sonra
+    notif_type = resolved.get("type", "message")
+    extra_data: dict[str, str] = {}
+    if resolved.get("related_id") is not None:
+        extra_data["sender_id"] = str(resolved["related_id"])
+    if resolved.get("sender_username"):
+        extra_data["sender_username"] = str(resolved["sender_username"])
+
+    pool = get_pool()
+    if pool:
+        job = await pool.enqueue_job(
+            "send_push_notification_task",
+            user.fcm_token,
+            resolved.get("title", ""),
+            resolved.get("body"),
+            badge,
+            notif_type,
+            extra_data or None,
+            None,  # image_url — DM push'unda kullanılmaz
+            _queue_name="critical",
+        )
+        logger.info("[MSG_PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s", getattr(job, "job_id", "?"), user_id)
+    else:
+        logger.warning("[MSG_PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
+        try:
+            await send_push(
+                user.fcm_token,
+                resolved.get("title", ""),
+                resolved.get("body"),
+                badge=badge,
+                notif_type=notif_type,
+                extra_data=extra_data or None,
+                image_url=None,
+            )
+        except Exception as exc:
+            from app.services.firebase_service import InvalidFCMTokenError
+            if isinstance(exc, InvalidFCMTokenError):
+                logger.warning("[MSG_PUSH] Geçersiz FCM token | user_id=%s", user_id)
+            else:
+                raise

@@ -9,6 +9,7 @@ from app.models.block import UserBlock
 from app.models.follow import Follow
 from app.schemas.message import MessageOut
 from app.services.dm_broadcast import broadcast_dm
+from app.services.notification_service import send_message_push
 from app.utils.redis_client import get_redis
 
 logger = get_logger(__name__)
@@ -143,8 +144,7 @@ class SendDirectMessageCommand:
                 "[AUTO_MOD] DM shadowban | sender_id=%s receiver_id=%s", sender_id, receiver_id,
             )
         elif auto_accepted and initiator_id_for_notif:
-            from app.routers.notifications import push_notification
-            await push_notification(
+            await send_message_push(
                 initiator_id_for_notif,
                 {
                     "type": "message",
@@ -156,11 +156,9 @@ class SendDirectMessageCommand:
                     "related_id": sender_id,
                     "sender_username": sender_username,
                 },
-                pref_key="messages",
             )
         elif not is_new_request and not is_pending_for_initiator:
-            from app.routers.notifications import push_notification
-            await push_notification(
+            await send_message_push(
                 receiver_id,
                 {
                     "type": "message",
@@ -172,7 +170,6 @@ class SendDirectMessageCommand:
                     "related_id": sender_id,
                     "sender_username": sender_username,
                 },
-                pref_key="messages",
             )
 
         logger.info("[SendDirectMessageCommand] Başarılı | msg_id=%s", msg_id)

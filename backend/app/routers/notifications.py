@@ -32,7 +32,10 @@ async def list_notifications(
 ):
     result = await db.execute(
         select(Notification)
-        .where(Notification.user_id == current_user.id)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.type != "message",  # DM'ler direct_messages'ta, Bildirimler'e sızmaz
+        )
         .order_by(Notification.created_at.desc())
         .limit(50)
     )
