@@ -74,22 +74,20 @@ class SendDirectMessageCommand:
             )
 
             if not existing_thread:
-                is_req = False
-                if receiver.is_private:
-                    follow_accepted = await self.uow.session.scalar(
-                        select(Follow).where(
-                            Follow.follower_id == sender_id,
-                            Follow.followed_id == receiver_id,
-                            Follow.status == "accepted",
-                        )
+                receiver_follows_sender = await self.uow.session.scalar(
+                    select(Follow).where(
+                        Follow.follower_id == receiver_id,
+                        Follow.followed_id == sender_id,
+                        Follow.status == "accepted",
                     )
-                    if not follow_accepted:
-                        is_req = True
+                )
+                is_req = not bool(receiver_follows_sender)
                 self.uow.session.add(MessageThread(
                     user_a_id=user_a,
                     user_b_id=user_b,
                     initiator_id=sender_id,
                     status="pending" if is_req else "accepted",
+                    call_allowed=False,
                 ))
                 is_new_request = is_req
 
