@@ -2783,6 +2783,7 @@
   "noResultsFound": "Sonuç bulunamadı",
   "removeFromFavoritesTooltip": "Favoriden Çıkar",
   "callForbiddenNotFollowing": "Arama yapabilmek için birbirinizi takip etmeniz gerekiyor",
+  "callForbiddenToast": "Bu kullanıcıyı şu an arayamazsın",
   "callVoiceCall": "Sesli Arama",
   "callCalling": "Arıyor...",
   "callConnecting": "Bağlanıyor...",

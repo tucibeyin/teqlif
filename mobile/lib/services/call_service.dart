@@ -28,6 +28,8 @@ import '../call/state/call_state.dart';
 import '../call/room/call_room_adapter.dart';
 import '../call/routing/call_screen_router.dart';
 import '../call/group/group_call_manager.dart';
+import '../ui_library/components/overlays/teq_toast.dart';
+import 'localization_service.dart';
 
 // Re-export: mevcut tüm importlar call_service.dart üzerinden çalışmaya devam eder.
 export '../call/state/call_status.dart';
@@ -335,6 +337,14 @@ class CallService {
       if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.busy));
         _scheduleReset();
+      } else if (e.code == 'CALL_FORBIDDEN') {
+        _cpLog('OUT', 'CALL_FORBIDDEN → teqToast');
+        _setState(state.value.copyWith(status: CallStatus.ended, endReason: EndReason.callForbidden));
+        _scheduleReset();
+        TeqToast.error(
+          LocalizationService.readCacheSync(LocalizationService.activeLang)
+              .tOr('callForbiddenToast', 'Bu kullanıcıyı şu an arayamazsın'),
+        );
       } else {
         _setState(state.value.copyWith(status: CallStatus.ended));
         _scheduleReset();

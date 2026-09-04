@@ -2786,6 +2786,7 @@
   "noResultsFound": "لا توجد نتائج",
   "removeFromFavoritesTooltip": "إزالة من المفضلة",
   "callForbiddenNotFollowing": "يجب أن تتابعوا بعضكم البعض لإجراء مكالمة",
+  "callForbiddenToast": "لا يمكنك الاتصال بهذا المستخدم الآن",
   "callVoiceCall": "مكالمة صوتية",
   "callCalling": "جارٍ الاتصال...",
   "callConnecting": "جارٍ الاتصال...",

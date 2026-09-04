@@ -86,6 +86,8 @@ class LocalizationService extends StateNotifier<TranslationPack> {
 
   final Ref _ref;
   String _currentLang = 'tr';
+  static String _activeLang = 'tr';
+  static String get activeLang => _activeLang;
 
   /// Completes when the first non-empty pack is ready.
   /// SplashScreen awaits this (with timeout) before removing the native splash,
@@ -188,6 +190,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     if (cachedJson != null) {
       final strings = Map<String, String>.from(jsonDecode(cachedJson) as Map);
       _currentLang = lang;
+      _activeLang = lang;
       state = TranslationPack(strings, lang);
       _checkStale(lang, box).ignore();
       return true;
@@ -197,7 +200,11 @@ class LocalizationService extends StateNotifier<TranslationPack> {
     final prevLang = _currentLang;
     _currentLang = lang;
     final ok = await _fetchAndCache(lang, box);
-    if (!ok) _currentLang = prevLang;
+    if (!ok) {
+      _currentLang = prevLang;
+    } else {
+      _activeLang = lang;
+    }
     return ok;
   }
 

@@ -7,4 +7,5 @@ enum EndReason {
   permissionDenied, // mic izni reddedildi
   error,            // LiveKit/API kalıcı hata
   unreachable,      // callee push ACK gelmedi (8s) — cihaz kapalı/ulaşılamaz
+  callForbidden,    // server CALL_FORBIDDEN — arama izni yok
 }
