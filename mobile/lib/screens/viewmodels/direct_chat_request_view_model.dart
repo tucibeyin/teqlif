@@ -10,6 +10,7 @@ class DirectChatRequestState {
   final bool isLoading;
   final bool isActioning;
   final bool canCall;
+  final String? canCallReason; // "no_follow" | "call_disabled" | null
   final bool callAllowed; // acceptor'ün verdiği arama izni
 
   const DirectChatRequestState({
@@ -18,6 +19,7 @@ class DirectChatRequestState {
     this.isLoading = true,
     this.isActioning = false,
     this.canCall = false,
+    this.canCallReason,
     this.callAllowed = false,
   });
 
@@ -28,6 +30,7 @@ class DirectChatRequestState {
     bool? isLoading,
     bool? isActioning,
     bool? canCall,
+    String? canCallReason,
     bool? callAllowed,
   }) {
     return DirectChatRequestState(
@@ -36,6 +39,7 @@ class DirectChatRequestState {
       isLoading: isLoading ?? this.isLoading,
       isActioning: isActioning ?? this.isActioning,
       canCall: canCall ?? this.canCall,
+      canCallReason: canCallReason ?? this.canCallReason,
       callAllowed: callAllowed ?? this.callAllowed,
     );
   }
@@ -53,6 +57,7 @@ class DirectChatRequestNotifier
         status: data['status'] as String?,
         isInitiator: (data['is_initiator'] as bool?) ?? false,
         canCall: (data['can_call'] as bool?) ?? false,
+        canCallReason: data['can_call_reason'] as String?,
         callAllowed: (data['call_allowed'] as bool?) ?? false,
         isLoading: false,
       );
@@ -99,10 +104,10 @@ class DirectChatRequestNotifier
     }
   }
 
-  void updateCanCall(bool canCall) {
+  void updateCanCall(bool canCall, String? reason) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncValue.data(current.copyWith(canCall: canCall));
+    state = AsyncValue.data(current.copyWith(canCall: canCall, canCallReason: reason));
   }
 }
 

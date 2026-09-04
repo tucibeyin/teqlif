@@ -32,21 +32,21 @@ async def _broadcast_can_call_updated(uid_a: int, uid_b: int, db: AsyncSession) 
         select(MessageThread).where(MessageThread.user_a_id == user_a, MessageThread.user_b_id == user_b)
     )
     # uid_a → uid_b can_call
-    can_call_ab = _compute_can_call(
+    can_call_ab, reason_ab = _compute_can_call(
         viewer_follows_target=follows_ab is not None,
         target_follows_viewer=follows_ba is not None,
         thread_status=thread.status if thread else None,
         call_allowed=thread.call_allowed if thread else False,
     )
     # uid_b → uid_a can_call
-    can_call_ba = _compute_can_call(
+    can_call_ba, reason_ba = _compute_can_call(
         viewer_follows_target=follows_ba is not None,
         target_follows_viewer=follows_ab is not None,
         thread_status=thread.status if thread else None,
         call_allowed=thread.call_allowed if thread else False,
     )
-    asyncio.create_task(broadcast_dm(uid_a, {"type": "can_call_changed", "user_id": uid_b, "can_call": can_call_ab}))
-    asyncio.create_task(broadcast_dm(uid_b, {"type": "can_call_changed", "user_id": uid_a, "can_call": can_call_ba}))
+    asyncio.create_task(broadcast_dm(uid_a, {"type": "can_call_changed", "user_id": uid_b, "can_call": can_call_ab, "reason": reason_ab}))
+    asyncio.create_task(broadcast_dm(uid_b, {"type": "can_call_changed", "user_id": uid_a, "can_call": can_call_ba, "reason": reason_ba}))
 
 router = APIRouter(prefix="/api/follows", tags=["follows"])
 

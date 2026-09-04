@@ -47,6 +47,7 @@ import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../utils/call_permission_helper.dart';
 import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
 import 'viewmodels/messages_view_model.dart';
@@ -1325,7 +1326,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         final userId = data['user_id'] as int?;
         if (userId == widget.otherUserId && mounted) {
           final canCall = (data['can_call'] as bool?) ?? false;
-          ref.read(directChatRequestProvider(widget.otherUserId).notifier).updateCanCall(canCall);
+          final reason = data['reason'] as String?;
+          ref.read(directChatRequestProvider(widget.otherUserId).notifier).updateCanCall(canCall, reason);
         }
         return;
       }
@@ -2145,6 +2147,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             builder: (context, ref, _) {
               final requestState = ref.watch(directChatRequestProvider(widget.otherUserId));
               final canCall = requestState.valueOrNull?.canCall ?? false;
+              final canCallReason = requestState.valueOrNull?.canCallReason;
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2164,7 +2167,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                               calleeAvatar: widget.otherAvatarUrl,
                             );
                           }
-                        : () => TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok')),
+                        : () => callPermissionToast(canCallReason, loc),
                   ),
                 ],
               );

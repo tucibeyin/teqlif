@@ -12,6 +12,7 @@ import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../utils/call_permission_helper.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
@@ -46,6 +47,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   bool _followLoading = false;
   bool _isBlocked = false;
   bool _canCall = false;
+  String? _canCallReason;
   Map<String, dynamic>? _ratingSummary;
 
   ListingFilterState _filter = const ListingFilterState();
@@ -144,6 +146,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         _isPrivate = state.isPrivate;
         _isBlocked = state.isBlocked;
         _canCall = state.canCall;
+        _canCallReason = state.canCallReason;
         _ratingSummary = state.ratingSummary;
         _filter = state.filter;
         _followLoading = state.followLoading;
@@ -185,10 +188,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                         calleeAvatar: _user?['profile_image_thumb_url'] as String?,
                       );
                     }
-                  : () {
-                      final loc = ref.read(localizationProvider);
-                      TeqToast.info(loc.tOr('callForbiddenInfo', 'Arama izni yok'));
-                    },
+                  : () => callPermissionToast(_canCallReason, ref.read(localizationProvider)),
             ),
           ],
           Builder(

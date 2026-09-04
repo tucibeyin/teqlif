@@ -100,12 +100,14 @@ class GetUserProfileQuery:
                         MessageThread.user_b_id == _user_b,
                     )
                 )
-                profile_data["can_call"] = _compute_can_call(
+                can_call, can_call_reason = _compute_can_call(
                     viewer_follows_target=profile_data["is_following"],
                     target_follows_viewer=is_followed_by,
                     thread_status=_thread.status if _thread else None,
                     call_allowed=_thread.call_allowed if _thread else False,
                 )
+                profile_data["can_call"] = can_call
+                profile_data["can_call_reason"] = can_call_reason
 
         from sqlalchemy import func
         from app.models.follow import Follow
