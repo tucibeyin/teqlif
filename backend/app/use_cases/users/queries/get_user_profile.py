@@ -6,7 +6,9 @@ from app.models.user import User
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.block import UserBlock
+from app.models.message_thread import MessageThread
 from app.use_cases.listings.queries.listing_utils import _fetch_seller_meta
+from app.use_cases.messages.queries.get_thread_status_query import _compute_can_call
 
 class GetUserProfileQuery:
     def __init__(self, uow: AbstractUnitOfWork):
@@ -39,6 +41,8 @@ class GetUserProfileQuery:
             "follower_count": 0,
             "following_count": 0,
             "is_following": False,
+            "is_followed_by": False,
+            "can_call": False,
             "is_blocked": False,
             "active_listings_count": 0,
             "instagram_url": target.instagram_url,
@@ -59,6 +63,17 @@ class GetUserProfileQuery:
                 profile_data["follow_status"] = follow_status
                 profile_data["is_following"] = follow_status == "accepted"
 
+                from app.models.follow import Follow as _Follow
+                followed_by_row = await self.uow.session.scalar(
+                    select(_Follow).where(
+                        _Follow.follower_id == target.id,
+                        _Follow.followed_id == current_user.id,
+                        _Follow.status == "accepted",
+                    )
+                )
+                is_followed_by = followed_by_row is not None
+                profile_data["is_followed_by"] = is_followed_by
+
                 is_blocked = await self.uow.session.scalar(
                     select(UserBlock).where(UserBlock.blocker_id == current_user.id, UserBlock.blocked_id == target.id)
                 )
@@ -75,6 +90,22 @@ class GetUserProfileQuery:
                 )
                 if is_blocked_by:
                     raise NotFoundException(code="USER_NOT_FOUND")
+
+                # can_call: current_user → target araması mümkün mü?
+                _user_a = min(current_user.id, target.id)
+                _user_b = max(current_user.id, target.id)
+                _thread = await self.uow.session.scalar(
+                    select(MessageThread).where(
+                        MessageThread.user_a_id == _user_a,
+                        MessageThread.user_b_id == _user_b,
+                    )
+                )
+                profile_data["can_call"] = _compute_can_call(
+                    viewer_follows_target=profile_data["is_following"],
+                    target_follows_viewer=is_followed_by,
+                    thread_status=_thread.status if _thread else None,
+                    call_allowed=_thread.call_allowed if _thread else False,
+                )
 
         from sqlalchemy import func
         from app.models.follow import Follow
