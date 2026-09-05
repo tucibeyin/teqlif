@@ -36,6 +36,7 @@ from app.utils.call_redis import (
     clear_call_redis,
 )
 from app.services.call_ws import broadcast_to_call_participants, send_to_user
+from app.services.call_presence import set_presence, clear_presence
 from app.constants import ws_types
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
@@ -629,6 +630,8 @@ async def start_call(
     db.add(call)
     await db.commit()
     await db.refresh(call)
+    asyncio.create_task(set_presence(current_user.id, "ringing", call.id, [callee_id]))
+    asyncio.create_task(set_presence(callee_id, "ringing", call.id, [current_user.id]))
     logger.info("[CALL_PROCESS][OUT] start_call: DB call created | call_id=%d room=%s", call.id, room_name)
 
     token = _make_livekit_token(room_name, current_user)
@@ -745,6 +748,8 @@ async def accept_call(
     caller_id = call.caller_id
     call_id_val = call.id
     await db.commit()
+    asyncio.create_task(set_presence(caller_id, "in_call", call_id_val, [current_user.id]))
+    asyncio.create_task(set_presence(current_user.id, "in_call", call_id_val, [caller_id]))
 
     # Send WS IMMEDIATELY before LK token generation.
     # Token gen takes ~200-500ms; the caller's TrackSubscribed event may already have fired
@@ -868,6 +873,8 @@ async def reject_call(
     call.status = "rejected"
     call.ended_at = datetime.now(timezone.utc)
     await db.commit()
+    asyncio.create_task(clear_presence(caller_id))
+    asyncio.create_task(clear_presence(current_user.id))
 
     try:
         await clear_call_redis(call_id_val)
@@ -946,6 +953,8 @@ async def end_call(
     call.ended_at = ended_at
     call.duration_seconds = duration_seconds
     await db.commit()
+    asyncio.create_task(clear_presence(current_user.id))
+    asyncio.create_task(clear_presence(other_id))
 
     try:
         await clear_call_redis(call_id_val)
@@ -1062,6 +1071,8 @@ async def missed_call(
         db.add(n)
 
         await db.commit()
+        asyncio.create_task(clear_presence(current_user.id))
+        asyncio.create_task(clear_presence(call.callee_id))
 
         try:
             await clear_call_redis(call.id)

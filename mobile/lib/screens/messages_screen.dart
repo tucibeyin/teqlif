@@ -1322,19 +1322,11 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         return;
       }
 
-      if (type == 'can_call_changed') {
-        final userId = data['user_id'] as int?;
-        if (userId == widget.otherUserId && mounted) {
-          final canCall = (data['can_call'] as bool?) ?? false;
-          final reason = data['reason'] as String?;
-          final callPermissionEditable = data['call_permission_editable'] as bool?;
-          final threadStatus = data['thread_status'] as String?;
-          final callAllowed = data['call_allowed'] as bool?;
+      if (type == 'relationship_changed') {
+        final peerId = data['peer_id'] as int?;
+        if (peerId == widget.otherUserId && mounted) {
           ref.read(directChatRequestProvider(widget.otherUserId).notifier)
-              .updateCanCall(canCall, reason,
-                callPermissionEditable: callPermissionEditable,
-                threadStatus: threadStatus,
-                callAllowed: callAllowed);
+              .applyWsUpdate(data);
         }
         return;
       }

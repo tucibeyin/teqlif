@@ -26,7 +26,8 @@ from app.use_cases.messages.queries.get_conversations_query import GetConversati
 from app.use_cases.messages.queries.get_unread_count_query import GetUnreadCountQuery
 from app.use_cases.messages.queries.get_messages_query import GetMessagesQuery
 from app.use_cases.messages.queries.list_message_requests_query import ListMessageRequestsQuery
-from app.use_cases.messages.queries.get_thread_status_query import GetThreadStatusQuery, _REASON_CALL_DISABLED
+from app.use_cases.messages.queries.get_thread_status_query import GetThreadStatusQuery
+from app.services.relationship_service import RelationshipStateService
 from app.use_cases.messages.commands.send_direct_message import SendDirectMessageCommand
 from app.use_cases.messages.commands.send_media_message_command import SendMediaMessageCommand
 from app.use_cases.messages.commands.delete_message_command import DeleteMessageCommand
@@ -207,12 +208,8 @@ async def update_call_permission(
     thread.call_allowed = body.call_allowed
     await db.commit()
 
-    await broadcast_dm(thread.initiator_id, {
-        "type": "can_call_changed",
-        "user_id": current_user.id,
-        "can_call": body.call_allowed,
-        "reason": None if body.call_allowed else _REASON_CALL_DISABLED,
-    })
+    state = await RelationshipStateService.recompute_and_cache(user_a, user_b, db)
+    RelationshipStateService.broadcast(state)
 
     return {"call_allowed": thread.call_allowed}
 

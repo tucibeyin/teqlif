@@ -109,15 +109,16 @@ class DirectChatRequestNotifier
     }
   }
 
-  void updateCanCall(bool canCall, String? reason, {bool? callPermissionEditable, String? threadStatus, bool? callAllowed}) {
+  void applyWsUpdate(Map<String, dynamic> data) {
     final current = state.value;
     if (current == null) return;
     state = AsyncValue.data(current.copyWith(
-      canCall: canCall,
-      canCallReason: reason,
-      callPermissionEditable: callPermissionEditable,
-      status: threadStatus,
-      callAllowed: callAllowed,
+      canCall: data['can_call'] as bool?,
+      canCallReason: data['can_call_reason'] as String?,
+      callPermissionEditable: data['call_permission_editable'] as bool?,
+      status: data['thread_status'] as String?,
+      callAllowed: data['call_allowed'] as bool?,
+      isInitiator: data['is_initiator'] as bool?,
     ));
   }
 }
