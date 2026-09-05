@@ -1328,8 +1328,11 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           final canCall = (data['can_call'] as bool?) ?? false;
           final reason = data['reason'] as String?;
           final callPermissionEditable = data['call_permission_editable'] as bool?;
+          final threadStatus = data['thread_status'] as String?;
           ref.read(directChatRequestProvider(widget.otherUserId).notifier)
-              .updateCanCall(canCall, reason, callPermissionEditable: callPermissionEditable);
+              .updateCanCall(canCall, reason,
+                callPermissionEditable: callPermissionEditable,
+                threadStatus: threadStatus);
         }
         return;
       }

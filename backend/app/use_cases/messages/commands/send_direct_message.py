@@ -92,6 +92,22 @@ class SendDirectMessageCommand:
                 ))
                 is_new_request = is_req
 
+            elif (existing_thread.deleted_at_a is not None
+                  and existing_thread.deleted_at_b is not None):
+                # Both parties deleted — reset thread state; keep deleted_at timestamps
+                # so each side's GetMessagesQuery still hides pre-deletion history.
+                receiver_follows_sender = await self.uow.session.scalar(
+                    select(Follow).where(
+                        Follow.follower_id == receiver_id,
+                        Follow.followed_id == sender_id,
+                        Follow.status == "accepted",
+                    )
+                )
+                existing_thread.initiator_id = sender_id
+                existing_thread.status = "accepted" if receiver_follows_sender else "pending"
+                existing_thread.call_allowed = False
+                is_new_request = existing_thread.status == "pending"
+
             elif existing_thread.status == "pending":
                 if existing_thread.initiator_id != sender_id:
                     # Receiver replies → auto-accept

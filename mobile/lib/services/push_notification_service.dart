@@ -334,7 +334,7 @@ class PushNotificationService {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true, badge: true, sound: true,
+      alert: false, badge: true, sound: false,
     );
 
     // ── flutter_local_notifications kurulumu ─────────────────────────────────
