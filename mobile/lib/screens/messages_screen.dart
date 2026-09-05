@@ -1152,8 +1152,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   bool _isOtherTyping = false;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   int? _myUserId;
-  Timer? _typingDebounce;
-  Timer? _typingHideTimer;
+  Timer? _typingDebounce;       // inactivity → typing_stopped
+  Timer? _typingThrottle;       // leading-edge throttle: max 1 event / 3s
+  Timer? _typingHideTimer;      // fallback hide (receiver side)
 
   // Send / Mic toggle
   bool _hasText = false;
@@ -1307,9 +1308,19 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         if (senderId == widget.otherUserId && mounted) {
           setState(() => _isOtherTyping = true);
           _typingHideTimer?.cancel();
-          _typingHideTimer = Timer(const Duration(seconds: 3), () {
+          // Fallback: karşı taraf typing_stopped göndermezse 5s sonra gizle
+          _typingHideTimer = Timer(const Duration(seconds: 5), () {
             if (mounted) setState(() => _isOtherTyping = false);
           });
+        }
+        return;
+      }
+
+      if (type == 'typing_stopped') {
+        final senderId = data['sender_id'] as int?;
+        if (senderId == widget.otherUserId && mounted) {
+          _typingHideTimer?.cancel();
+          setState(() => _isOtherTyping = false);
         }
         return;
       }
@@ -1356,14 +1367,29 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     });
   }
 
-  void _onTextChanged(String text) {
-    if (text.isEmpty) return;
+  void _sendTypingStopped() {
     _typingDebounce?.cancel();
-    _typingDebounce = Timer(const Duration(milliseconds: 500), () {
-      WsService.sendJson({
-        'type': 'typing',
-        'target_user_id': widget.otherUserId,
-      });
+    _typingThrottle?.cancel();
+    WsService.sendJson({'type': 'typing_stopped', 'target_user_id': widget.otherUserId});
+  }
+
+  void _onTextChanged(String text) {
+    if (text.isEmpty) {
+      _sendTypingStopped();
+      return;
+    }
+
+    // Inactivity timer: 3s sessizlik → typing_stopped
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(seconds: 3), _sendTypingStopped);
+
+    // Leading-edge throttle: throttle aktifse tekrar gönderme
+    if (_typingThrottle != null) return;
+
+    // İlk harf veya throttle süresi dolduysa hemen gönder
+    WsService.sendJson({'type': 'typing', 'target_user_id': widget.otherUserId});
+    _typingThrottle = Timer(const Duration(seconds: 3), () {
+      _typingThrottle = null;
     });
   }
 
@@ -2032,6 +2058,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     _textCtrl.clear();
+    _sendTypingStopped();
 
     // Optimistik ekleme — pending (saat ikonu) gösterir
     final tempId = -DateTime.now().millisecondsSinceEpoch;
@@ -2114,7 +2141,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _wsSub?.cancel();
-    _typingDebounce?.cancel();
+    _sendTypingStopped();
+    _typingThrottle?.cancel();
     _typingHideTimer?.cancel();
     _audioPositionSub?.cancel();
     _audioDurationSub?.cancel();

@@ -315,6 +315,13 @@ async def messages_ws(websocket: WebSocket):
                                         "type": "typing",
                                         "sender_id": user_id,
                                     })
+                            elif msg_type == "typing_stopped":
+                                target_id = msg.get("target_user_id")
+                                if isinstance(target_id, int):
+                                    await broadcast_dm(target_id, {
+                                        "type": "typing_stopped",
+                                        "sender_id": user_id,
+                                    })
                             elif msg_type == "call_incoming_ack":
                                 call_id = msg.get("call_id")
                                 if call_id is not None:
