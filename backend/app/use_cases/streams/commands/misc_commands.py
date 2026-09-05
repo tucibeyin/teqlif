@@ -47,7 +47,7 @@ class UpdateThumbnailCommand:
         self.uow = uow
 
     async def execute(self, stream_id: int, user: User, file: UploadFile) -> dict:
-        from app.routers.upload import _detect_image_type
+        from app.utils.media_processor import detect_image_type as _detect_image_type
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream:

@@ -950,8 +950,18 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _autoCaptureThumbnail() async {
-    if (!mounted || _localVideoTrack == null) return;
+    if (!mounted) return;
     try {
+      // Track henüz set edilmemişse publication'dan al (race condition recovery)
+      if (_localVideoTrack == null) {
+        for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
+          if (pub.track is LocalVideoTrack) {
+            setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
+            break;
+          }
+        }
+      }
+      if (_localVideoTrack == null) return; // try içinde: finally reschedule yapar
       final boundary =
           _videoKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary?;
