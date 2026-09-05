@@ -2,6 +2,7 @@ from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.models.stream import LiveStream
+from app.models.enums import StreamStatus
 from app.models.user import User
 from app.utils.redis_client import get_redis
 from app.use_cases.chat.chat_utils import publish_chat
@@ -17,7 +18,7 @@ class InviteCohostCommand:
     async def execute(self, stream_id: int, target_username: str, host: User) -> dict:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
-            if not stream or not stream.is_live:
+            if not stream or stream.status != StreamStatus.LIVE:
                 raise NotFoundException(code="STREAM_NOT_FOUND")
             if stream.host_id != host.id:
                 raise ForbiddenException(code="STREAM_HOST_ONLY_INVITE")
@@ -46,7 +47,7 @@ class AcceptCohostInviteCommand:
     async def execute(self, stream_id: int, current_user: User):
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
-            if not stream or not stream.is_live:
+            if not stream or stream.status != StreamStatus.LIVE:
                 raise NotFoundException(code="STREAM_NOT_FOUND")
 
             redis = await get_redis()
@@ -107,7 +108,7 @@ class RemoveCohostCommand:
     async def execute(self, stream_id: int, target_username: str, host: User) -> dict:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
-            if not stream or not stream.is_live:
+            if not stream or stream.status != StreamStatus.LIVE:
                 raise NotFoundException(code="STREAM_NOT_FOUND")
             if stream.host_id != host.id:
                 raise ForbiddenException(code="STREAM_HOST_ONLY_PERMISSIONS")
@@ -160,7 +161,7 @@ class LeaveCohostCommand:
     async def execute(self, stream_id: int, current_user: User) -> dict:
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
-            if not stream or not stream.is_live:
+            if not stream or stream.status != StreamStatus.LIVE:
                 raise NotFoundException(code="STREAM_NOT_FOUND")
 
             import aiohttp

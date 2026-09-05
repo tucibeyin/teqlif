@@ -24,6 +24,7 @@ class SearchAlertStatus(str, enum.Enum):
     DELETED = "deleted"
 
 class StreamStatus(str, enum.Enum):
+    PENDING = "pending"
     SCHEDULED = "scheduled"
     LIVE = "live"
     ENDED = "ended"

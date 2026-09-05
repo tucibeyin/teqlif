@@ -3,6 +3,7 @@ from sqlalchemy import select, text
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException, DatabaseException
 from app.models.stream import LiveStream
+from app.models.enums import StreamStatus
 from app.models.user import User
 from app.core.logger import get_logger, capture_exception
 from app.use_cases.streams.stream_utils import delete_livekit_room
@@ -24,7 +25,7 @@ class EndStreamCommand:
             if stream.host_id != user.id:
                 raise ForbiddenException(code="STREAM_END_FORBIDDEN")
 
-            if not stream.is_live:
+            if stream.status != StreamStatus.LIVE:
                 return {"message": "Yayın zaten sonlandırılmış"}
 
             # Clear highlights

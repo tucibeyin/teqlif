@@ -4,6 +4,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.stream import LiveStream, LiveStreamViewer
+from app.models.enums import StreamStatus
 from app.constants import ws_types as WS
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger
@@ -28,6 +29,7 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
 
     # 2. DB: stream kapat
     stream.is_live = False
+    stream.status = StreamStatus.ENDED
     stream.ended_at = now
 
     # 3. DB: açık kalan viewer seanslarını kapat

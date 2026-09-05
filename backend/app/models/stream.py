@@ -4,6 +4,7 @@ from sqlalchemy import String, Boolean, Integer, DateTime, ForeignKey, func, Ind
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.models.enums import StreamStatus
 
 
 class LiveStream(Base):
@@ -24,6 +25,7 @@ class LiveStream(Base):
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     peak_viewer_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(10), default=StreamStatus.PENDING, nullable=False, server_default="pending")
 
     host: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
     likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]

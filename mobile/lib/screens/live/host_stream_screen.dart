@@ -31,6 +31,7 @@ import '../../core/logger_service.dart';
 import '../../core/app_exception.dart';
 import '../../services/localization_service.dart';
 import '../../utils/error_helper.dart';
+import '../../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../ui_library/components/live/commerce_activity_overlay.dart';
 import '../../ui_library/components/live/commerce_activity_toggle.dart';
@@ -755,10 +756,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     }
     if (!mounted) return;
     final loc = ref.read(localizationProvider);
-    showModalBottomSheet(
+    await TeqBottomSheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ViewersBottomSheet(
+      child: _ViewersBottomSheet(
         viewers: viewers,
         noViewersText: loc.t('liveNoViewers'),
       ),
@@ -768,25 +768,16 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   // ── Sabitleme girişi ──────────────────────────────────────────────────────
 
   void _showPinInput() {
-    showModalBottomSheet<void>(
+    TeqBottomSheet.show<void>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) {
-        // StatefulBuilder → ctrl sheet'in kendi lifecycle'ında yaşar,
-        // parent rebuild'lardan etkilenmez.
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            return _PinInputSheet(
-              onPin: (content) {
-                _chatKey.currentState?.sendHostPin(content);
-                Navigator.of(ctx).pop();
-              },
-              onCancel: () => Navigator.of(ctx).pop(),
-            );
-          },
-        );
-      },
+      child: _PinInputSheet(
+        onPin: (content) {
+          _chatKey.currentState?.sendHostPin(content);
+          Navigator.of(context).pop();
+        },
+        onCancel: () => Navigator.of(context).pop(),
+      ),
     );
   }
 

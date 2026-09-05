@@ -3,6 +3,7 @@ from fastapi import BackgroundTasks
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException, DatabaseException
 from app.models.stream import LiveStream
+from app.models.enums import StreamStatus
 from app.models.user import User
 from app.core.logger import get_logger, capture_exception
 
@@ -27,6 +28,7 @@ class ConfirmLiveCommand:
 
             try:
                 stream.is_live = True
+                stream.status = StreamStatus.LIVE
                 await self.uow.session.commit()
             except Exception as exc:
                 try:
