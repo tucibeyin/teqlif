@@ -130,7 +130,10 @@ async def _read_streaming(file: UploadFile, max_bytes: int) -> bytes:
     """Chunk okuyarak max_bytes kontrolü yapar — tam dosyayı belleğe almadan."""
     chunks: list[bytes] = []
     total = 0
-    async for chunk in file:  # type: ignore[attr-defined]
+    while True:
+        chunk = await file.read(65536)  # 64 KB
+        if not chunk:
+            break
         total += len(chunk)
         if total > max_bytes:
             raise BadRequestException(code="FILE_TOO_LARGE")
