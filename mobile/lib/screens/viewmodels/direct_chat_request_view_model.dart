@@ -109,7 +109,7 @@ class DirectChatRequestNotifier
     }
   }
 
-  void updateCanCall(bool canCall, String? reason, {bool? callPermissionEditable, String? threadStatus}) {
+  void updateCanCall(bool canCall, String? reason, {bool? callPermissionEditable, String? threadStatus, bool? callAllowed}) {
     final current = state.value;
     if (current == null) return;
     state = AsyncValue.data(current.copyWith(
@@ -117,6 +117,7 @@ class DirectChatRequestNotifier
       canCallReason: reason,
       callPermissionEditable: callPermissionEditable,
       status: threadStatus,
+      callAllowed: callAllowed,
     ));
   }
 }

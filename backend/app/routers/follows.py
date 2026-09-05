@@ -54,8 +54,27 @@ async def _broadcast_can_call_updated(uid_a: int, uid_b: int, db: AsyncSession) 
     else:
         call_permission_editable = False
 
-    asyncio.create_task(broadcast_dm(uid_a, {"type": "can_call_changed", "user_id": uid_b, "can_call": can_call_ab, "reason": reason_ab, "call_permission_editable": call_permission_editable}))
-    asyncio.create_task(broadcast_dm(uid_b, {"type": "can_call_changed", "user_id": uid_a, "can_call": can_call_ba, "reason": reason_ba, "call_permission_editable": call_permission_editable}))
+    thread_status = thread.status if thread else None
+    call_allowed = thread.call_allowed if thread else False
+
+    asyncio.create_task(broadcast_dm(uid_a, {
+        "type": "can_call_changed",
+        "user_id": uid_b,
+        "can_call": can_call_ab,
+        "reason": reason_ab,
+        "call_permission_editable": call_permission_editable,
+        "thread_status": thread_status,
+        "call_allowed": call_allowed,
+    }))
+    asyncio.create_task(broadcast_dm(uid_b, {
+        "type": "can_call_changed",
+        "user_id": uid_a,
+        "can_call": can_call_ba,
+        "reason": reason_ba,
+        "call_permission_editable": call_permission_editable,
+        "thread_status": thread_status,
+        "call_allowed": call_allowed,
+    }))
 
 router = APIRouter(prefix="/api/follows", tags=["follows"])
 
@@ -144,6 +163,10 @@ async def follow_user(
     follow = Follow(follower_id=current_user.id, followed_id=user_id, status=status)
     db.add(follow)
     await db.commit()
+
+    # Public hesap: follow anında "accepted" — can_call durumu değişebilir
+    if status == "accepted":
+        asyncio.create_task(_broadcast_can_call_updated(current_user.id, user_id, db))
 
     from app.routers.notifications import push_notification
     if status == "pending":
@@ -279,4 +302,5 @@ async def reject_follow_request(
     
     await db.delete(follow)
     await db.commit()
+    asyncio.create_task(_broadcast_can_call_updated(follower_id, current_user.id, db))
     return {"ok": True}
