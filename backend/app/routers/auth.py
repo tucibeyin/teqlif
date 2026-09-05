@@ -363,12 +363,132 @@ async def init_context(
     }
 
 
+async def _auto_accept_pending_follows(user_id: int) -> None:
+    """
+    Kullanıcı private→public geçişinde tüm pending follow'ları kabul eder,
+    ilgili pending message thread'leri accepted'e çeker ve her çift için
+    can_call_changed WS event'i yayar.
+    """
+    from sqlalchemy import select, update as sa_update, or_, and_
+    from app.database import AsyncSessionLocal
+    from app.models.follow import Follow
+    from app.models.message_thread import MessageThread
+    from app.services.dm_broadcast import broadcast_dm
+    from app.use_cases.messages.queries.get_thread_status_query import _compute_can_call
+    from app.utils.redis_client import get_redis
+
+    async with AsyncSessionLocal() as session:
+        rows = await session.execute(
+            select(Follow.follower_id).where(
+                Follow.followed_id == user_id,
+                Follow.status == "pending",
+            )
+        )
+        follower_ids = [row[0] for row in rows.all()]
+        if not follower_ids:
+            return
+
+        await session.execute(
+            sa_update(Follow)
+            .where(Follow.followed_id == user_id, Follow.status == "pending")
+            .values(status="accepted")
+        )
+
+        # Bu kullanıcıya gelen pending thread'leri accepted'e çek; Redis counter'ı güncelle
+        pending_threads_result = await session.execute(
+            select(MessageThread).where(
+                or_(
+                    and_(MessageThread.user_a_id == user_id, MessageThread.user_b_id.in_(follower_ids)),
+                    and_(MessageThread.user_b_id == user_id, MessageThread.user_a_id.in_(follower_ids)),
+                ),
+                MessageThread.status == "pending",
+                MessageThread.initiator_id != user_id,
+            )
+        )
+        pending_threads = pending_threads_result.scalars().all()
+        for t in pending_threads:
+            t.status = "accepted"
+
+        await session.commit()
+
+        if pending_threads:
+            redis = await get_redis()
+            await redis.decrby(f"msg:unread:request:{user_id}", len(pending_threads))
+
+        # Her çift için can_call_changed broadcast'i yap
+        for follower_id in follower_ids:
+            uid_follows_fol = await session.scalar(
+                select(Follow).where(
+                    Follow.follower_id == user_id,
+                    Follow.followed_id == follower_id,
+                    Follow.status == "accepted",
+                )
+            )
+            ua, ub = min(follower_id, user_id), max(follower_id, user_id)
+            thread = await session.scalar(
+                select(MessageThread).where(
+                    MessageThread.user_a_id == ua,
+                    MessageThread.user_b_id == ub,
+                )
+            )
+
+            fol_follows_uid = True
+            uid_follows_fol_bool = uid_follows_fol is not None
+
+            can_call_fol, reason_fol = _compute_can_call(
+                viewer_follows_target=fol_follows_uid,
+                target_follows_viewer=uid_follows_fol_bool,
+                thread_status=thread.status if thread else None,
+                call_allowed=thread.call_allowed if thread else False,
+            )
+            can_call_uid, reason_uid = _compute_can_call(
+                viewer_follows_target=uid_follows_fol_bool,
+                target_follows_viewer=fol_follows_uid,
+                thread_status=thread.status if thread else None,
+                call_allowed=thread.call_allowed if thread else False,
+            )
+
+            if thread and thread.status == "accepted":
+                is_fol_initiator = thread.initiator_id == follower_id
+                acceptor_follows_initiator = uid_follows_fol_bool if is_fol_initiator else fol_follows_uid
+                call_permission_editable = not acceptor_follows_initiator
+            else:
+                call_permission_editable = False
+
+            thread_status = thread.status if thread else None
+            call_allowed_val = thread.call_allowed if thread else False
+
+            asyncio.create_task(broadcast_dm(follower_id, {
+                "type": "can_call_changed",
+                "user_id": user_id,
+                "can_call": can_call_fol,
+                "reason": reason_fol,
+                "call_permission_editable": call_permission_editable,
+                "thread_status": thread_status,
+                "call_allowed": call_allowed_val,
+            }))
+            asyncio.create_task(broadcast_dm(user_id, {
+                "type": "can_call_changed",
+                "user_id": follower_id,
+                "can_call": can_call_uid,
+                "reason": reason_uid,
+                "call_permission_editable": call_permission_editable,
+                "thread_status": thread_status,
+                "call_allowed": call_allowed_val,
+            }))
+
+
 @router.patch("/me", response_model=UserOut)
 async def update_me(
     data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    going_public = (
+        data.is_private is not None
+        and current_user.is_private is True
+        and data.is_private is False
+    )
     if data.is_private is not None:
         current_user.is_private = data.is_private
 
@@ -436,6 +556,9 @@ async def update_me(
 
     await db.commit()
     await db.refresh(current_user)
+
+    if going_public:
+        asyncio.create_task(_auto_accept_pending_follows(current_user.id))
 
     if locale_changed:
         from app.utils.i18n import invalidate_user_i18n_caches
