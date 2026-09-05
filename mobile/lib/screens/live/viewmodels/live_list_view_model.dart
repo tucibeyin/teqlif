@@ -125,15 +125,28 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   }
 
   void _onWsMessage(Map<String, dynamic> msg) {
+    final current = state.value;
+    if (current == null) return;
+
     if (msg['type'] == 'stream_ended') {
       final streamId = msg['stream_id'];
-      if (streamId is int && state.value != null) {
-        final current = state.value!;
-        final newStreams = current.streams.where((s) => s.id != streamId).toList();
-        final newRec = current.recommended.where((s) => s.id != streamId).toList();
+      if (streamId is int) {
         state = AsyncValue.data(current.copyWith(
-          streams: newStreams,
-          recommended: newRec,
+          streams: current.streams.where((s) => s.id != streamId).toList(),
+          recommended: current.recommended.where((s) => s.id != streamId).toList(),
+        ));
+      }
+    } else if (msg['type'] == 'stream_thumbnail_updated') {
+      final streamId = msg['stream_id'];
+      final thumbUrl = msg['thumbnail_url'] as String?;
+      if (streamId is int && thumbUrl != null) {
+        state = AsyncValue.data(current.copyWith(
+          streams: current.streams.map((s) =>
+            s.id == streamId ? s.copyWith(thumbnailUrl: thumbUrl) : s
+          ).toList(),
+          recommended: current.recommended.map((s) =>
+            s.id == streamId ? s.copyWith(thumbnailUrl: thumbUrl) : s
+          ).toList(),
         ));
       }
     }

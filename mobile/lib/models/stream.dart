@@ -54,6 +54,22 @@ class StreamOut {
         thumbnailUrl: json['thumbnail_url'] as String?,
       );
 
+  StreamOut copyWith({
+    String? thumbnailUrl,
+    int? viewerCount,
+  }) {
+    return StreamOut(
+      id: id,
+      roomName: roomName,
+      title: title,
+      category: category,
+      subcategory: subcategory,
+      viewerCount: viewerCount ?? this.viewerCount,
+      host: host,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'room_name': roomName,

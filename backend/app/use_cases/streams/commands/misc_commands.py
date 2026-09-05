@@ -73,4 +73,13 @@ class UpdateThumbnailCommand:
 
             stream.thumbnail_url = thumbnail_url
 
+        try:
+            from app.core.ws_manager import ws_manager
+            await ws_manager.publish(
+                "chat_broadcast", "global",
+                {"type": WS.STREAM_THUMBNAIL_UPDATED, "stream_id": stream_id, "thumbnail_url": thumbnail_url},
+            )
+        except Exception:
+            pass  # WS bildirimi isteğe bağlı — thumbnail DB'de kaydedildi
+
         return {"thumbnail_url": thumbnail_url}
