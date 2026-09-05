@@ -38,7 +38,7 @@ class MediaProcessResult:
     thumbnail_url: str | None = None
     file_name: str | None = None
     duration_secs: int | None = None
-    uploaded_keys: list[str] = field(default_factory=list)  # orphan cleanup için
+    uploaded_dm_keys: list[str] = field(default_factory=list)  # orphan cleanup için (DM bucket)
 
 
 # ── Detection fonksiyonları ──────────────────────────────────────────────────
@@ -165,9 +165,9 @@ class VoiceProcessor:
             audio_fmt = "aac"
         ext = self._EXT_MAP.get(audio_fmt, "aac")
         key = f"messages/voice/{uuid.uuid4().hex}.{ext}"
-        url = storage.upload_bytes(key, data, self._CT_MAP.get(audio_fmt, "audio/aac"))
+        url = storage.upload_bytes_dm(key, data, self._CT_MAP.get(audio_fmt, "audio/aac"))
         resolved = min(duration_secs, VOICE_MAX_SECS) if duration_secs is not None else None
-        return MediaProcessResult(media_url=url, duration_secs=resolved, uploaded_keys=[key])
+        return MediaProcessResult(media_url=url, duration_secs=resolved, uploaded_dm_keys=[key])
 
 
 class ImageProcessor:
@@ -176,21 +176,21 @@ class ImageProcessor:
         if ext is None:
             raise BadRequestException(code="INVALID_IMAGE_FORMAT")
         key = f"messages/img/{uuid.uuid4().hex}.{ext}"
-        url = storage.upload_bytes(key, data, IMAGE_CONTENT_TYPES[ext])
+        url = storage.upload_bytes_dm(key, data, IMAGE_CONTENT_TYPES[ext])
         uploaded = [key]
         thumb_url = None
         try:
             thumb_data = make_thumbnail(data, ext)
             thumb_ext = "jpg" if ext != "png" else "png"
             thumb_key = f"messages/img/{uuid.uuid4().hex}_thumb.{thumb_ext}"
-            thumb_url = storage.upload_bytes(
+            thumb_url = storage.upload_bytes_dm(
                 thumb_key, thumb_data,
                 "image/jpeg" if thumb_ext == "jpg" else "image/png",
             )
             uploaded.append(thumb_key)
         except Exception as exc:
             logger.warning("[ImageProcessor] Thumbnail oluşturulamadı: %s", exc)
-        return MediaProcessResult(media_url=url, thumbnail_url=thumb_url, uploaded_keys=uploaded)
+        return MediaProcessResult(media_url=url, thumbnail_url=thumb_url, uploaded_dm_keys=uploaded)
 
 
 class VideoProcessor:
@@ -208,7 +208,7 @@ class VideoProcessor:
                 raise BadRequestException(code="VIDEO_TOO_LONG")
             resolved_duration = int(detected_dur) if detected_dur is not None else duration_secs
             key = f"messages/vid/{uuid.uuid4().hex}.{vid_fmt}"
-            media_url = storage.upload_file(key, src_path, "video/mp4")
+            media_url = storage.upload_file_dm(key, src_path, "video/mp4")
             uploaded.append(key)
             thumb_url = None
             if shutil.which("ffmpeg"):
@@ -226,7 +226,7 @@ class VideoProcessor:
                         with open(thumb_path, "rb") as tf:
                             thumb_bytes = tf.read()
                         thumb_key = f"messages/vid/{uuid.uuid4().hex}_thumb.jpg"
-                        thumb_url = storage.upload_bytes(thumb_key, thumb_bytes, "image/jpeg")
+                        thumb_url = storage.upload_bytes_dm(thumb_key, thumb_bytes, "image/jpeg")
                         uploaded.append(thumb_key)
                 except Exception as exc:
                     logger.warning("[VideoProcessor] Thumbnail hatası: %s", exc)
@@ -234,7 +234,7 @@ class VideoProcessor:
             media_url=media_url,
             thumbnail_url=thumb_url,
             duration_secs=resolved_duration,
-            uploaded_keys=uploaded,
+            uploaded_dm_keys=uploaded,
         )
 
 
@@ -246,8 +246,8 @@ class FileProcessor:
             raise BadRequestException(code="UNSUPPORTED_FILE_TYPE")
         file_name = (original_filename or f"dosya.{ext or 'bin'}")[:255]
         key = f"messages/file/{uuid.uuid4().hex}.{ext or 'bin'}"
-        url = storage.upload_bytes(key, data, mime)
-        return MediaProcessResult(media_url=url, file_name=file_name, uploaded_keys=[key])
+        url = storage.upload_bytes_dm(key, data, mime)
+        return MediaProcessResult(media_url=url, file_name=file_name, uploaded_dm_keys=[key])
 
 
 PROCESSORS: dict[str, MediaProcessor] = {

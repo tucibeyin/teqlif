@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     minio_secret_key: str = ""
     minio_bucket: str = "teqlif"
     minio_dm_bucket: str = "teqlif-dm"   # private bucket for DM media (presigned access)
+    minio_dm_external_url: str = ""      # ör. "minio.teqlif.com" — presign için dışarıdan erişilebilir URL
     minio_secure: bool = False
 
     # APNS VoIP Push Ayarları

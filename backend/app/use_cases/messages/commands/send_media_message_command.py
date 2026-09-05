@@ -40,7 +40,12 @@ def _msg_out(msg: DirectMessage, sender_username: str) -> MessageOut:
     )
 
 
-def _media_payload(msg: DirectMessage, sender_username: str) -> dict:
+def _media_payload(
+    msg: DirectMessage,
+    sender_username: str,
+    media_url: str | None = None,
+    thumbnail_url: str | None = None,
+) -> dict:
     return {
         "type": "message",
         "id": msg.id,
@@ -49,8 +54,8 @@ def _media_payload(msg: DirectMessage, sender_username: str) -> dict:
         "sender_username": sender_username,
         "content": msg.content,
         "content_type": msg.content_type,
-        "media_url": msg.media_url,
-        "thumbnail_url": msg.thumbnail_url,
+        "media_url": media_url if media_url is not None else msg.media_url,
+        "thumbnail_url": thumbnail_url if thumbnail_url is not None else msg.thumbnail_url,
         "duration_secs": msg.duration_secs,
         "file_name": msg.file_name,
         "file_size": msg.file_size,
@@ -176,8 +181,8 @@ class SendMediaMessageCommand:
 
                 await self.uow.session.flush()
         except Exception:
-            for key in processed.uploaded_keys:
-                storage.delete_object(key)
+            for key in processed.uploaded_dm_keys:
+                storage.delete_object_dm(key)
             raise
 
         # commit sonrası — side effects
@@ -189,7 +194,18 @@ class SendMediaMessageCommand:
             redis = await get_redis()
             await redis.decr(f"msg:unread:request:{sender_id}")
 
-        payload = _media_payload(msg, sender_username)
+        # DM medyasını presign et — WS payload'u direkt URL içermeli
+        presigned_media = msg.media_url
+        presigned_thumb = msg.thumbnail_url
+        try:
+            if storage.is_dm_url(msg.media_url):
+                presigned_media = storage.presign_get(storage.dm_url_to_key(msg.media_url))
+            if storage.is_dm_url(msg.thumbnail_url):
+                presigned_thumb = storage.presign_get(storage.dm_url_to_key(msg.thumbnail_url))
+        except Exception as presign_exc:
+            logger.warning("[SendMediaMessageCommand] Presign başarısız: %s", presign_exc)
+
+        payload = _media_payload(msg, sender_username, presigned_media, presigned_thumb)
         await broadcast_dm(receiver_id, payload)
         await broadcast_dm(sender_id, payload)
 

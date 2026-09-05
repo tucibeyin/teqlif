@@ -22,9 +22,9 @@ class GetMessagesQuery:
     @staticmethod
     async def _presign_if_dm(url: str | None, viewer_id: int) -> str | None:
         """DM media URL'ini presigned URL'e çevirir (Redis cache'li)."""
-        if not url or not url.startswith("/uploads/messages/"):
+        if not storage.is_dm_url(url):
             return url
-        key = url.removeprefix("/uploads/")
+        key = storage.dm_url_to_key(url)  # type: ignore[arg-type]
         redis = await get_redis()
         cache_key = f"presign:{viewer_id}:{key}"
         cached = await redis.get(cache_key)
@@ -35,7 +35,7 @@ class GetMessagesQuery:
             await redis.set(cache_key, signed, ex=_CACHE_TTL_SECS)
             return signed
         except Exception:
-            return url  # presign başarısız → nginx proxy URL'ini dön (mevcut erişim kırılmaz)
+            return url  # presign başarısız → DB URL'ini döndür
 
     async def execute(
         self, uid: int, other_user_id: int, before_id: int | None = None

@@ -1,11 +1,11 @@
 """
 MinIO object storage wrapper.
 
-Tüm dosya yükleme/silme işlemleri bu modül üzerinden yapılır.
-URL formatı: /uploads/{key}  — nginx MinIO'yu bu path altında proxy'ler.
+Public bucket  (teqlif)    → nginx proxy → /uploads/{key}
+Private bucket (teqlif-dm) → presigned URL → /dm/{key} (DB prefix)
 
-Bucket politikası: public-read (nginx proxy erişebilmesi için).
-DM bucket (teqlif-dm): private — presigned URL ile erişim (Faz 5).
+Presigned URL üretiminde external domain kullanılır (minio_dm_external_url),
+böylece mobil cihazlar doğrudan MinIO'ya ulaşabilir.
 """
 import io
 from datetime import timedelta
@@ -26,9 +26,10 @@ class AbstractStorageService(Protocol):
     def url_to_key(self, url: str) -> str: ...
     def presign_get(self, key: str, expires: timedelta) -> str: ...
 
+
 logger = get_logger(__name__)
 
-# Module import sırasında bir kez oluşturulur — lazy singleton race condition yok.
+# Public bucket client — nginx proxy üzerinden erişilen medyalar
 _client = Minio(
     settings.minio_endpoint,
     access_key=settings.minio_access_key,
@@ -41,8 +42,23 @@ def _get_client() -> Minio:
     return _client
 
 
+def _get_presign_client() -> Minio:
+    """Presigned URL üretimi için external domain kullanan client."""
+    external = settings.minio_dm_external_url
+    if external:
+        return Minio(
+            external,
+            access_key=settings.minio_access_key,
+            secret_key=settings.minio_secret_key,
+            secure=True,
+        )
+    return _client
+
+
+# ── Public bucket ─────────────────────────────────────────────────────────────
+
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
-    """Bytes'ı MinIO'ya yükler. Dönüş: /uploads/{key} URL'si."""
+    """Bytes'ı public bucket'a yükler. Dönüş: /uploads/{key}"""
     _get_client().put_object(
         settings.minio_bucket,
         key,
@@ -55,7 +71,7 @@ def upload_bytes(key: str, data: bytes, content_type: str) -> str:
 
 
 def upload_file(key: str, path: str, content_type: str) -> str:
-    """Disk'teki dosyayı MinIO'ya yükler. Dönüş: /uploads/{key} URL'si."""
+    """Disk'teki dosyayı public bucket'a yükler. Dönüş: /uploads/{key}"""
     _get_client().fput_object(
         settings.minio_bucket,
         key,
@@ -67,7 +83,7 @@ def upload_file(key: str, path: str, content_type: str) -> str:
 
 
 def delete_object(key: str) -> None:
-    """MinIO'dan nesneyi siler. Yoksa sessizce geçer."""
+    """Public bucket'tan nesneyi siler."""
     try:
         _get_client().remove_object(settings.minio_bucket, key)
         logger.debug("[STORAGE] Silindi: %s", key)
@@ -82,10 +98,13 @@ def url_to_key(url: str) -> str:
     return url[len(prefix):] if url.startswith(prefix) else url
 
 
-# ── DM private bucket (Faz 5) ────────────────────────────────────────────────
+# ── Private DM bucket ─────────────────────────────────────────────────────────
+
+_DM_PREFIX = "/dm/"
+
 
 def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
-    """Bytes'ı private DM bucket'a yükler. Dönüş: iç key (presign için)."""
+    """Bytes'ı private DM bucket'a yükler. Dönüş: /dm/{key}"""
     _get_client().put_object(
         settings.minio_dm_bucket,
         key,
@@ -94,11 +113,11 @@ def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
         content_type=content_type,
     )
     logger.debug("[STORAGE_DM] Yüklendi: %s (%d bytes)", key, len(data))
-    return key
+    return f"{_DM_PREFIX}{key}"
 
 
 def upload_file_dm(key: str, path: str, content_type: str) -> str:
-    """Disk'teki dosyayı private DM bucket'a yükler. Dönüş: iç key."""
+    """Disk'teki dosyayı private DM bucket'a yükler. Dönüş: /dm/{key}"""
     _get_client().fput_object(
         settings.minio_dm_bucket,
         key,
@@ -106,11 +125,11 @@ def upload_file_dm(key: str, path: str, content_type: str) -> str:
         content_type=content_type,
     )
     logger.debug("[STORAGE_DM] Dosya yüklendi: %s → %s", path, key)
-    return key
+    return f"{_DM_PREFIX}{key}"
 
 
 def delete_object_dm(key: str) -> None:
-    """DM bucket'tan nesneyi siler."""
+    """Private DM bucket'tan nesneyi siler."""
     try:
         _get_client().remove_object(settings.minio_dm_bucket, key)
         logger.debug("[STORAGE_DM] Silindi: %s", key)
@@ -120,9 +139,18 @@ def delete_object_dm(key: str) -> None:
 
 
 def presign_get(key: str, expires: timedelta = timedelta(days=7)) -> str:
-    """DM bucket için presigned GET URL üretir."""
-    return _get_client().presigned_get_object(
+    """Private DM bucket için presigned GET URL üretir (external domain ile)."""
+    return _get_presign_client().presigned_get_object(
         settings.minio_dm_bucket,
         key,
         expires=expires,
     )
+
+
+def is_dm_url(url: str | None) -> bool:
+    return bool(url and url.startswith(_DM_PREFIX))
+
+
+def dm_url_to_key(url: str) -> str:
+    """/dm/messages/img/xxx.jpg  →  messages/img/xxx.jpg"""
+    return url[len(_DM_PREFIX):]
