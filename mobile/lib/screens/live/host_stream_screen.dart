@@ -560,8 +560,8 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       _listener!.on<RoomDisconnectedEvent>((event) {
         if (!mounted) return;
         final reason = event.reason;
-        if (reason == DisconnectReason.CLIENT_INITIATED ||
-            reason == DisconnectReason.ROOM_DELETED) {
+        if (reason == DisconnectReason.clientInitiated ||
+            reason == DisconnectReason.roomDeleted) {
           _endStream();
           return;
         }
@@ -579,7 +579,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
           true,
           cameraCaptureOptions: const CameraCaptureOptions(
             params: VideoParametersPresets.h720_169,
-            degradationPreference: RTCDegradationPreference.balanced,
           ),
         );
         await room.localParticipant?.setMicrophoneEnabled(true);
