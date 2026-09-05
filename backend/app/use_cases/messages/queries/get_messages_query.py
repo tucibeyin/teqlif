@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from sqlalchemy import select, or_, and_
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
@@ -6,11 +8,34 @@ from app.models.message_thread import MessageThread
 from app.models.user import User
 from app.schemas.message import MessageOut
 from app.constants.media_limits import MSG_PAGE_SIZE
+from app.services import storage_service as storage
+from app.utils.redis_client import get_redis
+
+_PRESIGN_TTL = timedelta(days=7)
+_CACHE_TTL_SECS = 6 * 24 * 3600  # 6 gün — 1 gün buffer
 
 
 class GetMessagesQuery:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
+
+    @staticmethod
+    async def _presign_if_dm(url: str | None, viewer_id: int) -> str | None:
+        """DM media URL'ini presigned URL'e çevirir (Redis cache'li)."""
+        if not url or not url.startswith("/uploads/messages/"):
+            return url
+        key = url.removeprefix("/uploads/")
+        redis = await get_redis()
+        cache_key = f"presign:{viewer_id}:{key}"
+        cached = await redis.get(cache_key)
+        if cached:
+            return cached.decode()
+        try:
+            signed = storage.presign_get(key, expires=_PRESIGN_TTL)
+            await redis.set(cache_key, signed, ex=_CACHE_TTL_SECS)
+            return signed
+        except Exception:
+            return url  # presign başarısız → nginx proxy URL'ini dön (mevcut erişim kırılmaz)
 
     async def execute(
         self, uid: int, other_user_id: int, before_id: int | None = None
@@ -66,21 +91,25 @@ class GetMessagesQuery:
         )
         users_map = {u.id: u for u in users_result.scalars().all()}
 
-        return [
-            MessageOut(
-                id=msg.id,
-                sender_id=msg.sender_id,
-                receiver_id=msg.receiver_id,
-                sender_username=users_map[msg.sender_id].username if msg.sender_id in users_map else "",
-                content=msg.content,
-                content_type=msg.content_type,
-                media_url=msg.media_url,
-                thumbnail_url=msg.thumbnail_url,
-                duration_secs=msg.duration_secs,
-                file_name=msg.file_name,
-                file_size=msg.file_size,
-                is_read=msg.is_read,
-                created_at=msg.created_at,
+        result_list = []
+        for msg in messages:
+            media_url = await self._presign_if_dm(msg.media_url, uid)
+            thumbnail_url = await self._presign_if_dm(msg.thumbnail_url, uid)
+            result_list.append(
+                MessageOut(
+                    id=msg.id,
+                    sender_id=msg.sender_id,
+                    receiver_id=msg.receiver_id,
+                    sender_username=users_map[msg.sender_id].username if msg.sender_id in users_map else "",
+                    content=msg.content,
+                    content_type=msg.content_type,
+                    media_url=media_url,
+                    thumbnail_url=thumbnail_url,
+                    duration_secs=msg.duration_secs,
+                    file_name=msg.file_name,
+                    file_size=msg.file_size,
+                    is_read=msg.is_read,
+                    created_at=msg.created_at,
+                )
             )
-            for msg in messages
-        ]
+        return result_list

@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     minio_access_key: str = ""
     minio_secret_key: str = ""
     minio_bucket: str = "teqlif"
+    minio_dm_bucket: str = "teqlif-dm"   # private bucket for DM media (presigned access)
     minio_secure: bool = False
 
     # APNS VoIP Push Ayarları
