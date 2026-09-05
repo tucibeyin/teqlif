@@ -25,7 +25,18 @@ class ConfirmLiveCommand:
             if not stream:
                 raise NotFoundException(code="PENDING_STREAM_NOT_FOUND")
 
-            stream.is_live = True
+            try:
+                stream.is_live = True
+                await self.uow.session.commit()
+            except Exception as exc:
+                try:
+                    from app.use_cases.streams.stream_utils import delete_livekit_room
+                    await delete_livekit_room(stream.room_name)
+                    await self.uow.session.delete(stream)
+                    await self.uow.session.commit()
+                except Exception:
+                    pass  # webhook 2dk'da temizler
+                raise DatabaseException(code="CONFIRM_LIVE_FAILED") from exc
 
         from app.use_cases.streams.stream_utils import notify_followers_task
         background_tasks.add_task(

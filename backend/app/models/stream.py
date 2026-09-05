@@ -23,6 +23,7 @@ class LiveStream(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    peak_viewer_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     host: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
     likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]
@@ -36,3 +37,4 @@ class LiveStreamViewer(Base):
     stream_id: Mapped[int] = mapped_column(ForeignKey("live_streams.id", ondelete="CASCADE"), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    left_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

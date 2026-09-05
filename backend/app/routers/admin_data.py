@@ -278,16 +278,8 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
     if not stream or not stream.is_live:
         raise BadRequestException(code="STREAM_ALREADY_CLOSED")
 
-    stream.is_live = False
-    stream.ended_at = datetime.now(timezone.utc)
-    await db.commit()
-
-    try:
-        redis = await get_redis()
-        await redis.delete(f"live:viewers:{stream.room_name}")
-        await _publish_chat(stream_id, {"type": WS.STREAM_ENDED, "message": "Stream terminated by admin."})
-    except Exception as exc:
-        logger.warning("[ADMIN] Redis temizleme/chat yayını başarısız | stream_id=%s | %s", stream_id, exc)
+    from app.use_cases.streams.stream_finalizer import finalize_stream
+    await finalize_stream(stream, db)
     return {"message": "Stream closed."}
 
 # ==========================================

@@ -336,7 +336,21 @@ async def leave_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from datetime import datetime, timezone
+    from app.models.stream import LiveStreamViewer
     from app.core.logger import get_logger
+
+    viewer = await db.scalar(
+        select(LiveStreamViewer).where(
+            LiveStreamViewer.stream_id == stream_id,
+            LiveStreamViewer.user_id == current_user.id,
+            LiveStreamViewer.left_at.is_(None),
+        )
+    )
+    if viewer:
+        viewer.left_at = datetime.now(timezone.utc)
+        await db.commit()
+
     get_logger(__name__).info(
         "[STREAMS] Yayından ayrılındı | stream_id=%s user_id=%s", stream_id, current_user.id
     )

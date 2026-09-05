@@ -24,27 +24,20 @@ class EndStreamCommand:
             if stream.host_id != user.id:
                 raise ForbiddenException(code="STREAM_END_FORBIDDEN")
 
-            if stream.is_live:
-                from datetime import datetime, timezone
-                stream.is_live = False
-                stream.ended_at = datetime.now(timezone.utc)
-                await delete_livekit_room(stream.room_name)
+            if not stream.is_live:
+                return {"message": "Yayın zaten sonlandırılmış"}
 
-                # Clear highlights and likes
-                try:
-                    await self.uow.session.execute(
-                        text("DELETE FROM listings WHERE active_room_id = :rid AND is_highlight = TRUE"),
-                        {"rid": stream_id},
-                    )
-                except Exception:
-                    pass
+            # Clear highlights
+            try:
+                await self.uow.session.execute(
+                    text("DELETE FROM listings WHERE active_room_id = :rid AND is_highlight = TRUE"),
+                    {"rid": stream_id},
+                )
+            except Exception:
+                pass
 
-        try:
-            await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
-            from app.core.ws_manager import ws_manager
-            await ws_manager.publish("chat_broadcast", "global", {"type": WS.STREAM_ENDED, "stream_id": stream_id})
-        except Exception:
-            pass
+            from app.use_cases.streams.stream_finalizer import finalize_stream
+            await finalize_stream(stream, self.uow.session)
 
         return {"message": "Yayın sonlandırıldı"}
 
