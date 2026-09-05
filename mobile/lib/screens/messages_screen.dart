@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
@@ -47,6 +48,7 @@ import '../core/media_constants.dart';
 import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../core/upload_state.dart';
 import '../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/call_permission_helper.dart';
@@ -1164,7 +1166,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   bool _hasText = false;
 
   // Media upload
-  bool _uploadingMedia = false;
+  MediaUploadState _uploadState = const UploadIdle();
 
   // Voice recording
   final _recorder = AudioRecorder();
@@ -1424,11 +1426,12 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     required String fileName,
     required String mimeType,
     int? durationSecs,
+    int? tempId,
   }) async {
     final loc = ref.read(localizationProvider);
     final token = await StorageService.getToken();
     if (token == null || !mounted) return;
-    setState(() => _uploadingMedia = true);
+    setState(() => _uploadState = const UploadSending(0.0));
     try {
       final uri = Uri.parse('$kBaseUrl/messages/upload');
       final req = http.MultipartRequest('POST', uri)
@@ -1451,11 +1454,13 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (!mounted) return;
       if (streamed.statusCode == 200 || streamed.statusCode == 201) {
         final msg = Map<String, dynamic>.from(jsonDecode(body) as Map);
-        // WS broadcast ile aynı mesajın iki kez eklenmesini önle
         final msgId = msg['id'];
-        if (msgId != null && !_messages.any((m) => m['id'] == msgId)) {
-          setState(() => _messages.add(msg));
-        }
+        setState(() {
+          if (tempId != null) _messages.removeWhere((m) => m['id'] == tempId);
+          if (msgId != null && !_messages.any((m) => m['id'] == msgId)) {
+            _messages.add(msg);
+          }
+        });
         _scrollToBottom();
       } else {
         String errMsg = loc.t("attachSendFailed");
@@ -1472,15 +1477,33 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           }
         } catch (_) {}
         if (mounted) {
-          TeqSnackBar.show(message: errMsg);
+          if (tempId != null) {
+            setState(() {
+              final idx = _messages.indexWhere((m) => m['id'] == tempId);
+              if (idx >= 0) {
+                _messages[idx] = {..._messages[idx], '_failed': true, '_error': errMsg};
+              }
+            });
+          } else {
+            TeqSnackBar.show(message: errMsg);
+          }
         }
       }
     } catch (_) {
       if (mounted) {
-        TeqSnackBar.show(message: loc.t("attachSendFailed"));
+        if (tempId != null) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m['id'] == tempId);
+            if (idx >= 0) {
+              _messages[idx] = {..._messages[idx], '_failed': true, '_error': loc.t("attachSendFailed")};
+            }
+          });
+        } else {
+          TeqSnackBar.show(message: loc.t("attachSendFailed"));
+        }
       }
     } finally {
-      if (mounted) setState(() => _uploadingMedia = false);
+      if (mounted) setState(() => _uploadState = const UploadIdle());
     }
   }
 
@@ -1573,11 +1596,29 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       quality: 80,
       format: CompressFormat.jpeg,
     );
+    if (!mounted) return;
+    // Optimistik balon — yükleme sırasında yerel önizleme göster
+    final tempId = -DateTime.now().millisecondsSinceEpoch;
+    setState(() {
+      _messages.add({
+        'id': tempId,
+        'sender_id': _myUserId,
+        'receiver_id': widget.otherUserId,
+        'content': '',
+        'content_type': 'image',
+        'is_read': false,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        '_pending': true,
+        '_bytes': Uint8List.fromList(compressed),
+      });
+    });
+    _scrollToBottom();
     await _uploadMedia(
       bytes: compressed,
       contentType: 'image',
       fileName: 'photo.jpg',
       mimeType: 'image/jpeg',
+      tempId: tempId,
     );
   }
 
@@ -1885,6 +1926,32 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         );
 
       case 'image':
+        final localBytes = msg['_bytes'] as Uint8List?;
+        final isFailed = (msg['_failed'] as bool?) ?? false;
+        final errorMsg = msg['_error'] as String?;
+        if (localBytes != null && !isFailed) {
+          // Optimistik balon: yükleme bitmeden yerel bayt önizlemesi
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                Image.memory(localBytes, width: 200, height: 200, fit: BoxFit.cover),
+                const LinearProgressIndicator(value: null, minHeight: 3, color: kPrimary),
+              ],
+            ),
+          );
+        }
+        if (isFailed) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.broken_image_outlined, size: 40, color: Colors.red),
+              if (errorMsg != null)
+                Text(errorMsg, style: const TextStyle(fontSize: 11, color: Colors.red)),
+            ],
+          );
+        }
         return GestureDetector(
           onTap: () {
             if (mediaUrl != null) {
@@ -2475,10 +2542,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       children: [
         // Ek dosya butonu
         GestureDetector(
-          onTap: _uploadingMedia ? null : _showAttachSheet,
+          onTap: _uploadState is! UploadIdle ? null : _showAttachSheet,
           child: Padding(
             padding: const EdgeInsetsDirectional.only(bottom: 10, end: 4),
-            child: _uploadingMedia
+            child: _uploadState is UploadSending
                 ? const SizedBox(
                     width: 24,
                     height: 24,
