@@ -28,6 +28,7 @@ import '../utils/listing_fields.dart';
 import '../utils/number_formatter.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../utils/snackbar_helper.dart';
 import '../ui_library/components/inputs/teq_multi_select.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
@@ -87,6 +88,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   File? _video;
   String? _videoUploadUrl;
   bool _videoUploading = false;
+  double _videoUploadProgress = 0.0;
 
   bool _submitting = false;
 
@@ -687,9 +689,15 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       _video = file;
       _videoUploadUrl = null;
       _videoUploading = true;
+      _videoUploadProgress = 0.0;
     });
     try {
-      final result = await UploadService.uploadVideo(file);
+      final result = await UploadService.uploadVideo(
+        file,
+        onProgress: (p) {
+          if (mounted) setState(() => _videoUploadProgress = p);
+        },
+      );
       if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
     } catch (e) {
       if (mounted) {
@@ -697,7 +705,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         _removeVideo();
       }
     } finally {
-      if (mounted) setState(() => _videoUploading = false);
+      if (mounted) setState(() {
+        _videoUploading = false;
+        _videoUploadProgress = 0.0;
+      });
     }
   }
 
@@ -705,33 +716,32 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         _video = null;
         _videoUploadUrl = null;
         _videoUploading = false;
+        _videoUploadProgress = 0.0;
       });
 
   void _showVideoSourceSheet() {
     final loc = ref.read(localizationProvider);
-    showModalBottomSheet(
+    TeqBottomSheet.show(
       context: context,
-      builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: Text(loc.t('profilePickGallery')),
-            onTap: () {
-              Navigator.pop(context);
-              _pickVideo(ImageSource.gallery);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.videocam_outlined),
-            title: Text(loc.t('createPickCamera',
-                {'sec': _maxVideoDurationSecs.toString()})),
-            onTap: () {
-              Navigator.pop(context);
-              _pickVideo(ImageSource.camera);
-            },
-          ),
-        ]),
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          leading: const Icon(Icons.photo_library_outlined),
+          title: Text(loc.t('profilePickGallery')),
+          onTap: () {
+            Navigator.pop(context);
+            _pickVideo(ImageSource.gallery);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.videocam_outlined),
+          title: Text(loc.t('createPickCamera',
+              {'sec': _maxVideoDurationSecs.toString()})),
+          onTap: () {
+            Navigator.pop(context);
+            _pickVideo(ImageSource.camera);
+          },
+        ),
+      ]),
     );
   }
 
@@ -778,28 +788,26 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   void _showImageSourceSheet() {
     final loc = ref.read(localizationProvider);
-    showModalBottomSheet(
+    TeqBottomSheet.show(
       context: context,
-      builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: Text(loc.t('btnPickGallery')),
-            onTap: () {
-              Navigator.pop(context);
-              _pickImages(ImageSource.gallery);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt_outlined),
-            title: Text(loc.t('btnCamera')),
-            onTap: () {
-              Navigator.pop(context);
-              _pickImages(ImageSource.camera);
-            },
-          ),
-        ]),
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          leading: const Icon(Icons.photo_library_outlined),
+          title: Text(loc.t('btnPickGallery')),
+          onTap: () {
+            Navigator.pop(context);
+            _pickImages(ImageSource.gallery);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.camera_alt_outlined),
+          title: Text(loc.t('btnCamera')),
+          onTap: () {
+            Navigator.pop(context);
+            _pickImages(ImageSource.camera);
+          },
+        ),
+      ]),
     );
   }
 
@@ -1100,8 +1108,25 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                    child: Text(_videoUploading ? loc.t('lblLoading') : loc.t('lblVideoReady'),
-                        style: const TextStyle(fontSize: 13))),
+                  child: _videoUploading
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${(_videoUploadProgress * 100).toStringAsFixed(0)}%',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: _videoUploadProgress,
+                              minHeight: 3,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ],
+                        )
+                      : Text(loc.t('lblVideoReady'),
+                          style: const TextStyle(fontSize: 13)),
+                ),
                 GestureDetector(
                   onTap: _removeVideo,
                   child: const Icon(Icons.close, size: 18, color: Colors.grey),

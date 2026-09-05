@@ -1,8 +1,9 @@
 abstract final class MediaConstants {
-  static const int imageMaxBytes = 5 * 1024 * 1024;   // 5 MB
-  static const int videoMaxBytes = 20 * 1024 * 1024;  // 20 MB
-  static const int voiceMaxBytes = 512 * 1024;          // 512 KB
-  static const int fileMaxBytes  = 5 * 1024 * 1024;   // 5 MB
+  static const int imageMaxBytes        = 5 * 1024 * 1024;    // 5 MB
+  static const int videoMaxBytes        = 20 * 1024 * 1024;   // 20 MB (DM video)
+  static const int listingVideoMaxBytes = 100 * 1024 * 1024;  // 100 MB (İlan video ham input)
+  static const int voiceMaxBytes        = 512 * 1024;          // 512 KB
+  static const int fileMaxBytes         = 5 * 1024 * 1024;    // 5 MB
 
   static const int videoMaxSecs = 15;
   static const int voiceMaxSecs = 30;

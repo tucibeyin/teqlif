@@ -13,6 +13,8 @@ import '../ui_library/components/cards/teq_card.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_bottom_sheet.dart';
+import '../utils/error_helper.dart';
 import '../utils/snackbar_helper.dart';
 import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
@@ -52,6 +54,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   File? _video;
   String? _videoUploadUrl;
   bool _videoUploading = false;
+  double _videoUploadProgress = 0.0;
 
   static const int _maxImages = 10;
   static const int _maxVideoDurationSecs = 15;
@@ -480,24 +483,28 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     setState(() {
       _video = file;
       _videoUploadUrl = null;
+      _videoUploading = true;
+      _videoUploadProgress = 0.0;
     });
-
-    // Arka planda yükle
-    setState(() => _videoUploading = true);
     try {
-      final result = await UploadService.uploadVideo(file);
+      final result = await UploadService.uploadVideo(
+        file,
+        onProgress: (p) {
+          if (mounted) setState(() => _videoUploadProgress = p);
+        },
+      );
       if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
-    } catch (e, st) {
-      debugPrint('[CreateListing] Video upload HATA: $e\n$st');
+    } catch (e) {
       if (mounted) {
-        TeqSnackBar.show(message: _uploadError(e),
-          type: TeqSnackBarType.error,
-        );
+        handleError(e, ref.read(localizationProvider));
         _removeVideo();
         return;
       }
     } finally {
-      if (mounted) setState(() => _videoUploading = false);
+      if (mounted) setState(() {
+        _videoUploading = false;
+        _videoUploadProgress = 0.0;
+      });
     }
   }
 
@@ -506,34 +513,34 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       _video = null;
       _videoUploadUrl = null;
       _videoUploading = false;
+      _videoUploadProgress = 0.0;
     });
   }
 
   void _showVideoSourceSheet() {
-    showModalBottomSheet(
+    final loc = ref.read(localizationProvider);
+    TeqBottomSheet.show(
       context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(ref.read(localizationProvider).t('profilePickGallery')),
-              onTap: () {
-                Navigator.pop(context);
-                _pickVideo(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam_outlined),
-              title: Text(ref.read(localizationProvider).t('createPickCamera', {'sec': _maxVideoDurationSecs.toString()})),
-              onTap: () {
-                Navigator.pop(context);
-                _pickVideo(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: Text(loc.t('profilePickGallery')),
+            onTap: () {
+              Navigator.pop(context);
+              _pickVideo(ImageSource.gallery);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam_outlined),
+            title: Text(loc.t('createPickCamera', {'sec': _maxVideoDurationSecs.toString()})),
+            onTap: () {
+              Navigator.pop(context);
+              _pickVideo(ImageSource.camera);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -586,30 +593,28 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
   void _showImageSourceSheet() {
     final loc = ref.read(localizationProvider);
-    showModalBottomSheet(
+    TeqBottomSheet.show(
       context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(loc.t('btnPickGallery')),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImages(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(loc.t('btnCamera')),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImages(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: Text(loc.t('btnPickGallery')),
+            onTap: () {
+              Navigator.pop(context);
+              _pickImages(ImageSource.gallery);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_outlined),
+            title: Text(loc.t('btnCamera')),
+            onTap: () {
+              Navigator.pop(context);
+              _pickImages(ImageSource.camera);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -699,25 +704,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-  }
-
-  /// Upload hatalarını kullanıcı dostu Türkçe mesaja çevirir.
-  String _uploadError(Object e) {
-    final s = e.toString();
-    if (s.contains('HTTP 413'))
-      return 'Video dosyası çok büyük. Daha kısa bir video deneyin.';
-    if (s.contains('HTTP 502') ||
-        s.contains('HTTP 503') ||
-        s.contains('HTTP 504')) {
-      return 'Sunucu şu an meşgul, lütfen tekrar deneyin.';
-    }
-    if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
-      return 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın.';
-    }
-    if (e is NetworkException) {
-      return ref.read(localizationProvider).t('errorNetworkMessage');
-    }
-    return 'Video yüklenemedi, lütfen tekrar deneyin.';
   }
 
   /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
@@ -967,10 +953,26 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              _videoUploading ? loc.t('lblLoading') : loc.t('lblVideoReady'),
-                              style: const TextStyle(fontSize: 13),
-                            ),
+                            child: _videoUploading
+                                ? Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${(_videoUploadProgress * 100).toStringAsFixed(0)}%',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      LinearProgressIndicator(
+                                        value: _videoUploadProgress,
+                                        minHeight: 3,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    loc.t('lblVideoReady'),
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
                           ),
                           GestureDetector(
                             onTap: _removeVideo,

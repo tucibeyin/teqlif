@@ -12,6 +12,7 @@ from app.core.exceptions import BadRequestException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.services import storage_service as storage
+from app.constants.media_limits import IMAGE_MAX_BYTES, LISTING_VIDEO_MAX_BYTES, VIDEO_MAX_SECS
 from app.utils.media_processor import (
     detect_image_type as _detect_image_type,
     detect_video_type as _detect_video_type,
@@ -24,9 +25,19 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
-MAX_SIZE = 10 * 1024 * 1024
-MAX_VIDEO_SIZE = 200 * 1024 * 1024
-MAX_VIDEO_DURATION = 15.0
+_CHUNK = 65536  # 64 KB
+
+
+async def _read_streaming(file: UploadFile, max_bytes: int) -> bytes:
+    """Chunk okuyarak max_bytes kontrolü yapar — tam dosyayı belleğe almadan."""
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in file:  # type: ignore[attr-defined]
+        total += len(chunk)
+        if total > max_bytes:
+            raise BadRequestException(code="FILE_TOO_LARGE")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | None]:
@@ -40,7 +51,7 @@ async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | Non
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
-            "-t", str(int(MAX_VIDEO_DURATION)),
+            "-t", str(int(VIDEO_MAX_SECS)),
             video_path,
         ]
         try:
@@ -82,12 +93,15 @@ async def upload_listing_video(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
-    data = await file.read()
-    if len(data) > MAX_VIDEO_SIZE:
+    # Content-Length early rejection
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > LISTING_VIDEO_MAX_BYTES:
         raise BadRequestException(code="VIDEO_TOO_LARGE")
 
+    data = await _read_streaming(file, LISTING_VIDEO_MAX_BYTES)
+
     if _detect_video_type(data) is None:
-        raise BadRequestException(code="INVALID_VIDEO_FORMAT_MOV")
+        raise BadRequestException(code="INVALID_VIDEO_FORMAT")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = os.path.join(tmp_dir, f"src_{uuid.uuid4().hex}.mp4")
@@ -95,7 +109,7 @@ async def upload_listing_video(
             f.write(data)
 
         duration = await _get_video_duration(tmp_path)
-        if duration is not None and duration > MAX_VIDEO_DURATION:
+        if duration is not None and duration > VIDEO_MAX_SECS:
             raise BadRequestException(code="VIDEO_TOO_LONG")
 
         video_local, thumb_local = await _process_listing_video(tmp_path, tmp_dir)
@@ -119,13 +133,16 @@ async def upload_image(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
-    data = await file.read()
-    if len(data) > MAX_SIZE:
+    # Content-Length early rejection
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > IMAGE_MAX_BYTES:
         raise BadRequestException(code="FILE_TOO_LARGE")
+
+    data = await _read_streaming(file, IMAGE_MAX_BYTES)
 
     ext = _detect_image_type(data)
     if ext is None:
-        raise BadRequestException(code="INVALID_IMAGE_FORMAT_GIF")
+        raise BadRequestException(code="INVALID_IMAGE_FORMAT")
 
     base_name = uuid.uuid4().hex
     filename = f"{base_name}.{ext}"

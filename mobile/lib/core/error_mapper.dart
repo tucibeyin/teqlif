@@ -55,6 +55,7 @@ class ErrorMapper {
       case 'MESSAGING_FORBIDDEN':
         return loc.t('errMessagingForbidden');
       case 'FILE_TOO_LARGE':
+      case 'VIDEO_TOO_LARGE':
         return loc.t('errFileTooLarge');
       case 'AUDIO_TOO_LARGE':
         return loc.t('errAudioTooLarge');
