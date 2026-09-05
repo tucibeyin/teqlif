@@ -3,6 +3,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from app.core.exceptions import BadRequestException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,7 +16,8 @@ from app.models.user import User
 from app.schemas.message import MessageOut, ConversationOut, SendMessageIn, MediaContentType
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
-from app.core.exceptions import NotFoundException, ForbiddenException
+from app.core.exceptions import NotFoundException, ForbiddenException  # BadRequestException imported above
+from app.constants.media_limits import IMAGE_MAX_BYTES, VIDEO_MAX_BYTES, VOICE_MAX_BYTES, FILE_MAX_BYTES
 from app.models.message_thread import MessageThread
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.ws_manager import ws_manager
@@ -115,6 +117,27 @@ async def send_message(
     )
 
 
+_CONTENT_TYPE_LIMITS = {
+    "voice": VOICE_MAX_BYTES,
+    "image": IMAGE_MAX_BYTES,
+    "video": VIDEO_MAX_BYTES,
+    "file":  FILE_MAX_BYTES,
+}
+_CHUNK = 65536  # 64 KB
+
+
+async def _read_streaming(file: UploadFile, max_bytes: int) -> bytes:
+    """Chunk okuyarak max_bytes kontrolü yapar — tam dosyayı belleğe almadan."""
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in file:  # type: ignore[attr-defined]
+        total += len(chunk)
+        if total > max_bytes:
+            raise BadRequestException(code="FILE_TOO_LARGE")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @router.post("/upload", response_model=MessageOut)
 @limiter.limit("30/minute", key_func=get_user_id_or_ip)
 async def upload_media_message(
@@ -126,7 +149,15 @@ async def upload_media_message(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    data = await file.read()
+    # Content-Length early rejection — istek gövdesini okumadan önce
+    cl = request.headers.get("content-length")
+    if cl:
+        max_bytes = _CONTENT_TYPE_LIMITS.get(content_type_field, FILE_MAX_BYTES)
+        if int(cl) > max_bytes:
+            raise BadRequestException(code="FILE_TOO_LARGE")
+
+    max_bytes = _CONTENT_TYPE_LIMITS.get(content_type_field, FILE_MAX_BYTES)
+    data = await _read_streaming(file, max_bytes)
     return await SendMediaMessageCommand(uow).execute(
         sender_id=current_user.id,
         receiver_id=receiver_id,
