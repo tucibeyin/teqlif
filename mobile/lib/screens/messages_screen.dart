@@ -47,8 +47,10 @@ import '../core/media_constants.dart';
 import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/call_permission_helper.dart';
+import 'package:shimmer/shimmer.dart';
 import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
 import 'viewmodels/messages_view_model.dart';
@@ -1147,6 +1149,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<Map<String, dynamic>> _messages = [];
+  final Set<int> _freshMsgIds = {};
   bool _loading = true;
   bool _sending = false;
   bool _error = false;
@@ -1361,6 +1364,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               );
             }
             _messages.add(data);
+            if (msgId > 0) _freshMsgIds.add(msgId);
+          });
+          Future.delayed(const Duration(milliseconds: 600), () {
+            if (mounted) setState(() => _freshMsgIds.remove(msgId));
           });
           _scrollToBottom();
         }
@@ -1479,70 +1486,57 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
 
   Future<void> _showAttachSheet() async {
     final loc = ref.read(localizationProvider);
-    await showModalBottomSheet(
+    await TeqBottomSheet.show(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border(context),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(loc.t("attachPickGallery")),
-              subtitle: Text(loc.t("attachLimitImage"), style: const TextStyle(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndSendImage(source: ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(loc.t("attachPickCamera")),
-              subtitle: Text(loc.t("attachLimitImage"), style: const TextStyle(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndSendImage(source: ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam_outlined),
-              title: Text(loc.t("attachPickVideo")),
-              subtitle: Text(loc.t("attachLimitVideo"), style: const TextStyle(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndSendVideo(source: ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.video_camera_back_outlined),
-              title: Text(loc.t("attachRecordVideo")),
-              subtitle: Text(loc.t("attachLimitVideo"), style: const TextStyle(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndSendVideo(source: ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.attach_file_outlined),
-              title: Text(loc.t("attachPickFile")),
-              subtitle: Text(loc.t("attachLimitFile"), style: const TextStyle(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndSendFile();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: Text(loc.t("attachPickGallery")),
+            subtitle: Text(loc.t("attachLimitImage"), style: const TextStyle(fontSize: 12)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendImage(source: ImageSource.gallery);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_outlined),
+            title: Text(loc.t("attachPickCamera")),
+            subtitle: Text(loc.t("attachLimitImage"), style: const TextStyle(fontSize: 12)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendImage(source: ImageSource.camera);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam_outlined),
+            title: Text(loc.t("attachPickVideo")),
+            subtitle: Text(loc.t("attachLimitVideo"), style: const TextStyle(fontSize: 12)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendVideo(source: ImageSource.gallery);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.video_camera_back_outlined),
+            title: Text(loc.t("attachRecordVideo")),
+            subtitle: Text(loc.t("attachLimitVideo"), style: const TextStyle(fontSize: 12)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendVideo(source: ImageSource.camera);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.attach_file_outlined),
+            title: Text(loc.t("attachPickFile")),
+            subtitle: Text(loc.t("attachLimitFile"), style: const TextStyle(fontSize: 12)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendFile();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -1795,6 +1789,32 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     }
   }
 
+  // ─── Format helpers ──────────────────────────────────────────────────
+
+  String _fmtSecs(int totalSecs) {
+    final m = totalSecs ~/ 60;
+    final s = totalSecs % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  String _fmtBytes(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / 1024).round()} KB';
+  }
+
+  IconData _fileIcon(String? name) {
+    final ext = (name ?? '').split('.').last.toLowerCase();
+    return switch (ext) {
+      'pdf' => Icons.picture_as_pdf_outlined,
+      'doc' || 'docx' => Icons.description_outlined,
+      'xls' || 'xlsx' => Icons.table_chart_outlined,
+      'txt' => Icons.text_snippet_outlined,
+      _ => Icons.insert_drive_file_outlined,
+    };
+  }
+
   // ─── Message content builder ─────────────────────────────────────────
 
   Widget _buildMsgContent(Map<String, dynamic> msg, bool isMe) {
@@ -1823,7 +1843,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isMe ? Colors.white24 : Colors.grey.shade200,
+                  color: isMe ? Colors.white24 : AppColors.card(context),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1837,8 +1857,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 100,
+                Expanded(
                   child: LinearProgressIndicator(
                     value:
                         (_playingMsgId == msgId && _playDuration.inSeconds > 0)
@@ -1848,13 +1867,13 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                         : 0.0,
                     backgroundColor: isMe
                         ? Colors.white24
-                        : Colors.grey.shade300,
+                        : AppColors.border(context),
                     color: isMe ? Colors.white : const Color(0xFF06B6D4),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${totalDur}s',
+                  _fmtSecs(totalDur),
                   style: TextStyle(
                     fontSize: 11,
                     color: isMe ? Colors.white70 : Colors.grey.shade600,
@@ -1884,10 +1903,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               width: 200,
               height: 200,
               fit: BoxFit.cover,
-              placeholder: (_, _) => const SizedBox(
-                width: 200,
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
+              placeholder: (_, _) => Shimmer.fromColors(
+                baseColor: Colors.grey.shade300,
+                highlightColor: Colors.grey.shade100,
+                child: Container(width: 200, height: 200, color: Colors.white),
               ),
               errorWidget: (_, _, _) => const Icon(Icons.broken_image),
             ),
@@ -1938,7 +1957,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                   bottom: 6,
                   end: 10,
                   child: Text(
-                    '${dur}s',
+                    _fmtSecs(dur),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -1951,16 +1970,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         );
 
       case 'file':
-        final sizeStr = fileSize != null
-            ? ' · ${(fileSize / 1024).round()}KB'
-            : '';
+        final sizeStr = fileSize != null ? ' · ${_fmtBytes(fileSize)}' : '';
         return GestureDetector(
           onTap: () => _downloadAndOpen(mediaUrl ?? '', fileName),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.insert_drive_file_outlined,
+                _fileIcon(fileName),
                 size: 32,
                 color: isMe ? Colors.white70 : Colors.grey.shade600,
               ),
@@ -2302,7 +2319,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                       ct == 'image' || ct == 'video';
 
                                   final msgId = msg['id'] as int? ?? -1;
-                                  return Align(
+                                  final isFresh = _freshMsgIds.contains(msgId);
+                                  final bubble = Align(
                                     alignment: isMe
                                         ? AlignmentDirectional.centerEnd
                                         : AlignmentDirectional.centerStart,
@@ -2371,28 +2389,20 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                                 ),
                                                 if (isMe) ...[
                                                   const SizedBox(width: 3),
-                                                  Icon(
-                                                    isPending
-                                                        ? Icons
-                                                              .access_time_rounded
-                                                        : (isRead
-                                                              ? Icons.done_all
-                                                              : Icons.done),
-                                                    size: 12,
-                                                    color: isPending
-                                                        ? Colors.white
-                                                              .withValues(
-                                                                alpha: 0.45,
-                                                              )
-                                                        : (isRead
-                                                              ? Colors
-                                                                    .blue
-                                                                    .shade200
-                                                              : Colors.white
-                                                                    .withValues(
-                                                                      alpha:
-                                                                          0.6,
-                                                                    )),
+                                                  AnimatedSwitcher(
+                                                    duration: const Duration(milliseconds: 300),
+                                                    child: Icon(
+                                                      isPending
+                                                          ? Icons.access_time_rounded
+                                                          : (isRead ? Icons.done_all : Icons.done),
+                                                      key: ValueKey(isPending ? 0 : (isRead ? 2 : 1)),
+                                                      size: 12,
+                                                      color: isPending
+                                                          ? Colors.white.withValues(alpha: 0.45)
+                                                          : (isRead
+                                                              ? Colors.blue.shade200
+                                                              : Colors.white.withValues(alpha: 0.6)),
+                                                    ),
                                                   ),
                                                 ],
                                               ],
@@ -2402,6 +2412,22 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                       ),
                                     ),
                                   );
+                                  return isFresh
+                                      ? TweenAnimationBuilder<double>(
+                                          key: ValueKey('fresh_$msgId'),
+                                          tween: Tween(begin: 0.0, end: 1.0),
+                                          duration: const Duration(milliseconds: 280),
+                                          curve: Curves.easeOut,
+                                          builder: (_, v, child) => Opacity(
+                                            opacity: v,
+                                            child: Transform.translate(
+                                              offset: Offset(0, 8 * (1 - v)),
+                                              child: child,
+                                            ),
+                                          ),
+                                          child: bubble,
+                                        )
+                                      : bubble;
                                 },
                               ),
                       ), // inner Expanded
@@ -2657,17 +2683,17 @@ class _RequestBanner extends ConsumerWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
-          border: Border(bottom: BorderSide(color: const Color(0xFFE5E7EB))),
+          color: AppColors.surface(context),
+          border: Border(bottom: BorderSide(color: AppColors.border(context))),
         ),
         child: Row(
           children: [
-            const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF9CA3AF)),
+            Icon(Icons.schedule_rounded, size: 16, color: AppColors.iconSecondary(context)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 loc.t('msgReqBannerInitiator'),
-                style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
               ),
             ),
           ],
