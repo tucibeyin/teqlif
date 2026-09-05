@@ -70,9 +70,9 @@ class ErrorMapper {
         return loc.t('errUnsupportedFileType');
       case 'MEDIA_EMPTY':
         return loc.t('errMediaEmpty');
-      case 'FORBIDDEN':
       case 'CAPTCHA_FAILED':
         return loc.t('errorCaptchaFailed');
+      // FORBIDDEN: backend lokalize mesajını doğrudan göster (103. satır fallback)
       case 'CONTENT_POLICY_VIOLATION':
         return loc.t('errorContentPolicy');
       case 'PROVINCE_REQUIRED':

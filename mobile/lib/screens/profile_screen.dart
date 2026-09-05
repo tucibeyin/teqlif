@@ -957,7 +957,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         _consentLocale = body['locale'] as String?;
       });
     } catch (e) {
-      // sessiz hata — consent durumu boş kalır
+      LoggerService.instance.warning('ProfileScreen', '_loadConsentStatus: $e');
     }
   }
 
@@ -1001,7 +1001,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           setState(() => _unreadRatingCount = data['unread_count'] ?? 0);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('ProfileScreen', '_loadUnreadRatings: $e');
+    }
   }
 
   Future<void> _loadPendingRequests() async {
@@ -1018,7 +1020,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           setState(() => _pendingRequestCount = data.length);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('ProfileScreen', '_loadPendingRequests: $e');
+    }
   }
 
   Future<void> _loadBiometricState() async {
