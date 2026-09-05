@@ -66,6 +66,8 @@ class ErrorMapper {
         return loc.t('errInvalidVideoFormat');
       case 'VIDEO_TOO_LONG':
         return loc.t('errVideoTooLong');
+      case 'DM_VIDEO_TOO_LARGE':
+        return loc.t('errDmVideoTooLarge');
       case 'UNSUPPORTED_FILE_TYPE':
         return loc.t('errUnsupportedFileType');
       case 'MEDIA_EMPTY':

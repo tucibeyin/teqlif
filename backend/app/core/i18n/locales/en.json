@@ -99,10 +99,11 @@
   "INVALID_VIDEO_FORMAT_MOV": "Only MP4, MOV, or WebM videos are allowed.",
   "FILE_TOO_LARGE": "File size must not exceed 10 MB.",
   "VIDEO_TOO_LARGE": "Video size must not exceed 200 MB.",
+  "DM_VIDEO_TOO_LARGE": "Videos in messages cannot exceed 20 MB.",
   "VIDEO_TOO_LONG": "Video must not exceed 15 seconds.",
   "UNSUPPORTED_FILE_TYPE": "Unsupported file type.",
   "UNSUPPORTED_AUDIO_FORMAT": "Unsupported audio format.",
-  "AUDIO_TOO_LARGE": "Audio file is too large.",
+  "AUDIO_TOO_LARGE": "Audio file cannot exceed 512 KB.",
 
   "INVALID_PRICE": "A valid price must be entered.",
   "INVALID_RATING_RANGE": "Rating must be between 1 and 5.",

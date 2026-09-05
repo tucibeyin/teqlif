@@ -43,6 +43,7 @@ import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import '../core/app_exception.dart';
 import '../core/error_mapper.dart';
+import '../core/media_constants.dart';
 import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
@@ -1489,7 +1490,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.border(context),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1497,6 +1498,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: Text(loc.t("attachPickGallery")),
+              subtitle: Text(loc.t("attachLimitImage"), style: const TextStyle(fontSize: 12)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendImage(source: ImageSource.gallery);
@@ -1505,6 +1507,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
               title: Text(loc.t("attachPickCamera")),
+              subtitle: Text(loc.t("attachLimitImage"), style: const TextStyle(fontSize: 12)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendImage(source: ImageSource.camera);
@@ -1513,6 +1516,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
               title: Text(loc.t("attachPickVideo")),
+              subtitle: Text(loc.t("attachLimitVideo"), style: const TextStyle(fontSize: 12)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendVideo(source: ImageSource.gallery);
@@ -1521,6 +1525,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             ListTile(
               leading: const Icon(Icons.video_camera_back_outlined),
               title: Text(loc.t("attachRecordVideo")),
+              subtitle: Text(loc.t("attachLimitVideo"), style: const TextStyle(fontSize: 12)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendVideo(source: ImageSource.camera);
@@ -1529,6 +1534,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             ListTile(
               leading: const Icon(Icons.attach_file_outlined),
               title: Text(loc.t("attachPickFile")),
+              subtitle: Text(loc.t("attachLimitFile"), style: const TextStyle(fontSize: 12)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndSendFile();
@@ -1561,11 +1567,13 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       return;
     }
     final raw = await picked.readAsBytes();
-    if (raw.length > 5 * 1024 * 1024) {
+    if (raw.length > MediaConstants.imageMaxBytes) {
       if (!mounted) return;
       TeqSnackBar.show(message: loc.t("attachFileTooLarge"));
       return;
     }
+    if (!mounted) return;
+    TeqToast.info(loc.t("attachImageProcessing"), duration: const Duration(seconds: 5));
     final compressed = await FlutterImageCompress.compressWithList(
       raw,
       quality: 80,
@@ -1585,7 +1593,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final loc = ref.read(localizationProvider);
     final picked = await ImagePicker().pickVideo(
       source: source,
-      maxDuration: const Duration(seconds: 15),
+      maxDuration: const Duration(seconds: MediaConstants.videoMaxSecs),
     );
     if (picked == null) {
       if (!mounted) return;
@@ -1598,7 +1606,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     }
     if (!mounted) return;
     final info = await VideoCompress.getMediaInfo(picked.path);
-    if ((info.duration ?? 0) / 1000 > 15) {
+    if ((info.duration ?? 0) / 1000 > MediaConstants.videoMaxSecs) {
       if (!mounted) return;
       TeqSnackBar.show(message: loc.t("attachVideoTooLong"));
       return;
@@ -1617,6 +1625,11 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       return;
     }
     final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    if (bytes.length > MediaConstants.videoMaxBytes) {
+      TeqSnackBar.show(message: loc.t("attachVideoTooLargeAfterCompress"));
+      return;
+    }
     final dur = ((info.duration ?? 0) / 1000).round();
     await _uploadMedia(
       bytes: bytes,
@@ -1627,7 +1640,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     );
   }
 
-  static const _allowedFileExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'];
+  static final _allowedFileExts = MediaConstants.allowedFileExtensions.toList();
   static const _mimeMap = {
     'pdf': 'application/pdf',
     'doc': 'application/msword',
@@ -1649,7 +1662,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final f = result.files.first;
     final bytes = f.bytes;
     if (bytes == null) return;
-    if (bytes.length > 5 * 1024 * 1024) {
+    if (bytes.length > MediaConstants.fileMaxBytes) {
       TeqSnackBar.show(message: loc.t("attachFileTooLarge"));
       return;
     }
@@ -1691,7 +1704,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           return;
         }
         setState(() => _recordSecs++);
-        if (_recordSecs >= 10) {
+        if (_recordSecs >= MediaConstants.voiceMaxSecs) {
           t.cancel();
           _stopAndSend();
         }
@@ -1721,7 +1734,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       contentType: 'voice',
       fileName: 'voice.m4a',
       mimeType: 'audio/mp4',
-      durationSecs: _recordSecs.clamp(1, 10),
+      durationSecs: _recordSecs.clamp(1, MediaConstants.voiceMaxSecs),
     );
   }
 
@@ -2530,25 +2543,35 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   }
 
   Widget _buildRecordingBar(TranslationPack loc) {
-    final mins = _recordSecs ~/ 60;
-    final secs = _recordSecs % 60;
-    final timer =
-        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    const maxSecs = MediaConstants.voiceMaxSecs;
+    final elapsed = _recordSecs;
+    final remaining = maxSecs - elapsed;
+    final em = elapsed ~/ 60;
+    final es = elapsed % 60;
+    final rm = remaining ~/ 60;
+    final rs = remaining % 60;
+    final elapsedStr = '${em.toString().padLeft(2, '0')}:${es.toString().padLeft(2, '0')}';
+    final remainStr  = '${rm.toString().padLeft(2, '0')}:${rs.toString().padLeft(2, '0')}';
+    final isWarning = remaining <= 10;
     return Row(
       children: [
-        // Kırmızı kayıt noktası + süre
+        // Kırmızı kayıt noktası + geçen / kalan süre
         Container(
           width: 10,
           height: 10,
           margin: const EdgeInsetsDirectional.only(end: 6),
-          decoration: const BoxDecoration(
-            color: Colors.red,
+          decoration: BoxDecoration(
+            color: isWarning ? Colors.orange : Colors.red,
             shape: BoxShape.circle,
           ),
         ),
         Text(
-          timer,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          '$elapsedStr / $remainStr',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: isWarning ? Colors.orange : null,
+          ),
         ),
         const SizedBox(width: 8),
         // Kaydır iptal

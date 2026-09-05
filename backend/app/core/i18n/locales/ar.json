@@ -99,10 +99,11 @@
   "INVALID_VIDEO_FORMAT_MOV": "يُسمح فقط بمقاطع MP4 أو MOV أو WebM.",
   "FILE_TOO_LARGE": "حجم الملف يجب ألا يتجاوز 10 ميغابايت.",
   "VIDEO_TOO_LARGE": "حجم الفيديو يجب ألا يتجاوز 200 ميغابايت.",
+  "DM_VIDEO_TOO_LARGE": "لا يمكن أن يتجاوز الفيديو في الرسائل 20 ميغابايت.",
   "VIDEO_TOO_LONG": "يجب ألا يتجاوز الفيديو 15 ثانية.",
   "UNSUPPORTED_FILE_TYPE": "نوع الملف غير مدعوم.",
   "UNSUPPORTED_AUDIO_FORMAT": "صيغة الصوت غير مدعومة.",
-  "AUDIO_TOO_LARGE": "ملف الصوت كبير جداً.",
+  "AUDIO_TOO_LARGE": "لا يمكن أن يتجاوز ملف الصوت 512 كيلوبايت.",
 
   "INVALID_PRICE": "يجب إدخال سعر صالح.",
   "INVALID_RATING_RANGE": "يجب أن يكون التقييم بين 1 و5.",

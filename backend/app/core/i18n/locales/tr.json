@@ -99,10 +99,11 @@
   "INVALID_VIDEO_FORMAT_MOV": "Yalnızca MP4, MOV veya WebM video yüklenebilir.",
   "FILE_TOO_LARGE": "Dosya boyutu 10 MB'ı geçemez.",
   "VIDEO_TOO_LARGE": "Video boyutu 200 MB'ı geçemez.",
+  "DM_VIDEO_TOO_LARGE": "Mesajda video en fazla 20 MB olabilir.",
   "VIDEO_TOO_LONG": "Video 15 saniyeyi geçemez.",
   "UNSUPPORTED_FILE_TYPE": "Desteklenmeyen dosya türü.",
   "UNSUPPORTED_AUDIO_FORMAT": "Desteklenmeyen ses formatı.",
-  "AUDIO_TOO_LARGE": "Ses dosyası çok büyük.",
+  "AUDIO_TOO_LARGE": "Ses dosyası 512 KB'ı geçemez.",
 
   "INVALID_PRICE": "Geçerli bir fiyat girilmelidir.",
   "INVALID_RATING_RANGE": "Puan 1 ile 5 arasında olmalıdır.",

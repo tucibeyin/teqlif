@@ -23,12 +23,16 @@ from app.routers.upload import (
     _get_video_duration,
     _IMAGE_CONTENT_TYPES,
 )
+from app.constants.media_limits import (
+    VOICE_MAX_BYTES,
+    IMAGE_MAX_BYTES,
+    VIDEO_MAX_BYTES,
+    FILE_MAX_BYTES,
+    VIDEO_MAX_SECS,
+    VOICE_MAX_SECS,
+)
 
 logger = get_logger(__name__)
-
-_MAX_VOICE = 512 * 1024
-_MAX_MEDIA = 5 * 1024 * 1024
-_VIDEO_MAX_SECS = 15
 
 _AUDIO_CONTENT_TYPES = {
     "audio/aac", "audio/mp4", "audio/x-m4a",
@@ -119,11 +123,15 @@ class SendMediaMessageCommand:
         if file_size == 0:
             raise BadRequestException(code="MEDIA_EMPTY")
 
-        max_size = _MAX_VOICE if content_type_field == "voice" else _MAX_MEDIA
+        _SIZE_LIMITS = {
+            "voice": (VOICE_MAX_BYTES, "AUDIO_TOO_LARGE"),
+            "video": (VIDEO_MAX_BYTES, "DM_VIDEO_TOO_LARGE"),
+            "image": (IMAGE_MAX_BYTES, "FILE_TOO_LARGE"),
+            "file":  (FILE_MAX_BYTES,  "FILE_TOO_LARGE"),
+        }
+        max_size, size_err_code = _SIZE_LIMITS.get(content_type_field, (FILE_MAX_BYTES, "FILE_TOO_LARGE"))
         if file_size > max_size:
-            raise BadRequestException(
-                code="AUDIO_TOO_LARGE" if content_type_field == "voice" else "FILE_TOO_LARGE"
-            )
+            raise BadRequestException(code=size_err_code)
 
         # Validate media and upload (before DB write)
         media_url, thumbnail_url, file_name, resolved_duration = await self._process_media(
@@ -309,7 +317,7 @@ class SendMediaMessageCommand:
                 with open(src_path, "wb") as f:
                     f.write(data)
                 detected_dur = await _get_video_duration(src_path)
-                if detected_dur is not None and detected_dur > _VIDEO_MAX_SECS:
+                if detected_dur is not None and detected_dur > VIDEO_MAX_SECS:
                     raise BadRequestException(code="VIDEO_TOO_LONG")
                 if detected_dur is not None:
                     resolved_duration = int(detected_dur)
