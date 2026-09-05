@@ -34,6 +34,7 @@ from app.use_cases.messages.commands.delete_message_command import DeleteMessage
 from app.use_cases.messages.commands.delete_conversation_command import DeleteConversationCommand
 from app.use_cases.messages.commands.accept_message_request_command import AcceptMessageRequestCommand
 from app.use_cases.messages.commands.decline_message_request_command import DeclineMessageRequestCommand
+from app.use_cases.messages.commands.mark_messages_read_command import MarkMessagesReadCommand
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -90,10 +91,13 @@ async def list_message_requests(
 @router.get("/{other_user_id}", response_model=List[MessageOut])
 async def get_messages(
     other_user_id: int,
+    before_id: int | None = Query(None),
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    return await GetMessagesQuery(uow).execute(current_user.id, other_user_id)
+    messages = await GetMessagesQuery(uow).execute(current_user.id, other_user_id, before_id)
+    await MarkMessagesReadCommand(uow).execute(current_user.id, other_user_id)
+    return messages
 
 
 @router.post("/send", response_model=MessageOut)

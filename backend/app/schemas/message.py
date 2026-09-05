@@ -9,7 +9,7 @@ class MessageOut(BaseModel):
     receiver_id: int
     sender_username: str
     content: str
-    content_type: str = "text"
+    content_type: Literal["text", "voice", "image", "video", "file"] = "text"
     media_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     duration_secs: Optional[int] = None

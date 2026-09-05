@@ -7,12 +7,21 @@ URL formatı: /uploads/{key}  — nginx MinIO'yu bu path altında proxy'ler.
 Bucket politikası: public-read (nginx proxy erişebilmesi için).
 """
 import io
+from typing import Protocol, runtime_checkable
 
 from minio import Minio
 from minio.error import S3Error
 
 from app.config import settings
 from app.core.logger import get_logger
+
+
+@runtime_checkable
+class AbstractStorageService(Protocol):
+    def upload_bytes(self, key: str, data: bytes, content_type: str) -> str: ...
+    def upload_file(self, key: str, path: str, content_type: str) -> str: ...
+    def delete_object(self, key: str) -> None: ...
+    def url_to_key(self, url: str) -> str: ...
 
 logger = get_logger(__name__)
 

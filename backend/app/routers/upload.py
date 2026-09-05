@@ -1,12 +1,10 @@
 import asyncio
-import io
 import os
 import shutil
 import tempfile
 import uuid
 
 from fastapi import APIRouter, Depends, Request, UploadFile, File
-from PIL import Image
 
 from app.models.user import User
 from app.utils.auth import get_current_user
@@ -14,6 +12,13 @@ from app.core.exceptions import BadRequestException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.services import storage_service as storage
+from app.utils.media_processor import (
+    detect_image_type as _detect_image_type,
+    detect_video_type as _detect_video_type,
+    get_video_duration as _get_video_duration,
+    make_thumbnail as _make_thumbnail,
+    IMAGE_CONTENT_TYPES as _IMAGE_CONTENT_TYPES,
+)
 
 logger = get_logger(__name__)
 
@@ -22,76 +27,6 @@ router = APIRouter(prefix="/api/upload", tags=["upload"])
 MAX_SIZE = 10 * 1024 * 1024
 MAX_VIDEO_SIZE = 200 * 1024 * 1024
 MAX_VIDEO_DURATION = 15.0
-_THUMB_SIZE = (400, 400)
-
-_IMAGE_CONTENT_TYPES = {
-    "jpg": "image/jpeg",
-    "png": "image/png",
-    "webp": "image/webp",
-    "gif": "image/gif",
-}
-
-
-def _detect_image_type(data: bytes) -> str | None:
-    if data[:3] == b"\xff\xd8\xff":
-        return "jpg"
-    if data[:8] == b"\x89PNG\r\n\x1a\n":
-        return "png"
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "webp"
-    if data[:6] in (b"GIF87a", b"GIF89a"):
-        return "gif"
-    return None
-
-
-def _make_thumbnail(data: bytes, ext: str) -> bytes:
-    img = Image.open(io.BytesIO(data))
-    try:
-        from PIL import ImageOps
-        img = ImageOps.exif_transpose(img)
-    except Exception:
-        pass
-
-    if img.mode not in ("RGB", "L"):
-        img = img.convert("RGB")
-
-    img.thumbnail(_THUMB_SIZE, Image.LANCZOS)
-    w, h = img.size
-    tw, th = _THUMB_SIZE
-    left = max((w - tw) // 2, 0)
-    top = max((h - th) // 2, 0)
-    img = img.crop((left, top, min(left + tw, w), min(top + th, h)))
-
-    buf = io.BytesIO()
-    fmt = "JPEG" if ext in ("jpg", "webp", "gif") else "PNG"
-    img.save(buf, format=fmt, quality=85, optimize=True)
-    return buf.getvalue()
-
-
-def _detect_video_type(data: bytes) -> str | None:
-    if len(data) >= 12 and data[4:8] == b'ftyp':
-        return 'mp4'
-    if data[:4] == b'\x1a\x45\xdf\xa3':
-        return 'webm'
-    return None
-
-
-async def _get_video_duration(path: str) -> float | None:
-    if not shutil.which("ffprobe"):
-        return None
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "ffprobe", "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            path,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
-        return float(stdout.decode().strip())
-    except Exception:
-        return None
 
 
 async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | None]:
