@@ -26,10 +26,24 @@ class FirebaseAdapter(PushNotificationPort):
     def __init__(self, project_id: str | None, sa_path: str | None):
         self._project_id = project_id
         self._sa_path = sa_path
+        self._session = None  # paylaşılan AuthorizedSession — ilk çağrıda kurulur
         if sa_path and project_id:
             logger.info("[FirebaseAdapter] hazır | project=%s", project_id)
         else:
             logger.warning("[FirebaseAdapter] sa_path veya project_id yok — push devre dışı")
+
+    def _get_session(self):
+        """İlk çağrıda credentials yükler ve AuthorizedSession oluşturur; sonraki çağrılarda paylaşır."""
+        if self._session is None and self._sa_path and self._project_id:
+            from google.oauth2 import service_account
+            import google.auth.transport.requests
+            creds = service_account.Credentials.from_service_account_file(
+                self._sa_path,
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
+            )
+            self._session = google.auth.transport.requests.AuthorizedSession(creds)
+            logger.info("[FirebaseAdapter] AuthorizedSession oluşturuldu")
+        return self._session
 
     async def send_notification(
         self,
@@ -124,20 +138,8 @@ class FirebaseAdapter(PushNotificationPort):
         return msg
 
     def _send_http(self, msg: dict) -> str:
-        """FCM V1 REST API'ye senkron POST. asyncio.to_thread içinde çalışır.
-
-        Her çağrıda taze credentials + AuthorizedSession oluşturur. Paylaşılan
-        session'da concurrent token yenileme yarış koşulunu önler.
-        """
-        from google.oauth2 import service_account
-        import google.auth.transport.requests
-
-        creds = service_account.Credentials.from_service_account_file(
-            self._sa_path,
-            scopes=["https://www.googleapis.com/auth/cloud-platform"],
-        )
-
-        session = google.auth.transport.requests.AuthorizedSession(creds)
+        """FCM V1 REST API'ye senkron POST. asyncio.to_thread içinde çalışır. Paylaşılan session kullanır."""
+        session = self._get_session()
 
         url = self.FCM_SEND_URL.format(project_id=self._project_id)
         resp = session.post(url, json={"message": msg}, timeout=30)
@@ -163,4 +165,49 @@ class FirebaseAdapter(PushNotificationPort):
     async def send_multicast(
         self, tokens: list[str], title: str, body: str, data: Dict[str, Any] = None
     ) -> dict:
-        raise NotImplementedError("Multicast is not yet implemented")
+        """FCM V1 multicast — her 500 token'a bir toplu HTTP döngüsü. Paylaşılan session ile OAuth overhead sıfır."""
+        if not tokens:
+            return {"success": 0, "failure": 0}
+
+        if not self._sa_path or not self._project_id:
+            logger.error("[FirebaseAdapter] send_multicast: sa_path/project_id eksik")
+            return {"success": 0, "failure": len(tokens)}
+
+        results = {"success": 0, "failure": 0}
+        BATCH = 500
+        for i in range(0, len(tokens), BATCH):
+            batch_tokens = tokens[i : i + BATCH]
+            ok, fail = await asyncio.to_thread(
+                self._send_multicast_batch, batch_tokens, title, body, data
+            )
+            results["success"] += ok
+            results["failure"] += fail
+
+        logger.info(
+            "[FirebaseAdapter] Multicast tamamlandı | total=%d success=%d failure=%d",
+            len(tokens), results["success"], results["failure"],
+        )
+        return results
+
+    def _send_multicast_batch(
+        self, tokens: list[str], title: str, body: str, data: Dict[str, Any] | None
+    ) -> tuple[int, int]:
+        """Her token için FCM V1 /messages:send — paylaşılan session ile tek OAuth token."""
+        session = self._get_session()
+        if not session:
+            return 0, len(tokens)
+
+        url = self.FCM_SEND_URL.format(project_id=self._project_id)
+        success, failure = 0, 0
+        for token in tokens:
+            msg = self._build_message(token, title, body, data, False, None, None)
+            try:
+                resp = session.post(url, json={"message": msg}, timeout=30)
+                if resp.status_code == 200:
+                    success += 1
+                else:
+                    failure += 1
+            except Exception as exc:
+                logger.debug("[FirebaseAdapter] Multicast token hatası: %s", exc)
+                failure += 1
+        return success, failure

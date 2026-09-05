@@ -253,8 +253,9 @@ async def refresh_stream_token(
     from app.use_cases.streams.stream_utils import make_livekit_token
     from app.config import settings
 
+    from app.models.enums import StreamStatus
     stream = await db.get(LiveStream, stream_id)
-    if not stream or not stream.is_live:
+    if not stream or stream.status != StreamStatus.LIVE:
         raise HTTPException(
             status_code=410,
             detail={"error": {"code": "STREAM_ENDED", "message": "Stream has ended"}},

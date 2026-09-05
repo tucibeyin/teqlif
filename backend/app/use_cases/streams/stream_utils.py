@@ -83,33 +83,23 @@ def make_livekit_token(room_name: str, user: User, can_publish: bool) -> str:
         raise
 
 async def notify_followers_task(user_id: int, username: str, stream_title: str | None, stream_id: int) -> None:
-    import asyncio as _asyncio
-    from app.models.follow import Follow
-    from app.routers.notifications import push_notification
-    from app.database import AsyncSessionLocal
-
+    """Takipçi bildirimlerini tek ARQ job olarak kuyruğa alır — asyncio.create_task döngüsü yerine."""
     try:
-        async with AsyncSessionLocal() as bg_db:
-            followers = await bg_db.scalars(
-                select(Follow.follower_id).where(Follow.followed_id == user_id)
-            )
-            for follower_id in followers:
-                _asyncio.create_task(push_notification(
-                    user_id=follower_id,
-                    notif={
-                        "type": "stream_started",
-                        "i18n": {
-                            "title_key": "notifStreamStarted",
-                            "title_params": {"username": username},
-                        },
-                        "body": stream_title or None,
-                        "related_id": stream_id,
-                        "stream_id": stream_id,
-                    },
-                    pref_key="stream_started",
-                ))
+        from app.core.task_queue import get_pool
+        pool = get_pool()
+        if not pool:
+            logger.warning("[STREAMS] ARQ pool yok — takipçi bildirimi atlandı | stream=%d", stream_id)
+            return
+        await pool.enqueue_job(
+            "send_stream_started_notifications",
+            host_id=user_id,
+            username=username,
+            stream_title=stream_title,
+            stream_id=stream_id,
+            _queue_name="critical",
+        )
     except Exception as exc:
         logger.error(
-            "[STREAMS] Takipçilere yayın bildirimi gönderilemedi: %s",
+            "[STREAMS] Takipçi bildirim job'u kuyruğa alınamadı: %s",
             exc, exc_info=True,
         )

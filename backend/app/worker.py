@@ -184,6 +184,63 @@ async def send_push_notification_task(
         raise  # ARQ görevi "failed" olarak işaretlenir (geçici hatalar için retry)
 
 
+# ── Task: Stream Başladı Push Bildirimi (Multicast) ──────────────────────────
+
+async def send_stream_started_notifications(
+    ctx: dict,
+    host_id: int,
+    username: str,
+    stream_title: str | None,
+    stream_id: int,
+) -> None:
+    """
+    Takipçilere 'yayın başladı' push bildirimi gönderir.
+    Tek JOIN sorgusuyla tüm fcm_token'ları toplar; send_multicast ile gönderir.
+    asyncio.create_task döngüsünden ~100× daha az Redis/FCM trafiği.
+    """
+    try:
+        from sqlalchemy import select
+        from app.database import AsyncSessionLocal
+        from app.models.follow import Follow
+        from app.models.user import User
+        from app.core.di import container
+        from app.core.ports.push_notification_port import PushNotificationPort
+
+        async with AsyncSessionLocal() as db:
+            rows = (await db.execute(
+                select(User.fcm_token)
+                .join(Follow, Follow.follower_id == User.id)
+                .where(
+                    Follow.followed_id == host_id,
+                    User.fcm_token.isnot(None),
+                )
+            )).all()
+
+        tokens = [row.fcm_token for row in rows if row.fcm_token]
+        if not tokens:
+            logger.info("[Worker] stream_started: takipçi token yok | stream=%d", stream_id)
+            return
+
+        push_port = container.resolve(PushNotificationPort)
+        result = await push_port.send_multicast(
+            tokens=tokens,
+            title=f"@{username} yayında!",
+            body=stream_title or "",
+            data={"type": "stream_started", "stream_id": str(stream_id), "username": username},
+        )
+        logger.info(
+            "[Worker] stream_started multicast | stream=%d followers=%d success=%d failure=%d",
+            stream_id, len(tokens), result["success"], result["failure"],
+        )
+    except Exception as exc:
+        logger.error(
+            "[Worker] send_stream_started_notifications başarısız | stream_id=%d | %s",
+            stream_id, str(exc), exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Süresi Dolan Hikaye Temizliği ──────────────────────────────────────
 
 async def cleanup_expired_stories_task(ctx: dict) -> None:
@@ -3494,6 +3551,7 @@ class WorkerSettingsCritical:
 
     functions = [
         send_push_notification_task,
+        send_stream_started_notifications,
         notify_outbid_task,
         notify_auction_losers_task,
         send_smart_auction_alerts,
