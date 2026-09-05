@@ -163,12 +163,12 @@ async def audience_insights(
     # Anlık izleyiciler: left_at IS NULL → henüz ayrılmamış kayıtlar (Faz 8 canonical)
     from app.models.stream import LiveStreamViewer
     viewer_id_rows = await db.execute(
-        select(LiveStreamViewer.viewer_id).where(
+        select(LiveStreamViewer.user_id).where(
             LiveStreamViewer.stream_id == stream_id,
             LiveStreamViewer.left_at.is_(None),
         )
     )
-    viewer_ids: set[int] = {row.viewer_id for row in viewer_id_rows}
+    viewer_ids: set[int] = {row.user_id for row in viewer_id_rows}
 
     # PiP modundakileri ekle (Redis tabanlı, gerçek zamanlı)
     pip_members_raw = await redis.smembers(f"live:pip_viewer_set:{stream_id}")
