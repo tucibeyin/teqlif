@@ -259,6 +259,18 @@ class StreamService {
     );
   }
 
+  /// Reconnect için taze token al — stream sona erdiyse 410 → STREAM_ENDED fırlatır.
+  /// Host: can_publish=True token. Viewer: can_publish=False token.
+  static Future<StreamTokenOut> refreshStreamToken(int streamId) async {
+    final body = await apiCall(
+      () async => http.get(
+        Uri.parse('$kBaseUrl/streams/$streamId/token'),
+        headers: await _headers(),
+      ),
+    );
+    return StreamTokenOut.fromJson(body);
+  }
+
   /// Gönüllü sahneden ayrıl — cohost_removed WS sinyali yayınlanır (viewer → POST /cohost/leave).
   static Future<void> leaveCoHost(int streamId) async {
     await apiCall(

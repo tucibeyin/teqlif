@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../core/app_exception.dart';
 import '../models/stream.dart';
 import 'stream_service.dart';
 import 'background_audio_handler.dart';
@@ -69,7 +70,10 @@ class StreamConnectionManager with WidgetsBindingObserver {
   // Hızlı ardışık state değişimlerinde (swipe, TrackPublishedEvent) platform
   // channel flood'unu önler — 80ms içinde gelen tüm çağrılar tek bir çağrıya indirilir.
   final Map<int, Timer> _subscriptionDebounceTimers = {};
-  
+  final Map<int, int> _reconnectAttempts = {};
+  final Map<int, Timer> _reconnectTimers = {};
+  static const int _maxViewerReconnectAttempts = 4;
+
   bool _isCallActive = false;
   
   void setCallActive(bool active) {
@@ -261,6 +265,47 @@ class StreamConnectionManager with WidgetsBindingObserver {
     }
   }
 
+  void _scheduleViewerReconnect(LiveSession session) {
+    if (session.isDisposed) return;
+    final attempts = _reconnectAttempts[session.streamId] ?? 0;
+    if (attempts >= _maxViewerReconnectAttempts) {
+      session.error = Exception('Bağlantı yeniden kurulamadı');
+      session.update();
+      return;
+    }
+    _reconnectAttempts[session.streamId] = attempts + 1;
+    final delay = Duration(milliseconds: 500 * (1 << attempts)); // 500ms, 1s, 2s, 4s
+    _reconnectTimers[session.streamId]?.cancel();
+    _reconnectTimers[session.streamId] =
+        Timer(delay, () => _reconnectRoom(session));
+  }
+
+  Future<void> _reconnectRoom(LiveSession session) async {
+    if (session.isDisposed || session.room == null) return;
+    try {
+      final freshToken =
+          await StreamService.refreshStreamToken(session.streamId);
+      await session.room!.connect(
+        freshToken.livekitUrl,
+        freshToken.token,
+        connectOptions: const ConnectOptions(autoSubscribe: false),
+      );
+      _reconnectAttempts.remove(session.streamId);
+      session.isConnected = true;
+      _scheduleTrackSubscriptions(session);
+      session.update();
+    } on AppException catch (e) {
+      if (e.code == 'STREAM_ENDED') {
+        session.streamEnded = true;
+        session.update();
+        return;
+      }
+      _scheduleViewerReconnect(session);
+    } catch (_) {
+      _scheduleViewerReconnect(session);
+    }
+  }
+
   void _setupListeners(LiveSession session) {
     session.listener!.on<TrackPublishedEvent>((e) {
       _scheduleTrackSubscriptions(session);
@@ -283,13 +328,19 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.update();
     });
     session.listener!.on<RoomDisconnectedEvent>((e) {
-      if (e.reason == DisconnectReason.roomDeleted) {
-        session.streamEnded = true;
-      }
       session.hostVideoTrack = null;
+      session.coHostVideoTrack = null;
       session.isConnected = false;
       session.state = SessionState.none;
       session.update();
+      if (session.isDisposed) return;
+      if (e.reason == DisconnectReason.roomDeleted ||
+          e.reason == DisconnectReason.clientInitiated) {
+        session.streamEnded = true;
+        session.update();
+        return;
+      }
+      _scheduleViewerReconnect(session);
     });
   }
 
@@ -364,6 +415,9 @@ class StreamConnectionManager with WidgetsBindingObserver {
   void _disconnect(int id) {
     _subscriptionDebounceTimers[id]?.cancel();
     _subscriptionDebounceTimers.remove(id);
+    _reconnectTimers[id]?.cancel();
+    _reconnectTimers.remove(id);
+    _reconnectAttempts.remove(id);
     final session = _sessions.remove(id);
     if (session != null) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Disconnecting stream: $id');
@@ -446,6 +500,11 @@ class StreamConnectionManager with WidgetsBindingObserver {
       timer.cancel();
     }
     _subscriptionDebounceTimers.clear();
+    for (final timer in _reconnectTimers.values) {
+      timer.cancel();
+    }
+    _reconnectTimers.clear();
+    _reconnectAttempts.clear();
     clearViewport();
   }
 }

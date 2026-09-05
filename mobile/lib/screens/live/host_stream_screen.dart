@@ -77,6 +77,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   bool _isFrontCamera = true;
   String? _error;
 
+  int _reconnectAttempts = 0;
+  Timer? _reconnectTimer;
+  static const int _maxReconnectAttempts = 3;
+
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
@@ -129,9 +133,31 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   // Kullanıcı yayındayken sistem ayarlarından izni kaldırıp geri dönebilir.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
     if (_room == null || _error != null) return;
-    _recheckPermissionsAfterResume();
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _handleHostBackground();
+      return;
+    }
+    if (state == AppLifecycleState.resumed) {
+      _recheckPermissionsAfterResume();
+    }
+  }
+
+  Future<void> _handleHostBackground() async {
+    if (!_cameraEnabled) return;
+    try {
+      await _room?.localParticipant?.setCameraEnabled(false);
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _cameraEnabled = false);
+      TeqToast.warning(
+        ref.read(localizationProvider).tOr(
+          'hostCameraDisabledBackground',
+          'Uygulama arka plana geçti — kamera duraklatıldı',
+        ),
+      );
+    }
   }
 
   Future<void> _recheckPermissionsAfterResume() async {
@@ -450,6 +476,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     StreamService.isHosting = false;
+    _reconnectTimer?.cancel();
     _thumbTimer?.cancel();
     _whaleHudTimer?.cancel();
     _whaleHudEntry?.remove();
@@ -491,7 +518,20 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     }
 
     try {
-      final room = Room();
+      final room = Room(
+        roomOptions: const RoomOptions(
+          defaultVideoPublishOptions: VideoPublishOptions(
+            simulcast: false,
+            videoEncoding: VideoEncoding(
+              maxBitrate: 1500000, // 1.5 Mbps — 720p@30fps tavanı
+              maxFramerate: 30,
+            ),
+          ),
+          defaultAudioPublishOptions: AudioPublishOptions(
+            audioBitrate: 128000,
+          ),
+        ),
+      );
       _listener = room.createListener();
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
@@ -516,10 +556,15 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         }
       });
 
-      _listener!.on<RoomDisconnectedEvent>((_) {
-        if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      _listener!.on<RoomDisconnectedEvent>((event) {
+        if (!mounted) return;
+        final reason = event.reason;
+        if (reason == DisconnectReason.CLIENT_INITIATED ||
+            reason == DisconnectReason.ROOM_DELETED) {
+          _endStream();
+          return;
         }
+        _scheduleReconnect();
       });
 
       await room.connect(
@@ -529,7 +574,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
       // T-HC-05: Bağlantı başarılı ama kamera/mikrofon başlatma ayrı hata verebilir
       try {
-        await room.localParticipant?.setCameraEnabled(true);
+        await room.localParticipant?.setCameraEnabled(
+          true,
+          cameraCaptureOptions: const CameraCaptureOptions(
+            params: VideoParametersPresets.h720_169,
+            degradationPreference: RTCDegradationPreference.balanced,
+          ),
+        );
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
         // TrackCreateException: simülatörde kamera/mikrofon donanımı yok — beklenen, Sentry'e gönderme
@@ -558,7 +609,18 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       }
 
       // LiveKit bağlantısı başarılı — yayını canlıya al ve bildirimleri gönder
-      await StreamService.confirmLive(widget.streamToken.streamId);
+      try {
+        await StreamService.confirmLive(widget.streamToken.streamId);
+      } catch (e) {
+        StreamService.cancelStream(widget.streamToken.streamId).ignore();
+        if (mounted) {
+          setState(() => _error = ref.read(localizationProvider).tOr(
+                'streamConfirmFailed',
+                'Yayın başlatılamadı',
+              ));
+        }
+        return;
+      }
 
       // Blast onaylandıysa şimdi gönder (LiveKit bağlantısı kesinleşti)
       if (widget.blastApproved) {
@@ -765,6 +827,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                     stackTrace: st,
                     tag: 'HostStream.removeCoHost',
                   );
+                  if (mounted) handleError(e, ref.read(localizationProvider));
                 }
               }
             : null,
@@ -776,6 +839,44 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         onInviteCoHost: () => _inviteCoHost(username),
       ),
     );
+  }
+
+  void _scheduleReconnect() {
+    if (!mounted) return;
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+      }
+      return;
+    }
+    final delay = Duration(seconds: 2 << _reconnectAttempts); // 2s, 4s, 8s
+    _reconnectAttempts++;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(delay, _reconnect);
+  }
+
+  Future<void> _reconnect() async {
+    if (!mounted || _room == null) return;
+    try {
+      final freshToken =
+          await StreamService.refreshStreamToken(widget.streamToken.streamId);
+      await _room!.connect(freshToken.livekitUrl, freshToken.token);
+      _reconnectAttempts = 0;
+    } on AppException catch (e) {
+      if (e.code == 'STREAM_ENDED') {
+        if (mounted) _showStreamEndedAndExit();
+        return;
+      }
+      _scheduleReconnect();
+    } catch (_) {
+      _scheduleReconnect();
+    }
+  }
+
+  void _showStreamEndedAndExit() {
+    final loc = ref.read(localizationProvider);
+    TeqToast.warning(loc.tOr('streamEndedByHost', 'Yayın sona erdi'));
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
   }
 
   Future<void> _endStream() async {
@@ -874,13 +975,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             widget.streamToken.streamId,
             byteData.buffer.asUint8List(),
           );
-      // Her 60 saniyede bir güncelle
-      if (mounted) {
-        _thumbTimer = Timer(
-          const Duration(seconds: _kThumbnailRefreshSeconds),
-          _autoCaptureThumbnail,
-        );
-      }
     } catch (e, st) {
       _log.captureException(
         e,
@@ -888,6 +982,14 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         tag: 'HostStream.thumbnail',
         shouldCapture: false,
       );
+    } finally {
+      // Hata olsa bile her 60 saniyede bir tekrar dene
+      if (mounted) {
+        _thumbTimer = Timer(
+          const Duration(seconds: _kThumbnailRefreshSeconds),
+          _autoCaptureThumbnail,
+        );
+      }
     }
   }
 
@@ -1429,6 +1531,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                                     stackTrace: st,
                                     tag: 'HostStream.removeCoHost.topBar',
                                   );
+                                  if (mounted) handleError(e, ref.read(localizationProvider));
                                 }
                               },
                               child: Container(
