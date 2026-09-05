@@ -1642,27 +1642,13 @@ class _ViewersBottomSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E293B),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 24),
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 4),
           Text(
             ref.read(localizationProvider).t('hostViewersTitle', {
               'count': viewers.length.toString(),

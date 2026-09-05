@@ -49,15 +49,13 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
         else:
             background_tasks.add_task(_delayed_close_stream, room_name)
 
-    # Katılımcı olayları — host ve izleyici ayrı işlenir
+    # Katılımcı olayları — host grace period / reconnect yönetimi
     if room_name and event.participant and not room_name.startswith("call_"):
         identity = event.participant.identity or ""
         if event_type == "participant_left":
             background_tasks.add_task(_on_host_left, room_name, identity, time.time())
-            background_tasks.add_task(_on_viewer_left, room_name, identity)
         elif event_type == "participant_joined":
             background_tasks.add_task(_on_host_rejoined, room_name, identity)
-            background_tasks.add_task(_on_viewer_joined, room_name, identity)
 
     return {"ok": True}
 

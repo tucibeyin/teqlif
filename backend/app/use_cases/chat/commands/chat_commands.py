@@ -142,20 +142,36 @@ class ChatCommands:
         return bool(await redis.sismember(mod_key(stream_id), str(user_id)))
 
     async def add_viewer(self, stream_id: int, room_name: str, username: str) -> None:
-        """viewer_set'e ekler — INCR webhook'ta yapılır."""
+        """viewer_set'e ekler ve sayacı artırır."""
         try:
             redis = await get_redis()
             await redis.sadd(f"live:viewer_set:{stream_id}", username)
+            key = f"live:viewers:{stream_id}"
+            count = await redis.incr(key)
+            await redis.expire(key, 48 * 3600)
+            peak_key = f"live:peak_viewers:{stream_id}"
+            peak_raw = await redis.get(peak_key)
+            current_peak = int(peak_raw) if peak_raw else 0
+            if count > current_peak:
+                await redis.setex(peak_key, 48 * 3600, count)
+            await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
         except Exception as exc:
-            logger.warning("[CHAT] viewer_set sadd başarısız | stream_id=%s | %s", stream_id, exc)
+            logger.warning("[CHAT] add_viewer başarısız | stream_id=%s | %s", stream_id, exc)
 
     async def remove_viewer(self, stream_id: int, room_name: str, username: str) -> None:
-        """viewer_set'ten çıkarır — DECR webhook'ta yapılır."""
+        """viewer_set'ten çıkarır ve sayacı azaltır."""
         try:
             redis = await get_redis()
             await redis.srem(f"live:viewer_set:{stream_id}", username)
+            key = f"live:viewers:{stream_id}"
+            count = await redis.decr(key)
+            if count < 0:
+                await redis.set(key, 0)
+                count = 0
+            await redis.expire(key, 48 * 3600)
+            await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
         except Exception as exc:
-            logger.warning("[CHAT] viewer_set srem başarısız | stream_id=%s | %s", stream_id, exc)
+            logger.warning("[CHAT] remove_viewer başarısız | stream_id=%s | %s", stream_id, exc)
 
     # ── Shadowban cache yardımcısı ────────────────────────────────────────────
     async def is_shadowbanned(self, user_id: int) -> bool:
