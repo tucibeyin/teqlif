@@ -1,11 +1,11 @@
 
-from app.use_cases.chat.chat_utils import chat_key, publish_chat, update_viewer_count
+from app.use_cases.chat.chat_utils import chat_key, publish_chat
 from app.core.uow import AbstractUnitOfWork
 """
 Chat servisi — Pub/Sub altyapısı ve mesaj iş mantığını router'dan ayırır.
 
 İçerir:
-  • chat_key / publish_chat / update_viewer_count — altyapı yardımcıları
+  • chat_key / publish_chat — altyapı yardımcıları
   • chat_pubsub_listener / moderation_pubsub_listener — arka plan görevleri
   • ChatService — WebSocket bağlantısının iş mantığı operasyonları
 
@@ -130,10 +130,10 @@ class ChatCommands:
         history_raw = await redis.lrange(chat_key(stream_id), -_MAX_HISTORY, -1)
         return [json.loads(m) for m in history_raw] if history_raw else []
 
-    async def get_viewer_count(self, room_name: str) -> int:
+    async def get_viewer_count(self, stream_id: int) -> int:
         """Redis'ten mevcut izleyici sayısını okur."""
         redis = await get_redis()
-        count_raw = await redis.get(f"live:viewers:{room_name}")
+        count_raw = await redis.get(f"live:viewers:{stream_id}")
         return int(count_raw) if count_raw else 0
 
     async def get_mod_status(self, stream_id: int, user_id: int) -> bool:
@@ -142,8 +142,7 @@ class ChatCommands:
         return bool(await redis.sismember(mod_key(stream_id), str(user_id)))
 
     async def add_viewer(self, stream_id: int, room_name: str, username: str) -> None:
-        """Viewer count'u artırır ve viewer_set'e ekler."""
-        await update_viewer_count(room_name, stream_id, +1)
+        """viewer_set'e ekler — INCR webhook'ta yapılır."""
         try:
             redis = await get_redis()
             await redis.sadd(f"live:viewer_set:{stream_id}", username)
@@ -151,8 +150,7 @@ class ChatCommands:
             logger.warning("[CHAT] viewer_set sadd başarısız | stream_id=%s | %s", stream_id, exc)
 
     async def remove_viewer(self, stream_id: int, room_name: str, username: str) -> None:
-        """Viewer count'u azaltır ve viewer_set'ten çıkarır."""
-        await update_viewer_count(room_name, stream_id, -1)
+        """viewer_set'ten çıkarır — DECR webhook'ta yapılır."""
         try:
             redis = await get_redis()
             await redis.srem(f"live:viewer_set:{stream_id}", username)

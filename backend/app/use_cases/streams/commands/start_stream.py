@@ -65,6 +65,18 @@ class StartStreamCommand:
             )
         )
 
+        # Webhook'un stream_id ve host_id'yi room_name'den çözebilmesi için mapping
+        try:
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            await redis.set(
+                f"live:room_to_stream:{room_name}",
+                f"{new_stream.id}:{user_id}",
+                ex=48 * 3600,
+            )
+        except Exception as exc:
+            logger.warning("[StartStreamCommand] room_to_stream mapping yazılamadı: %s", exc)
+
         token = make_livekit_token(room_name, user, can_publish=True)
         logger.info("[StartStreamCommand] Başarılı | stream_id=%s", new_stream.id)
         

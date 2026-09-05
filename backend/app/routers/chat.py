@@ -430,7 +430,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
                 await safe_send_json(websocket, {"type": WS.HISTORY, "messages": history})
 
             if room_name:
-                count = await svc.get_viewer_count(room_name)
+                count = await svc.get_viewer_count(stream_id)
                 await safe_send_json(websocket, {"type": WS.VIEWER_COUNT, "count": count})
 
             if not is_host:

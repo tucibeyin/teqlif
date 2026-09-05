@@ -29,7 +29,7 @@ async def _fill_viewer_counts(streams: list, tag: str = "") -> None:
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        keys = [f"live:viewers:{s.room_name}" for s in streams]
+        keys = [f"live:viewers:{s.id}" for s in streams]
         counts = await redis.mget(*keys)
         for stream, count in zip(streams, counts):
             stream.viewer_count = int(count) if count else 0

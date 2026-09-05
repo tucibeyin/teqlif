@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 _CHAT_CHANNEL = "chat_broadcast"
 _MAX_HISTORY = 50
-_VIEWER_TTL = 12 * 3600
+
 
 def chat_key(stream_id: int) -> str:
     return f"chat:{stream_id}:messages"
@@ -50,27 +50,6 @@ async def chat_announcement(
         await redis.expire(chat_key(stream_id), 24 * 3600)
     await publish_chat(stream_id, msg)
 
-async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> None:
-    try:
-        redis = await get_redis()
-        key = f"live:viewers:{room_name}"
-        peak_key = f"live:peak_viewers:{room_name}"
-        if delta > 0:
-            count = await redis.incr(key)
-            await redis.expire(key, _VIEWER_TTL)
-            peak_raw = await redis.get(peak_key)
-            current_peak = int(peak_raw) if peak_raw else 0
-            if count > current_peak:
-                await redis.setex(peak_key, _VIEWER_TTL, count)
-        else:
-            count = await redis.decr(key)
-            if count < 0:
-                await redis.set(key, 0)
-                count = 0
-            await redis.expire(key, _VIEWER_TTL)
-        await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
-    except Exception:
-        logger.error("[CHAT] Viewer count güncellenemedi | room=%s stream_id=%s delta=%s", room_name, stream_id, delta, exc_info=True)
 
 async def chat_pubsub_listener() -> None:
     from app.core.stream_listener import stream_listener

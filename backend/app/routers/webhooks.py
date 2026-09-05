@@ -49,13 +49,15 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
         else:
             background_tasks.add_task(_delayed_close_stream, room_name)
 
-    # Host görüntüsü kesilince (internet kopukluğu vb.) 2 dk içinde geri dönmezse yayını kapat
-    if room_name and event.participant:
+    # Katılımcı olayları — host ve izleyici ayrı işlenir
+    if room_name and event.participant and not room_name.startswith("call_"):
         identity = event.participant.identity or ""
         if event_type == "participant_left":
             background_tasks.add_task(_on_host_left, room_name, identity, time.time())
+            background_tasks.add_task(_on_viewer_left, room_name, identity)
         elif event_type == "participant_joined":
             background_tasks.add_task(_on_host_rejoined, room_name, identity)
+            background_tasks.add_task(_on_viewer_joined, room_name, identity)
 
     return {"ok": True}
 
@@ -186,6 +188,76 @@ async def _on_host_rejoined(room_name: str, identity: str) -> None:
         logger.info("[STREAMS] Host geri döndü | stream_id=%s room=%s", stream_id, room_name)
     except Exception as exc:
         logger.warning("[STREAMS] Redis host_reconnect yazılamadı | stream_id=%s | %s", stream_id, exc)
+
+
+_VIEWER_TTL = 48 * 3600  # 48 saat
+
+
+async def _resolve_stream_and_host(room_name: str) -> tuple[int, int] | None:
+    """room_to_stream Redis mapping'inden (stream_id, host_id) döner. Yoksa None."""
+    try:
+        redis = await get_redis()
+        val = await redis.get(f"live:room_to_stream:{room_name}")
+        if not val:
+            return None
+        raw = val.decode() if isinstance(val, bytes) else val
+        parts = raw.split(":")
+        if len(parts) != 2:
+            return None
+        return int(parts[0]), int(parts[1])
+    except Exception as exc:
+        logger.debug("[WEBHOOK] room_to_stream lookup başarısız | room=%s | %s", room_name, exc)
+        return None
+
+
+async def _on_viewer_joined(room_name: str, identity: str) -> None:
+    """Viewer (non-host) LiveKit'e katıldığında sayacı artırır."""
+    mapping = await _resolve_stream_and_host(room_name)
+    if not mapping:
+        return
+    stream_id, host_id = mapping
+    if identity == str(host_id):
+        return  # host is not a viewer
+
+    try:
+        from app.use_cases.chat.chat_utils import publish_chat
+        from app.constants import ws_types as WS
+        redis = await get_redis()
+        key = f"live:viewers:{stream_id}"
+        peak_key = f"live:peak_viewers:{stream_id}"
+        count = await redis.incr(key)
+        await redis.expire(key, _VIEWER_TTL)
+        peak_raw = await redis.get(peak_key)
+        current_peak = int(peak_raw) if peak_raw else 0
+        if count > current_peak:
+            await redis.setex(peak_key, _VIEWER_TTL, count)
+        await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
+    except Exception as exc:
+        logger.warning("[WEBHOOK] viewer_joined INCR başarısız | stream=%s | %s", stream_id, exc)
+
+
+async def _on_viewer_left(room_name: str, identity: str) -> None:
+    """Viewer (non-host) LiveKit'ten ayrıldığında sayacı azaltır."""
+    mapping = await _resolve_stream_and_host(room_name)
+    if not mapping:
+        return
+    stream_id, host_id = mapping
+    if identity == str(host_id):
+        return  # host is not a viewer
+
+    try:
+        from app.use_cases.chat.chat_utils import publish_chat
+        from app.constants import ws_types as WS
+        redis = await get_redis()
+        key = f"live:viewers:{stream_id}"
+        count = await redis.decr(key)
+        if count < 0:
+            await redis.set(key, 0)
+            count = 0
+        await redis.expire(key, _VIEWER_TTL)
+        await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
+    except Exception as exc:
+        logger.warning("[WEBHOOK] viewer_left DECR başarısız | stream=%s | %s", stream_id, exc)
 
 
 async def _delayed_close_stream(room_name: str) -> None:

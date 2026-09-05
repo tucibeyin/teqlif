@@ -160,22 +160,18 @@ async def audience_insights(
         raise ForbiddenException(code="STREAM_STATS_FORBIDDEN")
 
     redis = await get_redis()
-    # viewer_set kullanıcı adı ile, pip_viewer_set user_id ile saklar; her ikisini de çek
-    chat_members_raw = await redis.smembers(f"live:viewer_set:{stream.room_name}")
-    pip_members_raw = await redis.smembers(f"live:pip_viewer_set:{stream_id}")
-
-    # chat_viewer_set içindeki username'leri user_id'ye çevir
-    viewer_ids: set[int] = set()
-    if chat_members_raw:
-        usernames = [v.decode() if isinstance(v, bytes) else v for v in chat_members_raw]
-        rows_uname = await db.execute(
-            sql_text("SELECT id FROM users WHERE username = ANY(:names)"),
-            {"names": usernames},
+    # Anlık izleyiciler: left_at IS NULL → henüz ayrılmamış kayıtlar (Faz 8 canonical)
+    from app.models.stream import LiveStreamViewer
+    viewer_id_rows = await db.execute(
+        select(LiveStreamViewer.viewer_id).where(
+            LiveStreamViewer.stream_id == stream_id,
+            LiveStreamViewer.left_at.is_(None),
         )
-        for r in rows_uname.fetchall():
-            viewer_ids.add(r.id)
+    )
+    viewer_ids: set[int] = {row.viewer_id for row in viewer_id_rows}
 
-    # pip_viewer_set'teki integer user_id'leri ekle
+    # PiP modundakileri ekle (Redis tabanlı, gerçek zamanlı)
+    pip_members_raw = await redis.smembers(f"live:pip_viewer_set:{stream_id}")
     for v in (pip_members_raw or []):
         try:
             viewer_ids.add(int(v.decode() if isinstance(v, bytes) else v))
@@ -642,7 +638,7 @@ async def get_raid_targets(
 
     # Redis'ten anlık izleyici sayılarını çek
     redis = await get_redis()
-    viewer_keys = [f"live:viewers:{s.room_name}" for s in streams]
+    viewer_keys = [f"live:viewers:{s.id}" for s in streams]
     raw_counts = await redis.mget(*viewer_keys) if viewer_keys else []
     viewer_map: dict[int, int] = {}
     for s, raw in zip(streams, raw_counts):

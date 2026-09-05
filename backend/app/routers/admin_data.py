@@ -261,7 +261,7 @@ async def get_admin_active_streams(db: AsyncSession = Depends(get_db), admin: Us
         host = await db.get(User, s.host_id)
         viewer_count = 0
         if redis:
-            count = await redis.get(f"live:viewers:{s.room_name}")
+            count = await redis.get(f"live:viewers:{s.id}")
             viewer_count = int(count) if count else 0
 
         stream_list.append({
