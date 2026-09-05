@@ -242,6 +242,34 @@ async def start_stream(
     )
 
 
+@router.get("/{stream_id}/token", response_model=StreamTokenOut)
+async def refresh_stream_token(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reconnect için taze LiveKit token. Stream sona erdiyse 410 döner."""
+    from fastapi import HTTPException
+    from app.use_cases.streams.stream_utils import make_livekit_token
+    from app.config import settings
+
+    stream = await db.get(LiveStream, stream_id)
+    if not stream or not stream.is_live:
+        raise HTTPException(
+            status_code=410,
+            detail={"error": {"code": "STREAM_ENDED", "message": "Stream has ended"}},
+        )
+    can_publish = stream.host_id == current_user.id
+    token = make_livekit_token(stream.room_name, current_user, can_publish=can_publish)
+    return StreamTokenOut(
+        stream_id=stream.id,
+        room_name=stream.room_name,
+        livekit_url=settings.livekit_url,
+        token=token,
+        category=stream.category,
+    )
+
+
 @router.post("/{stream_id}/confirm-live", status_code=status.HTTP_200_OK)
 async def confirm_live(
     stream_id: int,

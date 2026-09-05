@@ -1,7 +1,9 @@
+from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.enums import StreamStatus
+from app.models.stream import LiveStream
 
 logger = get_logger(__name__)
 
@@ -25,6 +27,19 @@ class StartStreamCommand:
             user = await self.uow.users.get(user_id)
             if not user:
                 raise NotFoundException(code="USER_NOT_FOUND")
+
+            existing = await self.uow.session.scalar(
+                select(LiveStream).where(
+                    LiveStream.host_id == user_id,
+                    LiveStream.ended_at.is_(None),
+                )
+            )
+            if existing:
+                logger.warning(
+                    "[StartStreamCommand] Aktif yayın zaten var | user_id=%s stream_id=%s",
+                    user_id, existing.id,
+                )
+                raise BadRequestException(code="STREAM_ALREADY_ACTIVE")
 
             room_name = f"stream_{user_id}_{uuid.uuid4().hex[:8]}"
 

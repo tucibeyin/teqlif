@@ -80,7 +80,8 @@ class AcceptCohostInviteCommand:
                     )
                     await svc.update_participant(req)
                 except Exception as e:
-                    logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e))
+                    logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e), exc_info=True)
+                    raise BadRequestException(code="COHOST_GRANT_FAILED")
 
             await publish_chat(stream_id, {
                 "type": WS.COHOST_ACCEPTED,
@@ -139,7 +140,11 @@ class RemoveCohostCommand:
                     )
                     await svc.update_participant(req)
                 except Exception as e:
-                    pass
+                    logger.error(
+                        "[COHOST] UpdateParticipant başarısız (remove) | stream=%s user=%s | %s",
+                        stream_id, target.id, e,
+                    )
+                    raise BadRequestException(code="COHOST_REMOVE_FAILED")
 
             await publish_chat(stream_id, {
                 "type": WS.COHOST_REMOVED,
