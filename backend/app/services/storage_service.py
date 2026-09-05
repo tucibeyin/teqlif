@@ -16,18 +16,16 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_client: Minio | None = None
+# Module import sırasında bir kez oluşturulur — lazy singleton race condition yok.
+_client = Minio(
+    settings.minio_endpoint,
+    access_key=settings.minio_access_key,
+    secret_key=settings.minio_secret_key,
+    secure=settings.minio_secure,
+)
 
 
 def _get_client() -> Minio:
-    global _client
-    if _client is None:
-        _client = Minio(
-            settings.minio_endpoint,
-            access_key=settings.minio_access_key,
-            secret_key=settings.minio_secret_key,
-            secure=settings.minio_secure,
-        )
     return _client
 
 

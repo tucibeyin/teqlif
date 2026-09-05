@@ -48,6 +48,38 @@ _FILE_CONTENT_TYPES = {
 }
 
 
+def _validate_file_magic(data: bytes, ext: str) -> str | None:
+    """Magic byte + extension çapraz doğrulaması. Geçerliyse MIME döner, değilse None."""
+    # PDF: %PDF
+    if data[:4] == b"%PDF":
+        return "application/pdf"
+    # ZIP tabanlı (DOCX, XLSX): PK\x03\x04
+    if data[:4] == b"PK\x03\x04":
+        if ext in ("docx", "xlsx"):
+            _OFFICE_MIME = {
+                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }
+            return _OFFICE_MIME[ext]
+        return None
+    # DOC: Compound Document (D0CF11E0)
+    if data[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+        if ext == "doc":
+            return "application/msword"
+        if ext == "xls":
+            return "application/vnd.ms-excel"
+        return None
+    # TXT: UTF-8 BOM veya printable ASCII başlangıcı
+    if ext == "txt":
+        try:
+            sample = data[:512]
+            sample.decode("utf-8")
+            return "text/plain"
+        except UnicodeDecodeError:
+            return None
+    return None
+
+
 def _detect_audio_type(data: bytes) -> str | None:
     if len(data) >= 2 and data[0] == 0xFF and (data[1] & 0xF6) == 0xF0:
         return "aac"
@@ -178,6 +210,9 @@ class SendMediaMessageCommand:
             auto_accepted = False
             is_pending_for_initiator = False
             initiator_id_for_notif: int | None = None
+
+            if existing_thread and existing_thread.status == "declined":
+                raise ForbiddenException(code="MESSAGING_FORBIDDEN")
 
             if not existing_thread:
                 is_req = False
@@ -346,15 +381,13 @@ class SendMediaMessageCommand:
                     thumbnail_url = storage.upload_bytes(thumb_key, thumb_bytes, "image/jpeg")
 
         else:  # file
-            client_ct = file_content_type.lower()
-            if client_ct not in _FILE_CONTENT_TYPES:
-                if not data[:4] == b"%PDF":
-                    raise BadRequestException(code="UNSUPPORTED_FILE_TYPE")
-                client_ct = "application/pdf"
-            original_name = original_filename or f"dosya.{client_ct.split('/')[-1]}"
+            ext = (original_filename.rsplit(".", 1)[-1].lower() if "." in (original_filename or "") else "")
+            client_ct = _validate_file_magic(data, ext)
+            if client_ct is None:
+                raise BadRequestException(code="UNSUPPORTED_FILE_TYPE")
+            original_name = original_filename or f"dosya.{ext or 'bin'}"
             file_name = original_name[:255]
-            ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "bin"
-            key = f"messages/file/{uuid.uuid4().hex}.{ext}"
+            key = f"messages/file/{uuid.uuid4().hex}.{ext or 'bin'}"
             media_url = storage.upload_bytes(key, data, client_ct)
 
         return media_url, thumbnail_url, file_name, resolved_duration

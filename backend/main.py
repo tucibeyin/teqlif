@@ -91,10 +91,18 @@ if settings.sentry_backend_dsn:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import shutil
     from app.database import init_extensions
     from app.database_clickhouse import init_clickhouse, close_clickhouse, start_flush_loop, stop_flush_loop
     from app.core.di import init_di
     from app.services import device_service as _device_service  # noqa: F401 — TokenInvalidatedEvent handler'ını event_bus'a kaydeder
+
+    # ffprobe kontrolü — video süre/thumbnail için gerekli
+    if not shutil.which("ffprobe"):
+        logger.critical(
+            "[STARTUP] ffprobe bulunamadı! Video süre doğrulaması ve thumbnail oluşturma devre dışı. "
+            "Düzelt: sudo apt-get install -y ffmpeg"
+        )
 
     # i18n locale dosyalarını yükle
     from app.core.i18n import I18nService

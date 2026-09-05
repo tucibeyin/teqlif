@@ -74,6 +74,9 @@ class SendDirectMessageCommand:
                 )
             )
 
+            if existing_thread and existing_thread.status == "declined":
+                raise ForbiddenException(code="MESSAGING_FORBIDDEN")
+
             if not existing_thread:
                 receiver_follows_sender = await self.uow.session.scalar(
                     select(Follow).where(
