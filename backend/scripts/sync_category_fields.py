@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app.database import AsyncSessionLocal
 from app.models.category import Category
 from app.models.category_field import CategoryField, FieldOption
+from app.models.subcategory import Subcategory
 from app.models.enums import CategoryStatus
 from sqlalchemy import select
 from app.config import settings
@@ -58,6 +59,52 @@ async def sync_categories():
 
         await db.commit()
         print(f"[sync_categories] {upserted} kategori upsert, {passived} pasife alındı.")
+
+
+async def sync_subcategories():
+    json_files = glob.glob(os.path.join(_DOCS_PATH, '*.json'))
+    if not json_files:
+        print("[sync_subcategories] JSON dosyası bulunamadı.")
+        return
+
+    print("[sync_subcategories] Alt kategoriler DB ile senkronize ediliyor...")
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(Subcategory))
+        db_subs = {s.key: s for s in res.scalars().all()}
+
+        seen_keys: set[str] = set()
+
+        for file_path in json_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            category_key = data.get("category")
+            if not category_key or category_key == "unmapped":
+                continue
+
+            for sort_order, subcat_key in enumerate(data.get("subcategories", {}).keys()):
+                seen_keys.add(subcat_key)
+                if subcat_key in db_subs:
+                    s = db_subs[subcat_key]
+                    s.category_key = category_key
+                    s.sort_order = sort_order
+                    s.is_active = True
+                else:
+                    db.add(Subcategory(
+                        key=subcat_key,
+                        category_key=category_key,
+                        sort_order=sort_order,
+                        is_active=True,
+                    ))
+
+        deactivated = 0
+        for key, sub in db_subs.items():
+            if key not in seen_keys and sub.is_active:
+                sub.is_active = False
+                deactivated += 1
+
+        await db.commit()
+        print(f"[sync_subcategories] {len(seen_keys)} alt kategori upsert, {deactivated} pasife alındı.")
 
 
 async def sync_fields():
