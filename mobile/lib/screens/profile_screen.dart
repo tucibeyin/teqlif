@@ -2507,7 +2507,11 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         isVerified: updatedUser['is_verified'] as bool? ?? false,
         phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
-      if (mounted) setState(() => _profileImageUrl = upload.url);
+      await StorageService.saveAvatarUrl(upload.url);
+      if (mounted) {
+        setState(() => _profileImageUrl = upload.url);
+        ref.read(profileViewModelProvider.notifier).load(bypassCache: true);
+      }
     } catch (e) {
       LoggerService.instance.warning(
         'EditProfileScreen',
