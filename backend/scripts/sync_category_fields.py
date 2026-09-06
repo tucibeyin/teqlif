@@ -216,7 +216,8 @@ async def sync_fields():
         
     try:
         r = aioredis.from_url(settings.redis_url)
-        keys = await r.keys("teqlif:cache:*")
+        # fastapi-cache custom key_builder prefix uygulamaz: "teqlif:cache:" prefix'siz saklar
+        keys = (await r.keys("teqlif:cache:*")) + (await r.keys("schema:v*:*"))
         if keys:
             await r.delete(*keys)
             print(f"Redis API cache temizlendi. ({len(keys)} key silindi)")
