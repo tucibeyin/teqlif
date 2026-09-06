@@ -29,7 +29,7 @@ class GetMessagesQuery:
         cache_key = f"presign:{viewer_id}:{key}"
         cached = await redis.get(cache_key)
         if cached:
-            return cached.decode()
+            return cached
         try:
             signed = storage.presign_get(key, expires=_PRESIGN_TTL)
             await redis.set(cache_key, signed, ex=_CACHE_TTL_SECS)
