@@ -383,7 +383,7 @@ sudo chown www-data:www-data /var/www/teqlif.com/backend/.env
 ```bash
 sudo tee /var/www/teqlif.com/backend/.env.staging > /dev/null <<EOF
 DATABASE_URL=postgresql+asyncpg://teqlif_staging:STAGING_SIFRE@127.0.0.1:5432/teqlif_staging
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://localhost:6379/1
 SECRET_KEY=STAGING_UZUN_RASTGELE_STRING
 UPLOAD_DIR=/var/www/teqlif.com/uploads
 SITE_URL=https://staging.teqlif.com
