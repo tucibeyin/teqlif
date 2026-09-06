@@ -34,6 +34,7 @@ class Listing(Base):
     condition: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
     province: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    country_code: Mapped[str] = mapped_column(String(2), nullable=False, server_default="TR")
     location: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     extra_fields: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
