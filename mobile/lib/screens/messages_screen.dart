@@ -1796,8 +1796,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     await _uploadMedia(
       bytes: compressed.bytes,
       contentType: 'voice',
-      fileName: 'voice.ogg',
-      mimeType: 'audio/ogg',
+      fileName: 'voice.m4a',
+      mimeType: 'audio/mp4',
       durationSecs: recordedSecs,
     );
   }
