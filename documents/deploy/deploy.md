@@ -127,10 +127,20 @@ sudo systemctl enable --now postgresql
 #### Veritabanı ve Kullanıcı Oluştur
 
 ```bash
+# Production DB
 sudo -u postgres psql <<EOF
 CREATE USER teqlif WITH PASSWORD 'SIFRE_YAZ';
 CREATE DATABASE teqlif OWNER teqlif;
 \c teqlif
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+EOF
+
+# Staging DB (production ile ayrı)
+sudo -u postgres psql <<EOF
+CREATE USER teqlif_staging WITH PASSWORD 'STAGING_SIFRE_YAZ';
+CREATE DATABASE teqlif_staging OWNER teqlif_staging;
+\c teqlif_staging
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 EOF
@@ -222,7 +232,17 @@ sudo mv /tmp/mc /usr/local/bin/mc
 sudo chmod +x /usr/local/bin/mc
 
 mc alias set local http://localhost:9010 ACCESS_KEY_YAZ SECRET_KEY_YAZ
+
+# Production bucket'ları
 mc mb local/teqlif
+mc mb local/teqlif-dm
+mc anonymous set download local/teqlif   # ilan fotoları, avatarlar — public
+# teqlif-dm private kalır (DM medyası presigned URL ile erişilir)
+
+# Staging bucket'ları (production ile karışmaması için ayrı)
+mc mb local/teqlif-staging
+mc mb local/teqlif-dm-staging
+mc anonymous set download local/teqlif-staging
 ```
 
 ### 2.5 Nginx
@@ -250,6 +270,7 @@ sudo rm -f /etc/nginx/sites-enabled/default
 > Nginx config `alias /var/www/teqlif.com/uploads/` (yerel dizin) olarak geliyorsa  
 > MinIO'ya proxy'e çevir:
 >
+> **Production** (`/etc/nginx/sites-enabled/teqlif.com`):
 > ```nginx
 > location /uploads/ {
 >     proxy_pass http://127.0.0.1:9010/teqlif/;
@@ -260,9 +281,21 @@ sudo rm -f /etc/nginx/sites-enabled/default
 > }
 > ```
 >
-> Ve MinIO bucket'ı public-read yap:
+> **Staging** (`/etc/nginx/sites-enabled/staging.teqlif.com`) — ayrı bucket:
+> ```nginx
+> location /uploads/ {
+>     proxy_pass http://127.0.0.1:9010/teqlif-staging/;
+>     proxy_set_header Host $http_host;
+>     proxy_buffering off;
+>     expires 30d;
+>     add_header Cache-Control "public, no-transform";
+> }
+> ```
+>
+> Bucket'ları public-read yap (staging ve production ayrı ayrı):
 > ```bash
 > mc anonymous set download local/teqlif
+> mc anonymous set download local/teqlif-staging
 > ```
 
 ---
@@ -344,6 +377,48 @@ sudo chown www-data:www-data /var/www/teqlif.com/backend/.env
 ```
 
 > `ADMIN_PASSWORD_HASH` eski VPS'teki `.env`'den kopyala.
+
+#### .env.staging (Staging ortamı)
+
+```bash
+sudo tee /var/www/teqlif.com/backend/.env.staging > /dev/null <<EOF
+DATABASE_URL=postgresql+asyncpg://teqlif_staging:STAGING_SIFRE@127.0.0.1:5432/teqlif_staging
+REDIS_URL=redis://localhost:6379
+SECRET_KEY=STAGING_UZUN_RASTGELE_STRING
+UPLOAD_DIR=/var/www/teqlif.com/uploads
+SITE_URL=https://staging.teqlif.com
+
+FIREBASE_SERVICE_ACCOUNT=/var/www/teqlif.com/backend/firebase-service-account.json
+
+APNS_KEY_PATH=/var/www/teqlif.com/backend/certificates/AuthKey_XXXXXXXXXX.p8
+APNS_KEY_ID=XXXXXXXXXX
+APNS_TEAM_ID=XXXXXXXXXX
+APNS_CERT_PATH=/var/www/teqlif.com/backend/certificates/voip_cert.pem
+APNS_USE_SANDBOX=True
+
+LIVEKIT_URL=wss://live.teqlif.com
+LIVEKIT_API_KEY=API_KEY
+LIVEKIT_API_SECRET=API_SECRET
+
+MINIO_ENDPOINT=localhost:9010
+MINIO_ACCESS_KEY=ACCESS_KEY
+MINIO_SECRET_KEY=SECRET_KEY
+MINIO_BUCKET=teqlif-staging
+MINIO_DM_BUCKET=teqlif-dm-staging
+MINIO_DM_EXTERNAL_URL=minio.teqlif.com
+MINIO_SECURE=false
+
+CLICKHOUSE_HOST=localhost
+CLICKHOUSE_PORT=8123
+
+ADMIN_PASSWORD_HASH=
+BREVO_API_KEY=
+SENTRY_BACKEND_DSN=
+EOF
+
+sudo chmod 600 /var/www/teqlif.com/backend/.env.staging
+sudo chown www-data:www-data /var/www/teqlif.com/backend/.env.staging
+```
 
 ### 3.4 Sertifika Dosyaları
 
