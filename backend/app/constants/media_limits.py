@@ -1,10 +1,11 @@
-IMAGE_MAX_BYTES         = 5 * 1024 * 1024    # 5 MB
-VIDEO_MAX_BYTES         = 20 * 1024 * 1024   # 20 MB  (DM video — ≈15 sn iPhone MediumQuality)
-LISTING_VIDEO_MAX_BYTES = 100 * 1024 * 1024  # 100 MB (İlan video ham input, ffmpeg remux sonrası küçülür)
-VOICE_MAX_BYTES         = 512 * 1024          # 512 KB (64 kbps AAC ile ~60 sn)
-FILE_MAX_BYTES          = 5 * 1024 * 1024    # 5 MB
+IMAGE_MAX_BYTES         = 5 * 1024 * 1024     # 5 MB
+VIDEO_MAX_BYTES         = 30 * 1024 * 1024    # 30 MB  (DM video — CRF28 720p 90 sn)
+LISTING_VIDEO_MAX_BYTES = 50 * 1024 * 1024    # 50 MB  (İlan video — client CRF23 1080p sıkıştırır)
+VOICE_MAX_BYTES         = 2 * 1024 * 1024     # 2 MB   (Opus 16kbps VBR 10 dk)
+FILE_MAX_BYTES          = 50 * 1024 * 1024    # 50 MB
 
-VIDEO_MAX_SECS  = 15
-VOICE_MAX_SECS  = 30
+VIDEO_MAX_SECS          = 90   # DM video
+LISTING_VIDEO_MAX_SECS  = 60   # İlan videosu
+VOICE_MAX_SECS          = 600  # 10 dakika
 
 MSG_PAGE_SIZE   = 50

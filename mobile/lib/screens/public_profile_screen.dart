@@ -802,7 +802,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     Widget avatarWidget = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withValues(alpha: 0.15),
-      backgroundImage: rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
+      backgroundImage: rawImg != null ? CachedNetworkImageProvider(imgUrl(rawImg)) : null,
       child: rawImg == null
           ? Text(
               initial,
@@ -1380,7 +1380,7 @@ class _PublicRatingItemState extends State<_PublicRatingItem> {
                   radius: 20,
                   backgroundColor: kPrimary.withValues(alpha: 0.12),
                   backgroundImage:
-                      raterImg != null ? NetworkImage(imgUrl(raterImg)) : null,
+                      raterImg != null ? CachedNetworkImageProvider(imgUrl(raterImg)) : null,
                   child: raterImg == null
                       ? Text(
                           raterInitial,

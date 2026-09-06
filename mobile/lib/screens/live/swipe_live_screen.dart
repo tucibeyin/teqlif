@@ -2011,8 +2011,12 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
           ] else if (thumbUrl.isNotEmpty) ...[
             Builder(builder: (_) {
               debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
-              return CachedNetworkImage(imageUrl: imgUrl(thumbUrl),
- fit: BoxFit.cover);
+              return CachedNetworkImage(
+                imageUrl: imgUrl(thumbUrl),
+                fit: BoxFit.cover,
+                placeholder: (_, _) => const ColoredBox(color: Colors.black),
+                errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
+              );
             })
           ] else ...[
             Builder(builder: (_) {

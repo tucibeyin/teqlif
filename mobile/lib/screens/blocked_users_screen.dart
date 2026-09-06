@@ -1,5 +1,6 @@
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../config/app_colors.dart';
@@ -70,7 +71,7 @@ class BlockedUsersScreen extends ConsumerWidget {
                     radius: 22,
                     backgroundColor: kPrimary.withValues(alpha: 0.12),
                     backgroundImage:
-                        rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
+                        rawImg != null ? CachedNetworkImageProvider(imgUrl(rawImg)) : null,
                     child: rawImg == null
                         ? Text(
                             initial,

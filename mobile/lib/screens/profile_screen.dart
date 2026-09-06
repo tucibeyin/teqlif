@@ -66,6 +66,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/profile_view_model.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/consent_settings_modal.dart';
+import '../services/media_compressor.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -2477,8 +2478,8 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       _uploadingAvatar = true;
     });
     try {
-      final file = File(picked.path);
-      final upload = await UploadService.uploadFile(file);
+      final compressed = await MediaCompressor.compress(picked.path, MediaCompressType.dmPhoto);
+      final upload = await UploadService.uploadBytes(Uint8List.fromList(compressed.bytes), 'avatar.jpg');
 
       final patchBody = <String, dynamic>{'profile_image_url': upload.url};
       if (upload.thumbUrl != null) {
@@ -2646,7 +2647,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
                     radius: 44,
                     backgroundColor: AppColors.primaryBg(context),
                     backgroundImage: (_profileImageUrl?.isNotEmpty == true)
-                        ? NetworkImage(_buildImageUrl(_profileImageUrl!))
+                        ? CachedNetworkImageProvider(_buildImageUrl(_profileImageUrl!))
                         : null,
                     child: (_profileImageUrl?.isNotEmpty == true)
                         ? null
@@ -4493,9 +4494,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
-                    imageUrl: imageUrl.startsWith('/uploads')
-                        ? 'https://teqlif.com$imageUrl'
-                        : imageUrl,
+                    imageUrl: imgUrl(imageUrl),
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,

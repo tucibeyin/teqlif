@@ -27,6 +27,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
+import '../core/media_constants.dart';
+import '../services/media_compressor.dart';
+import '../providers/compression_progress_provider.dart';
 
 class EditListingScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
@@ -57,7 +60,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   double _videoUploadProgress = 0.0;
 
   static const int _maxImages = 10;
-  static const int _maxVideoDurationSecs = 15;
+  static const int _maxVideoDurationSecs = MediaConstants.listingVideoMaxSecs;
 
   @override
   void initState() {
@@ -487,13 +490,29 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       _videoUploadProgress = 0.0;
     });
     try {
-      final result = await UploadService.uploadVideo(
-        file,
+      // Aşama 1: sıkıştır
+      ref.read(compressionProgressProvider.notifier).state = 0.0;
+      final compressed = await MediaCompressor.compress(
+        picked.path,
+        MediaCompressType.listingVideo,
+        targetDurationMs: _maxVideoDurationSecs * 1000,
+        onProgress: (p) {
+          ref.read(compressionProgressProvider.notifier).state = p;
+        },
+      );
+      ref.read(compressionProgressProvider.notifier).state = null;
+      if (!mounted) return;
+
+      // Aşama 2: yükle
+      final result = await UploadService.uploadVideoBytes(
+        compressed.bytes,
         onProgress: (p) {
           if (mounted) setState(() => _videoUploadProgress = p);
         },
       );
       if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
+    } on MediaCompressCancelledException {
+      if (mounted) _removeVideo();
     } catch (e) {
       if (mounted) {
         handleError(e, ref.read(localizationProvider));
@@ -501,6 +520,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         return;
       }
     } finally {
+      ref.read(compressionProgressProvider.notifier).state = null;
       if (mounted) setState(() {
         _videoUploading = false;
         _videoUploadProgress = 0.0;
@@ -639,7 +659,11 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           if (img is String) {
             imageUrls.add(img);
           } else if (img is File) {
-            final result = await UploadService.uploadFile(img);
+            final compressed = await MediaCompressor.compress(img.path, MediaCompressType.listingPhoto);
+            final result = await UploadService.uploadBytes(
+              Uint8List.fromList(compressed.bytes),
+              'listing_photo.jpg',
+            );
             imageUrls.add(result.url);
             thumbnailUrl ??= result.thumbUrl;
           }

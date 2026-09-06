@@ -92,6 +92,52 @@ class UploadService {
     );
   }
 
+  /// İlan videosunu bytes olarak backend'e yükler.
+  static Future<VideoUploadResult> uploadVideoBytes(
+    List<int> bytes, {
+    void Function(double)? onProgress,
+  }) async {
+    final token = await StorageService.getToken();
+    if (token == null) throw const AppException('Oturum açık değil', code: 'UNAUTHORIZED');
+
+    debugPrint('[Upload] VideoBytes: ${(bytes.length / 1024 / 1024).toStringAsFixed(2)} MB');
+
+    if (bytes.length > MediaConstants.listingVideoMaxBytes) {
+      throw const AppException('', code: 'VIDEO_TOO_LARGE', statusCode: 400);
+    }
+
+    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload/listing-video'));
+    req.headers['Authorization'] = 'Bearer $token';
+
+    if (onProgress != null) {
+      final rawStream = Stream.fromIterable(<List<int>>[bytes]);
+      req.files.add(http.MultipartFile(
+        'file',
+        _progressStream(rawStream, bytes.length, onProgress),
+        bytes.length,
+        filename: 'video.mp4',
+      ));
+    } else {
+      req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: 'video.mp4'));
+    }
+
+    final sw = Stopwatch()..start();
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+    sw.stop();
+    debugPrint('[Upload] VideoBytes yanıt: HTTP ${streamed.statusCode} (${sw.elapsedMilliseconds}ms)');
+
+    if (streamed.statusCode != 200) {
+      throw _parseError(streamed.statusCode, body);
+    }
+
+    final json = jsonDecode(body) as Map<String, dynamic>;
+    return (
+      videoUrl: json['video_url'] as String,
+      thumbUrl: json['thumb_url'] as String?,
+    );
+  }
+
   /// İlan fotoğrafını backend'e yükler.
   /// [onProgress]: 0.0–1.0 arası ilerleme callback'i.
   static Future<UploadResult> uploadFile(

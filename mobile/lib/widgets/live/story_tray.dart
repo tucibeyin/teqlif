@@ -1,17 +1,15 @@
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:video_compress/video_compress.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../services/media_compressor.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
 import '../../screens/story/story_viewer_screen.dart';
@@ -108,7 +106,9 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
 
     setState(() => _isUploading = true);
     try {
-      await StoryService.uploadStory(File(picked.path));
+      final compressed = await MediaCompressor.compress(picked.path, MediaCompressType.storyPhoto);
+      if (!mounted) return;
+      await StoryService.uploadStoryBytes(compressed.bytes, fileName: 'story.jpg', mimeType: 'image/jpeg');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(loc.t("storyUploadSuccess"))),
@@ -116,11 +116,15 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       ref.invalidate(storyGroupsProvider);
       ref.invalidate(myStoriesProvider);
     } catch (e, st) {
-      await Sentry.captureException(e, stackTrace: st);
+      if (e is! MediaCompressCancelledException) {
+        await Sentry.captureException(e, stackTrace: st);
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.t("storyUploadFailed"))),
-      );
+      if (e is! MediaCompressCancelledException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(loc.t("storyUploadFailed"))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -150,62 +154,31 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     );
     if (picked == null || !mounted) return;
 
-    // Süre kontrolü — image_picker maxDuration'a rağmen bazı platformlarda
-    // daha uzun video dönebilir; ekstra güvenlik katmanı.
-    final info = await VideoCompress.getMediaInfo(picked.path);
-    final durationMs = info.duration ?? 0;
-    if (durationMs > 15500 && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.t("storyTooLong"))),
-      );
-      return;
-    }
-
     setState(() => _isUploading = true);
-
     try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(loc.t("storyProcessing")),
-            duration: const Duration(seconds: 30),
-          ),
-        );
-      }
-
-      final compressed = await VideoCompress.compressVideo(
+      final compressed = await MediaCompressor.compress(
         picked.path,
-        quality: VideoQuality.DefaultQuality,
-        deleteOrigin: false,
-        includeAudio: true,
+        MediaCompressType.storyVideo,
+        targetDurationMs: 15000,
       );
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-      if (compressed?.path == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(loc.t("storyUploadFailed"))),
-        );
-        return;
-      }
-
-      await StoryService.uploadStory(File(compressed!.path!));
-
+      await StoryService.uploadStoryBytes(compressed.bytes, fileName: 'story.mp4', mimeType: 'video/mp4');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(loc.t("storyUploadSuccess"))),
       );
-
       ref.invalidate(storyGroupsProvider);
       ref.invalidate(myStoriesProvider);
     } catch (e, st) {
-      await Sentry.captureException(e, stackTrace: st);
+      if (e is! MediaCompressCancelledException) {
+        await Sentry.captureException(e, stackTrace: st);
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.t("storyUploadFailed"))),
-      );
+      if (e is! MediaCompressCancelledException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(loc.t("storyUploadFailed"))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }

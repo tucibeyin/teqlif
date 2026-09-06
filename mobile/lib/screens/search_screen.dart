@@ -387,7 +387,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                     leading: CircleAvatar(
                       radius: 22,
                       backgroundColor: kPrimary,
-                      backgroundImage: img != null ? NetworkImage(img) : null,
+                      backgroundImage: img != null ? CachedNetworkImageProvider(img) : null,
                       child: img == null
                           ? Text(
                               (u['full_name'] as String? ?? '?')[0]

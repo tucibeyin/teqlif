@@ -1015,3 +1015,49 @@ WS altyapısına, router'a veya outbox'ın temel mekanizmasına dokunulmaz.
 
 **Referans:** `documents/commerce/PLAN.md`
 
+---
+
+## 11. Media Pipeline — MediaCompressor
+
+**Referans:** `documents/medium/V2.0/plan.md`  
+**Paket:** `ffmpeg_kit_flutter_min` — `video_compress` ve `flutter_image_compress` tamamen kaldırıldı.
+
+### Temel kural
+
+Tüm medya (ses, video, fotoğraf) upload öncesi `MediaCompressor.compress()` üzerinden geçer. İstisnalar yalnızca in-memory capture'lar (`RepaintBoundary.toImage()`).
+
+### Flutter tarafı
+
+**`MediaCompressor`** — `mobile/lib/services/media_compressor.dart`
+- Statik class, DI yok.
+- `compress(inputPath, MediaCompressType, {onProgress?})` → `CompressedMedia` (bytes + meta)
+- Hata: `throw` — caller `handleError(e, loc)` ile yakalar. İptal: `MediaCompressCancelledException` → sessiz return (toast yok).
+- `static cancel()` → `_currentSession?.cancel()`. Aynı anda tek session çalışır.
+- Output temp dosyasını kendisi siler; caller bytes alır, path almaz.
+
+**Progress state** — `compressionProgressProvider` (`StateProvider<double?>`)
+- `null` = sıkıştırma yok, `0.0–1.0` = devam ediyor.
+- ViewModel veya Fat View `onProgress` callback'te bu provider'ı günceller.
+- `finally` bloğu her zaman `null`'a döndürür.
+
+**`MediaCompressType`** enum: `voice | dmVideo | dmPhoto | listingPhoto | listingVideo | storyPhoto | storyVideo`
+
+### Backend tarafı
+
+**MIME validation** — `media_processor.py` → `VoiceProcessor._ALLOWED_CT`  
+Opus `OggS` magic bytes ile otomatik yakalanır; `audio/opus` MIME fallback için `_ALLOWED_CT`'de tutulur.
+
+**İlan videosu upload** — `upload.py` → `_process_listing_video`  
+Client CRF23 1080p sıkıştırdığı için backend sadece remux + faststart yapar (`-c:v copy`). Re-encode yok.
+
+**Limitler** (`media_limits.py`):
+
+| Sabit | Değer |
+|-------|-------|
+| `VOICE_MAX_SECS` | 600 sn |
+| `VOICE_MAX_BYTES` | 2 MB |
+| `VIDEO_MAX_SECS` | 90 sn |
+| `VIDEO_MAX_BYTES` | 30 MB |
+| `LISTING_VIDEO_MAX_SECS` | 60 sn |
+| `LISTING_VIDEO_MAX_BYTES` | 50 MB |
+

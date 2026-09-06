@@ -12,7 +12,7 @@ from app.core.exceptions import BadRequestException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.services import storage_service as storage
-from app.constants.media_limits import IMAGE_MAX_BYTES, LISTING_VIDEO_MAX_BYTES, VIDEO_MAX_SECS
+from app.constants.media_limits import IMAGE_MAX_BYTES, LISTING_VIDEO_MAX_BYTES, LISTING_VIDEO_MAX_SECS
 from app.utils.media_processor import (
     detect_image_type as _detect_image_type,
     detect_video_type as _detect_video_type,
@@ -54,7 +54,7 @@ async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | Non
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
-            "-t", str(int(VIDEO_MAX_SECS)),
+            "-t", str(int(LISTING_VIDEO_MAX_SECS)),
             video_path,
         ]
         try:
@@ -112,7 +112,7 @@ async def upload_listing_video(
             f.write(data)
 
         duration = await _get_video_duration(tmp_path)
-        if duration is not None and duration > VIDEO_MAX_SECS:
+        if duration is not None and duration > LISTING_VIDEO_MAX_SECS:
             raise BadRequestException(code="VIDEO_TOO_LONG")
 
         video_local, thumb_local = await _process_listing_video(tmp_path, tmp_dir)

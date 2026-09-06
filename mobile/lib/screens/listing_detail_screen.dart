@@ -1561,7 +1561,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                             return CircleAvatar(
                               radius: 24,
                               backgroundColor: AppColors.primaryBg(context),
-                              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                              backgroundImage: photoUrl != null ? CachedNetworkImageProvider(photoUrl) : null,
                               child: photoUrl == null
                                   ? Text(
                                       ((user['full_name'] as String?) ??
@@ -2527,7 +2527,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               radius: 18,
               backgroundColor: AppColors.primaryBg(context),
               backgroundImage: offer.profileImageUrl != null
-                  ? NetworkImage(imgUrl(offer.profileImageUrl!))
+                  ? CachedNetworkImageProvider(imgUrl(offer.profileImageUrl!))
                   : null,
               child: offer.profileImageUrl == null
                   ? Text(

@@ -92,6 +92,42 @@ class StoryService {
   // ── Hikaye yükleme (video dosyası → backend) ───────────────────────────────
   // MultipartRequest StreamedResponse döndürdüğü için apiCall kullanılamaz.
 
+  static Future<void> uploadStoryBytes(
+    List<int> bytes, {
+    required String fileName,
+    required String mimeType,
+  }) async {
+    final token = await StorageService.getToken();
+    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/stories/upload'));
+    if (token != null) req.headers['Authorization'] = 'Bearer $token';
+    final parts = mimeType.split('/');
+    final mediaType = MediaType(parts[0], parts.length > 1 ? parts[1] : 'octet-stream');
+    req.files.add(http.MultipartFile.fromBytes(
+      'file',
+      bytes,
+      filename: fileName,
+      contentType: mediaType,
+    ));
+    final streamed = await req.send();
+    final bodyStr = await streamed.stream.bytesToString();
+    if (streamed.statusCode >= 400) {
+      Map<String, dynamic> decoded;
+      try {
+        decoded = jsonDecode(bodyStr) as Map<String, dynamic>;
+      } catch (_) {
+        decoded = {};
+      }
+      final errMap = decoded['error'];
+      final message = errMap is Map
+          ? (errMap['message'] as String? ?? 'Hikaye yüklenemedi.')
+          : (decoded['detail'] as String? ?? 'Hikaye yüklenemedi.');
+      final code = errMap is Map
+          ? (errMap['code'] as String? ?? 'UPLOAD_ERROR')
+          : 'HTTP_${streamed.statusCode}';
+      throw AppException(message, code: code, statusCode: streamed.statusCode);
+    }
+  }
+
   static Future<void> uploadStory(File mediaFile) async {
     final token = await StorageService.getToken();
     final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/stories/upload'));

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,6 +60,7 @@ class FollowListScreen extends ConsumerWidget {
               final isFollowing = u['is_following'] as bool? ?? false;
               final fullName = u['full_name'] as String? ?? '';
               final username = u['username'] as String? ?? '';
+              final rawImg = u['profile_image_url'] as String?;
               final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
 
               return ListTile(
@@ -73,14 +76,19 @@ class FollowListScreen extends ConsumerWidget {
                   child: CircleAvatar(
                     radius: 22,
                     backgroundColor: kPrimary.withValues(alpha: 0.12),
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        color: kPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
+                    backgroundImage: rawImg != null
+                        ? CachedNetworkImageProvider(imgUrl(rawImg))
+                        : null,
+                    child: rawImg == null
+                        ? Text(
+                            initial,
+                            style: const TextStyle(
+                              color: kPrimary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
                 title: GestureDetector(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
+import 'package:cached_network_image/cached_network_image.dart';
 import "../services/localization_service.dart";
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -166,8 +167,11 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                       fit: StackFit.expand,
                       children: [
                         imageUrl != null
-                          ? Image.network(imageUrl, fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(color: AppColors.border(context)))
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) => Container(color: AppColors.border(context)),
+                              errorWidget: (_, _, _) => Container(color: AppColors.border(context)))
                           : Container(color: AppColors.border(context),
                               child: Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary(context))),
                         Positioned(
@@ -1010,8 +1014,11 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                       fit: StackFit.expand,
                       children: [
                         imageUrl != null
-                            ? Image.network(imageUrl, fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Container(color: AppColors.border(context)))
+                            ? CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) => Container(color: AppColors.border(context)),
+                                errorWidget: (_, _, _) => Container(color: AppColors.border(context)))
                             : Container(
                                 color: AppColors.border(context),
                                 child: Icon(Icons.image_not_supported_outlined,

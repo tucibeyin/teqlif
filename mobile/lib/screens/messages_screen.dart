@@ -9,7 +9,8 @@ import 'package:flutter/gestures.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+import '../services/media_compressor.dart';
+import '../providers/compression_progress_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,7 +18,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
-import 'package:video_compress/video_compress.dart';
 import 'package:video_player/video_player.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -44,6 +44,7 @@ import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import '../core/app_exception.dart';
 import '../core/error_mapper.dart';
+import '../utils/error_helper.dart';
 import '../core/media_constants.dart';
 import '../services/call_service.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
@@ -1583,19 +1584,30 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       }
       return;
     }
-    final raw = await picked.readAsBytes();
-    if (raw.length > MediaConstants.imageMaxBytes) {
+    if (!mounted) return;
+    CompressedMedia compressed;
+    try {
+      ref.read(compressionProgressProvider.notifier).state = 0.0;
+      compressed = await MediaCompressor.compress(
+        picked.path,
+        MediaCompressType.dmPhoto,
+      );
+    } on MediaCompressCancelledException {
+      ref.read(compressionProgressProvider.notifier).state = null;
+      return;
+    } catch (e) {
+      ref.read(compressionProgressProvider.notifier).state = null;
+      if (!mounted) return;
+      handleError(e, loc);
+      return;
+    } finally {
+      ref.read(compressionProgressProvider.notifier).state = null;
+    }
+    if (compressed.compressedBytes > MediaConstants.imageMaxBytes) {
       if (!mounted) return;
       TeqSnackBar.show(message: loc.t("attachFileTooLarge"));
       return;
     }
-    if (!mounted) return;
-    TeqToast.info(loc.t("attachImageProcessing"), duration: const Duration(seconds: 5));
-    final compressed = await FlutterImageCompress.compressWithList(
-      raw,
-      quality: 80,
-      format: CompressFormat.jpeg,
-    );
     if (!mounted) return;
     // Optimistik balon — yükleme sırasında yerel önizleme göster
     final tempId = -DateTime.now().millisecondsSinceEpoch;
@@ -1609,12 +1621,12 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         'is_read': false,
         'created_at': DateTime.now().toUtc().toIso8601String(),
         '_pending': true,
-        '_bytes': Uint8List.fromList(compressed),
+        '_bytes': Uint8List.fromList(compressed.bytes),
       });
     });
     _scrollToBottom();
     await _uploadMedia(
-      bytes: compressed,
+      bytes: Uint8List.fromList(compressed.bytes),
       contentType: 'image',
       fileName: 'photo.jpg',
       mimeType: 'image/jpeg',
@@ -1640,38 +1652,41 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       return;
     }
     if (!mounted) return;
-    final info = await VideoCompress.getMediaInfo(picked.path);
-    if ((info.duration ?? 0) / 1000 > MediaConstants.videoMaxSecs) {
+    ref.read(compressionProgressProvider.notifier).state = 0.0;
+    CompressedMedia compressed;
+    try {
+      compressed = await MediaCompressor.compress(
+        picked.path,
+        MediaCompressType.dmVideo,
+        targetDurationMs: MediaConstants.videoMaxSecs * 1000,
+        onProgress: (p) {
+          ref.read(compressionProgressProvider.notifier).state = p;
+        },
+      );
+    } on MediaCompressCancelledException {
+      ref.read(compressionProgressProvider.notifier).state = null;
+      return;
+    } catch (e) {
+      ref.read(compressionProgressProvider.notifier).state = null;
       if (!mounted) return;
-      TeqSnackBar.show(message: loc.t("attachVideoTooLong"));
+      handleError(e, loc);
       return;
+    } finally {
+      ref.read(compressionProgressProvider.notifier).state = null;
     }
     if (!mounted) return;
-    TeqToast.info(loc.t("attachVideoProcessing"), duration: const Duration(seconds: 10));
-    final result = await VideoCompress.compressVideo(
-      picked.path,
-      quality: VideoQuality.MediumQuality,
-      deleteOrigin: false,
-    );
-    if (!mounted) return;
-    final file = result?.file;
-    if (file == null) {
-      TeqSnackBar.show(message: loc.t("attachSendFailed"));
-      return;
-    }
-    final bytes = await file.readAsBytes();
-    if (!mounted) return;
-    if (bytes.length > MediaConstants.videoMaxBytes) {
+    if (compressed.compressedBytes > MediaConstants.videoMaxBytes) {
       TeqSnackBar.show(message: loc.t("attachVideoTooLargeAfterCompress"));
       return;
     }
-    final dur = ((info.duration ?? 0) / 1000).round();
     await _uploadMedia(
-      bytes: bytes,
+      bytes: compressed.bytes,
       contentType: 'video',
       fileName: 'video.mp4',
       mimeType: 'video/mp4',
-      durationSecs: dur,
+      durationSecs: compressed.durationMs != null
+          ? (compressed.durationMs! / 1000).round()
+          : MediaConstants.videoMaxSecs,
     );
   }
 
@@ -1761,15 +1776,29 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final path = await _recorder.stop();
     setState(() => _isRecording = false);
     if (_shouldCancelRec || path == null || !mounted) return;
-    final file = File(path);
-    final bytes = await file.readAsBytes();
-    if (bytes.isEmpty) return;
+    final loc = ref.read(localizationProvider);
+    final recordedSecs = _recordSecs.clamp(1, MediaConstants.voiceMaxSecs);
+    CompressedMedia compressed;
+    try {
+      compressed = await MediaCompressor.compress(
+        path,
+        MediaCompressType.voice,
+        targetDurationMs: recordedSecs * 1000,
+      );
+    } on MediaCompressCancelledException {
+      return;
+    } catch (e) {
+      if (!mounted) return;
+      handleError(e, loc);
+      return;
+    }
+    if (!mounted) return;
     await _uploadMedia(
-      bytes: bytes,
+      bytes: compressed.bytes,
       contentType: 'voice',
-      fileName: 'voice.m4a',
-      mimeType: 'audio/mp4',
-      durationSecs: _recordSecs.clamp(1, MediaConstants.voiceMaxSecs),
+      fileName: 'voice.ogg',
+      mimeType: 'audio/ogg',
+      durationSecs: recordedSecs,
     );
   }
 
@@ -2003,6 +2032,15 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                         width: 200,
                         height: 200,
                         fit: BoxFit.cover,
+                        placeholder: (_, _) => Shimmer.fromColors(
+                          baseColor: Colors.grey.shade800,
+                          highlightColor: Colors.grey.shade600,
+                          child: Container(width: 200, height: 200, color: Colors.grey.shade800),
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          width: 200, height: 200, color: Colors.black,
+                          child: const Icon(Icons.broken_image, color: Colors.white54),
+                        ),
                       )
                     : Container(width: 200, height: 200, color: Colors.black),
               ),
@@ -2247,7 +2285,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     _recordTimer?.cancel();
     _recorder.dispose();
     _audioPlayer.dispose();
-    VideoCompress.cancelCompression();
+    MediaCompressor.cancel();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -2645,7 +2683,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final rs = remaining % 60;
     final elapsedStr = '${em.toString().padLeft(2, '0')}:${es.toString().padLeft(2, '0')}';
     final remainStr  = '${rm.toString().padLeft(2, '0')}:${rs.toString().padLeft(2, '0')}';
-    final isWarning = remaining <= 10;
+    final isWarning = remaining <= 30;
     return Row(
       children: [
         // Kırmızı kayıt noktası + geçen / kalan süre

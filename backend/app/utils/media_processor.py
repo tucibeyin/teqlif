@@ -155,7 +155,7 @@ class MediaProcessor(Protocol):
 class VoiceProcessor:
     _EXT_MAP = {"aac": "aac", "ogg": "ogg", "m4a": "m4a", "mp3": "mp3"}
     _CT_MAP  = {"aac": "audio/aac", "ogg": "audio/ogg", "m4a": "audio/mp4", "mp3": "audio/mpeg"}
-    _ALLOWED_CT = {"audio/aac", "audio/mp4", "audio/x-m4a", "audio/mpeg", "audio/ogg", "audio/webm"}
+    _ALLOWED_CT = {"audio/aac", "audio/mp4", "audio/x-m4a", "audio/mpeg", "audio/ogg", "audio/webm", "audio/opus"}
 
     async def process(self, data, file_content_type, original_filename, duration_secs):
         audio_fmt = detect_audio_type(data)
