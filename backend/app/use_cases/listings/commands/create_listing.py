@@ -79,6 +79,7 @@ class CreateListingCommand:
                 "province": _province,
                 "district": (district or "").strip() or None,
                 "location": _province,  # backward compat: feed/search sorgularında hâlâ okunuyor
+                "country_code": "TR",
                 "extra_fields": ef or None,
                 "brand": brand,
                 "model_name": model_name,
