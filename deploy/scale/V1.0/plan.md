@@ -1,6 +1,29 @@
 # Teqlif Scale Planı — V1.0
 > **Hostname eşleştirme:** `node1` = OVH Frankfurt (ana backend) | `gateway` = Netcup Nürnberg (edge proxy + observability)
-> **Tarih:** 2026-09-07 | **Durum:** Taslak
+> **Tarih:** 2026-09-07 | **Durum:** ✅ UYGULAMAYA ALINDI (2026-09-07)
+
+## Uygulama Özeti
+
+Tüm adımlar `deploy/scale/V1.0/task.md`'de belgelenmiştir. Temel sonuçlar:
+
+| Bileşen | Durum |
+|---|---|
+| WireGuard (node1↔gateway) | ✅ Aktif — handshake ve ping doğrulandı |
+| gateway nginx + SSL | ✅ Let's Encrypt (certbot, teqlif.com+www+staging) |
+| Prometheus + Loki + promtail | ✅ gateway'de, tüm target'lar `up` |
+| DNS: teqlif.com → gateway | ✅ Cloudflare Proxied 94.16.105.135 |
+| DNS: uploads.teqlif.com → node1 | ✅ DNS Only 135.125.175.223 |
+| node1 UFW sertleştirme | ✅ 8000/8001/9100/9187/7881 sadece gateway'e açık |
+| Mobil imgUrl() | ✅ /uploads/ → uploads.teqlif.com (gateway bypass) |
+
+**Uygulama dışı kalan:** Adım 4b (promtail→gateway Loki), 4c (node1 Prometheus+Loki durdur), 4d (node_exporter WireGuard IP) — bunlar task.md'de de tamamlandı.
+
+**Önemli düzeltmeler uygulama sırasında:**
+- `teqlif.service --host 0.0.0.0` (127.0.0.1 değil) — gateway WireGuard üzerinden erişebilsin
+- `teqlif-staging.service` WorkingDirectory: `/var/www/teqlif-staging.com/` değil `/var/www/teqlif.com/`, EnvironmentFile: `.env.staging`
+- gateway certbot: `staging.teqlif.com` cert altında tüm domainler birleştirildi; livekit deploy hook silindi
+
+---
 
 ---
 

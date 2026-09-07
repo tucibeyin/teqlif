@@ -25,6 +25,9 @@
 - [x] **Adım 5 — node1 Firewall Sertleştirme tamamlandı** — gateway→8000/8001/9100/9187/7881 açık, public deny ✅
 - [x] **Adım 6 — DNS Değişikliği tamamlandı** — teqlif.com/staging→gateway(94.16.105.135 Proxied), uploads.teqlif.com→node1(DNS Only) ✅
 - [x] **Adım 8 — Tam Doğrulama** — teqlif.com ✅ staging ✅ uploads.teqlif.com MinIO direkt ✅
+- [x] **Adım 7 — Mobil imgUrl() güncellendi** — `/uploads/` path'leri `kUploadsHost` (uploads.teqlif.com) ile çözülüyor; `chat_panel._resolveImageUrl` de birleştirildi (`207fd8c3`)
+- [x] **gateway certbot renewal** — certonly ile teqlif.com+www+staging sertifikası alındı (staging.teqlif.com/ altında), livekit deploy hook silindi, nginx cert path güncellendi (`207fd8c3`)
+- [x] **node1 uploads.teqlif.com nginx** — `deploy/scale/V1.0/node1/nginx/uploads.teqlif.com` kopyalandı, certbot ile `uploads.teqlif.com` sertifikası alındı, nginx reload ✅
 
 ---
 
@@ -83,100 +86,77 @@
 
 ## ✅ Adım 2 — gateway Taban Kurulumu — TAMAMLANDI
 
-> WireGuard tüneli aktif olduktan sonra başlanır.
+> Binary sürümleri: prometheus 2.51.0, loki 3.6.7, promtail 3.0.0, node_exporter 1.8.2 (node1'den scp ile kopyalandı)
 
-- [ ] **gateway:** Temel paketler kur
+- [x] **gateway:** Temel paketler kur
   ```bash
   sudo apt update && sudo apt install -y nginx fail2ban curl wget
   ```
 
-- [ ] **gateway:** Prometheus binary kur
+- [x] **gateway:** Binary'leri node1'den kopyala
   ```bash
-  # deploy/scale/V1.0/gateway/systemd/prometheus.service şablonu
+  scp /usr/local/bin/prometheus /usr/local/bin/loki /usr/local/bin/promtail /usr/local/bin/node_exporter tucibeyin@10.10.0.2:/tmp/
+  sudo mv /tmp/prometheus /tmp/loki /tmp/promtail /tmp/node_exporter /usr/local/bin/
+  sudo chmod +x /usr/local/bin/prometheus /usr/local/bin/loki /usr/local/bin/promtail /usr/local/bin/node_exporter
   sudo useradd -r -s /sbin/nologin prometheus 2>/dev/null || true
-  sudo mkdir -p /etc/prometheus /var/lib/prometheus
-  sudo chown prometheus:prometheus /var/lib/prometheus
-  # Binary: eski node1'den kopyala veya GitHub releases'ten indir
+  sudo mkdir -p /etc/prometheus /var/lib/prometheus /etc/loki /var/lib/loki/chunks /var/lib/loki/rules /var/lib/loki/compactor
+  sudo chown prometheus:prometheus /var/lib/prometheus /etc/prometheus
   ```
 
-- [ ] **gateway:** Loki binary kur
+- [x] **gateway:** Config dosyalarını kopyala ve servisleri başlat
   ```bash
-  sudo mkdir -p /etc/loki /var/lib/loki
-  # deploy/scale/V1.0/gateway/loki-config.yml → /etc/loki/config.yml
-  ```
-
-- [ ] **gateway:** node_exporter binary kur
-  ```bash
-  # deploy/scale/V1.0/gateway/systemd/node_exporter.service şablonu
-  ```
-
-- [ ] **gateway:** promtail binary + GeoIP DB kur
-  ```bash
-  sudo mkdir -p /usr/share/GeoIP
-  # GeoIP DB: node1'den kopyala
-  scp tucibeyin@10.10.0.1:/usr/share/GeoIP/GeoLite2-City.mmdb /tmp/
-  sudo mv /tmp/GeoLite2-City.mmdb /usr/share/GeoIP/
-  # deploy/scale/V1.0/gateway/promtail-config.yml → /etc/promtail-config.yml
-  ```
-
-- [ ] **gateway:** Tüm systemd unit'leri kur ve başlat
-  ```bash
-  # deploy/scale/V1.0/gateway/systemd/ → /etc/systemd/system/
-  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/systemd/*.service /etc/systemd/system/
-  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/prometheus.yml /etc/prometheus/prometheus.yml
-  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/loki-config.yml /etc/loki/config.yml
-  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/promtail-config.yml /etc/promtail-config.yml
+  cd /var/www/teqlif.com && git pull
+  sudo cp deploy/scale/V1.0/gateway/prometheus.yml /etc/prometheus/prometheus.yml
+  sudo chown prometheus:prometheus /etc/prometheus/prometheus.yml
+  sudo cp deploy/scale/V1.0/gateway/loki-config.yml /etc/loki/config.yml
+  sudo cp deploy/scale/V1.0/gateway/promtail-config.yml /etc/promtail-config.yml
+  sudo cp deploy/scale/V1.0/gateway/systemd/*.service /etc/systemd/system/
   sudo systemctl daemon-reload
   sudo systemctl enable --now prometheus loki promtail node_exporter
   ```
 
-- [ ] **Doğrulama — gateway monitoring:**
-  ```bash
-  curl http://localhost:9090/-/healthy   # Prometheus
-  curl http://localhost:3100/ready       # Loki
-  curl http://localhost:9100/metrics | head -5  # node_exporter
-  # node1 metriklerini çekebiliyor mu:
-  curl "http://localhost:9090/api/v1/query?query=up" | python3 -m json.tool
-  ```
+- [x] **Doğrulama:** `curl http://localhost:9090/-/healthy` → "Prometheus Server is Healthy."
 
-**Commit hash:** _______________
+**Commit hash:** `f69a3f02`
 
 ---
 
 ## ✅ Adım 3 — gateway nginx Yapılandırması + SSL — TAMAMLANDI
 
-> nginx yapılandırması aktif olana kadar mevcut node1 nginx trafiği taşır — downtime yok.
+> SSL sertifikası: node1'den kopyalandı, sonra certbot ile gateway'de yeniden alındı.
+> **Önemli:** Cert path `staging.teqlif.com/` altında (teqlif.com+www+staging birleşik).
 
-- [ ] **gateway:** SSL sertifikalarını node1'den kopyala
+- [x] **node1'de** sertifikaları paketle ve gateway'e gönder:
   ```bash
-  sudo apt install -y certbot python3-certbot-nginx
-  # Mevcut sertifikaları taşı (DNS henüz gateway'e taşınmadı):
   sudo tar czf /tmp/letsencrypt.tar.gz /etc/letsencrypt/
-  scp node1:/tmp/letsencrypt.tar.gz /tmp/
+  scp /tmp/letsencrypt.tar.gz tucibeyin@10.10.0.2:/tmp/
+  ```
+
+- [x] **gateway'de** sertifikaları aç, certbot kur:
+  ```bash
   sudo tar xzf /tmp/letsencrypt.tar.gz -C /
+  sudo apt install -y certbot python3-certbot-nginx
   ```
 
-- [ ] **gateway:** nginx yapılandırmasını kur
+- [x] **gateway'de** nginx config'i kur:
   ```bash
-  # Rate limit zone'ları nginx.conf http bloğuna ekle (deploy/scale/V1.0/gateway/nginx/nginx-http-zones.conf)
-  # Site config:
-  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/nginx/teqlif.conf \
-         /etc/nginx/sites-available/teqlif.conf
-  sudo ln -sf /etc/nginx/sites-available/teqlif.conf /etc/nginx/sites-enabled/
+  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/nginx/nginx-http-zones.conf /etc/nginx/conf.d/http-zones.conf
+  sudo cp /var/www/teqlif.com/deploy/scale/V1.0/gateway/nginx/teqlif.conf /etc/nginx/sites-available/teqlif.conf
+  sudo ln -sf /etc/nginx/sites-available/teqlif.conf /etc/nginx/sites-enabled/teqlif.conf
   sudo rm -f /etc/nginx/sites-enabled/default
-  sudo nginx -t
-  sudo systemctl reload nginx
+  sudo nginx -t && sudo systemctl reload nginx
   ```
 
-- [ ] **Doğrulama — DNS değişmeden önce:**
+- [x] **gateway'de** certbot ile kendi sertifikasını al (DNS gateway'e geçtikten sonra):
   ```bash
-  # /etc/hosts'a geçici kayıt ekle (sadece test için):
-  echo "GATEWAY_IP teqlif.com" | sudo tee -a /etc/hosts
-  curl -H "Host: teqlif.com" https://GATEWAY_IP/api/health --insecure
-  # test sonrası /etc/hosts'dan sil
+  sudo certbot certonly --nginx -d teqlif.com -d www.teqlif.com -d staging.teqlif.com
+  # "Expand" seçildi — mevcut staging.teqlif.com cert'e diğer domainler eklendi
+  sudo rm /etc/letsencrypt/renewal-hooks/deploy/livekit-cert.sh  # node1'den kopyalanan hook, gateway'de livekit yok
   ```
 
-**Commit hash:** _______________
+- [x] **Doğrulama:** `curl -s https://www.teqlif.com/api/health` → `{"status":"ok","version":"0.1.0"}`
+
+**Commit hash:** `e29e5ddd`
 
 ---
 
@@ -186,50 +166,44 @@
 
 ### 4a — node1 teqlif.service ve teqlif-staging.service
 
-- [ ] `deploy/scale/V1.0/node1/systemd/teqlif.service` → `/etc/systemd/system/teqlif.service`
-  (`--forwarded-allow-ips 127.0.0.1` → `10.10.0.2`)
-- [ ] `deploy/scale/V1.0/node1/systemd/teqlif-staging.service` → `/etc/systemd/system/teqlif-staging.service`
-- [ ] node1'de reload:
+> **Düzeltme:** `--host 127.0.0.1` → `--host 0.0.0.0` (gateway WireGuard üzerinden erişebilsin)
+> **Düzeltme:** teqlif-staging WorkingDirectory `/var/www/teqlif.com/backend`, EnvironmentFile `.env.staging`
+
+- [x] node1'de:
   ```bash
+  cd /var/www/teqlif.com && git pull
+  sudo cp deploy/scale/V1.0/node1/systemd/teqlif.service /etc/systemd/system/teqlif.service
+  sudo cp deploy/scale/V1.0/node1/systemd/teqlif-staging.service /etc/systemd/system/teqlif-staging.service
   sudo systemctl daemon-reload
   sudo systemctl restart teqlif teqlif-staging
   ```
-- [ ] Doğrulama: `journalctl -u teqlif -n 20` — hata yok
 
 ### 4b — node1 promtail → gateway Loki
 
-- [ ] `deploy/scale/V1.0/node1/promtail-config.yml` → `/etc/promtail-config.yml`
-  (`localhost:3100` → `10.10.0.2:3100`)
-- [ ] `sudo systemctl restart promtail`
-- [ ] Doğrulama: gateway Loki'de node1 logları geliyor mu:
+- [x] node1'de:
   ```bash
-  curl "http://localhost:3100/loki/api/v1/labels" | python3 -m json.tool
+  sudo cp deploy/scale/V1.0/node1/promtail-config.yml /etc/promtail-config.yml
+  sudo systemctl restart promtail
   ```
 
-### 4c — node1 Prometheus → gateway'e taşındı
+### 4c — node1 Prometheus + Loki durdur
 
-- [ ] node1'de Prometheus durdur:
+- [x] node1'de:
   ```bash
-  sudo systemctl stop prometheus
-  sudo systemctl disable prometheus
-  ```
-- [ ] node1'de Loki durdur:
-  ```bash
-  sudo systemctl stop loki
-  sudo systemctl disable loki
-  ```
-- [ ] Doğrulama: gateway Prometheus node1'i scrape ediyor:
-  ```bash
-  curl "http://localhost:9090/api/v1/targets" | python3 -m json.tool | grep health
+  sudo systemctl stop prometheus loki
+  sudo systemctl disable prometheus loki
   ```
 
 ### 4d — node1 node_exporter WireGuard IP'de dinle
 
-- [ ] `deploy/scale/V1.0/node1/systemd/node_exporter.service` → `/etc/systemd/system/node_exporter.service`
-  (`--web.listen-address=10.10.0.1:9100`)
-- [ ] `sudo systemctl daemon-reload && sudo systemctl restart node_exporter`
+- [x] node1'de:
+  ```bash
+  sudo cp deploy/scale/V1.0/node1/systemd/node_exporter.service /etc/systemd/system/node_exporter.service
+  sudo systemctl daemon-reload && sudo systemctl restart node_exporter
+  ```
+- [x] **Doğrulama (gateway'den):** tüm Prometheus target'ları `up` — livekit dahil
 
-**Commit hash:** _______________
+**Commit hash:** `ed96b11b`
 
 ---
 
@@ -237,29 +211,22 @@
 
 > WireGuard ve gateway nginx aktif olduktan sonra yapılır.
 
-- [ ] gateway'den node1'e HTTP ve monitoring erişimi:
+- [x] node1'de (gateway'e izin ver):
   ```bash
   sudo ufw allow from 10.10.0.2 to any port 8000
   sudo ufw allow from 10.10.0.2 to any port 8001   # staging
   sudo ufw allow from 10.10.0.2 to any port 9100   # node_exporter
   sudo ufw allow from 10.10.0.2 to any port 9187   # postgres-exporter
   sudo ufw allow from 10.10.0.2 to any port 7881   # livekit metrics
-  ```
-
-- [ ] Public IP'den port 8000/8001 erişimini engelle (uvicorn 0.0.0.0'da dinliyor):
-  ```bash
   sudo ufw deny 8000
   sudo ufw deny 8001
   ```
-  > UFW kural sırası önemli: `allow from 10.10.0.2` önce, `deny` sonra geldiği sürece gateway erişimi korunur.
-  > Loopback (127.0.0.1) UFW tarafından varsayılan olarak izinlidir — node1 nginx etkilenmez.
+  > UFW kural sırası önemli: `allow from 10.10.0.2` önce, `deny` sonra.
+  > Loopback (127.0.0.1) UFW tarafından varsayılan izinli — node1 nginx etkilenmez.
 
-- [ ] Doğrulama: gateway'den node1 API'sine ulaşılıyor:
-  ```bash
-  curl http://10.10.0.1:8000/api/health
-  ```
+- [x] **Doğrulama (gateway'den):** `curl http://10.10.0.1:8000/api/health` → `{"status":"ok"}`
 
-**Commit hash:** _______________
+**Commit hash:** `e29e5ddd`
 
 ---
 
@@ -267,47 +234,52 @@
 
 > Gateway nginx ve WireGuard tüneli çalışıyorken yapılır. En kritik adım.
 
-- [ ] Cloudflare DNS TTL'leri 60 saniyeye düşür (24 saat önce yapılabilir)
-- [ ] `teqlif.com` A kaydını → `GATEWAY_PUBLIC_IP` (Proxied) ✏️
-- [ ] `uploads.teqlif.com` A kaydı ekle → `135.125.175.223` (DNS only) ✏️
-- [ ] `live.teqlif.com` A kaydı → node1'de kalır (değişmez)
-- [ ] Yayılmayı izle:
+- [x] Cloudflare'de yapılan değişiklikler:
+  - `teqlif.com` A → `94.16.105.135` (Proxied) ✅
+  - `staging.teqlif.com` A → `94.16.105.135` (Proxied) ✅
+  - `uploads.teqlif.com` A → `135.125.175.223` (DNS Only) ✅ (yeni eklendi)
+  - `www.teqlif.com` CNAME → teqlif.com (Proxied, değişmedi)
+  - `live.teqlif.com`, `minio.teqlif.com` node1'de kaldı (değişmedi)
+  - Cloudflare Redirect Rule (`teqlif.com → www.teqlif.com`) silindi
+  - SSL/TLS modu: Full (Strict)
+
+- [x] **node1'de** uploads.teqlif.com nginx kurulumu:
   ```bash
-  watch -n 10 "dig teqlif.com +short"
+  sudo certbot certonly --nginx -d uploads.teqlif.com
+  sudo cp deploy/scale/V1.0/node1/nginx/uploads.teqlif.com /etc/nginx/sites-available/uploads.teqlif.com
+  sudo nginx -t && sudo systemctl reload nginx
   ```
 
-- [ ] Doğrulama DNS sonrası:
-  ```bash
-  curl https://teqlif.com/api/health
-  ```
+- [x] **Doğrulama:**
+  - `curl -s https://teqlif.com/api/health` → `{"status":"ok"}`
+  - `curl -sI https://uploads.teqlif.com/teqlif/test` → `HTTP/2 404` `server: nginx` `x-minio-error-code: NoSuchKey` ✅
 
-**Commit hash:** _______________
+**Commit hash:** `b5d5ddbc`
 
 ---
 
-## 🔲 Adım 7 — Mobil Uygulama Upload URL Güncelleme
+## ✅ Adım 7 — Mobil Uygulama Upload URL Güncelleme — TAMAMLANDI
 
-> DNS aktif olduktan sonra. Upload trafiği gateway'i atlamalı.
+- [x] `mobile/lib/config/api.dart` — `kUploadsHost` sabiti eklendi, `imgUrl()` güncellendi:
+  - `/uploads/abc.jpg` → `https://uploads.teqlif.com/abc.jpg` (gateway bypass)
+  - Diğer relative path'ler → `kBaseHost` prefix'i
+- [x] `mobile/lib/widgets/chat_panel.dart` — `_resolveImageUrl()` `imgUrl()`'e birleştirildi
+- [x] gateway certbot renewal: `staging.teqlif.com` cert altında tüm domainler; livekit hook silindi
 
-- [ ] Mobil kodda upload endpoint'i `teqlif.com` → `uploads.teqlif.com` olarak güncelle
-- [ ] Test: dosya yükleme gateway loglarında değil, node1 loglarında görünmeli
-- [ ] Commit + push + `sudo systemctl restart teqlif teqlif-staging`
-
-**Commit hash:** _______________
+**Commit hash:** `207fd8c3`
 
 ---
 
 ## ✅ Adım 8 — Tam Doğrulama Checklist — TAMAMLANDI
 
-- [ ] `curl https://teqlif.com/api/health` → 200
-- [ ] WebSocket bağlantısı kuruluyor (DM, bildirim, feed)
-- [ ] LiveKit WebRTC ICE başarılı — sesli/görüntülü arama çalışıyor
-- [ ] `/uploads/` dosyaları erişilebilir
-- [ ] MinIO presigned DM URL'leri çalışıyor
-- [ ] Prometheus gateway'den node1 metriklerini scrape ediyor
-- [ ] Loki node1 + gateway loglarını alıyor
-- [ ] `uploads.teqlif.com` → node1 doğrudan (gateway log'da upload yok)
-- [ ] `staging.teqlif.com` çalışıyor
+- [x] `curl https://teqlif.com/api/health` → 200 ✅
+- [x] `curl https://staging.teqlif.com/api/health` → 200 ✅
+- [x] `curl -sI https://uploads.teqlif.com/teqlif/test` → 404 MinIO (node1 direkt) ✅
+- [x] Prometheus: tüm target'lar `up` (node-node1, node-gateway, postgres, livekit, prometheus) ✅
+- [x] SSL: Let's Encrypt, TLSv1.3, HTTP/2 ✅
+- [ ] WebSocket bağlantısı — canlı uygulama ile test edilmeli
+- [ ] LiveKit WebRTC ICE — canlı arama ile test edilmeli
+- [ ] MinIO presigned DM URL'leri — canlı DM ile test edilmeli
 
 ---
 
