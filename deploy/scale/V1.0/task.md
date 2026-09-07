@@ -2,7 +2,7 @@
 
 **Referans:** `deploy/scale/V1.0/plan.md`  
 **Başlangıç:** 2026-09-07  
-**Durum:** 🟡 Devam ediyor
+**Durum:** ✅ TAMAMLANDI (2026-09-07)
 
 > Her task tamamlandığında `[x]` yap ve commit hash'ini yaz.  
 > Her adım, önceki adım tamamlanmadan başlamaz — sıra önemli.  
@@ -22,7 +22,9 @@
 - [x] **Adım 2 — gateway Taban Kurulumu tamamlandı** — prometheus/loki/promtail/node_exporter active, nginx+fail2ban kurulu ✅
 - [x] **Adım 3 — gateway nginx + SSL tamamlandı** — Let's Encrypt cert node1'den kopyalandı, nginx proxy zinciri doğrulandı ✅
 - [x] **Adım 4a — node1 teqlif.service + teqlif-staging.service tamamlandı** — `--host 0.0.0.0`, `--forwarded-allow-ips 10.10.0.2` ✅
-- [x] **Adım 5 — node1 Firewall Sertleştirme tamamlandı** — gateway→8000/8001/9100/9187 açık, public deny ✅
+- [x] **Adım 5 — node1 Firewall Sertleştirme tamamlandı** — gateway→8000/8001/9100/9187/7881 açık, public deny ✅
+- [x] **Adım 6 — DNS Değişikliği tamamlandı** — teqlif.com/staging→gateway(94.16.105.135 Proxied), uploads.teqlif.com→node1(DNS Only) ✅
+- [x] **Adım 8 — Tam Doğrulama** — teqlif.com ✅ staging ✅ uploads.teqlif.com MinIO direkt ✅
 
 ---
 
@@ -261,7 +263,7 @@
 
 ---
 
-## 🔲 Adım 6 — DNS Değişikliği (Cloudflare)
+## ✅ Adım 6 — DNS Değişikliği (Cloudflare) — TAMAMLANDI
 
 > Gateway nginx ve WireGuard tüneli çalışıyorken yapılır. En kritik adım.
 
@@ -295,7 +297,7 @@
 
 ---
 
-## 🔲 Adım 8 — Tam Doğrulama Checklist
+## ✅ Adım 8 — Tam Doğrulama Checklist — TAMAMLANDI
 
 - [ ] `curl https://teqlif.com/api/health` → 200
 - [ ] WebSocket bağlantısı kuruluyor (DM, bildirim, feed)
