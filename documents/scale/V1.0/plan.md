@@ -312,9 +312,25 @@ sudo ufw allow 50000:60000/udp
 # SSH — kısıtla veya Tailscale üzerinden
 ```
 
-### Adım 5 — DNS Değişikliği
-- `teqlif.com` A record → gateway public IP
-- node1'in public IP'sini DNS'ten çıkar (LiveKit için açık port kalır)
+### Adım 5 — DNS Değişikliği (Cloudflare)
+
+**Mevcut DNS durumu:**
+
+| Alan adı | Tip | Hedef | Cloudflare Proxy |
+|---|---|---|---|
+| `teqlif.com` | A | 135.125.175.223 (node1) | ✅ Proxied |
+| `www.teqlif.com` | CNAME | teqlif.com | ✅ Proxied |
+| `live.teqlif.com` | A | 135.125.175.223 (node1) | ❌ DNS only |
+| `minio.teqlif.com` | A | 135.125.175.223 (node1) | ❌ DNS only |
+| `staging.teqlif.com` | A | 135.125.175.223 (node1) | ❌ DNS only |
+
+**Gerekli değişiklik:** Sadece `teqlif.com` A record'unu gateway IP'sine güncelle. Proxy durumu ve diğer tüm kayıtlar değişmez.
+
+```
+teqlif.com   A   <GATEWAY_PUBLIC_IP>   Proxied  ← bu satır değişiyor
+```
+
+`live.teqlif.com` DNS only olarak node1'de kalır — LiveKit STUN/TURN için gerekli.
 
 ### Adım 6 — Doğrulama Checklist
 - [ ] API endpoint'leri yanıt veriyor
@@ -341,7 +357,74 @@ Bu kazanç direkt olarak PostgreSQL `shared_buffers`, Redis maxmemory artışı 
 
 ---
 
-## 9. Riskler
+## 9. Cloudflare — Mevcut Durum ve CDN Fırsatı
+
+### Mevcut Trafik Zinciri
+
+`teqlif.com` ve `www.teqlif.com` zaten Cloudflare **Proxied** (turuncu bulut). Gerçek mimari şu an:
+
+```
+Client → Cloudflare edge (SSL + DDoS) → node1:135.125.175.223
+```
+
+V1.0 sonrası:
+```
+Client → Cloudflare edge (SSL + DDoS + CDN) → gateway → Tailscale → node1
+```
+
+Bu şu anlama gelir: node1'in IP'si (`135.125.175.223`) zaten Cloudflare tarafından gizleniyor — plan'daki "node1 IP'yi gizleme" argümanı büyük ölçüde Cloudflare tarafından karşılanıyor. gateway'in asıl değeri **observability node** rolü.
+
+### gateway SPOF — Cloudflare Bağlamında
+
+gateway düşerse trafik kesilir. Ancak Cloudflare üzerinden kolayca fallback kurulabilir:
+- Cloudflare **Health Checks** (ücretsiz planda sınırlı) veya
+- Cloudflare DNS TTL'ini 60 saniyeye çek; gateway sağlıklıyken `teqlif.com` → gateway, sorun varsa hızlıca node1'e döndür
+
+### Cloudflare CDN — Public Görseller için Ücretsiz
+
+`teqlif.com` proxied olduğu için `/uploads/...` üzerinden servis edilen tüm public listing görselleri Cloudflare edge'inden **zaten geçiyor**. Eksik tek parça: nginx'te `Cache-Control` header'ı.
+
+```nginx
+# node1 nginx'te /uploads/ location'ına ekle:
+location /uploads/ {
+    ...
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary Accept-Encoding;
+}
+```
+
+Bu ayarla:
+- İlk istek: Client → Cloudflare → gateway → node1 → MinIO → yanıt → Cloudflare cache'e yazar
+- Sonraki istekler: Client → Cloudflare edge (cache hit) — node1'e hiç ulaşmaz
+
+**Neler cache'lenir, neler cache'lenmez:**
+
+| İçerik | Cloudflare CDN | Gerekçe |
+|---|---|---|
+| Listing görselleri (`/uploads/...`) | ✅ Evet | Public, URL sabit, `Cache-Control` ile |
+| Profil fotoğrafları (`/uploads/...`) | ✅ Evet | Aynı |
+| DM görselleri (`minio.teqlif.com` presigned) | ❌ Hayır | DNS only + private + URL her seferinde değişiyor |
+| Video (upload trafiği) | ❌ Kullanılmamalı | Cloudflare free plan 100MB upload sınırı var |
+| WebSocket, API yanıtları | ❌ Cache'lenmez | Dinamik içerik |
+
+**Cloudflare Images (resize/optimize):** Ücretli. Ücretsiz planda sadece statik servis + edge caching.
+
+### Cloudflare Firewall — node1'i Koru
+
+Cloudflare IP aralıklarını node1'de güvenilir proxy olarak tanımla. Böylece Cloudflare'i atlayan direkt istekler reddedilir:
+
+```bash
+# Cloudflare IP aralıkları (https://www.cloudflare.com/ips/)
+# node1'de sadece Cloudflare + gateway Tailscale IP'sinden HTTP/HTTPS izin ver
+sudo ufw allow from 103.21.244.0/22 to any port 80
+sudo ufw allow from 103.22.200.0/22 to any port 80
+# ... (tüm Cloudflare IPv4 aralıkları)
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
+```
+
+---
+
+## 11. Riskler
 
 | Risk | Ağırlık | Önlem |
 |---|---|---|
@@ -352,7 +435,7 @@ Bu kazanç direkt olarak PostgreSQL `shared_buffers`, Redis maxmemory artışı 
 
 ---
 
-## 10. Açık Sorular
+## 12. Açık Sorular
 
 1. **Büyük upload bypass'ı** — Video yükleme (MB-GB boyutunda) Tailscale tünelinden geçmek zorunda. `uploads.teqlif.com` subdomain'i node1'e doğrudan A record bağlanabilir; upload trafiği gateway'i atlar.
 
@@ -362,7 +445,7 @@ Bu kazanç direkt olarak PostgreSQL `shared_buffers`, Redis maxmemory artışı 
 
 ---
 
-## 11. Sonraki Fazlar (V2.0+)
+## 13. Sonraki Fazlar (V2.0+)
 
 | Faz | Ne | Tetikleyici |
 |---|---|---|
