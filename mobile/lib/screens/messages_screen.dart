@@ -58,6 +58,7 @@ import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
 import 'viewmodels/messages_view_model.dart';
 import 'viewmodels/direct_chat_request_view_model.dart';
+import '../ui_library/components/buttons/teq_voice_button.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -1174,7 +1175,6 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   bool _isRecording = false;
   int _recordSecs = 0;
   Timer? _recordTimer;
-  bool _shouldCancelRec = false;
 
   // Audio playback
   final _audioPlayer = AudioPlayer();
@@ -1746,7 +1746,6 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       setState(() {
         _isRecording = true;
         _recordSecs = 0;
-        _shouldCancelRec = false;
       });
       _recordTimer = Timer.periodic(const Duration(seconds: 1), (t) {
         if (!mounted) {
@@ -1775,7 +1774,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     _recordTimer?.cancel();
     final path = await _recorder.stop();
     setState(() => _isRecording = false);
-    if (_shouldCancelRec || path == null || !mounted) return;
+    if (path == null || !mounted) return;
     final loc = ref.read(localizationProvider);
     final recordedSecs = _recordSecs.clamp(1, MediaConstants.voiceMaxSecs);
     CompressedMedia compressed;
@@ -1804,7 +1803,6 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
 
   Future<void> _cancelRecording() async {
     _recordTimer?.cancel();
-    _shouldCancelRec = true;
     await _recorder.stop();
     setState(() => _isRecording = false);
   }
@@ -2645,28 +2643,12 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                           ),
                   ),
                 )
-              : GestureDetector(
+              : TeqVoiceButton(
                   key: const ValueKey('mic'),
-                  onLongPressStart: (_) => _startRecording(),
-                  onLongPressEnd: (_) => _stopAndSend(),
-                  onLongPressMoveUpdate: (details) {
-                    if (details.localOffsetFromOrigin.dx < -60) {
-                      setState(() => _shouldCancelRec = true);
-                    }
-                  },
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
-                      color: kPrimary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.mic_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
+                  isRecording: _isRecording,
+                  onRecordStart: _startRecording,
+                  onRecordStop: _stopAndSend,
+                  onRecordCancel: _cancelRecording,
                 ),
         ),
       ],
