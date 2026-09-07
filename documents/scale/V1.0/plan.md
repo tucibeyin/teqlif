@@ -149,14 +149,38 @@ Grafana sadece görselleştirme katmanı — veri üretmiyor, saklamıyor. Alert
 
 ---
 
-## 6. Kod Değişikliği Gereksinimi
+## 6. Değişiklik Gereksinimleri
 
-**Sıfır.** Mevcut mimari bu geçişe hazır:
+### Uygulama kodu — sıfır değişiklik
 - `settings.redis_url` → node1 localhost, değişmez
 - `settings.database_url` → node1 localhost, değişmez
+- `database_clickhouse.py` → `host="localhost"` hardcoded, ClickHouse node1'de kalır, değişmez
 - `settings.minio_dm_external_url` → zaten dış domain, değişmez
 - `ws_manager` → Redis Stream fan-out zaten multi-node hazır
-- CORS → `settings.site_url` tek domain, gateway IP değişimi etkilemez
+- CORS → `main.py`'de `teqlif.com` / `www.teqlif.com` sabitleri, gateway IP CORS'u etkilemez
+
+### Deploy config — 3 değişiklik gerekli
+
+**1. `deploy/promtail-config.yml` — Loki hedefini gateway'e yönlendir**
+
+`clients.url` şu an `http://localhost:3100/...`. Prometheus + Loki gateway'e taşınınca:
+```yaml
+clients:
+  - url: http://<GATEWAY_TAILSCALE_IP>:3100/loki/api/v1/push
+```
+
+**2. node1 uvicorn — proxy IP güveni**
+
+Gateway → Tailscale → node1:8000 zincirinde `request.client.host` gateway Tailscale IP'si olur. `main.py` X-Forwarded-For header'ını okuyarak gerçek client IP'yi alıyor, bu doğru çalışır. Ancak güvenlik için uvicorn'a sadece gateway Tailscale IP'sini güvenilir proxy olarak tanıtmak gerekir:
+```bash
+# teqlif.service ExecStart'a ekle:
+--forwarded-allow-ips=<GATEWAY_TAILSCALE_IP>
+```
+Bu olmadan herhangi biri node1'e doğrudan erişebilseydi (firewall öncesi) sahte X-Forwarded-For gönderebilirdi. Firewall sertleştirme bunu zaten engeller, ama defense-in-depth açısından önerilir.
+
+**3. gateway nginx — `/rtc` LiveKit sinyalizasyon proxy'si**
+
+`settings.livekit_url = "wss://teqlif.com/rtc"` — istemciler WebSocket bağlantısını `/rtc` path'i üzerinden kurar. gateway nginx'e bu location **eksikse LiveKit sinyalizasyonu çalışmaz**. Detay Adım 3'te (nginx config bloğunda `/rtc` upstream ayrı tanımlandı).
 
 ---
 
@@ -214,6 +238,12 @@ upstream node1_api {
     keepalive 32;
 }
 
+# LiveKit sinyalizasyon (HTTP API) — sadece signaling, medya UDP doğrudan node1'e gider
+upstream node1_livekit {
+    server <NODE1_TAILSCALE_IP>:7880;
+    keepalive 8;
+}
+
 server {
     listen 443 ssl http2;
     server_name teqlif.com www.teqlif.com;
@@ -221,7 +251,21 @@ server {
     ssl_certificate     /etc/letsencrypt/live/teqlif.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/teqlif.com/privkey.pem;
 
-    # API + WebSocket
+    # LiveKit WebSocket sinyalizasyon — settings.livekit_url = "wss://teqlif.com/rtc"
+    # KRITIK: Bu location eksikse LiveKit sesli/görüntülü arama çalışmaz
+    location /rtc {
+        proxy_pass         http://node1_livekit;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        "upgrade";
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # API + WebSocket (DM, bildirim, feed)
     location / {
         proxy_pass         http://node1_api;
         proxy_http_version 1.1;
@@ -236,14 +280,14 @@ server {
 
     # Büyük dosya upload — buffer kapat
     location /api/upload {
-        proxy_pass             http://node1_api;
-        proxy_buffering        off;
+        proxy_pass              http://node1_api;
+        proxy_buffering         off;
         proxy_request_buffering off;
-        client_max_body_size   500m;
+        client_max_body_size    500m;
     }
 
     location /uploads/ {
-        proxy_pass http://node1_api;
+        proxy_pass      http://node1_api;
         proxy_buffering off;
     }
 }
