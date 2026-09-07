@@ -32,7 +32,6 @@
 | `loki` + `promtail` | Log toplama |
 | `node_exporter` + `postgres-exporter` | Prometheus metrik toplayıcıları |
 | `fail2ban` | Brute-force koruması |
-| `vetaris.service` | Ayrı Python e-ticaret servisi |
 
 ### Koddan Çıkan Mimari Tespitler
 
@@ -267,8 +266,6 @@ Node-2'de `node_exporter` + `promtail` kurulur, log'lar Node-1 Loki'ye gönderil
 3. **Nginx microcaching Node-2'de** — Feed ve listing API yanıtları için Node-2'de 1-5 saniyelik mikro cache kurulabilir; sık değişen veriler (WS, chat) cache'e alınmaz. Bu Node-1 yükünü ciddi ölçüde azaltır.
 
 4. **Gelecek: FastAPI replika Node-2'de** — Node-2 RAM'i şu an yetmez (1.9 GB). Daha büyük bir plan için Node-2 upgrade'i veya Node-3 eklenmesi gerekir.
-
-5. **Vetaris servisi** — Aynı Node-1'de çalışan bağımsız servis. Node-2'den mi proxy edilmeli yoksa kendi subdomain'i için ayrı yapı mı?
 
 ---
 
