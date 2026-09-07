@@ -178,7 +178,7 @@
 
 ---
 
-## ✅ Adım 4 — Deploy Config Değişiklikleri — KISMEN TAMAMLANDI
+## ✅ Adım 4 — Deploy Config Değişiklikleri — TAMAMLANDI
 
 > 4 config değişikliği (plan.md Bölüm 6). Deploy pipeline değişmez, sadece config.
 
