@@ -178,7 +178,7 @@ WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyali
 | **nginx (public)** | ❌ → iç | ✅ | SSL termination, edge |
 | **Prometheus** | ❌ → taşınır | ✅ | Observability bağımsızlığı; node1'e ~300MB RAM iade |
 | **Loki** | ❌ → taşınır | ✅ | Log storage için 58.9GB disk avantajı |
-| **Grafana** | ⛔ node1'den SİLİNECEK | ❌ | `apt remove grafana` + UFW 3000 kapat |
+| ~~Grafana~~ | ✅ SİLİNDİ | ❌ | 2026-09-07 kaldırıldı — ~2.3 GB disk, ~200 MB RAM geri döndü |
 | promtail | ✅ (node1 log → gateway) | ✅ (kendi logu) | Her iki node'da, gateway Loki'ye gönderir |
 | node_exporter | ✅ | ✅ | Her iki node'da, gateway Prometheus scrape eder |
 | Tailscale | ✅ | ✅ | Özel ağ tüneli |
@@ -186,19 +186,11 @@ WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyali
 
 ---
 
-## 5. Grafana — Silinecek
+## 5. Grafana — ✅ Silindi (2026-09-07)
 
 Grafana sadece görselleştirme katmanı; veri üretmiyor, saklamıyor, alert pipeline'ına dokunmuyor. Prometheus alert kuralları + Loki alert kuralları Grafana olmadan tam işlevsel çalışır.
 
-**Ek güvenlik gerekçesi:** Şu an `3000/tcp` tüm internete açık — Grafana doğrudan erişilebilir durumda. Bu kabul edilemez bir risk.
-
-**Uygulama sırası (V1.0 geçişinde):**
-```bash
-sudo systemctl stop grafana-server
-sudo systemctl disable grafana-server
-sudo apt remove grafana -y
-sudo ufw delete allow 3000/tcp
-```
+Alert kuralı olmadığı SQLite DB üzerinden doğrulandı. `apt remove --purge grafana` + `rm -rf` ile tamamen kaldırıldı. UFW port 3000 kapatıldı. Sahte `30000:40000/udp` UFW kuralı da bu süreçte temizlendi.
 
 ---
 
@@ -212,7 +204,7 @@ sudo ufw delete allow 3000/tcp
 - `ws_manager` → Redis Stream fan-out zaten multi-node hazır
 - CORS → `main.py`'de `teqlif.com` / `www.teqlif.com` sabitleri, gateway IP CORS'u etkilemez
 
-### Deploy config — 3 değişiklik gerekli
+### Deploy config — 4 değişiklik gerekli
 
 **1. `deploy/promtail-config.yml` — Loki hedefini gateway'e yönlendir**
 
@@ -297,20 +289,29 @@ wget https://github.com/grafana/loki/releases/download/.../loki-linux-amd64.zip
 wget https://github.com/prometheus/node_exporter/releases/download/.../node_exporter-*.linux-amd64.tar.gz
 ```
 
-`prometheus.yml` (gateway'de):
+`prometheus.yml` (gateway'de — Section 6 item 3 ile aynı):
 ```yaml
+global:
+  scrape_interval: 15s
+
 scrape_configs:
-  - job_name: node1
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'livekit'
+    static_configs:
+      - targets: ['<NODE1_TAILSCALE_IP>:7881']
+
+  - job_name: 'node_node1'
     static_configs:
       - targets: ['<NODE1_TAILSCALE_IP>:9100']
-    labels: {node: node1}
 
-  - job_name: gateway
+  - job_name: 'node_gateway'
     static_configs:
       - targets: ['localhost:9100']
-    labels: {node: gateway}
 
-  - job_name: postgres
+  - job_name: 'postgres'
     static_configs:
       - targets: ['<NODE1_TAILSCALE_IP>:9187']
 ```
@@ -387,13 +388,9 @@ server {
 
 ### Adım 4 — node1 Firewall Sertleştirme
 
-```bash
-# Grafana'yı kaldır ve portunu kapat (Tailscale üzerinden de erişilmeyecek — servis siliniyor)
-sudo systemctl stop grafana-server
-sudo systemctl disable grafana-server
-sudo apt remove grafana -y
-sudo ufw delete allow 3000/tcp
+> Grafana ve port 3000 zaten kaldırıldı (2026-09-07). Bu adım sadece Tailscale sonrası kural eklemelerini içerir.
 
+```bash
 # HTTP/HTTPS — gateway Tailscale IP + mevcut Cloudflare whitelist korunur
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 80
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
@@ -425,13 +422,18 @@ sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9187  # postgres-exporter
 | `minio.teqlif.com` | A | 135.125.175.223 (node1) | ❌ DNS only |
 | `staging.teqlif.com` | A | 135.125.175.223 (node1) | ❌ DNS only |
 
-**Gerekli değişiklik:** Sadece `teqlif.com` A record'unu gateway IP'sine güncelle. Proxy durumu ve diğer tüm kayıtlar değişmez.
+**Gerekli değişiklikler:**
 
 ```
-teqlif.com   A   <GATEWAY_PUBLIC_IP>   Proxied  ← bu satır değişiyor
+teqlif.com      A   <GATEWAY_PUBLIC_IP>    Proxied   ← gateway'e taşınıyor
+uploads.teqlif.com  A   135.125.175.223   DNS only  ← yeni; upload bypass
 ```
 
 `live.teqlif.com` DNS only olarak node1'de kalır — LiveKit STUN/TURN için gerekli.
+
+**Upload bypass gerekçesi:** `uploads.teqlif.com` → node1 doğrudan (DNS only, Cloudflare proxy yok). Mobil uygulama dosya yükleme endpoint'lerini bu subdomain üzerinden gönderir. Böylece MB/GB boyutundaki upload trafiği gateway'i hiç geçmez — gateway 24h ortalama 100 Mbps throttle riskinden korunur.
+
+**Mobil uygulama değişikliği:** Upload URL'i `teqlif.com` → `uploads.teqlif.com` olarak güncellenmeli. Diğer tüm API istekleri `teqlif.com` üzerinden aynı şekilde devam eder.
 
 ### Adım 6 — Doğrulama Checklist
 - [ ] API endpoint'leri yanıt veriyor
@@ -451,7 +453,7 @@ teqlif.com   A   <GATEWAY_PUBLIC_IP>   Proxied  ← bu satır değişiyor
 |---|---|
 | Prometheus | ~300 MB |
 | Loki | ~200-400 MB |
-| Grafana (**silinecek** — node1'den kaldırılıyor) | ~150-250 MB |
+| ~~Grafana~~ (2026-09-07 silindi ✅) | ~150-250 MB |
 | **Toplam** | **~650 MB – 950 MB** |
 
 Bu kazanç direkt olarak PostgreSQL `shared_buffers`, Redis maxmemory artışı veya ML worker'ların peak dönemlerinde kullanılabilir.
@@ -525,33 +527,31 @@ sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
 
 ---
 
-## 11. Riskler
+## 10. Riskler
 
 | Risk | Ağırlık | Önlem |
 |---|---|---|
 | **gateway SPOF** | Yüksek | DNS TTL kısalt (60s); node1 nginx'i hazır tut; gateway düşünce node1 doğrudan devreye girer |
 | **Tailscale SaaS bağımlılığı** | Orta | Alternatif: WireGuard manuel kurulum (daha fazla efor, tam kontrol) |
 | **Ekstra gecikme** | Düşük-Orta | Frankfurt↔Nürnberg ~10-15ms RTT; mobil API için +20-30ms — kabul edilebilir |
-| **Büyük upload Tailscale tünelinden geçer** | Orta | Değerlendirme: `uploads.teqlif.com` subdomain'ini node1'e doğrudan yönlendirmek |
+| **Büyük upload gateway trafiği** | ~~Orta~~ → ✅ Çözüldü | `uploads.teqlif.com` → node1 doğrudan (V1.0'a alındı) |
 
 ---
 
-## 12. Açık Sorular
+## 11. Açık Sorular
 
-1. **Büyük upload bypass'ı** — Video yükleme (MB-GB boyutunda) Tailscale tünelinden geçmek zorunda. `uploads.teqlif.com` subdomain'i node1'e doğrudan A record bağlanabilir; upload trafiği gateway'i atlar.
+1. **Nginx microcaching gateway'de** — Feed ve listing API yanıtları için 1-5 saniyelik mikro cache. WS ve chat endpoint'leri cache dışı. node1 yükünü ciddi ölçüde azaltır. V1.1 adayı.
 
-2. **Nginx microcaching gateway'de** — Feed ve listing API yanıtları için 1-5 saniyelik mikro cache. WS ve chat endpoint'leri cache dışı. node1 yükünü ciddi ölçüde azaltır. V1.1 adayı.
-
-3. **gateway SPOF fallback otomasyonu** — DNS TTL kısaltma yeterli mi, yoksa health-check tabanlı otomatik failover (Cloudflare, Route53 health check) gerekli mi?
+2. **gateway SPOF fallback otomasyonu** — DNS TTL kısaltma yeterli mi, yoksa health-check tabanlı otomatik failover (Cloudflare health check) gerekli mi?
 
 ---
 
-## 13. Sonraki Fazlar (V2.0+)
+## 12. Sonraki Fazlar (V2.0+)
 
 | Faz | Ne | Tetikleyici |
 |---|---|---|
 | V1.1 | gateway'de nginx microcaching | node1 CPU %70+ sürekli |
-| V1.2 | Büyük upload bypass (`uploads.teqlif.com` → node1 doğrudan) | Upload latency sorun olursa |
+| V1.2 | DM video için pre-signed upload URL (MinIO doğrudan) | Çok büyük DM video yükleme sorun olursa |
 | V2.0 | PostgreSQL streaming read replica (node3) | Okuma sorguları yavaşlarsa |
 | V2.1 | FastAPI replika (node3, daha büyük RAM) | API yanıt süresi bozulursa |
 | V2.2 | Redis Sentinel + Replica | Redis SPOF kabul edilemez hale gelirse |
