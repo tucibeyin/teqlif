@@ -49,6 +49,47 @@ Stateless; tüm durumu Redis/PostgreSQL'de. Gecikmesi düşük tutulmalı → DB
 **8. Prometheus + Loki — RAM + Disk**
 Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir (~500MB-1GB toplam) ve üretim yükünden bağımsız olmalı — monitoring, izlediği sistemin kaynaklarını yememeli. **Bu servislerin gateway'e taşınması node1'e ~500MB-1GB RAM iade eder.**
 
+### node1 Mevcut nginx Yapılandırması (Referans)
+
+| Domain | Tip | Hedef | Not |
+|---|---|---|---|
+| `teqlif.com` | Reverse proxy | uvicorn :8000 | Rate limiting, bot engeli, güvenlik header'ları |
+| `live.teqlif.com` | LiveKit proxy | :7880 | Ayrı SSL cert, WebRTC için DNS only |
+| `minio.teqlif.com` | MinIO proxy | :9010 | DNS only, 500M upload |
+| `staging.teqlif.com` | Reverse proxy | uvicorn :8001 | Staging MinIO bucket |
+| `mottosoft.com` | Static site | `/var/www/mottosoft.com` | Plan dışı |
+| `tucibeyin.com` | Static site | `/var/www/tucibeyin.com` | Plan dışı |
+| `thevetaris.com` | Vetaris proxy | :8801 | Plan dışı |
+
+**`/uploads/` Cache-Control:** `expires 30d; Cache-Control "public, no-transform"` — zaten ayarlı. Cloudflare CDN aktif. İyileştirme: `no-transform` kaldırılıp `immutable` eklenebilir.
+
+**`/rtc` location:** node1 nginx'te zaten mevcut (`proxy_pass 127.0.0.1:7880`). gateway nginx'te aynı yapı kurulacak.
+
+**MinIO gerçek portu:** nginx config'den doğrulandı → **9010** (settings.py default 9000, `.env` override ediyor).
+
+### node1 Firewall Durumu (UFW)
+
+**Güvenlik açığı:** `3000/tcp ALLOW IN Anywhere` — Grafana internete açık. Tailscale kurulunca kapatılmalı.
+
+**Cloudflare IP whitelist:** UFW'de zaten tanımlı (tüm Cloudflare IPv4/IPv6 aralıkları).
+
+**LiveKit açık portlar:**
+```
+50000:60000/udp  WebRTC medya
+7882/tcp          LiveKit TCP fallback
+5349/tcp+udp      TURN TLS
+3478/tcp+udp      STUN/TURN
+30000:40000/udp   Ek TURN aralığı
+```
+
+### fail2ban Jail'leri
+
+| Jail | Tetikleyici | Süre | Ban |
+|---|---|---|---|
+| `sshd` | 5 başarısız giriş | 60s | 1 saat |
+| `nginx-req-limit` | 10 rate limit hit | 60s | 24 saat |
+| `nginx-botscan` | 8 bot tarama isteği | 5 dakika | 7 gün |
+
 ---
 
 ## 2. Yeni Makine — gateway (Netcup Nürnberg)
@@ -294,22 +335,31 @@ server {
 ```
 
 ### Adım 4 — node1 Firewall Sertleştirme
+
 ```bash
-# HTTP/HTTPS sadece gateway Tailscale IP'sinden
+# Grafana'yı internetten kapat — sadece Tailscale üzerinden erişilecek
+sudo ufw delete allow 3000/tcp
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 3000
+
+# HTTP/HTTPS — gateway Tailscale IP + mevcut Cloudflare whitelist korunur
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 80
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 443
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
 
 # Monitoring — sadece gateway'den
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9100  # node_exporter
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9187  # postgres-exporter
 
-# LiveKit — herkese açık (UDP proxy edilemez)
-sudo ufw allow 7880/tcp
-sudo ufw allow 7881/tcp
-sudo ufw allow 50000:60000/udp
+# LiveKit — herkese açık (tüm portlar, UDP proxy edilemez)
+# Mevcut UFW'de zaten var — değişmez:
+# 50000:60000/udp  WebRTC medya
+# 7882/tcp          TCP fallback
+# 5349/tcp+udp      TURN TLS
+# 3478/tcp+udp      STUN/TURN
+# 30000:40000/udp   Ek TURN aralığı
 
-# SSH — kısıtla veya Tailscale üzerinden
+# SSH — Tailscale kurulunca idealde kısıtlanır
+# sudo ufw delete allow 22/tcp
+# sudo ufw allow from <TAILSCALE_SUBNET> to any port 22
 ```
 
 ### Adım 5 — DNS Değişikliği (Cloudflare)
