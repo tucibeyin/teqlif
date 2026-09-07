@@ -1121,12 +1121,8 @@ class _HistorySheet extends ConsumerWidget {
 }
 
 /// Relative URL'leri (/uploads/...) tam URL'ye çevirir.
-/// Diğer ekranlarla aynı mantık: kBaseUrl'den origin alınır.
-String _resolveImageUrl(String url) {
-  if (url.startsWith('http')) return url;
-  final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
-  return '$origin$url';
-}
+/// /uploads/ → kUploadsHost (node1 direkt); diğerleri → kBaseHost.
+String _resolveImageUrl(String url) => imgUrl(url);
 
 /// Satır içi avatar: 18×18 yuvarlak resim, OOM korumalı (memCache 60×60).
 /// URL null/boş veya hata durumunda kullanıcı baş harfini gösterir.

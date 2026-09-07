@@ -13,13 +13,22 @@ const String kBaseHost = String.fromEnvironment(
 );
 const String kBaseUrl = '$kBaseHost/api';
 
+const String kUploadsHost = String.fromEnvironment(
+  'UPLOADS_HOST',
+  defaultValue: 'https://uploads.teqlif.com',
+);
+
 // AuthService.tryRefresh() mutex'ini kullanarak çift refresh'i önler
 Future<RefreshOutcome> _tryRefreshOnce() => AuthService.tryRefresh();
 
-/// /uploads/... → https://teqlif.com/uploads/...
+/// /uploads/... → https://uploads.teqlif.com/... (node1 direkt, gateway bypass)
+/// Diğer relative path'ler → kBaseHost prefix'i
 String imgUrl(String? path) {
   if (path == null || path.isEmpty) return '';
   if (path.startsWith('http')) return path;
+  if (path.startsWith('/uploads/')) {
+    return '$kUploadsHost${path.substring('/uploads'.length)}';
+  }
   return '$kBaseHost$path';
 }
 
