@@ -1,12 +1,10 @@
 # Teqlif Scale Planı — V1.0
-> **Hostname eşleştirme:** `node1` = OVH Frankfurt (ana backend) | `gateway` = Netcup Nürnberg (edge proxy)
-
-> **Tarih:** 2026-09-07  
-> **Durum:** Taslak — olgunlaştırma aşamasında
+> **Hostname eşleştirme:** `node1` = OVH Frankfurt (ana backend) | `gateway` = Netcup Nürnberg (edge proxy + observability)
+> **Tarih:** 2026-09-07 | **Durum:** Taslak
 
 ---
 
-## 1. Mevcut Durum (Tek VPS — OVH Frankfurt)
+## 1. Mevcut Durum — node1 (OVH Frankfurt)
 
 ### Donanım
 | Parametre | Değer |
@@ -14,168 +12,199 @@
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
 | RAM | 11.4 GiB + 12 GiB Swap |
 | Disk | 98.3 GiB NVMe |
-| Ağ | ~1.94 Gbps uplink |
+| Ağ | ~1.94 Gbps **unmetered** |
 | Geekbench 6 | 1058 single / 4404 multi |
 
-### Çalışan Servisler (systemd)
-| Servis | Açıklama |
-|---|---|
-| `postgresql@17-main` | Birincil veritabanı |
-| `redis-server` | Cache, kuyruk, stream, presence (4 GB maxmemory) |
-| `minio` | Nesne depolama — `teqlif` (public) + `teqlif-dm` (private) bucket |
-| `clickhouse-server` | Analitik veritabanı |
-| `livekit` | WebRTC SFU — sesli/görüntülü arama |
-| `nginx` | Web sunucusu — şu an dışarıya açık |
-| `teqlif.service` | FastAPI backend (production) |
-| `teqlif-staging.service` | FastAPI backend (staging) |
-| `teqlif-worker.service` | ARQ arka plan worker |
-| `teqlif-worker-critical.service` | ARQ kritik işlemler worker |
-| `prometheus` + `grafana-server` | İzleme |
-| `loki` + `promtail` | Log toplama |
-| `node_exporter` + `postgres-exporter` | Prometheus metrik toplayıcıları |
-| `fail2ban` | Brute-force koruması |
+### node1 Kaynak Tüketicileri (Büyükten Küçüğe)
 
-### Koddan Çıkan Mimari Tespitler
+**1. LiveKit — Bant Genişliği + CPU**
+WebRTC SFU; sesli/görüntülü aramada gerçek zamanlı UDP medya akışları işler. Aktif arama başına ~1-4 Mbps upstream + downstream. OVH'ın unmetered 2Gbps hattının doğrudan faydalanıcısı. Kesinlikle node1'de kalmalı — UDP proxy edilemez, bant genişliği kritik.
 
-**WebSocket fan-out — zaten yatay ölçeklenebilir:**  
-`ws_manager.publish()` Redis Stream'e (`XADD`) yazar. Her worker kendi pozisyonundan `XREAD` eder ve `broadcast_local()` ile kendi bağlantılarına dağıtır. Bu yapı, API worker'ları birden fazla makineye dağıtmaya hazır — hiçbir kod değişikliği gerekmez.
+**2. ARQ Workers (ML) — CPU + RAM**
+`worker.py`'de ML ağırlıklı görevler:
+- `generate_embedding_task` / `generate_listing_embedding_task` — PyTorch sentence-transformer (384 boyutlu vektör). Kod yorumu: *"thread-blocking yaptığı için FastAPI'den ayrı çalışmalıdır"*
+- `update_user_preference_embedding` — numpy ağırlıklı ortalama vektör hesabı
+- `train_bpr_task` (Cumartesi 03:00) — BPR collaborative filtering modeli
+- `train_item2vec_task` (Pazar 04:00) — Item2Vec modeli
+- `train_kmeans_cold_start_task` (Pazar 05:00) — 50-cluster K-Means
+- `train_listing_quality_model_task` (Pazar 02:30) — GradientBoostingRegressor
 
-**Stateless API worker'lar:**  
-Tüm oturum bilgisi Redis'te tutulur (relationship cache, call presence, feed cache, schema cache, idempotency key'leri). API process'leri durumsuz; herhangi bir node istekleri yanıtlayabilir.
+Bu işler PostgreSQL + ClickHouse'a doğrudan, düşük gecikmeli erişim gerektirir. Gateway'e taşınamaz (2 vCPU + 1.9GB RAM yetersiz; PyTorch model tek başına ~300-500MB alır).
 
-**ARQ task queue — Redis tabanlı:**  
-`teqlif-worker` ve `teqlif-worker-critical` Redis üzerinden iş alır. Worker'lar farklı bir node'da çalışabilir — sadece aynı Redis URL'ine erişmesi yeterli.
+**3. ClickHouse — RAM + CPU**
+Her 5 dakikada `flush_interactions_to_db` bulk insert. Her 15-20 dakikada karmaşık analitik sorgular (`compute_user_interests`, `sync_swipelive_interests`). Columnar engine RAM'e agresif; PostgreSQL ve Redis ile RAM rekabeti yaşar.
 
-**MinIO presigned URL mimarisi:**  
-`minio_dm_external_url` ayarı sayesinde DM bucket için presigned URL üretimi harici domain'den yapılıyor. Bu, MinIO'nun arkaya alınmasını kolaylaştırır.
+**4. PostgreSQL — RAM + Disk I/O**
+`shared_buffers`, bağlantı havuzu, worker sorgularının çoğu buraya yüklenip buradan okunur. Disk I/O analitik yazma + normal OLTP yazmayla paylaşılıyor.
 
-**Tek sorun noktaları:**
-- PostgreSQL, Redis, MinIO, ClickHouse, LiveKit hepsi aynı node'da → bu servislerin birine olan yük artışı diğerlerini etkiler
-- `nginx` şu an hem SSL terminasyonu hem içerik sunumu yapıyor ve doğrudan dışarıya açık
+**5. Redis — RAM**
+4 GB `maxmemory`. Relationship cache, feed cache, call presence, ARQ kuyrukları, interaction queue, Thompson Sampling parametreleri, embedding cursor. Tüm sistem buraya bağlı — tek SPOF.
+
+**6. MinIO — Disk + Bant Genişliği**
+`teqlif` (public) + `teqlif-dm` (private) bucket. Upload/download trafiği; DM medya temizlik worker'ı her gün MinIO'ya erişir. OVH unmetered hat dolaylı faydalanıcı.
+
+**7. FastAPI (prod + staging) — Orta CPU/RAM**
+Stateless; tüm durumu Redis/PostgreSQL'de. Gecikmesi düşük tutulmalı → DB/Redis ile aynı node'da kalması avantajlı.
+
+**8. Prometheus + Loki — RAM + Disk**
+Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir (~500MB-1GB toplam) ve üretim yükünden bağımsız olmalı — monitoring, izlediği sistemin kaynaklarını yememeli. **Bu servislerin gateway'e taşınması node1'e ~500MB-1GB RAM iade eder.**
 
 ---
 
-## 2. Yeni VPS — Netcup Nürnberg
+## 2. Yeni Makine — gateway (Netcup Nürnberg)
 
 ### Donanım
 | Parametre | Değer |
 |---|---|
 | CPU | QEMU 2 vCPU @ 2.29 GHz |
-| RAM | 1.9 GiB |
+| RAM | 1.9 GiB + 1 GiB Swap |
 | Disk | 58.9 GiB NVMe |
-| Ağ | ~1.07 Gbps uplink |
+| Ağ | ~1.07 Gbps |
 | Geekbench 6 | 645 single / 1210 multi |
 
 ### Değerlendirme
-1.9 GB RAM, FastAPI replika, PostgreSQL replika veya herhangi bir ML servisi çalıştırmak için **yetersiz**. Bu node'u ağır iş yapacak bir backend node'u olarak konumlandırmak doğru değil.
+1.9 GB RAM, ML worker, PostgreSQL replica veya ClickHouse barındırmak için yetersiz. Ağır iş yapacak bir backend node'u değil.
 
-**Güçlü yanı:** 1 Gbps hat + düşük işletim maliyeti → **edge proxy** rolüne birebir uygun.
+**Güçlü yanları:**
+- 1 Gbps hat → nginx proxy için fazlasıyla yeterli
+- 58.9 GB NVMe → Prometheus TSDB + Loki log storage için ideal (node1'in daralan diski yerine)
+- Düşük işletim maliyeti → daimi servis için uygun
+- node1'den bağımsız çalışır → monitoring node1 çöktüğünde de ayakta kalabilir
+
+**Rol: Edge Proxy + Observability Node**
 
 ---
 
-## 3. Önerilen Mimari — V1.0 (Edge Proxy)
+## 3. Önerilen Mimari — V1.0
 
 ```
 İnternet
     │
     ▼
-[gateway — Netcup Nürnberg]
-  nginx (SSL termination, reverse proxy)
-  Tailscale (VPN tüneli)
-    │
-    │  Tailscale şifreli tünel
-    │  Frankfurt ↔ Nürnberg ~10-15ms
-    │
-    ▼
-[node1 — OVH Frankfurt]
-  FastAPI (teqlif.service)
-  PostgreSQL, Redis, MinIO
-  ClickHouse, LiveKit
-  ARQ Workers
-  (nginx → sadece iç iletişim için)
+[gateway — Netcup Nürnberg]          [node1 — OVH Frankfurt]
+  nginx  (SSL termination)    ──────▶   FastAPI prod
+  Tailscale (VPN tüneli)      ◀──────   FastAPI staging
+  Prometheus (scrape her ikisini)        PostgreSQL
+  Loki  (her ikisinden log)              Redis
+  promtail                               MinIO
+  node_exporter                          ClickHouse
+  fail2ban                               LiveKit  (UDP — gateway bypass)
+                                         ARQ Workers (ML + DB)
+                                         nginx (iç)
+                                         Tailscale
+                                         node_exporter
+                                         promtail → gateway Loki
+                                         fail2ban
 ```
 
 ### Trafik Akışı
 ```
-Client → gateway:443 (nginx SSL) → Tailscale → node1:8000 (FastAPI)
-Client → gateway:443 /uploads/* → Tailscale → node1 nginx/MinIO
-Client ← gateway (yanıt)
+Client  ──HTTP/WS──▶  gateway:443 (nginx SSL)
+                            │ Tailscale şifreli tünel
+                            ▼
+                       node1:8000 (FastAPI)
+
+LiveKit WebRTC medya (UDP):
+Client  ──UDP──▶  node1 doğrudan  (gateway bypass — proxy edilemez)
+
+Monitoring:
+node1 node_exporter/promtail  ──Tailscale──▶  gateway Prometheus/Loki
 ```
 
-**LiveKit istisnası (kritik):**  
-WebRTC medya trafiği (sesli/görüntülü arama) UDP kullanır, nginx üzerinden proxy edilemez. LiveKit sinyalizasyonu (`/rtc` WSS) gateway üzerinden proxy edilir, ama **medya akışı (STUN/TURN/ICE) için node1'in public IP'si erişilebilir kalmalı**. LiveKit'in UDP portları (7880-7900 ve ilgili TURN portları) node1 firewall'unda açık tutulur.
-
-### Avantajlar
-
-| Kazanım | Açıklama |
-|---|---|
-| **Saldırı yüzeyi azalır** | node1'in public IP'si gizlenebilir; sadece LiveKit UDP portları ve Tailscale açık |
-| **SSL CPU yükü dağıtılır** | TLS handshake gateway'de yapılır |
-| **DDoS filtresi** | gateway ilk barikat — SYN flood vb. node1'e ulaşmadan önce fail2ban/rate-limit'e çarpar |
-| **node1 bant genişliği korunur** | node1'in 1.94 Gbps'i LiveKit + iç trafik için ayrılır |
-| **Bağımsız güncelleme** | node1 restart'ta gateway 502 dönebilir, ama yapı korunur |
-
-### Dezavantajlar ve Riskler
-
-| Risk | Ağırlık | Yönetim |
-|---|---|---|
-| **Ekstra gecikme** | Orta | Frankfurt↔Nürnberg ~10-15ms RTT; API için +20-30ms — mobil için kabul edilebilir |
-| **gateway SPOF** | Yüksek | gateway düşerse tüm trafik durur. Mitigation: node1 nginx'i fallback DNS ile tutmak |
-| **WS proxy yapılandırması** | Düşük | nginx'e `upgrade` header'ları + uzun `proxy_read_timeout` gerekli |
-| **Let's Encrypt sertifika yönetimi** | Düşük | gateway'de Certbot; node1'de artık sertifika gerekmez |
+### LiveKit İstisnası (Kritik)
+WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyalizasyonu (`/rtc` WSS) gateway üzerinden proxy edilir; medya akışı (STUN/TURN/ICE) için node1'in public IP'si doğrudan erişilebilir kalır. node1 firewall'unda LiveKit UDP portları herkese açık tutulur.
 
 ---
 
-## 4. Hangi Servisler Nerede?
+## 4. Servis Dağılımı
 
-| Servis | node1 (OVH) | gateway (Netcup) | Notlar |
+| Servis | node1 (OVH) | gateway (Netcup) | Karar Gerekçesi |
 |---|---|---|---|
-| PostgreSQL | ✅ | ❌ | Taşınamaz — NVMe, RAM gerekli |
-| Redis | ✅ | ❌ | Tüm workers buna bağlı |
-| MinIO | ✅ | ❌ | 98 GB disk gerekli |
-| ClickHouse | ✅ | ❌ | RAM yoğun |
-| LiveKit | ✅ | ❌ | UDP media; 1.94 Gbps gerekli |
-| FastAPI (prod) | ✅ | ❌ | Tüm bağımlılıklar node1'de |
-| FastAPI (staging) | ✅ | ❌ | Aynı nedenle |
-| ARQ Workers | ✅ | ❌ | Redis'e doğrudan erişim gerekli |
-| nginx (public) | ❌ → iç | ✅ | node1 nginx iç iletişime döner |
-| Tailscale | ✅ | ✅ | Her iki node'da |
-| Prometheus scrape | ✅ | gateway'yi de izleyecek | |
-| Grafana | ✅ | gateway proxy ile erişim | grafana.teqlif.com |
-| Loki + Promtail | ✅ | gateway log'ları da gönderir | |
-| fail2ban | ✅ | ✅ | Her iki node'da bağımsız |
+| PostgreSQL | ✅ | ❌ | RAM + disk, worker'ların doğrudan erişimi |
+| Redis | ✅ | ❌ | Tüm sistem tek bağımlılık |
+| MinIO | ✅ | ❌ | Disk + OVH unmetered bant |
+| ClickHouse | ✅ | ❌ | RAM yoğun, worker entegrasyonu |
+| LiveKit | ✅ | ❌ | UDP medya + OVH unmetered bant |
+| FastAPI prod | ✅ | ❌ | DB/Redis yakınlığı kritik |
+| FastAPI staging | ✅ | ❌ | Aynı nedenle |
+| ARQ Workers | ✅ | ❌ | ML (PyTorch/numpy) + DB/ClickHouse erişimi |
+| nginx (iç) | ✅ | — | Sadece iç yönlendirme |
+| **nginx (public)** | ❌ → iç | ✅ | SSL termination, edge |
+| **Prometheus** | ❌ → taşınır | ✅ | Observability bağımsızlığı; node1'e ~300MB RAM iade |
+| **Loki** | ❌ → taşınır | ✅ | Log storage için 58.9GB disk avantajı |
+| **Grafana** | ❌ kaldırıldı | ❌ | Prometheus + Loki alert'leri yeterli |
+| promtail | ✅ (node1 log → gateway) | ✅ (kendi logu) | Her iki node'da, gateway Loki'ye gönderir |
+| node_exporter | ✅ | ✅ | Her iki node'da, gateway Prometheus scrape eder |
+| Tailscale | ✅ | ✅ | Özel ağ tüneli |
+| fail2ban | ✅ | ✅ | Bağımsız |
 
 ---
 
-## 5. Kod Değişikliği Gereksinimi
+## 5. Grafana Kaldırma Kararı
 
-**Neredeyse sıfır.** Mevcut mimari bu geçişe hazır:
-
-- `settings.redis_url` → node1 localhost'ta kalır, değişmez
-- `settings.database_url` → node1 localhost'ta kalır, değişmez
-- `settings.minio_dm_external_url` → zaten dış domain kullanıyor, değişmez
-- `ws_manager` → Redis Stream fan-out zaten multi-node için tasarlandı
-- CORS → `settings.site_url` tek domain, gateway IP değişimi CORS'u etkilemez
-
-**Tek yapılandırma değişikliği:** gateway'nin Tailscale IP'si üzerinden node1'e ulaşabilmesi için `.env`'de herhangi bir değişiklik yok — node1 üzerindeki servisler `127.0.0.1`'i dinlemeye devam eder, sadece gateway'den gelen Tailscale IP'sine izin verilir.
+Grafana sadece görselleştirme katmanı — veri üretmiyor, saklamıyor. Alert pipeline'ına dokunmuyor. Prometheus'un kendi alert kuralları (`alerting_rules.yml`) + Alertmanager ve Loki'nin kendi alert kuralları Grafana olmadan tam işlevsel çalışır. Servis kaldırıldı; RAM ve yönetim yükü azaltıldı.
 
 ---
 
-## 6. Uygulama Adımları
+## 6. Kod Değişikliği Gereksinimi
+
+**Sıfır.** Mevcut mimari bu geçişe hazır:
+- `settings.redis_url` → node1 localhost, değişmez
+- `settings.database_url` → node1 localhost, değişmez
+- `settings.minio_dm_external_url` → zaten dış domain, değişmez
+- `ws_manager` → Redis Stream fan-out zaten multi-node hazır
+- CORS → `settings.site_url` tek domain, gateway IP değişimi etkilemez
+
+---
+
+## 7. Uygulama Adımları
 
 ### Adım 1 — Tailscale Kurulumu (Sıfır downtime)
 ```bash
 # Her iki node'da
 curl -fsSL https://tailscale.com/install.sh | sh
-tailscale up --advertise-routes=...
+sudo tailscale up
 
-# Bağlantı testi
-ping node1-tailscale-ip
+# Bağlantı testi (gateway'den)
+ping <NODE1_TAILSCALE_IP>
 ```
 
-### Adım 2 — gateway Nginx Yapılandırması
+### Adım 2 — Prometheus + Loki'yi gateway'e Kur
+```bash
+# gateway'de
+# Prometheus
+wget https://github.com/prometheus/prometheus/releases/download/.../prometheus-*.linux-amd64.tar.gz
+# Loki
+wget https://github.com/grafana/loki/releases/download/.../loki-linux-amd64.zip
+```
+
+`prometheus.yml` (gateway'de):
+```yaml
+scrape_configs:
+  - job_name: node1
+    static_configs:
+      - targets: ['<NODE1_TAILSCALE_IP>:9100']
+    labels: {node: node1}
+
+  - job_name: gateway
+    static_configs:
+      - targets: ['localhost:9100']
+    labels: {node: gateway}
+
+  - job_name: postgres
+    static_configs:
+      - targets: ['<NODE1_TAILSCALE_IP>:9187']
+```
+
+node1'de `promtail.yml` hedefini gateway Loki'ye yönlendir:
+```yaml
+clients:
+  - url: http://<GATEWAY_TAILSCALE_IP>:3100/loki/api/v1/push
+```
+
+### Adım 3 — gateway nginx Yapılandırması
 ```nginx
-# /etc/nginx/sites-enabled/teqlif.conf (gateway)
+# /etc/nginx/sites-enabled/teqlif.conf
 
 upstream node1_api {
     server <NODE1_TAILSCALE_IP>:8000;
@@ -186,97 +215,113 @@ server {
     listen 443 ssl http2;
     server_name teqlif.com www.teqlif.com;
 
-    # SSL — Let's Encrypt (gateway'de Certbot)
-    ssl_certificate /etc/letsencrypt/live/teqlif.com/fullchain.pem;
+    ssl_certificate     /etc/letsencrypt/live/teqlif.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/teqlif.com/privkey.pem;
 
     # API + WebSocket
     location / {
-        proxy_pass http://node1_api;
+        proxy_pass         http://node1_api;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-        # WebSocket geçişi için zorunlu
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-
-        # WS bağlantılarını uzun tutmak için
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        "upgrade";
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }
 
-    # Uploads — büyük dosyalar için buffer ayarları
+    # Büyük dosya upload — buffer kapat
+    location /api/upload {
+        proxy_pass             http://node1_api;
+        proxy_buffering        off;
+        proxy_request_buffering off;
+        client_max_body_size   500m;
+    }
+
     location /uploads/ {
         proxy_pass http://node1_api;
         proxy_buffering off;
-        proxy_request_buffering off;
     }
 }
 ```
 
-### Adım 3 — node1 Firewall Sertleştirme
+### Adım 4 — node1 Firewall Sertleştirme
 ```bash
-# node1'de (OVH), HTTP/HTTPS sadece gateway Tailscale IP'sinden
-ufw allow from <NODE2_TAILSCALE_IP> to any port 80
-ufw allow from <NODE2_TAILSCALE_IP> to any port 8000
+# HTTP/HTTPS sadece gateway Tailscale IP'sinden
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 80
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 443
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
 
-# LiveKit UDP portları herkese açık kalmaya devam eder
-ufw allow 7880/tcp   # LiveKit HTTP
-ufw allow 7881/tcp   # LiveKit TURN/TLS
-ufw allow 50000:60000/udp  # WebRTC media
+# Monitoring — sadece gateway'den
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9100  # node_exporter
+sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9187  # postgres-exporter
 
-# SSH — Tailscale üzerinden veya kısıtlı IP
+# LiveKit — herkese açık (UDP proxy edilemez)
+sudo ufw allow 7880/tcp
+sudo ufw allow 7881/tcp
+sudo ufw allow 50000:60000/udp
+
+# SSH — kısıtla veya Tailscale üzerinden
 ```
 
-### Adım 4 — DNS Değişikliği
+### Adım 5 — DNS Değişikliği
 - `teqlif.com` A record → gateway public IP
-- Staging → gateway üzerinden aynı yapıyla
+- node1'in public IP'sini DNS'ten çıkar (LiveKit için açık port kalır)
 
-### Adım 5 — Doğrulama
-- [ ] API endpoint'leri çalışıyor
-- [ ] WebSocket bağlantıları (DM, bildirim, chat) kurulabiliyor
-- [ ] Sesli/görüntülü arama WebRTC ICE başarılı (LiveKit)
+### Adım 6 — Doğrulama Checklist
+- [ ] API endpoint'leri yanıt veriyor
+- [ ] WebSocket (DM, bildirim, feed) bağlantıları kuruluyor
+- [ ] LiveKit WebRTC ICE başarılı (sesli/görüntülü arama)
 - [ ] `/uploads/` dosyaları erişilebilir
 - [ ] MinIO presigned DM URL'leri çalışıyor
-- [ ] Grafana → gateway proxy üzerinden erişilebilir
+- [ ] Prometheus gateway'den node1 metriklerini scrape ediyor
+- [ ] Loki node1 loglarını alıyor
+- [ ] Prometheus alert kuralları aktif
 
 ---
 
-## 7. İzleme — gateway Eklenmesi
+## 8. node1'e Kazandırılan Kapasite
 
-```yaml
-# node1 Prometheus scrape_configs'e ek
-- job_name: gateway
-  static_configs:
-    - targets: ['<NODE2_TAILSCALE_IP>:9100']  # node_exporter
-  labels:
-    node: gateway
-```
+| Servis taşındı | Tahmini RAM kazancı |
+|---|---|
+| Prometheus | ~300 MB |
+| Loki | ~200-400 MB |
+| Grafana (kaldırıldı) | ~150-250 MB |
+| **Toplam** | **~650 MB – 950 MB** |
 
-gateway'de `node_exporter` + `promtail` kurulur, log'lar node1 Loki'ye gönderilir.
+Bu kazanç direkt olarak PostgreSQL `shared_buffers`, Redis maxmemory artışı veya ML worker'ların peak dönemlerinde kullanılabilir.
 
 ---
 
-## 8. Açık Sorular (Olgunlaştırılacak)
+## 9. Riskler
 
-1. **gateway SPOF** — gateway düşünce kullanıcılar etkilenmesin diye nasıl bir fallback mekanizması kurulur? (DNS TTL kısaltma + node1 nginx fallback DNS?)
-
-2. **Upload büyük dosyaları gateway üzerinden mi geçsin?** — Video yükleme (MB boyutunda) Tailscale tünelinden geçmek zorunda; bu tünel bant genişliğini etkiler mi? Alternatif: `uploads.teqlif.com` subdomain'ini node1'e doğrudan yönlendirmek.
-
-3. **Nginx microcaching gateway'de** — Feed ve listing API yanıtları için gateway'de 1-5 saniyelik mikro cache kurulabilir; sık değişen veriler (WS, chat) cache'e alınmaz. Bu node1 yükünü ciddi ölçüde azaltır.
-
-4. **Gelecek: FastAPI replika gateway'de** — gateway RAM'i şu an yetmez (1.9 GB). Daha büyük bir plan için gateway upgrade'i veya Node-3 eklenmesi gerekir.
-
----
-
-## 9. Sonraki Fazlar (V2.0+)
-
-| Faz | Ne | Ne Zaman |
+| Risk | Ağırlık | Önlem |
 |---|---|---|
-| V1.1 | gateway'de nginx microcaching | node1 CPU %70+ sürekli ise |
-| V2.0 | PostgreSQL streaming read replica (gateway veya Node-3) | Okuma sorguları yavaşlarsa |
-| V2.1 | FastAPI replika node'u (Node-3, daha büyük RAM) | API yanıt süresi bozulursa |
-| V2.2 | Redis Sentinel / Replication | Redis SPOF kabul edilemez hale gelirse |
-| V3.0 | MinIO distributed mode | Depolama limiti yaklaşırsa |
+| **gateway SPOF** | Yüksek | DNS TTL kısalt (60s); node1 nginx'i hazır tut; gateway düşünce node1 doğrudan devreye girer |
+| **Tailscale SaaS bağımlılığı** | Orta | Alternatif: WireGuard manuel kurulum (daha fazla efor, tam kontrol) |
+| **Ekstra gecikme** | Düşük-Orta | Frankfurt↔Nürnberg ~10-15ms RTT; mobil API için +20-30ms — kabul edilebilir |
+| **Büyük upload Tailscale tünelinden geçer** | Orta | Değerlendirme: `uploads.teqlif.com` subdomain'ini node1'e doğrudan yönlendirmek |
+
+---
+
+## 10. Açık Sorular
+
+1. **Büyük upload bypass'ı** — Video yükleme (MB-GB boyutunda) Tailscale tünelinden geçmek zorunda. `uploads.teqlif.com` subdomain'i node1'e doğrudan A record bağlanabilir; upload trafiği gateway'i atlar.
+
+2. **Nginx microcaching gateway'de** — Feed ve listing API yanıtları için 1-5 saniyelik mikro cache. WS ve chat endpoint'leri cache dışı. node1 yükünü ciddi ölçüde azaltır. V1.1 adayı.
+
+3. **gateway SPOF fallback otomasyonu** — DNS TTL kısaltma yeterli mi, yoksa health-check tabanlı otomatik failover (Cloudflare, Route53 health check) gerekli mi?
+
+---
+
+## 11. Sonraki Fazlar (V2.0+)
+
+| Faz | Ne | Tetikleyici |
+|---|---|---|
+| V1.1 | gateway'de nginx microcaching | node1 CPU %70+ sürekli |
+| V1.2 | Büyük upload bypass (`uploads.teqlif.com` → node1 doğrudan) | Upload latency sorun olursa |
+| V2.0 | PostgreSQL streaming read replica (node3) | Okuma sorguları yavaşlarsa |
+| V2.1 | FastAPI replika (node3, daha büyük RAM) | API yanıt süresi bozulursa |
+| V2.2 | Redis Sentinel + Replica | Redis SPOF kabul edilemez hale gelirse |
+| V3.0 | MinIO distributed mode | Disk dolumu yaklaşırsa |
