@@ -10,6 +10,7 @@ from app.models.follow import Follow
 from app.schemas.message import MessageOut
 from app.services.dm_broadcast import broadcast_dm
 from app.services.notification_service import send_message_push
+from app.services.relationship_service import RelationshipStateService
 from app.utils.redis_client import get_redis
 
 logger = get_logger(__name__)
@@ -38,6 +39,7 @@ class SendDirectMessageCommand:
         auto_accepted = False
         is_pending_for_initiator = False
         initiator_id_for_notif: int | None = None
+        thread_status_changed = False
 
         async with self.uow:
             receiver = await self.uow.users.get(receiver_id)
@@ -94,6 +96,7 @@ class SendDirectMessageCommand:
                     call_allowed=False,
                 ))
                 is_new_request = is_req
+                thread_status_changed = True
 
             elif (existing_thread.deleted_at_a is not None
                   and existing_thread.deleted_at_b is not None):
@@ -110,6 +113,7 @@ class SendDirectMessageCommand:
                 existing_thread.status = "accepted" if receiver_follows_sender else "pending"
                 existing_thread.call_allowed = False
                 is_new_request = existing_thread.status == "pending"
+                thread_status_changed = True
 
             elif existing_thread.status == "pending":
                 if existing_thread.initiator_id != sender_id:
@@ -117,14 +121,22 @@ class SendDirectMessageCommand:
                     existing_thread.status = "accepted"
                     auto_accepted = True
                     initiator_id_for_notif = existing_thread.initiator_id
+                    thread_status_changed = True
                 else:
                     # Initiator sends another message to their own pending request
                     is_pending_for_initiator = True
 
             await self.uow.session.flush()
             msg_id = msg.id
+            session = self.uow.session
 
         # commit sonrası — side effects
+
+        # Thread durumu değiştiyse relationship cache'i güncelle ve her iki tarafa broadcast et
+        if thread_status_changed:
+            state = await RelationshipStateService.recompute_and_cache(user_a, user_b, session)
+            RelationshipStateService.broadcast(state)
+
         if is_new_request:
             redis = await get_redis()
             await redis.incr(f"msg:unread:request:{receiver_id}")
