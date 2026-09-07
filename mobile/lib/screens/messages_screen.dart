@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1175,6 +1175,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   bool _isRecording = false;
   int _recordSecs = 0;
   Timer? _recordTimer;
+  double _swipeDx = 0.0;
 
   // Audio playback
   final _audioPlayer = AudioPlayer();
@@ -1804,7 +1805,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   Future<void> _cancelRecording() async {
     _recordTimer?.cancel();
     await _recorder.stop();
-    setState(() => _isRecording = false);
+    setState(() {
+      _isRecording = false;
+      _swipeDx = 0.0;
+    });
   }
 
   // ─── Audio playback ──────────────────────────────────────────────────
@@ -2666,76 +2670,104 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final elapsedStr = '${em.toString().padLeft(2, '0')}:${es.toString().padLeft(2, '0')}';
     final remainStr  = '${rm.toString().padLeft(2, '0')}:${rs.toString().padLeft(2, '0')}';
     final isWarning = remaining <= 30;
-    return Row(
-      children: [
-        // Kırmızı kayıt noktası + geçen / kalan süre
-        Container(
-          width: 10,
-          height: 10,
-          margin: const EdgeInsetsDirectional.only(end: 6),
-          decoration: BoxDecoration(
-            color: isWarning ? Colors.orange : Colors.red,
-            shape: BoxShape.circle,
-          ),
-        ),
-        Text(
-          '$elapsedStr / $remainStr',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-            color: isWarning ? Colors.orange : null,
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Kaydır iptal
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.chevron_left, size: 18, color: Colors.grey),
-              Text(
-                loc.t("voiceSwipeToCancel"),
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        // İptal butonu
-        GestureDetector(
-          onTap: _cancelRecording,
-          child: Container(
-            width: 42,
-            height: 42,
+    const cancelThreshold = -80.0;
+    final isCancelling = _swipeDx < cancelThreshold * 0.6;
+
+    return GestureDetector(
+      onHorizontalDragUpdate: (d) {
+        if (d.delta.dx >= 0) return;
+        final next = (_swipeDx + d.delta.dx).clamp(cancelThreshold, 0.0);
+        setState(() => _swipeDx = next);
+        if (_swipeDx <= cancelThreshold) {
+          HapticFeedback.heavyImpact();
+          _cancelRecording();
+        }
+      },
+      onHorizontalDragEnd: (_) {
+        if (_isRecording) setState(() => _swipeDx = 0.0);
+      },
+      child: Row(
+        children: [
+          // Kırmızı kayıt noktası + geçen / kalan süre
+          Container(
+            width: 10,
+            height: 10,
+            margin: const EdgeInsetsDirectional.only(end: 6),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: isWarning ? Colors.orange : Colors.red,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.delete_outline,
-              color: Colors.red,
-              size: 22,
+          ),
+          Text(
+            '$elapsedStr / $remainStr',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: isWarning ? Colors.orange : null,
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        // Gönder (bırak)
-        GestureDetector(
-          onTap: _stopAndSend,
-          child: Container(
-            width: 42,
-            height: 42,
-            decoration: const BoxDecoration(
-              color: kPrimary,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.send_rounded,
-              color: Colors.white,
-              size: 20,
+          const SizedBox(width: 8),
+          // Kaydır iptal — parmağı takip eder
+          Expanded(
+            child: Transform.translate(
+              offset: Offset(_swipeDx, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.chevron_left,
+                      size: 18,
+                      color: isCancelling ? Colors.red : Colors.grey),
+                  Text(
+                    loc.t("voiceSwipeToCancel"),
+                    style: TextStyle(
+                      color: isCancelling ? Colors.red : Colors.grey,
+                      fontSize: 12,
+                      fontWeight: isCancelling
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+          // İptal butonu
+          GestureDetector(
+            onTap: _cancelRecording,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 22,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Gönder
+          GestureDetector(
+            onTap: _stopAndSend,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                color: kPrimary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
