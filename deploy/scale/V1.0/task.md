@@ -20,6 +20,9 @@
   - node1: `10.10.0.1` — public key `JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=`
   - gateway: `10.10.0.2` (94.16.105.135) — public key `7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=`
 - [x] **Adım 2 — gateway Taban Kurulumu tamamlandı** — prometheus/loki/promtail/node_exporter active, nginx+fail2ban kurulu ✅
+- [x] **Adım 3 — gateway nginx + SSL tamamlandı** — Let's Encrypt cert node1'den kopyalandı, nginx proxy zinciri doğrulandı ✅
+- [x] **Adım 4a — node1 teqlif.service + teqlif-staging.service tamamlandı** — `--host 0.0.0.0`, `--forwarded-allow-ips 10.10.0.2` ✅
+- [x] **Adım 5 — node1 Firewall Sertleştirme tamamlandı** — gateway→8000/8001/9100/9187 açık, public deny ✅
 
 ---
 
@@ -138,7 +141,7 @@
 
 ---
 
-## 🔲 Adım 3 — gateway nginx Yapılandırması + SSL
+## ✅ Adım 3 — gateway nginx Yapılandırması + SSL — TAMAMLANDI
 
 > nginx yapılandırması aktif olana kadar mevcut node1 nginx trafiği taşır — downtime yok.
 
@@ -175,7 +178,7 @@
 
 ---
 
-## 🔲 Adım 4 — Deploy Config Değişiklikleri
+## ✅ Adım 4 — Deploy Config Değişiklikleri — KISMEN TAMAMLANDI
 
 > 4 config değişikliği (plan.md Bölüm 6). Deploy pipeline değişmez, sadece config.
 
@@ -228,7 +231,7 @@
 
 ---
 
-## 🔲 Adım 5 — node1 Firewall Sertleştirme
+## ✅ Adım 5 — node1 Firewall Sertleştirme — TAMAMLANDI
 
 > WireGuard ve gateway nginx aktif olduktan sonra yapılır.
 
