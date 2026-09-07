@@ -1,8 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import select, true
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import NotFoundException, ForbiddenException
 from app.models.follow import Follow
+from app.models.message_thread import MessageThread
 from app.services.relationship_service import RelationshipStateService
 
 logger = get_logger(__name__)
@@ -35,6 +36,19 @@ class FollowUserCommand:
                 await self.uow.session.delete(follow)
                 action = "unfollowed"
                 logger.info("[FollowUserCommand] Takipten çıkarıldı | follower=%s followed=%s", follower_id, followed_id)
+
+                # Unfollow'da call_allowed'ı sıfırla — karşı taraf isterse tekrar açar
+                user_a, user_b = min(follower_id, followed_id), max(follower_id, followed_id)
+                thread = await self.uow.session.scalar(
+                    select(MessageThread).where(
+                        MessageThread.user_a_id == user_a,
+                        MessageThread.user_b_id == user_b,
+                        MessageThread.call_allowed == true(),
+                    )
+                )
+                if thread:
+                    thread.call_allowed = False
+                    logger.info("[FollowUserCommand] call_allowed sıfırlandı | user_a=%s user_b=%s", user_a, user_b)
             else:
                 new_follow = Follow(follower_id=follower_id, followed_id=followed_id)
                 self.uow.session.add(new_follow)
