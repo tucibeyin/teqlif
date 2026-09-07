@@ -621,9 +621,9 @@ Bu URL Cloudflare → gateway → MinIO zincirinden geçiyor. MinIO'ya `10.10.0.
 ## 17. Açık Konular ve V1.1 Adayları
 
 ### Doğrulanmayı Bekleyen (Adım 8 artıklar)
-- [ ] WebSocket (DM, bildirim, feed) bağlantısı — canlı uygulamayla test
-- [ ] LiveKit WebRTC ICE — canlı arama ile test
-- [ ] MinIO presigned DM URL'leri — canlı DM ile test
+- [x] WebSocket (DM, bildirim, feed) bağlantısı — doğrulandı ✅
+- [x] LiveKit WebRTC ICE — canlı arama ile doğrulandı ✅
+- [x] MinIO presigned DM URL'leri — canlı DM ile doğrulandı ✅
 
 ### V1.1 Adayları
 - **nginx microcaching:** Gateway'de feed + listing API yanıtları için 1-5 saniyelik mikro cache. WS ve chat hariç. node1 yükünü ciddi ölçüde azaltır.

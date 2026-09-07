@@ -277,9 +277,9 @@
 - [x] `curl -sI https://uploads.teqlif.com/teqlif/test` → 404 MinIO (node1 direkt) ✅
 - [x] Prometheus: tüm target'lar `up` (node-node1, node-gateway, postgres, livekit, prometheus) ✅
 - [x] SSL: Let's Encrypt, TLSv1.3, HTTP/2 ✅
-- [ ] WebSocket bağlantısı — canlı uygulama ile test edilmeli
-- [ ] LiveKit WebRTC ICE — canlı arama ile test edilmeli
-- [ ] MinIO presigned DM URL'leri — canlı DM ile test edilmeli
+- [x] WebSocket bağlantısı — canlı uygulama ile doğrulandı ✅
+- [x] LiveKit WebRTC ICE — canlı arama ile doğrulandı ✅
+- [x] MinIO presigned DM URL'leri — canlı DM ile doğrulandı ✅
 
 ---
 
