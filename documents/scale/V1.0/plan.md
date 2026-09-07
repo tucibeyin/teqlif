@@ -172,7 +172,8 @@ WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyali
 | LiveKit | ✅ | ❌ | UDP medya + OVH unmetered bant |
 | FastAPI prod | ✅ | ❌ | DB/Redis yakınlığı kritik |
 | FastAPI staging | ✅ | ❌ | Aynı nedenle |
-| ARQ Workers | ✅ | ❌ | ML (PyTorch/numpy) + DB/ClickHouse erişimi |
+| ARQ Worker (genel) | ✅ | ❌ | ML (PyTorch/numpy) + DB/ClickHouse erişimi |
+| ARQ Worker (critical) | ✅ | ❌ | Push notification, outbid, loser cascade — bulkhead pattern |
 | nginx (iç) | ✅ | — | Sadece iç yönlendirme |
 | **nginx (public)** | ❌ → iç | ✅ | SSL termination, edge |
 | **Prometheus** | ❌ → taşınır | ✅ | Observability bağımsızlığı; node1'e ~300MB RAM iade |
@@ -234,7 +235,35 @@ Gateway → Tailscale → node1:8000 zincirine geçince bu değer güncellenmeli
 ```
 Aynı değişiklik `teqlif-staging.service` için de gerekli. Bu olmadan sahte X-Forwarded-For kabul edilebilir; firewall sertleştirme bunu engeller ama defense-in-depth açısından zorunlu.
 
-**3. gateway nginx — `/rtc` LiveKit sinyalizasyon proxy'si**
+**3. Prometheus scrape config — tüm `localhost` hedefleri node1 Tailscale IP'sine taşınır**
+
+`/etc/prometheus/prometheus.yml` şu an node1'de çalışıyor ve tüm hedefler `localhost:xxxx`. Prometheus gateway'e taşınınca:
+
+```yaml
+# /etc/prometheus/prometheus.yml — gateway'de bu hale gelecek
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']           # gateway'in kendisi
+
+  - job_name: 'livekit'
+    static_configs:
+      - targets: ['<NODE1_TAILSCALE_IP>:7881']
+
+  - job_name: 'node_node1'
+    static_configs:
+      - targets: ['<NODE1_TAILSCALE_IP>:9100']
+
+  - job_name: 'node_gateway'
+    static_configs:
+      - targets: ['localhost:9100']
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['<NODE1_TAILSCALE_IP>:9187']
+```
+
+**4. gateway nginx — `/rtc` LiveKit sinyalizasyon proxy'si**
 
 `settings.livekit_url = "wss://teqlif.com/rtc"` — istemciler WebSocket bağlantısını `/rtc` path'i üzerinden kurar. gateway nginx'e bu location **eksikse LiveKit sinyalizasyonu çalışmaz**. Detay Adım 3'te (nginx config bloğunda `/rtc` upstream ayrı tanımlandı).
 
@@ -252,13 +281,20 @@ sudo tailscale up
 ping <NODE1_TAILSCALE_IP>
 ```
 
-### Adım 2 — Prometheus + Loki'yi gateway'e Kur
+### Adım 2 — gateway Taban Kurulumu (nginx + Prometheus + Loki + node_exporter)
+
+> **Not:** gateway şu an tamamen çıplak — nginx dahil hiçbir servis kurulu değil. Her şey sıfırdan kurulacak.
+
 ```bash
-# gateway'de
-# Prometheus
+# gateway'de — taban paketler
+sudo apt update && sudo apt install -y nginx fail2ban
+
+# Prometheus (binary kurulum)
 wget https://github.com/prometheus/prometheus/releases/download/.../prometheus-*.linux-amd64.tar.gz
-# Loki
+# Loki (binary kurulum)
 wget https://github.com/grafana/loki/releases/download/.../loki-linux-amd64.zip
+# node_exporter
+wget https://github.com/prometheus/node_exporter/releases/download/.../node_exporter-*.linux-amd64.tar.gz
 ```
 
 `prometheus.yml` (gateway'de):
