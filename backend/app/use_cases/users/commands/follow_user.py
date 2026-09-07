@@ -1,9 +1,12 @@
+from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import BadRequestException, NotFoundException, ForbiddenException
+from app.core.exceptions import NotFoundException, ForbiddenException
 from app.models.follow import Follow
+from app.services.relationship_service import RelationshipStateService
 
 logger = get_logger(__name__)
+
 
 class FollowUserCommand:
     """CQRS Command: Bir kullanıcıyı takip eder veya takipten çıkar (Toggle)."""
@@ -23,8 +26,6 @@ class FollowUserCommand:
                 logger.warning("[FollowUserCommand] Hedef kullanıcı bulunamadı | followed_id=%s", followed_id)
                 raise NotFoundException(code="USER_NOT_FOUND")
 
-            # Mevcut takip durumu
-            from sqlalchemy import select
             stmt = select(Follow).where(Follow.follower_id == follower_id, Follow.followed_id == followed_id)
             result = await self.uow.session.execute(stmt)
             follow = result.scalar_one_or_none()
@@ -39,6 +40,9 @@ class FollowUserCommand:
                 self.uow.session.add(new_follow)
                 logger.info("[FollowUserCommand] Takip edildi | follower=%s followed=%s", follower_id, followed_id)
 
-            # TODO: EventBus publish UserFollowedEvent
+            session = self.uow.session
+
+        state = await RelationshipStateService.recompute_and_cache(follower_id, followed_id, session)
+        RelationshipStateService.broadcast(state)
 
         return {"followed_id": followed_id, "action": action}
