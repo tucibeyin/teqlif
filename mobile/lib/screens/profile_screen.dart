@@ -99,11 +99,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
 
 
-  String _buildImageUrl(String url) {
-    if (url.startsWith('http')) return url;
-    final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
-    return '$origin$url';
-  }
+  String _buildImageUrl(String url) => imgUrl(url);
 
   /// Profil fotoğrafı — CachedNetworkImage ile disk'e önbelleğe alınır.
   Widget _buildAvatar({
@@ -2425,11 +2421,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     }
   }
 
-  String _buildImageUrl(String url) {
-    if (url.startsWith('http')) return url;
-    final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
-    return '$origin$url';
-  }
+  String _buildImageUrl(String url) => imgUrl(url);
 
   Future<void> _pickAndUploadAvatar() async {
     final loc = ref.read(localizationProvider);
