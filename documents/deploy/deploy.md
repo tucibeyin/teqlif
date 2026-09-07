@@ -506,6 +506,11 @@ for svc in teqlif teqlif-staging teqlif-worker teqlif-worker-critical livekit mi
   sudo cp /var/www/teqlif.com/deploy/monolith/systemd/${svc}.service /etc/systemd/system/
 done
 sudo cp /var/www/teqlif.com/deploy/monolith/systemd/redis-backup.timer /etc/systemd/system/
+
+# Redis backup scriptini kopyala (redis-backup.service bu path'i çalıştırır)
+sudo cp /var/www/teqlif.com/deploy/scripts/redis-backup.sh /usr/local/sbin/redis-backup.sh
+sudo chmod +x /usr/local/sbin/redis-backup.sh
+sudo mkdir -p /var/backups/redis
 ```
 
 #### Worker PartOf Override
