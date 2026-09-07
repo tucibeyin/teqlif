@@ -168,19 +168,13 @@ def censor_text(text: str) -> str:
 def analyze_listing_text(title: str, description: str = "") -> bool:
     """
     İlan başlığı + açıklamasını uygunsuz içerik için kontrol et.
-    Hem JSON sözlüğü hem better-profanity kullanılır.
+    Sadece JSON sözlük + tam kelime (token) eşleşmesi — better-profanity
+    substring matching Türkçe metinde çok fazla false-positive üretir.
     """
     combined = f"{title} {description or ''}".strip()
     if not combined:
         return False
-    if analyze_text_all(combined):
-        return True
-    if _bp_profanity is not None:
-        try:
-            return _bp_profanity.contains_profanity(combined)
-        except Exception:
-            pass
-    return False
+    return analyze_text_all(combined)
 
 
 class _LegacyAutoMod:
