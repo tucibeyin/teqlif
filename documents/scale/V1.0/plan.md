@@ -69,7 +69,7 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
 
 ### node1 Firewall Durumu (UFW)
 
-**Güvenlik açığı:** `3000/tcp ALLOW IN Anywhere` — Grafana internete açık. Tailscale kurulunca kapatılmalı.
+**⛔ Grafana silinecek:** `3000/tcp ALLOW IN Anywhere` açığı güvenlik riski. Grafana kaldırılınca bu port zaten kapanacak (`apt remove grafana` + `ufw delete allow 3000/tcp`).
 
 **Cloudflare IP whitelist:** UFW'de zaten tanımlı (tüm Cloudflare IPv4/IPv6 aralıkları).
 
@@ -176,7 +176,7 @@ WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyali
 | **nginx (public)** | ❌ → iç | ✅ | SSL termination, edge |
 | **Prometheus** | ❌ → taşınır | ✅ | Observability bağımsızlığı; node1'e ~300MB RAM iade |
 | **Loki** | ❌ → taşınır | ✅ | Log storage için 58.9GB disk avantajı |
-| **Grafana** | ❌ kaldırıldı | ❌ | Prometheus + Loki alert'leri yeterli |
+| **Grafana** | ⛔ node1'den SİLİNECEK | ❌ | `apt remove grafana` + UFW 3000 kapat |
 | promtail | ✅ (node1 log → gateway) | ✅ (kendi logu) | Her iki node'da, gateway Loki'ye gönderir |
 | node_exporter | ✅ | ✅ | Her iki node'da, gateway Prometheus scrape eder |
 | Tailscale | ✅ | ✅ | Özel ağ tüneli |
@@ -184,9 +184,19 @@ WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyali
 
 ---
 
-## 5. Grafana Kaldırma Kararı
+## 5. Grafana — Silinecek
 
-Grafana sadece görselleştirme katmanı — veri üretmiyor, saklamıyor. Alert pipeline'ına dokunmuyor. Prometheus'un kendi alert kuralları (`alerting_rules.yml`) + Alertmanager ve Loki'nin kendi alert kuralları Grafana olmadan tam işlevsel çalışır. Servis kaldırıldı; RAM ve yönetim yükü azaltıldı.
+Grafana sadece görselleştirme katmanı; veri üretmiyor, saklamıyor, alert pipeline'ına dokunmuyor. Prometheus alert kuralları + Loki alert kuralları Grafana olmadan tam işlevsel çalışır.
+
+**Ek güvenlik gerekçesi:** Şu an `3000/tcp` tüm internete açık — Grafana doğrudan erişilebilir durumda. Bu kabul edilemez bir risk.
+
+**Uygulama sırası (V1.0 geçişinde):**
+```bash
+sudo systemctl stop grafana-server
+sudo systemctl disable grafana-server
+sudo apt remove grafana -y
+sudo ufw delete allow 3000/tcp
+```
 
 ---
 
@@ -337,9 +347,11 @@ server {
 ### Adım 4 — node1 Firewall Sertleştirme
 
 ```bash
-# Grafana'yı internetten kapat — sadece Tailscale üzerinden erişilecek
+# Grafana'yı kaldır ve portunu kapat (Tailscale üzerinden de erişilmeyecek — servis siliniyor)
+sudo systemctl stop grafana-server
+sudo systemctl disable grafana-server
+sudo apt remove grafana -y
 sudo ufw delete allow 3000/tcp
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 3000
 
 # HTTP/HTTPS — gateway Tailscale IP + mevcut Cloudflare whitelist korunur
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 80
@@ -400,7 +412,7 @@ teqlif.com   A   <GATEWAY_PUBLIC_IP>   Proxied  ← bu satır değişiyor
 |---|---|
 | Prometheus | ~300 MB |
 | Loki | ~200-400 MB |
-| Grafana (kaldırıldı) | ~150-250 MB |
+| Grafana (**silinecek** — node1'den kaldırılıyor) | ~150-250 MB |
 | **Toplam** | **~650 MB – 950 MB** |
 
 Bu kazanç direkt olarak PostgreSQL `shared_buffers`, Redis maxmemory artışı veya ML worker'ların peak dönemlerinde kullanılabilir.
