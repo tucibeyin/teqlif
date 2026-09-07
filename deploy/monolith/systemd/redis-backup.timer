@@ -1,5 +1,5 @@
 [Unit]
-Description=Redis RDB Backup – Her gece 02:00
+Description=Redis RDB Backup — her gece 02:00
 
 [Timer]
 OnCalendar=*-*-* 02:00:00

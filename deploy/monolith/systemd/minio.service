@@ -1,0 +1,13 @@
+[Unit]
+Description=MinIO
+After=network.target
+
+[Service]
+User=www-data
+EnvironmentFile=/etc/minio.env
+ExecStart=/usr/local/bin/minio server /var/minio/data --address :9010 --console-address :9011
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

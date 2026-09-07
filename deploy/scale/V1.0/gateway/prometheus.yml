@@ -1,0 +1,34 @@
+# /etc/prometheus/prometheus.yml — gateway
+# Scale V1.0: node1 metrikleri WireGuard üzerinden 10.10.0.1'den çekilir
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-gateway'
+    static_configs:
+      - targets: ['localhost:9100']
+        labels:
+          node: gateway
+
+  - job_name: 'node-node1'
+    static_configs:
+      - targets: ['10.10.0.1:9100']
+        labels:
+          node: node1
+
+  - job_name: 'livekit'
+    static_configs:
+      - targets: ['10.10.0.1:7881']
+        labels:
+          node: node1
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['10.10.0.1:9187']
+        labels:
+          node: node1

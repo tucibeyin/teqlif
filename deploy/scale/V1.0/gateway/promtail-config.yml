@@ -1,0 +1,41 @@
+# /etc/promtail-config.yml — gateway
+# Scale V1.0: gateway'in kendi nginx + systemd logları, localhost Loki'ye
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://localhost:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-access
+          node: gateway
+          __path__: /var/log/nginx/access.log
+
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-error
+          node: gateway
+          __path__: /var/log/nginx/error.log
+
+  - job_name: systemd-journal
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+        node: gateway
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: unit

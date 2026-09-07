@@ -24,7 +24,6 @@
 | Loki | 3.6.7 | 3100 |
 | Promtail | 3.0.0 | 9080 |
 | Prometheus | 2.51.0 | 9090 |
-| Grafana | 13.x | 3000 |
 | node_exporter | 1.8.2 | 9100 |
 | prometheus-postgres-exporter | 0.17.x | 9187 |
 
@@ -66,14 +65,11 @@ sudo mkdir -p /var/backups/redis
 sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 ```
 
-> İleride `www-data`'ya devredilecek; önce git işlemleri için tucibeyin sahibi olmalı.
-
 ### 1.4 Güvenlik Duvarı (UFW)
 
 ```bash
 sudo ufw allow 22/tcp
 sudo ufw allow 'Nginx Full'
-sudo ufw allow 3000/tcp comment 'Grafana'
 
 # LiveKit
 sudo ufw allow 50000:60000/udp comment 'LiveKit WebRTC medya'
@@ -84,9 +80,6 @@ sudo ufw allow 5349/tcp
 sudo ufw allow 5349/udp
 sudo ufw allow 3478/tcp
 sudo ufw allow 3478/udp
-
-# Ek WebRTC
-sudo ufw allow 30000:40000/udp
 
 # Cloudflare IPv4
 for ip in 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 104.16.0.0/13 104.24.0.0/14 108.162.192.0/18 131.0.72.0/22 141.101.64.0/18 162.158.0.0/15 172.64.0.0/13 173.245.48.0/20 188.114.96.0/20 190.93.240.0/20 197.234.240.0/22 198.41.128.0/17; do
@@ -101,6 +94,8 @@ done
 sudo ufw --force enable
 sudo ufw status verbose
 ```
+
+> **Scale V1.0 notu:** WireGuard etkinleştirildiğinde `sudo ufw allow 51820/udp` ekle ve gateway IP'sini (10.10.0.2) hariç tut: `sudo ufw allow from 10.10.0.2 to any`.
 
 ### 1.5 Fail2ban
 
@@ -373,7 +368,7 @@ GOOGLE_CLIENT_ID=
 EOF
 
 sudo chmod 600 /var/www/teqlif.com/backend/.env
-sudo chown www-data:www-data /var/www/teqlif.com/backend/.env
+sudo chown tucibeyin:tucibeyin /var/www/teqlif.com/backend/.env
 ```
 
 > `ADMIN_PASSWORD_HASH` eski VPS'teki `.env`'den kopyala.
@@ -417,7 +412,7 @@ SENTRY_BACKEND_DSN=
 EOF
 
 sudo chmod 600 /var/www/teqlif.com/backend/.env.staging
-sudo chown www-data:www-data /var/www/teqlif.com/backend/.env.staging
+sudo chown tucibeyin:tucibeyin /var/www/teqlif.com/backend/.env.staging
 ```
 
 ### 3.4 Sertifika Dosyaları
@@ -503,21 +498,14 @@ sudo systemctl restart minio
 
 ### 3.7 Systemd Servisleri
 
-Eski VPS'ten kopyala:
+`deploy/monolith/systemd/` altındaki dosyaları kopyala (repo'dan çekilir):
 
 ```bash
-# Eski VPS'te:
-for svc in teqlif teqlif-worker teqlif-worker-critical redis-backup; do
-  sudo cat /etc/systemd/system/${svc}.service > /tmp/${svc}.service
+# Yeni VPS'te — repo zaten /var/www/teqlif.com'da:
+for svc in teqlif teqlif-staging teqlif-worker teqlif-worker-critical livekit minio redis-backup; do
+  sudo cp /var/www/teqlif.com/deploy/monolith/systemd/${svc}.service /etc/systemd/system/
 done
-sudo cat /etc/systemd/system/redis-backup.timer > /tmp/redis-backup.timer
-scp /tmp/teqlif*.service /tmp/redis-backup* tucibeyin@YENİ_VPS_IP:/tmp/
-
-# Yeni VPS'te:
-for svc in teqlif teqlif-worker teqlif-worker-critical redis-backup; do
-  sudo cp /tmp/${svc}.service /etc/systemd/system/
-done
-sudo cp /tmp/redis-backup.timer /etc/systemd/system/
+sudo cp /var/www/teqlif.com/deploy/monolith/systemd/redis-backup.timer /etc/systemd/system/
 ```
 
 #### Worker PartOf Override
@@ -532,16 +520,15 @@ EOF
 done
 ```
 
-#### www-data Sahibi ve Enable
+#### Enable
 
 ```bash
-sudo chown -R www-data:www-data /var/www/teqlif.com
-sudo usermod -aG www-data tucibeyin   # ssh yeniden bağlan
-
 sudo systemctl daemon-reload
-sudo systemctl enable --now teqlif teqlif-worker teqlif-worker-critical
+sudo systemctl enable --now teqlif teqlif-staging teqlif-worker teqlif-worker-critical
 sudo systemctl enable --now redis-backup.timer
 ```
+
+> Servisler `User=tucibeyin` ile çalışır — `www-data` sahipliğine gerek yok.
 
 ---
 
@@ -762,44 +749,11 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now prometheus
 ```
 
-### 6.4 Grafana
+### 6.4 Grafana — silindi ✅ (2026-09-07)
 
-```bash
-sudo apt install -y apt-transport-https
-wget -q -O - https://packages.grafana.com/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/grafana.gpg
-echo "deb [signed-by=/usr/share/keyrings/grafana.gpg] https://packages.grafana.com/oss/deb stable main" \
-  | sudo tee /etc/apt/sources.list.d/grafana.list
-sudo apt update
-sudo apt install -y grafana
-sudo systemctl enable --now grafana-server
-```
-
-#### Dashboard'ları Taşı (grafana.db kopyala)
-
-```bash
-# Eski VPS'te:
-sudo systemctl stop grafana-server
-sudo scp /var/lib/grafana/grafana.db tucibeyin@YENİ_VPS_IP:/tmp/
-
-# Yeni VPS'te:
-sudo systemctl stop grafana-server
-sudo cp /tmp/grafana.db /var/lib/grafana/grafana.db
-sudo chown grafana:grafana /var/lib/grafana/grafana.db
-sudo systemctl start grafana-server
-
-# Eski VPS'te tekrar başlat:
-sudo systemctl start grafana-server
-```
-
-#### ClickHouse Plugin
-
-```bash
-sudo GF_PATHS_HOME=/usr/share/grafana \
-  /usr/share/grafana/bin/grafana cli \
-  --homepath /usr/share/grafana \
-  plugins install grafana-clickhouse-datasource
-sudo systemctl restart grafana-server
-```
+> Grafana node1'dan kaldırıldı (`apt remove --purge grafana`). UFW port 3000 kapalı.  
+> Prometheus + Loki verilere doğrudan `localhost:9090` / `localhost:3100` ile erişilebilir.  
+> Scale V1.0'da gateway'de isteğe bağlı olarak kurulabilir.
 
 ### 6.5 node_exporter
 
@@ -982,7 +936,7 @@ sudo sh -c 'env $(grep -v "^#" .env | xargs) /var/www/teqlif.com/venv/bin/alembi
 [x] apt upgrade tamamlandı
 [x] Python 3.13 (Debian 13 native — PPA gerekmez)
 [x] Dizin yapısı oluşturuldu
-[x] UFW aktif (SSH, Nginx Full, LiveKit, TURN, Grafana, Cloudflare IP'leri)
+[x] UFW aktif (SSH, Nginx Full, LiveKit, TURN, Cloudflare IP'leri)
 [x] Fail2ban aktif (3 jail: nginx-botscan, nginx-req-limit, sshd)
 
 ### Servisler
@@ -1002,9 +956,8 @@ sudo sh -c 'env $(grep -v "^#" .env | xargs) /var/www/teqlif.com/venv/bin/alembi
 [x] alembic stamp head çalıştırıldı
 [x] PostgreSQL verisi taşındı (pg_dump --data-only — 8 kullanıcı, 12020 çeviri, 970 ilçe)
 [x] MinIO verisi taşındı (80 obje — /var/minio/data/teqlif/)
-[x] Systemd unit'ler kuruldu (teqlif, workers, redis-backup.timer)
+[x] Systemd unit'ler kuruldu (teqlif, teqlif-staging, workers, redis-backup.timer)
 [x] PartOf override'lar uygulandı (teqlif-worker, teqlif-worker-critical)
-[x] www-data sahipliği ayarlandı
 
 ### LiveKit
 [x] Binary eski VPS'ten kopyalandı (v1.13.3)
@@ -1022,7 +975,7 @@ sudo sh -c 'env $(grep -v "^#" .env | xargs) /var/www/teqlif.com/venv/bin/alembi
 [x] Loki 3.6.7 — binary + config eski VPS'ten kopyalandı, retention_period=720h
 [x] Promtail 3.0.0 — binary + config + GeoIP DB kopyalandı (worker.log dahil)
 [x] Prometheus 2.51.0 — binary + config + prometheus kullanıcısı
-[x] Grafana 13.x — grafana.db kopyalandı, ClickHouse plugin kuruldu
+[x] Grafana — silindi ✅ (2026-09-07), ~2.3 GB serbest kaldı
 [x] node_exporter 1.8.2 — binary eski VPS'ten kopyalandı
 [x] prometheus-postgres-exporter 0.17.1 — apt kurulum, Unix socket (prometheus kullanıcısı)
 
@@ -1050,44 +1003,21 @@ sudo sh -c 'env $(grep -v "^#" .env | xargs) /var/www/teqlif.com/venv/bin/alembi
 
 **Neden:** Önceki bir `sudo git pull` ya da root işlemi `.git/objects` altında root'a ait dosya bırakmış.
 
-**Doğru düzeltme — sadece .git dizinini düzelt, tüm repo'yu değil:**
+**Düzeltme:**
 
 ```bash
-sudo chown -R www-data:www-data /var/www/teqlif.com/.git
-git pull   # tucibeyin www-data grubunda olduğu için çalışır
-```
-
-> ⚠️ `sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com` YAPMA.  
-> Tüm repo'yu `tucibeyin`'e bağlarsa `www-data` `.env`, `firebase-service-account.json`,  
-> `certificates/`, `logs/` gibi dosyalara erişemez — servis çöker.
-
-**Yanlış düzeltme sonrası kurtarma** (tüm repo `tucibeyin`'e bağlandıysa):
-
-```bash
-# Tüm repo'yu tekrar www-data'ya devret
-sudo chown -R www-data:www-data /var/www/teqlif.com
-
-# Hassas dosyalar: sadece www-data okuyabilmeli
-sudo chmod 600 /var/www/teqlif.com/backend/.env
-sudo chmod 600 /var/www/teqlif.com/backend/firebase-service-account.json
-sudo chmod 600 /var/www/teqlif.com/backend/certificates/*
-
-# Servisin yazma ihtiyacı olan dizinler
-sudo chown -R www-data:www-data /var/www/teqlif.com/backend/logs
-sudo chown -R www-data:www-data /var/www/teqlif.com/uploads
-
-sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
+sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com/.git
+git pull
 ```
 
 ### Sahiplik Modeli Özeti
 
+Servisler `User=tucibeyin` ile çalışır — `www-data` sahipliğine gerek yoktur.
+
 | Yol | Sahip | İzin | Neden |
 |-----|-------|------|-------|
-| `/var/www/teqlif.com` (genel) | `www-data:www-data` | 755/644 | Servis `www-data` olarak çalışır |
-| `backend/.env` | `www-data:www-data` | 600 | Secret — sadece www-data |
-| `backend/firebase-service-account.json` | `www-data:www-data` | 600 | Secret — sadece www-data |
-| `backend/certificates/*` | `www-data:www-data` | 600 | Secret — sadece www-data |
-| `backend/logs/` | `www-data:www-data` | 755 | Servis buraya yazar |
-| `uploads/` | `www-data:www-data` | 755 | Servis buraya yazar |
-
-`tucibeyin` kullanıcısı `www-data` grubundadır (`usermod -aG www-data tucibeyin`) — bu sayede `git pull` ve dosya düzenlemeleri çalışır.
+| `/var/www/teqlif.com` (genel) | `tucibeyin:tucibeyin` | 755/644 | Servis ve git aynı kullanıcı |
+| `backend/.env` | `tucibeyin:tucibeyin` | 600 | Secret |
+| `backend/firebase-service-account.json` | `tucibeyin:tucibeyin` | 600 | Secret |
+| `backend/certificates/*` | `tucibeyin:tucibeyin` | 600 | Secret |
+| `backend/logs/` | `tucibeyin:tucibeyin` | 755 | Servis buraya yazar |
