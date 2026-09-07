@@ -128,7 +128,7 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
     ▼
 [gateway — Netcup Nürnberg]          [node1 — OVH Frankfurt]
   nginx  (SSL termination)    ──────▶   FastAPI prod
-  Tailscale (VPN tüneli)      ◀──────   FastAPI staging
+  WireGuard (VPN tüneli)      ◀──────   FastAPI staging
   Prometheus (scrape her ikisini)        PostgreSQL
   Loki  (her ikisinden log)              Redis
   promtail                               MinIO
@@ -136,7 +136,7 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
   fail2ban                               LiveKit  (UDP — gateway bypass)
                                          ARQ Workers (ML + DB)
                                          nginx (iç)
-                                         Tailscale
+                                         WireGuard
                                          node_exporter
                                          promtail → gateway Loki
                                          fail2ban
@@ -145,7 +145,7 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
 ### Trafik Akışı
 ```
 Client  ──HTTP/WS──▶  gateway:443 (nginx SSL)
-                            │ Tailscale şifreli tünel
+                            │ WireGuard şifreli tünel
                             ▼
                        node1:8000 (FastAPI)
 
@@ -153,7 +153,7 @@ LiveKit WebRTC medya (UDP):
 Client  ──UDP──▶  node1 doğrudan  (gateway bypass — proxy edilemez)
 
 Monitoring:
-node1 node_exporter/promtail  ──Tailscale──▶  gateway Prometheus/Loki
+node1 node_exporter/promtail  ──WireGuard──▶  gateway Prometheus/Loki
 ```
 
 ### LiveKit İstisnası (Kritik)
@@ -181,7 +181,7 @@ WebRTC medya UDP kullanır, nginx üzerinden proxy **edilemez**. LiveKit sinyali
 | ~~Grafana~~ | ✅ SİLİNDİ | ❌ | 2026-09-07 kaldırıldı — ~2.3 GB disk, ~200 MB RAM geri döndü |
 | promtail | ✅ (node1 log → gateway) | ✅ (kendi logu) | Her iki node'da, gateway Loki'ye gönderir |
 | node_exporter | ✅ | ✅ | Her iki node'da, gateway Prometheus scrape eder |
-| Tailscale | ✅ | ✅ | Özel ağ tüneli |
+| WireGuard | ✅ | ✅ | Özel ağ tüneli (kernel-native, SaaS yok) |
 | fail2ban | ✅ | ✅ | Bağımsız |
 
 ---
@@ -211,7 +211,7 @@ Alert kuralı olmadığı SQLite DB üzerinden doğrulandı. `apt remove --purge
 `clients.url` şu an `http://localhost:3100/...`. Prometheus + Loki gateway'e taşınınca:
 ```yaml
 clients:
-  - url: http://<GATEWAY_TAILSCALE_IP>:3100/loki/api/v1/push
+  - url: http://10.10.0.2:3100/loki/api/v1/push
 ```
 
 **2. node1 uvicorn — proxy IP güveni**
@@ -220,14 +220,14 @@ clients:
 ```
 --forwarded-allow-ips 127.0.0.1
 ```
-Gateway → Tailscale → node1:8000 zincirine geçince bu değer güncellenmeli:
+Gateway → WireGuard (wg0) → node1:8000 zincirine geçince bu değer güncellenmeli:
 ```bash
 # teqlif.service ExecStart'ta 127.0.0.1 yerine:
---forwarded-allow-ips=<GATEWAY_TAILSCALE_IP>
+--forwarded-allow-ips=10.10.0.2
 ```
 Aynı değişiklik `teqlif-staging.service` için de gerekli. Bu olmadan sahte X-Forwarded-For kabul edilebilir; firewall sertleştirme bunu engeller ama defense-in-depth açısından zorunlu.
 
-**3. Prometheus scrape config — tüm `localhost` hedefleri node1 Tailscale IP'sine taşınır**
+**3. Prometheus scrape config — tüm `localhost` hedefleri node1 WireGuard IP'sine taşınır**
 
 `/etc/prometheus/prometheus.yml` şu an node1'de çalışıyor ve tüm hedefler `localhost:xxxx`. Prometheus gateway'e taşınınca:
 
@@ -240,11 +240,11 @@ scrape_configs:
 
   - job_name: 'livekit'
     static_configs:
-      - targets: ['<NODE1_TAILSCALE_IP>:7881']
+      - targets: ['10.10.0.1:7881']
 
   - job_name: 'node_node1'
     static_configs:
-      - targets: ['<NODE1_TAILSCALE_IP>:9100']
+      - targets: ['10.10.0.1:9100']
 
   - job_name: 'node_gateway'
     static_configs:
@@ -252,7 +252,7 @@ scrape_configs:
 
   - job_name: 'postgres'
     static_configs:
-      - targets: ['<NODE1_TAILSCALE_IP>:9187']
+      - targets: ['10.10.0.1:9187']
 ```
 
 **4. gateway nginx — `/rtc` LiveKit sinyalizasyon proxy'si**
@@ -263,14 +263,76 @@ scrape_configs:
 
 ## 7. Uygulama Adımları
 
-### Adım 1 — Tailscale Kurulumu (Sıfır downtime)
-```bash
-# Her iki node'da
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
+### Adım 1 — WireGuard Kurulumu (Sıfır downtime)
 
-# Bağlantı testi (gateway'den)
-ping <NODE1_TAILSCALE_IP>
+> WireGuard ayrı bir `wg0` arayüzü açar — mevcut `eth0` ve SSH bağlantısına dokunmaz.
+> Özel ağ adresleri: **node1 → `10.10.0.1`** | **gateway → `10.10.0.2`**
+
+**node1'de:**
+```bash
+sudo apt install -y wireguard
+
+# Key çifti üret
+wg genkey | sudo tee /etc/wireguard/privatekey | wg pubkey | sudo tee /etc/wireguard/publickey
+sudo chmod 600 /etc/wireguard/privatekey
+
+# Public key'i not al — gateway config'ine girecek
+sudo cat /etc/wireguard/publickey
+```
+
+**gateway'de:**
+```bash
+sudo apt install -y wireguard
+
+wg genkey | sudo tee /etc/wireguard/privatekey | wg pubkey | sudo tee /etc/wireguard/publickey
+sudo chmod 600 /etc/wireguard/privatekey
+
+# Public key'i not al — node1 config'ine girecek
+sudo cat /etc/wireguard/publickey
+```
+
+**node1'de `/etc/wireguard/wg0.conf`:**
+```ini
+[Interface]
+Address = 10.10.0.1/24
+ListenPort = 51820
+PrivateKey = <NODE1_PRIVATE_KEY>
+
+[Peer]
+PublicKey = <GATEWAY_PUBLIC_KEY>
+AllowedIPs = 10.10.0.2/32
+```
+
+**gateway'de `/etc/wireguard/wg0.conf`:**
+```ini
+[Interface]
+Address = 10.10.0.2/24
+ListenPort = 51820
+PrivateKey = <GATEWAY_PRIVATE_KEY>
+
+[Peer]
+PublicKey = <NODE1_PUBLIC_KEY>
+AllowedIPs = 10.10.0.1/32
+Endpoint = 135.125.175.223:51820
+PersistentKeepalive = 25
+```
+
+```bash
+# node1'de — WireGuard portunu UFW'e ekle
+sudo ufw allow 51820/udp
+
+# Her iki node'da — başlat ve boot'ta otomatik başlasın
+sudo chmod 600 /etc/wireguard/wg0.conf
+sudo systemctl enable --now wg-quick@wg0
+
+# Bağlantı testi
+# gateway'den:
+ping 10.10.0.1
+# node1'den:
+ping 10.10.0.2
+
+# Tünel durumu
+sudo wg show
 ```
 
 ### Adım 2 — gateway Taban Kurulumu (nginx + Prometheus + Loki + node_exporter)
@@ -301,11 +363,11 @@ scrape_configs:
 
   - job_name: 'livekit'
     static_configs:
-      - targets: ['<NODE1_TAILSCALE_IP>:7881']
+      - targets: ['10.10.0.1:7881']
 
   - job_name: 'node_node1'
     static_configs:
-      - targets: ['<NODE1_TAILSCALE_IP>:9100']
+      - targets: ['10.10.0.1:9100']
 
   - job_name: 'node_gateway'
     static_configs:
@@ -313,13 +375,13 @@ scrape_configs:
 
   - job_name: 'postgres'
     static_configs:
-      - targets: ['<NODE1_TAILSCALE_IP>:9187']
+      - targets: ['10.10.0.1:9187']
 ```
 
 node1'de `promtail.yml` hedefini gateway Loki'ye yönlendir:
 ```yaml
 clients:
-  - url: http://<GATEWAY_TAILSCALE_IP>:3100/loki/api/v1/push
+  - url: http://10.10.0.2:3100/loki/api/v1/push
 ```
 
 ### Adım 3 — gateway nginx Yapılandırması
@@ -327,13 +389,13 @@ clients:
 # /etc/nginx/sites-enabled/teqlif.conf
 
 upstream node1_api {
-    server <NODE1_TAILSCALE_IP>:8000;
+    server 10.10.0.1:8000;
     keepalive 32;
 }
 
 # LiveKit sinyalizasyon (HTTP API) — sadece signaling, medya UDP doğrudan node1'e gider
 upstream node1_livekit {
-    server <NODE1_TAILSCALE_IP>:7880;
+    server 10.10.0.1:7880;
     keepalive 8;
 }
 
@@ -388,16 +450,16 @@ server {
 
 ### Adım 4 — node1 Firewall Sertleştirme
 
-> Grafana ve port 3000 zaten kaldırıldı (2026-09-07). Bu adım sadece Tailscale sonrası kural eklemelerini içerir.
+> Grafana ve port 3000 zaten kaldırıldı (2026-09-07). Bu adım sadece WireGuard sonrası kural eklemelerini içerir.
 
 ```bash
-# HTTP/HTTPS — gateway Tailscale IP + mevcut Cloudflare whitelist korunur
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 80
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
+# HTTP/HTTPS — gateway WireGuard IP + mevcut Cloudflare whitelist korunur
+sudo ufw allow from 10.10.0.2 to any port 80
+sudo ufw allow from 10.10.0.2 to any port 8000
 
 # Monitoring — sadece gateway'den
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9100  # node_exporter
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9187  # postgres-exporter
+sudo ufw allow from 10.10.0.2 to any port 9100  # node_exporter
+sudo ufw allow from 10.10.0.2 to any port 9187  # postgres-exporter
 
 # LiveKit — herkese açık (UDP proxy edilemez), livekit.yaml'dan doğrulandı:
 # 50000:60000/udp  WebRTC medya (port_range_start/end)
@@ -405,7 +467,7 @@ sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9187  # postgres-exporter
 # 5349/tcp+udp      TURN TLS (live.teqlif.com cert)
 # 3478/udp          STUN/TURN UDP
 
-# SSH — Tailscale kurulunca idealde kısıtlanır
+# SSH — WireGuard kurulunca idealde kısıtlanır
 # sudo ufw delete allow 22/tcp
 # sudo ufw allow from <TAILSCALE_SUBNET> to any port 22
 ```
@@ -472,7 +534,7 @@ Client → Cloudflare edge (SSL + DDoS) → node1:135.125.175.223
 
 V1.0 sonrası:
 ```
-Client → Cloudflare edge (SSL + DDoS + CDN) → gateway → Tailscale → node1
+Client → Cloudflare edge (SSL + DDoS + CDN) → gateway → WireGuard → node1
 ```
 
 Bu şu anlama gelir: node1'in IP'si (`135.125.175.223`) zaten Cloudflare tarafından gizleniyor — plan'daki "node1 IP'yi gizleme" argümanı büyük ölçüde Cloudflare tarafından karşılanıyor. gateway'in asıl değeri **observability node** rolü.
@@ -518,11 +580,11 @@ Cloudflare IP aralıklarını node1'de güvenilir proxy olarak tanımla. Böylec
 
 ```bash
 # Cloudflare IP aralıkları (https://www.cloudflare.com/ips/)
-# node1'de sadece Cloudflare + gateway Tailscale IP'sinden HTTP/HTTPS izin ver
+# node1'de sadece Cloudflare + gateway WireGuard IP'sinden HTTP/HTTPS izin ver
 sudo ufw allow from 103.21.244.0/22 to any port 80
 sudo ufw allow from 103.22.200.0/22 to any port 80
 # ... (tüm Cloudflare IPv4 aralıkları)
-sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
+sudo ufw allow from 10.10.0.2 to any port 8000
 ```
 
 ---
@@ -532,7 +594,7 @@ sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
 | Risk | Ağırlık | Önlem |
 |---|---|---|
 | **gateway SPOF** | Yüksek | DNS TTL kısalt (60s); node1 nginx'i hazır tut; gateway düşünce node1 doğrudan devreye girer |
-| **Tailscale SaaS bağımlılığı** | Orta | Alternatif: WireGuard manuel kurulum (daha fazla efor, tam kontrol) |
+| **WireGuard peer config hatası** | Düşük | Config dosyası yazılmadan önce key çiftleri not edilmeli; hata durumunda SSH erişimi kesilmez |
 | **Ekstra gecikme** | Düşük-Orta | Frankfurt↔Nürnberg ~10-15ms RTT; mobil API için +20-30ms — kabul edilebilir |
 | **Büyük upload gateway trafiği** | ~~Orta~~ → ✅ Çözüldü | `uploads.teqlif.com` → node1 doğrudan (V1.0'a alındı) |
 
