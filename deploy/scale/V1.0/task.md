@@ -241,6 +241,7 @@
   sudo ufw allow from 10.10.0.2 to any port 8001   # staging
   sudo ufw allow from 10.10.0.2 to any port 9100   # node_exporter
   sudo ufw allow from 10.10.0.2 to any port 9187   # postgres-exporter
+  sudo ufw allow from 10.10.0.2 to any port 7881   # livekit metrics
   ```
 
 - [ ] Public IP'den port 8000/8001 erişimini engelle (uvicorn 0.0.0.0'da dinliyor):
