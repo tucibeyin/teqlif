@@ -235,9 +235,18 @@
 - [ ] gateway'den node1'e HTTP ve monitoring erişimi:
   ```bash
   sudo ufw allow from 10.10.0.2 to any port 8000
+  sudo ufw allow from 10.10.0.2 to any port 8001   # staging
   sudo ufw allow from 10.10.0.2 to any port 9100   # node_exporter
   sudo ufw allow from 10.10.0.2 to any port 9187   # postgres-exporter
   ```
+
+- [ ] Public IP'den port 8000/8001 erişimini engelle (uvicorn 0.0.0.0'da dinliyor):
+  ```bash
+  sudo ufw deny 8000
+  sudo ufw deny 8001
+  ```
+  > UFW kural sırası önemli: `allow from 10.10.0.2` önce, `deny` sonra geldiği sürece gateway erişimi korunur.
+  > Loopback (127.0.0.1) UFW tarafından varsayılan olarak izinlidir — node1 nginx etkilenmez.
 
 - [ ] Doğrulama: gateway'den node1 API'sine ulaşılıyor:
   ```bash
