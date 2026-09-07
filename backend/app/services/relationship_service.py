@@ -15,7 +15,10 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from sqlalchemy import or_, and_
+
 from app.models.follow import Follow
+from app.models.block import UserBlock
 from app.models.message_thread import MessageThread
 from app.services.dm_broadcast import broadcast_dm
 from app.utils.redis_client import get_redis
@@ -25,6 +28,7 @@ _REASON_NO_FOLLOW     = "no_follow"
 _REASON_PENDING       = "pending"
 _REASON_CALL_DISABLED = "call_disabled"
 _REASON_USER_BUSY     = "user_busy"
+_REASON_BLOCKED       = "blocked"
 
 _REL_TTL = 3600  # Redis TTL: 1 saat
 
@@ -41,6 +45,9 @@ def _compute_can_call(
     caller=viewer, callee=target perspektifinden can_call hesaplar.
     Returns (can_call, reason) — reason is None when can_call=True.
     """
+    # Declined: hiçbir taraf arayamaz
+    if thread_status == "declined":
+        return False, _REASON_NO_FOLLOW
     if viewer_follows_target and target_follows_viewer:
         return True, None
     if target_follows_viewer and not viewer_follows_target:
@@ -192,6 +199,15 @@ class RelationshipStateService:
             select(MessageThread).where(MessageThread.user_a_id == a, MessageThread.user_b_id == b)
         )
 
+        is_blocked = await session.scalar(
+            select(UserBlock).where(
+                or_(
+                    and_(UserBlock.blocker_id == a, UserBlock.blocked_id == b),
+                    and_(UserBlock.blocker_id == b, UserBlock.blocked_id == a),
+                )
+            ).limit(1)
+        )
+
         state = _build_state(
             uid_a=a, uid_b=b,
             a_follows_b=follows_ab is not None,
@@ -200,6 +216,13 @@ class RelationshipStateService:
             initiator_id=thread.initiator_id if thread else None,
             call_allowed=thread.call_allowed if thread else False,
         )
+
+        # Block override: engel varsa her iki yönde de arama kapalı
+        if is_blocked:
+            state.can_call_ab = False
+            state.reason_ab = _REASON_BLOCKED
+            state.can_call_ba = False
+            state.reason_ba = _REASON_BLOCKED
 
         # Call presence override: hedef aramadaysa can_call → False + user_busy
         from app.services.call_presence import is_busy as _is_busy

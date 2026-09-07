@@ -9,6 +9,7 @@ Call presence — kullanıcının anlık arama durumunu Redis'te tutar.
 TTL kasıtlı olarak uzun tutulmuştur (10 dk) — aramanın azami süresi +
 bir server crash'inde bile orphan presence'ın otomatik temizlenmesi için.
 """
+import asyncio
 import json
 from typing import Optional
 
@@ -21,6 +22,16 @@ def _key(uid: int) -> str:
     return f"user:call_presence:{uid}"
 
 
+async def _invalidate_relationship_pairs(uid: int, peers: list[int]) -> None:
+    """Presence değişince ilgili çiftlerin relationship cache'ini temizle."""
+    from app.services.relationship_service import RelationshipStateService
+    for peer_id in peers:
+        try:
+            await RelationshipStateService.invalidate(uid, peer_id)
+        except Exception:
+            pass
+
+
 async def set_presence(uid: int, status: str, call_id: int, peers: list[int]) -> None:
     """status: 'ringing' | 'in_call'"""
     r = await get_redis()
@@ -29,11 +40,23 @@ async def set_presence(uid: int, status: str, call_id: int, peers: list[int]) ->
         json.dumps({"status": status, "call_id": call_id, "peers": peers}),
         ex=_PRESENCE_TTL,
     )
+    if peers:
+        asyncio.create_task(_invalidate_relationship_pairs(uid, peers))
 
 
 async def clear_presence(uid: int) -> None:
     r = await get_redis()
+    # Peer bilgisini silmeden önce oku — invalidate için gerekli
+    raw = await r.get(_key(uid))
     await r.delete(_key(uid))
+    if raw:
+        try:
+            data = json.loads(raw)
+            peers = data.get("peers", [])
+            if peers:
+                asyncio.create_task(_invalidate_relationship_pairs(uid, peers))
+        except Exception:
+            pass
 
 
 async def get_presence(uid: int) -> Optional[dict]:

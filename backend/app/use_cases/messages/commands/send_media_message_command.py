@@ -9,6 +9,7 @@ from app.models.follow import Follow
 from app.schemas.message import MessageOut
 from app.services.dm_broadcast import broadcast_dm
 from app.services.notification_service import send_message_push
+from app.services.relationship_service import RelationshipStateService
 from app.services import storage_service as storage
 from app.utils.redis_client import get_redis
 from app.utils.media_processor import process_media
@@ -109,6 +110,7 @@ class SendMediaMessageCommand:
         auto_accepted = False
         is_pending_for_initiator = False
         initiator_id_for_notif: int | None = None
+        thread_status_changed = False
 
         try:
             async with self.uow:
@@ -170,22 +172,30 @@ class SendMediaMessageCommand:
                         status="pending" if is_req else "accepted",
                     ))
                     is_new_request = is_req
+                    thread_status_changed = True
 
                 elif existing_thread.status == "pending":
                     if existing_thread.initiator_id != sender_id:
                         existing_thread.status = "accepted"
                         auto_accepted = True
                         initiator_id_for_notif = existing_thread.initiator_id
+                        thread_status_changed = True
                     else:
                         is_pending_for_initiator = True
 
                 await self.uow.session.flush()
+                session = self.uow.session
         except Exception:
             for key in processed.uploaded_dm_keys:
                 storage.delete_object_dm(key)
             raise
 
         # commit sonrası — side effects
+
+        if thread_status_changed:
+            state = await RelationshipStateService.recompute_and_cache(user_a, user_b, session)
+            RelationshipStateService.broadcast(state)
+
         if is_new_request:
             redis = await get_redis()
             await redis.incr(f"msg:unread:request:{receiver_id}")
