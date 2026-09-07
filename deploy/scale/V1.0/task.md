@@ -16,10 +16,14 @@
 - [x] `deploy/` klasörü oluşturuldu — monolith + scale/V1.0 yapısı, tüm config dosyaları (`074fc885`)
 - [x] gateway'de git kurulumu ve repo klonlandı → `/var/www/teqlif.com`
 - [x] plan.md `deploy/scale/V1.0/plan.md`'ye taşındı
+- [x] **Adım 1 — WireGuard Kurulumu tamamlandı** — node1↔gateway tünel aktif, handshake ✅, ping ✅ (`7c4577ad`)
+  - node1: `10.10.0.1` — public key `JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=`
+  - gateway: `10.10.0.2` (94.16.105.135) — public key `7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=`
+- [x] **Adım 2 — gateway Taban Kurulumu tamamlandı** — prometheus/loki/promtail/node_exporter active, nginx+fail2ban kurulu ✅
 
 ---
 
-## 🔲 Adım 1 — WireGuard Kurulumu
+## ✅ Adım 1 — WireGuard Kurulumu — TAMAMLANDI
 
 > Sıfır downtime. `wg0` arayüzü `eth0`'a dokunmaz; SSH bağlantısı kesilmez.
 
@@ -72,7 +76,7 @@
 
 ---
 
-## 🔲 Adım 2 — gateway Taban Kurulumu
+## ✅ Adım 2 — gateway Taban Kurulumu — TAMAMLANDI
 
 > WireGuard tüneli aktif olduktan sonra başlanır.
 
