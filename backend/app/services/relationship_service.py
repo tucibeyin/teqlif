@@ -45,9 +45,6 @@ def _compute_can_call(
     caller=viewer, callee=target perspektifinden can_call hesaplar.
     Returns (can_call, reason) — reason is None when can_call=True.
     """
-    # Declined: hiçbir taraf arayamaz
-    if thread_status == "declined":
-        return False, _REASON_NO_FOLLOW
     if viewer_follows_target and target_follows_viewer:
         return True, None
     if target_follows_viewer and not viewer_follows_target:
