@@ -12,7 +12,7 @@
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
 | RAM | 11.4 GiB + 12 GiB Swap |
 | Disk | 98.3 GiB NVMe |
-| Ağ | ~1.94 Gbps **unmetered** |
+| Ağ | **2 Gbps / unmetered** (kota yok) |
 | Geekbench 6 | 1058 single / 4404 multi |
 
 ### node1 Kaynak Tüketicileri (Büyükten Küçüğe)
@@ -56,20 +56,23 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
 ### Donanım
 | Parametre | Değer |
 |---|---|
-| CPU | QEMU 2 vCPU @ 2.29 GHz |
-| RAM | 1.9 GiB + 1 GiB Swap |
-| Disk | 58.9 GiB NVMe |
-| Ağ | ~1.07 Gbps |
+| CPU | 2 vCore (QEMU @ 2.29 GHz) |
+| RAM | 2 GB + 1 GB Swap |
+| Disk | 60 GB SSD (genişletilemiyor) |
+| Ağ | 1 Gbps interface — **24h ortalama >100 Mbps → geçici throttle (100 Mbps)** |
 | Geekbench 6 | 645 single / 1210 multi |
 
 ### Değerlendirme
 1.9 GB RAM, ML worker, PostgreSQL replica veya ClickHouse barındırmak için yetersiz. Ağır iş yapacak bir backend node'u değil.
 
 **Güçlü yanları:**
-- 1 Gbps hat → nginx proxy için fazlasıyla yeterli
-- 58.9 GB NVMe → Prometheus TSDB + Loki log storage için ideal (node1'in daralan diski yerine)
+- 1 Gbps interface → nginx proxy için fazlasıyla yeterli; monitoring trafiği 24h ortalaması 100 Mbps'nin çok altında kalır
+- 60 GB SSD → Prometheus TSDB + Loki log storage için ideal (node1'in daralan diski yerine)
 - Düşük işletim maliyeti → daimi servis için uygun
 - node1'den bağımsız çalışır → monitoring node1 çöktüğünde de ayakta kalabilir
+
+**Ağ kısıtı — dikkat:**
+24 saatlik ortalama trafik 100 Mbps'yi aşarsa Netcup geçici throttle uygular (ortalama düşünce otomatik kalkar). Bu nedenle büyük dosya upload/download trafiğinin gateway üzerinden **geçmemesi** kritik. Video yükleme gibi burst trafik `uploads.teqlif.com` → node1 doğrudan yönlendirmesiyle gateway'i atlamalı.
 
 **Rol: Edge Proxy + Observability Node**
 
