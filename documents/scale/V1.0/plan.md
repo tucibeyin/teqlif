@@ -75,11 +75,12 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
 
 **LiveKit açık portlar:**
 ```
-50000:60000/udp  WebRTC medya
+50000:60000/udp  WebRTC medya (livekit.yaml port_range)
+7882/udp          LiveKit UDP (RTC)
 7882/tcp          LiveKit TCP fallback
+7880/tcp          LiveKit HTTP sinyalizasyon (nginx /rtc proxy ile kapatılabilir)
 5349/tcp+udp      TURN TLS
-3478/tcp+udp      STUN/TURN
-30000:40000/udp   Ek TURN aralığı
+3478/udp          STUN/TURN UDP
 ```
 
 ### fail2ban Jail'leri
@@ -222,12 +223,16 @@ clients:
 
 **2. node1 uvicorn — proxy IP güveni**
 
-Gateway → Tailscale → node1:8000 zincirinde `request.client.host` gateway Tailscale IP'si olur. `main.py` X-Forwarded-For header'ını okuyarak gerçek client IP'yi alıyor, bu doğru çalışır. Ancak güvenlik için uvicorn'a sadece gateway Tailscale IP'sini güvenilir proxy olarak tanıtmak gerekir:
+`teqlif.service` ve `teqlif-staging.service` ExecStart'ta şu an:
+```
+--forwarded-allow-ips 127.0.0.1
+```
+Gateway → Tailscale → node1:8000 zincirine geçince bu değer güncellenmeli:
 ```bash
-# teqlif.service ExecStart'a ekle:
+# teqlif.service ExecStart'ta 127.0.0.1 yerine:
 --forwarded-allow-ips=<GATEWAY_TAILSCALE_IP>
 ```
-Bu olmadan herhangi biri node1'e doğrudan erişebilseydi (firewall öncesi) sahte X-Forwarded-For gönderebilirdi. Firewall sertleştirme bunu zaten engeller, ama defense-in-depth açısından önerilir.
+Aynı değişiklik `teqlif-staging.service` için de gerekli. Bu olmadan sahte X-Forwarded-For kabul edilebilir; firewall sertleştirme bunu engeller ama defense-in-depth açısından zorunlu.
 
 **3. gateway nginx — `/rtc` LiveKit sinyalizasyon proxy'si**
 
@@ -361,13 +366,11 @@ sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 8000
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9100  # node_exporter
 sudo ufw allow from <GATEWAY_TAILSCALE_IP> to any port 9187  # postgres-exporter
 
-# LiveKit — herkese açık (tüm portlar, UDP proxy edilemez)
-# Mevcut UFW'de zaten var — değişmez:
-# 50000:60000/udp  WebRTC medya
-# 7882/tcp          TCP fallback
-# 5349/tcp+udp      TURN TLS
-# 3478/tcp+udp      STUN/TURN
-# 30000:40000/udp   Ek TURN aralığı
+# LiveKit — herkese açık (UDP proxy edilemez), livekit.yaml'dan doğrulandı:
+# 50000:60000/udp  WebRTC medya (port_range_start/end)
+# 7882/udp+tcp      RTC UDP + TCP fallback
+# 5349/tcp+udp      TURN TLS (live.teqlif.com cert)
+# 3478/udp          STUN/TURN UDP
 
 # SSH — Tailscale kurulunca idealde kısıtlanır
 # sudo ufw delete allow 22/tcp
