@@ -29,7 +29,7 @@ server {
         proxy_pass http://127.0.0.1:9010/teqlif/;
         proxy_set_header Host $http_host;
         proxy_buffering off;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
+        expires 365d;
+        add_header Cache-Control "public, max-age=31536000, immutable";
     }
 }
