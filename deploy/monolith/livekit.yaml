@@ -1,0 +1,38 @@
+# /etc/livekit/livekit.yaml
+# node1 — 135.125.175.223
+
+prometheus_port: 7881
+port: 7880
+
+rtc:
+  port_range_start: 50000
+  port_range_end: 60000
+  udp_port: 7882
+  tcp_port: 7882
+  use_external_ip: false
+  node_ip: "135.125.175.223"
+
+turn:
+  enabled: true
+  domain: live.teqlif.com
+  cert_file: /etc/livekit/certs/fullchain.pem
+  key_file: /etc/livekit/certs/privkey.pem
+  tls_port: 5349
+  udp_port: 3478
+
+keys:
+  teqlif_livekit_key: <LIVEKIT_API_SECRET>
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  max_participants: 500
+
+logging:
+  level: info
+  json: false
+
+webhook:
+  api_key: teqlif_livekit_key
+  urls:
+    - https://teqlif.com/api/webhooks/livekit

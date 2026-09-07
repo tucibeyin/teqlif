@@ -14,8 +14,8 @@ install() {
     chmod +x "$SCRIPT_DEST"
 
     REPO_DIR="$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")"
-    cp "$REPO_DIR/deploy/systemd/redis-backup.service" /etc/systemd/system/
-    cp "$REPO_DIR/deploy/systemd/redis-backup.timer"   /etc/systemd/system/
+    cp "$REPO_DIR/deploy/monolith/systemd/redis-backup.service" /etc/systemd/system/
+    cp "$REPO_DIR/deploy/monolith/systemd/redis-backup.timer"   /etc/systemd/system/
 
     systemctl daemon-reload
     systemctl enable --now redis-backup.timer
