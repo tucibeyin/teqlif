@@ -1173,6 +1173,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   // Voice recording
   final _recorder = AudioRecorder();
   bool _isRecording = false;
+  bool _isSendingVoice = false;
   int _recordSecs = 0;
   Timer? _recordTimer;
   double _swipeDx = 0.0;
@@ -1772,11 +1773,26 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   }
 
   Future<void> _stopAndSend() async {
+    if (_isSendingVoice || !_isRecording) return;
+    _isSendingVoice = true;
     _recordTimer?.cancel();
-    final path = await _recorder.stop();
-    setState(() => _isRecording = false);
-    if (path == null || !mounted) return;
     final loc = ref.read(localizationProvider);
+    String? path;
+    try {
+      path = await _recorder.stop();
+    } catch (e) {
+      if (mounted) handleError(e, loc);
+      setState(() {
+        _isRecording = false;
+        _isSendingVoice = false;
+      });
+      return;
+    }
+    setState(() => _isRecording = false);
+    if (path == null || !mounted) {
+      _isSendingVoice = false;
+      return;
+    }
     final recordedSecs = _recordSecs.clamp(1, MediaConstants.voiceMaxSecs);
     CompressedMedia compressed;
     try {
@@ -1786,10 +1802,12 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         targetDurationMs: recordedSecs * 1000,
       );
     } on MediaCompressCancelledException {
+      _isSendingVoice = false;
       return;
     } catch (e) {
       if (!mounted) return;
       handleError(e, loc);
+      _isSendingVoice = false;
       return;
     }
     if (!mounted) return;
@@ -1800,13 +1818,18 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       mimeType: 'audio/mp4',
       durationSecs: recordedSecs,
     );
+    _isSendingVoice = false;
   }
 
   Future<void> _cancelRecording() async {
+    if (!_isRecording) return;
     _recordTimer?.cancel();
-    await _recorder.stop();
+    try {
+      await _recorder.stop();
+    } catch (_) {}
     setState(() {
       _isRecording = false;
+      _isSendingVoice = false;
       _swipeDx = 0.0;
     });
   }
