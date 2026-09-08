@@ -26,7 +26,8 @@ sudo cp deploy/scale/V1.1/gateway/nginx/teqlif.conf /etc/nginx/sites-available/t
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**Commit:** —
+**Commit:** `bec02286`  
+**VPS uygulandı:** 2026-09-08, gateway
 
 ---
 
