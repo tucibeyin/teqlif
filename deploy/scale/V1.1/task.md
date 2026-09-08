@@ -74,7 +74,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Adım 4 — Alertmanager
 
-**Durum:** ✅ Tamamlandı (config hazır, VPS uygulaması bekliyor)
+**Durum:** ✅ Tamamlandı
 
 **Dosyalar:**
 - `deploy/scale/V1.1/gateway/alertmanager.yml` — Telegram receiver, `${TELEGRAM_BOT_TOKEN}` / `${TELEGRAM_CHAT_ID}` placeholder
@@ -113,7 +113,9 @@ sudo systemctl enable --now alertmanager
 sudo systemctl restart prometheus
 ```
 
-**Commit:** —
+**Commit:** `ef23a889`  
+**VPS uygulandı:** 2026-09-08, gateway  
+**Test:** `/-/healthy` → OK, 5 kural inactive (sistem sağlıklı) ✅
 
 ---
 
@@ -124,4 +126,4 @@ sudo systemctl restart prometheus
 | 1 | Staging block güçlendirme | ✅ |
 | 2 | uploads.teqlif.com immutable | ✅ |
 | 3 | nginx microcaching | ✅ |
-| 4 | Alertmanager | ⬜ (config hazır, VPS bekliyor) |
+| 4 | Alertmanager | ✅ |
