@@ -26,8 +26,9 @@ sudo cp deploy/scale/V1.1/gateway/nginx/teqlif.conf /etc/nginx/sites-available/t
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**Commit:** `bec02286`  
-**VPS uygulandı:** 2026-09-08, gateway
+**Commit:** `bec02286` (nginx), `0c021a2f` (proxy_hide_header), `8b07e89a` (backend middleware)  
+**VPS uygulandı:** 2026-09-08, gateway + node1  
+**Not:** proxy_hide_header çalışmadı — kaynakta düzeltildi. Backend security_headers middleware'den statik başlıklar kaldırıldı, CSP koşullu mantığı kaldı. Duplicate header sorunu giderildi.
 
 ---
 
