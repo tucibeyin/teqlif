@@ -1501,7 +1501,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     if (!mounted || !context.mounted) return;
 
     // Semantik kod bazlı yönlendirme — string matching yok
-    if (e.code == 'BID_BLOCKED_MUTE' || e.code == 'BID_BLOCKED_VERIFY') {
+    if (e.code == 'BID_BLOCKED_MUTE' || e.code == 'BID_BLOCKED_VERIFY' || e.code == 'BID_BLOCKED_SUSPICIOUS') {
       _showBidBlockedSheet(e.code);
       return;
     }
@@ -1514,7 +1514,15 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   void _showBidBlockedSheet(String code) {
     if (!mounted || !context.mounted) return;
     final loc = ref.read(localizationProvider);
-    final needsVerify = code == 'BID_BLOCKED_VERIFY';
+    final needsVerify = code == 'BID_BLOCKED_VERIFY' || code == 'BID_BLOCKED_SUSPICIOUS';
+    final String body;
+    if (code == 'BID_BLOCKED_VERIFY') {
+      body = loc.t("bidBlockedVerifyBody");
+    } else if (code == 'BID_BLOCKED_SUSPICIOUS') {
+      body = loc.t("bidBlockedSuspiciousBody");
+    } else {
+      body = loc.t("bidBlockedMuteBody");
+    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -1522,7 +1530,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       isScrollControlled: true,
       builder: (sheetCtx) => _BidBlockedSheet(
         title: loc.t("bidBlockedTitle"),
-        body: needsVerify ? loc.t("bidBlockedVerifyBody") : loc.t("bidBlockedMuteBody"),
+        body: body,
         actionLabel: needsVerify ? loc.t("bidBlockedVerifyAction") : loc.t("bidBlockedDismiss"),
         onAction: () {
           Navigator.pop(sheetCtx);

@@ -2730,6 +2730,11 @@
   "bidBlockedVerifyBody": "To place a bid at this amount, both your email and phone must be verified. You will be taken to your profile to complete verification.",
   "bidBlockedVerifyAction": "Verify Account",
   "bidBlockedDismiss": "Got It",
+  "bidBlockedSuspiciousBody": "Bids are not allowed for unverified accounts in this auction. Complete your phone and email verification to participate.",
+  "errBidHostCannot": "You can't bid in your own stream.",
+  "errBidNotActive": "The auction is not currently active.",
+  "errBidTooLow": "Your bid is below the minimum increment.",
+  "errBidOutbid": "Another bid came in just before yours. Check the current price.",
   "btnRemovePin": "✕ Remove",
   "blastSent": "🎯 Notification sent to {count} people!",
   "@blastSent": {

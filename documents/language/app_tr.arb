@@ -2694,6 +2694,11 @@
   "bidBlockedVerifyBody": "Bu tutarda teklif verebilmek için e-posta ve telefon doğrulamanızın tamamlanmış olması gerekiyor. Bilgilerinizi güncellemek için profil sayfanıza yönlendirileceksiniz.",
   "bidBlockedVerifyAction": "Hesabı Doğrula",
   "bidBlockedDismiss": "Anladım",
+  "bidBlockedSuspiciousBody": "Hesabınız henüz doğrulanmadığı için bu artırmada teklif verilemedi. Telefon ve e-posta doğrulamanızı tamamlayarak katılabilirsiniz.",
+  "errBidHostCannot": "Kendi yayınında teklif veremezsiniz.",
+  "errBidNotActive": "Artırma şu an aktif değil.",
+  "errBidTooLow": "Teklifiniz minimum artış miktarının altında.",
+  "errBidOutbid": "Gönderirken başka bir teklif geçti. Güncel fiyatı kontrol edin.",
   "btnRemovePin": "✕ Kaldır",
   "blastSent": "🎯 {count} kişiye bildirim gönderildi!",
   "@blastSent": {

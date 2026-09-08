@@ -506,7 +506,7 @@ class AuctionCommands:
             stream_id, user, bidder_ip, prev_data.get("host_ip", ""), float(data.amount)
         )
         if decision.action == "MUTE":
-            raise ForbiddenException(code="BID_BLOCKED_MUTE")
+            raise ForbiddenException(code="BID_BLOCKED_SUSPICIOUS")
 
         # ── Troll Teklif Koruması (Telefon + Hesap Doğrulama) ────────────────
         # Doğrulanmış hesaplar daha yüksek eşikten yararlanır.

@@ -47,6 +47,14 @@ class ErrorMapper {
       case 'RATE_LIMITED':
       case 'BID_RATE_LIMIT':
         return loc.t('errorTooFast');
+      case 'HOST_CANNOT_BID':
+        return loc.t('errBidHostCannot');
+      case 'AUCTION_NOT_ACTIVE':
+        return loc.t('errBidNotActive');
+      case 'BID_TOO_LOW':
+        return loc.t('errBidTooLow');
+      case 'CONCURRENT_BID_OUTBID':
+        return loc.t('errBidOutbid');
       case 'FOLLOWERS_LIST_PRIVATE':
       case 'FOLLOWING_LIST_PRIVATE':
         return loc.t('errFollowListPrivate');
