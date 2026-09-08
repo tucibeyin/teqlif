@@ -2587,6 +2587,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             final reqState = ref.watch(directChatRequestProvider(widget.otherUserId)).valueOrNull;
             final canMessage = reqState?.canMessage ?? true;
             if (!canMessage) {
+              final msgReason = reqState?.canMessageReason;
               return Container(
                 padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 12),
                 decoration: BoxDecoration(
@@ -2596,7 +2597,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 child: SafeArea(
                   top: false,
                   child: Text(
-                    loc.t('msgDeclinedHint'),
+                    msgReason == 'blocked' ? loc.t('msgBlockedHint') : loc.t('msgDeclinedHint'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
