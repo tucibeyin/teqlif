@@ -1501,7 +1501,11 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     if (!mounted || !context.mounted) return;
 
     // Semantik kod bazlı yönlendirme — string matching yok
-    if (e.code == 'BID_BLOCKED_MUTE' || e.code == 'BID_BLOCKED_VERIFY' || e.code == 'BID_BLOCKED_SUSPICIOUS') {
+    if (e.code == 'BID_BLOCKED_MUTE' ||
+        e.code == 'BID_BLOCKED_SUSPICIOUS' ||
+        e.code == 'BID_BLOCKED_VERIFY' ||
+        e.code == 'BID_BLOCKED_NO_PHONE' ||
+        e.code == 'BID_BLOCKED_PHONE_UNVERIFIED') {
       _showBidBlockedSheet(e.code);
       return;
     }
@@ -1514,15 +1518,17 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   void _showBidBlockedSheet(String code) {
     if (!mounted || !context.mounted) return;
     final loc = ref.read(localizationProvider);
-    final needsVerify = code == 'BID_BLOCKED_VERIFY' || code == 'BID_BLOCKED_SUSPICIOUS';
-    final String body;
-    if (code == 'BID_BLOCKED_VERIFY') {
-      body = loc.t("bidBlockedVerifyBody");
-    } else if (code == 'BID_BLOCKED_SUSPICIOUS') {
-      body = loc.t("bidBlockedSuspiciousBody");
-    } else {
-      body = loc.t("bidBlockedMuteBody");
-    }
+    final needsVerify = code == 'BID_BLOCKED_VERIFY' ||
+        code == 'BID_BLOCKED_SUSPICIOUS' ||
+        code == 'BID_BLOCKED_NO_PHONE' ||
+        code == 'BID_BLOCKED_PHONE_UNVERIFIED';
+    final String body = switch (code) {
+      'BID_BLOCKED_NO_PHONE'           => loc.t("bidBlockedNoPhoneBody"),
+      'BID_BLOCKED_PHONE_UNVERIFIED'   => loc.t("bidBlockedPhoneUnverifiedBody"),
+      'BID_BLOCKED_VERIFY'             => loc.t("bidBlockedVerifyBody"),
+      'BID_BLOCKED_SUSPICIOUS'         => loc.t("bidBlockedSuspiciousBody"),
+      _                                => loc.t("bidBlockedMuteBody"),
+    };
 
     showModalBottomSheet<void>(
       context: context,

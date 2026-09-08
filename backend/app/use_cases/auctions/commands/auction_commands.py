@@ -537,7 +537,8 @@ class AuctionCommands:
                 user_id=user.id,
                 price_point=float(data.amount),
             ))
-            raise ForbiddenException(code="BID_BLOCKED_VERIFY")
+            _verify_code = "BID_BLOCKED_NO_PHONE" if not user.phone else "BID_BLOCKED_PHONE_UNVERIFIED"
+            raise ForbiddenException(code=_verify_code)
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)
         val = await redis.eval(_VALIDATE_BID_SCRIPT, 1, auction_key(stream_id), str(data.amount))
