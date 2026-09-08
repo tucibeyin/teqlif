@@ -24,19 +24,14 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Adım 2 — uploads.teqlif.com Cache-Control Düzeltmesi
 
-**Durum:** ⬜ Bekliyor
+**Durum:** ✅ Tamamlandı (değişiklik gerekmedi)
 
-**Dosyalar:**
-- `deploy/scale/V1.1/node1/nginx/uploads.teqlif.com` (güncellenir)
+**Notlar:**
+- V1.1 dosyasında (`node1/nginx/uploads.teqlif.com`) `immutable` zaten mevcut.
+- VPS'de doğrulandı (2026-09-08): `/etc/nginx/sites-available/uploads.teqlif.com` satır 33'te `Cache-Control "public, max-age=31536000, immutable"` yazıyor.
+- Herhangi bir değişiklik uygulanmadı.
 
-**VPS komutu (node1):**
-```bash
-cd /var/www/teqlif.com && git pull
-sudo cp deploy/scale/V1.1/node1/nginx/uploads.teqlif.com /etc/nginx/sites-available/uploads.teqlif.com
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-**Commit:** —
+**Commit:** — (değişiklik yok)
 
 ---
 
@@ -102,6 +97,6 @@ sudo systemctl restart prometheus
 | Adım | İçerik | Durum |
 |---|---|---|
 | 1 | Staging block güçlendirme | ⬜ |
-| 2 | uploads.teqlif.com immutable | ⬜ |
+| 2 | uploads.teqlif.com immutable | ✅ |
 | 3 | nginx microcaching | ⬜ |
 | 4 | Alertmanager | ⬜ |
