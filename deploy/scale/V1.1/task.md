@@ -84,9 +84,11 @@ sudo nginx -t && sudo systemctl reload nginx
 
 **Not:** Değişkenler (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) gateway'deki `/var/www/teqlif.com/backend/.env`'den okunur. Ayrı bir env dosyası gerekmez.
 
+**Not:** `--config.expand-env` 0.27.0 build'inde yok. Deploy sırasında `envsubst` ile template'ten gerçek config oluşturulur.
+
 **VPS komutu (gateway):**
 ```bash
-# Binary kurulum
+# Binary kurulum (zaten yapıldıysa atla)
 wget https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz
 tar xzf alertmanager-0.27.0.linux-amd64.tar.gz
 sudo mv alertmanager-0.27.0.linux-amd64/alertmanager /usr/local/bin/
@@ -94,7 +96,13 @@ sudo mkdir -p /etc/alertmanager /var/lib/alertmanager /etc/prometheus/rules
 
 # Config
 cd /var/www/teqlif.com && git pull
-sudo cp deploy/scale/V1.1/gateway/alertmanager.yml /etc/alertmanager/alertmanager.yml
+
+# Template'ten gerçek config oluştur (credentials .env'den okunur)
+set -a && source /etc/alertmanager/alertmanager.env && set +a
+envsubst '$TELEGRAM_BOT_TOKEN $TELEGRAM_CHAT_ID' \
+  < deploy/scale/V1.1/gateway/alertmanager.yml.template \
+  | sudo tee /etc/alertmanager/alertmanager.yml > /dev/null
+
 sudo cp deploy/scale/V1.1/gateway/prometheus-rules.yml /etc/prometheus/rules/teqlif.yml
 sudo cp deploy/scale/V1.1/gateway/prometheus.yml /etc/prometheus/prometheus.yml
 sudo cp deploy/scale/V1.1/gateway/systemd/alertmanager.service /etc/systemd/system/alertmanager.service

@@ -8,8 +8,7 @@ User=tucibeyin
 EnvironmentFile=/etc/alertmanager/alertmanager.env
 ExecStart=/usr/local/bin/alertmanager \
     --config.file=/etc/alertmanager/alertmanager.yml \
-    --storage.path=/var/lib/alertmanager \
-    --config.expand-env
+    --storage.path=/var/lib/alertmanager
 Restart=on-failure
 RestartSec=5s
 
