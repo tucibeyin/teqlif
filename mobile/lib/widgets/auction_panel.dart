@@ -14,17 +14,15 @@ import '../core/logger_service.dart';
 import '../models/auction.dart';
 import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
-import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/number_formatter.dart';
 import 'proof_capture_sheet.dart';
 import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
-import 'phone_input_field.dart';
 import '../utils/bid_calculator.dart';
 import 'swipe_paginated_list.dart';
-import '../screens/profile_screen.dart';
+import '../screens/account_info_screen.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -1540,32 +1538,14 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
         actionLabel: needsVerify ? loc.t("bidBlockedVerifyAction") : loc.t("bidBlockedDismiss"),
         onAction: () {
           Navigator.pop(sheetCtx);
-          if (needsVerify) _showPhoneVerificationSheet();
+          if (needsVerify) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AccountInfoScreen()),
+            );
+          }
         },
         showDismiss: needsVerify,
         dismissLabel: loc.t("bidBlockedDismiss"),
-      ),
-    );
-  }
-
-  Future<void> _showPhoneVerificationSheet() async {
-    if (!mounted || !context.mounted) return;
-    String? existingPhone;
-    try {
-      final user = await AuthService.me();
-      if (!user.phoneVerified) existingPhone = user.phone;
-    } catch (_) {}
-    if (!mounted || !context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      isScrollControlled: true,
-      builder: (sheetCtx) => _PhoneVerifySheet(
-        onClose: () => Navigator.pop(sheetCtx),
-        existingPhone: existingPhone,
       ),
     );
   }
@@ -2492,19 +2472,6 @@ class _AuctionStatusBadge extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Phone verification bottom sheet
-// ---------------------------------------------------------------------------
-
-class _PhoneVerifySheet extends ConsumerStatefulWidget {
-  final VoidCallback onClose;
-  final String? existingPhone;
-  const _PhoneVerifySheet({required this.onClose, this.existingPhone});
-
-  @override
-  ConsumerState<_PhoneVerifySheet> createState() => _PhoneVerifySheetState();
-}
-
 // ── Bid Blocked Bottom Sheet ───────────────────────────────────────────────
 class _BidBlockedSheet extends ConsumerWidget {
   final String title;
@@ -2616,224 +2583,6 @@ class _BidBlockedSheet extends ConsumerWidget {
                   color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                   fontSize: 14,
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PhoneVerifySheetState extends ConsumerState<_PhoneVerifySheet> {
-  late String? _phoneE164;
-  bool _loading = false;
-  bool _sent = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _phoneE164 = widget.existingPhone;
-  }
-
-  Future<void> _sendVerification() async {
-    final loc = ref.watch(localizationProvider);
-    final phone = _phoneE164;
-    if (phone == null || phone.length < 8) {
-      setState(() => _error = loc.t("phoneVerifyInvalidPhone"));
-      return;
-    }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/phone-verify/request'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'phone': phone}),
-      );
-      if (resp.statusCode == 202) {
-        setState(() {
-          _sent = true;
-          _loading = false;
-        });
-      } else {
-        final msg =
-            (jsonDecode(resp.body) as Map<String, dynamic>)['detail']
-                as String? ??
-            loc.t("phoneVerifyError");
-        setState(() {
-          _error = msg;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      setState(() {
-        _error = loc.t("phoneVerifyConnectionError");
-        _loading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final loc = ref.watch(localizationProvider);
-    return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        24,
-        8,
-        24,
-        MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.amber.withValues(alpha: 0.4),
-                width: 1.5,
-              ),
-            ),
-            child: const Icon(
-              Icons.verified_user_rounded,
-              color: Colors.amber,
-              size: 30,
-            ),
-          ),
-          const SizedBox(height: 18),
-          if (_sent) ...[
-            const Icon(
-              Icons.mark_email_read_outlined,
-              color: Color(0xFF0D9488),
-              size: 40,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              loc.t("phoneVerifyEmailSentTitle"),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              loc.t("phoneVerifyEmailSentDesc"),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 13,
-                height: 1.55,
-              ),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: widget.onClose,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  loc.t("btnOk"),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ),
-          ] else ...[
-            Text(
-              loc.t("phoneVerifyTitle"),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              loc.t("phoneVerifyDesc"),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 13,
-                height: 1.55,
-              ),
-            ),
-            const SizedBox(height: 24),
-            PhoneInputField(
-              initialE164: widget.existingPhone,
-              errorText: _error,
-              onChanged: (e164) => setState(() {
-                _phoneE164 = e164;
-                _error = null;
-              }),
-              onReset: () => setState(() => _phoneE164 = null),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _sendVerification,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber.shade600,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.black,
-                        ),
-                      )
-                    : Text(
-                        loc.t("auctionSendVerificationEmail"),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: widget.onClose,
-              child: Text(
-                loc.t("btnCancel"),
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),
           ],
