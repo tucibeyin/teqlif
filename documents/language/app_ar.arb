@@ -2806,7 +2806,7 @@
   "callReasonPending": "بعد قبول الطلب، يمكن للطرف الآخر تفعيل المكالمات.",
   "callReasonBusy": "الطرف الآخر في مكالمة حالياً.",
   "callReasonBlocked": "لا يحق لك التواصل مع هذا المستخدم.",
-  "callReasonDeclined": "تم رفض طلب رسالتك.",
+  "callReasonDeclined": "لا يمكنك الاتصال بهذا المستخدم الآن.",
   "msgBlockedHint": "لا يمكنك التواصل مع هذا المستخدم.",
   "callPermissionBarText": "اسمح للطرف الآخر بالاتصال بك",
   "callVoiceCall": "مكالمة صوتية",

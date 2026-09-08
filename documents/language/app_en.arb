@@ -2839,7 +2839,7 @@
   "callReasonPending": "Once the request is accepted, the other person can enable calls.",
   "callReasonBusy": "The other person is currently in a call.",
   "callReasonBlocked": "You can't communicate with this user.",
-  "callReasonDeclined": "Your message request was declined.",
+  "callReasonDeclined": "You can't call this user right now.",
   "msgBlockedHint": "You can't communicate with this user.",
   "callPermissionBarText": "Allow the other person to call you",
   "callVoiceCall": "Voice Call",

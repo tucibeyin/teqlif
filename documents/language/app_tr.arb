@@ -2803,7 +2803,7 @@
   "callReasonPending": "Mesaj isteği kabul edilince karşı taraf arama özelliğini açabilir.",
   "callReasonBusy": "Karşı taraf şu an başka bir aramada.",
   "callReasonBlocked": "Bu kullanıcıyla iletişim kurma yetkiniz yok.",
-  "callReasonDeclined": "Mesaj isteğiniz reddedildi.",
+  "callReasonDeclined": "Şu an bu kullanıcıyla arama yapamazsınız.",
   "msgBlockedHint": "Bu kullanıcıyla iletişim kuramazsınız.",
   "callPermissionBarText": "Karşı tarafa seni araması için izin ver",
   "callVoiceCall": "Sesli Arama",
