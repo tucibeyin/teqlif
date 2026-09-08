@@ -1540,15 +1540,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
         actionLabel: needsVerify ? loc.t("bidBlockedVerifyAction") : loc.t("bidBlockedDismiss"),
         onAction: () {
           Navigator.pop(sheetCtx);
-          if (code == 'BID_BLOCKED_NO_PHONE' ||
-              code == 'BID_BLOCKED_PHONE_UNVERIFIED' ||
-              code == 'BID_BLOCKED_VERIFY') {
-            _showPhoneVerificationSheet();
-          } else if (code == 'BID_BLOCKED_SUSPICIOUS') {
-            Navigator.of(context, rootNavigator: true).push(
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            );
-          }
+          if (needsVerify) _showPhoneVerificationSheet();
         },
         showDismiss: needsVerify,
         dismissLabel: loc.t("bidBlockedDismiss"),

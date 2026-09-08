@@ -2732,7 +2732,7 @@
   "bidBlockedPhoneUnverifiedBody": "To bid this amount, you need to verify your phone number.",
   "bidBlockedVerifyAction": "Verify Account",
   "bidBlockedDismiss": "Got It",
-  "bidBlockedSuspiciousBody": "Bids are not allowed for unverified accounts in this auction. Complete your phone and email verification to participate.",
+  "bidBlockedSuspiciousBody": "Your bidding access has been suspended in this stream. Verifying your account will prevent this from happening in future streams.",
   "errBidHostCannot": "You can't bid in your own stream.",
   "errBidNotActive": "The auction is not currently active.",
   "errBidTooLow": "Your bid is below the minimum increment.",

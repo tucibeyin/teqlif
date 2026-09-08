@@ -2699,7 +2699,7 @@
   "bidBlockedPhoneUnverifiedBody": "لتقديم عرض بهذا المبلغ، يجب التحقق من رقم هاتفك.",
   "bidBlockedVerifyAction": "التحقق من الحساب",
   "bidBlockedDismiss": "فهمت",
-  "bidBlockedSuspiciousBody": "لا يُسمح بتقديم العروض للحسابات غير الموثقة في هذا المزاد. أكمل التحقق من هاتفك وبريدك الإلكتروني للمشاركة.",
+  "bidBlockedSuspiciousBody": "تم تعليق صلاحية تقديم العروض في هذا البث. التحقق من حسابك سيمنع حدوث ذلك في البثوث المستقبلية.",
   "errBidHostCannot": "لا يمكنك المزايدة في بثك المباشر.",
   "errBidNotActive": "المزاد غير نشط حالياً.",
   "errBidTooLow": "عرضك أقل من الحد الأدنى للزيادة.",

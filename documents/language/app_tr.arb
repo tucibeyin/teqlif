@@ -2696,7 +2696,7 @@
   "bidBlockedPhoneUnverifiedBody": "Bu tutarda teklif verebilmek için telefon numaranızı doğrulamanız gerekiyor.",
   "bidBlockedVerifyAction": "Hesabı Doğrula",
   "bidBlockedDismiss": "Anladım",
-  "bidBlockedSuspiciousBody": "Hesabınız henüz doğrulanmadığı için bu artırmada teklif verilemedi. Telefon ve e-posta doğrulamanızı tamamlayarak katılabilirsiniz.",
+  "bidBlockedSuspiciousBody": "Bu yayında teklif verme yetkiniz askıya alındı. Hesabınızı doğrularsanız sonraki yayınlarda sorun yaşamazsınız.",
   "errBidHostCannot": "Kendi yayınında teklif veremezsiniz.",
   "errBidNotActive": "Artırma şu an aktif değil.",
   "errBidTooLow": "Teklifiniz minimum artış miktarının altında.",
