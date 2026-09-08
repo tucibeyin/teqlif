@@ -10,7 +10,7 @@
 
 Scale V1.0, Teqlif'in monolith (tek-sunucu) mimarisinden iki-sunuculu (gateway + node1) mimariye geçişidir. Amaç:
 
-- **node1'e RAM iade etmek** — Prometheus + Loki + Grafana node1'de çalışıyordu, backend ile kaynak rekabeti yapıyordu.
+- **node1'e RAM iade etmek** — Prometheus + Loki node1'de çalışıyordu, backend ile kaynak rekabeti yapıyordu.
 - **Edge proxy ayrımı** — SSL terminasyonu, rate limiting ve güvenlik kuralları gateway'e taşındı.
 - **Observability bağımsızlığı** — Monitoring, izlediği sistemden (node1) bağımsız ayrı bir makinede çalışır.
 - **Upload trafiğini gateway'den ayırmak** — Netcup 100 Mbps 24h ortalama throttle sınırını aşmamak için medya trafiği node1'e direkt yönlendirildi.
@@ -26,7 +26,7 @@ Scale V1.0, Teqlif'in monolith (tek-sunucu) mimarisinden iki-sunuculu (gateway +
 | Public IP | 135.125.175.223 |
 | WireGuard IP | 10.10.0.1 |
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
-| RAM | 11.4 GiB + 12 GiB Swap |
+| RAM | 11.4 GiB + 2 GiB Swap |
 | Disk | 98.3 GiB NVMe |
 | Ağ | **2 Gbps / unmetered** (kota yok) |
 | Geekbench 6 | 1058 single / 4404 multi |
@@ -133,13 +133,12 @@ Monitoring (WireGuard üzerinden):
 | nginx (uploads) | ✅ | ❌ | uploads.teqlif.com, MinIO direkt |
 | Prometheus | ❌ (durduruldu) | ✅ | Observability bağımsızlığı; node1'e ~300 MB RAM iade |
 | Loki | ❌ (durduruldu) | ✅ | Log storage için 60 GB SSD; node1'e ~200 MB RAM iade |
-| ~~Grafana~~ | ❌ (silindi) | ❌ | 2026-09-07 kaldırıldı — ~200 MB RAM + ~2.3 GB disk geri |
 | promtail | ✅ (→ gateway Loki) | ✅ (→ localhost Loki) | Her iki node'da |
 | node_exporter | ✅ | ✅ | Her iki node'da |
 | WireGuard | ✅ (10.10.0.1) | ✅ (10.10.0.2) | Özel ağ tüneli |
 | fail2ban | ✅ | ✅ | Bağımsız |
 
-**node1'e kazandırılan kapasite:** ~650–950 MB RAM (Prometheus + Loki + Grafana kaldırıldı).
+**node1'e kazandırılan kapasite:** ~500–700 MB RAM (Prometheus + Loki kaldırıldı).
 
 ---
 
@@ -644,7 +643,7 @@ Bu URL Cloudflare → gateway → MinIO zincirinden geçiyor. MinIO'ya `10.10.0.
 
 | Hash | İçerik |
 |---|---|
-| `f535a48e` | Grafana kaldırıldı — node1 RAM + disk iade |
+| `f535a48e` | Prometheus + Loki node1'den gateway'e taşındı — node1 RAM iade |
 | `074fc885` | `deploy/` klasörü oluşturuldu — monolith + scale/V1.0 yapısı |
 | `7c4577ad` | WireGuard config dosyaları |
 | `f69a3f02` | gateway monitoring stack config'leri |
