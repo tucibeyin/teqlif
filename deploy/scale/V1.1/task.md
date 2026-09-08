@@ -65,7 +65,9 @@ sudo cp deploy/scale/V1.1/gateway/nginx/teqlif.conf /etc/nginx/sites-available/t
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**Commit:** —
+**Commit:** `90aedd4b`  
+**VPS uygulandı:** 2026-09-08, gateway  
+**Test:** MISS→HIT (auth yok) ✅, BYPASS (Authorization header) ✅
 
 ---
 
