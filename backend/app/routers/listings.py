@@ -739,8 +739,7 @@ async def generate_description(
                     msg = await asyncio.wait_for(queue.get(), timeout=10.0)
                 except asyncio.TimeoutError:
                     logger.info(f"[API] Sending SSE keep-alive ping for user_id={current_user.id}")
-                    # 8192 karakterlik boşluk (padding) ekleyerek inatçı proxy/buffer'ları (Cloudflare vb.) deliyoruz
-                    yield f": keep-alive {' ' * 8192}\n\n"
+                    yield f": keep-alive\n\n"
                     continue
 
                 if msg["type"] == "done":
@@ -784,8 +783,7 @@ async def generate_description(
                             logger.error(f"[AI Desc] Kredi sayma başarısız: %s", charge_exc)
 
                     chunk_payload = json.dumps({'text': chunk}, ensure_ascii=False)
-                    padding = ' ' * 8192
-                    yield f": {padding}\ndata: {chunk_payload}\n\n"
+                    yield f"data: {chunk_payload}\n\n"
                     await asyncio.sleep(0.05)
 
             if text_generated:
