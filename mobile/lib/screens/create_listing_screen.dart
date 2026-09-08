@@ -383,11 +383,13 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 break;
               } else if (json.containsKey('text')) {
                 final newText = _descCtrl.text + (json['text'] as String);
-                _descCtrl.value = _descCtrl.value.copyWith(
-                  text: newText,
-                  selection: TextSelection.collapsed(offset: newText.length),
-                  composing: TextRange.empty,
-                );
+                if (mounted) setState(() {
+                  _descCtrl.value = _descCtrl.value.copyWith(
+                    text: newText,
+                    selection: TextSelection.collapsed(offset: newText.length),
+                    composing: TextRange.empty,
+                  );
+                });
                 await Future.delayed(const Duration(milliseconds: 30));
               } else if (json['done'] == true) {
                 _appendLocationSuffix();
