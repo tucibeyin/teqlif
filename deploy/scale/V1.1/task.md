@@ -6,10 +6,18 @@
 
 ## Adım 1 — Staging Server Block Güçlendirme
 
-**Durum:** ⬜ Bekliyor
+**Durum:** ✅ Tamamlandı
 
-**Dosyalar:**
-- `deploy/scale/V1.1/gateway/nginx/teqlif.conf` (güncellenir)
+**Değişiklikler (`gateway/nginx/teqlif.conf`):**
+- `ssl_session_cache`, `ssl_stapling off` eklendi
+- Security header seti eklendi (X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy)
+- `/api/auth` → `limit_req zone=auth burst=5`
+- `/api/upload` → `client_max_body_size 100M` ayrı location
+- `/api/chat/` → WebSocket location (upgrade header'ları)
+- `/api/` → `limit_req zone=api burst=300`
+- `~* /ws$` → WebSocket location
+- `/` → `limit_req zone=general burst=60`
+- Production'dan fark: `burst` değerleri biraz daha gevşek (staging az trafik)
 
 **VPS komutu (gateway):**
 ```bash
@@ -96,7 +104,7 @@ sudo systemctl restart prometheus
 
 | Adım | İçerik | Durum |
 |---|---|---|
-| 1 | Staging block güçlendirme | ⬜ |
+| 1 | Staging block güçlendirme | ✅ |
 | 2 | uploads.teqlif.com immutable | ✅ |
 | 3 | nginx microcaching | ⬜ |
 | 4 | Alertmanager | ⬜ |

@@ -1,0 +1,17 @@
+[Unit]
+Description=MinIO Object Storage
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+EnvironmentFile=/etc/minio.env
+ExecStart=/usr/local/bin/minio server /var/lib/minio --address :9010 --console-address :9011
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
