@@ -74,13 +74,15 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Adım 4 — Alertmanager
 
-**Durum:** ⬜ Bekliyor
+**Durum:** ✅ Tamamlandı (config hazır, VPS uygulaması bekliyor)
 
 **Dosyalar:**
-- `deploy/scale/V1.1/gateway/alertmanager.yml`
-- `deploy/scale/V1.1/gateway/prometheus-rules.yml`
-- `deploy/scale/V1.1/gateway/prometheus.yml` (rule_files + alerting bloğu eklenir)
-- `deploy/scale/V1.1/gateway/systemd/alertmanager.service`
+- `deploy/scale/V1.1/gateway/alertmanager.yml` — Telegram receiver, `${TELEGRAM_BOT_TOKEN}` / `${TELEGRAM_CHAT_ID}` placeholder
+- `deploy/scale/V1.1/gateway/prometheus-rules.yml` — NodeDown, HighMemory, DiskSpaceLow, HighSwap, HighCPU kuralları
+- `deploy/scale/V1.1/gateway/prometheus.yml` — rule_files + alerting bloğu eklendi
+- `deploy/scale/V1.1/gateway/systemd/alertmanager.service` — `EnvironmentFile=/var/www/teqlif.com/backend/.env` + `--config.expand-env`
+
+**Not:** Değişkenler (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) gateway'deki `/var/www/teqlif.com/backend/.env`'den okunur. Ayrı bir env dosyası gerekmez.
 
 **VPS komutu (gateway):**
 ```bash
@@ -88,7 +90,7 @@ sudo nginx -t && sudo systemctl reload nginx
 wget https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz
 tar xzf alertmanager-0.27.0.linux-amd64.tar.gz
 sudo mv alertmanager-0.27.0.linux-amd64/alertmanager /usr/local/bin/
-sudo mkdir -p /etc/alertmanager /var/lib/alertmanager
+sudo mkdir -p /etc/alertmanager /var/lib/alertmanager /etc/prometheus/rules
 
 # Config
 cd /var/www/teqlif.com && git pull
@@ -114,4 +116,4 @@ sudo systemctl restart prometheus
 | 1 | Staging block güçlendirme | ✅ |
 | 2 | uploads.teqlif.com immutable | ✅ |
 | 3 | nginx microcaching | ✅ |
-| 4 | Alertmanager | ⬜ |
+| 4 | Alertmanager | ⬜ (config hazır, VPS bekliyor) |
