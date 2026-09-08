@@ -2583,17 +2583,41 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 ],
               ),
             ),
-          Container(
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface(context),
-              border: Border(top: BorderSide(color: AppColors.border(context))),
-            ),
-            child: SafeArea(
-              top: false,
-              child: _isRecording ? _buildRecordingBar(loc) : _buildNormalBar(loc),
-            ),
-          ),
+          Builder(builder: (context) {
+            final reqState = ref.watch(directChatRequestProvider(widget.otherUserId)).valueOrNull;
+            final canMessage = reqState?.canMessage ?? true;
+            if (!canMessage) {
+              return Container(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface(context),
+                  border: Border(top: BorderSide(color: AppColors.border(context))),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Text(
+                    loc.t('msgDeclinedHint'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return Container(
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface(context),
+                border: Border(top: BorderSide(color: AppColors.border(context))),
+              ),
+              child: SafeArea(
+                top: false,
+                child: _isRecording ? _buildRecordingBar(loc) : _buildNormalBar(loc),
+              ),
+            );
+          }),
         ],
       ),
     );

@@ -231,6 +231,7 @@
   "msgNoRequestsDesc": "Seni takip etmeyen kişilerden gelen mesajlar\nburada görünecek",
   "msgTabRequests": "Mesaj İstekleri",
   "msgSendFailed": "Mesaj gönderilemedi",
+  "msgDeclinedHint": "Mesaj isteğiniz reddedildi. Karşı taraf sizi takip ettiğinde tekrar yazabilirsiniz.",
   "msgWriteHint": "Mesaj yaz...",
   "msgNoChat": "Henüz mesaj yok.\nİlk mesajı gönder!",
   "msgGoToListing": "📌 İlana Git",

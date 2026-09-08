@@ -77,16 +77,19 @@ class SendDirectMessageCommand:
             )
 
             if existing_thread and existing_thread.status == "declined":
-                # Declined → yeniden mesaj gönderilebilir sadece receiver sender'ı follow ediyorsa
-                receiver_follows_sender_on_declined = await self.uow.session.scalar(
-                    select(Follow).where(
-                        Follow.follower_id == receiver_id,
-                        Follow.followed_id == sender_id,
-                        Follow.status == "accepted",
+                sender_is_initiator = existing_thread.initiator_id == sender_id
+                if sender_is_initiator:
+                    # Reddedilen kişi: yeniden yazabilmek için receiver'ın sender'ı follow etmesi şart
+                    receiver_follows_sender = await self.uow.session.scalar(
+                        select(Follow).where(
+                            Follow.follower_id == receiver_id,
+                            Follow.followed_id == sender_id,
+                            Follow.status == "accepted",
+                        )
                     )
-                )
-                if not receiver_follows_sender_on_declined:
-                    raise ForbiddenException(code="MESSAGING_FORBIDDEN")
+                    if not receiver_follows_sender:
+                        raise ForbiddenException(code="MESSAGING_FORBIDDEN")
+                # Reddeden kişi (not initiator): her zaman yazabilir → thread'i yeniden açar
                 existing_thread.status = "accepted"
                 existing_thread.initiator_id = sender_id
                 existing_thread.call_allowed = False

@@ -29,11 +29,29 @@ _REASON_PENDING       = "pending"
 _REASON_CALL_DISABLED = "call_disabled"
 _REASON_USER_BUSY     = "user_busy"
 _REASON_BLOCKED       = "blocked"
+_REASON_DECLINED      = "declined"
 
 _REL_TTL = 3600  # Redis TTL: 1 saat
 
 
 # ── Pure hesaplama fonksiyonu ─────────────────────────────────────────────────
+
+def _compute_can_message(
+    sender_is_initiator: bool,
+    target_follows_sender: bool,
+    thread_status: Optional[str],
+) -> tuple[bool, Optional[str]]:
+    """
+    sender → target mesaj gönderebilir mi?
+    declined dışında her durumda izin var.
+    declined: reddeden her zaman yazabilir; reddedilen yalnızca target follows sender ise.
+    """
+    if thread_status != "declined":
+        return True, None
+    if not sender_is_initiator:
+        return True, None
+    return (True, None) if target_follows_sender else (False, _REASON_DECLINED)
+
 
 def _compute_can_call(
     viewer_follows_target: bool,
@@ -83,6 +101,11 @@ class PairRelationshipState:
     reason_ba: Optional[str]
     perm_editable_for_b: bool
 
+    can_message_ab: bool           # uid_a → uid_b mesaj gönderebilir mi
+    reason_msg_ab: Optional[str]
+    can_message_ba: bool           # uid_b → uid_a mesaj gönderebilir mi
+    reason_msg_ba: Optional[str]
+
     def payload_for(self, viewer_id: int) -> dict:
         """viewer'a gönderilecek 'relationship_changed' WS payload'ı."""
         is_a = viewer_id == self.uid_a
@@ -96,6 +119,8 @@ class PairRelationshipState:
             "can_call_reason": self.reason_ab if is_a else self.reason_ba,
             "call_allowed": self.call_allowed,
             "call_permission_editable": self.perm_editable_for_a if is_a else self.perm_editable_for_b,
+            "can_message": self.can_message_ab if is_a else self.can_message_ba,
+            "can_message_reason": self.reason_msg_ab if is_a else self.reason_msg_ba,
         }
 
     def to_query_response(self, uid: int) -> dict:
@@ -108,6 +133,8 @@ class PairRelationshipState:
             "can_call_reason": self.reason_ab if is_a else self.reason_ba,
             "call_allowed": self.call_allowed,
             "call_permission_editable": self.perm_editable_for_a if is_a else self.perm_editable_for_b,
+            "can_message": self.can_message_ab if is_a else self.can_message_ba,
+            "can_message_reason": self.reason_msg_ab if is_a else self.reason_msg_ba,
         }
 
     def to_redis_dict(self) -> dict:
@@ -125,6 +152,10 @@ class PairRelationshipState:
             "can_call_ba": int(self.can_call_ba),
             "reason_ba": self.reason_ba or "",
             "perm_editable_for_b": int(self.perm_editable_for_b),
+            "can_message_ab": int(self.can_message_ab),
+            "reason_msg_ab": self.reason_msg_ab or "",
+            "can_message_ba": int(self.can_message_ba),
+            "reason_msg_ba": self.reason_msg_ba or "",
         }
 
 
@@ -144,6 +175,11 @@ def _build_state(
     can_call_ab, reason_ab = _compute_can_call(a_follows_b, b_follows_a, thread_status, call_allowed)
     can_call_ba, reason_ba = _compute_can_call(b_follows_a, a_follows_b, thread_status, call_allowed)
 
+    a_is_initiator = initiator_id == uid_a if initiator_id is not None else False
+    b_is_initiator = initiator_id == uid_b if initiator_id is not None else False
+    can_message_ab, reason_msg_ab = _compute_can_message(a_is_initiator, b_follows_a, thread_status)
+    can_message_ba, reason_msg_ba = _compute_can_message(b_is_initiator, a_follows_b, thread_status)
+
     # Toggle görünürlüğü: acceptor'ın initiator'ı takip edip etmediğine göre
     # Aynı değer her iki tarafa da yansıtılır (ortak bir kavram)
     if thread_status == "accepted" and initiator_id is not None:
@@ -157,6 +193,8 @@ def _build_state(
         thread_status=thread_status, initiator_id=initiator_id, call_allowed=call_allowed,
         can_call_ab=can_call_ab, reason_ab=reason_ab, perm_editable_for_a=editable,
         can_call_ba=can_call_ba, reason_ba=reason_ba, perm_editable_for_b=editable,
+        can_message_ab=can_message_ab, reason_msg_ab=reason_msg_ab,
+        can_message_ba=can_message_ba, reason_msg_ba=reason_msg_ba,
     )
 
 
@@ -214,12 +252,16 @@ class RelationshipStateService:
             call_allowed=thread.call_allowed if thread else False,
         )
 
-        # Block override: engel varsa her iki yönde de arama kapalı
+        # Block override: engel varsa her iki yönde de arama ve mesajlaşma kapalı
         if is_blocked:
             state.can_call_ab = False
             state.reason_ab = _REASON_BLOCKED
             state.can_call_ba = False
             state.reason_ba = _REASON_BLOCKED
+            state.can_message_ab = False
+            state.reason_msg_ab = _REASON_BLOCKED
+            state.can_message_ba = False
+            state.reason_msg_ba = _REASON_BLOCKED
 
         # Call presence override: hedef aramadaysa can_call → False + user_busy
         from app.services.call_presence import is_busy as _is_busy
@@ -261,6 +303,10 @@ class RelationshipStateService:
                 can_call_ba=bool(d["can_call_ba"]),
                 reason_ba=d["reason_ba"] or None,
                 perm_editable_for_b=bool(d["perm_editable_for_b"]),
+                can_message_ab=bool(d.get("can_message_ab", 1)),
+                reason_msg_ab=d.get("reason_msg_ab") or None,
+                can_message_ba=bool(d.get("can_message_ba", 1)),
+                reason_msg_ba=d.get("reason_msg_ba") or None,
             )
         except Exception:
             return None

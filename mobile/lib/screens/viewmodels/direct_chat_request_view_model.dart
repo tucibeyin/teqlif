@@ -13,6 +13,8 @@ class DirectChatRequestState {
   final String? canCallReason; // "no_follow" | "call_disabled" | null
   final bool callAllowed; // acceptor'ün verdiği arama izni
   final bool callPermissionEditable; // toggle bar'ı göster (mutual follow durumunda gizle)
+  final bool canMessage;
+  final String? canMessageReason; // "declined" | "blocked" | null
 
   const DirectChatRequestState({
     this.status,
@@ -23,6 +25,8 @@ class DirectChatRequestState {
     this.canCallReason,
     this.callAllowed = false,
     this.callPermissionEditable = false,
+    this.canMessage = true,
+    this.canMessageReason,
   });
 
   DirectChatRequestState copyWith({
@@ -35,6 +39,8 @@ class DirectChatRequestState {
     String? canCallReason,
     bool? callAllowed,
     bool? callPermissionEditable,
+    bool? canMessage,
+    String? canMessageReason,
   }) {
     return DirectChatRequestState(
       status: clearStatus ? null : (status ?? this.status),
@@ -45,6 +51,8 @@ class DirectChatRequestState {
       canCallReason: canCallReason ?? this.canCallReason,
       callAllowed: callAllowed ?? this.callAllowed,
       callPermissionEditable: callPermissionEditable ?? this.callPermissionEditable,
+      canMessage: canMessage ?? this.canMessage,
+      canMessageReason: canMessageReason ?? this.canMessageReason,
     );
   }
 }
@@ -64,6 +72,8 @@ class DirectChatRequestNotifier
         canCallReason: data['can_call_reason'] as String?,
         callAllowed: (data['call_allowed'] as bool?) ?? false,
         callPermissionEditable: (data['call_permission_editable'] as bool?) ?? false,
+        canMessage: (data['can_message'] as bool?) ?? true,
+        canMessageReason: data['can_message_reason'] as String?,
         isLoading: false,
       );
     } catch (_) {
@@ -119,6 +129,8 @@ class DirectChatRequestNotifier
       status: data['thread_status'] as String?,
       callAllowed: data['call_allowed'] as bool?,
       isInitiator: data['is_initiator'] as bool?,
+      canMessage: data['can_message'] as bool?,
+      canMessageReason: data['can_message_reason'] as String?,
     ));
   }
 }
