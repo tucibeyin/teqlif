@@ -72,11 +72,15 @@ def _compute_can_call(
             return (True, None) if call_allowed else (False, _REASON_CALL_DISABLED)
         if thread_status == "pending":
             return False, _REASON_PENDING
+        if thread_status == "declined":
+            return False, _REASON_DECLINED
         return False, _REASON_NO_FOLLOW
     if thread_status == "accepted":
         return (True, None) if call_allowed else (False, _REASON_CALL_DISABLED)
     if thread_status == "pending":
         return False, _REASON_PENDING
+    if thread_status == "declined":
+        return False, _REASON_DECLINED
     return False, _REASON_NO_FOLLOW
 
 
