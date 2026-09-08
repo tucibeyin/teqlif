@@ -46,11 +46,14 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Adım 3 — nginx Microcaching
 
-**Durum:** ⬜ Bekliyor
+**Durum:** ✅ Tamamlandı
 
-**Dosyalar:**
-- `deploy/scale/V1.1/gateway/nginx/nginx-http-zones.conf` (cache zone eklenir)
-- `deploy/scale/V1.1/gateway/nginx/teqlif.conf` (cache location'lar eklenir)
+**Değişiklikler:**
+- `nginx-http-zones.conf`: `proxy_cache_path /var/cache/nginx/teqlif` eklendi (256MB, keys_zone 10m)
+- `teqlif.conf` `/api/` location: `proxy_cache teqlif_cache`, GET/HEAD only, 5s TTL
+- Bypass: `Authorization` veya `Pragma` header varsa cache yok — authenticated istekler asla cache'lenmez
+- `X-Cache-Status` response header eklendi (HIT/MISS/BYPASS debug için)
+- Staging block'a cache eklenmedi (kasıtlı)
 
 **VPS komutu (gateway):**
 ```bash
@@ -107,5 +110,5 @@ sudo systemctl restart prometheus
 |---|---|---|
 | 1 | Staging block güçlendirme | ✅ |
 | 2 | uploads.teqlif.com immutable | ✅ |
-| 3 | nginx microcaching | ⬜ |
+| 3 | nginx microcaching | ✅ |
 | 4 | Alertmanager | ⬜ |
