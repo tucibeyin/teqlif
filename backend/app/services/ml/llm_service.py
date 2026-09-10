@@ -440,7 +440,7 @@ async def _get_text_groq(system: str, user: str, model_id: str) -> str:
                     {"role": "user", "content": user},
                 ],
                 "temperature": 0.6,
-                "max_tokens": 350,
+                "max_tokens": 600,
                 "stop": _STOP_WORDS,
                 "stream": False,
             },
@@ -459,7 +459,7 @@ async def _get_text_gemini(system: str, user: str, model_id: str) -> str:
                 "contents": [{"role": "user", "parts": [{"text": user}]}],
                 "generationConfig": {
                     "temperature": 0.6,
-                    "maxOutputTokens": 350,
+                    "maxOutputTokens": 600,
                     "stopSequences": _STOP_WORDS,
                 },
             },
