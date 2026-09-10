@@ -10,11 +10,9 @@ Her node kendi registry'sini tutar:
 generate_listing_description() → (description: str, provider: str)
 """
 import asyncio
-import json
 import logging
 import random
 import re
-import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -28,12 +26,9 @@ from app.services.ml.llm_templates import ListingTemplates
 logger = logging.getLogger(__name__)
 
 # ── Provider endpoints ────────────────────────────────────────────────────────
-GROQ_API_URL    = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
-GEMINI_URL      = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash-lite:generateContent"
-)
+GROQ_API_URL     = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODELS_URL  = "https://api.groq.com/openai/v1/models"
+GEMINI_BASE_URL  = "https://generativelanguage.googleapis.com/v1beta"
 
 _REGISTRY_REFRESH_INTERVAL = 86_400  # 24 saat
 
@@ -201,25 +196,6 @@ def _postprocess(raw: str, price: Optional[float]) -> str:
     return text
 
 
-# ── Rate limit hatası ─────────────────────────────────────────────────────────
-class _RateLimitError(Exception):
-    def __init__(self, retry_after: float = 60.0):
-        self.retry_after = retry_after
-
-
-# ── In-memory exhaustion tracking ────────────────────────────────────────────
-_exhausted: dict[str, float] = {}  # model_id → reset_timestamp
-
-
-def _is_exhausted(model_id: str) -> bool:
-    return time.monotonic() < _exhausted.get(model_id, 0.0)
-
-
-def _mark_exhausted(model_id: str, retry_after: float) -> None:
-    _exhausted[model_id] = time.monotonic() + retry_after
-    logger.warning("[LLM] %s exhausted %.0fs süreyle atlanıyor", model_id, retry_after)
-
-
 # ── Registry ──────────────────────────────────────────────────────────────────
 @dataclass
 class _ModelEntry:
@@ -231,16 +207,25 @@ class _ModelEntry:
 _registry: list[_ModelEntry] = []
 
 
-def _score_groq_model(model_info: dict) -> float:
-    mid = model_info.get("id", "")
-    ctx = model_info.get("context_window", 0)
-    score = ctx / 1_000.0
-    if any(x in mid for x in ("70b", "72b", "90b")):
-        score += 50
-    elif any(x in mid for x in ("27b", "32b")):
-        score += 30
-    elif any(x in mid for x in ("8b", "9b")):
-        score += 10
+def _score_groq(model_id: str) -> float:
+    name = model_id.lower()
+    score = 0.0
+    if "gpt" in name:         score += 1000
+    elif "qwen" in name:      score += 800
+    elif "compound" in name:  score += 400 if "mini" not in name else 200
+    m = re.search(r'(\d+)b', name)
+    if m:                     score += int(m.group(1))
+    return score
+
+
+def _score_gemini(model_id: str) -> float:
+    name = model_id.lower()
+    score = 0.0
+    if "gemma" in name:           score += 100      # TPM kısıtlı — en sona
+    elif "flash-lite" in name:    score += 500
+    elif "flash" in name:         score += 400
+    m = re.search(r'(\d+)[.\-](\d+)', name)
+    if m:                         score += float(f"{m.group(1)}.{m.group(2)}") * 50
     return score
 
 
@@ -257,11 +242,7 @@ async def _fetch_groq_models() -> list[_ModelEntry]:
             logger.warning("[LLM] Groq models API HTTP %d", resp.status_code)
             return []
         entries = [
-            _ModelEntry(
-                model_id=m["id"],
-                provider="groq",
-                score=_score_groq_model(m),
-            )
+            _ModelEntry(model_id=m["id"], provider="groq", score=_score_groq(m["id"]))
             for m in resp.json().get("data", [])
             if m.get("id") and m.get("object") == "model"
         ]
@@ -273,44 +254,90 @@ async def _fetch_groq_models() -> list[_ModelEntry]:
         return []
 
 
-async def _probe_gemini() -> Optional[_ModelEntry]:
+async def _probe_gemini_model(model_id: str, sem: asyncio.Semaphore) -> bool:
+    """
+    True  → registry'e al (200 veya 429 = erişilebilir, kota dolmuş olabilir)
+    False → çıkar (403 = IP kısıtlama, 404 = model yok, hata)
+    """
+    async with sem:
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+            "generationConfig": {"maxOutputTokens": 1},
+        }
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    f"{GEMINI_BASE_URL}/models/{model_id}:generateContent",
+                    params={"key": settings.gemini_api_key},
+                    json=payload,
+                )
+            if resp.status_code in (200, 429):
+                logger.debug("[LLM] Gemini probe %s → HTTP %d", model_id, resp.status_code)
+                return True
+            logger.debug("[LLM] Gemini probe %s → HTTP %d (çıkarılıyor)", model_id, resp.status_code)
+            return False
+        except Exception as exc:
+            logger.debug("[LLM] Gemini probe %s hata: %s", model_id, exc)
+            return False
+
+
+async def _fetch_gemini_models() -> list[_ModelEntry]:
     if not settings.gemini_api_key:
-        return None
-    payload = {
-        "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
-        "generationConfig": {"maxOutputTokens": 1},
-    }
+        return []
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                GEMINI_URL,
+            resp = await client.get(
+                f"{GEMINI_BASE_URL}/models",
                 params={"key": settings.gemini_api_key},
-                json=payload,
             )
-        if resp.status_code == 200:
-            logger.info("[LLM] Gemini probe OK — available")
-            return _ModelEntry(model_id="gemini-2.0-flash-lite", provider="gemini", score=5.0)
-        elif resp.status_code == 429:
-            logger.warning("[LLM] Gemini probe 429 — kota doldu")
-            return None
-        else:
-            # 403 = IP kısıtlaması (EU node), 400 = geçersiz key
-            logger.warning("[LLM] Gemini probe HTTP %d — atlanıyor", resp.status_code)
-            return None
+        if resp.status_code != 200:
+            logger.warning("[LLM] Gemini model listesi HTTP %d", resp.status_code)
+            return []
+
+        candidates: list[str] = []
+        for m in resp.json().get("models", []):
+            if "generateContent" not in m.get("supportedGenerationMethods", []):
+                continue
+            model_id = m.get("name", "").removeprefix("models/")
+            if not model_id:
+                continue
+            # Embedding, vision-only, ses ve özel modelleri çıkar
+            lower = model_id.lower()
+            if any(x in lower for x in ("embedding", "aqa", "vision", "tts", "imagen")):
+                continue
+            candidates.append(model_id)
+
+        if not candidates:
+            logger.info("[LLM] Gemini: hiç aday model yok (IP kısıtlaması?)")
+            return []
+
+        # Paralel probe — max 4 eşzamanlı (startup maliyetini sınırlar)
+        sem = asyncio.Semaphore(4)
+        results = await asyncio.gather(*[_probe_gemini_model(m, sem) for m in candidates])
+
+        entries = [
+            _ModelEntry(model_id=m, provider="gemini", score=_score_gemini(m))
+            for m, ok in zip(candidates, results) if ok
+        ]
+        entries.sort(key=lambda e: e.score, reverse=True)
+        logger.info(
+            "[LLM] Gemini registry: %d model (%d adaydan) — ilk: %s",
+            len(entries), len(candidates),
+            entries[0].model_id if entries else "—",
+        )
+        return entries
     except Exception as exc:
-        logger.error("[LLM] Gemini probe hatası: %s", exc)
-        return None
+        logger.error("[LLM] Gemini model listesi alınamadı: %s", exc)
+        return []
 
 
 async def _refresh_registry() -> None:
     global _registry
     groq_entries = await _fetch_groq_models()
-    gemini_entry = await _probe_gemini()
-    new_registry = groq_entries[:]
-    if gemini_entry:
-        new_registry.append(gemini_entry)
-    _registry = new_registry
-    logger.info("[LLM] Registry yenilendi: %d model", len(_registry))
+    gemini_entries = await _fetch_gemini_models()
+    # Groq önce (primary), Gemini arkada (fallback — puan sıralı)
+    _registry = groq_entries + gemini_entries
+    logger.info("[LLM] Registry yenilendi: %d Groq + %d Gemini", len(groq_entries), len(gemini_entries))
 
 
 async def _loop() -> None:
@@ -323,7 +350,7 @@ async def _loop() -> None:
 
 
 async def start_registry_loop() -> None:
-    """main.py lifespan'dan await edilir: registry'yi başlatır ve 24h refresh loop'u ateşler."""
+    """main.py / ai_proxy_main.py lifespan'dan await edilir."""
     try:
         await _refresh_registry()
     except Exception as exc:
@@ -332,18 +359,7 @@ async def start_registry_loop() -> None:
 
 
 # ── Non-streaming provider çağrıları ─────────────────────────────────────────
-async def _get_text_groq(system: str, user: str, model: str) -> str:
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "temperature": 0.6,
-        "max_tokens": 350,
-        "stop": _STOP_WORDS,
-        "stream": False,
-    }
+async def _get_text_groq(system: str, user: str, model_id: str) -> str:
     async with httpx.AsyncClient(timeout=45.0) as client:
         resp = await client.post(
             GROQ_API_URL,
@@ -351,37 +367,40 @@ async def _get_text_groq(system: str, user: str, model: str) -> str:
                 "Authorization": f"Bearer {settings.groq_api_key}",
                 "Content-Type": "application/json",
             },
-            json=payload,
+            json={
+                "model": model_id,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.6,
+                "max_tokens": 350,
+                "stop": _STOP_WORDS,
+                "stream": False,
+            },
         )
-    if resp.status_code == 429:
-        retry_after = float(resp.headers.get("retry-after", "60"))
-        raise _RateLimitError(retry_after)
     if resp.status_code != 200:
-        raise RuntimeError(f"Groq HTTP {resp.status_code}: {resp.text[:200]}")
+        raise RuntimeError(f"Groq {model_id} HTTP {resp.status_code}: {resp.text[:200]}")
     return resp.json()["choices"][0]["message"]["content"]
 
 
-async def _get_text_gemini(system: str, user: str) -> str:
-    payload = {
-        "system_instruction": {"parts": [{"text": system}]},
-        "contents": [{"role": "user", "parts": [{"text": user}]}],
-        "generationConfig": {
-            "temperature": 0.6,
-            "maxOutputTokens": 350,
-            "stopSequences": _STOP_WORDS,
-        },
-    }
+async def _get_text_gemini(system: str, user: str, model_id: str) -> str:
     async with httpx.AsyncClient(timeout=45.0) as client:
         resp = await client.post(
-            GEMINI_URL,
+            f"{GEMINI_BASE_URL}/models/{model_id}:generateContent",
             params={"key": settings.gemini_api_key},
-            json=payload,
+            json={
+                "system_instruction": {"parts": [{"text": system}]},
+                "contents": [{"role": "user", "parts": [{"text": user}]}],
+                "generationConfig": {
+                    "temperature": 0.6,
+                    "maxOutputTokens": 350,
+                    "stopSequences": _STOP_WORDS,
+                },
+            },
         )
-    if resp.status_code == 429:
-        retry_after = float(resp.headers.get("retry-after", "60"))
-        raise _RateLimitError(retry_after)
     if resp.status_code != 200:
-        raise RuntimeError(f"Gemini HTTP {resp.status_code}: {resp.text[:200]}")
+        raise RuntimeError(f"Gemini {model_id} HTTP {resp.status_code}: {resp.text[:200]}")
     data = resp.json()
     return (
         data.get("candidates", [{}])[0]
@@ -402,30 +421,25 @@ async def generate_listing_description(
     lang: str = "tr",
 ) -> tuple[str, str]:
     """
-    Tüm registry modellerini sırayla dener; (description, provider) döner.
-    Tüm modeller exhausted/başarısız ise AIServiceBusyException fırlatır.
+    Her çağrıda registry'nin başından iterasyona başlar — stateless.
+    Hata (429 dahil) → sonraki model. Tümü başarısız → AIServiceBusyException.
     """
     system_prompt, user_prompt = _build_prompt(
         title, category, condition, subcategory, extra_fields, lang
     )
 
     for entry in _registry:
-        if _is_exhausted(entry.model_id):
-            continue
         try:
             logger.info("[LLM] Deneniyor: %s | title=%r", entry.model_id, title[:60])
             if entry.provider == "groq":
                 raw = await _get_text_groq(system_prompt, user_prompt, entry.model_id)
             else:
-                raw = await _get_text_gemini(system_prompt, user_prompt)
+                raw = await _get_text_gemini(system_prompt, user_prompt, entry.model_id)
             text = _postprocess(raw, price)
             logger.info("[LLM] Tamamlandı | %s | %d char", entry.model_id, len(text))
             return text, entry.provider
-        except _RateLimitError as exc:
-            _mark_exhausted(entry.model_id, exc.retry_after)
-            continue
         except Exception as exc:
-            logger.error("[LLM] %s başarısız: %s", entry.model_id, exc)
+            logger.warning("[LLM] %s başarısız: %s", entry.model_id, exc)
             continue
 
     logger.error("[LLM] Tüm providerlar başarısız | title=%r", title[:60])
