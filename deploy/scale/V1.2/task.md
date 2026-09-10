@@ -1241,11 +1241,11 @@ sudo systemctl start teqlif-ai-proxy
 | node1 | 19 — WireGuard peer | [x] |
 | node1 | 20 — .env güncelle | [x] |
 | node1 | 21 — git pull + restart | [x] |
-| gateway | 22 — WireGuard peer | [ ] |
-| gateway | 23 — UFW Loki | [ ] |
-| gateway | 24 — Prometheus + rules | [ ] |
-| Test | 25 — WireGuard mesh | [ ] |
-| Test | 26 — AI proxy uçtan uca | [ ] |
-| Test | 27 — Production endpoint | [ ] |
-| Test | 28 — Fallback | [ ] |
-| Test | 29 — Monitoring | [ ] |
+| gateway | 22 — WireGuard peer | [x] |
+| gateway | 23 — UFW Loki | [x] |
+| gateway | 24 — Prometheus + rules | [x] |
+| Test | 25 — WireGuard mesh | [x] |
+| Test | 26 — AI proxy uçtan uca | [x] |
+| Test | 27 — Production endpoint | [x] |
+| Test | 28 — Fallback | [x] |
+| Test | 29 — Monitoring | [x] |
