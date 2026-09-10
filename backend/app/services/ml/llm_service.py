@@ -4,12 +4,15 @@ Scale V1.2 — Özerk registry, non-streaming, dual-provider (Groq + Gemini).
 Her node kendi registry'sini tutar:
   - Startup'ta Groq model listesi çekilir, Gemini 1-token probe ile test edilir
   - 24 saatte bir yenilenir (fire_and_forget loop)
-  - 429 → retry-after süresince model in-memory olarak atlanır
-  - Tüm modeller tükenirse AIServiceBusyException fırlatılır
+  - 429 → retry-after süresince model Redis'te exhausted olarak işaretlenir
+  - llm:last_success → bir sonraki istekte önce son başarılı model denenir
+  - node1 ve node2 aynı Redis'i (WireGuard üzerinden) paylaşır → cross-node kota paylaşımı
+  - Redis yoksa graceful degradation: stateless fallback
 
 generate_listing_description() → (description: str, provider: str)
 """
 import asyncio
+import json
 import logging
 import random
 import re
@@ -22,6 +25,7 @@ from app.config import settings
 from app.core.exceptions import AIServiceBusyException
 from app.core.logger import fire_and_forget
 from app.services.ml.llm_templates import ListingTemplates
+from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +198,58 @@ def _postprocess(raw: str, price: Optional[float]) -> str:
     if suffix:
         text = text + "\n\n" + suffix
     return text
+
+
+# ── Redis shared state ────────────────────────────────────────────────────────
+# node1 ve node2 aynı Groq API key'ini paylaşır; cross-node exhaustion+last_success
+# node1 Redis'e yerel bağlanır; node2 WireGuard üzerinden bağlanır (redis://10.10.0.1:6379)
+# Redis erişilemezse her fonksiyon sessizce fallback değer döner — servis çalışmaya devam eder
+
+async def _redis_is_exhausted(model_id: str) -> bool:
+    try:
+        r = await get_redis()
+        return await r.exists(f"llm:exhausted:{model_id}") > 0
+    except Exception:
+        return False   # Redis yoksa model atlanmaz, denenir
+
+
+async def _redis_mark_exhausted(model_id: str, retry_after: float = 60.0) -> None:
+    try:
+        r = await get_redis()
+        await r.setex(f"llm:exhausted:{model_id}", max(1, int(retry_after)), "1")
+    except Exception as exc:
+        logger.debug("[LLM] Redis exhausted mark hatası: %s", exc)
+
+
+async def _redis_get_last_success() -> tuple[str, str] | None:
+    try:
+        r = await get_redis()
+        val = await r.get("llm:last_success")
+        if val:
+            data = json.loads(val)
+            return data["model_id"], data["provider"]
+    except Exception:
+        pass
+    return None
+
+
+async def _redis_set_last_success(model_id: str, provider: str) -> None:
+    try:
+        r = await get_redis()
+        await r.setex(
+            "llm:last_success",
+            3600,
+            json.dumps({"model_id": model_id, "provider": provider}),
+        )
+    except Exception as exc:
+        logger.debug("[LLM] Redis last_success set hatası: %s", exc)
+
+
+def _parse_retry_after(headers: dict) -> float:
+    try:
+        return float(headers.get("retry-after", 60))
+    except Exception:
+        return 60.0
 
 
 # ── Registry ──────────────────────────────────────────────────────────────────
@@ -421,14 +477,20 @@ async def generate_listing_description(
     lang: str = "tr",
 ) -> tuple[str, str]:
     """
-    Her çağrıda registry'nin başından iterasyona başlar — stateless.
-    Hata (429 dahil) → sonraki model. Tümü başarısız → AIServiceBusyException.
+    Redis shared state ile model seçimi:
+      1. llm:last_success varsa → önce o model denenir (sıcak yol, latency düşer)
+      2. Exhausted değilse registry başından iterasyon
+      3. 429 → llm:exhausted:{model_id} SET (TTL=retry-after) — node1+node2 paylaşır
+      4. Başarıda → llm:last_success güncellenir (TTL=3600s)
+    Redis yoksa: sessizce stateless davranır, servis kesintisiz çalışır.
     """
     system_prompt, user_prompt = _build_prompt(
         title, category, condition, subcategory, extra_fields, lang
     )
 
-    for entry in _registry:
+    async def _try_entry(entry: _ModelEntry) -> tuple[str, str] | None:
+        if await _redis_is_exhausted(entry.model_id):
+            return None
         try:
             logger.info("[LLM] Deneniyor: %s | title=%r", entry.model_id, title[:60])
             if entry.provider == "groq":
@@ -437,10 +499,34 @@ async def generate_listing_description(
                 raw = await _get_text_gemini(system_prompt, user_prompt, entry.model_id)
             text = _postprocess(raw, price)
             logger.info("[LLM] Tamamlandı | %s | %d char", entry.model_id, len(text))
+            await _redis_set_last_success(entry.model_id, entry.provider)
             return text, entry.provider
         except Exception as exc:
+            retry_after = 60.0
+            try:
+                retry_after = _parse_retry_after(exc.response.headers)  # type: ignore[union-attr]
+            except Exception:
+                pass
+            if getattr(getattr(exc, "response", None), "status_code", None) == 429:
+                await _redis_mark_exhausted(entry.model_id, retry_after)
             logger.warning("[LLM] %s başarısız: %s", entry.model_id, exc)
-            continue
+            return None
+
+    # 1. last_success — son başarılı modeli önce dene (aynı model çalışıyorsa hızlı yol)
+    last = await _redis_get_last_success()
+    if last:
+        last_id, _ = last
+        entry = next((e for e in _registry if e.model_id == last_id), None)
+        if entry:
+            result = await _try_entry(entry)
+            if result:
+                return result
+
+    # 2. Registry başından tam iterasyon
+    for entry in _registry:
+        result = await _try_entry(entry)
+        if result:
+            return result
 
     logger.error("[LLM] Tüm providerlar başarısız | title=%r", title[:60])
     raise AIServiceBusyException()

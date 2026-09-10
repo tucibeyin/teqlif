@@ -11,7 +11,7 @@
 
 ### Görev 1 — `config.py`: node2 alanları ekle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **Dosya:** `backend/app/config.py`
 
@@ -42,7 +42,7 @@ class AIServiceBusyException(AppException):
 
 ### Görev 3 — `llm_service.py`: Tamamen yeniden yaz
 
-**Durum:** [ ]
+**Durum:** [x] — Stateless versiyon tamamlandı (commit `89b3f9da`). Redis shared state → Görev 10.
 
 **Dosya:** `backend/app/services/ml/llm_service.py`
 
@@ -197,7 +197,7 @@ async def generate_listing_description(title, category, condition=None,
 
 ### Görev 4 — `ai_proxy_client.py`: Yeni dosya
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **Dosya:** `backend/app/services/ml/ai_proxy_client.py` (yeni)
 
@@ -235,7 +235,7 @@ async def generate_via_node2(params: dict) -> tuple[str, str]:
 
 ### Görev 5 — `ai_proxy_main.py`: Yeni dosya
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **Dosya:** `backend/app/ai_proxy_main.py` (yeni)
 
@@ -290,7 +290,7 @@ async def health():
 
 ### Görev 6 — `listings.py`: SSE → JSON
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **Dosya:** `backend/app/routers/listings.py` (satır 684–806 arası)
 
@@ -372,7 +372,7 @@ async def generate_description(
 
 ### Görev 7 — `main.py`: Lifespan'a registry başlatma ekle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **Dosya:** `backend/main.py`
 
@@ -390,7 +390,7 @@ await _start_ai_registry()
 
 ### Görev 8 — ARB dosyaları: `aiDescFallbackNotice` ekle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **Dosyalar:** `mobile/lib/l10n/` altındaki 4 ARB dosyası
 
@@ -414,7 +414,7 @@ await _start_ai_registry()
 
 ### Görev 9 — Flutter: `create_listing_screen.dart` SSE → JSON + AiDescNotifier
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
 
 **9.1 — `AiDescNotifier` oluştur**
 
@@ -545,28 +545,146 @@ void _onTapDuringAnimation() {
 
 ---
 
-### Görev 10 — Git commit + push
+### Görev 10 — `llm_service.py`: Redis shared state
+
+**Durum:** [ ]
+
+**Dosya:** `backend/app/services/ml/llm_service.py`
+
+**Amaç:** Aynı Groq API key'ini kullanan node1 ve node2'nin rate limit bilgisini paylaşması — her node 429 aldığında diğeri o modeli atlar. Son başarılı model `llm:last_success` key'inde saklanır; bir sonraki istekte önce o denenir.
+
+**Import'lara ekle:**
+```python
+import json
+from app.utils.redis_client import get_redis
+```
+
+**`_build_prompt` çağrısından önce ekle (module-level helper'lar):**
+```python
+# ── Redis shared state ────────────────────────────────────────────────────────
+
+async def _redis_is_exhausted(model_id: str) -> bool:
+    try:
+        r = await get_redis()
+        return await r.exists(f"llm:exhausted:{model_id}") > 0
+    except Exception:
+        return False   # Redis yoksa atlamaz — dener
+
+
+async def _redis_mark_exhausted(model_id: str, retry_after: float = 60.0) -> None:
+    try:
+        r = await get_redis()
+        await r.setex(f"llm:exhausted:{model_id}", max(1, int(retry_after)), "1")
+    except Exception as exc:
+        logger.debug("[LLM] Redis exhausted mark hatası: %s", exc)
+
+
+async def _redis_get_last_success() -> tuple[str, str] | None:
+    try:
+        r = await get_redis()
+        val = await r.get("llm:last_success")
+        if val:
+            data = json.loads(val)
+            return data["model_id"], data["provider"]
+    except Exception:
+        pass
+    return None
+
+
+async def _redis_set_last_success(model_id: str, provider: str) -> None:
+    try:
+        r = await get_redis()
+        await r.setex(
+            "llm:last_success",
+            3600,
+            json.dumps({"model_id": model_id, "provider": provider}),
+        )
+    except Exception as exc:
+        logger.debug("[LLM] Redis last_success set hatası: %s", exc)
+
+
+def _parse_retry_after(headers: dict) -> float:
+    try:
+        return float(headers.get("retry-after", 60))
+    except Exception:
+        return 60.0
+```
+
+**`generate_listing_description` fonksiyonunu değiştir:**
+
+Mevcut stateless loop yerine:
+
+```python
+async def generate_listing_description(
+    title: str,
+    category: str,
+    condition: Optional[str] = None,
+    price: Optional[float] = None,
+    subcategory: Optional[str] = None,
+    extra_fields: Optional[dict[str, str]] = None,
+    lang: str = "tr",
+) -> tuple[str, str]:
+    system_prompt, user_prompt = _build_prompt(
+        title, category, condition, subcategory, extra_fields, lang
+    )
+
+    async def _try_entry(entry: _ModelEntry) -> tuple[str, str] | None:
+        if await _redis_is_exhausted(entry.model_id):
+            return None
+        try:
+            logger.info("[LLM] Deneniyor: %s | title=%r", entry.model_id, title[:60])
+            if entry.provider == "groq":
+                raw = await _get_text_groq(system_prompt, user_prompt, entry.model_id)
+            else:
+                raw = await _get_text_gemini(system_prompt, user_prompt, entry.model_id)
+            text = _postprocess(raw, price)
+            logger.info("[LLM] Tamamlandı | %s | %d char", entry.model_id, len(text))
+            await _redis_set_last_success(entry.model_id, entry.provider)
+            return text, entry.provider
+        except Exception as exc:
+            retry_after = 60.0
+            try:
+                retry_after = _parse_retry_after(exc.response.headers)
+            except Exception:
+                pass
+            if getattr(getattr(exc, "response", None), "status_code", None) == 429:
+                await _redis_mark_exhausted(entry.model_id, retry_after)
+            logger.warning("[LLM] %s başarısız: %s", entry.model_id, exc)
+            return None
+
+    # 1. last_success — başarılı olan model önce denenir (sıcak yol)
+    last = await _redis_get_last_success()
+    if last:
+        last_id, _ = last
+        entry = next((e for e in _registry if e.model_id == last_id), None)
+        if entry:
+            result = await _try_entry(entry)
+            if result:
+                return result
+
+    # 2. Registry başından tam iterasyon
+    for entry in _registry:
+        result = await _try_entry(entry)
+        if result:
+            return result
+
+    logger.error("[LLM] Tüm providerlar başarısız | title=%r", title[:60])
+    raise AIServiceBusyException()
+```
+
+**Doğrulama:** `python3 -c "from app.services.ml.llm_service import generate_listing_description"` — import hatası olmamalı.
+
+---
+
+### Görev 10b — Git commit + push
 
 **Durum:** [ ]
 
 ```bash
 cd /Users/tucibeyin/Desktop/teqlif
-git add backend/app/config.py \
-        backend/app/core/exceptions.py \
-        backend/app/services/ml/llm_service.py \
-        backend/app/services/ml/ai_proxy_client.py \
-        backend/app/ai_proxy_main.py \
-        backend/app/routers/listings.py \
-        backend/main.py \
-        mobile/lib/l10n/app_tr.arb \
-        mobile/lib/l10n/app_en.arb \
-        mobile/lib/l10n/app_ar.arb \
-        mobile/lib/l10n/app_ru.arb \
-        mobile/lib/viewmodels/create_listing/ai_desc_notifier.dart \
-        mobile/lib/viewmodels/create_listing/ai_desc_notifier.g.dart \
-        mobile/lib/screens/create_listing_screen.dart \
+git add backend/app/services/ml/llm_service.py \
         deploy/scale/V1.2/
-git commit -m "feat(ai): Scale V1.2 — node2 AI proxy, non-streaming registry, typewriter UI"
+git commit -m "feat(ai): llm_service Redis shared exhaustion + last_success state"
 git push origin main
 ```
 
@@ -613,6 +731,7 @@ SECRET_KEY=placeholder_not_used_on_node2
 GROQ_API_KEY=gsk_...          # gerçek değer
 GEMINI_API_KEY=AIza...        # gerçek değer
 NODE2_INTERNAL_TOKEN=...      # üretilen token
+REDIS_URL=redis://10.10.0.1:6379   # node1 Redis — WireGuard üzerinden
 SENTRY_BACKEND_DSN=           # boş bırak — node2 hatalar Loki'ye gider
 EOF
 chmod 600 /var/www/teqlif.com/backend/.env
@@ -796,6 +915,21 @@ node1 `.env`'e şu satırları ekle:
 NODE2_AI_PROXY_URL=http://10.10.0.3:8080
 NODE2_INTERNAL_TOKEN=...   # Görev 12'de üretilen token (aynı değer)
 ```
+
+---
+
+### Görev 20a — node1: UFW Redis port'u node2'ye aç
+
+**Durum:** [ ]
+
+node2 WireGuard IP'sinden gelen Redis bağlantılarına izin ver:
+
+```bash
+sudo ufw allow from 10.10.0.3 to any port 6379
+sudo ufw status | grep 6379   # kural görünmeli
+```
+
+**Not:** Bu kural olmadan node2'nin `redis://10.10.0.1:6379` bağlantısı reddedilir; `llm_service.py` hata yakalar ve stateless fallback'e düşer — servis yine çalışır ama cross-node state paylaşımı olmaz.
 
 ---
 

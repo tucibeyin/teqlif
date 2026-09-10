@@ -379,30 +379,32 @@ ufw allow from 10.10.0.3 to any port 3100   # Loki push ← node2 promtail
 
 Groq ve Gemini her ikisi de tam metni tek HTTP yanıtında döndürebilir. `llm_service.py`'deki mevcut `stream=True` / `streamGenerateContent` yapısı kaldırılır; yerine basit `await response.json()` çağrıları gelir. `AsyncGenerator`, `_sentence_stream`, sentinel token'lar (`__META_groq__`, `__LLM_ERROR__`) ve SSE parsing tamamen ortadan kalkar. Post-processing (`_RE_AI_OPENER` temizleme, fiyat suffix) full string üzerinde yapılır.
 
-**Kota yönetimi:** Redis counter veya header tracking yok. API'nin kendi 429 yanıtı kota kontrolcüsüdür. Her model sırayla denenir; 429 gelirse bir sonrakine geçilir. Tüm modeller 429 dönerse `503 — Şu an bu özellik kullanılamıyor.`
+**Kota yönetimi:** API'nin kendi 429 yanıtı kota kontrolcüsüdür. Her model sırayla denenir; 429 gelirse bir sonrakine geçilir. Tüm modeller tükenirse `503 — AI_SERVICE_BUSY`.
 
-### In-memory exhaustion tracking
+### Redis shared state — cross-node exhaustion + last success
 
-429'u her seferinde yeniden almak yerine, exhausted modeller process memory'de saklanır. Aynı process içinde sıradaki request doğrudan atlar — 429 latency sıfıra iner.
+node1 ve node2 aynı Groq API key'ini paylaşır; dolayısıyla bir node'un aldığı 429, diğer node'u da etkiler. Çözüm: node1'deki Redis, tüm exhaustion ve last_success durumunu saklar. node2, WireGuard üzerinden `redis://10.10.0.1:6379`'a erişir.
 
-```python
-import time
-_exhausted: dict[str, float] = {}   # {model_id: reset_epoch_seconds}
+**Redis key tasarımı:**
 
-def _is_exhausted(model_id: str) -> bool:
-    ts = _exhausted.get(model_id)
-    if ts is None:
-        return False
-    if time.time() >= ts:
-        _exhausted.pop(model_id, None)   # süresi doldu, temizle
-        return False
-    return True
+| Key | Tip | TTL | İçerik |
+|---|---|---|---|
+| `llm:exhausted:{model_id}` | STRING | retry-after saniyesi | `"1"` (varlığı yeterli) |
+| `llm:last_success` | STRING | 3600s | `{"model_id": "...", "provider": "..."}` |
 
-def _mark_exhausted(model_id: str, retry_after: float = 60.0):
-    _exhausted[model_id] = time.time() + retry_after
-```
+**İstek akışı:**
 
-429 yanıtında `retry-after` header'ı okunur (Groq saniye olarak verir; Gemini de `Retry-After` verir). Header yoksa varsayılan 60s kullanılır. Process restart'ta dict temizlenir — sorun değil, 429 yeniden öğretir. Redis gerekmez.
+1. `llm:last_success` okunur. Varsa ve exhausted değilse → önce o model denenir.
+2. Başarısızsa (veya last_success yoksa) → registry başından iterasyon.
+3. Her iterasyonda `llm:exhausted:{model_id}` kontrol edilir; set ise atlanır.
+4. 429 → `llm:exhausted:{model_id}` SET, TTL = `retry-after` header (yoksa 60s).
+5. Başarı → `llm:last_success` güncellenir (TTL 3600s).
+
+**Graceful degradation:** Redis bağlantısı kesilirse (try/except) in-process hiçbir state tutulmaz — stateless fallback gibi davranır. Servis çalışmaya devam eder; sadece cross-node paylaşım kaybolur.
+
+**node1 UFW kuralı:** `ufw allow from 10.10.0.3 to any port 6379` — node2 WireGuard IP.
+
+**node2 .env:** `REDIS_URL=redis://10.10.0.1:6379` — node1 WireGuard IP üzerinden bağlantı.
 
 ### Fully autonomous model registry
 
@@ -475,32 +477,50 @@ _registry: _ModelRegistry | None = None
 
 Startup'ta doldurulur. 24h background task tekrar çalıştırır (`asyncio.create_task` + `asyncio.sleep(86400)` loop). Process restart'ta yeniden başlar — JSON cache'e gerek yok, startup süresi zaten birkaç saniye.
 
-### 7.1 `llm_service.py` — Yeniden yazılır (non-streaming, fully autonomous)
+### 7.1 `llm_service.py` — Yeniden yazılır (non-streaming, fully autonomous, Redis shared state)
 
 ```python
-# _get_text_groq(system, user, model) → str   (stream=False, 429 → RateLimitError)
-# _get_text_gemini(system, user, model) → str  (generateContent, 429 → RateLimitError)
+import json, re, asyncio
+from dataclasses import dataclass
 
-import re, time, asyncio
-from dataclasses import dataclass, field
+from app.utils.redis_client import get_redis
 
-# --- Exhaustion tracking ---
-_exhausted: dict[str, float] = {}   # {model_id: reset_epoch}
+# --- Redis shared state ---
 
-def _is_exhausted(model_id: str) -> bool:
-    ts = _exhausted.get(model_id)
-    if ts is None: return False
-    if time.time() >= ts:
-        _exhausted.pop(model_id, None)
-        return False
-    return True
+async def _redis_is_exhausted(model_id: str) -> bool:
+    try:
+        r = await get_redis()
+        return await r.exists(f"llm:exhausted:{model_id}") > 0
+    except Exception:
+        return False   # Redis yoksa atlamayız, dener
 
-def _mark_exhausted(model_id: str, retry_after: float = 60.0):
-    _exhausted[model_id] = time.time() + retry_after
+async def _redis_mark_exhausted(model_id: str, retry_after: float = 60.0) -> None:
+    try:
+        r = await get_redis()
+        await r.setex(f"llm:exhausted:{model_id}", max(1, int(retry_after)), "1")
+    except Exception as exc:
+        logger.debug("[LLM] Redis exhausted mark hatası: %s", exc)
 
-def _parse_retry_after(exc) -> float:
-    # Groq ve Gemini 'retry-after' header'ını RateLimitError içinde taşır
-    try: return float(exc.response.headers.get("retry-after", 60))
+async def _redis_get_last_success() -> tuple[str, str] | None:
+    try:
+        r = await get_redis()
+        val = await r.get("llm:last_success")
+        if val:
+            data = json.loads(val)
+            return data["model_id"], data["provider"]
+    except Exception:
+        pass
+    return None
+
+async def _redis_set_last_success(model_id: str, provider: str) -> None:
+    try:
+        r = await get_redis()
+        await r.setex("llm:last_success", 3600, json.dumps({"model_id": model_id, "provider": provider}))
+    except Exception as exc:
+        logger.debug("[LLM] Redis last_success set hatası: %s", exc)
+
+def _parse_retry_after(headers: dict) -> float:
+    try: return float(headers.get("retry-after", 60))
     except Exception: return 60.0
 
 # --- Model registry ---
@@ -601,25 +621,45 @@ async def start_registry_loop():
 async def generate_listing_description(title, category, ...) -> tuple[str, str]:
     system, user = _build_prompt(...)
 
-    for model_id in _registry.groq:
-        if _is_exhausted(model_id): continue
+    async def _try_model(entry: _ModelEntry) -> tuple[str, str] | None:
+        if await _redis_is_exhausted(entry.model_id):
+            return None
         try:
-            raw = await _get_text_groq(system, user, model_id)
-            return _post_process(raw, price), "groq"
-        except RateLimitError as e:
-            _mark_exhausted(model_id, _parse_retry_after(e)); continue
-        except Exception: continue
+            if entry.provider == "groq":
+                raw = await _get_text_groq(system, user, entry.model_id)
+            else:
+                raw = await _get_text_gemini(system, user, entry.model_id)
+            text = _postprocess(raw, price)
+            await _redis_set_last_success(entry.model_id, entry.provider)
+            return text, entry.provider
+        except Exception as exc:
+            # 429 için retry-after header'ını yakala
+            retry_after = 60.0
+            try: retry_after = _parse_retry_after(exc.response.headers)
+            except Exception: pass
+            if hasattr(exc, "response") and exc.response.status_code == 429:
+                await _redis_mark_exhausted(entry.model_id, retry_after)
+            logger.warning("[LLM] %s başarısız: %s", entry.model_id, exc)
+            return None
 
-    for model_id in _registry.gemini:
-        if _is_exhausted(model_id): continue
-        try:
-            raw = await _get_text_gemini(system, user, model_id)
-            return _post_process(raw, price), "gemini"
-        except RateLimitError as e:
-            _mark_exhausted(model_id, _parse_retry_after(e)); continue
-        except Exception: continue
+    # 1. last_success önce (cache ısıtma — aynı model çalışıyorsa hızlı yol)
+    last = await _redis_get_last_success()
+    if last:
+        last_id, last_prov = last
+        entry = next((e for e in _registry if e.model_id == last_id), None)
+        if entry:
+            result = await _try_model(entry)
+            if result:
+                return result
 
-    return "", "error"
+    # 2. Registry başından iterasyon
+    for entry in _registry:
+        result = await _try_model(entry)
+        if result:
+            return result
+
+    logger.error("[LLM] Tüm providerlar başarısız | title=%r", title[:60])
+    raise AIServiceBusyException()
 ```
 
 ### 7.2 `ai_proxy_main.py` (node2'de çalışır)
