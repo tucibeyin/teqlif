@@ -614,6 +614,29 @@ async def generate_listing_description(title, category, ...) -> tuple[str, str]:
 ```python
 # backend/app/ai_proxy_main.py
 # Çalıştırma: uvicorn app.ai_proxy_main:app --host 10.10.0.3 --port 8080
+# Import izolasyonu: database.py / redis_client.py / livekit import edilmez.
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel
+from app.config import settings
+from app.services.ml.llm_service import generate_listing_description, start_registry_loop
+
+class GenerateRequest(BaseModel):
+    title: str
+    category: str
+    condition: str | None = None
+    price: float | None = None
+    subcategory: str | None = None
+    extra_fields: dict | None = None
+    lang: str = "tr"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await start_registry_loop()   # model listesi çekilir, 24h refresh başlar
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/generate")
 async def generate(body: GenerateRequest, x_internal_token: str = Header(...)):
@@ -843,27 +866,57 @@ cp deploy/scale/V1.2/wireguard/node2-wg0.conf /etc/wireguard/wg0.conf
 # (private key ve peer public key'leri doldur)
 systemctl enable --now wg-quick@wg0
 
-# 3. Repo
-git clone https://github.com/tucibeyin/teqlif.git /var/www/teqlif.com
-# .env oluştur (GROQ_API_KEY, GEMINI_API_KEY, NODE2_INTERNAL_TOKEN + dummy DB değerleri)
+# 3. Git + deploy key
+apt install -y git
+ssh-keygen -t ed25519 -C "teqlif-vpshs-AI" -f ~/.ssh/teqlif-vpshs-AI-key -N ""
+cat ~/.ssh/teqlif-vpshs-AI-key.pub   # → GitHub repo → Settings → Deploy keys → Add (read-only)
+cat >> ~/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/teqlif-vpshs-AI-key
+    IdentitiesOnly yes
+EOF
+ssh -T git@github.com   # → "Hi tucibeyin/teqlif! You've successfully authenticated..."
 
-# 4. Python ortamı
+# 4. Repo
+sudo mkdir -p /var/www/teqlif.com
+sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com
+git clone git@github.com:tucibeyin/teqlif.git /var/www/teqlif.com
+
+# 5. .env oluştur
+# NODE2_INTERNAL_TOKEN → openssl rand -hex 32 ile üret (aynı değer node1 .env'e de eklenecek)
+cat > /var/www/teqlif.com/backend/.env << 'EOF'
+DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@localhost/placeholder
+SECRET_KEY=placeholder_not_used_on_node2
+GROQ_API_KEY=gsk_...
+GEMINI_API_KEY=AIza...
+NODE2_INTERNAL_TOKEN=...
+EOF
+
+# 6. Python ortamı
 cd /var/www/teqlif.com/backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 
-# 5. Servisler
-cp deploy/scale/V1.2/node2/systemd/teqlif-ai-proxy.service /etc/systemd/system/
-cp deploy/scale/V1.2/node2/systemd/node_exporter.service   /etc/systemd/system/
-cp deploy/scale/V1.2/node2/systemd/promtail.service         /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now teqlif-ai-proxy node_exporter promtail
+# 7. Servisler
+sudo cp deploy/scale/V1.2/node2/systemd/teqlif-ai-proxy.service /etc/systemd/system/
+sudo cp deploy/scale/V1.2/node2/systemd/node_exporter.service   /etc/systemd/system/
+sudo cp deploy/scale/V1.2/node2/systemd/promtail.service        /etc/systemd/system/
+sudo cp deploy/scale/V1.2/node2/promtail-config.yml             /etc/promtail-config.yml
+sudo systemctl daemon-reload
+sudo systemctl enable --now teqlif-ai-proxy node_exporter promtail
 
-# 6. UFW
-ufw allow ssh && ufw allow 51820/udp
-ufw allow from 10.10.0.1 to any port 8080
-ufw allow from 10.10.0.2 to any port 9100
-ufw enable
+# 8. UFW
+sudo ufw allow ssh
+sudo ufw allow 51820/udp
+sudo ufw allow from 10.10.0.1 to any port 8080
+sudo ufw allow from 10.10.0.2 to any port 9100
+sudo ufw enable
+
+# 9. Log dizini
+sudo mkdir -p /var/log/teqlif
+sudo chown tucibeyin:tucibeyin /var/log/teqlif
 ```
 
 ### node1 — WireGuard güncelleme
@@ -952,7 +1005,7 @@ sudo systemctl start teqlif-ai-proxy   # node2'de
 |---|---|
 | node2 `.env` stratejisi | Mevcut şablona `NODE2_INTERNAL_TOKEN` eklenir; `DATABASE_URL`/`SECRET_KEY` placeholder kalır (import için gerekli, kullanılmaz) |
 | Mobile SSE → JSON | Flutter `ai_proxy_client`'a POST → tam metin JSON; sonra client-side typewriter animasyonu |
-| Typing animasyonu | Flutter sabit ~18ms/karakter hızında animasyon; "tap to skip" eklenebilir |
+| Typing animasyonu | Flutter sabit ~18ms/karakter hızında animasyon; tap to skip (`_skipAnimation` flag) tasarlandı |
 | Gemma 4 | Zincire eklenir, **son sırada** (son çare); TPM=16K → etkin ~18 RPM |
 | Mono repo | Aynı git repo; node2 `ai_proxy_main.py`'ı, node1 `main.py`'ı çalıştırır |
 | Fallback | `ai_proxy_client.py` → try node2, except → lokal `generate_listing_description()` |

@@ -47,9 +47,3 @@ scrape_configs:
       - targets: ['10.10.0.3:9100']
         labels:
           node: node2
-
-  - job_name: 'teqlif-ai-proxy'
-    static_configs:
-      - targets: ['10.10.0.3:8080']
-        labels:
-          node: node2
