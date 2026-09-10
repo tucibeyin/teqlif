@@ -111,6 +111,11 @@ sudo ufw allow in on wg0 from 10.10.0.2 to any port 8001 proto tcp comment 'API 
 sudo ufw allow in on wg0 from 10.10.0.3 to any port 6379 proto tcp comment 'Redis — node2' 2>/dev/null || true
 sudo ufw --force enable
 
+# ── .env izinleri ─────────────────────────────────────────────────────────────
+echo "==> .env izinleri..."
+[[ -f "$RESOURCES/.env.node1.production" ]] && chmod 600 "$RESOURCES/.env.node1.production"
+[[ -f "$RESOURCES/.env.node1.staging"    ]] && chmod 600 "$RESOURCES/.env.node1.staging"
+
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""

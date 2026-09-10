@@ -102,6 +102,16 @@ sudo ufw allow in on wg0 to any port 8080 proto tcp comment 'AI proxy via WireGu
 sudo ufw allow in on wg0 to any port 9100 proto tcp comment 'node_exporter — gateway' 2>/dev/null || true
 sudo ufw --force enable
 
+# ── Hostname ──────────────────────────────────────────────────────────────────
+if [[ "$(hostname)" != "node2" ]]; then
+  echo "==> Hostname node2 olarak ayarlaniyor..."
+  sudo hostnamectl set-hostname node2
+fi
+
+# ── .env izinleri ─────────────────────────────────────────────────────────────
+echo "==> .env izinleri..."
+[[ -f "$RESOURCES/.env.node2.production" ]] && chmod 600 "$RESOURCES/.env.node2.production"
+
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""

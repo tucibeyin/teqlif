@@ -123,16 +123,38 @@ for svc in node_exporter promtail prometheus loki alertmanager; do
   sudo systemctl enable "$svc"
 done
 
+# ── WireGuard: node2 peer (V1.2) ─────────────────────────────────────────────
+NODE2_PUBKEY="t+lw3dW45sVklF3wsbji7WGA6jN4+StcwK6nKmJi21k="
+NODE2_ENDPOINT="198.12.123.33:51820"
+echo "==> WireGuard: node2 peer..."
+if sudo wg show wg0 2>/dev/null | grep -q "$NODE2_PUBKEY"; then
+  echo "    node2 peer zaten mevcut, atlaniyor."
+elif sudo systemctl is-active wg-quick@wg0 &>/dev/null; then
+  sudo wg set wg0 peer "$NODE2_PUBKEY" \
+    allowed-ips 10.10.0.3/32 \
+    endpoint "$NODE2_ENDPOINT" \
+    persistent-keepalive 25
+  printf '\n[Peer]\n# node2 — RackNerd Buffalo (AI Proxy)\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
+    "$NODE2_PUBKEY" "$NODE2_ENDPOINT" | sudo tee -a /etc/wireguard/wg0.conf > /dev/null
+  echo "    node2 peer eklendi ve wg0.conf'a yazildi."
+else
+  echo "  UYARI: wg0 servisi aktif degil — node2 peer atlaniyor."
+fi
+
 # ── UFW ───────────────────────────────────────────────────────────────────────
 echo "==> UFW..."
 sudo ufw allow 22/tcp    comment 'SSH'          2>/dev/null || true
 sudo ufw allow 80/tcp    comment 'HTTP'          2>/dev/null || true
 sudo ufw allow 443/tcp   comment 'HTTPS'         2>/dev/null || true
 sudo ufw allow 51820/udp comment 'WireGuard'     2>/dev/null || true
-# Loki — sadece WireGuard mesh'inden
 sudo ufw allow in on wg0 to any port 3100 proto tcp comment 'Loki — mesh' 2>/dev/null || true
-# Prometheus scrape — sadece localhost (nginx proxy üzerinden Grafana)
 sudo ufw --force enable
+
+# ── .env dosya izinleri ───────────────────────────────────────────────────────
+echo "==> .env izinleri..."
+[[ -f "$RESOURCES/.env.node1.production" ]] && chmod 600 "$RESOURCES/.env.node1.production"
+[[ -f "$RESOURCES/.env.node1.staging"    ]] && chmod 600 "$RESOURCES/.env.node1.staging"
+[[ -f "$RESOURCES/.env.node2.production" ]] && chmod 600 "$RESOURCES/.env.node2.production"
 
 echo ""
 echo "Bootstrap tamamlandi."

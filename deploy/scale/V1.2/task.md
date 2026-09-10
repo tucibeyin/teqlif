@@ -1066,7 +1066,7 @@ journalctl -u teqlif -n 20
 
 ### Görev 22 — gateway: WireGuard node2 peer ekle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_gateway.sh + wg0.conf kalıcı yazma)
 
 node2 public key ve public IP'siyle (RackNerd panelinden öğren):
 
@@ -1087,7 +1087,7 @@ ping -c 3 10.10.0.3   # gateway'den node2'ye
 
 ### Görev 23 — gateway: UFW Loki push izni
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı
 
 ```bash
 sudo ufw allow from 10.10.0.3 to any port 3100
@@ -1097,7 +1097,7 @@ sudo ufw allow from 10.10.0.3 to any port 3100
 
 ### Görev 24 — gateway: Prometheus güncelle + reload
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (node2 target UP doğrulandı)
 
 ```bash
 cd /var/www/teqlif.com && git pull
@@ -1118,7 +1118,7 @@ curl -s http://10.10.0.2:9090/api/v1/targets | python3 -m json.tool | grep node2
 
 ### Görev 25 — WireGuard tam mesh doğrulama
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (0% kayıp, tüm yönler)
 
 ```bash
 # node1'den
@@ -1138,7 +1138,7 @@ ping -c 3 10.10.0.1   # node1
 
 ### Görev 26 — AI proxy uçtan uca test
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (provider: groq, tam açıklama)
 
 ```bash
 # node1'den — AI proxy health
@@ -1163,7 +1163,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=<GEMINI_API
 
 ### Görev 27 — Production endpoint testi
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (description tam, provider: groq, tuci_spent: 0)
 
 ```bash
 curl -s -X POST https://teqlif.com/api/listings/generate-description \
@@ -1177,7 +1177,7 @@ curl -s -X POST https://teqlif.com/api/listings/generate-description \
 
 ### Görev 28 — Fallback testi
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (node2 kapalıyken node1 lokal Groq ile yanıt verdi)
 
 node2'de AI proxy'yi durdur, production'dan istek gönder:
 
@@ -1204,7 +1204,7 @@ sudo systemctl start teqlif-ai-proxy
 
 ### Görev 29 — Monitoring doğrulama
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (node2 logları Loki'de, Prometheus target UP)
 
 ```bash
 # AIProxyDown alert aktif mi? (node2 servisi durduruluyken 1 dakika bekle)
@@ -1220,16 +1220,16 @@ sudo systemctl start teqlif-ai-proxy
 
 | Faz | Görev | Durum |
 |---|---|---|
-| Kod | 1 — config.py | [ ] |
+| Kod | 1 — config.py | [x] |
 | Kod | 2 — exceptions.py | [x] |
-| Kod | 3 — llm_service.py | [ ] |
-| Kod | 4 — ai_proxy_client.py | [ ] |
-| Kod | 5 — ai_proxy_main.py | [ ] |
-| Kod | 6 — listings.py | [ ] |
-| Kod | 7 — main.py lifespan | [ ] |
-| Kod | 8 — ARB dosyaları | [ ] |
-| Kod | 9 — Flutter AiDescNotifier | [ ] |
-| Kod | 10 — Git push | [ ] |
+| Kod | 3 — llm_service.py | [x] |
+| Kod | 4 — ai_proxy_client.py | [x] |
+| Kod | 5 — ai_proxy_main.py | [x] |
+| Kod | 6 — listings.py | [x] |
+| Kod | 7 — main.py lifespan | [x] |
+| Kod | 8 — ARB dosyaları | [x] |
+| Kod | 9 — Flutter AiDescNotifier | [x] |
+| Kod | 10 — Git push | [x] |
 | node2 | 11 — Python ortamı | [x] |
 | node2 | 12 — .env | [x] |
 | node2 | 13 — WireGuard | [x] |
