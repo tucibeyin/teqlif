@@ -160,3 +160,46 @@ livekit_breaker = CircuitBreaker(
     failure_threshold=3,
     recovery_timeout=30,
 )
+
+
+@dataclass
+class InMemoryCircuitBreaker:
+    """
+    Process-local circuit breaker — Redis gibi state-store'un korunamayacağı
+    bağımlılıklar için. State process belleğinde tutulur; multi-worker arasında
+    paylaşılmaz, her worker bağımsız öğrenir.
+
+    Kullanım:
+        _redis_breaker = InMemoryCircuitBreaker("llm_redis", failure_threshold=3)
+
+        result = await _redis_breaker.call(r.exists("key"), fallback=False)
+    """
+    name: str
+    failure_threshold: int = 3
+    recovery_timeout: float = 30.0
+    _failures: int = field(default=0, init=False, repr=False)
+    _opened_at: float | None = field(default=None, init=False, repr=False)
+
+    def _is_open(self) -> bool:
+        if self._opened_at is None:
+            return False
+        if time.monotonic() - self._opened_at >= self.recovery_timeout:
+            self._opened_at = None   # half-open — bir deneme geçirilir
+            return False
+        return True
+
+    async def call(self, coro, *, fallback=None, timeout: float = 2.0):
+        if self._is_open():
+            return fallback
+        try:
+            result = await asyncio.wait_for(coro, timeout=timeout)
+            self._failures = 0
+            return result
+        except Exception:
+            self._failures += 1
+            if self._failures >= self.failure_threshold:
+                self._opened_at = time.monotonic()
+                logger.warning(
+                    "[CB:%s] → OPEN (in-memory, %d hata)", self.name, self._failures
+                )
+            return fallback

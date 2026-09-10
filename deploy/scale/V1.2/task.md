@@ -676,15 +676,88 @@ async def generate_listing_description(
 
 ---
 
-### Görev 10b — Git commit + push
+### Görev 10b — `circuit_breaker.py`: `InMemoryCircuitBreaker` ekle
+
+**Durum:** [ ]
+
+**Dosyalar:** `backend/app/core/circuit_breaker.py`, `backend/app/services/ml/llm_service.py`
+
+**Amaç:** Mevcut `CircuitBreaker` Redis-backed — Redis'i korumak için Redis'i kullanamaz (tavuk-yumurta). `InMemoryCircuitBreaker`, state'ini process belleğinde tutar; Redis çağrılarını `asyncio.wait_for` + failure sayacı ile korur. node1 WireGuard düşünce 3. hatadan itibaren Redis çağrıları 0ms fallback döner — servis kesintisiz çalışır.
+
+`backend/app/core/circuit_breaker.py` sonuna ekle:
+
+```python
+@dataclass
+class InMemoryCircuitBreaker:
+    """
+    Process-local circuit breaker — Redis gibi state-store'un
+    korunamayacağı bağımlılıklar için. State multi-worker arasında
+    paylaşılmaz; her worker bağımsız öğrenir.
+    """
+    name: str
+    failure_threshold: int = 3
+    recovery_timeout: float = 30.0
+    _failures: int = field(default=0, init=False, repr=False)
+    _opened_at: float | None = field(default=None, init=False, repr=False)
+
+    def _is_open(self) -> bool:
+        if self._opened_at is None:
+            return False
+        if time.monotonic() - self._opened_at >= self.recovery_timeout:
+            self._opened_at = None   # half-open — bir deneme geçirilir
+            return False
+        return True
+
+    async def call(self, coro, *, fallback=None, timeout: float = 2.0):
+        if self._is_open():
+            return fallback
+        try:
+            result = await asyncio.wait_for(coro, timeout=timeout)
+            self._failures = 0
+            return result
+        except Exception:
+            self._failures += 1
+            if self._failures >= self.failure_threshold:
+                self._opened_at = time.monotonic()
+                logger.warning("[CB:%s] → OPEN (in-memory, %d hata)", self.name, self._failures)
+            return fallback
+```
+
+`backend/app/services/ml/llm_service.py`'de Redis helper'larını circuit breaker ile sar:
+
+```python
+from app.core.circuit_breaker import InMemoryCircuitBreaker
+
+_redis_breaker = InMemoryCircuitBreaker(name="llm_redis", failure_threshold=3, recovery_timeout=30.0)
+```
+
+Her `get_redis()` + komut çifti `_redis_breaker.call(...)` içine alınır. Örnek:
+
+```python
+async def _redis_is_exhausted(model_id: str) -> bool:
+    try:
+        r = await get_redis()
+        return await _redis_breaker.call(
+            r.exists(f"llm:exhausted:{model_id}"), fallback=False
+        )
+    except Exception:
+        return False
+```
+
+**Doğrulama:** `python3 -c "from app.core.circuit_breaker import InMemoryCircuitBreaker; print('OK')"`
+
+---
+
+### Görev 10c — Git commit + push
 
 **Durum:** [ ]
 
 ```bash
 cd /Users/tucibeyin/Desktop/teqlif
-git add backend/app/services/ml/llm_service.py \
+git add backend/app/core/circuit_breaker.py \
+        backend/app/services/ml/llm_service.py \
         deploy/scale/V1.2/
-git commit -m "feat(ai): llm_service Redis shared exhaustion + last_success state"
+git commit -m "feat(ai): InMemoryCircuitBreaker — Redis çağrılarını node1 downtime'dan koru"
 git push origin main
 ```
 

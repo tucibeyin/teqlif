@@ -22,6 +22,7 @@ from typing import Optional
 import httpx
 
 from app.config import settings
+from app.core.circuit_breaker import InMemoryCircuitBreaker
 from app.core.exceptions import AIServiceBusyException
 from app.core.logger import fire_and_forget
 from app.services.ml.llm_templates import ListingTemplates
@@ -203,12 +204,19 @@ def _postprocess(raw: str, price: Optional[float]) -> str:
 # ── Redis shared state ────────────────────────────────────────────────────────
 # node1 ve node2 aynı Groq API key'ini paylaşır; cross-node exhaustion+last_success
 # node1 Redis'e yerel bağlanır; node2 WireGuard üzerinden bağlanır (redis://10.10.0.1:6379)
-# Redis erişilemezse her fonksiyon sessizce fallback değer döner — servis çalışmaya devam eder
+# InMemoryCircuitBreaker: node1 down olduğunda Redis çağrıları timeout beklemez —
+# 3 ardışık hatadan sonra devre açılır, 30s boyunca fallback döner, sonra half-open.
+
+_redis_breaker = InMemoryCircuitBreaker(name="llm_redis", failure_threshold=3, recovery_timeout=30.0)
+
 
 async def _redis_is_exhausted(model_id: str) -> bool:
     try:
         r = await get_redis()
-        return await r.exists(f"llm:exhausted:{model_id}") > 0
+        result = await _redis_breaker.call(
+            r.exists(f"llm:exhausted:{model_id}"), fallback=0
+        )
+        return bool(result)
     except Exception:
         return False   # Redis yoksa model atlanmaz, denenir
 
@@ -216,7 +224,10 @@ async def _redis_is_exhausted(model_id: str) -> bool:
 async def _redis_mark_exhausted(model_id: str, retry_after: float = 60.0) -> None:
     try:
         r = await get_redis()
-        await r.setex(f"llm:exhausted:{model_id}", max(1, int(retry_after)), "1")
+        await _redis_breaker.call(
+            r.setex(f"llm:exhausted:{model_id}", max(1, int(retry_after)), "1"),
+            fallback=None,
+        )
     except Exception as exc:
         logger.debug("[LLM] Redis exhausted mark hatası: %s", exc)
 
@@ -224,7 +235,7 @@ async def _redis_mark_exhausted(model_id: str, retry_after: float = 60.0) -> Non
 async def _redis_get_last_success() -> tuple[str, str] | None:
     try:
         r = await get_redis()
-        val = await r.get("llm:last_success")
+        val = await _redis_breaker.call(r.get("llm:last_success"), fallback=None)
         if val:
             data = json.loads(val)
             return data["model_id"], data["provider"]
@@ -236,10 +247,9 @@ async def _redis_get_last_success() -> tuple[str, str] | None:
 async def _redis_set_last_success(model_id: str, provider: str) -> None:
     try:
         r = await get_redis()
-        await r.setex(
-            "llm:last_success",
-            3600,
-            json.dumps({"model_id": model_id, "provider": provider}),
+        await _redis_breaker.call(
+            r.setex("llm:last_success", 3600, json.dumps({"model_id": model_id, "provider": provider})),
+            fallback=None,
         )
     except Exception as exc:
         logger.debug("[LLM] Redis last_success set hatası: %s", exc)
