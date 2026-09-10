@@ -965,21 +965,16 @@ sudo mkdir -p /var/www/teqlif.com
 sudo chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 git clone git@github.com:tucibeyin/teqlif.git /var/www/teqlif.com
 
-# 5. .env oluştur
+# 5. .env doldur (şablon repo içinde: deploy/scale/resources/.env.node2.production)
 # NODE2_INTERNAL_TOKEN → openssl rand -hex 32 ile üret (aynı değer node1 .env'e de eklenecek)
-cat > /var/www/teqlif.com/backend/.env << 'EOF'
-DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@localhost/placeholder
-SECRET_KEY=placeholder_not_used_on_node2
-GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=AIza...
-NODE2_INTERNAL_TOKEN=...
-SENTRY_BACKEND_DSN=          # boş bırakılırsa Sentry devre dışı — node2 hatalar sadece Loki'ye gider
-EOF
+nano /var/www/teqlif.com/deploy/scale/resources/.env.node2.production
+chmod 600 /var/www/teqlif.com/deploy/scale/resources/.env.node2.production
 
-# 6. Python ortamı
-cd /var/www/teqlif.com/backend
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+# 6. Python ortamı (standart venv konumu: /var/www/teqlif.com/venv/)
+sudo apt install python3.13-venv -y
+cd /var/www/teqlif.com
+python3 -m venv venv
+venv/bin/pip install -r deploy/scale/resources/node2_production_requirements.txt
 
 # 7. Servisler
 sudo cp deploy/scale/V1.2/node2/systemd/teqlif-ai-proxy.service /etc/systemd/system/

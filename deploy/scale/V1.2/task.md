@@ -791,21 +791,24 @@ git push origin main
 
 **Durum:** [ ]
 
-node2 sadece AI proxy çalıştırır; `requirements.txt`'teki ML/DB/LiveKit paketleri gerekmez.
-`requirements-node2.txt` yalnızca 7 paketi içerir (~200 MB yerine ~30 MB).
+node2 sadece AI proxy çalıştırır; ML/DB/LiveKit paketleri gerekmez.
+`node2_production_requirements.txt` yalnızca 7 paketi içerir (~30 MB, node1'in ~1 GB'ına karşı).
+
+**Standart venv konumu (tüm node'lar): `/var/www/teqlif.com/venv/`**
 
 node2'de çalıştır:
 
 ```bash
-cd /var/www/teqlif.com/backend
-python3 -m venv .venv
-.venv/bin/pip install --upgrade pip
-.venv/bin/pip install -r /var/www/teqlif.com/deploy/scale/V1.2/node2/requirements.txt
+sudo apt install python3.13-venv -y
+cd /var/www/teqlif.com
+python3 -m venv venv
+venv/bin/pip install --upgrade pip
+venv/bin/pip install -r /var/www/teqlif.com/deploy/scale/resources/node2_production_requirements.txt
 ```
 
 **Doğrulama:**
 ```bash
-.venv/bin/python -c "import fastapi, httpx, redis; print('OK')"
+/var/www/teqlif.com/venv/bin/python -c "import fastapi, httpx, redis; print('OK')"
 ```
 
 ---
@@ -814,30 +817,30 @@ python3 -m venv .venv
 
 **Durum:** [ ]
 
-node2'de `NODE2_INTERNAL_TOKEN` üret ve kaydet (aynı değer node1'e de eklenecek):
+`.env` şablonu `deploy/scale/resources/.env.node2.production` içinde hazır.
+Değerleri doldur ve `chmod 600` uygula:
 
 ```bash
+# NODE2_INTERNAL_TOKEN üret (aynı değer node1'e de girecek — Görev 20)
 openssl rand -hex 32   # çıktıyı kopyala
+
+# Değerleri doldur
+nano /var/www/teqlif.com/deploy/scale/resources/.env.node2.production
+
+# İzin kısıtla
+chmod 600 /var/www/teqlif.com/deploy/scale/resources/.env.node2.production
 ```
 
-Sonra `.env` oluştur:
-
-```bash
-cat > /var/www/teqlif.com/backend/.env << 'EOF'
-DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@localhost/placeholder
-SECRET_KEY=placeholder_not_used_on_node2
-GROQ_API_KEY=gsk_...          # gerçek değer
-GEMINI_API_KEY=AIza...        # gerçek değer
-NODE2_INTERNAL_TOKEN=...      # üretilen token
-REDIS_URL=redis://10.10.0.1:6379   # node1 Redis — WireGuard üzerinden
-SENTRY_BACKEND_DSN=           # boş bırak — node2 hatalar Loki'ye gider
-EOF
-chmod 600 /var/www/teqlif.com/backend/.env
-```
+Doldurulacak alanlar:
+- `GROQ_API_KEY` — gerçek değer
+- `GEMINI_API_KEY` — gerçek değer
+- `NODE2_INTERNAL_TOKEN` — üretilen token
+- `REDIS_URL` — zaten `redis://10.10.0.1:6379` olarak set edilmiş
 
 **Doğrulama:**
 ```bash
-.venv/bin/python -c "from app.config import settings; print(settings.groq_api_key[:8])"
+cd /var/www/teqlif.com/backend
+/var/www/teqlif.com/venv/bin/python -c "from app.config import settings; print(settings.groq_api_key[:8])"
 ```
 
 ---
