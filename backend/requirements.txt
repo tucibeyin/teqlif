@@ -1,1 +1,1 @@
-../deploy/scale/resources/node1_production.txt
+../deploy/scale/resources/node1_production_requirements.txt
