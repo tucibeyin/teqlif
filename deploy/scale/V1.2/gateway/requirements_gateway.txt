@@ -1,3 +1,0 @@
-# gateway Python uygulaması çalıştırmaz.
-# nginx, prometheus, loki, alertmanager, promtail sistem binary'leri olarak kurulur.
-# apt veya binary indirme ile kurulum için ilgili systemd/ ve config dosyalarına bak.
