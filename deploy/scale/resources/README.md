@@ -117,9 +117,9 @@ Bundan sonra **tucibeyin** kullanıcısıyla bağlan ve ilgili node kurulumuna g
 cd /var/www/teqlif.com
 
 # 1. .env şablonunu doldur (git pull sonrası boş gelir)
+# chmod 600 bootstrap tarafından otomatik uygulanır
 nano deploy/scale/resources/node1/.env.node1.production
-chmod 600 deploy/scale/resources/node1/.env.node1.production
-chmod 600 deploy/scale/resources/node1/.env.node1.staging
+nano deploy/scale/resources/node1/.env.node1.staging
 
 # 2. Bootstrap çalıştır (idempotent — tekrar çalıştırmak güvenli)
 bash deploy/scale/resources/node1/bootstrap_node1.sh
@@ -155,10 +155,9 @@ bash deploy/scale/resources/node1/node1_services.sh status
 cd /var/www/teqlif.com
 
 # 1. .env şablonlarını doldur
+# chmod 600 bootstrap tarafından otomatik uygulanır
 nano deploy/scale/resources/node2/.env.node2.production
 nano deploy/scale/resources/node2/.env.node2.cfFailover
-chmod 600 deploy/scale/resources/node2/.env.node2.production
-chmod 600 deploy/scale/resources/node2/.env.node2.cfFailover
 
 # 2. WireGuard key oluştur
 sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'
@@ -187,8 +186,8 @@ sudo journalctl -u cf-failover -f
 cd /var/www/teqlif.com
 
 # 1. .env şablonunu doldur
+# chmod 600 bootstrap tarafından otomatik uygulanır
 nano deploy/scale/resources/gateway/.env.gateway.production
-chmod 600 deploy/scale/resources/gateway/.env.gateway.production
 
 # 2. Bootstrap çalıştır (idempotent)
 bash deploy/scale/resources/gateway/bootstrap_gateway.sh
