@@ -483,7 +483,7 @@ deploy/scale/resources/
 |---|---|---|---|
 | prometheus | 2.51.0 | gateway | `node-node2` scrape target eklendi |
 | alertmanager | 0.27.0 | gateway | `AIProxyDown` alert kuralı eklendi |
-| loki | 3.6.7 | gateway | node2 logları (job: teqlif-ai-proxy, systemd-journal) |
+| loki | 3.6.7 | gateway | node2 logları (job: teqlif-ai-proxy, systemd-journal) — retention 7 gün (168h) |
 | promtail | 3.0.0 | her 3 node | node2 eklendi |
 | node_exporter | 1.8.2 | her 3 node | node2 eklendi (`--collector.systemd`) |
 
@@ -675,11 +675,13 @@ Tüm node'larda `/etc/sysctl.d/99-teqlif.conf` oluşturuldu.
 
 ### 14.5 journald Limitleri
 
-| Node | SystemMaxUse | SystemKeepFree | Önceki Kullanım |
+| Node | SystemMaxUse | SystemKeepFree | MaxRetentionSec |
 |---|---|---|---|
-| node1 | 500M | 2G | 442 MB |
-| gateway | 300M | 1G | 91 MB |
-| node2 | 200M | 200M | 40 MB |
+| node1 | 500M | 2G | 1week |
+| gateway | 300M | 1G | 1week |
+| node2 | 200M | 200M | 1week |
+
+`MaxRetentionSec=1week`: zaman sınırı — 7 günden eski kayıtlar silinir. `SystemMaxUse`: boyut sınırı — log fırtınası gibi anormal durumlarda disk dolu senaryosuna karşı acil fren.
 
 ### 14.6 WireGuard MTU
 
