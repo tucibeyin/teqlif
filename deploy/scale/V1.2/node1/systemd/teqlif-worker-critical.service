@@ -1,16 +1,22 @@
 [Unit]
-Description=Teqlif Critical Background Worker (bulkhead)
-After=network.target redis.service
+Description=Teqlif ARQ Critical Worker (Bulkhead — push notifications, outbid, loser cascade)
+After=network.target postgresql.service redis.service teqlif.service
+StartLimitBurst=10
+StartLimitIntervalSec=600
 
 [Service]
 User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
-Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node1.production
-EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/.env.node1.production
-ExecStart=/var/www/teqlif.com/venv/bin/python -m worker_critical
+EnvironmentFile=/var/www/teqlif.com/backend/.env
+ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettingsCritical
 Restart=always
-RestartSec=5
+RestartSec=3
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=600
+OOMScoreAdj=100
+CPUWeight=100
 StandardOutput=journal
 StandardError=journal
 

@@ -1,13 +1,14 @@
 [Unit]
 Description=Teqlif FastAPI Backend
 After=network.target postgresql.service redis.service
+StartLimitBurst=10
+StartLimitIntervalSec=600
 
 [Service]
 User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
-Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node1.production
-EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/.env.node1.production
+EnvironmentFile=/var/www/teqlif.com/backend/.env
 ExecStartPre=/var/www/teqlif.com/venv/bin/python -m alembic upgrade head
 ExecStartPre=/var/www/teqlif.com/venv/bin/python /var/www/teqlif.com/backend/scripts/sync_main.py
 ExecStart=/var/www/teqlif.com/venv/bin/uvicorn main:app \
@@ -19,6 +20,12 @@ ExecStart=/var/www/teqlif.com/venv/bin/uvicorn main:app \
     --forwarded-allow-ips 10.10.0.2
 Restart=always
 RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+LimitNOFILE=65536
+OOMScoreAdj=-500
+CPUWeight=200
 StandardOutput=journal
 StandardError=journal
 

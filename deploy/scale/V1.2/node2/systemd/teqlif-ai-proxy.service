@@ -1,6 +1,8 @@
 [Unit]
 Description=Teqlif AI Proxy — node2 (US IP, Gemini + Groq)
 After=network.target
+StartLimitBurst=10
+StartLimitIntervalSec=600
 
 [Service]
 User=tucibeyin
@@ -15,6 +17,13 @@ ExecStart=/var/www/teqlif.com/venv/bin/uvicorn app.ai_proxy_main:app \
     --loop uvloop
 Restart=always
 RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+LimitNOFILE=4096
+MemoryMax=768M
+MemorySwapMax=0
+OOMScoreAdj=0
 StandardOutput=journal
 StandardError=journal
 
