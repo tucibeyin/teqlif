@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# deploy/scale/resources/bootstrap_node1.sh
+# deploy/scale/resources/node1/bootstrap_node1.sh
 # node1 (OVHcloud SAS, Frankfurt) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
 # Kapsam dışı (sır içerir): WireGuard private key, .env değerleri.
-# NOT: livekit, minio, postgresql, redis ayrıca kurulmalı — bu script sadece
-#      teqlif uygulama katmanını, nginx fallback'i ve izleme bileşenlerini kurar.
+# NOT: livekit, minio, postgresql, redis ayrıca kurulmalı.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
+REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SCALE_VERSION="V1.2"
 N1_SRC="$REPO/deploy/scale/$SCALE_VERSION/node1"
 SYSTEMD_SRC="$N1_SRC/systemd"
 RESOURCES="$REPO/deploy/scale/resources"
+NODE1="$RESOURCES/node1"
 VENV="$REPO/venv"
 NODE_EXPORTER_VERSION="1.8.2"
 PROMTAIL_VERSION="3.0.0"
@@ -23,7 +23,7 @@ echo "==> apt paketleri..."
 sudo apt update -q
 sudo apt install -y ufw python3.13-venv wireguard unzip nginx
 
-# ── Grup üyelikleri (promtail journal okuyabilsin) ────────────────────────────
+# ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
@@ -34,7 +34,7 @@ if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --upgrade pip -q
-"$VENV/bin/pip" install -r "$RESOURCES/node1_production_requirements.txt"
+"$VENV/bin/pip" install -r "$NODE1/node1_production_requirements.txt"
 
 # ── Log dizini ────────────────────────────────────────────────────────────────
 echo "==> Log dizini..."
@@ -68,7 +68,7 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   sudo chmod +x /usr/local/bin/promtail
   rm -rf "$TMP"
 fi
-sudo cp "$REPO/deploy/scale/$SCALE_VERSION/node1/promtail-config.yml" /etc/promtail-config.yml
+sudo cp "$N1_SRC/promtail-config.yml" /etc/promtail-config.yml
 
 # ── nginx fallback (Cloudflare failover için port 443) ───────────────────────
 echo "==> nginx fallback (CF failover, port 443)..."
@@ -83,7 +83,6 @@ sudo cp "$N1_SRC/nginx/teqlif-fallback.conf" /etc/nginx/sites-available/teqlif-f
 if [[ ! -L /etc/nginx/sites-enabled/teqlif-fallback.conf ]]; then
   sudo ln -s /etc/nginx/sites-available/teqlif-fallback.conf /etc/nginx/sites-enabled/
 fi
-# default site'ı devre dışı bırak — 80 portunu boş bırak (sadece 443 fallback)
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl enable --now nginx
 
@@ -137,7 +136,6 @@ echo "==> UFW..."
 sudo ufw allow 22/tcp    comment 'SSH'        2>/dev/null || true
 sudo ufw allow 443/tcp   comment 'HTTPS — CF failover fallback' 2>/dev/null || true
 sudo ufw allow 51820/udp comment 'WireGuard'  2>/dev/null || true
-# Cloudflare IPv4 aralıkları — CF failover için 443'ü sadece CF'den izin ver
 CF_IPS=(
   103.21.244.0/22 103.22.200.0/22 103.31.4.0/22
   104.16.0.0/13   104.24.0.0/14   108.162.192.0/18
@@ -148,17 +146,15 @@ CF_IPS=(
 for cidr in "${CF_IPS[@]}"; do
   sudo ufw allow from "$cidr" to any port 80,443 proto tcp comment "CF — $cidr" 2>/dev/null || true
 done
-# API port'ları sadece gateway WireGuard IP'sinden
 sudo ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp comment 'API prod — gateway' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.2 to any port 8001 proto tcp comment 'API staging — gateway' 2>/dev/null || true
-# Redis — node2 AI proxy'den
 sudo ufw allow in on wg0 from 10.10.0.3 to any port 6379 proto tcp comment 'Redis — node2' 2>/dev/null || true
 sudo ufw --force enable
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
-[[ -f "$RESOURCES/.env.node1.production" ]] && chmod 600 "$RESOURCES/.env.node1.production"
-[[ -f "$RESOURCES/.env.node1.staging"    ]] && chmod 600 "$RESOURCES/.env.node1.staging"
+chmod 600 "$NODE1/.env.node1.production"
+chmod 600 "$NODE1/.env.node1.staging"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -166,9 +162,9 @@ echo ""
 echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: sudo bash -c 'wg genkey | tee /etc/wireguard/node1_private.key | wg pubkey > /etc/wireguard/node1_public.key'"
 echo "  2. wg0.conf yaz ve 'sudo systemctl enable --now wg-quick@wg0' calistir"
-echo "  3. .env degerlerini doldur: $RESOURCES/.env.node1.production"
+echo "  3. .env degerlerini doldur: $NODE1/.env.node1.production"
 echo "  4. PostgreSQL tuning uygula:"
-echo "     bash $RESOURCES/apply_pg_tuning.sh"
+echo "     bash $NODE1/apply_pg_tuning.sh"
 echo "  5. Tum servisleri baslat:"
-echo "     bash $RESOURCES/node1_services.sh start"
+echo "     bash $NODE1/node1_services.sh start"
 echo "  6. livekit, minio, postgresql, redis ayrica kurulmali"

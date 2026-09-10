@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# deploy/scale/resources/bootstrap_node2.sh
+# deploy/scale/resources/node2/bootstrap_node2.sh
 # node2 (VPSHostingService.co, Buffalo NY) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
 # Kapsam dışı (sır içerir): WireGuard private key, .env değerleri, CF_API_TOKEN, CF_ZONE_ID.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
+REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SCALE_VERSION="V1.2"
 N2_SRC="$REPO/deploy/scale/$SCALE_VERSION/node2"
 SYSTEMD_SRC="$N2_SRC/systemd"
 RESOURCES="$REPO/deploy/scale/resources"
+NODE2="$RESOURCES/node2"
 VENV="$REPO/venv"
 NODE_EXPORTER_VERSION="1.8.2"
 PROMTAIL_VERSION="3.0.0"
@@ -21,7 +22,7 @@ echo "==> apt paketleri..."
 sudo apt update -q
 sudo apt install -y ufw python3.13-venv wireguard unzip curl
 
-# ── Grup üyelikleri (promtail journal okuyabilsin) ────────────────────────────
+# ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
@@ -32,7 +33,7 @@ if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --upgrade pip -q
-"$VENV/bin/pip" install -r "$RESOURCES/node2_production_requirements.txt"
+"$VENV/bin/pip" install -r "$NODE2/node2_production_requirements.txt"
 
 # ── Log dizini ────────────────────────────────────────────────────────────────
 echo "==> Log dizini..."
@@ -66,7 +67,7 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   sudo chmod +x /usr/local/bin/promtail
   rm -rf "$TMP"
 fi
-sudo cp "$REPO/deploy/scale/$SCALE_VERSION/node2/promtail-config.yml" /etc/promtail-config.yml
+sudo cp "$N2_SRC/promtail-config.yml" /etc/promtail-config.yml
 
 # ── Kernel sysctl ────────────────────────────────────────────────────────────
 echo "==> sysctl optimizasyonları..."
@@ -84,11 +85,9 @@ sudo systemctl restart systemd-journald
 echo "==> cf-failover daemon..."
 sudo cp "$N2_SRC/cf-failover/cf-failover.sh" /usr/local/bin/cf-failover.sh
 sudo chmod +x /usr/local/bin/cf-failover.sh
-# .env.node2.cfFailover — repo içinde yaşar, değerleri git pull sonrası elle doldur
-ENV_CF="$RESOURCES/.env.node2.cfFailover"
-chmod 600 "$ENV_CF"
-if ! grep -q "^CF_API_TOKEN=.\+" "$ENV_CF" 2>/dev/null; then
-  echo "  UYARI: $ENV_CF içinde CF_API_TOKEN boş — doldurup 'sudo systemctl restart cf-failover' calistir."
+chmod 600 "$NODE2/.env.node2.cfFailover"
+if ! grep -q "^CF_API_TOKEN=.\+" "$NODE2/.env.node2.cfFailover" 2>/dev/null; then
+  echo "  UYARI: $NODE2/.env.node2.cfFailover içinde CF_API_TOKEN boş — doldurup 'sudo systemctl restart cf-failover' calistir."
 fi
 
 # ── systemd servisleri ────────────────────────────────────────────────────────
@@ -140,8 +139,8 @@ fi
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
-[[ -f "$RESOURCES/.env.node2.production" ]] && chmod 600 "$RESOURCES/.env.node2.production"
-[[ -f "$RESOURCES/.env.node2.cfFailover"  ]] && chmod 600 "$RESOURCES/.env.node2.cfFailover"
+chmod 600 "$NODE2/.env.node2.production"
+chmod 600 "$NODE2/.env.node2.cfFailover"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -150,8 +149,8 @@ echo "Kalan manuel adimlar:"
 echo "  1. WireGuard key yoksa:"
 echo "     sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
 echo "     Sonra scripti tekrar calistir — wg0.conf otomatik yazilir."
-echo "  2. .env degerlerini doldur: $RESOURCES/.env.node2.production"
-echo "  3. CF failover: nano $RESOURCES/.env.node2.cfFailover"
+echo "  2. .env degerlerini doldur: $NODE2/.env.node2.production"
+echo "  3. CF failover: nano $NODE2/.env.node2.cfFailover"
 echo "     CF_ZONE_ID= ve CF_API_TOKEN= satirlarini doldur"
 echo "  4. Servisleri baslat:"
-echo "     bash $RESOURCES/node2_services.sh start"
+echo "     bash $NODE2/node2_services.sh start"

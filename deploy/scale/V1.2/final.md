@@ -36,6 +36,7 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | 19 | node1 nginx fallback (port 443) | Gateway down → CF doğrudan node1'e → uvicorn:8000 |
 | 20 | Cloudflare DNS failover otomasyonu | node2 cf-failover daemon: 30s içinde DNS A → node1, geri dönüş otomatik |
 | 21 | Bootstrap script'leri güncellendi | sysctl, journald, nginx fallback, cf-failover kurulumu otomasyona eklendi |
+| 22 | `resources/` node alt dizinlerine ayrıldı | `node1/`, `node2/`, `gateway/` — tüm servis ve script referansları güncellendi |
 
 ---
 
@@ -208,7 +209,7 @@ Her node diğer ikisine de peer tanımlar. PersistentKeepalive: 25s (tüm bağla
 WorkingDirectory: /var/www/teqlif.com/backend
 ExecStart: /var/www/teqlif.com/venv/bin/uvicorn app.ai_proxy_main:app
            --host 10.10.0.3 --port 8080 --workers 1 --loop uvloop
-Environment: TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node2.production
+Environment: TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/node2/.env.node2.production
 EnvironmentFile: (aynı dosya)
 ```
 
@@ -224,8 +225,8 @@ EnvironmentFile: (aynı dosya)
 ### Authentication
 
 `X-Internal-Token: NODE2_INTERNAL_TOKEN` — node1 ve node2 aynı değeri paylaşır. Sır yönetimi:
-- `deploy/scale/resources/.env.node1.production` → `NODE2_INTERNAL_TOKEN=...`
-- `deploy/scale/resources/.env.node2.production` → `NODE2_INTERNAL_TOKEN=...`
+- `deploy/scale/resources/node1/.env.node1.production` → `NODE2_INTERNAL_TOKEN=...`
+- `deploy/scale/resources/node2/.env.node2.production` → `NODE2_INTERNAL_TOKEN=...`
 - Üretim: `openssl rand -hex 32`
 
 ### node2 Python Ortamı
@@ -234,7 +235,7 @@ node2 sadece AI proxy çalıştırır — ML/DB/LiveKit/MinIO paketleri yüklenm
 
 ```
 Venv: /var/www/teqlif.com/venv/  (tüm node'lar için standart konum)
-Requirements: deploy/scale/resources/node2_production_requirements.txt
+Requirements: deploy/scale/resources/node2/node2_production_requirements.txt
 Paketler (7): fastapi, uvicorn[standard], httpx, redis, sentry-sdk,
               pydantic-settings, python-dotenv
 Boyut: ~30 MB  (node1'in ~1 GB'ına karşı)
@@ -326,16 +327,25 @@ Version-independent tek kaynak dizini. Her versiyonda path değişmez — node'l
 
 ```
 deploy/scale/resources/
-├── .env.node1.production          # node1 prod .env şablonu (git'te, değerler boş)
-├── .env.node1.staging             # node1 staging .env şablonu
-├── .env.node2.production          # node2 prod .env şablonu
-├── node1_production_requirements.txt
-├── node1_staging_requirements.txt  # production + Faker==25.0.1
-├── node2_production_requirements.txt
-├── bootstrap_node1.sh             # node1 idempotent kurulum scripti
-├── bootstrap_node2.sh             # node2 idempotent kurulum scripti
-├── bootstrap_gateway.sh           # gateway idempotent kurulum scripti
-└── README.md
+├── node1/
+│   ├── .env.node1.production          # node1 prod .env şablonu (git'te, değerler boş)
+│   ├── .env.node1.staging             # node1 staging .env şablonu
+│   ├── node1_production_requirements.txt
+│   ├── node1_staging_requirements.txt  # production + Faker==25.0.1
+│   ├── bootstrap_node1.sh             # node1 idempotent kurulum scripti
+│   ├── node1_services.sh              # start|stop|restart|status
+│   └── apply_pg_tuning.sh             # PostgreSQL ALTER SYSTEM tuning
+├── node2/
+│   ├── .env.node2.production          # node2 prod .env şablonu
+│   ├── .env.node2.cfFailover          # CF_ZONE_ID + CF_API_TOKEN
+│   ├── node2_production_requirements.txt
+│   ├── bootstrap_node2.sh             # node2 idempotent kurulum scripti
+│   └── node2_services.sh              # start|stop|restart|status
+├── gateway/
+│   ├── bootstrap_gateway.sh           # gateway idempotent kurulum scripti
+│   ├── gateway_services.sh            # start|stop|restart|status
+│   └── certbot_gateway.sh             # Let's Encrypt SSL al
+└── README.md                          # Per-node kurulum rehberi
 ```
 
 **Bootstrap scriptleri** şunları otomatize eder:
@@ -358,11 +368,11 @@ deploy/scale/resources/
 
 | Script | Node | İş |
 |---|---|---|
-| `apply_pg_tuning.sh` | node1 | PostgreSQL ALTER SYSTEM tuning + restart |
-| `certbot_gateway.sh` | gateway | Let's Encrypt SSL sertifikası al |
-| `node1_services.sh [start\|stop\|restart\|status]` | node1 | Tüm node1 servislerini yönet |
-| `node2_services.sh [start\|stop\|restart\|status]` | node2 | Tüm node2 servislerini yönet |
-| `gateway_services.sh [start\|stop\|restart\|status]` | gateway | Tüm gateway servislerini yönet |
+| `node1/apply_pg_tuning.sh` | node1 | PostgreSQL ALTER SYSTEM tuning + restart |
+| `gateway/certbot_gateway.sh` | gateway | Let's Encrypt SSL sertifikası al |
+| `node1/node1_services.sh [start\|stop\|restart\|status]` | node1 | Tüm node1 servislerini yönet |
+| `node2/node2_services.sh [start\|stop\|restart\|status]` | node2 | Tüm node2 servislerini yönet |
+| `gateway/gateway_services.sh [start\|stop\|restart\|status]` | gateway | Tüm gateway servislerini yönet |
 
 **Kapsam dışı (sır içerir):** WireGuard key üretimi, `.env` gerçek değerleri.
 
@@ -507,7 +517,7 @@ sudo systemctl restart teqlif-ai-proxy
 
 ```bash
 # node2
-nano /var/www/teqlif.com/deploy/scale/resources/.env.node2.production
+nano /var/www/teqlif.com/deploy/scale/resources/node2/.env.node2.production
 sudo systemctl restart teqlif-ai-proxy
 ```
 
@@ -552,19 +562,19 @@ git clone <repo-url> /var/www/teqlif.com
 sudo bash -c 'wg genkey | tee /etc/wireguard/<node>_private.key | wg pubkey > /etc/wireguard/<node>_public.key'
 
 # 3. Bootstrap çalıştır (sysctl, journald, nginx, cf-failover dahil)
-bash /var/www/teqlif.com/deploy/scale/resources/bootstrap_<node>.sh
+bash /var/www/teqlif.com/deploy/scale/resources/<node>/bootstrap_<node>.sh
 
 # 4. .env değerlerini doldur
-nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
+nano /var/www/teqlif.com/deploy/scale/resources/<node>/.env.<node>.production
 
 # 5a. node1: PostgreSQL tuning uygula
-bash /var/www/teqlif.com/deploy/scale/resources/apply_pg_tuning.sh
+bash /var/www/teqlif.com/deploy/scale/resources/node1/apply_pg_tuning.sh
 
 # 5b. gateway: SSL sertifikası al
-bash /var/www/teqlif.com/deploy/scale/resources/certbot_gateway.sh
+bash /var/www/teqlif.com/deploy/scale/resources/gateway/certbot_gateway.sh
 
 # 6. Servisleri başlat
-bash /var/www/teqlif.com/deploy/scale/resources/<node>_services.sh start
+bash /var/www/teqlif.com/deploy/scale/resources/<node>/<node>_services.sh start
 ```
 
 ---

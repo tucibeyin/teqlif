@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# deploy/scale/resources/bootstrap_gateway.sh
+# deploy/scale/resources/gateway/bootstrap_gateway.sh
 # gateway (netcup GmbH, Nürnberg) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
 # Kapsam dışı (sır içerir): WireGuard private key, alertmanager.env, nginx SSL sertifikaları.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
+REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SCALE_VERSION="V1.2"
 GW_SRC="$REPO/deploy/scale/$SCALE_VERSION/gateway"
 SYSTEMD_SRC="$GW_SRC/systemd"
+GATEWAY="$REPO/deploy/scale/resources/gateway"
 NODE_EXPORTER_VERSION="1.8.2"
 PROMTAIL_VERSION="3.0.0"
 PROMETHEUS_VERSION="2.51.0"
@@ -22,7 +23,7 @@ echo "==> apt paketleri..."
 sudo apt update -q
 sudo apt install -y ufw wireguard unzip nginx
 
-# ── Grup üyelikleri (promtail journal okuyabilsin) ────────────────────────────
+# ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
@@ -122,12 +123,10 @@ sudo cp "$GW_SRC/nginx/teqlif.conf" /etc/nginx/sites-available/teqlif.conf
 if [[ ! -L /etc/nginx/sites-enabled/teqlif.conf ]]; then
   sudo ln -s /etc/nginx/sites-available/teqlif.conf /etc/nginx/sites-enabled/teqlif.conf
 fi
-sudo nginx -t && sudo systemctl reload nginx 2>/dev/null || true
-
-# ── nginx-http-zones.conf (rate limiting) ────────────────────────────────────
 if [[ -f "$GW_SRC/nginx/nginx-http-zones.conf" ]]; then
   sudo cp "$GW_SRC/nginx/nginx-http-zones.conf" /etc/nginx/conf.d/nginx-http-zones.conf
 fi
+sudo nginx -t && sudo systemctl reload nginx 2>/dev/null || true
 
 # ── Kernel sysctl ────────────────────────────────────────────────────────────
 echo "==> sysctl optimizasyonları..."
@@ -185,8 +184,7 @@ echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: wg0.conf yaz, 'sudo systemctl enable --now wg-quick@wg0' calistir"
 echo "  2. alertmanager: /etc/alertmanager/alertmanager.yml ve alertmanager.env doldur"
 echo "  3. nginx SSL sertifikasi al:"
-REPO_PATH="$(cd "$(dirname "$0")/../../.." && pwd)"
-echo "     bash $REPO_PATH/deploy/scale/resources/certbot_gateway.sh"
+echo "     bash $GATEWAY/certbot_gateway.sh"
 echo "  4. Grafana ayri kurulmali (apt repo veya binary)"
 echo "  5. Tum servisleri baslat:"
-echo "     bash $REPO_PATH/deploy/scale/resources/gateway_services.sh start"
+echo "     bash $GATEWAY/gateway_services.sh start"
