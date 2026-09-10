@@ -23,12 +23,14 @@ echo "==> apt paketleri..."
 sudo apt update -q
 sudo apt install -y ufw wireguard unzip nginx
 
-# ── prometheus kullanıcısı ────────────────────────────────────────────────────
-if ! id prometheus &>/dev/null; then
-  sudo useradd --no-create-home --shell /bin/false prometheus
-fi
-sudo mkdir -p /etc/prometheus /var/lib/prometheus
-sudo chown prometheus:prometheus /var/lib/prometheus
+# ── Grup üyelikleri (promtail journal okuyabilsin) ────────────────────────────
+echo "==> Grup üyelikleri..."
+sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
+sudo usermod -aG adm tucibeyin 2>/dev/null || true
+
+# ── Dizin izinleri ───────────────────────────────────────────────────────────
+sudo mkdir -p /etc/prometheus /var/lib/prometheus /var/lib/alertmanager
+sudo chown tucibeyin:tucibeyin /var/lib/prometheus /var/lib/alertmanager
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
@@ -70,7 +72,7 @@ if ! /usr/local/bin/prometheus --version 2>&1 | grep -q "$PROMETHEUS_VERSION" 2>
 fi
 sudo cp "$GW_SRC/prometheus.yml"       /etc/prometheus/prometheus.yml
 sudo cp "$GW_SRC/prometheus-rules.yml" /etc/prometheus/prometheus-rules.yml
-sudo chown -R prometheus:prometheus /etc/prometheus
+sudo chown -R tucibeyin:tucibeyin /etc/prometheus
 
 # ── loki ──────────────────────────────────────────────────────────────────────
 echo "==> loki $LOKI_VERSION..."

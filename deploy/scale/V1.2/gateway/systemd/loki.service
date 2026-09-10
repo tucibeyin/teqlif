@@ -3,6 +3,7 @@ Description=Loki Log Aggregation
 After=network.target
 
 [Service]
+User=tucibeyin
 ExecStart=/usr/local/bin/loki -config.file=/etc/loki/config.yml
 Restart=always
 RestartSec=5

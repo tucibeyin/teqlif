@@ -3,8 +3,7 @@ Description=Node Exporter — gateway metrikleri
 After=network.target
 
 [Service]
-User=nobody
-Group=nogroup
+User=tucibeyin
 Type=simple
 ExecStart=/usr/local/bin/node_exporter --web.listen-address=localhost:9100
 

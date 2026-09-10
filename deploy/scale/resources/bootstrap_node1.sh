@@ -22,6 +22,11 @@ echo "==> apt paketleri..."
 sudo apt update -q
 sudo apt install -y ufw python3.13-venv wireguard unzip
 
+# ── Grup üyelikleri (promtail journal okuyabilsin) ────────────────────────────
+echo "==> Grup üyelikleri..."
+sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
+sudo usermod -aG adm tucibeyin 2>/dev/null || true
+
 # ── Python venv ───────────────────────────────────────────────────────────────
 echo "==> Python venv @ $VENV..."
 if [[ ! -d "$VENV" ]]; then

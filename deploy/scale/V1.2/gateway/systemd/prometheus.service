@@ -3,8 +3,7 @@ Description=Prometheus Metrics Server
 After=network.target
 
 [Service]
-User=prometheus
-Group=prometheus
+User=tucibeyin
 ExecStart=/usr/local/bin/prometheus \
     --config.file=/etc/prometheus/prometheus.yml \
     --storage.tsdb.path=/var/lib/prometheus \

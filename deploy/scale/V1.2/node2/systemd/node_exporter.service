@@ -3,8 +3,7 @@ Description=Node Exporter — node2 metrikleri gateway Prometheus'a
 After=network.target
 
 [Service]
-User=nobody
-Group=nogroup
+User=tucibeyin
 Type=simple
 ExecStart=/usr/local/bin/node_exporter \
     --web.listen-address=10.10.0.3:9100 \
