@@ -33,6 +33,9 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | 16 | Kernel sysctl — tüm node'lar | swappiness, somaxconn, tcp_syn_backlog, tcp_tw_reuse |
 | 17 | nginx optimizasyonu | worker_connections 4096, gzip tam config, ssl_session_cache, open_file_cache |
 | 18 | journald limitleri | Her node'da disk kullanımı sınırlandırıldı |
+| 19 | node1 nginx fallback (port 443) | Gateway down → CF doğrudan node1'e → uvicorn:8000 |
+| 20 | Cloudflare DNS failover otomasyonu | node2 cf-failover daemon: 30s içinde DNS A → node1, geri dönüş otomatik |
+| 21 | Bootstrap script'leri güncellendi | sysctl, journald, nginx fallback, cf-failover kurulumu otomasyona eklendi |
 
 ---
 
@@ -166,6 +169,7 @@ AIServiceBusyException (503)
 | ARQ Worker (critical) | ✅ | ❌ | ❌ | Bulkhead pattern |
 | **AI Proxy (:8080)** | ❌ | ❌ | ✅ | **Gemini ABD IP gereksinimi ← V1.2** |
 | nginx (public SSL) | ❌ | ✅ | ❌ | Edge proxy rolü |
+| nginx (fallback, port 443) | ✅ | ❌ | ❌ | CF failover — gateway down → node1 direkt ← V1.2 |
 | nginx (uploads) | ✅ | ❌ | ❌ | uploads.teqlif.com → MinIO |
 | Prometheus | ❌ | ✅ | ❌ | Observability bağımsızlığı |
 | Alertmanager | ❌ | ✅ | ❌ | Prometheus alerts → Telegram |
@@ -367,11 +371,18 @@ deploy/scale/resources/
 | `livekit.service` | 7880/7881/7882 | — |
 | `minio.service` | 9010 | — |
 
+### node1 (ek) — `deploy/scale/V1.2/node1/nginx/`
+
+| Dosya | Açıklama |
+|---|---|
+| `teqlif-fallback.conf` | Port 443, self-signed cert, CF failover için — gateway down → node1 direkt |
+
 ### node2 — `deploy/scale/V1.2/node2/systemd/`
 
 | Dosya | Port | Workers |
 |---|---|---|
 | `teqlif-ai-proxy.service` | 8080 (wg0) | 1 |
+| `cf-failover.service` | — | — |
 | `node_exporter.service` | 9100 (wg0) | — |
 | `promtail.service` | — | — |
 
@@ -395,6 +406,7 @@ deploy/scale/resources/
 
 ```
 22/tcp          ALLOW   Anywhere          # SSH
+443/tcp         ALLOW   Cloudflare IPs    # HTTPS — CF failover fallback  ← V1.2
 51820/udp       ALLOW   Anywhere          # WireGuard
 8000/tcp on wg0 ALLOW   10.10.0.2         # API prod — gateway
 8001/tcp on wg0 ALLOW   10.10.0.2         # API staging — gateway
@@ -494,6 +506,27 @@ sudo cp deploy/scale/V1.2/gateway/prometheus.yml /etc/prometheus/prometheus.yml
 sudo mkdir -p /etc/prometheus/rules
 sudo cp deploy/scale/V1.2/gateway/prometheus-rules.yml /etc/prometheus/rules/teqlif.yml
 sudo systemctl restart prometheus
+```
+
+### Sistem Optimizasyonlarını Yeniden Uygulama
+
+```bash
+# sysctl (herhangi bir node):
+sudo cp deploy/scale/V1.2/<node>/sysctl/99-teqlif.conf /etc/sysctl.d/99-teqlif.conf
+sudo sysctl -p /etc/sysctl.d/99-teqlif.conf
+
+# journald (herhangi bir node):
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo cp deploy/scale/V1.2/<node>/journald/journald.conf /etc/systemd/journald.conf.d/99-teqlif.conf
+sudo systemctl restart systemd-journald
+
+# nginx.conf (gateway):
+sudo cp deploy/scale/V1.2/gateway/nginx/nginx.conf /etc/nginx/nginx.conf
+sudo nginx -t && sudo systemctl reload nginx
+
+# nginx fallback (node1):
+sudo cp deploy/scale/V1.2/node1/nginx/teqlif-fallback.conf /etc/nginx/sites-available/
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ### Yeni Node Kurulumu
@@ -611,7 +644,7 @@ Tüm node'larda `mtu 1420` zaten doğru değerdeydi — değişiklik gerekmedi.
 | node2 çöker | node1 otomatik lokal Groq fallback'e geçer — kullanıcı etkilenmez |
 | node2 Gemini kota doldu | Groq listesine düşer; node1 fallback devrede |
 | AIProxyDown alert | `sudo systemctl restart teqlif-ai-proxy` (node2'de) |
-| gateway çöker | Cloudflare'de `teqlif.com` A → node1 (135.125.175.223). TTL 60s |
+| gateway çöker | **Otomatik:** node2 cf-failover daemon 30s içinde CF DNS A'yı node1'e çevirir. Gateway geri gelince 30s içinde otomatik geri döner. |
 | WireGuard bozulur | `sudo systemctl restart wg-quick@wg0` |
 | V1.1'e dönüş | `deploy/scale/V1.1/` config'lerini uygula; node2 servislerini durdur |
 
@@ -662,7 +695,6 @@ Tüm node'larda `mtu 1420` zaten doğru değerdeydi — değişiklik gerekmedi.
 - **Gemini erişim kontrolü:** node1, proxy üzerinden Gemini kullanabilir — bu bir seçim değil, şu an maliyet/karmaşıklık gerekçesiyle ertelendi.
 - **node2 auto-scaling:** Yük arttığında birden fazla AI proxy instance'ı — şu an tek worker yeterli.
 - **Redis sentinel / replica:** node1 Redis SPOF — yüksek erişilebilirlik için replica adayı.
-- **gateway SPOF fallback:** Cloudflare Health Check otomasyonu.
 - **ARQ worker node2'ye taşıma:** AI işler zaten node2'ye yönleniyor — ARQ da taşınabilir (V2.0 adayı).
 
 ---
@@ -685,6 +717,7 @@ Tüm node'larda `mtu 1420` zaten doğru değerdeydi — değişiklik gerekmedi.
 | `03feac31` | Tüm servisler tucibeyin kullanıcısına standardize edildi |
 | `f3d2e4b7` | Systemd servis optimizasyonları — LimitNOFILE, OOMScoreAdj, TimeoutStopSec, CPUWeight |
 | `f5be2e77` | Sistem optimizasyonları — PostgreSQL tuning, sysctl, nginx, journald |
+| `07e85c1d` | CF failover: node2 cf-failover daemon + node1 nginx fallback (port 443) |
 
 ---
 
@@ -702,8 +735,11 @@ deploy/scale/V1.2/
 │   ├── alertmanager.yml.template
 │   ├── loki-config.yml
 │   ├── promtail-config.yml
+│   ├── journald/
+│   │   └── journald.conf                     # SystemMaxUse=300M, SystemKeepFree=1G
 │   ├── nginx/
-│   │   └── nginx.conf                        # worker_connections=4096, gzip, ssl_session_cache
+│   │   ├── nginx.conf                        # worker_connections=4096, gzip, ssl_session_cache
+│   │   └── teqlif.conf                       # /cf-health endpoint + location / redirect  ← V1.2
 │   ├── sysctl/
 │   │   └── 99-teqlif.conf                    # tcp_max_syn_backlog=65535, tcp_tw_reuse=1
 │   └── systemd/
@@ -714,6 +750,10 @@ deploy/scale/V1.2/
 │       └── node_exporter.service             # User=tucibeyin
 ├── node1/
 │   ├── promtail-config.yml
+│   ├── journald/
+│   │   └── journald.conf                     # SystemMaxUse=500M, SystemKeepFree=2G
+│   ├── nginx/
+│   │   └── teqlif-fallback.conf              # Port 443, self-signed cert, uvicorn:8000 — CF failover
 │   ├── postgres/
 │   │   └── postgresql-tuning.conf            # shared_buffers=2GB, work_mem=16MB, NVMe tuning
 │   ├── sysctl/
@@ -730,10 +770,16 @@ deploy/scale/V1.2/
 │       └── minio.service                     # User=www-data (değişmez)
 └── node2/
     ├── promtail-config.yml
+    ├── cf-failover/
+    │   ├── cf-failover.sh                    # DNS failover daemon scripti
+    │   └── cf-failover.env.template          # CF_ZONE_ID + CF_API_TOKEN şablonu (git'te, değerler boş)
+    ├── journald/
+    │   └── journald.conf                     # SystemMaxUse=200M, SystemKeepFree=200M
     ├── sysctl/
     │   └── 99-teqlif.conf                    # swappiness=1, overcommit_memory=1
     └── systemd/
         ├── teqlif-ai-proxy.service           # MemoryMax=768M, TimeoutStopSec=60
+        ├── cf-failover.service               # CF DNS failover daemon
         ├── node_exporter.service             # User=tucibeyin
         └── promtail.service                  # User=tucibeyin + SupplementaryGroups
 
@@ -762,3 +808,76 @@ mobile/lib/
 ├── providers/ai_desc_provider.dart           # AiDescNotifier (yeni)
 └── screens/create_listing_screen.dart        # ref.listen typewriter, _typing
 ```
+
+---
+
+## 20. Cloudflare Gateway Failover (V1.2)
+
+Gateway SPOF tamamen otomasyona alındı. Cloudflare Free plan kullanılarak gerçekleştirildi.
+
+### Mimari
+
+```
+node2 cf-failover.sh
+  │  (her 10s bir kontrol)
+  └─► http://94.16.105.135/cf-health
+         │
+    gateway UP  → sessiz izleme devam eder
+    gateway DOWN → 3 ardışık hata (30s) → CF DNS API → A record → node1
+    gateway UP  → 3 ardışık başarı (30s) → CF DNS API → A record → gateway
+```
+
+### Bileşenler
+
+| Bileşen | Konum | Açıklama |
+|---|---|---|
+| `/cf-health` endpoint | gateway nginx | port 80, `location = /cf-health`, `200 OK` döner |
+| `teqlif-fallback.conf` | node1 nginx | port 443, self-signed cert, uvicorn:8000 proxy |
+| `cf-failover.sh` | `/usr/local/bin/` node2 | bash daemon, CF API v4 kullanır |
+| `cf-failover.service` | node2 systemd | `EnvironmentFile=/etc/cf-failover.env`, Restart=always |
+| `/etc/cf-failover.env` | node2 | `CF_ZONE_ID` + `CF_API_TOKEN` — git'e girmez |
+
+### Failover Parametreleri
+
+| Parametre | Değer | Açıklama |
+|---|---|---|
+| `CHECK_INTERVAL` | 10s | Health check sıklığı |
+| `FAIL_THRESHOLD` | 3 | Ardışık hata sayısı → failover tetiklenir |
+| `RECOVER_THRESHOLD` | 3 | Ardışık başarı sayısı → geri dönüş tetiklenir |
+| Toplam failover süresi | ~30s | 3 × 10s |
+| Toplam recovery süresi | ~30s | 3 × 10s |
+
+### CF SSL Modu
+
+`Full` — Cloudflare ile node1 arası self-signed cert yeterli. `Full (Strict)` gerektirmez.
+
+### node1 nginx Fallback Kısıtlamaları
+
+Failover sırasında çalışmayan özellikler (gateway down iken):
+- staging.teqlif.com (fallback config'de staging upstream yok)
+- LiveKit SFU websocket /rtc, /livekit/ (LiveKit doğrudan WS, nginx proxy gerekmiyor)
+- nginx microcaching ve rate limiting (uvicorn doğrudan yanıtlar)
+
+### CF DNS Record Yönetimi
+
+Script sadece `teqlif.com` A record'unu günceller. `www.teqlif.com` CNAME → `teqlif.com` olduğundan otomatik takip eder.
+
+### Test (2026-09-11)
+
+```
+gateway nginx durduruldu:
+  00:47:08  Gateway erişilemiyor (1/3)
+  00:47:18  Gateway erişilemiyor (2/3)
+  00:47:28  Gateway erişilemiyor (3/3)
+  00:47:28  === SWITCH: gateway → node1 (135.125.175.223) ===
+  00:47:29    teqlif.com → 135.125.175.223: OK
+
+gateway nginx başlatıldı:
+  00:48:10  Gateway geri geldi (1/3)
+  00:48:20  Gateway geri geldi (2/3)
+  00:48:30  Gateway geri geldi (3/3)
+  00:48:30  === SWITCH: node1 → gateway (94.16.105.135) ===
+  00:48:31    teqlif.com → 94.16.105.135: OK
+```
+
+Failover: 20s, Recovery: 20s (3 check × 10s, ilk check anında geldi).

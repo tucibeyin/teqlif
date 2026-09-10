@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # deploy/scale/resources/bootstrap_gateway.sh
-# gateway (Netcup) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
+# gateway (netcup GmbH, Nürnberg) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
 # Kapsam dışı (sır içerir): WireGuard private key, alertmanager.env, nginx SSL sertifikaları.
-# NOT: nginx ayrıca kurulmalı ve SSL sertifikaları ayrıca alınmalı.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -101,12 +100,10 @@ if ! /usr/local/bin/alertmanager --version 2>&1 | grep -q "$ALERTMANAGER_VERSION
   rm -rf "$TMP"
 fi
 sudo mkdir -p /etc/alertmanager /var/lib/alertmanager
-# alertmanager.yml şablondan kopyalanır; gerçek değerleri manuel doldur
 if [[ ! -f /etc/alertmanager/alertmanager.yml ]]; then
   sudo cp "$GW_SRC/alertmanager.yml.template" /etc/alertmanager/alertmanager.yml
   echo "  UYARI: /etc/alertmanager/alertmanager.yml sıfırdan kopyalandı — gerçek değerleri doldur."
 fi
-# alertmanager.env dosyası yoksa boş oluştur (secrets el ile girilmeli)
 if [[ ! -f /etc/alertmanager/alertmanager.env ]]; then
   sudo tee /etc/alertmanager/alertmanager.env > /dev/null <<'ENV'
 # Bu dosyayı el ile doldur — git'e girmesin
@@ -114,6 +111,35 @@ SLACK_WEBHOOK_URL=
 ENV
   echo "  UYARI: /etc/alertmanager/alertmanager.env oluşturuldu — SLACK_WEBHOOK_URL doldur."
 fi
+
+# ── nginx.conf optimizasyonu ─────────────────────────────────────────────────
+echo "==> nginx.conf optimizasyonu..."
+sudo cp "$GW_SRC/nginx/nginx.conf" /etc/nginx/nginx.conf
+
+# ── nginx site config (teqlif.conf + /cf-health) ─────────────────────────────
+echo "==> nginx site config..."
+sudo cp "$GW_SRC/nginx/teqlif.conf" /etc/nginx/sites-available/teqlif.conf
+if [[ ! -L /etc/nginx/sites-enabled/teqlif.conf ]]; then
+  sudo ln -s /etc/nginx/sites-available/teqlif.conf /etc/nginx/sites-enabled/teqlif.conf
+fi
+sudo nginx -t && sudo systemctl reload nginx 2>/dev/null || true
+
+# ── nginx-http-zones.conf (rate limiting) ────────────────────────────────────
+if [[ -f "$GW_SRC/nginx/nginx-http-zones.conf" ]]; then
+  sudo cp "$GW_SRC/nginx/nginx-http-zones.conf" /etc/nginx/conf.d/nginx-http-zones.conf
+fi
+
+# ── Kernel sysctl ────────────────────────────────────────────────────────────
+echo "==> sysctl optimizasyonları..."
+sudo mkdir -p /etc/sysctl.d
+sudo cp "$GW_SRC/sysctl/99-teqlif.conf" /etc/sysctl.d/99-teqlif.conf
+sudo sysctl -p /etc/sysctl.d/99-teqlif.conf
+
+# ── journald limitleri ───────────────────────────────────────────────────────
+echo "==> journald limitleri..."
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo cp "$GW_SRC/journald/journald.conf" /etc/systemd/journald.conf.d/99-teqlif.conf
+sudo systemctl restart systemd-journald
 
 # ── systemd servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri..."
@@ -136,7 +162,7 @@ elif sudo systemctl is-active wg-quick@wg0 &>/dev/null; then
     allowed-ips 10.10.0.3/32 \
     endpoint "$NODE2_ENDPOINT" \
     persistent-keepalive 25
-  printf '\n[Peer]\n# node2 — RackNerd Buffalo (AI Proxy)\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
+  printf '\n[Peer]\n# node2 — VPSHostingService.co Buffalo\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
     "$NODE2_PUBKEY" "$NODE2_ENDPOINT" | sudo tee -a /etc/wireguard/wg0.conf > /dev/null
   echo "    node2 peer eklendi ve wg0.conf'a yazildi."
 else
@@ -145,18 +171,12 @@ fi
 
 # ── UFW ───────────────────────────────────────────────────────────────────────
 echo "==> UFW..."
-sudo ufw allow 22/tcp    comment 'SSH'          2>/dev/null || true
-sudo ufw allow 80/tcp    comment 'HTTP'          2>/dev/null || true
-sudo ufw allow 443/tcp   comment 'HTTPS'         2>/dev/null || true
-sudo ufw allow 51820/udp comment 'WireGuard'     2>/dev/null || true
+sudo ufw allow 22/tcp    comment 'SSH'      2>/dev/null || true
+sudo ufw allow 80/tcp    comment 'HTTP'     2>/dev/null || true
+sudo ufw allow 443/tcp   comment 'HTTPS'    2>/dev/null || true
+sudo ufw allow 51820/udp comment 'WireGuard' 2>/dev/null || true
 sudo ufw allow in on wg0 to any port 3100 proto tcp comment 'Loki — mesh' 2>/dev/null || true
 sudo ufw --force enable
-
-# ── .env dosya izinleri ───────────────────────────────────────────────────────
-echo "==> .env izinleri..."
-[[ -f "$RESOURCES/.env.node1.production" ]] && chmod 600 "$RESOURCES/.env.node1.production"
-[[ -f "$RESOURCES/.env.node1.staging"    ]] && chmod 600 "$RESOURCES/.env.node1.staging"
-[[ -f "$RESOURCES/.env.node2.production" ]] && chmod 600 "$RESOURCES/.env.node2.production"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -164,6 +184,6 @@ echo ""
 echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: wg0.conf yaz, 'sudo systemctl enable --now wg-quick@wg0' calistir"
 echo "  2. alertmanager: /etc/alertmanager/alertmanager.yml ve alertmanager.env doldur"
-echo "  3. nginx: SSL sertifikalari al (certbot), site config'i etkinlestir"
+echo "  3. nginx: SSL sertifikalari al (certbot), teqlif.conf'ta cert yollarini gir, nginx reload"
 echo "  4. Grafana ayri kurulmali (apt repo veya binary)"
 echo "  5. Servisleri baslat: sudo systemctl start node_exporter promtail prometheus loki alertmanager"

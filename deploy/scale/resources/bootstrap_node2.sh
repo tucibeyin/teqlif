@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # deploy/scale/resources/bootstrap_node2.sh
-# node2 (RackNerd Buffalo) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
-# Kapsam dışı (sır içerir): WireGuard private key, .env değerleri.
+# node2 (VPSHostingService.co, Buffalo NY) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
+# Kapsam dışı (sır içerir): WireGuard private key, .env değerleri, CF_API_TOKEN, CF_ZONE_ID.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
 SCALE_VERSION="V1.2"
-SYSTEMD_SRC="$REPO/deploy/scale/$SCALE_VERSION/node2/systemd"
+N2_SRC="$REPO/deploy/scale/$SCALE_VERSION/node2"
+SYSTEMD_SRC="$N2_SRC/systemd"
 RESOURCES="$REPO/deploy/scale/resources"
 VENV="$REPO/venv"
 NODE_EXPORTER_VERSION="1.8.2"
@@ -18,7 +19,7 @@ echo "==> Scale version: $SCALE_VERSION"
 # ── apt ───────────────────────────────────────────────────────────────────────
 echo "==> apt paketleri..."
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip
+sudo apt install -y ufw python3.13-venv wireguard unzip curl
 
 # ── Grup üyelikleri (promtail journal okuyabilsin) ────────────────────────────
 echo "==> Grup üyelikleri..."
@@ -67,24 +68,46 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
 fi
 sudo cp "$REPO/deploy/scale/$SCALE_VERSION/node2/promtail-config.yml" /etc/promtail-config.yml
 
+# ── Kernel sysctl ────────────────────────────────────────────────────────────
+echo "==> sysctl optimizasyonları..."
+sudo mkdir -p /etc/sysctl.d
+sudo cp "$N2_SRC/sysctl/99-teqlif.conf" /etc/sysctl.d/99-teqlif.conf
+sudo sysctl -p /etc/sysctl.d/99-teqlif.conf
+
+# ── journald limitleri ───────────────────────────────────────────────────────
+echo "==> journald limitleri..."
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo cp "$N2_SRC/journald/journald.conf" /etc/systemd/journald.conf.d/99-teqlif.conf
+sudo systemctl restart systemd-journald
+
+# ── cf-failover (Cloudflare DNS failover daemon) ─────────────────────────────
+echo "==> cf-failover daemon..."
+sudo cp "$N2_SRC/cf-failover/cf-failover.sh" /usr/local/bin/cf-failover.sh
+sudo chmod +x /usr/local/bin/cf-failover.sh
+# /etc/cf-failover.env — yoksa şablondan oluştur, gerçek değerleri el ile gir
+if [[ ! -f /etc/cf-failover.env ]]; then
+  sudo cp "$N2_SRC/cf-failover/cf-failover.env.template" /etc/cf-failover.env
+  sudo chmod 600 /etc/cf-failover.env
+  echo "  UYARI: /etc/cf-failover.env olusturuldu — CF_ZONE_ID ve CF_API_TOKEN doldur, sonra:"
+  echo "  sudo systemctl restart cf-failover"
+fi
+
 # ── systemd servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri..."
-for svc in teqlif-ai-proxy node_exporter promtail; do
+for svc in teqlif-ai-proxy node_exporter promtail cf-failover; do
   sudo cp "$SYSTEMD_SRC/${svc}.service" /etc/systemd/system/
 done
 sudo systemctl daemon-reload
-for svc in teqlif-ai-proxy node_exporter promtail; do
+for svc in teqlif-ai-proxy node_exporter promtail cf-failover; do
   sudo systemctl enable "$svc"
 done
 
-# ── WireGuard wg0.conf (private key zaten üretilmişse otomatik yazar) ─────────
-# Key üretimi kapsam dışı — önceden çalıştır:
-#   sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'
+# ── WireGuard wg0.conf ────────────────────────────────────────────────────────
 echo "==> WireGuard wg0.conf..."
 if [[ -f /etc/wireguard/node2_private.key ]]; then
   if [[ ! -f /etc/wireguard/wg0.conf ]]; then
     NODE2_PRIV=$(sudo cat /etc/wireguard/node2_private.key)
-    printf '[Interface]\nAddress = 10.10.0.3/24\nListenPort = 51820\nPrivateKey = %s\n\n[Peer]\n# node1 — OVH Paris\nPublicKey = JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=\nAllowedIPs = 10.10.0.1/32\nEndpoint = 135.125.175.223:51820\nPersistentKeepalive = 25\n\n[Peer]\n# gateway — Netcup\nPublicKey = 7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=\nAllowedIPs = 10.10.0.2/32\nEndpoint = 94.16.105.135:51820\nPersistentKeepalive = 25\n' \
+    printf '[Interface]\nAddress = 10.10.0.3/24\nListenPort = 51820\nPrivateKey = %s\n\n[Peer]\n# node1 — OVHcloud Frankfurt\nPublicKey = JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=\nAllowedIPs = 10.10.0.1/32\nEndpoint = 135.125.175.223:51820\nPersistentKeepalive = 25\n\n[Peer]\n# gateway — netcup Nürnberg\nPublicKey = 7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=\nAllowedIPs = 10.10.0.2/32\nEndpoint = 94.16.105.135:51820\nPersistentKeepalive = 25\n' \
       "$NODE2_PRIV" | sudo tee /etc/wireguard/wg0.conf > /dev/null
     sudo chmod 600 /etc/wireguard/wg0.conf
     echo "    wg0.conf yazildi."
@@ -101,8 +124,8 @@ fi
 
 # ── UFW ───────────────────────────────────────────────────────────────────────
 echo "==> UFW..."
-sudo ufw allow 22/tcp   comment 'SSH'       2>/dev/null || true
-sudo ufw allow 51820/udp comment 'WireGuard' 2>/dev/null || true
+sudo ufw allow 22/tcp    comment 'SSH'        2>/dev/null || true
+sudo ufw allow 51820/udp comment 'WireGuard'  2>/dev/null || true
 sudo ufw allow in on wg0 to any port 8080 proto tcp comment 'AI proxy via WireGuard' 2>/dev/null || true
 sudo ufw allow in on wg0 to any port 9100 proto tcp comment 'node_exporter — gateway' 2>/dev/null || true
 sudo ufw --force enable
@@ -111,6 +134,9 @@ sudo ufw --force enable
 if [[ "$(hostname)" != "node2" ]]; then
   echo "==> Hostname node2 olarak ayarlaniyor..."
   sudo hostnamectl set-hostname node2
+  if ! grep -q "node2" /etc/hosts; then
+    echo "127.0.1.1 node2" | sudo tee -a /etc/hosts > /dev/null
+  fi
 fi
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
@@ -121,7 +147,11 @@ echo ""
 echo "Bootstrap tamamlandi."
 echo ""
 echo "Kalan manuel adimlar:"
-echo "  1. WireGuard key yoksa: sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
+echo "  1. WireGuard key yoksa:"
+echo "     sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
 echo "     Sonra scripti tekrar calistir — wg0.conf otomatik yazilir."
 echo "  2. .env degerlerini doldur: $RESOURCES/.env.node2.production"
-echo "  3. Servisleri baslat: sudo systemctl start teqlif-ai-proxy node_exporter promtail"
+echo "  3. CF failover: sudo nano /etc/cf-failover.env"
+echo "     CF_ZONE_ID= ve CF_API_TOKEN= satirlarini doldur"
+echo "  4. Servisleri baslat:"
+echo "     sudo systemctl start teqlif-ai-proxy node_exporter promtail cf-failover"
