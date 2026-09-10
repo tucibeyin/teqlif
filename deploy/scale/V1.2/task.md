@@ -789,7 +789,7 @@ git push origin main
 
 ### Görev 11 — Python ortamı kur
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı
 
 node2 sadece AI proxy çalıştırır; ML/DB/LiveKit paketleri gerekmez.
 `node2_production_requirements.txt` yalnızca 7 paketi içerir (~30 MB, node1'in ~1 GB'ına karşı).
