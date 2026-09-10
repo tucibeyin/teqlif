@@ -791,18 +791,21 @@ git push origin main
 
 **Durum:** [ ]
 
+node2 sadece AI proxy çalıştırır; `requirements.txt`'teki ML/DB/LiveKit paketleri gerekmez.
+`requirements-node2.txt` yalnızca 7 paketi içerir (~200 MB yerine ~30 MB).
+
 node2'de çalıştır:
 
 ```bash
 cd /var/www/teqlif.com/backend
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r requirements-node2.txt
 ```
 
 **Doğrulama:**
 ```bash
-.venv/bin/python -c "import fastapi, groq, httpx; print('OK')"
+.venv/bin/python -c "import fastapi, httpx, redis; print('OK')"
 ```
 
 ---
