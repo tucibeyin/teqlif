@@ -86,7 +86,8 @@ if ! /usr/local/bin/loki --version 2>&1 | grep -q "$LOKI_VERSION" 2>/dev/null; t
   sudo chmod +x /usr/local/bin/loki
   rm -rf "$TMP"
 fi
-sudo mkdir -p /etc/loki
+sudo mkdir -p /etc/loki /var/lib/loki
+sudo chown -R tucibeyin:tucibeyin /var/lib/loki
 sudo cp "$GW_SRC/loki-config.yml" /etc/loki/config.yml
 
 # ── alertmanager ──────────────────────────────────────────────────────────────
