@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query as FastApiQuery
 from pydantic import BaseModel, Field
@@ -654,7 +654,7 @@ class GenerateDescriptionRequest(BaseModel):
     condition: Optional[str] = Field(default=None)
     price: Optional[float] = Field(default=None, ge=0)
     subcategory: Optional[str] = Field(default=None)
-    extra_fields: Optional[dict[str, str]] = Field(default=None)
+    extra_fields: Optional[dict[str, Any]] = Field(default=None)
     lang: str = Field(default="tr")
 
 

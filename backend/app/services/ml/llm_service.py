@@ -17,7 +17,7 @@ import logging
 import random
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -127,7 +127,7 @@ def _build_prompt(
     category: str,
     condition: Optional[str],
     subcategory: Optional[str] = None,
-    extra_fields: Optional[dict[str, str]] = None,
+    extra_fields: Optional[dict[str, Any]] = None,
     lang: str = "tr",
 ) -> tuple[str, str]:
     cat_raw = category.lower().strip()
@@ -168,10 +168,15 @@ def _build_prompt(
     ]
 
     if extra_fields:
+        def _ef_str(v: Any) -> str:
+            if isinstance(v, list):
+                return ", ".join(str(i) for i in v)
+            return str(v)
+
         field_lines = [
-            f"  {key}: {val}"
+            f"  {key}: {_ef_str(val)}"
             for key, val in extra_fields.items()
-            if val and val.strip()
+            if val is not None and val != "" and val != []
         ]
         if field_lines:
             user_lines.append("Product details:")
@@ -481,7 +486,7 @@ async def generate_listing_description(
     condition: Optional[str] = None,
     price: Optional[float] = None,
     subcategory: Optional[str] = None,
-    extra_fields: Optional[dict[str, str]] = None,
+    extra_fields: Optional[dict[str, Any]] = None,
     lang: str = "tr",
 ) -> tuple[str, str]:
     """
