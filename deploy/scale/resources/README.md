@@ -62,6 +62,53 @@ resources/
 
 ---
 
+## 0. Yeni VPS — Ortak İlk Hazırlık
+
+Her yeni VPS'te node kurulumundan önce aşağıdaki adımlar **root olarak** çalıştırılır.
+
+### Kullanıcı oluştur
+
+```bash
+# tucibeyin kullanıcısını oluştur ve sudo grubuna ekle
+adduser tucibeyin
+usermod -aG sudo tucibeyin
+
+# Root'un SSH authorized_keys'ini tucibeyin'e kopyala (mevcut SSH erişimi korunur)
+mkdir -p /home/tucibeyin/.ssh
+cp /root/.ssh/authorized_keys /home/tucibeyin/.ssh/
+chown -R tucibeyin:tucibeyin /home/tucibeyin/.ssh
+chmod 700 /home/tucibeyin/.ssh
+chmod 600 /home/tucibeyin/.ssh/authorized_keys
+```
+
+### Makine adını ayarla
+
+VPS amacına göre hostname ver (`node1`, `node2`, `gateway` veya başka bir isim):
+
+```bash
+hostnamectl set-hostname <hostname>
+echo "127.0.1.1 <hostname>" >> /etc/hosts
+```
+
+### Git ve repo
+
+```bash
+apt update && apt install -y git
+
+# Repo dizinini oluştur ve klonla
+mkdir -p /var/www/teqlif.com
+git clone https://github.com/tucibeyin/teqlif.git /var/www/teqlif.com
+chown -R tucibeyin:tucibeyin /var/www/teqlif.com
+```
+
+> **Not:** Repo private ise git clone için HTTPS personal access token kullan:
+> `git clone https://<token>@github.com/tucibeyin/teqlif.git /var/www/teqlif.com`
+> Token aldıktan sonra remote URL'i temizle: `git remote set-url origin https://github.com/tucibeyin/teqlif.git`
+
+Bundan sonra **tucibeyin** kullanıcısıyla bağlan ve ilgili node kurulumuna geç.
+
+---
+
 ## node1 (OVHcloud Frankfurt) — İlk Kurulum
 
 **Ön koşul:** `/var/www/teqlif.com` repoya git clone edilmiş, `deploy/scale/V1.2/` mevcut.
