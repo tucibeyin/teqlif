@@ -689,7 +689,7 @@ void _onTapDuringAnimation() {
 
 | Soru | Karar | Gerekçe |
 |---|---|---|
-| `listings` tablosuna `ai_provider` kolonu eklensin mi? | Hayır (V1.2 değil) | Analytics değeri var; ancak V1.2 scope'unu genişletir. V1.3'e bırakılır. |
+| `listings` tablosuna `ai_provider` kolonu eklensin mi? | Hayır | Hangi modelin kullanıldığı server log'larında zaten var. Listing'e bağlamak için iş mantığı yok — kullanıcı görmez, hiçbir query bunu okumaz. |
 | Kredi düşme mantığı değişiyor mu? | Hayır | Server-side, başarılı yanıt sonrası — mevcut davranış korunur. |
 | Başka DB değişikliği? | Hayır | |
 
