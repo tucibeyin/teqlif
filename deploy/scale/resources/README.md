@@ -67,6 +67,21 @@ venv/bin/pip install -r deploy/scale/resources/node2_production_requirements.txt
 
 ---
 
+## Kurulum scriptleri
+
+| Script | Çalıştırıldığı Node | Açıklama |
+|--------|---------------------|----------|
+| `bootstrap_node1.sh` | node1 | Tek seferlik kurulum (idempotent) |
+| `bootstrap_node2.sh` | node2 | Tek seferlik kurulum (idempotent) |
+| `bootstrap_gateway.sh` | gateway | Tek seferlik kurulum (idempotent) |
+| `apply_pg_tuning.sh` | node1 | PostgreSQL ALTER SYSTEM tuning |
+| `certbot_gateway.sh` | gateway | Let's Encrypt SSL sertifikası al |
+| `node1_services.sh [start\|stop\|restart\|status]` | node1 | Tüm node1 servisleri |
+| `node2_services.sh [start\|stop\|restart\|status]` | node2 | Tüm node2 servisleri |
+| `gateway_services.sh [start\|stop\|restart\|status]` | gateway | Tüm gateway servisleri |
+
+---
+
 ## Yeni versiyon / yeni alan eklenince
 
 1. İlgili `.env.*` dosyasına yeni satır ekle

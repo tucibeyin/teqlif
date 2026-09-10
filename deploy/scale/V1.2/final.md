@@ -350,6 +350,19 @@ deploy/scale/resources/
 9. `chmod 600` .env dosyaları
 10. `hostnamectl set-hostname` (node2)
 11. `usermod -aG systemd-journal adm tucibeyin` (promtail journal erişimi)
+12. Kernel sysctl + journald limitleri uygular
+13. nginx fallback kurulumu (node1) / nginx.conf optimizasyonu (gateway)
+14. cf-failover daemon kurulumu (node2)
+
+**Yardımcı scriptler:**
+
+| Script | Node | İş |
+|---|---|---|
+| `apply_pg_tuning.sh` | node1 | PostgreSQL ALTER SYSTEM tuning + restart |
+| `certbot_gateway.sh` | gateway | Let's Encrypt SSL sertifikası al |
+| `node1_services.sh [start\|stop\|restart\|status]` | node1 | Tüm node1 servislerini yönet |
+| `node2_services.sh [start\|stop\|restart\|status]` | node2 | Tüm node2 servislerini yönet |
+| `gateway_services.sh [start\|stop\|restart\|status]` | gateway | Tüm gateway servislerini yönet |
 
 **Kapsam dışı (sır içerir):** WireGuard key üretimi, `.env` gerçek değerleri.
 
@@ -532,17 +545,26 @@ sudo nginx -t && sudo systemctl reload nginx
 ### Yeni Node Kurulumu
 
 ```bash
-# Repo klonla
+# 1. Repo klonla
 git clone <repo-url> /var/www/teqlif.com
 
-# WireGuard key üret (manuel — sır)
+# 2. WireGuard key üret (manuel — sır)
 sudo bash -c 'wg genkey | tee /etc/wireguard/<node>_private.key | wg pubkey > /etc/wireguard/<node>_public.key'
 
-# Bootstrap çalıştır
+# 3. Bootstrap çalıştır (sysctl, journald, nginx, cf-failover dahil)
 bash /var/www/teqlif.com/deploy/scale/resources/bootstrap_<node>.sh
 
-# .env değerlerini doldur
+# 4. .env değerlerini doldur
 nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
+
+# 5a. node1: PostgreSQL tuning uygula
+bash /var/www/teqlif.com/deploy/scale/resources/apply_pg_tuning.sh
+
+# 5b. gateway: SSL sertifikası al
+bash /var/www/teqlif.com/deploy/scale/resources/certbot_gateway.sh
+
+# 6. Servisleri başlat
+bash /var/www/teqlif.com/deploy/scale/resources/<node>_services.sh start
 ```
 
 ---
@@ -786,12 +808,18 @@ deploy/scale/resources/                       # Version-independent, kalıcı
 ├── .env.node1.production                     # Şablon (git'te, değerler boş)
 ├── .env.node1.staging
 ├── .env.node2.production
+├── .env.node2.cfFailover                     # CF_ZONE_ID + CF_API_TOKEN şablonu
 ├── node1_production_requirements.txt
 ├── node1_staging_requirements.txt
 ├── node2_production_requirements.txt
-├── bootstrap_node1.sh
-├── bootstrap_node2.sh
-├── bootstrap_gateway.sh
+├── bootstrap_node1.sh                        # node1 idempotent kurulum
+├── bootstrap_node2.sh                        # node2 idempotent kurulum
+├── bootstrap_gateway.sh                      # gateway idempotent kurulum
+├── apply_pg_tuning.sh                        # PostgreSQL ALTER SYSTEM tuning
+├── certbot_gateway.sh                        # Let's Encrypt SSL sertifikası
+├── node1_services.sh                         # node1 servis yönetimi (start|stop|restart|status)
+├── node2_services.sh                         # node2 servis yönetimi
+├── gateway_services.sh                       # gateway servis yönetimi
 └── README.md
 
 backend/app/
