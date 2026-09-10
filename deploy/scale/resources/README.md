@@ -22,6 +22,7 @@ bağımsız olarak **hiç değişmez**.
 | node1   | production | `node1_production_requirements.txt` | `.env.node1.production`     |
 | node1   | staging    | `node1_staging_requirements.txt`    | `.env.node1.staging`        |
 | node2   | production | `node2_production_requirements.txt` | `.env.node2.production`     |
+| node2   | cfFailover | —                                   | `.env.node2.cfFailover`     |
 
 ---
 
@@ -62,6 +63,7 @@ venv/bin/pip install -r deploy/scale/resources/node2_production_requirements.txt
 | teqlif-staging.service   | `.../deploy/scale/resources/.env.node1.staging`          |
 | teqlif-worker.service    | `.../deploy/scale/resources/.env.node1.production`       |
 | teqlif-ai-proxy.service  | `.../deploy/scale/resources/.env.node2.production`       |
+| cf-failover.service      | `.../deploy/scale/resources/.env.node2.cfFailover`       |
 
 ---
 

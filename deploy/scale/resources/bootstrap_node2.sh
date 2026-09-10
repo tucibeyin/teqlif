@@ -84,12 +84,11 @@ sudo systemctl restart systemd-journald
 echo "==> cf-failover daemon..."
 sudo cp "$N2_SRC/cf-failover/cf-failover.sh" /usr/local/bin/cf-failover.sh
 sudo chmod +x /usr/local/bin/cf-failover.sh
-# /etc/cf-failover.env — yoksa şablondan oluştur, gerçek değerleri el ile gir
-if [[ ! -f /etc/cf-failover.env ]]; then
-  sudo cp "$N2_SRC/cf-failover/cf-failover.env.template" /etc/cf-failover.env
-  sudo chmod 600 /etc/cf-failover.env
-  echo "  UYARI: /etc/cf-failover.env olusturuldu — CF_ZONE_ID ve CF_API_TOKEN doldur, sonra:"
-  echo "  sudo systemctl restart cf-failover"
+# .env.node2.cfFailover — repo içinde yaşar, değerleri git pull sonrası elle doldur
+ENV_CF="$RESOURCES/.env.node2.cfFailover"
+chmod 600 "$ENV_CF"
+if ! grep -q "^CF_API_TOKEN=.\+" "$ENV_CF" 2>/dev/null; then
+  echo "  UYARI: $ENV_CF içinde CF_API_TOKEN boş — doldurup 'sudo systemctl restart cf-failover' calistir."
 fi
 
 # ── systemd servisleri ────────────────────────────────────────────────────────
@@ -142,6 +141,7 @@ fi
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
 [[ -f "$RESOURCES/.env.node2.production" ]] && chmod 600 "$RESOURCES/.env.node2.production"
+[[ -f "$RESOURCES/.env.node2.cfFailover"  ]] && chmod 600 "$RESOURCES/.env.node2.cfFailover"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -151,7 +151,7 @@ echo "  1. WireGuard key yoksa:"
 echo "     sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
 echo "     Sonra scripti tekrar calistir — wg0.conf otomatik yazilir."
 echo "  2. .env degerlerini doldur: $RESOURCES/.env.node2.production"
-echo "  3. CF failover: sudo nano /etc/cf-failover.env"
+echo "  3. CF failover: nano $RESOURCES/.env.node2.cfFailover"
 echo "     CF_ZONE_ID= ve CF_API_TOKEN= satirlarini doldur"
 echo "  4. Servisleri baslat:"
 echo "     sudo systemctl start teqlif-ai-proxy node_exporter promtail cf-failover"

@@ -771,8 +771,7 @@ deploy/scale/V1.2/
 └── node2/
     ├── promtail-config.yml
     ├── cf-failover/
-    │   ├── cf-failover.sh                    # DNS failover daemon scripti
-    │   └── cf-failover.env.template          # CF_ZONE_ID + CF_API_TOKEN şablonu (git'te, değerler boş)
+    │   └── cf-failover.sh                    # DNS failover daemon scripti
     ├── journald/
     │   └── journald.conf                     # SystemMaxUse=200M, SystemKeepFree=200M
     ├── sysctl/
@@ -835,7 +834,7 @@ node2 cf-failover.sh
 | `teqlif-fallback.conf` | node1 nginx | port 443, self-signed cert, uvicorn:8000 proxy |
 | `cf-failover.sh` | `/usr/local/bin/` node2 | bash daemon, CF API v4 kullanır |
 | `cf-failover.service` | node2 systemd | `EnvironmentFile=/etc/cf-failover.env`, Restart=always |
-| `/etc/cf-failover.env` | node2 | `CF_ZONE_ID` + `CF_API_TOKEN` — git'e girmez |
+| `.env.node2.cfFailover` | `deploy/scale/resources/` | `CF_ZONE_ID` + `CF_API_TOKEN` — git'te, değerler boş |
 
 ### Failover Parametreleri
 
