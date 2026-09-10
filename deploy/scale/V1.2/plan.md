@@ -580,35 +580,118 @@ async def generate_description(body: GenerateDescriptionRequest, ...):
     return {"description": text, "provider": provider, "tuci_spent": tuci_spent}
 ```
 
-### 7.5 Mobile (`create_listing_screen.dart`)
+### 7.5 Mobile UX — `create_listing_screen.dart`
+
+**Durum makinesi:**
+
+```
+idle → loading → animating → done
+              ↘ error (503 / timeout)
+```
+
+**Loading state (10–45 sn):**
+- "Yapay Zeka" butonu disabled + spinner
+- TextField readonly, mevcut içerik soluk
+- Timeout: 60 saniye (node2 → Groq + Gemini zinciri tamamlanırsa max ~45s; güvenlik payı 60s)
+
+**Typewriter animasyonu:**
+- 18ms/karakter sabit hız
+- Animasyon sırasında ekrana tap → animasyon atlanır, tam metin gösterilir (`_skipAnimation = true`)
+- Animasyon bitince `_appendLocationSuffix()` çağrılır ve kredi UI güncellenir
+
+**503 / timeout error state:**
+- Snackbar: `loc.t('aiUnavailableError')` — "Şu an bu özellik kullanılamıyor."
+- Buton tekrar aktif → kullanıcı isterse tekrar deneyebilir (retry = butona tekrar basmak)
+
+**Provider notice:**
+- `provider == 'gemini'` → snackbar: `loc.t('aiDescFallbackNotice')` (zaten mevcut)
+- `provider == 'groq'` → sessiz (standart yol)
+
+**Kredi düşme zamanlaması:**
+- Backend yanıt döndüğünde (full text alındığında) server-side düşülür
+- Flutter: animasyon bitmeden tuci_spent UI güncellenir — animasyon sırasında kredi sayacı azalıyor görüntüsü verir
 
 ```dart
-// SSE streaming handler → düz HTTP POST
-final resp = await http.post(uri, headers: headers, body: jsonEncode(params))
-    .timeout(const Duration(seconds: 60));
+bool _skipAnimation = false;
 
-if (resp.statusCode == 200) {
-  final data = jsonDecode(resp.body);
-  final fullText = data['description'] as String;
-  final provider = data['provider'] as String;
+Future<void> _fetchAiDescription() async {
+  setState(() { _isLoading = true; _skipAnimation = false; });
 
-  if (provider == 'gemini') {
-    TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), ...);
+  try {
+    final resp = await http.post(uri, headers: headers, body: jsonEncode(params))
+        .timeout(const Duration(seconds: 60));
+
+    if (!mounted) return;
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      final fullText = data['description'] as String;
+      final provider = data['provider'] as String;
+
+      // Kredi UI hemen güncelle (animasyon bitmeden)
+      final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
+      if (tuciSpent > 0) _updateTuciBalance(tuciSpent);
+
+      if (provider == 'gemini') {
+        TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'));
+      }
+
+      // Typewriter (tap to skip)
+      for (int i = 0; i <= fullText.length; i++) {
+        if (!mounted || _skipAnimation) break;
+        setState(() => _descCtrl.text = fullText.substring(0, i));
+        await Future.delayed(const Duration(milliseconds: 18));
+      }
+      if (mounted) setState(() => _descCtrl.text = fullText);
+      _appendLocationSuffix();
+
+    } else {
+      TeqSnackBar.show(message: loc.t('aiUnavailableError'));
+    }
+  } on TimeoutException {
+    if (mounted) TeqSnackBar.show(message: loc.t('aiUnavailableError'));
+  } catch (_) {
+    if (mounted) TeqSnackBar.show(message: loc.t('aiUnavailableError'));
+  } finally {
+    if (mounted) setState(() { _isLoading = false; _skipAnimation = false; });
   }
+}
 
-  // Client-side typewriter animasyonu
-  for (int i = 0; i <= fullText.length; i++) {
-    if (!mounted) break;
-    setState(() => _descCtrl.text = fullText.substring(0, i));
-    await Future.delayed(const Duration(milliseconds: 18));
-  }
-  _appendLocationSuffix();
-
-  // Kredi UI güncelle
-  final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
-  if (tuciSpent > 0) { ... }
+// Tap to skip — TextField veya ekrana dokunulunca çağrılır
+void _onTapDuringAnimation() {
+  if (_isLoading) _skipAnimation = true;
 }
 ```
+
+**i18n (ARB'ye eklenecek):**
+```json
+"aiUnavailableError": "Şu an bu özellik kullanılamıyor.",
+"aiDescFallbackNotice": "Açıklama yedek model ile üretildi."
+```
+
+---
+
+## 7.6 Redis — V1.2 Kararı
+
+**Yeni Redis kullanımı yok.**
+
+| Soru | Karar | Gerekçe |
+|---|---|---|
+| `_exhausted` dict Redis'e taşınsın mı? | Hayır | node2 tek CPU → tek uvicorn worker; multi-worker senaryosu yok. node1 fallback düşük trafik. Her worker bağımsız 429 öğrenmesi kabul edilebilir. |
+| Response cache Redis'te tutulsun mu? | Hayır (V1.2 değil) | Aynı title+category kombinasyonu nadiren tekrar eder; kota tasarrufu marjinal. Karmaşıklığı artırır. İleride değerlendirilebilir. |
+| Başka Redis değişikliği? | Hayır | Mevcut Redis kullanımı (session, diğer cache) dokunulmadan kalır. |
+
+---
+
+## 7.7 Veritabanı — V1.2 Kararı
+
+**Migration yok.**
+
+| Soru | Karar | Gerekçe |
+|---|---|---|
+| `listings` tablosuna `ai_provider` kolonu eklensin mi? | Hayır (V1.2 değil) | Analytics değeri var; ancak V1.2 scope'unu genişletir. V1.3'e bırakılır. |
+| Kredi düşme mantığı değişiyor mu? | Hayır | Server-side, başarılı yanıt sonrası — mevcut davranış korunur. |
+| Başka DB değişikliği? | Hayır | |
 
 ---
 
