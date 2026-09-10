@@ -414,7 +414,7 @@ await _start_ai_registry()
 
 ### Görev 9 — Flutter: `create_listing_screen.dart` SSE → JSON + AiDescNotifier
 
-**Durum:** [x] — Tamamlandı (commit `89b3f9da`)
+**Durum:** [x] — SSE→JSON tamamlandı (commit `89b3f9da`). MVVM refactor tamamlandı (bkz. Görev 9b).
 
 **9.1 — `AiDescNotifier` oluştur**
 
@@ -542,6 +542,28 @@ void _onTapDuringAnimation() {
 ```
 
 **Doğrulama:** `dart analyze mobile/` → 0 hata. Cihazda test: AI butonu → loading → typewriter → kredi azalır. Tap sırasında → animasyon atlar, tam metin gösterilir.
+
+---
+
+### Görev 9b — Flutter MVVM: `AiDescNotifier` ViewModel
+
+**Durum:** [x] — Tamamlandı (commit `PENDING`)
+
+**Dosyalar:**
+- `mobile/lib/providers/ai_desc_provider.dart` (yeni)
+- `mobile/lib/screens/create_listing_screen.dart` (güncellendi)
+
+**Ne yapıldı:**
+- `AiDescNotifier extends StateNotifier<AiDescState>` oluşturuldu (project standardına uygun: codegen değil `StateNotifier`)
+- Provider `providers/` altına taşındı (`viewmodels/` değil — mevcut proje yapısına uygun)
+- `generate()`: API çağrısı, token alımı, kredi silme (`CacheService.clearData`) → ViewModel'de
+- `_fetchAiDescription()` sadece validasyon + `ref.read(aiDescProvider.notifier).generate(...)` çağrısı
+- `ref.listen<AiDescState>` ile typewriter animasyonu + kredi UI + Gemini snackbar → View'da (saf UI)
+- `_aiDescLoading` bool kaldırıldı → `aiDescProvider.status == AiDescStatus.loading || _typing`
+- `_typing` bool eklendi (typewriter çalışıyor mu — saf UI state)
+- `_onTapDuringAnimation()` `_typing` kontrolüne güncellendi
+
+**ADR §8 uyumluluğu:** API çağrıları + iş mantığı ViewModel'de; View yalnızca render + dinler.
 
 ---
 
@@ -678,7 +700,7 @@ async def generate_listing_description(
 
 ### Görev 10b — `circuit_breaker.py`: `InMemoryCircuitBreaker` ekle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `84b7002e`)
 
 **Dosyalar:** `backend/app/core/circuit_breaker.py`, `backend/app/services/ml/llm_service.py`
 
@@ -750,7 +772,7 @@ async def _redis_is_exhausted(model_id: str) -> bool:
 
 ### Görev 10c — Git commit + push
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `84b7002e`)
 
 ```bash
 cd /Users/tucibeyin/Desktop/teqlif

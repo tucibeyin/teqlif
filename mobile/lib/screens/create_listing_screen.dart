@@ -37,6 +37,7 @@ import '../ui_library/components/buttons/teq_button.dart';
 import '../core/media_constants.dart';
 import '../services/media_compressor.dart';
 import '../providers/compression_progress_provider.dart';
+import '../providers/ai_desc_provider.dart';
 
 class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
@@ -81,7 +82,6 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   // AI / Pro
   bool _isPro = false;
   bool _aiLoading = false;
-  bool _aiDescLoading = false;
   int? _aiCreditsRemaining;
   int? _aiDescCreditsRemaining;
 
@@ -94,6 +94,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   double _videoUploadProgress = 0.0;
 
   bool _skipAnimation = false;
+  bool _typing = false;
 
   bool _submitting = false;
 
@@ -331,81 +332,28 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       return;
     }
     setState(() {
-      _aiDescLoading = true;
       _skipAnimation = false;
       _descCtrl.text = '';
     });
-
     try {
-      final token = await StorageService.getToken();
-      final priceRaw = _priceCtrl.text.trim();
-      final price = TeqNumberFormatter.parse(priceRaw)?.toDouble();
-
-      final data = await apiCall(() => http.post(
-        Uri.parse('$kBaseUrl/listings/generate-description'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'title': _titleCtrl.text.trim(),
-          'category': _selectedCategory,
-          'condition': _selectedCondition,
-          'lang': loc.lang,
-          if (price != null && price > 0) 'price': price,
-          if (_selectedSubcategory != null) 'subcategory': _selectedSubcategory,
-          if (_extraValues.isNotEmpty || _extraMultiValues.isNotEmpty)
-            'extra_fields': {
-              ..._extraValues,
-              for (final e in _extraMultiValues.entries)
-                if (e.value.isNotEmpty) e.key: e.value.join(', '),
-            },
-        }),
-      ));
-
-      if (!mounted) return;
-
-      final fullText = data['description'] as String? ?? '';
-      final provider = data['provider'] as String? ?? '';
-      final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
-
-      // Kredi UI hemen güncelle (animasyon bitmeden)
-      if (tuciSpent > 0) {
-        CacheService.clearData('user_wallet_data');
-        _loadAiDescCredits();
-        TeqSnackBar.show(
-          message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
-          type: TeqSnackBarType.success,
-        );
-      } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
-        setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
-      }
-
-      if (provider == 'gemini') {
-        TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), type: TeqSnackBarType.info);
-      }
-
-      // Typewriter animasyonu — tap ile atlanabilir (_onTapDuringAnimation)
-      for (int i = 0; i <= fullText.length; i++) {
-        if (!mounted || _skipAnimation) break;
-        setState(() => _descCtrl.text = fullText.substring(0, i));
-        await Future.delayed(const Duration(milliseconds: 18));
-      }
-      if (mounted) {
-        setState(() => _descCtrl.text = fullText);
-        _appendLocationSuffix();
-      }
+      await ref.read(aiDescProvider.notifier).generate(
+        title: _titleCtrl.text.trim(),
+        category: _selectedCategory ?? '',
+        condition: _selectedCondition,
+        price: TeqNumberFormatter.parse(_priceCtrl.text.trim())?.toDouble(),
+        subcategory: _selectedSubcategory,
+        extraFields: _collectExtraFields(),
+        lang: loc.lang,
+      );
     } on AppException catch (e) {
       if (mounted) handleError(e, loc);
     } catch (e) {
       if (mounted) handleError(e, loc);
-    } finally {
-      if (mounted) setState(() { _aiDescLoading = false; _skipAnimation = false; });
     }
   }
 
   void _onTapDuringAnimation() {
-    if (_aiDescLoading) setState(() => _skipAnimation = true);
+    if (_typing) setState(() => _skipAnimation = true);
   }
 
   // ── Price sheet ────────────────────────────────────────────────────────────
@@ -884,6 +832,39 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    ref.listen<AiDescState>(aiDescProvider, (prev, next) async {
+      if (next.status == AiDescStatus.done && prev?.status == AiDescStatus.loading) {
+        if (next.tuciSpent > 0) {
+          _loadAiDescCredits();
+          TeqSnackBar.show(
+            message: loc.t('tuciSpent', {'count': next.tuciSpent.toString()}),
+            type: TeqSnackBarType.success,
+          );
+        } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
+          if (mounted) setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
+        }
+        if (next.provider == 'gemini') {
+          TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), type: TeqSnackBarType.info);
+        }
+        if (mounted) setState(() => _typing = true);
+        final fullText = next.text;
+        for (int i = 0; i <= fullText.length; i++) {
+          if (!mounted || _skipAnimation) break;
+          setState(() => _descCtrl.text = fullText.substring(0, i));
+          await Future.delayed(const Duration(milliseconds: 18));
+        }
+        if (mounted) {
+          setState(() {
+            _descCtrl.text = fullText;
+            _typing = false;
+            _skipAnimation = false;
+          });
+          _appendLocationSuffix();
+        }
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: Text(loc.t('btnCreateListing'))),
       body: SingleChildScrollView(
@@ -1485,7 +1466,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           ),
           const SizedBox(height: 10),
           _AiDescButton(
-            loading: _aiDescLoading,
+            loading: ref.watch(aiDescProvider).status == AiDescStatus.loading || _typing,
             isPro: _isPro,
             creditsRemaining: _aiDescCreditsRemaining,
             onTap: _fetchAiDescription,
