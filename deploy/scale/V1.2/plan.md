@@ -158,8 +158,8 @@ gateway (nginx) → WireGuard → node1:8000 (FastAPI)
 
 | Konu | Karar | Gerekçe |
 |---|---|---|
-| Streaming → Tam metin | **Tam metin JSON** | ARQ veya proxy her ikisi de streaming kırar; kullanıcı zaten bekliyor |
-| Typing animasyonu | **Client-side** (Flutter) | Tam metin gelir, Flutter sabit hızda karakter karakter oynatır; gerçek streaming'den daha tutarlı |
+| **API çağrı modu** | **Non-streaming** (tam metin) | Groq `stream=False`, Gemini `generateContent` endpoint; animasyon client-side yapılacak, streaming gereksiz |
+| **Typing animasyonu** | **Client-side** (Flutter) | API'den tam metin alınır; Flutter istediği animasyonu uygular — daha tutarlı, jitter yok |
 | Proxy vs ARQ | **HTTP Proxy** | Stateless; node2 Redis/DB'ye erişmez; fallback trivial |
 | Kredi düşme zamanı | **Başarılı yanıt sonrası** | Yarım/hatalı yanıt için ücret alınmaz |
 | Fallback | **node2 down → node1 lokal çağrı** | Groq EU'dan çalışır (~4.500 RPD, Gemini/Gemma yok) |
@@ -289,113 +289,127 @@ ufw allow from 10.10.0.3 to any port 3100   # Loki push ← node2 promtail
 
 ## 7. Backend Kod Tasarımı
 
-### 7.1 `ai_proxy_main.py` (node2'de çalışır)
+### Non-streaming ilkesi
+
+Groq ve Gemini her ikisi de tam metni tek HTTP yanıtında döndürebilir. `llm_service.py`'deki mevcut `stream=True` / `streamGenerateContent` yapısı kaldırılır; yerine basit `await response.json()` çağrıları gelir. `AsyncGenerator`, `_sentence_stream`, sentinel token'lar (`__META_groq__`, `__LLM_ERROR__`) ve SSE parsing tamamen ortadan kalkar. Post-processing (`_RE_AI_OPENER` temizleme, fiyat suffix) full string üzerinde yapılır.
+
+### 7.1 `llm_service.py` — Yeniden yazılır (non-streaming)
+
+```python
+# _get_text_groq(system, user, model) → str  (stream=False)
+# _get_text_gemini(system, user, model) → str  (generateContent endpoint)
+# _get_text_gemma(system, user) → str  (Gemini API, gemma-4-26b-a4b-it)
+
+async def generate_listing_description(title, category, ...) -> tuple[str, str]:
+    """
+    Tam metni ve provider adını döndürür: (text, provider)
+    Zincir: Groq × 6 → Gemini 3.5 FL → Gemini 3.1 FL → Gemma 4 26B
+    """
+    system, user = _build_prompt(...)
+
+    # Groq chain
+    for model_id, daily_limit in _GROQ_MODELS:
+        if not await _quota_ok(model_id, daily_limit): continue
+        try:
+            raw = await _get_text_groq(system, user, model_id)
+            return _post_process(raw, price), "groq"
+        except Exception: continue
+
+    # Gemini chain (US IP'de çalışır)
+    for model_id, daily_limit in _GEMINI_MODELS:
+        if not await _quota_ok(model_id, daily_limit): continue
+        try:
+            raw = await _get_text_gemini(system, user, model_id)
+            return _post_process(raw, price), "gemini"
+        except Exception: continue
+
+    return "", "error"
+```
+
+### 7.2 `ai_proxy_main.py` (node2'de çalışır)
 
 ```python
 # backend/app/ai_proxy_main.py
 # Çalıştırma: uvicorn app.ai_proxy_main:app --host 10.10.0.3 --port 8080
 
-from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel
-from app.services.ml.llm_service import generate_listing_description
-from app.config import settings  # GROQ_API_KEY, GEMINI_API_KEY, node2_internal_token
-
-app = FastAPI(docs_url=None, redoc_url=None)  # public UI yok
-
-class GenerateRequest(BaseModel):
-    title: str
-    category: str
-    condition: str | None = None
-    price: float | None = None
-    subcategory: str | None = None
-    extra_fields: dict | None = None
-    lang: str = "tr"
-
 @app.post("/generate")
 async def generate(body: GenerateRequest, x_internal_token: str = Header(...)):
     if x_internal_token != settings.node2_internal_token:
         raise HTTPException(status_code=403)
-    text = await generate_listing_description(**body.model_dump())
-    if text == "__LLM_ERROR__":
-        raise HTTPException(status_code=503, detail="LLM chain failed")
-    return {"text": text}
+    text, provider = await generate_listing_description(**body.model_dump())
+    if provider == "error":
+        raise HTTPException(status_code=503)
+    return {"text": text, "provider": provider}
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 ```
 
-### 7.2 `llm_service.py` — Non-streaming wrapper (node2 + lokal fallback için)
-
-```python
-# llm_service.py'ye eklenecek
-async def generate_listing_description(
-    title: str,
-    category: str,
-    condition: str | None = None,
-    price: float | None = None,
-    subcategory: str | None = None,
-    extra_fields: dict | None = None,
-    lang: str = "tr",
-) -> str:
-    """Tam metin döndürür. generate_listing_description_stream'i collect eder."""
-    chunks = []
-    async for chunk in generate_listing_description_stream(
-        title, category, condition, price, subcategory, extra_fields, lang
-    ):
-        if chunk.startswith("__META_"):
-            continue
-        if chunk == "__LLM_ERROR__":
-            return "__LLM_ERROR__"
-        chunks.append(chunk)
-    return "".join(chunks)
-```
-
 ### 7.3 `ai_proxy_client.py` (node1'de çalışır)
 
 ```python
-# backend/app/services/ml/ai_proxy_client.py
-import asyncio, logging, httpx
-from app.config import settings
-from app.services.ml.llm_service import generate_listing_description
-
-logger = logging.getLogger(__name__)
-
-async def generate_via_node2(params: dict) -> str:
-    """node2 AI proxy → lokal fallback."""
-    try:
-        async with asyncio.timeout(45):
-            async with httpx.AsyncClient() as client:
-                r = await client.post(
-                    f"{settings.node2_ai_proxy_url}/generate",
-                    json=params,
-                    headers={"X-Internal-Token": settings.node2_internal_token},
-                    timeout=44.0,
-                )
+async def generate_via_node2(params: dict) -> tuple[str, str]:
+    """(text, provider) döndürür. node2 down → lokal fallback."""
+    if settings.node2_ai_proxy_url:
+        try:
+            async with asyncio.timeout(45):
+                r = await client.post(f"{settings.node2_ai_proxy_url}/generate",
+                                      json=params,
+                                      headers={"X-Internal-Token": settings.node2_internal_token})
                 r.raise_for_status()
-                return r.json()["text"]
-    except Exception as exc:
-        logger.warning("[AI-PROXY] node2 başarısız, lokal fallback: %s", exc)
+                data = r.json()
+                return data["text"], data["provider"]
+        except Exception as exc:
+            logger.warning("[AI-PROXY] node2 başarısız, lokal fallback: %s", exc)
 
-    # Lokal fallback (Groq only, EU IP — Gemini çalışmaz)
+    # Lokal fallback (Groq only, EU IP — Gemini/Gemma EU'da çalışmaz)
     return await generate_listing_description(**params)
 ```
 
 ### 7.4 `listings.py` — SSE → JSON (node1)
 
 ```python
-# Mevcut SSE endpoint (EventSourceResponse) → normal JSON endpoint
 @router.post("/generate-description")
 async def generate_description(body: GenerateDescriptionRequest, ...):
-    # kredi kontrolü (mevcut mantık korunur)
+    # kredi kontrolü — mevcut mantık korunur
     ...
-    params = body.model_dump(exclude={"session_token"})
-    text = await generate_via_node2(params)
-    if text == "__LLM_ERROR__":
+    text, provider = await generate_via_node2(params)
+    if provider == "error":
         raise HTTPException(status_code=503)
     # kredi düş (başarılı yanıt sonrası)
     ...
-    return {"description": text}
+    return {"description": text, "provider": provider, "tuci_spent": tuci_spent}
+```
+
+### 7.5 Mobile (`create_listing_screen.dart`)
+
+```dart
+// SSE streaming handler → düz HTTP POST
+final resp = await http.post(uri, headers: headers, body: jsonEncode(params))
+    .timeout(const Duration(seconds: 60));
+
+if (resp.statusCode == 200) {
+  final data = jsonDecode(resp.body);
+  final fullText = data['description'] as String;
+  final provider = data['provider'] as String;
+
+  if (provider == 'gemini') {
+    TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), ...);
+  }
+
+  // Client-side typewriter animasyonu
+  for (int i = 0; i <= fullText.length; i++) {
+    if (!mounted) break;
+    setState(() => _descCtrl.text = fullText.substring(0, i));
+    await Future.delayed(const Duration(milliseconds: 18));
+  }
+  _appendLocationSuffix();
+
+  // Kredi UI güncelle
+  final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
+  if (tuciSpent > 0) { ... }
+}
 ```
 
 ---
