@@ -253,11 +253,72 @@ AllowedIPs = 10.10.0.3/32
 **UFW:** Ek kural gerekmez. node1 → node2:8080 outbound (varsayılan allow outgoing).
 
 **Backend kod değişiklikleri:**
-- `backend/app/config.py`: `node2_ai_proxy_url`, `node2_internal_token` alanları
-- `backend/app/services/ml/llm_service.py`: non-streaming wrapper `generate_listing_description()` ekleme
-- `backend/app/services/ml/ai_proxy_client.py`: yeni — node2 HTTP çağrısı + lokal fallback
-- `backend/app/routers/listings.py`: SSE endpoint → JSON response; `ai_proxy_client` entegrasyonu
-- `backend/app/ai_proxy_main.py`: yeni — node2'nin çalıştırdığı minimal FastAPI app
+- `backend/app/config.py`: `node2_ai_proxy_url`, `node2_internal_token` alanları eklenir
+- `backend/app/services/ml/llm_service.py`: tamamen yeniden yazılır (non-streaming, autonomous registry)
+- `backend/app/services/ml/ai_proxy_client.py`: yeni dosya — node2 HTTP çağrısı + lokal fallback
+- `backend/app/routers/listings.py`: SSE `StreamingResponse` → düz JSON response
+- `backend/app/ai_proxy_main.py`: yeni dosya — node2'nin çalıştırdığı minimal FastAPI app
+
+---
+
+### 6.4 Mono Repo + systemd İzolasyonu
+
+**Soru:** Aynı `git pull` ile gelen kod tabanında node2'ye özel servis nasıl ayağa kalkar?
+
+**Cevap:** systemd unit dosyaları node-specific'tir ve git'ten gelmez.
+
+```
+git pull  →  Python kodunu günceller (llm_service.py, ai_proxy_main.py, ...)
+systemd   →  hangi entry point'in çalışacağını belirler (node'a göre farklı, değişmez)
+```
+
+**node1'de kurulu systemd servisleri:**
+```
+/etc/systemd/system/teqlif.service          → uvicorn app.main:app --host 0.0.0.0 --port 8000
+/etc/systemd/system/teqlif-staging.service  → uvicorn app.main:app --host 0.0.0.0 --port 8001
+```
+
+**node2'de kurulu systemd servisleri:**
+```
+/etc/systemd/system/teqlif-ai-proxy.service → uvicorn app.ai_proxy_main:app --host 10.10.0.3 --port 8080
+/etc/systemd/system/node_exporter.service
+/etc/systemd/system/promtail.service
+```
+
+Bu dosyalar initial setup sırasında bir kez `cp` ile yerlerine kopyalanır. Sonraki her `git pull` sadece Python kodunu günceller; systemd neyi çalıştıracağını zaten bilir. node2'de `teqlif.service` kurulu olmadığı için `main.py` hiç başlamaz.
+
+**Deploy rutini:**
+
+| Eylem | node1 | node2 |
+|---|---|---|
+| Rutin deployment | `git pull && systemctl restart teqlif teqlif-staging` | `git pull && systemctl restart teqlif-ai-proxy` |
+| İlk kurulum | `teqlif.service` + `teqlif-staging.service` install | `teqlif-ai-proxy.service` install |
+
+**`ai_proxy_main.py` neden node1'i etkilemez?**
+
+`ai_proxy_main.py` bağımsız bir mini FastAPI uygulamasıdır. node1'deki `main.py` onu import etmez. node2'deki `ai_proxy_main.py` ise sadece ihtiyacı olanı import eder:
+
+```python
+# backend/app/ai_proxy_main.py — node2 entry point
+from app.services.ml.llm_service import generate_listing_description, start_registry_loop
+from app.config import settings
+# SQLAlchemy (database.py) import edilmez → DB bağlantısı açılmaz
+# Redis (redis_client.py)  import edilmez → Redis bağlantısı açılmaz
+# LiveKit, MinIO, ARQ worker import edilmez
+```
+
+**node2 `.env` stratejisi:**
+
+`config.py`'daki `database_url: str` ve `secret_key: str` zorunlu alanlar (varsayılan yok). Pydantic bunları `.env`'den okur. node2'de bu alanlar placeholder değer alır — `ai_proxy_main.py` hiç `database.py` import etmediği için bağlantı denenmez:
+
+```bash
+# node2 /var/www/teqlif.com/backend/.env
+DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@localhost/placeholder
+SECRET_KEY=placeholder_not_used_on_node2
+GROQ_API_KEY=gsk_...          # gerçek değer
+GEMINI_API_KEY=AIza...         # gerçek değer
+NODE2_INTERNAL_TOKEN=...       # openssl rand -hex 32 ile üretilir
+```
 
 ### 6.3 gateway (Mevcut — Eklemeler)
 
@@ -288,6 +349,30 @@ ufw allow from 10.10.0.3 to any port 3100   # Loki push ← node2 promtail
 ---
 
 ## 7. Backend Kod Tasarımı
+
+### Mevcut Kod → V1.2 Değişim Haritası
+
+| Dosya | Mevcut Durum | V1.2 Değişimi |
+|---|---|---|
+| `backend/app/services/ml/llm_service.py` | `generate_listing_description_stream()` — AsyncGenerator, stream=True, sentinel token'lar, `_quota_ok()` Redis sayacı | Tamamen yeniden yazılır: non-streaming, autonomous registry, in-memory exhaustion |
+| `backend/app/routers/listings.py:684-806` | SSE `StreamingResponse`, `event_generator()`, keep-alive ping | JSON response; `generate_via_node2()` çağrısı; kredi düşme mantığı korunur |
+| `backend/app/config.py` | `groq_api_key`, `gemini_api_key` mevcut | `node2_ai_proxy_url: str = ""`, `node2_internal_token: str = ""` eklenir |
+| `backend/app/services/ml/ai_proxy_client.py` | Yok | Yeni — node2 HTTP POST + lokal fallback |
+| `backend/app/ai_proxy_main.py` | Yok | Yeni — node2 entry point (minimal FastAPI) |
+
+**Korunan parçalar (`llm_service.py`'den):**
+- `_build_prompt()` — sistem + kullanıcı prompt oluşturma (değişmez)
+- `_build_suffix()` — fiyat suffix (değişmez)
+- `_RE_AI_OPENER`, `_CAT_NORMALIZE`, `_CONDITION_LABELS` — tüm sabitler (değişmez)
+- `llm_templates.py` — few-shot örnekler (değişmez)
+
+**Kaldırılan parçalar (`llm_service.py`'den):**
+- `generate_listing_description_stream()` — AsyncGenerator stream
+- `_tokens_groq()`, `_tokens_gemini()` — streaming token generatorlar
+- `_sentence_stream()` — cümle sınırı wrapper
+- `_quota_ok()` — Redis sayacı (Redis bağımlılığı ortadan kalkar)
+- `__META_groq__`, `__META_gemini__`, `__LLM_ERROR__` sentinel token'lar
+- `_GROQ_MODELS` hardcode list, `_GEMINI_DAILY_LIMIT` hardcode sayısı
 
 ### Non-streaming + API-driven kota ilkesi
 
@@ -567,18 +652,66 @@ async def generate_via_node2(params: dict) -> tuple[str, str]:
 
 ### 7.4 `listings.py` — SSE → JSON (node1)
 
+Mevcut endpoint (`listings.py:684-806`) `StreamingResponse` + `event_generator()` döngüsü tamamen kaldırılır. Kredi ön-kontrol mantığı (satır 697–708) değişmez; kredi düşme satır 760–781 arası mantık da korunur — yalnızca "first chunk gelince düş" yerine "tam yanıt gelince düş" olarak kaydırılır.
+
 ```python
 @router.post("/generate-description")
-async def generate_description(body: GenerateDescriptionRequest, ...):
-    # kredi kontrolü — mevcut mantık korunur
-    ...
+@limiter.limit("10/minute")
+async def generate_description(
+    request: Request,
+    body: GenerateDescriptionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # ── Kredi ön kontrolü (mevcut mantık korunur) ─────────────────────────────
+    _ai_desc_cost  = credit_service.cost_tuci("ai_desc")
+    _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
+    if current_user.is_premium:
+        ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
+        if ai_used >= _ai_desc_limit and current_user.tuci_balance < _ai_desc_cost:
+            raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
+    else:
+        if current_user.tuci_balance < _ai_desc_cost:
+            raise InsufficientFundsException()
+
+    # ── AI üretimi — node2'ye ilet, yoksa lokal fallback ─────────────────────
+    params = dict(
+        title=body.title, category=body.category, condition=body.condition,
+        price=body.price, subcategory=body.subcategory,
+        extra_fields=body.extra_fields, lang=body.lang,
+    )
     text, provider = await generate_via_node2(params)
     if provider == "error":
-        raise HTTPException(status_code=503)
-    # kredi düş (başarılı yanıt sonrası)
-    ...
+        raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
+
+    # ── Kredi düş (başarılı yanıt sonrası — mevcut mantık korunur) ───────────
+    tuci_spent = 0
+    try:
+        if current_user.is_premium:
+            ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
+            if ai_used_new > _ai_desc_limit:
+                await db.execute(
+                    text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                    {"cost": _ai_desc_cost, "uid": current_user.id},
+                )
+                db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+                await db.commit()
+                tuci_spent = _ai_desc_cost
+        else:
+            await db.execute(
+                text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                {"cost": _ai_desc_cost, "uid": current_user.id},
+            )
+            db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+            await db.commit()
+            tuci_spent = _ai_desc_cost
+    except Exception as e:
+        logger.error("[AI Desc] Kredi sayma başarısız: %s", e)
+
     return {"description": text, "provider": provider, "tuci_spent": tuci_spent}
 ```
+
+`StreamingResponse` import'u ve `event_generator()` fonksiyonu `listings.py`'den tamamen kaldırılır. `generate_listing_description_stream` import'u → `generate_via_node2` import'uyla değişir.
 
 ### 7.5 Mobile UX — `create_listing_screen.dart`
 
