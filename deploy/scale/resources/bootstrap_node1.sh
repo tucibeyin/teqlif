@@ -79,6 +79,27 @@ for svc in "${SERVICES[@]}"; do
 done
 sudo systemctl enable redis-backup.timer
 
+# ── WireGuard: node2 peer (V1.2) ─────────────────────────────────────────────
+# wg0 çalışıyorsa node2 peer'ını ekler ve wg0.conf'a kalıcı yazar.
+# Key üretimi kapsam dışı — wg0 ayrıca kurulmuş olmalı.
+NODE2_PUBKEY="t+lw3dW45sVklF3wsbji7WGA6jN4+StcwK6nKmJi21k="
+NODE2_ENDPOINT="198.12.123.33:51820"
+echo "==> WireGuard: node2 peer..."
+if sudo wg show wg0 2>/dev/null | grep -q "$NODE2_PUBKEY"; then
+  echo "    node2 peer zaten mevcut, atlaniyor."
+elif sudo systemctl is-active wg-quick@wg0 &>/dev/null; then
+  sudo wg set wg0 peer "$NODE2_PUBKEY" \
+    allowed-ips 10.10.0.3/32 \
+    endpoint "$NODE2_ENDPOINT" \
+    persistent-keepalive 25
+  printf '\n[Peer]\n# node2 — RackNerd Buffalo (AI Proxy)\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
+    "$NODE2_PUBKEY" "$NODE2_ENDPOINT" | sudo tee -a /etc/wireguard/wg0.conf > /dev/null
+  echo "    node2 peer eklendi ve wg0.conf'a yazildi."
+else
+  echo "  UYARI: wg0 servisi aktif degil — node2 peer atlaniyor."
+  echo "  wg-quick@wg0 baslatildiktan sonra scripti tekrar calistir."
+fi
+
 # ── UFW ───────────────────────────────────────────────────────────────────────
 echo "==> UFW..."
 sudo ufw allow 22/tcp   comment 'SSH'       2>/dev/null || true

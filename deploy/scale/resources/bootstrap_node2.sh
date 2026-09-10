@@ -72,6 +72,28 @@ for svc in teqlif-ai-proxy node_exporter promtail; do
   sudo systemctl enable "$svc"
 done
 
+# ── WireGuard wg0.conf (private key zaten üretilmişse otomatik yazar) ─────────
+# Key üretimi kapsam dışı — önceden çalıştır:
+#   sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'
+echo "==> WireGuard wg0.conf..."
+if [[ -f /etc/wireguard/node2_private.key ]]; then
+  if [[ ! -f /etc/wireguard/wg0.conf ]]; then
+    NODE2_PRIV=$(sudo cat /etc/wireguard/node2_private.key)
+    printf '[Interface]\nAddress = 10.10.0.3/24\nListenPort = 51820\nPrivateKey = %s\n\n[Peer]\n# node1 — OVH Paris\nPublicKey = JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=\nAllowedIPs = 10.10.0.1/32\nEndpoint = 135.125.175.223:51820\nPersistentKeepalive = 25\n\n[Peer]\n# gateway — Netcup\nPublicKey = 7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=\nAllowedIPs = 10.10.0.2/32\nEndpoint = 94.16.105.135:51820\nPersistentKeepalive = 25\n' \
+      "$NODE2_PRIV" | sudo tee /etc/wireguard/wg0.conf > /dev/null
+    sudo chmod 600 /etc/wireguard/wg0.conf
+    echo "    wg0.conf yazildi."
+  else
+    echo "    wg0.conf zaten mevcut, atlaniyor."
+  fi
+  sudo systemctl enable wg-quick@wg0 2>/dev/null || true
+  sudo systemctl is-active wg-quick@wg0 &>/dev/null || sudo systemctl start wg-quick@wg0
+else
+  echo "  UYARI: /etc/wireguard/node2_private.key bulunamadi — WireGuard atlanıyor."
+  echo "  Once anahtari olustur:"
+  echo "  sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
+fi
+
 # ── UFW ───────────────────────────────────────────────────────────────────────
 echo "==> UFW..."
 sudo ufw allow 22/tcp   comment 'SSH'       2>/dev/null || true
@@ -83,7 +105,7 @@ echo ""
 echo "Bootstrap tamamlandi."
 echo ""
 echo "Kalan manuel adimlar:"
-echo "  1. WireGuard: sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
-echo "  2. wg0.conf yaz ve 'sudo systemctl enable --now wg-quick@wg0' calistir"
-echo "  3. .env degerlerini doldur: $RESOURCES/.env.node2.production"
-echo "  4. Servisleri baslat: sudo systemctl start teqlif-ai-proxy node_exporter promtail"
+echo "  1. WireGuard key yoksa: sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
+echo "     Sonra scripti tekrar calistir — wg0.conf otomatik yazilir."
+echo "  2. .env degerlerini doldur: $RESOURCES/.env.node2.production"
+echo "  3. Servisleri baslat: sudo systemctl start teqlif-ai-proxy node_exporter promtail"

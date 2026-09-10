@@ -848,7 +848,7 @@ TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node2.production
 
 ### Görev 13 — WireGuard kur + yapılandır
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node2.sh + manuel key üretimi)
 
 ```bash
 apt install -y wireguard
@@ -880,7 +880,7 @@ wg show    # interface ve peer'lar görünmeli
 
 ### Görev 14 — UFW yapılandır
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node2.sh)
 
 ```bash
 ufw default deny incoming
@@ -897,7 +897,7 @@ ufw status
 
 ### Görev 15 — Log dizini (symlink)
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node2.sh)
 
 `logging_config.py` backend/logs/ klasörüne yazar; promtail /var/log/teqlif/ bekler:
 
@@ -911,7 +911,7 @@ ls -la /var/log/teqlif   # → symlink görünmeli
 
 ### Görev 16 — node_exporter kur + başlat
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node2.sh)
 
 ```bash
 # İndir (son sürümü kontrol et: https://github.com/prometheus/node_exporter/releases)
@@ -937,7 +937,7 @@ curl -s http://10.10.0.3:9100/metrics | head -5
 
 ### Görev 17 — promtail kur + yapılandır + başlat
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node2.sh)
 
 ```bash
 # İndir (node1'deki sürümle eşleştir)
@@ -964,7 +964,7 @@ sudo systemctl status promtail   # active (running)
 
 ### Görev 18 — teqlif-ai-proxy servisi kur + başlat
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node2.sh)
 
 ```bash
 sudo cp /var/www/teqlif.com/deploy/scale/V1.2/node2/systemd/teqlif-ai-proxy.service \
@@ -991,7 +991,7 @@ journalctl -u teqlif-ai-proxy -n 30
 
 ### Görev 19 — node1: WireGuard node2 peer ekle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node1.sh + manuel wg0.conf kalıcı yazma)
 
 node2 public key'i (Görev 13'ten) node1'e ekle:
 
@@ -1009,7 +1009,7 @@ ping -c 3 10.10.0.3   # node1'den node2'ye
 
 ### Görev 20 — node1: `.env` güncelle
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (NODE2_AI_PROXY_URL + NODE2_INTERNAL_TOKEN + SITE_URL eklendi)
 
 node1 `.env`'e şu satırları ekle:
 
@@ -1022,7 +1022,7 @@ NODE2_INTERNAL_TOKEN=...   # Görev 12'de üretilen token (aynı değer)
 
 ### Görev 20a — node1: UFW Redis port'u node2'ye aç
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (bootstrap_node1.sh)
 
 node2 WireGuard IP'sinden gelen Redis bağlantılarına izin ver:
 
@@ -1037,7 +1037,7 @@ sudo ufw status | grep 6379   # kural görünmeli
 
 ### Görev 21 — node1: git pull + symlink + ARB sync + restart
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (git pull + systemctl restart teqlif teqlif-staging teqlif-worker teqlif-worker-critical)
 
 ```bash
 cd /var/www/teqlif.com
@@ -1230,17 +1230,17 @@ sudo systemctl start teqlif-ai-proxy
 | Kod | 8 — ARB dosyaları | [ ] |
 | Kod | 9 — Flutter AiDescNotifier | [ ] |
 | Kod | 10 — Git push | [ ] |
-| node2 | 11 — Python ortamı | [ ] |
-| node2 | 12 — .env | [ ] |
-| node2 | 13 — WireGuard | [ ] |
-| node2 | 14 — UFW | [ ] |
-| node2 | 15 — Log symlink | [ ] |
-| node2 | 16 — node_exporter | [ ] |
-| node2 | 17 — promtail | [ ] |
-| node2 | 18 — teqlif-ai-proxy servisi | [ ] |
-| node1 | 19 — WireGuard peer | [ ] |
-| node1 | 20 — .env güncelle | [ ] |
-| node1 | 21 — git pull + restart | [ ] |
+| node2 | 11 — Python ortamı | [x] |
+| node2 | 12 — .env | [x] |
+| node2 | 13 — WireGuard | [x] |
+| node2 | 14 — UFW | [x] |
+| node2 | 15 — Log symlink | [x] |
+| node2 | 16 — node_exporter | [x] |
+| node2 | 17 — promtail | [x] |
+| node2 | 18 — teqlif-ai-proxy servisi | [x] |
+| node1 | 19 — WireGuard peer | [x] |
+| node1 | 20 — .env güncelle | [x] |
+| node1 | 21 — git pull + restart | [x] |
 | gateway | 22 — WireGuard peer | [ ] |
 | gateway | 23 — UFW Loki | [ ] |
 | gateway | 24 — Prometheus + rules | [ ] |
