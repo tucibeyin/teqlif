@@ -561,6 +561,10 @@ sudo mkdir -p /etc/systemd/journald.conf.d
 sudo cp deploy/scale/V1.2/<node>/journald/journald.conf /etc/systemd/journald.conf.d/99-teqlif.conf
 sudo systemctl restart systemd-journald
 
+# loki-config.yml (gateway):
+sudo cp deploy/scale/V1.2/gateway/loki-config.yml /etc/loki/config.yml
+sudo systemctl restart loki
+
 # nginx.conf (gateway):
 sudo cp deploy/scale/V1.2/gateway/nginx/nginx.conf /etc/nginx/nginx.conf
 sudo nginx -t && sudo systemctl reload nginx
@@ -770,6 +774,11 @@ Tüm node'larda `mtu 1420` zaten doğru değerdeydi — değişiklik gerekmedi.
 | `f3d2e4b7` | Systemd servis optimizasyonları — LimitNOFILE, OOMScoreAdj, TimeoutStopSec, CPUWeight |
 | `f5be2e77` | Sistem optimizasyonları — PostgreSQL tuning, sysctl, nginx, journald |
 | `07e85c1d` | CF failover: node2 cf-failover daemon + node1 nginx fallback (port 443) |
+| `49b92dc3` | Auction doğrulama akışı PhoneVerifySheet → AccountInfoScreen |
+| `33b462a8` | firebase-key.json → backend/firebase-service-account.json |
+| `53702c2b` | firebase dosya adı düzeltmesi (.env template) |
+| `405409c4` | Log retention: Loki 720h→168h, journald MaxRetentionSec=1week |
+| `7ee9cb11` | bootstrap_gateway: /var/lib/loki chown tucibeyin |
 
 ---
 
