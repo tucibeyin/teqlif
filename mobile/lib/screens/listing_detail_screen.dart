@@ -2393,8 +2393,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           loc.t('fieldCondition'),
                           _localizeCondition(loc, listing['condition'] as String),
                         ),
-                      if (listing['location'] != null)
-                        _infoRow(loc.t('listingLocationLabel'), listing['location'] as String),
+                      if (listing['province'] != null || listing['location'] != null)
+                        _infoRow(
+                          loc.t('listingLocationLabel'),
+                          () {
+                            final province = (listing['province'] as String?)?.trim() ??
+                                (listing['location'] as String?)?.trim() ?? '';
+                            final district = (listing['district'] as String?)?.trim() ?? '';
+                            return district.isNotEmpty ? '$province, $district' : province;
+                          }(),
+                        ),
                       // Extra fields — tüm field'lar öncelik sırasına göre
                       if (ef.isNotEmpty) ...() {
                         final subcategory =

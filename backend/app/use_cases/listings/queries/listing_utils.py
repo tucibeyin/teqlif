@@ -102,6 +102,8 @@ def _row_dict(
         "image_urls": _parse_image_urls(listing.image_urls),
         "thumbnail_url": listing.thumbnail_url,
         "video_url": listing.video_url,
+        "province": listing.province,
+        "district": listing.district,
         "location": listing.location,
         "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
         "created_at": listing.created_at,
