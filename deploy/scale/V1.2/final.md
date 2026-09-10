@@ -1,8 +1,652 @@
 # Teqlif Scale V1.2 — Kapsamlı Mimari ve Uygulama Belgesi
 
-> **Uygulama tarihi:**  
-> **Durum:**  
+> **Uygulama tarihi:** 2026-09-10  
+> **Durum:** Aktif (production)  
 > **Önceki sürüm:** `deploy/scale/V1.1/`  
-> **Kaynak dosyalar:** `deploy/scale/V1.2/`
+> **Kaynak dosyalar:** `deploy/scale/V1.2/`, `deploy/scale/resources/`
 
 ---
+
+## 1. Genel Bakış
+
+Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)** eklenir. Temel motivasyon, Groq API'sinin Avrupa IP'lerinden Gemini API'ye erişiminin kısıtlı olması ve AI açıklama üretiminde Gemini'nin devreye alınmak istenmesidir. node2, ABD IP'sine sahip RackNerd Buffalo sunucusudur; hem Groq hem Gemini'ye tam erişimi vardır.
+
+### V1.2 ile gelen değişiklikler
+
+| # | Değişiklik | Etki |
+|---|---|---|
+| 1 | node2 (RackNerd Buffalo) eklendi | AI proxy — Groq + Gemini desteği |
+| 2 | `llm_service.py` yeniden yazıldı | Stateless registry, non-streaming, autonomous model discovery |
+| 3 | Redis shared exhaustion state | node1 ve node2 aynı Groq key'i için 429 bilgisini paylaşır |
+| 4 | `InMemoryCircuitBreaker` eklendi | Redis erişimi kesilse bile llm_service bozulmaz |
+| 5 | `ai_proxy_client.py` eklendi | node1 → node2 yönlendirme + otomatik lokal fallback |
+| 6 | `ai_proxy_main.py` eklendi | node2'nin çalıştırdığı minimal FastAPI uygulaması |
+| 7 | SSE → JSON geçişi | Listing açıklama endpoint'i stream yerine tam JSON döner |
+| 8 | Flutter `AiDescNotifier` MVVM | Typewriter animasyonu View'da, iş mantığı ViewModel'de |
+| 9 | WireGuard 3-node mesh | node1 ↔ node2 ↔ gateway tam bağlantı |
+| 10 | `deploy/scale/resources/` | Tüm `.env` şablonları ve requirements tek dizinde — version-independent |
+| 11 | Bootstrap scriptleri | Her node için idempotent kurulum scripti |
+| 12 | `TEQLIF_ENV_FILE` env var | `config.py` artık env dosya yolunu env var'dan okur |
+| 13 | Tüm servisler `tucibeyin` kullanıcısına standardize edildi | node_exporter, promtail, prometheus, loki |
+
+---
+
+## 2. Donanım
+
+### node1 — OVH Frankfurt (Ana Backend)
+
+| Parametre | Değer |
+|---|---|
+| Public IP | 135.125.175.223 |
+| WireGuard IP | 10.10.0.1 |
+| CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
+| RAM | 11.4 GiB + 2 GiB Swap |
+| Disk | 98.3 GiB NVMe |
+| Ağ | **2 Gbps / unmetered** (kota yok) |
+| SSH alias | `teqlif-node1` |
+
+### gateway — Netcup Nürnberg (Edge Proxy + Observability)
+
+| Parametre | Değer |
+|---|---|
+| Public IP | 94.16.105.135 |
+| WireGuard IP | 10.10.0.2 |
+| CPU | 2 vCore (QEMU @ 2.29 GHz) |
+| RAM | 2 GB + 1 GB Swap |
+| Disk | 60 GB SSD |
+| Ağ | 1 Gbps — **24h ortalama >100 Mbps → throttle** |
+| SSH alias | `teqlif-gateway` |
+
+### node2 — RackNerd Buffalo (AI Proxy) ← **V1.2'de eklendi**
+
+| Parametre | Değer |
+|---|---|
+| Public IP | 198.12.123.33 |
+| WireGuard IP | 10.10.0.3 |
+| CPU | 1 vCore |
+| RAM | 1 GB |
+| Disk | 25 GB SSD |
+| Ağ | ABD IP — Gemini API tam erişim |
+| SSH alias | `teqlif-node2` |
+| Hostname | `node2` |
+
+**node2 seçim gerekçesi:** Groq API, Avrupa IP'lerinden Gemini endpoint'lerine kısıtlı erişim sağlar. node2 ABD IP'si sayesinde Gemini model listesini tam olarak keşfeder ve kullanır. node1 EU IP'siyle registry'de Gemini sonuçları boş döner — bu beklenen ve tasarım gereği davranıştır.
+
+---
+
+## 3. Topoloji ve Trafik Akışı
+
+```
+                    ┌─────────────────────────────────────────────┐
+ İnternet           │           CLOUDFLARE EDGE                   │
+                    │  (DDoS koruma, SSL proxy, CDN cache)        │
+                    └──────────────┬──────────────────────────────┘
+                                   │ HTTPS
+                    ┌──────────────▼──────────────────────────────┐
+                    │       gateway (Netcup, 94.16.105.135)        │
+                    │                                              │
+                    │  nginx (SSL termination, rate limit,         │
+                    │         microcaching)                        │
+                    │  WireGuard (10.10.0.2)                       │
+                    │  Prometheus  :9090                           │
+                    │  Alertmanager :9093                          │
+                    │  Loki        :3100  ← node1 + node2 push    │
+                    │  promtail    → Loki (kendi logları)          │
+                    │  node_exporter :9100                         │
+                    └──────┬───────────────────────┬──────────────┘
+                           │ WireGuard             │ WireGuard
+              ┌────────────▼────────────┐  ┌───────▼─────────────────────┐
+              │  node1 (OVH Paris)      │  │  node2 (RackNerd Buffalo)   │
+              │                         │  │               ← V1.2        │
+              │  FastAPI prod   :8000    │  │  AI Proxy  :8080            │
+              │  FastAPI staging:8001    │  │    /generate (POST)         │
+              │  PostgreSQL     :5432    │  │    /health  (GET)           │
+              │  Redis          :6379    │◄─┤  Groq API (EU kısıtısız)   │
+              │  MinIO          :9010    │  │  Gemini API (ABD IP)        │
+              │  ClickHouse     :8123    │  │  node_exporter  :9100       │
+              │  LiveKit SFU    :7880+   │  │  promtail → gateway:3100    │
+              │  ARQ Workers             │  │  WireGuard (10.10.0.3)      │
+              │  WireGuard (10.10.0.1)  │  └─────────────────────────────┘
+              │  node_exporter  :9100    │
+              │  promtail → gateway:3100 │
+              └─────────────────────────┘
+```
+
+### AI Açıklama Üretim Akışı (V1.2)
+
+```
+Mobil → POST /api/listings/generate-description
+  └─ node1: listings.py → generate_via_node2(params)
+       └─ node2_ai_proxy_url doluysa:
+            POST http://10.10.0.3:8080/generate
+              X-Internal-Token: NODE2_INTERNAL_TOKEN
+              timeout: 45s
+            └─ node2: ai_proxy_main.py
+                 └─ generate_listing_description(...)
+                      ├─ Groq modelleri dene (registry sırası)
+                      └─ Gemini modelleri dene (Groq exhausted ise)
+       └─ node2 down / timeout → lokal Groq fallback (node1)
+```
+
+### Fallback Zinciri
+
+```
+node2 (Groq + Gemini)
+    ↓  down / timeout / 503
+node1 (Groq only — EU IP, Gemini çalışmaz)
+    ↓  tüm Groq modelleri exhausted
+AIServiceBusyException (503)
+```
+
+---
+
+## 4. Servis Dağılımı
+
+| Servis | node1 | gateway | node2 | Gerekçe |
+|---|---|---|---|---|
+| FastAPI prod (:8000) | ✅ | ❌ | ❌ | PostgreSQL/Redis yakınlığı |
+| FastAPI staging (:8001) | ✅ | ❌ | ❌ | Aynı ortam, `.env.node1.staging` ile ayrılır |
+| PostgreSQL | ✅ | ❌ | ❌ | Disk I/O + worker erişimi |
+| Redis | ✅ | ❌ | ❌ | node2 WireGuard üzerinden bağlanır |
+| MinIO | ✅ | ❌ | ❌ | Disk + OVH unmetered bant |
+| ClickHouse | ✅ | ❌ | ❌ | RAM yoğun |
+| LiveKit SFU | ✅ | ❌ | ❌ | UDP medya + OVH unmetered |
+| ARQ Worker (genel) | ✅ | ❌ | ❌ | ML + DB/ClickHouse erişimi |
+| ARQ Worker (critical) | ✅ | ❌ | ❌ | Bulkhead pattern |
+| **AI Proxy (:8080)** | ❌ | ❌ | ✅ | **Gemini ABD IP gereksinimi ← V1.2** |
+| nginx (public SSL) | ❌ | ✅ | ❌ | Edge proxy rolü |
+| nginx (uploads) | ✅ | ❌ | ❌ | uploads.teqlif.com → MinIO |
+| Prometheus | ❌ | ✅ | ❌ | Observability bağımsızlığı |
+| Alertmanager | ❌ | ✅ | ❌ | Prometheus alerts → Telegram |
+| Loki | ❌ | ✅ | ❌ | 60 GB SSD |
+| promtail | ✅ | ✅ | ✅ | Her node — gateway Loki'ye push |
+| node_exporter | ✅ | ✅ | ✅ | Her node |
+| WireGuard | ✅ (10.10.0.1) | ✅ (10.10.0.2) | ✅ (10.10.0.3) | 3-node mesh ← V1.2 |
+
+---
+
+## 5. WireGuard 3-Node Mesh (V1.2)
+
+```
+node1  10.10.0.1  135.125.175.223:51820  ListenPort: 51820
+gateway 10.10.0.2  94.16.105.135:51820   ListenPort: 51820
+node2  10.10.0.3  198.12.123.33:51820   ListenPort: 51820
+```
+
+Her node diğer ikisine de peer tanımlar. PersistentKeepalive: 25s (tüm bağlantılar).
+
+**Konfigürasyon dosyaları:**
+- `deploy/scale/V1.2/wireguard/` — şablonlar (private key hariç, git'e girmez)
+- Her node'da `/etc/wireguard/wg0.conf` — gerçek config (sunucularda)
+
+**node1 ↔ node2 gecikme:** ~100ms (OVH Paris ↔ RackNerd Buffalo)
+
+---
+
+## 6. node2 AI Proxy
+
+### Servis Konfigürasyonu
+
+`deploy/scale/V1.2/node2/systemd/teqlif-ai-proxy.service`
+
+```
+WorkingDirectory: /var/www/teqlif.com/backend
+ExecStart: /var/www/teqlif.com/venv/bin/uvicorn app.ai_proxy_main:app
+           --host 10.10.0.3 --port 8080 --workers 1 --loop uvloop
+Environment: TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node2.production
+EnvironmentFile: (aynı dosya)
+```
+
+**Neden `--workers 1`:** node2 düşük RAM'e sahip (1 GB). AI çağrıları I/O-bound — tek worker yeterli.
+
+### Endpoint'ler
+
+| Method | Path | Açıklama |
+|---|---|---|
+| POST | `/generate` | AI açıklama üretimi — `X-Internal-Token` header zorunlu |
+| GET | `/health` | Servis sağlık kontrolü |
+
+### Authentication
+
+`X-Internal-Token: NODE2_INTERNAL_TOKEN` — node1 ve node2 aynı değeri paylaşır. Sır yönetimi:
+- `deploy/scale/resources/.env.node1.production` → `NODE2_INTERNAL_TOKEN=...`
+- `deploy/scale/resources/.env.node2.production` → `NODE2_INTERNAL_TOKEN=...`
+- Üretim: `openssl rand -hex 32`
+
+### node2 Python Ortamı
+
+node2 sadece AI proxy çalıştırır — ML/DB/LiveKit/MinIO paketleri yüklenmez.
+
+```
+Venv: /var/www/teqlif.com/venv/  (tüm node'lar için standart konum)
+Requirements: deploy/scale/resources/node2_production_requirements.txt
+Paketler (7): fastapi, uvicorn[standard], httpx, redis, sentry-sdk,
+              pydantic-settings, python-dotenv
+Boyut: ~30 MB  (node1'in ~1 GB'ına karşı)
+```
+
+---
+
+## 7. AI Servis Mimarisi (Backend)
+
+### `backend/app/services/ml/llm_service.py`
+
+**Model Registry** — `start_registry_loop()` lifespan'da çağrılır, 24h'te bir yeniler:
+
+```python
+# Groq: API'den model listesi çekilir, parametrik skor ile sıralanır
+# Gemini: API'den model listesi çekilir, her model probe ile doğrulanır
+#         node1 EU IP → probe 403/fail → Gemini listesi boş (beklenen)
+#         node2 ABD IP → probe başarılı → Gemini modelleri aktif
+```
+
+**Redis Shared State** — node1 ve node2 aynı Groq API key'ini paylaştığında 429'lar koordineli yönetilir:
+
+```
+Redis key: llm:exhausted:{model_id}  TTL: retry-after saniyesi
+Redis key: llm:last_success          TTL: 3600s  → sıcak yol optimizasyonu
+```
+
+**`InMemoryCircuitBreaker`** (`backend/app/core/circuit_breaker.py`):
+- Redis çağrılarını `asyncio.wait_for(timeout=2s)` ile sarar
+- 3 başarısız çağrı → OPEN, 30s sonra half-open
+- Redis down olsa bile `llm_service` çalışmaya devam eder
+
+**`max_tokens`: 600** — JSON non-streaming modunda tam açıklama için (eski streaming'de 350 idi).
+
+### `backend/app/services/ml/ai_proxy_client.py`
+
+```python
+async def generate_via_node2(params) -> tuple[str, str]:
+    if settings.node2_ai_proxy_url:
+        try:
+            async with asyncio.timeout(45):
+                r = await _client.post(f"{node2_ai_proxy_url}/generate", ...)
+                return r.json()["text"], r.json()["provider"]
+        except Exception:
+            logger.warning("[AI-PROXY] node2 başarısız, lokal fallback")
+    return await generate_listing_description(**params)  # node1 Groq-only
+```
+
+### `backend/app/ai_proxy_main.py`
+
+node2'nin çalıştırdığı minimal FastAPI uygulaması. Bağımlılıkları: yalnızca `llm_service` + `config` + `logging_config`. PostgreSQL, Redis, MinIO, LiveKit import'u yok.
+
+### `backend/app/routers/listings.py` — `/generate-description`
+
+SSE (Server-Sent Events) → JSON geçişi yapıldı:
+- `StreamingResponse` kaldırıldı
+- `generate_via_node2(params)` → `(description, provider)` döner
+- Kredi düşme başarılı yanıt sonrası gerçekleşir
+- `tuci_spent` response'a eklendi (Flutter UI'da gösterilir)
+
+### `backend/app/config.py`
+
+```python
+class Config:
+    env_file = os.environ.get("TEQLIF_ENV_FILE", ".env")
+```
+
+Her servis kendi `.env` dosyasını `TEQLIF_ENV_FILE` env var ile belirtir. Symlink gerekmez.
+
+---
+
+## 8. Flutter — AiDescNotifier MVVM (ADR §8)
+
+**Dosyalar:**
+- `mobile/lib/providers/ai_desc_provider.dart` — `AiDescNotifier extends StateNotifier<AiDescState>`
+- `mobile/lib/screens/create_listing_screen.dart` — View (render + dinleme)
+
+**State:** `AiDescStatus { idle, loading, done, error }` + `text`, `provider`, `tuciSpent`
+
+**İş mantığı (ViewModel):** API çağrısı, token yönetimi, `CacheService.clearData('user_wallet_data')`
+
+**View sorumluluğu:** `ref.listen<AiDescState>` ile typewriter animasyonu, Gemini snackbar (`aiDescFallbackNotice`), kredi UI güncellemesi. `_typing` bool saf UI state — ViewModel'e girmez.
+
+---
+
+## 9. Deploy Konfigürasyonu — `deploy/scale/resources/`
+
+Version-independent tek kaynak dizini. Her versiyonda path değişmez — node'lar hep bu dizine bakar.
+
+```
+deploy/scale/resources/
+├── .env.node1.production          # node1 prod .env şablonu (git'te, değerler boş)
+├── .env.node1.staging             # node1 staging .env şablonu
+├── .env.node2.production          # node2 prod .env şablonu
+├── node1_production_requirements.txt
+├── node1_staging_requirements.txt  # production + Faker==25.0.1
+├── node2_production_requirements.txt
+├── bootstrap_node1.sh             # node1 idempotent kurulum scripti
+├── bootstrap_node2.sh             # node2 idempotent kurulum scripti
+├── bootstrap_gateway.sh           # gateway idempotent kurulum scripti
+└── README.md
+```
+
+**Bootstrap scriptleri** şunları otomatize eder:
+1. apt paketleri
+2. `/var/www/teqlif.com/venv/` Python venv + pip install
+3. Log dizini + symlink (`/var/log/teqlif` → `/var/www/teqlif.com/logs`)
+4. node_exporter indir + kur
+5. promtail indir + kur + config
+6. Systemd servis dosyalarını kopyala + enable
+7. UFW kuralları
+8. WireGuard: node2 private key varsa wg0.conf otomatik yazar (node2); node2 peer ekler (node1, gateway)
+9. `chmod 600` .env dosyaları
+10. `hostnamectl set-hostname` (node2)
+11. `usermod -aG systemd-journal adm tucibeyin` (promtail journal erişimi)
+
+**Kapsam dışı (sır içerir):** WireGuard key üretimi, `.env` gerçek değerleri.
+
+---
+
+## 10. Systemd Servis Dosyaları
+
+### node1 — `deploy/scale/V1.2/node1/systemd/`
+
+| Dosya | Port | Workers |
+|---|---|---|
+| `teqlif.service` | 8000 | 4 |
+| `teqlif-staging.service` | 8001 | 2 |
+| `teqlif-worker.service` | — | 1 |
+| `teqlif-worker-critical.service` | — | 1 |
+| `node_exporter.service` | 9100 (wg0) | — |
+| `promtail.service` | — | — |
+| `redis-backup.service` + `.timer` | — | — |
+| `livekit.service` | 7880/7881/7882 | — |
+| `minio.service` | 9010 | — |
+
+### node2 — `deploy/scale/V1.2/node2/systemd/`
+
+| Dosya | Port | Workers |
+|---|---|---|
+| `teqlif-ai-proxy.service` | 8080 (wg0) | 1 |
+| `node_exporter.service` | 9100 (wg0) | — |
+| `promtail.service` | — | — |
+
+### gateway — `deploy/scale/V1.2/gateway/systemd/`
+
+| Dosya | Port |
+|---|---|
+| `prometheus.service` | 9090 (localhost) |
+| `alertmanager.service` | 9093 (localhost) |
+| `loki.service` | 3100 |
+| `promtail.service` | — |
+| `node_exporter.service` | 9100 (localhost) |
+
+**Tüm servisler `User=tucibeyin` ile çalışır.** İstisnalar: `livekit.service` (User=livekit), `minio.service` (User=www-data).
+
+---
+
+## 11. Firewall (UFW)
+
+### node1
+
+```
+22/tcp          ALLOW   Anywhere          # SSH
+51820/udp       ALLOW   Anywhere          # WireGuard
+8000/tcp on wg0 ALLOW   10.10.0.2         # API prod — gateway
+8001/tcp on wg0 ALLOW   10.10.0.2         # API staging — gateway
+9100/tcp on wg0 ALLOW   Anywhere (wg0)    # node_exporter — Prometheus
+6379/tcp on wg0 ALLOW   10.10.0.3         # Redis — node2  ← V1.2
+```
+
+### node2
+
+```
+22/tcp          ALLOW   Anywhere          # SSH
+51820/udp       ALLOW   Anywhere          # WireGuard
+8080/tcp on wg0 ALLOW   Anywhere (wg0)    # AI proxy — node1
+9100/tcp on wg0 ALLOW   Anywhere (wg0)    # node_exporter — gateway
+```
+
+### gateway
+
+```
+22/tcp          ALLOW   Anywhere          # SSH
+80/tcp          ALLOW   Anywhere          # HTTP
+443/tcp         ALLOW   Anywhere          # HTTPS
+51820/udp       ALLOW   Anywhere          # WireGuard
+3100/tcp on wg0 ALLOW   10.10.0.1         # Loki — node1
+3100/tcp on wg0 ALLOW   10.10.0.3         # Loki — node2  ← V1.2
+```
+
+---
+
+## 12. Monitoring Stack
+
+| Bileşen | Versiyon | Konum | V1.2 Değişikliği |
+|---|---|---|---|
+| prometheus | 2.51.0 | gateway | `node-node2` scrape target eklendi |
+| alertmanager | 0.27.0 | gateway | `AIProxyDown` alert kuralı eklendi |
+| loki | 3.6.7 | gateway | node2 logları (job: teqlif-ai-proxy, systemd-journal) |
+| promtail | 3.0.0 | her 3 node | node2 eklendi |
+| node_exporter | 1.8.2 | her 3 node | node2 eklendi (`--collector.systemd`) |
+
+### Prometheus — node2 Scrape (V1.2)
+
+`deploy/scale/V1.2/gateway/prometheus.yml`:
+```yaml
+- job_name: 'node-node2'
+  static_configs:
+    - targets: ['10.10.0.3:9100']
+      labels:
+        node: node2
+```
+
+### Alertmanager — AIProxyDown Alert
+
+`deploy/scale/V1.2/gateway/prometheus-rules.yml`:
+
+```yaml
+- alert: AIProxyDown
+  expr: up{job="node-node2"} == 0
+  for: 1m
+  labels:
+    severity: warning
+  annotations:
+    summary: "node2 AI Proxy erişilemiyor"
+```
+
+---
+
+## 13. Deploy Workflow (V1.2)
+
+### Rutin Deploy (kod değişikliği)
+
+```bash
+# Yerel
+git push
+
+# node1
+cd /var/www/teqlif.com && git pull
+sudo systemctl restart teqlif teqlif-staging teqlif-worker teqlif-worker-critical
+
+# node2
+cd /var/www/teqlif.com && git pull
+sudo systemctl restart teqlif-ai-proxy
+```
+
+### node2 .env Güncelleme
+
+```bash
+# node2
+nano /var/www/teqlif.com/deploy/scale/resources/.env.node2.production
+sudo systemctl restart teqlif-ai-proxy
+```
+
+### gateway Prometheus/Rules Güncelleme
+
+```bash
+cd /var/www/teqlif.com && git pull
+sudo cp deploy/scale/V1.2/gateway/prometheus.yml /etc/prometheus/prometheus.yml
+sudo mkdir -p /etc/prometheus/rules
+sudo cp deploy/scale/V1.2/gateway/prometheus-rules.yml /etc/prometheus/rules/teqlif.yml
+sudo systemctl restart prometheus
+```
+
+### Yeni Node Kurulumu
+
+```bash
+# Repo klonla
+git clone <repo-url> /var/www/teqlif.com
+
+# WireGuard key üret (manuel — sır)
+sudo bash -c 'wg genkey | tee /etc/wireguard/<node>_private.key | wg pubkey > /etc/wireguard/<node>_public.key'
+
+# Bootstrap çalıştır
+bash /var/www/teqlif.com/deploy/scale/resources/bootstrap_<node>.sh
+
+# .env değerlerini doldur
+nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
+```
+
+---
+
+## 14. Rollback Planı
+
+| Senaryo | Aksiyon |
+|---|---|
+| node2 çöker | node1 otomatik lokal Groq fallback'e geçer — kullanıcı etkilenmez |
+| node2 Gemini kota doldu | Groq listesine düşer; node1 fallback devrede |
+| AIProxyDown alert | `sudo systemctl restart teqlif-ai-proxy` (node2'de) |
+| gateway çöker | Cloudflare'de `teqlif.com` A → node1 (135.125.175.223). TTL 60s |
+| WireGuard bozulur | `sudo systemctl restart wg-quick@wg0` |
+| V1.1'e dönüş | `deploy/scale/V1.1/` config'lerini uygula; node2 servislerini durdur |
+
+---
+
+## 15. V1.2 Uygulama Sırasında Karşılaşılan Sorunlar
+
+### 1. WireGuard heredoc'ta variable expansion çalışmadı
+
+**Sorun:** `<< 'EOF'` (single-quoted) heredoc içinde `$(cat /etc/wireguard/node2_private.key)` expand edilmedi. wg0.conf'a literal `$(cat ...)` yazıldı.
+
+**Çözüm:** Private key önce shell değişkenine atandı (`NODE2_PRIV=$(sudo cat ...)`), ardından `printf '%s'` ile dosyaya yazıldı.
+
+### 2. `config.py` `.env` dosyasını bulamadı
+
+**Sorun:** `env_file = ".env"` hardcoded — backend/ altında `.env` olmayınca ayarlar yüklenmedi.
+
+**Çözüm:** `env_file = os.environ.get("TEQLIF_ENV_FILE", ".env")` — her systemd servisi kendi `Environment=TEQLIF_ENV_FILE=...` satırıyla belirtir.
+
+### 3. node2'de `python3 -m venv` başarısız
+
+**Sorun:** `ensurepip not available` — python3.13-venv paketi kurulu değildi.
+
+**Çözüm:** `sudo apt install python3.13-venv -y` önce çalıştırıldı. bootstrap_node2.sh'a eklendi.
+
+### 4. node_exporter UFW'da kapalı kaldı
+
+**Sorun:** UFW kurallarında 9100 portu unutuldu — Prometheus node2 target'ı `down` görüldü.
+
+**Çözüm:** `sudo ufw allow in on wg0 to any port 9100 proto tcp` eklendi. bootstrap_node2.sh güncellendi.
+
+### 5. `max_tokens: 350` JSON modunda yeterli değil
+
+**Sorun:** Eski streaming kodu için düşük tutulan limit, non-streaming modda uzun açıklamaları yarıda kesiyor.
+
+**Çözüm:** `max_tokens: 600` (Groq) ve `maxOutputTokens: 600` (Gemini) — `backend/app/services/ml/llm_service.py:443,463`.
+
+### 6. `sudo` hostname çözümleme uyarısı
+
+**Sorun:** `hostnamectl set-hostname node2` sonrası `/etc/hosts`'ta kayıt olmadığı için her `sudo` komutunda `unable to resolve host node2` uyarısı.
+
+**Çözüm:** `echo "127.0.1.1 node2" >> /etc/hosts`. bootstrap_node2.sh'a eklendi.
+
+---
+
+## 16. V1.3 Adayları
+
+- **Gemini erişim kontrolü:** node1, proxy üzerinden Gemini kullanabilir — bu bir seçim değil, şu an maliyet/karmaşıklık gerekçesiyle ertelendi.
+- **node2 auto-scaling:** Yük arttığında birden fazla AI proxy instance'ı — şu an tek worker yeterli.
+- **Redis sentinel / replica:** node1 Redis SPOF — yüksek erişilebilirlik için replica adayı.
+- **gateway SPOF fallback:** Cloudflare Health Check otomasyonu.
+- **ARQ worker node2'ye taşıma:** AI işler zaten node2'ye yönleniyor — ARQ da taşınabilir (V2.0 adayı).
+
+---
+
+## 17. Commit Referansları
+
+| Hash | İçerik |
+|---|---|
+| `1f582199` | Scale V1.2 başlangıç — plan + node2 ilk tasarım |
+| `89b3f9da` | llm_service stateless registry, ai_proxy_main, ai_proxy_client, SSE→JSON, Flutter |
+| `3c104a6b` | Redis shared exhaustion + last_success state |
+| `84b7002e` | InMemoryCircuitBreaker |
+| `d57af7ee` | Flutter AiDescNotifier MVVM refactor |
+| `002d23da` | TEQLIF_ENV_FILE config.py |
+| `a86e9041` | deploy/scale/resources/ tek kaynak yapısı |
+| `2e8ea50b` | bootstrap_node1.sh + bootstrap_node2.sh |
+| `c3a247f3` | bootstrap_gateway.sh |
+| `3ee6664f` | WireGuard otomasyonu bootstrap scriptlerine eklendi |
+| `5b0516b6` | max_tokens 350→600 |
+| `03feac31` | Tüm servisler tucibeyin kullanıcısına standardize edildi |
+
+---
+
+## 18. Dosya Referansları
+
+```
+deploy/scale/V1.2/
+├── plan.md                                   # Mimari kararlar
+├── task.md                                   # Adım adım uygulama logu
+├── final.md                                  # Bu belge
+├── wireguard/                                # wg0.conf şablonları
+├── gateway/
+│   ├── prometheus.yml                        # node-node2 scrape eklendi
+│   ├── prometheus-rules.yml                  # AIProxyDown alert
+│   ├── alertmanager.yml.template
+│   ├── loki-config.yml
+│   ├── promtail-config.yml
+│   ├── nginx/
+│   └── systemd/
+│       ├── prometheus.service                # User=tucibeyin
+│       ├── loki.service                      # User=tucibeyin
+│       ├── alertmanager.service
+│       ├── promtail.service                  # User=tucibeyin + SupplementaryGroups
+│       └── node_exporter.service             # User=tucibeyin
+├── node1/
+│   ├── promtail-config.yml
+│   └── systemd/
+│       ├── teqlif.service
+│       ├── teqlif-staging.service
+│       ├── teqlif-worker.service
+│       ├── teqlif-worker-critical.service
+│       ├── node_exporter.service             # User=tucibeyin
+│       ├── promtail.service                  # User=tucibeyin + SupplementaryGroups
+│       ├── redis-backup.service + .timer
+│       ├── livekit.service                   # User=livekit (değişmez)
+│       └── minio.service                     # User=www-data (değişmez)
+└── node2/
+    ├── promtail-config.yml
+    └── systemd/
+        ├── teqlif-ai-proxy.service
+        ├── node_exporter.service             # User=tucibeyin
+        └── promtail.service                  # User=tucibeyin + SupplementaryGroups
+
+deploy/scale/resources/                       # Version-independent, kalıcı
+├── .env.node1.production                     # Şablon (git'te, değerler boş)
+├── .env.node1.staging
+├── .env.node2.production
+├── node1_production_requirements.txt
+├── node1_staging_requirements.txt
+├── node2_production_requirements.txt
+├── bootstrap_node1.sh
+├── bootstrap_node2.sh
+├── bootstrap_gateway.sh
+└── README.md
+
+backend/app/
+├── config.py                                 # TEQLIF_ENV_FILE, node2 alanları
+├── ai_proxy_main.py                          # node2 FastAPI uygulaması (yeni)
+├── core/circuit_breaker.py                   # InMemoryCircuitBreaker (yeni)
+├── routers/listings.py                       # /generate-description SSE→JSON
+└── services/ml/
+    ├── llm_service.py                        # Stateless registry, Redis state, max_tokens=600
+    └── ai_proxy_client.py                    # generate_via_node2 + fallback (yeni)
+
+mobile/lib/
+├── providers/ai_desc_provider.dart           # AiDescNotifier (yeni)
+└── screens/create_listing_screen.dart        # ref.listen typewriter, _typing
+```
