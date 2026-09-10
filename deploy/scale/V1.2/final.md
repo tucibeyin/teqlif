@@ -9,13 +9,13 @@
 
 ## 1. Genel Bakış
 
-Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)** eklenir. Temel motivasyon, Groq API'sinin Avrupa IP'lerinden Gemini API'ye erişiminin kısıtlı olması ve AI açıklama üretiminde Gemini'nin devreye alınmak istenmesidir. node2, ABD IP'sine sahip RackNerd Buffalo sunucusudur; hem Groq hem Gemini'ye tam erişimi vardır.
+Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)** eklenir. Temel motivasyon, Groq API'sinin Avrupa IP'lerinden Gemini API'ye erişiminin kısıtlı olması ve AI açıklama üretiminde Gemini'nin devreye alınmak istenmesidir. node2, ABD IP'sine sahip VPSHostingService.co Buffalo sunucusudur; hem Groq hem Gemini'ye tam erişimi vardır.
 
 ### V1.2 ile gelen değişiklikler
 
 | # | Değişiklik | Etki |
 |---|---|---|
-| 1 | node2 (RackNerd Buffalo) eklendi | AI proxy — Groq + Gemini desteği |
+| 1 | node2 (VPSHostingService Buffalo) eklendi | AI proxy — Groq + Gemini desteği |
 | 2 | `llm_service.py` yeniden yazıldı | Stateless registry, non-streaming, autonomous model discovery |
 | 3 | Redis shared exhaustion state | node1 ve node2 aynı Groq key'i için 429 bilgisini paylaşır |
 | 4 | `InMemoryCircuitBreaker` eklendi | Redis erişimi kesilse bile llm_service bozulmaz |
@@ -38,10 +38,12 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 
 ## 2. Donanım
 
-### node1 — OVH Frankfurt (Ana Backend)
+### node1 — OVHcloud Frankfurt (Ana Backend)
 
 | Parametre | Değer |
 |---|---|
+| Sağlayıcı | **OVHcloud SAS** (FR) |
+| Lokasyon | Frankfurt, Almanya |
 | Public IP | 135.125.175.223 |
 | WireGuard IP | 10.10.0.1 |
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
@@ -50,10 +52,12 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | Ağ | **2 Gbps / unmetered** (kota yok) |
 | SSH alias | `teqlif-node1` |
 
-### gateway — Netcup Nürnberg (Edge Proxy + Observability)
+### gateway — netcup GmbH Nürnberg (Edge Proxy + Observability)
 
 | Parametre | Değer |
 |---|---|
+| Sağlayıcı | **netcup GmbH** (DE) |
+| Lokasyon | Nürnberg, Almanya |
 | Public IP | 94.16.105.135 |
 | WireGuard IP | 10.10.0.2 |
 | CPU | 2 vCore (QEMU @ 2.29 GHz) |
@@ -62,10 +66,12 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | Ağ | 1 Gbps — **24h ortalama >100 Mbps → throttle** |
 | SSH alias | `teqlif-gateway` |
 
-### node2 — RackNerd Buffalo (AI Proxy) ← **V1.2'de eklendi**
+### node2 — VPSHostingService.co Buffalo (AI Proxy) ← **V1.2'de eklendi**
 
 | Parametre | Değer |
 |---|---|
+| Sağlayıcı | **VPSHostingService.co** (US) |
+| Lokasyon | Buffalo, New York, ABD |
 | Public IP | 198.12.123.33 |
 | WireGuard IP | 10.10.0.3 |
 | CPU | 1 vCore |
@@ -88,7 +94,7 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
                     └──────────────┬──────────────────────────────┘
                                    │ HTTPS
                     ┌──────────────▼──────────────────────────────┐
-                    │       gateway (Netcup, 94.16.105.135)        │
+                    │     gateway (netcup GmbH, 94.16.105.135)     │
                     │                                              │
                     │  nginx (SSL termination, rate limit,         │
                     │         microcaching)                        │
@@ -101,7 +107,7 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
                     └──────┬───────────────────────┬──────────────┘
                            │ WireGuard             │ WireGuard
               ┌────────────▼────────────┐  ┌───────▼─────────────────────┐
-              │  node1 (OVH Paris)      │  │  node2 (RackNerd Buffalo)   │
+              │  node1 (OVHcloud, FR)   │  │  node2 (VPSHostingService.co, US)   │
               │                         │  │               ← V1.2        │
               │  FastAPI prod   :8000    │  │  AI Proxy  :8080            │
               │  FastAPI staging:8001    │  │    /generate (POST)         │
@@ -153,9 +159,9 @@ AIServiceBusyException (503)
 | FastAPI staging (:8001) | ✅ | ❌ | ❌ | Aynı ortam, `.env.node1.staging` ile ayrılır |
 | PostgreSQL | ✅ | ❌ | ❌ | Disk I/O + worker erişimi |
 | Redis | ✅ | ❌ | ❌ | node2 WireGuard üzerinden bağlanır |
-| MinIO | ✅ | ❌ | ❌ | Disk + OVH unmetered bant |
+| MinIO | ✅ | ❌ | ❌ | Disk + OVHcloud unmetered bant |
 | ClickHouse | ✅ | ❌ | ❌ | RAM yoğun |
-| LiveKit SFU | ✅ | ❌ | ❌ | UDP medya + OVH unmetered |
+| LiveKit SFU | ✅ | ❌ | ❌ | UDP medya + OVHcloud unmetered |
 | ARQ Worker (genel) | ✅ | ❌ | ❌ | ML + DB/ClickHouse erişimi |
 | ARQ Worker (critical) | ✅ | ❌ | ❌ | Bulkhead pattern |
 | **AI Proxy (:8080)** | ❌ | ❌ | ✅ | **Gemini ABD IP gereksinimi ← V1.2** |
@@ -184,7 +190,7 @@ Her node diğer ikisine de peer tanımlar. PersistentKeepalive: 25s (tüm bağla
 - `deploy/scale/V1.2/wireguard/` — şablonlar (private key hariç, git'e girmez)
 - Her node'da `/etc/wireguard/wg0.conf` — gerçek config (sunucularda)
 
-**node1 ↔ node2 gecikme:** ~100ms (OVH Paris ↔ RackNerd Buffalo)
+**node1 ↔ node2 gecikme:** ~100ms (OVHcloud Frankfurt ↔ VPSHostingService.co Buffalo)
 
 ---
 
