@@ -800,7 +800,7 @@ node2'de çalıştır:
 cd /var/www/teqlif.com/backend
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install -r requirements-node2.txt
+.venv/bin/pip install -r /var/www/teqlif.com/deploy/scale/V1.2/node2/requirements.txt
 ```
 
 **Doğrulama:**
