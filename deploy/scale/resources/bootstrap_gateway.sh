@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# deploy/scale/resources/bootstrap_gateway.sh
+# gateway (Netcup) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
+# Kapsam dışı (sır içerir): WireGuard private key, alertmanager.env, nginx SSL sertifikaları.
+# NOT: nginx ayrıca kurulmalı ve SSL sertifikaları ayrıca alınmalı.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
+SCALE_VERSION="V1.2"
+GW_SRC="$REPO/deploy/scale/$SCALE_VERSION/gateway"
+SYSTEMD_SRC="$GW_SRC/systemd"
+NODE_EXPORTER_VERSION="1.8.2"
+PROMTAIL_VERSION="3.0.0"
+PROMETHEUS_VERSION="2.51.0"
+LOKI_VERSION="3.6.7"
+ALERTMANAGER_VERSION="0.27.0"
+
+echo "==> REPO: $REPO"
+echo "==> Scale version: $SCALE_VERSION"
+
+# ── apt ───────────────────────────────────────────────────────────────────────
+echo "==> apt paketleri..."
+sudo apt update -q
+sudo apt install -y ufw wireguard unzip nginx
+
+# ── prometheus kullanıcısı ────────────────────────────────────────────────────
+if ! id prometheus &>/dev/null; then
+  sudo useradd --no-create-home --shell /bin/false prometheus
+fi
+sudo mkdir -p /etc/prometheus /var/lib/prometheus
+sudo chown prometheus:prometheus /var/lib/prometheus
+
+# ── node_exporter ─────────────────────────────────────────────────────────────
+echo "==> node_exporter $NODE_EXPORTER_VERSION..."
+if ! /usr/local/bin/node_exporter --version 2>&1 | grep -q "$NODE_EXPORTER_VERSION" 2>/dev/null; then
+  TMP=$(mktemp -d)
+  wget -q \
+    "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz" \
+    -O "$TMP/ne.tar.gz"
+  tar xzf "$TMP/ne.tar.gz" -C "$TMP"
+  sudo mv "$TMP/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter" /usr/local/bin/
+  rm -rf "$TMP"
+fi
+
+# ── promtail ──────────────────────────────────────────────────────────────────
+echo "==> promtail $PROMTAIL_VERSION..."
+if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev/null; then
+  TMP=$(mktemp -d)
+  wget -q \
+    "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip" \
+    -O "$TMP/promtail.zip"
+  unzip -q "$TMP/promtail.zip" -d "$TMP"
+  sudo mv "$TMP/promtail-linux-amd64" /usr/local/bin/promtail
+  sudo chmod +x /usr/local/bin/promtail
+  rm -rf "$TMP"
+fi
+sudo cp "$GW_SRC/promtail-config.yml" /etc/promtail-config.yml
+
+# ── prometheus ────────────────────────────────────────────────────────────────
+echo "==> prometheus $PROMETHEUS_VERSION..."
+if ! /usr/local/bin/prometheus --version 2>&1 | grep -q "$PROMETHEUS_VERSION" 2>/dev/null; then
+  TMP=$(mktemp -d)
+  wget -q \
+    "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" \
+    -O "$TMP/prom.tar.gz"
+  tar xzf "$TMP/prom.tar.gz" -C "$TMP"
+  sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/prometheus"  /usr/local/bin/
+  sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"    /usr/local/bin/
+  rm -rf "$TMP"
+fi
+sudo cp "$GW_SRC/prometheus.yml"       /etc/prometheus/prometheus.yml
+sudo cp "$GW_SRC/prometheus-rules.yml" /etc/prometheus/prometheus-rules.yml
+sudo chown -R prometheus:prometheus /etc/prometheus
+
+# ── loki ──────────────────────────────────────────────────────────────────────
+echo "==> loki $LOKI_VERSION..."
+if ! /usr/local/bin/loki --version 2>&1 | grep -q "$LOKI_VERSION" 2>/dev/null; then
+  TMP=$(mktemp -d)
+  wget -q \
+    "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip" \
+    -O "$TMP/loki.zip"
+  unzip -q "$TMP/loki.zip" -d "$TMP"
+  sudo mv "$TMP/loki-linux-amd64" /usr/local/bin/loki
+  sudo chmod +x /usr/local/bin/loki
+  rm -rf "$TMP"
+fi
+sudo mkdir -p /etc/loki
+sudo cp "$GW_SRC/loki-config.yml" /etc/loki/config.yml
+
+# ── alertmanager ──────────────────────────────────────────────────────────────
+echo "==> alertmanager $ALERTMANAGER_VERSION..."
+if ! /usr/local/bin/alertmanager --version 2>&1 | grep -q "$ALERTMANAGER_VERSION" 2>/dev/null; then
+  TMP=$(mktemp -d)
+  wget -q \
+    "https://github.com/prometheus/alertmanager/releases/download/v${ALERTMANAGER_VERSION}/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64.tar.gz" \
+    -O "$TMP/am.tar.gz"
+  tar xzf "$TMP/am.tar.gz" -C "$TMP"
+  sudo mv "$TMP/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/alertmanager" /usr/local/bin/
+  rm -rf "$TMP"
+fi
+sudo mkdir -p /etc/alertmanager /var/lib/alertmanager
+# alertmanager.yml şablondan kopyalanır; gerçek değerleri manuel doldur
+if [[ ! -f /etc/alertmanager/alertmanager.yml ]]; then
+  sudo cp "$GW_SRC/alertmanager.yml.template" /etc/alertmanager/alertmanager.yml
+  echo "  UYARI: /etc/alertmanager/alertmanager.yml sıfırdan kopyalandı — gerçek değerleri doldur."
+fi
+# alertmanager.env dosyası yoksa boş oluştur (secrets el ile girilmeli)
+if [[ ! -f /etc/alertmanager/alertmanager.env ]]; then
+  sudo tee /etc/alertmanager/alertmanager.env > /dev/null <<'ENV'
+# Bu dosyayı el ile doldur — git'e girmesin
+SLACK_WEBHOOK_URL=
+ENV
+  echo "  UYARI: /etc/alertmanager/alertmanager.env oluşturuldu — SLACK_WEBHOOK_URL doldur."
+fi
+
+# ── systemd servisleri ────────────────────────────────────────────────────────
+echo "==> systemd servisleri..."
+for svc in node_exporter promtail prometheus loki alertmanager; do
+  sudo cp "$SYSTEMD_SRC/${svc}.service" /etc/systemd/system/
+done
+sudo systemctl daemon-reload
+for svc in node_exporter promtail prometheus loki alertmanager; do
+  sudo systemctl enable "$svc"
+done
+
+# ── UFW ───────────────────────────────────────────────────────────────────────
+echo "==> UFW..."
+sudo ufw allow 22/tcp    comment 'SSH'          2>/dev/null || true
+sudo ufw allow 80/tcp    comment 'HTTP'          2>/dev/null || true
+sudo ufw allow 443/tcp   comment 'HTTPS'         2>/dev/null || true
+sudo ufw allow 51820/udp comment 'WireGuard'     2>/dev/null || true
+# Loki — sadece WireGuard mesh'inden
+sudo ufw allow in on wg0 to any port 3100 proto tcp comment 'Loki — mesh' 2>/dev/null || true
+# Prometheus scrape — sadece localhost (nginx proxy üzerinden Grafana)
+sudo ufw --force enable
+
+echo ""
+echo "Bootstrap tamamlandi."
+echo ""
+echo "Kalan manuel adimlar:"
+echo "  1. WireGuard: wg0.conf yaz, 'sudo systemctl enable --now wg-quick@wg0' calistir"
+echo "  2. alertmanager: /etc/alertmanager/alertmanager.yml ve alertmanager.env doldur"
+echo "  3. nginx: SSL sertifikalari al (certbot), site config'i etkinlestir"
+echo "  4. Grafana ayri kurulmali (apt repo veya binary)"
+echo "  5. Servisleri baslat: sudo systemctl start node_exporter promtail prometheus loki alertmanager"
