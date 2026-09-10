@@ -93,6 +93,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   bool _videoUploading = false;
   double _videoUploadProgress = 0.0;
 
+  bool _skipAnimation = false;
+
   bool _submitting = false;
 
   static const int _maxImages = 10;
@@ -330,123 +332,80 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     }
     setState(() {
       _aiDescLoading = true;
+      _skipAnimation = false;
       _descCtrl.text = '';
     });
 
-    http.Client? client;
     try {
       final token = await StorageService.getToken();
       final priceRaw = _priceCtrl.text.trim();
       final price = TeqNumberFormatter.parse(priceRaw)?.toDouble();
 
-      final req = http.Request(
-          'POST', Uri.parse('$kBaseUrl/listings/generate-description'));
-      req.headers['Content-Type'] = 'application/json';
-      if (token != null) req.headers['Authorization'] = 'Bearer $token';
-      req.body = jsonEncode({
-        'title': _titleCtrl.text.trim(),
-        'category': _selectedCategory,
-        'condition': _selectedCondition,
-        'lang': ref.read(localizationProvider).lang,
-        if (price != null && price > 0) 'price': price,
-        if (_selectedSubcategory != null) 'subcategory': _selectedSubcategory,
-        if (_extraValues.isNotEmpty || _extraMultiValues.isNotEmpty)
-          'extra_fields': {
-            ..._extraValues,
-            for (final e in _extraMultiValues.entries)
-              if (e.value.isNotEmpty) e.key: e.value.join(', '),
-          },
-      });
+      final data = await apiCall(() => http.post(
+        Uri.parse('$kBaseUrl/listings/generate-description'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': _titleCtrl.text.trim(),
+          'category': _selectedCategory,
+          'condition': _selectedCondition,
+          'lang': loc.lang,
+          if (price != null && price > 0) 'price': price,
+          if (_selectedSubcategory != null) 'subcategory': _selectedSubcategory,
+          if (_extraValues.isNotEmpty || _extraMultiValues.isNotEmpty)
+            'extra_fields': {
+              ..._extraValues,
+              for (final e in _extraMultiValues.entries)
+                if (e.value.isNotEmpty) e.key: e.value.join(', '),
+            },
+        }),
+      ));
 
-      client = http.Client();
-      final resp =
-          await client.send(req).timeout(const Duration(seconds: 60));
       if (!mounted) return;
 
-      if (resp.statusCode == 200) {
-        final stream = resp.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter());
-        await for (final line in stream) {
-          if (!mounted) break;
-          if (line.startsWith('data: ')) {
-            final dataStr = line.substring(6);
-            try {
-              final json = jsonDecode(dataStr) as Map<String, dynamic>;
-              if (json.containsKey('meta')) {
-                final metaMap = json['meta'] as Map<String, dynamic>?;
-                if (metaMap?['model'] == 'gemini') {
-                  TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), type: TeqSnackBarType.info);
-                }
-              } else if (json.containsKey('error')) {
-                TeqSnackBar.show(message: loc.t('aiDescError'), type: TeqSnackBarType.error);
-                break;
-              } else if (json.containsKey('text')) {
-                final newText = _descCtrl.text + (json['text'] as String);
-                if (mounted) setState(() {
-                  _descCtrl.value = _descCtrl.value.copyWith(
-                    text: newText,
-                    selection: TextSelection.collapsed(offset: newText.length),
-                    composing: TextRange.empty,
-                  );
-                });
-                await Future.delayed(const Duration(milliseconds: 30));
-              } else if (json['done'] == true) {
-                _appendLocationSuffix();
-                final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
-                if (tuciSpent > 0) {
-                  CacheService.clearData('user_wallet_data');
-                  _loadAiDescCredits();
-                  TeqSnackBar.show(message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
-                      type: TeqSnackBarType.success);
-                } else if (_aiDescCreditsRemaining != null &&
-                    _aiDescCreditsRemaining! > 0) {
-                  setState(
-                      () => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
-                }
-              }
-            } catch (_) {}
-          }
-        }
-      } else {
-        if (!mounted) return;
-        final errBody = await resp.stream.bytesToString();
-        if (resp.statusCode == 402) {
-          String msg;
-          try {
-            final detail =
-                (jsonDecode(errBody) as Map<String, dynamic>)['detail']
-                    as String? ??
-                    loc.t('aiDescError');
-            if (detail == 'INSUFFICIENT_FUNDS_PRO') {
-              msg = loc.t('apiErrorInsufficientFundsPro', {'cost': '5'});
-            } else if (detail == 'INSUFFICIENT_FUNDS_STD') {
-              msg = loc.t('apiErrorInsufficientFundsStd', {'cost': '5'});
-            } else {
-              msg = detail;
-            }
-          } catch (_) {
-            msg = loc.t('aiDescError');
-          }
-          // ignore: use_build_context_synchronously
-          TeqSnackBar.show(message: msg, type: TeqSnackBarType.error);
-        } else if (resp.statusCode == 503) {
-          // ignore: use_build_context_synchronously
-          TeqSnackBar.show(message: loc.t('aiDescUnavailable'), type: TeqSnackBarType.warning);
-        } else {
-          // ignore: use_build_context_synchronously
-          TeqSnackBar.show(message: loc.t('aiDescError'), type: TeqSnackBarType.error);
-        }
+      final fullText = data['description'] as String? ?? '';
+      final provider = data['provider'] as String? ?? '';
+      final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
+
+      // Kredi UI hemen güncelle (animasyon bitmeden)
+      if (tuciSpent > 0) {
+        CacheService.clearData('user_wallet_data');
+        _loadAiDescCredits();
+        TeqSnackBar.show(
+          message: loc.t('tuciSpent', {'count': tuciSpent.toString()}),
+          type: TeqSnackBarType.success,
+        );
+      } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
+        setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
       }
-    } catch (_) {
+
+      if (provider == 'gemini') {
+        TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'), type: TeqSnackBarType.info);
+      }
+
+      // Typewriter animasyonu — tap ile atlanabilir (_onTapDuringAnimation)
+      for (int i = 0; i <= fullText.length; i++) {
+        if (!mounted || _skipAnimation) break;
+        setState(() => _descCtrl.text = fullText.substring(0, i));
+        await Future.delayed(const Duration(milliseconds: 18));
+      }
       if (mounted) {
-        TeqSnackBar.show(message: ref.read(localizationProvider).t('aiDescStreamError'),
-            type: TeqSnackBarType.error);
+        setState(() => _descCtrl.text = fullText);
+        _appendLocationSuffix();
       }
+    } on AppException catch (e) {
+      if (mounted) handleError(e, loc);
+    } catch (e) {
+      if (mounted) handleError(e, loc);
     } finally {
-      client?.close();
-      if (mounted) setState(() => _aiDescLoading = false);
+      if (mounted) setState(() { _aiDescLoading = false; _skipAnimation = false; });
     }
+  }
+
+  void _onTapDuringAnimation() {
+    if (_aiDescLoading) setState(() => _skipAnimation = true);
   }
 
   // ── Price sheet ────────────────────────────────────────────────────────────
@@ -1522,6 +1481,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             hintText: loc.t('fieldDescriptionHint'),
             validator: (v) =>
                 v == null || v.isEmpty ? loc.t('fieldDescriptionHint') : null,
+            onTap: _onTapDuringAnimation,
           ),
           const SizedBox(height: 10),
           _AiDescButton(

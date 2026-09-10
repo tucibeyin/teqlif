@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Query as FastApi
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import text
+from sqlalchemy.sql import text as sql_text
 
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
@@ -39,6 +39,7 @@ from app.core.exceptions import (
     ListingNotActiveException,
     InsufficientFundsException,
     CooldownException,
+    AIServiceBusyException,
 )
 from app.services import credit_service
 from app.core.read_cache import cache_get, cache_set, invalidate_cache
@@ -283,7 +284,7 @@ async def record_listing_view(
 ):
     # Doğrudan raw SQL impression kaydı — UoW gerektirmez
     await db.execute(
-        text("""
+        sql_text("""
             INSERT INTO listing_impressions (user_id, listing_id)
             VALUES (:uid, :lid)
             ON CONFLICT DO NOTHING
@@ -425,7 +426,7 @@ async def _build_listing_audience(
         logging.getLogger(__name__).warning("[AudienceEstimate] ClickHouse başarısız: %s", exc)
         # ClickHouse yoksa listing_impressions'dan doğrudan görüntüleyenleri al
         rows = await db.execute(
-            text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
+            sql_text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
             {"lid": listing_id, "uid": owner_id},
         )
         audience.update(r[0] for r in rows.fetchall())
@@ -434,7 +435,7 @@ async def _build_listing_audience(
     # user_interests: bu kategoriyle ilgilenen (score >= 0.3) kullanıcılar
     try:
         interest_rows = await db.execute(
-            text("""
+            sql_text("""
                 SELECT DISTINCT user_id
                 FROM user_interests
                 WHERE category = :cat
@@ -479,7 +480,7 @@ async def audience_estimate(
 
     reachable = 0
     if candidate_ids:
-        token_count = await db.scalar(text("""
+        token_count = await db.scalar(sql_text("""
             SELECT COUNT(*) FROM users
             WHERE id = ANY(:ids)
               AND fcm_token IS NOT NULL AND fcm_token != ''
@@ -513,7 +514,7 @@ class ListingPriceSignalOut(BaseModel):
 
 _EMPTY_SIGNAL = ListingPriceSignalOut()
 
-_SIMILAR_ATTRS_SQL = text("""
+_SIMILAR_ATTRS_SQL = sql_text("""
     SELECT price, sale_type FROM (
         SELECT a.final_price AS price, 'auction' AS sale_type
         FROM auctions a
@@ -542,7 +543,7 @@ _SIMILAR_ATTRS_SQL = text("""
     ) sub
 """)
 
-_EXACT_SALES_SQL = text("""
+_EXACT_SALES_SQL = sql_text("""
     SELECT final_price AS price, 'auction' AS sale_type
     FROM auctions
     WHERE listing_id = :listing_id
@@ -677,9 +678,8 @@ async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     }
 
 
-from fastapi.responses import StreamingResponse
-import json
-from app.services.ml.llm_service import generate_listing_description_stream
+from app.services.ml.ai_proxy_client import generate_via_node2
+
 
 @router.post("/generate-description")
 @limiter.limit("10/minute")
@@ -690,120 +690,62 @@ async def generate_description(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Ollama (Qwen2.5:3b) ile ilan açıklaması üretir ve metni stream eder (SSE).
+    AI ilan açıklaması üretir — node2 (Groq + Gemini) primary, lokal Groq fallback.
     PRO: ayda 6 ücretsiz, sonrası 5 TUCi. Standart: her seferinde 5 TUCi.
     """
-    logger.info(f"[API] /generate-description called by user_id={current_user.id} | title='{body.title}'")
+    logger.info("[API] /generate-description user_id=%s title=%r", current_user.id, body.title[:60])
+
     # ── TUCi / PRO kredi ön kontrolü ──────────────────────────────────────────
     _ai_desc_cost  = credit_service.cost_tuci("ai_desc")
     _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
     if current_user.is_premium:
         ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
         if ai_used >= _ai_desc_limit and current_user.tuci_balance < _ai_desc_cost:
-            logger.warning(f"[API] User {current_user.id} has insufficient TUCi (PRO limit reached).")
             raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
     else:
         if current_user.tuci_balance < _ai_desc_cost:
-            logger.warning(f"[API] User {current_user.id} has insufficient TUCi.")
             raise InsufficientFundsException()
 
-    async def event_generator():
-        logger.info(f"[API] event_generator started for user_id={current_user.id}")
-        text_generated = False
-        queue = asyncio.Queue()
-
-        async def producer():
-            try:
-                async for chunk in generate_listing_description_stream(
-                    title=body.title,
-                    category=body.category,
-                    condition=body.condition,
-                    price=body.price,
-                    subcategory=body.subcategory,
-                    extra_fields=body.extra_fields,
-                    lang=body.lang,
-                ):
-                    await queue.put({"type": "chunk", "data": chunk})
-                
-                await queue.put({"type": "done"})
-            except Exception as e:
-                await queue.put({"type": "error", "error": e})
-
-        producer_task = asyncio.create_task(producer())
-
-        tuci_spent = 0
-        try:
-            while True:
-                try:
-                    # Nginx proxy_read_timeout is usually 60s. We send a ping every 10s.
-                    msg = await asyncio.wait_for(queue.get(), timeout=10.0)
-                except asyncio.TimeoutError:
-                    logger.info(f"[API] Sending SSE keep-alive ping for user_id={current_user.id}")
-                    yield f": keep-alive\n\n"
-                    continue
-
-                if msg["type"] == "done":
-                    break
-                elif msg["type"] == "error":
-                    raise msg["error"]
-                elif msg["type"] == "chunk":
-                    chunk = msg["data"]
-                    if chunk == "__LLM_ERROR__":
-                        yield f"data: {json.dumps({'error': 'AI_SERVICE_ERROR'}, ensure_ascii=False)}\n\n"
-                        return
-                    if chunk.startswith("__META_") and chunk.endswith("__"):
-                        provider = chunk[7:-2]  # "__META_groq__" → "groq"
-                        yield f"data: {json.dumps({'meta': {'model': provider}}, ensure_ascii=False)}\n\n"
-                        continue
-                    if not text_generated:
-                        # İlk chunk'ta krediyi say: LLM çalışıyor ve kullanıcı içerik alıyor.
-                        # Bağlantı daha sonra koparsa bile kredi tüketilmiş sayılır.
-                        text_generated = True
-                        logger.info(f"[API] First chunk received, charging credit for user_id={current_user.id}")
-                        try:
-                            if current_user.is_premium:
-                                ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
-                                if ai_used_new > _ai_desc_limit:
-                                    await db.execute(
-                                        text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                                        {"cost": _ai_desc_cost, "uid": current_user.id},
-                                    )
-                                    db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
-                                    await db.commit()
-                                    tuci_spent = _ai_desc_cost
-                            else:
-                                await db.execute(
-                                    text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                                    {"cost": _ai_desc_cost, "uid": current_user.id},
-                                )
-                                db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
-                                await db.commit()
-                                tuci_spent = _ai_desc_cost
-                        except Exception as charge_exc:
-                            logger.error(f"[AI Desc] Kredi sayma başarısız: %s", charge_exc)
-
-                    chunk_payload = json.dumps({'text': chunk}, ensure_ascii=False)
-                    yield f"data: {chunk_payload}\n\n"
-                    await asyncio.sleep(0.05)
-
-            if text_generated:
-                logger.info(f"[API] Stream finished for user_id={current_user.id}. tuci_spent={tuci_spent}")
-                yield f"data: {json.dumps({'done': True, 'tuci_spent': tuci_spent}, ensure_ascii=False)}\n\n"
-        except Exception as e:
-            logger.error(f"[LLM] Stream generator error: {e}")
-            yield f"data: {json.dumps({'error': 'AI_SERVICE_ERROR'}, ensure_ascii=False)}\n\n"
-        finally:
-            producer_task.cancel()
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
+    # ── AI üretimi — node2'ye ilet, yoksa lokal fallback ─────────────────────
+    params = dict(
+        title=body.title,
+        category=body.category,
+        condition=body.condition,
+        price=body.price,
+        subcategory=body.subcategory,
+        extra_fields=body.extra_fields,
+        lang=body.lang,
     )
+    # generate_via_node2 lokal fallback da dahil tüm provider'lar başarısız olursa
+    # AIServiceBusyException fırlatır (503).
+    description, provider = await generate_via_node2(params)
+
+    # ── Kredi düş (başarılı yanıt sonrası) ───────────────────────────────────
+    tuci_spent = 0
+    try:
+        if current_user.is_premium:
+            ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
+            if ai_used_new > _ai_desc_limit:
+                await db.execute(
+                    sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                    {"cost": _ai_desc_cost, "uid": current_user.id},
+                )
+                db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+                await db.commit()
+                tuci_spent = _ai_desc_cost
+        else:
+            await db.execute(
+                sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                {"cost": _ai_desc_cost, "uid": current_user.id},
+            )
+            db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+            await db.commit()
+            tuci_spent = _ai_desc_cost
+    except Exception as exc:
+        logger.error("[AI Desc] Kredi sayma başarısız: %s", exc)
+
+    logger.info("[API] /generate-description done | provider=%s tuci_spent=%d", provider, tuci_spent)
+    return {"description": description, "provider": provider, "tuci_spent": tuci_spent}
 
 
 # ── Send Mass Notification ────────────────────────────────────────────────────
@@ -872,7 +814,7 @@ async def send_mass_notification(
     if not candidate_ids:
         return {"sent": 0, "spent": 0, "code": "NO_AUDIENCE_DATA"}
 
-    token_rows = (await db.execute(text("""
+    token_rows = (await db.execute(sql_text("""
         SELECT fcm_token FROM users
         WHERE id = ANY(:ids)
           AND fcm_token IS NOT NULL AND fcm_token != ''
@@ -919,7 +861,7 @@ async def send_mass_notification(
 
     if tuci_cost > 0:
         await db.execute(
-            text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
             {"cost": tuci_cost, "uid": current_user.id},
         )
         db.add(TuciTransaction(

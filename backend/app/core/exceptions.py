@@ -189,3 +189,12 @@ class DirectSaleAlreadyActiveException(AppException):
 
     def __init__(self, message: str | None = None):
         super().__init__(status_code=409, message=message, code="DIRECT_SALE_ALREADY_ACTIVE")
+
+
+# ── AI Servisi ─────────────────────────────────────────────────────────────────
+
+class AIServiceBusyException(AppException):
+    """503 — Tüm AI modelleri kota dolduğundan veya erişilemez olduğundan yanıt üretilemedi."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=503, message=message, code="AI_SERVICE_BUSY")

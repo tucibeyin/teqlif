@@ -1,46 +1,43 @@
 """
-Groq model chain primary / Gemini (gemini-3.1-flash-lite) fallback LLM Servisi
+Scale V1.2 — Özerk registry, non-streaming, dual-provider (Groq + Gemini).
 
-Provider seçimi (sırayla, kota bitince sonraki modele geçilir):
-  1..N. Groq modelleri — _GROQ_MODELS listesinde tanımlı, her biri kendi RPD kotasıyla
-  N+1.  Gemini         — tüm Groq kotaları dolmuş ya da key yok (1,000 req/gün güvenli marj)
+Her node kendi registry'sini tutar:
+  - Startup'ta Groq model listesi çekilir, Gemini 1-token probe ile test edilir
+  - 24 saatte bir yenilenir (fire_and_forget loop)
+  - 429 → retry-after süresince model in-memory olarak atlanır
+  - Tüm modeller tükenirse AIServiceBusyException fırlatılır
 
-Her path aynı sentence-boundary streaming + Python-side suffix kullanır.
+generate_listing_description() → (description: str, provider: str)
 """
+import asyncio
 import json
 import logging
 import random
 import re
-from datetime import date
-from typing import AsyncGenerator, Optional
+import time
+from dataclasses import dataclass
+from typing import Optional
+
 import httpx
 
 from app.config import settings
-from app.utils.redis_client import get_redis
+from app.core.exceptions import AIServiceBusyException
+from app.core.logger import fire_and_forget
 from app.services.ml.llm_templates import ListingTemplates
 
 logger = logging.getLogger(__name__)
 
-# ── Sağlayıcı ayarları ────────────────────────────────────────────────────────
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+# ── Provider endpoints ────────────────────────────────────────────────────────
+GROQ_API_URL    = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
+GEMINI_URL      = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-2.0-flash-lite:generateContent"
+)
 
-# Groq free-plan model chain (öncelik sırasına göre; RPD = requests per day)
-# Kota dolan model atlanır, bir sonraki denenir.
-_GROQ_MODELS: list[tuple[str, int]] = [
-    ("openai/gpt-oss-120b", 1_000),
-    ("openai/gpt-oss-20b",  1_000),
-    ("qwen/qwen3.6-27b",    1_000),
-    ("qwen/qwen3.8-27b",    1_000),
-    ("groq/compound",         250),
-    ("groq/compound-mini",    250),
-]
+_REGISTRY_REFRESH_INTERVAL = 86_400  # 24 saat
 
-GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent"
-_GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
-
-# Sentences containing these words are truncated from LLM output (price/delivery guard)
-# Max 4 items — Groq hard limit. "kargo" intentionally omitted: truncation risk in
-# legitimate contexts ("kargo geldi" etc.); system prompt directive handles it instead.
+# ── Stop words (Groq hard limit: max 4) ──────────────────────────────────────
 _STOP_WORDS = ["TL", "₺", "elden"]
 
 # ── Kategori normalizasyonu ───────────────────────────────────────────────────
@@ -65,7 +62,7 @@ _CONDITION_LABELS: dict[str, str] = {
     "damaged":   "damaged or defective",
 }
 
-# ── Fiyat şablonları (lokasyon suffix'i artık mobile tarafında ekleniyor) ─────
+# ── Fiyat şablonları ──────────────────────────────────────────────────────────
 _PRICE_ONLY: list[str] = [
     "{price} TL'ye satıyorum, pazarlık payı var.",
     "Fiyatım {price} TL, ciddi alıcı beklerim.",
@@ -74,7 +71,6 @@ _PRICE_ONLY: list[str] = [
 ]
 
 # ── Yazım çeşitlendirme direktifleri ─────────────────────────────────────────
-# Her request'te rastgele seçilir → aynı (kategori, kondisyon) için farklı yapılar
 _PARA_DIRECTIVES: list[str] = [
     (
         "Write EXACTLY TWO PARAGRAPHS separated by a blank line. "
@@ -101,7 +97,14 @@ _FOCUS_DIRECTIVES: list[str] = [
     "Be concise and clear, avoid filler words.",
 ]
 
-# YZ açılış kalıpları — ilk cümlede tespit edilirse atlanır
+_LANG_DIRECTIVE: dict[str, str] = {
+    "tr": "ÇIKTI DİLİ: Türkçe. Açıklamayı Türkçe yaz.",
+    "en": "OUTPUT LANGUAGE: English. Write the entire listing description in English.",
+    "ar": "لغة الإخراج: العربية. اكتب وصف الإعلان بالكامل باللغة العربية.",
+    "ru": "ЯЗЫК ВЫВОДА: Русский. Напиши всё описание объявления на русском языке.",
+}
+
+# YZ açılış kalıpları — ilk cümlede tespit edilirse temizlenir
 _RE_AI_OPENER = re.compile(
     r"^(üzgünüm\b|tabii\s+ki\b|elbette\b|merhaba\b|size\s+yardım|ürününüz\b|"
     r"aşağıda\b|işte\s+ilan|evet[,\s]|anladım\b|ilan\s+metni\b)",
@@ -113,19 +116,10 @@ _SENTENCE_END = frozenset({".", "!", "?"})
 
 # ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
 def _build_suffix(price: Optional[float]) -> str:
-    """Fiyat bilgisini suffix olarak döndürür. Lokasyon mobile tarafında eklenir."""
     if price and price > 0:
         p = f"{int(price):,}".replace(",", ".")
         return random.choice(_PRICE_ONLY).format(price=p)
     return ""
-
-
-_LANG_DIRECTIVE: dict[str, str] = {
-    "tr": "ÇIKTI DİLİ: Türkçe. Açıklamayı Türkçe yaz.",
-    "en": "OUTPUT LANGUAGE: English. Write the entire listing description in English.",
-    "ar": "لغة الإخراج: العربية. اكتب وصف الإعلان بالكامل باللغة العربية.",
-    "ru": "ЯЗЫК ВЫВОДА: Русский. Напиши всё описание объявления на русском языке.",
-}
 
 
 def _build_prompt(
@@ -192,29 +186,153 @@ def _build_prompt(
     return system, user
 
 
-# ── Kota kontrolü ────────────────────────────────────────────────────────────
-async def _quota_ok(provider: str, daily_limit: int) -> bool:
+def _postprocess(raw: str, price: Optional[float]) -> str:
+    """YZ açılış cümlesi temizleme + fiyat suffix ekleme."""
+    lines = raw.strip().split("\n")
+    if lines:
+        cleaned = _RE_AI_OPENER.sub("", lines[0]).lstrip()
+        if cleaned != lines[0].lstrip():
+            logger.warning("[LLM] YZ açılış cümlesi silindi")
+        lines[0] = cleaned
+    text = "\n".join(lines).strip()
+    suffix = _build_suffix(price)
+    if suffix:
+        text = text + "\n\n" + suffix
+    return text
+
+
+# ── Rate limit hatası ─────────────────────────────────────────────────────────
+class _RateLimitError(Exception):
+    def __init__(self, retry_after: float = 60.0):
+        self.retry_after = retry_after
+
+
+# ── In-memory exhaustion tracking ────────────────────────────────────────────
+_exhausted: dict[str, float] = {}  # model_id → reset_timestamp
+
+
+def _is_exhausted(model_id: str) -> bool:
+    return time.monotonic() < _exhausted.get(model_id, 0.0)
+
+
+def _mark_exhausted(model_id: str, retry_after: float) -> None:
+    _exhausted[model_id] = time.monotonic() + retry_after
+    logger.warning("[LLM] %s exhausted %.0fs süreyle atlanıyor", model_id, retry_after)
+
+
+# ── Registry ──────────────────────────────────────────────────────────────────
+@dataclass
+class _ModelEntry:
+    model_id: str
+    provider: str   # "groq" | "gemini"
+    score: float    # yüksek = öncelikli
+
+
+_registry: list[_ModelEntry] = []
+
+
+def _score_groq_model(model_info: dict) -> float:
+    mid = model_info.get("id", "")
+    ctx = model_info.get("context_window", 0)
+    score = ctx / 1_000.0
+    if any(x in mid for x in ("70b", "72b", "90b")):
+        score += 50
+    elif any(x in mid for x in ("27b", "32b")):
+        score += 30
+    elif any(x in mid for x in ("8b", "9b")):
+        score += 10
+    return score
+
+
+async def _fetch_groq_models() -> list[_ModelEntry]:
+    if not settings.groq_api_key:
+        return []
     try:
-        redis = await get_redis()
-        key = f"{provider}:calls:{date.today().isoformat()}"
-        count = await redis.incr(key)
-        if count == 1:
-            await redis.expire(key, 86_400)
-        if count > daily_limit:
-            logger.warning("[LLM] %s günlük kota doldu (%d req)", provider, count)
-            return False
-        return True
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                GROQ_MODELS_URL,
+                headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            )
+        if resp.status_code != 200:
+            logger.warning("[LLM] Groq models API HTTP %d", resp.status_code)
+            return []
+        entries = [
+            _ModelEntry(
+                model_id=m["id"],
+                provider="groq",
+                score=_score_groq_model(m),
+            )
+            for m in resp.json().get("data", [])
+            if m.get("id") and m.get("object") == "model"
+        ]
+        entries.sort(key=lambda e: e.score, reverse=True)
+        logger.info("[LLM] Groq registry: %d model", len(entries))
+        return entries
     except Exception as exc:
-        logger.error("[LLM] Redis kota kontrolü başarısız (%s): %s — deneniyor", provider, exc)
-        return True
+        logger.error("[LLM] Groq model listesi alınamadı: %s", exc)
+        return []
 
 
-# ── Raw token async generatorlar ─────────────────────────────────────────────
-async def _tokens_groq(system: str, user: str, model: str) -> AsyncGenerator[str, None]:
-    headers = {
-        "Authorization": f"Bearer {settings.groq_api_key}",
-        "Content-Type": "application/json",
+async def _probe_gemini() -> Optional[_ModelEntry]:
+    if not settings.gemini_api_key:
+        return None
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+        "generationConfig": {"maxOutputTokens": 1},
     }
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                GEMINI_URL,
+                params={"key": settings.gemini_api_key},
+                json=payload,
+            )
+        if resp.status_code == 200:
+            logger.info("[LLM] Gemini probe OK — available")
+            return _ModelEntry(model_id="gemini-2.0-flash-lite", provider="gemini", score=5.0)
+        elif resp.status_code == 429:
+            logger.warning("[LLM] Gemini probe 429 — kota doldu")
+            return None
+        else:
+            # 403 = IP kısıtlaması (EU node), 400 = geçersiz key
+            logger.warning("[LLM] Gemini probe HTTP %d — atlanıyor", resp.status_code)
+            return None
+    except Exception as exc:
+        logger.error("[LLM] Gemini probe hatası: %s", exc)
+        return None
+
+
+async def _refresh_registry() -> None:
+    global _registry
+    groq_entries = await _fetch_groq_models()
+    gemini_entry = await _probe_gemini()
+    new_registry = groq_entries[:]
+    if gemini_entry:
+        new_registry.append(gemini_entry)
+    _registry = new_registry
+    logger.info("[LLM] Registry yenilendi: %d model", len(_registry))
+
+
+async def _loop() -> None:
+    while True:
+        await asyncio.sleep(_REGISTRY_REFRESH_INTERVAL)
+        try:
+            await _refresh_registry()
+        except Exception as exc:
+            logger.warning("[LLM] Registry refresh başarısız: %s", exc)
+
+
+async def start_registry_loop() -> None:
+    """main.py lifespan'dan await edilir: registry'yi başlatır ve 24h refresh loop'u ateşler."""
+    try:
+        await _refresh_registry()
+    except Exception as exc:
+        logger.error("[LLM] Başlangıç registry yüklenemedi: %s — boş registry ile devam", exc)
+    fire_and_forget(_loop(), tag="llm_service.registry_loop")
+
+
+# ── Non-streaming provider çağrıları ─────────────────────────────────────────
+async def _get_text_groq(system: str, user: str, model: str) -> str:
     payload = {
         "model": model,
         "messages": [
@@ -224,30 +342,26 @@ async def _tokens_groq(system: str, user: str, model: str) -> AsyncGenerator[str
         "temperature": 0.6,
         "max_tokens": 350,
         "stop": _STOP_WORDS,
-        "stream": True,
+        "stream": False,
     }
-    async with httpx.AsyncClient() as client:
-        async with client.stream(
-            "POST", GROQ_API_URL, headers=headers, json=payload, timeout=60.0
-        ) as resp:
-            if resp.status_code != 200:
-                body = await resp.aread()
-                raise RuntimeError(f"Groq HTTP {resp.status_code}: {body[:200]}")
-            async for line in resp.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                raw = line[6:].strip()
-                if raw == "[DONE]":
-                    break
-                try:
-                    delta = json.loads(raw)["choices"][0]["delta"].get("content", "")
-                    if delta:
-                        yield delta
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
+    async with httpx.AsyncClient(timeout=45.0) as client:
+        resp = await client.post(
+            GROQ_API_URL,
+            headers={
+                "Authorization": f"Bearer {settings.groq_api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+        )
+    if resp.status_code == 429:
+        retry_after = float(resp.headers.get("retry-after", "60"))
+        raise _RateLimitError(retry_after)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Groq HTTP {resp.status_code}: {resp.text[:200]}")
+    return resp.json()["choices"][0]["message"]["content"]
 
 
-async def _tokens_gemini(system: str, user: str) -> AsyncGenerator[str, None]:
+async def _get_text_gemini(system: str, user: str) -> str:
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
@@ -257,73 +371,28 @@ async def _tokens_gemini(system: str, user: str) -> AsyncGenerator[str, None]:
             "stopSequences": _STOP_WORDS,
         },
     }
-    async with httpx.AsyncClient() as client:
-        async with client.stream(
-            "POST",
-            GEMINI_API_URL,
-            params={"key": settings.gemini_api_key, "alt": "sse"},
+    async with httpx.AsyncClient(timeout=45.0) as client:
+        resp = await client.post(
+            GEMINI_URL,
+            params={"key": settings.gemini_api_key},
             json=payload,
-            timeout=60.0,
-        ) as resp:
-            if resp.status_code != 200:
-                body = await resp.aread()
-                raise RuntimeError(f"Gemini HTTP {resp.status_code}: {body[:200]}")
-            async for line in resp.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                raw = line[6:].strip()
-                try:
-                    data = json.loads(raw)
-                    text = (
-                        data.get("candidates", [{}])[0]
-                            .get("content", {})
-                            .get("parts", [{}])[0]
-                            .get("text", "")
-                    )
-                    if text:
-                        yield text
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
-
-
-# ── Sentence-boundary wrapper ─────────────────────────────────────────────────
-async def _sentence_stream(
-    token_gen: AsyncGenerator[str, None],
-    price: Optional[float],
-    provider: str,
-) -> AsyncGenerator[str, None]:
-    """Token stream'ini cümle sınırlarında flush eder, fiyat suffix'i ekler."""
-    sentence_buf = ""
-    is_first = True
-    total_chars = 0
-
-    async for token in token_gen:
-        sentence_buf += token
-        if any(c in token for c in _SENTENCE_END):
-            if is_first:
-                is_first = False
-                clean = _RE_AI_OPENER.sub("", sentence_buf).lstrip()
-                if clean != sentence_buf.lstrip():
-                    logger.warning("[LLM] YZ açılış cümlesi silindi")
-                sentence_buf = clean
-            if sentence_buf.strip():
-                yield sentence_buf
-                total_chars += len(sentence_buf)
-            sentence_buf = ""
-
-    if sentence_buf.strip():
-        logger.info("[LLM] Dangling fragment yutuldu: %r", sentence_buf[:60])
-
-    suffix = _build_suffix(price)
-    if suffix:
-        yield "\n\n"
-        yield suffix
-
-    logger.info("[LLM] Tamamlandı | %s | %d char | suffix=%r", provider, total_chars, suffix or "─")
+        )
+    if resp.status_code == 429:
+        retry_after = float(resp.headers.get("retry-after", "60"))
+        raise _RateLimitError(retry_after)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Gemini HTTP {resp.status_code}: {resp.text[:200]}")
+    data = resp.json()
+    return (
+        data.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+    )
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
-async def generate_listing_description_stream(
+async def generate_listing_description(
     title: str,
     category: str,
     condition: Optional[str] = None,
@@ -331,43 +400,33 @@ async def generate_listing_description_stream(
     subcategory: Optional[str] = None,
     extra_fields: Optional[dict[str, str]] = None,
     lang: str = "tr",
-) -> AsyncGenerator[str, None]:
+) -> tuple[str, str]:
     """
-    Groq model chain primary → Gemini fallback.
-    Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
-    Lokasyon bilgisi bu fonksiyona gelmez — mobile client tarafında eklenir.
+    Tüm registry modellerini sırayla dener; (description, provider) döner.
+    Tüm modeller exhausted/başarısız ise AIServiceBusyException fırlatır.
     """
-    system_prompt, user_prompt = _build_prompt(title, category, condition, subcategory, extra_fields, lang)
+    system_prompt, user_prompt = _build_prompt(
+        title, category, condition, subcategory, extra_fields, lang
+    )
 
-    # ── Groq model chain ──────────────────────────────────────────────────────
-    if settings.groq_api_key:
-        for model_id, daily_limit in _GROQ_MODELS:
-            if not await _quota_ok(model_id, daily_limit):
-                continue
-            try:
-                logger.info("[LLM] %s | title=%r", model_id, title[:60])
-                yield "__META_groq__"
-                async for chunk in _sentence_stream(
-                    _tokens_groq(system_prompt, user_prompt, model_id), price, model_id
-                ):
-                    yield chunk
-                return
-            except Exception as exc:
-                logger.error("[LLM] %s başarısız, sonraki model deneniyor: %s", model_id, exc)
-                continue
-
-    # ── Gemini fallback ────────────────────────────────────────────────────────
-    if settings.gemini_api_key and await _quota_ok("gemini", _GEMINI_DAILY_LIMIT):
+    for entry in _registry:
+        if _is_exhausted(entry.model_id):
+            continue
         try:
-            logger.info("[LLM] Gemini | title=%r", title[:60])
-            yield "__META_gemini__"
-            async for chunk in _sentence_stream(
-                _tokens_gemini(system_prompt, user_prompt), price, "gemini"
-            ):
-                yield chunk
-            return
+            logger.info("[LLM] Deneniyor: %s | title=%r", entry.model_id, title[:60])
+            if entry.provider == "groq":
+                raw = await _get_text_groq(system_prompt, user_prompt, entry.model_id)
+            else:
+                raw = await _get_text_gemini(system_prompt, user_prompt)
+            text = _postprocess(raw, price)
+            logger.info("[LLM] Tamamlandı | %s | %d char", entry.model_id, len(text))
+            return text, entry.provider
+        except _RateLimitError as exc:
+            _mark_exhausted(entry.model_id, exc.retry_after)
+            continue
         except Exception as exc:
-            logger.error("[LLM] Gemini başarısız: %s", exc)
+            logger.error("[LLM] %s başarısız: %s", entry.model_id, exc)
+            continue
 
     logger.error("[LLM] Tüm providerlar başarısız | title=%r", title[:60])
-    yield "__LLM_ERROR__"
+    raise AIServiceBusyException()

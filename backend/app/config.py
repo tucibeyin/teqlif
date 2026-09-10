@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
     groq_api_key: str = ""
     gemini_api_key: str = ""
+    node2_ai_proxy_url: str = ""        # ör. "http://10.10.0.3:8080" — boşsa node2 atlanır
+    node2_internal_token: str = ""      # Bearer token — node2 ve node1 aynı değeri paylaşır
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     minio_endpoint: str = "localhost:9000"

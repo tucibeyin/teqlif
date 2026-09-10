@@ -142,6 +142,9 @@ async def lifespan(app: FastAPI):
     # Hype Meter sönümleme döngüsü
     from app.core.hype_manager import hype_manager
     hype_manager.start_decay()
+    # AI registry — node1 Groq-only (EU IP), node2 up ise Groq+Gemini iletir
+    from app.services.ml.llm_service import start_registry_loop
+    await start_registry_loop()
     yield
     task.cancel()
     chat_task.cancel()

@@ -258,6 +258,7 @@ AllowedIPs = 10.10.0.3/32
 - `backend/app/services/ml/ai_proxy_client.py`: yeni dosya — node2 HTTP çağrısı + lokal fallback
 - `backend/app/routers/listings.py`: SSE `StreamingResponse` → düz JSON response
 - `backend/app/ai_proxy_main.py`: yeni dosya — node2'nin çalıştırdığı minimal FastAPI app
+- `backend/app/main.py`: mevcut `lifespan`'a `await start_registry_loop()` eklenir — node1 da kendi Groq-only registry'sini startup'ta kurar ve 24h günceller. (§7.1 docstring: "hem main.py hem ai_proxy_main.py'da çağrılır")
 
 ---
 
@@ -577,12 +578,24 @@ async def start_registry_loop():
     Aynı kod; Gemini probe sonucu IP'ye göre farklılaşır:
       node2: Groq + Gemini  |  node1: sadece Groq
     """
-    await _refresh_registry()
+    try:
+        await _refresh_registry()
+    except Exception as exc:
+        # Startup hatası servisi engellemez — boş registry ile devam eder.
+        # İlk istek geldiğinde tüm modeller exhausted olmadığı için 429/hata alacak ve öğrenecek.
+        logger.error("[AI] Registry startup başarısız, boş registry ile devam: %s", exc)
+
     async def _loop():
         while True:
             await asyncio.sleep(86400)   # 24h
-            await _refresh_registry()
-    asyncio.create_task(_loop())
+            try:
+                await _refresh_registry()
+            except Exception as exc:
+                logger.warning("[AI] Registry 24h refresh başarısız: %s", exc)
+
+    # fire_and_forget: task exception fırlatırsa logger.error + Sentry — codebase pattern'i
+    from app.core.logger import fire_and_forget
+    fire_and_forget(_loop(), tag="llm_service.registry_loop")
 
 # --- Ana fonksiyon ---
 async def generate_listing_description(title, category, ...) -> tuple[str, str]:
@@ -642,10 +655,10 @@ app = FastAPI(lifespan=lifespan)
 async def generate(body: GenerateRequest, x_internal_token: str = Header(...)):
     if x_internal_token != settings.node2_internal_token:
         raise HTTPException(status_code=403)
-    text, provider = await generate_listing_description(**body.model_dump())
+    description, provider = await generate_listing_description(**body.model_dump())
     if provider == "error":
-        raise HTTPException(status_code=503)
-    return {"text": text, "provider": provider}
+        raise HTTPException(status_code=503)   # node2 internal — AppException format gerekmez
+    return {"text": description, "provider": provider}
 
 @app.get("/health")
 async def health():
@@ -703,9 +716,9 @@ async def generate_description(
         price=body.price, subcategory=body.subcategory,
         extra_fields=body.extra_fields, lang=body.lang,
     )
-    text, provider = await generate_via_node2(params)
+    description, provider = await generate_via_node2(params)
     if provider == "error":
-        raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
+        raise AIServiceBusyException()   # AppException subclass → {"error": {"code": "AI_SERVICE_BUSY"}}
 
     # ── Kredi düş (başarılı yanıt sonrası — mevcut mantık korunur) ───────────
     tuci_spent = 0
@@ -731,12 +744,16 @@ async def generate_description(
     except Exception as e:
         logger.error("[AI Desc] Kredi sayma başarısız: %s", e)
 
-    return {"description": text, "provider": provider, "tuci_spent": tuci_spent}
+    return {"description": description, "provider": provider, "tuci_spent": tuci_spent}
 ```
 
-`StreamingResponse` import'u ve `event_generator()` fonksiyonu `listings.py`'den tamamen kaldırılır. `generate_listing_description_stream` import'u → `generate_via_node2` import'uyla değişir.
+`StreamingResponse` import'u ve `event_generator()` fonksiyonu `listings.py`'den tamamen kaldırılır. `generate_listing_description_stream` import'u → `generate_via_node2` import'uyla değişir. `AIServiceBusyException` import'u eklenir (`from app.exceptions import AIServiceBusyException`).
+
+> **Uygulama notu:** Flutter `ErrorMapper`'da `AI_SERVICE_BUSY` ve `AI_SERVICE_TIMEOUT` kodları tanımlı. Backend'de karşılık gelen `AIServiceBusyException` (HTTP 503, code=`AI_SERVICE_BUSY`) exception sınıfı mevcut değilse implementation sırasında `app/exceptions.py`'ye eklenmeli. ADR §6 kuralı: "Yeni backend hataları için her zaman `AppException` subclass kullan."
 
 ### 7.5 Mobile UX — `create_listing_screen.dart`
+
+> **MVVM notu (ADR §8):** AI üretim state machine'i (`idle → loading → animating → done`), API çağrısı ve `_updateTuciBalance()` iş mantığı bir `AiDescNotifier extends Notifier<AiDescState>` içine taşınmalı. `create_listing_screen.dart` pilot ekran olduğundan MVVM kuralı özellikle geçerli. Ancak mevcut ekranın tüm form mantığı da yoğun olduğundan, V1.2 kapsamında yalnızca AI üretim bölümünü ViewModel'e almak yeterli. `_isLoading` ve `_skipAnimation` provider state'ine taşınır; View `ref.watch(aiDescProvider)` ile state'e göre render yapar.
 
 **Durum makinesi:**
 
@@ -774,40 +791,49 @@ Future<void> _fetchAiDescription() async {
   setState(() { _isLoading = true; _skipAnimation = false; });
 
   try {
-    final resp = await http.post(uri, headers: headers, body: jsonEncode(params))
-        .timeout(const Duration(seconds: 60));
+    // Mevcut SSE için raw http.post kullanıldı (streaming gerektiriyordu).
+    // Non-streaming JSON yanıt artık ApiService üzerinden çağrılır — Dio error handling,
+    // 401 refresh, AppException parse tümüyle hazır gelir.
+    final result = await ApiService.instance.post<Map<String, dynamic>>(
+      '/listings/generate-description',
+      data: {
+        'title': _titleCtrl.text, 'category': _category, 'condition': _condition,
+        'price': _price, 'subcategory': _subcategory,
+        'extra_fields': _extraValues, 'lang': _lang,
+      },
+    );
 
     if (!mounted) return;
 
-    if (resp.statusCode == 200) {
-      final data = jsonDecode(resp.body);
-      final fullText = data['description'] as String;
-      final provider = data['provider'] as String;
+    result.when(
+      ok: (data) async {
+        final fullText = data['description'] as String;
+        final provider = data['provider'] as String;
 
-      // Kredi UI hemen güncelle (animasyon bitmeden)
-      final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
-      if (tuciSpent > 0) _updateTuciBalance(tuciSpent);
+        // Kredi UI hemen güncelle (animasyon bitmeden)
+        final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
+        if (tuciSpent > 0) _updateTuciBalance(tuciSpent);
 
-      if (provider == 'gemini') {
-        TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'));
-      }
+        if (provider == 'gemini') {
+          TeqSnackBar.show(message: loc.t('aiDescFallbackNotice'));
+        }
 
-      // Typewriter (tap to skip)
-      for (int i = 0; i <= fullText.length; i++) {
-        if (!mounted || _skipAnimation) break;
-        setState(() => _descCtrl.text = fullText.substring(0, i));
-        await Future.delayed(const Duration(milliseconds: 18));
-      }
-      if (mounted) setState(() => _descCtrl.text = fullText);
-      _appendLocationSuffix();
-
-    } else {
-      TeqSnackBar.show(message: loc.t('aiUnavailableError'));
-    }
-  } on TimeoutException {
-    if (mounted) TeqSnackBar.show(message: loc.t('aiUnavailableError'));
-  } catch (_) {
-    if (mounted) TeqSnackBar.show(message: loc.t('aiUnavailableError'));
+        // Typewriter (tap to skip)
+        for (int i = 0; i <= fullText.length; i++) {
+          if (!mounted || _skipAnimation) break;
+          setState(() => _descCtrl.text = fullText.substring(0, i));
+          await Future.delayed(const Duration(milliseconds: 18));
+        }
+        if (mounted) setState(() => _descCtrl.text = fullText);
+        _appendLocationSuffix();
+      },
+      err: (error) => handleError(error, ref.read(localizationProvider)),
+      // ApiService 503 → DioException + AppException(code='AI_SERVICE_BUSY') parse eder
+      // handleError → ErrorMapper → mevcut 'AI_SERVICE_BUSY' key → toast
+    );
+  } catch (e) {
+    // Timeout, NetworkException vb. — handleError 401/connectivity özel durumlarını kapsar
+    if (mounted) handleError(e, ref.read(localizationProvider));
   } finally {
     if (mounted) setState(() { _isLoading = false; _skipAnimation = false; });
   }
@@ -907,6 +933,7 @@ SECRET_KEY=placeholder_not_used_on_node2
 GROQ_API_KEY=gsk_...
 GEMINI_API_KEY=AIza...
 NODE2_INTERNAL_TOKEN=...
+SENTRY_BACKEND_DSN=          # boş bırakılırsa Sentry devre dışı — node2 hatalar sadece Loki'ye gider
 EOF
 
 # 6. Python ortamı
@@ -929,9 +956,11 @@ sudo ufw allow from 10.10.0.1 to any port 8080
 sudo ufw allow from 10.10.0.2 to any port 9100
 sudo ufw enable
 
-# 9. Log dizini
-sudo mkdir -p /var/log/teqlif
-sudo chown tucibeyin:tucibeyin /var/log/teqlif
+# 9. Log dizini — symlink
+# logging_config.py backend/logs/ dizinine yazar; promtail /var/log/teqlif/ bekler.
+# Symlink ile hizalanır (node1'deki aynı pattern).
+mkdir -p /var/www/teqlif.com/backend/logs
+sudo ln -sf /var/www/teqlif.com/backend/logs /var/log/teqlif
 ```
 
 ### node1 — WireGuard güncelleme
