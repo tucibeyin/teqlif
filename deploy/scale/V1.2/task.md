@@ -569,7 +569,7 @@ void _onTapDuringAnimation() {
 
 ### Görev 10 — `llm_service.py`: Redis shared state
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı (commit `3c104a6b`)
 
 **Dosya:** `backend/app/services/ml/llm_service.py`
 
