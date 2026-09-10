@@ -547,7 +547,7 @@ void _onTapDuringAnimation() {
 
 ### Görev 9b — Flutter MVVM: `AiDescNotifier` ViewModel
 
-**Durum:** [x] — Tamamlandı (commit `PENDING`)
+**Durum:** [x] — Tamamlandı (commit `d57af7ee`)
 
 **Dosyalar:**
 - `mobile/lib/providers/ai_desc_provider.dart` (yeni)
