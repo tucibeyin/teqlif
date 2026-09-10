@@ -815,7 +815,7 @@ venv/bin/pip install -r /var/www/teqlif.com/deploy/scale/resources/node2_product
 
 ### Görev 12 — `.env` dosyası oluştur
 
-**Durum:** [ ]
+**Durum:** [x] — Tamamlandı
 
 `.env` şablonu `deploy/scale/resources/.env.node2.production` içinde hazır.
 Değerleri doldur ve `chmod 600` uygula:
