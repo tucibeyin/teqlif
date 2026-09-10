@@ -94,20 +94,25 @@ node2 (Buffalo)   → Groq model listesi:  14 model (aynı)
 ### 3.3 LLM Zinciri (node2 üzerinden)
 
 ```
-1. Groq openai/gpt-oss-120b  →  1.000 RPD
-2. Groq openai/gpt-oss-20b   →  1.000 RPD
-3. Groq qwen/qwen3.6-27b     →  1.000 RPD
-4. Groq qwen/qwen3.8-27b     →  1.000 RPD
-5. Groq groq/compound         →    250 RPD
-6. Groq groq/compound-mini    →    250 RPD
-                               ─────────────
-   Groq toplam                → ~4.500 RPD
-                               ─────────────
-7. Gemini 3.5 Flash Lite      →    500 RPD  ← EU'dan erişilemeyen, şimdi çalışır
-8. Gemini 3.1 Flash Lite      →    500 RPD  ← mevcut kodda var, ikinci sıra
-                               ─────────────
-   Genel toplam               → ~5.500 RPD/gün
+node2 (US IP) — tam zincir:
+  1. Groq openai/gpt-oss-120b     1.000 RPD
+  2. Groq openai/gpt-oss-20b      1.000 RPD
+  3. Groq qwen/qwen3.6-27b        1.000 RPD
+  4. Groq qwen/qwen3.8-27b        1.000 RPD
+  5. Groq groq/compound             250 RPD
+  6. Groq groq/compound-mini        250 RPD
+  ──────────────────────────────────────────
+  7. Gemini 3.5 Flash Lite          500 RPD  ← US IP'de çalışır, EU'da bloke
+  8. Gemini 3.1 Flash Lite          500 RPD  ← US IP'de çalışır, EU'da bloke
+  9. Gemma 4 26B (Gemini API)    14.400 RPD  ← son çare; TPM=16K → etkin ~18 RPM
+  ══════════════════════════════════════════
+  Toplam                        ~19.900 RPD/gün
+
+node2 DOWN → node1 lokal fallback (EU IP):
+  1–6. Aynı Groq chain            ~4.500 RPD  (Gemini/Gemma EU'da çalışmaz)
 ```
+
+**Gemma 4 not:** 14.400 RPD yüksek ama TPM=16K kısıtlı. Her istek ~850 token (prompt+output) → etkin kapasite ~18 RPM. Günlük doluluk senaryosunda son çare olarak yeterli.
 
 ---
 
@@ -153,13 +158,15 @@ gateway (nginx) → WireGuard → node1:8000 (FastAPI)
 
 | Konu | Karar | Gerekçe |
 |---|---|---|
-| Streaming → Tam metin | **Tam metin JSON** | ARQ veya proxy, her ikisi de streaming kırar; kullanıcı zaten bekliyor |
+| Streaming → Tam metin | **Tam metin JSON** | ARQ veya proxy her ikisi de streaming kırar; kullanıcı zaten bekliyor |
+| Typing animasyonu | **Client-side** (Flutter) | Tam metin gelir, Flutter sabit hızda karakter karakter oynatır; gerçek streaming'den daha tutarlı |
 | Proxy vs ARQ | **HTTP Proxy** | Stateless; node2 Redis/DB'ye erişmez; fallback trivial |
 | Kredi düşme zamanı | **Başarılı yanıt sonrası** | Yarım/hatalı yanıt için ücret alınmaz |
-| Fallback | **node2 down → node1 lokal çağrı** | Groq EU'dan çalışır (düşük kota ama funcitonal) |
+| Fallback | **node2 down → node1 lokal çağrı** | Groq EU'dan çalışır (~4.500 RPD, Gemini/Gemma yok) |
 | Auth | **X-Internal-Token header** | WireGuard şifreleme + shared secret: çift katman |
 | node2 servis portu | **10.10.0.3:8080** (WireGuard IP'de) | Kamuya açık port yok |
-| node2 kod temeli | **Mevcut repo** (git pull) | `llm_service.py` yeniden kullanılır |
+| Kod tabanı | **Mono repo** (aynı git pull) | node2 `ai_proxy_main.py`'ı çalıştırır; `llm_service.py` paylaşılır |
+| node2 `.env` | Mevcut şablona yeni key'ler eklenir | `DATABASE_URL`/`SECRET_KEY` placeholder; `GROQ_API_KEY`, `GEMINI_API_KEY`, `NODE2_INTERNAL_TOKEN` gerçek değer |
 
 ---
 
@@ -511,9 +518,14 @@ sudo systemctl start teqlif-ai-proxy   # node2'de
 
 ---
 
-## 11. Açık Sorular (Uygulama Öncesi Karar Gerekiyor)
+## 11. Kararlaşan Tasarım Noktaları
 
-- [ ] **node2 `.env` stratejisi:** `ai_proxy_main.py` mevcut `app.config.settings`'i import ederse tüm zorunlu config alanları (DATABASE_URL, SECRET_KEY vb.) node2'nin `.env`'inde de olmalı — dummy değerlerle mi, yoksa `ai_proxy_config.py` ayrı minimal config mi?
-- [ ] **Mobile SSE → JSON değişikliği:** Flutter tarafındaki `generate_description` akışı nasıl güncellenir? (Şu an SSE stream handler var)
-- [ ] **Gemma 4 (26B / 31B) Gemini chain'e eklenecek mi?** 14.400 RPD ile en yüksek kota; önce kalite testi gerekli.
-- [ ] **NODE2_INTERNAL_TOKEN değeri:** Üretilip `.env` ve node2'nin `.env`'ine elle yazılacak.
+| Konu | Karar |
+|---|---|
+| node2 `.env` stratejisi | Mevcut şablona `NODE2_INTERNAL_TOKEN` eklenir; `DATABASE_URL`/`SECRET_KEY` placeholder kalır (import için gerekli, kullanılmaz) |
+| Mobile SSE → JSON | Flutter `ai_proxy_client`'a POST → tam metin JSON; sonra client-side typewriter animasyonu |
+| Typing animasyonu | Flutter sabit ~18ms/karakter hızında animasyon; "tap to skip" eklenebilir |
+| Gemma 4 | Zincire eklenir, **son sırada** (son çare); TPM=16K → etkin ~18 RPM |
+| Mono repo | Aynı git repo; node2 `ai_proxy_main.py`'ı, node1 `main.py`'ı çalıştırır |
+| Fallback | `ai_proxy_client.py` → try node2, except → lokal `generate_listing_description()` |
+| NODE2_INTERNAL_TOKEN | Deploy sırasında `openssl rand -hex 32` ile üretilir; her iki `.env`'e elle eklenir |
