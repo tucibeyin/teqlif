@@ -1,1 +1,0 @@
-../deploy/scale/resources/node1_production_requirements.txt

@@ -48,3 +48,6 @@ numpy>=1.26.0
 Babel>=2.14.0
 
 aioapns==3.2
+
+# Dev / seed araçları
+Faker==25.0.1
