@@ -827,7 +827,22 @@ void _onTapDuringAnimation() {
 
 ---
 
-## 7.6 Redis — V1.2 Kararı
+## 7.6 node2 Monitoring
+
+| Katman | Araç | Ne izleniyor | Nereye gidiyor |
+|---|---|---|---|
+| Sistem metrikleri | node_exporter `:9100` | CPU, RAM, disk, network | gateway Prometheus |
+| Servis durumu | node_exporter `--collector.systemd` | `teqlif-ai-proxy.service` active/inactive | gateway Prometheus → AIProxyDown alert |
+| Loglar | promtail | ai-proxy stdout + systemd journal | gateway Loki |
+| Alert | Alertmanager | `NodeDown` (VM) + `AIProxyDown` (servis) | Telegram |
+
+**AIProxyDown alert:** `teqlif-ai-proxy.service` 1 dakika boyunca inactive olursa Telegram'a critical alert gider. Bu noktada node1 zaten Groq-only fallback'e geçmiş demektir — kullanıcı hata görmez ama RPD kapasitesi düşer.
+
+**HTTP metrikleri (istek sayısı, latency, 503 oranı):** V1.2 kapsamı dışı. Gerekirse `prometheus-fastapi-instrumentator` eklenerek `/metrics` endpoint açılabilir.
+
+---
+
+## 7.7 Redis — V1.2 Kararı
 
 **Yeni Redis kullanımı yok.**
 

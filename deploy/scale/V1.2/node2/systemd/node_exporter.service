@@ -6,7 +6,9 @@ After=network.target
 User=nobody
 Group=nogroup
 Type=simple
-ExecStart=/usr/local/bin/node_exporter --web.listen-address=10.10.0.3:9100
+ExecStart=/usr/local/bin/node_exporter \
+    --web.listen-address=10.10.0.3:9100 \
+    --collector.systemd
 
 [Install]
 WantedBy=multi-user.target
