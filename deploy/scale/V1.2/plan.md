@@ -289,41 +289,115 @@ ufw allow from 10.10.0.3 to any port 3100   # Loki push ← node2 promtail
 
 ## 7. Backend Kod Tasarımı
 
-### Non-streaming ilkesi
+### Non-streaming + API-driven kota ilkesi
 
 Groq ve Gemini her ikisi de tam metni tek HTTP yanıtında döndürebilir. `llm_service.py`'deki mevcut `stream=True` / `streamGenerateContent` yapısı kaldırılır; yerine basit `await response.json()` çağrıları gelir. `AsyncGenerator`, `_sentence_stream`, sentinel token'lar (`__META_groq__`, `__LLM_ERROR__`) ve SSE parsing tamamen ortadan kalkar. Post-processing (`_RE_AI_OPENER` temizleme, fiyat suffix) full string üzerinde yapılır.
 
-### 7.1 `llm_service.py` — Yeniden yazılır (non-streaming)
+**Kota yönetimi:** Redis counter veya header tracking yok. API'nin kendi 429 yanıtı kota kontrolcüsüdür. Her model sırayla denenir; 429 gelirse bir sonrakine geçilir. Tüm modeller 429 dönerse `503 — Şu an bu özellik kullanılamıyor.`
+
+### In-memory exhaustion tracking
+
+429'u her seferinde yeniden almak yerine, exhausted modeller process memory'de saklanır. Aynı process içinde sıradaki request doğrudan atlar — 429 latency sıfıra iner.
 
 ```python
-# _get_text_groq(system, user, model) → str  (stream=False)
-# _get_text_gemini(system, user, model) → str  (generateContent endpoint)
-# _get_text_gemma(system, user) → str  (Gemini API, gemma-4-26b-a4b-it)
+import time
+_exhausted: dict[str, float] = {}   # {model_id: reset_epoch_seconds}
+
+def _is_exhausted(model_id: str) -> bool:
+    ts = _exhausted.get(model_id)
+    if ts is None:
+        return False
+    if time.time() >= ts:
+        _exhausted.pop(model_id, None)   # süresi doldu, temizle
+        return False
+    return True
+
+def _mark_exhausted(model_id: str, retry_after: float = 60.0):
+    _exhausted[model_id] = time.time() + retry_after
+```
+
+429 yanıtında `retry-after` header'ı okunur (Groq saniye olarak verir; Gemini de `Retry-After` verir). Header yoksa varsayılan 60s kullanılır. Process restart'ta dict temizlenir — sorun değil, 429 yeniden öğretir. Redis gerekmez.
+
+### Dinamik model listesi
+
+**API key kendi filtresidir.** Free tier key ile `GET /models` sadece erişilebilir modelleri döndürür — listeyi hardcode etmeye gerek kalmaz. Groq'ta `object: "model"` olanlar; Gemini'de `supportedGenerationMethods` içinde `generateContent` olanlar alınır.
+
+**Neden discovery sadece node2'den?**
+- Groq: node1 ve node2'den aynı 14 model görünür. node2'den çalışır.
+- Gemini: node1 (EU IP) 0 model, node2 (US IP) 52 model. Discovery **sadece node2'de** anlamlı.
+
+**Sıralama: config = tercih sırası, API = gerçek liste.**
+
+```python
+# .env veya config.py
+GROQ_MODEL_PREFERENCE = "openai/gpt-oss-120b,openai/gpt-oss-20b,qwen/qwen3.6-27b,qwen/qwen3.8-27b"
+GEMINI_MODEL_PREFERENCE = "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemma-4-26b-a4b-it"
+```
+
+Discovery'den gelen modeller bu listeye göre sıralanır; listede olmayan yeni modeller **sona** eklenir. Yeni bir model eklendiğinde kodda değişiklik gerekmez — `GROQ_MODEL_PREFERENCE`'a eklemek yeterli, ya da hiç eklenmezse zincirin sonuna otomatik girer.
+
+**Refresh stratejisi:** Startup'ta bir kez çekilir, 24 saatte bir tekrar (`asyncio.create_task` background loop). Gemini'nin `GET /v1beta/models` çağrısı ücretsiz ve kotadan sayılmaz.
+
+### 7.1 `llm_service.py` — Yeniden yazılır (non-streaming, dynamic models)
+
+```python
+# _get_text_groq(system, user, model) → str   (stream=False, 429 → RateLimitError)
+# _get_text_gemini(system, user, model) → str  (generateContent, 429 → RateLimitError)
+
+# Startup'ta ve 24h'de bir doldurulur
+_active_groq_models: list[str] = []
+_active_gemini_models: list[str] = []
+
+async def _refresh_model_lists():
+    groq_pref = settings.groq_model_preference   # virgülle ayrılmış string
+    gemini_pref = settings.gemini_model_preference
+
+    groq_available = await _fetch_groq_models()       # GET /openai/v1/models
+    gemini_available = await _fetch_gemini_models()   # GET /v1beta/models, generateContent filtreli
+
+    def _sort_by_pref(available: list[str], pref_str: str) -> list[str]:
+        pref = [m.strip() for m in pref_str.split(",") if m.strip()]
+        pref_set = set(pref)
+        ordered = [m for m in pref if m in available]
+        extras = [m for m in available if m not in pref_set]
+        return ordered + extras
+
+    _active_groq_models[:] = _sort_by_pref(groq_available, groq_pref)
+    _active_gemini_models[:] = _sort_by_pref(gemini_available, gemini_pref)
 
 async def generate_listing_description(title, category, ...) -> tuple[str, str]:
     """
-    Tam metni ve provider adını döndürür: (text, provider)
-    Zincir: Groq × 6 → Gemini 3.5 FL → Gemini 3.1 FL → Gemma 4 26B
+    (text, provider) döndürür.
+    Kota: API'nin 429 yanıtı kontrolcüdür.
+    Exhaustion: in-memory dict ile tükenmiş modeller atlanır.
     """
     system, user = _build_prompt(...)
 
-    # Groq chain
-    for model_id, daily_limit in _GROQ_MODELS:
-        if not await _quota_ok(model_id, daily_limit): continue
+    for model_id in _active_groq_models:
+        if _is_exhausted(model_id):
+            continue
         try:
             raw = await _get_text_groq(system, user, model_id)
             return _post_process(raw, price), "groq"
-        except Exception: continue
+        except RateLimitError as e:
+            _mark_exhausted(model_id, retry_after=_parse_retry_after(e))
+            continue
+        except Exception:
+            continue
 
-    # Gemini chain (US IP'de çalışır)
-    for model_id, daily_limit in _GEMINI_MODELS:
-        if not await _quota_ok(model_id, daily_limit): continue
+    for model_id in _active_gemini_models:
+        if _is_exhausted(model_id):
+            continue
         try:
             raw = await _get_text_gemini(system, user, model_id)
             return _post_process(raw, price), "gemini"
-        except Exception: continue
+        except RateLimitError as e:
+            _mark_exhausted(model_id, retry_after=_parse_retry_after(e))
+            continue
+        except Exception:
+            continue
 
-    return "", "error"
+    return "", "error"   # tüm modeller tükendi → 503
 ```
 
 ### 7.2 `ai_proxy_main.py` (node2'de çalışır)
@@ -543,3 +617,6 @@ sudo systemctl start teqlif-ai-proxy   # node2'de
 | Mono repo | Aynı git repo; node2 `ai_proxy_main.py`'ı, node1 `main.py`'ı çalıştırır |
 | Fallback | `ai_proxy_client.py` → try node2, except → lokal `generate_listing_description()` |
 | NODE2_INTERNAL_TOKEN | Deploy sırasında `openssl rand -hex 32` ile üretilir; her iki `.env`'e elle eklenir |
+| In-memory exhaustion tracking | `_exhausted: dict[str, float]` — 429'da model_id → reset_epoch kaydedilir; sonraki request atlar; process restart'ta temizlenir |
+| Dinamik model listesi | Startup + 24h refresh: Groq `/openai/v1/models`, Gemini `/v1beta/models` (generateContent filtreli); sıralama `GROQ_MODEL_PREFERENCE` / `GEMINI_MODEL_PREFERENCE` env'den; yeni modeller sona eklenir |
+| Gemini discovery | Sadece node2'den (US IP) — node1 EU IP'sinden 0 model görünür |
