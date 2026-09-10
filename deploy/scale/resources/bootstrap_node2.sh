@@ -99,6 +99,7 @@ echo "==> UFW..."
 sudo ufw allow 22/tcp   comment 'SSH'       2>/dev/null || true
 sudo ufw allow 51820/udp comment 'WireGuard' 2>/dev/null || true
 sudo ufw allow in on wg0 to any port 8080 proto tcp comment 'AI proxy via WireGuard' 2>/dev/null || true
+sudo ufw allow in on wg0 to any port 9100 proto tcp comment 'node_exporter — gateway' 2>/dev/null || true
 sudo ufw --force enable
 
 echo ""
