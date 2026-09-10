@@ -190,6 +190,7 @@ class InMemoryCircuitBreaker:
 
     async def call(self, coro, *, fallback=None, timeout: float = 2.0):
         if self._is_open():
+            coro.close()  # "coroutine was never awaited" uyarısını önle
             return fallback
         try:
             result = await asyncio.wait_for(coro, timeout=timeout)

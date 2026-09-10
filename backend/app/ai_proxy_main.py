@@ -7,10 +7,11 @@ node1'deki main.py bu dosyayı import etmez; node2'de teqlif.service kurulu değ
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
 from app.config import settings
+from app.core.exceptions import ForbiddenException
 from app.services.ml.llm_service import generate_listing_description, start_registry_loop
 
 
@@ -39,7 +40,7 @@ async def generate(
     x_internal_token: str = Header(...),
 ):
     if x_internal_token != settings.node2_internal_token:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise ForbiddenException()
     # generate_listing_description raises AIServiceBusyException (HTTPException 503)
     # FastAPI yakalayıp 503 döndürür; ai_proxy_client.py raise_for_status() ile fallback'e düşer.
     description, provider = await generate_listing_description(**body.model_dump())

@@ -6,15 +6,14 @@ Sıra:
   2. node2 down veya hata → lokal fallback (Groq-only, EU IP'den Gemini yoktur)
 """
 import asyncio
-import logging
 
 import httpx
 
 from app.config import settings
-from app.core.exceptions import AIServiceBusyException
+from app.core.logger import get_logger
 from app.services.ml.llm_service import generate_listing_description
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def generate_via_node2(params: dict) -> tuple[str, str]:
@@ -24,19 +23,15 @@ async def generate_via_node2(params: dict) -> tuple[str, str]:
     """
     if settings.node2_ai_proxy_url:
         try:
-            async with asyncio.timeout(45):
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"{settings.node2_ai_proxy_url}/generate",
-                        json=params,
-                        headers={"X-Internal-Token": settings.node2_internal_token},
-                        timeout=45.0,
-                    )
-                resp.raise_for_status()
-                data = resp.json()
-                return data["text"], data["provider"]
-        except asyncio.TimeoutError:
-            logger.warning("[AI-PROXY] node2 timeout, lokal fallback devrede")
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                resp = await client.post(
+                    f"{settings.node2_ai_proxy_url}/generate",
+                    json=params,
+                    headers={"X-Internal-Token": settings.node2_internal_token},
+                )
+            resp.raise_for_status()
+            data = resp.json()
+            return data["text"], data["provider"]
         except Exception as exc:
             logger.warning("[AI-PROXY] node2 başarısız, lokal fallback: %s", exc)
 

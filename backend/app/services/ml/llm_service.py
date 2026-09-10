@@ -24,11 +24,11 @@ import httpx
 from app.config import settings
 from app.core.circuit_breaker import InMemoryCircuitBreaker
 from app.core.exceptions import AIServiceBusyException
-from app.core.logger import fire_and_forget
+from app.core.logger import fire_and_forget, get_logger
 from app.services.ml.llm_templates import ListingTemplates
 from app.utils.redis_client import get_redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ── Provider endpoints ────────────────────────────────────────────────────────
 GROQ_API_URL     = "https://api.groq.com/openai/v1/chat/completions"
@@ -255,7 +255,7 @@ async def _redis_set_last_success(model_id: str, provider: str) -> None:
         logger.debug("[LLM] Redis last_success set hatası: %s", exc)
 
 
-def _parse_retry_after(headers: dict) -> float:
+def _parse_retry_after(headers) -> float:
     try:
         return float(headers.get("retry-after", 60))
     except Exception:
@@ -445,8 +445,7 @@ async def _get_text_groq(system: str, user: str, model_id: str) -> str:
                 "stream": False,
             },
         )
-    if resp.status_code != 200:
-        raise RuntimeError(f"Groq {model_id} HTTP {resp.status_code}: {resp.text[:200]}")
+    resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"]
 
 
@@ -465,8 +464,7 @@ async def _get_text_gemini(system: str, user: str, model_id: str) -> str:
                 },
             },
         )
-    if resp.status_code != 200:
-        raise RuntimeError(f"Gemini {model_id} HTTP {resp.status_code}: {resp.text[:200]}")
+    resp.raise_for_status()
     data = resp.json()
     return (
         data.get("candidates", [{}])[0]
@@ -512,13 +510,10 @@ async def generate_listing_description(
             await _redis_set_last_success(entry.model_id, entry.provider)
             return text, entry.provider
         except Exception as exc:
-            retry_after = 60.0
-            try:
-                retry_after = _parse_retry_after(exc.response.headers)  # type: ignore[union-attr]
-            except Exception:
-                pass
-            if getattr(getattr(exc, "response", None), "status_code", None) == 429:
-                await _redis_mark_exhausted(entry.model_id, retry_after)
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+                await _redis_mark_exhausted(
+                    entry.model_id, _parse_retry_after(exc.response.headers)
+                )
             logger.warning("[LLM] %s başarısız: %s", entry.model_id, exc)
             return None
 
