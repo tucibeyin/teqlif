@@ -1,0 +1,55 @@
+# /etc/prometheus/rules/teqlif.yml — gateway
+# Scale V1.1: node1 + gateway alert kuralları
+
+groups:
+  - name: teqlif
+    rules:
+
+      - alert: NodeDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} ({{ $labels.node }}) erişilemiyor"
+          description: "Hedef 1 dakikadır yanıt vermiyor."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yüksek RAM kullanımı ({{ $labels.node }})"
+          description: "RAM kullanımı %{{ $value | printf \"%.0f\" }} — 5 dakikadır eşiğin üzerinde."
+
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Düşük disk alanı ({{ $labels.node }})"
+          description: "{{ $labels.mountpoint }} doluluk oranı %{{ $value | printf \"%.0f\" }}."
+
+      - alert: HighSwapUsage
+        expr: |
+          (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes * 100 > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yüksek swap kullanımı ({{ $labels.node }})"
+          description: "Swap kullanımı %{{ $value | printf \"%.0f\" }} — bellek baskısı olabilir."
+
+      - alert: HighCPULoad
+        expr: |
+          100 - (avg by(node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yüksek CPU kullanımı ({{ $labels.node }})"
+          description: "CPU kullanımı %{{ $value | printf \"%.0f\" }} — 10 dakikadır eşiğin üzerinde."

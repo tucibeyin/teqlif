@@ -1,0 +1,75 @@
+# /etc/promtail-config.yml — node1
+# Scale V1.0: logları gateway'deki Loki'ye WireGuard üzerinden gönder
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://10.10.0.2:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: teqlif-backend
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: teqlif-backend
+          node: node1
+          __path__: /var/log/teqlif/*.log
+
+  - job_name: teqlif-errors
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: teqlif-errors
+          node: node1
+          __path__: /var/log/teqlif/error*.log
+
+  - job_name: nginx-access
+    pipeline_stages:
+      - regex:
+          expression: '(?P<remote_addr>\S+) - (?P<remote_user>\S+) \[(?P<time_local>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]+)" "(?P<http_user_agent>[^"]+)"'
+      - geoip:
+          db: /usr/share/GeoIP/GeoLite2-City.mmdb
+          source: remote_addr
+          db_type: city
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-access
+          node: node1
+          __path__: /var/log/nginx/access.log
+
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-error
+          node: node1
+          __path__: /var/log/nginx/error.log
+
+  - job_name: systemd-journal
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+        node: node1
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: unit
+
+  - job_name: teqlif-worker-log
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: teqlif-worker
+          node: node1
+          __path__: /var/log/teqlif/worker*.log

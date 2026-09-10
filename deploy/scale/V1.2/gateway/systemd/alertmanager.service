@@ -1,0 +1,16 @@
+[Unit]
+Description=Alertmanager
+After=network.target prometheus.service
+
+[Service]
+Type=simple
+User=tucibeyin
+EnvironmentFile=/etc/alertmanager/alertmanager.env
+ExecStart=/usr/local/bin/alertmanager \
+    --config.file=/etc/alertmanager/alertmanager.yml \
+    --storage.path=/var/lib/alertmanager
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+# /etc/alertmanager/alertmanager.yml — gateway
+# Scale V1.1: Telegram bildirimleri
+# Değerler /etc/alertmanager/alertmanager.env'den okunur (--config.expand-env)
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: telegram
+  group_by: [alertname, node]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token: "${TELEGRAM_BOT_TOKEN}"
+        chat_id: ${TELEGRAM_CHAT_ID}
+        message: |
+          {{ range .Alerts }}
+          {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} *{{ .Labels.alertname }}*
+          📍 Node: {{ .Labels.node }}
+          📝 {{ .Annotations.summary }}
+          {{ if .Annotations.description }}ℹ️ {{ .Annotations.description }}{{ end }}
+          {{ end }}
+        parse_mode: Markdown
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [alertname, node]

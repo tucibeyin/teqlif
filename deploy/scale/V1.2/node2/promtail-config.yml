@@ -1,0 +1,33 @@
+# /etc/promtail-config.yml — node2 (RackNerd Buffalo)
+# Scale V1.2: logları gateway'deki Loki'ye WireGuard üzerinden gönder
+# node2'de nginx yok; sadece ai-proxy servisi ve systemd journal loglanır.
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://10.10.0.2:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: teqlif-ai-proxy
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: teqlif-ai-proxy
+          node: node2
+          __path__: /var/log/teqlif/*.log
+
+  - job_name: systemd-journal
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+        node: node2
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: unit
