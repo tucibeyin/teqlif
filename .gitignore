@@ -9,6 +9,10 @@ memory/
 .env.test.local
 .env.production.local
 
+# deploy/ altındaki .env şablonları git'te tutulur (value'lar elle doldurulur)
+!deploy/**/.env
+!deploy/**/.env.staging
+
 # Firebase servis hesabı anahtarı (asla commit edilmemeli!)
 firebase-key.json
 *-service-account.json
