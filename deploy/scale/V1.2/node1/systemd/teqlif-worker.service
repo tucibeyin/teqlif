@@ -6,6 +6,7 @@ After=network.target redis.service
 User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
+Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node1.production
 EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/.env.node1.production
 ExecStart=/var/www/teqlif.com/venv/bin/python -m worker
 Restart=always

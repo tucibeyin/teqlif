@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -66,7 +68,7 @@ class Settings(BaseSettings):
     apns_use_sandbox: bool = False
 
     class Config:
-        env_file = ".env"
+        env_file = os.environ.get("TEQLIF_ENV_FILE", ".env")
 
 
 settings = Settings()

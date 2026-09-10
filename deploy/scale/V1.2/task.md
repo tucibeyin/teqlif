@@ -837,21 +837,11 @@ Doldurulacak alanlar:
 - `NODE2_INTERNAL_TOKEN` — üretilen token
 - `REDIS_URL` — zaten `redis://10.10.0.1:6379` olarak set edilmiş
 
-**`backend/.env` symlink oluştur (tek seferlik):**
-
-`config.py` env dosyasını `backend/.env` konumunda arar. Systemd `EnvironmentFile=` ile
-bu dosyaya ihtiyaç duymaz; ancak elle çalıştırma ve doğrulama için symlink gereklidir.
-
-```bash
-ln -sf /var/www/teqlif.com/deploy/scale/resources/.env.node2.production \
-       /var/www/teqlif.com/backend/.env
-```
-
 **Doğrulama:**
 ```bash
-ls -la /var/www/teqlif.com/backend/.env   # symlink görünmeli
 cd /var/www/teqlif.com/backend
-/var/www/teqlif.com/venv/bin/python -c "from app.config import settings; print(settings.groq_api_key[:8])"
+TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/.env.node2.production \
+  /var/www/teqlif.com/venv/bin/python -c "from app.config import settings; print(settings.groq_api_key[:8])"
 ```
 
 ---
@@ -1053,13 +1043,7 @@ sudo ufw status | grep 6379   # kural görünmeli
 cd /var/www/teqlif.com
 git pull
 
-# backend/.env symlink — tek seferlik, config.py ve manuel doğrulama için gerekli
-ln -sf /var/www/teqlif.com/deploy/scale/resources/.env.node1.production \
-       /var/www/teqlif.com/backend/.env
-ln -sf /var/www/teqlif.com/deploy/scale/resources/.env.node1.staging \
-       /var/www/teqlif.com/backend/.env.staging
-
-# resources/.env dosyalarını doldurduğundan emin ol (henüz yapmadıysan)
+# resources/.env dosyalarını doldur (henüz yapmadıysan)
 # nano deploy/scale/resources/.env.node1.production
 chmod 600 deploy/scale/resources/.env.node1.production
 chmod 600 deploy/scale/resources/.env.node1.staging
@@ -1071,8 +1055,7 @@ sudo systemctl restart teqlif teqlif-staging
 
 **Doğrulama:**
 ```bash
-ls -la /var/www/teqlif.com/backend/.env          # symlink görünmeli
-sudo systemctl status teqlif                      # active (running)
+sudo systemctl status teqlif   # active (running)
 journalctl -u teqlif -n 20
 # [AI] Registry güncellendi: groq=N gemini=0  ← node1 EU IP, Gemini yok
 ```
