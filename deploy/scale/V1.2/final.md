@@ -37,7 +37,7 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | 20 | Cloudflare DNS failover otomasyonu | node2 cf-failover daemon: 30s içinde DNS A → node1, geri dönüş otomatik |
 | 21 | Bootstrap script'leri güncellendi | sysctl, journald, nginx fallback, cf-failover kurulumu otomasyona eklendi |
 | 22 | `resources/` node alt dizinlerine ayrıldı | `node1/`, `node2/`, `gateway/` — tüm servis ve script referansları güncellendi |
-| 23 | `gateway/.env.gateway.production` eklendi | alertmanager EnvironmentFile repo'dan okunuyor; `--config.expand-env` ile TELEGRAM_BOT_TOKEN/CHAT_ID inject |
+| 23 | `gateway/.env.gateway.production` eklendi | alertmanager EnvironmentFile repo'dan okunuyor; `ExecStartPre+envsubst` ile TELEGRAM_BOT_TOKEN/CHAT_ID inject |
 | 24 | Telegram mesaj şablonu güncellendi | DOWN/UP durumu açık, timestamp, node adı — firing ve resolved ayrı format |
 
 ---
@@ -350,6 +350,21 @@ deploy/scale/resources/
 │   └── certbot_gateway.sh             # Let's Encrypt SSL al
 └── README.md                          # Per-node kurulum rehberi
 ```
+
+**Systemd EnvironmentFile path'leri (version-independent):**
+
+| Servis | Node | EnvironmentFile |
+|---|---|---|
+| `teqlif.service` | node1 | `.../resources/node1/.env.node1.production` |
+| `teqlif-staging.service` | node1 | `.../resources/node1/.env.node1.staging` |
+| `teqlif-worker.service` | node1 | `.../resources/node1/.env.node1.production` |
+| `teqlif-ai-proxy.service` | node2 | `.../resources/node2/.env.node2.production` |
+| `cf-failover.service` | node2 | `.../resources/node2/.env.node2.cfFailover` |
+| `alertmanager.service` | gateway | `.../resources/gateway/.env.gateway.production` |
+
+`alertmanager.service`: EnvironmentFile vars `ExecStartPre` ile `envsubst` aracılığıyla `alertmanager.yml.template`'e inject edilir, `/etc/alertmanager/alertmanager.yml` üretilir.
+
+---
 
 **Bootstrap scriptleri** şunları otomatize eder:
 1. apt paketleri
