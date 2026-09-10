@@ -322,9 +322,17 @@ def _mark_exhausted(model_id: str, retry_after: float = 60.0):
 
 Hiçbir manuel işlem yok: manuel config düzenleme, tercih listesi tutma, elle tetikleme. Sistem startup'ta kendi model listesini üretir ve 24h'de bir günceller.
 
-**Neden discovery sadece node2'den?**
-- Groq: node1 ve node2'den aynı 14 model — node2'den çalışır.
-- Gemini: node1 (EU IP) 0 model, node2 (US IP) 52 model. Gemini discovery **sadece node2'de** anlamlı.
+**Her node kendi registry'sini tutar — aynı kod, IP-aware davranış.**
+
+`llm_service.py` hem node1'de hem node2'de çalışır. Kod hangi node olduğunu bilmez; Gemini validation probe IP'yi dolaylı olarak tespit eder:
+
+| | node2 (US IP) | node1 (EU IP, fallback) |
+|---|---|---|
+| Groq discovery | ✅ 14 model | ✅ 14 model |
+| Gemini probe | ✅ 200/429 → registry'e girer | ❌ 403 → registry'e girmez |
+| Registry içeriği | Groq + Gemini | Sadece Groq |
+
+**Sonuç:** node2 ayaktayken node1 isteği node2'ye iletir (Groq + Gemini zinciri). node2 düşünce node1 kendi Groq-only registry'sine düşer — fallback anında, sıfır gecikme, sıfır config değişikliği.
 
 **Adım 1 — Listele:**
 - Groq: `GET /openai/v1/models` → free key doğal filtredir, sadece erişilebilir modeller döner.
@@ -479,7 +487,11 @@ async def _refresh_registry():
                 len(_registry.groq), len(_registry.gemini))
 
 async def start_registry_loop():
-    """FastAPI lifespan'da çağrılır. Startup + 24h refresh."""
+    """
+    FastAPI lifespan'da çağrılır — hem main.py (node1) hem ai_proxy_main.py (node2).
+    Aynı kod; Gemini probe sonucu IP'ye göre farklılaşır:
+      node2: Groq + Gemini  |  node1: sadece Groq
+    """
     await _refresh_registry()
     async def _loop():
         while True:
@@ -732,5 +744,5 @@ sudo systemctl start teqlif-ai-proxy   # node2'de
 | In-memory exhaustion tracking | `_exhausted: dict[str, float]` — 429'da model_id → reset_epoch kaydedilir; sonraki request atlar; process restart'ta temizlenir |
 | Fully autonomous registry | Startup + 24h refresh; Groq: API key filtresi + heuristic sıralama; Gemini: generateContent filtre → 1-token probe ile validate → heuristic sıralama; sıfır manuel config |
 | Gemini validation probe | Her Gemini modeline startup'ta `max_tokens=1` çağrı: 200/429 → aktif listeye al, 403/404 → çıkar |
-| Gemini discovery | Sadece node2'den (US IP) — node1 EU IP'sinden 0 model görünür |
+| Registry her node'da ayrı | node1 ve node2 bağımsız registry; aynı kod, Gemini probe IP'yi dolaylı tespit eder |
 | GROQ/GEMINI_MODEL_PREFERENCE | Kaldırıldı — sıralama tamamen heuristic ile yapılır, env var gerekmez |
