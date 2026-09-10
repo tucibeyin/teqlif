@@ -21,6 +21,7 @@ resources/
 │   ├── bootstrap_node2.sh
 │   └── node2_services.sh
 └── gateway/
+    ├── .env.gateway.production
     ├── bootstrap_gateway.sh
     ├── gateway_services.sh
     └── certbot_gateway.sh
@@ -30,11 +31,21 @@ resources/
 
 ## Dosya isimlendirme
 
-| Tür          | Şablon                            | Örnek                              |
-|--------------|-----------------------------------|------------------------------------|
-| requirements | `{node}_{ortam}_requirements.txt` | `node1_production_requirements.txt` |
-| .env         | `.env.{node}.{ortam}`             | `.env.node1.production`            |
-| scripts      | `{eylem}_{node}.sh`               | `bootstrap_node1.sh`               |
+| Tür          | Şablon                            | Örnek                                |
+|--------------|-----------------------------------|--------------------------------------|
+| requirements | `{node}_{ortam}_requirements.txt` | `node1_production_requirements.txt`  |
+| .env         | `.env.{node}.{ortam}`             | `.env.node1.production`              |
+| scripts      | `{eylem}_{node}.sh`               | `bootstrap_node1.sh`                 |
+
+## Mevcut .env dosyaları
+
+| Dosya | Servis | Açıklama |
+|-------|--------|----------|
+| `node1/.env.node1.production` | teqlif, teqlif-staging, teqlif-worker | node1 prod ortam değişkenleri |
+| `node1/.env.node1.staging` | teqlif-staging | node1 staging ortam değişkenleri |
+| `node2/.env.node2.production` | teqlif-ai-proxy | GROQ_API_KEY, GEMINI_API_KEY, NODE2_INTERNAL_TOKEN |
+| `node2/.env.node2.cfFailover` | cf-failover | CF_ZONE_ID, CF_API_TOKEN |
+| `gateway/.env.gateway.production` | alertmanager | TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID |
 
 ---
 
@@ -47,6 +58,7 @@ resources/
 | teqlif-worker.service    | `.../deploy/scale/resources/node1/.env.node1.production`             |
 | teqlif-ai-proxy.service  | `.../deploy/scale/resources/node2/.env.node2.production`             |
 | cf-failover.service      | `.../deploy/scale/resources/node2/.env.node2.cfFailover`             |
+| alertmanager.service     | `.../deploy/scale/resources/gateway/.env.gateway.production`         |
 
 ---
 
@@ -127,28 +139,31 @@ sudo journalctl -u cf-failover -f
 ```bash
 cd /var/www/teqlif.com
 
-# 1. Bootstrap çalıştır (idempotent)
+# 1. .env şablonunu doldur
+nano deploy/scale/resources/gateway/.env.gateway.production
+chmod 600 deploy/scale/resources/gateway/.env.gateway.production
+
+# 2. Bootstrap çalıştır (idempotent)
 bash deploy/scale/resources/gateway/bootstrap_gateway.sh
 
-# 2. WireGuard (henüz kurulmadıysa)
+# 3. WireGuard (henüz kurulmadıysa)
 sudo bash -c 'wg genkey | tee /etc/wireguard/gateway_private.key | wg pubkey > /etc/wireguard/gateway_public.key'
 # wg0.conf oluştur (node1 + node2 peer'lar), sonra:
 sudo systemctl enable --now wg-quick@wg0
 
-# 3. Bootstrap'i tekrar çalıştır (node2 peer'ı ekler)
+# 4. Bootstrap'i tekrar çalıştır (node2 peer'ı ekler)
 bash deploy/scale/resources/gateway/bootstrap_gateway.sh
 
-# 4. SSL sertifikası al (DNS A kaydı gateway'e işaret etmeli)
+# 5. SSL sertifikası al (DNS A kaydı gateway'e işaret etmeli)
 bash deploy/scale/resources/gateway/certbot_gateway.sh
 
-# 5. Alertmanager'ı yapılandır
-sudo nano /etc/alertmanager/alertmanager.yml
-sudo nano /etc/alertmanager/alertmanager.env  # SLACK_WEBHOOK_URL
+# 6. alertmanager.yml kopyala
+sudo cp deploy/scale/V1.2/gateway/alertmanager.yml.template /etc/alertmanager/alertmanager.yml
 
-# 6. Servisleri başlat
+# 7. Servisleri başlat
 bash deploy/scale/resources/gateway/gateway_services.sh start
 
-# 7. Durum kontrolü
+# 8. Durum kontrolü
 bash deploy/scale/resources/gateway/gateway_services.sh status
 ```
 

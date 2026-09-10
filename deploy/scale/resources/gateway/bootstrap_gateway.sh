@@ -105,13 +105,6 @@ if [[ ! -f /etc/alertmanager/alertmanager.yml ]]; then
   sudo cp "$GW_SRC/alertmanager.yml.template" /etc/alertmanager/alertmanager.yml
   echo "  UYARI: /etc/alertmanager/alertmanager.yml sıfırdan kopyalandı — gerçek değerleri doldur."
 fi
-if [[ ! -f /etc/alertmanager/alertmanager.env ]]; then
-  sudo tee /etc/alertmanager/alertmanager.env > /dev/null <<'ENV'
-# Bu dosyayı el ile doldur — git'e girmesin
-SLACK_WEBHOOK_URL=
-ENV
-  echo "  UYARI: /etc/alertmanager/alertmanager.env oluşturuldu — SLACK_WEBHOOK_URL doldur."
-fi
 
 # ── nginx.conf optimizasyonu ─────────────────────────────────────────────────
 echo "==> nginx.conf optimizasyonu..."
@@ -180,11 +173,18 @@ sudo ufw --force enable
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""
+# ── .env izinleri ─────────────────────────────────────────────────────────────
+echo "==> .env izinleri..."
+chmod 600 "$GATEWAY/.env.gateway.production"
+
 echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: wg0.conf yaz, 'sudo systemctl enable --now wg-quick@wg0' calistir"
-echo "  2. alertmanager: /etc/alertmanager/alertmanager.yml ve alertmanager.env doldur"
-echo "  3. nginx SSL sertifikasi al:"
+echo "  2. .env degerlerini doldur: $GATEWAY/.env.gateway.production"
+echo "     (TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID)"
+echo "  3. alertmanager.yml kopyala:"
+echo "     sudo cp deploy/scale/V1.2/gateway/alertmanager.yml.template /etc/alertmanager/alertmanager.yml"
+echo "  4. nginx SSL sertifikasi al:"
 echo "     bash $GATEWAY/certbot_gateway.sh"
-echo "  4. Grafana ayri kurulmali (apt repo veya binary)"
-echo "  5. Tum servisleri baslat:"
+echo "  5. Grafana ayri kurulmali (apt repo veya binary)"
+echo "  6. Tum servisleri baslat:"
 echo "     bash $GATEWAY/gateway_services.sh start"

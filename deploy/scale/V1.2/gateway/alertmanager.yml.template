@@ -1,6 +1,6 @@
 # /etc/alertmanager/alertmanager.yml — gateway
-# Scale V1.1: Telegram bildirimleri
-# Değerler /etc/alertmanager/alertmanager.env'den okunur (--config.expand-env)
+# Scale V1.2: Telegram bildirimleri
+# Değerler deploy/scale/resources/gateway/.env.gateway.production'dan okunur (--config.expand-env)
 
 global:
   resolve_timeout: 5m
@@ -18,11 +18,21 @@ receivers:
       - bot_token: "${TELEGRAM_BOT_TOKEN}"
         chat_id: ${TELEGRAM_CHAT_ID}
         message: |
-          {{ range .Alerts }}
-          {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} *{{ .Labels.alertname }}*
-          📍 Node: {{ .Labels.node }}
-          📝 {{ .Annotations.summary }}
-          {{ if .Annotations.description }}ℹ️ {{ .Annotations.description }}{{ end }}
+          {{ range .Alerts -}}
+          {{ if eq .Status "firing" -}}
+          🔴 *ALARM: {{ .Labels.alertname }}*
+          📍 Node: `{{ .Labels.node }}`
+          🔥 Durum: *DOWN / Aktif*
+          📋 {{ .Annotations.summary }}
+          {{ if .Annotations.description }}ℹ️ {{ .Annotations.description }}{{ end -}}
+          🕐 Başladı: {{ .StartsAt.Format "02 Jan 15:04:05 UTC" }}
+          {{ else -}}
+          ✅ *ÇÖZÜLDÜ: {{ .Labels.alertname }}*
+          📍 Node: `{{ .Labels.node }}`
+          🟢 Durum: *UP / Normal*
+          📋 {{ .Annotations.summary }}
+          🕐 Çözüldü: {{ .EndsAt.Format "02 Jan 15:04:05 UTC" }}
+          {{ end -}}
           {{ end }}
         parse_mode: Markdown
         send_resolved: true

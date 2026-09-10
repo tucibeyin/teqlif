@@ -37,6 +37,8 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | 20 | Cloudflare DNS failover otomasyonu | node2 cf-failover daemon: 30s içinde DNS A → node1, geri dönüş otomatik |
 | 21 | Bootstrap script'leri güncellendi | sysctl, journald, nginx fallback, cf-failover kurulumu otomasyona eklendi |
 | 22 | `resources/` node alt dizinlerine ayrıldı | `node1/`, `node2/`, `gateway/` — tüm servis ve script referansları güncellendi |
+| 23 | `gateway/.env.gateway.production` eklendi | alertmanager EnvironmentFile repo'dan okunuyor; `--config.expand-env` ile TELEGRAM_BOT_TOKEN/CHAT_ID inject |
+| 24 | Telegram mesaj şablonu güncellendi | DOWN/UP durumu açık, timestamp, node adı — firing ve resolved ayrı format |
 
 ---
 
@@ -342,6 +344,7 @@ deploy/scale/resources/
 │   ├── bootstrap_node2.sh             # node2 idempotent kurulum scripti
 │   └── node2_services.sh              # start|stop|restart|status
 ├── gateway/
+│   ├── .env.gateway.production        # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 │   ├── bootstrap_gateway.sh           # gateway idempotent kurulum scripti
 │   ├── gateway_services.sh            # start|stop|restart|status
 │   └── certbot_gateway.sh             # Let's Encrypt SSL al

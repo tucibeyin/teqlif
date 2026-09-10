@@ -5,9 +5,10 @@ After=network.target prometheus.service
 [Service]
 Type=simple
 User=tucibeyin
-EnvironmentFile=/etc/alertmanager/alertmanager.env
+EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/gateway/.env.gateway.production
 ExecStart=/usr/local/bin/alertmanager \
     --config.file=/etc/alertmanager/alertmanager.yml \
+    --config.expand-env \
     --storage.path=/var/lib/alertmanager
 Restart=on-failure
 RestartSec=5s
