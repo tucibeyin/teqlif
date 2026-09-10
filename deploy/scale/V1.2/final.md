@@ -28,6 +28,11 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 | 11 | Bootstrap scriptleri | Her node için idempotent kurulum scripti |
 | 12 | `TEQLIF_ENV_FILE` env var | `config.py` artık env dosya yolunu env var'dan okur |
 | 13 | Tüm servisler `tucibeyin` kullanıcısına standardize edildi | node_exporter, promtail, prometheus, loki |
+| 14 | Systemd servis optimizasyonları | LimitNOFILE, OOMScoreAdj, TimeoutStopSec, CPUWeight, MemoryMax |
+| 15 | PostgreSQL tuning | shared_buffers 2GB, work_mem 16MB, NVMe planner (random_page_cost=1.1) |
+| 16 | Kernel sysctl — tüm node'lar | swappiness, somaxconn, tcp_syn_backlog, tcp_tw_reuse |
+| 17 | nginx optimizasyonu | worker_connections 4096, gzip tam config, ssl_session_cache, open_file_cache |
+| 18 | journald limitleri | Her node'da disk kullanımı sınırlandırıldı |
 
 ---
 
@@ -503,7 +508,97 @@ nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
 
 ---
 
-## 14. Rollback Planı
+## 14. Sistem Optimizasyonları (2026-09-10)
+
+### 14.1 Systemd Servis Optimizasyonları
+
+`deploy/scale/V1.2/node1/systemd/` ve `deploy/scale/V1.2/node2/systemd/` güncellendi.
+
+| Servis | LimitNOFILE | OOMScoreAdj | TimeoutStopSec | CPUWeight | MemoryMax |
+|---|---|---|---|---|---|
+| teqlif | 65536 | -500 (korunan) | 30s | 200 | — |
+| teqlif-staging | 65536 | -200 | 30s | 80 | — |
+| teqlif-worker | — | +200 (ilk öldürülen) | 300s | 50 | — |
+| teqlif-worker-critical | — | +100 | 600s | 100 | — |
+| teqlif-ai-proxy | 4096 | 0 | 60s | — | 768M |
+
+Tüm servislere `KillMode=mixed` (API) / `KillMode=process` (worker) + `StartLimitBurst=10` eklendi.
+
+### 14.2 PostgreSQL Tuning (node1)
+
+Konfigürasyon `ALTER SYSTEM` ile uygulandı — aktif değerler `/etc/postgresql/17/main/postgresql.auto.conf` içinde.
+Referans dosya: `deploy/scale/V1.2/node1/postgres/postgresql-tuning.conf`
+
+| Parametre | Önceki | Sonraki | Gerekçe |
+|---|---|---|---|
+| `shared_buffers` | 128MB | **2GB** | 11.4 GB RAM'in %17'si (Redis 4 GB aldığından dengeli) |
+| `effective_cache_size` | 4GB | **6GB** | Planner tahmini |
+| `work_mem` | 4MB | **16MB** | Sort/hash per-operation belleği |
+| `maintenance_work_mem` | 64MB | **256MB** | VACUUM, CREATE INDEX |
+| `wal_buffers` | ~3.8MB | **64MB** | WAL write buffer |
+| `random_page_cost` | 4.0 | **1.1** | NVMe'de random/seq maliyet neredeyse eşit |
+| `effective_io_concurrency` | 1 | **200** | NVMe paralel I/O |
+
+### 14.3 Kernel sysctl
+
+Tüm node'larda `/etc/sysctl.d/99-teqlif.conf` oluşturuldu.
+
+**node1** (`deploy/scale/V1.2/node1/sysctl/99-teqlif.conf`):
+
+| Parametre | Önceki | Sonraki |
+|---|---|---|
+| `vm.swappiness` | 60 | 10 |
+| `vm.dirty_ratio` | 20 | 15 |
+| `vm.dirty_background_ratio` | 10 | 5 |
+| `net.core.somaxconn` | 4096 | 65535 |
+| `net.ipv4.tcp_max_syn_backlog` | 1024 | 65535 |
+| `net.ipv4.tcp_tw_reuse` | 2 | 1 |
+
+**gateway** (`deploy/scale/V1.2/gateway/sysctl/99-teqlif.conf`):
+
+| Parametre | Önceki | Sonraki |
+|---|---|---|
+| `net.ipv4.tcp_max_syn_backlog` | 128 | 65535 |
+| `net.ipv4.tcp_tw_reuse` | 2 | 1 |
+
+**node2** (`deploy/scale/V1.2/node2/sysctl/99-teqlif.conf`):
+
+| Parametre | Önceki | Sonraki |
+|---|---|---|
+| `vm.swappiness` | 10 | 1 |
+| `vm.overcommit_memory` | 0 | 1 |
+| `net.ipv4.tcp_max_syn_backlog` | 128 | 4096 |
+
+### 14.4 nginx Optimizasyonu (gateway)
+
+`deploy/scale/V1.2/gateway/nginx/nginx.conf`
+
+| Parametre | Önceki | Sonraki |
+|---|---|---|
+| `worker_connections` | 768 | 4096 |
+| `multi_accept` | off | on |
+| `tcp_nodelay` | — | on |
+| `keepalive_timeout` | default | 65 |
+| `ssl_session_cache` | — | shared:SSL:10m |
+| `ssl_session_timeout` | — | 10m |
+| `open_file_cache` | — | max=1000 inactive=20s |
+| `gzip_vary/proxied/comp_level/types` | comment'te | aktif |
+
+### 14.5 journald Limitleri
+
+| Node | SystemMaxUse | SystemKeepFree | Önceki Kullanım |
+|---|---|---|---|
+| node1 | 500M | 2G | 442 MB |
+| gateway | 300M | 1G | 91 MB |
+| node2 | 200M | 200M | 40 MB |
+
+### 14.6 WireGuard MTU
+
+Tüm node'larda `mtu 1420` zaten doğru değerdeydi — değişiklik gerekmedi.
+
+---
+
+## 15. Rollback Planı
 
 | Senaryo | Aksiyon |
 |---|---|
@@ -516,7 +611,7 @@ nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
 
 ---
 
-## 15. V1.2 Uygulama Sırasında Karşılaşılan Sorunlar
+## 16. V1.2 Uygulama Sırasında Karşılaşılan Sorunlar
 
 ### 1. WireGuard heredoc'ta variable expansion çalışmadı
 
@@ -556,7 +651,7 @@ nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
 
 ---
 
-## 16. V1.3 Adayları
+## 17. V1.3 Adayları
 
 - **Gemini erişim kontrolü:** node1, proxy üzerinden Gemini kullanabilir — bu bir seçim değil, şu an maliyet/karmaşıklık gerekçesiyle ertelendi.
 - **node2 auto-scaling:** Yük arttığında birden fazla AI proxy instance'ı — şu an tek worker yeterli.
@@ -566,7 +661,7 @@ nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
 
 ---
 
-## 17. Commit Referansları
+## 18. Commit Referansları
 
 | Hash | İçerik |
 |---|---|
@@ -582,10 +677,12 @@ nano /var/www/teqlif.com/deploy/scale/resources/.env.<node>.production
 | `3ee6664f` | WireGuard otomasyonu bootstrap scriptlerine eklendi |
 | `5b0516b6` | max_tokens 350→600 |
 | `03feac31` | Tüm servisler tucibeyin kullanıcısına standardize edildi |
+| `f3d2e4b7` | Systemd servis optimizasyonları — LimitNOFILE, OOMScoreAdj, TimeoutStopSec, CPUWeight |
+| `f5be2e77` | Sistem optimizasyonları — PostgreSQL tuning, sysctl, nginx, journald |
 
 ---
 
-## 18. Dosya Referansları
+## 19. Dosya Referansları
 
 ```
 deploy/scale/V1.2/
@@ -600,6 +697,9 @@ deploy/scale/V1.2/
 │   ├── loki-config.yml
 │   ├── promtail-config.yml
 │   ├── nginx/
+│   │   └── nginx.conf                        # worker_connections=4096, gzip, ssl_session_cache
+│   ├── sysctl/
+│   │   └── 99-teqlif.conf                    # tcp_max_syn_backlog=65535, tcp_tw_reuse=1
 │   └── systemd/
 │       ├── prometheus.service                # User=tucibeyin
 │       ├── loki.service                      # User=tucibeyin
@@ -608,11 +708,15 @@ deploy/scale/V1.2/
 │       └── node_exporter.service             # User=tucibeyin
 ├── node1/
 │   ├── promtail-config.yml
+│   ├── postgres/
+│   │   └── postgresql-tuning.conf            # shared_buffers=2GB, work_mem=16MB, NVMe tuning
+│   ├── sysctl/
+│   │   └── 99-teqlif.conf                    # swappiness=10, somaxconn=65535, dirty_ratio
 │   └── systemd/
-│       ├── teqlif.service
-│       ├── teqlif-staging.service
-│       ├── teqlif-worker.service
-│       ├── teqlif-worker-critical.service
+│       ├── teqlif.service                    # LimitNOFILE=65536, OOMScoreAdj=-500, CPUWeight=200
+│       ├── teqlif-staging.service            # LimitNOFILE=65536, OOMScoreAdj=-200
+│       ├── teqlif-worker.service             # OOMScoreAdj=+200, TimeoutStopSec=300
+│       ├── teqlif-worker-critical.service    # OOMScoreAdj=+100, TimeoutStopSec=600
 │       ├── node_exporter.service             # User=tucibeyin
 │       ├── promtail.service                  # User=tucibeyin + SupplementaryGroups
 │       ├── redis-backup.service + .timer
@@ -620,8 +724,10 @@ deploy/scale/V1.2/
 │       └── minio.service                     # User=www-data (değişmez)
 └── node2/
     ├── promtail-config.yml
+    ├── sysctl/
+    │   └── 99-teqlif.conf                    # swappiness=1, overcommit_memory=1
     └── systemd/
-        ├── teqlif-ai-proxy.service
+        ├── teqlif-ai-proxy.service           # MemoryMax=768M, TimeoutStopSec=60
         ├── node_exporter.service             # User=tucibeyin
         └── promtail.service                  # User=tucibeyin + SupplementaryGroups
 
