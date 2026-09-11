@@ -6,6 +6,7 @@
 # Kurduğu servisler:
 #   Uygulama: teqlif-staging, teqlif-worker-staging, teqlif-worker-critical-staging
 #   AI Proxy:  teqlif-ai-proxy
+#   Medya:     livekit (staging SFU — live-staging.teqlif.com)
 #   Depolama:  postgresql-17, redis-server, minio
 #   Web:       nginx (uploads-staging.teqlif.com)
 #   Monitoring: prometheus, loki, alertmanager, node_exporter, promtail
@@ -18,6 +19,7 @@ SYSTEMD_SRC="$N3_SRC/systemd"
 RESOURCES="$REPO/deploy/scale/resources"
 NODE3="$RESOURCES/node3"
 
+LIVEKIT_VERSION="1.13.3"
 NODE_EXPORTER_VERSION="1.8.2"
 PROMTAIL_VERSION="3.0.0"
 PROMETHEUS_VERSION="2.51.0"
@@ -168,6 +170,30 @@ sudo chown -R tucibeyin:tucibeyin /var/lib/alertmanager
 # alertmanager.yml.template → envsubst ile .env.node3.production'dan TELEGRAM_* inject edilir
 # (alertmanager.service ExecStartPre'si bu işi yapar — deployment sırasında otomatik)
 
+# ── LiveKit ───────────────────────────────────────────────────────────────────
+echo "==> livekit-server $LIVEKIT_VERSION..."
+if ! /usr/local/bin/livekit-server --version 2>&1 | grep -q "$LIVEKIT_VERSION" 2>/dev/null; then
+  TMP=$(mktemp -d)
+  wget -q \
+    "https://github.com/livekit/livekit/releases/download/v${LIVEKIT_VERSION}/livekit_${LIVEKIT_VERSION}_linux_amd64.tar.gz" \
+    -O "$TMP/livekit.tar.gz"
+  tar xzf "$TMP/livekit.tar.gz" -C "$TMP"
+  sudo mv "$TMP/livekit-server" /usr/local/bin/livekit-server
+  sudo chmod +x /usr/local/bin/livekit-server
+  rm -rf "$TMP"
+fi
+# livekit kullanıcısı
+if ! id livekit &>/dev/null; then
+  sudo useradd --system --no-create-home --shell /usr/sbin/nologin livekit
+fi
+sudo mkdir -p /etc/livekit/certs
+sudo chown -R livekit:livekit /etc/livekit
+# livekit.yaml — <LIVEKIT_API_SECRET> elle doldurulmalı (bootstrap sonrası):
+if [[ ! -f /etc/livekit/livekit.yaml ]]; then
+  sudo cp "$N3_SRC/livekit.yaml" /etc/livekit/livekit.yaml
+  sudo chmod 640 /etc/livekit/livekit.yaml
+fi
+
 # ── nginx: uploads-staging.teqlif.com ────────────────────────────────────────
 echo "==> nginx site config..."
 sudo cp "$N3_SRC/nginx/uploads-staging.teqlif.com" \
@@ -210,7 +236,7 @@ echo "==> systemd servisleri..."
 for svc in \
   teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging \
   teqlif-ai-proxy \
-  minio \
+  minio livekit \
   node_exporter promtail prometheus loki alertmanager; do
   sudo cp "$SYSTEMD_SRC/${svc}.service" /etc/systemd/system/
 done
@@ -218,7 +244,7 @@ sudo systemctl daemon-reload
 for svc in \
   teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging \
   teqlif-ai-proxy \
-  minio \
+  minio livekit \
   node_exporter promtail prometheus loki alertmanager; do
   sudo systemctl enable "$svc"
 done

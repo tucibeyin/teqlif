@@ -8,14 +8,13 @@
 ## Çalışma Kuralı
 
 Her adım için sıra:
-1. **Sun** — adım Claude tarafından açıklanır
-2. **Onayla** — kullanıcı onaylar
-3. **Uygula** — implement edilir
-4. **Push** — `git push` (lokal değişiklik varsa)
-5. **Test** — VPS'te doğrulanır
-6. **Test onayı** — kullanıcı test çıktısını iletir ve onaylar
-7. **task.md güncelle** — adım `[x]` işaretlenir
-8. **Sonraki adım** — bir sonraki adıma geçilir
+1. **Onayla** — kullanıcı onaylar
+2. **Uygula** — implement edilir
+3. **Push** — `git push` (lokal değişiklik varsa)
+4. **Test** — VPS'te doğrulanır
+5. **Test onayı** — kullanıcı test çıktısını iletir ve onaylar
+6. **task.md güncelle** — adım `[x]` işaretlenir
+7. **Sonraki adım** — bir sonraki adıma geçilir
 
 ---
 
@@ -85,13 +84,8 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 0.8 Git Push
 
-- [ ] **[Lokal]** Değişiklikleri doğrula: `git diff --stat`
-- [ ] **[Lokal]** Commit ve push:
-  ```bash
-  git add -p   # hassas dosya içermediğini doğrula
-  git commit -m "feat(scale): V1.3 — node3 eklendi (AI proxy secondary, monitoring, staging, backup)"
-  git push
-  ```
+- [x] **[Lokal]** Değişiklikleri doğrula: `git diff --stat`
+- [x] **[Lokal]** Commit ve push: `8324261d` → `a54ff83d..8324261d main → main`
 
 ---
 
@@ -102,7 +96,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 1.1 node3 — WireGuard Kurulumu ve Key Üretimi
 
-- [ ] **[node3]** WireGuard kur ve key üret:
+- [x] **[node3]** WireGuard kur ve key üret:
   ```bash
   sudo apt install -y wireguard
   sudo bash -c 'wg genkey | tee /etc/wireguard/node3_private.key | wg pubkey > /etc/wireguard/node3_public.key'
@@ -110,7 +104,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   sudo cat /etc/wireguard/node3_public.key   # ← bu değeri not al (NODE3_PUBLIC_KEY)
   ```
 
-- [ ] **[node3]** `/etc/wireguard/wg0.conf` oluştur — `deploy/scale/V1.3/wireguard/node3-wg0.conf`'u baz al:
+- [x] **[node3]** `/etc/wireguard/wg0.conf` oluştur — `deploy/scale/V1.3/wireguard/node3-wg0.conf`'u baz al:
   ```bash
   # Repo'dan kopyala (git pull öncesi değil — elle yaz):
   sudo nano /etc/wireguard/wg0.conf
@@ -121,7 +115,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   #   gateway: 7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=
   ```
 
-- [ ] **[node3]** WireGuard başlat:
+- [x] **[node3]** WireGuard başlat:
   ```bash
   sudo systemctl enable --now wg-quick@wg0
   sudo wg show
@@ -131,7 +125,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 **node3 public key'ini önceki adımda not aldın. Aşağıdaki komutlarda `<NODE3_PUBLIC_KEY>` yerine yaz.**
 
-- [ ] **[node1]** node3 peer ekle:
+- [x] **[node1]** node3 peer ekle:
   ```bash
   NODE3_PUBKEY="<NODE3_PUBLIC_KEY>"
   # Runtime ekle:
@@ -143,7 +137,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   printf '\n[Peer]  # node3 — Zap-Hosting Ashburn VA\nPublicKey = %s\nAllowedIPs = 10.10.0.4/32\nEndpoint = 5.249.165.10:51820\nPersistentKeepalive = 25\n' "$NODE3_PUBKEY" | sudo tee -a /etc/wireguard/wg0.conf
   ```
 
-- [ ] **[node2]** node3 peer ekle:
+- [x] **[node2]** node3 peer ekle:
   ```bash
   NODE3_PUBKEY="<NODE3_PUBLIC_KEY>"
   sudo wg set wg0 peer "$NODE3_PUBKEY" \
@@ -153,7 +147,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   printf '\n[Peer]  # node3 — Zap-Hosting Ashburn VA\nPublicKey = %s\nAllowedIPs = 10.10.0.4/32\nEndpoint = 5.249.165.10:51820\nPersistentKeepalive = 25\n' "$NODE3_PUBKEY" | sudo tee -a /etc/wireguard/wg0.conf
   ```
 
-- [ ] **[gateway]** node3 peer ekle:
+- [x] **[gateway]** node3 peer ekle:
   ```bash
   NODE3_PUBKEY="<NODE3_PUBLIC_KEY>"
   sudo wg set wg0 peer "$NODE3_PUBKEY" \
@@ -165,20 +159,20 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 1.3 Doğrulama
 
-- [ ] **[node1]** Ping testi:
+- [x] **[node1]** Ping testi:
   ```bash
   ping -c 3 10.10.0.4   # node3'e
   ping -c 3 10.10.0.3   # node2 — mevcut, bozulmamalı
   ```
-- [ ] **[node2]** Ping testi:
+- [x] **[node2]** Ping testi:
   ```bash
   ping -c 3 10.10.0.4
   ```
-- [ ] **[gateway]** Ping testi:
+- [x] **[gateway]** Ping testi:
   ```bash
   ping -c 3 10.10.0.4
   ```
-- [ ] **[node3]** Tüm node'lara ulaşıyor mu:
+- [x] **[node3]** Tüm node'lara ulaşıyor mu:
   ```bash
   ping -c 2 10.10.0.1   # node1
   ping -c 2 10.10.0.2   # gateway
@@ -193,7 +187,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.1 Git Clone ve Bootstrap
 
-- [ ] **[node3]** Repo kopyala ve bootstrap çalıştır:
+- [x] **[node3]** Repo kopyala ve bootstrap çalıştır:
   ```bash
   git clone <REPO_URL> /var/www/teqlif.com
   cd /var/www/teqlif.com
@@ -307,7 +301,56 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   bash /var/www/teqlif.com/deploy/scale/resources/node3/node3_services.sh start
   ```
 
-### 2.9 Nginx — uploads-staging.teqlif.com
+### 2.9 LiveKit Staging — node3
+
+- [ ] **[Lokal]** node3 LiveKit config + systemd + bootstrap güncelleme dosyaları oluştur ve push et.
+
+- [ ] **[node3]** git pull, sonra bootstrap LiveKit adımını çalıştır:
+  ```bash
+  git pull
+  bash deploy/scale/resources/node3/bootstrap_node3.sh  # sadece LiveKit binary adımı yeniden çalışır
+  ```
+
+- [ ] **[node3]** livekit.yaml yerleştir ve secret doldur:
+  ```bash
+  sudo mkdir -p /etc/livekit/certs
+  sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node3/livekit.yaml /etc/livekit/livekit.yaml
+  # <LIVEKIT_API_SECRET> yerine secret yaz:
+  LKSECRET=$(openssl rand -hex 32)
+  sudo sed -i "s|<LIVEKIT_API_SECRET>|$LKSECRET|" /etc/livekit/livekit.yaml
+  echo "LIVEKIT_API_KEY=teqlif_livekit_staging"
+  echo "LIVEKIT_API_SECRET=$LKSECRET"
+  # Bu iki değeri .env.node3.staging dosyasına ekle
+  ```
+
+- [ ] **[node3]** TLS sertifikası al (TURN için):
+  ```bash
+  sudo certbot certonly --standalone -d live-staging.teqlif.com \
+    --non-interactive --agree-tos -m tucibeyin@gmail.com
+  sudo cp /etc/letsencrypt/live/live-staging.teqlif.com/fullchain.pem /etc/livekit/certs/
+  sudo cp /etc/letsencrypt/live/live-staging.teqlif.com/privkey.pem   /etc/livekit/certs/
+  sudo chmod 640 /etc/livekit/certs/*.pem
+  ```
+  > DNS: `live-staging.teqlif.com` A → `5.249.165.10` (CF proxy kapalı) tanımlı olmalı.
+
+- [ ] **[node3]** LiveKit servisi başlat:
+  ```bash
+  sudo systemctl enable --now livekit
+  sudo systemctl status livekit
+  ```
+
+- [ ] **[node3]** UFW — LiveKit portları:
+  ```bash
+  sudo ufw allow 7880/tcp comment 'LiveKit API/WebSocket staging'
+  sudo ufw allow 7882/tcp comment 'LiveKit RTC/TCP staging'
+  sudo ufw allow 7882/udp comment 'LiveKit RTC/UDP staging'
+  sudo ufw allow 3478/udp comment 'LiveKit TURN/UDP staging'
+  sudo ufw allow 5349/tcp comment 'LiveKit TURN/TLS staging'
+  sudo ufw allow 50000:60000/udp comment 'LiveKit media port range staging'
+  sudo ufw reload
+  ```
+
+### 2.10 Nginx — uploads-staging.teqlif.com
 
 - [ ] **[node3]** nginx config aktive et:
   ```bash
