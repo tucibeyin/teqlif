@@ -70,30 +70,50 @@ Her yeni VPS'te node kurulumundan önce aşağıdaki adımlar **root olarak** ç
 
 ```bash
 # tucibeyin kullanıcısını oluştur ve sudo grubuna ekle
-adduser tucibeyin
+adduser --gecos "" tucibeyin
 usermod -aG sudo tucibeyin
 
-# Root'un SSH authorized_keys'ini tucibeyin'e kopyala (mevcut SSH erişimi korunur)
+# SSH dizinini hazırla
 mkdir -p /home/tucibeyin/.ssh
-cp /root/.ssh/authorized_keys /home/tucibeyin/.ssh/
 chown -R tucibeyin:tucibeyin /home/tucibeyin/.ssh
 chmod 700 /home/tucibeyin/.ssh
-chmod 600 /home/tucibeyin/.ssh/authorized_keys
 ```
+
+> **Not:** Bazı sağlayıcılar (Zap-Hosting gibi) root için şifre kullanır, SSH key kullanmaz.
+> Bu durumda `cp /root/.ssh/authorized_keys` işe yaramaz — aşağıdaki adımla lokal key eklenir.
+
+### SSH key ekle (lokal makinadan — bir kez şifre girerek)
+
+```bash
+# Lokal Mac'te çalıştır:
+ssh-copy-id -i ~/.ssh/id_ed25519.pub tucibeyin@<IP>
+```
+
+### SSH alias ekle (lokal makinada ~/.ssh/config)
+
+```
+Host teqlif-<hostname>
+    HostName <IP>
+    User tucibeyin
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 60
+```
+
+Bundan sonra `ssh teqlif-<hostname>` ile şifresiz bağlanılır.
 
 ### Makine adını ayarla
 
-VPS amacına göre hostname ver (`node1`, `node2`, `gateway` veya başka bir isim):
+VPS amacına göre hostname ver (`node1`, `node2`, `node3`, `gateway` veya başka bir isim):
 
 ```bash
-hostnamectl set-hostname <hostname>
-echo "127.0.1.1 <hostname>" >> /etc/hosts
+sudo hostnamectl set-hostname <hostname>
+echo "127.0.1.1 <hostname>" | sudo tee -a /etc/hosts
 ```
 
-### Git ve repo
+### Temel araçları yükle
 
 ```bash
-apt update && apt install -y git
+sudo apt update && sudo apt install -y git btop curl wget
 
 # Repo dizinini oluştur ve klonla
 mkdir -p /var/www/teqlif.com
@@ -104,6 +124,23 @@ chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 > **Not:** Repo private ise git clone için HTTPS personal access token kullan:
 > `git clone https://<token>@github.com/tucibeyin/teqlif.git /var/www/teqlif.com`
 > Token aldıktan sonra remote URL'i temizle: `git remote set-url origin https://github.com/tucibeyin/teqlif.git`
+
+### Giriş ekranı (MOTD) ayarla
+
+```bash
+sudo tee /etc/motd << 'EOF'
+
+=========================================
+ 🖥️  <HOSTNAME> (<Rol>)
+ 📍  Provider : <Sağlayıcı>
+ 🌐  Public IP: <IP>
+ 📅  Purchase : <Tarih>
+ 🎯  Roles    : <Rol 1>
+                <Rol 2>
+=========================================
+
+EOF
+```
 
 Bundan sonra **tucibeyin** kullanıcısıyla bağlan ve ilgili node kurulumuna geç.
 
