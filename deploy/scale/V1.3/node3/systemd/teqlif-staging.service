@@ -1,6 +1,7 @@
 [Unit]
 Description=Teqlif FastAPI Backend — Staging (node3)
 After=network.target postgresql.service redis-server.service
+Wants=teqlif-worker-staging.service teqlif-worker-critical-staging.service
 StartLimitBurst=10
 StartLimitIntervalSec=600
 

@@ -1,6 +1,7 @@
 [Unit]
 Description=Teqlif FastAPI Backend
 After=network.target postgresql.service redis.service
+Wants=teqlif-worker.service teqlif-worker-critical.service
 StartLimitBurst=10
 StartLimitIntervalSec=600
 
