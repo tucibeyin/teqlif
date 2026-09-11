@@ -417,11 +417,84 @@ V1.2/final.md §17'de ertelenen kalemler:
 
 ### §9.1 AI Proxy Secondary
 
-> **Durum:** Tartışılacak
+> **Durum:** Planlandı ✓
 
 node3 ABD IP'sine sahip — Gemini erişimi tam. node2 SPOF'unu kırar; fallback zincirinde ikinci halka olur.
 
 **Çözülen sorun:** §7 #2 — AI proxy SPOF
+
+#### Yeni Fallback Zinciri
+
+```
+POST /api/listings/generate-description  (node1)
+  └─► generate_via_proxy(params)
+        ├─ node2 :8080  (primary, ~100ms WG gecikme)
+        │     └─ başarısız → devam
+        ├─ node3 :8080  (secondary, ~80ms WG gecikme)
+        │     └─ başarısız → devam
+        └─ node1 local Groq  (son çare — Gemini yok, EU IP)
+```
+
+#### Değişecek Dosyalar
+
+**Backend (node1 deploy gerektirir):**
+
+| Dosya | Değişiklik |
+|---|---|
+| `backend/app/config.py` | `node3_ai_proxy_url: str = ""` ve `node3_internal_token: str = ""` eklenir |
+| `backend/app/services/ml/ai_proxy_client.py` | `generate_via_node2` → `generate_via_proxy` yeniden yazılır; proxy listesi iterate edilir |
+| `backend/app/routers/listings.py:681` | import ve çağrı adı güncellenir |
+| `deploy/scale/resources/node1/.env.node1.production` | `NODE3_AI_PROXY_URL=http://10.10.0.4:8080` ve `NODE3_INTERNAL_TOKEN=` eklenir |
+| `deploy/scale/resources/node1/.env.node1.staging` | aynı |
+
+**node3 (yeni dosyalar):**
+
+| Dosya | İçerik |
+|---|---|
+| `deploy/scale/V1.3/node3/systemd/teqlif-ai-proxy.service` | node2 servisiyle aynı yapı; `--host 10.10.0.4 --port 8080`, `MemoryMax=768M` |
+| `deploy/scale/resources/node3/.env.node3.production` | `GROQ_API_KEY`, `GEMINI_API_KEY`, `NODE3_INTERNAL_TOKEN`, `REDIS_URL=redis://10.10.0.1:6379` |
+| `deploy/scale/resources/node3/node3_production_requirements.txt` | node2 ile aynı 7 paket |
+| `deploy/scale/resources/node3/node3_services.sh` | `teqlif-ai-proxy node_exporter promtail` |
+
+**node2 (mevcut dosya değişimi):**
+
+| Dosya | Değişiklik |
+|---|---|
+| `backend/app/ai_proxy_main.py` | `settings.node2_internal_token` → `settings.node3_internal_token` token kontrolü **sorun — bkz. Trade-off #1** |
+
+#### UFW (node3)
+
+```
+8080/tcp on wg0  ALLOW  WireGuard mesh   # AI proxy — node1'den
+9100/tcp on wg0  ALLOW  WireGuard mesh   # node_exporter — Prometheus
+```
+
+#### Ön Koşul
+
+**WireGuard 4-node mesh kurulumu zorunlu.** node3, node1'in Redis'ine WireGuard üzerinden bağlanır (`REDIS_URL=redis://10.10.0.1:6379`). WireGuard olmadan proxy çalışmaz.
+
+#### ⚠️ Trade-off #1 — Token Adı (Karar Gerekiyor)
+
+`ai_proxy_main.py:42` şu an sabit olarak `settings.node2_internal_token` kontrolü yapıyor. node3 aynı kodu çalıştıracak. İki seçenek:
+
+| | Seçenek A: Ortak token | Seçenek B: Ayrı token |
+|---|---|---|
+| **Yöntem** | `node2_internal_token` → `ai_proxy_internal_token` olarak yeniden adlandır; her iki proxy aynı değeri kullanır | `config.py`'ye `node3_internal_token` eklenir; `ai_proxy_main.py`'ye generic field (`ai_proxy_internal_token`) girer; her proxy kendi token'ı |
+| **Avantaj** | Tek değer, basit yönetim | Biri sızdıralsa diğeri korunur |
+| **Dezavantaj** | node2'nin live `.env`'i değişmeli (`NODE2_INTERNAL_TOKEN` → `AI_PROXY_INTERNAL_TOKEN`) + node2 restart | +1 env var, `ai_proxy_main.py` yeniden adlandırma gerektirir |
+| **Gerçek risk** | Her iki proxy da WireGuard arkasında — token dışarıdan ulaşılamaz | — |
+
+> **Öneri:** Token WireGuard arkasında olduğu için sızıntı riski düşük. Seçenek A operasyonel olarak daha basit — ama node2 live restart gerektirir.
+
+#### ⚠️ Trade-off #2 — Timeout Yığılması (Bilgi)
+
+Her proxy için timeout şu an 45s. Her ikisi de yavaş olursa worst-case: 45s + 45s = **90s** kullanıcı bekler.
+
+> **Öneri:** Her proxy için 30s — yeterli, toplam max 60s. Kabul edilebilir.
+
+#### Prometheus Güncelleme
+
+node3 eklenince gateway'deki `prometheus.yml`'ye scrape target eklenir. Bu §9.3 Monitoring başlığında işlenecek.
 
 ---
 
