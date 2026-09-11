@@ -421,6 +421,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 - [x] **[node1]** Yeni UFW kuralları:
   ```bash
+  sudo ufw allow in on wg0 from 10.10.0.4 to any port 9100 proto tcp comment 'node_exporter — node3 Prometheus'
   sudo ufw allow in on wg0 from 10.10.0.4 to any port 9187 proto tcp comment 'postgres_exporter — node3 Prometheus'
   sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'LiveKit metrics — node3 Prometheus'
   sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy'
@@ -497,7 +498,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 4.5 Promtail — Push URL'i node3'e Çevir
 
-- [ ] **[node1]** promtail config güncelle:
+- [x] **[node1]** promtail config güncelle:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node1/promtail-config.yml /etc/promtail-config.yml
   sudo systemctl restart promtail
@@ -514,14 +515,14 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 5.1 git pull
 
-- [ ] **[gateway]** Kodu güncelle:
+- [x] **[gateway]** Kodu güncelle:
   ```bash
   cd /var/www/teqlif.com && git pull
   ```
 
 ### 5.2 UFW — Loki Kuralını Kaldır, node_exporter Ekle
 
-- [ ] **[gateway]** UFW değiştir:
+- [x] **[gateway]** UFW değiştir:
   ```bash
   # Loki kuralını bul ve sil:
   sudo ufw status numbered
@@ -536,7 +537,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 5.3 node_exporter — Listen Address Değiştir
 
-- [ ] **[gateway]** node_exporter.service güncelle:
+- [x] **[gateway]** node_exporter.service güncelle:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/gateway/systemd/node_exporter.service \
     /etc/systemd/system/node_exporter.service
@@ -550,7 +551,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 5.4 Promtail — Push URL'i node3'e Çevir
 
-- [ ] **[gateway]** promtail config güncelle:
+- [x] **[gateway]** promtail config güncelle:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/gateway/promtail-config.yml /etc/promtail-config.yml
   sudo systemctl restart promtail
@@ -559,7 +560,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 5.5 journald Güncelle
 
-- [ ] **[gateway]** journald retention kısalt:
+- [x] **[gateway]** journald retention kısalt:
   ```bash
   sudo mkdir -p /etc/systemd/journald.conf.d
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/gateway/journald/journald.conf \
@@ -569,7 +570,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 5.6 Nginx — Staging Upstream node3
 
-- [ ] **[gateway]** nginx config güncelle ve reload:
+- [x] **[gateway]** nginx config güncelle ve reload:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/gateway/nginx/teqlif.conf \
     /etc/nginx/sites-available/teqlif.conf
@@ -584,7 +585,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 > curl -s "http://10.10.0.4:9090/api/v1/query?query=up{job=\"node-gateway\"}" | python3 -m json.tool
 > ```
 
-- [ ] **[gateway]** Prometheus, Loki, Alertmanager durdur ve disable et:
+- [x] **[gateway]** Prometheus, Loki, Alertmanager durdur ve disable et:
   ```bash
   sudo systemctl stop prometheus loki alertmanager
   sudo systemctl disable prometheus loki alertmanager
