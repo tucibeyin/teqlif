@@ -60,13 +60,15 @@ sudo usermod -aG adm            tucibeyin 2>/dev/null || true
 
 # ── Python venv (staging + AI proxy ortak) ───────────────────────────────────
 # Staging requirements, AI proxy requirements'ı kapsıyor; tek venv yeterli.
-# Not: sentence-transformers + ML paketleri ~3-5 GB disk kullanır — ilk kurulum uzun sürer.
+# Not: sentence-transformers + ML paketleri ~1-2 GB disk kullanır (CPU-only torch).
 VENV="$REPO/venv"
 echo "==> Python venv @ $VENV (staging requirements)..."
 if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --upgrade pip -q
+# CPU-only torch önce kurulur — sentence-transformers varsayılan olarak CUDA indirir (GPU yok).
+"$VENV/bin/pip" install torch --index-url https://download.pytorch.org/whl/cpu -q
 "$VENV/bin/pip" install -r "$RESOURCES/node3/node3_staging_requirements.txt"
 
 # ── MinIO ─────────────────────────────────────────────────────────────────────
