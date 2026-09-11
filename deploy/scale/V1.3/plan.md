@@ -9,48 +9,41 @@
 
 ## §1. Donanım Özeti
 
-| Node | Sağlayıcı | Lokasyon | IP (Public) | IP (WG) | RAM | Disk | Ağ | Ödeme |
-|---|---|---|---|---|---|---|---|---|
-| **node1** | OVHcloud SAS | Frankfurt, DE | 135.125.175.223 | 10.10.0.1 | — | — | 2 Gbps / unmetered | aylık |
-| **node2** | VPSHostingService.co | Buffalo, NY | 198.12.123.33 | 10.10.0.3 | — | — | 1 Gbps | aylık |
-| **gateway** | Netcup GmbH | Nürnberg, DE | 94.16.105.135 | 10.10.0.2 | — | — | 1 Gbps / 24h ort. 100 Mbps aşılırsa throttle | aylık |
-| **node3** | Zap-Hosting GmbH | Ashburn, VA | 5.249.165.10 | 10.10.0.4 | 3.8 GiB | 25 GB NVMe | 1 Gbps / 33 TB/ay | $81.66 — tek seferlik |
+| Node | Sağlayıcı | Lokasyon | IP (Public) | IP (WG) | CPU | RAM | Disk | Ağ | Ödeme |
+|---|---|---|---|---|---|---|---|---|---|
+| **node1** | OVH SAS | Frankfurt, DE | 135.125.175.223 | 10.10.0.1 | Intel Haswell 6C @ 3.09 GHz | 11.4 GiB + 12 GiB swap | 98.3 GB NVMe | ~1.95 Gbps / unmetered | aylık |
+| **node2** | RackNerd LLC | Buffalo, NY | 198.12.123.33 | 10.10.0.3 | Intel Xeon E5-2670 v2, 1C @ 2.50 GHz | 1.4 GiB + 2 GiB swap | 14.7 GB HDD/SSD | ~237–435 Mbps | aylık |
+| **gateway** | Netcup GmbH | Nürnberg, DE | 94.16.105.135 | 10.10.0.2 | QEMU vCPU 2C @ 2.29 GHz | 1.9 GiB (efektif) | 58.9 GB NVMe | ~1.08 Gbps / 100 Mbps ort. aşılırsa throttle | aylık |
+| **node3** | Zap-Hosting GmbH | Ashburn, VA | 5.249.165.10 | 10.10.0.4 | AMD EPYC 7763, 4C @ 2.45 GHz | 3.8 GiB (ballooning kapalı) | 25 GB NVMe | 1 Gbps / 33 TB/ay | $81.66 tek seferlik |
 
-> `—` işaretli alanlar kullanıcıdan alınacak (§1.1).
+### §1.1 Benchmark Karşılaştırması
 
-### §1.1 Donanım Detayları (Doldurulacak)
+| Node | Geekbench 6 Single | Geekbench 6 Multi | Disk IOPS (4k) | Ağ (uplink) |
+|---|---|---|---|---|
+| node1 | 1058 | 4404 | ~60.2k (123 MB/s) | ~1.95 Gbps |
+| node2 | **206** | **199** | ~7.8k (32 MB/s) | ~237–435 Mbps |
+| gateway | 645 | 1210 | ~750–800 MB/s (1M blok) | ~1.08 Gbps |
+| node3 | — | — | — (YABS çalıştırıldı, not edilmedi) | 1 Gbps |
 
-```
-node1:
-  CPU:
-  RAM:
-  Disk:
-  OS:
+> node2 benchmark'ı oldukça düşük — single-core 206, Raspberry Pi 4 seviyesi.
 
-node2:
-  CPU:
-  RAM:
-  Disk:
-  OS:
+### §1.2 Spec'lerden Çıkan Kritik Gözlemler
 
-gateway:
-  CPU:
-  RAM:
-  Disk:
-  OS:
+| # | Gözlem | Etki |
+|---|---|---|
+| 1 | **node2 RAM: 1.4 GiB** — AI proxy `MemoryMax=768M` tanımlı; swap+sistem ile neredeyse tüm bellek dolu | node2 başka hiçbir şey taşıyamaz |
+| 2 | **node2 CPU tek çekirdek, Geekbench 206** — E5-2670 v2, 2013 donanımı | AI proxy dışında iş yüklenmemeli |
+| 3 | **gateway RAM: 1.9 GiB efektif** — Prometheus+Loki+alertmanager+Grafana+nginx toplamda ~1.0–1.4 GB kullanır | Gateway zaten sınırda; ek yük alamaz |
+| 4 | **node3, node2'den çok daha güçlü** — 4 çekirdek EPYC vs 1 çekirdek Xeon, 3.8 GiB vs 1.4 GiB | node3 birden fazla rol taşıyabilir |
+| 5 | **node2 disk: 14.7 GB** — V1.2 bootstrap'ta "VPSHostingService.co" yazıyor; gerçek sağlayıcı RackNerd LLC | Bootstrap ve env template'leri güncellenmeli |
+| 6 | **node1 swap: 12 GiB** — bellek baskısında disk'e döküyor; production'da swap kullanımı izlenmeli | Swap metriği Prometheus'ta izlenmeli |
 
-node3:
-  CPU:    AMD EPYC 7763, 4 çekirdek @ 2450 MHz
-  RAM:    3.8 GiB (4 GB, ballooning kapalı)
-  Disk:   25 GB NVMe
-  OS:     Debian 13
-```
+### §1.3 Özel Notlar
 
-### §1.2 Özel Notlar
-
-- **node3 ballooning:** KVM hypervisor dinamik RAM tahsisi — Zap panel'den devre dışı bırakıldı. Aksi hâlde 1.8 GiB görünür.
-- **node3 panel girişi:** Her 90 günde bir giriş zorunlu (aksi hâlde hesap dondurulabilir) — takvime hatırlatıcı eklenmeli.
-- **gateway bandwidth:** Netcup 24 saatlik ortalama 100 Mbps'yi aşarsa throttle uygulanır.
+- **node3 ballooning:** KVM hypervisor dinamik RAM — Zap panel'den devre dışı bırakıldı. Aksi hâlde 1.8 GiB görünür.
+- **node3 panel girişi:** Her 90 günde bir giriş zorunlu — takvime hatırlatıcı eklenmeli.
+- **gateway throttle:** Netcup 24 saatlik ortalama 100 Mbps'yi aşarsa bant genişliği throttle edilir.
+- **node2 sağlayıcı adı:** `bootstrap_node2.sh` ve servis dosyalarında "VPSHostingService.co" yazıyor; gerçek sağlayıcı RackNerd LLC. Yorum satırları güncellenecek.
 
 ---
 
