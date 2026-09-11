@@ -18,32 +18,69 @@
 
 ### §1.1 Benchmark Karşılaştırması
 
-| Node | Geekbench 6 Single | Geekbench 6 Multi | Disk IOPS (4k) | Ağ (uplink) |
+| Node | Geekbench 6 Single | Geekbench 6 Multi | Disk 4k IOPS (R/W) | Ağ (uplink, yakın) |
 |---|---|---|---|---|
 | node1 | 1058 | 4404 | ~60.2k (123 MB/s) | ~1.95 Gbps |
 | node2 | **206** | **199** | ~7.8k (32 MB/s) | ~237–435 Mbps |
 | gateway | 645 | 1210 | ~750–800 MB/s (1M blok) | ~1.08 Gbps |
-| node3 | — | — | — (YABS çalıştırıldı, not edilmedi) | 1 Gbps |
+| node3 | — (çalıştırılmadı) | — | **56.2k (230 MB/s)** | **1.04 Gbps** (NYC, 7ms) |
 
-> node2 benchmark'ı oldukça düşük — single-core 206, Raspberry Pi 4 seviyesi.
+> node2 single-core 206 — 2013 donanımı, Raspberry Pi 4 seviyesi.
 
-### §1.2 Spec'lerden Çıkan Kritik Gözlemler
+### §1.2 node3 YABS Detayları (2026-09-11, ballooning kapalı öncesi)
+
+```
+YABS tarihi : 2026-09-11 05:08 EDT  (ballooning henüz kapalı değil → RAM 1.8 GiB gösteriyor)
+Gerçek RAM  : 3.8 GiB  (ballooning kapatıldıktan sonra free -h ile doğrulandı)
+Swap        : 0 KiB
+Disk        : 24.5 GiB NVMe
+VM type     : KVM
+AES-NI      : ✔  (WireGuard için önemli)
+AMD-V       : ✔  (nested virt mümkün)
+IPv6        : ❌ Offline
+ISP/ASN     : ZAP-Hosting GmbH / AS206996
+Coğrafi konum: Reston, VA (Ashburn'ün hemen yanı, aynı AWS/datacenter bölgesi)
+```
+
+**Disk (fio, mixed R/W 50/50):**
+
+| Blok | Okuma | Yazma | Toplam |
+|---|---|---|---|
+| 4k | 115 MB/s (28k IOPS) | 115 MB/s (28k IOPS) | 230 MB/s (56k IOPS) |
+| 64k | 158 MB/s | 158 MB/s | 316 MB/s |
+| 512k | 150 MB/s | 158 MB/s | 309 MB/s |
+| 1m | 149 MB/s | 158 MB/s | 307 MB/s |
+
+**Ağ (iperf3 IPv4):**
+
+| Hedef | Ping | Gönderme | Alma |
+|---|---|---|---|
+| NYC, NY (Leaseweb) | 7.4 ms | **1.04 Gbps** | 976 Mbps |
+| Los Angeles, CA | 52 ms | 516 Mbps | 935 Mbps |
+| London, UK | 77 ms | busy | 927 Mbps |
+| Amsterdam, NL | 82 ms | 405 Mbps | 863 Mbps |
+| Tashkent, UZ | 172 ms | 296 Mbps | 757 Mbps |
+
+> Türkiye/Avrupa'ya ~80ms, ~400–900 Mbps. WireGuard tüneli üzerinden node1/gateway'e bu gecikme beklenir.
+
+### §1.3 Spec'lerden Çıkan Kritik Gözlemler
 
 | # | Gözlem | Etki |
 |---|---|---|
-| 1 | **node2 RAM: 1.4 GiB** — AI proxy `MemoryMax=768M` tanımlı; swap+sistem ile neredeyse tüm bellek dolu | node2 başka hiçbir şey taşıyamaz |
+| 1 | **node2 RAM: 1.4 GiB** — AI proxy `MemoryMax=768M`; swap+sistem ile tamamen dolu | node2 başka hiçbir şey taşıyamaz |
 | 2 | **node2 CPU tek çekirdek, Geekbench 206** — E5-2670 v2, 2013 donanımı | AI proxy dışında iş yüklenmemeli |
-| 3 | **gateway RAM: 1.9 GiB efektif** — Prometheus+Loki+alertmanager+Grafana+nginx toplamda ~1.0–1.4 GB kullanır | Gateway zaten sınırda; ek yük alamaz |
-| 4 | **node3, node2'den çok daha güçlü** — 4 çekirdek EPYC vs 1 çekirdek Xeon, 3.8 GiB vs 1.4 GiB | node3 birden fazla rol taşıyabilir |
-| 5 | **node2 disk: 14.7 GB** — V1.2 bootstrap'ta "VPSHostingService.co" yazıyor; gerçek sağlayıcı RackNerd LLC | Bootstrap ve env template'leri güncellenmeli |
-| 6 | **node1 swap: 12 GiB** — bellek baskısında disk'e döküyor; production'da swap kullanımı izlenmeli | Swap metriği Prometheus'ta izlenmeli |
+| 3 | **gateway RAM: 1.9 GiB** — Prometheus+Loki+alertmanager+Grafana+nginx ~1.0–1.4 GB kullanır | Gateway zaten sınırda; monitoring taşınmalı |
+| 4 | **node3 bu tablonun en güçlü ikinci makinesi** — 4C EPYC, 3.8 GiB, 56k IOPS, 1 Gbps | Birden fazla rol taşıyabilir |
+| 5 | **node2 disk: 14.7 GB** — bootstrap'ta "VPSHostingService.co" yazıyor; gerçek sağlayıcı RackNerd LLC | Bootstrap yorum satırları güncellenmeli |
+| 6 | **node1 swap: 12 GiB** — bellek baskısında diske döküyor | Swap kullanım metriği izlenmeli |
+| 7 | **node3 IPv6 yok** — Zap mevcut konfigürasyonda IPv6 vermiyor | Yalnızca IPv4 erişim; WireGuard için sorun değil |
 
-### §1.3 Özel Notlar
+### §1.4 Özel Notlar
 
-- **node3 ballooning:** KVM hypervisor dinamik RAM — Zap panel'den devre dışı bırakıldı. Aksi hâlde 1.8 GiB görünür.
+- **node3 ballooning:** KVM dinamik RAM tahsisi — Zap panel'den devre dışı bırakıldı. Aksi hâlde 1.8 GiB görünür; dashboard restart sonrası 3.8 GiB kalıcı olarak onaylandı.
 - **node3 panel girişi:** Her 90 günde bir giriş zorunlu — takvime hatırlatıcı eklenmeli.
 - **gateway throttle:** Netcup 24 saatlik ortalama 100 Mbps'yi aşarsa bant genişliği throttle edilir.
-- **node2 sağlayıcı adı:** `bootstrap_node2.sh` ve servis dosyalarında "VPSHostingService.co" yazıyor; gerçek sağlayıcı RackNerd LLC. Yorum satırları güncellenecek.
+- **node2 sağlayıcı adı:** `bootstrap_node2.sh` ve servis dosyalarında "VPSHostingService.co" yazıyor; gerçek sağlayıcı RackNerd LLC. V1.3'te düzeltilecek.
 
 ---
 
