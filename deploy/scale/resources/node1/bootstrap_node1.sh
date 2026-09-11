@@ -6,7 +6,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
-SCALE_VERSION="V1.2"
+SCALE_VERSION="V1.3"
 N1_SRC="$REPO/deploy/scale/$SCALE_VERSION/node1"
 SYSTEMD_SRC="$N1_SRC/systemd"
 RESOURCES="$REPO/deploy/scale/resources"
@@ -21,7 +21,7 @@ echo "==> Scale version: $SCALE_VERSION"
 # ── apt ───────────────────────────────────────────────────────────────────────
 echo "==> apt paketleri..."
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip nginx
+sudo apt install -y ufw python3.13-venv wireguard unzip nginx rsync
 
 # ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
@@ -100,7 +100,7 @@ sudo systemctl restart systemd-journald
 
 # ── systemd servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri..."
-SERVICES=(teqlif teqlif-staging teqlif-worker teqlif-worker-critical node_exporter promtail)
+SERVICES=(teqlif teqlif-worker teqlif-worker-critical node_exporter promtail)
 for svc in "${SERVICES[@]}"; do
   sudo cp "$SYSTEMD_SRC/${svc}.service" /etc/systemd/system/
 done
@@ -112,24 +112,30 @@ for svc in "${SERVICES[@]}"; do
 done
 sudo systemctl enable redis-backup.timer
 
-# ── WireGuard: node2 peer (V1.2) ─────────────────────────────────────────────
+# ── WireGuard: node2 + node3 peer (V1.3) ────────────────────────────────────
 NODE2_PUBKEY="t+lw3dW45sVklF3wsbji7WGA6jN4+StcwK6nKmJi21k="
 NODE2_ENDPOINT="198.12.123.33:51820"
-echo "==> WireGuard: node2 peer..."
-if sudo wg show wg0 2>/dev/null | grep -q "$NODE2_PUBKEY"; then
-  echo "    node2 peer zaten mevcut, atlaniyor."
-elif sudo systemctl is-active wg-quick@wg0 &>/dev/null; then
-  sudo wg set wg0 peer "$NODE2_PUBKEY" \
-    allowed-ips 10.10.0.3/32 \
-    endpoint "$NODE2_ENDPOINT" \
-    persistent-keepalive 25
-  printf '\n[Peer]\n# node2 — VPSHostingService.co Buffalo\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
-    "$NODE2_PUBKEY" "$NODE2_ENDPOINT" | sudo tee -a /etc/wireguard/wg0.conf > /dev/null
-  echo "    node2 peer eklendi ve wg0.conf'a yazildi."
-else
-  echo "  UYARI: wg0 servisi aktif degil — node2 peer atlaniyor."
-  echo "  wg-quick@wg0 baslatildiktan sonra scripti tekrar calistir."
-fi
+NODE3_ENDPOINT="5.249.165.10:51820"
+
+_wg_add_peer() {
+  local label="$1" pubkey="$2" allowed_ip="$3" endpoint="$4"
+  if sudo wg show wg0 2>/dev/null | grep -q "$pubkey"; then
+    echo "    $label peer zaten mevcut, atlaniyor."
+  elif sudo systemctl is-active wg-quick@wg0 &>/dev/null; then
+    sudo wg set wg0 peer "$pubkey" allowed-ips "$allowed_ip" endpoint "$endpoint" persistent-keepalive 25
+    printf '\n[Peer]\n# %s\nPublicKey = %s\nAllowedIPs = %s\nEndpoint = %s\nPersistentKeepalive = 25\n' \
+      "$label" "$pubkey" "$allowed_ip" "$endpoint" | sudo tee -a /etc/wireguard/wg0.conf > /dev/null
+    echo "    $label peer eklendi."
+  else
+    echo "  UYARI: wg0 aktif degil — $label peer atlaniyor. Sonra tekrar calistir."
+  fi
+}
+
+echo "==> WireGuard peer'lari..."
+_wg_add_peer "node2 — Buffalo" "$NODE2_PUBKEY" "10.10.0.3/32" "$NODE2_ENDPOINT"
+# node3 public key'i deploy sirasinda ogrenilir; placeholder ile devam:
+# NODE3_PUBKEY="<NODE3_PUBLIC_KEY>"
+# _wg_add_peer "node3 — Ashburn VA" "$NODE3_PUBKEY" "10.10.0.4/32" "$NODE3_ENDPOINT"
 
 # ── UFW ───────────────────────────────────────────────────────────────────────
 echo "==> UFW..."
@@ -147,14 +153,16 @@ for cidr in "${CF_IPS[@]}"; do
   sudo ufw allow from "$cidr" to any port 80,443 proto tcp comment "CF — $cidr" 2>/dev/null || true
 done
 sudo ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp comment 'API prod — gateway' 2>/dev/null || true
-sudo ufw allow in on wg0 from 10.10.0.2 to any port 8001 proto tcp comment 'API staging — gateway' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.3 to any port 6379 proto tcp comment 'Redis — node2' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.4 to any port 9100 proto tcp comment 'node_exporter — node3 Prometheus' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.4 to any port 9187 proto tcp comment 'postgres_exporter — node3 Prometheus' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'LiveKit metrics — node3 Prometheus' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy' 2>/dev/null || true
 sudo ufw --force enable
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
 chmod 600 "$NODE1/.env.production"
-chmod 600 "$NODE1/.env.staging"
 
 echo ""
 echo "Bootstrap tamamlandi."
