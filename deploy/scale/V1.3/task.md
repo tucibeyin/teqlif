@@ -214,12 +214,6 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   # AI_PROXY_INTERNAL_TOKEN (aynı değer)
   ```
 
-- [ ] **[node3]** MinIO credentials doldur:
-  ```bash
-  sudo nano /etc/minio.env
-  # MINIO_ROOT_USER=<kullanici>
-  # MINIO_ROOT_PASSWORD=<sifre_en_az_8_karakter>
-  ```
 
 - [ ] **[node3]** Env izinlerini ayarla (servisler doğrudan resources'tan okur):
   ```bash
@@ -443,17 +437,25 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   sudo systemctl status teqlif
   ```
 
-- [ ] **[node1]** AI proxy token rename — `backend/.env` güncelle:
+- [ ] **[node1]** Servis dosyalarını güncelle ve env'i resources'a taşı:
   ```bash
-  # Mevcut değerleri kontrol et:
-  grep -E "NODE2_INTERNAL_TOKEN|AI_PROXY_INTERNAL_TOKEN|NODE3_AI_PROXY_URL" /var/www/teqlif.com/backend/.env
-  # NODE2_INTERNAL_TOKEN satırını AI_PROXY_INTERNAL_TOKEN olarak yeniden adlandır,
-  # NODE3_AI_PROXY_URL ve LOG_NODE yoksa ekle:
-  nano /var/www/teqlif.com/backend/.env
-  # Değiştirilecekler:
-  #   NODE2_INTERNAL_TOKEN=<değer>  →  AI_PROXY_INTERNAL_TOKEN=<değer>
-  #   NODE3_AI_PROXY_URL=http://10.10.0.4:8080   (yoksa ekle)
-  #   LOG_NODE=node1                              (yoksa ekle)
+  cd /var/www/teqlif.com
+
+  # Servis dosyalarını güncelle (V1.3: EnvironmentFile artık resources/node1/.env.production)
+  sudo cp deploy/scale/V1.3/node1/systemd/teqlif.service /etc/systemd/system/
+  sudo cp deploy/scale/V1.3/node1/systemd/teqlif-worker.service /etc/systemd/system/
+  sudo cp deploy/scale/V1.3/node1/systemd/teqlif-worker-critical.service /etc/systemd/system/
+  sudo cp deploy/scale/V1.3/node1/systemd/minio.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+
+  # Mevcut backend/.env değerlerini resources'a taşı (tek seferlik):
+  # AI_PROXY_INTERNAL_TOKEN ve NODE3_AI_PROXY_URL zaten resources'ta var (Faz 4.2'de eklenmişti)
+  # Eksik diğer tüm değerleri kontrol et:
+  diff <(grep -v '^#\|^$' deploy/scale/resources/node1/.env.production | cut -d= -f1 | sort) \
+       <(grep -v '^#\|^$' backend/.env | cut -d= -f1 | sort)
+  # Farkı görünce backend/.env'deki değerleri resources/.env.production'a ekle:
+  nano deploy/scale/resources/node1/.env.production
+
   sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
   ```
 

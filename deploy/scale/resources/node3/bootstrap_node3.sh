@@ -86,9 +86,7 @@ if [[ ! -f /usr/local/bin/minio ]]; then
 fi
 sudo mkdir -p /var/lib/minio
 sudo id -u www-data &>/dev/null && sudo chown www-data:www-data /var/lib/minio || true
-# MinIO credentials — .env.staging'deki MINIO_ROOT_USER/PASSWORD /etc/minio.env'e extract edilir
-grep -E "^MINIO_ROOT_(USER|PASSWORD)=" "$NODE3/.env.staging" | sudo tee /etc/minio.env > /dev/null
-sudo chmod 600 /etc/minio.env
+# MinIO credentials: minio.service doğrudan resources/node3/.env.staging'den okur — /etc/minio.env gerekmez
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."

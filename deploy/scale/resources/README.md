@@ -7,21 +7,24 @@ versiyondan bağımsız olarak **hiç değişmez**.
 ```
 resources/
 ├── node1/
-│   ├── .env.node1.production
-│   ├── .env.node1.staging
+│   ├── .env.production              ← teqlif, teqlif-worker, minio
 │   ├── node1_production_requirements.txt
-│   ├── node1_staging_requirements.txt
 │   ├── bootstrap_node1.sh
 │   ├── node1_services.sh
 │   └── apply_pg_tuning.sh
 ├── node2/
-│   ├── .env.node2.production
-│   ├── .env.node2.cfFailover
+│   ├── .env.production              ← teqlif-ai-proxy, cf-failover
 │   ├── node2_production_requirements.txt
 │   ├── bootstrap_node2.sh
 │   └── node2_services.sh
+├── node3/
+│   ├── .env.production              ← teqlif-ai-proxy (node3), alertmanager
+│   ├── .env.staging                 ← teqlif-staging, teqlif-worker-staging, minio (staging)
+│   ├── node3_production_requirements.txt
+│   ├── node3_staging_requirements.txt
+│   ├── bootstrap_node3.sh
+│   └── node3_services.sh
 └── gateway/
-    ├── .env.gateway.production
     ├── bootstrap_gateway.sh
     ├── gateway_services.sh
     └── certbot_gateway.sh
@@ -29,36 +32,44 @@ resources/
 
 ---
 
-## Dosya isimlendirme
+## Dosya isimlendirme kuralı
 
-| Tür          | Şablon                            | Örnek                                |
-|--------------|-----------------------------------|--------------------------------------|
-| requirements | `{node}_{ortam}_requirements.txt` | `node1_production_requirements.txt`  |
-| .env         | `.env.{node}.{ortam}`             | `.env.node1.production`              |
-| scripts      | `{eylem}_{node}.sh`               | `bootstrap_node1.sh`                 |
+Her node altında **en fazla 2 env dosyası**: `.env.production` ve `.env.staging` (staging varsa).  
+Tüm servisler EnvironmentFile olarak doğrudan bu path'leri okur — `backend/.env` gibi ara kopya kullanılmaz.
 
-## Mevcut .env dosyaları
+| Tür          | Şablon                            | Örnek                           |
+|--------------|-----------------------------------|---------------------------------|
+| requirements | `{node}_{ortam}_requirements.txt` | `node1_production_requirements.txt` |
+| .env         | `.env.{ortam}`                    | `node1/.env.production`         |
+| scripts      | `{eylem}_{node}.sh`               | `bootstrap_node1.sh`            |
 
-| Dosya | Servis | Açıklama |
-|-------|--------|----------|
-| `node1/.env.node1.production` | teqlif, teqlif-staging, teqlif-worker | node1 prod ortam değişkenleri |
-| `node1/.env.node1.staging` | teqlif-staging | node1 staging ortam değişkenleri |
-| `node2/.env.node2.production` | teqlif-ai-proxy | GROQ_API_KEY, GEMINI_API_KEY, NODE2_INTERNAL_TOKEN |
-| `node2/.env.node2.cfFailover` | cf-failover | CF_ZONE_ID, CF_API_TOKEN |
-| `gateway/.env.gateway.production` | alertmanager | TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID |
+## Mevcut .env dosyaları ve servis eşleşmeleri
+
+| Dosya | Okuyan servisler | Açıklama |
+|-------|-----------------|----------|
+| `node1/.env.production` | teqlif, teqlif-worker, teqlif-worker-critical, minio | node1 production app + MinIO |
+| `node2/.env.production` | teqlif-ai-proxy, cf-failover | AI proxy + Cloudflare failover |
+| `node3/.env.production` | teqlif-ai-proxy (node3), alertmanager | AI proxy secondary + monitoring |
+| `node3/.env.staging`    | teqlif-staging, teqlif-worker-staging, teqlif-worker-critical-staging, minio (staging) | Staging app + MinIO |
 
 ---
 
-## Systemd EnvironmentFile path'leri
+## Systemd EnvironmentFile path'leri (Scale V1.3)
 
-| Servis                   | EnvironmentFile                                                      |
-|--------------------------|----------------------------------------------------------------------|
-| teqlif.service           | `.../deploy/scale/resources/node1/.env.node1.production`             |
-| teqlif-staging.service   | `.../deploy/scale/resources/node1/.env.node1.staging`                |
-| teqlif-worker.service    | `.../deploy/scale/resources/node1/.env.node1.production`             |
-| teqlif-ai-proxy.service  | `.../deploy/scale/resources/node2/.env.node2.production`             |
-| cf-failover.service      | `.../deploy/scale/resources/node2/.env.node2.cfFailover`             |
-| alertmanager.service     | `.../deploy/scale/resources/gateway/.env.gateway.production`         |
+| Servis | Node | EnvironmentFile |
+|--------|------|-----------------|
+| teqlif.service | node1 | `.../resources/node1/.env.production` |
+| teqlif-worker.service | node1 | `.../resources/node1/.env.production` |
+| teqlif-worker-critical.service | node1 | `.../resources/node1/.env.production` |
+| minio.service | node1 | `.../resources/node1/.env.production` |
+| teqlif-ai-proxy.service | node2 | `.../resources/node2/.env.production` |
+| cf-failover.service | node2 | `.../resources/node2/.env.production` |
+| teqlif-ai-proxy.service | node3 | `.../resources/node3/.env.production` |
+| alertmanager.service | node3 | `.../resources/node3/.env.production` |
+| teqlif-staging.service | node3 | `.../resources/node3/.env.staging` |
+| teqlif-worker-staging.service | node3 | `.../resources/node3/.env.staging` |
+| teqlif-worker-critical-staging.service | node3 | `.../resources/node3/.env.staging` |
+| minio.service | node3 | `.../resources/node3/.env.staging` |
 
 ---
 

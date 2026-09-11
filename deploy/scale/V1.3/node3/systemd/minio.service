@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=www-data
 Group=www-data
-EnvironmentFile=/etc/minio.env
+EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
 ExecStart=/usr/local/bin/minio server /var/lib/minio --address :9010 --console-address :9011
 Restart=always
 RestartSec=5
