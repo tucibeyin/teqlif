@@ -8,8 +8,7 @@ StartLimitIntervalSec=600
 User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
-Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
-EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
+Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/node3/.env.production
 EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.production
 ExecStart=/var/www/teqlif.com/venv/bin/uvicorn app.ai_proxy_main:app \
     --host 10.10.0.4 \
