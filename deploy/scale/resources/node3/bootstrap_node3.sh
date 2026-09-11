@@ -88,10 +88,9 @@ sudo chown tucibeyin:tucibeyin /var/lib/minio
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
 if ! /usr/local/bin/node_exporter --version 2>&1 | grep -q "$NODE_EXPORTER_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
+  curl -fsSL \
     "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz" \
-    -O "$TMP/ne.tar.gz"
-  tar xzf "$TMP/ne.tar.gz" -C "$TMP"
+    | tar xz -C "$TMP"
   sudo mv "$TMP/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter" /usr/local/bin/
   rm -rf "$TMP"
 fi
@@ -100,10 +99,9 @@ fi
 echo "==> promtail $PROMTAIL_VERSION..."
 if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip" \
-    -O "$TMP/promtail.zip"
-  unzip -q "$TMP/promtail.zip" -d "$TMP"
+  curl -fsSL -o "$TMP/promtail.zip" \
+    "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip"
+  unzip -q "$TMP/promtail.zip" promtail-linux-amd64 -d "$TMP"
   sudo mv "$TMP/promtail-linux-amd64" /usr/local/bin/promtail
   sudo chmod +x /usr/local/bin/promtail
   rm -rf "$TMP"
@@ -114,10 +112,9 @@ sudo cp "$N3_SRC/promtail-config.yml" /etc/promtail-config.yml
 echo "==> prometheus $PROMETHEUS_VERSION..."
 if ! /usr/local/bin/prometheus --version 2>&1 | grep -q "$PROMETHEUS_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
+  curl -fsSL \
     "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" \
-    -O "$TMP/prom.tar.gz"
-  tar xzf "$TMP/prom.tar.gz" -C "$TMP"
+    | tar xz -C "$TMP"
   sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/prometheus" /usr/local/bin/
   sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"   /usr/local/bin/
   rm -rf "$TMP"
@@ -131,10 +128,9 @@ sudo chown -R tucibeyin:tucibeyin /etc/prometheus /var/lib/prometheus
 echo "==> loki $LOKI_VERSION..."
 if ! /usr/local/bin/loki --version 2>&1 | grep -q "$LOKI_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip" \
-    -O "$TMP/loki.zip"
-  unzip -q "$TMP/loki.zip" -d "$TMP"
+  curl -fsSL -o "$TMP/loki.zip" \
+    "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip"
+  unzip -q "$TMP/loki.zip" loki-linux-amd64 -d "$TMP"
   sudo mv "$TMP/loki-linux-amd64" /usr/local/bin/loki
   sudo chmod +x /usr/local/bin/loki
   rm -rf "$TMP"
@@ -147,10 +143,9 @@ sudo cp "$N3_SRC/loki-config.yml" /etc/loki/config.yml
 echo "==> alertmanager $ALERTMANAGER_VERSION..."
 if ! /usr/local/bin/alertmanager --version 2>&1 | grep -q "$ALERTMANAGER_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
+  curl -fsSL \
     "https://github.com/prometheus/alertmanager/releases/download/v${ALERTMANAGER_VERSION}/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64.tar.gz" \
-    -O "$TMP/am.tar.gz"
-  tar xzf "$TMP/am.tar.gz" -C "$TMP"
+    | tar xz -C "$TMP"
   sudo mv "$TMP/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/alertmanager" /usr/local/bin/
   rm -rf "$TMP"
 fi
@@ -163,10 +158,9 @@ sudo chown -R tucibeyin:tucibeyin /var/lib/alertmanager
 echo "==> livekit-server $LIVEKIT_VERSION..."
 if ! /usr/local/bin/livekit-server --version 2>&1 | grep -q "$LIVEKIT_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
+  curl -fsSL \
     "https://github.com/livekit/livekit/releases/download/v${LIVEKIT_VERSION}/livekit_${LIVEKIT_VERSION}_linux_amd64.tar.gz" \
-    -O "$TMP/livekit.tar.gz"
-  tar xzf "$TMP/livekit.tar.gz" -C "$TMP"
+    | tar xz -C "$TMP" livekit-server
   sudo mv "$TMP/livekit-server" /usr/local/bin/livekit-server
   sudo chmod +x /usr/local/bin/livekit-server
   rm -rf "$TMP"

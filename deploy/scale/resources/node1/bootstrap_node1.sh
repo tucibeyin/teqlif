@@ -50,10 +50,9 @@ fi
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
 if ! /usr/local/bin/node_exporter --version 2>&1 | grep -q "$NODE_EXPORTER_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
+  curl -fsSL \
     "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz" \
-    -O "$TMP/ne.tar.gz"
-  tar xzf "$TMP/ne.tar.gz" -C "$TMP"
+    | tar xz -C "$TMP"
   sudo mv "$TMP/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter" /usr/local/bin/
   rm -rf "$TMP"
 fi
@@ -62,10 +61,9 @@ fi
 echo "==> promtail $PROMTAIL_VERSION..."
 if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev/null; then
   TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip" \
-    -O "$TMP/promtail.zip"
-  unzip -q "$TMP/promtail.zip" -d "$TMP"
+  curl -fsSL -o "$TMP/promtail.zip" \
+    "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip"
+  unzip -q "$TMP/promtail.zip" promtail-linux-amd64 -d "$TMP"
   sudo mv "$TMP/promtail-linux-amd64" /usr/local/bin/promtail
   sudo chmod +x /usr/local/bin/promtail
   rm -rf "$TMP"
