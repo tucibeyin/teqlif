@@ -86,14 +86,9 @@ if [[ ! -f /usr/local/bin/minio ]]; then
 fi
 sudo mkdir -p /var/lib/minio
 sudo id -u www-data &>/dev/null && sudo chown www-data:www-data /var/lib/minio || true
-# MinIO credentials — /etc/minio.env dosyasına elle doldurulmalı:
-#   MINIO_ROOT_USER=<admin-kullanici>
-#   MINIO_ROOT_PASSWORD=<guclu-sifre>
-if [[ ! -f /etc/minio.env ]]; then
-  printf 'MINIO_ROOT_USER=\nMINIO_ROOT_PASSWORD=\n' | sudo tee /etc/minio.env > /dev/null
-  sudo chmod 600 /etc/minio.env
-  echo "  UYARI: /etc/minio.env oluşturuldu — MINIO_ROOT_USER ve MINIO_ROOT_PASSWORD doldur."
-fi
+# MinIO credentials — resources/node3/.env.node3.minio doldurup buraya kopyalanır
+sudo cp "$RESOURCES/node3/.env.node3.minio" /etc/minio.env
+sudo chmod 600 /etc/minio.env
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
