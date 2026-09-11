@@ -107,6 +107,8 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 sudo cp "$N3_SRC/promtail-config.yml" /etc/promtail-config.yml
+sudo mkdir -p /var/lib/promtail
+sudo chown tucibeyin:tucibeyin /var/lib/promtail
 
 # ── prometheus ────────────────────────────────────────────────────────────────
 echo "==> prometheus $PROMETHEUS_VERSION..."

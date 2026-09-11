@@ -46,6 +46,11 @@ if [[ ! -L "$REPO/logs" ]]; then
   ln -s /var/log/teqlif "$REPO/logs"
 fi
 
+# ── Promtail positions dizini ─────────────────────────────────────────────────
+echo "==> Promtail positions dizini..."
+sudo mkdir -p /var/lib/promtail
+sudo chown "$USER:$USER" /var/lib/promtail
+
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
 if ! /usr/local/bin/node_exporter --version 2>&1 | grep -q "$NODE_EXPORTER_VERSION" 2>/dev/null; then

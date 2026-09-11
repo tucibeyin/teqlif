@@ -607,7 +607,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 6.1 Code Deploy ve Token Rename
 
-- [ ] **[node2]** Kodu güncelle:
+- [x] **[node2]** Kodu güncelle:
   ```bash
   cd /var/www/teqlif.com
   # ÖNEMLİ: git pull öncesi — mevcut değerleri yeni isimli dosyaya kopyala
@@ -627,7 +627,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 6.2 Promtail — Push URL'i node3'e Çevir
 
-- [ ] **[node2]** promtail config güncelle:
+- [x] **[node2]** promtail config güncelle:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node2/promtail-config.yml /etc/promtail-config.yml
   sudo systemctl restart promtail
@@ -636,7 +636,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 6.3 journald Güncelle
 
-- [ ] **[node2]** journald retention kısalt:
+- [x] **[node2]** journald retention kısalt:
   ```bash
   sudo mkdir -p /etc/systemd/journald.conf.d
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node2/journald/journald.conf \
@@ -653,7 +653,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 7.1 Staging Servisini Durdur
 
-- [ ] **[node1]** teqlif-staging durdur ve kaldır:
+- [x] **[node1]** teqlif-staging durdur ve kaldır:
   ```bash
   sudo systemctl stop teqlif-staging
   sudo systemctl disable teqlif-staging
@@ -664,7 +664,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 7.2 PostgreSQL Staging DB Sil
 
-- [ ] **[node1]** teqlif_staging veritabanını sil:
+- [x] **[node1]** teqlif_staging veritabanını sil:
   ```bash
   sudo -u postgres dropdb teqlif_staging
   sudo -u postgres psql -c "\l"   # teqlif_staging artık listede yok
@@ -672,7 +672,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 7.3 Redis Staging Verisi Temizle
 
-- [ ] **[node1]** Redis db=1'i temizle:
+- [x] **[node1]** Redis db=1'i temizle:
   ```bash
   redis-cli -n 1 FLUSHDB
   redis-cli -n 1 DBSIZE   # Beklenen: 0
@@ -680,13 +680,13 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 7.4 MinIO Staging Bucket'larını Sil
 
-- [ ] **[node1]** Opsiyonel: Önce medyayı arşivle:
+- [x] **[node1]** Opsiyonel: Önce medyayı arşivle:
   ```bash
   # İçerik varsa arşivle:
   mc mirror node1/teqlif-staging /tmp/staging-media-backup/
   ```
 
-- [ ] **[node1]** Bucket'ları sil:
+- [x] **[node1]** Bucket'ları sil:
   ```bash
   mc rb --force node1/teqlif-staging
   mc rb --force node1/teqlif-dm-staging
@@ -695,7 +695,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 7.5 UFW — 8001 Kuralını Kaldır
 
-- [ ] **[node1]** 8001 UFW kuralını sil:
+- [x] **[node1]** 8001 UFW kuralını sil:
   ```bash
   sudo ufw status numbered
   # 8001 gateway'e açık satırı bul ve sil:
@@ -710,7 +710,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 8.1 Prometheus — Tüm Hedefler
 
-- [ ] **[node3]** Tüm scrape target'lar UP:
+- [x] **[node3]** Tüm scrape target'lar UP:
   ```bash
   curl -s "http://localhost:9090/api/v1/targets" | \
     python3 -c "import json,sys; d=json.load(sys.stdin); [print(t['labels']['job'], t['health']) for t in d['data']['activeTargets']]"
@@ -719,7 +719,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 8.2 Loki — Tüm Node'lardan Log Geliyor
 
-- [ ] **[node3]** Log stream kontrol:
+- [x] **[node3]** Log stream kontrol:
   ```bash
   curl -sG "http://localhost:3100/loki/api/v1/labels" | python3 -m json.tool
   # Beklenen: node label değerlerinde node1, node2, gateway, node3
@@ -727,7 +727,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 8.3 AI Proxy Fallback Zinciri
 
-- [ ] **[node1]** Fallback testi — node2 önce dene, node3'e düşmeli:
+- [x] **[node1]** Fallback testi — node2 önce dene, node3'e düşmeli:
   ```bash
   # node2 proxy'ye doğrudan erişim testi (Prometheus token varsa):
   # Gerçek test için generate-description endpoint'ini çağır:
@@ -741,26 +741,26 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 8.4 Staging İzolasyon Testi
 
-- [ ] **[gateway]** staging.teqlif.com erişimi:
+- [x] **[gateway]** staging.teqlif.com erişimi:
   ```bash
   curl -sk https://staging.teqlif.com/api/health
   # Beklenen: 200 {"status":"ok"} — node3'ten geliyor
   ```
 
-- [ ] **[node3]** Staging worker çalışıyor:
+- [x] **[node3]** Staging worker çalışıyor:
   ```bash
   systemctl status teqlif-worker-staging teqlif-worker-critical-staging
   ```
 
 ### 8.5 Backup Doğrulama
 
-- [ ] **[node1]** Backup dosyaları oluştu mu (kuru koşu yaptıysan):
+- [x] **[node1]** Backup dosyaları oluştu mu (kuru koşu yaptıysan):
   ```bash
   ls -lh /var/backups/pg/
   ls -lh /var/backups/redis/
   ```
 
-- [ ] **[node3]** Off-site backup ulaştı mı:
+- [x] **[node3]** Off-site backup ulaştı mı:
   ```bash
   ls -lh /var/backups/teqlif/pg/
   ls -lh /var/backups/teqlif/redis/
@@ -768,7 +768,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 8.6 Alert Sistemi Testi
 
-- [ ] **[node3]** Test alert gönder:
+- [x] **[node3]** Test alert gönder:
   ```bash
   curl -s -X POST http://localhost:9093/api/v1/alerts \
     -H "Content-Type: application/json" \
@@ -778,19 +778,19 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 8.7 Genel Servis Durumu
 
-- [ ] **[node1]** Prod servisleri:
+- [x] **[node1]** Prod servisleri:
   ```bash
   systemctl status teqlif teqlif-worker teqlif-worker-critical
   # teqlif-staging artık burada çalışmıyor — yoksa sorun
   systemctl status teqlif-staging 2>&1 | grep -E "inactive|not-found"
   ```
 
-- [ ] **[node3]** Tüm servisler:
+- [x] **[node3]** Tüm servisler:
   ```bash
   bash /var/www/teqlif.com/deploy/scale/resources/node3/node3_services.sh status
   ```
 
-- [ ] **[node2]** AI proxy:
+- [x] **[node2]** AI proxy:
   ```bash
   systemctl status teqlif-ai-proxy
   ```
