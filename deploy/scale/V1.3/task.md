@@ -608,10 +608,18 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 - [ ] **[node2]** Kodu güncelle:
   ```bash
-  cd /var/www/teqlif.com && git pull
-  # node2 AI proxy env dosyası (resources path — servis bu dosyayı okur):
-  nano /var/www/teqlif.com/deploy/scale/resources/node2/.env.production
-  # NODE2_INTERNAL_TOKEN=<değer>  →  AI_PROXY_INTERNAL_TOKEN=<aynı_değer>
+  cd /var/www/teqlif.com
+  # ÖNEMLİ: git pull öncesi — mevcut değerleri yeni isimli dosyaya kopyala
+  # (V1.3 refactor: .env.node2.production → .env.production)
+  cp deploy/scale/resources/node2/.env.node2.production \
+     deploy/scale/resources/node2/.env.production 2>/dev/null || true
+  git pull
+  # Servis dosyasını güncelle (.env.production'ı okuyacak şekilde):
+  sudo cp deploy/scale/V1.3/node2/systemd/teqlif-ai-proxy.service /etc/systemd/system/
+  sudo cp deploy/scale/V1.3/node2/systemd/cf-failover.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+  # AI_PROXY_INTERNAL_TOKEN değerini kontrol et/doldur:
+  nano deploy/scale/resources/node2/.env.production
   sudo systemctl restart teqlif-ai-proxy
   sudo systemctl status teqlif-ai-proxy
   ```
