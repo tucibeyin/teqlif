@@ -473,24 +473,18 @@ POST /api/listings/generate-description  (node1)
 
 **WireGuard 4-node mesh kurulumu zorunlu.** node3, node1'in Redis'ine WireGuard üzerinden bağlanır (`REDIS_URL=redis://10.10.0.1:6379`). WireGuard olmadan proxy çalışmaz.
 
-#### ⚠️ Trade-off #1 — Token Adı (Karar Gerekiyor)
+#### Trade-off #1 — Token Adı ✓ Karara Bağlandı
 
-`ai_proxy_main.py:42` şu an sabit olarak `settings.node2_internal_token` kontrolü yapıyor. node3 aynı kodu çalıştıracak. İki seçenek:
+**Seçenek A seçildi:** `node2_internal_token` → `ai_proxy_internal_token` olarak yeniden adlandırılır. Her iki proxy aynı token değerini kullanır. Token WireGuard arkasında olduğu için dışarıdan ulaşılamaz — ayrı token gerçek güvenlik artışı sağlamaz. Tüm node'lar aynı repodan git pull aldığı için node2 dahil her node restart edilebilir.
 
-| | Seçenek A: Ortak token | Seçenek B: Ayrı token |
-|---|---|---|
-| **Yöntem** | `node2_internal_token` → `ai_proxy_internal_token` olarak yeniden adlandır; her iki proxy aynı değeri kullanır | `config.py`'ye `node3_internal_token` eklenir; `ai_proxy_main.py`'ye generic field (`ai_proxy_internal_token`) girer; her proxy kendi token'ı |
-| **Avantaj** | Tek değer, basit yönetim | Biri sızdıralsa diğeri korunur |
-| **Dezavantaj** | node2'nin live `.env`'i değişmeli (`NODE2_INTERNAL_TOKEN` → `AI_PROXY_INTERNAL_TOKEN`) + node2 restart | +1 env var, `ai_proxy_main.py` yeniden adlandırma gerektirir |
-| **Gerçek risk** | Her iki proxy da WireGuard arkasında — token dışarıdan ulaşılamaz | — |
+**Env var adı değişimi:**
+- `NODE2_INTERNAL_TOKEN` → `AI_PROXY_INTERNAL_TOKEN` (node1, node2, node3 env dosyaları)
+- `config.py`: `node2_internal_token` → `ai_proxy_internal_token`
+- `ai_proxy_main.py:42`: `settings.node2_internal_token` → `settings.ai_proxy_internal_token`
 
-> **Öneri:** Token WireGuard arkasında olduğu için sızıntı riski düşük. Seçenek A operasyonel olarak daha basit — ama node2 live restart gerektirir.
+#### Trade-off #2 — Timeout ✓ Karara Bağlandı
 
-#### ⚠️ Trade-off #2 — Timeout Yığılması (Bilgi)
-
-Her proxy için timeout şu an 45s. Her ikisi de yavaş olursa worst-case: 45s + 45s = **90s** kullanıcı bekler.
-
-> **Öneri:** Her proxy için 30s — yeterli, toplam max 60s. Kabul edilebilir.
+**30s/proxy seçildi.** 45s → 30s. Worst-case: 30s + 30s = **60s**. AI üretimi için yeterli, kullanıcı deneyimi açısından kabul edilebilir.
 
 #### Prometheus Güncelleme
 
