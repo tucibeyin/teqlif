@@ -25,7 +25,7 @@ PROMTAIL_VERSION="3.0.0"
 PROMETHEUS_VERSION="2.51.0"
 LOKI_VERSION="3.6.7"
 ALERTMANAGER_VERSION="0.27.0"
-MINIO_VERSION="RELEASE.2024-09-22T00-33-43Z"
+MINIO_VERSION="RELEASE.2025-10-15T17-29-55Z"
 
 echo "==> REPO: $REPO"
 echo "==> Scale version: $SCALE_VERSION"
@@ -78,7 +78,7 @@ echo "==> MinIO $MINIO_VERSION..."
 if [[ ! -f /usr/local/bin/minio ]]; then
   TMP=$(mktemp -d)
   wget -q \
-    "https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_VERSION}" \
+    "https://github.com/minio/minio/releases/download/${MINIO_VERSION}/minio.linux-amd64" \
     -O "$TMP/minio"
   sudo mv "$TMP/minio" /usr/local/bin/minio
   sudo chmod +x /usr/local/bin/minio
