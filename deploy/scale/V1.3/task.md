@@ -798,6 +798,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ## Bekleyen Görevler
 
+- [ ] **node3 Swap doğrulaması** — `swapon --show` ile 4 GB swap aktif mi kontrol et. Bootstrap MinIO hatasında `set -euo pipefail` ile durmuş olabileceğinden swap kurulmamış olabilir. Kurulum: `sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile && grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab`
 - [ ] **Bootstrap env izinleri** — `bootstrap_node*.sh` sonunda `chmod 600` otomatik uygulansın; şu an elle yapılıyor. Her node'un bootstrap'ına `chmod 600 "$NODE_DIR"/.env.*` satırı eklenecek.
 - [ ] **Staging Sentry DSN** — `deploy/scale/resources/node3/.env.staging` içinde `SENTRY_BACKEND_DSN=` boş. Staging için Sentry projesi oluşturulunca DSN buraya girilmeli ve `sudo systemctl restart teqlif-staging` çalıştırılmalı.
 - [ ] **Staging Admin Panel** — production `admin.html` → `staging.admin.html` olarak ayrılmalı; aynı fonksiyonalite ama staging URL'lerine (staging.teqlif.com) bakmalı. Şimdilik ADMIN_EMAIL/ADMIN_PASSWORD_HASH aynı değer kullanıyor.
