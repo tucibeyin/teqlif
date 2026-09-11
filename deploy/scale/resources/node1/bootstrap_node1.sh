@@ -155,8 +155,8 @@ sudo ufw --force enable
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
-chmod 600 "$NODE1/.env.node1.production"
-chmod 600 "$NODE1/.env.node1.staging"
+chmod 600 "$NODE1/.env.production"
+chmod 600 "$NODE1/.env.staging"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -164,7 +164,7 @@ echo ""
 echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: sudo bash -c 'wg genkey | tee /etc/wireguard/node1_private.key | wg pubkey > /etc/wireguard/node1_public.key'"
 echo "  2. wg0.conf yaz ve 'sudo systemctl enable --now wg-quick@wg0' calistir"
-echo "  3. .env degerlerini doldur: $NODE1/.env.node1.production"
+echo "  3. .env degerlerini doldur: $NODE1/.env.production"
 echo "  4. PostgreSQL tuning uygula:"
 echo "     bash $NODE1/apply_pg_tuning.sh"
 echo "  5. Tum servisleri baslat:"

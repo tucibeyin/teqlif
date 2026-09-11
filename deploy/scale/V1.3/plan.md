@@ -263,7 +263,7 @@ node2/cf-failover.sh  (her 10s gateway health check)
 **İlgili dosyalar:**
 - `deploy/scale/V1.2/node2/cf-failover/cf-failover.sh`
 - `deploy/scale/V1.2/node1/nginx/teqlif-fallback.conf`
-- `deploy/scale/resources/node2/.env.node2.cfFailover`
+- `deploy/scale/resources/node2/.env.cfFailover`
 
 ---
 
@@ -680,14 +680,14 @@ POST /api/listings/generate-description  (node1)
 | `backend/app/config.py` | `node3_ai_proxy_url: str = ""` eklenir; `node2_internal_token` → `ai_proxy_internal_token` (Trade-off #1) |
 | `backend/app/services/ml/ai_proxy_client.py` | `generate_via_node2` → `generate_via_proxy` yeniden yazılır; proxy listesi iterate edilir; hata sınıfları `AppException` subclass olmalı — düz `HTTPException` yasak (ADR §6) |
 | `backend/app/routers/listings.py:681` | import ve çağrı adı güncellenir |
-| `deploy/scale/resources/node1/.env.node1.production` | `NODE3_AI_PROXY_URL=http://10.10.0.4:8080`, `AI_PROXY_INTERNAL_TOKEN=`, `LOG_NODE=node1` eklenir |
+| `deploy/scale/resources/node1/.env.production` | `NODE3_AI_PROXY_URL=http://10.10.0.4:8080`, `AI_PROXY_INTERNAL_TOKEN=`, `LOG_NODE=node1` eklenir |
 
 **node3 (yeni dosyalar):**
 
 | Dosya | İçerik |
 |---|---|
 | `deploy/scale/V1.3/node3/systemd/teqlif-ai-proxy.service` | ✅ node2 servisiyle aynı yapı; `--host 10.10.0.4 --port 8080`, `MemoryMax=768M` |
-| `deploy/scale/resources/node3/.env.node3.production` | ✅ `GROQ_API_KEY`, `GEMINI_API_KEY`, `AI_PROXY_INTERNAL_TOKEN`, `REDIS_URL=redis://10.10.0.1:6379` |
+| `deploy/scale/resources/node3/.env.production` | ✅ `GROQ_API_KEY`, `GEMINI_API_KEY`, `AI_PROXY_INTERNAL_TOKEN`, `REDIS_URL=redis://10.10.0.1:6379` |
 | `deploy/scale/resources/node3/node3_production_requirements.txt` | ✅ node2 ile aynı 7 paket |
 | `deploy/scale/resources/node3/node3_services.sh` | ✅ tüm node3 servisleri dahil |
 
@@ -1186,7 +1186,7 @@ ufw delete allow in on wg0 from 10.10.0.2 to any port 8001
 | `deploy/scale/V1.3/node3/systemd/teqlif-worker-critical-staging.service` | ARQ critical worker, `.env.staging` |
 | `deploy/scale/V1.3/node3/systemd/minio.service` | Staging MinIO `:9010` |
 | `deploy/scale/V1.3/node3/nginx/uploads-staging.teqlif.com` | nginx proxy → staging MinIO |
-| `deploy/scale/resources/node3/.env.node3.staging` | Staging env şablonu (node3 lokal DB/Redis/MinIO) |
+| `deploy/scale/resources/node3/.env.staging` | Staging env şablonu (node3 lokal DB/Redis/MinIO) |
 | `deploy/scale/resources/node3/bootstrap_node3.sh` | PostgreSQL 17 + Redis + MinIO + staging stack kurulumu |
 
 **gateway:**
@@ -1219,14 +1219,14 @@ Her §9.x kararının mevcut node'larda ne gerektirdiğini listeler. Sadece node
 | Redis db=1 (staging) | `redis-cli -n 1 FLUSHDB` — node3 ayrı instance kullanıyor | §9.4 |
 | MinIO `teqlif-staging` + `teqlif-dm-staging` bucket | Arşivle (opsiyonel), sonra sil | §9.4 |
 | `node1_services.sh` | ✅ `SERVICES` listesinden `teqlif-staging` çıkarıldı | §9.4 |
-| `deploy/scale/resources/node1/.env.node1.staging` | **Silinecek** — staging node3'e taşındı; şablonun yerine `resources/node3/.env.node3.staging` geçti | §9.4 |
+| `deploy/scale/resources/node1/.env.node1.staging` | **Silinecek** — staging node3'e taşındı; şablonun yerine `resources/node3/.env.staging` geçti | §9.4 |
 | `pg-backup.sh` | **Yeni oluşturulur** — pg_dump + gzip | §9.2 |
 | `offsite-rsync.sh` | **Yeni oluşturulur** — node3'e rsync | §9.2 |
 | `teqlif-backup.timer/service` | **Yeni oluşturulur** — 03:00 UTC | §9.2 |
 | `config.py` — `node2_internal_token` | `ai_proxy_internal_token` olarak yeniden adlandırılır | §9.1 |
 | `ai_proxy_main.py` — token kontrolü | `node2_internal_token` → `ai_proxy_internal_token` | §9.1 |
 | `ai_proxy_client.py` — fallback zinciri | node3 secondary proxy eklenir | §9.1 |
-| `.env.node1.production` | `NODE3_AI_PROXY_URL=`, `AI_PROXY_INTERNAL_TOKEN=` eklenir; `LOG_NODE=node1` eklenir | §9.1, §9.3 |
+| `.env.production` | `NODE3_AI_PROXY_URL=`, `AI_PROXY_INTERNAL_TOKEN=` eklenir; `LOG_NODE=node1` eklenir | §9.1, §9.3 |
 | `backend/app/logging_config.py` | `LOG_NODE` env var; `{LOG_NODE}-app/error/worker.log`; worker double-write fix (`propagate=False`) | §9.3 |
 | `promtail-config.yml` | `teqlif-backend`, `teqlif-errors`, `teqlif-worker-log` job'ları kaldırılır; push URL `10.10.0.4:3100` | §9.3 |
 | `journald/journald.conf` | `MaxRetentionSec=2d`, `SystemMaxUse=200M` | §9.3 |
@@ -1249,7 +1249,7 @@ Her §9.x kararının mevcut node'larda ne gerektirdiğini listeler. Sadece node
 
 | Alan | Değişiklik | Kaynak § |
 |---|---|---|
-| `.env.node2.production` | `NODE2_INTERNAL_TOKEN` → `AI_PROXY_INTERNAL_TOKEN` | §9.1 |
+| `.env.production` | `NODE2_INTERNAL_TOKEN` → `AI_PROXY_INTERNAL_TOKEN` | §9.1 |
 | `ai_proxy_main.py` | node2'deki kopya da aynı değişikliği alır (git pull) | §9.1 |
 | `promtail-config.yml` | `teqlif-ai-proxy` job'u kaldırılır; push URL `10.10.0.4:3100` | §9.3 |
 | `journald/journald.conf` | `MaxRetentionSec=2d`, `SystemMaxUse=100M` | §9.3 |
@@ -1282,7 +1282,7 @@ Her §9.x kararının mevcut node'larda ne gerektirdiğini listeler. Sadece node
 | promtail → `localhost:3100` | Kendi logları | §9.3 |
 | Backup hedef `/var/backups/teqlif/` | pg + redis off-site hedefi | §9.2 |
 | `journald/journald.conf` | `MaxRetentionSec=2d`, `SystemMaxUse=200M` | §9.3 |
-| `.env.node3.staging` | `LOG_NODE=staging` eklenir | §9.3 |
+| `.env.staging` | `LOG_NODE=staging` eklenir | §9.3 |
 | Swap (`/swapfile`, 4 GB) | `bootstrap_node3.sh` tarafından oluşturulur; `vm.swappiness=10` | §9.4 |
 
 ---

@@ -35,8 +35,8 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 - [x] `deploy/scale/resources/gateway/gateway_services.sh` — `prometheus loki alertmanager` SERVICES'ten çıkarıldı
 - [x] `deploy/scale/resources/gateway/bootstrap_gateway.sh` — `SCALE_VERSION="V1.3"`; monitoring install blokları kaldırıldı; Loki UFW kuralı → node3 node_exporter kuralına değiştirildi
 - [x] `deploy/scale/resources/node1/node1_services.sh` — `teqlif-staging` kaldırıldı
-- [x] `deploy/scale/resources/node1/.env.node1.production` — `NODE3_AI_PROXY_URL`, `AI_PROXY_INTERNAL_TOKEN`, `LOG_NODE=node1` eklendi
-- [x] `deploy/scale/resources/node2/.env.node2.production` — `AI_PROXY_INTERNAL_TOKEN` eklendi
+- [x] `deploy/scale/resources/node1/.env.production` — `NODE3_AI_PROXY_URL`, `AI_PROXY_INTERNAL_TOKEN`, `LOG_NODE=node1` eklendi
+- [x] `deploy/scale/resources/node2/.env.production` — `AI_PROXY_INTERNAL_TOKEN` eklendi
 - [x] `deploy/scale/resources/node3/` — bootstrap, services, env şablonları hazır
 
 ### 0.3 Yeni Dosyalar
@@ -199,14 +199,14 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 - [ ] **[node3]** Production env doldur:
   ```bash
-  nano /var/www/teqlif.com/deploy/scale/resources/node3/.env.node3.production
+  nano /var/www/teqlif.com/deploy/scale/resources/node3/.env.production
   # Doldurulacaklar: GROQ_API_KEY, GEMINI_API_KEY, AI_PROXY_INTERNAL_TOKEN (node1/node2 ile aynı değer)
   # REDIS_URL zaten wg IP'sini gösteriyor: redis://10.10.0.1:6379
   ```
 
 - [ ] **[node3]** Staging env doldur:
   ```bash
-  nano /var/www/teqlif.com/deploy/scale/resources/node3/.env.node3.staging
+  nano /var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
   # Doldurulacaklar: SECRET_KEY, DATABASE_URL (postgresql://...@localhost:5432/teqlif_staging),
   # REDIS_URL=redis://localhost:6379/0, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
   # GROQ_API_KEY, GEMINI_API_KEY, LOG_NODE=staging, LIVEKIT_API_KEY, LIVEKIT_API_SECRET,
@@ -224,8 +224,8 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 - [ ] **[node3]** Env dosyalarını `backend/` altına kopyala (servisler bu yolu kullanır):
   ```bash
   RESOURCES=/var/www/teqlif.com/deploy/scale/resources/node3
-  cp "$RESOURCES/.env.node3.production" /var/www/teqlif.com/backend/.env
-  cp "$RESOURCES/.env.node3.staging"    /var/www/teqlif.com/backend/.env.staging
+  cp "$RESOURCES/.env.production" /var/www/teqlif.com/backend/.env
+  cp "$RESOURCES/.env.staging"    /var/www/teqlif.com/backend/.env.staging
   chmod 600 /var/www/teqlif.com/backend/.env /var/www/teqlif.com/backend/.env.staging
   ```
 
@@ -262,8 +262,8 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 - [ ] **[node3]** alertmanager.yml render et:
   ```bash
-  # .env.node3.production içindeki TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID'yi export et:
-  set -o allexport; source /var/www/teqlif.com/deploy/scale/resources/node3/.env.node3.production; set +o allexport
+  # .env.production içindeki TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID'yi export et:
+  set -o allexport; source /var/www/teqlif.com/deploy/scale/resources/node3/.env.production; set +o allexport
   sudo mkdir -p /etc/alertmanager
   envsubst < /var/www/teqlif.com/deploy/scale/V1.3/node3/alertmanager.yml.template \
     | sudo tee /etc/alertmanager/alertmanager.yml
@@ -320,7 +320,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   sudo sed -i "s|<LIVEKIT_API_SECRET>|$LKSECRET|" /etc/livekit/livekit.yaml
   echo "LIVEKIT_API_KEY=teqlif_livekit_staging"
   echo "LIVEKIT_API_SECRET=$LKSECRET"
-  # Bu iki değeri .env.node3.staging dosyasına ekle
+  # Bu iki değeri .env.staging dosyasına ekle
   ```
 
 - [ ] **[node3]** TLS sertifikası al (TURN için):
@@ -610,7 +610,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   ```bash
   cd /var/www/teqlif.com && git pull
   # node2 AI proxy env dosyası (resources path — servis bu dosyayı okur):
-  nano /var/www/teqlif.com/deploy/scale/resources/node2/.env.node2.production
+  nano /var/www/teqlif.com/deploy/scale/resources/node2/.env.production
   # NODE2_INTERNAL_TOKEN=<değer>  →  AI_PROXY_INTERNAL_TOKEN=<aynı_değer>
   sudo systemctl restart teqlif-ai-proxy
   sudo systemctl status teqlif-ai-proxy

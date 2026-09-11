@@ -85,9 +85,9 @@ sudo systemctl restart systemd-journald
 echo "==> cf-failover daemon..."
 sudo cp "$N2_SRC/cf-failover/cf-failover.sh" /usr/local/bin/cf-failover.sh
 sudo chmod +x /usr/local/bin/cf-failover.sh
-chmod 600 "$NODE2/.env.node2.cfFailover"
-if ! grep -q "^CF_API_TOKEN=.\+" "$NODE2/.env.node2.cfFailover" 2>/dev/null; then
-  echo "  UYARI: $NODE2/.env.node2.cfFailover içinde CF_API_TOKEN boş — doldurup 'sudo systemctl restart cf-failover' calistir."
+chmod 600 "$NODE2/.env.cfFailover"
+if ! grep -q "^CF_API_TOKEN=.\+" "$NODE2/.env.cfFailover" 2>/dev/null; then
+  echo "  UYARI: $NODE2/.env.cfFailover içinde CF_API_TOKEN boş — doldurup 'sudo systemctl restart cf-failover' calistir."
 fi
 
 # ── systemd servisleri ────────────────────────────────────────────────────────
@@ -139,8 +139,8 @@ fi
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
-chmod 600 "$NODE2/.env.node2.production"
-chmod 600 "$NODE2/.env.node2.cfFailover"
+chmod 600 "$NODE2/.env.production"
+chmod 600 "$NODE2/.env.cfFailover"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -149,8 +149,8 @@ echo "Kalan manuel adimlar:"
 echo "  1. WireGuard key yoksa:"
 echo "     sudo bash -c 'wg genkey | tee /etc/wireguard/node2_private.key | wg pubkey > /etc/wireguard/node2_public.key'"
 echo "     Sonra scripti tekrar calistir — wg0.conf otomatik yazilir."
-echo "  2. .env degerlerini doldur: $NODE2/.env.node2.production"
-echo "  3. CF failover: nano $NODE2/.env.node2.cfFailover"
+echo "  2. .env degerlerini doldur: $NODE2/.env.production"
+echo "  3. CF failover: nano $NODE2/.env.cfFailover"
 echo "     CF_ZONE_ID= ve CF_API_TOKEN= satirlarini doldur"
 echo "  4. Servisleri baslat:"
 echo "     bash $NODE2/node2_services.sh start"

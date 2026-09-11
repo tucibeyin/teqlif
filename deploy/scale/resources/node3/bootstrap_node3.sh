@@ -86,8 +86,8 @@ if [[ ! -f /usr/local/bin/minio ]]; then
 fi
 sudo mkdir -p /var/lib/minio
 sudo id -u www-data &>/dev/null && sudo chown www-data:www-data /var/lib/minio || true
-# MinIO credentials — resources/node3/.env.node3.minio doldurup buraya kopyalanır
-sudo cp "$RESOURCES/node3/.env.node3.minio" /etc/minio.env
+# MinIO credentials — .env.staging'deki MINIO_ROOT_USER/PASSWORD /etc/minio.env'e extract edilir
+grep -E "^MINIO_ROOT_(USER|PASSWORD)=" "$NODE3/.env.staging" | sudo tee /etc/minio.env > /dev/null
 sudo chmod 600 /etc/minio.env
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ if ! /usr/local/bin/alertmanager --version 2>&1 | grep -q "$ALERTMANAGER_VERSION
 fi
 sudo mkdir -p /etc/alertmanager /var/lib/alertmanager
 sudo chown -R tucibeyin:tucibeyin /var/lib/alertmanager
-# alertmanager.yml.template → envsubst ile .env.node3.production'dan TELEGRAM_* inject edilir
+# alertmanager.yml.template → envsubst ile .env.production'dan TELEGRAM_* inject edilir
 # (alertmanager.service ExecStartPre'si bu işi yapar — deployment sırasında otomatik)
 
 # ── LiveKit ───────────────────────────────────────────────────────────────────
@@ -286,8 +286,8 @@ fi
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
-chmod 600 "$NODE3/.env.node3.production"
-chmod 600 "$NODE3/.env.node3.staging"
+chmod 600 "$NODE3/.env.production"
+chmod 600 "$NODE3/.env.staging"
 
 echo ""
 echo "Bootstrap tamamlandi."
@@ -300,13 +300,13 @@ echo "     cat /etc/wireguard/node3_public.key  # → diğer node'ların wg0.con
 echo "     Sonra bu scripti tekrar calistir — wg0.conf otomatik yazilir."
 echo ""
 echo "  2. .env dosyalarini doldur:"
-echo "     nano $NODE3/.env.node3.production   (AI proxy + monitoring)"
-echo "     nano $NODE3/.env.node3.staging       (staging uygulama)"
-echo "     nano /etc/minio.env                  (MinIO credentials)"
+echo "     nano $NODE3/.env.production   (AI proxy + monitoring)"
+echo "     nano $NODE3/.env.staging       (staging uygulama)"
+echo "     # MinIO credentials: .env.staging içinde MINIO_ROOT_USER/PASSWORD satırları"
 echo ""
 echo "  3. .env dosyalarini /var/www/teqlif.com/backend/'a kopyala:"
-echo "     cp $NODE3/.env.node3.production /var/www/teqlif.com/backend/.env"
-echo "     cp $NODE3/.env.node3.staging    /var/www/teqlif.com/backend/.env.staging"
+echo "     cp $NODE3/.env.production /var/www/teqlif.com/backend/.env"
+echo "     cp $NODE3/.env.staging    /var/www/teqlif.com/backend/.env.staging"
 echo ""
 echo "  4. PostgreSQL — DB ve kullanici olustur:"
 echo "     sudo -u postgres createuser --no-superuser --createdb tucibeyin"
