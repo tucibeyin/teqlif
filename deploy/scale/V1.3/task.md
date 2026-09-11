@@ -392,20 +392,20 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 > **Ön koşul:** WireGuard mesh aktif (Faz 1 ✓).
 
-- [ ] **[node1]** Backup için ED25519 key üret (root olarak):
+- [x] **[node1]** Backup için ED25519 key üret (root olarak):
   ```bash
   sudo ssh-keygen -t ed25519 -f /root/.ssh/id_backup -N "" -C "node1-backup"
   sudo cat /root/.ssh/id_backup.pub
   ```
 
-- [ ] **[node3]** node1'in public key'ini authorized_keys'e ekle:
+- [x] **[node3]** node1'in public key'ini authorized_keys'e ekle:
   ```bash
   # Önceki adımın çıktısını buraya yapıştır:
   echo "<NODE1_BACKUP_PUBLIC_KEY>" >> ~/.ssh/authorized_keys
   chmod 600 ~/.ssh/authorized_keys
   ```
 
-- [ ] **[node1]** SSH bağlantısını test et:
+- [x] **[node1]** SSH bağlantısını test et:
   ```bash
   sudo ssh -i /root/.ssh/id_backup -o StrictHostKeyChecking=no tucibeyin@10.10.0.4 "echo OK"
   # Beklenen: OK (şifre istemeden)
