@@ -197,14 +197,14 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.2 Ortam Değişkenleri
 
-- [ ] **[node3]** Production env doldur:
+- [x] **[node3]** Production env doldur:
   ```bash
   nano /var/www/teqlif.com/deploy/scale/resources/node3/.env.production
   # Doldurulacaklar: GROQ_API_KEY, GEMINI_API_KEY, AI_PROXY_INTERNAL_TOKEN (node1/node2 ile aynı değer)
   # REDIS_URL zaten wg IP'sini gösteriyor: redis://10.10.0.1:6379
   ```
 
-- [ ] **[node3]** Staging env doldur:
+- [x] **[node3]** Staging env doldur:
   ```bash
   nano /var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
   # Doldurulacaklar: SECRET_KEY, DATABASE_URL (postgresql://...@localhost:5432/teqlif_staging),
@@ -215,7 +215,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   ```
 
 
-- [ ] **[node3]** Env izinlerini ayarla (servisler doğrudan resources'tan okur):
+- [x] **[node3]** Env izinlerini ayarla (servisler doğrudan resources'tan okur):
   ```bash
   chmod 600 /var/www/teqlif.com/deploy/scale/resources/node3/.env.production
   chmod 600 /var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
@@ -223,7 +223,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.3 PostgreSQL — Staging DB Hazırlığı
 
-- [ ] **[node3]** DB ve kullanıcı oluştur:
+- [x] **[node3]** DB ve kullanıcı oluştur:
   ```bash
   sudo -u postgres psql <<'SQL'
   CREATE DATABASE teqlif_staging;
@@ -236,7 +236,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.4 MinIO — Staging Bucket'ları
 
-- [ ] **[node3]** MinIO başlat ve bucket'ları oluştur:
+- [x] **[node3]** MinIO başlat ve bucket'ları oluştur:
   ```bash
   sudo systemctl start minio
   sudo systemctl status minio   # active?
@@ -252,7 +252,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.5 Alertmanager Yapılandırması
 
-- [ ] **[node3]** alertmanager.yml render et:
+- [x] **[node3]** alertmanager.yml render et:
   ```bash
   # .env.production içindeki TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID'yi export et:
   set -o allexport; source /var/www/teqlif.com/deploy/scale/resources/node3/.env.production; set +o allexport
@@ -264,7 +264,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.6 Backup Hedef Dizini
 
-- [ ] **[node3]** Backup dizini oluştur:
+- [x] **[node3]** Backup dizini oluştur:
   ```bash
   sudo mkdir -p /var/backups/teqlif/pg /var/backups/teqlif/redis
   sudo chown -R tucibeyin:tucibeyin /var/backups/teqlif
@@ -272,7 +272,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.7 UFW Kuralları
 
-- [ ] **[node3]** UFW kural seti:
+- [x] **[node3]** UFW kural seti:
   ```bash
   sudo ufw allow 22/tcp comment 'SSH'
   sudo ufw allow 80/tcp comment 'HTTP — uploads-staging'
@@ -288,22 +288,22 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.8 Servisleri Başlat
 
-- [ ] **[node3]** Tüm servisleri başlat:
+- [x] **[node3]** Tüm servisleri başlat:
   ```bash
   bash /var/www/teqlif.com/deploy/scale/resources/node3/node3_services.sh start
   ```
 
 ### 2.9 LiveKit Staging — node3
 
-- [ ] **[Lokal]** node3 LiveKit config + systemd + bootstrap güncelleme dosyaları oluştur ve push et.
+- [x] **[Lokal]** node3 LiveKit config + systemd + bootstrap güncelleme dosyaları oluştur ve push et.
 
-- [ ] **[node3]** git pull, sonra bootstrap LiveKit adımını çalıştır:
+- [x] **[node3]** git pull, sonra bootstrap LiveKit adımını çalıştır:
   ```bash
   git pull
   bash deploy/scale/resources/node3/bootstrap_node3.sh  # sadece LiveKit binary adımı yeniden çalışır
   ```
 
-- [ ] **[node3]** livekit.yaml yerleştir ve secret doldur:
+- [x] **[node3]** livekit.yaml yerleştir ve secret doldur:
   ```bash
   sudo mkdir -p /etc/livekit/certs
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node3/livekit.yaml /etc/livekit/livekit.yaml
@@ -315,7 +315,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   # Bu iki değeri .env.staging dosyasına ekle
   ```
 
-- [ ] **[node3]** TLS sertifikası al (TURN için):
+- [x] **[node3]** TLS sertifikası al (TURN için):
   ```bash
   sudo certbot certonly --standalone -d live-staging.teqlif.com \
     --non-interactive --agree-tos -m tucibeyin@gmail.com
@@ -325,13 +325,13 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   ```
   > DNS: `live-staging.teqlif.com` A → `5.249.165.10` (CF proxy kapalı) tanımlı olmalı.
 
-- [ ] **[node3]** LiveKit servisi başlat:
+- [x] **[node3]** LiveKit servisi başlat:
   ```bash
   sudo systemctl enable --now livekit
   sudo systemctl status livekit
   ```
 
-- [ ] **[node3]** UFW — LiveKit portları:
+- [x] **[node3]** UFW — LiveKit portları:
   ```bash
   sudo ufw allow 7880/tcp comment 'LiveKit API/WebSocket staging'
   sudo ufw allow 7882/tcp comment 'LiveKit RTC/TCP staging'
@@ -344,7 +344,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.10 Nginx — uploads-staging.teqlif.com
 
-- [ ] **[node3]** nginx config aktive et:
+- [x] **[node3]** nginx config aktive et:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node3/nginx/uploads-staging.teqlif.com \
     /etc/nginx/sites-available/uploads-staging.teqlif.com
@@ -353,7 +353,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   sudo nginx -t && sudo systemctl reload nginx
   ```
 
-- [ ] **[node3]** SSL sertifikası al:
+- [x] **[node3]** SSL sertifikası al:
   ```bash
   sudo certbot --nginx -d uploads-staging.teqlif.com --non-interactive --agree-tos -m tucibeyin@gmail.com
   ```
@@ -361,26 +361,26 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 2.10 Servis Sağlık Kontrolleri
 
-- [ ] **[node3]** Servis durumları:
+- [x] **[node3]** Servis durumları:
   ```bash
   systemctl status prometheus loki alertmanager node_exporter promtail \
     teqlif-ai-proxy minio
   # Hepsi active (running) veya active (waiting) olmalı
   ```
 
-- [ ] **[node3]** Prometheus hedefleri kontrol:
+- [x] **[node3]** Prometheus hedefleri kontrol:
   ```bash
   curl -s http://localhost:9090/api/v1/targets | python3 -m json.tool | grep -E '"health"|"job"'
   # Beklenen: node3 kendi hedefleri UP
   ```
 
-- [ ] **[node3]** Loki sağlık:
+- [x] **[node3]** Loki sağlık:
   ```bash
   curl -s http://localhost:3100/ready
   # Beklenen: "ready"
   ```
 
-- [ ] **[node3]** AI proxy sağlık:
+- [x] **[node3]** AI proxy sağlık:
   ```bash
   curl -s http://10.10.0.4:8080/health
   # Beklenen: 200 OK {"status":"ok"} (veya similar)
@@ -802,7 +802,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 - [ ] **Staging Sentry DSN** — `deploy/scale/resources/node3/.env.staging` içinde `SENTRY_BACKEND_DSN=` boş. Staging için Sentry projesi oluşturulunca DSN buraya girilmeli ve `sudo systemctl restart teqlif-staging` çalıştırılmalı.
 - [ ] **Staging Admin Panel** — production `admin.html` → `staging.admin.html` olarak ayrılmalı; aynı fonksiyonalite ama staging URL'lerine (staging.teqlif.com) bakmalı. Şimdilik ADMIN_EMAIL/ADMIN_PASSWORD_HASH aynı değer kullanıyor.
 - [ ] **Staging Telegram kanalı** — node3 `.env.production` (alertmanager) ve `.env.staging` (app) için ayrı Telegram kanalı/bot oluşturulacak. Şimdilik bu iki dosyada `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` boş — alertmanager ve uygulama Telegram bildirimleri staging'de çalışmıyor.
-- [ ] **Staging DB şema kurulumu** — `alembic upgrade head` migration zinciriyle staging DB oluşturulamıyor; `listings` tablosunu ALTER eden bir migration, tablo oluşturulmadan önce çalışıyor. Doğru yaklaşım: production DB'den `pg_dump --schema-only` alıp staging'e restore etmek veya migration zincirini düzeltmek. Şimdilik `teqlif-staging` servisi başlatılmadı.
+- [ ] **Staging DB şema kurulumu (migration zinciri)** — `alembic upgrade head` migration zinciriyle staging DB fresh olarak oluşturulamıyor; `listings` tablosunu ALTER eden bir migration, tablo oluşturulmadan önce çalışıyor. Geçici çözüm (V1.3 setup'ta uygulandı): node1'den `pg_dump --schema-only -h 127.0.0.1 -U teqlif teqlif | psql -h 127.0.0.1 -U teqlif_staging teqlif_staging` ile şema kopyalandı, ardından `alembic stamp head` ile revision işaretlendi. Kalıcı çözüm: ya migration zinciri düzeltilmeli ya da `pg_dump` yaklaşımı bootstrap'e dokümante edilmeli. `teqlif-staging` servisi node3'te aktif çalışıyor.
 
 ---
 
