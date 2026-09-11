@@ -3,8 +3,8 @@ Description=MinIO Object Storage
 After=network.target
 
 [Service]
-User=www-data
-Group=www-data
+User=tucibeyin
+Group=tucibeyin
 EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node1/.env.production
 ExecStart=/usr/local/bin/minio server /var/lib/minio --address :9010 --console-address :9011
 Restart=always

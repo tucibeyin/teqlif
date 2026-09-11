@@ -85,7 +85,7 @@ if [[ ! -f /usr/local/bin/minio ]]; then
   rm -rf "$TMP"
 fi
 sudo mkdir -p /var/lib/minio
-sudo id -u www-data &>/dev/null && sudo chown www-data:www-data /var/lib/minio || true
+sudo chown tucibeyin:tucibeyin /var/lib/minio
 # MinIO credentials: minio.service doğrudan resources/node3/.env.staging'den okur — /etc/minio.env gerekmez
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
