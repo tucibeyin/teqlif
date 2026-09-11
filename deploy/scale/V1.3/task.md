@@ -419,7 +419,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 4.1 UFW — node3 İçin Portlar Aç
 
-- [ ] **[node1]** Yeni UFW kuralları:
+- [x] **[node1]** Yeni UFW kuralları:
   ```bash
   sudo ufw allow in on wg0 from 10.10.0.4 to any port 9187 proto tcp comment 'postgres_exporter — node3 Prometheus'
   sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'LiveKit metrics — node3 Prometheus'
@@ -429,7 +429,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 4.2 Code Deploy (Backend + Proxy Token Rename)
 
-- [ ] **[node1]** Kodu güncelle ve yeniden başlat:
+- [x] **[node1]** Kodu güncelle ve yeniden başlat:
   ```bash
   cd /var/www/teqlif.com && git pull
   python3 backend/scripts/sync_translations.py
@@ -437,7 +437,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   sudo systemctl status teqlif
   ```
 
-- [ ] **[node1]** Servis dosyalarını güncelle ve env'i resources'a taşı:
+- [x] **[node1]** Servis dosyalarını güncelle ve env'i resources'a taşı:
   ```bash
   cd /var/www/teqlif.com
 
@@ -461,14 +461,14 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 4.3 Backup Servisleri Kur
 
-- [ ] **[node1]** Scriptleri kur:
+- [x] **[node1]** Scriptleri kur:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scripts/pg-backup.sh /usr/local/sbin/pg-backup.sh
   sudo cp /var/www/teqlif.com/deploy/scripts/offsite-rsync.sh /usr/local/sbin/offsite-rsync.sh
   sudo chmod +x /usr/local/sbin/pg-backup.sh /usr/local/sbin/offsite-rsync.sh
   ```
 
-- [ ] **[node1]** Systemd servis ve timer kur:
+- [x] **[node1]** Systemd servis ve timer kur:
   ```bash
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node1/systemd/teqlif-backup.service /etc/systemd/system/
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node1/systemd/teqlif-backup.timer /etc/systemd/system/
@@ -477,7 +477,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   sudo systemctl list-timers teqlif-backup.timer
   ```
 
-- [ ] **[node1]** Manuel kuru koşu — backup çalışıyor mu doğrula:
+- [x] **[node1]** Manuel kuru koşu — backup çalışıyor mu doğrula:
   ```bash
   sudo systemctl start teqlif-backup.service
   sudo journalctl -u teqlif-backup.service -n 20
@@ -487,7 +487,7 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ### 4.4 journald Güncelle
 
-- [ ] **[node1]** journald retention kısalt:
+- [x] **[node1]** journald retention kısalt:
   ```bash
   sudo mkdir -p /etc/systemd/journald.conf.d
   sudo cp /var/www/teqlif.com/deploy/scale/V1.3/node1/journald/journald.conf \

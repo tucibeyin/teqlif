@@ -38,7 +38,7 @@ sudo apt install -y \
   nginx redis-server \
   python3.13-venv \
   certbot python3-certbot-nginx \
-  fail2ban
+  fail2ban rsync
 
 # ── PostgreSQL 17 (PGDG repo) ────────────────────────────────────────────────
 echo "==> PostgreSQL 17 (PGDG)..."
@@ -271,6 +271,11 @@ if [[ "$(hostname)" != "node3" ]]; then
   sudo hostnamectl set-hostname node3
   grep -q "node3" /etc/hosts || echo "127.0.1.1 node3" | sudo tee -a /etc/hosts > /dev/null
 fi
+
+# ── Backup hedef dizini ──────────────────────────────────────────────────────
+echo "==> Backup dizinleri..."
+sudo mkdir -p /var/backups/teqlif/pg /var/backups/teqlif/redis
+sudo chown -R tucibeyin:tucibeyin /var/backups/teqlif
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
