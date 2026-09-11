@@ -34,6 +34,8 @@ if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --upgrade pip -q
+# CPU-only torch önce kurulur — GPU yok, CUDA wheel'ları atlanır.
+"$VENV/bin/pip" install torch --index-url https://download.pytorch.org/whl/cpu -q
 "$VENV/bin/pip" install -r "$NODE1/node1_production_requirements.txt"
 
 # ── Log dizini ────────────────────────────────────────────────────────────────
