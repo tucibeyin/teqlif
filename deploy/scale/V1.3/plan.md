@@ -263,7 +263,7 @@ node2/cf-failover.sh  (her 10s gateway health check)
 **İlgili dosyalar:**
 - `deploy/scale/V1.2/node2/cf-failover/cf-failover.sh`
 - `deploy/scale/V1.2/node1/nginx/teqlif-fallback.conf`
-- `deploy/scale/resources/node2/.env.cfFailover`
+- `deploy/scale/resources/node2/.env.production`
 
 ---
 

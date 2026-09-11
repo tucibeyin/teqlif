@@ -1,0 +1,1 @@
+# Teqlif Scale V1.3 — Kapsamlı Mimari ve Uygulama Belgesi

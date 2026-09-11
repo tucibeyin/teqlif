@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node2/.env.node2.cfFailover
+EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node2/.env.production
 ExecStart=/usr/local/bin/cf-failover.sh
 Restart=always
 RestartSec=10
