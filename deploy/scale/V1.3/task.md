@@ -221,12 +221,10 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   # MINIO_ROOT_PASSWORD=<sifre_en_az_8_karakter>
   ```
 
-- [ ] **[node3]** Env dosyalarını `backend/` altına kopyala (servisler bu yolu kullanır):
+- [ ] **[node3]** Env izinlerini ayarla (servisler doğrudan resources'tan okur):
   ```bash
-  RESOURCES=/var/www/teqlif.com/deploy/scale/resources/node3
-  cp "$RESOURCES/.env.production" /var/www/teqlif.com/backend/.env
-  cp "$RESOURCES/.env.staging"    /var/www/teqlif.com/backend/.env.staging
-  chmod 600 /var/www/teqlif.com/backend/.env /var/www/teqlif.com/backend/.env.staging
+  chmod 600 /var/www/teqlif.com/deploy/scale/resources/node3/.env.production
+  chmod 600 /var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
   ```
 
 ### 2.3 PostgreSQL — Staging DB Hazırlığı
@@ -793,6 +791,14 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
   ```bash
   systemctl status teqlif-ai-proxy
   ```
+
+---
+
+## Bekleyen Görevler
+
+- [ ] **Staging Sentry DSN** — `deploy/scale/resources/node3/.env.staging` içinde `SENTRY_BACKEND_DSN=` boş. Staging için Sentry projesi oluşturulunca DSN buraya girilmeli ve `sudo systemctl restart teqlif-staging` çalıştırılmalı.
+- [ ] **Staging Admin Panel** — production `admin.html` → `staging.admin.html` olarak ayrılmalı; aynı fonksiyonalite ama staging URL'lerine (staging.teqlif.com) bakmalı. Şimdilik ADMIN_EMAIL/ADMIN_PASSWORD_HASH aynı değer kullanıyor.
+- [ ] **Staging Telegram kanalı** — şimdilik production kanalı kullanılıyor. Ayrı bir staging kanalı oluşturulunca `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` güncellenmeli (hem `.env.staging` hem node3 alertmanager).
 
 ---
 
