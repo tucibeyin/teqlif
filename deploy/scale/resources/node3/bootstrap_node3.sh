@@ -25,7 +25,7 @@ PROMTAIL_VERSION="3.0.0"
 PROMETHEUS_VERSION="2.51.0"
 LOKI_VERSION="3.6.7"
 ALERTMANAGER_VERSION="0.27.0"
-MINIO_VERSION="RELEASE.2025-10-15T17-29-55Z"
+MINIO_VERSION="RELEASE.2025-09-07T16-13-09Z"
 
 echo "==> REPO: $REPO"
 echo "==> Scale version: $SCALE_VERSION"
@@ -75,14 +75,10 @@ fi
 
 # ── MinIO ─────────────────────────────────────────────────────────────────────
 echo "==> MinIO $MINIO_VERSION..."
-if [[ ! -f /usr/local/bin/minio ]]; then
-  TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/minio/minio/releases/download/${MINIO_VERSION}/minio.linux-amd64" \
-    -O "$TMP/minio"
-  sudo mv "$TMP/minio" /usr/local/bin/minio
+if [[ ! -f /usr/local/bin/minio ]] || ! /usr/local/bin/minio --version 2>&1 | grep -q "$MINIO_VERSION"; then
+  sudo curl -fsSL -o /usr/local/bin/minio \
+    "https://github.com/minio/minio/releases/download/${MINIO_VERSION}/minio.linux-amd64.${MINIO_VERSION}"
   sudo chmod +x /usr/local/bin/minio
-  rm -rf "$TMP"
 fi
 sudo mkdir -p /var/lib/minio
 sudo chown tucibeyin:tucibeyin /var/lib/minio
