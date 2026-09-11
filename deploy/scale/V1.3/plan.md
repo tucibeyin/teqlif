@@ -105,10 +105,29 @@ node1'deki `teqlif-staging` node3'e taşınır.
 
 | Servis | node1 (şimdiki) | node3 (hedef) |
 |---|---|---|
-| FastAPI staging | ✅ çalışıyor | taşınacak |
+| FastAPI staging | ✅ çalışıyor | taşınacak — **1 uvicorn worker** |
+| ARQ workers (default) | node1'de çalışıyor | node3'te — **2 process** |
+| ARQ workers (critical) | node1'de çalışıyor | node3'te — **1 process** |
 | PostgreSQL staging | node1 prod DB paylaşımlı | node3'te izole DB |
 | Redis staging | node1 prod Redis paylaşımlı | node3'te izole Redis |
-| MinIO staging | teqlif-staging bucket | node3'te izole MinIO |
+| MinIO staging | teqlif-staging bucket | **node1'e WireGuard üzerinden bağlanır** — kopyalanmaz |
+| ClickHouse | node1'de | **node1'e WireGuard üzerinden bağlanır** — kopyalanmaz |
+| LiveKit | node1'de | **node1'e WireGuard üzerinden bağlanır** — kopyalanmaz |
+
+### node3 RAM tahmini (test kullanıcıları altında)
+
+| Servis | Boşta | ~20 eşzamanlı kullanıcı |
+|---|---|---|
+| PostgreSQL | ~400 MB | ~600 MB |
+| Redis | ~100 MB | ~300 MB |
+| FastAPI (1 worker) | ~200 MB | ~250 MB |
+| ARQ workers (3 process) | ~520 MB | ~700 MB |
+| AI proxy secondary | ~200 MB | ~300 MB |
+| Monitoring (Loki+Prometheus+Grafana) | ~500 MB | ~600 MB |
+| Sistem | ~400 MB | ~400 MB |
+| **Toplam** | **~2.3 GB** | **~3.15 GB** |
+
+3.8 GiB limitinin **%83'ü** — güvenli bant içinde.
 
 ---
 
@@ -149,7 +168,13 @@ Tüm node'lar birbirine tam mesh bağlantıyla erişir.
 [ ] 3. Log seviyesi — WARNING+ kodu değişikliği + deploy
 [ ] 4. Staging — node3'te PostgreSQL, Redis, MinIO, FastAPI kurulumu
 [ ] 5. Backup — systemd timer + rsync + doğrulama scripti
-[ ] 6. Monitoring — node3 node_exporter + promtail → gateway
+[ ] 6. Monitoring taşınması — Loki+Prometheus+Grafana+alertmanager gateway'den node3'e; gateway'de sadece nginx kalır
+       Migration adımları:
+       - node3'te Loki+Prometheus+Grafana+alertmanager kur
+       - node1/node2/gateway promtail: `clients.url` → http://10.10.0.4:3100/loki/api/v1/push
+       - node1/node2/gateway node_exporter → Prometheus scrape hedefi 10.10.0.4:9090
+       - Grafana dashboard'ları aktarılır (export → import)
+       - gateway'den monitoring servisleri kaldırılır
 [ ] 7. Bootstrap scripti — deploy/scale/resources/node3/
 [ ] 8. GitHub Actions runner (nice to have)
 ```
@@ -171,5 +196,5 @@ Tüm node'lar birbirine tam mesh bağlantıyla erişir.
 |---|---|---|---|---|---|---|
 | node1 | OVHcloud | Frankfurt DE | 11.4 GiB | 98 GB | 2 Gbps/unmetered | Backend, DB, Redis, MinIO, LiveKit |
 | node2 | VPSHostingService | Buffalo NY | 1 GB | 25 GB | 1 Gbps | AI Proxy (primary), CF Failover |
-| node3 | Zap-Hosting | Ashburn VA | 3.8 GiB | 25 GB | 1 Gbps/33 TB | AI Proxy (secondary), Backup, Staging |
-| gateway | Netcup | Nürnberg DE | 2 GiB | 40 GB | 1 Gbps | nginx, Prometheus, Loki, Grafana |
+| node3 | Zap-Hosting | Ashburn VA | 3.8 GiB | 25 GB | 1 Gbps/33 TB | AI Proxy (secondary), Backup, Staging, **Monitoring** |
+| gateway | Netcup | Nürnberg DE | 2 GiB | 40 GB | 1 Gbps | **nginx (reverse proxy only)** |
