@@ -8,6 +8,7 @@ StartLimitIntervalSec=600
 User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
+Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/node1/.env.production
 EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node1/.env.production
 ExecStartPre=/var/www/teqlif.com/venv/bin/python -m alembic upgrade head
 ExecStartPre=/var/www/teqlif.com/venv/bin/python /var/www/teqlif.com/backend/scripts/sync_main.py

@@ -1,6 +1,8 @@
 [Unit]
 Description=Teqlif ARQ Background Worker — Staging (node3)
 After=network.target postgresql.service redis-server.service teqlif-staging.service
+BindsTo=teqlif-staging.service
+PartOf=teqlif-staging.service
 StartLimitBurst=10
 StartLimitIntervalSec=600
 

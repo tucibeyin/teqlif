@@ -1,6 +1,8 @@
 [Unit]
 Description=Teqlif ARQ Background Worker
 After=network.target postgresql.service redis.service teqlif.service
+BindsTo=teqlif.service
+PartOf=teqlif.service
 StartLimitBurst=10
 StartLimitIntervalSec=600
 

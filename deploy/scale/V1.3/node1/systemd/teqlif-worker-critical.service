@@ -1,6 +1,8 @@
 [Unit]
 Description=Teqlif ARQ Critical Worker (Bulkhead — push notifications, outbid, loser cascade)
 After=network.target postgresql.service redis.service teqlif.service
+BindsTo=teqlif.service
+PartOf=teqlif.service
 StartLimitBurst=10
 StartLimitIntervalSec=600
 
