@@ -411,8 +411,47 @@ V1.2/final.md §17'de ertelenen kalemler:
 
 ## §9. node3 Rol Kararı
 
-> **Bu bölüm doldurulacak.**  
-> Hangi sorunları (§7 + §8.1) çözeceği ve hangi bileşenlerin node3'e taşınacağı / ekleneceği burada netleşecek.
+> Dört ana başlık altında değerlendiriliyor. Her başlık ayrı beyin fırtınasıyla olgunlaşacak, ardından nihai karara bağlanacak.
+
+---
+
+### §9.1 AI Proxy Secondary
+
+> **Durum:** Tartışılacak
+
+node3 ABD IP'sine sahip — Gemini erişimi tam. node2 SPOF'unu kırar; fallback zincirinde ikinci halka olur.
+
+**Çözülen sorun:** §7 #2 — AI proxy SPOF
+
+---
+
+### §9.2 Off-site Backup
+
+> **Durum:** Tartışılacak
+
+PostgreSQL ve Redis yedeklerini node1'den WireGuard üzerinden node3'e alır. node1 disk arızasında veri kurtarma mümkün hale gelir.
+
+**Çözülen sorun:** §7 #1 — Off-site yedek yok
+
+---
+
+### §9.3 Monitoring
+
+> **Durum:** Tartışılacak
+
+Prometheus + Loki + alertmanager + Grafana gateway'den node3'e taşınır. Gateway nginx-only kalır; 1.9 GiB RAM baskısı ortadan kalkar.
+
+**Çözülen sorun:** §7 #5 — Monitoring SPOF, §1.3 #3 — gateway RAM sınırı
+
+---
+
+### §9.4 Staging İzolasyonu
+
+> **Durum:** Tartışılacak
+
+FastAPI staging + PostgreSQL staging + Redis staging + ARQ worker (staging) node3'e taşınır. node1'deki prod yükü azalır, staging testleri güvenilir hale gelir.
+
+**Çözülen sorun:** §7 #3 — Staging prod ile aynı makinede, §7 #4 — Staging ARQ worker yok
 
 ---
 
