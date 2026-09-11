@@ -39,7 +39,7 @@ async def generate(
     body: GenerateRequest,
     x_internal_token: str = Header(...),
 ):
-    if x_internal_token != settings.node2_internal_token:
+    if x_internal_token != settings.ai_proxy_internal_token:
         raise ForbiddenException()
     # generate_listing_description raises AIServiceBusyException (HTTPException 503)
     # FastAPI yakalayıp 503 döndürür; ai_proxy_client.py raise_for_status() ile fallback'e düşer.

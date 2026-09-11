@@ -1,0 +1,31 @@
+[Unit]
+Description=Teqlif AI Proxy — node3 (US IP, Gemini + Groq, secondary)
+After=network.target
+StartLimitBurst=10
+StartLimitIntervalSec=600
+
+[Service]
+User=tucibeyin
+Group=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/deploy/scale/resources/node3/.env.node3.production
+EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.node3.production
+ExecStart=/var/www/teqlif.com/venv/bin/uvicorn app.ai_proxy_main:app \
+    --host 10.10.0.4 \
+    --port 8080 \
+    --workers 1 \
+    --loop uvloop
+Restart=always
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+LimitNOFILE=4096
+MemoryMax=768M
+MemorySwapMax=0
+OOMScoreAdj=0
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+[Unit]
+Description=Teqlif ARQ Critical Worker — Staging (node3) (push notifications, outbid, loser cascade)
+After=network.target postgresql.service redis-server.service teqlif-staging.service
+StartLimitBurst=10
+StartLimitIntervalSec=600
+
+[Service]
+User=tucibeyin
+Group=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/var/www/teqlif.com/backend/.env.staging
+ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettingsCritical
+Restart=always
+RestartSec=3
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=600
+OOMScoreAdj=100
+CPUWeight=100
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

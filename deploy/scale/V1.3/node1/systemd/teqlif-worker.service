@@ -1,0 +1,24 @@
+[Unit]
+Description=Teqlif ARQ Background Worker
+After=network.target postgresql.service redis.service teqlif.service
+StartLimitBurst=10
+StartLimitIntervalSec=600
+
+[Service]
+User=tucibeyin
+Group=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/var/www/teqlif.com/backend/.env
+ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettings
+Restart=always
+RestartSec=5
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=300
+OOMScoreAdj=200
+CPUWeight=50
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

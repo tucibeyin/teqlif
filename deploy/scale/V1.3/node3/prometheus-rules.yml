@@ -1,0 +1,77 @@
+# /etc/prometheus/rules/teqlif.yml — node3
+# Scale V1.3: AIProxySecondaryDown eklendi (node3 secondary proxy için)
+
+groups:
+  - name: teqlif
+    rules:
+
+      - alert: NodeDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} ({{ $labels.node }}) erişilemiyor"
+          description: "Hedef 1 dakikadır yanıt vermiyor."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yüksek RAM kullanımı ({{ $labels.node }})"
+          description: "RAM kullanımı %{{ $value | printf \"%.0f\" }} — 5 dakikadır eşiğin üzerinde."
+
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Düşük disk alanı ({{ $labels.node }})"
+          description: "{{ $labels.mountpoint }} doluluk oranı %{{ $value | printf \"%.0f\" }}."
+
+      - alert: HighSwapUsage
+        expr: |
+          (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes * 100 > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yüksek swap kullanımı ({{ $labels.node }})"
+          description: "Swap kullanımı %{{ $value | printf \"%.0f\" }} — bellek baskısı olabilir."
+
+      - alert: HighCPULoad
+        expr: |
+          100 - (avg by(node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yüksek CPU kullanımı ({{ $labels.node }})"
+          description: "CPU kullanımı %{{ $value | printf \"%.0f\" }} — 10 dakikadır eşiğin üzerinde."
+
+      # Scale V1.2 — node2 AI proxy (primary)
+      - alert: AIProxyDown
+        expr: |
+          node_systemd_unit_state{node="node2", name="teqlif-ai-proxy.service", state="active"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AI Proxy primary durdu (node2)"
+          description: "teqlif-ai-proxy.service 1 dakikadır inactive — zincir node3 secondary'ye düştü."
+
+      # Scale V1.3 — node3 AI proxy (secondary)
+      - alert: AIProxySecondaryDown
+        expr: |
+          node_systemd_unit_state{node="node3", name="teqlif-ai-proxy.service", state="active"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI Proxy secondary durdu (node3)"
+          description: "node2 primary hâlâ çalışıyor olabilir; zincir node2 → local Groq'a düştü."

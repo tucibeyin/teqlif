@@ -45,7 +45,8 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     gemini_api_key: str = ""
     node2_ai_proxy_url: str = ""        # ör. "http://10.10.0.3:8080" — boşsa node2 atlanır
-    node2_internal_token: str = ""      # Bearer token — node2 ve node1 aynı değeri paylaşır
+    node3_ai_proxy_url: str = ""        # ör. "http://10.10.0.4:8080" — boşsa node3 atlanır
+    ai_proxy_internal_token: str = ""   # Shared bearer token — node1, node2, node3 aynı değeri kullanır
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     minio_endpoint: str = "localhost:9000"

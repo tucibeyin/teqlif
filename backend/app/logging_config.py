@@ -38,7 +38,8 @@ def _make_json_handler(path: str, level: int) -> TimedRotatingFileHandler:
 def setup_logging() -> logging.Logger:
     os.makedirs(LOGS_DIR, exist_ok=True)
 
-    # Konsol — uvicorn zaten basar, WARNING+ göster (düz metin yeterli)
+    log_node = os.getenv("LOG_NODE", "node")
+
     console_fmt = logging.Formatter(
         "%(asctime)s [%(levelname)s] [%(user_id)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
@@ -50,15 +51,13 @@ def setup_logging() -> logging.Logger:
 
     root = logging.getLogger()
     root.setLevel(logging.INFO)
-    root.addHandler(_make_json_handler(os.path.join(LOGS_DIR, "app.log"), logging.INFO))
-    root.addHandler(_make_json_handler(os.path.join(LOGS_DIR, "error.log"), logging.ERROR))
-    root.addHandler(_make_json_handler(os.path.join(LOGS_DIR, "worker.log"), logging.INFO))
+    root.addHandler(_make_json_handler(os.path.join(LOGS_DIR, f"{log_node}-app.log"), logging.INFO))
+    root.addHandler(_make_json_handler(os.path.join(LOGS_DIR, f"{log_node}-error.log"), logging.ERROR))
     root.addHandler(console_handler)
 
-    # worker.log sadece arq worker kayıtlarını alsın — diğer handler'lar root'tan devralır
+    # arq log'ları ayrı dosyaya — root'a propagate etme (double-write önlemi)
     worker_logger = logging.getLogger("arq")
-    worker_file = _make_json_handler(os.path.join(LOGS_DIR, "worker.log"), logging.INFO)
-    worker_logger.addHandler(worker_file)
-    worker_logger.propagate = True
+    worker_logger.addHandler(_make_json_handler(os.path.join(LOGS_DIR, f"{log_node}-worker.log"), logging.INFO))
+    worker_logger.propagate = False
 
     return logging.getLogger("teqlif")

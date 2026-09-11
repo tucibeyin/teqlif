@@ -1,0 +1,13 @@
+[Unit]
+Description=Node Exporter — node3 metrikleri
+After=network.target
+
+[Service]
+User=tucibeyin
+Type=simple
+ExecStart=/usr/local/bin/node_exporter \
+    --web.listen-address=10.10.0.4:9100 \
+    --collector.systemd
+
+[Install]
+WantedBy=multi-user.target

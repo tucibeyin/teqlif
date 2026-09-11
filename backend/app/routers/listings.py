@@ -678,7 +678,7 @@ async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     }
 
 
-from app.services.ml.ai_proxy_client import generate_via_node2
+from app.services.ml.ai_proxy_client import generate_via_proxy
 
 
 @router.post("/generate-description")
@@ -716,9 +716,9 @@ async def generate_description(
         extra_fields=body.extra_fields,
         lang=body.lang,
     )
-    # generate_via_node2 lokal fallback da dahil tüm provider'lar başarısız olursa
+    # generate_via_proxy lokal fallback da dahil tüm provider'lar başarısız olursa
     # AIServiceBusyException fırlatır (503).
-    description, provider = await generate_via_node2(params)
+    description, provider = await generate_via_proxy(params)
 
     # ── Kredi düş (başarılı yanıt sonrası) ───────────────────────────────────
     tuci_spent = 0

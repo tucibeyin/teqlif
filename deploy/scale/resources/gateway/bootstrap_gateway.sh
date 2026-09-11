@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 # deploy/scale/resources/gateway/bootstrap_gateway.sh
 # gateway (netcup GmbH, Nürnberg) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
-# Kapsam dışı (sır içerir): WireGuard private key, alertmanager.env, nginx SSL sertifikaları.
+# Kapsam dışı (sır içerir): WireGuard private key, nginx SSL sertifikaları.
+# Scale V1.3: prometheus/loki/alertmanager node3'e taşındı — gateway yalnızca nginx + node_exporter + promtail çalıştırır.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
-SCALE_VERSION="V1.2"
+SCALE_VERSION="V1.3"
 GW_SRC="$REPO/deploy/scale/$SCALE_VERSION/gateway"
 SYSTEMD_SRC="$GW_SRC/systemd"
 GATEWAY="$REPO/deploy/scale/resources/gateway"
 NODE_EXPORTER_VERSION="1.8.2"
 PROMTAIL_VERSION="3.0.0"
-PROMETHEUS_VERSION="2.51.0"
-LOKI_VERSION="3.6.7"
-ALERTMANAGER_VERSION="0.27.0"
 
 echo "==> REPO: $REPO"
 echo "==> Scale version: $SCALE_VERSION"
@@ -27,10 +25,6 @@ sudo apt install -y ufw wireguard unzip nginx
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
-
-# ── Dizin izinleri ───────────────────────────────────────────────────────────
-sudo mkdir -p /etc/prometheus /var/lib/prometheus /var/lib/alertmanager
-sudo chown tucibeyin:tucibeyin /var/lib/prometheus /var/lib/alertmanager
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
@@ -57,55 +51,6 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 sudo cp "$GW_SRC/promtail-config.yml" /etc/promtail-config.yml
-
-# ── prometheus ────────────────────────────────────────────────────────────────
-echo "==> prometheus $PROMETHEUS_VERSION..."
-if ! /usr/local/bin/prometheus --version 2>&1 | grep -q "$PROMETHEUS_VERSION" 2>/dev/null; then
-  TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" \
-    -O "$TMP/prom.tar.gz"
-  tar xzf "$TMP/prom.tar.gz" -C "$TMP"
-  sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/prometheus"  /usr/local/bin/
-  sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"    /usr/local/bin/
-  rm -rf "$TMP"
-fi
-sudo cp "$GW_SRC/prometheus.yml"       /etc/prometheus/prometheus.yml
-sudo cp "$GW_SRC/prometheus-rules.yml" /etc/prometheus/prometheus-rules.yml
-sudo chown -R tucibeyin:tucibeyin /etc/prometheus
-
-# ── loki ──────────────────────────────────────────────────────────────────────
-echo "==> loki $LOKI_VERSION..."
-if ! /usr/local/bin/loki --version 2>&1 | grep -q "$LOKI_VERSION" 2>/dev/null; then
-  TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip" \
-    -O "$TMP/loki.zip"
-  unzip -q "$TMP/loki.zip" -d "$TMP"
-  sudo mv "$TMP/loki-linux-amd64" /usr/local/bin/loki
-  sudo chmod +x /usr/local/bin/loki
-  rm -rf "$TMP"
-fi
-sudo mkdir -p /etc/loki /var/lib/loki
-sudo chown -R tucibeyin:tucibeyin /var/lib/loki
-sudo cp "$GW_SRC/loki-config.yml" /etc/loki/config.yml
-
-# ── alertmanager ──────────────────────────────────────────────────────────────
-echo "==> alertmanager $ALERTMANAGER_VERSION..."
-if ! /usr/local/bin/alertmanager --version 2>&1 | grep -q "$ALERTMANAGER_VERSION" 2>/dev/null; then
-  TMP=$(mktemp -d)
-  wget -q \
-    "https://github.com/prometheus/alertmanager/releases/download/v${ALERTMANAGER_VERSION}/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64.tar.gz" \
-    -O "$TMP/am.tar.gz"
-  tar xzf "$TMP/am.tar.gz" -C "$TMP"
-  sudo mv "$TMP/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/alertmanager" /usr/local/bin/
-  rm -rf "$TMP"
-fi
-sudo mkdir -p /etc/alertmanager /var/lib/alertmanager
-if [[ ! -f /etc/alertmanager/alertmanager.yml ]]; then
-  sudo cp "$GW_SRC/alertmanager.yml.template" /etc/alertmanager/alertmanager.yml
-  echo "  UYARI: /etc/alertmanager/alertmanager.yml sıfırdan kopyalandı — gerçek değerleri doldur."
-fi
 
 # ── nginx.conf optimizasyonu ─────────────────────────────────────────────────
 echo "==> nginx.conf optimizasyonu..."
@@ -136,15 +81,15 @@ sudo systemctl restart systemd-journald
 
 # ── systemd servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri..."
-for svc in node_exporter promtail prometheus loki alertmanager; do
+for svc in node_exporter promtail; do
   sudo cp "$SYSTEMD_SRC/${svc}.service" /etc/systemd/system/
 done
 sudo systemctl daemon-reload
-for svc in node_exporter promtail prometheus loki alertmanager; do
+for svc in node_exporter promtail; do
   sudo systemctl enable "$svc"
 done
 
-# ── WireGuard: node2 peer (V1.2) ─────────────────────────────────────────────
+# ── WireGuard: node2 peer ─────────────────────────────────────────────────────
 NODE2_PUBKEY="t+lw3dW45sVklF3wsbji7WGA6jN4+StcwK6nKmJi21k="
 NODE2_ENDPOINT="198.12.123.33:51820"
 echo "==> WireGuard: node2 peer..."
@@ -155,9 +100,9 @@ elif sudo systemctl is-active wg-quick@wg0 &>/dev/null; then
     allowed-ips 10.10.0.3/32 \
     endpoint "$NODE2_ENDPOINT" \
     persistent-keepalive 25
-  printf '\n[Peer]\n# node2 — VPSHostingService.co Buffalo\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
+  printf '\n[Peer]\n# node2 — RackNerd Buffalo\nPublicKey = %s\nAllowedIPs = 10.10.0.3/32\nEndpoint = %s\nPersistentKeepalive = 25\n' \
     "$NODE2_PUBKEY" "$NODE2_ENDPOINT" | sudo tee -a /etc/wireguard/wg0.conf > /dev/null
-  echo "    node2 peer eklendi ve wg0.conf'a yazildi."
+  echo "    node2 peer eklendi."
 else
   echo "  UYARI: wg0 servisi aktif degil — node2 peer atlaniyor."
 fi
@@ -168,7 +113,8 @@ sudo ufw allow 22/tcp    comment 'SSH'      2>/dev/null || true
 sudo ufw allow 80/tcp    comment 'HTTP'     2>/dev/null || true
 sudo ufw allow 443/tcp   comment 'HTTPS'    2>/dev/null || true
 sudo ufw allow 51820/udp comment 'WireGuard' 2>/dev/null || true
-sudo ufw allow in on wg0 to any port 3100 proto tcp comment 'Loki — mesh' 2>/dev/null || true
+# Scale V1.3: node3 Prometheus node_exporter'ı scrape eder — WG IP'de dinle
+sudo ufw allow in on wg0 from 10.10.0.4 to any port 9100 proto tcp comment 'node_exporter — node3 Prometheus' 2>/dev/null || true
 sudo ufw --force enable
 
 echo ""
@@ -180,12 +126,9 @@ chmod 600 "$GATEWAY/.env.gateway.production"
 
 echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: wg0.conf yaz, 'sudo systemctl enable --now wg-quick@wg0' calistir"
+echo "     node3 [Peer] blogu da wg0.conf'a ekle (task.md Faz 1)"
 echo "  2. .env degerlerini doldur: $GATEWAY/.env.gateway.production"
-echo "     (TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID)"
-echo "  3. alertmanager.yml kopyala:"
-echo "     sudo cp deploy/scale/V1.2/gateway/alertmanager.yml.template /etc/alertmanager/alertmanager.yml"
-echo "  4. nginx SSL sertifikasi al:"
+echo "  3. nginx SSL sertifikasi al:"
 echo "     bash $GATEWAY/certbot_gateway.sh"
-echo "  5. Grafana ayri kurulmali (apt repo veya binary)"
-echo "  6. Tum servisleri baslat:"
+echo "  4. Tum servisleri baslat:"
 echo "     bash $GATEWAY/gateway_services.sh start"

@@ -1,3 +1,4 @@
 {
-  "BASE_HOST": "https://staging.teqlif.com"
+  "BASE_HOST": "https://staging.teqlif.com",
+  "UPLOADS_HOST": "https://uploads-staging.teqlif.com"
 }

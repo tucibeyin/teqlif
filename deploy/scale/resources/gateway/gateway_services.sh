@@ -3,7 +3,7 @@
 # Kullanım: bash services.sh <start|stop|restart|status>
 set -euo pipefail
 CMD="${1:-status}"
-SERVICES=(nginx prometheus loki alertmanager node_exporter promtail)
+SERVICES=(nginx node_exporter promtail)  # Scale V1.3: prometheus/loki/alertmanager node3'e taşındı
 
 case "$CMD" in
   start|stop|restart)

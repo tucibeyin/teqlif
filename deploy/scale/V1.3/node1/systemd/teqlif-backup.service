@@ -1,0 +1,12 @@
+[Unit]
+Description=Teqlif Off-site Backup (pg_dump + rsync → node3)
+After=postgresql.service network.target
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/pg-backup.sh
+ExecStart=/usr/local/sbin/offsite-rsync.sh
+StandardOutput=journal
+StandardError=journal

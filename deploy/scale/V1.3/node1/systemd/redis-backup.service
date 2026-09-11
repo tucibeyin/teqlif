@@ -1,0 +1,9 @@
+[Unit]
+Description=Redis RDB Backup
+After=redis.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/redis-backup.sh
+StandardOutput=journal
+StandardError=journal

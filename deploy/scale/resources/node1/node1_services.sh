@@ -3,7 +3,7 @@
 # Kullanım: bash services.sh <start|stop|restart|status>
 set -euo pipefail
 CMD="${1:-status}"
-SERVICES=(teqlif teqlif-staging teqlif-worker teqlif-worker-critical node_exporter promtail nginx)
+SERVICES=(teqlif teqlif-worker teqlif-worker-critical node_exporter promtail nginx)
 
 case "$CMD" in
   start|stop|restart)
