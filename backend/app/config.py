@@ -70,6 +70,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = os.environ.get("TEQLIF_ENV_FILE", ".env")
+        extra = "ignore"
 
 
 settings = Settings()
