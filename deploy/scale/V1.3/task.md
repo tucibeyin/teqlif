@@ -798,9 +798,11 @@ Tüm lokal dosya değişiklikleri **bu oturumda tamamlandı**. Doğrula ve push 
 
 ## Bekleyen Görevler
 
+- [ ] **Bootstrap env izinleri** — `bootstrap_node*.sh` sonunda `chmod 600` otomatik uygulansın; şu an elle yapılıyor. Her node'un bootstrap'ına `chmod 600 "$NODE_DIR"/.env.*` satırı eklenecek.
 - [ ] **Staging Sentry DSN** — `deploy/scale/resources/node3/.env.staging` içinde `SENTRY_BACKEND_DSN=` boş. Staging için Sentry projesi oluşturulunca DSN buraya girilmeli ve `sudo systemctl restart teqlif-staging` çalıştırılmalı.
 - [ ] **Staging Admin Panel** — production `admin.html` → `staging.admin.html` olarak ayrılmalı; aynı fonksiyonalite ama staging URL'lerine (staging.teqlif.com) bakmalı. Şimdilik ADMIN_EMAIL/ADMIN_PASSWORD_HASH aynı değer kullanıyor.
-- [ ] **Staging Telegram kanalı** — şimdilik production kanalı kullanılıyor. Ayrı bir staging kanalı oluşturulunca `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` güncellenmeli (hem `.env.staging` hem node3 alertmanager).
+- [ ] **Staging Telegram kanalı** — node3 `.env.production` (alertmanager) ve `.env.staging` (app) için ayrı Telegram kanalı/bot oluşturulacak. Şimdilik bu iki dosyada `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` boş — alertmanager ve uygulama Telegram bildirimleri staging'de çalışmıyor.
+- [ ] **Staging DB şema kurulumu** — `alembic upgrade head` migration zinciriyle staging DB oluşturulamıyor; `listings` tablosunu ALTER eden bir migration, tablo oluşturulmadan önce çalışıyor. Doğru yaklaşım: production DB'den `pg_dump --schema-only` alıp staging'e restore etmek veya migration zincirini düzeltmek. Şimdilik `teqlif-staging` servisi başlatılmadı.
 
 ---
 
