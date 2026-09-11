@@ -92,13 +92,21 @@ node1 (10.10.0.1) ──── node2 (10.10.0.3)
      └──── gateway (10.10.0.2) ─────┘
 ```
 
-V1.2'de node3 mesh'te yok. Tüm node'lar birbirini WireGuard üzerinden görüyor (full mesh).
+V1.2: 3-node full mesh — her node diğer ikisine de peer tanımlar. `PersistentKeepalive=25s` tüm bağlantılarda.
+
+**Bilinen gecikme:**
+- node1 ↔ node2: ~100ms (Frankfurt ↔ Buffalo)
+- node1 ↔ gateway: ~15ms (Frankfurt ↔ Nürnberg)
+- gateway ↔ node2: ~85ms
+- node3 ↔ node1/gateway: ~80ms (Ashburn VA ↔ DE, WireGuard tünelinde)
 
 **Bilinen public key'ler (V1.2 bootstrap'tan):**
 - node1: `JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=`
 - node2: `t+lw3dW45sVklF3wsbji7WGA6jN4+StcwK6nKmJi21k=`
 - gateway: `7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=`
 - node3: `<üretilecek — git'e girmez>`
+
+V1.3'te node3 eklenerek 4-node full mesh hedefleniyor.
 
 ---
 
@@ -116,7 +124,9 @@ V1.2'de node3 mesh'te yok. Tüm node'lar birbirini WireGuard üzerinden görüyo
 | **PostgreSQL** | `:5432` | — | — | — |
 | **postgres_exporter** | `:9187` | — | — | — |
 | **Redis** | `:6379` | — | — | — |
-| **MinIO** | prod + staging bucket | — | — | — |
+| **ClickHouse** | `:8123` (HTTP) / `:9000` (native) | — | — | — |
+| **MinIO** | `:9010` (prod + staging bucket) | — | — | — |
+| **nginx (uploads)** | `:80` → uploads.teqlif.com | — | — | — |
 | **LiveKit** | `:7880-7882`, metrics `:7881` | — | — | — |
 | **Prometheus** | — | — | `:9090` (15s scrape) | — |
 | **Loki** | — | — | `:3100` (0.0.0.0) | — |
@@ -127,6 +137,157 @@ V1.2'de node3 mesh'te yok. Tüm node'lar birbirini WireGuard üzerinden görüyo
 | **WireGuard** | `:51820` | `:51820` | `:51820` | `:51820` |
 
 > ¹ Critical worker: push bildirimi, outbid bildirimi, loser cascade — `TimeoutStopSec=600`
+
+---
+
+## §3.1 Trafik Akışı (V1.2 Mevcut)
+
+```
+İnternet
+   │ HTTPS
+   ▼
+Cloudflare Edge  (DDoS, SSL proxy, CDN cache)
+   │ HTTPS
+   ▼
+gateway :443  (nginx — SSL termination, rate limit, microcaching)
+   │ WireGuard (10.10.0.2 → 10.10.0.1)
+   ├──► node1 :8000  FastAPI prod
+   └──► node1 :8001  FastAPI staging
+
+node1 :8000/8001
+   ├──► PostgreSQL :5432   (local)
+   ├──► Redis :6379         (local)
+   ├──► MinIO :9010         (local)
+   ├──► ClickHouse :8123    (local)
+   ├──► LiveKit :7880+      (local)
+   └──► node2 :8080         (WireGuard — AI proxy)
+
+uploads.teqlif.com
+   │  (Cloudflare bypass — direkt node1)
+   └──► node1 :80  nginx → MinIO :9010
+```
+
+**CF failover aktifken (gateway down):**
+```
+Cloudflare → node1 :443  (nginx fallback, self-signed cert)
+   └──► FastAPI prod :8000  ✅
+   staging ❌ / LiveKit WS ❌ / microcaching ❌
+```
+
+---
+
+## §3.2 AI Proxy Fallback Zinciri (V1.2 Mevcut)
+
+```
+POST /api/listings/generate-description  (node1)
+  └─► ai_proxy_client.py: generate_via_node2()
+        │
+        ├─ NODE2_AI_PROXY_URL dolu ─────────────────────────────────────┐
+        │   POST http://10.10.0.3:8080/generate                         │
+        │   Header: X-Internal-Token: NODE2_INTERNAL_TOKEN              │
+        │   Timeout: 45s                                                 │
+        │                                                                ▼
+        │                                              node2: ai_proxy_main.py
+        │                                                ├─ Groq modelleri (registry sırası)
+        │                                                └─ Gemini modelleri (Groq exhausted ise)
+        │                                                     ABD IP → Gemini ✅
+        │
+        └─ node2 down / timeout / 503 ──────────────────────────────────┐
+                                                                         │
+                                                           node1 lokal fallback
+                                                             Groq-only (EU IP)
+                                                             Gemini ❌ (EU IP kısıtlı)
+                                                                         │
+                                                           Groq da exhausted ─► 503
+```
+
+**Redis shared state** (node1 ↔ node2 aynı key'i paylaşırken 429 koordinasyonu):
+- `llm:exhausted:{model_id}` — TTL: retry-after saniyesi
+- `llm:last_success` — TTL: 3600s (sıcak yol optimizasyonu)
+
+**InMemoryCircuitBreaker:** Redis down olsa bile llm_service çalışmaya devam eder (3 hata → OPEN, 30s sonra half-open).
+
+---
+
+## §3.3 Cloudflare Failover Mimarisi (V1.2 Mevcut)
+
+Gateway tek hata noktasıydı — V1.2'de otomatik CF DNS failover eklendi.
+
+```
+node2/cf-failover.sh  (her 10s gateway health check)
+  │
+  ├─ GET http://94.16.105.135/cf-health
+  │      ├─ OK → sessiz izleme
+  │      └─ 3 ardışık hata (~30s) ──► CF DNS API → A record: gateway → node1
+  │
+  └─ Recovery: 3 ardışık başarı (~30s) ──► CF DNS API → A record: node1 → gateway
+```
+
+| Parametre | Değer |
+|---|---|
+| Check interval | 10s |
+| Failover eşiği | 3 ardışık hata (~30s toplam) |
+| Recovery eşiği | 3 ardışık başarı (~30s toplam) |
+| Test sonucu (2026-09-11) | Failover: 20s, Recovery: 20s |
+
+**Failover sırasında çalışmayan özellikler:**
+- `staging.teqlif.com` (fallback config'de yok)
+- nginx microcaching ve rate limiting
+- node1 nginx fallback'te yalnızca prod :8000 proxy'leniyor
+
+**İlgili dosyalar:**
+- `deploy/scale/V1.2/node2/cf-failover/cf-failover.sh`
+- `deploy/scale/V1.2/node1/nginx/teqlif-fallback.conf`
+- `deploy/scale/resources/node2/.env.node2.cfFailover`
+
+---
+
+## §3.4 Firewall (UFW) Özeti (V1.2 Mevcut)
+
+| Node | Kural | Hedef |
+|---|---|---|
+| node1 | 22/tcp | SSH |
+| node1 | 443/tcp | CF IPs — fallback |
+| node1 | 51820/udp | WireGuard |
+| node1 | 8000/tcp (wg0) | 10.10.0.2 gateway |
+| node1 | 8001/tcp (wg0) | 10.10.0.2 gateway |
+| node1 | 6379/tcp (wg0) | 10.10.0.3 node2 (Redis) |
+| node2 | 22/tcp | SSH |
+| node2 | 51820/udp | WireGuard |
+| node2 | 8080/tcp (wg0) | WireGuard mesh (AI proxy) |
+| node2 | 9100/tcp (wg0) | WireGuard mesh (node_exporter) |
+| gateway | 22/tcp, 80/tcp, 443/tcp | herkese |
+| gateway | 51820/udp | WireGuard |
+| gateway | 3100/tcp (wg0) | 10.10.0.1, 10.10.0.3 (Loki) |
+
+---
+
+## §3.5 Deploy Workflow (V1.2 Mevcut)
+
+### Rutin deploy (kod değişikliği)
+
+```bash
+# Yerel
+git push
+
+# node1
+cd /var/www/teqlif.com && git pull
+sudo systemctl restart teqlif teqlif-staging teqlif-worker teqlif-worker-critical
+
+# node2 (AI proxy kodu değiştiyse)
+cd /var/www/teqlif.com && git pull
+sudo systemctl restart teqlif-ai-proxy
+```
+
+### Yeni node kurulum sırası
+
+```bash
+git clone <repo> /var/www/teqlif.com
+sudo bash -c 'wg genkey | tee /etc/wireguard/<node>_private.key | wg pubkey > /etc/wireguard/<node>_public.key'
+bash deploy/scale/resources/<node>/bootstrap_<node>.sh
+nano deploy/scale/resources/<node>/.env.<node>.production
+bash deploy/scale/resources/<node>/<node>_services.sh start
+```
 
 ---
 
@@ -231,10 +392,27 @@ Aşağıdaki senaryolar §9'daki rol kararından sonra kesinleşecek.
 
 ---
 
+## §8.1 V1.2'den Gelen V1.3 Adayları
+
+V1.2/final.md §17'de ertelenen kalemler:
+
+| Aday | Açıklama | Öncelik |
+|---|---|---|
+| Off-site backup | PostgreSQL + Redis → uzak node | 🔴 |
+| AI proxy secondary | node2 SPOF'unu kır | 🔴 |
+| Staging izolasyonu | Redis/PostgreSQL/ARQ worker ayrışması | 🟠 |
+| Monitoring SPOF | gateway down → kör kalma | 🟠 |
+| Redis metrikleri | redis_exporter node1'e eklenmesi | 🟡 |
+| Gemini node1'den erişim | proxy üzerinden — maliyet/karmaşıklık gerekçesiyle ertelendi | 🟡 |
+| Redis sentinel/replica | node1 Redis SPOF için replica | 🔵 (V2.0) |
+| ARQ worker → node2 | AI iş yükü zaten orada — worker da taşınabilir | 🔵 (V2.0) |
+
+---
+
 ## §9. node3 Rol Kararı
 
 > **Bu bölüm doldurulacak.**  
-> Hangi sorunları (§7) çözeceği ve hangi bileşenlerin node3'e taşınacağı / ekleneceği burada netleşecek.
+> Hangi sorunları (§7 + §8.1) çözeceği ve hangi bileşenlerin node3'e taşınacağı / ekleneceği burada netleşecek.
 
 ---
 
