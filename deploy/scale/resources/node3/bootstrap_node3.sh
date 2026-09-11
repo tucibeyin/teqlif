@@ -67,7 +67,7 @@ if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --upgrade pip -q
-"$VENV/bin/pip" install -r "$RESOURCES/node3/node3_production_requirements.txt"
+"$VENV/bin/pip" install -r "$RESOURCES/node1/node1_production_requirements.txt"
 
 # ── MinIO ─────────────────────────────────────────────────────────────────────
 echo "==> MinIO $MINIO_VERSION..."
