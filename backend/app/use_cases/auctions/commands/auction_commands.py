@@ -567,7 +567,9 @@ class AuctionCommands:
             capture_exception(exc)
             raise DatabaseException(code="BID_SAVE_FAILED")
 
-        await redis.sadd(f"auction:bidders:{stream_id}", str(user.id))
+        bidder_key = f"auction:bidders:{stream_id}"
+        await redis.sadd(bidder_key, str(user.id))
+        await redis.expire(bidder_key, 86400)  # 24 saat — auction sonunda da silinir
 
         # Redis atomik güncelle (re-validate + update)
         result = await redis.eval(

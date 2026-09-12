@@ -1104,11 +1104,14 @@ class FeedQueries:
         """
         redis = await get_redis()
 
+        # "ad_campaigns:active" set'i yalnızca aktif kampanya ID'lerini tutar.
+        # Keyspace SCAN yerine O(N) SMEMBERS — kampanya sayısı küçük (~50 max).
+        raw_ids = await redis.smembers("ad_campaigns:active")
         campaign_ids: list[int] = []
-        async for key in redis.scan_iter("ad_campaign_budget:*", count=100):
+        for raw in raw_ids:
             try:
-                campaign_ids.append(int(key.split(":")[-1]))
-            except (ValueError, IndexError):
+                campaign_ids.append(int(raw))
+            except (ValueError, TypeError):
                 continue
             if len(campaign_ids) >= 50:
                 break

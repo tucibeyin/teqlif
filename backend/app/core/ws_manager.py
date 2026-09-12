@@ -41,6 +41,14 @@ import asyncio
 import json
 from typing import Dict, Set
 
+try:
+    import orjson as _json_lib
+    def _dumps(obj: dict) -> str:
+        return _json_lib.dumps(obj).decode()
+except ImportError:
+    def _dumps(obj: dict) -> str:  # type: ignore[misc]
+        return json.dumps(obj)
+
 from fastapi import WebSocket, WebSocketDisconnect
 
 from app.utils.redis_client import get_redis, get_redis_blpop
@@ -73,6 +81,21 @@ async def safe_send_json(ws: WebSocket, payload: dict) -> bool:
         return False
     except Exception as exc:
         logger.warning("[WS GATEWAY] send_json beklenmeyen hata: %s", exc)
+        return False
+
+
+async def safe_send_text(ws: WebSocket, text: str) -> bool:
+    """Pre-serialized text gönderimi — broadcast_local için (serialize-once pattern)."""
+    try:
+        await ws.send_text(text)
+        return True
+    except WebSocketDisconnect:
+        return False
+    except RuntimeError as exc:
+        logger.debug("[WS GATEWAY] RuntimeError send sırasında (kapanıyor): %s", exc)
+        return False
+    except Exception as exc:
+        logger.warning("[WS GATEWAY] send_text beklenmeyen hata: %s", exc)
         return False
 
 
@@ -144,8 +167,9 @@ class GlobalWSManager:
         if not targets:
             return 0
 
+        blob = _dumps(payload)
         results = await asyncio.gather(
-            *[safe_send_json(ws, payload) for ws in targets],
+            *[safe_send_text(ws, blob) for ws in targets],
             return_exceptions=True,
         )
 

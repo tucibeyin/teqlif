@@ -137,28 +137,30 @@ async def rebuild_index() -> None:
         return list(raw)
 
     vectors = np.array([_parse_embedding(r[1]) for r in rows], dtype=np.float32)
-    faiss.normalize_L2(vectors)
 
-    n = len(rows)
-    # IVFFlat için FAISS önerisi: centroid başına en az 39 training point.
-    # Altında kalan dataset boyutlarında FlatIP daha doğru ve yeterince hızlı.
-    if n < _NLIST * 39:
-        index = faiss.IndexFlatIP(_DIM)
-    else:
-        quantizer = faiss.IndexFlatIP(_DIM)
-        index = faiss.IndexIVFFlat(quantizer, _DIM, _NLIST, faiss.METRIC_INNER_PRODUCT)
-        index.train(vectors)
+    def _build_and_save(vecs: np.ndarray, ids: np.ndarray) -> None:
+        """CPU-bound index build — executor'da çalışır, event loop bloklamaz."""
+        faiss.normalize_L2(vecs)
+        n = len(vecs)
+        if n < _NLIST * 39:
+            idx = faiss.IndexFlatIP(_DIM)
+        else:
+            quantizer = faiss.IndexFlatIP(_DIM)
+            idx = faiss.IndexIVFFlat(quantizer, _DIM, _NLIST, faiss.METRIC_INNER_PRODUCT)
+            idx.train(vecs)
+        idx.add(vecs)
+        os.makedirs(os.path.dirname(_INDEX_PATH), exist_ok=True)
+        faiss.write_index(idx, _INDEX_PATH)
+        np.save(_ID_MAP_PATH, ids)
+        return idx
 
-    index.add(vectors)
+    loop = asyncio.get_running_loop()
+    new_index = await loop.run_in_executor(None, _build_and_save, vectors, listing_ids)
 
-    os.makedirs(os.path.dirname(_INDEX_PATH), exist_ok=True)
-    faiss.write_index(index, _INDEX_PATH)
-    np.save(_ID_MAP_PATH, listing_ids)
-
-    if hasattr(index, "nprobe"):  # IVFFlat only — IndexFlatIP has no nprobe
-        index.nprobe = _NPROBE
-    _index = index
+    if hasattr(new_index, "nprobe"):  # IVFFlat only — IndexFlatIP has no nprobe
+        new_index.nprobe = _NPROBE
+    _index = new_index
     _id_map = listing_ids
     _index_mtime = os.path.getmtime(_INDEX_PATH)
 
-    logger.info("[FAISS] Index yeniden kuruldu | listings=%d", n)
+    logger.info("[FAISS] Index yeniden kuruldu | listings=%d", len(rows))

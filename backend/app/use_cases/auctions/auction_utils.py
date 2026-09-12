@@ -69,15 +69,19 @@ class AuctionConnectionManager:
         targets = list(self._conns.get(stream_id, set()))
         if not targets:
             return
-        
+
+        import asyncio
+        import json as _json
+
+        blob = _json.dumps(payload)
+
         async def _send(ws):
             try:
-                await ws.send_json(payload)
+                await asyncio.wait_for(ws.send_text(blob), timeout=5.0)
                 return True
             except Exception:
                 return False
 
-        import asyncio
         results = await asyncio.gather(*[_send(ws) for ws in targets], return_exceptions=True)
         dead = {ws for ws, ok in zip(targets, results) if ok is not True}
         if dead:

@@ -8,72 +8,91 @@ from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
+_FORYOU_TTL = 3600        # 1 saat — saat başı cron ile yenilenir
+_POOL_SIZE   = 500        # BPR + recent birleşiminden alınan max ilan
+_MAX_FEED    = 500        # Redis list max uzunluğu
+_MAX_PER_SUBCAT = 2       # Greedy diversity
+
+
 async def populate_foryou_feed_task(ctx: dict) -> None:
     """
     Her aktif kullanıcının ilgi alanlarını ve BPR verilerini değerlendirip
     'Sana Özel' Redis listesini (feed:{user_id}:foryou) baştan doldurur.
+
+    Saatte bir cron job ile çalışır. Her listenin TTL'i _FORYOU_TTL ile sınırlıdır;
+    cron tetiklenmese bile bayat veri gösterilmez.
     """
     try:
         redis = await get_redis()
-        
+
         async with AsyncSessionLocal() as db:
-            # Sadece aktif kullanıcıları al (gerçek bir senaryoda son 1 ayda girenler vb. filtrelenebilir)
-            result = await db.execute(select(User.id).where(User.status == UserStatus.ACTIVE))
+            result = await db.execute(
+                select(User.id).where(User.status == UserStatus.ACTIVE)
+            )
             users = result.scalars().all()
-            
-            for uid in users:
-                # 1. BPR (Collaborative Filtering) verilerini al
-                bpr_key = f"bpr:rec:{uid}"
-                bpr_data = await redis.get(bpr_key)
-                bpr_listings = json.loads(bpr_data) if bpr_data else []
-                
-                # 2. Base Havuz (En Yeni İlanlar)
-                recent_listings = await redis.zrevrange("feed:recent", 0, 500)
-                recent_listings = [int(lid) for lid in recent_listings]
-                
-                # 3. BPR ve Recent'i birleştir (BPR öncelikli)
-                combined_pool = []
-                for lid in bpr_listings:
-                    if lid not in combined_pool:
-                        combined_pool.append(lid)
-                        
-                for lid in recent_listings:
-                    if lid not in combined_pool:
-                        combined_pool.append(lid)
-                
-                # 4. Greedy Diversity (MAX_PER_SUBCAT = 2)
-                final_feed = []
-                subcat_counts = {}
-                
-                for lid in combined_pool:
-                    if len(final_feed) >= 500:
-                        break
-                        
-                    listing_data_raw = await redis.get(f"listing:{lid}")
-                    if not listing_data_raw:
+
+        # recent feed'i bir kez çek — tüm kullanıcılar için paylaşımlı havuz
+        recent_raw = await redis.zrevrange("feed:recent", 0, _POOL_SIZE - 1)
+        recent_listings = [int(lid) for lid in recent_raw]
+
+        # Aktif listing meta-verilerini toplu çek
+        if recent_listings:
+            listing_keys = [f"listing:{lid}" for lid in recent_listings]
+            listing_metas_raw = await redis.mget(*listing_keys)
+            listing_meta: dict[int, dict] = {}
+            for lid, raw in zip(recent_listings, listing_metas_raw):
+                if raw:
+                    try:
+                        listing_meta[lid] = json.loads(raw)
+                    except Exception:
+                        pass
+        else:
+            listing_meta = {}
+
+        for uid in users:
+            bpr_data = await redis.get(f"bpr:rec:{uid}")
+            bpr_listings = json.loads(bpr_data) if bpr_data else []
+
+            # BPR öncelikli + recent birleşimi (duplicate yok)
+            seen: set[int] = set()
+            combined_pool: list[int] = []
+            for lid in bpr_listings:
+                if lid not in seen:
+                    seen.add(lid)
+                    combined_pool.append(lid)
+            for lid in recent_listings:
+                if lid not in seen:
+                    seen.add(lid)
+                    combined_pool.append(lid)
+
+            # Greedy diversity
+            final_feed: list[int] = []
+            subcat_counts: dict[str, int] = {}
+
+            for lid in combined_pool:
+                if len(final_feed) >= _MAX_FEED:
+                    break
+                meta = listing_meta.get(lid)
+                if not meta or meta.get("status") != "active":
+                    continue
+                subcat = meta.get("subcategory")
+                if subcat:
+                    if subcat_counts.get(subcat, 0) >= _MAX_PER_SUBCAT:
                         continue
-                        
-                    listing_data = json.loads(listing_data_raw)
-                    if listing_data.get("status") != "active":
-                        continue
-                        
-                    subcat = listing_data.get("subcategory")
-                    if subcat:
-                        if subcat_counts.get(subcat, 0) >= 2:
-                            continue
-                        subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
-                    
-                    final_feed.append(lid)
-                
-                # 5. Sonuçları listeye bas
-                if final_feed:
-                    foryou_key = f"feed:{uid}:foryou"
-                    await redis.delete(foryou_key)
-                    # Listeye en baştan eleman eklemek (O(1)) yerine toplu RPUSH ile dizilişi koruyalım
-                    # final_feed zaten en önemliden aza doğru (BPR -> Recent)
-                    await redis.rpush(foryou_key, *final_feed)
-                
-        logger.info(f"[ForYouWorker] Sana Özel feed'leri {len(users)} kullanıcı için yenilendi.")
+                    subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
+                final_feed.append(lid)
+
+            foryou_key = f"feed:{uid}:foryou"
+            if final_feed:
+                pipe = redis.pipeline()
+                pipe.delete(foryou_key)
+                pipe.rpush(foryou_key, *final_feed)
+                pipe.expire(foryou_key, _FORYOU_TTL)
+                await pipe.execute()
+            else:
+                await redis.delete(foryou_key)
+
+        logger.info("[ForYouWorker] Sana Özel feed'leri %d kullanıcı için yenilendi.", len(users))
     except Exception as e:
-        logger.error(f"[ForYouWorker] Hata: {e}", exc_info=True)
+        logger.error("[ForYouWorker] Hata: %s", e, exc_info=True)
         raise

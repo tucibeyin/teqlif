@@ -29,7 +29,7 @@ class LiveStream(Base):
 
     host: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
     likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]
-        "StreamLike", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
+        "StreamLike", cascade="all, delete-orphan", passive_deletes=True, lazy="raise"
     )
 
 

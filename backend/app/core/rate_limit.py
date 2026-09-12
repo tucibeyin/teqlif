@@ -45,7 +45,7 @@ def get_user_id_or_ip(request: Request) -> str:
 
 limiter = Limiter(
     key_func=get_user_id_or_ip,
-    storage_uri=_REDIS_URL,
+    storage_uri="async+" + _REDIS_URL,
     strategy="fixed-window",
 )
 

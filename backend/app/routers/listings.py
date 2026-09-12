@@ -42,7 +42,7 @@ from app.core.exceptions import (
     AIServiceBusyException,
 )
 from app.services import credit_service
-from app.core.read_cache import cache_get, cache_set, invalidate_cache
+from app.core.read_cache import cache_get, cache_set
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -143,7 +143,7 @@ async def get_my_listings(
     q: Optional[str] = None,
     category: Optional[str] = None,
     subcategory: Optional[str] = None,
-    limit: int = 1000,
+    limit: int = 50,
     offset: int = 0,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
@@ -203,7 +203,6 @@ async def create_listing(
     pool = get_pool()
     if pool:
         await pool.enqueue_job("generate_listing_embedding_task", result["id"])
-    await invalidate_cache("listings:search")
     return result
 
 
@@ -235,7 +234,6 @@ async def update_listing(
         extra_fields=payload.get("extra_fields"),
         **media_kwargs,
     )
-    await invalidate_cache("listings:search")
     return result
 
 

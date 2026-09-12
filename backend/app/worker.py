@@ -913,7 +913,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
                 logger.info("[Worker] compute_user_interests: sinyal yok, atlanıyor")
                 return
 
-            # Toplu upsert
+            # Toplu upsert — executemany tek round-trip
             upsert_sql = text("""
                 INSERT INTO user_interests (user_id, category, score, raw_signals, updated_at)
                 VALUES (:uid, :cat, :score, :raw, NOW())
@@ -923,9 +923,10 @@ async def compute_user_interests_task(ctx: dict) -> None:
                               updated_at = NOW()
             """)
 
-            updated_users = set()
+            updated_users: set[int] = set()
+            params = []
             for row in rows:
-                await db.execute(upsert_sql, {
+                params.append({
                     "uid": row.user_id,
                     "cat": row.category,
                     "score": float(row.score),
@@ -933,16 +934,19 @@ async def compute_user_interests_task(ctx: dict) -> None:
                 })
                 updated_users.add(row.user_id)
 
+            await db.execute(upsert_sql, params)
             await db.commit()
 
-            # Redis cache invalidation
+            # Redis cache invalidation — pipeline, SADD ile takip edilen feed key'leri
             redis = await get_redis()
+            invalidation_keys = []
             for uid in updated_users:
-                await redis.delete(f"interests:{uid}")
-                # Feed cache'lerini de temizle — SCAN kullan, KEYS O(N) Redis'i bloklar
-                feed_keys = [k async for k in redis.scan_iter(f"feed:{uid}:*")]
-                if feed_keys:
-                    await redis.delete(*feed_keys)
+                invalidation_keys.append(f"interests:{uid}")
+                # feed:recent ve foryou listelerini temizle (SCAN'siz)
+                invalidation_keys.append(f"feed:{uid}:foryou")
+                invalidation_keys.append(f"feed:{uid}:personalized")
+            if invalidation_keys:
+                await redis.delete(*invalidation_keys)
 
             logger.info(
                 "[Worker] compute_user_interests tamamlandı | kullanıcı=%d | kayıt=%d",

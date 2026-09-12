@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, case, update as sa_update
+from sqlalchemy import select, func, or_, case, update as sa_update, exists, literal
 
 from app.models.enums import UserStatus
 from app.database import get_db
@@ -209,7 +209,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     if not user.onboarding_completed:
         from app.models.user_interest import UserInterest
         has_interests = await db.scalar(
-            select(func.count()).where(UserInterest.user_id == user.id)
+            select(exists().where(UserInterest.user_id == user.id))
         )
         if has_interests:
             user.onboarding_completed = True
@@ -317,7 +317,7 @@ async def me(current_user: User = Depends(get_current_user), db: AsyncSession = 
     if not current_user.onboarding_completed:
         from app.models.user_interest import UserInterest
         has_interests = await db.scalar(
-            select(func.count()).where(UserInterest.user_id == current_user.id)
+            select(exists().where(UserInterest.user_id == current_user.id))
         )
         if has_interests:
             current_user.onboarding_completed = True

@@ -65,11 +65,16 @@ async def load_active_campaigns_to_redis() -> int:
         return 0
 
     redis = await get_redis()
+    campaign_ids = [str(c.id) for c in campaigns]
     pipe = redis.pipeline()
     for c in campaigns:
         remaining = max(0, c.total_budget - c.spent_budget)
         pipe.setex(_BUDGET_KEY.format(c.id), _CAMPAIGN_TTL, str(remaining))
         pipe.setex(_CPC_KEY.format(c.id), _CAMPAIGN_TTL, str(c.cpc_bid))
+    # Aktif kampanya ID setini güncelle — feed_queries SCAN yerine bunu okur
+    pipe.delete("ad_campaigns:active")
+    pipe.sadd("ad_campaigns:active", *campaign_ids)
+    pipe.expire("ad_campaigns:active", _CAMPAIGN_TTL)
     await pipe.execute()
 
     logger.info("[AdService] %d kampanya Redis'e yüklendi.", len(campaigns))
@@ -95,6 +100,8 @@ async def _reload_campaign_to_redis(campaign_id: int) -> Optional[int]:
     pipe = redis.pipeline()
     pipe.setex(_BUDGET_KEY.format(campaign_id), _CAMPAIGN_TTL, str(remaining))
     pipe.setex(_CPC_KEY.format(campaign_id), _CAMPAIGN_TTL, str(campaign.cpc_bid))
+    pipe.sadd("ad_campaigns:active", str(campaign_id))
+    pipe.expire("ad_campaigns:active", _CAMPAIGN_TTL)
     await pipe.execute()
     logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%d TUCi", campaign_id, remaining)
     return campaign.cpc_bid

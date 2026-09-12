@@ -64,5 +64,5 @@ class Listing(Base):
     reactivated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     likes: Mapped[list["ListingLike"]] = relationship(  # type: ignore[name-defined]
-        "ListingLike", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
+        "ListingLike", cascade="all, delete-orphan", passive_deletes=True, lazy="raise"
     )

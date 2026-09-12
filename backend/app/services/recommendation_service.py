@@ -368,12 +368,13 @@ async def _ids_from_categories(
     subcategories verilirse: category filtresi + subcategory filtresi (kesişim).
     Kesişim sonucu boş gelirse subcategory filtresi düşürülür.
     """
+    import random as _rand
     clauses = [
         "l.status = 'active'",
         "l.status != 'deleted'",
         "l.user_id != :uid",
     ]
-    params: dict = {"uid": user_id, "lim": limit}
+    params: dict = {"uid": user_id, "lim": limit, "salt": str(_rand.randint(0, 999999))}
 
     if categories:
         clauses.append("l.category = ANY(:cats)")
@@ -387,7 +388,7 @@ async def _ids_from_categories(
 
     where = " AND ".join(clauses)
     result = await db.execute(
-        text(f"SELECT l.id FROM listings l WHERE {where} ORDER BY RANDOM() LIMIT :lim"),
+        text(f"SELECT l.id FROM listings l WHERE {where} ORDER BY (hashtext(l.id::text || :salt) & 2147483647) LIMIT :lim"),
         params,
     )
     ids = [row.id for row in result]
@@ -398,7 +399,7 @@ async def _ids_from_categories(
         clauses_fallback = [c for c in clauses if "subcategory" not in c]
         where_fallback = " AND ".join(clauses_fallback)
         result_fallback = await db.execute(
-            text(f"SELECT l.id FROM listings l WHERE {where_fallback} ORDER BY RANDOM() LIMIT :lim"),
+            text(f"SELECT l.id FROM listings l WHERE {where_fallback} ORDER BY (hashtext(l.id::text || :salt) & 2147483647) LIMIT :lim"),
             params_fallback,
         )
         ids = [row.id for row in result_fallback]
