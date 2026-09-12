@@ -141,6 +141,10 @@ echo ""
 echo "==> .env izinleri..."
 chmod 600 "$GATEWAY/.env.gateway.production"
 
+echo ""
+echo "==> teqlif-restart symlink..."
+sudo ln -sf "$REPO/deploy/scale/V1.3/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
+
 echo "Kalan manuel adimlar:"
 echo "  1. WireGuard: wg0.conf yaz, 'sudo systemctl enable --now wg-quick@wg0' calistir"
 echo "     node3 [Peer] blogu da wg0.conf'a ekle (task.md Faz 1)"

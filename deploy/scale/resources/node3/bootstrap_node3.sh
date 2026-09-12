@@ -333,6 +333,10 @@ sudo tee /etc/motd > /dev/null << 'MOTD'
 MOTD
 
 echo ""
+echo "==> teqlif-restart symlink..."
+sudo ln -sf "$REPO/deploy/scale/V1.3/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
+
+echo ""
 echo "Bootstrap tamamlandi."
 echo ""
 echo "Kalan manuel adimlar:"
