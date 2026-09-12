@@ -186,28 +186,43 @@ else
   echo "bind 127.0.0.1 10.10.0.1" | sudo tee -a /etc/redis/redis.conf > /dev/null
 fi
 
-echo "==> Redis requirepass (yoksa yeni şifre üretilir)..."
+echo "==> Redis requirepass + ACL fix (Redis 8 nopass override)..."
 if ! sudo grep -qE '^requirepass ' /etc/redis/redis.conf 2>/dev/null; then
   REDIS_PASS=$(openssl rand -hex 32)
   echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf > /dev/null
   echo ""
   echo "  ╔══════════════════════════════════════════════════════════════╗"
   echo "  ║  Redis şifresi oluşturuldu — NOT: Bu şifreyi kaydet!        ║"
-  echo "  ║  REDIS_URL=redis://:${REDIS_PASS}@127.0.0.1:6379  ║"
+  echo "  ║  REDIS_URL=redis://:${REDIS_PASS}@127.0.0.1:6379            ║"
   echo "  ║  → node1/.env.production REDIS_URL'e gir                    ║"
   echo "  ║  → node2/.env.production: redis://:PASS@10.10.0.1:6379      ║"
   echo "  ║  → node3/.env.production + .env.staging güncelle            ║"
   echo "  ╚══════════════════════════════════════════════════════════════╝"
   echo ""
 else
-  echo "    requirepass zaten mevcut — atlanıyor."
+  REDIS_PASS=$(sudo grep -oP '^requirepass \K\S+' /etc/redis/redis.conf)
+  echo "    requirepass zaten mevcut."
 fi
+# Redis 8: default user nopass flag requirepass'ı ezer — ACL satırını temizle ve düzelt
+sudo sed -i '/^user default /d' /etc/redis/redis.conf
+echo "user default on >$REDIS_PASS ~* &* +@all" | sudo tee -a /etc/redis/redis.conf > /dev/null
 sudo systemctl restart redis-server 2>/dev/null || true
 
 # ── fail2ban ──────────────────────────────────────────────────────────────────
 echo "==> fail2ban..."
 sudo cp "$N1_SRC/fail2ban/jail.local" /etc/fail2ban/jail.local
 sudo systemctl enable --now fail2ban
+
+# ── SSH hardening ─────────────────────────────────────────────────────────────
+echo "==> SSH hardening..."
+SSHD_CFG=/etc/ssh/sshd_config
+sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' "$SSHD_CFG"
+if sudo grep -q '^MaxAuthTries' "$SSHD_CFG"; then
+  sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 3/' "$SSHD_CFG"
+else
+  echo 'MaxAuthTries 3' | sudo tee -a "$SSHD_CFG" > /dev/null
+fi
+sudo systemctl reload ssh
 
 # ── MOTD ──────────────────────────────────────────────────────────────────────
 echo "==> MOTD..."

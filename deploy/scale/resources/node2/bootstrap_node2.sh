@@ -22,7 +22,7 @@ echo "==> Scale version: $SCALE_VERSION"
 # ── apt ───────────────────────────────────────────────────────────────────────
 echo "==> apt paketleri..."
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip curl
+sudo apt install -y ufw python3.13-venv wireguard unzip curl fail2ban
 
 # ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
@@ -139,9 +139,24 @@ if [[ "$(hostname)" != "node2" ]]; then
 fi
 grep -q "node2" /etc/hosts || echo "127.0.1.1 node2" | sudo tee -a /etc/hosts > /dev/null
 
+# ── fail2ban ──────────────────────────────────────────────────────────────────
+echo "==> fail2ban..."
+sudo cp "$N2_SRC/fail2ban/jail.local" /etc/fail2ban/jail.local
+sudo systemctl enable --now fail2ban
+
+# ── SSH hardening ─────────────────────────────────────────────────────────────
+echo "==> SSH hardening..."
+SSHD_CFG=/etc/ssh/sshd_config
+sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' "$SSHD_CFG"
+if sudo grep -q '^MaxAuthTries' "$SSHD_CFG"; then
+  sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 3/' "$SSHD_CFG"
+else
+  echo 'MaxAuthTries 3' | sudo tee -a "$SSHD_CFG" > /dev/null
+fi
+sudo systemctl reload ssh
+
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
-chmod 600 "$NODE2/.env.production"
 chmod 600 "$NODE2/.env.production"
 
 # ── MOTD ──────────────────────────────────────────────────────────────────────

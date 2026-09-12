@@ -337,8 +337,8 @@ echo "==> fail2ban..."
 sudo cp "$N3_SRC/fail2ban/jail.local" /etc/fail2ban/jail.local
 sudo systemctl enable --now fail2ban
 
-# ── Redis requirepass (node3 lokal — staging) ─────────────────────────────────
-echo "==> Redis requirepass (node3 lokal)..."
+# ── Redis requirepass + ACL fix (node3 lokal — staging) ──────────────────────
+echo "==> Redis requirepass + ACL fix (Redis 8 nopass override)..."
 if ! sudo grep -qE '^requirepass ' /etc/redis/redis.conf 2>/dev/null; then
   REDIS_PASS_STAGING=$(openssl rand -hex 32)
   echo "requirepass $REDIS_PASS_STAGING" | sudo tee -a /etc/redis/redis.conf > /dev/null
@@ -349,10 +349,25 @@ if ! sudo grep -qE '^requirepass ' /etc/redis/redis.conf 2>/dev/null; then
   echo "  ║  → node3/.env.staging REDIS_URL'e gir                       ║"
   echo "  ╚══════════════════════════════════════════════════════════════╝"
   echo ""
-  sudo systemctl restart redis-server 2>/dev/null || true
 else
-  echo "    requirepass zaten mevcut — atlanıyor."
+  REDIS_PASS_STAGING=$(sudo grep -oP '^requirepass \K\S+' /etc/redis/redis.conf)
+  echo "    requirepass zaten mevcut."
 fi
+# Redis 8: default user nopass flag requirepass'ı ezer — ACL satırını temizle ve düzelt
+sudo sed -i '/^user default /d' /etc/redis/redis.conf
+echo "user default on >$REDIS_PASS_STAGING ~* &* +@all" | sudo tee -a /etc/redis/redis.conf > /dev/null
+sudo systemctl restart redis-server 2>/dev/null || true
+
+# ── SSH hardening ─────────────────────────────────────────────────────────────
+echo "==> SSH hardening..."
+SSHD_CFG=/etc/ssh/sshd_config
+sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' "$SSHD_CFG"
+if sudo grep -q '^MaxAuthTries' "$SSHD_CFG"; then
+  sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 3/' "$SSHD_CFG"
+else
+  echo 'MaxAuthTries 3' | sudo tee -a "$SSHD_CFG" > /dev/null
+fi
+sudo systemctl reload ssh
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
