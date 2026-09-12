@@ -11,6 +11,8 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 LimitNOFILE=65536
+CPUWeight=150
+OOMScoreAdj=-100
 
 [Install]
 WantedBy=multi-user.target

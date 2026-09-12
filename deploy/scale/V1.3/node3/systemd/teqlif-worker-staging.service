@@ -19,6 +19,8 @@ KillSignal=SIGTERM
 TimeoutStopSec=300
 OOMScoreAdj=200
 CPUWeight=50
+IOWeight=50
+LimitNOFILE=65536
 StandardOutput=journal
 StandardError=journal
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=Disable Transparent Huge Pages (THP)
+Documentation=https://redis.io/docs/management/optimization/latency/#linux-transparent-hugepages
+DefaultDependencies=no
+After=sysinit.target local-fs.target
+Before=redis-server.service postgresql.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'echo never > /sys/kernel/mm/transparent_hugepage/enabled'
+ExecStart=/bin/sh -c 'echo never > /sys/kernel/mm/transparent_hugepage/defrag'
+
+[Install]
+WantedBy=basic.target
