@@ -239,6 +239,7 @@ for svc in \
   node_exporter promtail prometheus loki alertmanager; do
   sudo cp "$SYSTEMD_SRC/${svc}.service" /etc/systemd/system/
 done
+sudo cp "$SYSTEMD_SRC/thp-disable.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 for svc in \
   teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging \
@@ -247,6 +248,7 @@ for svc in \
   node_exporter promtail prometheus loki alertmanager; do
   sudo systemctl enable "$svc"
 done
+sudo systemctl enable --now thp-disable.service
 
 # ── WireGuard ─────────────────────────────────────────────────────────────────
 echo "==> WireGuard..."
