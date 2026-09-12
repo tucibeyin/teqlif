@@ -67,7 +67,7 @@ Motivasyon:
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
 | RAM | 11.4 GiB + 2 GiB Swap |
 | Disk | 98.3 GiB NVMe |
-| Ağ | **2 Gbps / unmetered** (kota yok) |
+| Ağ | **2 Gbps fixed / Unlimited** |
 | SSH alias | `teqlif-node1` |
 
 ### gateway — netcup GmbH Nürnberg (Edge Proxy)
@@ -81,7 +81,7 @@ Motivasyon:
 | CPU | 2 vCore (QEMU @ 2.29 GHz) |
 | RAM | 2 GB + 1 GB Swap |
 | Disk | 60 GB SSD |
-| Ağ | 1 Gbps — **24h ortalama >100 Mbps → throttle** |
+| Ağ | 1 Gbps fixed / Unlimited — **24h ort. >100 Mbps → geçici throttle; ort. düşünce otomatik kalkar** |
 | SSH alias | `teqlif-gateway` |
 | V1.3 notu | Prometheus/Loki/Alertmanager kaldırıldı — node_exporter + promtail + nginx kalır |
 
@@ -96,6 +96,7 @@ Motivasyon:
 | CPU | 1 vCore |
 | RAM | 1 GB |
 | Disk | 25 GB SSD |
+| Ağ | **1 Gbps shared / Unlimited** |
 | SSH alias | `teqlif-node2` |
 | Hostname | `node2` |
 
@@ -110,7 +111,7 @@ Motivasyon:
 | CPU | 2 vCore |
 | RAM | 1.8 GiB + 4 GiB Swap |
 | Disk | 40 GB SSD |
-| Ağ | 1 Gbps |
+| Ağ | 1 Gbps fixed / Unlimited — **33 TB/ay @ 1 Gbps, sonrası 10 Mbps throttle** |
 | SSH alias | `teqlif-node3` |
 | Hostname | `node3` |
 | Aylık ücret | $81.66 |
@@ -334,6 +335,22 @@ ExecStartPre=/var/www/teqlif.com/venv/bin/python /var/www/teqlif.com/backend/scr
 | `promtail.service` | — | push → `10.10.0.4:3100` |
 
 **V1.3'te kaldırılanlar:** `prometheus.service`, `loki.service`, `alertmanager.service`
+
+### LiveKit Mimarisi
+
+LiveKit **pure SFU** (Selective Forwarding Unit) modunda çalışır — transcoding yok, sadece RTP paket yönlendirme.
+
+| Parametre | Değer |
+|---|---|
+| Mod | **SFU** — transcoding yok, CPU yükü minimaI |
+| Sinyal (WebSocket) | `wss://teqlif.com/rtc` → Cloudflare → gateway → node1 |
+| Medya (UDP/RTP) | **Doğrudan node1** `135.125.175.223:50000-60000` — gateway bypass |
+| Yayıncı bant genişliği | ~1–2 Mbps upload (720p) |
+| İzleyici bant genişliği | ~1 Mbps/kişi download (node1'dan) |
+| node1 medya kapasitesi | ~2.000 eşzamanlı izleyici (2 Gbps / 1 Mbps) |
+| Her açık artırma | 1 LiveStream odası = 1 yayıncı + N abone |
+
+Yapılandırma: `deploy/scale/V1.3/node1/livekit.yaml` — `node_ip: 135.125.175.223`, `use_external_ip: false`, TURN etkin.
 
 ---
 
@@ -783,9 +800,42 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 16. Bekleyen Görevler
+## 16. Kapasite Limitleri (Kod Tabanlı)
 
-- [ ] **node3 Swap doğrulaması** — `swapon --show` ile 4 GB swap aktif mi kontrol et. Bootstrap MinIO hatasında `set -euo pipefail` ile durmuş olabileceğinden swap kurulmamış olabilir.
+### Gerçek Tavan Değerleri
+
+| Katman | Değer | Kaynak |
+|---|---|---|
+| PostgreSQL bağlantı tavan (prod) | 4 worker × 30 = **120 app** + ~30 admin = **150 ihtiyaç** | `config.py:8-9`, `database.py:18-21` |
+| PostgreSQL max_connections (varsayılan) | **100** — yetersiz, 200'e yükseltildi | `apply_pg_tuning.sh` |
+| Nginx eşzamanlı WS bağlantısı | 2 worker × 4096 / 2 (upstream) = **~4.096** | `nginx.conf:9` |
+| Teklif hız limiti | **1 teklif / 3 sn** per kullanıcı | `auction_commands.py:484` |
+| Kullanıcı başına max WS | **8 eşzamanlı** | `defender.py:51` |
+| ARQ critical queue (bildirimler) | **30 eşzamanlı iş** | `worker.py:3566` |
+| LiveKit max katılımcı/oda | **500** (prod) / **100** (staging) | `livekit.yaml:30` |
+| API rate limit | **1.800 req/dk** + burst 200 per IP | `nginx-http-zones.conf:6` |
+
+### Senaryo Kapasitesi
+
+| Senaryo | Kapasite | Darboğaz |
+|---|---|---|
+| Pasif tarama | **~5.000 eşzamanlı** | nginx microcache 5s + PG read |
+| Aktif WS bağlantısı | **~4.000 eşzamanlı** | nginx worker_connections tavan |
+| Aktif teklif verici | **~800–1.500 eşzamanlı** | gateway 100 Mbps + PG write |
+| Açık artırma sonu bildirimi | **~90 kullanıcıya kadar anlık**, sonrası kuyruklanır | ARQ critical 30 eşzamanlı iş |
+
+### Uygulanan Düzeltmeler
+
+- `apply_pg_tuning.sh`: `max_connections=200`, `shared_buffers=3GB`, `effective_cache_size=9GB`
+- `apply_pg_tuning_node3.sh`: `max_connections=100`, `shared_buffers=1GB` (yeni dosya)
+- `redis_client.py`: Her client'a `max_connections` sınırı eklendi (50/20/20/20)
+
+---
+
+## 17. Bekleyen Görevler
+
+- [x] **node3 Swap** — node3 artık 4 GB fiziksel RAM; bootstrap'teki 4 GB swapfile ek güvence olarak kalabilir veya kaldırılabilir.
+- [ ] **PostgreSQL tuning uygulaması** — `apply_pg_tuning.sh` node1'de, `apply_pg_tuning_node3.sh` node3'te çalıştırılmalı
 - [ ] **Staging Sentry DSN** — `.env.staging` içinde `SENTRY_BACKEND_DSN=` boş.
 - [ ] **Staging Admin Panel** — production `admin.html`'den ayrılmalı; staging URL'lerine bakmalı.
 - [ ] **Staging Telegram kanalı** — alertmanager ve uygulama için ayrı bot/kanal.

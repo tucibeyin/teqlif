@@ -9,7 +9,7 @@ _redis_stream: aioredis.Redis | None = None
 async def get_redis() -> aioredis.Redis:
     global _redis
     if _redis is None:
-        _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+        _redis = aioredis.from_url(settings.redis_url, decode_responses=True, max_connections=50)
     return _redis
 
 
@@ -28,6 +28,7 @@ async def get_redis_stream() -> aioredis.Redis:
             decode_responses=True,
             socket_timeout=10,
             socket_connect_timeout=5,
+            max_connections=20,
         )
     return _redis_stream
 
@@ -48,6 +49,7 @@ async def get_redis_blpop() -> aioredis.Redis:
             settings.redis_url,
             decode_responses=True,
             socket_timeout=None,
+            max_connections=20,
         )
     return _redis_blpop
 
@@ -56,5 +58,5 @@ async def get_redis_binary() -> aioredis.Redis:
     """decode_responses=False client — for storing/reading raw bytes (numpy vectors etc.)."""
     global _redis_binary
     if _redis_binary is None:
-        _redis_binary = aioredis.from_url(settings.redis_url, decode_responses=False)
+        _redis_binary = aioredis.from_url(settings.redis_url, decode_responses=False, max_connections=20)
     return _redis_binary
