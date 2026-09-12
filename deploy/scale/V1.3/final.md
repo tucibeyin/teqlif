@@ -835,7 +835,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 ## 17. Bekleyen Görevler
 
 - [x] **node3 Swap** — node3 artık 4 GB fiziksel RAM; bootstrap'teki 4 GB swapfile ek güvence olarak kalabilir veya kaldırılabilir.
-- [ ] **PostgreSQL tuning uygulaması** — `apply_pg_tuning.sh` node1'de, `apply_pg_tuning_node3.sh` node3'te çalıştırılmalı
+- [x] **PostgreSQL tuning uygulaması** — `apply_pg_tuning.sh` node1'de, `apply_pg_tuning_node3.sh` node3'te uygulandı (2026-09-12)
 - [ ] **Staging Sentry DSN** — `.env.staging` içinde `SENTRY_BACKEND_DSN=` boş.
 - [ ] **Staging Admin Panel** — production `admin.html`'den ayrılmalı; staging URL'lerine bakmalı.
 - [ ] **Staging Telegram kanalı** — alertmanager ve uygulama için ayrı bot/kanal.
