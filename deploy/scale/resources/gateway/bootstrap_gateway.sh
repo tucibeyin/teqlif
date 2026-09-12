@@ -119,6 +119,21 @@ sudo ufw allow 51820/udp comment 'WireGuard' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 9100 proto tcp comment 'node_exporter — node3 Prometheus' 2>/dev/null || true
 sudo ufw --force enable
 
+# ── MOTD ──────────────────────────────────────────────────────────────────────
+echo "==> MOTD..."
+sudo tee /etc/motd > /dev/null << 'MOTD'
+=========================================
+ 🛡️  GATEWAY (netcup GmbH — Nürnberg)
+ 📍  Provider : netcup GmbH (Germany)
+ 🌐  Public IP: 94.16.105.135
+ 🔒  WireGuard: 10.10.0.2
+ 📅  Start    : 7 Sep 2026
+ ⏳  Renew    : 7 Feb 2027
+ 🎯  Roles    : 🌐 nginx (SSL / Rate Limit)
+                🔄 CF Failover Target
+=========================================
+MOTD
+
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""

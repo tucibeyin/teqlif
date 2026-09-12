@@ -284,6 +284,23 @@ echo "==> .env izinleri..."
 chmod 600 "$NODE3/.env.production"
 chmod 600 "$NODE3/.env.staging"
 
+# ── MOTD ──────────────────────────────────────────────────────────────────────
+echo "==> MOTD..."
+sudo tee /etc/motd > /dev/null << 'MOTD'
+=========================================
+ 🖥️  NODE-3 (Zap-Hosting — Ashburn VA)
+ 📍  Provider : Zap-Hosting GmbH (Lifetime)
+ 🌐  Public IP: 5.249.165.10
+ 🔒  WireGuard: 10.10.0.4
+ 📅  Start    : 11 Sep 2026
+ ⏳  Renew    : — (Lifetime)
+ 🎯  Roles    : 🤖 AI Proxy (Secondary)
+                📊 Monitoring (Prometheus/Loki)
+                🧪 Staging Environment
+                💾 Backup Destination
+=========================================
+MOTD
+
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""

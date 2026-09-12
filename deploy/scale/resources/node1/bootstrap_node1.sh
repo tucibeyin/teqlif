@@ -165,6 +165,23 @@ sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'Live
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy' 2>/dev/null || true
 sudo ufw --force enable
 
+# ── MOTD ──────────────────────────────────────────────────────────────────────
+echo "==> MOTD..."
+sudo tee /etc/motd > /dev/null << 'MOTD'
+=========================================
+ 🖥️  NODE-1 (OVHcloud — Frankfurt)
+ 📍  Provider : OVHcloud SAS (Germany)
+ 🌐  Public IP: 135.125.175.223
+ 🔒  WireGuard: 10.10.0.1
+ 📅  Start    : 2 Sep 2026
+ ⏳  Renew    : 1 Sep 2027
+ 🎯  Roles    : ⚡ FastAPI Backend (prod)
+                🗄️  PostgreSQL / Redis / MinIO
+                📹  LiveKit SFU
+                🔁  ARQ Workers
+=========================================
+MOTD
+
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
 chmod 600 "$NODE1/.env.production"

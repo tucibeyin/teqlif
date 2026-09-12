@@ -144,6 +144,21 @@ echo "==> .env izinleri..."
 chmod 600 "$NODE2/.env.production"
 chmod 600 "$NODE2/.env.production"
 
+# ── MOTD ──────────────────────────────────────────────────────────────────────
+echo "==> MOTD..."
+sudo tee /etc/motd > /dev/null << 'MOTD'
+=========================================
+ 🖥️  NODE-2 (VPSHostingService — Buffalo)
+ 📍  Provider : VPSHostingService.co (USA)
+ 🌐  Public IP: 198.12.123.33
+ 🔒  WireGuard: 10.10.0.3
+ 📅  Start    : Sep 2026
+ ⏳  Renew    : —
+ 🎯  Roles    : 🤖 AI Proxy (Primary)
+                🔄 CF Failover Daemon
+=========================================
+MOTD
+
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""
