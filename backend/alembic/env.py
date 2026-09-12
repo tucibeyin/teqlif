@@ -51,21 +51,8 @@ target_metadata = Base.metadata
 
 
 def _collect_db_urls() -> list[str]:
-    """Production + staging DB URL'lerini toplar (tekrarları atar)."""
-    urls = [settings.database_url]
-
-    staging_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env.staging")
-    if os.path.exists(staging_env):
-        with open(staging_env) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("DATABASE_URL="):
-                    staging_url = line[len("DATABASE_URL="):]
-                    if staging_url and staging_url not in urls:
-                        urls.append(staging_url)
-                    break
-
-    return urls
+    """TEQLIF_ENV_FILE'dan okunan DB URL'ini döner. Staging V1.3'ten itibaren node3'te ayrı çalışır."""
+    return [settings.database_url]
 
 
 def run_migrations_offline() -> None:

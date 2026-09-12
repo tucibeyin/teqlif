@@ -1,9 +1,12 @@
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.enums import StreamStatus
 from app.models.stream import LiveStream
+
+PENDING_STALE_MINUTES = 5
 
 logger = get_logger(__name__)
 
@@ -35,11 +38,26 @@ class StartStreamCommand:
                 )
             )
             if existing:
-                logger.warning(
-                    "[StartStreamCommand] Aktif yayın zaten var | user_id=%s stream_id=%s",
-                    user_id, existing.id,
+                stale_cutoff = datetime.now(timezone.utc) - timedelta(minutes=PENDING_STALE_MINUTES)
+                is_stale_pending = (
+                    not existing.is_live
+                    and existing.status == "pending"
+                    and existing.started_at < stale_cutoff
                 )
-                raise BadRequestException(code="STREAM_ALREADY_ACTIVE")
+                if is_stale_pending:
+                    logger.warning(
+                        "[StartStreamCommand] Takılı pending yayın temizlendi | user_id=%s stream_id=%s",
+                        user_id, existing.id,
+                    )
+                    existing.status = "ended"
+                    existing.ended_at = datetime.now(timezone.utc)
+                    await self.uow.session.flush()
+                else:
+                    logger.warning(
+                        "[StartStreamCommand] Aktif yayın zaten var | user_id=%s stream_id=%s",
+                        user_id, existing.id,
+                    )
+                    raise BadRequestException(code="STREAM_ALREADY_ACTIVE")
 
             room_name = f"stream_{user_id}_{uuid.uuid4().hex[:8]}"
 
