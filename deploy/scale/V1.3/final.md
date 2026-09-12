@@ -81,7 +81,7 @@ Motivasyon:
 | CPU | 2 vCore (QEMU @ 2.29 GHz) |
 | RAM | 2 GB + 1 GB Swap |
 | Disk | 60 GB SSD |
-| Ağ | 1 Gbps fixed / Unlimited — **24h ort. >100 Mbps → geçici throttle; ort. düşünce otomatik kalkar** |
+| Ağ | **1 Gbps fixed / Unlimited — 24h ort. >100 Mbps → geçici throttle; ort. düşünce otomatik kalkar** |
 | SSH alias | `teqlif-gateway` |
 | V1.3 notu | Prometheus/Loki/Alertmanager kaldırıldı — node_exporter + promtail + nginx kalır |
 
@@ -109,13 +109,13 @@ Motivasyon:
 | Public IP | 5.249.165.10 |
 | WireGuard IP | 10.10.0.4 |
 | CPU | 2 vCore |
-| RAM | 1.8 GiB + 4 GiB Swap |
-| Disk | 40 GB SSD |
-| Ağ | 1 Gbps fixed / Unlimited — **33 TB/ay @ 1 Gbps, sonrası 10 Mbps throttle** |
+| RAM | 3.2 GiB + 4 GiB Swap |
+| Disk | 50 GB SSD |
+| Ağ | **1 Gbps fixed / Unlimited — 33 TB/ay @ 1 Gbps, sonrası 10 Mbps throttle** |
 | SSH alias | `teqlif-node3` |
 | Hostname | `node3` |
 | Aylık ücret | $81.66 |
-| Panel notu | **90 günde bir giriş zorunlu** — sonraki: **~2026-12-10** (aksi halde RAM 1.8→1 GB) |
+| Panel notu | **90 günde bir giriş zorunlu** — sonraki: **~2026-12-10** |
 
 ---
 

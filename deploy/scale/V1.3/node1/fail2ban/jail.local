@@ -1,0 +1,16 @@
+# /etc/fail2ban/jail.local — node1
+# SSH brute-force koruması. Varsayılan /etc/fail2ban/jail.conf'u override eder.
+# Kurulum: bootstrap_node1.sh tarafından kopyalanır.
+
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+ignoreip = 127.0.0.1/8 ::1 10.10.0.0/24
+
+[sshd]
+enabled  = true
+port     = ssh
+logpath  = %(sshd_log)s
+backend  = %(sshd_backend)s
+maxretry = 3

@@ -21,7 +21,7 @@ echo "==> Scale version: $SCALE_VERSION"
 # ── apt ───────────────────────────────────────────────────────────────────────
 echo "==> apt paketleri..."
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip nginx rsync
+sudo apt install -y ufw python3.13-venv wireguard unzip nginx rsync fail2ban
 
 # ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
@@ -178,14 +178,36 @@ sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'Live
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy' 2>/dev/null || true
 sudo ufw --force enable
 
-# ── Redis bind kısıtlaması ────────────────────────────────────────────────────
+# ── Redis bind + requirepass ─────────────────────────────────────────────────
 echo "==> Redis bind: 127.0.0.1 + WireGuard (10.10.0.1)..."
 if grep -qE '^bind ' /etc/redis/redis.conf 2>/dev/null; then
   sudo sed -i 's/^bind .*/bind 127.0.0.1 10.10.0.1/' /etc/redis/redis.conf
 else
   echo "bind 127.0.0.1 10.10.0.1" | sudo tee -a /etc/redis/redis.conf > /dev/null
 fi
+
+echo "==> Redis requirepass (yoksa yeni şifre üretilir)..."
+if ! sudo grep -qE '^requirepass ' /etc/redis/redis.conf 2>/dev/null; then
+  REDIS_PASS=$(openssl rand -hex 32)
+  echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf > /dev/null
+  echo ""
+  echo "  ╔══════════════════════════════════════════════════════════════╗"
+  echo "  ║  Redis şifresi oluşturuldu — NOT: Bu şifreyi kaydet!        ║"
+  echo "  ║  REDIS_URL=redis://:${REDIS_PASS}@127.0.0.1:6379  ║"
+  echo "  ║  → node1/.env.production REDIS_URL'e gir                    ║"
+  echo "  ║  → node2/.env.production: redis://:PASS@10.10.0.1:6379      ║"
+  echo "  ║  → node3/.env.production + .env.staging güncelle            ║"
+  echo "  ╚══════════════════════════════════════════════════════════════╝"
+  echo ""
+else
+  echo "    requirepass zaten mevcut — atlanıyor."
+fi
 sudo systemctl restart redis-server 2>/dev/null || true
+
+# ── fail2ban ──────────────────────────────────────────────────────────────────
+echo "==> fail2ban..."
+sudo cp "$N1_SRC/fail2ban/jail.local" /etc/fail2ban/jail.local
+sudo systemctl enable --now fail2ban
 
 # ── MOTD ──────────────────────────────────────────────────────────────────────
 echo "==> MOTD..."

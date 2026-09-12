@@ -40,7 +40,7 @@ sudo apt install -y \
   nginx redis-server \
   python3.13-venv \
   certbot python3-certbot-nginx \
-  fail2ban rsync
+  fail2ban apache2-utils rsync
 
 # ── PostgreSQL 17 (PGDG repo) ────────────────────────────────────────────────
 echo "==> PostgreSQL 17 (PGDG)..."
@@ -204,6 +204,28 @@ fi
 # Default site kaldır (varsa)
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 
+# ── nginx: monitoring auth proxy (Prometheus + Alertmanager) ─────────────────
+echo "==> nginx monitoring auth proxy..."
+sudo cp "$N3_SRC/nginx/monitoring.conf" /etc/nginx/sites-available/monitoring.conf
+if [[ ! -L /etc/nginx/sites-enabled/monitoring.conf ]]; then
+  sudo ln -s /etc/nginx/sites-available/monitoring.conf /etc/nginx/sites-enabled/monitoring.conf
+fi
+if [[ ! -f /etc/nginx/.htpasswd-monitoring ]]; then
+  MON_PASS=$(openssl rand -hex 16)
+  sudo htpasswd -bc /etc/nginx/.htpasswd-monitoring monitoring "$MON_PASS"
+  echo ""
+  echo "  ╔══════════════════════════════════════════════════════════════╗"
+  echo "  ║  Monitoring basic auth şifresi oluşturuldu — NOT: Kaydet!   ║"
+  echo "  ║  Kullanıcı: monitoring                                       ║"
+  echo "  ║  Şifre    : $MON_PASS                   ║"
+  echo "  ║  Erişim: http://10.10.0.4:9091 (Prometheus)                 ║"
+  echo "  ║          http://10.10.0.4:9094 (Alertmanager)               ║"
+  echo "  ╚══════════════════════════════════════════════════════════════╝"
+  echo ""
+else
+  echo "    .htpasswd-monitoring zaten mevcut — atlanıyor."
+fi
+
 # ── sysctl ────────────────────────────────────────────────────────────────────
 echo "==> sysctl optimizasyonları..."
 sudo mkdir -p /etc/sysctl.d
@@ -309,6 +331,28 @@ grep -q "node3" /etc/hosts || echo "127.0.1.1 node3" | sudo tee -a /etc/hosts > 
 echo "==> Backup dizinleri..."
 sudo mkdir -p /var/backups/teqlif/pg /var/backups/teqlif/redis
 sudo chown -R tucibeyin:tucibeyin /var/backups/teqlif
+
+# ── fail2ban ──────────────────────────────────────────────────────────────────
+echo "==> fail2ban..."
+sudo cp "$N3_SRC/fail2ban/jail.local" /etc/fail2ban/jail.local
+sudo systemctl enable --now fail2ban
+
+# ── Redis requirepass (node3 lokal — staging) ─────────────────────────────────
+echo "==> Redis requirepass (node3 lokal)..."
+if ! sudo grep -qE '^requirepass ' /etc/redis/redis.conf 2>/dev/null; then
+  REDIS_PASS_STAGING=$(openssl rand -hex 32)
+  echo "requirepass $REDIS_PASS_STAGING" | sudo tee -a /etc/redis/redis.conf > /dev/null
+  echo ""
+  echo "  ╔══════════════════════════════════════════════════════════════╗"
+  echo "  ║  node3 Redis şifresi oluşturuldu — NOT: Bu şifreyi kaydet!  ║"
+  echo "  ║  REDIS_URL=redis://:${REDIS_PASS_STAGING}@127.0.0.1:6379    ║"
+  echo "  ║  → node3/.env.staging REDIS_URL'e gir                       ║"
+  echo "  ╚══════════════════════════════════════════════════════════════╝"
+  echo ""
+  sudo systemctl restart redis-server 2>/dev/null || true
+else
+  echo "    requirepass zaten mevcut — atlanıyor."
+fi
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
