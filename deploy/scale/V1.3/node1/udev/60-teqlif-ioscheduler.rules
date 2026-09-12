@@ -1,0 +1,12 @@
+# I/O scheduler tuning — Teqlif node1 (Scale V1.3)
+#
+# NVMe: "none" — kernel elevator devre dışı; NVMe'nin kendi çok kuyruklu (blk-mq)
+#   donanım kuyruğu yeterli. mq-deadline veya bfq gereksiz gecikme ekler.
+#
+# Sanal disk (virtio/vda): mq-deadline — düşük batch iş gecikme garantisi.
+#
+# Uygulama: sudo cp bu_dosya /etc/udev/rules.d/ && sudo udevadm trigger --type=devices --action=change
+
+ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/scheduler}="none"
+ACTION=="add|change", KERNEL=="vd*|sd*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
+ACTION=="add|change", KERNEL=="vd*|sd*", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"

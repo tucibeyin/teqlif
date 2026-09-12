@@ -210,6 +210,12 @@ sudo mkdir -p /etc/sysctl.d
 sudo cp "$N3_SRC/sysctl/99-teqlif.conf" /etc/sysctl.d/99-teqlif.conf
 sudo sysctl -p /etc/sysctl.d/99-teqlif.conf
 
+# ── I/O scheduler (udev) ──────────────────────────────────────────────────────
+echo "==> I/O scheduler udev kuralı..."
+sudo mkdir -p /etc/udev/rules.d
+sudo cp "$N3_SRC/udev/60-teqlif-ioscheduler.rules" /etc/udev/rules.d/
+sudo udevadm trigger --type=devices --action=change
+
 # ── Swap (4 GB) ───────────────────────────────────────────────────────────────
 # vm.swappiness=10 yukarıdaki sysctl adımında uygulandı — swap sadece baskı altında kullanılır
 echo "==> Swap (4 GB)..."
@@ -249,6 +255,7 @@ for svc in \
   sudo systemctl enable "$svc"
 done
 sudo systemctl enable --now thp-disable.service
+sudo systemctl enable fstrim.timer
 
 # ── WireGuard ─────────────────────────────────────────────────────────────────
 echo "==> WireGuard..."

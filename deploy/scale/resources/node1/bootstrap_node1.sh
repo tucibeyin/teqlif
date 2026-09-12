@@ -97,6 +97,12 @@ sudo mkdir -p /etc/sysctl.d
 sudo cp "$N1_SRC/sysctl/99-teqlif.conf" /etc/sysctl.d/99-teqlif.conf
 sudo sysctl -p /etc/sysctl.d/99-teqlif.conf
 
+# ── I/O scheduler (udev) ──────────────────────────────────────────────────────
+echo "==> I/O scheduler udev kuralı..."
+sudo mkdir -p /etc/udev/rules.d
+sudo cp "$N1_SRC/udev/60-teqlif-ioscheduler.rules" /etc/udev/rules.d/
+sudo udevadm trigger --type=devices --action=change
+
 # ── journald limitleri ───────────────────────────────────────────────────────
 echo "==> journald limitleri..."
 sudo mkdir -p /etc/systemd/journald.conf.d
@@ -114,12 +120,15 @@ sudo cp "$SYSTEMD_SRC/redis-backup.timer"   /etc/systemd/system/
 sudo cp "$REPO/deploy/scripts/redis-backup.sh" /usr/local/sbin/redis-backup.sh
 sudo chmod +x /usr/local/sbin/redis-backup.sh
 sudo cp "$SYSTEMD_SRC/thp-disable.service" /etc/systemd/system/
+sudo cp "$SYSTEMD_SRC/cpu-performance.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc"
 done
 sudo systemctl enable redis-backup.timer
 sudo systemctl enable --now thp-disable.service
+sudo systemctl enable --now cpu-performance.service
+sudo systemctl enable fstrim.timer
 
 # ── WireGuard: node2 + node3 peer (V1.3) ────────────────────────────────────
 NODE2_PUBKEY="t+lw3dW45sVklF3wsbji7WGA6jN4+StcwK6nKmJi21k="

@@ -1,0 +1,14 @@
+[Unit]
+Description=Set CPU governor to performance
+DefaultDependencies=no
+After=sysinit.target
+Before=teqlif.service livekit.service postgresql.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# KVM VPS'te cpufreq sysfs expose edilmeyebilir — hata durumunda sessizce geç
+ExecStart=/bin/sh -c 'for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do [ -w "$f" ] && echo performance > "$f"; done; exit 0'
+
+[Install]
+WantedBy=basic.target
