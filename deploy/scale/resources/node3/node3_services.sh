@@ -30,6 +30,7 @@ SERVICES=(
 case "$CMD" in
   start|restart)
     sudo mkdir -p /var/lib/promtail && sudo chown tucibeyin:tucibeyin /var/lib/promtail
+    sudo ln -sf /var/www/teqlif.com/deploy/scale/V1.3/scripts/teqlif-restart.sh /usr/local/sbin/teqlif-restart
     for svc in "${SERVICES[@]}"; do sudo systemctl "$CMD" "$svc"; done
     ;;
   stop)

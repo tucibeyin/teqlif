@@ -7,6 +7,7 @@ SERVICES=(teqlif teqlif-worker teqlif-worker-critical node_exporter promtail ngi
 
 case "$CMD" in
   start|stop|restart)
+    [[ "$CMD" != "stop" ]] && sudo ln -sf /var/www/teqlif.com/deploy/scale/V1.3/scripts/teqlif-restart.sh /usr/local/sbin/teqlif-restart
     for svc in "${SERVICES[@]}"; do sudo systemctl "$CMD" "$svc"; done
     ;;
   status)
