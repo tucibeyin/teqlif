@@ -4,5 +4,4 @@
 # Uygulama: sudo cp bu_dosya /etc/udev/rules.d/ && sudo udevadm trigger --type=devices --action=change
 
 ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/scheduler}="none"
-ACTION=="add|change", KERNEL=="vd*|sd*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
-ACTION=="add|change", KERNEL=="vd*|sd*", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="vd*|sd*", ATTR{queue/scheduler}="mq-deadline"
