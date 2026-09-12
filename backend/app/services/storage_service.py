@@ -7,6 +7,7 @@ Private bucket (teqlif-dm) → presigned URL → /dm/{key} (DB prefix)
 Presigned URL üretiminde external domain kullanılır (minio_dm_external_url),
 böylece mobil cihazlar doğrudan MinIO'ya ulaşabilir.
 """
+import asyncio
 import io
 from datetime import timedelta
 from typing import Protocol, runtime_checkable
@@ -96,6 +97,16 @@ def url_to_key(url: str) -> str:
     """/uploads/stories/foo.mp4  →  stories/foo.mp4"""
     prefix = "/uploads/"
     return url[len(prefix):] if url.startswith(prefix) else url
+
+
+async def upload_bytes_async(key: str, data: bytes, content_type: str) -> str:
+    """upload_bytes'ı event loop'u kilitlemeden çalıştırır."""
+    return await asyncio.to_thread(upload_bytes, key, data, content_type)
+
+
+async def upload_file_async(key: str, path: str, content_type: str) -> str:
+    """upload_file'ı event loop'u kilitlemeden çalıştırır."""
+    return await asyncio.to_thread(upload_file, key, path, content_type)
 
 
 # ── Private DM bucket ─────────────────────────────────────────────────────────

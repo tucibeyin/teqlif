@@ -811,7 +811,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 | Nginx eşzamanlı WS bağlantısı | 2 worker × 4096 / 2 (upstream) = **~4.096** | `nginx.conf:9` |
 | Teklif hız limiti | **1 teklif / 3 sn** per kullanıcı | `auction_commands.py:484` |
 | Kullanıcı başına max WS | **8 eşzamanlı** | `defender.py:51` |
-| ARQ critical queue (bildirimler) | **30 eşzamanlı iş** | `worker.py:3566` |
+| ARQ critical queue (bildirimler) | **50 eşzamanlı iş** (30'dan artırıldı) | `worker.py:3566` |
 | LiveKit max katılımcı/oda | **500** (prod) / **100** (staging) | `livekit.yaml:30` |
 | API rate limit | **1.800 req/dk** + burst 200 per IP | `nginx-http-zones.conf:6` |
 
@@ -822,13 +822,16 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 | Pasif tarama | **~5.000 eşzamanlı** | nginx microcache 5s + PG read |
 | Aktif WS bağlantısı | **~4.000 eşzamanlı** | nginx worker_connections tavan |
 | Aktif teklif verici | **~800–1.500 eşzamanlı** | gateway 100 Mbps + PG write |
-| Açık artırma sonu bildirimi | **~90 kullanıcıya kadar anlık**, sonrası kuyruklanır | ARQ critical 30 eşzamanlı iş |
+| Açık artırma sonu bildirimi | **~150 kullanıcıya kadar anlık**, sonrası kuyruklanır | ARQ critical 50 eşzamanlı iş |
 
 ### Uygulanan Düzeltmeler
 
 - `apply_pg_tuning.sh`: `max_connections=200`, `shared_buffers=3GB`, `effective_cache_size=9GB`
 - `apply_pg_tuning_node3.sh`: `max_connections=100`, `shared_buffers=1GB` (yeni dosya)
 - `redis_client.py`: Her client'a `max_connections` sınırı eklendi (50/20/20/20)
+- `worker.py`: `WorkerSettingsCritical.max_jobs` 30 → 50 (push notification I/O bound)
+- `storage_service.py`: `upload_bytes_async` / `upload_file_async` wrapper'ları eklendi (MinIO sync çağrılar event loop'u kilitliyordu)
+- `upload.py`: Tüm MinIO çağrıları async versiyonlara geçirildi
 
 ---
 

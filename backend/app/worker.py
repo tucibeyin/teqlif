@@ -3563,7 +3563,7 @@ class WorkerSettingsCritical:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     queue_name = "critical"
 
-    max_jobs = 30          # Push notification'lar hızlı işlenmeli
+    max_jobs = 50          # Push notification'lar I/O bound — 50 concurrent güvenli
     job_timeout = 30       # 30sn — push gönderimi uzun sürmez
     keep_result = 600
     max_tries = 5          # Kritik task'lar daha fazla retry

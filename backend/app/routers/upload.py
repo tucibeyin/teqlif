@@ -118,12 +118,12 @@ async def upload_listing_video(
         video_local, thumb_local = await _process_listing_video(tmp_path, tmp_dir)
 
         video_key = f"{uuid.uuid4().hex}.mp4"
-        video_url = storage.upload_file(video_key, video_local, "video/mp4")
+        video_url = await storage.upload_file_async(video_key, video_local, "video/mp4")
 
         thumb_url = None
         if thumb_local:
             thumb_key = f"{uuid.uuid4().hex}_vthumb.jpg"
-            thumb_url = storage.upload_file(thumb_key, thumb_local, "image/jpeg")
+            thumb_url = await storage.upload_file_async(thumb_key, thumb_local, "image/jpeg")
 
     logger.info("[UPLOAD] İlan videosu yüklendi | user_id=%s | video=%s", current_user.id, video_url)
     return {"video_url": video_url, "thumb_url": thumb_url}
@@ -152,11 +152,11 @@ async def upload_image(
     thumb_ext = "jpg" if ext in ("jpg", "webp", "gif") else "png"
     thumb_filename = f"{base_name}_thumb.{thumb_ext}"
 
-    url = storage.upload_bytes(filename, data, _IMAGE_CONTENT_TYPES[ext])
+    url = await storage.upload_bytes_async(filename, data, _IMAGE_CONTENT_TYPES[ext])
 
     try:
         thumb_data = _make_thumbnail(data, ext)
-        thumb_url = storage.upload_bytes(
+        thumb_url = await storage.upload_bytes_async(
             thumb_filename,
             thumb_data,
             "image/jpeg" if thumb_ext == "jpg" else "image/png",
