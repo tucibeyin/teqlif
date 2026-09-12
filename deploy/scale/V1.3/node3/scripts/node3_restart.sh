@@ -40,7 +40,7 @@ echo ""
 echo -e "${B}[1/4] git pull${R}"
 cd "$REPO_DIR"
 GIT_BEFORE=$(git rev-parse HEAD)
-if ! git pull --ff-only 2>&1 | sed 's/^/  /'; then
+if ! sudo -u tucibeyin git pull --ff-only 2>&1 | sed 's/^/  /'; then
     echo -e "  ${RE}git pull başarısız — yerel değişiklik veya çakışma var.${R}" >&2
     exit 1
 fi
