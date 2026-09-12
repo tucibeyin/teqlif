@@ -796,6 +796,38 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 **Çözüm:** Pattern `0\.0\.0\.0` → `0\.0\.0\.0:6379` — port numarasıyla eşleştirince peer kolonu artık eşleşmiyor.
 
+### 18. database.py — `Depends` import eksikti (NameError — alembic çöktü)
+
+**Sorun:** `backend/app/database.py`'de `get_uow()` fonksiyonu `Depends(get_db)` kullanıyordu ama `from fastapi import Depends` satırı yoktu. Alembic `env.py` → `database.py` import zincirinde modül yüklenirken `NameError: name 'Depends' is not defined` hatası alındı. Servis `ExecStartPre` (alembic aşaması) anında başarısız oluyordu.
+
+**Çözüm:** `from fastapi import Depends` satırı `database.py`'nin başına eklendi. Commit: `3742feda`.
+
+**Kural:** Alembic `NameError`'ı migration hatasından önce gelirse suçlu `env.py` → `database.py` import zinciridir — migration dosyalarına bakma.
+
+### 19. rate_limit.py — `coredis` yok, uvicorn worker'ları crash loop'a girdi
+
+**Sorun:** `Limiter(storage_uri="async+redis://...")` `limits` kütüphanesi aracılığıyla `coredis >= 3.4.0` gerektiriyor. `coredis` venv'de kurulu değildi. `ConfigurationError` fırlatıldı. Systemd servisi `active` görünüyordu (uvicorn parent ayakta) ama tüm worker process'leri crash loop'a girdiğinden uygulama hiç istek almıyordu.
+
+**Çözüm:** `storage_uri="async+" + _REDIS_URL` → `storage_uri=_REDIS_URL`. Rate limit check için sync Redis yeterli. Commit: `690f5acd`.
+
+**Kural:** `systemctl is-active` `active` döndürse de uvicorn multi-process modunda worker'lar ölmüş olabilir. Gerçek sağlık: `journalctl -u teqlif -n 50 | grep "SpawnProcess"` veya `curl -s http://localhost:8000/health`.
+
+### 20. node2 cf-failover — yüklü servis dosyası repoyla uyuşmuyor
+
+**Sorun:** `/etc/systemd/system/cf-failover.service`'in yüklü versiyonu `EnvironmentFile=.../resources/node2/.env.node2.cfFailover` gösteriyordu. V1.3'te bu dosya `.env.production`'a birleştirildi ve `.env.node2.cfFailover` silindi. Servis restart sonrası env dosyasını bulamadı; daha önce hiç restart gerektirmediği için sorun gizli kalmıştı.
+
+**Çözüm:** `sudo cp .../V1.3/node2/systemd/cf-failover.service /etc/systemd/system/` + `daemon-reload`. `.env.production`'a `CF_ZONE_ID=` ve `CF_API_TOKEN=` satırları eklendi.
+
+**Kural:** Major versiyon geçişlerinde yüklü servis dosyalarını `systemctl cat <servis> | grep EnvironmentFile` ile repodaki şablonla karşılaştır.
+
+### 21. gateway — git remote SSH, `sudo -u tucibeyin git pull` başarısız
+
+**Sorun:** gateway'de git remote `git@github.com` (SSH) iken, `teqlif-restart.sh` içindeki `sudo -u tucibeyin git pull` SSH agent socket'ine (`SSH_AUTH_SOCK`) erişemedi. node1/node2/node3 HTTPS kullanıyor — sorun sadece gateway'de ortaya çıktı.
+
+**Çözüm:** `git remote set-url origin https://github.com/tucibeyin/teqlif.git` (gateway'de bir kez uygulandı).
+
+**Kural:** `teqlif-restart.sh` root olarak çalışır ve `sudo -u tucibeyin` ile pull atar. SSH-agent forwarding bu context'te çalışmaz; tüm node'larda HTTPS remote zorunlu.
+
 ---
 
 ## 16. Kapasite Limitleri (Kod Tabanlı)
@@ -871,6 +903,8 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 | `1d29624c` | fix(bootstrap): bootstrap_node1.sh V1.3'e güncellendi |
 | `406a9bea` | chore: Faz 4.4/4.5 ve Faz 5 tamamlandı |
 | `706222a0` | fix(deploy): promtail positions /tmp → /var/lib/promtail; Faz 6-8 tamamlandı |
+| `3742feda` | fix(database): Depends importunu ekle — alembic NameError düzeltildi |
+| `690f5acd` | fix(rate_limit): coredis bağımlılığını kaldır — async+ yerine sync redis kullan |
 
 ---
 
@@ -963,7 +997,19 @@ deploy/scripts/
 └── offsite-rsync.sh                          # V1.3: rsync → node3 WireGuard, 14 gün Redis
 
 deploy/scale/V1.3/scripts/
-└── teqlif-restart.sh                         # tek komut deploy — git pull + restart + izleme
+└── teqlif-restart.sh                         # dispatcher — node tespiti → node-specific script'e yönlendirir
+
+deploy/scale/V1.3/node1/scripts/
+└── node1_restart.sh                          # git pull → teqlif+worker restart (canlı journal) → altyapı check → özet
+
+deploy/scale/V1.3/node2/scripts/
+└── node2_restart.sh                          # git pull → ai-proxy + cf-failover restart → özet
+
+deploy/scale/V1.3/node3/scripts/
+└── node3_restart.sh                          # git pull → teqlif-staging restart (canlı journal) → ai-proxy → altyapı+monitoring check → özet
+
+deploy/scale/V1.3/gateway/scripts/
+└── gateway_restart.sh                        # git pull → nginx -t + reload → özet
 
 backend/app/
 ├── config.py                                 # ai_proxy_internal_token, node3_ai_proxy_url, extra='ignore'
@@ -1063,7 +1109,7 @@ Aynı V1.3 döneminde yapılan 14 kod düzeyinde iyileştirme:
 | 1 | `models/stream.py` | `StreamLike.lazy="raise"` | Tüm like'ları her stream sorgusunda yüklemez |
 | 2 | `models/listing.py` | `ListingLike.lazy="raise"` | Aynı |
 | 3 | `models/story.py` | `StoryLike.lazy="raise"` | Aynı |
-| 4 | `core/rate_limit.py` | `storage_uri="async+redis://"` | slowapi sync Redis client → async; event loop bloklanmaz |
+| 4 | `core/rate_limit.py` | `storage_uri="redis://"` (sync) | `async+redis://` coredis ≥3.4.0 gerektiriyor; venv'e kurulmadığından sync'e döndürüldü — rate limit check için fark ihmal edilebilir |
 | 5 | `core/ws_manager.py` | serialize-once + `orjson` | N kullanıcıya broadcast'te JSON N kez değil 1 kez üretilir |
 | 6 | `routers/listings.py` | dead cache invalidation kaldırıldı | Hiç yazılmayan cache key'i silmeye çalışan ölü kod |
 | 7 | `database.py` | `get_uow()` → `get_db()` session'ını paylaşır | Aynı request'te iki DB session yerine bir session |
@@ -1099,15 +1145,29 @@ V1.3 sonrasında tek komut:
 sudo teqlif-restart
 ```
 
-| Aşama | Ne yapar |
+**Mimari:** `teqlif-restart.sh` bir dispatcher'dır — `systemctl cat` ile yüklü servis dosyalarını kontrol ederek node'u tespit eder ve ilgili node-specific script'i çalıştırır.
+
+| Node tespiti | Kriter |
 |---|---|
-| `[1/4] git pull` | `--ff-only` ile kodu çeker; hangi commit'lerin geldiğini listeler |
-| `[2/4] Mevcut durum` | Restart öncesi 3 servisin state'ini gösterir |
-| `[3/4] Restart` | `systemctl restart` + `journalctl -f` aynı terminalde canlı akar |
-| `[4/4] Durum` | Her servis için `✓ ACTIVE pid=... started=...` veya `✗ FAILED` |
+| node1 | `teqlif.service` var + `teqlif-staging.service` yok |
+| node2 | `cf-failover.service` var |
+| node3 | `teqlif-staging.service` var |
+| gateway | diğer hiçbiri yok |
 
-Hata durumunda: başarısız her servis için `systemctl status` çıktısı + son 200 satır journal + `reset-failed` komutu otomatik gösterilir.
+Her node-specific script'in fazları:
 
-**Ortam tespiti:** Parametre verilmezse `systemctl cat teqlif.service` / `teqlif-staging.service` varlığına bakarak prod/staging'i otomatik seçer. Override: `sudo teqlif-restart staging`.
+| Node | Faz 1 | Faz 2 | Faz 3 | Faz 4 |
+|---|---|---|---|---|
+| node1 | git pull | teqlif+worker restart (canlı journal) | altyapı check | servis özeti |
+| node2 | git pull | ai-proxy+cf-failover restart | servis özeti | — |
+| node3 | git pull | teqlif-staging+worker restart (canlı journal) | ai-proxy restart | altyapı+monitoring check + özet |
+| gateway | git pull | nginx -t + reload | servis özeti | — |
 
-**Kaynak:** `deploy/scale/V1.3/scripts/teqlif-restart.sh`
+Hata durumunda: başarısız her servis için `systemctl status` + son 100 satır journal + `reset-failed` ipucu otomatik gösterilir.
+
+**Ön koşullar:**
+- Tüm node'larda git remote HTTPS olmalı: `git remote set-url origin https://github.com/tucibeyin/teqlif.git`
+- `teqlif-restart.sh` execute bit'i: `chmod +x deploy/scale/V1.3/scripts/teqlif-restart.sh`
+- Symlink: `sudo ln -sf /var/www/teqlif.com/deploy/scale/V1.3/scripts/teqlif-restart.sh /usr/local/sbin/teqlif-restart`
+
+**Kaynak:** `deploy/scale/V1.3/scripts/teqlif-restart.sh` → `deploy/scale/V1.3/<node>/scripts/<node>_restart.sh`
