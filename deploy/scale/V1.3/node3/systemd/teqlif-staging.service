@@ -28,6 +28,8 @@ TimeoutStopSec=30
 LimitNOFILE=65536
 OOMScoreAdj=-200
 CPUWeight=80
+IOWeight=200
+TasksMax=512
 StandardOutput=journal
 StandardError=journal
 
