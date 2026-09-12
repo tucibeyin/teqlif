@@ -1,3 +1,4 @@
+from fastapi import Depends
 from sqlalchemy import text
 from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
