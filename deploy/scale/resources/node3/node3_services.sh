@@ -28,8 +28,12 @@ SERVICES=(
 )
 
 case "$CMD" in
-  start|stop|restart)
+  start|restart)
+    sudo mkdir -p /var/lib/promtail && sudo chown tucibeyin:tucibeyin /var/lib/promtail
     for svc in "${SERVICES[@]}"; do sudo systemctl "$CMD" "$svc"; done
+    ;;
+  stop)
+    for svc in "${SERVICES[@]}"; do sudo systemctl stop "$svc"; done
     ;;
   status)
     for svc in "${SERVICES[@]}"; do

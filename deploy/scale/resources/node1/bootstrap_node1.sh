@@ -111,6 +111,8 @@ for svc in "${SERVICES[@]}"; do
 done
 sudo cp "$SYSTEMD_SRC/redis-backup.service" /etc/systemd/system/
 sudo cp "$SYSTEMD_SRC/redis-backup.timer"   /etc/systemd/system/
+sudo cp "$REPO/deploy/scripts/redis-backup.sh" /usr/local/sbin/redis-backup.sh
+sudo chmod +x /usr/local/sbin/redis-backup.sh
 sudo systemctl daemon-reload
 for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc"
@@ -164,6 +166,15 @@ sudo ufw allow in on wg0 from 10.10.0.4 to any port 9187 proto tcp comment 'post
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'LiveKit metrics — node3 Prometheus' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy' 2>/dev/null || true
 sudo ufw --force enable
+
+# ── Redis bind kısıtlaması ────────────────────────────────────────────────────
+echo "==> Redis bind: 127.0.0.1 + WireGuard (10.10.0.1)..."
+if grep -qE '^bind ' /etc/redis/redis.conf 2>/dev/null; then
+  sudo sed -i 's/^bind .*/bind 127.0.0.1 10.10.0.1/' /etc/redis/redis.conf
+else
+  echo "bind 127.0.0.1 10.10.0.1" | sudo tee -a /etc/redis/redis.conf > /dev/null
+fi
+sudo systemctl restart redis-server 2>/dev/null || true
 
 # ── MOTD ──────────────────────────────────────────────────────────────────────
 echo "==> MOTD..."

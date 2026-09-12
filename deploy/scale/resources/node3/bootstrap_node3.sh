@@ -13,6 +13,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
+# Config dosyaları repo'dan kopyalanır — bootstrap öncesi repo güncel olmalı:
+#   cd "$REPO" && git pull
 SCALE_VERSION="V1.3"
 N3_SRC="$REPO/deploy/scale/$SCALE_VERSION/node3"
 SYSTEMD_SRC="$N3_SRC/systemd"
@@ -83,6 +85,18 @@ fi
 sudo mkdir -p /var/lib/minio
 sudo chown tucibeyin:tucibeyin /var/lib/minio
 # MinIO credentials: minio.service doğrudan resources/node3/.env.staging'den okur — /etc/minio.env gerekmez
+# mc client alias — .env.staging dolu ise hemen kur, değilse bootstrap sonrası manuel
+_minio_user=$(grep -E '^MINIO_ROOT_USER=' "$NODE3/.env.staging" 2>/dev/null | cut -d= -f2-)
+_minio_pass=$(grep -E '^MINIO_ROOT_PASSWORD=' "$NODE3/.env.staging" 2>/dev/null | cut -d= -f2-)
+if [[ -n "$_minio_user" && "$_minio_user" != "<MINIO_ROOT_USER>" ]]; then
+  mc alias set node3-staging http://localhost:9010 "$_minio_user" "$_minio_pass" --quiet 2>/dev/null || true
+  mc mb --ignore-existing node3-staging/teqlif-staging    2>/dev/null || true
+  mc mb --ignore-existing node3-staging/teqlif-dm-staging 2>/dev/null || true
+  echo "    mc alias 'node3-staging' ve bucket'lar hazır."
+else
+  echo "  NOT: .env.staging doldurunca mc alias kur:"
+  echo "       mc alias set node3-staging http://localhost:9010 <user> <pass>"
+fi
 
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
@@ -267,12 +281,20 @@ sudo ufw allow in on wg0 to any port 3100 proto tcp comment 'Loki — mesh pushl
 sudo ufw allow in on wg0 to any port 9100 proto tcp comment 'node_exporter — Prometheus self' 2>/dev/null || true
 sudo ufw --force enable
 
+# ── Log dizini ────────────────────────────────────────────────────────────────
+echo "==> Log dizini..."
+sudo mkdir -p /var/log/teqlif
+sudo chown tucibeyin:tucibeyin /var/log/teqlif
+if [[ ! -L "$REPO/logs" ]]; then
+  ln -s /var/log/teqlif "$REPO/logs"
+fi
+
 # ── Hostname ──────────────────────────────────────────────────────────────────
 if [[ "$(hostname)" != "node3" ]]; then
   echo "==> Hostname node3 olarak ayarlaniyor..."
   sudo hostnamectl set-hostname node3
-  grep -q "node3" /etc/hosts || echo "127.0.1.1 node3" | sudo tee -a /etc/hosts > /dev/null
 fi
+grep -q "node3" /etc/hosts || echo "127.0.1.1 node3" | sudo tee -a /etc/hosts > /dev/null
 
 # ── Backup hedef dizini ──────────────────────────────────────────────────────
 echo "==> Backup dizinleri..."
@@ -335,10 +357,11 @@ echo "     sudo nginx -t && sudo systemctl start nginx"
 echo "     sudo certbot --nginx -d uploads-staging.teqlif.com"
 echo "     sudo systemctl reload nginx"
 echo ""
-echo "  6. MinIO bucket'lari olustur (MinIO calisiyor olmali, sonra mc ile):"
-echo "     mc alias set node3 http://localhost:9010 <user> <password>"
-echo "     mc mb node3/teqlif-staging"
-echo "     mc mb node3/teqlif-dm-staging"
+echo "  6. MinIO bucket'lari olustur (MinIO calisiyor olmali, .env.staging dolu degilse):"
+echo "     mc alias set node3-staging http://localhost:9010 <user> <password>"
+echo "     mc mb node3-staging/teqlif-staging"
+echo "     mc mb node3-staging/teqlif-dm-staging"
+echo "     NOT: .env.staging dolu ise bootstrap otomatik yapar (adim 2'den sonra tekrar calistir)"
 echo ""
 echo "  7. Tum servisleri baslat:"
 echo "     bash $NODE3/node3_services.sh start"

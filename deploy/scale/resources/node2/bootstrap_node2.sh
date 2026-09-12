@@ -5,7 +5,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
-SCALE_VERSION="V1.2"
+# Config dosyaları repo'dan kopyalanır — bootstrap öncesi repo güncel olmalı:
+#   cd "$REPO" && git pull
+SCALE_VERSION="V1.3"
 N2_SRC="$REPO/deploy/scale/$SCALE_VERSION/node2"
 SYSTEMD_SRC="$N2_SRC/systemd"
 RESOURCES="$REPO/deploy/scale/resources"
@@ -134,10 +136,8 @@ sudo ufw --force enable
 if [[ "$(hostname)" != "node2" ]]; then
   echo "==> Hostname node2 olarak ayarlaniyor..."
   sudo hostnamectl set-hostname node2
-  if ! grep -q "node2" /etc/hosts; then
-    echo "127.0.1.1 node2" | sudo tee -a /etc/hosts > /dev/null
-  fi
 fi
+grep -q "node2" /etc/hosts || echo "127.0.1.1 node2" | sudo tee -a /etc/hosts > /dev/null
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."

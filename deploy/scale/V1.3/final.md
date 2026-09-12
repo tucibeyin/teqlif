@@ -49,6 +49,8 @@ Motivasyon:
 | 19 | node2 `.env.cfFailover` kaldırıldı | CF vars `.env.production`'a taşındı; role-based env isimlendirmesi |
 | 20 | Env dosyaları role-based isimlendirmeye geçti | `.env.node1.production` → `.env.production` (her node kendi dizininde) |
 | 21 | Bootstrap scriptleri V1.3'e güncellendi | Tüm node'lar: rsync, `/var/lib/promtail/`, backup dizini, curl←wget |
+| 22 | Redis bind: `127.0.0.1 + 10.10.0.1` (node1) | `0.0.0.0` yerine lokal + WireGuard — UFW'ya ek derinlikte savunma |
+| 23 | bootstrap_node3.sh: log dizini + mc alias | `/var/log/teqlif` oluşturma; `mc alias set node3-staging` + bucket otomasyonu |
 
 ---
 
@@ -458,7 +460,7 @@ deploy/scale/resources/
 ├── node1/
 │   ├── .env.production                        # prod env şablonu — V1.3: LOG_NODE=node1 eklendi
 │   ├── node1_production_requirements.txt
-│   ├── bootstrap_node1.sh                     # V1.3: rsync, /var/lib/promtail/, rsync_backup
+│   ├── bootstrap_node1.sh                     # V1.3: rsync, /var/lib/promtail/, redis-backup.sh kopyası, Redis bind kısıtlaması
 │   ├── node1_services.sh                      # teqlif-staging kaldırıldı
 │   └── apply_pg_tuning.sh
 ├── node2/
@@ -733,6 +735,52 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 **Çözüm:** `/api/v2/alerts` kullanıldı.
 
+### 11. node3 UFW lockout — VNC recovery
+
+**Sorun:** `sudo ufw --force enable` WireGuard kuralları eklenmeden çalıştırıldı → SSH bağlantısı kesildi.
+
+**Çözüm:** Zap-Hosting panel VNC console ile root girişi. Klavye layout farklıydı (Shift+7=`?` yerine `/` çıkmıyor); `ufw allow 22` komutu ve slash'siz alternatifler kullanıldı.
+
+**Kural:** UFW enable öncesi `ufw status numbered` ile SSH kuralının var olduğunu doğrula.
+
+### 12. node3_services.sh promtail mkdir eksikti
+
+**Sorun:** `start/restart` sırasında `/var/lib/promtail/` dizini gateway ve node2_services.sh'da oluşturuluyordu ama node3_services.sh'da yoktu. promtail `positions.yaml` yazamıyor, crash loop.
+
+**Çözüm:** `node3_services.sh start|restart` bloğuna `sudo mkdir -p /var/lib/promtail && sudo chown tucibeyin:tucibeyin /var/lib/promtail` eklendi.
+
+### 13. redis-backup.sh /usr/local/sbin/'a kopyalanmıyordu
+
+**Sorun:** `bootstrap_node1.sh` redis-backup.service ve .timer dosyalarını kopyalıyordu ama `redis-backup.sh` script'ini `/usr/local/sbin/`'a kopyalamıyordu. Servis `ExecStart=/usr/local/sbin/redis-backup.sh` hatasıyla başarısız oluyordu.
+
+**Çözüm:** Bootstrap'e `sudo cp "$REPO/deploy/scripts/redis-backup.sh" /usr/local/sbin/redis-backup.sh && sudo chmod +x` eklendi.
+
+### 14. MinIO mc alias adı "node3-staging" — test "local" varsayıyordu
+
+**Sorun:** `mc alias list` JSON parse'ı SSH BatchMode'da başarısız olunca test `mc_alias="local"` fallback yapıyordu. Gerçek alias adı `node3-staging` (port 9010).
+
+**Çözüm:** Test `mc alias list --json` çıktısını `9010` içeren satır için filtreliyor; fallback `"node3-staging"` olarak güncellendi. `bootstrap_node3.sh`'a `.env.staging` doluysa otomatik `mc alias set node3-staging` + bucket oluşturma eklendi.
+
+### 15. LiveKit API secret staging/production uyumsuzluğu
+
+**Sorun:** `/etc/livekit/livekit.yaml`'daki `api_secret` ile `.env.staging` içindeki `LIVEKIT_API_SECRET` farklıydı. Token doğrulama hatası.
+
+**Çözüm:** `sudo sed -i "s|api_secret:.*|api_secret: $secret|"` ile `livekit.yaml` güncellendi; `sudo systemctl restart livekit`.
+
+**Kural:** Bootstrap `livekit.yaml`'ı sadece dosya yoksa kopyalar. `.env.staging` dolduktan sonra secret'ı elle güncellemek gerekiyor.
+
+### 16. Redis bind sed uygulanmadı — /etc/redis/redis.conf'ta bind satırı yoktu
+
+**Sorun:** `sed -i 's/^bind .*/...'` eşleşmiyordu çünkü bazı Redis kurulumlarında `redis.conf`'ta `bind` satırı comment'lı veya hiç yok.
+
+**Çözüm:** `bootstrap_node1.sh`'a `grep -qE '^bind '` kontrolü eklendi; satır varsa sed, yoksa `tee -a` ile ekleniyor.
+
+### 17. ss çıktısında 0.0.0.0:* — test yanlış alarm veriyordu
+
+**Sorun:** `ss -tlnp | grep :6379` çıktısında "peer" kolonu `0.0.0.0:*` içeriyordu. Test `grep -qE "0\.0\.0\.0"` ile eşleşiyor, Redis `0.0.0.0`'da bind görünüyordu. Oysa local bind `127.0.0.1:6379` ve `10.10.0.1:6379`.
+
+**Çözüm:** Pattern `0\.0\.0\.0` → `0\.0\.0\.0:6379` — port numarasıyla eşleştirince peer kolonu artık eşleşmiyor.
+
 ---
 
 ## 16. Bekleyen Görevler
@@ -851,7 +899,7 @@ deploy/scale/resources/
 │   ├── .env.production                       # AI proxy env
 │   ├── .env.staging                          # Staging env
 │   ├── node3_staging_requirements.txt
-│   ├── bootstrap_node3.sh                    # rsync, /var/lib/promtail/, backup dizini, swap
+│   ├── bootstrap_node3.sh                    # rsync, /var/lib/promtail/, backup dizini, swap, /var/log/teqlif, mc alias node3-staging + bucket oluşturma
 │   └── node3_services.sh
 └── gateway/
     ├── .env.gateway.production               # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
