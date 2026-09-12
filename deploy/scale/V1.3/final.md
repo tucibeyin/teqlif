@@ -586,7 +586,126 @@ deploy/scale/resources/
 
 ---
 
-## 12. journald Limitleri (V1.3)
+## 12. Güvenlik Katmanları (V1.3 — Eylül 2026)
+
+### Genel Bakış
+
+V1.3 deployment tamamlandıktan sonra (2026-09-12/13) tüm node'larda aşağıdaki güvenlik iyileştirmeleri uygulandı ve bootstrap scriptlerine entegre edildi.
+
+| Katman | Kapsam | Durum |
+|---|---|---|
+| Redis kimlik doğrulama | node1 (prod), node3 (staging) | ✅ |
+| nginx Cloudflare IP kısıtı | node1 fallback (port 443) | ✅ |
+| Monitoring basic auth proxy | node3 (Prometheus + Alertmanager) | ✅ |
+| fail2ban SSH koruması | tüm 4 node | ✅ |
+| SSH hardening | tüm 4 node | ✅ |
+| CF API token scope kısıtı | Cloudflare dashboard | ✅ |
+
+### Redis Kimlik Doğrulama (node1 + node3)
+
+Redis 8'de `requirepass` tek başına yeterli değildir: `default` kullanıcısı ACL'de `nopass` flag taşıyorsa şifreyi geçersiz kılar. Bootstrap artık hem `requirepass` hem de ACL satırını birlikte yönetiyor:
+
+```ini
+# /etc/redis/redis.conf
+requirepass <64-hex-karakter>
+user default on ><şifre> ~* &* +@all   # nopass flag olmadan
+```
+
+| Node | REDIS_URL formatı |
+|---|---|
+| node1 (kendi servisi) | `redis://:<şifre>@127.0.0.1:6379` |
+| node2 → node1 | `redis://:<şifre>@10.10.0.1:6379` (WireGuard) |
+| node3 → node1 (prod) | `redis://:<şifre>@10.10.0.1:6379` (WireGuard) |
+| node3 (staging, lokal) | `redis://:<şifre>@localhost:6379` |
+
+`bootstrap_node1.sh` ve `bootstrap_node3.sh` şifreyi `openssl rand -hex 32` ile üretir, `redis.conf`'a ekler, mevcut `user default` satırını (varsa) silerek doğru olanı ekler ve Redis'i yeniden başlatır. Şifre terminal çıktısında gösterilir — kaydedip ilgili `.env` dosyalarına manuel girilmesi gerekir.
+
+### nginx Cloudflare IP Kısıtı (node1)
+
+`deploy/scale/V1.3/node1/nginx/teqlif-fallback.conf` — port 443'e yalnızca Cloudflare IP aralıklarından gelen bağlantılar kabul edilir; diğerleri `deny all` ile reddedilir.
+
+Kapsanan aralıklar (15 IPv4 + 7 IPv6, Cloudflare yayınlanan listesi):
+
+```
+103.21.244.0/22  103.22.200.0/22  103.31.4.0/22
+104.16.0.0/13    104.24.0.0/14    108.162.192.0/18
+131.0.72.0/22    141.101.64.0/18  162.158.0.0/15
+172.64.0.0/13    173.245.48.0/20  188.114.96.0/20
+190.93.240.0/20  197.234.240.0/22 198.41.128.0/17
+2400:cb00::/32   2606:4700::/32   2803:f800::/32
+2405:b500::/32   2405:8100::/32   2a06:98c0::/29   2c0f:f248::/32
+```
+
+**Etki:** Direct-to-IP saldırıları ve Cloudflare bypass girişimleri node1'e ulaşamaz. Bu liste değişirse `teqlif-fallback.conf` güncellenmeli ve `sudo nginx -t && sudo systemctl reload nginx` çalıştırılmalıdır.
+
+### Monitoring Auth Proxy (node3)
+
+Prometheus (:9090) ve Alertmanager (:9093) doğrudan WireGuard IP'de açık yerine nginx basic auth arkasına alındı. Loki (:3100) Promtail push için ayrı tutulur — auth gerektirmez.
+
+| Servis | nginx portu | Arka uç | Erişim |
+|---|---|---|---|
+| Prometheus | `10.10.0.4:9091` | `127.0.0.1:9090` | Basic auth — kullanıcı: `monitoring` |
+| Alertmanager | `10.10.0.4:9094` | `127.0.0.1:9093` | Basic auth — kullanıcı: `monitoring` |
+
+Şifre dosyası: `/etc/nginx/.htpasswd-monitoring`  
+Config: `deploy/scale/V1.3/node3/nginx/monitoring.conf`  
+Bootstrap: `.htpasswd-monitoring` yoksa `openssl rand -hex 16` ile şifre üretilir, terminal çıktısında gösterilir.
+
+### fail2ban SSH Koruması (Tüm Node'lar)
+
+| Parametre | Değer |
+|---|---|
+| `bantime` | 1 saat |
+| `findtime` | 10 dakika |
+| `maxretry (sshd)` | 3 başarısız giriş |
+| `maxretry (default)` | 5 |
+| `ignoreip` | `127.0.0.1/8 ::1 10.10.0.0/24` |
+
+WireGuard mesh IP aralığı (10.10.0.0/24) beyaz listededir — node'lar arası trafik ban'e takılmaz.
+
+Jail dosyaları:
+- `deploy/scale/V1.3/node1/fail2ban/jail.local`
+- `deploy/scale/V1.3/node2/fail2ban/jail.local`
+- `deploy/scale/V1.3/node3/fail2ban/jail.local`
+- `deploy/scale/V1.3/gateway/fail2ban/jail.local`
+
+### SSH Hardening (Tüm Node'lar)
+
+Tüm node'larda `/etc/ssh/sshd_config`:
+
+```
+PasswordAuthentication no
+MaxAuthTries 3
+```
+
+`PasswordAuthentication no` — şifre girişi tamamen devre dışı, yalnızca key-based auth. `MaxAuthTries 3` — brute-force denemelerini erken keser.
+
+### Cloudflare API Token Scope Kısıtı
+
+`cf-failover.service`'in kullandığı CF API token kapsamı daraltıldı:
+
+| Ayar | Değer |
+|---|---|
+| Permission | `Zone > DNS > Edit` |
+| Zone Resources | `Include > Specific zone > teqlif.com` |
+| Kapsam dışı | Diğer tüm domain'ler, hesap ayarları, Workers, Pages |
+
+Token sızsa etkisi yalnızca `teqlif.com` DNS kaydı ile sınırlı kalır.
+
+### Bootstrap Otomasyonu
+
+Tüm güvenlik adımları ilgili bootstrap scriptlerine entegre edildi — `sudo bash bootstrap_<node>.sh` yeniden çalıştırıldığında idempotent şekilde güvenlik ayarları da uygulanır:
+
+| Script | Eklenen güvenlik adımları |
+|---|---|
+| `bootstrap_node1.sh` | Redis requirepass + ACL fix, SSH hardening |
+| `bootstrap_node2.sh` | fail2ban + jail.local, SSH hardening |
+| `bootstrap_node3.sh` | Redis requirepass + ACL fix, SSH hardening |
+| `bootstrap_gateway.sh` | fail2ban + jail.local, SSH hardening |
+
+---
+
+## 13. journald Limitleri (V1.3)
 
 Tüm node'larda Loki 14 günlük log saklar; journald kısa vadeli yerel yedek rolüne indirildi.
 
@@ -599,7 +718,7 @@ Tüm node'larda Loki 14 günlük log saklar; journald kısa vadeli yerel yedek r
 
 ---
 
-## 13. Deploy Workflow (V1.3)
+## 14. Deploy Workflow (V1.3)
 
 ### Rutin Deploy (kod değişikliği)
 
@@ -671,7 +790,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 14. Rollback Planı (V1.3)
+## 15. Rollback Planı (V1.3)
 
 | Senaryo | Aksiyon |
 |---|---|
@@ -686,7 +805,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 15. V1.3 Uygulama Sırasında Karşılaşılan Sorunlar
+## 16. V1.3 Uygulama Sırasında Karşılaşılan Sorunlar
 
 ### 1. pydantic ValidationError — boş env değerleri
 
@@ -830,7 +949,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 16. Kapasite Limitleri (Kod Tabanlı)
+## 17. Kapasite Limitleri (Kod Tabanlı)
 
 ### Gerçek Tavan Değerleri
 
@@ -865,7 +984,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 17. Bekleyen Görevler
+## 18. Bekleyen Görevler
 
 - [x] **node3 Swap** — node3 artık 4 GB fiziksel RAM; bootstrap'teki 4 GB swapfile ek güvence olarak kalabilir veya kaldırılabilir.
 - [x] **PostgreSQL tuning uygulaması** — `apply_pg_tuning.sh` node1'de, `apply_pg_tuning_node3.sh` node3'te uygulandı (2026-09-12)
@@ -878,7 +997,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 17. V1.4 Adayları
+## 18. V1.4 Adayları
 
 - **Redis Sentinel / replica:** node1 Redis SPOF — yüksek erişilebilirlik için replica adayı.
 - **Staging DB migration zinciri düzeltmesi:** `listings` tablosunu ALTER eden migration, tablo olmadan çalışıyor — migration kaynaklandığı commit'e kadar bölünmeli.
@@ -887,7 +1006,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 18. Commit Referansları (V1.3)
+## 19. Commit Referansları (V1.3)
 
 | Hash | İçerik |
 |---|---|
@@ -908,7 +1027,7 @@ bash deploy/scale/resources/<node>/<node>_services.sh start
 
 ---
 
-## 19. Dosya Referansları
+## 20. Dosya Referansları
 
 ```
 deploy/scale/V1.3/
@@ -1021,7 +1140,7 @@ backend/app/
 
 ---
 
-## 20. Performans İyileştirmeleri (V1.3)
+## 21. Performans İyileştirmeleri (V1.3)
 
 ### OS / Kernel Seviyesi
 
@@ -1123,7 +1242,7 @@ Aynı V1.3 döneminde yapılan 14 kod düzeyinde iyileştirme:
 
 ---
 
-## 21. Operasyonel Tekilleştirme (V1.3)
+## 22. Operasyonel Tekilleştirme (V1.3)
 
 ### `teqlif-restart` — Tek Komut Deploy
 
