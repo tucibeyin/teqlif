@@ -607,21 +607,19 @@ Tüm node'larda Loki 14 günlük log saklar; journald kısa vadeli yerel yedek r
 # Yerel
 git push
 
-# node1 — tek komut yeterli (ExecStartPre alembic+sync zinciri)
-cd /var/www/teqlif.com && git pull
-sudo systemctl restart teqlif   # worker'lar da otomatik restart olur
-
-# node3 — staging
-cd /var/www/teqlif.com && git pull
-sudo systemctl restart teqlif-staging   # staging worker'lar da otomatik restart olur
+# node1 veya node3 — tek komut yeterli
+# git pull + alembic + sync_main + restart + canlı izleme hepsini yapar
+sudo teqlif-restart
 
 # node2
 cd /var/www/teqlif.com && git pull
 sudo systemctl restart teqlif-ai-proxy
 
-# node3 — ai proxy
+# node3 — ai proxy (sadece ai proxy güncelleniyorsa)
 sudo systemctl restart teqlif-ai-proxy
 ```
+
+> `teqlif-restart` kurulumu (VPS'te bir kez): `sudo install -m 755 deploy/scale/V1.3/scripts/teqlif-restart.sh /usr/local/bin/teqlif-restart`
 
 ### Manuel Backup Çalıştırma
 
@@ -964,6 +962,9 @@ deploy/scripts/
 ├── pg-backup.sh                              # V1.3: pg_dump + gzip, 3 gün lokal retention
 └── offsite-rsync.sh                          # V1.3: rsync → node3 WireGuard, 14 gün Redis
 
+deploy/scale/V1.3/scripts/
+└── teqlif-restart.sh                         # tek komut deploy — git pull + restart + izleme
+
 backend/app/
 ├── config.py                                 # ai_proxy_internal_token, node3_ai_proxy_url, extra='ignore'
 ├── ai_proxy_main.py                          # node2 + node3 proxy (AI_PROXY_INTERNAL_TOKEN)
@@ -971,3 +972,142 @@ backend/app/
 └── services/ml/
     └── ai_proxy_client.py                    # generate_via_proxy: node2 → node3 → node1 fallback
 ```
+
+---
+
+## 20. Performans İyileştirmeleri (V1.3)
+
+### OS / Kernel Seviyesi
+
+#### sysctl — `deploy/scale/V1.3/node3/sysctl/99-teqlif.conf`
+
+node3 için uygulanan kernel parametreleri:
+
+| Parametre | Değer | Gerekçe |
+|---|---|---|
+| `vm.swappiness` | `10` | RAM dolarsa önce uygulama yerine cache çıkar |
+| `net.core.somaxconn` | `1024` | TCP accept backlog — nginx + uvicorn |
+| `net.ipv4.tcp_max_syn_backlog` | `2048` | SYN kuyruğu — burst bağlantılar |
+| `net.core.netdev_max_backlog` | `5000` | NIC → kernel kuyruk boyu |
+| `vm.overcommit_memory` | `1` | ARQ worker fork sırasında OOM kill önlenir |
+
+#### systemd Cgroup Limitleri
+
+Servis dosyalarında cgroup direktifleri ile kaynak izolasyonu:
+
+| Direktif | node1 `teqlif.service` | node3 `teqlif-staging.service` | Gerekçe |
+|---|---|---|---|
+| `CPUWeight` | `200` | `80` | Prod daha yüksek CPU önceliği |
+| `IOWeight` | `200` | `200` | Disk I/O önceliği — node3'te diğer servislerle rekabet |
+| `TasksMax` | `512` | `512` | Maksimum thread/process sayısı |
+| `OOMScoreAdj` | `-500` | `-200` | OOM killer'a karşı koruma (prod daha agresif) |
+| `LimitNOFILE` | `65536` | `65536` | Açık dosya tanımlayıcı limiti |
+| `KillMode` | `mixed` | `mixed` | Ana process SIGTERM, worker'lar uyumlu kapanır |
+| `TimeoutStopSec` | `30` | `30` | Graceful shutdown süresi |
+
+ARQ worker'lar için ek ayrım:
+
+| Direktif | `teqlif-worker` | `teqlif-worker-critical` |
+|---|---|---|
+| `TimeoutStopSec` | `300` (5 dk) | `600` (10 dk) |
+| `KillMode` | `process` | `process` |
+| Gerekçe | Uzun süreli ML/bulk işler | Push notif cascade |
+
+### PostgreSQL Seviyesi
+
+`apply_pg_tuning.sh` (node1) ve `apply_pg_tuning_node3.sh` (node3):
+
+| Parametre | node1 | node3 | Varsayılan |
+|---|---|---|---|
+| `max_connections` | `200` | `100` | 100 |
+| `shared_buffers` | `3GB` (RAM'in ~%25) | `512MB` | 128MB |
+| `effective_cache_size` | `9GB` | `1.2GB` | 4GB |
+| `work_mem` | `16MB` | `8MB` | 4MB |
+| `maintenance_work_mem` | `512MB` | `128MB` | 64MB |
+| `wal_buffers` | `64MB` | `16MB` | auto |
+| `checkpoint_completion_target` | `0.9` | `0.9` | 0.5 |
+
+#### Yeni Alembic Migration'ları: `zzzzs_perf_indexes`
+
+7 eksik index eklendi — en yaygın sorgu yollarını kapsar:
+
+| Index | Tablo | Kolon | Tür |
+|---|---|---|---|
+| `ix_favorites_listing_id` | `favorites` | `listing_id` | B-tree |
+| `ix_listing_impressions_listing_id` | `listing_impressions` | `listing_id` | B-tree |
+| `ix_listing_impressions_seen_at` | `listing_impressions` | `seen_at DESC` | B-tree |
+| `ix_user_interests_category_score` | `user_interests` | `(category, score DESC)` | B-tree |
+| `ix_direct_sale_orders_listing_id` | `direct_sale_orders` | `listing_id` | B-tree |
+| `ix_listings_active_created` | `listings` | `created_at DESC` | Partial (`WHERE status='active'`) |
+| `ix_listings_active_video` | `listings` | `id` | Partial (`WHERE status='active' AND video_url IS NOT NULL`) |
+
+> **Not:** `CREATE INDEX CONCURRENTLY` Alembic transaction block içinde yasaktır. Tüm index'ler `CONCURRENTLY` olmadan oluşturulur — `ExecStartPre` sırasında servis zaten kapalı olduğu için tablo lock önemli değil.
+
+### Redis Seviyesi
+
+`redis_client.py` her pool için `max_connections` sınırı:
+
+| Pool | `max_connections` | Kullanım |
+|---|---|---|
+| Ana pool (app) | `50` | API request'leri |
+| ARQ pool | `20` | Worker job'ları |
+| Cache pool | `20` | FastAPICache |
+| Pub/sub pool | `20` | WS broadcast, auction stream |
+
+### Uygulama Seviyesi (Backend)
+
+Aynı V1.3 döneminde yapılan 14 kod düzeyinde iyileştirme:
+
+| # | Dosya | Değişiklik | Etki |
+|---|---|---|---|
+| 1 | `models/stream.py` | `StreamLike.lazy="raise"` | Tüm like'ları her stream sorgusunda yüklemez |
+| 2 | `models/listing.py` | `ListingLike.lazy="raise"` | Aynı |
+| 3 | `models/story.py` | `StoryLike.lazy="raise"` | Aynı |
+| 4 | `core/rate_limit.py` | `storage_uri="async+redis://"` | slowapi sync Redis client → async; event loop bloklanmaz |
+| 5 | `core/ws_manager.py` | serialize-once + `orjson` | N kullanıcıya broadcast'te JSON N kez değil 1 kez üretilir |
+| 6 | `routers/listings.py` | dead cache invalidation kaldırıldı | Hiç yazılmayan cache key'i silmeye çalışan ölü kod |
+| 7 | `database.py` | `get_uow()` → `get_db()` session'ını paylaşır | Aynı request'te iki DB session yerine bir session |
+| 8 | `routers/auth.py` | `COUNT(*)` → `EXISTS()` | Kullanıcı varlık kontrolü tam sayım yerine boolean |
+| 9 | `services/feed/foryou_worker.py` | mget + pipeline + TTL | N kullanıcı × M ilan yerine 1 mget; pipeline ile toplu yazım; 1 saatlik TTL |
+| 10 | `worker.py` | loop → `executemany`; `scan_iter` → direct delete | Tek DB round-trip; deterministic key silme |
+| 11 | `use_cases/listings/get_video_feed.py` | `ORDER BY RANDOM()` → offset-based | Tam tablo sıralama yerine COUNT + random offset |
+| 12 | `services/recommendation_service.py` | `RANDOM()` → `hashtext(id \|\| salt)` | Full-scan yerine index kullanabilir sıralama |
+| 13 | `services/ml/faiss_service.py` | index build → `run_in_executor` | CPU-bound FAISS build event loop'u bloklamaz |
+| 14 | `use_cases/feed/feed_queries.py` | `scan_iter("ad_campaign_budget:*")` → `smembers("ad_campaigns:active")` | Keyspace taraması yerine O(1) set lookup |
+
+---
+
+## 21. Operasyonel Tekilleştirme (V1.3)
+
+### `teqlif-restart` — Tek Komut Deploy
+
+V1.3 öncesinde bir deploy şu adımları gerektiriyordu:
+
+```
+ssh node1
+cd /var/www/teqlif.com && git pull
+sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
+# ayrı terminal açıp:
+journalctl -u teqlif -f
+# sonra durum kontrolü:
+systemctl status teqlif teqlif-worker teqlif-worker-critical
+```
+
+V1.3 sonrasında tek komut:
+
+```bash
+sudo teqlif-restart
+```
+
+| Aşama | Ne yapar |
+|---|---|
+| `[1/4] git pull` | `--ff-only` ile kodu çeker; hangi commit'lerin geldiğini listeler |
+| `[2/4] Mevcut durum` | Restart öncesi 3 servisin state'ini gösterir |
+| `[3/4] Restart` | `systemctl restart` + `journalctl -f` aynı terminalde canlı akar |
+| `[4/4] Durum` | Her servis için `✓ ACTIVE pid=... started=...` veya `✗ FAILED` |
+
+Hata durumunda: başarısız her servis için `systemctl status` çıktısı + son 200 satır journal + `reset-failed` komutu otomatik gösterilir.
+
+**Ortam tespiti:** Parametre verilmezse `systemctl cat teqlif.service` / `teqlif-staging.service` varlığına bakarak prod/staging'i otomatik seçer. Override: `sudo teqlif-restart staging`.
+
+**Kaynak:** `deploy/scale/V1.3/scripts/teqlif-restart.sh`
