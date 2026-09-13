@@ -227,7 +227,7 @@ if [[ ! -f /etc/nginx/.htpasswd-monitoring ]]; then
   echo "  ║  Kullanıcı: monitoring                                       ║"
   echo "  ║  Şifre    : $MON_PASS                   ║"
   echo "  ║  Erişim: http://10.10.0.4:9091 (Prometheus)                 ║"
-  echo "  ║          http://10.10.0.4:9094 (Alertmanager)               ║"
+  echo "  ║          http://10.10.0.4:9095 (Alertmanager)               ║"
   echo "  ╚══════════════════════════════════════════════════════════════╝"
   echo ""
 else
