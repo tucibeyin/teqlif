@@ -129,6 +129,9 @@ async def lifespan(app: FastAPI):
     # Schema-versioned cache — statik endpoint key builder'ları için versiyon belirleme
     from app.utils.schema_cache import init_schema_version
     await init_schema_version()
+    # Kategori whitelist cache — analytics validator için startup'ta yüklenir
+    from app.utils.category_cache import init_category_cache
+    await init_category_cache()
     # ARQ Task Queue pool
     arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url), default_queue_name="default")
     app.state.arq_pool = arq_pool
