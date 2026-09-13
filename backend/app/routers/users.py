@@ -151,18 +151,20 @@ async def get_suggested_sellers(
     cold_start = not top_cats
 
     if top_cats:
-        cat_cases = " ".join(
-            f"WHEN l.category = '{cat}' THEN {score:.4f}"
-            for cat, score in list(interests.items())[:5]
-        )
-        cat_score_expr = f"COALESCE(MAX(CASE {cat_cases} ELSE 0.0 END), 0.0)"
-        # Kişiselleştirilmiş sıralama: kategori affinitesi ağır
+        cat_params: dict = {}
+        case_parts: list[str] = []
+        for i, (cat, score) in enumerate(list(interests.items())[:5]):
+            cat_params[f"cat{i}"] = cat
+            cat_params[f"score{i}"] = round(score, 4)
+            case_parts.append(f"WHEN l.category = :cat{i} THEN :score{i}")
+        cat_score_expr = "COALESCE(MAX(CASE " + " ".join(case_parts) + " ELSE 0.0 END), 0.0)"
         order_expr = f"""
             {cat_score_expr} * 0.60
             + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
             + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
         """
     else:
+        cat_params = {}
         # Cold start: kişisel ilgi yok — son 7 gün içinde en aktif satıcıları öne çıkar
         cat_score_expr = "0.0"
         order_expr = """
@@ -206,9 +208,11 @@ async def get_suggested_sellers(
     """
 
     fetch_lim = min(limit * 2, 100)
+    base_params = {"uid": current_user.id, "lim": fetch_lim, **cat_params}
+
     result = await db.execute(
         sa_text(base_query.format(follow_filter="AND u.id NOT IN (SELECT followed_id FROM follows WHERE follower_id = :uid)")),
-        {"uid": current_user.id, "lim": fetch_lim},
+        base_params,
     )
     rows_out = result.fetchall()
 
@@ -216,7 +220,7 @@ async def get_suggested_sellers(
     if not rows_out:
         result = await db.execute(
             sa_text(base_query.format(follow_filter="")),
-            {"uid": current_user.id, "lim": fetch_lim},
+            base_params,
         )
         rows_out = result.fetchall()
 

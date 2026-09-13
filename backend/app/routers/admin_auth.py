@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, Request
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,13 +10,15 @@ from app.models.user import User
 from app.utils.auth import create_access_token
 from app.core.exceptions import NotFoundException, ForbiddenException, UnauthorizedException
 from app.core.logger import get_logger
+from app.core.rate_limit import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/admin-auth", tags=["admin-auth"])
 
 
 @router.post("/verify-google")
-async def verify_google(token: str = Body(..., embed=True), db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def verify_google(request: Request, token: str = Body(..., embed=True), db: AsyncSession = Depends(get_db)):
     try:
         idinfo = id_token.verify_oauth2_token(
             token,
@@ -41,7 +43,9 @@ from app.security.auth import AdminSecurity
 
 
 @router.post("/verify-password")
+@limiter.limit("3/minute")
 async def verify_password(
+    request: Request,
     password: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
 ):

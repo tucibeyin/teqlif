@@ -461,14 +461,18 @@ async def get_suggested_streamers(
     # Normalize: en yüksek skoru 1.0'a çek, diğerleri oransal
     max_score = max((s for _, s in top_cat_scores), default=1.0) or 1.0
 
-    # Kategori affinitesini 0.0–1.0 aralığına normalize eden CASE ifadesi
+    # Kategori affinitesini 0.0–1.0 aralığına normalize eden CASE ifadesi.
+    # Bind param kullanılır — f-string ile kategori değeri SQL'e gömülmez.
     if top_cat_scores:
-        cat_affinity_cases = " ".join(
-            f"WHEN category = '{cat}' THEN {score / max_score:.4f}"
-            for cat, score in top_cat_scores
-        )
-        cat_affinity_expr = f"CASE {cat_affinity_cases} ELSE 0.0 END"
+        cat_params: dict = {}
+        case_parts: list[str] = []
+        for i, (cat, score) in enumerate(top_cat_scores):
+            cat_params[f"cat{i}"] = cat
+            cat_params[f"score{i}"] = round(score / max_score, 4)
+            case_parts.append(f"WHEN category = :cat{i} THEN :score{i}")
+        cat_affinity_expr = "CASE " + " ".join(case_parts) + " ELSE 0.0 END"
     else:
+        cat_params = {}
         cat_affinity_expr = "0.0"
 
     base_query = f"""
@@ -535,18 +539,20 @@ async def get_suggested_streamers(
         LIMIT :lim
     """
 
+    base_params = {"uid": current_user.id, "lim": limit, **cat_params}
+
     result = await db.execute(
         sa_text(base_query.format(
             follow_filter="AND u.id NOT IN (SELECT followed_id FROM follows WHERE follower_id = :uid)"
         )),
-        {"uid": current_user.id, "lim": limit},
+        base_params,
     )
     rows = result.fetchall()
 
     if not rows:
         result = await db.execute(
             sa_text(base_query.format(follow_filter="")),
-            {"uid": current_user.id, "lim": limit},
+            base_params,
         )
         rows = result.fetchall()
 
