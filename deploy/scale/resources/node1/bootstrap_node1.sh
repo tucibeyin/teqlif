@@ -51,6 +51,16 @@ echo "==> Promtail positions dizini..."
 sudo mkdir -p /var/lib/promtail
 sudo chown "$USER:$USER" /var/lib/promtail
 
+# ── MinIO data dizini (ProtectSystem=strict ReadWritePaths gerektirir) ─────────
+echo "==> MinIO data dizini..."
+sudo mkdir -p /var/lib/minio
+sudo chown "$USER:$USER" /var/lib/minio
+
+# ── Backup dizinleri ───────────────────────────────────────────────────────────
+echo "==> Backup dizinleri..."
+sudo mkdir -p /var/backups/teqlif/pg /var/backups/teqlif/redis
+sudo chown -R "$USER:$USER" /var/backups/teqlif
+
 # ── node_exporter ─────────────────────────────────────────────────────────────
 echo "==> node_exporter $NODE_EXPORTER_VERSION..."
 if ! /usr/local/bin/node_exporter --version 2>&1 | grep -q "$NODE_EXPORTER_VERSION" 2>/dev/null; then
