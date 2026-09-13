@@ -9,6 +9,11 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/loki
 
 [Install]
 WantedBy=multi-user.target

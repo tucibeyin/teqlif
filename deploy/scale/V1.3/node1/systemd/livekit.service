@@ -13,6 +13,10 @@ StandardError=journal
 LimitNOFILE=65536
 CPUWeight=150
 OOMScoreAdj=-100
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
 
 [Install]
 WantedBy=multi-user.target

@@ -32,6 +32,11 @@ IOWeight=200
 TasksMax=512
 StandardOutput=journal
 StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/teqlif.com
 
 [Install]
 WantedBy=multi-user.target

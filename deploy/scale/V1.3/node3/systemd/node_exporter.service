@@ -8,6 +8,10 @@ Type=simple
 ExecStart=/usr/local/bin/node_exporter \
     --web.listen-address=10.10.0.4:9100 \
     --collector.systemd
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
 
 [Install]
 WantedBy=multi-user.target

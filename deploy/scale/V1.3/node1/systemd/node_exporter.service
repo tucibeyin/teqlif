@@ -6,6 +6,10 @@ After=network.target
 User=tucibeyin
 Type=simple
 ExecStart=/usr/local/bin/node_exporter --web.listen-address=10.10.0.1:9100
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
 
 [Install]
 WantedBy=multi-user.target

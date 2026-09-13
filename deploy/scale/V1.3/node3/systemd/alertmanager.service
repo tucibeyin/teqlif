@@ -13,6 +13,11 @@ ExecStart=/usr/local/bin/alertmanager \
     --config.expand-env
 Restart=on-failure
 RestartSec=5s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/alertmanager
 
 [Install]
 WantedBy=multi-user.target

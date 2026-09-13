@@ -798,7 +798,7 @@ dizinlerine yazabilmeli.
 | TASK-M6 | nginx CSP header | 3 | ✅ Tamamlandı |
 | TASK-M7 | alertmanager root ExecStartPre kaldır | 3 | ✅ Tamamlandı |
 | TASK-M8 | OCSP stapling | 3 | ✅ Tamamlandı |
-| TASK-L3 | systemd hardening | 3 | ⬜ Bekliyor |
+| TASK-L3 | systemd hardening | 3 | ✅ Tamamlandı |
 | TASK-L1 | check-username auth guard | 3 | ⬜ Bekliyor |
 | TASK-L2 | client-log sanitization | 3 | ⬜ Bekliyor |
 | — | L4 WireGuard topoloji | Kabul | ✅ Değiştirilmeyecek |
