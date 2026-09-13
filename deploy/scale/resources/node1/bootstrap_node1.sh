@@ -56,6 +56,13 @@ echo "==> MinIO data dizini..."
 sudo mkdir -p /var/lib/minio
 sudo chown "$USER:$USER" /var/lib/minio
 
+# ── MinIO bucket kurulumu (servis başladıktan sonra çalıştır) ─────────────────
+# NOT: Bu blok MinIO servisi başlatıldıktan sonra ayrıca çalıştırılmalı.
+# mc alias set local http://10.10.0.1:9010 <MINIO_ACCESS_KEY> <MINIO_SECRET_KEY> --api s3v4
+# mc mb local/teqlif
+# mc mb local/teqlif-dm
+# mc anonymous set download local/teqlif
+
 # ── Backup dizinleri ───────────────────────────────────────────────────────────
 echo "==> Backup dizinleri..."
 sudo mkdir -p /var/backups/teqlif/pg /var/backups/teqlif/redis

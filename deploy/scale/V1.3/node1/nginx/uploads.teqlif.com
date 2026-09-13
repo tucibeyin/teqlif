@@ -26,7 +26,7 @@ server {
 
     # MinIO — uploads bucket
     location / {
-        proxy_pass http://127.0.0.1:9010/teqlif/;
+        proxy_pass http://10.10.0.1:9010/teqlif/;
         proxy_set_header Host $http_host;
         proxy_buffering off;
         expires 365d;
