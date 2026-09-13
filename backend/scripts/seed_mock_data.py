@@ -244,19 +244,23 @@ def gen_listing_title(
     )[:95]
 
 
+def _safe_int(val, default: int) -> int:
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def gen_price(category: str, extra: dict) -> float:
     lo, hi = PRICE_RANGES.get(category, (500, 50_000))
-    # Araç: yıl bazlı gerçekçi fiyat
     if category == "vehicles":
-        year = extra.get("year", 2015)
-        age  = max(0, 2024 - int(year))
+        age  = max(0, 2024 - _safe_int(extra.get("year"), 2015))
         base = random.uniform(lo, hi)
         return round(base * max(0.2, 1 - age * 0.05), 2)
-    # Emlak: alan bazlı
     if category == "real_estate":
-        area = extra.get("area", extra.get("size", 100))
+        area = _safe_int(extra.get("area", extra.get("size", 100)), 100)
         sqm  = random.uniform(8_000, 80_000)
-        return round(int(area) * sqm, 2)
+        return round(area * sqm, 2)
     return round(random.uniform(lo, hi), 2)
 
 
