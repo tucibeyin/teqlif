@@ -29,9 +29,8 @@ StandardError=journal
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
-ProtectHome=yes
+ProtectHome=read-only
 ReadWritePaths=/var/www/teqlif.com
-BindReadOnlyPaths=/home/tucibeyin/.postgresql
 
 [Install]
 WantedBy=multi-user.target
