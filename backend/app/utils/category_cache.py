@@ -18,11 +18,11 @@ async def init_category_cache() -> None:
     """categories tablosundan is_listable=True, status=active key'leri yükler."""
     global _valid_keys
     try:
-        from app.database import async_session_maker
+        from app.database import AsyncSessionLocal
         from app.models.category import Category
         from sqlalchemy import select
 
-        async with async_session_maker() as session:
+        async with AsyncSessionLocal() as session:
             result = await session.execute(
                 select(Category.key).where(
                     Category.status == "active",
