@@ -85,15 +85,21 @@ async def cleanup_clickhouse(user_ids: list) -> None:
         )
         str_ids = ", ".join(f"'{uid}'" for uid in user_ids)
         int_ids = ", ".join(str(uid) for uid in user_ids)
-        tables_str  = ["feed_analytics", "search_events"]
-        tables_int  = ["user_events", "swipe_live_events"]
-        for tbl in tables_str:
-            await ch.command(f"ALTER TABLE {tbl} DELETE WHERE user_id IN ({str_ids})")
-        for tbl in tables_int:
-            await ch.command(f"ALTER TABLE {tbl} DELETE WHERE user_id IN ({int_ids})")
-        await ch.command(
-            f"ALTER TABLE direct_sale_events DELETE WHERE user_id IN ({int_ids})"
-        )
+        ops = [
+            ("feed_analytics",     f"ALTER TABLE feed_analytics DELETE WHERE user_id IN ({str_ids})"),
+            ("search_events",      f"ALTER TABLE search_events DELETE WHERE user_id IN ({str_ids})"),
+            ("user_events",        f"ALTER TABLE user_events DELETE WHERE user_id IN ({int_ids})"),
+            ("swipe_live_events",  f"ALTER TABLE swipe_live_events DELETE WHERE user_id IN ({int_ids})"),
+            ("direct_sale_events", f"ALTER TABLE direct_sale_events DELETE WHERE user_id IN ({int_ids})"),
+        ]
+        for tbl, sql in ops:
+            try:
+                await ch.command(sql)
+            except Exception as te:
+                if "UNKNOWN_TABLE" in str(te) or "60" in str(te):
+                    print(f"  ℹ️  '{tbl}' tablosu yok, atlanıyor.")
+                else:
+                    raise
         print("  ✅ ClickHouse temizlendi.")
     except Exception as e:
         print(f"  ⚠️  ClickHouse temizlenemedi, atlanıyor: {e}")

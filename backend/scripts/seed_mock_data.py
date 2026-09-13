@@ -321,6 +321,25 @@ async def seed_clickhouse(
         print(f"  ⚠️  ClickHouse bağlanamadı, atlanıyor: {e}")
         return
 
+    # Tabloları oluştur (ilk seed'de yoktur)
+    print("  📋 ClickHouse tabloları oluşturuluyor (IF NOT EXISTS)...")
+    from app.database_clickhouse import (
+        _CREATE_FEED_ANALYTICS_TABLE,
+        _CREATE_USER_EVENTS_TABLE,
+        _CREATE_SEARCH_EVENTS_TABLE,
+        _CREATE_SWIPE_LIVE_EVENTS_TABLE,
+        _CREATE_DIRECT_SALE_EVENTS_TABLE,
+    )
+    for ddl in [
+        _CREATE_FEED_ANALYTICS_TABLE,
+        _CREATE_USER_EVENTS_TABLE,
+        _CREATE_SEARCH_EVENTS_TABLE,
+        _CREATE_SWIPE_LIVE_EVENTS_TABLE,
+        _CREATE_DIRECT_SALE_EVENTS_TABLE,
+    ]:
+        await ch.command(ddl)
+    print("  ✅ Tablolar hazır.")
+
     def ts(dt: datetime) -> str:
         return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
