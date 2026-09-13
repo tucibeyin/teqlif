@@ -37,7 +37,7 @@ PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
 ReadWritePaths=/var/www/teqlif.com
-ReadOnlyPaths=/home/tucibeyin/.postgresql
+BindReadOnlyPaths=/home/tucibeyin/.postgresql
 
 [Install]
 WantedBy=multi-user.target
