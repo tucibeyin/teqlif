@@ -9,7 +9,8 @@ EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.production
 ExecStartPre=+/bin/bash -c 'envsubst < /var/www/teqlif.com/deploy/scale/V1.3/node3/alertmanager.yml.template > /etc/alertmanager/alertmanager.yml'
 ExecStart=/usr/local/bin/alertmanager \
     --config.file=/etc/alertmanager/alertmanager.yml \
-    --storage.path=/var/lib/alertmanager
+    --storage.path=/var/lib/alertmanager \
+    --web.listen-address=localhost:9093
 Restart=on-failure
 RestartSec=5s
 

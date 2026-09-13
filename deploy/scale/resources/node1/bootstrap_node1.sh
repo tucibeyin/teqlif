@@ -171,11 +171,18 @@ for cidr in "${CF_IPS[@]}"; do
   sudo ufw allow from "$cidr" to any port 80,443 proto tcp comment "CF — $cidr" 2>/dev/null || true
 done
 sudo ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp comment 'API prod — gateway' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.2 to any port 7880 proto tcp comment 'LiveKit WS — gateway proxy' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.3 to any port 6379 proto tcp comment 'Redis — node2' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 9100 proto tcp comment 'node_exporter — node3 Prometheus' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 9187 proto tcp comment 'postgres_exporter — node3 Prometheus' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'LiveKit metrics — node3 Prometheus' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy' 2>/dev/null || true
+# LiveKit WebRTC — istemciler doğrudan node1'e bağlanır
+sudo ufw allow 50000:60000/udp comment 'LiveKit WebRTC media' 2>/dev/null || true
+sudo ufw allow 7882/tcp         comment 'LiveKit TCP media fallback' 2>/dev/null || true
+sudo ufw allow 7882/udp         comment 'LiveKit UDP media' 2>/dev/null || true
+sudo ufw allow 5349/tcp         comment 'LiveKit TURN TLS' 2>/dev/null || true
+sudo ufw allow 3478/udp         comment 'LiveKit TURN UDP' 2>/dev/null || true
 sudo ufw --force enable
 
 # ── Redis bind + requirepass ─────────────────────────────────────────────────

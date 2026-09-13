@@ -310,6 +310,13 @@ sudo ufw allow in on wg0 to any port 8001 proto tcp comment 'staging FastAPI —
 sudo ufw allow in on wg0 to any port 8080 proto tcp comment 'AI proxy — node1'         2>/dev/null || true
 sudo ufw allow in on wg0 to any port 3100 proto tcp comment 'Loki — mesh pushları'      2>/dev/null || true
 sudo ufw allow in on wg0 to any port 9100 proto tcp comment 'node_exporter — Prometheus self' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.2 to any port 7880 proto tcp comment 'LiveKit WS — gateway proxy' 2>/dev/null || true
+# LiveKit WebRTC — staging istemciler doğrudan node3'e bağlanır
+sudo ufw allow 50000:60000/udp comment 'LiveKit WebRTC media (staging)' 2>/dev/null || true
+sudo ufw allow 7882/tcp         comment 'LiveKit TCP media fallback (staging)' 2>/dev/null || true
+sudo ufw allow 7882/udp         comment 'LiveKit UDP media (staging)' 2>/dev/null || true
+sudo ufw allow 5349/tcp         comment 'LiveKit TURN TLS (staging)' 2>/dev/null || true
+sudo ufw allow 3478/udp         comment 'LiveKit TURN UDP (staging)' 2>/dev/null || true
 sudo ufw --force enable
 
 # ── Log dizini ────────────────────────────────────────────────────────────────

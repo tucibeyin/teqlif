@@ -11,6 +11,7 @@ set -euo pipefail
 
 echo "==> PostgreSQL tuning uygulanıyor..."
 sudo -u postgres psql <<'SQL'
+ALTER SYSTEM SET listen_addresses           = 'localhost';
 ALTER SYSTEM SET max_connections            = '200';
 ALTER SYSTEM SET shared_buffers             = '3GB';
 ALTER SYSTEM SET effective_cache_size       = '9GB';

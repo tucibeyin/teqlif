@@ -4,6 +4,8 @@
 
 CF_ZONE_ID="${CF_ZONE_ID:?CF_ZONE_ID gerekli}"
 CF_API_TOKEN="${CF_API_TOKEN:?CF_API_TOKEN gerekli}"
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
 
 GATEWAY_IP="94.16.105.135"
 NODE1_IP="135.125.175.223"
@@ -20,6 +22,14 @@ fail_count=0
 ok_count=0
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+notify_telegram() {
+    [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]] && return 0
+    curl -sf -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=🔄 cf-failover: $*" \
+        > /dev/null 2>&1 || true
+}
 
 get_record_id() {
     curl -sf \
@@ -45,12 +55,21 @@ switch_to() {
     local ip
     [ "$target" = "node1" ] && ip="$NODE1_IP" || ip="$GATEWAY_IP"
     log "=== SWITCH: ${current_target} → ${target} (${ip}) ==="
+    local switched=0
     for name in "${DNS_NAMES[@]}"; do
         local rid
         rid=$(get_record_id "$name") || { log "  ${name}: record ID alınamadı"; continue; }
         update_dns "$name" "$rid" "$ip"
+        switched=1
     done
     current_target="$target"
+    if [[ "$switched" -eq 1 ]]; then
+        if [ "$target" = "node1" ]; then
+            notify_telegram "⚠️ FAILOVER — gateway (${GATEWAY_IP}) erişilemez, DNS → node1 (${NODE1_IP})"
+        else
+            notify_telegram "✅ RECOVER — gateway (${GATEWAY_IP}) geri geldi, DNS → gateway"
+        fi
+    fi
 }
 
 log "cf-failover başladı. Gateway: ${GATEWAY_IP}, Node1: ${NODE1_IP}"
