@@ -177,6 +177,7 @@ sudo ufw allow in on wg0 from 10.10.0.4 to any port 9100 proto tcp comment 'node
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 9187 proto tcp comment 'postgres_exporter — node3 Prometheus' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 7881 proto tcp comment 'LiveKit metrics — node3 Prometheus' 2>/dev/null || true
 sudo ufw allow in on wg0 from 10.10.0.4 to any port 6379 proto tcp comment 'Redis — node3 AI proxy' 2>/dev/null || true
+sudo ufw allow in on wg0 from 10.10.0.4 to any port 8123 proto tcp comment 'ClickHouse HTTP — node3 staging' 2>/dev/null || true
 # LiveKit WebRTC — istemciler doğrudan node1'e bağlanır
 sudo ufw allow 50000:60000/udp comment 'LiveKit WebRTC media' 2>/dev/null || true
 sudo ufw allow 7882/tcp         comment 'LiveKit TCP media fallback' 2>/dev/null || true
@@ -214,6 +215,25 @@ fi
 sudo sed -i '/^user default /d' /etc/redis/redis.conf
 echo "user default on >$REDIS_PASS ~* &* +@all" | sudo tee -a /etc/redis/redis.conf > /dev/null
 sudo systemctl restart redis-server 2>/dev/null || true
+
+# ── ClickHouse — WireGuard listen config ─────────────────────────────────────
+# ClickHouse ayrıca kurulmalı (bootstrap_node1.sh bunu yapmaz).
+# Kurulu ise node3 staging'in WireGuard üzerinden bağlanabilmesi için config oluşturulur.
+if command -v clickhouse-server &>/dev/null || systemctl list-units --all | grep -q clickhouse; then
+  echo "==> ClickHouse config.d/listen.xml..."
+  sudo mkdir -p /etc/clickhouse-server/config.d
+  sudo tee /etc/clickhouse-server/config.d/listen.xml > /dev/null << 'CHEOF'
+<clickhouse>
+    <listen_host>127.0.0.1</listen_host>
+    <listen_host>10.10.0.1</listen_host>
+</clickhouse>
+CHEOF
+  sudo systemctl restart clickhouse-server 2>/dev/null || true
+  clickhouse-client --query "CREATE DATABASE IF NOT EXISTS teqlif_staging" 2>/dev/null || true
+  echo "    ClickHouse: 127.0.0.1 + 10.10.0.1 (WireGuard) dinleniyor."
+else
+  echo "    ClickHouse kurulu değil — kurulum sonrası bootstrap'i tekrar çalıştır veya manuel yapılandır."
+fi
 
 # ── fail2ban ──────────────────────────────────────────────────────────────────
 echo "==> fail2ban..."

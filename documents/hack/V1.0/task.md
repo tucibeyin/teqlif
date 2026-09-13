@@ -785,11 +785,11 @@ dizinlerine yazabilmeli.
 
 | ID | Görev | Faz | Durum |
 |----|-------|-----|-------|
-| TASK-H1 | SQL Injection — whitelist + SQLAlchemy case() | 1 | ⬜ Bekliyor |
-| TASK-H2 | Admin şifre rate limit | 1 | ⬜ Bekliyor |
-| TASK-M4 | Admin Google verify rate limit | 1 | ⬜ Bekliyor |
-| TASK-H5 | Redis backup auth | 1 | ⬜ Bekliyor |
-| TASK-H3 | rsync StrictHostKeyChecking | 1 | ⬜ Bekliyor |
+| TASK-H1 | SQL Injection — whitelist + SQLAlchemy case() | 1 | ✅ Tamamlandı |
+| TASK-H2 | Admin şifre rate limit | 1 | ✅ Tamamlandı |
+| TASK-M4 | Admin Google verify rate limit | 1 | ✅ Tamamlandı |
+| TASK-H5 | Redis backup auth | 1 | ✅ Tamamlandı |
+| TASK-H3 | rsync StrictHostKeyChecking | 1 | ✅ Tamamlandı |
 | TASK-H4 | .gitignore .env.* exception kaldır | 2 | ⬜ Bekliyor |
 | TASK-M3 | wallet.py Pydantic + bakiye kontrolü | 2 | ⬜ Bekliyor |
 | TASK-M1 | JWT log truncation | 2 | ⬜ Bekliyor |

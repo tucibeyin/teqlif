@@ -14,11 +14,11 @@ if ! ping -c 1 -W 3 10.10.0.4 &>/dev/null; then
 fi
 
 rsync -az --delete \
-  -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
+  -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=yes -o ConnectTimeout=10" \
   "$BACKUP_SRC" "$BACKUP_DEST"
 
 echo "[$(date '+%F %T')] rsync tamamlandi: $BACKUP_SRC → $BACKUP_DEST"
 
 # node3'te eski Redis backup'ları temizle (redis: 14 gün retention)
-ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no tucibeyin@10.10.0.4 \
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=yes tucibeyin@10.10.0.4 \
   "find /var/backups/teqlif/redis -name 'dump-*.rdb' -mtime +$REDIS_KEEP_DAYS -delete 2>/dev/null || true"

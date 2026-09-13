@@ -8,14 +8,22 @@ BACKUP_DIR="/var/backups/redis"
 REDIS_DIR="/var/lib/redis"
 KEEP_DAYS=3
 
+REDIS_PASS=$(grep '^requirepass' /etc/redis/redis.conf | awk '{print $2}')
+REDIS_CLI="redis-cli -a $REDIS_PASS --no-auth-warning"
+
 mkdir -p "$BACKUP_DIR"
 
-START=$(redis-cli LASTSAVE)
+START=$($REDIS_CLI LASTSAVE)
 
-redis-cli BGSAVE
+if echo "$START" | grep -q "NOAUTH\|ERR"; then
+    echo "[redis-backup] HATA: Redis auth başarısız" >&2
+    exit 1
+fi
+
+$REDIS_CLI BGSAVE
 for i in $(seq 1 10); do
     sleep 2
-    STATUS=$(redis-cli LASTSAVE)
+    STATUS=$($REDIS_CLI LASTSAVE)
     if [ "$STATUS" -gt "$START" ] 2>/dev/null; then
         break
     fi
