@@ -32,6 +32,19 @@ from app.models.search_alert import SearchAlert
 from app.models.referral import Referral
 
 
+async def cleanup_redis() -> None:
+    print("🔴 Redis temizleniyor (FLUSHDB — staging)...")
+    try:
+        import redis.asyncio as aioredis
+        from app.config import settings
+        client = aioredis.from_url(str(settings.redis_url), decode_responses=True)
+        await client.flushdb()
+        await client.aclose()
+        print("  ✅ Redis temizlendi.")
+    except Exception as e:
+        print(f"  ⚠️  Redis temizlenemedi, atlanıyor: {e}")
+
+
 async def cleanup_clickhouse(user_ids: list) -> None:
     print("🔶 ClickHouse temizleniyor...")
     try:
@@ -179,7 +192,8 @@ async def cleanup():
         print("✅ PostgreSQL mock verileri silindi.")
 
     await cleanup_clickhouse(user_ids)
-    print("✅ Temizlik tamamlandı.")
+    await cleanup_redis()
+    print("✅ Temizlik tamamlandı — PostgreSQL + ClickHouse + Redis boşaltıldı.")
 
 
 if __name__ == "__main__":
