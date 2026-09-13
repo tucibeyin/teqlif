@@ -32,6 +32,34 @@ from app.models.search_alert import SearchAlert
 from app.models.referral import Referral
 
 
+async def cleanup_clickhouse(user_ids: list) -> None:
+    print("🔶 ClickHouse temizleniyor...")
+    try:
+        import clickhouse_connect
+        from app.config import settings
+        ch = await clickhouse_connect.get_async_client(
+            host=settings.clickhouse_host,
+            port=settings.clickhouse_port,
+            database=settings.clickhouse_db,
+            connect_timeout=10,
+            send_receive_timeout=60,
+        )
+        str_ids = ", ".join(f"'{uid}'" for uid in user_ids)
+        int_ids = ", ".join(str(uid) for uid in user_ids)
+        tables_str  = ["feed_analytics", "search_events"]
+        tables_int  = ["user_events", "swipe_live_events"]
+        for tbl in tables_str:
+            await ch.command(f"ALTER TABLE {tbl} DELETE WHERE user_id IN ({str_ids})")
+        for tbl in tables_int:
+            await ch.command(f"ALTER TABLE {tbl} DELETE WHERE user_id IN ({int_ids})")
+        await ch.command(
+            f"ALTER TABLE direct_sale_events DELETE WHERE user_id IN ({int_ids})"
+        )
+        print("  ✅ ClickHouse temizlendi.")
+    except Exception as e:
+        print(f"  ⚠️  ClickHouse temizlenemedi, atlanıyor: {e}")
+
+
 async def cleanup():
     print("🧹 Mock Veriler Temizleniyor...")
 
@@ -148,7 +176,10 @@ async def cleanup():
         await session.execute(delete(User).where(User.id.in_(user_ids)))
 
         await session.commit()
-        print("✅ Tüm mock veriler başarıyla silindi.")
+        print("✅ PostgreSQL mock verileri silindi.")
+
+    await cleanup_clickhouse(user_ids)
+    print("✅ Temizlik tamamlandı.")
 
 
 if __name__ == "__main__":
