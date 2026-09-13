@@ -89,6 +89,9 @@ sudo systemctl restart systemd-journald
 echo "==> cf-failover daemon..."
 sudo cp "$N2_SRC/cf-failover/cf-failover.sh" /usr/local/bin/cf-failover.sh
 sudo chmod +x /usr/local/bin/cf-failover.sh
+if [ ! -f "$NODE2/.env.production" ]; then
+  cp "$NODE2/.env.production.template" "$NODE2/.env.production"
+fi
 chmod 600 "$NODE2/.env.production"
 if ! grep -q "^CF_API_TOKEN=.\+" "$NODE2/.env.production" 2>/dev/null; then
   echo "  UYARI: $NODE2/.env.production içinde CF_API_TOKEN boş — doldurup 'sudo systemctl restart cf-failover' calistir."
@@ -155,8 +158,14 @@ else
 fi
 sudo systemctl reload ssh
 
-# ── .env izinleri ─────────────────────────────────────────────────────────────
-echo "==> .env izinleri..."
+# ── .env dosyası oluştur (template → actual) ─────────────────────────────────
+echo "==> .env.production oluşturuluyor..."
+if [ ! -f "$NODE2/.env.production" ]; then
+  cp "$NODE2/.env.production.template" "$NODE2/.env.production"
+  echo "    Oluşturuldu — gerçek değerleri doldurun: nano $NODE2/.env.production"
+else
+  echo "    Zaten mevcut — üzerine yazılmadı."
+fi
 chmod 600 "$NODE2/.env.production"
 
 # ── MOTD ──────────────────────────────────────────────────────────────────────

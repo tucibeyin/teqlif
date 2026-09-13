@@ -153,8 +153,14 @@ else
 fi
 sudo systemctl reload ssh
 
-# ── .env izinleri ─────────────────────────────────────────────────────────────
-echo "==> .env izinleri..."
+# ── .env dosyası oluştur (template → actual) ─────────────────────────────────
+echo "==> .env.gateway.production oluşturuluyor..."
+if [ ! -f "$GATEWAY/.env.gateway.production" ]; then
+  cp "$GATEWAY/.env.gateway.production.template" "$GATEWAY/.env.gateway.production"
+  echo "    Oluşturuldu — gerçek değerleri doldurun: nano $GATEWAY/.env.gateway.production"
+else
+  echo "    Zaten mevcut — üzerine yazılmadı."
+fi
 chmod 600 "$GATEWAY/.env.gateway.production"
 
 echo ""

@@ -377,8 +377,20 @@ else
 fi
 sudo systemctl reload ssh
 
-# ── .env izinleri ─────────────────────────────────────────────────────────────
-echo "==> .env izinleri..."
+# ── .env dosyaları oluştur (template → actual) ───────────────────────────────
+echo "==> .env dosyaları oluşturuluyor..."
+if [ ! -f "$NODE3/.env.production" ]; then
+  cp "$NODE3/.env.production.template" "$NODE3/.env.production"
+  echo "    .env.production oluşturuldu — gerçek değerleri doldurun."
+else
+  echo "    .env.production zaten mevcut — üzerine yazılmadı."
+fi
+if [ ! -f "$NODE3/.env.staging" ]; then
+  cp "$NODE3/.env.staging.template" "$NODE3/.env.staging"
+  echo "    .env.staging oluşturuldu — gerçek değerleri doldurun."
+else
+  echo "    .env.staging zaten mevcut — üzerine yazılmadı."
+fi
 chmod 600 "$NODE3/.env.production"
 chmod 600 "$NODE3/.env.staging"
 

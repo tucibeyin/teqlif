@@ -790,7 +790,7 @@ dizinlerine yazabilmeli.
 | TASK-M4 | Admin Google verify rate limit | 1 | ✅ Tamamlandı |
 | TASK-H5 | Redis backup auth | 1 | ✅ Tamamlandı |
 | TASK-H3 | rsync StrictHostKeyChecking | 1 | ✅ Tamamlandı |
-| TASK-H4 | .gitignore .env.* exception kaldır | 2 | ⬜ Bekliyor |
+| TASK-H4 | .gitignore .env.* exception kaldır | 2 | ✅ Tamamlandı |
 | TASK-M3 | wallet.py Pydantic + bakiye kontrolü | 2 | ⬜ Bekliyor |
 | TASK-M1 | JWT log truncation | 2 | ⬜ Bekliyor |
 | TASK-M2 | Analytics user_id injection | 2 | ⬜ Bekliyor |

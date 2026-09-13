@@ -9,8 +9,10 @@ memory/
 .env.test.local
 .env.production.local
 
-# deploy/scale/resources/ altındaki .env şablonları git'te tutulur (value'lar elle doldurulur)
-!deploy/scale/resources/.env.*
+# Gerçek .env dosyaları asla git'te (dolu, VPS'e özgü)
+deploy/scale/resources/**/.env.*
+# Template'ler (boş değerler) git'te takip edilir
+!deploy/scale/resources/**/*.template
 
 # Firebase servis hesabı anahtarı (asla commit edilmemeli!)
 firebase-key.json

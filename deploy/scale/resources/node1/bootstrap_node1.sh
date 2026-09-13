@@ -281,8 +281,14 @@ echo "==> TEQLIF_ENV_FILE /etc/environment'a ekleniyor..."
 grep -q "^TEQLIF_ENV_FILE=" /etc/environment \
   || echo "TEQLIF_ENV_FILE=$NODE1/.env.production" | sudo tee -a /etc/environment > /dev/null
 
-# ── .env izinleri ─────────────────────────────────────────────────────────────
-echo "==> .env izinleri..."
+# ── .env dosyası oluştur (template → actual) ─────────────────────────────────
+echo "==> .env.production oluşturuluyor..."
+if [ ! -f "$NODE1/.env.production" ]; then
+  cp "$NODE1/.env.production.template" "$NODE1/.env.production"
+  echo "    Oluşturuldu — gerçek değerleri doldurun: nano $NODE1/.env.production"
+else
+  echo "    Zaten mevcut — üzerine yazılmadı."
+fi
 chmod 600 "$NODE1/.env.production"
 
 echo ""
