@@ -93,7 +93,9 @@ if [[ -n "$_minio_user" && "$_minio_user" != "<MINIO_ROOT_USER>" ]]; then
   mc alias set node3-staging http://localhost:9010 "$_minio_user" "$_minio_pass" --quiet 2>/dev/null || true
   mc mb --ignore-existing node3-staging/teqlif-staging    2>/dev/null || true
   mc mb --ignore-existing node3-staging/teqlif-dm-staging 2>/dev/null || true
-  echo "    mc alias 'node3-staging' ve bucket'lar hazır."
+  mc anonymous set download node3-staging/teqlif-staging    2>/dev/null || true
+  mc anonymous set download node3-staging/teqlif-dm-staging 2>/dev/null || true
+  echo "    mc alias 'node3-staging', bucket'lar ve public-read policy hazır."
 else
   echo "  NOT: .env.staging doldurunca mc alias kur:"
   echo "       mc alias set node3-staging http://localhost:9010 <user> <pass>"
@@ -194,15 +196,14 @@ if [[ ! -f /etc/livekit/livekit.yaml ]]; then
   sudo chmod 640 /etc/livekit/livekit.yaml
 fi
 
-# ── nginx: uploads-staging.teqlif.com ────────────────────────────────────────
-echo "==> nginx site config..."
-sudo cp "$N3_SRC/nginx/uploads-staging.teqlif.com" \
-  /etc/nginx/sites-available/uploads-staging.teqlif.com
-if [[ ! -L /etc/nginx/sites-enabled/uploads-staging.teqlif.com ]]; then
-  sudo ln -s /etc/nginx/sites-available/uploads-staging.teqlif.com \
-    /etc/nginx/sites-enabled/uploads-staging.teqlif.com
+# ── nginx: uploads-staging.teqlif.com → MinIO proxy ─────────────────────────
+echo "==> nginx uploads-staging proxy..."
+sudo cp "$N3_SRC/nginx/uploads-staging.conf" /etc/nginx/sites-available/uploads-staging.conf
+if [[ ! -L /etc/nginx/sites-enabled/uploads-staging.conf ]]; then
+  sudo ln -s /etc/nginx/sites-available/uploads-staging.conf \
+    /etc/nginx/sites-enabled/uploads-staging.conf
 fi
-# Default site kaldır (varsa)
+# Default site kaldır (varsa — uploads-staging server_name içerebilir)
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 
 # ── nginx: live-staging.teqlif.com → LiveKit proxy ───────────────────────────
