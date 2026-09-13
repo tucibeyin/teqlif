@@ -2785,6 +2785,7 @@
     }
   },
   "explorePersonalizedHint": "تصفح بعض الإعلانات،\nيتم تحضير المحتوى الخاص بك!",
+  "personalizedGridExhausted": "تم عرض جميع التوصيات · اسحب للأسفل للتحديث",
   "joinLiveStreamBanner": "انضم إلى البث المباشر →",
   "audienceCountPeople": "{count} أشخاص",
   "@audienceCountPeople": {

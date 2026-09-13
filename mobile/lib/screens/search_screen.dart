@@ -888,6 +888,22 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                 ),
               ),
+            if (state.recentExhausted && state.isLoggedIn && state.recentListings.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  child: Center(
+                    child: Text(
+                      loc.t("personalizedGridExhausted"),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
 
           // ── Boş durum ────────────────────────────────────────────

@@ -2782,6 +2782,7 @@
     }
   },
   "explorePersonalizedHint": "Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!",
+  "personalizedGridExhausted": "Tüm öneriler görüntülendi · Yenilemek için sayfayı aşağı çekin",
   "joinLiveStreamBanner": "Canlı Yayına Katıl →",
   "audienceCountPeople": "{count} Kişi",
   "@audienceCountPeople": {

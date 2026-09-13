@@ -2818,6 +2818,7 @@
     }
   },
   "explorePersonalizedHint": "Browse a few listings,\nPersonalized content is being prepared!",
+  "personalizedGridExhausted": "All recommendations viewed · Pull down to refresh",
   "joinLiveStreamBanner": "Join Live Stream →",
   "audienceCountPeople": "{count} People",
   "@audienceCountPeople": {

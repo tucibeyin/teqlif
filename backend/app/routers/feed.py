@@ -47,7 +47,7 @@ async def get_feed(
 
 @router.get("/personalized")
 async def get_clickhouse_personalized_feed(
-    limit: int = Query(default=10, ge=1, le=30),
+    limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

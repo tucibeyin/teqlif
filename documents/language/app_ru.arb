@@ -2785,6 +2785,7 @@
     }
   },
   "explorePersonalizedHint": "Просмотрите несколько объявлений,\nГотовится персонализированный контент!",
+  "personalizedGridExhausted": "Все рекомендации просмотрены · Потяните вниз для обновления",
   "joinLiveStreamBanner": "Присоединиться к трансляции →",
   "audienceCountPeople": "{count} чел.",
   "@audienceCountPeople": {

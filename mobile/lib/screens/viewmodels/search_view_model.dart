@@ -26,8 +26,9 @@ class SearchState {
   final bool exploreLoading;
   final bool exploreNetworkError;
   final bool isLoggedIn;
-  final List<dynamic> exploreListings; // For You feed
-  final List<dynamic> recentListings;
+  final List<dynamic> exploreListings; // For You feed — yatay scroll
+  final List<dynamic> allPersonalizedListings; // Personalized feed tam buffer (100 ilan)
+  final List<dynamic> recentListings; // Görünen dilim (client-side windowing)
   final List<StreamOut> exploreStreams;
   final List<Map<String, dynamic>> suggestedSellers;
   final List<Map<String, dynamic>> suggestedStreamers;
@@ -55,6 +56,7 @@ class SearchState {
     this.exploreNetworkError = false,
     this.isLoggedIn = false,
     this.exploreListings = const [],
+    this.allPersonalizedListings = const [],
     this.recentListings = const [],
     this.exploreStreams = const [],
     this.suggestedSellers = const [],
@@ -82,6 +84,7 @@ class SearchState {
     bool? exploreNetworkError,
     bool? isLoggedIn,
     List<dynamic>? exploreListings,
+    List<dynamic>? allPersonalizedListings,
     List<dynamic>? recentListings,
     List<StreamOut>? exploreStreams,
     List<Map<String, dynamic>>? suggestedSellers,
@@ -108,6 +111,7 @@ class SearchState {
       exploreNetworkError: exploreNetworkError ?? this.exploreNetworkError,
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
       exploreListings: exploreListings ?? this.exploreListings,
+      allPersonalizedListings: allPersonalizedListings ?? this.allPersonalizedListings,
       recentListings: recentListings ?? this.recentListings,
       exploreStreams: exploreStreams ?? this.exploreStreams,
       suggestedSellers: suggestedSellers ?? this.suggestedSellers,
@@ -126,6 +130,8 @@ class SearchState {
 class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
   StreamSubscription<List<StreamOut>>? _streamsSub;
   int _searchToken = 0;
+
+  static const int _kPersonalizedChunkSize = 12;
 
   @override
   FutureOr<SearchState> build() async {
@@ -210,6 +216,8 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
           state = AsyncValue.data(current.copyWith(suggestedStreamers: streamers));
         }
       });
+      // Personalized grid: SWR ile yenile (stale briefly → taze)
+      _loadExploreRecent(bypassCache: false, onData: () {});
     }
 
     try {
@@ -343,38 +351,63 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     required bool bypassCache,
     required void Function() onData,
   }) {
-    final url = state.value?.isLoggedIn == true
-        ? '$kBaseUrl/feed/for-you?page=1'
+    final isLoggedIn = state.value?.isLoggedIn == true;
+    final url = isLoggedIn
+        ? '$kBaseUrl/feed/personalized?limit=100'
         : '$kBaseUrl/feed/recent?page=0';
-    final cacheKey = state.value?.isLoggedIn == true ? 'explore_foryou_grid' : 'explore_recent_feed';
-    
+    final cacheKey = isLoggedIn ? 'explore_personalized_feed' : 'explore_recent_feed';
+    final ttl = isLoggedIn
+        ? const Duration(minutes: 15) // Backend Redis affinity TTL ile senkron
+        : const Duration(minutes: 5);
+
     ApiService.get<List<dynamic>>(
       url: url,
       cacheKey: cacheKey,
-      cacheTtl: const Duration(minutes: 5),
-      bypassCache: bypassCache,
+      cacheTtl: ttl,
+      bypassCache: isLoggedIn ? false : bypassCache, // Logged-in her zaman SWR
       fromJson: (raw) => raw as List,
-    ).listen((recent) {
+    ).listen((allItems) {
       final current = state.value;
       if (current == null) return;
-      
-      state = AsyncValue.data(current.copyWith(
-        recentListings: recent,
-        recentPage: current.isLoggedIn ? 2 : 1,
-        recentExhausted: recent.length < 20,
-      ));
 
-      final recentIds = recent
-          .whereType<Map<String, dynamic>>()
-          .map((e) => e['id'])
-          .whereType<int>()
-          .take(10)
-          .toList();
-      if (recentIds.isNotEmpty) {
-        AnalyticsService.logListingImpressions(
-          listingIds: recentIds,
-          section: current.isLoggedIn ? 'for_you_grid' : 'recent',
-        );
+      if (isLoggedIn) {
+        final initialSlice = allItems.take(_kPersonalizedChunkSize).toList();
+        state = AsyncValue.data(current.copyWith(
+          allPersonalizedListings: allItems,
+          recentListings: initialSlice,
+          recentPage: 1,
+          recentExhausted: allItems.length <= _kPersonalizedChunkSize,
+        ));
+        final ids = initialSlice
+            .whereType<Map<String, dynamic>>()
+            .map((e) => e['id'])
+            .whereType<int>()
+            .take(10)
+            .toList();
+        if (ids.isNotEmpty) {
+          AnalyticsService.logListingImpressions(
+            listingIds: ids,
+            section: 'personalized_grid',
+          );
+        }
+      } else {
+        state = AsyncValue.data(current.copyWith(
+          recentListings: allItems,
+          recentPage: 1,
+          recentExhausted: allItems.length < 20,
+        ));
+        final ids = allItems
+            .whereType<Map<String, dynamic>>()
+            .map((e) => e['id'])
+            .whereType<int>()
+            .take(10)
+            .toList();
+        if (ids.isNotEmpty) {
+          AnalyticsService.logListingImpressions(
+            listingIds: ids,
+            section: 'recent',
+          );
+        }
       }
       onData();
     }, onError: (_) {
@@ -389,18 +422,36 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
   Future<void> loadMoreRecentListings() async {
     final current = state.value;
     if (current == null || current.recentExhausted || current.recentLoadingMore || current.hasQuery) return;
-    
+
+    if (current.isLoggedIn) {
+      // Client-side windowing — buffer bellekte, API çağrısı yok
+      final all = current.allPersonalizedListings;
+      final nextCount = current.recentPage * _kPersonalizedChunkSize;
+      if (nextCount >= all.length) {
+        state = AsyncValue.data(current.copyWith(recentExhausted: true));
+        return;
+      }
+      final nextSlice = all.take(nextCount + _kPersonalizedChunkSize).toList();
+      state = AsyncValue.data(current.copyWith(
+        recentListings: nextSlice,
+        recentPage: current.recentPage + 1,
+        recentExhausted: nextSlice.length >= all.length,
+      ));
+      return;
+    }
+
+    // Misafir kullanıcı — /feed/recent API sayfalama
     state = AsyncValue.data(current.copyWith(recentLoadingMore: true));
     try {
       final token = await StorageService.getToken();
       final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final excludeParams = current.forYouIds.isNotEmpty ? '&exclude_ids=${current.forYouIds.join(',')}' : '';
-      final url = current.isLoggedIn
-          ? '$kBaseUrl/feed/for-you?page=${current.recentPage}'
-          : '$kBaseUrl/feed/recent?page=${current.recentPage}$excludeParams';
-      
+      final excludeParams = current.forYouIds.isNotEmpty
+          ? '&exclude_ids=${current.forYouIds.join(',')}'
+          : '';
+      final url = '$kBaseUrl/feed/recent?page=${current.recentPage}$excludeParams';
+
       final resp = await http.get(Uri.parse(url), headers: headers);
-      
+
       final newState = state.value;
       if (newState == null) return;
 
