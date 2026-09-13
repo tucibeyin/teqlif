@@ -1,6 +1,6 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
-from app.core.exceptions import BadRequestException, ForbiddenException
+from app.core.exceptions import BadRequestException, ForbiddenException, InsufficientFundsException, NotFoundException
 from app.models.tuci_transaction import TuciTransaction
 
 logger = get_logger(__name__)
@@ -22,9 +22,12 @@ class TransferTuciCommand:
             raise ForbiddenException(code="SELF_TRANSFER_FORBIDDEN")
 
         async with self.uow:
-            # 1. Gönderenin bakiyesi kontrol edilir (Gerçekte Aggregate Root'tan veya Query'den yapılır)
-            # Şimdilik bakiye yeterli varsayalım veya DB'de trigger ile kontrol edilsin
-            
+            sender = await self.uow.users.get(id=sender_id)
+            if sender is None:
+                raise NotFoundException(code="SENDER_NOT_FOUND")
+            if sender.tuci_balance < amount:
+                raise InsufficientFundsException()
+
             # 2. İşlemleri UoW ile kaydet
             t1_data = {"user_id": sender_id, "amount": -amount, "transaction_type": "transfer_out", "reference_id": receiver_id}
             t2_data = {"user_id": receiver_id, "amount": amount, "transaction_type": "transfer_in", "reference_id": sender_id}

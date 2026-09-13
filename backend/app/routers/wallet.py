@@ -42,6 +42,11 @@ class TopupRequest(BaseModel):
     amount: int = Field(gt=0, le=10000)
 
 
+class TransferRequest(BaseModel):
+    recipient_id: int
+    amount: int = Field(gt=0, le=10000)
+
+
 class GiftRequest(BaseModel):
     stream_id: int
     receiver_username: str
@@ -94,18 +99,16 @@ async def get_balance(
 
 @router.post("/transfer")
 async def transfer_tuci(
-    data: dict,
+    data: TransferRequest,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
     from app.use_cases.wallet.commands.transfer_tuci import TransferTuciCommand
 
-    recipient_id = data.get("recipient_id")
-    amount = data.get("amount")
     return await TransferTuciCommand(uow).execute(
         sender_id=current_user.id,
-        receiver_id=recipient_id,
-        amount=amount
+        receiver_id=data.recipient_id,
+        amount=data.amount
     )
 
 
