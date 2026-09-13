@@ -11,6 +11,7 @@ Kullanım:
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Optional
 
@@ -25,6 +26,10 @@ router = APIRouter(prefix="/api/client-log", tags=["client-log"])
 
 _RL_WINDOW = 60   # saniye
 _RL_LIMIT  = 20   # pencere başına max istek
+
+
+def _sanitize(value: str, max_len: int = 500) -> str:
+    return re.sub(r'[\r\n\t\x00-\x1f\x7f]', ' ', value)[:max_len]
 
 
 class ClientLogEntry(BaseModel):
@@ -77,16 +82,16 @@ async def client_log(
 
     logger.warning(
         "[CLIENT_LOG] tag=%s | user_id=%s | platform=%s | v=%s | ip=%s | %s%s",
-        entry.tag,
+        _sanitize(entry.tag),
         user_id  or "anon",
         platform,
         version,
         ip,
-        entry.message,
-        f" | error={entry.error}" if entry.error else "",
+        _sanitize(entry.message),
+        f" | error={_sanitize(entry.error)}" if entry.error else "",
     )
 
     if entry.details:
-        logger.warning("[CLIENT_LOG] details | tag=%s | %s", entry.tag, entry.details)
+        logger.warning("[CLIENT_LOG] details | tag=%s | %s", _sanitize(entry.tag), entry.details)
 
     return {"ok": True}

@@ -799,7 +799,7 @@ dizinlerine yazabilmeli.
 | TASK-M7 | alertmanager root ExecStartPre kaldır | 3 | ✅ Tamamlandı |
 | TASK-M8 | OCSP stapling | 3 | ✅ Tamamlandı |
 | TASK-L3 | systemd hardening | 3 | ✅ Tamamlandı |
-| TASK-L1 | check-username auth guard | 3 | ⬜ Bekliyor |
-| TASK-L2 | client-log sanitization | 3 | ⬜ Bekliyor |
+| TASK-L1 | check-username auth guard | 3 | ✅ Tamamlandı |
+| TASK-L2 | client-log sanitization | 3 | ✅ Tamamlandı |
 | — | L4 WireGuard topoloji | Kabul | ✅ Değiştirilmeyecek |
 | — | L5 Loki 0.0.0.0 | Kabul | ✅ Değiştirilmeyecek |

@@ -12,7 +12,7 @@ from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword, ConsentOut, ConsentUpdate
-from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies, invalidate_user_session_cache
+from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, get_current_user_optional, set_auth_cookies, clear_auth_cookies, invalidate_user_session_cache
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
 from app.utils.i18n import _get_t, _msg, get_locale
 from app.utils.redis_client import get_redis
@@ -301,9 +301,18 @@ async def reset_password(request: Request, data: ResetPassword, db: AsyncSession
 
 @router.get("/check-username")
 @limiter.limit("30/minute")
-async def check_username(request: Request, username: str = "", exclude_id: int | None = None, db: AsyncSession = Depends(get_db)):
+async def check_username(
+    request: Request,
+    username: str = "",
+    exclude_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
     if not _USERNAME_RE.match(username):
         return {"available": False, "reason": "format"}
+    if exclude_id is not None:
+        if current_user is None or current_user.id != exclude_id:
+            exclude_id = None
     q = select(User).where(User.username == username)
     if exclude_id is not None:
         q = q.where(User.id != exclude_id)
