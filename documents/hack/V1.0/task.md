@@ -795,9 +795,9 @@ dizinlerine yazabilmeli.
 | TASK-M1 | JWT log truncation | 2 | ✅ Tamamlandı |
 | TASK-M2 | Analytics user_id injection | 2 | ✅ Tamamlandı |
 | TASK-M5 | MinIO bind adresi | 2 | ✅ Tamamlandı |
-| TASK-M6 | nginx CSP header | 3 | ⬜ Bekliyor |
+| TASK-M6 | nginx CSP header | 3 | ✅ Tamamlandı |
 | TASK-M7 | alertmanager root ExecStartPre kaldır | 3 | ⬜ Bekliyor |
-| TASK-M8 | OCSP stapling | 3 | ⬜ Bekliyor |
+| TASK-M8 | OCSP stapling | 3 | ✅ Tamamlandı |
 | TASK-L3 | systemd hardening | 3 | ⬜ Bekliyor |
 | TASK-L1 | check-username auth guard | 3 | ⬜ Bekliyor |
 | TASK-L2 | client-log sanitization | 3 | ⬜ Bekliyor |
