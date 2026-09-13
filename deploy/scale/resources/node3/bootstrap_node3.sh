@@ -205,6 +205,13 @@ fi
 # Default site kaldır (varsa)
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 
+# ── nginx: live-staging.teqlif.com → LiveKit proxy ───────────────────────────
+echo "==> nginx live-staging LiveKit proxy..."
+sudo cp "$N3_SRC/nginx/live-staging.conf" /etc/nginx/sites-available/live-staging.conf
+if [[ ! -L /etc/nginx/sites-enabled/live-staging.conf ]]; then
+  sudo ln -s /etc/nginx/sites-available/live-staging.conf /etc/nginx/sites-enabled/live-staging.conf
+fi
+
 # ── nginx: monitoring auth proxy (Prometheus + Alertmanager) ─────────────────
 echo "==> nginx monitoring auth proxy..."
 sudo cp "$N3_SRC/nginx/monitoring.conf" /etc/nginx/sites-available/monitoring.conf
