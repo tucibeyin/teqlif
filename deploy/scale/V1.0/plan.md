@@ -1,5 +1,5 @@
 # Teqlif Scale Planı — V1.0
-> **Hostname eşleştirme:** `node1` = OVH Frankfurt (ana backend) | `gateway` = Netcup Nürnberg (edge proxy + observability)
+> **Hostname eşleştirme:** `node1` = OVH Limburg (ana backend) | `gateway` = Netcup Nürnberg (edge proxy + observability)
 > **Tarih:** 2026-09-07 | **Durum:** ✅ UYGULAMAYA ALINDI (2026-09-07)
 
 ## Uygulama Özeti
@@ -27,7 +27,7 @@ Tüm adımlar `deploy/scale/V1.0/task.md`'de belgelenmiştir. Temel sonuçlar:
 
 ---
 
-## 1. Mevcut Durum — node1 (OVH Frankfurt)
+## 1. Mevcut Durum — node1 (OVH Limburg)
 
 ### Donanım
 | Parametre | Değer |
@@ -149,7 +149,7 @@ Prometheus TSDB scrape + retention. Loki log indexing. Her ikisi de RAM tüketir
 İnternet
     │
     ▼
-[gateway — Netcup Nürnberg]          [node1 — OVH Frankfurt]
+[gateway — Netcup Nürnberg]          [node1 — OVH Limburg]
   nginx  (SSL termination)    ──────▶   FastAPI prod
   WireGuard (VPN tüneli)      ◀──────   FastAPI staging
   Prometheus (scrape her ikisini)        PostgreSQL
@@ -618,7 +618,7 @@ sudo ufw allow from 10.10.0.2 to any port 8000
 |---|---|---|
 | **gateway SPOF** | Yüksek | DNS TTL kısalt (60s); node1 nginx'i hazır tut; gateway düşünce node1 doğrudan devreye girer |
 | **WireGuard peer config hatası** | Düşük | Config dosyası yazılmadan önce key çiftleri not edilmeli; hata durumunda SSH erişimi kesilmez |
-| **Ekstra gecikme** | Düşük-Orta | Frankfurt↔Nürnberg ~10-15ms RTT; mobil API için +20-30ms — kabul edilebilir |
+| **Ekstra gecikme** | Düşük-Orta | Limburg↔Nürnberg ~10-15ms RTT; mobil API için +20-30ms — kabul edilebilir |
 | **Büyük upload gateway trafiği** | ~~Orta~~ → ✅ Çözüldü | `uploads.teqlif.com` → node1 doğrudan (V1.0'a alındı) |
 
 ---

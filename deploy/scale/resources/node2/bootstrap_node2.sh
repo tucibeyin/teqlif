@@ -109,7 +109,7 @@ echo "==> WireGuard wg0.conf..."
 if [[ -f /etc/wireguard/node2_private.key ]]; then
   if [[ ! -f /etc/wireguard/wg0.conf ]]; then
     NODE2_PRIV=$(sudo cat /etc/wireguard/node2_private.key)
-    printf '[Interface]\nAddress = 10.10.0.3/24\nListenPort = 51820\nPrivateKey = %s\n\n[Peer]\n# node1 — OVHcloud Frankfurt\nPublicKey = JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=\nAllowedIPs = 10.10.0.1/32\nEndpoint = 135.125.175.223:51820\nPersistentKeepalive = 25\n\n[Peer]\n# gateway — netcup Nürnberg\nPublicKey = 7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=\nAllowedIPs = 10.10.0.2/32\nEndpoint = 94.16.105.135:51820\nPersistentKeepalive = 25\n' \
+    printf '[Interface]\nAddress = 10.10.0.3/24\nListenPort = 51820\nPrivateKey = %s\n\n[Peer]\n# node1 — OVHcloud Limburg\nPublicKey = JEI9uud8kaoK7t3vSSrKeFCvibiOclbf1NhidFlQuyc=\nAllowedIPs = 10.10.0.1/32\nEndpoint = 135.125.175.223:51820\nPersistentKeepalive = 25\n\n[Peer]\n# gateway — netcup Nürnberg\nPublicKey = 7AQbLvVlCdTvDOlFJslZ01PWzgvNhL2r/7f0Lw7ld0Y=\nAllowedIPs = 10.10.0.2/32\nEndpoint = 94.16.105.135:51820\nPersistentKeepalive = 25\n' \
       "$NODE2_PRIV" | sudo tee /etc/wireguard/wg0.conf > /dev/null
     sudo chmod 600 /etc/wireguard/wg0.conf
     echo "    wg0.conf yazildi."

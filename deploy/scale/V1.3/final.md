@@ -56,12 +56,12 @@ Motivasyon:
 
 ## 2. Donanım
 
-### node1 — OVHcloud Frankfurt (Ana Backend)
+### node1 — OVHcloud Limburg (Ana Backend)
 
 | Parametre | Değer |
 |---|---|
 | Sağlayıcı | **OVHcloud SAS** (FR) |
-| Lokasyon | Frankfurt, Almanya |
+| Lokasyon | Limburg, Almanya |
 | Public IP | 135.125.175.223 |
 | WireGuard IP | 10.10.0.1 |
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |

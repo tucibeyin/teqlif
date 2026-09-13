@@ -10,7 +10,7 @@
 
 | Node | Sağlayıcı | Lokasyon | IP (Public) | IP (WG) | CPU | RAM | Disk | Ağ | Ödeme |
 |---|---|---|---|---|---|---|---|---|---|
-| **node1** | OVH SAS | Frankfurt, DE | 135.125.175.223 | 10.10.0.1 | Intel Haswell 6C @ 3.09 GHz | 11.4 GiB + 2 GiB swap | 98.3 GB NVMe | ~1.95 Gbps / unmetered | aylık |
+| **node1** | OVH SAS | Limburg, DE | 135.125.175.223 | 10.10.0.1 | Intel Haswell 6C @ 3.09 GHz | 11.4 GiB + 2 GiB swap | 98.3 GB NVMe | ~1.95 Gbps / unmetered | aylık |
 | **node2** | RackNerd LLC | Buffalo, NY | 198.12.123.33 | 10.10.0.3 | Intel Xeon E5-2670 v2, 1C @ 2.50 GHz | 1.4 GiB + 2 GiB swap | 15 GB SSD | ~237–435 Mbps | aylık |
 | **gateway** | Netcup GmbH | Nürnberg, DE | 94.16.105.135 | 10.10.0.2 | QEMU vCPU 2C @ 2.29 GHz | 1.9 GiB (efektif) | 58.9 GB NVMe | ~1.08 Gbps / 100 Mbps ort. aşılırsa throttle | aylık |
 | **node3** | Zap-Hosting GmbH | Ashburn, VA | 5.249.165.10 | 10.10.0.4 | AMD EPYC 7763, 4C @ 2.45 GHz | 3.8 GiB (ballooning kapalı) | 50 GB NVMe | 1 Gbps / 33 TB/ay | $81.66 tek seferlik |
@@ -112,9 +112,9 @@ Her node diğer üçüne de peer tanımlar. `PersistentKeepalive=25s` tüm bağl
 
 | Bağlantı | Gecikme | Not |
 |---|---|---|
-| node1 ↔ gateway | ~15ms | Frankfurt ↔ Nürnberg |
-| node1 ↔ node2 | ~100ms | Frankfurt ↔ Buffalo |
-| node1 ↔ node3 | ~80ms | Frankfurt ↔ Ashburn VA |
+| node1 ↔ gateway | ~15ms | Limburg ↔ Nürnberg |
+| node1 ↔ node2 | ~100ms | Limburg ↔ Buffalo |
+| node1 ↔ node3 | ~80ms | Limburg ↔ Ashburn VA |
 | gateway ↔ node2 | ~85ms | |
 | gateway ↔ node3 | ~80ms | |
 | node2 ↔ node3 | ~10ms | Buffalo ↔ Ashburn VA |

@@ -12,7 +12,7 @@
 
 | Bulgu | Detay |
 |---|---|
-| **Gemini free tier EU kısıtlaması** | node1 Frankfurt IP'sinden Gemini API model listesi boş dönüyor (HTTP 403 / 0 model) |
+| **Gemini free tier EU kısıtlaması** | node1 Limburg IP'sinden Gemini API model listesi boş dönüyor (HTTP 403 / 0 model) |
 | **node2 US IP'den Gemini erişimi** | 52 model — `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite` dahil tam erişim |
 | **Groq geografik fark** | Yok — her iki IP'den 14 model, aynı kota |
 | **Mevcut sessiz hata** | `llm_service.py` Gemini fallback, node1'den hiç çalışmamış; tüm üretim yükü Groq'a düşmüş |
@@ -21,9 +21,9 @@
 ### Coğrafi test sonucu (2026-09-10)
 
 ```
-node1 (Frankfurt) → Gemini model listesi: 0 model
+node1 (Limburg) → Gemini model listesi: 0 model
 node2 (Buffalo)   → Gemini model listesi: 52 model  ✅
-node1 (Frankfurt) → Groq model listesi:  14 model
+node1 (Limburg) → Groq model listesi:  14 model
 node2 (Buffalo)   → Groq model listesi:  14 model (aynı)
 ```
 

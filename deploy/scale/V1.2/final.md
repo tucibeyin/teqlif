@@ -44,12 +44,12 @@ Scale V1.2, V1.1 üzerine tek büyük mimari genişlemedir: **node2 (AI Proxy)**
 
 ## 2. Donanım
 
-### node1 — OVHcloud Frankfurt (Ana Backend)
+### node1 — OVHcloud Limburg (Ana Backend)
 
 | Parametre | Değer |
 |---|---|
 | Sağlayıcı | **OVHcloud SAS** (FR) |
-| Lokasyon | Frankfurt, Almanya |
+| Lokasyon | Limburg, Almanya |
 | Public IP | 135.125.175.223 |
 | WireGuard IP | 10.10.0.1 |
 | CPU | Intel Haswell 6 çekirdek @ 3.09 GHz |
@@ -197,7 +197,7 @@ Her node diğer ikisine de peer tanımlar. PersistentKeepalive: 25s (tüm bağla
 - `deploy/scale/V1.2/wireguard/` — şablonlar (private key hariç, git'e girmez)
 - Her node'da `/etc/wireguard/wg0.conf` — gerçek config (sunucularda)
 
-**node1 ↔ node2 gecikme:** ~100ms (OVHcloud Frankfurt ↔ VPSHostingService.co Buffalo)
+**node1 ↔ node2 gecikme:** ~100ms (OVHcloud Limburg ↔ VPSHostingService.co Buffalo)
 
 ---
 

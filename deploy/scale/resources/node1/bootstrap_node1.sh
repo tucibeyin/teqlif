@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # deploy/scale/resources/node1/bootstrap_node1.sh
-# node1 (OVHcloud SAS, Frankfurt) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
+# node1 (OVHcloud SAS, Limburg) — tek seferlik kurulum. Idempotent: tekrar çalıştırmak güvenli.
 # Kapsam dışı (sır içerir): WireGuard private key, .env değerleri.
 # NOT: livekit, minio, postgresql, redis ayrıca kurulmalı.
 set -euo pipefail
@@ -235,7 +235,7 @@ sudo systemctl reload ssh
 echo "==> MOTD..."
 sudo tee /etc/motd > /dev/null << 'MOTD'
 =========================================
- 🖥️  NODE-1 (OVHcloud — Frankfurt)
+ 🖥️  NODE-1 (OVHcloud — Limburg)
  📍  Provider : OVHcloud SAS (Germany)
  🌐  Public IP: 135.125.175.223
  🔒  WireGuard: 10.10.0.1

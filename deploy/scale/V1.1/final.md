@@ -25,7 +25,7 @@ Scale V1.1, V1.0 üzerine 4 operasyonel iyileştirmedir. Mimari değişmez; gate
 
 ## 2. Donanım
 
-### node1 — OVH Frankfurt (Ana Backend)
+### node1 — OVH Limburg (Ana Backend)
 
 | Parametre | Değer |
 |---|---|

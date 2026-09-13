@@ -2,7 +2,7 @@
 
 ## 1. Amaç ve Kapsam
 
-teqlif'in altyapısı iki lokasyonda çalışmaktadır: ana veriler (kullanıcı hesabı, ilanlar, mesajlar) Frankfurt, Almanya'da (AB/GDPR) konumlanan sunucularda saklanmakta; yapay zekâ işlemleri ve yedekleme ise Ashburn, Virginia, ABD'de gerçekleştirilmektedir. Türkiye'den kayıt olan kullanıcıların kişisel verileri her iki lokasyona da aktarılmaktadır. Bu durum, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) Madde 9 kapsamında "yurt dışına kişisel veri aktarımı" sayılmakta ve hukuki bir dayanak gerektirmektedir.
+teqlif'in altyapısı iki lokasyonda çalışmaktadır: ana veriler (kullanıcı hesabı, ilanlar, mesajlar) Limburg, Almanya'da (AB/GDPR) konumlanan sunucularda saklanmakta; yapay zekâ işlemleri ve yedekleme ise Ashburn, Virginia, ABD'de gerçekleştirilmektedir. Türkiye'den kayıt olan kullanıcıların kişisel verileri her iki lokasyona da aktarılmaktadır. Bu durum, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) Madde 9 kapsamında "yurt dışına kişisel veri aktarımı" sayılmakta ve hukuki bir dayanak gerektirmektedir.
 
 **Hedef:** Kayıt ekranına, kullanıcının yurt dışı veri aktarımını anlayıp kabul ettiğini belgeleyen bir rıza akışı eklemek.
 
@@ -24,7 +24,7 @@ teqlif'in altyapısı iki lokasyonda çalışmaktadır: ana veriler (kullanıcı
 ### Uygulanan Strateji: Önce Rıza, Sonra Sözleşme
 
 **Aşama 1 — Şu an uygulanacak (Madde 9/6/b + Madde 10):**
-Kayıt ekranında kullanıcıya aydınlatma metni sunulur ve hukuki dayanak olarak **sözleşmesel zorunluluk (Madde 9/6/b)** kullanılır. Ana veriler Frankfurt, Almanya'da GDPR güvencesi altında tutulmakta; yapay zekâ işlemleri ve yedekleme ise Virginia, ABD'de gerçekleştirilmektedir. Her iki aktarım da hizmetin ifası için kaçınılmazdır. Checkbox metni "onay veriyorum" yerine "anlıyorum" ile biter — bu bir rıza değil, bilgilendirme onayıdır. Zorunlu tutulması Madde 3/a'daki özgür irade şartını ihlal etmez çünkü "rıza" değil "sözleşmesel bilgilendirme" dayanağı kullanılmaktadır.
+Kayıt ekranında kullanıcıya aydınlatma metni sunulur ve hukuki dayanak olarak **sözleşmesel zorunluluk (Madde 9/6/b)** kullanılır. Ana veriler Limburg, Almanya'da GDPR güvencesi altında tutulmakta; yapay zekâ işlemleri ve yedekleme ise Virginia, ABD'de gerçekleştirilmektedir. Her iki aktarım da hizmetin ifası için kaçınılmazdır. Checkbox metni "onay veriyorum" yerine "anlıyorum" ile biter — bu bir rıza değil, bilgilendirme onayıdır. Zorunlu tutulması Madde 3/a'daki özgür irade şartını ihlal etmez çünkü "rıza" değil "sözleşmesel bilgilendirme" dayanağı kullanılmaktadır.
 
 > **Checkbox metni:** "KVKK Aydınlatma Metni'ni okudum; hizmetin sunulabilmesi için kişisel verilerimin Almanya (AB) ve ABD sunucularında işleneceğini anlıyorum." — Kayıt için zorunludur.
 
@@ -32,7 +32,7 @@ Kayıt ekranında kullanıcıya aydınlatma metni sunulur ve hukuki dayanak olar
 Bulut sağlayıcı ile KVKK Kurulu'nun standart sözleşme şablonu imzalanır. Bu işlem kullanıcı rızasını ortadan kaldırmaz; mevcut checkpoint'i güçlendirir ve "arızi kullanım" riskini tamamen bertaraf eder. Sözleşme imzasından itibaren 5 iş günü içinde Kuruma bildirim yapılması zorunludur.
 
 **Sunucu Konumları:**
-- **Ana veriler** (kullanıcı hesabı, ilanlar, mesajlar, sohbet): Frankfurt, Almanya — Avrupa Birliği (GDPR güvencesi altında)
+- **Ana veriler** (kullanıcı hesabı, ilanlar, mesajlar, sohbet): Limburg, Almanya — Avrupa Birliği (GDPR güvencesi altında)
 - **Yapay zekâ işlemleri ve yedekleme**: Ashburn, Virginia, ABD (US-EAST-VA)
 
 ---
@@ -126,7 +126,7 @@ Dört dilde (`app_tr.arb`, `app_en.arb`, `app_ru.arb`, `app_ar.arb`) aşağıdak
 > **İşleme Amacı:** Hesap oluşturma, platform hizmetlerinin sunulması, güvenlik ve doğrulama işlemleri.
 >
 > **Yurt Dışı Aktarım:**
-> - Ana veriler (hesap, ilanlar, mesajlar): Frankfurt, Almanya — Avrupa Birliği (GDPR güvencesi altında)
+> - Ana veriler (hesap, ilanlar, mesajlar): Limburg, Almanya — Avrupa Birliği (GDPR güvencesi altında)
 > - Yapay zekâ işlemleri ve yedekleme: Ashburn, Virginia, ABD
 >
 > **Haklarınız (KVKK Madde 11):** Verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltme, silme ve itiraz etme haklarına sahipsiniz. Başvuru için: [e-posta adresi]
@@ -148,7 +148,7 @@ Dört dilde (`app_tr.arb`, `app_en.arb`, `app_ru.arb`, `app_ar.arb`) aşağıdak
 #### İdari (Aşama 2 — teknik tamamlandıktan sonra)
 9. [ ] Bulut sağlayıcı ile KVKK standart sözleşme şablonu imzalanması (Kurul'un yayımladığı şablon kullanılır)
 10. [ ] Sözleşme imzasından itibaren 5 iş günü içinde KVKK Kurumu'na bildirim
-11. [ ] VERBIS kaydı güncellenmesi (yurt dışı aktarım: Frankfurt, Almanya — AB ve Ashburn, Virginia, ABD)
+11. [ ] VERBIS kaydı güncellenmesi (yurt dışı aktarım: Limburg, Almanya — AB ve Ashburn, Virginia, ABD)
 
 ---
 

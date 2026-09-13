@@ -19,7 +19,7 @@ Scale V1.0, Teqlif'in monolith (tek-sunucu) mimarisinden iki-sunuculu (gateway +
 
 ## 2. Donanım
 
-### node1 — OVH Frankfurt (Ana Backend)
+### node1 — OVH Limburg (Ana Backend)
 
 | Parametre | Değer |
 |---|---|

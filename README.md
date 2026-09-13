@@ -410,7 +410,7 @@ flowchart TB
     subgraph WG_MESH["WireGuard Mesh — 10.10.0.0/24 (şifreli overlay)"]
         GW["🛡️ gateway\nnetcup GmbH — Nürnberg DE\nPublic: 94.16.105.135\nWireGuard: 10.10.0.2\n─────────────────\nnginx SSL termination\nRate limit · Microcache\nHTTPS :443 → node1 :8000\nnode_exporter · promtail"]
 
-        N1["⚡ node1\nOVHcloud — Frankfurt DE\nPublic: 135.125.175.223\nWireGuard: 10.10.0.1\n─────────────────\nFastAPI prod :8000\nPostgreSQL :5432\nRedis :6379\nMinIO :9010\nClickHouse :8123\nLiveKit SFU :7880\nARQ Workers\nnginx (uploads.teqlif.com)\nnode_exporter · promtail\nBackup source (03:00 UTC)"]
+        N1["⚡ node1\nOVHcloud — Limburg DE\nPublic: 135.125.175.223\nWireGuard: 10.10.0.1\n─────────────────\nFastAPI prod :8000\nPostgreSQL :5432\nRedis :6379\nMinIO :9010\nClickHouse :8123\nLiveKit SFU :7880\nARQ Workers\nnginx (uploads.teqlif.com)\nnode_exporter · promtail\nBackup source (03:00 UTC)"]
 
         N2["🤖 node2\nVPSHostingService — Buffalo NY US\nPublic: 198.12.123.33\nWireGuard: 10.10.0.3\n─────────────────\nAI Proxy Primary :8080\ncf-failover daemon\nnode_exporter · promtail"]
 
@@ -482,7 +482,7 @@ flowchart LR
 
 | Node | Sağlayıcı | Konum | CPU | RAM | Disk | Ağ |
 |---|---|---|---|---|---|---|
-| node1 | OVHcloud | Frankfurt DE | 6 çekirdek @ 3.09 GHz | 11.4 GB | 98 GB NVMe | 2 Gbps / Unlimited |
+| node1 | OVHcloud | Limburg DE | 6 çekirdek @ 3.09 GHz | 11.4 GB | 98 GB NVMe | 2 Gbps / Unlimited |
 | gateway | netcup GmbH | Nürnberg DE | 2 vCore | 2 GB | 60 GB SSD | 1 Gbps / Unlimited* |
 | node2 | VPSHostingService | Buffalo NY US | 1 vCore | 1 GB | 25 GB SSD | 1 Gbps Shared |
 | node3 | Zap-Hosting | Ashburn VA US | 2 vCore | 3.2 GB + 4 GB Swap | 50 GB SSD | 1 Gbps / 33 TB/ay |
@@ -723,7 +723,7 @@ flowchart TB
 | R-05 | **Staging alembic migration zinciri** | `alembic upgrade head` fresh DB'de kırık | Yüksek | pg_dump --schema-only + alembic stamp head geçici çözüm |
 | R-06 | **FastAPICache key invalidation** | Stale veri gösterimi | Düşük | Manuel invalidation; kısa TTL'ler |
 | R-07 | **ClickHouse yedek yok** | Analitik veri kaybı | Orta | Backup timer ekleme (V1.4 adayı) |
-| R-08 | **Tek coğrafi bölge (prod)** | Frankfurt DC arızası tüm prod'u etkiler | Çok Düşük | node3'e staging → prod geçiş prosedürü yazılmalı |
+| R-08 | **Tek coğrafi bölge (prod)** | Limburg DC arızası tüm prod'u etkiler | Çok Düşük | node3'e staging → prod geçiş prosedürü yazılmalı |
 
 ---
 

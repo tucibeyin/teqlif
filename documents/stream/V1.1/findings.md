@@ -1,199 +1,112 @@
 # Stream Mimarisi — Bulgular ve Yol Haritası V1.1
 
 **Tarih:** 2026-09-13  
-**Kapsam:** LiveKit mevcut durum analizi · Mirror Oda geçiş planı · mediasoup uzun vadeli hedef  
-**Topoloji referansı:** `deploy/scale/V1.3/final.md`  
-**Nihai hedef:** Her biri 2Gbps/unmetered olan node1-tipi node'lar ekleyerek tüm kapasiteyi tek bir kaynak havuzu olarak kullanan, binlerce eşzamanlı izleyiciyi kaldırabilen streaming altyapısı
+**Topoloji referansı:** `deploy/scale/V1.3/final.md`
 
 ---
 
-## 1. Mevcut Topoloji — Stream Açısından
+## Hedef
 
-### 1.1 Node Kapasiteleri (Stream İçin)
+Mevcut altyapının streaming kapasitesini **yazılım değişiklikleriyle** maksimuma taşımak, ardından yeni node eklendiğinde bunun otomatik olarak kapasiteye katkı sağladığı bir mimari kurmak.
 
-| Node | Sağlayıcı | Bant Genişliği | LiveKit Durumu | Streaming Rolü |
-|------|-----------|---------------|----------------|----------------|
-| **node1** | OVHcloud Frankfurt | **2 Gbps / unmetered** | ✅ Production | Ana SFU — tüm prod yayınlar burada |
-| gateway | netcup Nürnberg | 1 Gbps / 24h ort. >100 Mbps → throttle | ❌ Yok | Sadece signaling proxy (WebSocket) |
-| node2 | VPSHostingService Buffalo | 1 Gbps shared | ❌ Yok | AI Proxy — LiveKit için uygun değil |
-| node3 | Zap-Hosting Ashburn | 1 Gbps / **33TB/ay sonrası 10 Mbps throttle** | ⚠️ Sadece staging | Staging SFU — prod mirror için uygunsuz |
+**Sıra önemli:**
+1. Önce mevcut altyapıdaki yazılımsal dar boğazları çöz → LiveKit mirroring
+2. Ardından SFU'yu mediasoup'a geçir → PipeTransport ile gerçek cascading
+3. Sonra yeni node ekle → mimari buna hazır, her node tam verimle çalışır
 
-**Kritik tespitler:**
-- Production streaming'i taşıyan tek node: **node1**
-- Gateway medya trafiğini görmez — UDP/RTP doğrudan node1'e gider (`135.125.175.223:50000-60000`)
-- node3'ün bant genişliği sınırı (33TB/ay cap) onu production mirror'dan dışarıda bırakır
-- node2 shared bant genişliği LiveKit için uygun değil
-
-**Sonuç:** Scaling için eklenecek yeni node'lar **node1 eşdeğeri** olmalı: OVHcloud (veya benzeri), 2Gbps/unmetered.
+Yeni node satın almadan önce bu sırayı takip etmek kritik. Yeni node'u LiveKit mirror üstüne eklemek, relay overhead'i yaratır (video iki kez işlenir). Aynı node'u mediasoup PipeTransport üstüne eklemek, RTP doğrudan tünellenir — sıfır overhead.
 
 ---
 
-### 1.2 Mevcut LiveKit Trafik Akışı
+## Mevcut Durum Analizi
 
-```
-Flutter (sinyal)
-    │
-    ▼
-wss://teqlif.com/rtc
-    │
-    ▼
-Cloudflare → gateway (nginx) → node1:7880   ← WebSocket sinyal
-                                    │
-Flutter (medya) ──────────────────▶ node1:50000-60000/UDP   ← RTP medya (gateway bypass)
-                                    │
-                               LiveKit SFU
-                               (pure SFU — transcoding yok)
-                                    │
-                              Tüm viewer'lar
-                              (node1'den beslenyor)
+### Altyapı (Stream Gözüyle)
+
+| Node | Bant Genişliği | LiveKit | Streaming Rolü |
+|------|---------------|---------|----------------|
+| **node1** | **2 Gbps / unmetered** | ✅ Production | Tüm prod yayınlar burada |
+| node3 | 1 Gbps / 33TB cap → 10Mbps throttle | ⚠️ Staging | Prod için uygunsuz — bandwidth cap |
+| node2 | 1 Gbps shared | ❌ Yok | AI proxy — video için uygunsuz |
+| gateway | 1 Gbps / 100Mbps ort. cap | ❌ Yok | Sadece sinyal proxy |
+
+Medya (UDP/RTP) doğrudan node1'e gidiyor (`135.125.175.223:50000-60000`). Gateway medya trafiğini görmüyor.
+
+### Mevcut Yazılımsal Dar Boğazlar
+
+**1. Tek LIVEKIT_URL — multi-node routing kodu yok**
+
+`app/config.py:72`:
+```python
+livekit_url: str = "wss://teqlif.com/rtc"  # tek sabit URL
 ```
 
-Sinyal Cloudflare → gateway üzerinden geçiyor ama medya (video paketleri) doğrudan node1'e gidiyor. Bu sayede gateway'in 100 Mbps ortalama limiti streaming'i etkilemiyor.
-
----
-
-### 1.3 Mevcut LiveKit Konfigürasyonu
-
-**Dosya:** `deploy/scale/V1.3/node1/livekit.yaml`
-
-| Parametre | Değer | Notlar |
-|-----------|-------|--------|
-| `node_ip` | `135.125.175.223` | node1 public IP — medya paketleri bu IP'den gönderilir |
-| `use_external_ip` | `false` | IP sabit tanımlanmış |
-| `max_participants` (prod) | **500** | Hard limit — bu değeri geçen odaya katılım reddedilir |
-| `max_participants` (staging) | **100** | node3 livekit.yaml |
-| Mod | Pure SFU | Transcoding yok — CPU yükü minimal |
-| TURN | Etkin | Kısıtlı ağlar için fallback |
-
-**⚠️ Dikkat:** `max_participants: 500` hard limit şu an hem kapasite hem de güvenlik sınırı olarak çalışıyor. Mirror oda olmadan tek odada bu sınırı artırmak node1'i riske atar.
-
----
-
-### 1.4 Mevcut Kod Haritası
-
-| Konu | Dosya | Satır |
-|------|-------|-------|
-| Config (tek LIVEKIT_URL) | `app/config.py` | 21–34 |
-| Token üretimi | `app/use_cases/streams/stream_utils.py` | 58–83 |
-| Oda ismi: `stream_{user_id}_{uuid[:8]}` | `app/use_cases/streams/commands/start_stream.py` | 62 |
-| Yayıncı başlatma | `app/routers/streams.py` | 224–238 |
-| Viewer join endpoint | `app/routers/streams.py` | 307–313 |
-| Viewer join + token üretimi | `app/use_cases/streams/commands/join_stream.py` | 20–53 |
-| Co-host izin yükseltme | `app/use_cases/streams/commands/cohost_commands.py` | 43–102 |
-| LiveKit webhook handler | `app/routers/webhooks.py` | 26–60 |
-| Viewer count WS eventi | `app/routers/webhooks.py` | 211–258 |
-| Stream finalizasyonu | `app/use_cases/streams/stream_finalizer.py` | 15–79 |
-| Response schema | `app/schemas/stream.py` | 56–72 |
-| DB model: LiveStream | `app/models/stream.py` | 10–33 |
-| DB model: Auction → Stream FK | `app/models/auction.py` | 13 |
-
----
-
-### 1.5 Servis Ayrımı — En Büyük Avantaj
-
-```
-Video (LiveKit)      ←── RTP/WebRTC medya — node bazlı
-Bid (FastAPI WS)     ←── JSON, stream_id bazlı — node'dan bağımsız
-Chat (FastAPI WS)    ←── JSON, stream_id bazlı — node'dan bağımsız
-Analytics            ←── Redis + PostgreSQL — node'dan bağımsız
+`app/use_cases/streams/commands/join_stream.py:47`:
+```python
+livekit_url = settings.livekit_url  # her viewer aynı node'a gönderilir
 ```
 
-Flutter'daki "Teklif Ver" butonu ve chat **hangi LiveKit node'una bağlı olunduğundan tamamen bağımsız çalışıyor.** Bu ayrım mirror oda ve mediasoup geçişini doğrudan mümkün kılıyor — Flutter'da hiçbir değişiklik gerekmeden video katmanı yatay ölçeklenebilir.
+Yeni bir LiveKit node kurulsa bile bu kodu değiştirmedikçe hiçbir viewer oraya yönlendirilmez.
 
----
+**2. livekit.yaml hard limit: `max_participants: 500`**
 
-## 2. Kapasite Hesabı
-
-### 2.1 node1 Mevcut Limitler
-
-| Çözünürlük | Viewer başı bant genişliği | 2 Gbps ile maks. viewer | Mevcut hard limit |
-|------------|--------------------------|------------------------|-------------------|
-| 1080p | ~5 Mbps | ~400 kişi | 500 (livekit.yaml) |
-| 720p | ~2.5 Mbps | ~800 kişi | 500 (livekit.yaml) |
-| 480p | ~1 Mbps | ~2000 kişi | 500 (livekit.yaml) |
-
-**Not:** CPU şifreleme yükü (SRTP/DTLS) gerçek limiti port dolmadan getirebilir. Her UDP paketi anlık şifrelenir. Pratikte 720p'de ~600–700 viewer CPU darboğazı yaratmaya başlayabilir.
-
-Mevcut `max_participants: 500` limiti zaten bant genişliği tavanının altında — gerçek darboğaz livekit.yaml konfigürasyonu.
-
-### 2.2 node1-Tipi Node Eklenince Toplam Kapasite
-
-Her eklenen node1-eşdeğeri (2Gbps/unmetered):
-
-| Node sayısı | 720p kapasitesi | 480p kapasitesi |
-|-------------|-----------------|-----------------|
-| 1 (mevcut) | ~700 viewer | ~2000 viewer |
-| 2 (node1 + node4) | ~1400 viewer | ~4000 viewer |
-| 3 (node1 + node4 + node5) | ~2100 viewer | ~6000 viewer |
-
----
-
-## 3. Faz 1 — LiveKit Mirror Oda (Şimdi Yapılabilir)
-
-### 3.1 Önkoşul: node4 (node1-Eşdeğeri)
-
-Mirror oda için eklenmesi gereken yeni node özellikleri:
-
-| Parametre | Gereksinim | node1 Referans |
-|-----------|-----------|----------------|
-| Sağlayıcı | OVHcloud veya eşdeğeri | OVHcloud SAS Frankfurt |
-| Bant genişliği | **2 Gbps / unmetered** | 2 Gbps fixed / Unlimited |
-| CPU | ≥ 4 çekirdek | Intel Haswell 6 çekirdek |
-| RAM | ≥ 8 GB | 11.4 GiB |
-| WireGuard IP | `10.10.0.5` (node4) | `10.10.0.1` |
-
-Yeni node deploy edilince:
-- `bootstrap_node4.sh` (node1 bootstrap'i temel alarak)
-- WireGuard mesh'e eklenir (diğer tüm node'lara peer)
-- LiveKit kurulur, konfigüre edilir
-- UFW kuralları: UDP 50000-60000, TCP/UDP 7882, TCP 5349, UDP 3478
-- `TEQLIF_ENV_FILE` `/etc/environment`'a eklenir
-
----
-
-### 3.2 Mimari
-
-```
-                  ┌──────────────────────────────────────┐
-                  │            FastAPI (node1)            │
-                  │        MirrorOrchestrator             │
-                  │   - viewer sayacı (Redis, per-node)  │
-                  │   - threshold tespiti                 │
-                  │   - yeni viewer'ı yönlendirme        │
-                  └───────────┬──────────────────────────┘
-                              │
-        ┌─────────────────────┼──────────────────────┐
-        ▼                     ▼                      ▼
-   LiveKit node1         LiveKit node4          LiveKit node5
-   stream_42_a3f9bc01    mirror_42_0001         mirror_42_0002
-   [Yayıncı burada]      [Relay bot]            [Relay bot]
-   2Gbps / unmetered     2Gbps / unmetered      2Gbps / unmetered
-   ~700 viewer           ~700 viewer            ~700 viewer
-        │                     │                      │
-        └─────────────────────┴──────────────────────┘
-                              │
-                    FastAPI WebSocket (node1)
-                    Bid · Chat · Analytics
-                    (stream_id bazlı — tüm viewer'lar aynı kanalda)
+`deploy/scale/V1.3/node1/livekit.yaml`:
+```yaml
+room:
+  max_participants: 500
 ```
 
-Yayıncı daima node1'deki ana odaya bağlıdır. FastAPI, arka planda ana odayı diğer node'lara relay eder. Yeni gelen viewer'lar en az dolu node'a yönlendirilir. Bid/chat WebSocket bağlantıları `stream_id` bazlı çalıştığından hangi LiveKit node'unda olunduğu fark etmez.
+node1 2 Gbps / unmetered bant genişliğiyle 720p'de ~700-800 viewer kaldırabilir. Ama kod bu limiti 500'de tutuyor — donanım kapasitesinin ~%70'i kullanılıyor.
+
+**3. Viewer join'de node seçim mantığı yok**
+
+Tüm viewer'lar tek odaya giriyor. Yük dengeleme, threshold tespiti, otomatik mirror oda açma mekanizması yok.
+
+### Mevcut Kapasite (Yazılımsal Limitlerle)
+
+| Durum | Maks. Viewer | Darboğaz |
+|-------|-------------|----------|
+| Şu an (livekit.yaml hard limit) | **500** | `max_participants: 500` config |
+| Donanım kapasitesi (node1, 720p) | ~700-800 | 2Gbps port + CPU şifreleme |
+| Donanım kapasitesi (node1, 480p) | ~2000 | 2Gbps port |
 
 ---
 
-### 3.3 Gerekli Değişiklikler
+## Faz 1 — Mevcut Altyapıda Yazılımsal İyileştirme
 
-#### 3.3.1 Config — Çoklu LiveKit Node
+**Donanım değişikliği yok. Mevcut node'larla çalışır.**
+
+### 1.1 Ne Yapılacak
+
+- `max_participants` limitini node1'in gerçek kapasitesine yükselt
+- Multi-node routing altyapısını yaz — şimdilik tek node, yeni node eklenince otomatik devreye girer
+- `JoinStreamCommand`'a node seçim mantığı ekle
+- Viewer count'u per-node Redis'te izle
+
+### 1.2 max_participants Artırımı
+
+`deploy/scale/V1.3/node1/livekit.yaml`:
+```yaml
+room:
+  max_participants: 750  # 500'den artır — node1 donanım kapasitesine yakın
+```
+
+Bu tek değişiklik, hiçbir kod yazmadan mevcut kapasiteyi **%50 artırır**.
+
+Staging'de (node3 livekit.yaml): 100'de bırakılır.
+
+### 1.3 Multi-Node Routing Altyapısı
+
+#### Config — Çoklu LiveKit Node Desteği
 
 `app/config.py`:
 ```python
 # Format: "wss://node1/rtc|apikey1|secret1,wss://node4/rtc|apikey2|secret2"
+# Şimdilik tek node: LIVEKIT_NODES boş bırakılırsa mevcut LIVEKIT_URL kullanılır
 livekit_nodes: str = ""
 
 @property
 def livekit_node_list(self) -> list[dict]:
     if not self.livekit_nodes:
-        # Geriye dönük uyumluluk: tek node
         return [{"url": self.livekit_url, "api_key": self.livekit_api_key,
                  "api_secret": self.livekit_api_secret,
                  "api_url": self.livekit_api_base, "node_id": "node1"}]
@@ -206,259 +119,199 @@ def livekit_node_list(self) -> list[dict]:
     return nodes
 ```
 
-`.env.production`'a eklenir (node4 hazır olduğunda):
-```
-LIVEKIT_NODES=wss://teqlif.com/rtc|key1|secret1,wss://node4-wg/rtc|key2|secret2
-```
+Geriye dönük uyumlu: `LIVEKIT_NODES` boşsa mevcut `LIVEKIT_URL` kullanılır, hiçbir şey bozulmaz.
 
-#### 3.3.2 DB — Mirror Oda Tablosu
+#### DB — Mirror Oda Tablosu
 
 ```sql
 CREATE TABLE stream_mirror_rooms (
-    id           SERIAL PRIMARY KEY,
-    stream_id    INTEGER      NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
-    room_name    VARCHAR(120) NOT NULL UNIQUE,
-    node_id      VARCHAR(50)  NOT NULL,   -- "node1", "node4", "node5"
-    livekit_url  TEXT         NOT NULL,
-    is_primary   BOOLEAN      DEFAULT FALSE,
-    viewer_count INTEGER      DEFAULT 0,
-    relay_egress_id TEXT,                 -- LiveKit Egress ID (relay durdurma için)
-    created_at   TIMESTAMPTZ  DEFAULT NOW()
+    id              SERIAL PRIMARY KEY,
+    stream_id       INTEGER      NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    room_name       VARCHAR(120) NOT NULL UNIQUE,
+    node_id         VARCHAR(50)  NOT NULL,
+    livekit_url     TEXT         NOT NULL,
+    is_primary      BOOLEAN      DEFAULT FALSE,
+    viewer_count    INTEGER      DEFAULT 0,
+    relay_egress_id TEXT,
+    created_at      TIMESTAMPTZ  DEFAULT NOW()
 );
 CREATE INDEX ix_smr_stream_id ON stream_mirror_rooms(stream_id);
 ```
 
-Yeni alembic revision gerektirir.
+#### MirrorOrchestrator
 
-#### 3.3.3 MirrorOrchestrator Servisi
-
-`app/services/mirror_orchestrator.py` — yeni dosya:
+`app/services/mirror_orchestrator.py`:
 
 ```python
-MIRROR_THRESHOLD = 500   # Bu viewer sayısını geçince yeni mirror aç
-                          # (livekit.yaml max_participants ile uyumlu)
-MAX_MIRRORS_PER_STREAM = len(settings.livekit_node_list)
+MIRROR_THRESHOLD = 600   # Bu sayıyı geçince yeni mirror aç
 
 class MirrorOrchestrator:
 
     async def get_join_node(self, stream_id: int) -> dict:
-        """En az dolu LiveKit node'unu döner. Mirror yoksa primary node'u döner."""
+        """En az dolu LiveKit node'unu döner."""
+        # Şimdilik: tek node → her zaman node1
+        # Node4 eklenince: otomatik yük dengeleme devreye girer
 
     async def maybe_create_mirror(self, stream_id: int) -> None:
         """
-        Toplam viewer sayısı MIRROR_THRESHOLD'u geçtiyse ve boş node varsa
-        yeni mirror oda açar + relay başlatır. ARQ worker task olarak çağrılır.
+        Viewer sayısı MIRROR_THRESHOLD'u geçtiyse
+        ve kullanılmayan node varsa mirror oda açar + relay başlatır.
+        ARQ worker task olarak çalışır.
         """
 
     async def get_viewer_counts(self, stream_id: int) -> dict[str, int]:
-        """Redis'ten her node'daki viewer sayısını döner."""
-        # Redis key pattern: live:viewer_count:{stream_id}:{node_id}
+        """Redis key: live:viewer_count:{stream_id}:{node_id}"""
 ```
 
-#### 3.3.4 Relay Bot
-
-Mirror oda açılınca yayın primary node'dan mirror node'a iletilir. İki seçenek:
-
-**Seçenek A — LiveKit Egress API (tercih edilen):**
-```python
-async def start_relay(primary_room: str, mirror_room: str,
-                      from_node: dict, to_node: dict) -> str:
-    # LiveKit Egress: primary odayı RTMP/WebRTC olarak mirror node'a ilet
-    # egress_id döner — stream sonunda durdurmak için saklanır
-```
-
-**Seçenek B — FFmpeg bot (Egress lisansı olmadan):**
-```bash
-# Primary node'dan RTMP çek, mirror node'a bas
-ffmpeg -i rtmp://10.10.0.1/live/{room_name} \
-       -c copy -f rtmp \
-       rtmp://10.10.0.5/live/{mirror_room_name}
-```
-
-#### 3.3.5 JoinStreamCommand Değişikliği
+#### JoinStreamCommand Değişikliği
 
 `app/use_cases/streams/commands/join_stream.py`:
-
 ```python
-# Mevcut
+# Mevcut (hardcoded)
 livekit_url = settings.livekit_url
 room_name   = stream.room_name
 
-# Yeni
-node      = await mirror_orchestrator.get_join_node(stream.id)
+# Yeni (orchestrator üzerinden)
+node        = await mirror_orchestrator.get_join_node(stream.id)
 livekit_url = node["url"]
-room_name   = node["room_name"]  # primary veya mirror oda adı
+room_name   = node["room_name"]
 ```
 
-`JoinTokenOut` response yapısı değişmez — Flutter aynı JSON'u alır. Sadece `livekit_url` ve `room_name` farklı bir node'a işaret edebilir.
+`JoinTokenOut` response yapısı değişmez — Flutter aynı JSON'u alır.
 
-#### 3.3.6 Webhook Handler Değişikliği
+#### Webhook Handler
 
 `app/routers/webhooks.py` — per-node viewer sayacı:
-
 ```
-# Mevcut
-live:viewer_count:{stream_id}  →  N
-
-# Yeni (ek Redis key'ler)
-live:viewer_count:{stream_id}:node1  →  N
-live:viewer_count:{stream_id}:node4  →  M
-live:viewer_count:{stream_id}        →  N + M  (toplam — mevcut davranış korunur)
+live:viewer_count:{stream_id}:node1  →  N     (yeni)
+live:viewer_count:{stream_id}        →  N     (toplam — mevcut davranış korunur)
 ```
 
-Flutter'a giden `viewer_count` WS eventi toplam sayıyı gösterir. Mirror varlığı Flutter'a transparan kalır.
+Flutter'a giden `viewer_count` WS eventi toplam sayıyı gösterir, mirror varlığı transparan.
 
-#### 3.3.7 livekit.yaml — max_participants Artırımı
+#### Relay Bot (Mirror Oda Açılınca)
 
-Mirror oda devreye girince her node'un `max_participants` limiti yeniden anlamlı hale gelir.
+Mirror oda açılınca primary'den mirror'a video iletilir:
 
-Node1 için `deploy/scale/V1.3/node1/livekit.yaml`:
-```yaml
-room:
-  max_participants: 700   # 500'den artır — node başı 700 viewer
+```python
+# Seçenek A: LiveKit Egress API
+async def start_relay(primary_room, mirror_room, from_node, to_node) -> str:
+    # egress_id döner — stream sonunda durdurmak için saklanır
+
+# Seçenek B: FFmpeg (Egress olmadan)
+# ffmpeg -i rtmp://10.10.0.1/live/{room} -c copy -f rtmp rtmp://10.10.0.X/live/{mirror}
 ```
 
-Her yeni node için aynı değer.
+### 1.4 Flutter Tarafında Değişiklik Yok
+
+`host_livekit_identity` = `str(host.id)` — relay bot bunu mirror odada da korur.  
+Bid/chat WebSocket'leri `stream_id` bazlı çalışıyor — hangi LiveKit node'unda olunduğu fark etmez.
+
+### 1.5 Faz 1 Sonucu
+
+| | Faz 1 Öncesi | Faz 1 Sonrası |
+|--|--------------|---------------|
+| Maks. viewer (kod limiti) | 500 | 750 (tek node) |
+| Yeni node eklenince | Kod değişikliği gerekir | Otomatik devreye girer |
+| Flutter değişikliği | — | Yok |
+| Donanım değişikliği | — | Yok |
+
+**Tahmini süre:** 4–5 gün
 
 ---
 
-### 3.4 Flutter Tarafında Değişiklik Yok
+## Faz 2 — mediasoup Geçişi
 
-Flutter şunları alıyor: `{ room_name, livekit_url, token, host_livekit_identity }`
+**Donanım değişikliği yok. Hâlâ aynı node'lar.**
 
-Relay bot, host track'ini mirror odaya iletirken yayıncının user ID'sini (`host_livekit_identity`) korur. Flutter mirror odaya girdiğinde host track'ini bulmak için aynı kodu çalıştırır. Bid/chat WebSocket'leri `stream_id` bazlı çalışıyor, room_name'e bağlı değil.
+### 2.1 Neden Önce Kod, Sonra Donanım?
 
----
-
-### 3.5 WireGuard — Yeni Node Entegrasyonu
-
-Her yeni node (node4, node5…) mevcut WireGuard mesh'e eklenir:
+LiveKit Mirror (Faz 1) ile yeni node eklenirse:
 
 ```
-node1   10.10.0.1  ←──── tam peer
-gateway 10.10.0.2  ←──── tam peer
-node2   10.10.0.3  ←──── tam peer
-node3   10.10.0.4  ←──── tam peer
-node4   10.10.0.5  ←──── yeni (LiveKit mirror)
-node5   10.10.0.6  ←──── yeni (LiveKit mirror)
+node1 → relay → node4
 ```
 
-node4 için wg0.conf şablonu: `deploy/scale/resources/node4/` altında oluşturulacak.
+Video iki kez işlenir: node1 encode eder, node4'e relay edilir, node4 viewer'lara dağıtır.  
+Bu relay overhead demek — hem bant genişliği hem CPU.
 
-Relay bot WireGuard IP'ler üzerinden haberleşir — public IP yerine mesh IP:
+mediasoup PipeTransport ile yeni node eklenirse:
+
 ```
-node1 LiveKit → 10.10.0.5:7880 (node4 WireGuard IP)
-```
-
----
-
-### 3.6 Prometheus — Yeni Node Scrape
-
-`deploy/scale/V1.3/node3/prometheus.yml`'e eklenir (her yeni node için):
-```yaml
-- job_name: 'livekit-node4'
-  static_configs:
-    - targets: ['10.10.0.5:7881']  # LiveKit metrics
-- job_name: 'node-node4'
-  static_configs:
-    - targets: ['10.10.0.5:9100']  # node_exporter
+node1 ──PipeTransport(RTP tüneli)──► node4
 ```
 
----
+RTP paketleri doğrudan tünellenir. Video sadece bir kez encode edilir.  
+Yeni node eklemenin maliyeti sıfıra yakın.
 
-### 3.7 Implementasyon Sırası
+**Sonuç: Önce mediasoup'a geç, sonra node ekle.**
 
-1. `stream_mirror_rooms` tablosu + alembic migration
-2. `app/config.py` multi-node config (`LIVEKIT_NODES`)
-3. `MirrorOrchestrator` — node seçimi + Redis per-node tracking
-4. `JoinStreamCommand` — orchestrator entegrasyonu
-5. Webhook handler — per-node viewer count
-6. Relay bot (Egress veya FFmpeg)
-7. ARQ worker task — `maybe_create_mirror` threshold trigger
-8. `livekit.yaml` max_participants güncelleme
-9. node4 fiziksel kurulum + bootstrap + WireGuard mesh
-10. `.env.production` — `LIVEKIT_NODES` değerleri
-11. Prometheus scrape ekleme
-12. Staging'de 2 node mirror testi
+### 2.2 mediasoup vs LiveKit
 
-**Tahmini süre:** 4–6 gün (kod) + node4 kurulum süresi
-
----
-
-## 4. Faz 2 — mediasoup Geçişi (Uzun Vadeli Hedef)
-
-### 4.1 Neden mediasoup?
-
-| | LiveKit OSS + Mirror | mediasoup + PipeTransport |
-|--|---------------------|--------------------------|
-| Lisans | Apache 2.0 | ISC (tam ticari özgür) |
-| Dağıtık oda (tek oda → çok node) | ❌ Mirror: relay kopyası | ✅ Gerçek cascading |
-| Relay overhead | Video 2x encode + iletim | ❌ Yok — RTP doğrudan tünellenir |
-| Flutter SDK | ✅ Hazır | ❌ flutter_webrtc ile kendin yaz |
-| Oda yönetimi | ✅ Dahili | ❌ Sen yazarsın |
-| Recording/Egress | ✅ Dahili | ❌ Sen yazarsın |
+| | LiveKit OSS | mediasoup |
+|--|-------------|-----------|
+| Lisans | Apache 2.0 | **ISC — tam ticari özgür** |
+| Dağıtık oda | ❌ Enterprise özelliği | ✅ PipeTransport |
+| Relay overhead | Video kopyalanır | ❌ Yok — RTP tünellenir |
+| Flutter SDK | ✅ Hazır | ❌ flutter_webrtc ile yazılır |
+| Oda yönetimi | ✅ Dahili | ❌ Signaling server yazılır |
 | CPU verimliliği | İyi | Çok iyi (C++ çekirdeği) |
-| Özelleştirme | Kısıtlı | Tam kontrol |
 
-LiveKit Mirror'ın zayıf noktası: video relay ile iletilir — her mirror node yayını bir kez daha alıp dağıtır, bu CPU ve bant genişliği overhead'i demek. mediasoup PipeTransport'ta ise RTP paketleri doğrudan bir node'dan diğerine tünellenir; orijinal encode sadece bir kez yapılır.
-
-### 4.2 PipeTransport — Gerçek Cascading
+### 2.3 PipeTransport — Gerçek Cascading
 
 ```
-Yayıncı → Worker1 (node1)
-                │
-         PipeTransport (WireGuard mesh üzerinden RTP tüneli)
-                │
-         Worker2 (node4) → 700 viewer
-                │
-         PipeTransport
-                │
-         Worker3 (node5) → 700 viewer
+Yayıncı ──► Worker (node1)
+                  │
+       PipeTransport ← WireGuard mesh üzerinden RTP tüneli
+                  │
+          Worker (node4) ──► 700 viewer
+                  │
+       PipeTransport
+                  │
+          Worker (node5) ──► 700 viewer
 
-Toplam: 3 node × ~700 = ~2100 viewer @ 720p
 Video encode: sadece 1 kez (yayıncı → node1)
+Toplam: node sayısı × ~700 viewer @ 720p
 ```
 
-### 4.3 Mimari Tasarım
+### 2.4 Mimari
 
 ```
-                    ┌─────────────────────────────────┐
-                    │   Signaling Server (Node.js)    │
-                    │   Her node1-tipi node'da çalışır│
-                    │   - Oda yönetimi                │
-                    │   - JWT auth (FastAPI ile shared)│
-                    │   - PipeTransport koordinasyonu │
-                    └──────────────┬──────────────────┘
-                                   │ REST
-                    ┌──────────────▼──────────────────┐
-                    │         FastAPI (node1)          │
-                    │   (Bid · Chat · Analytics)       │
+                    ┌──────────────────────────────────┐
+                    │   Signaling Server (Node.js)     │
+                    │   Her node'da çalışır            │
+                    │   - Oda yönetimi                 │
+                    │   - JWT auth (FastAPI shared)    │
+                    │   - PipeTransport koordinasyonu  │
+                    └─────────────┬────────────────────┘
+                                  │ REST
+                    ┌─────────────▼────────────────────┐
+                    │        FastAPI (node1)            │
+                    │   Bid · Chat · Analytics          │
                     └──────────────────────────────────┘
-                                   │
-         ┌─────────────────────────┼──────────────────────┐
-         ▼                         ▼                      ▼
-  mediasoup node1           mediasoup node4        mediasoup node5
-  (Node.js process)         (PipeTransport)        (PipeTransport)
-  Yayıncı + 700 viewer      700 viewer             700 viewer
-  WireGuard: 10.10.0.1      10.10.0.5              10.10.0.6
+                                  │
+          ┌───────────────────────┼──────────────────────┐
+          ▼                       ▼                      ▼
+   mediasoup (node1)       mediasoup (node4)      mediasoup (node5)
+   Yayıncı + ~700 viewer   ~700 viewer            ~700 viewer
+   WireGuard 10.10.0.1     10.10.0.5              10.10.0.6
 ```
 
-### 4.4 Gerekli Geliştirmeler
+### 2.5 Gerekli Geliştirmeler
 
-#### Signaling Server (Node.js — yeni servis, her node'da)
+#### Signaling Server (Node.js — yeni servis)
 
 ```
-deploy/scale/V2.0/
-└── signaling/
-    ├── server.js          ← Express + ws
-    ├── room_manager.js    ← Oda oluşturma, PipeTransport yönetimi
-    ├── worker_pool.js     ← CPU core başı 1 mediasoup worker
-    └── package.json
+deploy/scale/V2.0/signaling/
+├── server.js         ← Express + WebSocket
+├── room_manager.js   ← Oda oluşturma, PipeTransport yönetimi
+├── worker_pool.js    ← CPU core başı 1 mediasoup worker
+└── package.json
 ```
 
-Systemd servisi: `teqlif-signaling.service` — her node1-tipi node'da.
+Systemd servisi: `teqlif-signaling.service` — her node'da.
 
-#### Flutter Tarafı — flutter_webrtc
+#### Flutter — flutter_webrtc
 
 LiveKit Flutter SDK çıkar, `flutter_webrtc` paketi girer:
 
@@ -466,116 +319,144 @@ LiveKit Flutter SDK çıkar, `flutter_webrtc` paketi girer:
 // Mevcut LiveKit SDK:
 await room.connect(livekitUrl, token);
 
-// Yeni mediasoup signaling:
+// Yeni mediasoup signaling WebSocket:
 final ws = WebSocketChannel.connect(signalingUrl);
 await _createRecvTransport(ws);
 await _consumeTrack(ws, producerId: hostProducerId);
 ```
 
-Bu kısım en büyük Flutter değişikliği — tahminen 1–2 hafta.
+Tahminen 1–2 haftalık Flutter değişikliği.
 
-#### FastAPI Değişiklikleri
+#### FastAPI Adaptör Katmanı
 
-- `make_livekit_token()` → `make_signaling_token()` (aynı JWT yapısı, farklı claim'ler)
+- `make_livekit_token()` → `make_signaling_token()`
 - `JoinTokenOut.livekit_url` → `signaling_url`
 - Webhook handler → mediasoup event formatına uyarlanır
-- Co-host logic → mediasoup `updateProducerPermissions`
+- Co-host → mediasoup `updateProducerPermissions`
 
-#### Feature Flag ile Sıfır Kesintili Geçiş
+#### Feature Flag — Sıfır Kesintili Geçiş
 
 ```python
 # config.py
 sfu_backend: str = "livekit"  # "livekit" veya "mediasoup"
 ```
 
-```python
-# join_stream.py
-if settings.sfu_backend == "mediasoup":
-    return await MediasoupJoinCommand(uow).execute(...)
-else:
-    return await LivekitJoinCommand(uow).execute(...)
-```
+Staging'de mediasoup açık, production'da LiveKit — test yeterince tamamlanınca tek satırla production geçişi. Geri dönüş yine tek satır.
 
-Staging'de mediasoup aktif, production'da LiveKit — yeterince test edildikten sonra tek satır değişiklikle production geçişi. Geri dönüş yine tek satır.
+### 2.6 Faz 2 Sonucu
 
-### 4.5 Geçiş Tetikleyici
+| | Faz 2 Öncesi | Faz 2 Sonrası |
+|--|--------------|---------------|
+| Cascading | Relay (video kopyalanır) | PipeTransport (RTP tüneli) |
+| Yeni node overhead | Yüksek | Sıfıra yakın |
+| Flutter SDK | LiveKit SDK | flutter_webrtc |
+| Lisans kısıtı | Apache 2.0 | ISC — tam özgür |
 
-mediasoup geçişi için gerçekçi eşik: **tek bir müzayede odasında sürekli 1500+ eşzamanlı viewer** görülmesi ve relay overhead'inin (mirror oda yaklaşımı) ölçülebilir gecikme veya senkronizasyon sorununa yol açması.
-
-Bu eşiğe ulaşılmadan mediasoup geçişi erken optimizasyon olur.
-
-### 4.6 Tahmini Süre
-
-| Görev | Süre |
-|-------|------|
-| mediasoup signaling server (Node.js) | 5–7 gün |
-| Flutter flutter_webrtc entegrasyonu | 7–10 gün |
-| FastAPI adaptör katmanı | 2–3 gün |
-| PipeTransport cascading logic | 3–4 gün |
-| Staging test + stabilizasyon | 5–7 gün |
-| Production geçiş + izleme | 2–3 gün |
-| **Toplam** | **~4–5 hafta** |
+**Tahmini süre:** 4–5 hafta
 
 ---
 
-## 5. Yol Haritası
+## Faz 3 — Yeni Node'larla Kapasite Artırımı
+
+**Yazılım hazır. Artık her yeni node tam verimle çalışır.**
+
+### 3.1 Hangi Node Eklenebilir?
+
+| Kriter | Gereksinim | Neden |
+|--------|-----------|-------|
+| Bant genişliği | **2 Gbps / unmetered** | 720p'de ~700 viewer; throttle riski yok |
+| CPU | ≥ 4 çekirdek | SRTP/DTLS şifreleme yükü |
+| RAM | ≥ 8 GB | mediasoup worker havuzu |
+| Ağ | WireGuard peer olabilmeli | PipeTransport mesh üzerinden çalışır |
+| Referans | node1 (OVHcloud Limburg) | Kanıtlanmış spec |
+
+**Neden node3-tipi değil:**  
+33TB/ay bant genişliği cap → yoğun streaming'de throttle riski.  
+Production streaming için unmetered zorunlu.
+
+### 3.2 Kapasite Hesabı
+
+Her yeni node1-eşdeğeri PipeTransport sayesinde:
+
+| Node sayısı | 720p kapasitesi | 480p kapasitesi |
+|-------------|-----------------|-----------------|
+| 1 (mevcut) | ~700 viewer | ~2000 viewer |
+| 2 | ~1400 viewer | ~4000 viewer |
+| 3 | ~2100 viewer | ~6000 viewer |
+| N | ~N × 700 viewer | ~N × 2000 viewer |
+
+### 3.3 Yeni Node Deploy Adımları
+
+Faz 2 tamamlandıktan sonra node4 eklemek için:
+
+1. `deploy/scale/resources/node4/` oluştur (node1 temel alınarak)
+2. `bootstrap_node4.sh` — LiveKit yerine mediasoup + signaling server
+3. WireGuard mesh'e ekle (10.10.0.5)
+4. `LIVEKIT_NODES` yerine signaling server URL listesine ekle
+5. Prometheus scrape ekle (node3 prometheus.yml)
+6. `MirrorOrchestrator` yeni node'u otomatik tanır — kod değişikliği gerekmez
+
+---
+
+## Yol Haritası
 
 ```
-Şimdi (V1.3)        node4 hazır       node4 aktif        Gerekirse
-      │                  │                 │                   │
-      ▼                  ▼                 ▼                   ▼
-node1 tek node      node4 sipariş    Faz 1 tamamlandı    Faz 2 başlar
-500 max viewer      node1-eşdeğeri   Mirror Oda aktif    mediasoup
-(livekit.yaml)      OVHcloud 2Gbps   ~1400 viewer        PipeTransport
-                    WireGuard mesh'e  (node1+node4)       gerçek cascading
-                    eklenir           Flutter değişmez    ~N×700 viewer
+Şimdi           Faz 1           Faz 2           Faz 3
+   │            (4-5 gün)       (4-5 hafta)     (ihtiyaç halinde)
+   │               │               │               │
+   ▼               ▼               ▼               ▼
+Tek node       Yazılımsal      mediasoup       Yeni node'lar
+node1          iyileştirme     geçişi          (node4, node5...)
+500 viewer     750 viewer      PipeTransport   N × 700 viewer
+(livekit.yaml  (aynı donanım)  (aynı donanım)  (tam verimli)
+ hard limit)   multi-node      sıfır overhead  ölçekleme
+               kod hazır       Flutter yeni SDK
 ```
 
 ---
 
-### Kilometre Taşları
-
-**KT-0 (node4 hazır — önkoşul):**
-- [ ] node4 sipariş edildi (OVHcloud, 2Gbps/unmetered)
-- [ ] `bootstrap_node4.sh` oluşturuldu (node1 bootstrap temel alınarak)
-- [ ] WireGuard mesh'e eklendi (10.10.0.5)
-- [ ] LiveKit kuruldu ve konfigüre edildi
-- [ ] Prometheus scrape eklendi
+## Kilometre Taşları
 
 **KT-1 (Faz 1 tamamlandı):**
-- [ ] `stream_mirror_rooms` tablosu aktif
-- [ ] `MirrorOrchestrator` çalışıyor
-- [ ] `livekit.yaml` max_participants 700'e yükseltildi (node1 + node4)
-- [ ] Relay bot aktif (Egress veya FFmpeg)
-- [ ] Staging'de 2 node mirror testi geçti
-- [ ] Viewer count toplamı doğru gösteriliyor
-- [ ] Flutter'da hiçbir değişiklik yapılmadı
+- [ ] `livekit.yaml` max_participants 750'ye yükseltildi — node1'e deploy edildi
+- [ ] `stream_mirror_rooms` tablosu + alembic migration aktif
+- [ ] `MirrorOrchestrator` çalışıyor — tek node, multi-node hazır
+- [ ] `JoinStreamCommand` orchestrator kullanıyor
+- [ ] Webhook per-node viewer count aktif
+- [ ] Relay bot hazır (tetikleyici: 600+ viewer)
+- [ ] Flutter değişikliği yok — test edildi
+- [ ] Kod: `LIVEKIT_NODES` env var tanımlandı, boş bırakılınca mevcut node kullanılır
 
-**KT-2 (Faz 2 staging):**
+**KT-2 (Faz 2 — staging):**
 - [ ] mediasoup signaling server node3 staging'de çalışıyor
 - [ ] Flutter flutter_webrtc ile staging'e bağlanabiliyor
-- [ ] Bid/chat aynı şekilde çalışıyor
-- [ ] PipeTransport ile 2 node cascading test edildi
+- [ ] `sfu_backend=mediasoup` staging'de aktif
+- [ ] Bid/chat staging'de aynı şekilde çalışıyor
+- [ ] PipeTransport ile node1 ↔ node3 cascading test edildi (staging izin verdiği ölçüde)
 
-**KT-3 (Faz 2 production):**
+**KT-3 (Faz 2 — production):**
 - [ ] `sfu_backend=mediasoup` production'da aktif
-- [ ] N node PipeTransport cascading stabil
-- [ ] LiveKit servisleri opsiyonel olarak devre dışı bırakılabilir
-- [ ] Kapasite testi: hedef viewer sayısı simüle edildi
+- [ ] LiveKit servisleri standby'da (kaldırılmadı — geri dönüş için)
+- [ ] node1 tek başına mediasoup ile stabil çalışıyor
+
+**KT-4 (Faz 3 — ilk yeni node):**
+- [ ] node4 kuruldu (node1-eşdeğeri, 2Gbps/unmetered)
+- [ ] WireGuard mesh'e eklendi
+- [ ] mediasoup PipeTransport node1 ↔ node4 aktif
+- [ ] `MirrorOrchestrator` node4'ü otomatik kullanıyor
+- [ ] Kapasite testi: ~1400 viewer @ 720p
 
 ---
 
-## 6. Kararlar ve Gerekçeler
+## Kararlar ve Gerekçeler
 
 | Karar | Gerekçe |
 |-------|---------|
-| node3'ü production mirror olarak kullanmamak | 33TB/ay bant genişliği cap → throttle riski; staging LiveKit olarak kalır |
-| node2'yi LiveKit için kullanmamak | 1Gbps shared — video trafiği için yetersiz ve unreliable |
-| node4 için OVHcloud/2Gbps zorunluluğu | node1 ile aynı unmetered profil — tahmin edilebilir kapasite |
-| Faz 1'de LiveKit'i korumak | Flutter SDK hazır; mediasoup geçişi için henüz erken |
-| Feature flag ile geçiş | Production'da sıfır kesinti; geri dönüş tek satır |
-| Relay için Egress (tercih) / FFmpeg (fallback) | PipeTransport Faz 2'ye saklandı; Faz 1 daha basit tutuldu |
-| Flutter'da değişiklik yok (Faz 1) | Bid/chat zaten ayrık — risk sıfır |
-| mediasoup ISC lisansı | Ticari kullanım için tam özgür; LiveKit'in enterprise kısıtı yok |
-| Pion/Janus yerine mediasoup | En aktif topluluk; PipeTransport en iyi cascading desteği |
-| mediasoup geçişini ertelemek | 1500+ viewer eşiğine gelene kadar erken optimizasyon olur |
+| Faz sırası: kod → mediasoup → donanım | Donanımı mediasoup'tan önce eklemek relay overhead yaratır |
+| Faz 1'de donanım değişikliği yok | Yazılımsal dar boğazlar giderilmeden donanım eklemek verimsiz |
+| Faz 1 geriye dönük uyumlu | `LIVEKIT_NODES` boşsa mevcut davranış korunur — sıfır risk |
+| max_participants 500→750 | node1 donanım kapasitesine göre; hemen uygulanabilir |
+| mediasoup ISC lisansı | Ticari kullanım için tam özgür; LiveKit Enterprise kısıtı yok |
+| PipeTransport önce, donanım sonra | Her yeni node sıfır overhead ile havuza katılır |
+| node3/node2 production mirror'dan dışarıda | node3 bandwidth cap, node2 shared — unmetered zorunlu |
+| Flutter değişikliği Faz 2'de | Faz 1 risk-free; Flutter büyük değişiklik Faz 2'ye ertelendi |

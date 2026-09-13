@@ -157,7 +157,7 @@ Bundan sonra **tucibeyin** kullanıcısıyla bağlan ve ilgili node kurulumuna g
 
 ---
 
-## node1 (OVHcloud Frankfurt) — İlk Kurulum
+## node1 (OVHcloud Limburg) — İlk Kurulum
 
 **Ön koşul:** `/var/www/teqlif.com` repoya git clone edilmiş, `deploy/scale/V1.2/` mevcut.
 
