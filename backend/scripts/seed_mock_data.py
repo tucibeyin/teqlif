@@ -340,8 +340,8 @@ async def seed_clickhouse(
         await ch.command(ddl)
     print("  ✅ Tablolar hazır.")
 
-    def ts(dt: datetime) -> str:
-        return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    def utc(dt: datetime) -> datetime:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
     # listing'leri kategori bazında indexle
     pool_by_cat: dict[str, list[dict]] = {}
@@ -366,7 +366,7 @@ async def seed_clickhouse(
                 dwell = random.choice([random.randint(4000, 15000), random.randint(200, 1500)])
             slot = random.randint(0, 20)
             fa_rows.append([
-                ts(recent_date(7)), str(uid), str(item["id"]), event,
+                utc(recent_date(7)), str(uid), str(item["id"]), event,
                 dwell, "listing", slot, cat,
                 item.get("condition", ""), item.get("subcategory", ""),
             ])
@@ -396,7 +396,7 @@ async def seed_clickhouse(
             dur  = round(random.uniform(30.0, 180.0), 1)
             ue_rows.append([
                 uid, item["id"], "listing", "detail_dwell",
-                None, dur, "", ts(recent_date(14)), item.get("subcategory", ""),
+                None, dur, "", utc(recent_date(14)), item.get("subcategory", ""),
             ])
         # bid_hesitation — fiyat gerçek listing fiyatından türetilir
         for _ in range(random.randint(1, 5)):
@@ -409,7 +409,7 @@ async def seed_clickhouse(
             bid_p = round(price * random.uniform(0.7, 1.1), 2)
             ue_rows.append([
                 uid, item["id"], "listing", "bid_hesitation",
-                bid_p, None, "", ts(recent_date(14)), item.get("subcategory", ""),
+                bid_p, None, "", utc(recent_date(14)), item.get("subcategory", ""),
             ])
 
     if ue_rows:
@@ -434,7 +434,7 @@ async def seed_clickhouse(
             subcats = SUBCATEGORY_MAP.get(cat, [])
             subcat  = random.choice(subcats) if subcats else ""
             se_rows.append([
-                ts(recent_date(30)), uid, q, cat,
+                utc(recent_date(30)), uid, q, cat,
                 random.randint(0, 200),
                 random.choice(["browse", "buy", "compare", ""]),
                 subcat,
@@ -470,7 +470,7 @@ async def seed_clickhouse(
                 sle_rows.append([
                     uid, stream.id, item["id"], event, dwell,
                     cat, cat, item.get("condition", ""),
-                    seen, slot_i, session_id, ts(random_date(30)),
+                    seen, slot_i, session_id, utc(random_date(30)),
                     item.get("subcategory", ""), item.get("subcategory", ""),
                 ])
 
@@ -495,8 +495,8 @@ async def seed_clickhouse(
         item   = listing_id_to_item.get(auction.listing_id, {})
         cat    = item.get("category", "other")
         vcount = random.randint(10, 200)
-        t1     = ts(auction.started_at or random_date(60))
-        t2     = ts(auction.ended_at   or random_date(60))
+        t1     = utc(auction.started_at or random_date(60))
+        t2     = utc(auction.ended_at   or random_date(60))
         dse_rows.append([
             "sale_started", auction.id, auction.stream_id, 0,
             auction.winner_id, None, auction.listing_id, cat,
