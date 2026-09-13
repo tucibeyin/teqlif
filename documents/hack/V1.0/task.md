@@ -792,7 +792,7 @@ dizinlerine yazabilmeli.
 | TASK-H3 | rsync StrictHostKeyChecking | 1 | ✅ Tamamlandı |
 | TASK-H4 | .gitignore .env.* exception kaldır | 2 | ✅ Tamamlandı |
 | TASK-M3 | wallet.py Pydantic + bakiye kontrolü | 2 | ✅ Tamamlandı |
-| TASK-M1 | JWT log truncation | 2 | ⬜ Bekliyor |
+| TASK-M1 | JWT log truncation | 2 | ✅ Tamamlandı |
 | TASK-M2 | Analytics user_id injection | 2 | ⬜ Bekliyor |
 | TASK-M5 | MinIO bind adresi | 2 | ⬜ Bekliyor |
 | TASK-M6 | nginx CSP header | 3 | ⬜ Bekliyor |

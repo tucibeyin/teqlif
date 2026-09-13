@@ -165,7 +165,7 @@ async def get_current_user(
     user_id = decode_token(raw_token)
     if not user_id:
         from app.core.logger import get_logger
-        get_logger(__name__).error(f"[AUTH] get_current_user 401: Geçersiz token (raw_token={raw_token})")
+        get_logger(__name__).error(f"[AUTH] get_current_user 401: Geçersiz token (raw_token={raw_token[:10]}...)")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz token")
 
     user = await _fetch_and_cache_user(db, user_id)
