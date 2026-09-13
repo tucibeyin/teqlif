@@ -32,6 +32,32 @@ from app.models.search_alert import SearchAlert
 from app.models.referral import Referral
 
 
+async def cleanup_minio() -> None:
+    print("🪣  MinIO temizleniyor (staging bucket'ları)...")
+    try:
+        from minio import Minio
+        from minio.error import S3Error
+        from app.config import settings
+        client = Minio(
+            settings.minio_endpoint,
+            access_key=settings.minio_access_key,
+            secret_key=settings.minio_secret_key,
+            secure=settings.minio_secure,
+        )
+        for bucket in [settings.minio_bucket, settings.minio_dm_bucket]:
+            if not client.bucket_exists(bucket):
+                print(f"  ⚠️  Bucket '{bucket}' yok, atlanıyor.")
+                continue
+            objects = client.list_objects(bucket, recursive=True)
+            deleted = 0
+            for obj in objects:
+                client.remove_object(bucket, obj.object_name)
+                deleted += 1
+            print(f"  ✅ '{bucket}': {deleted} nesne silindi.")
+    except Exception as e:
+        print(f"  ⚠️  MinIO temizlenemedi, atlanıyor: {e}")
+
+
 async def cleanup_redis() -> None:
     print("🔴 Redis temizleniyor (FLUSHDB — staging)...")
     try:
@@ -193,7 +219,8 @@ async def cleanup():
 
     await cleanup_clickhouse(user_ids)
     await cleanup_redis()
-    print("✅ Temizlik tamamlandı — PostgreSQL + ClickHouse + Redis boşaltıldı.")
+    await cleanup_minio()
+    print("✅ Temizlik tamamlandı — PostgreSQL + ClickHouse + Redis + MinIO boşaltıldı.")
 
 
 if __name__ == "__main__":
