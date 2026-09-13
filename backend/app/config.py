@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     minio_dm_external_url: str = ""      # ör. "minio.teqlif.com" — presign için dışarıdan erişilebilir URL
     minio_secure: bool = False
 
+    # ClickHouse analytics
+    clickhouse_host: str = "localhost"
+    clickhouse_port: int = 8123
+    clickhouse_db: str = "default"
+
     # APNS VoIP Push Ayarları
     # Token-based auth (.p8) — süresi dolmaz, tercih edilen yöntem.
     # apns_key_path + apns_key_id + apns_team_id üçü set edilirse token-based kullanılır.

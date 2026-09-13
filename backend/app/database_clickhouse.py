@@ -189,9 +189,11 @@ async def get_clickhouse_client() -> AsyncClient | None:
         return None
     if _client is None:
         try:
+            from app.config import settings as _settings
             _client = await clickhouse_connect.get_async_client(
-                host="localhost",
-                port=8123,
+                host=_settings.clickhouse_host,
+                port=_settings.clickhouse_port,
+                database=_settings.clickhouse_db,
                 connect_timeout=5,
                 send_receive_timeout=30,
             )

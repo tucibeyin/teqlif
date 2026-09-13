@@ -40,7 +40,8 @@ sudo apt install -y \
   nginx redis-server \
   python3.13-venv \
   certbot python3-certbot-nginx \
-  fail2ban apache2-utils rsync
+  fail2ban apache2-utils rsync \
+  ffmpeg
 
 # ── PostgreSQL 17 (PGDG repo) ────────────────────────────────────────────────
 echo "==> PostgreSQL 17 (PGDG)..."
