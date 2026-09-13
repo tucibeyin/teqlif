@@ -248,11 +248,18 @@ sudo tee /etc/motd > /dev/null << 'MOTD'
 =========================================
 MOTD
 
-# ── backend/.env temizle ──────────────────────────────────────────────────────
+# ── backend/.env kaldır ───────────────────────────────────────────────────────
 # Uygulama değerlerini yalnızca systemd EnvironmentFile'dan (deploy/.env.production) okur.
-# backend/.env dolu kalırsa python-dotenv @ karakterinde URL'leri keser — boş olmalı.
-echo "==> backend/.env temizleniyor (systemd EnvironmentFile tek kaynak)..."
-> "$REPO/backend/.env"
+# backend/.env varsa python-dotenv @ karakterinde URL'leri keser; pydantic dosya yoksa atlar.
+echo "==> backend/.env kaldırılıyor (systemd EnvironmentFile tek kaynak)..."
+rm -f "$REPO/backend/.env"
+
+# ── TEQLIF_ENV_FILE sistem genelinde tanımla ──────────────────────────────────
+# Scriptler (seed, backfill, vb.) TEQLIF_ENV_FILE ile doğru env dosyasını bulur.
+# /etc/environment PAM ile her oturumda yüklenir — reboot'tan etkilenmez.
+echo "==> TEQLIF_ENV_FILE /etc/environment'a ekleniyor..."
+grep -q "^TEQLIF_ENV_FILE=" /etc/environment \
+  || echo "TEQLIF_ENV_FILE=$NODE1/.env.production" | sudo tee -a /etc/environment > /dev/null
 
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."

@@ -402,6 +402,14 @@ echo ""
 echo "==> teqlif-restart symlink..."
 sudo ln -sf "$REPO/deploy/scale/V1.3/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
 
+# ── TEQLIF_ENV_FILE sistem genelinde tanımla ──────────────────────────────────
+# Scriptler (seed, backfill, vb.) TEQLIF_ENV_FILE ile doğru env dosyasını bulur.
+# node3'te staging app env'i (.env.staging) kullanılır — DATABASE_URL, REDIS_URL buradan.
+# /etc/environment PAM ile her oturumda yüklenir — reboot'tan etkilenmez.
+echo "==> TEQLIF_ENV_FILE /etc/environment'a ekleniyor..."
+grep -q "^TEQLIF_ENV_FILE=" /etc/environment \
+  || echo "TEQLIF_ENV_FILE=$NODE3/.env.staging" | sudo tee -a /etc/environment > /dev/null
+
 echo ""
 echo "Bootstrap tamamlandi."
 echo ""
@@ -417,11 +425,7 @@ echo "     nano $NODE3/.env.production   (AI proxy + monitoring)"
 echo "     nano $NODE3/.env.staging       (staging uygulama)"
 echo "     # MinIO credentials: .env.staging içinde MINIO_ROOT_USER/PASSWORD satırları"
 echo ""
-echo "  3. .env dosyalarini /var/www/teqlif.com/backend/'a kopyala:"
-echo "     cp $NODE3/.env.production /var/www/teqlif.com/backend/.env"
-echo "     cp $NODE3/.env.staging    /var/www/teqlif.com/backend/.env.staging"
-echo ""
-echo "  4. PostgreSQL — DB ve kullanici olustur:"
+echo "  3. PostgreSQL — DB ve kullanici olustur:"
 echo "     DB_PASS=\$(grep '^DATABASE_URL=' $NODE3/.env.staging | grep -oP '(?<=:)[^@]+(?=@)' | tail -1)"
 echo "     sudo -u postgres psql <<SQL"
 echo "     CREATE USER teqlif_staging WITH PASSWORD '\$DB_PASS';"
@@ -431,12 +435,12 @@ echo "     CREATE EXTENSION IF NOT EXISTS vector;"
 echo "     SQL"
 echo "     (DATABASE_URL .env.staging'de zaten dolu olmali: postgresql+asyncpg://teqlif_staging:<sifre>@127.0.0.1:5432/teqlif_staging)"
 echo ""
-echo "  5. SSL sertifikası al (nginx calisiyor olmali):"
+echo "  4. SSL sertifikası al (nginx calisiyor olmali):"
 echo "     sudo nginx -t && sudo systemctl start nginx"
 echo "     sudo certbot --nginx -d uploads-staging.teqlif.com"
 echo "     sudo systemctl reload nginx"
 echo ""
-echo "  6. MinIO bucket'lari olustur (MinIO calisiyor olmali, .env.staging dolu degilse):"
+echo "  5. MinIO bucket'lari olustur (MinIO calisiyor olmali, .env.staging dolu degilse):"
 echo "     mc alias set node3-staging http://localhost:9010 <user> <password>"
 echo "     mc mb node3-staging/teqlif-staging"
 echo "     mc mb node3-staging/teqlif-dm-staging"

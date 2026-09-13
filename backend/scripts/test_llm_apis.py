@@ -19,7 +19,7 @@ sys.path.insert(0, parent)
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(parent, ".env"))
+    load_dotenv(os.environ.get("TEQLIF_ENV_FILE", ""))
 except ImportError:
     pass  # dotenv yoksa os.environ'dan okur
 
@@ -399,7 +399,7 @@ async def main(run_groq: bool, run_gemini: bool) -> None:
         groq_key = os.environ.get("GROQ_API_KEY", "")
         if not groq_key:
             header("GROQ")
-            fail("GROQ_API_KEY bulunamadı — .env dosyasını kontrol et")
+            fail("GROQ_API_KEY bulunamadı — TEQLIF_ENV_FILE değişkenini kontrol et")
             results["Groq"] = False
         else:
             results["Groq"] = await test_groq(groq_key)
@@ -409,7 +409,7 @@ async def main(run_groq: bool, run_gemini: bool) -> None:
         gemini_key = os.environ.get("GEMINI_API_KEY", "")
         if not gemini_key:
             header("GEMINI")
-            fail("GEMINI_API_KEY bulunamadı — .env dosyasını kontrol et")
+            fail("GEMINI_API_KEY bulunamadı — TEQLIF_ENV_FILE değişkenini kontrol et")
             results["Gemini"] = False
         else:
             results["Gemini"] = await test_gemini(gemini_key)

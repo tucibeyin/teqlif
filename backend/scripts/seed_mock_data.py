@@ -11,7 +11,7 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(backend_dir)
 
 from dotenv import load_dotenv
-load_dotenv(os.path.join(backend_dir, ".env"))
+load_dotenv(os.environ.get("TEQLIF_ENV_FILE", ""))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext

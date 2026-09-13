@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(backend_dir)
-_env_file = os.environ.get("TEQLIF_ENV_FILE") or os.path.join(backend_dir, ".env")
+_env_file = os.environ.get("TEQLIF_ENV_FILE", "")
 load_dotenv(_env_file, override=False)
 
 import sqlalchemy as sa

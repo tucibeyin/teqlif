@@ -7,7 +7,7 @@ Kullanım:
 Gereksinimler:
   pip install requests psycopg2-binary redis python-dotenv
 
-DB ve Redis bağlantıları backend/.env dosyasından otomatik okunur.
+DB ve Redis bağlantıları TEQLIF_ENV_FILE ortam değişkeninden okunur.
 """
 
 import os
@@ -19,10 +19,7 @@ import psycopg2
 import redis as redis_lib
 from dotenv import load_dotenv
 
-# backend/.env'i yükle
-_script_dir = os.path.dirname(os.path.abspath(__file__))
-_backend_dir = os.path.dirname(_script_dir)
-load_dotenv(os.path.join(_backend_dir, ".env"))
+load_dotenv(os.environ.get("TEQLIF_ENV_FILE", ""))
 
 def _db_url_from_env():
     url = os.environ.get("DATABASE_URL", "")
@@ -435,8 +432,8 @@ def main():
     print(f"\n{'='*60}")
     print("  Teqlif Privacy & Block — Otomatik Test Scripti")
     print(f"  Hedef : {base_url}")
-    print(f"  DB    : {'✓ .env'if db_url else '✗ bulunamadı'}")
-    print(f"  Redis : {'✓ .env' if redis_url else '✗ bulunamadı'}")
+    print(f"  DB    : {'✓ env' if db_url else '✗ bulunamadı'}")
+    print(f"  Redis : {'✓ env' if redis_url else '✗ bulunamadı'}")
     print(f"{'='*60}")
 
     print("\n[Giriş yapılıyor...]")

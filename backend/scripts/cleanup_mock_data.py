@@ -5,8 +5,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(backend_dir, ".env"))
+load_dotenv(os.environ.get("TEQLIF_ENV_FILE", ""))
 
 from sqlalchemy import delete, select
 from app.database import AsyncSessionLocal

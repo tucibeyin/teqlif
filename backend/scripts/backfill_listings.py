@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(backend_dir)
 
-# Explicitly load .env from the backend directory
-load_dotenv(os.path.join(backend_dir, ".env"))
+load_dotenv(os.environ.get("TEQLIF_ENV_FILE", ""))
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload

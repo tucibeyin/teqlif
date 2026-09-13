@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     apns_use_sandbox: bool = False
 
     class Config:
-        env_file = os.environ.get("TEQLIF_ENV_FILE", ".env")
+        env_file = os.environ.get("TEQLIF_ENV_FILE", "")
         extra = "ignore"
 
 
