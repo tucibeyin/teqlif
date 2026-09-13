@@ -793,7 +793,7 @@ dizinlerine yazabilmeli.
 | TASK-H4 | .gitignore .env.* exception kaldır | 2 | ✅ Tamamlandı |
 | TASK-M3 | wallet.py Pydantic + bakiye kontrolü | 2 | ✅ Tamamlandı |
 | TASK-M1 | JWT log truncation | 2 | ✅ Tamamlandı |
-| TASK-M2 | Analytics user_id injection | 2 | ⬜ Bekliyor |
+| TASK-M2 | Analytics user_id injection | 2 | ✅ Tamamlandı |
 | TASK-M5 | MinIO bind adresi | 2 | ⬜ Bekliyor |
 | TASK-M6 | nginx CSP header | 3 | ⬜ Bekliyor |
 | TASK-M7 | alertmanager root ExecStartPre kaldır | 3 | ⬜ Bekliyor |

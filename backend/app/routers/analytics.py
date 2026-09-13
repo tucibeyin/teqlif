@@ -41,7 +41,6 @@ class InteractionPayload(BaseModel):
     duration_seconds: Optional[float] = None
     price_point: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
-    user_id: Optional[int] = None  # mobil fallback — JWT expire olduğunda kullanılır
 
 async def _save_event_async(data: AnalyticsEventCreate, user_id: int | None, ip_address: str | None, db: AsyncSession):
     try:
@@ -105,15 +104,14 @@ async def track_interaction(
     DB'ye yazmaz — Redis kuyruğuna (interaction_queue) ekler.
     Worker periyodik olarak kuyruğu boşaltır ve bulk-insert yapar.
     """
-    # JWT decode: sunucu imzası güvenilir → öncelikli kaynak
-    # Fallback: mobil istemcinin body'ye gömdüğü user_id (JWT expire durumu)
-    user_id = payload.user_id  # fallback
+    # user_id yalnızca JWT'den türetilir — body'den asla alınmaz
+    user_id = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         try:
-            user_id = decode_token(auth_header.split(" ")[1])  # JWT her zaman kazanır
+            user_id = decode_token(auth_header.split(" ")[1])
         except Exception:
-            pass  # fallback (payload.user_id) korunur
+            pass
 
     from datetime import datetime, timezone
     record = {
