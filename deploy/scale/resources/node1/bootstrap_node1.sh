@@ -248,6 +248,12 @@ sudo tee /etc/motd > /dev/null << 'MOTD'
 =========================================
 MOTD
 
+# ── backend/.env temizle ──────────────────────────────────────────────────────
+# Uygulama değerlerini yalnızca systemd EnvironmentFile'dan (deploy/.env.production) okur.
+# backend/.env dolu kalırsa python-dotenv @ karakterinde URL'leri keser — boş olmalı.
+echo "==> backend/.env temizleniyor (systemd EnvironmentFile tek kaynak)..."
+> "$REPO/backend/.env"
+
 # ── .env izinleri ─────────────────────────────────────────────────────────────
 echo "==> .env izinleri..."
 chmod 600 "$NODE1/.env.production"
