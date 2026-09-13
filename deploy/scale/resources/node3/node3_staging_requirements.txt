@@ -48,3 +48,4 @@ numpy>=1.26.0
 Babel>=2.14.0
 
 aioapns==3.2
+faker>=24.0.0
