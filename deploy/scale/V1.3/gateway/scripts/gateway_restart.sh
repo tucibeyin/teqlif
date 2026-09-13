@@ -39,6 +39,12 @@ echo ""
 
 # ── 2/3 nginx reload ──────────────────────────────────────────────────────────
 echo -e "${B}[2/3] nginx reload${R}"
+NGINX_SRC="$REPO_DIR/deploy/scale/V1.3/gateway/nginx/teqlif.conf"
+NGINX_DST="/etc/nginx/sites-available/teqlif.conf"
+if [[ -f "$NGINX_SRC" ]]; then
+    cp "$NGINX_SRC" "$NGINX_DST"
+    echo -e "  ${D}nginx config güncellendi: $NGINX_DST${R}"
+fi
 echo -ne "  ${D}Config test (nginx -t)...${R} "
 if nginx -t 2>/dev/null; then
     echo -e "${G}✓${R}"
