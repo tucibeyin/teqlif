@@ -124,10 +124,10 @@ class FraudDetectionService:
         )
 
         if shill_score >= _SHILL_THRESHOLD_MUTE:
-            from app.services.moderation_service import ModerationService
-            await ModerationService(self.session).system_mute(
-                stream_id, user.id, reason="shill_bidding"
-            )
+            # UX Düzeltmesi: system_mute (kalıcı ban) ATMIYORUZ!
+            # Kalıcı ban atarsak kullanıcı bir daha teklif veremez ve Flutter sadece "Susturuldunuz" mesajı gösterir.
+            # Bunun yerine sadece MUTE kararını dönüyoruz, auction_commands "BID_BLOCKED_SUSPICIOUS" fırlatıp
+            # Flutter'da "Lütfen Hesabınızı Doğrulayın" modalını tetikleyecek.
             asyncio.create_task(track_user_event(
                 event_type="bid_fraud_mute",
                 item_id=stream_id,
