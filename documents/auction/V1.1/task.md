@@ -26,7 +26,7 @@ Bu dosya, `plan.md` ve `findings.md` belgelerindeki kararların Clean Architectu
 - `auction_commands.py` içerisindeki Troll teklif limitlerinin (çarpanlar ve telefon onay kısıtları) bu servise taşınması (`validate_troll_bid` metodu).
 - `place_bid` fonksiyonunun bu servisi çağıracak şekilde sadeleştirilmesi.
 
-## `[ ]` Adım 4: Clean Architecture - AuctionRedisRepository (Dependency Injection)
+## `[x]` Adım 4: Clean Architecture - AuctionRedisRepository (Dependency Injection) (Completed: 15:40)
 - `app/repositories/auction_redis_repo.py` sınıfının oluşturulması.
 - `get_redis()`, Lua Script tetiklemeleri ve Mute kontrollerinin bu repository arkasına gizlenmesi.
 - `AuctionCommands` sınıfının bu repository'i kullanarak Redis'ten izole edilmesi (Mock/Test edilebilir hale getirilmesi).

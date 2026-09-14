@@ -53,6 +53,7 @@ from app.services.moderation_service import mute_key
 from app.services.notification_service import push_notification
 from app.services.fraud_detection_service import FraudDetectionService, _log_fraud_attempt
 from app.services.bid_validation_service import BidValidationService
+from app.repositories.auction_redis_repo import AuctionRedisRepository
 
 _DM_CHANNEL = "dm_broadcast"
 
@@ -112,121 +113,6 @@ async def get_bids(stream_id: int, db: AsyncSession, limit: int = 50) -> list:
     return result
 
 
-# ── Lua scriptleri ───────────────────────────────────────────────────────────
-
-# Sadece okuma — Redis'te hiçbir şey değiştirmez.
-# DB commit'ten ÖNCE fiyat/durum kontrolü için kullanılır.
-_VALIDATE_BID_SCRIPT = """
-local key = KEYS[1]
-local amount = tonumber(ARGV[1])
-local status = redis.call('hget', key, 'status')
-if status ~= 'active' then return {0, 'not_active'} end
-local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
-local bid_count = tonumber(redis.call('hget', key, 'bid_count')) or 0
-
-if bid_count == 0 then
-    if amount < current then return {0, 'too_low'} end
-else
-    local increment = 1
-    if current >= 1000 then increment = 50
-    elseif current >= 500 then increment = 25
-    elseif current >= 100 then increment = 10 end
-
-    if amount < current + increment then return {0, 'too_low'} end
-end
-
-return {1, tostring(current)}
-"""
-
-# DB commit başarılı olduktan SONRA Redis'i günceller.
-# Re-validate içerir: DB ile Redis arasındaki küçük zaman penceresinde
-# başka bir teklif geldiyse güvenli şekilde reddeder.
-_BID_SCRIPT = """
-local key = KEYS[1]
-local amount = tonumber(ARGV[1])
-local bidder_id = ARGV[2]
-local bidder_name = ARGV[3]
-local status = redis.call('hget', key, 'status')
-if status ~= 'active' then return {0, 'not_active'} end
-
-local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
-local bid_count = tonumber(redis.call('hget', key, 'bid_count')) or 0
-
-if bid_count == 0 then
-    if amount < current then return {0, 'too_low'} end
-else
-    local increment = 1
-    if current >= 1000 then increment = 50
-    elseif current >= 500 then increment = 25
-    elseif current >= 100 then increment = 10 end
-
-    if amount < current + increment then return {0, 'too_low'} end
-end
-
-redis.call('hset', key,
-    'current_bid', tostring(amount),
-    'current_bidder_id', bidder_id,
-    'current_bidder_name', bidder_name)
-redis.call('hincrby', key, 'bid_count', 1)
-return {1, tostring(amount)}
-"""
-
-# Viewer isteği: active → buy_it_now_pending (atomik)
-_BUY_IT_NOW_REQUEST_SCRIPT = """
-local key = KEYS[1]
-local status = redis.call('hget', key, 'status')
-if status ~= 'active' and status ~= 'paused' then
-    return {0, 'not_active'}
-end
-local bin_raw = redis.call('hget', key, 'buy_it_now_price')
-if not bin_raw or bin_raw == '' then
-    return {0, 'no_bin_price'}
-end
-local bin = tonumber(bin_raw)
-local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
-if current >= bin then
-    return {0, 'bid_exceeds_bin'}
-end
-redis.call('hset', key, 'pre_pending_status', status)
-redis.call('hset', key, 'status', 'buy_it_now_pending')
-redis.call('hset', key, 'bin_buyer_id', ARGV[1])
-redis.call('hset', key, 'bin_buyer_username', ARGV[2])
-return {1, bin_raw}
-"""
-
-# Host kabulü: buy_it_now_pending → buy_it_now_locked (atomik)
-_BUY_IT_NOW_ACCEPT_SCRIPT = """
-local key = KEYS[1]
-local status = redis.call('hget', key, 'status')
-if status ~= 'buy_it_now_pending' then
-    return {0, 'not_pending'}
-end
-local bin_raw = redis.call('hget', key, 'buy_it_now_price')
-if not bin_raw or bin_raw == '' then
-    return {0, 'no_bin_price'}
-end
-local buyer_id = redis.call('hget', key, 'bin_buyer_id') or ''
-local buyer_username = redis.call('hget', key, 'bin_buyer_username') or ''
-redis.call('hset', key, 'status', 'buy_it_now_locked')
-return {1, bin_raw, buyer_id, buyer_username}
-"""
-
-# Host reddi: buy_it_now_pending → önceki status'e dön (atomik)
-_BUY_IT_NOW_REJECT_SCRIPT = """
-local key = KEYS[1]
-local status = redis.call('hget', key, 'status')
-if status ~= 'buy_it_now_pending' then
-    return {0, 'not_pending'}
-end
-local prev = redis.call('hget', key, 'pre_pending_status') or 'active'
-local buyer_username = redis.call('hget', key, 'bin_buyer_username') or ''
-local buyer_id = redis.call('hget', key, 'bin_buyer_id') or ''
-redis.call('hset', key, 'status', prev)
-redis.call('hdel', key, 'bin_buyer_id', 'bin_buyer_username', 'pre_pending_status')
-return {1, prev, buyer_username, buyer_id}
-"""
-
-
 # ── Servis sınıfı ────────────────────────────────────────────────────────────
 class AuctionCommands:
     """
@@ -239,20 +125,18 @@ class AuctionCommands:
 
     def __init__(self, uow):
         self.uow = uow
+        self.redis_repo = AuctionRedisRepository()
 
     # ── Yardımcı: stream & host doğrulama ───────────────────────────────────
     async def _require_host(self, stream_id: int, user: User) -> LiveStream:
-        from app.services.moderation_service import mod_key
-        from app.utils.redis_client import get_redis
-
+        
         result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
             raise NotFoundException(code="STREAM_NOT_FOUND")
         if stream.host_id != user.id:
             # Moderatör de bu işlemi yapabilir
-            redis = await get_redis()
-            is_mod = await redis.sismember(mod_key(stream_id), str(user.id))
+            is_mod = await self.redis_repo.is_user_mod(stream_id, user.id)
             if not is_mod:
                 raise ForbiddenException(code="HOST_OR_MOD_REQUIRED")
         if not stream.is_live:
@@ -265,10 +149,7 @@ class AuctionCommands:
     async def start(self, stream_id: int, data: AuctionStart, user: User, host_ip: str | None = None) -> dict:
         from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
         await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        existing_status = await redis.hget(key, "status")
+        existing_status = await self.redis_repo.get_status(stream_id)
         if existing_status == "active":
             raise BadRequestException(code="AUCTION_ALREADY_ACTIVE")
 
@@ -286,21 +167,17 @@ class AuctionCommands:
             listing_id_val = None
 
         bin_price = float(data.buy_it_now_price) if data.buy_it_now_price else None
-        await redis.hset(key, mapping={
+        await self.redis_repo.set_state(stream_id, {
             "status": "active",
-            "item_name": item_name,
-            "start_price": str(start_price),
-            "buy_it_now_price": str(bin_price) if bin_price else "",
-            "current_bid": str(start_price),
-            "current_bidder_id": "",
+            "item_name": data.item_name,
+            "start_price": data.start_price,
+            "buy_it_now_price": data.buy_it_now_price,
+            "current_bid": data.start_price or 0,
             "current_bidder_name": "",
-            "bid_count": "0",
-            "host_id": str(user.id),
+            "bid_count": 0,
             "host_ip": host_ip or "",
-            "stream_id": str(stream_id),
-            "listing_id": str(listing_id_val) if listing_id_val else "",
+            "listing_id": data.listing_id or "",
         })
-        await redis.expire(key, 24 * 3600)
 
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
@@ -314,13 +191,9 @@ class AuctionCommands:
     async def pause(self, stream_id: int, user: User) -> dict:
         from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
         await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        if await redis.hget(key, "status") != "active":
+        if await self.redis_repo.get_status(stream_id) != "active":
             raise BadRequestException(code="AUCTION_NOT_ACTIVE")
-
-        await redis.hset(key, "status", "paused")
+        await self.redis_repo.set_status(stream_id, "paused")
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
@@ -339,13 +212,9 @@ class AuctionCommands:
     async def resume(self, stream_id: int, user: User) -> dict:
         from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
         await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        if await redis.hget(key, "status") != "paused":
+        if await self.redis_repo.get_status(stream_id) != "paused":
             raise BadRequestException(code="AUCTION_NOT_PAUSED")
-
-        await redis.hset(key, "status", "active")
+        await self.redis_repo.set_status(stream_id, "active")
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
@@ -363,10 +232,7 @@ class AuctionCommands:
     async def end_auction(
         self, stream_id: int, user: User, proof_image_url: Optional[str] = None, system_end: bool = False
     ):
-        from app.utils.redis_client import get_redis
-        redis = await get_redis()
-        key = auction_key(stream_id)
-        data = await redis.hgetall(key)
+        data = await self.redis_repo.get_state(stream_id)
         
         if not data:
             if system_end:
@@ -416,11 +282,8 @@ class AuctionCommands:
                 raise DatabaseException(code="AUCTION_RESULT_FAILED")
 
         # Kazananlar listesini Redis'ten al, ardından key'leri temizle
-        _bidder_set_key = f"auction:bidders:{stream_id}"
-        _raw_bidders = await redis.smembers(_bidder_set_key)
+        _raw_bidders = await self.redis_repo.delete_auction(stream_id)
         _bidder_ids = [int(x) for x in _raw_bidders] if _raw_bidders else []
-        await redis.delete(_bidder_set_key)
-        await redis.delete(key)
 
         if bid_count > 0:
             from app.database_clickhouse import track_user_event
@@ -482,14 +345,12 @@ class AuctionCommands:
         if stream and stream.host_id == user.id:
             raise ForbiddenException(code="HOST_CANNOT_BID")
 
-        redis = await get_redis()
-
         # Mute kontrolü
-        if await redis.sismember(mute_key(stream_id), str(user.id)):
+        if await self.redis_repo.is_user_muted(stream_id, user.id):
             raise ForbiddenException(code="BID_BLOCKED_MUTE")
 
         # Önceki teklif sahibini kaydet (outbid bildirimi için)
-        prev_data = await redis.hgetall(auction_key(stream_id))
+        prev_data = await self.redis_repo.get_state(stream_id)
         prev_bidder_id_str = prev_data.get("current_bidder_id", "")
         prev_item_name = prev_data.get("item_name", "")
 
@@ -506,8 +367,7 @@ class AuctionCommands:
         await BidValidationService.validate_troll_bid(stream_id, user, float(data.amount), current_bid)
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)
-        val = await redis.eval(_VALIDATE_BID_SCRIPT, 1, auction_key(stream_id), str(data.amount))
-        ok, msg = int(val[0]), val[1]
+        ok, msg = await self.redis_repo.validate_bid(stream_id, float(data.amount))
         if ok == 0:
             if msg == "not_active":
                 raise BadRequestException(code="AUCTION_NOT_ACTIVE")
@@ -532,16 +392,10 @@ class AuctionCommands:
             capture_exception(exc)
             raise DatabaseException(code="BID_SAVE_FAILED")
 
-        bidder_key = f"auction:bidders:{stream_id}"
-        await redis.sadd(bidder_key, str(user.id))
-        await redis.expire(bidder_key, 86400)  # 24 saat — auction sonunda da silinir
+        await self.redis_repo.add_bidder(stream_id, user.id)  # 24 saat — auction sonunda da silinir
 
         # Redis atomik güncelle (re-validate + update)
-        result = await redis.eval(
-            _BID_SCRIPT, 1, auction_key(stream_id),
-            str(data.amount), str(user.id), user.username,
-        )
-        ok, msg = int(result[0]), result[1]
+        ok, msg = await self.redis_repo.execute_bid(stream_id, float(data.amount), user.id, user.username)
         if ok == 0:
             # Nadir race condition: DB commit ile Redis update arasında başka bir
             # teklif geldi. DB kaydı audit trail olarak kalır, publish yapılmaz.
@@ -635,22 +489,14 @@ class AuctionCommands:
 
         from app.core.exceptions import TooManyRequestsException
         
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
         # DoS Koruması: Önceki talebi reddedildiyse 60 saniyelik cooldown bloğu.
-        cooldown_key = f"bin_cooldown:{stream_id}:{user.id}"
-        if await redis.get(cooldown_key):
+        if await self.redis_repo.has_cooldown(stream_id, user.id):
             raise TooManyRequestsException(code="BUY_NOW_REJECTED_COOLDOWN")
 
-        if await redis.sismember(mute_key(stream_id), str(user.id)):
+        if await self.redis_repo.is_user_muted(stream_id, user.id):
             raise ForbiddenException(code="STREAM_MUTED_PURCHASE")
 
-        val = await redis.eval(
-            _BUY_IT_NOW_REQUEST_SCRIPT, 1, key,
-            str(user.id), user.username,
-        )
-        ok, msg = int(val[0]), val[1]
+        ok, msg = await self.redis_repo.request_buy_it_now(stream_id, user.id, user.username)
         if ok == 0:
             if msg == "not_active":
                 raise BadRequestException(code="AUCTION_NOT_ACTIVE")
@@ -661,7 +507,7 @@ class AuctionCommands:
             raise BadRequestException(code="BUY_NOW_SEND_FAILED")
 
         bin_price = float(msg)
-        redis_data = await redis.hgetall(key)
+        redis_data = await self.redis_repo.get_state(stream_id)
         item_name = redis_data.get("item_name", "")
 
         state = await GetAuctionStateQuery().execute(stream_id)
@@ -682,31 +528,25 @@ class AuctionCommands:
     # ── Hemen Al Kabul ───────────────────────────────────────────────────────
     async def accept_buy_it_now(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
         await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
         
         logger.info(f"[DEBUG_PROOF] accept_buy_it_now called for stream {stream_id}. proof_image_url={proof_image_url}")
 
-        val = await redis.eval(_BUY_IT_NOW_ACCEPT_SCRIPT, 1, key)
-        ok = int(val[0])
+        ok, msg, buyer_id_str, buyer_username = await self.redis_repo.accept_buy_it_now(stream_id)
         if ok == 0:
-            msg = val[1]
             if msg == "not_pending":
                 raise BadRequestException(code="NO_PENDING_BUY_NOW")
             if msg == "no_bin_price":
                 raise BadRequestException(code="BUY_NOW_UNAVAILABLE")
             raise BadRequestException(code="BUY_NOW_ACCEPT_FAILED")
 
-        bin_price = float(val[1])
-        buyer_id_str = val[2]
-        buyer_username = val[3]
-
+        bin_price = float(msg)
+        
         if not buyer_id_str:
-            await redis.hset(key, "status", "active")
+            await self.redis_repo.set_status(stream_id, "active")
             raise NotFoundException(code="BUYER_NOT_FOUND")
 
         buyer_id = int(buyer_id_str)
-        redis_data = await redis.hgetall(key)
+        redis_data = await self.redis_repo.get_state(stream_id)
         item_name   = redis_data.get("item_name", "")
         lid_str     = redis_data.get("listing_id", "")
         listing_id  = int(lid_str) if lid_str else None
@@ -781,7 +621,7 @@ class AuctionCommands:
 
         except Exception as exc:
             await self.uow.session.rollback()
-            await redis.hset(key, "status", "buy_it_now_pending")
+            await self.redis_repo.set_status(stream_id, "buy_it_now_pending")
             logger.error(
                 "[HEMEN AL KABUL] DB commit HATASI | stream_id=%s | %s",
                 stream_id, exc, exc_info=True,
@@ -830,11 +670,8 @@ class AuctionCommands:
         except Exception as exc:
             logger.error("[HEMEN AL KABUL] Bildirim gönderilemedi | buyer_id=%s | %s", buyer_id, exc)
 
-        _bidder_set_key = f"auction:bidders:{stream_id}"
-        _raw_bidders = await redis.smembers(_bidder_set_key)
+        _raw_bidders = await self.redis_repo.delete_auction(stream_id)
         _bidder_ids = [int(x) for x in _raw_bidders] if _raw_bidders else []
-        await redis.delete(_bidder_set_key)
-        await redis.delete(key)
 
         state = {
             "status": "ended",
@@ -897,22 +734,18 @@ class AuctionCommands:
     # ── Hemen Al Red ─────────────────────────────────────────────────────────
     async def reject_buy_it_now(self, stream_id: int, user: User) -> dict:
         await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        val = await redis.eval(_BUY_IT_NOW_REJECT_SCRIPT, 1, key)
-        ok = int(val[0])
+        
+        ok, msg, prev_status, buyer_id_str = await self.redis_repo.reject_buy_it_now(stream_id)
         if ok == 0:
             raise BadRequestException(code="NO_PENDING_BUY_NOW")
 
-        prev_status = val[1]
-        buyer_username = val[2]
-        buyer_id = val[3] if len(val) > 3 else None
+        buyer_username = msg
+        buyer_id = buyer_id_str
         
         # Hemen al talebini reddettik, kötü niyetli döngü saldırılarını kırmak için
         # reddedilen kişiye 60 saniye cooldown (işlem engeli) koyuyoruz.
         if buyer_id and buyer_id != '':
-            await redis.set(f"bin_cooldown:{stream_id}:{buyer_id}", "1", ex=60)
+            await self.redis_repo.set_cooldown(stream_id, int(buyer_id), 60)
 
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
@@ -939,10 +772,8 @@ class AuctionCommands:
     # ── Teklif Kabul ─────────────────────────────────────────────────────────
     async def accept_bid(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
         await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
 
-        data = await redis.hgetall(key)
+        data = await self.redis_repo.get_state(stream_id)
         if not data or data.get("status") not in ("active", "paused"):
             raise BadRequestException(code="AUCTION_NOT_ACTIVE")
 
@@ -1003,7 +834,7 @@ class AuctionCommands:
                 await self.uow.session.delete(auction)
                 await self.uow.session.flush()
             # Redis state'i geri yükle
-            await redis.hset(key, "status", original_status)
+            await self.redis_repo.set_status(stream_id, original_status)
 
         await saga.step("create_auction", do=_create_auction, compensate=_compensate_auction)
 
@@ -1057,7 +888,7 @@ class AuctionCommands:
         except Exception as exc:
             await self.uow.session.rollback()
             # Redis state'i geri yükle (DB commit başarısız oldu)
-            await redis.hset(key, "status", original_status)
+            await self.redis_repo.set_status(stream_id, original_status)
             logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc, exc_info=True)
             capture_exception(exc)
             raise DatabaseException(code="BID_ACCEPT_FAILED")
@@ -1065,11 +896,8 @@ class AuctionCommands:
         winner_dm_content = dm_content + (f"\n📋 teqlif://auction/{auction.id}" if auction else "")
 
         # Commit başarılı → kazananlar listesini al, Redis key'leri temizle
-        _bidder_set_key = f"auction:bidders:{stream_id}"
-        _raw_bidders = await redis.smembers(_bidder_set_key)
+        _raw_bidders = await self.redis_repo.delete_auction(stream_id)
         _bidder_ids = [int(x) for x in _raw_bidders] if _raw_bidders else []
-        await redis.delete(_bidder_set_key)
-        await redis.delete(key)
 
         # DM WS broadcast (satıcı→kazanan mesajı her iki tarafa bildir)
         if winner_user_id and dm:
