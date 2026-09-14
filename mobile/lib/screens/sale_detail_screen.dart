@@ -45,7 +45,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
     final itemName = sale['item_name'] as String? ?? loc.t('purchaseUnknownItem');
     final buyerUsername = sale['buyer_username'] as String? ?? loc.t('saleUnknownBuyer');
     final buyerId = sale['buyer_id'] as int?;
-    final finalPrice = (sale['final_price'] as num?)?.toDouble() ?? 0.0;
+    final finalPrice = (sale['final_price'] as num?)?.toDouble() ?? (sale['total_revenue'] as num?)?.toDouble() ?? 0.0;
     final startPrice = (sale['start_price'] as num?)?.toDouble();
     final bidCount = sale['bid_count'] as int?;
     final isBuyItNow = (sale['is_bought_it_now'] as bool?) ?? false;
