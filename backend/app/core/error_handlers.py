@@ -23,7 +23,10 @@ def setup_exception_handlers(app: FastAPI):
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException):
         user = getattr(request.state, "user", None)
-        user_label = f"@{user.username}#{user.id}" if user else "guest"
+        try:
+            user_label = f"@{user.username}#{user.id}" if user else "guest"
+        except Exception:
+            user_label = f"user_{id(user)}" if user else "guest"
         req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
 
         log_level = logging.ERROR if exc.status_code >= 500 else logging.WARNING
