@@ -2804,7 +2804,6 @@
     }
   },
   "defaultUserFallback": "Пользователь",
-  "startLiveStreamOption": "Начать трансляцию",
   "noResultsFound": "Ничего не найдено",
   "removeFromFavoritesTooltip": "Удалить из избранного",
   "callForbiddenNotFollowing": "Чтобы позвонить, вы должны подписаться друг на друга",

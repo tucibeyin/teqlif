@@ -2801,7 +2801,6 @@
     }
   },
   "defaultUserFallback": "Kullanıcı",
-  "startLiveStreamOption": "Canlı Yayın Aç",
   "noResultsFound": "Sonuç bulunamadı",
   "removeFromFavoritesTooltip": "Favoriden Çıkar",
   "callForbiddenNotFollowing": "Arama yapabilmek için birbirinizi takip etmeniz gerekiyor",

@@ -2804,7 +2804,6 @@
     }
   },
   "defaultUserFallback": "مستخدم",
-  "startLiveStreamOption": "بدء البث المباشر",
   "noResultsFound": "لا توجد نتائج",
   "removeFromFavoritesTooltip": "إزالة من المفضلة",
   "callForbiddenNotFollowing": "يجب أن تتابعوا بعضكم البعض لإجراء مكالمة",

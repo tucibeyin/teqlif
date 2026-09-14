@@ -230,7 +230,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    ref.read(localizationProvider).t('startLiveStreamOption'),
+                    ref.read(localizationProvider).t('liveStartStream'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
