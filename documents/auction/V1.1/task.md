@@ -21,7 +21,7 @@ Bu dosya, `plan.md` ve `findings.md` belgelerindeki kararların Clean Architectu
 - `app/services/fraud_detection_service.py` dosyasındaki `_SHILL_SCORE_IP_MATCH` değerinin 30'dan 15'e düşürülmesi.
 - VPS Adımı: Node 1 (Backend Core) üzerinde `systemctl restart teqlif.service` çalıştırılması.
 
-## `[ ]` Adım 3: Clean Architecture - BidValidationService (Troll Teklif Refactoring)
+## `[/]` Adım 3: Clean Architecture - BidValidationService (Troll Teklif Refactoring)
 - `app/services/bid_validation_service.py` servisinin oluşturulması.
 - `auction_commands.py` içerisindeki Troll teklif limitlerinin (çarpanlar ve telefon onay kısıtları) bu servise taşınması (`validate_troll_bid` metodu).
 - `place_bid` fonksiyonunun bu servisi çağıracak şekilde sadeleştirilmesi.

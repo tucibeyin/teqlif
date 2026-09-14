@@ -52,6 +52,7 @@ from app.constants import ws_types as WS
 from app.services.moderation_service import mute_key
 from app.services.notification_service import push_notification
 from app.services.fraud_detection_service import FraudDetectionService, _log_fraud_attempt
+from app.services.bid_validation_service import BidValidationService
 
 _DM_CHANNEL = "dm_broadcast"
 
@@ -59,16 +60,7 @@ logger = get_logger(__name__)
 
 _PUBSUB_CHANNEL = "auction_broadcast"
 
-# Telefon doğrulaması gerektiren mutlak teklif eşiği (TL)
-_HIGH_BID_THRESHOLD_TL = 10_000
-# Doğrulanmamış hesaplar için daha düşük eşik
-_HIGH_BID_THRESHOLD_UNVERIFIED = 5_000
-# Katlama kontrolü: mevcut teklif bu değerin üzerindeyken geçerli
-_MULTIPLIER_MIN_BASE_TL = 500
-# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır — verified hesaplar
-_HIGH_BID_MULTIPLIER = 10
-# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır — unverified hesaplar
-_HIGH_BID_MULTIPLIER_UNVERIFIED = 7
+
 
 # ── Fiyat formatlama yardımcısı ──────────────────────────────────────────────
 def fmt_price(v: float) -> str:
@@ -509,36 +501,9 @@ class AuctionCommands:
             raise ForbiddenException(code="BID_BLOCKED_SUSPICIOUS")
 
         # ── Troll Teklif Koruması (Telefon + Hesap Doğrulama) ────────────────
-        # Doğrulanmış hesaplar daha yüksek eşikten yararlanır.
         current_bid_raw = prev_data.get("current_bid")
         current_bid = float(current_bid_raw) if current_bid_raw else 0.0
-        bid_threshold  = _HIGH_BID_THRESHOLD_TL        if user.is_verified else _HIGH_BID_THRESHOLD_UNVERIFIED
-        bid_multiplier = _HIGH_BID_MULTIPLIER           if user.is_verified else _HIGH_BID_MULTIPLIER_UNVERIFIED
-        is_high_bid = (
-            float(data.amount) > bid_threshold
-            or (
-                current_bid >= _MULTIPLIER_MIN_BASE_TL
-                and float(data.amount) > current_bid * bid_multiplier
-            )
-        )
-        if is_high_bid and (not user.phone or not user.phone_verified):
-            await _log_fraud_attempt(
-                "troll_bid_no_phone",
-                stream_id=stream_id,
-                user_id=user.id,
-                username=user.username,
-                extra={"amount": float(data.amount), "current_bid": current_bid, "is_verified": user.is_verified},
-            )
-            from app.database_clickhouse import track_user_event
-            asyncio.create_task(track_user_event(
-                event_type="bid_blocked_verify",
-                item_id=stream_id,
-                item_type="stream",
-                user_id=user.id,
-                price_point=float(data.amount),
-            ))
-            _verify_code = "BID_BLOCKED_NO_PHONE" if not user.phone else "BID_BLOCKED_PHONE_UNVERIFIED"
-            raise ForbiddenException(code=_verify_code)
+        await BidValidationService.validate_troll_bid(stream_id, user, float(data.amount), current_bid)
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)
         val = await redis.eval(_VALIDATE_BID_SCRIPT, 1, auction_key(stream_id), str(data.amount))

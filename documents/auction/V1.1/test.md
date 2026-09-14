@@ -26,3 +26,17 @@ Bu dosya, `task.md` üzerindeki her bir adımın başarıyla uygulandığını k
 - **Amaç:** Aynı Wi-Fi / Hücresel (CGNAT) ağındaki yeni bir kullanıcının ilk teklifinde banlanmadığını görmek.
 - **Nasıl Yapılır:** Yeni bir mobil cihaz veya emülatörden giriş yapıp, yayıncıyla aynı ağdayken (veya aynı IP maskesindeyken) bir teklif verilir.
 - **Beklenen Çıktı:** Uygulama "Susturuldunuz" (MUTE) uyarısı göstermez, teklif yayına düşer. (Loglarda WARN verilebilir ama MUTE olmamalıdır).
+
+---
+
+## Adım 3: Clean Architecture - BidValidationService Testleri
+
+**Test 3.1: Servis İzolasyon (Unit Test)**
+- **Amaç:** `auction_commands.py` içerisinde `BidValidationService` entegrasyonunun syntax ve logic hatası barındırmadığını doğrulamak.
+- **Nasıl Yapılır:** `python3 -m py_compile app/use_cases/auctions/commands/auction_commands.py` ve `python3 -m py_compile app/services/bid_validation_service.py`
+- **Beklenen Çıktı:** Boş (başarılı) dönmesi.
+
+**Test 3.2: Troll Teklif Limit Testi (Canlı)**
+- **Amaç:** Doğrulanmamış bir hesabın 5.000 TL üzeri veya mevcut teklifin 7 katı teklif verdiğinde reddedildiğini görmek.
+- **Nasıl Yapılır:** Telefon onayı olmayan bir hesapla canlı yayında mevcut teklifin 10 katı bir tutar girilip teklif verilir.
+- **Beklenen Çıktı:** "Lütfen Hesabınızı Doğrulayın" hatasının alınması (Backend 403 Forbidden - BID_BLOCKED_PHONE_UNVERIFIED dönmeli).
