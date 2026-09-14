@@ -157,6 +157,31 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
 
             const SizedBox(height: 20),
 
+            // Satış Onay Görseli
+            if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
+              Text(
+                ref.read(localizationProvider).t('saleProofImageTitle') == 'saleProofImageTitle' 
+                  ? 'Satış Onay Görseli' 
+                  : ref.read(localizationProvider).t('saleProofImageTitle'),
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: imgUrl(proofImageUrl),
+                  fit: BoxFit.cover,
+                  errorWidget: (_, _, _) => _imagePlaceholder(),
+                  placeholder: (_, _) => _imagePlaceholder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
             // Alıcı Profiline Git
             TeqButton(
               onPressed: () {
