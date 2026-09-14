@@ -3,7 +3,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../ui_library/components/overlays/teq_bottom_sheet.dart';
-import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/foundation/teq_colors.dart';
 
 enum AppPermissionResult { granted, denied, permanentlyDenied }
@@ -64,28 +63,7 @@ class PermissionService {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: textColor),
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TeqButton(
-                    onPressed: () => Navigator.pop(context),
-                    text: loc.t('btnCancel'),
-                    type: TeqButtonType.outline,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TeqButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      openAppSettings();
-                    },
-                    text: loc.t('permOpenSettings'), // "Ayarları Aç"
-                  ),
-                ),
-              ],
-            ),
+            const SizedBox(height: 16),
           ],
         ),
       );
