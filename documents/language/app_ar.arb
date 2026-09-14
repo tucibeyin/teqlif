@@ -441,7 +441,7 @@
   "liveEndedBadge": "انتهى",
   "liveConnecting": "جارٍ بدء البث...",
   "liveConnectingViewer": "جارٍ الاتصال بالبث...",
-  "livePermissionRequired": "إذن الكاميرا والميكروفون مطلوب",
+  "livePermissionRequired": "مطلوب إذن الكاميرا والميكروفون",
   "liveViewersTitle": "👁 المشاهدون ({count})",
   "@liveViewersTitle": {
     "placeholders": {
@@ -2903,7 +2903,6 @@
   "errMessagingForbidden": "لا يمكنك مراسلة هذا المستخدم",
   "errFileTooLarge": "لا يمكن أن يتجاوز الملف 5 ميغابايت",
   "errAudioTooLarge": "لا يمكن أن يتجاوز الملف الصوتي 512 كيلوبايت",
-  "errDmVideoTooLarge": "لا يمكن أن يتجاوز الفيديو 20 ميغابايت",
   "errUnsupportedAudioFormat": "تنسيق الصوت غير مدعوم (AAC، OGG، M4A، MP3)",
   "errInvalidImageFormat": "تنسيق الصورة غير صالح (JPEG، PNG، WebP)",
   "errInvalidVideoFormat": "تنسيق الفيديو غير صالح (MP4، MOV)",
@@ -4326,19 +4325,15 @@
   "opt_2": "2",
   "opt_3": "3",
   "opt_4_plus": "+4",
-
   "commerceSelectTitle": "Select Sale Type",
   "commerceSelectAuction": "Auction",
   "commerceSelectDirectSale": "Direct Sale",
-
   "directSaleIdleChip": "No active sale",
-
   "directSaleStatusActive": "ACTIVE",
   "directSaleStatusPaused": "PAUSED",
   "directSaleStatusSoldOut": "SOLD OUT",
   "directSaleStatusEnded": "ENDED",
   "directSaleStatusCancelled": "CANCELLED",
-
   "directSalePausedLabel": "Sale paused",
   "directSaleSoldOutBanner": "Sold out 🎉",
   "directSaleEndedSoldOut": "Everything sold out! 🎉",
@@ -4350,10 +4345,11 @@
   "directSaleStockUrgency": "Only {count} left!",
   "@directSaleStockUrgency": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "directSaleFormTitle": "بدء البيع",
   "directSaleFormProductTitle": "اسم المنتج",
   "directSaleFormPrice": "السعر (₺)",
@@ -4362,54 +4358,55 @@
   "directSaleFormManual": "إدخال يدوي",
   "directSaleFormNoListing": "لا يوجد إعلان مرتبط",
   "directSaleFormValidationError": "يرجى ملء جميع الحقول المطلوبة.",
-
   "directSaleDialogCancel": "إلغاء",
-
   "directSaleStartBtn": "▶ ابدأ",
   "directSalePauseBtn": "إيقاف مؤقت",
   "directSaleResumeBtn": "استئناف",
   "directSaleEndBtn": "إنهاء البيع",
   "directSaleCancelBtn": "إلغاء البيع",
-
   "directSaleStockLabel": "Remaining Stock",
   "directSaleSoldLabel": "Sold",
   "directSaleRevenueLabel": "Total Revenue",
-
   "directSaleEndDialogTitle": "End Sale",
   "directSaleEndDialogBody": "{count} orders placed. These orders will remain valid.",
   "@directSaleEndDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleEndDialogBodyNoOrders": "Are you sure you want to end the sale?",
-
   "directSaleCancelDialogTitle": "إلغاء البيع",
   "directSaleCancelDialogBody": "تم تقديم {count} طلب حتى الآن. ماذا تريد أن يحدث لها؟",
   "@directSaleCancelDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleCancelDialogBodyNoOrders": "هل أنت متأكد من إلغاء البيع؟",
   "directSaleCancelVoidOrders": "إلغاء الطلبات",
   "directSaleCancelKeepOrders": "الإبقاء على الطلبات",
-
   "directSaleSummaryTitle": "Sale Completed",
   "directSaleSummarySold": "{count} sold",
   "@directSaleSummarySold": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleSummaryRevenue": "Total: {amount}",
   "@directSaleSummaryRevenue": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "directSaleNewSaleBtn": "Start New Sale",
-
   "directSaleBuyBtn": "Buy Now",
   "directSaleBuySheetTitle": "Purchase",
   "directSaleBuySheetQuantity": "Quantity",
@@ -4417,32 +4414,35 @@
   "directSaleBuySheetPreviousBadge": "✓ You bought {count}",
   "@directSaleBuySheetPreviousBadge": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleBuySheetConfirm": "Buy",
-
   "directSaleProofDialogTitle": "Starting Your Sale",
   "directSaleProofDialogBody": "Show the product on camera before starting the sale and take a proof photo.",
-
   "directSaleNotActive": "Sale is no longer active.",
   "directSaleSoldOutError": "Sorry, sold out.",
   "directSaleInsufficientStock": "Insufficient stock.",
   "directSaleAlreadyActive": "A sale is already active.",
-
   "saleTypeDirect": "Direct Sale",
   "directSaleOrdersTitle": "Buyers",
   "directSaleOrderCancelled": "Cancelled",
   "directSaleOrderQuantity": "{count} pcs",
   "@directSaleOrderQuantity": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleBuyerCount": "{count} buyers",
   "@directSaleBuyerCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleSaleStatusLabel": "Sale Status",
@@ -4455,10 +4455,8 @@
   "directSaleSuggestionPrice": "السعر المقترح: ₺{price}",
   "directSaleSuggestionStock": "الطلب المتوقع: {stock} قطعة",
   "directSaleSuggestionApply": "تطبيق",
-
   "notifDirectSalePurchased": "اكتملت عملية الشراء",
   "notifDirectSalePurchasedBody": "تم استلام دفعة {price} مقابل {item}.",
-
   "announcementAuctionWinner": "فاز {winner} بـ{price}",
   "announcementAuctionWinnerBids": "{bidCount} عروض · {startPrice}→{price} · فاز {winner}",
   "announcementBinAccepted": "{buyer} اشترى فوراً · {price}",
@@ -4486,6 +4484,9 @@
   "privacyBannerTitle": "ملفك الشخصي عام",
   "privacyBannerDesc": "اجعل ملفك الشخصي خاصاً ليظهر لمتابعيك فقط.",
   "privacyBannerAction": "انتقل إلى الإعدادات",
-
-  "saleProofImageTitle": "صورة تأكيد البيع"
+  "saleProofImageTitle": "صورة تأكيد البيع",
+  "liveBothPermissionDesc": "نحتاج إلى أذونات الكاميرا والميكروفون لبدء بث مباشر. يرجى السماح من الإعدادات.",
+  "liveCameraPermissionReq": "إذن الكاميرا مطلوب",
+  "liveCameraPermissionDesc": "نحتاج إلى إذن الكاميرا لبدء بث مباشر. يرجى السماح من الإعدادات.",
+  "liveMicPermissionDesc": "نحتاج إلى إذن الميكروفون لبدء بث مباشر. يرجى السماح من الإعدادات."
 }

@@ -4361,19 +4361,15 @@
   "opt_2": "2",
   "opt_3": "3",
   "opt_4_plus": "4+",
-
   "commerceSelectTitle": "Select Sale Type",
   "commerceSelectAuction": "Auction",
   "commerceSelectDirectSale": "Direct Sale",
-
   "directSaleIdleChip": "No active sale",
-
   "directSaleStatusActive": "ACTIVE",
   "directSaleStatusPaused": "PAUSED",
   "directSaleStatusSoldOut": "SOLD OUT",
   "directSaleStatusEnded": "ENDED",
   "directSaleStatusCancelled": "CANCELLED",
-
   "directSalePausedLabel": "Sale paused",
   "directSaleSoldOutBanner": "Sold out 🎉",
   "directSaleEndedSoldOut": "Everything sold out! 🎉",
@@ -4385,10 +4381,11 @@
   "directSaleStockUrgency": "Only {count} left!",
   "@directSaleStockUrgency": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "directSaleFormTitle": "Start Sale",
   "directSaleFormProductTitle": "Product Name",
   "directSaleFormPrice": "Price (₺)",
@@ -4397,54 +4394,55 @@
   "directSaleFormManual": "Manual Entry",
   "directSaleFormNoListing": "No listing linked",
   "directSaleFormValidationError": "Please fill in all required fields.",
-
   "directSaleDialogCancel": "Cancel",
-
   "directSaleStartBtn": "▶ Start",
   "directSalePauseBtn": "Pause",
   "directSaleResumeBtn": "Resume",
   "directSaleEndBtn": "End Sale",
   "directSaleCancelBtn": "Cancel Sale",
-
   "directSaleStockLabel": "Remaining Stock",
   "directSaleSoldLabel": "Sold",
   "directSaleRevenueLabel": "Total Revenue",
-
   "directSaleEndDialogTitle": "End Sale",
   "directSaleEndDialogBody": "{count} orders placed. These orders will remain valid.",
   "@directSaleEndDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleEndDialogBodyNoOrders": "Are you sure you want to end the sale?",
-
   "directSaleCancelDialogTitle": "Cancel Sale",
   "directSaleCancelDialogBody": "{count} orders placed so far. What should happen to them?",
   "@directSaleCancelDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleCancelDialogBodyNoOrders": "Are you sure you want to cancel the sale?",
   "directSaleCancelVoidOrders": "Cancel Orders",
   "directSaleCancelKeepOrders": "Keep Orders",
-
   "directSaleSummaryTitle": "Sale Completed",
   "directSaleSummarySold": "{count} sold",
   "@directSaleSummarySold": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleSummaryRevenue": "Total: {amount}",
   "@directSaleSummaryRevenue": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "directSaleNewSaleBtn": "Start New Sale",
-
   "directSaleBuyBtn": "Buy Now",
   "directSaleBuySheetTitle": "Purchase",
   "directSaleBuySheetQuantity": "Quantity",
@@ -4452,19 +4450,18 @@
   "directSaleBuySheetPreviousBadge": "✓ You bought {count}",
   "@directSaleBuySheetPreviousBadge": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleBuySheetConfirm": "Buy",
-
   "directSaleProofDialogTitle": "Starting Your Sale",
   "directSaleProofDialogBody": "Show the product on camera before starting the sale and take a proof photo.",
-
   "directSaleNotActive": "Sale is no longer active.",
   "directSaleSoldOutError": "Sorry, sold out.",
   "directSaleInsufficientStock": "Insufficient stock.",
   "directSaleAlreadyActive": "A sale is already active.",
-
   "saleTypeDirect": "Direct Sale",
   "directSaleOrdersTitle": "Buyers",
   "directSaleOrderCancelled": "Cancelled",
@@ -4472,12 +4469,16 @@
   "directSaleBuyerCount": "{count} buyers",
   "@directSaleBuyerCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "@directSaleOrderQuantity": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleSaleStatusLabel": "Sale Status",
@@ -4490,10 +4491,8 @@
   "directSaleSuggestionPrice": "Suggested price: ₺{price}",
   "directSaleSuggestionStock": "Est. demand: {stock} units",
   "directSaleSuggestionApply": "Apply",
-
   "notifDirectSalePurchased": "Purchase Completed",
   "notifDirectSalePurchasedBody": "Payment of {price} received for {item}.",
-
   "announcementAuctionWinner": "{winner} won at {price}",
   "announcementAuctionWinnerBids": "{bidCount} bids · {startPrice}→{price} · {winner} won",
   "announcementBinAccepted": "{buyer} bought it now · {price}",
@@ -4521,6 +4520,9 @@
   "privacyBannerTitle": "Your profile is public",
   "privacyBannerDesc": "Make your profile private so only your followers can see it.",
   "privacyBannerAction": "Go to settings",
-
-  "saleProofImageTitle": "Sale Confirmation Image"
+  "saleProofImageTitle": "Sale Confirmation Image",
+  "liveBothPermissionDesc": "We need camera and microphone permissions to start a live stream. Please allow from settings.",
+  "liveCameraPermissionReq": "Camera Permission Required",
+  "liveCameraPermissionDesc": "We need camera permission to start a live stream. Please allow from settings.",
+  "liveMicPermissionDesc": "We need microphone permission to start a live stream. Please allow from settings."
 }

@@ -40,6 +40,11 @@ Future<void> showStartStreamDialog(
     return;
   }
 
+  // ── YENİ: İzin Kontrolü Dialog Öncesine Taşındı ──────────────────────────
+  final hasPermission = await PermissionService.requestLiveStreamPermissions(context);
+  if (!hasPermission) return;
+  // ──────────────────────────────────────────────────────────────────────────
+
   final titleController = TextEditingController();
   String? selectedCategory;
   String? selectedSubcategory;
@@ -320,11 +325,6 @@ Future<void> showStartStreamDialog(
   });
 
   if (!context.mounted) return;
-
-  // ── YENİ: Başlat butonuna basıldıktan SONRA İzin Kontrolü ──────────────────
-  final hasPermission = await PermissionService.requestLiveStreamPermissions(context);
-  if (!hasPermission) return;
-  // ──────────────────────────────────────────────────────────────────────────
 
   showDialog(
     context: context,

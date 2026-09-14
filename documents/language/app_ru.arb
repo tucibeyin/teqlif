@@ -1136,7 +1136,7 @@
   "liveEndedBadge": "ЗАВЕРШЕНО",
   "liveConnecting": "Начало трансляции...",
   "liveConnectingViewer": "Подключение к потоку...",
-  "livePermissionRequired": "Требуется разрешение на использование камеры и микрофона",
+  "livePermissionRequired": "Требуется разрешение на камеру и микрофон",
   "liveViewersTitle": "👁 Зрители ({count})",
   "liveNoViewers": "Зрителей пока нет",
   "streamViewerMuted": "Заглушен",
@@ -2903,7 +2903,6 @@
   "errMessagingForbidden": "Вы не можете написать этому пользователю",
   "errFileTooLarge": "Файл не может превышать 5 МБ",
   "errAudioTooLarge": "Аудиофайл не может превышать 512 КБ",
-  "errDmVideoTooLarge": "Видео не может превышать 20 МБ",
   "errUnsupportedAudioFormat": "Неподдерживаемый формат аудио (AAC, OGG, M4A, MP3)",
   "errInvalidImageFormat": "Неверный формат изображения (JPEG, PNG, WebP)",
   "errInvalidVideoFormat": "Неверный формат видео (MP4, MOV)",
@@ -4326,19 +4325,15 @@
   "opt_2": "2",
   "opt_3": "3",
   "opt_4_plus": "4+",
-
   "commerceSelectTitle": "Выберите тип продажи",
   "commerceSelectAuction": "Аукцион",
   "commerceSelectDirectSale": "Прямая продажа",
-
   "directSaleIdleChip": "Нет активной продажи",
-
   "directSaleStatusActive": "АКТИВНА",
   "directSaleStatusPaused": "ПРИОСТАНОВЛЕНА",
   "directSaleStatusSoldOut": "РАСПРОДАНО",
   "directSaleStatusEnded": "ЗАВЕРШЕНА",
   "directSaleStatusCancelled": "ОТМЕНЕНА",
-
   "directSalePausedLabel": "Продажа приостановлена",
   "directSaleSoldOutBanner": "Распродано 🎉",
   "directSaleEndedSoldOut": "Всё распродано! 🎉",
@@ -4350,10 +4345,11 @@
   "directSaleStockUrgency": "Осталось {count}!",
   "@directSaleStockUrgency": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "directSaleFormTitle": "Начать продажу",
   "directSaleFormProductTitle": "Название товара",
   "directSaleFormPrice": "Цена (₺)",
@@ -4362,54 +4358,55 @@
   "directSaleFormManual": "Ввод вручную",
   "directSaleFormNoListing": "Без объявления",
   "directSaleFormValidationError": "Пожалуйста, заполните все обязательные поля.",
-
   "directSaleDialogCancel": "Отмена",
-
   "directSaleStartBtn": "▶ Начать",
   "directSalePauseBtn": "Пауза",
   "directSaleResumeBtn": "Продолжить",
   "directSaleEndBtn": "Завершить",
   "directSaleCancelBtn": "Отменить",
-
   "directSaleStockLabel": "Остаток",
   "directSaleSoldLabel": "Продано",
   "directSaleRevenueLabel": "Общий доход",
-
   "directSaleEndDialogTitle": "Завершить продажу",
   "directSaleEndDialogBody": "Размещено {count} заказов. Они останутся в силе.",
   "@directSaleEndDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleEndDialogBodyNoOrders": "Вы уверены, что хотите завершить продажу?",
-
   "directSaleCancelDialogTitle": "Отменить продажу",
   "directSaleCancelDialogBody": "Поступило {count} заказов. Что делать с ними?",
   "@directSaleCancelDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleCancelDialogBodyNoOrders": "Вы уверены, что хотите отменить продажу?",
   "directSaleCancelVoidOrders": "Отменить заказы",
   "directSaleCancelKeepOrders": "Сохранить заказы",
-
   "directSaleSummaryTitle": "Продажа завершена",
   "directSaleSummarySold": "Продано {count}",
   "@directSaleSummarySold": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleSummaryRevenue": "Итого: {amount}",
   "@directSaleSummaryRevenue": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "directSaleNewSaleBtn": "Начать новую продажу",
-
   "directSaleBuyBtn": "Купить",
   "directSaleBuySheetTitle": "Купить",
   "directSaleBuySheetQuantity": "Количество",
@@ -4417,32 +4414,35 @@
   "directSaleBuySheetPreviousBadge": "✓ Вы купили {count}",
   "@directSaleBuySheetPreviousBadge": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleBuySheetConfirm": "Купить",
-
   "directSaleProofDialogTitle": "Начало продажи",
   "directSaleProofDialogBody": "Покажите товар на камеру и сделайте фото перед началом продажи.",
-
   "directSaleNotActive": "Продажа больше не активна.",
   "directSaleSoldOutError": "К сожалению, товар распродан.",
   "directSaleInsufficientStock": "Недостаточно товара.",
   "directSaleAlreadyActive": "Продажа уже активна.",
-
   "saleTypeDirect": "Прямая продажа",
   "directSaleOrdersTitle": "Покупатели",
   "directSaleOrderCancelled": "Отменён",
   "directSaleOrderQuantity": "{count} шт.",
   "@directSaleOrderQuantity": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleBuyerCount": "{count} покупателей",
   "@directSaleBuyerCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "directSaleSaleStatusLabel": "Статус продажи",
@@ -4455,10 +4455,8 @@
   "directSaleSuggestionPrice": "Рекомендуемая цена: ₺{price}",
   "directSaleSuggestionStock": "Прогноз спроса: {stock} шт.",
   "directSaleSuggestionApply": "Применить",
-
   "notifDirectSalePurchased": "Покупка завершена",
   "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}.",
-
   "announcementAuctionWinner": "{winner} победил · {price}",
   "announcementAuctionWinnerBids": "{bidCount} ставок · {startPrice}→{price} · {winner} победил",
   "announcementBinAccepted": "{buyer} купил сразу · {price}",
@@ -4486,6 +4484,9 @@
   "privacyBannerTitle": "Ваш профиль открыт",
   "privacyBannerDesc": "Сделайте профиль закрытым — его увидят только подписчики.",
   "privacyBannerAction": "Перейти в настройки",
-
-  "saleProofImageTitle": "Изображение подтверждения продажи"
+  "saleProofImageTitle": "Изображение подтверждения продажи",
+  "liveBothPermissionDesc": "Нам нужны разрешения на камеру и микрофон для начала прямого эфира. Пожалуйста, разрешите в настройках.",
+  "liveCameraPermissionReq": "Требуется разрешение на камеру",
+  "liveCameraPermissionDesc": "Нам нужно разрешение на камеру для начала прямого эфира. Пожалуйста, разрешите в настройках.",
+  "liveMicPermissionDesc": "Нам нужно разрешение на микрофон для начала прямого эфира. Пожалуйста, разрешите в настройках."
 }
