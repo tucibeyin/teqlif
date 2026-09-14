@@ -14,6 +14,7 @@ import '../services/catalog_service.dart';
 import 'subcategory_icons.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
+import '../services/permission_service.dart';
 
 /// Canlı yayın başlatma dialog'unu gösterir.
 /// [onStreamStarted]: yayın ekranından geri dönüldüğünde çağrılır (opsiyonel).
@@ -319,6 +320,11 @@ Future<void> showStartStreamDialog(
   });
 
   if (!context.mounted) return;
+
+  // ── YENİ: Başlat butonuna basıldıktan SONRA İzin Kontrolü ──────────────────
+  final hasPermission = await PermissionService.requestLiveStreamPermissions(context);
+  if (!hasPermission) return;
+  // ──────────────────────────────────────────────────────────────────────────
 
   showDialog(
     context: context,
