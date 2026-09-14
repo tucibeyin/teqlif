@@ -160,6 +160,9 @@ async def audience_insights(
         raise ForbiddenException(code="STREAM_STATS_FORBIDDEN")
 
     redis = await get_redis()
+    viewer_count_raw = await redis.get(f"live:viewers:{stream_id}")
+    realtime_viewer_count = int(viewer_count_raw) if viewer_count_raw else 0
+
     # Anlık izleyiciler: left_at IS NULL → henüz ayrılmamış kayıtlar (Faz 8 canonical)
     from app.models.stream import LiveStreamViewer
     viewer_id_rows = await db.execute(
@@ -180,7 +183,7 @@ async def audience_insights(
 
     if not viewer_ids:
         return {
-            "viewer_count": stream.viewer_count,
+            "viewer_count": max(realtime_viewer_count, stream.viewer_count),
             "avg_budget": None,
             "high_value_count": 0,
             "medium_value_count": 0,
@@ -207,16 +210,16 @@ async def audience_insights(
 
     pip_count = len(pip_members_raw) if pip_members_raw else 0
     return {
-        "viewer_count": stream.viewer_count + pip_count,
+        "viewer_count": max(realtime_viewer_count, len(viewer_ids)),
         "avg_budget": avg_budget,
         "high_value_count": high_value,
         "medium_value_count": medium_value,
         "low_budget_count": low_budget,
         "ready_buyers_count": ready_buyers,
         "segments": [
-            {"label": "Yüksek Bütçe (1000₺+)", "count": high_value, "color": "#4CAF50"},
-            {"label": "Orta Bütçe (250-999₺)", "count": medium_value, "color": "#2196F3"},
-            {"label": "Düşük Bütçe (<250₺)", "count": low_budget, "color": "#FF9800"},
+            {"label": "budgetHigh", "count": high_value, "color": "#4CAF50"},
+            {"label": "budgetMedium", "count": medium_value, "color": "#2196F3"},
+            {"label": "budgetLow", "count": low_budget, "color": "#FF9800"},
         ],
     }
 

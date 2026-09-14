@@ -423,7 +423,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  seg['label'] as String? ?? '',
+                                  loc.tOr(seg['label'] as String? ?? '', seg['label'] as String? ?? ''),
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 13,

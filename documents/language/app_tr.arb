@@ -1,5 +1,8 @@
 {
   "@@locale": "tr",
+  "budgetHigh": "Yüksek Bütçe (1000₺+)",
+  "budgetMedium": "Orta Bütçe (250-999₺)",
+  "budgetLow": "Düşük Bütçe (<250₺)",
   "micPermissionRequiredTitle": "Mikrofon İzni Gerekli",
   "micPermissionRequiredBody": "Aramalara cevap verebilmek için cihaz ayarlarından mikrofon izni vermelisiniz.",
   "appName": "teqlif",

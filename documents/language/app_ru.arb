@@ -1,5 +1,8 @@
 {
   "@@locale": "ru",
+  "budgetHigh": "Высокий Бюджет (1000₺+)",
+  "budgetMedium": "Средний Бюджет (250-999₺)",
+  "budgetLow": "Низкий Бюджет (<250₺)",
   "@homeResultsCount": {
     "placeholders": {
       "count": {

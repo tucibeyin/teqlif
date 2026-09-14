@@ -1,5 +1,8 @@
 {
   "@@locale": "ar",
+  "budgetHigh": "ميزانية عالية (1000₺+)",
+  "budgetMedium": "ميزانية متوسطة (250-999₺)",
+  "budgetLow": "ميزانية منخفضة (<250₺)",
   "micPermissionRequiredTitle": "إذن الميكروفون مطلوب",
   "micPermissionRequiredBody": "تحتاج إلى منح إذن الميكروفون من إعدادات الجهاز للرد على المكالمات.",
   "appName": "teqlif",
