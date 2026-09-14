@@ -17,11 +17,11 @@ Bu dosya, `plan.md` ve `findings.md` belgelerindeki kararların Clean Architectu
 - `real_ip_header CF-Connecting-IP;` kuralının aktif edilmesi.
 - VPS Adımı: Nginx sunucusuna (Node 2/Gateway) çıkılıp `nginx -t` ve `systemctl reload nginx` yapılması.
 
-## `[/]` Adım 2: Fraud Skoru Güncellemesi (Mute Bug Kök Çözüm)
+## `[x]` Adım 2: Fraud Skoru Güncellemesi (Mute Bug Kök Çözüm) (Completed: 7e4f7c5d, 2026-09-14 13:33)
 - `app/services/fraud_detection_service.py` dosyasındaki `_SHILL_SCORE_IP_MATCH` değerinin 30'dan 15'e düşürülmesi.
 - VPS Adımı: Node 1 (Backend Core) üzerinde `systemctl restart teqlif.service` çalıştırılması.
 
-## `[/]` Adım 3: Clean Architecture - BidValidationService (Troll Teklif Refactoring)
+## `[x]` Adım 3: Clean Architecture - BidValidationService (Troll Teklif Refactoring) (Completed: 2134edcd, 2026-09-14 14:19)
 - `app/services/bid_validation_service.py` servisinin oluşturulması.
 - `auction_commands.py` içerisindeki Troll teklif limitlerinin (çarpanlar ve telefon onay kısıtları) bu servise taşınması (`validate_troll_bid` metodu).
 - `place_bid` fonksiyonunun bu servisi çağıracak şekilde sadeleştirilmesi.
