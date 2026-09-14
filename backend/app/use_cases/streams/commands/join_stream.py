@@ -38,7 +38,10 @@ class JoinStreamCommand:
             await self.uow.session.execute(
                 pg_insert(LiveStreamViewer)
                 .values(stream_id=stream_id, user_id=user.id)
-                .on_conflict_do_nothing()
+                .on_conflict_do_update(
+                    index_elements=["stream_id", "user_id"],
+                    set_={"left_at": None}
+                )
             )
 
             return JoinTokenOut(
