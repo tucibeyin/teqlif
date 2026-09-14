@@ -4485,5 +4485,7 @@
   "consentSettingsDeleteHint": "Вы можете закрыть аккаунт, чтобы удалить свои данные.",
   "privacyBannerTitle": "Ваш профиль открыт",
   "privacyBannerDesc": "Сделайте профиль закрытым — его увидят только подписчики.",
-  "privacyBannerAction": "Перейти в настройки"
+  "privacyBannerAction": "Перейти в настройки",
+
+  "saleProofImageTitle": "Изображение подтверждения продажи"
 }

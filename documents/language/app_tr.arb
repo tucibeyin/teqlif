@@ -4484,5 +4484,7 @@
   "consentSettingsDeleteHint": "Verilerinizin silinmesi için hesabınızı kapatabilirsiniz.",
   "privacyBannerTitle": "Profilin herkese açık",
   "privacyBannerDesc": "Profilini gizleyerek sadece takipçilerine görünür olabilirsin.",
-  "privacyBannerAction": "Ayarlara git"
+  "privacyBannerAction": "Ayarlara git",
+
+  "saleProofImageTitle": "Satış Onay Görseli"
 }

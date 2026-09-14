@@ -160,9 +160,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
             // Satış Onay Görseli
             if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
               Text(
-                ref.read(localizationProvider).t('saleProofImageTitle') == 'saleProofImageTitle' 
-                  ? 'Satış Onay Görseli' 
-                  : ref.read(localizationProvider).t('saleProofImageTitle'),
+                ref.read(localizationProvider).t('saleProofImageTitle'),
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontSize: 16,

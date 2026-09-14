@@ -4485,5 +4485,7 @@
   "consentSettingsDeleteHint": "يمكنك إغلاق حسابك لحذف بياناتك.",
   "privacyBannerTitle": "ملفك الشخصي عام",
   "privacyBannerDesc": "اجعل ملفك الشخصي خاصاً ليظهر لمتابعيك فقط.",
-  "privacyBannerAction": "انتقل إلى الإعدادات"
+  "privacyBannerAction": "انتقل إلى الإعدادات",
+
+  "saleProofImageTitle": "صورة تأكيد البيع"
 }
