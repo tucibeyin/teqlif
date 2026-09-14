@@ -169,14 +169,14 @@ class AuctionCommands:
         bin_price = float(data.buy_it_now_price) if data.buy_it_now_price else None
         await self.redis_repo.set_state(stream_id, {
             "status": "active",
-            "item_name": data.item_name,
-            "start_price": data.start_price,
-            "buy_it_now_price": data.buy_it_now_price,
-            "current_bid": data.start_price or 0,
+            "item_name": item_name or "",
+            "start_price": start_price or 0,
+            "buy_it_now_price": bin_price or "",
+            "current_bid": start_price or 0,
             "current_bidder_name": "",
             "bid_count": 0,
             "host_ip": host_ip or "",
-            "listing_id": data.listing_id or "",
+            "listing_id": listing_id_val or "",
         })
 
         state = await GetAuctionStateQuery().execute(stream_id)

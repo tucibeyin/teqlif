@@ -139,7 +139,10 @@ def setup_exception_handlers(app: FastAPI):
             return await http_exception_handler(request, exc)
             
         user = getattr(request.state, "user", None)
-        user_label = f"@{user.username}#{user.id}" if user else "guest"
+        try:
+            user_label = f"@{user.username}#{user.id}" if user else "guest"
+        except Exception:
+            user_label = f"User#{getattr(user, 'id', '?')}" if user else "guest"
         req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
 
         logger.error(
