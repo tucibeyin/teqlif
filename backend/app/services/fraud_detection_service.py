@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 
 # Shill bidding sinyal skorları
 # IP eşleşmesi tek başına dominant olmamalı (aynı ağda meşru kullanıcılar olabilir)
-_SHILL_SCORE_IP_MATCH     = 30  # IP eşleşmesi (tetikleyici, tek başına yeterli değil)
+_SHILL_SCORE_IP_MATCH     = 15  # IP eşleşmesi (tetikleyici, tek başına yeterli değil)
 _SHILL_SCORE_UNVERIFIED   = 35  # Doğrulanmamış hesap + IP → ciddi sinyal
 _SHILL_SCORE_NEW_ACCOUNT  = 25  # Hesap 7 günden genç
 _SHILL_SCORE_REPEAT       = 10  # Aynı stream'de önceki sinyal başına (max 2x)
