@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>teqlif - Kapsamlı Proje Sunumu</title>
+
+    <!-- Reveal.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.0/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.0/reveal.min.css">
+    
+    <!-- Apple Aesthetic Styling -->
+    <style>
+        :root {
+            --bg-color: #000000;
+            --brand-cyan: #00c2ff; 
+            --brand-cyan-dim: rgba(0, 194, 255, 0.15);
+            --text-main: #f5f5f7; 
+            --text-muted: #86868b; 
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body, .reveal-viewport, .reveal, .reveal .slide-background {
+            background-color: var(--bg-color) !important;
+            background: var(--bg-color) !important;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .reveal .slides {
+            font-family: inherit;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: inherit !important;
+            text-transform: none !important;
+            letter-spacing: -0.015em !important;
+            margin: 0 0 20px 0 !important;
+        }
+
+        .reveal h1 {
+            font-weight: 700 !important;
+            font-size: 5em;
+            letter-spacing: -0.04em !important;
+        }
+
+        .teqlif-logo {
+            font-weight: 800;
+            background: linear-gradient(120deg, #ffffff 0%, var(--brand-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .reveal h2 {
+            font-weight: 600 !important;
+            font-size: 3em;
+            margin-bottom: 30px !important;
+            color: var(--text-main);
+        }
+
+        .reveal p {
+            font-weight: 400;
+            color: var(--text-muted);
+            line-height: 1.5;
+            font-size: 1.1em;
+        }
+
+        .apple-subtitle {
+            font-size: 1.8em;
+            font-weight: 500;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+            margin-top: 10px;
+        }
+
+        /* Apple Glass Card */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 40px;
+            text-align: left;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            transform: scale(1.02);
+            border-color: rgba(0, 194, 255, 0.3);
+        }
+
+        .reveal ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .reveal ul li {
+            margin-bottom: 15px;
+            position: relative;
+            font-size: 0.9em;
+            color: var(--text-muted);
+            line-height: 1.4;
+            padding-left: 0;
+        }
+        
+        .reveal ul li strong {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .cyan-text {
+            color: var(--brand-cyan);
+        }
+        
+        .feature-box {
+            background: transparent;
+            text-align: left;
+            padding: 10px;
+        }
+        
+        .feature-box h4 {
+            color: var(--brand-cyan);
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .feature-box p {
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.5em;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin: 0 5px 10px 0;
+            background: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+        }
+
+        /* Minimalist Table */
+        .apple-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+        
+        .apple-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            text-align: left;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .apple-table td {
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            vertical-align: top;
+        }
+        
+        .apple-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .apple-table strong {
+            color: var(--text-main);
+            font-size: 1.1em;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .reveal .controls {
+            color: var(--brand-cyan) !important;
+        }
+
+        /* Smaller text specifically for heavy content slides */
+        .dense-text p, .dense-text li {
+            font-size: 0.8em !important;
+        }
+        .dense-text h2 {
+            font-size: 2.5em !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- 1. PROJE ÖZETİ -->
+            <section data-transition="fade">
+                <h1 class="teqlif-logo">teqlif</h1>
+                <div class="apple-subtitle">Sosyal ve Canlı Yayın Odaklı E-Ticaret.</div>
+                <p style="margin-top: 30px;">Geleneksel e-ticareti "alışveriş + eğlence" <strong style="color:var(--text-main);">(Shoppertainment)</strong> konseptiyle dinamik, etkileşimli ve rekabetçi bir sosyal etkinliğe dönüştürüyoruz.</p>
+                <div style="margin-top: 40px;">
+                    <span class="badge">Live Commerce</span>
+                    <span class="badge">Social Commerce</span>
+                </div>
+            </section>
+
+            <!-- 2. PROBLEM TANIMI -->
+            <section data-transition="slide">
+                <h2>Yapısal Problemler.</h2>
+                <div class="grid-3" style="margin-top: 40px;">
+                    <div class="glass-card fragment fade-up">
+                        <strong style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">Güven Açığı</strong>
+                        <p style="font-size: 0.85em;">Statik fotoğraf ve metinler ürünün gerçek kondisyonunu yansıtmaz; dolandırıcılık endişesi yüksektir.</p>
+                    </div>
+                    <div class="glass-card fragment fade-up" data-fragment-index="1">
+                        <strong style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">Parçalanmış Süreç</strong>
+                        <p style="font-size: 0.85em;">Sosyal ağ satıcıları ödeme, teklif ve envanteri platform dışında manuel yapmak zorundadır (Friction).</p>
+                    </div>
+                    <div class="glass-card fragment fade-up" data-fragment-index="2">
+                        <strong style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">İzolasyon</strong>
+                        <p style="font-size: 0.85em;">Mevcut pazar yerleri "işlem" odaklıdır. Sosyal aidiyet ve anlık rekabet heyecanı yoktur.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. ÇÖZÜM -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Çözüm: <span class="cyan-text">Çok Taraflı Platform.</span></h2>
+                <div class="glass-card grid-2">
+                    <div>
+                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block;">Entegre Canlı Yayın</strong>
+                        <p>360 derece ürün sergileme ve soru-cevap. Güven problemini ortadan kaldıran düşük gecikmeli WebRTC video altyapısı.</p>
+                        
+                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block; margin-top: 20px;">Gerçek Zamanlı Teklif Motoru</strong>
+                        <p>Saniyeler içinde gerçekleşen anlık teklifleri eşzamanlı yöneten ve ödemeyi provizyona alan sürtünmesiz (frictionless) motor.</p>
+                    </div>
+                    <div style="border-left: 1px solid var(--glass-border); padding-left: 30px;">
+                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block;">Oyunlaştırma & FOMO</strong>
+                        <p>"Ani ölüm" (sudden death) açık artırmaları ve gizemli kutu kurguları. Rekabet, dönüşüm oranlarını dramatik şekilde artırır.</p>
+                        
+                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block; margin-top: 20px;">Çapraz Mobil Deneyim</strong>
+                        <p>Video, anlık sohbet (chat) ve ödeme, uygulamadan çıkmadan pürüzsüzce tek akışta çalışır.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. SATIŞ VE İLETİŞİM (TEMEL ÖZELLİKLER 1) -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Ürün Sihri: <span class="cyan-text">Satış & İletişim.</span></h2>
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Satış Kanalları</strong>
+                        <ul>
+                            <li><strong>SwipeLive:</strong> Kişiselleştirilmiş dikey kaydırmalı canlı yayın ve ilan akışı.</li>
+                            <li><strong>Canlı Müzayede:</strong> Teklif verme, Buy-it-now, kazananı onaylama.</li>
+                            <li><strong>Canlı Direkt Satış:</strong> Sabit fiyatlı anlık sipariş kuyruğa alma.</li>
+                            <li><strong>İlan Pazaryeri:</strong> Klasik ilan yayınlama yönetimi.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-card">
+                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">P2P İletişim</strong>
+                        <ul>
+                            <li><strong>Görüntülü/Sesli Çağrı:</strong> WebRTC tabanlı şifreli doğrudan iletişim ve çağrı geçmişi.</li>
+                            <li><strong>Bire Bir Mesaj:</strong> Metin, görsel, video ve dosya paylaşımı.</li>
+                            <li><strong>Hikayeler (Stories):</strong> 24 saatlik döngü, beğeni ve görüntüleme takibi.</li>
+                            <li><strong>Canlı Sohbet:</strong> Yayın içi gerçek zamanlı anlık iletişim.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. TOPLULUK, GÜVEN, KEŞİF (TEMEL ÖZELLİKLER 2) -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Topluluk, Güven ve <span class="cyan-text">Keşif.</span></h2>
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Güven Altyapısı</strong>
+                        <ul>
+                            <li><strong>Trust Score & Influence Rank:</strong> Satıcı güvenilirliğini yansıtan şeffaf etki sıralaması.</li>
+                            <li><strong>Değerlendirme Sistemi:</strong> Puanlama ve satıcı yanıt hakkı.</li>
+                            <li><strong>Yayın Moderasyonu:</strong> Susturma, yayından atma, moderatör atama.</li>
+                            <li><strong>Kapsamlı Profil:</strong> İşletme/Kişisel profil ve gizli hesap yönetimi.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-card">
+                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Kişiselleştirilmiş İçerik</strong>
+                        <ul>
+                            <li><strong>Yapay Zeka İlgi Haritası:</strong> Görüntüleme, teklif, satın alma ve tereddüt sinyalleriyle sürekli öğrenen motor.</li>
+                            <li><strong>Sana Özel (For You):</strong> Tamamen ilgi alanına dayalı ilan/yayın akışı.</li>
+                            <li><strong>Arama Uyarıları:</strong> Kayıtlı kriterlere uyan yeni ilanlar için otomatik anlık bildirim.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. PRO ARAÇLAR VE AR-GE -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Pro Araçlar & <span class="cyan-text">Ar-Ge Harikaları.</span></h2>
+                <p style="margin-bottom: 30px;">Hesap tipinden bağımsız, tüm satıcılara açık kurumsal araçlar.</p>
+                <div class="glass-card" style="padding: 30px;">
+                    <div class="grid-2">
+                        <div>
+                            <strong style="color:var(--brand-cyan);">Sıcak Aday (Hot Lead) Tespiti</strong>
+                            <p style="margin-bottom: 15px;">24 saat içinde ilana yönelik yüksek teklif tereddütü gösterenlerin tespiti ve satıcı bildirimi.</p>
+                            
+                            <strong style="color:var(--brand-cyan);">Toplu Bildirim (Blast) & Retargeting</strong>
+                            <p style="margin-bottom: 15px;">Filtrelenmiş hedef kitlelere ve etkileşim kurmuş alıcılara kişiselleştirilmiş push bildirimi.</p>
+                            
+                            <strong style="color:var(--brand-cyan);">SwipeLive Algoritması (Ar-Ge)</strong>
+                            <p>Video varsa video, yoksa kapak fotoğrafı kullanarak canlı yayın ve ilanları kesintisiz tek akışta sunar.</p>
+                        </div>
+                        <div>
+                            <strong style="color:var(--brand-cyan);">Fiyat Zekası & Rakip Radar</strong>
+                            <p style="margin-bottom: 15px;">Rakip aktivitesi, kategori talep trendleri ve fiyatların gerçek zamanlı izlenmesi.</p>
+                            
+                            <strong style="color:var(--brand-cyan);">AI Fiyat Tahmini</strong>
+                            <p style="margin-bottom: 15px;">Piyasa verilerine dayalı dinamik fiyat öneri motoru.</p>
+                            
+                            <strong style="color:var(--brand-cyan);">Dönüşüm Hunisi Analizi</strong>
+                            <p>Görüntüleme → Tereddüt → Satın Alma hattını izleyen kapsamlı KPI gösterge paneli.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. TEKNOLOJİK YAKLAŞIM -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Teknolojik Yaklaşım.</h2>
+                <div class="glass-card grid-3" style="padding: 30px;">
+                    <div>
+                        <strong style="color:var(--text-main);">Mobil İstemi</strong>
+                        <p>Flutter (iOS & Android) - Tek kod tabanı, çift platform.</p>
+                    </div>
+                    <div>
+                        <strong style="color:var(--text-main);">Backend</strong>
+                        <p>FastAPI (Python) + PostgreSQL + Redis (Pub/Sub).</p>
+                    </div>
+                    <div>
+                        <strong style="color:var(--text-main);">Gerçek Zamanlı İletişim</strong>
+                        <p>LiveKit WebRTC + WebSocket anlık olay akışı.</p>
+                    </div>
+                    <div>
+                        <strong style="color:var(--text-main);">Hibrit Push</strong>
+                        <p>iOS VoIP PushKit + APNs + Android FCM birleşimi ile arka planda güvenilir çağrı.</p>
+                    </div>
+                    <div>
+                        <strong style="color:var(--text-main);">Big Data Analitiği</strong>
+                        <p>ClickHouse tabanlı yüksek hacimli etkileşim ve öneri motoru sinyal işleme.</p>
+                    </div>
+                    <div>
+                        <strong style="color:var(--text-main);">OTA Yerelleştirme</strong>
+                        <p>Uygulama güncellemesi gerektirmeden TR, EN, RU, AR dil paketi dağıtımı.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. YASAL UYUMLULUK VE VERİ YÖNETİMİ -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Yasal Uyum ve <span class="cyan-text">Veri Yönetimi.</span></h2>
+                <p style="margin-bottom: 30px;">KVKK uyumlu veri işleme mimarisiyle global rakiplerin Türkiye pazarında karşılayamadığı yasal güvenliği sunarız.</p>
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Yasal Dayanak</strong>
+                        <ul>
+                            <li><strong>KVKK Madde 9/6/b:</strong> ABD, Virginia sunucularına zorunlu aktarım onay mekanizması.</li>
+                            <li><strong>Denetlenebilir İspat:</strong> Onay tarihi, dil ve IP adresi veritabanı loglaması.</li>
+                            <li><strong>Haklar:</strong> Madde 11 (Bilgi, düzeltme, silme) doğrultusunda tam kontrol.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-card">
+                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Teknik Güvenlik</strong>
+                        <ul>
+                            <li><strong>Güvenli Depolama:</strong> Mobil cihazda Flutter Secure Storage şifrelemesi.</li>
+                            <li><strong>Kimlik Yönetimi:</strong> JWT tabanlı yenilenebilir/iptal edilebilir tokenlar.</li>
+                            <li><strong>Siber Koruma:</strong> Uç noktalarda Rate limiting, Brute-force ve XSS koruması (CSP).</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. HEDEF PAZAR -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Hedef Pazar.</h2>
+                <div class="grid-2" style="margin-top: 40px;">
+                    <div class="glass-card">
+                        <strong style="color: var(--brand-cyan); font-size: 1.4em; display:block; margin-bottom: 20px;">Satıcı Tarafı</strong>
+                        <ul>
+                            <li>Canlı yayında açık artırma yapan bireyseller.</li>
+                            <li>Koleksiyon, ikinci el, el yapımı ve niş satıcılar.</li>
+                            <li>Küçük/orta ölçekli butikler, KOBİ'ler.</li>
+                            <li>Instagram, TikTok, Twitch kitlesi olup entegre ödeme altyapısı arayanlar.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-card">
+                        <strong style="color: var(--brand-cyan); font-size: 1.4em; display:block; margin-bottom: 20px;">Alıcı Tarafı</strong>
+                        <ul>
+                            <li><strong>Shoppertainment izleyicileri:</strong> Alışverişi sosyal etkinlik olarak gören, FOMO ile karar verenler.</li>
+                            <li><strong>Güven odaklılar:</strong> Almadan önce görüntülü iletişim arayanlar.</li>
+                            <li><strong>Fırsat avcıları:</strong> Kişiselleştirilmiş keşif akışında beklenmedik ürünler arayanlar.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. GELİR MODELİ -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Çok Katmanlı <span class="cyan-text">Gelir Modeli.</span></h2>
+                <div class="glass-card" style="margin-top: 30px; padding: 30px;">
+                    <table class="apple-table">
+                        <tr>
+                            <td><strong>İşlem Komisyonu</strong></td>
+                            <td>Açık artırma, direkt satış ve ilan satışlarından komisyon.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tuci Kredisi Satışı</strong></td>
+                            <td>İlan öne çıkarma, blast kampanyaları ve AI araç kullanımı.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hediye Ekonomisi</strong></td>
+                            <td>İzleyicilerin yayıncıya Tuci ile hediye göndermesi.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sponsorlu İlanlar</strong></td>
+                            <td>Tıklama ve görüntüleme bazlı reklam kampanyaları.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Planlanan Altyapı</strong></td>
+                            <td>Gerçek para ile Tuci yükleme, platform içi ödeme ve Pro abonelik.</td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 11. REKABET ANALİZİ -->
+            <section data-transition="slide" class="dense-text">
+                <h2>Rekabet Analizi & <span class="cyan-text">Farkımız.</span></h2>
+                <div class="glass-card" style="padding: 30px; margin-top: 20px;">
+                    <strong style="color: var(--text-main); font-size: 1.1em;">Global:</strong> Whatnot, TikTok Shop, SHEIN Live, Amazon Live<br>
+                    <strong style="color: var(--text-main); font-size: 1.1em;">Yerel:</strong> Trendyol Canlı, Hepsiburada Canlı
+                    <hr style="border: 1px solid var(--glass-border); margin: 20px 0;">
+                    <strong style="color: var(--brand-cyan); font-size: 1.2em; display:block; margin-bottom: 15px;">teqlif Neden Üstün?</strong>
+                    <ul style="font-size: 0.85em;">
+                        <li><strong>Entegre 3 Kanal:</strong> Açık artırma, direkt satış ve ilan aynı hesap altında paralel çalışır.</li>
+                        <li><strong>Platform İçi P2P İletişim:</strong> Görüntülü çağrı doğrudan ticarete entegredir; hiçbir rakipte yoktur.</li>
+                        <li><strong>SwipeLive Etkisi:</strong> Canlı yayın ve ilanların tek akışta sunulması oturum süresini artırır.</li>
+                        <li><strong>Araçlara Demokratik Erişim:</strong> Retargeting, Hot Lead vb. kurumsal araçlar harcama sınırına bakılmaksızın tüm satıcılara açıktır.</li>
+                        <li><strong>Yerel Yasal Uyum:</strong> KVKK uyumlu veri mimarisi, global rakiplerin Türkiye'de karşılamadığı yapısal bir avantajdır.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 12. VİZYON / SONUÇ -->
+            <section data-transition="fade">
+                <h1 class="teqlif-logo" style="font-size: 3em;">Geleceğe Katılın.</h1>
+                <p style="font-size: 1.2em; margin-top: 20px; color: var(--text-main);">
+                    E-ticaretin "işlem" odaklı yapısını,<br>"deneyim" odaklı bir sosyal ekosisteme dönüştürüyoruz.
+                </p>
+                
+                <div style="margin-top: 40px;">
+                    <p style="font-size: 0.9em; color: var(--text-muted);">
+                        <strong>Pazara Giriş Stratejisi Başladı.</strong><br>
+                        İlk hedef kitlemiz olan canlı müzayede satıcıları, sosyal KOBİ'ler ve niş topluluklarla gerçekleştirilen pilot testler eşliğinde büyümeye hazırız.
+                    </p>
+                </div>
+                
+                <div style="margin-top: 40px; font-weight: 500;">
+                    <p class="cyan-text">iletisim@teqlif.com | www.teqlif.com</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Reveal.js Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.0/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'slide', 
+            transitionSpeed: 'slow',
+            backgroundTransition: 'fade',
+            center: true,
+            controls: true,
+            progress: true,
+            
+            // Layout settings
+            width: 1200,
+            height: 800,
+            margin: 0.1,
+            minScale: 0.2,
+            maxScale: 2.0
+        });
+    </script>
+</body>
+</html>

@@ -2772,13 +2772,18 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
             const SizedBox(height: 20),
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                'Sosyal Medya',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary(context),
-                ),
+              child: Builder(
+                builder: (context) {
+                  final loc = ref.read(localizationProvider);
+                  return Text(
+                    loc.t('editProfileSocialTitle'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 10),
@@ -2817,12 +2822,17 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     String label,
     String urlPrefix,
   ) {
-    return TeqTextField(
-      controller: ctrl,
-      keyboardType: TextInputType.text,
-      autocorrect: false,
-      labelText: label,
-      hintText: 'kullaniciadi',
+    return Builder(
+      builder: (context) {
+        final loc = ref.read(localizationProvider);
+        return TeqTextField(
+          controller: ctrl,
+          keyboardType: TextInputType.text,
+          autocorrect: false,
+          labelText: label,
+          hintText: loc.t('editProfileSocialUsernameHint'),
+        );
+      },
     );
   }
 }

@@ -33,7 +33,7 @@ Entegre Canlı Yayın Altyapısı: Satıcıların ürünlerini 360 derece göste
 
 Gerçek Zamanlı Teklif Motoru: Canlı yayın sırasında saniyeler içinde gerçekleşen anlık teklifleri (bidding) yönetebilmek için, eşzamanlılık (concurrency) sorunlarını çözen, yüksek performanslı arka plan iş kuyrukları (job queues) ve bellek içi veri yapıları kullanılır. Açık artırma bittiğinde ödeme eşzamanlı olarak provizyona alınır; böylece manuel ödeme takibi sorunu (friction) çözülür.
 
-Oyunlaştırma ve FOMO Üretimi: 15-30 saniyelik "ani ölüm" (sudden death) açık artırmaları ve "gizemli kutu açılışları" gibi kurgularla alışveriş oyunlaştırılır. Alıcılar arasındaki rekabet, Fırsatı Kaçırma Korkusunu (FOMO) tetikleyerek dönüşüm oranlarını (conversion rate) dramatik ölçüde artırır.
+Oyunlaştırma ve FOMO Üretimi: "ani ölüm" (sudden death) açık artırmaları ve "gizemli kutu açılışları" gibi kurgularla alışveriş oyunlaştırılır. Alıcılar arasındaki rekabet, Fırsatı Kaçırma Korkusunu (FOMO) tetikleyerek dönüşüm oranlarını (conversion rate) dramatik ölçüde artırır.
 
 Çapraz Platform (Cross-Platform) Mobil Deneyim: Video izleme, anlık sohbet (chat) ve ödeme altyapısı, kullanıcının uygulamadan çıkmasına gerek kalmadan, tek bir akış içinde pürüzsüz çalışacak şekilde tasarlanmıştır.
 
@@ -154,7 +154,6 @@ teqlif, kullanıcı verilerini Virginia, ABD'deki (US-EAST-VA) bulut altyapısı
 
 **Alıcı Tarafı**
 
-- Niş ürün koleksiyoncuları: spor kartları, vintage elektronik, el yapımı takı, nadir kitap gibi spesifik ilgi alanlarına sahip kullanıcılar
 - Shoppertainment izleyicileri: alışverişi sosyal ve eğlenceli bir etkinlik olarak deneyimleyen, canlı yayın atmosferinden FOMO ile karar veren alıcılar
 - Güven odaklı alıcılar: ürünü satın almadan önce görüntülü veya sesli olarak satıcıyla iletişim kurmak isteyen kullanıcılar
 - İkinci el ve fırsat avcıları: kişiselleştirilmiş keşif akışında beklenmedik ürünlerle karşılaşmayı tercih eden alıcılar

@@ -712,6 +712,8 @@
   "editProfileLinkHint": "https://...",
   "editProfileLinkHelper": "يجب أن يبدأ بـ https://",
   "editProfileLinkError": "يجب أن يبدأ الرابط بـ http:// أو https://",
+  "editProfileSocialTitle": "وسائل التواصل الاجتماعي",
+  "editProfileSocialUsernameHint": "اسم_المستخدم",
   "settingsProTools": "📈 أدوات Pro",
   "settingsProActive": "نشط",
   "walletTitle": "محفظة TUCi الخاصة بي",

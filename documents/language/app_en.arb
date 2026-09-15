@@ -709,6 +709,8 @@
   "editProfileLinkHint": "https://...",
   "editProfileLinkHelper": "Must start with https://",
   "editProfileLinkError": "Link must start with http:// or https://",
+  "editProfileSocialTitle": "Social Media",
+  "editProfileSocialUsernameHint": "username",
   "settingsProTools": "📈 Pro Tools",
   "settingsProActive": "ACTIVE",
   "walletTitle": "My TUCi Wallet",

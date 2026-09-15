@@ -1293,6 +1293,8 @@
   "editProfileLinkHint": "https://...",
   "editProfileLinkHelper": "Должно начинаться с https://",
   "editProfileLinkError": "Ссылка должна начинаться с http:// или https://",
+  "editProfileSocialTitle": "Социальные сети",
+  "editProfileSocialUsernameHint": "имя_пользователя",
   "settingsProTools": "📈 Профессиональные инструменты",
   "settingsProActive": "АКТИВНЫЙ",
   "walletTitle": "Мой кошелек TUCi",

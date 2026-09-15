@@ -709,6 +709,8 @@
   "editProfileLinkHint": "https://...",
   "editProfileLinkHelper": "https:// ile başlamalı",
   "editProfileLinkError": "Link http:// veya https:// ile başlamalı",
+  "editProfileSocialTitle": "Sosyal Medya",
+  "editProfileSocialUsernameHint": "kullaniciadi",
   "settingsProTools": "📈 Pro Araçları",
   "settingsProActive": "AKTİF",
   "walletTitle": "TUCi Cüzdanım",
