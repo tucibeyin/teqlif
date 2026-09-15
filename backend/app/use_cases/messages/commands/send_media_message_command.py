@@ -23,7 +23,12 @@ from app.constants.media_limits import (
 logger = get_logger(__name__)
 
 
-def _msg_out(msg: DirectMessage, sender_username: str) -> MessageOut:
+def _msg_out(
+    msg: DirectMessage, 
+    sender_username: str, 
+    media_url: str | None = None, 
+    thumbnail_url: str | None = None
+) -> MessageOut:
     return MessageOut(
         id=msg.id,
         sender_id=msg.sender_id,
@@ -31,8 +36,8 @@ def _msg_out(msg: DirectMessage, sender_username: str) -> MessageOut:
         sender_username=sender_username,
         content=msg.content,
         content_type=msg.content_type,
-        media_url=msg.media_url,
-        thumbnail_url=msg.thumbnail_url,
+        media_url=media_url if media_url is not None else msg.media_url,
+        thumbnail_url=thumbnail_url if thumbnail_url is not None else msg.thumbnail_url,
         duration_secs=msg.duration_secs,
         file_name=msg.file_name,
         file_size=msg.file_size,
@@ -271,4 +276,4 @@ class SendMediaMessageCommand:
             "[SendMediaMessageCommand] Başarılı | sender=%s receiver=%s type=%s size=%d",
             sender_id, receiver_id, content_type_field, file_size,
         )
-        return _msg_out(msg, sender_username)
+        return _msg_out(msg, sender_username, media_url=presigned_media, thumbnail_url=presigned_thumb)
