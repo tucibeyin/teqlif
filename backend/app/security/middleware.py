@@ -36,7 +36,7 @@ class SecurityMiddleware:
 # Security headers middleware
 _DEFAULT_CSP = (
     "default-src 'self'; "
-    "script-src 'self' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.gstatic.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com; "
+    "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://www.gstatic.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com; "
     "style-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net; "
     "img-src 'self' data: https:; "
     "media-src 'self' blob:; "
