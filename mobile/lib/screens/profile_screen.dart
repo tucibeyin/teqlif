@@ -3246,8 +3246,8 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
                                     size: 22,
                                   ),
                                   tooltip: widget.active
-                                      ? 'Pasife Al'
-                                      : 'Aktif Yap',
+                                      ? ref.read(localizationProvider).t('tooltipDeactivate')
+                                      : ref.read(localizationProvider).t('tooltipActivate'),
                                   onPressed: () => _toggle(l),
                                 ),
                                 IconButton(
@@ -3256,7 +3256,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
                                     color: Color(0xFFDC2626),
                                     size: 22,
                                   ),
-                                  tooltip: 'Sil',
+                                  tooltip: ref.read(localizationProvider).t('tooltipDelete'),
                                   onPressed: () => _delete(l),
                                 ),
                               ],

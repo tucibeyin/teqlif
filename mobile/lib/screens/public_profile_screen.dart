@@ -427,7 +427,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       // ── İşlemler ──────────────────────────────────────
                       PopupMenuButton<String>(
                         key: const Key('pub_profile_btn_islemler'),
-                        tooltip: 'İşlemler',
+                        tooltip: ref.read(localizationProvider).t('tooltipActions'),
                         position: PopupMenuPosition.under,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
