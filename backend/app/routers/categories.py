@@ -25,13 +25,16 @@ async def list_categories(
 
     t = _get_t(lang)
 
+    context = request.query_params.get("context")
+
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Category)
-            .where(Category.status == CategoryStatus.ACTIVE)  # noqa: E712
-            .order_by(Category.sort_order)
-        )
+        query = select(Category).where(Category.status == CategoryStatus.ACTIVE)
+        if context != "stream":
+            query = query.where(Category.is_listable.is_(True))
+            
+        result = await db.execute(query.order_by(Category.sort_order))
         cats = result.scalars().all()
+        
         return [
             {
                 "key": c.key,

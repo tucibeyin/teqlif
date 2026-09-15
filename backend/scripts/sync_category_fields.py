@@ -15,42 +15,58 @@ from app.config import settings
 import redis.asyncio as aioredis
 
 _DOCS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'documents', 'categorization'))
-
+_STREAM_DOCS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'documents', 'stream'))
 
 async def sync_categories():
-    json_files = glob.glob(os.path.join(_DOCS_PATH, '*.json'))
-    if not json_files:
-        print("[sync_categories] JSON dosyası bulunamadı.")
-        return
-
     print("[sync_categories] Kategoriler DB ile senkronize ediliyor...")
     async with AsyncSessionLocal() as db:
         res = await db.execute(select(Category))
         db_categories = {c.key: c for c in res.scalars().all()}
-
+        
         seen_keys = set()
         upserted = 0
 
-        for file_path in json_files:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            key = data.get("category")
-            if not key or key == "unmapped":
-                continue
-
-            meta = data.get("meta", {})
-            sort_order = meta.get("sort_order", 0)
+        def process_category(key, sort_order, is_listable):
+            nonlocal upserted
             seen_keys.add(key)
-
             if key in db_categories:
                 cat = db_categories[key]
                 cat.sort_order = sort_order
                 cat.status = CategoryStatus.ACTIVE
+                cat.is_listable = is_listable
             else:
-                db.add(Category(key=key, label=key, sort_order=sort_order, status=CategoryStatus.ACTIVE))
+                db.add(Category(
+                    key=key, 
+                    label=key, 
+                    sort_order=sort_order, 
+                    status=CategoryStatus.ACTIVE, 
+                    is_listable=is_listable
+                ))
             upserted += 1
 
+        # 1. İlan kategorilerini işle (is_listable = True)
+        json_files = glob.glob(os.path.join(_DOCS_PATH, '*.json'))
+        for file_path in json_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            key = data.get("category")
+            if not key or key == "unmapped":
+                continue
+            meta = data.get("meta", {})
+            process_category(key, meta.get("sort_order", 0), is_listable=True)
+
+        # 2. Yayın kategorilerini işle (is_listable = False)
+        stream_json_files = glob.glob(os.path.join(_STREAM_DOCS_PATH, '*.json'))
+        for file_path in stream_json_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                stream_cats = json.load(f)
+            for sc in stream_cats:
+                key = sc.get("key")
+                if not key:
+                    continue
+                process_category(key, sc.get("sort_order", 99), is_listable=False)
+
+        # 3. Görünmeyenleri pasife çek
         passived = 0
         for key, cat in db_categories.items():
             if key not in seen_keys and cat.status == CategoryStatus.ACTIVE:
@@ -59,7 +75,6 @@ async def sync_categories():
 
         await db.commit()
         print(f"[sync_categories] {upserted} kategori upsert, {passived} pasife alındı.")
-
 
 async def sync_subcategories():
     json_files = glob.glob(os.path.join(_DOCS_PATH, '*.json'))
