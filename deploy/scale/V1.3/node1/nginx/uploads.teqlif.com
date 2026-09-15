@@ -24,7 +24,16 @@ server {
     add_header Strict-Transport-Security "max-age=31536000" always;
     add_header X-Content-Type-Options "nosniff" always;
 
-    # MinIO — uploads bucket
+    # DM (Private) bucket proxy - Presigned URL routing
+    location /teqlif-dm/ {
+        proxy_pass http://10.10.0.1:9010/teqlif-dm/;
+        proxy_set_header Host $http_host;
+        proxy_buffering off;
+        # Presigned URL'ler dinamiktir, cache'lenmez
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+    }
+
+    # MinIO — public uploads bucket (Implicit routing)
     location / {
         proxy_pass http://10.10.0.1:9010/teqlif/;
         proxy_set_header Host $http_host;
