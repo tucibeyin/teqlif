@@ -30,9 +30,14 @@ class AbstractStorageService(Protocol):
 
 logger = get_logger(__name__)
 
+def _clean_endpoint(url: str) -> str:
+    """Minio client requires host:port without scheme or paths."""
+    cleaned = url.replace("https://", "").replace("http://", "")
+    return cleaned.split("/")[0]
+
 # Public bucket client — nginx proxy üzerinden erişilen medyalar
 _client = Minio(
-    settings.minio_endpoint,
+    _clean_endpoint(settings.minio_endpoint),
     access_key=settings.minio_access_key,
     secret_key=settings.minio_secret_key,
     secure=settings.minio_secure,
@@ -48,7 +53,7 @@ def _get_presign_client() -> Minio:
     external = settings.minio_dm_external_url
     if external:
         return Minio(
-            external,
+            _clean_endpoint(external),
             access_key=settings.minio_access_key,
             secret_key=settings.minio_secret_key,
             secure=True,
