@@ -306,6 +306,8 @@ if os.path.exists(frontend_dir):
 
     @app.get("/", include_in_schema=False)
     async def serve_index():
+        if settings.web_app_enabled:
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
         return FileResponse(os.path.join(frontend_dir, "app-landing.html"))
 
     @app.get("/.well-known/apple-app-site-association", include_in_schema=False)
@@ -338,6 +340,8 @@ if os.path.exists(frontend_dir):
         ctx = _listing_og(listing, listing_id)
         ctx["app_scheme"] = f"teqlif://ilan/{listing_id}"
         ctx["web_url"]    = f"/ilan.html?id={listing_id}"
+        if settings.web_app_enabled:
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
         return templates.TemplateResponse(request, "app-landing.html", ctx)
 
     @app.get("/profil/{username}", include_in_schema=False)
@@ -356,6 +360,8 @@ if os.path.exists(frontend_dir):
         ctx = _user_og(user)
         ctx["app_scheme"] = f"teqlif://profil/{user.username}"
         ctx["web_url"]    = f"/profil.html?u={user.username}"
+        if settings.web_app_enabled:
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
         return templates.TemplateResponse(request, "app-landing.html", ctx)
 
 
@@ -391,6 +397,8 @@ if os.path.exists(frontend_dir):
             "app_scheme":     f"teqlif://yayin/{stream_id}",
             "web_url":        f"/yayin.html?id={stream_id}",
         }
+        if settings.web_app_enabled:
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
         return templates.TemplateResponse(request, "app-landing.html", ctx)
 
     @app.get("/{page}.html", include_in_schema=False)

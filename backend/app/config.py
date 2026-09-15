@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     captcha_provider: str = "turnstile"
     captcha_secret_key: str = ""
     debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
+    web_app_enabled: bool = False  # Staging için index.html sunulmasını kontrol eder
     groq_api_key: str = ""
     gemini_api_key: str = ""
     node2_ai_proxy_url: str = ""        # ör. "http://10.10.0.3:8080" — boşsa node2 atlanır
