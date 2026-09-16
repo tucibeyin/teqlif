@@ -56,4 +56,18 @@
 
 **Beklenen Sonuç:** Node1'in eski karmaşık Monolith yüklerinden tamamen arındırılmış, Node4 (Edge 2) ile asimetrik ikiz olacak şekilde kodlanmış olması.
 
+**Durum:** ✅ Tamamlandı (Commit: c49ea325)
+
+---
+
+## Görev 1.4: Gateway, Node2 ve Node3 Testi
+**Amaç:** Kalan node'ların (Gateway ve Async Worker'lar) V1.4 Core-Edge topolojisi ile entegre olduğunu onaylamak.
+
+**Test Adımları (Review):**
+1. `gateway/resources/certbot_gateway.sh` scriptinde Nginx proxy_pass ayarının `10.10.0.1` yerine `10.10.0.5` (Yeni Node5 Core IP'si) olarak güncellendiğini (`sed` komutu) doğrula.
+2. Node2 ve Node3 (Worker'lar) için `bootstrap` scriptlerinin yazıldığını ve V1.4'te veritabanı (Postgres vb.) barındırmadıklarını onayla.
+3. Her üç node'un `bootstrap` scriptinde `Clean State` (Önbellek temizlik) kuralına uyulduğunu doğrula.
+
+**Beklenen Sonuç:** Tüm sunucu yelpazesinin tam V1.4 (Orchestrator=Node5, Edge=Node1/4, Workers=Node2/3, Proxy=Gateway) senaryosuna göre scriptlerinin tamamlanması.
+
 **Durum:** ⏳ Kullanıcı onayı bekleniyor.
