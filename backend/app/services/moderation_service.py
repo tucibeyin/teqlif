@@ -77,11 +77,14 @@ async def remove_from_livekit(room_name: str, user_id: int) -> None:
     """Katılımcıyı LiveKit odasından zorla çıkar (non-critical)."""
     try:
         logger.info(
-            "[MOD] LiveKit katılımcı çıkarılıyor | room=%s user_id=%s identity=%s api_url=%s",
-            room_name, user_id, str(user_id), settings.livekit_api_base,
+            "[MOD] LiveKit katılımcı çıkarılıyor | room=%s user_id=%s identity=%s",
+            room_name, user_id, str(user_id),
         )
+        from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
+        node = await orchestrator.allocate_node(ServiceType.MEDIA)
+        api_url = livekit_api_url(node["livekit_url"])
         async with aiohttp.ClientSession() as session:
-            svc = RoomService(session, settings.livekit_api_base, settings.livekit_api_key, settings.livekit_api_secret)
+            svc = RoomService(session, api_url, settings.livekit_api_key, settings.livekit_api_secret)
             req = RoomParticipantIdentity()
             req.room = room_name
             req.identity = str(user_id)

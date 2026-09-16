@@ -45,6 +45,7 @@ from app.config import settings
 from app.core.exceptions import AppException, NotFoundException, BadRequestException, ForbiddenException, ConflictException
 from app.services.apns_service import send_voip_push
 from app.services.firebase_service import send_push
+from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
@@ -75,8 +76,10 @@ def _make_livekit_token(room_name: str, user: User) -> str:
 async def _delete_lk_room(room_name: str) -> None:
     try:
         from livekit.api import LiveKitAPI, DeleteRoomRequest
+        node = await orchestrator.allocate_node(ServiceType.MEDIA)
+        api_url = livekit_api_url(node["livekit_url"])
         async with LiveKitAPI(
-            url=settings.livekit_api_base,
+            url=api_url,
             api_key=settings.livekit_api_key,
             api_secret=settings.livekit_api_secret,
         ) as api:
@@ -116,7 +119,7 @@ async def get_callee_token(
     )
     return {
         "token": token,
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "room_name": call.room_name,
     }
 
@@ -191,7 +194,7 @@ async def get_active_call(
             "status": call.status,
             "role": role,
             "room_name": call.room_name,
-            "livekit_url": settings.livekit_url,
+            "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
             "token": token,
             "other_user": {
                 "id": other_user_id,
@@ -406,7 +409,7 @@ async def _send_call_push(
         "caller_id": str(caller.id),
         "caller_username": caller.username,
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "callee_token": callee_token,
     }
 
@@ -418,7 +421,7 @@ async def _send_call_push(
         "caller_id": str(caller.id),
         "caller_username": caller.username,
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "callee_token": callee_token,
     }
 
@@ -645,7 +648,7 @@ async def start_call(
         "caller_id": current_user.id,
         "caller_username": current_user.username,
         "caller_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "callee_token": callee_token,
     }
     await _ws_broadcast(callee_id, ws_payload)
@@ -698,7 +701,7 @@ async def start_call(
     return {
         "call_id": call.id,
         "room_name": room_name,
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "token": token,
     }
 
@@ -810,7 +813,7 @@ async def accept_call(
     return {
         "call_id": call_id_val,
         "room_name": room_name,
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "token": token,
         "accepted_at": accepted_at.isoformat(),
     }
@@ -1319,7 +1322,7 @@ async def invite_to_call(
         "type": ws_types.CALL_GROUP_INVITE,
         "call_id": call_id,
         "room_name": call.room_name,
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "livekit_token": livekit_token,
         "inviter_id": current_user.id,
         "inviter_username": current_user.username,
@@ -1341,7 +1344,7 @@ async def invite_to_call(
                 extra_data={
                     "call_id": str(call_id),
                     "room_name": call.room_name,
-                    "livekit_url": settings.livekit_url,
+                    "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
                     "livekit_token": livekit_token,
                     "inviter_id": str(current_user.id),
                     "inviter_username": current_user.username,
@@ -1427,7 +1430,7 @@ async def accept_group_invite(
     logger.info("[CALL_GROUP][ACCEPT] accept OK | call_id=%d user=%d", call_id, user_id)
     return {
         "livekit_token": cp.livekit_token,
-        "livekit_url": settings.livekit_url,
+        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "room_name": call.room_name,
         "participants": participants,
     }

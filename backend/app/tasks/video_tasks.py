@@ -92,8 +92,11 @@ async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> 
     output = _highlight_path(room_id)
 
     try:
+        from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
         from app.config import settings
-        lk_http = settings.livekit_url.replace("wss://", "https://").replace("ws://", "http://")
+        node = await orchestrator.allocate_node(ServiceType.MEDIA)
+        lk_wss = node["livekit_url"] if node else (settings.edge_livekit_urls[0] if settings.edge_livekit_urls else "")
+        lk_http = livekit_api_url(lk_wss)
         whep_url = f"{lk_http}/rooms/{room_name}/whep"
         token = _make_livekit_recorder_token(room_name, room_id)
     except Exception as exc:

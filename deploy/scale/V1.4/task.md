@@ -28,7 +28,7 @@
 
 ## 🔀 Aşama 3: Backend Refactor - Dinamik Orkestratör ve Servisler
 - `[x]` Görev 3.1: `edge_orchestrator.py` servisinin (Clean Architecture ve Strategy pattern'a uygun) kodlanması. İhtiyaca göre (CPU vs Disk) jenerik Edge Node tahsisi yapılması. (Commit: 4d5af235, Date: 2026-09-16)
-- `[x]` Görev 3.2: `storage_service.py` refactor'ü. Tüm Edge node'lar için bir "MinIO Connection Pool" oluşturulması. Kayıt (Upload) esnasında Orkestratör'den node atanması; Silme (Delete) esnasında ise veritabanındaki URL'in parse edilip doğru node'a silme isteğinin yönlendirilmesi (Media Routing). (Commit: pending, Date: 2026-09-16)
+- `[x]` Görev 3.2: `storage_service.py` refactor'ü. Tüm Edge node'lar için bir "MinIO Connection Pool" oluşturulması. Kayıt (Upload) esnasında Orkestratör'den node atanması; Silme (Delete) esnasında ise veritabanındaki URL'in parse edilip doğru node'a silme isteğinin yönlendirilmesi (Media Routing). (Commit: 5920a27e, Date: 2026-09-16)
 - `[ ]` Görev 3.3: `stream_utils.py` (Yayınlar) ve `calls.py` (VoIP) servislerinin, LiveKit URL'lerini dinamik orkestratörden alacak şekilde güncellenmesi.
 
 ## 🚀 Aşama 4: Canlı Sunucu Operasyonları (Execution & Migration)

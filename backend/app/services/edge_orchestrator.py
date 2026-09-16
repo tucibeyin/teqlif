@@ -13,6 +13,11 @@ class ServiceType(Enum):
     STORAGE = "storage"  # Yüksek Disk kapasitesi (MinIO Yükleme)
     # İleride eklenebilecek: AI_MODEL, BATCH_PROCESS vb.
 
+
+def livekit_api_url(livekit_wss_url: str) -> str:
+    """Orkestratör'den dönen wss:// adresini LiveKit HTTP API URL'ine dönüştürür."""
+    return livekit_wss_url.replace("wss://", "https://").replace("ws://", "http://")
+
 class EdgeOrchestrator:
     """
     Teqlif V1.4 - Generic Edge Allocator (Strateji Deseni)

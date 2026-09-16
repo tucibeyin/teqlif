@@ -128,7 +128,7 @@
 
 **Beklenen Sonuç:** Bir resim Node4'e yüklendiyse (Standalone), silme talebinin de Node1'e değil yalnızca Node4'e (Nokta atışı) gitmesi.
 
-**Durum:** ✅ Tamamlandı (Commit: pending)
+**Durum:** ✅ Tamamlandı (Commit: 5920a27e)
 
 ---
 

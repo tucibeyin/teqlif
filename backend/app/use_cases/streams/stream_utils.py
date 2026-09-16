@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.models.user import User
 from app.models.block import UserBlock
+from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
 
 logger = logging.getLogger(__name__)
 
@@ -37,26 +38,31 @@ async def _fill_viewer_counts(streams: list, tag: str = "") -> None:
         logger.error("[STREAMS] Redis viewer count okunamadı%s", f" | {tag}" if tag else "", exc_info=True)
 
 async def delete_livekit_room(room_name: str) -> None:
-    """LiveKit odasını zorla sil (tüm katılımcıları çıkarır)."""
+    """LiveKit odasını zorla sil — Orkestratör'den alınan en uygun MEDIA node üzerinden."""
     try:
+        node = await orchestrator.allocate_node(ServiceType.MEDIA)
+        api_url = livekit_api_url(node["livekit_url"])
         async with aiohttp.ClientSession() as session:
             svc = RoomService(
                 session,
-                settings.livekit_api_base,
+                api_url,
                 settings.livekit_api_key,
                 settings.livekit_api_secret,
             )
             req = DeleteRoomRequest()
             req.room = room_name
             await svc.delete_room(req)
-        logger.info("[STREAMS] LiveKit oda silindi | room=%s", room_name)
+        logger.info("[STREAMS] LiveKit oda silindi | room=%s node=%s", room_name, node.get("node_id"))
     except Exception as exc:
         logger.warning("[STREAMS] LiveKit oda silinemedi | room=%s | %s", room_name, exc)
 
 _LIVEKIT_TOKEN_TTL = timedelta(hours=24)
 
 def make_livekit_token(room_name: str, user: User, can_publish: bool) -> str:
-    """LiveKit JWT token üretir."""
+    """
+    LiveKit JWT token üretir.
+    API key/secret tüm Edge node'larda ortaktır — token içeriği Node bağımsızdır.
+    """
     try:
         from livekit.api import AccessToken, VideoGrants
         grant = VideoGrants(

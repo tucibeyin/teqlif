@@ -8,6 +8,7 @@ from app.utils.redis_client import get_redis
 from app.use_cases.chat.chat_utils import publish_chat
 from app.constants import ws_types as WS
 from app.core.logger import get_logger
+from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
 
 logger = get_logger(__name__)
 
@@ -62,10 +63,13 @@ class AcceptCohostInviteCommand:
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
 
+            node = await orchestrator.allocate_node(ServiceType.MEDIA)
+            api_url = livekit_api_url(node["livekit_url"])
+
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
-                    settings.livekit_api_base,
+                    api_url,
                     settings.livekit_api_key,
                     settings.livekit_api_secret
                 )
@@ -96,7 +100,7 @@ class AcceptCohostInviteCommand:
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,
-                livekit_url=settings.livekit_url,
+                livekit_url=node["livekit_url"],
                 token=token,
                 category=stream.category,
             )
@@ -122,10 +126,13 @@ class RemoveCohostCommand:
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
 
+            node = await orchestrator.allocate_node(ServiceType.MEDIA)
+            api_url = livekit_api_url(node["livekit_url"])
+
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
-                    settings.livekit_api_base,
+                    api_url,
                     settings.livekit_api_key,
                     settings.livekit_api_secret
                 )
@@ -169,10 +176,13 @@ class LeaveCohostCommand:
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
 
+            node = await orchestrator.allocate_node(ServiceType.MEDIA)
+            api_url = livekit_api_url(node["livekit_url"])
+
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
-                    settings.livekit_api_base,
+                    api_url,
                     settings.livekit_api_key,
                     settings.livekit_api_secret
                 )
