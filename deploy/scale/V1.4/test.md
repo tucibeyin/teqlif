@@ -26,4 +26,19 @@
 
 **Beklenen Sonuç:** Tüm yapılandırmaların "Sıfır Statik Veri" kuralına ve Core yapısına uygun tasarlanmış olması.
 
+**Durum:** ✅ Tamamlandı (Commit: 6643f126)
+
+---
+
+## Görev 1.2: Node4 (Edge 2) Resources Testi
+**Amaç:** Node4'ün "Saf Medya ve Storage (Edge 2)" rolüne uygun bir şekilde (Core servislerinden tamamen arındırılarak) yapılandırıldığını doğrulamak.
+
+**Test Adımları (Review):**
+1. `node4_production_requirements.txt` dosyasının backend bağımlılıklarından (`fastapi`, `sqlalchemy` vb.) arındırıldığını, sadece `edge-metrics-agent` gereksinimlerini içerdiğini onayla.
+2. `bootstrap_node4.sh` içerisinde 8GB Swap alanının (Media/Storage buffer) yapılandırıldığını doğrula.
+3. `.env.production.template` içerisinde Core servis (Postgres vb.) bilgilerinin OLMADIĞINI, sadece `CORE_REDIS_URL`, `LIVEKIT_*` ve `MINIO_*` ayarlarının bulunduğunu onayla.
+4. `node4_services.sh` içerisinde backend/veritabanı servislerinin değil, sadece Edge servislerinin (livekit, minio, redis-server, edge-metrics-agent) listelendiğini doğrula.
+
+**Beklenen Sonuç:** Node4'ün hiçbir şekilde gereksiz Core paketlerini veya ayarlarını barındırmaması, tamamen "Edge" görevine izole edilmesi.
+
 **Durum:** ⏳ Kullanıcı onayı bekleniyor.
