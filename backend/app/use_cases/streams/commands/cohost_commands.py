@@ -8,7 +8,7 @@ from app.utils.redis_client import get_redis
 from app.use_cases.chat.chat_utils import publish_chat
 from app.constants import ws_types as WS
 from app.core.logger import get_logger
-from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
+from app.services.edge_orchestrator import orchestrator, ServiceType
 
 logger = get_logger(__name__)
 
@@ -64,7 +64,7 @@ class AcceptCohostInviteCommand:
             from livekit.protocol.models import ParticipantPermission
 
             node = await orchestrator.allocate_node(ServiceType.MEDIA)
-            api_url = livekit_api_url(node["livekit_url"])
+            api_url = node["livekit_url"]
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
@@ -127,7 +127,7 @@ class RemoveCohostCommand:
             from livekit.protocol.models import ParticipantPermission
 
             node = await orchestrator.allocate_node(ServiceType.MEDIA)
-            api_url = livekit_api_url(node["livekit_url"])
+            api_url = node["livekit_url"]
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
@@ -177,7 +177,7 @@ class LeaveCohostCommand:
             from livekit.protocol.models import ParticipantPermission
 
             node = await orchestrator.allocate_node(ServiceType.MEDIA)
-            api_url = livekit_api_url(node["livekit_url"])
+            api_url = node["livekit_url"]
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(

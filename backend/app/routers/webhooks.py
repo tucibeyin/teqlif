@@ -273,9 +273,9 @@ async def _delayed_close_stream(room_name: str) -> None:
     # Fallback: ARQ pool yok
     await asyncio.sleep(60)
     try:
-        from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
+        from app.services.edge_orchestrator import orchestrator, ServiceType
         node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        api_url = livekit_api_url(node["livekit_url"])
+        api_url = node["livekit_url"]
         async with aiohttp.ClientSession() as session:
             svc = RoomService(
                 session,

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.models.user import User
 from app.models.block import UserBlock
-from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
+from app.services.edge_orchestrator import orchestrator, ServiceType
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ async def delete_livekit_room(room_name: str) -> None:
     """LiveKit odasını zorla sil — Orkestratör'den alınan en uygun MEDIA node üzerinden."""
     try:
         node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        api_url = livekit_api_url(node["livekit_url"])
+        api_url = node["livekit_url"]
         async with aiohttp.ClientSession() as session:
             svc = RoomService(
                 session,

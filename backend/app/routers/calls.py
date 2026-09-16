@@ -45,7 +45,7 @@ from app.config import settings
 from app.core.exceptions import AppException, NotFoundException, BadRequestException, ForbiddenException, ConflictException
 from app.services.apns_service import send_voip_push
 from app.services.firebase_service import send_push
-from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
+from app.services.edge_orchestrator import orchestrator, ServiceType
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
@@ -77,7 +77,7 @@ async def _delete_lk_room(room_name: str) -> None:
     try:
         from livekit.api import LiveKitAPI, DeleteRoomRequest
         node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        api_url = livekit_api_url(node["livekit_url"])
+        api_url = node["livekit_url"]
         async with LiveKitAPI(
             url=api_url,
             api_key=settings.livekit_api_key,

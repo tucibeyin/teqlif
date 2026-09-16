@@ -24,7 +24,7 @@ from app.core.logger import get_logger, capture_exception
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
 from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
 from app.services.feed.foryou_worker import populate_foryou_feed_task
-from app.services.edge_orchestrator import orchestrator, ServiceType, livekit_api_url
+from app.services.edge_orchestrator import orchestrator, ServiceType
 logger = get_logger(__name__)
 
 # Embedding metninde kullanılan Türkçe condition etiketleri
@@ -1766,7 +1766,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                 async with aiohttp.ClientSession() as session:
                     svc = RoomService(
                         session,
-                        livekit_api_url((await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]),
+                        (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
                         settings.livekit_api_key,
                         settings.livekit_api_secret,
                     )
@@ -2029,7 +2029,7 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
                 from livekit.api import LiveKitAPI, DeleteRoomRequest
                 from app.config import settings as _settings
                 async with LiveKitAPI(
-                    url=_livekit_api_url((await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]),
+                    url=_(await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
                     api_key=_settings.livekit_api_key,
                     api_secret=_settings.livekit_api_secret,
                 ) as api:
@@ -2095,7 +2095,7 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                 async with aiohttp.ClientSession() as session:
                     svc = RoomService(
                         session,
-                        livekit_api_url((await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]),
+                        (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
                         settings.livekit_api_key,
                         settings.livekit_api_secret,
                     )
@@ -2146,7 +2146,7 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                 try:
                     from livekit.api import LiveKitAPI, DeleteRoomRequest
                     async with LiveKitAPI(
-                        url=livekit_api_url((await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]),
+                        url=(await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
                         api_key=settings.livekit_api_key,
                         api_secret=settings.livekit_api_secret,
                     ) as api:
@@ -2186,7 +2186,7 @@ async def delayed_close_stream_task(ctx: dict, room_name: str) -> None:
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
-                    livekit_api_url((await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]),
+                    (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
                     settings.livekit_api_key,
                     settings.livekit_api_secret,
                 )
