@@ -20,14 +20,14 @@
 - `[x]` Görev 1.6: V1.4 mimarisine özel 6-Node (Core ve Edge 2 dahil) WireGuard ağ topolojisinin Node bağımsız `resources/wg0.conf` dosyaları olarak oluşturulması. (Commit: pending, Date: 2026-09-16)
 
 ## 🧠 Aşama 2: Backend Refactor - Konfigürasyon ve Ajanlar
-- `[x]` Görev 2.1: `backend/app/config.py` refactor'ü. `livekit_url` ve `minio_endpoint`'in kaldırılıp dinamik `.env` listesi okuyan (Pydantic validator) yapısına dönüştürülmesi. (Commit: -, Date: -)
-- `[x]` Görev 2.2: `scripts/edge_metrics_agent.py` ajanının yazılması (CPU, RAM, Disk, Net istatistiklerinin Core Redis'e yazılması). (Commit: -, Date: -)
-- `[x]` Görev 2.3: `app/services/edge_orchestrator.py` sınıfının yaratılması ve `allocate_node(service_type)` jenerik kaynak yöneticisi mantığının kodlanması. (Tamamen soyutlanmış yapı). (Commit: -, Date: -)
-- `[x]` Görev 2.4: **(ClickHouse Optimizasyonu)** Backend API ve modellerindeki `user_id` ve `listing_id` alanlarının `String`'den `int` (UInt32) tipine çevrilmesi ve `Nullable` türlerin iptal edilmesi. (Commit: -, Date: -)
-- `[x]` Görev 2.5: **(ClickHouse Optimizasyonu)** FastAPI background worker'larının `FLUSH_INTERVAL` değerinin 30 saniyeye, `MAX_BATCH` limitinin 5000'e çıkarılması. Şema yaratma scriptlerine `ZSTD(3)`, Bloom Filter ve kısa TTL sürelerinin eklenmesi. (Commit: -, Date: -)
+- `[x]` Görev 2.1: `backend/app/config.py` refactor'ü. `livekit_url` ve `minio_endpoint`'in kaldırılıp dinamik `.env` listesi okuyan (Pydantic validator) yapısına dönüştürülmesi. (Commit: f198cbe5, Date: 2026-09-16)
+- `[x]` Görev 2.2: `scripts/edge_metrics_agent.py` ajanının yazılması (CPU, RAM, Disk, Net istatistiklerinin Core Redis'e yazılması). (Commit: f198cbe5, Date: 2026-09-16)
+- `[x]` Görev 2.3: `app/services/edge_orchestrator.py` sınıfının yaratılması ve `allocate_node(service_type)` jenerik kaynak yöneticisi mantığının kodlanması. (Tamamen soyutlanmış yapı). (Commit: 4d5af235, Date: 2026-09-16)
+- `[x]` Görev 2.4: **(ClickHouse Optimizasyonu)** Backend API ve modellerindeki `user_id` ve `listing_id` alanlarının `String`'den `int` (UInt32) tipine çevrilmesi ve `Nullable` türlerin iptal edilmesi. (Commit: d694afba, Date: 2026-09-16)
+- `[x]` Görev 2.5: **(ClickHouse Optimizasyonu)** FastAPI background worker'larının `FLUSH_INTERVAL` değerinin 30 saniyeye, `MAX_BATCH` limitinin 5000'e çıkarılması. Şema yaratma scriptlerine `ZSTD(3)`, Bloom Filter ve kısa TTL sürelerinin eklenmesi. (Commit: d694afba, Date: 2026-09-16)
 
 ## 🔀 Aşama 3: Backend Refactor - Dinamik Orkestratör ve Servisler
-- `[x]` Görev 3.1: `edge_orchestrator.py` servisinin (Clean Architecture ve Strategy pattern'a uygun) kodlanması. İhtiyaca göre (CPU vs Disk) jenerik Edge Node tahsisi yapılması. (Commit: -, Date: -)
+- `[x]` Görev 3.1: `edge_orchestrator.py` servisinin (Clean Architecture ve Strategy pattern'a uygun) kodlanması. İhtiyaca göre (CPU vs Disk) jenerik Edge Node tahsisi yapılması. (Commit: 4d5af235, Date: 2026-09-16)
 - `[ ]` Görev 3.2: `storage_service.py` refactor'ü. Tüm Edge node'lar için bir "MinIO Connection Pool" oluşturulması. Kayıt (Upload) esnasında Orkestratör'den node atanması; Silme (Delete) esnasında ise veritabanındaki URL'in parse edilip doğru node'a silme isteğinin yönlendirilmesi (Media Routing). (Commit: -, Date: -)
 - `[ ]` Görev 3.3: `stream_utils.py` (Yayınlar) ve `calls.py` (VoIP) servislerinin, LiveKit URL'lerini dinamik orkestratörden alacak şekilde güncellenmesi.
 

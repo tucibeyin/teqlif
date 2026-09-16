@@ -115,7 +115,7 @@
 
 **Beklenen Sonuç:** ClickHouse'un CPU şişmelerinin (I/O) ve gereksiz depolama kayıplarının backend kod refaktörü ile kalıcı olarak engellenmesi.
 
-**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+**Durum:** ✅ Tamamlandı (Commit: d694afba)
 
 ---
 
@@ -139,7 +139,7 @@
 1. `config.py` içerisinde `EDGE_LIVEKIT_URLS` ve `EDGE_MINIO_URLS` değişkenlerinin Pydantic validator'ü ile parse edilip bir listeye dönüştüğünü doğrula.
 2. `scripts/edge_metrics_agent.py` dosyasında `psutil` kullanılarak CPU ve Disk kotalarının ölçüldüğünü ve `redis.set(f"edge:metrics:{ip}", ...)` formatında Node5'e gönderildiğini doğrula.
 
-**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+**Durum:** ✅ Tamamlandı (Commit: f198cbe5)
 
 ---
 
@@ -150,7 +150,7 @@
 1. `edge_orchestrator.py` içinde `allocate_node(service_type)` metodunun varlığını ve Media vs. Storage için farklı metrik kararları verdiğini doğrula.
 2. `stream_utils.py` ve `calls.py` (VoIP) içerisinde `settings.livekit_url` çağrılarının TAMAMEN SİLİNDİĞİNİ ve yerine `orchestrator.allocate_node()` metodunun kullanıldığını doğrula.
 
-**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+**Durum:** ⏳ Kısmen Tamamlandı (Commit: 4d5af235) - Görev 3.3 (VoIP Refactor) bekleniyor.
 
 ---
 
