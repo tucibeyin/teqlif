@@ -70,4 +70,35 @@
 
 **Beklenen Sonuç:** Tüm sunucu yelpazesinin tam V1.4 (Orchestrator=Node5, Edge=Node1/4, Workers=Node2/3, Proxy=Gateway) senaryosuna göre scriptlerinin tamamlanması.
 
+**Durum:** ✅ Tamamlandı (Commit: 8827ba8b)
+
+---
+
+## Görev 1.5: Cloudflare DNS Yapılandırması Testi
+**Amaç:** V1.4 Multi-Edge mimarisi için zorunlu olan dinamik DNS altyapısının belgelenmesi ve eski yüklerin temizlenmesi.
+
+**Test Adımları (Review):**
+1. `deploy/scale/V1.4/plan.md` dosyasının en altındaki **Faz 7: Cloudflare DNS Yapılandırması** bölümünü aç ve incele.
+2. Gateway (Core trafiği) için `teqlif.com` ve `api.teqlif.com` yönlendirmelerinin **Proxied** olarak `94.16.105.135` (Gateway) hedefine ayarlandığını doğrula.
+3. Edge sunucuları (Node1 ve Node4) için sırasıyla `live1`/`minio1` ve `live2`/`minio2` olarak her makineye özel yeni subdomain kayıtlarının açıldığını ve bunların Cloudflare Proxy'den bağımsız (**DNS Only**) ayarlandığını doğrula.
+4. Eski, tekil (single-point-of-failure) `live.teqlif.com` gibi kayıtların uyarı blokunda silinecekler listesine eklendiğini kontrol et.
+5. `plan.md` içerisindeki **Faz 8: SSL (Sertifika) Yönetimi** bölümünü kontrol et, Node1 ve Node4'te standalone certbot alınabilmesi için scriptlerin (`certbot_node1.sh`, `certbot_node4.sh`) eklendiğini onayla.
+6. `node1_cleanup.sh` içerisine eski monolitik yapının SSL kalıntılarını silmek için `/etc/letsencrypt` kaldırma komutunun eklendiğini doğrula.
+
+**Beklenen Sonuç:** Tüm DNS trafiğinin Cloudflare üzerinden doğru Proxy kuralları (WebRTC için bypass, API için Proxy) ile Core ve Edge node'lara yönlendirilmesi için tam talimat tablosunun hazırlanması ve Multi-Edge SSL stratejisinin kusursuz otomatize edilmesi.
+
 **Durum:** ⏳ Kullanıcı onayı bekleniyor.
+
+---
+
+## Görev 1.6: WireGuard 6-Node Mesh Testi
+**Amaç:** Veritabanı ve Staging trafiğinin güvenle akabilmesi için 6 sunuculuk iç ağın (10.10.0.x/24) doğru kurulduğunu teyit etmek.
+
+**Test Adımları (Review):**
+1. `deploy/scale/V1.4/wireguard/` dizinindeki tüm `*-wg0.conf` dosyalarını aç.
+2. Her dosyanın içinde Node5 (Core - 10.10.0.5) ve Node4 (Edge 2 - 10.10.0.6) IP'lerinin `[Peer]` olarak eklendiğini doğrula.
+3. IP havuzunun `plan.md` Faz 1.5 ile eşleştiğini doğrula.
+
+**Beklenen Sonuç:** Tüm sunucuların sadece WireGuard tüneli üzerinden güvenle haberleşebileceği, yeni mimariye uygun Full-Mesh altyapısının kurulması.
+
+**Durum:** ✅ Tamamlandı (Commit: pending)

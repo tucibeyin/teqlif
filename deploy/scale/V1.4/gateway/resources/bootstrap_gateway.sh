@@ -20,10 +20,26 @@ sudo apt install -y ufw wireguard unzip nginx certbot python3-certbot-nginx fail
 
 # ── UFW (Güvenlik Duvarı) ─────────────────────────────────────────────────────
 echo "==> UFW yapılandırması..."
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 51820/udp # WireGuard
-# Nginx'in 10.10.0.0/24 subnetine erişimi WireGuard üzerinden olacaktır.
+sudo ufw --force reset
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp       # SSH
+sudo ufw allow 80/tcp       # HTTP
+sudo ufw allow 443/tcp      # HTTPS
+sudo ufw allow 51820/udp    # WireGuard
+sudo ufw --force enable
+
+# ── Nginx Temizliği ve V1.4 Konfigürasyonu ────────────────────────────────────
+echo "==> Eski Nginx ayarları temizleniyor ve V1.4 Gateway konfigürasyonu kuruluyor..."
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-available/default
+# Ana konfigürasyonu kopyala
+sudo cp "$RESOURCES_DIR/teqlif_gateway.conf" /etc/nginx/nginx.conf
+# Routing (Proxy) Konfigürasyonunu kopyala
+sudo cp "$RESOURCES_DIR/teqlif.com.conf" /etc/nginx/sites-available/teqlif.com.conf
+sudo ln -sf /etc/nginx/sites-available/teqlif.com.conf /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
 
 # ── node_exporter & promtail ──────────────────────────────────────────────────
 echo "==> Binery kurulumları..."

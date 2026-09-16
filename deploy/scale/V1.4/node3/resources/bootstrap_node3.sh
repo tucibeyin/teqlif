@@ -19,6 +19,15 @@ echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
 
+echo "==> UFW (Güvenlik Duvarı) Worker kuralları uygulanıyor..."
+sudo ufw --force reset
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp       # SSH
+sudo ufw allow 51820/udp    # WireGuard (Mesh)
+sudo ufw allow in on wg0 to any 2>/dev/null || echo "Uyarı: wg0 henüz aktif olmayabilir."
+sudo ufw --force enable
+
 echo "==> Python venv @ $VENV..."
 if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"

@@ -24,7 +24,19 @@ echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
 
-# ── Swap Alanı (8GB - Node5 OOM Koruması) ────────────────────────────────────
+# ── UFW (Güvenlik Duvarı) Core Profili ────────────────────────────────────────
+echo "==> UFW (Güvenlik Duvarı) Core kuralları uygulanıyor..."
+echo "NOT: Core Node dışarıya DB portlarını AÇMAZ. Sadece WireGuard ve SSH."
+sudo ufw --force reset
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp       # SSH
+sudo ufw allow 51820/udp    # WireGuard (Mesh)
+# 10.10.0.0/24 subnetine (Wireguard arayüzüne) sınırsız izin
+sudo ufw allow in on wg0 to any 2>/dev/null || echo "Uyarı: wg0 henüz aktif olmayabilir."
+sudo ufw --force enable
+
+# ── Swap Alanı (Deli Gömleği / OOM Koruması) ────────────────────────────────────
 echo "==> Swap yapılandırması kontrol ediliyor..."
 if ! swapon --show | grep -q "/swapfile"; then
   echo "==> 8GB Swap dosyası oluşturuluyor..."
@@ -104,8 +116,15 @@ for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
 done
 
+# ── Temizlik (Clean State) ────────────────────────────────────────────────────
+echo "==> Kurulum artıkları ve önbellek temizleniyor..."
+sudo apt-get autoremove -y -q
+sudo apt-get clean -q
+"$VENV/bin/pip" cache purge 2>/dev/null || true
+
 echo "=============================================="
 echo " Node5 (Core) Bootstrap Tamamlandı!"
+echo " Clean State (Sıfır Kurulum) kuralı gereği önbellekler temizlendi."
 echo " Lütfen PostgreSQL, ClickHouse ve Redis kurulumlarından"
-echo " sonra V1.4 Tuning scriptlerini (apply_pg_tuning.sh ve apply_ch_tuning.sh) çalıştırın."
+echo " sonra V1.4 Tuning scriptlerini çalıştırın."
 echo "=============================================="

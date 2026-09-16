@@ -45,7 +45,23 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
 
 ---
 
-## 🟡 Faz 2: Kod Tabanı Refactor - Konfigürasyon Katmanı (Parser)
+## 🟡 Faz 1.5: WireGuard 6-Node Mesh Ağının Kurulması (Kritik Network Topolojisi)
+*V1.3'teki 4-Node ağının, V1.4 mimarisi için 6-Node olarak (Edge 2 ve Core dahil) baştan yazılması.*
+
+1. **`resources/wg0.conf` Olarak Dağıtım:** V1.4 altyapı bağımsızlığı prensibine uygun olarak, ayrı bir klasör yerine her sunucunun kendi `deploy/scale/V1.4/{node}/resources/wg0.conf` dosyası oluşturulmuştur.
+2. **IP Adreslemesi (10.10.0.x/24):**
+   - `10.10.0.1`: Node1 (Edge 1 - 135.125.175.223)
+   - `10.10.0.2`: Gateway (Proxy - 94.16.105.135)
+   - `10.10.0.3`: Node2 (Worker - 198.12.123.33)
+   - `10.10.0.4`: Node3 (Staging - 5.249.165.10)
+   - `10.10.0.5`: Node5 (Core - 45.146.252.165)
+   - `10.10.0.6`: Node4 (Edge 2 - 51.75.74.124)
+3. **Template'lerin Oluşturulması:** Her sunucu için `[Peer]` tanımlarını (Full-Mesh) barındıran yepyeni `wg0.conf` şablonları kendi dizinlerine yazılmıştır.
+4. **Güvenlik Entegrasyonu:** Daha önce yazdığımız UFW `allow in on wg0` kuralları, bu yapı sayesinde Node5'in (veritabanı) ve Node3'ün (staging) dış dünyaya tamamen kapalı ama kendi içlerinde iletişimde olmasını sağlayacaktır.
+
+---
+
+## 🟠 Faz 2: Kod Tabanı Refactor - Konfigürasyon Katmanı (Parser)
 *Backend koduna girilir, monolitik yapı temizlenmeye başlanır.*
 
 1. **`app/config.py` Revizyonu:** Tekil `livekit_url` ve `minio_endpoint` değişkenleri silinecek. Yerine `.env`'den okunan virgüllü string'leri Python List (Array) objelerine dönüştüren güvenli Pydantic validatörleri yazılacak. (Örn: `edge_livekit_urls: list[str]`).
@@ -91,3 +107,61 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
 
 ---
 > **Not:** Her faz, bitiminde doğrulanacak ve onaylandıktan sonra bir sonrakine geçilecektir. Tüm kodlamalar `teqlif_architectural_decisions.md` (Clean Architecture) anayasasına bağlı kalacaktır.
+
+---
+
+## 🌐 Faz 7: Cloudflare DNS Yapılandırması (V1.4)
+
+V1.4 mimarisinde Edge sunucularının (LiveKit ve MinIO) istemciler (kullanıcılar) ile doğrudan iletişim kurabilmesi için (WebRTC P2P bağlantıları ve limitsiz medya aktarımı) her Edge sunucusunun kendine özel, Cloudflare Proxy'sini atlayan (DNS Only) public bir DNS adresi olmalıdır.
+
+Aşağıdaki tabloya göre Cloudflare üzerindeki DNS (A kayıtları) güncellemelerini yapınız.
+
+### 1. Gateway & Core (Proxied)
+API ve Frontend trafiğini Gateway (Nginx proxy) karşılayıp Wireguard üzerinden Core sunucuya (Node5) aktarır.
+
+| Kayıt Tipi | İsim | Hedef IPv4 (Gateway IP) | Proxy Durumu | Not |
+| :--- | :--- | :--- | :--- | :--- |
+| A | `teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Ana domain |
+| A | `api.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Backend API |
+| A | `staging.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Staging |
+
+### 2. Edge 1 - Node1 (DNS Only)
+LiveKit WebRTC UDP trafiği ve yüksek boyutlu MinIO veri akışı için Cloudflare proxy'si (Turuncu bulut) **KESİNLİKLE KAPALI** (Gri bulut) olmalıdır.
+
+| Kayıt Tipi | İsim | Hedef IPv4 (Node1 IP) | Proxy Durumu | Not |
+| :--- | :--- | :--- | :--- | :--- |
+| A | `live1.teqlif.com` | `135.125.175.223` | ☁️ DNS Only (Gri) | Edge 1 LiveKit adresi |
+| A | `minio1.teqlif.com` | `135.125.175.223` | ☁️ DNS Only (Gri) | Edge 1 MinIO adresi |
+
+### 3. Edge 2 - Node4 (DNS Only)
+Yeni kurulan Node4 Edge sunucusu.
+
+| Kayıt Tipi | İsim | Hedef IPv4 (Node4 IP) | Proxy Durumu | Not |
+| :--- | :--- | :--- | :--- | :--- |
+| A | `live2.teqlif.com` | `51.75.74.124` | ☁️ DNS Only (Gri) | Edge 2 LiveKit adresi |
+| A | `minio2.teqlif.com` | `51.75.74.124` | ☁️ DNS Only (Gri) | Edge 2 MinIO adresi |
+
+> [!WARNING]  
+> **Silinecek / Değişecek Eski Kayıtlar:**
+> V1.3'ten kalan `live.teqlif.com`, `live-staging.teqlif.com`, `uploads.teqlif.com`, `uploads-staging.teqlif.com` ve `minio.teqlif.com` kayıtları karmaşayı önlemek için Cloudflare'dan **SİLİNMELİDİR**. 
+> V1.4 Orchestrator'u artık istemcilere tek bir adres değil, dinamik olarak `live1`, `live2`, `minio1`, `minio2` gibi Edge spesifik adresler verecektir.
+
+---
+
+## 🔒 Faz 8: SSL (Sertifika) Yönetimi ve Temizliği
+
+V1.4 dağıtık (Multi-Edge) mimarisinde SSL sertifika yönetimi node'ların rollerine göre bölünmüştür. Cloudflare'ın Proxied (Turuncu bulut) avantajı sadece Gateway'de kullanılacağı için Edge node'lar (Gri bulut) kendi Let's Encrypt sertifikalarını barındırmak zorundadır.
+
+### 1. SSL Temizliği (Node1)
+Eski V1.3 Monolitik yapısında **Node1**, `api.teqlif.com` ve `teqlif.com` sertifikalarını üzerinde tutuyordu. V1.4'te API trafiği Node5'e, SSL sonlandırması ise Gateway'e taşındığı için Node1 üzerindeki eski sertifikalar geçersizdir ve **temizlenmelidir**.
+- **Otomasyon:** `node1_cleanup.sh` scripti içine `/etc/letsencrypt` dizinini tamamen silen bir adım eklenmiştir.
+
+### 2. Yeni SSL İstemleri (Provisioning)
+
+| Node | Domainler | Yönetim | Otomasyon Scripti |
+| :--- | :--- | :--- | :--- |
+| **Gateway** | `teqlif.com`, `api.teqlif.com` | Nginx + Certbot plugin | `gateway/resources/certbot_gateway.sh` |
+| **Node1 (Edge 1)** | `live1.teqlif.com`, `minio1.teqlif.com` | Certbot Standalone | `node1/resources/certbot_node1.sh` |
+| **Node4 (Edge 2)** | `live2.teqlif.com`, `minio2.teqlif.com` | Certbot Standalone | `node4/resources/certbot_node4.sh` |
+
+> **Edge Sertifika Entegrasyonu:** Edge node'larda `certbot_node*.sh` scriptleri 80 portunu kullanarak standalone sertifika alır. Daha sonra LiveKit (Caddy) veya MinIO konfigürasyon dosyalarında bu sertifika yolları (`/etc/letsencrypt/live/.../fullchain.pem`) gösterilmelidir.

@@ -24,6 +24,20 @@ echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
 
+# ── UFW (Güvenlik Duvarı) Edge Profili ────────────────────────────────────────
+echo "==> UFW (Güvenlik Duvarı) Edge kuralları uygulanıyor..."
+sudo ufw --force reset
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp       # SSH
+sudo ufw allow 80/tcp       # HTTP (Certbot/Livekit)
+sudo ufw allow 443/tcp      # HTTPS (Livekit/MinIO SSL)
+sudo ufw allow 9010/tcp     # MinIO Standalone Web/API
+sudo ufw allow 7880/tcp     # LiveKit TCP
+sudo ufw allow 50000:60000/udp # LiveKit WebRTC UDP
+sudo ufw allow 51820/udp    # WireGuard
+sudo ufw --force enable
+
 # ── Swap Alanı (8GB - Edge Media/Storage Buffer) ──────────────────────────────
 echo "==> Swap yapılandırması kontrol ediliyor..."
 if ! swapon --show | grep -q "/swapfile"; then
@@ -94,9 +108,14 @@ for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
 done
 
+# ── Temizlik (Clean State) ────────────────────────────────────────────────────
+echo "==> Kurulum artıkları ve önbellek temizleniyor..."
+sudo apt-get autoremove -y -q
+sudo apt-get clean -q
+"$VENV/bin/pip" cache purge 2>/dev/null || true
+
 echo "=============================================="
 echo " Node4 (Edge 2) Bootstrap Tamamlandı!"
-echo " Lütfen LiveKit ve MinIO Standalone kurulumlarınızı"
-echo " V1.4 mimarisine uygun olarak gerçekleştirin."
-echo " Ayrıca 'edge-metrics-agent' servisini kurmayı unutmayın."
+echo " Clean State (Sıfır Kurulum) kuralı gereği önbellekler temizlendi."
+echo " Lütfen LiveKit ve MinIO kurulumlarınızı gerçekleştirin."
 echo "=============================================="

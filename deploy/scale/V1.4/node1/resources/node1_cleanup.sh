@@ -45,6 +45,9 @@ sudo rm -rf /var/log/clickhouse-server
 sudo rm -rf /etc/nginx
 sudo rm -rf /var/log/nginx
 
+echo "==> 4.5 Eski SSL Sertifikaları Temizleniyor..."
+sudo rm -rf /etc/letsencrypt
+
 echo "==> 5. Redis ve eski MinIO verileri sıfırlanıyor (Temiz Edge durumu için)..."
 sudo rm -rf /var/lib/redis/* 2>/dev/null || true
 sudo rm -rf /var/lib/minio/* 2>/dev/null || true
@@ -58,9 +61,11 @@ fi
 sudo rm -rf /var/log/teqlif/* 2>/dev/null || true
 sudo rm -rf /var/backups/teqlif/* 2>/dev/null || true
 
-echo "==> 7. İşletim sistemi artıkları temizleniyor..."
+echo "==> 7. İşletim sistemi artıkları ve Güvenlik Duvarı (UFW) temizleniyor..."
 sudo apt-get autoremove -y --purge
 sudo apt-get clean
+sudo ufw --force reset 2>/dev/null || true
+sudo ufw disable 2>/dev/null || true
 
 echo "========================================================================="
 echo " TEMİZLİK TAMAMLANDI!"
