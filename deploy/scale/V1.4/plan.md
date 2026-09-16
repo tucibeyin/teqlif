@@ -77,21 +77,36 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
 
 ---
 
-## 🔴 Faz 4: Kod Tabanı Refactor - Dinamik Orkestratör (Core Business Logic)
-*Sistemin asıl "Beyni" olan servisin inşa edilmesi.*
+## 🔴 Faz 4: Kod Tabanı Refactor - Dinamik Orkestratör (Generic Edge Allocator)
+*Sistemin asıl "Beyni" olan servisin inşa edilmesi (Tamamen Soyutlanmış Kaynak Yöneticisi).*
 
-1. **Orchestrator Sınıfı:** `app/services/stream_orchestrator.py` yaratılacak. (Clean Architecture: Sadece iş mantığı barındıracak).
-2. **LiveKit Karar Mekanizması:** `get_best_livekit_node()` metodu yazılacak. Core Redis'ten Edge CPU ve Bant genişliği verilerini okuyup en boş olan Node URL'sini döndürecek.
-3. **MinIO (Media Sharding) Karar Mekanizması:** `get_best_storage_node()` metodu yazılacak. Diski %80'in (veya `.env`'deki kotanın) altında olan ve en çok GB boş alanı olan Node'u seçecek.
+1. **Orchestrator Sınıfı (`edge_orchestrator.py`):** `app/services/stream_orchestrator.py` yerine, tamamen "Resource Allocation" (Kaynak Atama) mantığıyla çalışan `edge_orchestrator.py` yaratılacak. (Clean Architecture).
+2. **Kullanım Alanından Soyutlanmış Metodoloji:** `get_best_media_node()` veya `get_best_storage_node()` gibi domain spesifik metodlar yerine tek bir jenerik metod yazılacak: `allocate_node(service_type: ServiceType)`.
+3. **Strateji (Strategy) Pattern Entegrasyonu:**
+   - Eğer `ServiceType.MEDIA` (veya VOIP/Streaming) istenirse: Orkestratör sadece CPU ve Ağ trafiği ağırlıklı bir strateji uygular.
+   - Eğer `ServiceType.STORAGE` istenirse: Orkestratör sadece Boş Disk ve Kota ağırlıklı bir strateji uygular.
+   Bu sayede Orkestratör sadece bir "Kaynak Karar Motoru" olur; arkada neyin çalıştığını veya hangi özelliğin (VoIP, Video, Dosya) bunu talep ettiğini bilmez.
 
 ---
 
-## 🟣 Faz 5: Kod Tabanı Refactor - Servis ve Use-Case Entegrasyonları
+## ⚫ Faz 5: Kod Tabanı Refactor - Servis ve Use-Case Entegrasyonları
 *Orkestratörün sisteme bağlanması ve eski monolitik yapının tamamen sökülmesi.*
 
-1. **`storage_service.py` Refactor:** Tek bir `_client` yerine, Orkestratör'den dönen Edge URL'ye göre dinamik olarak Minio istemcisi oluşturulacak/kullanılacak.
-2. **MinIO Standalone Dosya Bütünlüğü:** Dosyalar Orkestratör'ün seçtiği tek bir hedefe tek parça yazılacak. Veritabanına (PostgreSQL) dosyanın konumu (`node_id` veya `url_prefix` olarak) kaydedilecek.
-3. **`stream_utils.py` ve Use-Cases:** Canlı yayın başlatma (`start_stream`), katılma (`join_stream`) ve `cohost` işlemlerinde statik `settings.livekit_url` kullanımı silinecek; yerine Orkestratör'den gelen dinamik Edge adresi kullanılacak.
+1. **`storage_service.py` Refactor (Generic Storage Manager):** 
+   - Tekil bir MinIO istemcisi (client) yerine, tüm Edge node'lar için ayrı istemcilerin tutulduğu bir "Connection Pool" yazılacak.
+   - **Kayıt (Upload):** `upload_file()` çağrıldığında Orkestratör'den en uygun node istenecek ve dosya oraya yazılıp, DB'ye `node_ip_or_id:key` formatında (veya Absolute URL) kaydedilecek.
+2. **Generic Silme ve Okuma (Media Routing):** 
+   - **Silme (Delete):** `delete_object(url)` metodu, kendisine gelen URL veya formattan hangi Edge sunucusuna ait olduğunu parse edecek (Örn: `10.10.0.6/uploads/avatar.png`). O sunucunun MinIO istemcisini bulup, silme işlemini **sadece o sunucuya** gönderecek. Bu sayede silme işlemi tamamen generic ve otonom çalışacak.
+3. **`stream_utils.py` ve `calls.py` (VoIP) Refactor:** Canlı yayın başlatma (`start_stream`), katılma (`join_stream`), `cohost` işlemleri ve VoIP Push payload'larına gömülen `settings.livekit_url` statik bağımlılıkları silinecek; yerine çağrı/yayın anında Orkestratör'den atanan dinamik Edge adresi kullanılacak.
+
+---
+
+## 🟤 Faz 5.5: Kod Tabanı Refactor - ClickHouse Optimizasyonları
+*Veritabanı darboğazlarının giderilmesi ve kod tabanının yüksek CCU'ya hazırlanması.*
+
+1. **Veri Tipi Güncellemeleri:** `app/` altındaki API ve model katmanlarında `user_id` ve `listing_id` tipleri `String` yerine `int` olarak güncellenecek ve `Nullable` yapılardan kaçınılacak (varsayılan 0).
+2. **Batch ve Flush Tuning:** `app/workers` (veya ilgili CH gömme işçisi) içerisindeki `FLUSH_INTERVAL` 30 saniyeye, `MAX_BATCH` 5000'e çıkarılacak.
+3. **Şema (Schema) Revizyonları:** Yeni oluşturulacak veritabanı tabloları `ZSTD(3)` sıkıştırması, Bloom Filter indeksleri (`item_id`), Materialized View ön-toplamaları ve kısa TTL süreleriyle (30 gün) optimize edilecek.
 
 ---
 

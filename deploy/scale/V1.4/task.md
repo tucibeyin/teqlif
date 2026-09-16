@@ -16,17 +16,20 @@
 - `[x]` Görev 1.2: `deploy/scale/V1.4/node4/resources` dizininin açılması. Node4 (Edge 2) için `bootstrap_node4.sh`, `node4_services.sh`, `node4_production_requirements.txt` ve `.env.production.template` dosyalarının oluşturulması. (Commit: df3b06ff, Date: 2026-09-16)
 - `[x]` Görev 1.3: `deploy/scale/V1.4/node1/resources` dizininin açılması. Node1'in (Edge 1) yeni V1.4 rolüne uygun olarak `bootstrap_node1.sh`, `node1_services.sh`, `node1_production_requirements.txt` ve şablonlarının sıfırdan oluşturulması. (Commit: c49ea325, Date: 2026-09-16)
 - `[x]` Görev 1.4: Gateway, Node2 ve Node3 için V1.4 kaynak dizinlerinin açılarak Network/UFW/Wireguard trafik güncellemelerini barındıran scriptlerin baştan yazılması. **Gateway için `certbot_gateway.sh`** scriptinin de V1.4'e (Node5 upstreame) göre port edilmesi. (Commit: 8827ba8b, Date: 2026-09-16)
-- `[/]` Görev 1.5: Cloudflare DNS Yapılandırmasının Belgelenmesi. `plan.md` (Faz 7) içerisine, V1.4 Orchestrator mimarisinde Edge node'ların doğrudan public hizmet verebilmesi için gerekli olan DNS tablolarının (Proxied/DNS Only kuralları) işlenmesi. (Commit: -, Date: -)
+- `[x]` Görev 1.5: Cloudflare DNS Yapılandırmasının Belgelenmesi. `plan.md` (Faz 7) içerisine, V1.4 Orchestrator mimarisinde Edge node'ların doğrudan public hizmet verebilmesi için gerekli olan DNS tablolarının (Proxied/DNS Only kuralları) işlenmesi. (Commit: 26cf95b9, Date: 2026-09-16)
 - `[x]` Görev 1.6: V1.4 mimarisine özel 6-Node (Core ve Edge 2 dahil) WireGuard ağ topolojisinin Node bağımsız `resources/wg0.conf` dosyaları olarak oluşturulması. (Commit: pending, Date: 2026-09-16)
 
 ## 🧠 Aşama 2: Backend Refactor - Konfigürasyon ve Ajanlar
 - `[ ]` Görev 2.1: `backend/app/config.py` refactor'ü. `livekit_url` ve `minio_endpoint`'in kaldırılıp dinamik `.env` listesi okuyan (Pydantic validator) yapısına dönüştürülmesi. (Commit: -, Date: -)
-- `[ ]` Görev 2.2: `scripts/edge_metrics_agent.py` yazılımı. psutil ile CPU, Ağ, Disk (%80 kota takibi) verilerini toplayıp Node5'in Redis'ine 3 saniyede bir iletmesi. (Commit: -, Date: -)
+- `[ ]` Görev 2.2: `scripts/edge_metrics_agent.py` ajanının yazılması (CPU, RAM, Disk, Net istatistiklerinin Core Redis'e yazılması). (Commit: -, Date: -)
+- `[ ]` Görev 2.3: `app/services/edge_orchestrator.py` sınıfının yaratılması ve `allocate_node(service_type)` jenerik kaynak yöneticisi mantığının kodlanması. (Tamamen soyutlanmış yapı). (Commit: -, Date: -)
+- `[ ]` Görev 2.4: **(ClickHouse Optimizasyonu)** Backend API ve modellerindeki `user_id` ve `listing_id` alanlarının `String`'den `int` (UInt32) tipine çevrilmesi ve `Nullable` türlerin iptal edilmesi. (Commit: -, Date: -)
+- `[ ]` Görev 2.5: **(ClickHouse Optimizasyonu)** FastAPI background worker'larının `FLUSH_INTERVAL` değerinin 30 saniyeye, `MAX_BATCH` limitinin 5000'e çıkarılması. Şema yaratma scriptlerine `ZSTD(3)`, Bloom Filter ve kısa TTL sürelerinin eklenmesi. (Commit: -, Date: -)
 
 ## 🔀 Aşama 3: Backend Refactor - Dinamik Orkestratör ve Servisler
-- `[ ]` Görev 3.1: `app/services/stream_orchestrator.py` servisinin (Clean Architecture'a uygun) kodlanması. Edge yüklerine (Redis) göre anlık LiveKit ve MinIO node'u seçimi. (Commit: -, Date: -)
-- `[ ]` Görev 3.2: `storage_service.py` refactor'ü. Tekil istemci (client) yerine orkestratörden dönen node adresine MinIO yüklemesinin (Standalone Quota'ya uygun) yapılması. (Commit: -, Date: -)
-- `[ ]` Görev 3.3: `stream_utils.py` ve Use-Cases (start/join/cohost) servislerinin, LiveKit URL'lerini dinamik orkestratörden alacak şekilde güncellenmesi. (Commit: -, Date: -)
+- `[ ]` Görev 3.1: `edge_orchestrator.py` servisinin (Clean Architecture ve Strategy pattern'a uygun) kodlanması. İhtiyaca göre (CPU vs Disk) jenerik Edge Node tahsisi yapılması. (Commit: -, Date: -)
+- `[ ]` Görev 3.2: `storage_service.py` refactor'ü. Tüm Edge node'lar için bir "MinIO Connection Pool" oluşturulması. Kayıt (Upload) esnasında Orkestratör'den node atanması; Silme (Delete) esnasında ise veritabanındaki URL'in parse edilip doğru node'a silme isteğinin yönlendirilmesi (Media Routing). (Commit: -, Date: -)
+- `[ ]` Görev 3.3: `stream_utils.py` (Yayınlar) ve `calls.py` (VoIP) servislerinin, LiveKit URL'lerini dinamik orkestratörden alacak şekilde güncellenmesi.
 
 ## 🚀 Aşama 4: Canlı Sunucu Operasyonları (Execution & Migration)
 *Not: Bu aşamada sunuculara SSH ile erişilecektir.*

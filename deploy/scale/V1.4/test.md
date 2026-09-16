@@ -87,7 +87,7 @@
 
 **Beklenen Sonuç:** Tüm DNS trafiğinin Cloudflare üzerinden doğru Proxy kuralları (WebRTC için bypass, API için Proxy) ile Core ve Edge node'lara yönlendirilmesi için tam talimat tablosunun hazırlanması ve Multi-Edge SSL stratejisinin kusursuz otomatize edilmesi.
 
-**Durum:** ⏳ Kullanıcı onayı bekleniyor.
+**Durum:** ✅ Tamamlandı (Commit: 26cf95b9)
 
 ---
 
@@ -102,3 +102,64 @@
 **Beklenen Sonuç:** Tüm sunucuların sadece WireGuard tüneli üzerinden güvenle haberleşebileceği, yeni mimariye uygun Full-Mesh altyapısının kurulması.
 
 **Durum:** ✅ Tamamlandı (Commit: pending)
+
+---
+
+## Görev 2.4 & 2.5: ClickHouse Refactor Testi
+**Amaç:** `documents/clickhouse/V1.0/findings.md` dosyasındaki optimizasyonların backend koduna başarıyla entegre edildiğini teyit etmek.
+
+**Test Adımları (Review):**
+1. Backend `app/models/` altındaki analitik ve event şemalarında `user_id` ve `listing_id` tiplerinin `int` (UInt32) yapıldığını doğrula.
+2. Background flush worker'ında (FastAPI) `FLUSH_INTERVAL = 30` ve `MAX_BATCH = 5000` değerlerinin güncellendiğini kontrol et.
+3. Şema oluşturma (Schema Builder) fonksiyonlarında `ZSTD(3)` ve `TTL` (30 Days vb.) komutlarının eklendiğini doğrula.
+
+**Beklenen Sonuç:** ClickHouse'un CPU şişmelerinin (I/O) ve gereksiz depolama kayıplarının backend kod refaktörü ile kalıcı olarak engellenmesi.
+
+**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+
+---
+
+## Görev 3.2: Storage Media Routing & Deletion Testi
+**Amaç:** `storage_service.py` içindeki URL tabanlı otonom silme algoritmasının, veriyi sadece barındırıldığı (shard edilmiş) Edge sunucusundan sildiğini kanıtlamak.
+
+**Test Adımları (Review):**
+1. Backend kodlarında `delete_object(url)` metodunun incelenmesi. URL içerisindeki domain (veya IP) ile `.env` dosyasındaki MinIO havuzunun (Connection Pool) doğru eşleştiğini doğrula.
+2. Silme metodunun tüm node'lara gitmediğini, sadece ilgili node'a gönderildiğini kontrol et.
+
+**Beklenen Sonuç:** Bir resim Node4'e yüklendiyse (Standalone), silme talebinin de Node1'e değil yalnızca Node4'e (Nokta atışı) gitmesi.
+
+**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+
+---
+
+## Görev 2.1 & 2.2: Dinamik Config ve Metrics Agent Testi
+**Amaç:** `app/config.py` dosyasının statik URL'lerden kurtulduğunu ve `edge_metrics_agent.py`'nin Core Redis'e başarıyla telemetri bastığını kanıtlamak.
+
+**Test Adımları (Review):**
+1. `config.py` içerisinde `EDGE_LIVEKIT_URLS` ve `EDGE_MINIO_URLS` değişkenlerinin Pydantic validator'ü ile parse edilip bir listeye dönüştüğünü doğrula.
+2. `scripts/edge_metrics_agent.py` dosyasında `psutil` kullanılarak CPU ve Disk kotalarının ölçüldüğünü ve `redis.set(f"edge:metrics:{ip}", ...)` formatında Node5'e gönderildiğini doğrula.
+
+**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+
+---
+
+## Görev 2.3, 3.1 & 3.3: Generic Orchestrator ve VoIP Testi
+**Amaç:** `edge_orchestrator.py` sınıfının Teknoloji Bağımsız (Strategy Pattern) çalıştığını ve VoIP/Yayın sistemlerinin buraya doğru bağlandığını doğrulamak.
+
+**Test Adımları (Review):**
+1. `edge_orchestrator.py` içinde `allocate_node(service_type)` metodunun varlığını ve Media vs. Storage için farklı metrik kararları verdiğini doğrula.
+2. `stream_utils.py` ve `calls.py` (VoIP) içerisinde `settings.livekit_url` çağrılarının TAMAMEN SİLİNDİĞİNİ ve yerine `orchestrator.allocate_node()` metodunun kullanıldığını doğrula.
+
+**Durum:** ⏳ Backend kodlaması esnasında test edilecek.
+
+---
+
+## Aşama 4: Canlı Sunucu Operasyonları (Execution) Testi
+**Amaç:** Backend refaktörleri bittikten sonra canlı sunucuların (SSH) V1.4 mimarisine sıfır veri kaybı ile geçmesini doğrulamak.
+
+**Test Adımları:**
+1. Node5, Node4 ve Node1'e SSH ile girilip `bootstrap` scriptlerinin hatasız çalıştığını onayla.
+2. Node1'den alınan `pg_dump` ve MinIO arşivinin başarıyla Node5 ve Node4'e kopyalandığını (Migration) doğrula.
+3. Gateway Nginx `teqlif.com.conf` devresi açıldığında mobil uygulamanın sorunsuz API (Node5) ve Staging (Node3) bağlantısı kurduğunu onayla.
+
+**Durum:** ⏳ Faz 6 (Canlıya Geçiş) esnasında test edilecek.
