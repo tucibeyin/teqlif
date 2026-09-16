@@ -41,7 +41,7 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
    - Kendi bulundukları `V1.4/{node}/resources/` klasörünü dinamik olarak (`RESOURCES_DIR="$(cd "$(dirname "$0")" && pwd)"`) çözümleyecek.
    - Tüm node'larda halihazırda (root yetkili `tucibeyin` kullanıcısı altında) bulunan `/var/www/teqlif.com` repo dizini baz alınarak, bu `RESOURCES_DIR` üzerinden 5 üst dizine (`../../../../..`) çıkılarak jenerik `REPO` değişkeni tanımlanacak. Böylece scriptler hardcode path kullanmadan evrensel (portable) çalışmaya devam edecektir.
 3. **Network ve WireGuard Mesh (6-Node):** Yeni dizinler içinde oluşturulacak ağ haritası, Node4 (`10.10.0.6`) ve Node5 (`10.10.0.5`) sunucularını da kapsayacak şekilde (UFW port izinleri ve WireGuard şablonları) baştan kurgulanacaktır.
-4. **"No Hardcoding" Şablonları:** Yeni oluşturulan `V1.4/{node}/resources/.env.*.template` dosyalarına dinamik değişkenler (Örn: `EDGE_LIVEKIT_URLS="wss://node1,wss://node4"`, `MINIO_STORAGE_QUOTA_PERCENT=80`) eklenecektir.
+4. **"No Hardcoding" Şablonları:** Yeni oluşturulan `V1.4/{node}/resources/.env.*.template` dosyalarına dinamik değişkenler (Örn: `EDGE_LIVEKIT_URLS="https://live1.teqlif.com,https://live2.teqlif.com"`, `MINIO_STORAGE_QUOTA_PERCENT=80`) eklenecektir. Not: LiveKit URL'leri `https://` formatında saklanır; SDK bağlantıyı kendi içinde `wss://`'e dönüştürür.
 
 ---
 
@@ -114,7 +114,7 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
 *Tüm kodlar test edildikten sonra sunucularda yapılacak operasyonlar.*
 
 1. **Node5 (Core) Kurulumu:** V1.4 dizinindeki `bootstrap_node5.sh` çalıştırılacak. PostgreSQL Master, Core Redis ve ClickHouse (Kesin RAM sınırlarıyla) ayağa kaldırılacak.
-2. **Veri Göçü:** Mevcut Node1'deki (V1.3) veritabanları (PG dump) ve eski MinIO dosyaları Node5 ve Node4'e aktarılacak.
+2. **Sıfırdan Kurulum (No Migration):** Sistem tamamen sıfırdan kurulacak, veri taşıması yapılmayacaktır. Node1'deki eski veriler (PG dump, MinIO dosyaları) taşınmaz; sistem yeni kullanıcı kayıtları ve içeriklerle başlar.
 3. **Edge'lerin Formatlanması:**
    - Node4 (Yeni) saf Edge medyası olarak V1.4 scriptiyle kurulacak. (İzole Local Redis, Standalone MinIO %80 quota, LiveKit).
    - Node1'in sırtındaki veritabanları ve core yükler silinip Node4'ün ikizi (Edge 1) haline getirilecek (Yine V1.4 scripti kullanılacak).
