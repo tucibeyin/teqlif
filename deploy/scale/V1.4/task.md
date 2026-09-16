@@ -20,8 +20,8 @@
 - `[x]` Görev 1.6: V1.4 mimarisine özel 6-Node (Core ve Edge 2 dahil) WireGuard ağ topolojisinin Node bağımsız `resources/wg0.conf` dosyaları olarak oluşturulması. (Commit: pending, Date: 2026-09-16)
 
 ## 🧠 Aşama 2: Backend Refactor - Konfigürasyon ve Ajanlar
-- `[ ]` Görev 2.1: `backend/app/config.py` refactor'ü. `livekit_url` ve `minio_endpoint`'in kaldırılıp dinamik `.env` listesi okuyan (Pydantic validator) yapısına dönüştürülmesi. (Commit: -, Date: -)
-- `[ ]` Görev 2.2: `scripts/edge_metrics_agent.py` ajanının yazılması (CPU, RAM, Disk, Net istatistiklerinin Core Redis'e yazılması). (Commit: -, Date: -)
+- `[x]` Görev 2.1: `backend/app/config.py` refactor'ü. `livekit_url` ve `minio_endpoint`'in kaldırılıp dinamik `.env` listesi okuyan (Pydantic validator) yapısına dönüştürülmesi. (Commit: -, Date: -)
+- `[x]` Görev 2.2: `scripts/edge_metrics_agent.py` ajanının yazılması (CPU, RAM, Disk, Net istatistiklerinin Core Redis'e yazılması). (Commit: -, Date: -)
 - `[ ]` Görev 2.3: `app/services/edge_orchestrator.py` sınıfının yaratılması ve `allocate_node(service_type)` jenerik kaynak yöneticisi mantığının kodlanması. (Tamamen soyutlanmış yapı). (Commit: -, Date: -)
 - `[ ]` Görev 2.4: **(ClickHouse Optimizasyonu)** Backend API ve modellerindeki `user_id` ve `listing_id` alanlarının `String`'den `int` (UInt32) tipine çevrilmesi ve `Nullable` türlerin iptal edilmesi. (Commit: -, Date: -)
 - `[ ]` Görev 2.5: **(ClickHouse Optimizasyonu)** FastAPI background worker'larının `FLUSH_INTERVAL` değerinin 30 saniyeye, `MAX_BATCH` limitinin 5000'e çıkarılması. Şema yaratma scriptlerine `ZSTD(3)`, Bloom Filter ve kısa TTL sürelerinin eklenmesi. (Commit: -, Date: -)

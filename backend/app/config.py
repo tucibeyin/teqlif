@@ -1,5 +1,6 @@
 import os
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -18,20 +19,21 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@teqlif.com"
     brevo_sender_name: str = "teqlif"
-    livekit_url: str = "wss://teqlif.com/rtc"
+    # --- V1.4 EDGE MİMARİSİ (Dinamik Medya & Yayın) ---
+    edge_livekit_urls: list[str] = []
+    edge_minio_urls: list[str] = []
+    minio_storage_quota_percent: int = 80
+    edge_metrics_interval_sec: int = 3
+
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
-    # LiveKit admin API URL'si (boşsa livekit_url'dan path çıkarılarak türetilir)
-    livekit_api_url: str = ""
+    
+    @field_validator("edge_livekit_urls", "edge_minio_urls", mode="before")
+    def parse_comma_separated_list(cls, v):
+        if isinstance(v, str):
+            return [url.strip() for url in v.split(",") if url.strip()]
+        return v or []
 
-    @property
-    def livekit_api_base(self) -> str:
-        """Admin API çağrıları için path içermeyen URL döndürür."""
-        if self.livekit_api_url:
-            return self.livekit_api_url
-        from urllib.parse import urlparse
-        parsed = urlparse(self.livekit_url)
-        return f"{parsed.scheme}://{parsed.netloc}"
     firebase_service_account: str = ""  # path to service account JSON
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""
@@ -50,12 +52,11 @@ class Settings(BaseSettings):
     ai_proxy_internal_token: str = ""   # Shared bearer token — node1, node2, node3 aynı değeri kullanır
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
-    minio_endpoint: str = "localhost:9000"
+    
     minio_access_key: str = ""
     minio_secret_key: str = ""
     minio_bucket: str = "teqlif"
     minio_dm_bucket: str = "teqlif-dm"   # private bucket for DM media (presigned access)
-    minio_dm_external_url: str = ""      # ör. "minio.teqlif.com" — presign için dışarıdan erişilebilir URL
     minio_secure: bool = False
     minio_region: str = "us-east-1"      # S3 API uyumluluğu ve ağ keşfini atlamak için
 

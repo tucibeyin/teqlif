@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,20 +9,23 @@
     <!-- Reveal.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.0/reset.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.0/reveal.min.css">
-    
+
     <!-- Apple Aesthetic Styling -->
     <style>
         :root {
             --bg-color: #000000;
-            --brand-cyan: #00c2ff; 
+            --brand-cyan: #00c2ff;
             --brand-cyan-dim: rgba(0, 194, 255, 0.15);
-            --text-main: #f5f5f7; 
-            --text-muted: #86868b; 
+            --text-main: #f5f5f7;
+            --text-muted: #86868b;
             --glass-bg: rgba(255, 255, 255, 0.04);
             --glass-border: rgba(255, 255, 255, 0.08);
         }
 
-        body, .reveal-viewport, .reveal, .reveal .slide-background {
+        body,
+        .reveal-viewport,
+        .reveal,
+        .reveal .slide-background {
             background-color: var(--bg-color) !important;
             background: var(--bg-color) !important;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -34,7 +38,12 @@
             font-family: inherit;
         }
 
-        h1, h2, h3, h4, h5, h6 {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             font-family: inherit !important;
             text-transform: none !important;
             letter-spacing: -0.015em !important;
@@ -108,7 +117,7 @@
             line-height: 1.4;
             padding-left: 0;
         }
-        
+
         .reveal ul li strong {
             color: var(--text-main);
             font-weight: 600;
@@ -121,7 +130,7 @@
             gap: 30px;
             align-items: start;
         }
-        
+
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -132,20 +141,20 @@
         .cyan-text {
             color: var(--brand-cyan);
         }
-        
+
         .feature-box {
             background: transparent;
             text-align: left;
             padding: 10px;
         }
-        
+
         .feature-box h4 {
             color: var(--brand-cyan);
             font-size: 1.3em;
             font-weight: 600;
             margin-bottom: 10px;
         }
-        
+
         .feature-box p {
             font-size: 0.9em;
         }
@@ -169,7 +178,7 @@
             border-collapse: collapse;
             font-size: 0.85em;
         }
-        
+
         .apple-table th {
             color: var(--text-muted);
             font-weight: 500;
@@ -177,18 +186,18 @@
             padding-bottom: 15px;
             border-bottom: 1px solid var(--glass-border);
         }
-        
+
         .apple-table td {
             padding: 15px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: var(--text-muted);
             vertical-align: top;
         }
-        
+
         .apple-table tr:last-child td {
             border-bottom: none;
         }
-        
+
         .apple-table strong {
             color: var(--text-main);
             font-size: 1.1em;
@@ -202,14 +211,17 @@
         }
 
         /* Smaller text specifically for heavy content slides */
-        .dense-text p, .dense-text li {
+        .dense-text p,
+        .dense-text li {
             font-size: 0.8em !important;
         }
+
         .dense-text h2 {
             font-size: 2.5em !important;
         }
     </style>
 </head>
+
 <body>
 
     <div class="reveal">
@@ -219,7 +231,9 @@
             <section data-transition="fade">
                 <h1 class="teqlif-logo">teqlif</h1>
                 <div class="apple-subtitle">Sosyal ve Canlı Yayın Odaklı E-Ticaret.</div>
-                <p style="margin-top: 30px;">Geleneksel e-ticareti "alışveriş + eğlence" <strong style="color:var(--text-main);">(Shoppertainment)</strong> konseptiyle dinamik, etkileşimli ve rekabetçi bir sosyal etkinliğe dönüştürüyoruz.</p>
+                <p style="margin-top: 30px;">Geleneksel e-ticareti "alışveriş + eğlence" <strong
+                        style="color:var(--text-main);">(Shoppertainment)</strong> konseptiyle dinamik, etkileşimli ve
+                    rekabetçi bir sosyal etkinliğe dönüştürüyoruz.</p>
                 <div style="margin-top: 40px;">
                     <span class="badge">Live Commerce</span>
                     <span class="badge">Social Commerce</span>
@@ -231,16 +245,24 @@
                 <h2>Yapısal Problemler.</h2>
                 <div class="grid-3" style="margin-top: 40px;">
                     <div class="glass-card fragment fade-up">
-                        <strong style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">Güven Açığı</strong>
-                        <p style="font-size: 0.85em;">Statik fotoğraf ve metinler ürünün gerçek kondisyonunu yansıtmaz; dolandırıcılık endişesi yüksektir.</p>
+                        <strong
+                            style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">Güven
+                            Açığı</strong>
+                        <p style="font-size: 0.85em;">Statik fotoğraf ve metinler ürünün gerçek kondisyonunu yansıtmaz;
+                            dolandırıcılık endişesi yüksektir.</p>
                     </div>
                     <div class="glass-card fragment fade-up" data-fragment-index="1">
-                        <strong style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">Parçalanmış Süreç</strong>
-                        <p style="font-size: 0.85em;">Sosyal ağ satıcıları ödeme, teklif ve envanteri platform dışında manuel yapmak zorundadır (Friction).</p>
+                        <strong
+                            style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">Parçalanmış
+                            Süreç</strong>
+                        <p style="font-size: 0.85em;">Sosyal ağ satıcıları ödeme, teklif ve envanteri platform dışında
+                            manuel yapmak zorundadır (Friction).</p>
                     </div>
                     <div class="glass-card fragment fade-up" data-fragment-index="2">
-                        <strong style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">İzolasyon</strong>
-                        <p style="font-size: 0.85em;">Mevcut pazar yerleri "işlem" odaklıdır. Sosyal aidiyet ve anlık rekabet heyecanı yoktur.</p>
+                        <strong
+                            style="color: var(--text-main); font-size: 1.2em; display:block; margin-bottom: 15px;">İzolasyon</strong>
+                        <p style="font-size: 0.85em;">Mevcut pazar yerleri "işlem" odaklıdır. Sosyal aidiyet ve anlık
+                            rekabet heyecanı yoktur.</p>
                     </div>
                 </div>
             </section>
@@ -250,17 +272,26 @@
                 <h2>Çözüm: <span class="cyan-text">Çok Taraflı Platform.</span></h2>
                 <div class="glass-card grid-2">
                     <div>
-                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block;">Entegre Canlı Yayın</strong>
-                        <p>360 derece ürün sergileme ve soru-cevap. Güven problemini ortadan kaldıran düşük gecikmeli WebRTC video altyapısı.</p>
-                        
-                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block; margin-top: 20px;">Gerçek Zamanlı Teklif Motoru</strong>
-                        <p>Saniyeler içinde gerçekleşen anlık teklifleri eşzamanlı yöneten ve ödemeyi provizyona alan sürtünmesiz (frictionless) motor.</p>
+                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block;">Entegre Canlı
+                            Yayın</strong>
+                        <p>360 derece ürün sergileme ve soru-cevap. Güven problemini ortadan kaldıran düşük gecikmeli
+                            WebRTC video altyapısı.</p>
+
+                        <strong
+                            style="color: var(--brand-cyan); font-size: 1.3em; display:block; margin-top: 20px;">Gerçek
+                            Zamanlı Teklif Motoru</strong>
+                        <p>Saniyeler içinde gerçekleşen anlık teklifleri eşzamanlı yöneten ve ödemeyi provizyona alan
+                            sürtünmesiz (frictionless) motor.</p>
                     </div>
                     <div style="border-left: 1px solid var(--glass-border); padding-left: 30px;">
-                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block;">Oyunlaştırma & FOMO</strong>
-                        <p>"Ani ölüm" (sudden death) açık artırmaları ve gizemli kutu kurguları. Rekabet, dönüşüm oranlarını dramatik şekilde artırır.</p>
-                        
-                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block; margin-top: 20px;">Çapraz Mobil Deneyim</strong>
+                        <strong style="color: var(--brand-cyan); font-size: 1.3em; display:block;">Oyunlaştırma &
+                            FOMO</strong>
+                        <p>"Ani ölüm" (sudden death) açık artırmaları ve gizemli kutu kurguları. Rekabet, dönüşüm
+                            oranlarını dramatik şekilde artırır.</p>
+
+                        <strong
+                            style="color: var(--brand-cyan); font-size: 1.3em; display:block; margin-top: 20px;">Çapraz
+                            Mobil Deneyim</strong>
                         <p>Video, anlık sohbet (chat) ve ödeme, uygulamadan çıkmadan pürüzsüzce tek akışta çalışır.</p>
                     </div>
                 </div>
@@ -271,20 +302,27 @@
                 <h2>Ürün Sihri: <span class="cyan-text">Satış & İletişim.</span></h2>
                 <div class="grid-2">
                     <div class="glass-card">
-                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Satış Kanalları</strong>
+                        <strong
+                            style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Satış
+                            Kanalları</strong>
                         <ul>
-                            <li><strong>SwipeLive:</strong> Kişiselleştirilmiş dikey kaydırmalı canlı yayın ve ilan akışı.</li>
+                            <li><strong>SwipeLive:</strong> Kişiselleştirilmiş dikey kaydırmalı canlı yayın ve ilan
+                                akışı.</li>
                             <li><strong>Canlı Müzayede:</strong> Teklif verme, Buy-it-now, kazananı onaylama.</li>
                             <li><strong>Canlı Direkt Satış:</strong> Sabit fiyatlı anlık sipariş kuyruğa alma.</li>
                             <li><strong>İlan Pazaryeri:</strong> Klasik ilan yayınlama yönetimi.</li>
                         </ul>
                     </div>
                     <div class="glass-card">
-                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">P2P İletişim</strong>
+                        <strong
+                            style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">P2P
+                            İletişim</strong>
                         <ul>
-                            <li><strong>Görüntülü/Sesli Çağrı:</strong> WebRTC tabanlı şifreli doğrudan iletişim ve çağrı geçmişi.</li>
+                            <li><strong>Görüntülü/Sesli Çağrı:</strong> WebRTC tabanlı şifreli doğrudan iletişim ve
+                                çağrı geçmişi.</li>
                             <li><strong>Bire Bir Mesaj:</strong> Metin, görsel, video ve dosya paylaşımı.</li>
-                            <li><strong>Hikayeler (Stories):</strong> 24 saatlik döngü, beğeni ve görüntüleme takibi.</li>
+                            <li><strong>Hikayeler (Stories):</strong> 24 saatlik döngü, beğeni ve görüntüleme takibi.
+                            </li>
                             <li><strong>Canlı Sohbet:</strong> Yayın içi gerçek zamanlı anlık iletişim.</li>
                         </ul>
                     </div>
@@ -296,20 +334,27 @@
                 <h2>Topluluk, Güven ve <span class="cyan-text">Keşif.</span></h2>
                 <div class="grid-2">
                     <div class="glass-card">
-                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Güven Altyapısı</strong>
+                        <strong
+                            style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Güven
+                            Altyapısı</strong>
                         <ul>
-                            <li><strong>Trust Score & Influence Rank:</strong> Satıcı güvenilirliğini yansıtan şeffaf etki sıralaması.</li>
+                            <li><strong>Trust Score & Influence Rank:</strong> Satıcı güvenilirliğini yansıtan şeffaf
+                                etki sıralaması.</li>
                             <li><strong>Değerlendirme Sistemi:</strong> Puanlama ve satıcı yanıt hakkı.</li>
                             <li><strong>Yayın Moderasyonu:</strong> Susturma, yayından atma, moderatör atama.</li>
                             <li><strong>Kapsamlı Profil:</strong> İşletme/Kişisel profil ve gizli hesap yönetimi.</li>
                         </ul>
                     </div>
                     <div class="glass-card">
-                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Kişiselleştirilmiş İçerik</strong>
+                        <strong
+                            style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Kişiselleştirilmiş
+                            İçerik</strong>
                         <ul>
-                            <li><strong>Yapay Zeka İlgi Haritası:</strong> Görüntüleme, teklif, satın alma ve tereddüt sinyalleriyle sürekli öğrenen motor.</li>
+                            <li><strong>Yapay Zeka İlgi Haritası:</strong> Görüntüleme, teklif, satın alma ve tereddüt
+                                sinyalleriyle sürekli öğrenen motor.</li>
                             <li><strong>Sana Özel (For You):</strong> Tamamen ilgi alanına dayalı ilan/yayın akışı.</li>
-                            <li><strong>Arama Uyarıları:</strong> Kayıtlı kriterlere uyan yeni ilanlar için otomatik anlık bildirim.</li>
+                            <li><strong>Arama Uyarıları:</strong> Kayıtlı kriterlere uyan yeni ilanlar için otomatik
+                                anlık bildirim.</li>
                         </ul>
                     </div>
                 </div>
@@ -323,21 +368,25 @@
                     <div class="grid-2">
                         <div>
                             <strong style="color:var(--brand-cyan);">Sıcak Aday (Hot Lead) Tespiti</strong>
-                            <p style="margin-bottom: 15px;">24 saat içinde ilana yönelik yüksek teklif tereddütü gösterenlerin tespiti ve satıcı bildirimi.</p>
-                            
+                            <p style="margin-bottom: 15px;">24 saat içinde ilana yönelik yüksek teklif tereddütü
+                                gösterenlerin tespiti ve satıcı bildirimi.</p>
+
                             <strong style="color:var(--brand-cyan);">Toplu Bildirim (Blast) & Retargeting</strong>
-                            <p style="margin-bottom: 15px;">Filtrelenmiş hedef kitlelere ve etkileşim kurmuş alıcılara kişiselleştirilmiş push bildirimi.</p>
-                            
+                            <p style="margin-bottom: 15px;">Filtrelenmiş hedef kitlelere ve etkileşim kurmuş alıcılara
+                                kişiselleştirilmiş push bildirimi.</p>
+
                             <strong style="color:var(--brand-cyan);">SwipeLive Algoritması (Ar-Ge)</strong>
-                            <p>Video varsa video, yoksa kapak fotoğrafı kullanarak canlı yayın ve ilanları kesintisiz tek akışta sunar.</p>
+                            <p>Video varsa video, yoksa kapak fotoğrafı kullanarak canlı yayın ve ilanları kesintisiz
+                                tek akışta sunar.</p>
                         </div>
                         <div>
                             <strong style="color:var(--brand-cyan);">Fiyat Zekası & Rakip Radar</strong>
-                            <p style="margin-bottom: 15px;">Rakip aktivitesi, kategori talep trendleri ve fiyatların gerçek zamanlı izlenmesi.</p>
-                            
+                            <p style="margin-bottom: 15px;">Rakip aktivitesi, kategori talep trendleri ve fiyatların
+                                gerçek zamanlı izlenmesi.</p>
+
                             <strong style="color:var(--brand-cyan);">AI Fiyat Tahmini</strong>
                             <p style="margin-bottom: 15px;">Piyasa verilerine dayalı dinamik fiyat öneri motoru.</p>
-                            
+
                             <strong style="color:var(--brand-cyan);">Dönüşüm Hunisi Analizi</strong>
                             <p>Görüntüleme → Tereddüt → Satın Alma hattını izleyen kapsamlı KPI gösterge paneli.</p>
                         </div>
@@ -379,22 +428,33 @@
             <!-- 8. YASAL UYUMLULUK VE VERİ YÖNETİMİ -->
             <section data-transition="slide" class="dense-text">
                 <h2>Yasal Uyum ve <span class="cyan-text">Veri Yönetimi.</span></h2>
-                <p style="margin-bottom: 30px;">KVKK uyumlu veri işleme mimarisiyle global rakiplerin Türkiye pazarında karşılayamadığı yasal güvenliği sunarız.</p>
+                <p style="margin-bottom: 30px;">KVKK uyumlu veri işleme mimarisiyle global rakiplerin Türkiye pazarında
+                    karşılayamadığı yasal güvenliği sunarız.</p>
                 <div class="grid-2">
                     <div class="glass-card">
-                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Yasal Dayanak</strong>
+                        <strong
+                            style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Yasal
+                            Dayanak</strong>
                         <ul>
-                            <li><strong>KVKK Madde 9/6/b:</strong> ABD, Virginia sunucularına zorunlu aktarım onay mekanizması.</li>
-                            <li><strong>Denetlenebilir İspat:</strong> Onay tarihi, dil ve IP adresi veritabanı loglaması.</li>
-                            <li><strong>Haklar:</strong> Madde 11 (Bilgi, düzeltme, silme) doğrultusunda tam kontrol.</li>
+                            <li><strong>KVKK Madde 9/6/b:</strong> ABD, Virginia sunucularına zorunlu aktarım onay
+                                mekanizması.</li>
+                            <li><strong>Denetlenebilir İspat:</strong> Onay tarihi, dil ve IP adresi veritabanı
+                                loglaması.</li>
+                            <li><strong>Haklar:</strong> Madde 11 (Bilgi, düzeltme, silme) doğrultusunda tam kontrol.
+                            </li>
                         </ul>
                     </div>
                     <div class="glass-card">
-                        <strong style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Teknik Güvenlik</strong>
+                        <strong
+                            style="font-size: 1.2em; color: var(--text-main); margin-bottom: 15px; display:block;">Teknik
+                            Güvenlik</strong>
                         <ul>
-                            <li><strong>Güvenli Depolama:</strong> Mobil cihazda Flutter Secure Storage şifrelemesi.</li>
-                            <li><strong>Kimlik Yönetimi:</strong> JWT tabanlı yenilenebilir/iptal edilebilir tokenlar.</li>
-                            <li><strong>Siber Koruma:</strong> Uç noktalarda Rate limiting, Brute-force ve XSS koruması (CSP).</li>
+                            <li><strong>Güvenli Depolama:</strong> Mobil cihazda Flutter Secure Storage şifrelemesi.
+                            </li>
+                            <li><strong>Kimlik Yönetimi:</strong> JWT tabanlı yenilenebilir/iptal edilebilir tokenlar.
+                            </li>
+                            <li><strong>Siber Koruma:</strong> Uç noktalarda Rate limiting, Brute-force ve XSS koruması
+                                (CSP).</li>
                         </ul>
                     </div>
                 </div>
@@ -405,7 +465,9 @@
                 <h2>Hedef Pazar.</h2>
                 <div class="grid-2" style="margin-top: 40px;">
                     <div class="glass-card">
-                        <strong style="color: var(--brand-cyan); font-size: 1.4em; display:block; margin-bottom: 20px;">Satıcı Tarafı</strong>
+                        <strong
+                            style="color: var(--brand-cyan); font-size: 1.4em; display:block; margin-bottom: 20px;">Satıcı
+                            Tarafı</strong>
                         <ul>
                             <li>Canlı yayında açık artırma yapan bireyseller.</li>
                             <li>Koleksiyon, ikinci el, el yapımı ve niş satıcılar.</li>
@@ -414,11 +476,15 @@
                         </ul>
                     </div>
                     <div class="glass-card">
-                        <strong style="color: var(--brand-cyan); font-size: 1.4em; display:block; margin-bottom: 20px;">Alıcı Tarafı</strong>
+                        <strong
+                            style="color: var(--brand-cyan); font-size: 1.4em; display:block; margin-bottom: 20px;">Alıcı
+                            Tarafı</strong>
                         <ul>
-                            <li><strong>Shoppertainment izleyicileri:</strong> Alışverişi sosyal etkinlik olarak gören, FOMO ile karar verenler.</li>
+                            <li><strong>Shoppertainment izleyicileri:</strong> Alışverişi sosyal etkinlik olarak gören,
+                                FOMO ile karar verenler.</li>
                             <li><strong>Güven odaklılar:</strong> Almadan önce görüntülü iletişim arayanlar.</li>
-                            <li><strong>Fırsat avcıları:</strong> Kişiselleştirilmiş keşif akışında beklenmedik ürünler arayanlar.</li>
+                            <li><strong>Fırsat avcıları:</strong> Kişiselleştirilmiş keşif akışında beklenmedik ürünler
+                                arayanlar.</li>
                         </ul>
                     </div>
                 </div>
@@ -457,16 +523,25 @@
             <section data-transition="slide" class="dense-text">
                 <h2>Rekabet Analizi & <span class="cyan-text">Farkımız.</span></h2>
                 <div class="glass-card" style="padding: 30px; margin-top: 20px;">
-                    <strong style="color: var(--text-main); font-size: 1.1em;">Global:</strong> Whatnot, TikTok Shop, SHEIN Live, Amazon Live<br>
-                    <strong style="color: var(--text-main); font-size: 1.1em;">Yerel:</strong> Trendyol Canlı, Hepsiburada Canlı
+                    <strong style="color: var(--text-main); font-size: 1.1em;">Global:</strong> Whatnot, TikTok Shop,
+                    SHEIN Live, Amazon Live<br>
+                    <strong style="color: var(--text-main); font-size: 1.1em;">Yerel:</strong> Trendyol Canlı,
+                    Hepsiburada Canlı
                     <hr style="border: 1px solid var(--glass-border); margin: 20px 0;">
-                    <strong style="color: var(--brand-cyan); font-size: 1.2em; display:block; margin-bottom: 15px;">teqlif Neden Üstün?</strong>
+                    <strong
+                        style="color: var(--brand-cyan); font-size: 1.2em; display:block; margin-bottom: 15px;">teqlif
+                        Neden Üstün?</strong>
                     <ul style="font-size: 0.85em;">
-                        <li><strong>Entegre 3 Kanal:</strong> Açık artırma, direkt satış ve ilan aynı hesap altında paralel çalışır.</li>
-                        <li><strong>Platform İçi P2P İletişim:</strong> Görüntülü çağrı doğrudan ticarete entegredir; hiçbir rakipte yoktur.</li>
-                        <li><strong>SwipeLive Etkisi:</strong> Canlı yayın ve ilanların tek akışta sunulması oturum süresini artırır.</li>
-                        <li><strong>Araçlara Demokratik Erişim:</strong> Retargeting, Hot Lead vb. kurumsal araçlar harcama sınırına bakılmaksızın tüm satıcılara açıktır.</li>
-                        <li><strong>Yerel Yasal Uyum:</strong> KVKK uyumlu veri mimarisi, global rakiplerin Türkiye'de karşılamadığı yapısal bir avantajdır.</li>
+                        <li><strong>Entegre 3 Kanal:</strong> Açık artırma, direkt satış ve ilan aynı hesap altında
+                            paralel çalışır.</li>
+                        <li><strong>Platform İçi P2P İletişim:</strong> Görüntülü çağrı doğrudan ticarete entegredir;
+                            hiçbir rakipte yoktur.</li>
+                        <li><strong>SwipeLive Etkisi:</strong> Canlı yayın ve ilanların tek akışta sunulması oturum
+                            süresini artırır.</li>
+                        <li><strong>Araçlara Demokratik Erişim:</strong> Retargeting, Hot Lead vb. kurumsal araçlar
+                            harcama sınırına bakılmaksızın tüm satıcılara açıktır.</li>
+                        <li><strong>Yerel Yasal Uyum:</strong> KVKK uyumlu veri mimarisi, global rakiplerin Türkiye'de
+                            karşılamadığı yapısal bir avantajdır.</li>
                     </ul>
                 </div>
             </section>
@@ -477,16 +552,17 @@
                 <p style="font-size: 1.2em; margin-top: 20px; color: var(--text-main);">
                     E-ticaretin "işlem" odaklı yapısını,<br>"deneyim" odaklı bir sosyal ekosisteme dönüştürüyoruz.
                 </p>
-                
+
                 <div style="margin-top: 40px;">
                     <p style="font-size: 0.9em; color: var(--text-muted);">
                         <strong>Pazara Giriş Stratejisi Başladı.</strong><br>
-                        İlk hedef kitlemiz olan canlı müzayede satıcıları, sosyal KOBİ'ler ve niş topluluklarla gerçekleştirilen pilot testler eşliğinde büyümeye hazırız.
+                        İlk hedef kitlemiz olan canlı müzayede satıcıları, sosyal KOBİ'ler ve niş topluluklarla
+                        gerçekleştirilen pilot testler eşliğinde büyümeye hazırız.
                     </p>
                 </div>
-                
+
                 <div style="margin-top: 40px; font-weight: 500;">
-                    <p class="cyan-text">iletisim@teqlif.com | www.teqlif.com</p>
+                    <p class="cyan-text">destek@teqlif.com | www.teqlif.com</p>
                 </div>
             </section>
 
@@ -498,13 +574,13 @@
     <script>
         Reveal.initialize({
             hash: true,
-            transition: 'slide', 
+            transition: 'slide',
             transitionSpeed: 'slow',
             backgroundTransition: 'fade',
             center: true,
             controls: true,
             progress: true,
-            
+
             // Layout settings
             width: 1200,
             height: 800,
@@ -514,4 +590,5 @@
         });
     </script>
 </body>
+
 </html>
