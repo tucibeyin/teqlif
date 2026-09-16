@@ -32,8 +32,8 @@ _flush_task: Optional[asyncio.Task] = None
 
 # ── Ayarlar ───────────────────────────────────────────────────────────────────
 
-FLUSH_INTERVAL: int = 5    # saniye — her 5s bir flush
-MAX_BATCH: int = 2000      # flush başına tablo başına max satır
+FLUSH_INTERVAL: int = 30   # saniye — her 30s bir flush (V1.4 CPU Optimizasyonu)
+MAX_BATCH: int = 5000      # flush başına tablo başına max satır (V1.4 I/O Optimizasyonu)
 
 # Redis buffer key'leri
 _BUF_USER_EVENTS         = "ch_buf:user_events"
@@ -45,20 +45,21 @@ _BUF_DIRECT_SALE_EVENTS  = "ch_buf:direct_sale_events"
 _CREATE_USER_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS user_events
 (
-    user_id          Nullable(UInt32),
-    item_id          UInt32,
-    item_type        LowCardinality(String),
-    event_type       LowCardinality(String),
-    price_point      Nullable(Float64),
-    duration_seconds Nullable(Float64),
-    metadata         String DEFAULT '',
-    timestamp        DateTime DEFAULT now(),
-    subcategory      LowCardinality(String) DEFAULT ''
+    user_id          UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    item_id          UInt32 CODEC(ZSTD(3)),
+    item_type        LowCardinality(String) CODEC(ZSTD(3)),
+    event_type       LowCardinality(String) CODEC(ZSTD(3)),
+    price_point      Nullable(Float64) CODEC(ZSTD(3)),
+    duration_seconds Nullable(Float64) CODEC(ZSTD(3)),
+    metadata         String DEFAULT '' CODEC(ZSTD(3)),
+    timestamp        DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    subcategory      LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    INDEX idx_item_id item_id TYPE bloom_filter GRANULARITY 1
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (timestamp, item_id)
-TTL timestamp + INTERVAL 180 DAY
+TTL timestamp + INTERVAL 30 DAY
 SETTINGS index_granularity = 8192
 """
 
@@ -70,21 +71,21 @@ _ALTER_USER_EVENTS = [
 _CREATE_FEED_ANALYTICS_TABLE = """
 CREATE TABLE IF NOT EXISTS feed_analytics
 (
-    timestamp           DateTime,
-    user_id             String,
-    listing_id          String,
-    event_type          LowCardinality(String),
-    dwell_time_ms       UInt32,
-    content_type        LowCardinality(String) DEFAULT '',
-    slot_index          UInt32 DEFAULT 0,
-    stream_category     LowCardinality(String) DEFAULT '',
-    listing_condition   LowCardinality(String) DEFAULT '',
-    listing_subcategory LowCardinality(String) DEFAULT ''
+    timestamp           DateTime CODEC(Delta, ZSTD(3)),
+    user_id             UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    listing_id          UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    event_type          LowCardinality(String) CODEC(ZSTD(3)),
+    dwell_time_ms       UInt32 CODEC(ZSTD(3)),
+    content_type        LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    slot_index          UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    stream_category     LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    listing_condition   LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    listing_subcategory LowCardinality(String) DEFAULT '' CODEC(ZSTD(3))
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
-ORDER BY (listing_id, event_type, timestamp)
-TTL timestamp + INTERVAL 365 DAY
+ORDER BY (user_id, timestamp)
+TTL timestamp + INTERVAL 30 DAY
 """
 
 _ALTER_FEED_ANALYTICS = [
@@ -98,18 +99,18 @@ _ALTER_FEED_ANALYTICS = [
 _CREATE_SEARCH_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS search_events
 (
-    timestamp    DateTime,
-    user_id      Nullable(UInt32),
-    query        String,
-    category     LowCardinality(String) DEFAULT '',
-    result_count UInt32 DEFAULT 0,
-    intent       LowCardinality(String) DEFAULT '',
-    subcategory  LowCardinality(String) DEFAULT ''
+    timestamp    DateTime CODEC(Delta, ZSTD(3)),
+    user_id      UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    query        String CODEC(ZSTD(3)),
+    category     LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    result_count UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    intent       LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    subcategory  LowCardinality(String) DEFAULT '' CODEC(ZSTD(3))
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (category, timestamp)
-TTL timestamp + INTERVAL 365 DAY
+TTL timestamp + INTERVAL 30 DAY
 """
 
 _ALTER_SEARCH_EVENTS = [
@@ -120,54 +121,54 @@ _ALTER_SEARCH_EVENTS = [
 _CREATE_SWIPE_LIVE_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS swipe_live_events
 (
-    user_id              UInt32,
-    stream_id            UInt32        DEFAULT 0,
-    listing_id           UInt32        DEFAULT 0,
-    event_type           LowCardinality(String),
-    dwell_ms             UInt32        DEFAULT 0,
-    stream_category      LowCardinality(String) DEFAULT '',
-    listing_category     LowCardinality(String) DEFAULT '',
-    listing_condition    LowCardinality(String) DEFAULT '',
-    listings_seen        UInt8         DEFAULT 0,
-    slot_index           UInt32        DEFAULT 0,
-    session_id           String        DEFAULT '',
-    timestamp            DateTime      DEFAULT now(),
-    stream_subcategory   LowCardinality(String) DEFAULT '',
-    listing_subcategory  LowCardinality(String) DEFAULT ''
+    user_id              UInt32 CODEC(ZSTD(3)),
+    stream_id            UInt32        DEFAULT 0 CODEC(ZSTD(3)),
+    listing_id           UInt32        DEFAULT 0 CODEC(ZSTD(3)),
+    event_type           LowCardinality(String) CODEC(ZSTD(3)),
+    dwell_ms             UInt32        DEFAULT 0 CODEC(ZSTD(3)),
+    stream_category      LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    listing_category     LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    listing_condition    LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    listings_seen        UInt8         DEFAULT 0 CODEC(ZSTD(3)),
+    slot_index           UInt32        DEFAULT 0 CODEC(ZSTD(3)),
+    session_id           String        DEFAULT '' CODEC(ZSTD(3)),
+    timestamp            DateTime      DEFAULT now() CODEC(Delta, ZSTD(3)),
+    stream_subcategory   LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    listing_subcategory  LowCardinality(String) DEFAULT '' CODEC(ZSTD(3))
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp)
-TTL timestamp + INTERVAL 180 DAY
+TTL timestamp + INTERVAL 30 DAY
 SETTINGS index_granularity = 8192
 """
 
 _CREATE_DIRECT_SALE_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS direct_sale_events
 (
-    event_id                UUID DEFAULT generateUUIDv4(),
-    event_type              LowCardinality(String),
-    sale_id                 UInt32,
-    stream_id               UInt32,
-    host_id                 UInt32,
-    user_id                 UInt32,
-    order_id                Nullable(UInt32),
-    listing_id              Nullable(UInt32),
-    category                LowCardinality(Nullable(String)),
-    quantity                Nullable(UInt8),
-    unit_price              Nullable(Decimal(10, 2)),
-    total_price             Nullable(Decimal(10, 2)),
-    remaining_stock_before  Nullable(UInt16),
-    remaining_stock_after   Nullable(UInt16),
-    viewer_count            Nullable(UInt32),
-    end_reason              LowCardinality(Nullable(String)),
-    orders_voided           Nullable(Bool),
-    created_at              DateTime DEFAULT now()
+    event_id                UUID DEFAULT generateUUIDv4() CODEC(ZSTD(3)),
+    event_type              LowCardinality(String) CODEC(ZSTD(3)),
+    sale_id                 UInt32 CODEC(ZSTD(3)),
+    stream_id               UInt32 CODEC(ZSTD(3)),
+    host_id                 UInt32 CODEC(ZSTD(3)),
+    user_id                 UInt32 CODEC(ZSTD(3)),
+    order_id                UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    listing_id              UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    category                LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    quantity                UInt8 DEFAULT 0 CODEC(ZSTD(3)),
+    unit_price              Nullable(Decimal(10, 2)) CODEC(ZSTD(3)),
+    total_price             Nullable(Decimal(10, 2)) CODEC(ZSTD(3)),
+    remaining_stock_before  UInt16 DEFAULT 0 CODEC(ZSTD(3)),
+    remaining_stock_after   UInt16 DEFAULT 0 CODEC(ZSTD(3)),
+    viewer_count            UInt32 DEFAULT 0 CODEC(ZSTD(3)),
+    end_reason              LowCardinality(String) DEFAULT '' CODEC(ZSTD(3)),
+    orders_voided           Bool DEFAULT false CODEC(ZSTD(3)),
+    created_at              DateTime DEFAULT now() CODEC(Delta, ZSTD(3))
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)
 ORDER BY (sale_id, created_at, event_type)
-TTL created_at + INTERVAL 730 DAY
+TTL created_at + INTERVAL 180 DAY
 SETTINGS index_granularity = 8192
 """
 

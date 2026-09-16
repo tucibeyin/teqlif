@@ -1263,7 +1263,7 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
                                 END
                             ) AS signal
                         FROM feed_analytics
-                        WHERE user_id = '{uid_str}'
+                        WHERE user_id = {uid}
                           AND timestamp >= now() - INTERVAL 7 DAY
                         GROUP BY listing_id
                         HAVING signal > 0

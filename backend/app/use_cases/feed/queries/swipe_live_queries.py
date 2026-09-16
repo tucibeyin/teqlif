@@ -314,7 +314,7 @@ class SwipeLiveQueries:
                     countIf(event_type = 'click')      AS clicks,
                     countIf(event_type = 'impression') AS impressions
                 FROM feed_analytics
-                WHERE user_id = {uid:String}
+                WHERE user_id = {uid:UInt32}
                   AND timestamp >= now() - INTERVAL 30 DAY
                   AND content_type IN ('listing', 'listing_video')
                 """,

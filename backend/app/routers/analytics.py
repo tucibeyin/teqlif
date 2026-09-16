@@ -1188,7 +1188,7 @@ async def ingest_feed_events(
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
-    uid = str(current_user.id)
+    uid = current_user.id
 
     rows = [
         [now, uid, e.listing_id, e.event_type, e.dwell_time_ms,

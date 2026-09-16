@@ -14,7 +14,7 @@ class AnalyticsEventCreate(BaseModel):
 
 
 class FeedEventCreate(BaseModel):
-    listing_id: str = Field(..., max_length=64)
+    listing_id: int
     event_type: Literal["skip", "impression", "click"]
     dwell_time_ms: int = Field(default=0, ge=0)
     content_type: Literal["video", "photo"] = "video"
