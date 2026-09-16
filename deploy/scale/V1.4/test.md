@@ -150,7 +150,7 @@
 1. `edge_orchestrator.py` içinde `allocate_node(service_type)` metodunun varlığını ve Media vs. Storage için farklı metrik kararları verdiğini doğrula.
 2. `stream_utils.py` ve `calls.py` (VoIP) içerisinde `settings.livekit_url` çağrılarının TAMAMEN SİLİNDİĞİNİ ve yerine `orchestrator.allocate_node()` metodunun kullanıldığını doğrula.
 
-**Durum:** ⏳ Kısmen Tamamlandı (Commit: 4d5af235) - Görev 3.3 (VoIP Refactor) bekleniyor.
+**Durum:** ✅ Tamamlandı (Commit: 163d04a6)
 
 ---
 
