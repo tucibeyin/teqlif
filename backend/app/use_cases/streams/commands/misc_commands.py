@@ -69,7 +69,7 @@ class UpdateThumbnailCommand:
             from app.services import storage_service as storage
             _CONTENT_TYPES = {"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
             filename = f"thumb_{uuid.uuid4().hex}.{ext}"
-            thumbnail_url = storage.upload_bytes(filename, data, _CONTENT_TYPES[ext])
+            thumbnail_url = await storage.upload_bytes(filename, data, _CONTENT_TYPES[ext])
 
             stream.thumbnail_url = thumbnail_url
 

@@ -26,7 +26,7 @@ _LISTING_NOTIF_TYPES = (
 
 # ── Dosya Temizliği ───────────────────────────────────────────────────────────
 
-def delete_listing_files(
+async def delete_listing_files(
     listing_id: int,
     image_url: str | None,
     image_urls_json: str | None,
@@ -53,7 +53,7 @@ def delete_listing_files(
 
     for url in urls:
         key = storage.url_to_key(url)
-        storage.delete_object(key)
+        await storage.delete_object(key)
         logger.info("[LISTING CLEANUP] MinIO'dan silindi | listing_id=%d | key=%s", listing_id, key)
 
 
@@ -149,6 +149,6 @@ async def cleanup_listing_resources(
     video_url: str | None,
 ) -> None:
     """Silinen ilanın tüm kaynaklarını temizler: dosyalar + Redis + bildirimler."""
-    delete_listing_files(listing_id, image_url, image_urls_json, thumbnail_url, video_url)
+    await delete_listing_files(listing_id, image_url, image_urls_json, thumbnail_url, video_url)
     await cleanup_listing_redis(listing_id)
     await cleanup_listing_notifications(listing_id)

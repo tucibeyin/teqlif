@@ -134,7 +134,7 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
 
         # Commit sonrası: dosyaları sil
         for lid, img_url, img_urls, thumb, vid in media_info:
-            delete_listing_files(lid, img_url, img_urls, thumb, vid)
+            await delete_listing_files(lid, img_url, img_urls, thumb, vid)
 
         # Redis ALS vektörleri + bildirimleri toplu temizle
         await asyncio.gather(

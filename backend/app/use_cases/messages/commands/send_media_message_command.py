@@ -206,7 +206,7 @@ class SendMediaMessageCommand:
                 session = self.uow.session
         except Exception:
             for key in processed.uploaded_dm_keys:
-                storage.delete_object_dm(key)
+                await storage.delete_object_dm(key)
             raise
 
         # commit sonrası — side effects
@@ -228,9 +228,9 @@ class SendMediaMessageCommand:
         presigned_thumb = msg.thumbnail_url
         try:
             if storage.is_dm_url(msg.media_url):
-                presigned_media = storage.presign_get(storage.dm_url_to_key(msg.media_url))
+                presigned_media = await storage.presign_get(storage.dm_url_to_key(msg.media_url))
             if storage.is_dm_url(msg.thumbnail_url):
-                presigned_thumb = storage.presign_get(storage.dm_url_to_key(msg.thumbnail_url))
+                presigned_thumb = await storage.presign_get(storage.dm_url_to_key(msg.thumbnail_url))
         except Exception as presign_exc:
             logger.warning("[SendMediaMessageCommand] Presign başarısız: %s", presign_exc)
 

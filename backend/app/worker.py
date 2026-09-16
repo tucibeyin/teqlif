@@ -406,9 +406,9 @@ async def cleanup_old_media_messages_task(ctx: dict) -> None:
             deleted_count = 0
             for msg in messages:
                 if msg.media_url:
-                    storage.delete_object(storage.url_to_key(msg.media_url))
+                    await storage.delete_object(storage.url_to_key(msg.media_url))
                 if msg.thumbnail_url:
-                    storage.delete_object(storage.url_to_key(msg.thumbnail_url))
+                    await storage.delete_object(storage.url_to_key(msg.thumbnail_url))
                 await db.delete(msg)
                 deleted_count += 1
 

@@ -31,7 +31,7 @@ class GetMessagesQuery:
         if cached:
             return cached
         try:
-            signed = storage.presign_get(key, expires=_PRESIGN_TTL)
+            signed = await storage.presign_get(key, expires=_PRESIGN_TTL)
             await redis.set(cache_key, signed, ex=_CACHE_TTL_SECS)
             return signed
         except Exception:

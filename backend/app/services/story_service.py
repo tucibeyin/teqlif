@@ -322,7 +322,7 @@ class StoryService:
                     logger.info("[STORY UPLOAD] Sıkıştırıldı | user_id=%s", user_id)
 
             try:
-                video_url = storage.upload_file(minio_key, upload_path, content_type)
+                video_url = await storage.upload_file(minio_key, upload_path, content_type)
             except Exception as exc:
                 logger.error(
                     "[STORY UPLOAD] MinIO yükleme başarısız | user_id=%s | %s",
@@ -347,7 +347,7 @@ class StoryService:
             await self.db.commit()
             await self.db.refresh(story)
         except Exception as exc:
-            storage.delete_object(minio_key)
+            await storage.delete_object(minio_key)
             logger.error(
                 "[STORY UPLOAD] DB kaydı oluşturulamadı | user_id=%s | %s",
                 user_id,
@@ -555,11 +555,11 @@ class StoryService:
                 except (FileNotFoundError, OSError):
                     pass
             else:
-                storage.delete_object(story.video_path)
+                await storage.delete_object(story.video_path)
             logger.info("[STORY DELETE] video silindi | story_id=%d", story_id)
 
         if story.thumbnail_url:
-            storage.delete_object(storage.url_to_key(story.thumbnail_url))
+            await storage.delete_object(storage.url_to_key(story.thumbnail_url))
 
         try:
             await self.db.delete(story)
@@ -612,11 +612,11 @@ class StoryService:
                     except (FileNotFoundError, OSError):
                         pass
                 else:
-                    storage.delete_object(story.video_path)
+                    await storage.delete_object(story.video_path)
                 logger.info("[STORY CLEANUP] video silindi | story_id=%d", story.id)
 
             if story.thumbnail_url:
-                storage.delete_object(storage.url_to_key(story.thumbnail_url))
+                await storage.delete_object(storage.url_to_key(story.thumbnail_url))
 
             # ── DB kaydını sil (story_views CASCADE ile otomatik silinir) ─
             try:

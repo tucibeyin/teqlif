@@ -136,7 +136,7 @@ class UpdateListingCommand:
         # ── DB commit'ten sonra MinIO temizliği ────────────────────────────────
         for key in files_to_delete:
             try:
-                storage.delete_object(key)
+                await storage.delete_object(key)
                 logger.debug("[UpdateListing] MinIO silindi: %s", key)
             except Exception as exc:
                 logger.warning("[UpdateListing] MinIO silme başarısız: key=%s | %s", key, exc)

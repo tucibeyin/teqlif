@@ -1562,9 +1562,9 @@ async def delete_account(
 
     try:
         if old_avatar:
-            storage.delete_object(storage.url_to_key(old_avatar))
+            await storage.delete_object(storage.url_to_key(old_avatar))
         if old_thumb:
-            storage.delete_object(storage.url_to_key(old_thumb))
+            await storage.delete_object(storage.url_to_key(old_thumb))
     except Exception:
         pass
 

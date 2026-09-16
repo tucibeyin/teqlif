@@ -13,17 +13,14 @@ logger = get_logger(__name__)
 async def _purge_media(urls: list[str]) -> None:
     from app.services import storage_service as storage
 
-    def _sync():
-        for url in urls:
-            try:
-                if storage.is_dm_url(url):
-                    storage.delete_object_dm(storage.dm_url_to_key(url))
-                else:
-                    storage.delete_object(storage.url_to_key(url))
-            except Exception as exc:
-                logger.error("[DeleteConversation] MinIO silme hatası: url=%s | %s", url, exc)
-
-    await asyncio.to_thread(_sync)
+    for url in urls:
+        try:
+            if storage.is_dm_url(url):
+                await storage.delete_object_dm(storage.dm_url_to_key(url))
+            else:
+                await storage.delete_object(storage.url_to_key(url))
+        except Exception as exc:
+            logger.error("[DeleteConversation] MinIO silme hatası: url=%s | %s", url, exc)
 
 
 class DeleteConversationCommand:

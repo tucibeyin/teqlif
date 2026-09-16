@@ -165,7 +165,7 @@ class VoiceProcessor:
             audio_fmt = "aac"
         ext = self._EXT_MAP.get(audio_fmt, "aac")
         key = f"messages/voice/{uuid.uuid4().hex}.{ext}"
-        url = storage.upload_bytes_dm(key, data, self._CT_MAP.get(audio_fmt, "audio/aac"))
+        url = await storage.upload_bytes_dm(key, data, self._CT_MAP.get(audio_fmt, "audio/aac"))
         resolved = min(duration_secs, VOICE_MAX_SECS) if duration_secs is not None else None
         return MediaProcessResult(media_url=url, duration_secs=resolved, uploaded_dm_keys=[key])
 
@@ -176,14 +176,14 @@ class ImageProcessor:
         if ext is None:
             raise BadRequestException(code="INVALID_IMAGE_FORMAT")
         key = f"messages/img/{uuid.uuid4().hex}.{ext}"
-        url = storage.upload_bytes_dm(key, data, IMAGE_CONTENT_TYPES[ext])
+        url = await storage.upload_bytes_dm(key, data, IMAGE_CONTENT_TYPES[ext])
         uploaded = [key]
         thumb_url = None
         try:
             thumb_data = make_thumbnail(data, ext)
             thumb_ext = "jpg" if ext != "png" else "png"
             thumb_key = f"messages/img/{uuid.uuid4().hex}_thumb.{thumb_ext}"
-            thumb_url = storage.upload_bytes_dm(
+            thumb_url = await storage.upload_bytes_dm(
                 thumb_key, thumb_data,
                 "image/jpeg" if thumb_ext == "jpg" else "image/png",
             )
@@ -208,7 +208,7 @@ class VideoProcessor:
                 raise BadRequestException(code="VIDEO_TOO_LONG")
             resolved_duration = int(detected_dur) if detected_dur is not None else duration_secs
             key = f"messages/vid/{uuid.uuid4().hex}.{vid_fmt}"
-            media_url = storage.upload_file_dm(key, src_path, "video/mp4")
+            media_url = await storage.upload_file_dm(key, src_path, "video/mp4")
             uploaded.append(key)
             thumb_url = None
             if shutil.which("ffmpeg"):
@@ -226,7 +226,7 @@ class VideoProcessor:
                         with open(thumb_path, "rb") as tf:
                             thumb_bytes = tf.read()
                         thumb_key = f"messages/vid/{uuid.uuid4().hex}_thumb.jpg"
-                        thumb_url = storage.upload_bytes_dm(thumb_key, thumb_bytes, "image/jpeg")
+                        thumb_url = await storage.upload_bytes_dm(thumb_key, thumb_bytes, "image/jpeg")
                         uploaded.append(thumb_key)
                 except Exception as exc:
                     logger.warning("[VideoProcessor] Thumbnail hatası: %s", exc)
@@ -246,7 +246,7 @@ class FileProcessor:
             raise BadRequestException(code="UNSUPPORTED_FILE_TYPE")
         file_name = (original_filename or f"dosya.{ext or 'bin'}")[:255]
         key = f"messages/file/{uuid.uuid4().hex}.{ext or 'bin'}"
-        url = storage.upload_bytes_dm(key, data, mime)
+        url = await storage.upload_bytes_dm(key, data, mime)
         return MediaProcessResult(media_url=url, file_name=file_name, uploaded_dm_keys=[key])
 
 
