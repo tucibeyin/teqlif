@@ -41,4 +41,19 @@
 
 **Beklenen Sonuç:** Node4'ün hiçbir şekilde gereksiz Core paketlerini veya ayarlarını barındırmaması, tamamen "Edge" görevine izole edilmesi.
 
+**Durum:** ✅ Tamamlandı (Commit: df3b06ff)
+
+---
+
+## Görev 1.3: Node1 (Edge 1) Resources Testi
+**Amaç:** V1.3'te "Monolith Core" rolünde çalışan Node1'in, V1.4 ile tamamen "Saf Medya ve Storage (Edge 1)" rolüne indirgendiğini onaylamak.
+
+**Test Adımları (Review):**
+1. `node1_production_requirements.txt` dosyasının Node4 ile aynı izolasyon seviyesinde olduğunu (sadece edge-metrics) doğrula.
+2. `bootstrap_node1.sh` içerisinde Node1'in geçmiş V1.3 Core rolüne atıfta bulunan "Eski servisleri durdurma uyarıları"nın yer aldığını kontrol et.
+3. `.env.production.template` içerisinde statik Postgres, Google OAuth vs. gibi Core servis ayarlarının tamamen SİLİNDİĞİNİ ve sadece Edge profili (MinIO, LiveKit, Edge Redis) ayarlarının bırakıldığını onayla.
+4. `node1_services.sh` scriptinin artık teqlif, teqlif-worker veya postgresql GİBİ servisleri İÇERMEDİĞİNİ onayla.
+
+**Beklenen Sonuç:** Node1'in eski karmaşık Monolith yüklerinden tamamen arındırılmış, Node4 (Edge 2) ile asimetrik ikiz olacak şekilde kodlanmış olması.
+
 **Durum:** ⏳ Kullanıcı onayı bekleniyor.
