@@ -1,5 +1,5 @@
 # /etc/prometheus/prometheus.yml — node3
-# Scale V1.3: Prometheus gateway'den node3'e taşındı; node3 + node-gateway hedefleri eklendi
+# Scale V1.4: 6-Node Architecture
 
 global:
   scrape_interval: 15s
@@ -21,35 +21,23 @@ scrape_configs:
   - job_name: 'node-gateway'
     static_configs:
       - targets: ['10.10.0.2:9100']
-        labels:
-          node: gateway
 
   - job_name: 'node-node1'
     static_configs:
       - targets: ['10.10.0.1:9100']
-        labels:
-          node: node1
 
   - job_name: 'node-node2'
     static_configs:
       - targets: ['10.10.0.3:9100']
-        labels:
-          node: node2
 
   - job_name: 'node-node3'
     static_configs:
       - targets: ['10.10.0.4:9100']
-        labels:
-          node: node3
 
-  - job_name: 'livekit'
+  - job_name: 'node-node4'
     static_configs:
-      - targets: ['10.10.0.1:7881']
-        labels:
-          node: node1
+      - targets: ['10.10.0.6:9100']
 
-  - job_name: 'postgres'
+  - job_name: 'node-node5'
     static_configs:
-      - targets: ['10.10.0.1:9187']
-        labels:
-          node: node1
+      - targets: ['10.10.0.5:9100']
