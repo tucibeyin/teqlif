@@ -19,9 +19,7 @@ if [[ "$(stat -c '%U' "$REPO" 2>/dev/null)" == "root" ]]; then
   sudo chown -R "$REPO_OWNER:$REPO_OWNER" "$REPO"
 fi
 
-echo "==> apt paketleri..."
-# Eski pgdg kaynağı kaldığıysa temizle (postgresql purge sonrası)
-sudo rm -f /etc/apt/sources.list.d/pgdg.list 2>/dev/null || true
+echo "==> apt paketleri (Staging DB dâhil)..."
 # gnupg ve wget önce kurulmalı (Grafana keyring için gerekli)
 sudo apt update -q
 sudo apt install -y gnupg wget
@@ -33,7 +31,7 @@ if ! grep -q "apt.grafana.com" /etc/apt/sources.list.d/grafana.list 2>/dev/null;
   echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
 fi
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana postgresql postgresql-contrib
 
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
