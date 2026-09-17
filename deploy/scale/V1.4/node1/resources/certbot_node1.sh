@@ -31,6 +31,151 @@ echo " Cert: /etc/letsencrypt/live/$DOMAIN_LIVE/fullchain.pem"
 echo " Key:  /etc/letsencrypt/live/$DOMAIN_LIVE/privkey.pem"
 echo "=========================================================="
 
-# Sertifikalar alındığına göre Edge servislerini (MinIO & LiveKit) otomatik kur
+# Sertifikalar alındığına göre Edge servislerini (MinIO & LiveKit) kur
 echo "==> Edge servisleri otomatik kuruluyor..."
-sudo bash "$(dirname "$0")/../../install_edge_services.sh"
+WG_IP="10.10.0.1"
+
+# SSL Sertifika Yolları
+CERT_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/fullchain.pem"
+KEY_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/privkey.pem"
+MINIO_CERT_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/fullchain.pem"
+MINIO_KEY_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/privkey.pem"
+
+# 1. MinIO Kurulumu
+echo "==> MinIO kuruluyor..."
+wget -q -nc https://dl.min.io/server/minio/release/linux-amd64/minio
+chmod +x minio
+sudo mv minio /usr/local/bin/
+
+sudo mkdir -p /var/lib/minio
+sudo chown -R tucibeyin:tucibeyin /var/lib/minio
+
+MINIO_CERTS_DIR="/home/tucibeyin/.minio/certs"
+sudo mkdir -p "$MINIO_CERTS_DIR"
+sudo ln -sf "$MINIO_CERT_FILE" "$MINIO_CERTS_DIR/public.crt"
+sudo ln -sf "$MINIO_KEY_FILE" "$MINIO_CERTS_DIR/private.key"
+sudo chown -R tucibeyin:tucibeyin /home/tucibeyin/.minio
+
+cat <<EOF | sudo tee /etc/systemd/system/minio.service
+[Unit]
+Description=MinIO Object Storage
+After=network.target
+
+[Service]
+User=tucibeyin
+Group=tucibeyin
+Environment="MINIO_ROOT_USER=admin"
+Environment="MINIO_ROOT_PASSWORD=teqlif_minio_admin"
+Environment="MINIO_SERVER_URL=https://$DOMAIN_MINIO:9010"
+ExecStart=/usr/local/bin/minio server /var/lib/minio --address $WG_IP:9010 --console-address $WG_IP:9011 --certs-dir $MINIO_CERTS_DIR
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 2. LiveKit Kurulumu
+echo "==> LiveKit kuruluyor..."
+curl -sSL https://get.livekit.io | bash
+sudo mkdir -p /etc/livekit
+
+cat <<EOF | sudo tee /etc/livekit/livekit.yaml
+port: 7880
+prometheus_port: 7881
+
+rtc:
+  port_range_start: 50000
+  port_range_end: 60000
+  udp_port: 7882
+  tcp_port: 7882
+  use_external_ip: true
+  node_ip: "135.125.175.223"
+
+turn:
+  enabled: true
+  domain: "$DOMAIN_LIVE"
+  cert_file: "$CERT_FILE"
+  key_file: "$KEY_FILE"
+  tls_port: 5349
+  udp_port: 3478
+
+keys:
+  teqlif_livekit_key: "teqlif_livekit_secret_123!"
+
+logging:
+  level: info
+  json: false
+EOF
+
+cat <<EOF | sudo tee /etc/systemd/system/livekit.service
+[Unit]
+Description=LiveKit Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/livekit-server --config /etc/livekit/livekit.yaml
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 3. Nginx Reverse Proxy
+echo "==> Nginx yapılandırılıyor..."
+sudo apt-get install -y nginx
+cat <<EOF | sudo tee /etc/nginx/sites-available/edge_services
+server {
+    listen 443 ssl;
+    server_name $DOMAIN_LIVE;
+
+    ssl_certificate $CERT_FILE;
+    ssl_certificate_key $KEY_FILE;
+
+    location / {
+        proxy_pass http://localhost:7880;
+        proxy_set_header Host \\\$host;
+        proxy_set_header X-Real-IP \\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \\\$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN_MINIO;
+
+    ssl_certificate $MINIO_CERT_FILE;
+    ssl_certificate_key $MINIO_KEY_FILE;
+
+    location / {
+        proxy_pass https://$WG_IP:9010;
+        proxy_set_header Host \\\$host;
+        proxy_set_header X-Real-IP \\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\$scheme;
+        client_max_body_size 1G;
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/edge_services /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo systemctl restart nginx
+
+# 4. Servisleri Başlat
+echo "==> Servisler başlatılıyor..."
+sudo systemctl daemon-reload
+sudo systemctl enable --now minio livekit
+
+echo "========================================================================="
+echo " ✅ Node1 (Edge 1) Kurulumu Tamamlandı!"
+echo " MinIO S3 URL:  https://$DOMAIN_MINIO"
+echo " LiveKit URL:   wss://$DOMAIN_LIVE"
+echo "========================================================================="
