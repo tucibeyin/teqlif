@@ -29,6 +29,31 @@ sudo ufw allow 443/tcp      # HTTPS
 sudo ufw allow 51820/udp    # WireGuard
 sudo ufw --force enable
 
+# ── WireGuard (Mesh Network) ──────────────────────────────────────────────────
+echo "==> WireGuard ağı (Mesh) yapılandırılıyor..."
+if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
+  sudo mkdir -p /etc/wireguard
+  sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
+  sudo chmod 600 /etc/wireguard/wg0.conf
+  
+  if grep -q "<GATEWAY_PRIVATE_KEY>" /etc/wireguard/wg0.conf; then
+    echo "==> Otomatik WireGuard Anahtarı Üretiliyor..."
+    sudo apt-get install -y -q wireguard-tools
+    PRIV_KEY=$(wg genkey)
+    PUB_KEY=$(echo "$PRIV_KEY" | wg pubkey)
+    sudo sed -i "s|<GATEWAY_PRIVATE_KEY>|$PRIV_KEY|" /etc/wireguard/wg0.conf
+    echo "=================================================================="
+    echo " 🚨 DİKKAT: Gateway için YENİ WireGuard Public Key üretildi! 🚨"
+    echo " PUBLIC KEY: $PUB_KEY"
+    echo " Lütfen bu anahtarı diğer sunucularda wg0.conf içindeki Gateway [Peer] kısmına kopyalayın!"
+    echo "=================================================================="
+  fi
+  
+  sudo systemctl enable --now wg-quick@wg0 || echo "Uyarı: WireGuard başlatılamadı."
+else
+  echo "Uyarı: wg0.conf bulunamadı, WireGuard ağı kurulamadı!"
+fi
+
 # ── Nginx Temizliği ve V1.4 Konfigürasyonu ────────────────────────────────────
 echo "==> Eski Nginx ayarları temizleniyor ve V1.4 Gateway konfigürasyonu kuruluyor..."
 sudo rm -f /etc/nginx/sites-enabled/default

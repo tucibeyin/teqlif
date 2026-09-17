@@ -25,7 +25,21 @@ if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
   sudo mkdir -p /etc/wireguard
   sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
   sudo chmod 600 /etc/wireguard/wg0.conf
-  sudo systemctl enable --now wg-quick@wg0 || echo "Uyarı: WireGuard başlatılamadı. Lütfen wg0.conf içerisindeki PrivateKey/PublicKey kısımlarını doldurun!"
+  
+  if grep -q "<NODE2_PRIVATE_KEY>" /etc/wireguard/wg0.conf; then
+    echo "==> Otomatik WireGuard Anahtarı Üretiliyor..."
+    sudo apt-get install -y -q wireguard-tools
+    PRIV_KEY=$(wg genkey)
+    PUB_KEY=$(echo "$PRIV_KEY" | wg pubkey)
+    sudo sed -i "s|<NODE2_PRIVATE_KEY>|$PRIV_KEY|" /etc/wireguard/wg0.conf
+    echo "=================================================================="
+    echo " 🚨 DİKKAT: Node2 için YENİ WireGuard Public Key üretildi! 🚨"
+    echo " PUBLIC KEY: $PUB_KEY"
+    echo " Lütfen bu anahtarı diğer sunucularda wg0.conf içindeki Node2 [Peer] kısmına kopyalayın!"
+    echo "=================================================================="
+  fi
+  
+  sudo systemctl enable --now wg-quick@wg0 || echo "Uyarı: WireGuard başlatılamadı."
 else
   echo "Uyarı: wg0.conf bulunamadı, WireGuard ağı kurulamadı!"
 fi
