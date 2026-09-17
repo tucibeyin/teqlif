@@ -18,11 +18,11 @@ echo "==> Resources Dir: $RESOURCES_DIR"
 echo "==> apt paketleri ve ana servisler (PostgreSQL, Redis)..."
 export DEBIAN_FRONTEND=noninteractive
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban postgresql postgresql-contrib redis-server apt-transport-https ca-certificates dirmngr
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban postgresql postgresql-contrib redis-server apt-transport-https ca-certificates curl gnupg
 
 echo "==> ClickHouse kurulumu..."
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
-echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee /etc/apt/sources.list.d/clickhouse.list
+curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg --yes
+echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" | sudo tee /etc/apt/sources.list.d/clickhouse.list
 sudo apt update -q
 sudo apt install -y clickhouse-server clickhouse-client
 
