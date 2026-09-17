@@ -55,7 +55,7 @@
 ## 🌍 Aşama 6: DNS ve SSL Sertifikasyonu
 - `[x]` Görev 6.1: Cloudflare DNS A kayıtlarının `plan.md` "Faz 7" tablosuna uygun olarak Gateway (Proxied) ve Edge sunucular (DNS Only) için güncellenmesi.
 - `[x]` Görev 6.2: Gateway'de `certbot_gateway.sh` çalıştırılarak wildcard/Nginx sertifikalarının alınması.
-- `[ ]` Görev 6.3: Node1 ve Node4'te `certbot_nodeX.sh` çalıştırılarak Edge (LiveKit ve MinIO) sertifikalarının alınması.
+- `[x]` Görev 6.3: Node1 ve Node4'te `certbot_nodeX.sh` çalıştırılarak Edge (LiveKit ve MinIO) sertifikalarının alınması.
 
 ## 🏁 Aşama 7: Son Başlatma ve Final Testleri
 - `[ ]` Görev 7.1: Node1 ve Node4 (Edge'ler) üzerinde MinIO ve LiveKit servislerinin SSL yollarıyla birlikte aktifleştirilmesi.
