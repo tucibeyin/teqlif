@@ -121,7 +121,7 @@ fi
 
 # node3 (Monitor, Staging, AI Proxy 2 - 3)
 if _is_reachable 3; then
-  for svc in teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio; do
+  for svc in teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio redis-server postgresql; do
     # Staging henüz yapılandırılmamış olabilir, active değilse sadece uyarı verelim
     if [[ "$svc" == *"staging"* ]]; then
       st=$(_ssh teqlif-node3 "systemctl is-active $svc || true" 2>/dev/null) || st="unknown"
