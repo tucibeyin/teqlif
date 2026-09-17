@@ -63,8 +63,10 @@ class AcceptCohostInviteCommand:
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
 
-            node = await orchestrator.allocate_node(ServiceType.MEDIA)
-            api_url = node["livekit_url"]
+            if not stream.livekit_url:
+                logger.error("[COHOST] Yayının livekit_url'i yok! stream_id=%s", stream.id)
+                raise BadRequestException(code="STREAM_NODE_MISSING")
+            api_url = stream.livekit_url
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
@@ -100,7 +102,7 @@ class AcceptCohostInviteCommand:
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,
-                livekit_url=node["livekit_url"],
+                livekit_url=api_url,
                 token=token,
                 category=stream.category,
             )
@@ -126,8 +128,9 @@ class RemoveCohostCommand:
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
 
-            node = await orchestrator.allocate_node(ServiceType.MEDIA)
-            api_url = node["livekit_url"]
+            if not stream.livekit_url:
+                raise BadRequestException(code="STREAM_NODE_MISSING")
+            api_url = stream.livekit_url
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
@@ -176,8 +179,9 @@ class LeaveCohostCommand:
             from livekit.api.room_service import RoomService, UpdateParticipantRequest
             from livekit.protocol.models import ParticipantPermission
 
-            node = await orchestrator.allocate_node(ServiceType.MEDIA)
-            api_url = node["livekit_url"]
+            if not stream.livekit_url:
+                raise BadRequestException(code="STREAM_NODE_MISSING")
+            api_url = stream.livekit_url
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(

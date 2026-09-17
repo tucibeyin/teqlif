@@ -37,24 +37,31 @@ async def _fill_viewer_counts(streams: list, tag: str = "") -> None:
     except Exception:
         logger.error("[STREAMS] Redis viewer count okunamadı%s", f" | {tag}" if tag else "", exc_info=True)
 
-async def delete_livekit_room(room_name: str) -> None:
-    """LiveKit odasını zorla sil — Orkestratör'den alınan en uygun MEDIA node üzerinden."""
-    try:
-        node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        api_url = node["livekit_url"]
-        async with aiohttp.ClientSession() as session:
-            svc = RoomService(
-                session,
-                api_url,
-                settings.livekit_api_key,
-                settings.livekit_api_secret,
-            )
-            req = DeleteRoomRequest()
-            req.room = room_name
-            await svc.delete_room(req)
-        logger.info("[STREAMS] LiveKit oda silindi | room=%s node=%s", room_name, node.get("node_id"))
-    except Exception as exc:
-        logger.warning("[STREAMS] LiveKit oda silinemedi | room=%s | %s", room_name, exc)
+async def delete_livekit_room(room_name: str, api_url: str = None) -> None:
+    """LiveKit odasını zorla sil — Verilen URL'den veya tüm Edge node'lardan silmeyi dener."""
+    urls_to_try = [api_url] if api_url else settings.edge_livekit_urls
+    
+    async with aiohttp.ClientSession() as session:
+        for url in urls_to_try:
+            if not url:
+                continue
+            try:
+                svc = RoomService(
+                    session,
+                    url,
+                    settings.livekit_api_key,
+                    settings.livekit_api_secret,
+                )
+                req = DeleteRoomRequest()
+                req.room = room_name
+                await svc.delete_room(req)
+                logger.info("[STREAMS] LiveKit oda silindi | room=%s node=%s", room_name, url)
+                if api_url:
+                    break
+            except Exception as exc:
+                err_str = str(exc).lower()
+                if "not found" not in err_str and "does not exist" not in err_str and "not_found" not in err_str:
+                    logger.warning("[STREAMS] LiveKit oda silinemedi | room=%s node=%s | %s", room_name, url, exc)
 
 _LIVEKIT_TOKEN_TTL = timedelta(hours=24)
 

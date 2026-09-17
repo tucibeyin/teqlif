@@ -60,7 +60,7 @@ class StartStreamCommand:
                     )
                     raise BadRequestException(code="STREAM_ALREADY_ACTIVE")
 
-            room_name = f"stream_{user_id}_{uuid.uuid4().hex[:8]}"
+            node = await orchestrator.allocate_node(ServiceType.MEDIA)
 
             stream_data = {
                 "room_name": room_name,
@@ -69,7 +69,8 @@ class StartStreamCommand:
                 "is_live": False,
                 "category": category if category else "other",
                 "subcategory": subcategory,
-                "thumbnail_url": thumbnail_url
+                "thumbnail_url": thumbnail_url,
+                "livekit_url": node["livekit_url"],  # Edge node kalıcı olarak kayıt altına alınır
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
 
@@ -96,14 +97,13 @@ class StartStreamCommand:
         except Exception as exc:
             logger.warning("[StartStreamCommand] room_to_stream mapping yazılamadı: %s", exc)
 
-        node = await orchestrator.allocate_node(ServiceType.MEDIA)
         token = make_livekit_token(room_name, user, can_publish=True)
         logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s", new_stream.id, node.get("node_id"))
         
         return {
             "stream_id": new_stream.id,
             "room_name": room_name,
-            "livekit_url": node["livekit_url"],
+            "livekit_url": node["livekit_url"],  # DB'ye yazılan node ile aynı
             "token": token,
             "category": category if category else "other",
         }

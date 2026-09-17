@@ -10,7 +10,7 @@ from app.utils.redis_client import get_redis
 from app.config import settings
 from app.core.logger import get_logger
 from app.schemas.stream import JoinTokenOut
-from app.services.edge_orchestrator import orchestrator, ServiceType
+from app.services.edge_orchestrator import ServiceType
 
 logger = get_logger(__name__)
 
@@ -35,7 +35,10 @@ class JoinStreamCommand:
                 raise ForbiddenException(code="STREAM_ACCESS_FORBIDDEN")
 
             token = make_livekit_token(stream.room_name, user, can_publish=False)
-            node = await orchestrator.allocate_node(ServiceType.MEDIA)
+            if not stream.livekit_url:
+                logger.error("[JoinStream] Yayının livekit_url'i yok! stream_id=%s", stream.id)
+                raise BadRequestException(code="STREAM_NODE_MISSING")
+            node_url = stream.livekit_url
 
             await self.uow.session.execute(
                 pg_insert(LiveStreamViewer)
@@ -49,7 +52,7 @@ class JoinStreamCommand:
             return JoinTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,
-                livekit_url=node["livekit_url"],
+                livekit_url=node_url,
                 token=token,
                 title=stream.title,
                 category=stream.category,

@@ -261,12 +261,14 @@ async def refresh_stream_token(
         )
     can_publish = stream.host_id == current_user.id
     token = make_livekit_token(stream.room_name, current_user, can_publish=can_publish)
-    from app.services.edge_orchestrator import orchestrator, ServiceType
-    node = await orchestrator.allocate_node(ServiceType.MEDIA)
+    if not stream.livekit_url:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail={"error": {"code": "STREAM_NODE_MISSING", "message": "Stream has no allocated edge node"}})
+    node_url = stream.livekit_url
     return StreamTokenOut(
         stream_id=stream.id,
         room_name=stream.room_name,
-        livekit_url=node["livekit_url"],
+        livekit_url=node_url,
         token=token,
         category=stream.category,
     )
