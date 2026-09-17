@@ -13,7 +13,7 @@ PROMTAIL_VERSION="3.0.0"
 echo "==> REPO Root: $REPO"
 echo "==> apt paketleri..."
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server
 
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
