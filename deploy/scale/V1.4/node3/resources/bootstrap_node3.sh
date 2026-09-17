@@ -14,6 +14,9 @@ echo "==> REPO Root: $REPO"
 echo "==> apt paketleri..."
 # Eski pgdg kaynağı kaldığıysa temizle (postgresql purge sonrası)
 sudo rm -f /etc/apt/sources.list.d/pgdg.list 2>/dev/null || true
+# gnupg ve wget önce kurulmalı (Grafana keyring için gerekli)
+sudo apt update -q
+sudo apt install -y gnupg wget
 # Grafana OSS apt kaynağı ekle (idempotent)
 if [[ ! -f /etc/apt/sources.list.d/grafana.list ]]; then
   sudo mkdir -p /etc/apt/keyrings
