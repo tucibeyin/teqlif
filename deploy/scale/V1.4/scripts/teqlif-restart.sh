@@ -141,8 +141,17 @@ format_uptime() {
 }
 
 for svc in $SERVICES_LIST; do
+    target_svc="$svc"
+    # PostgreSQL için asıl process postgresql@*-main altında çalışır
+    if [[ "$svc" == "postgresql" ]]; then
+        real_pg_svc=$(systemctl list-units "postgresql@*" --no-legend --state=active 2>/dev/null | awk '{print $1}' | head -n 1)
+        if [[ -n "$real_pg_svc" ]]; then
+            target_svc="$real_pg_svc"
+        fi
+    fi
+    
     # systemctl üzerinden verileri çek
-    raw_status=$(systemctl show -p ActiveState,MainPID,MemoryCurrent,ActiveEnterTimestamp "$svc" 2>/dev/null)
+    raw_status=$(systemctl show -p ActiveState,MainPID,MemoryCurrent,ActiveEnterTimestamp "$target_svc" 2>/dev/null)
     
     active_state=$(echo "$raw_status" | grep "^ActiveState=" | cut -d= -f2)
     main_pid=$(echo "$raw_status" | grep "^MainPID=" | cut -d= -f2)
