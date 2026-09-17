@@ -87,6 +87,13 @@ for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
 done
 
+# ── Otomatik .env Şablonu ─────────────────────────────────────────────────────
+echo "==> .env.production şablonu kopyalanıyor..."
+mkdir -p "$REPO/backend"
+if [[ ! -f "$REPO/backend/.env.production" ]]; then
+  cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
+fi
+
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
 sudo apt-get autoremove -y -q

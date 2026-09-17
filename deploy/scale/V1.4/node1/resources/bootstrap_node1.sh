@@ -126,6 +126,14 @@ for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
 done
 
+# ── Otomatik .env ve Servis Başlatma ──────────────────────────────────────────
+echo "==> .env.production şablonu kopyalanıyor ve Ajan başlatılıyor..."
+mkdir -p "$REPO/backend"
+if [[ ! -f "$REPO/backend/.env.production" ]]; then
+  cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
+fi
+sudo systemctl restart edge-metrics-agent || true
+
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
 sudo apt-get autoremove -y -q
