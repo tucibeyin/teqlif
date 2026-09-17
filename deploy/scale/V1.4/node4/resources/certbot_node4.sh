@@ -30,3 +30,7 @@ echo " MinIO veya LiveKit konfigürasyonlarınızda şu yolları kullanın:"
 echo " Cert: /etc/letsencrypt/live/$DOMAIN_LIVE/fullchain.pem"
 echo " Key:  /etc/letsencrypt/live/$DOMAIN_LIVE/privkey.pem"
 echo "=========================================================="
+
+# Sertifikalar alındığına göre Edge servislerini (MinIO & LiveKit) otomatik kur
+echo "==> Edge servisleri otomatik kuruluyor..."
+sudo bash "$(dirname "$0")/../../install_edge_services.sh"
