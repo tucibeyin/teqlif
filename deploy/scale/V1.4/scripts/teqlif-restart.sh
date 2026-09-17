@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # deploy/scale/V1.4/scripts/teqlif-restart.sh
-# teqlif-restart — V1.4 mimarisinde wg0 IP adresine bakarak node'u tespit eder 
-# ve o node'a ait tüm servisleri adım adım, durumlarını göstererek yeniden başlatır.
+# teqlif-restart — Endüstri standardında gelişmiş servis yönetim ve raporlama aracı.
 
 set -euo pipefail
 
-REPO_DIR="/var/www/teqlif.com"
-
-# Renkler
+# ── 1. Renkler ve Biçimlendirme ──
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -15,6 +12,19 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
+# ── 2. Topoloji (Hardcoded Services) ──
+# Her node için yönetilecek servislerin tam listesi. Yeni bir servis eklendiğinde buraya eklenmelidir.
+declare -A NODE_SERVICES
+NODE_SERVICES=(
+    ["gateway"]="nginx node_exporter promtail"
+    ["node1"]="livekit minio redis-server edge-metrics-agent node_exporter promtail"
+    ["node2"]="teqlif-ai-proxy cf-failover node_exporter promtail"
+    ["node3"]="teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail redis-server postgresql"
+    ["node4"]="livekit minio redis-server edge-metrics-agent node_exporter promtail"
+    ["node5"]="teqlif teqlif-worker teqlif-worker-critical postgresql clickhouse-server redis-server node_exporter promtail"
+)
+
+# ── 3. Node Tespiti ──
 detect_node() {
     local wg_ip
     if wg_ip=$(ip -4 addr show wg0 2>/dev/null | grep -oP '(?<=inet\s)10\.10\.0\.\d+'); then
@@ -27,7 +37,8 @@ detect_node() {
         esac
     fi
 
-    if systemctl is-active nginx &>/dev/null; then
+    # Gateway kontrolü
+    if systemctl is-active nginx &>/dev/null && ! ip link show wg0 &>/dev/null; then
         echo "gateway"
         return 0
     fi
@@ -38,51 +49,142 @@ detect_node() {
 NODE=$(detect_node)
 
 if [[ "$NODE" == "unknown" ]]; then
-    echo -e "${RED}Hata: Bu sunucunun V1.4 rolü tespit edilemedi.${RESET}" >&2
+    echo -e "${RED}${BOLD}Hata: Bu sunucunun V1.4 rolü (Node1-5 veya Gateway) tespit edilemedi.${RESET}" >&2
     exit 1
 fi
 
-SCRIPT="$REPO_DIR/deploy/scale/V1.4/$NODE/resources/${NODE}_services.sh"
+SERVICES_LIST=${NODE_SERVICES[$NODE]:-}
 
-if [[ ! -f "$SCRIPT" ]]; then
-    echo -e "${RED}Hata: $SCRIPT bulunamadı. V1.4 altyapısı bu node için tam kurulmamış olabilir.${RESET}" >&2
+if [[ -z "$SERVICES_LIST" ]]; then
+    echo -e "${RED}${BOLD}Hata: $NODE için herhangi bir servis tanımı bulunamadı.${RESET}" >&2
     exit 1
 fi
 
-chmod +x "$SCRIPT"
+# ── 4. Yeniden Başlatma İşlemi ──
+echo -e "\n${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}"
+echo -e "${CYAN}${BOLD} 🚀 TEQLIF RESTART — $NODE Servisleri Yeniden Başlatılıyor ${RESET}"
+echo -e "${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}\n"
 
-echo -e "\n${CYAN}${BOLD}════════════════════════════════════════════════════════════════════${RESET}"
-echo -e "${CYAN}${BOLD} 🚀 TEQLIF RESTART — $NODE Tüm Bileşenleri Yeniden Başlatılıyor ${RESET}"
-echo -e "${CYAN}${BOLD}════════════════════════════════════════════════════════════════════${RESET}\n"
-
-# İlgili node'un servis listesini `status` komutu çıktısından yakalıyoruz
-SERVICES=$(bash "$SCRIPT" status | awk '{print $1}')
-
-# Bütün servisleri sırayla restart et
-for svc in $SERVICES; do
-    echo -ne "  ${YELLOW}↻${RESET} Yeniden başlatılıyor: ${BOLD}$svc${RESET} ... "
+for svc in $SERVICES_LIST; do
+    echo -ne "  ${YELLOW}↻${RESET} ${BOLD}$svc${RESET} yeniden başlatılıyor... "
     if sudo systemctl restart "$svc" 2>/dev/null; then
         echo -e "${GREEN}BAŞARILI${RESET}"
     else
-        echo -e "${RED}BAŞARISIZ${RESET} (Loglara bak: journalctl -u $svc)"
+        echo -e "${RED}BAŞARISIZ${RESET} (journalctl -u $svc ile logları inceleyin)"
     fi
 done
 
-echo -e "\n${CYAN}${BOLD}════════════════════════════════════════════════════════════════════${RESET}"
-echo -e "${CYAN}${BOLD} 📊 $NODE Bileşen Durumları (Sonuç) ${RESET}"
-echo -e "${CYAN}${BOLD}════════════════════════════════════════════════════════════════════${RESET}\n"
+# Servislerin oturması için kısa bir bekleme
+sleep 2
 
-bash "$SCRIPT" status | while read -r line; do
-    svc=$(echo "$line" | awk '{print $1}')
-    status=$(echo "$line" | cut -d' ' -f2-)
+# ── 5. Gelişmiş Raporlama (Dashboard) ──
+echo -e "\n${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}"
+echo -e "${CYAN}${BOLD} 📊 $NODE SERVİS DURUM RAPORU (DASHBOARD) ${RESET}"
+echo -e "${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}"
+printf " ${BOLD}%-32s %-12s %-8s %-10s %s${RESET}\n" "SERVİS ADI" "DURUM" "PID" "RAM" "UPTIME"
+echo -e " ──────────────────────────────────────────────────────────────────────"
+
+# Süre formatlama (ActiveEnterTimestamp'tan uptime hesaplamak için)
+format_uptime() {
+    local start_time=$1
+    if [[ -z "$start_time" || "$start_time" == "N/A" ]]; then
+        echo "-"
+        return
+    fi
     
-    if [[ "$status" == *"active"* ]]; then
-        printf "  ${GREEN}✓${RESET} %-35s : ${GREEN}%s${RESET}\n" "$svc" "$status"
-    elif [[ "$status" == "kurulu değil" || "$status" == *"not-found"* ]]; then
-        printf "  ${YELLOW}⚠${RESET} %-35s : ${YELLOW}%s${RESET}\n" "$svc" "$status"
-    else
-        printf "  ${RED}✗${RESET} %-35s : ${RED}%s${RESET}\n" "$svc" "$status"
+    local start_epoch
+    start_epoch=$(date -d "$start_time" +%s 2>/dev/null) || start_epoch=""
+    if [[ -z "$start_epoch" ]]; then
+        echo "-"
+        return
     fi
+    
+    local now_epoch
+    now_epoch=$(date +%s)
+    local diff=$((now_epoch - start_epoch))
+    
+    if [[ $diff -lt 0 ]]; then
+        echo "-"
+        return
+    fi
+    
+    local d=$((diff / 86400))
+    local h=$(( (diff % 86400) / 3600 ))
+    local m=$(( (diff % 3600) / 60 ))
+    local s=$((diff % 60))
+    
+    if [[ $d -gt 0 ]]; then
+        printf "%dd %02dh %02dm" $d $h $m
+    elif [[ $h -gt 0 ]]; then
+        printf "%dh %02dm %02ds" $h $m $s
+    else
+        printf "%02dm %02ds" $m $s
+    fi
+}
+
+for svc in $SERVICES_LIST; do
+    # systemctl üzerinden verileri çek
+    raw_status=$(systemctl show -p ActiveState,MainPID,MemoryCurrent,ActiveEnterTimestamp "$svc" 2>/dev/null)
+    
+    active_state=$(echo "$raw_status" | grep "^ActiveState=" | cut -d= -f2)
+    main_pid=$(echo "$raw_status" | grep "^MainPID=" | cut -d= -f2)
+    mem_current=$(echo "$raw_status" | grep "^MemoryCurrent=" | cut -d= -f2)
+    start_timestamp=$(echo "$raw_status" | grep "^ActiveEnterTimestamp=" | cut -d= -f2-)
+    
+    # Varsayılan değerler
+    display_status="${YELLOW}○ BİLİNMİYOR${RESET}"
+    display_pid="-"
+    display_mem="-"
+    display_uptime="-"
+    
+    # Durum (Status)
+    if [[ "$active_state" == "active" ]]; then
+        display_status="${GREEN}● ACTIVE${RESET}  "
+    elif [[ "$active_state" == "failed" ]]; then
+        display_status="${RED}○ FAILED${RESET}  "
+    elif [[ "$active_state" == "inactive" ]]; then
+        display_status="${YELLOW}○ INACTIVE${RESET}"
+    elif [[ "$active_state" == "activating" ]]; then
+        display_status="${CYAN}↻ STARTING${RESET}"
+    fi
+    
+    # PID
+    if [[ "$main_pid" != "0" && -n "$main_pid" ]]; then
+        display_pid="$main_pid"
+    fi
+    
+    # Bellek (Memory)
+    if [[ "$mem_current" != "[not set]" && -n "$mem_current" && "$mem_current" =~ ^[0-9]+$ ]]; then
+        # Byte'ı MB'a çevir (tam sayı)
+        mem_mb=$((mem_current / 1024 / 1024))
+        display_mem="${mem_mb} MB"
+    fi
+    
+    # Uptime
+    if [[ "$active_state" == "active" ]]; then
+        display_uptime=$(format_uptime "$start_timestamp")
+    fi
+    
+    # Satırı bas (Hizalama ANSI renk kodlarından etkilenmemesi için durum alanı ayrı parametre olarak beslenir)
+    if [[ "$active_state" == "active" ]]; then
+        printf " %-32s ${GREEN}%-12s${RESET} %-8s %-10s %s\n" "$svc" "● ACTIVE" "$display_pid" "$display_mem" "$display_uptime"
+    elif [[ "$active_state" == "failed" ]]; then
+        printf " %-32s ${RED}%-12s${RESET} %-8s %-10s %s\n" "$svc" "○ FAILED" "$display_pid" "$display_mem" "$display_uptime"
+    elif [[ "$active_state" == "inactive" ]]; then
+        printf " %-32s ${YELLOW}%-12s${RESET} %-8s %-10s %s\n" "$svc" "○ INACTIVE" "$display_pid" "$display_mem" "$display_uptime"
+    elif [[ "$active_state" == "activating" ]]; then
+        printf " %-32s ${CYAN}%-12s${RESET} %-8s %-10s %s\n" "$svc" "↻ STARTING" "$display_pid" "$display_mem" "$display_uptime"
+    else
+        printf " %-32s ${YELLOW}%-12s${RESET} %-8s %-10s %s\n" "$svc" "○ UNKNOWN" "$display_pid" "$display_mem" "$display_uptime"
+    fi
+
 done
 
-echo -e "\n${GREEN}${BOLD}✓ $NODE yeniden başlatma işlemi tamamlandı.${RESET}\n"
+echo -e " ──────────────────────────────────────────────────────────────────────\n"
+
+# Genel kontrol
+if systemctl is-failed $SERVICES_LIST &>/dev/null; then
+    echo -e "${RED}${BOLD} ⚠ DİKKAT: Bazı servisler başlatılamadı veya hatalı (FAILED). Tabloyu inceleyin.${RESET}\n"
+else
+    echo -e "${GREEN}${BOLD} ✓ Tüm servisler başarıyla çalışıyor.${RESET}\n"
+fi
