@@ -90,7 +90,7 @@ fi
 
 if _is_reachable 3; then
   _ssh teqlif-node3 'sudo -u postgres psql -d teqlif_staging -c "SELECT 1;" >/dev/null 2>&1' \
-    && pass "node3: PostgreSQL (Staging) canlı" || warn "node3: PostgreSQL (Staging) yanıt vermiyor (Kurulmamış olabilir)"
+    || warn "node3: PostgreSQL (Staging) yanıt vermiyor (Kurulmamış olabilir)"
   _ssh teqlif-node3 'redis-cli ping | grep -q PONG' \
     && pass "node3: Redis (Staging) aktif" || fail "node3: Redis yanıt vermiyor"
 fi
