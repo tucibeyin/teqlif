@@ -31,7 +31,7 @@ if ! grep -q "apt.grafana.com" /etc/apt/sources.list.d/grafana.list 2>/dev/null;
   echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
 fi
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana postgresql postgresql-contrib postgresql-server-dev-all
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana postgresql postgresql-contrib postgresql-server-dev-all gettext-base
 
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
