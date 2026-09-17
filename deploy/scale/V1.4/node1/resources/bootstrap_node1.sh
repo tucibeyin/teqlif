@@ -41,7 +41,7 @@ sudo ufw --force enable
 
 # ── Swap Alanı (8GB - Edge Media/Storage Buffer) ──────────────────────────────
 echo "==> Swap yapılandırması kontrol ediliyor..."
-if ! swapon --show | grep -q "/swapfile"; then
+if ! sudo swapon --show 2>/dev/null | grep -q "/swapfile"; then
   echo "==> 8GB Swap dosyası oluşturuluyor..."
   sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
   sudo chmod 600 /swapfile
