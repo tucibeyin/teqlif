@@ -30,7 +30,7 @@ if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
   sudo mkdir -p /etc/wireguard
   sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
   sudo chmod 600 /etc/wireguard/wg0.conf
-  sudo systemctl enable --now wg-quick@wg0
+  sudo systemctl enable --now wg-quick@wg0 || echo "Uyarı: WireGuard başlatılamadı. Lütfen wg0.conf içerisindeki PrivateKey/PublicKey kısımlarını doldurun!"
 else
   echo "Uyarı: wg0.conf bulunamadı, WireGuard ağı kurulamadı!"
 fi
