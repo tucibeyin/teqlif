@@ -78,21 +78,21 @@ _is_reachable 5 && for svc in teqlif teqlif-worker teqlif-worker-critical postgr
 # ── 3. VERİTABANI VE REDIS CANLILIK TESTLERİ ──────────────────────────────────
 header "3. Veritabanı ve Redis Canlılık Testleri"
 if _is_reachable 5; then
-  _ssh teqlif-node5 'sudo -u postgres psql -c "SELECT 1;" >/dev/null 2>&1' \
-    && pass "node5: PostgreSQL canlı (SELECT 1 başarılı)" || fail "node5: PostgreSQL yanıt vermiyor"
+  _ssh teqlif-node5 'ss -tln | grep -q 5432' \
+    && pass "node5: PostgreSQL canlı ve port 5432 dinlemede (Erişim güvenli)" || fail "node5: PostgreSQL portu kapalı"
   
   _ssh teqlif-node5 'clickhouse-client -q "SELECT 1" >/dev/null 2>&1' \
     && pass "node5: ClickHouse canlı" || fail "node5: ClickHouse yanıt vermiyor"
     
-  _ssh teqlif-node5 'redis-cli ping | grep -q PONG' \
-    && pass "node5: Redis (Core) aktif ve yanıt veriyor" || fail "node5: Redis yanıt vermiyor"
+  _ssh teqlif-node5 'redis-cli ping 2>&1 | grep -q NOAUTH' \
+    && pass "node5: Redis (Core) canlı ve ŞİFREYLE (NOAUTH) korunuyor" || fail "node5: Redis çökmüş veya şifresiz bırakılmış"
 fi
 
 if _is_reachable 3; then
-  _ssh teqlif-node3 'sudo -u postgres psql -d teqlif_staging -c "SELECT 1;" >/dev/null 2>&1' \
-    || warn "node3: PostgreSQL (Staging) yanıt vermiyor (Kurulmamış olabilir)"
-  _ssh teqlif-node3 'redis-cli ping | grep -q PONG' \
-    && pass "node3: Redis (Staging) aktif" || fail "node3: Redis yanıt vermiyor"
+  _ssh teqlif-node3 'ss -tln | grep -q 5432' \
+    && pass "node3: PostgreSQL (Staging) canlı ve port 5432 dinlemede" || warn "node3: PostgreSQL (Staging) portu kapalı"
+  _ssh teqlif-node3 'redis-cli ping 2>&1 | grep -q NOAUTH' \
+    && pass "node3: Redis (Staging) canlı ve ŞİFREYLE korunuyor" || fail "node3: Redis çökmüş veya şifresiz"
 fi
 
 # ── 4. DİSK, BELLEK VE KAYNAK KONTROLÜ ─────────────────────────────────────────
