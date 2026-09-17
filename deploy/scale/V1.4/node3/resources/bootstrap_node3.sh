@@ -117,6 +117,46 @@ sudo cp "$RESOURCES_DIR/livekit.yaml" /etc/livekit/livekit.yaml || true
 sudo chown -R "$USER:$USER" /etc/prometheus /etc/loki /var/lib/alertmanager /var/lib/loki
 sudo chown -R livekit:livekit /etc/livekit 2>/dev/null || true
 
+# ── LiveKit Kurulumu ──────────────────────────────────────────────────────────
+echo "==> LiveKit (Staging) kuruluyor..."
+if ! command -v livekit-server &> /dev/null; then
+    curl -sSL https://get.livekit.io | bash
+fi
+
+# ── MinIO Kurulumu ────────────────────────────────────────────────────────────
+echo "==> MinIO (Staging) kaynak koddan derleniyor..."
+if ! command -v minio &> /dev/null; then
+    echo "==> Go (Golang) Debian deposundan yükleniyor..."
+    sudo apt-get update -q && sudo apt-get install -y golang
+    
+    export GOPATH=$HOME/go
+    export PATH=$PATH:$GOPATH/bin
+    export CGO_ENABLED=0
+    go install github.com/minio/minio@latest
+    
+    sudo mv $GOPATH/bin/minio /usr/local/bin/
+    sudo chmod +x /usr/local/bin/minio
+    
+    # Derleme sonrası temizlik (Cleanup)
+    echo "==> MinIO derleme artıkları temizleniyor..."
+    sudo rm -rf $HOME/go
+    sudo apt-get remove --purge -y golang
+    sudo apt-get autoremove -y -q
+fi
+sudo mkdir -p /var/lib/minio
+sudo chown -R tucibeyin:tucibeyin /var/lib/minio
+
+# ── PostgreSQL (Staging) Yapılandırması ───────────────────────────────────────
+echo "==> PostgreSQL izole staging veritabanı kuruluyor..."
+sudo systemctl start postgresql 2>/dev/null || true
+if sudo -u postgres psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw teqlif_staging; then
+    echo "==> teqlif_staging veritabanı zaten var."
+else
+    echo "==> teqlif_staging veritabanı oluşturuluyor..."
+    sudo -u postgres psql -c "CREATE USER teqlif_staging WITH PASSWORD 'password';" || true
+    sudo -u postgres psql -c "CREATE DATABASE teqlif_staging OWNER teqlif_staging;" || true
+fi
+
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(
   alertmanager grafana-server livekit loki minio node_exporter prometheus promtail redis-server
@@ -150,6 +190,10 @@ if [[ ! -f "$REPO/backend/.env.production" ]]; then
 fi
 if [[ ! -f "$REPO/backend/.env.staging" ]]; then
   cp "$RESOURCES_DIR/.env.staging.template" "$REPO/backend/.env.staging"
+  # Rastgele güçlü bir şifre üret ve SECRET_KEY alanına yaz
+  YENI_SECRET=$(openssl rand -hex 32)
+  sed -i "s/^SECRET_KEY=.*/SECRET_KEY=$YENI_SECRET/g" "$REPO/backend/.env.staging"
+  echo "==> .env.staging otomatik yapılandırıldı (SECRET_KEY atandı)."
 fi
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
