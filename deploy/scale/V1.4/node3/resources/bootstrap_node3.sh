@@ -138,13 +138,14 @@ if ! command -v loki &> /dev/null; then
 fi
 
 echo "==> Yapılandırma Dosyaları (Prometheus, Loki, Alertmanager, LiveKit)..."
-sudo mkdir -p /etc/prometheus /etc/loki /etc/livekit /var/lib/alertmanager /var/lib/loki
+sudo mkdir -p /etc/prometheus /etc/loki /etc/livekit /etc/alertmanager /var/lib/alertmanager /var/lib/loki /var/lib/prometheus
 sudo cp "$RESOURCES_DIR/prometheus.yml" /etc/prometheus/prometheus.yml || true
 sudo cp "$RESOURCES_DIR/prometheus-rules.yml" /etc/prometheus/prometheus-rules.yml || true
+sudo cp "$RESOURCES_DIR/alertmanager.yml.template" /etc/alertmanager/alertmanager.yml || true
 sudo cp "$RESOURCES_DIR/loki-config.yml" /etc/loki/config.yml || true
 sudo cp "$RESOURCES_DIR/promtail-config.yml" /etc/promtail-config.yml || true
 sudo cp "$RESOURCES_DIR/livekit.yaml" /etc/livekit/livekit.yaml || true
-sudo chown -R "$USER:$USER" /etc/prometheus /etc/loki /var/lib/alertmanager /var/lib/loki
+sudo chown -R "$USER:$USER" /etc/prometheus /etc/loki /etc/alertmanager /var/lib/alertmanager /var/lib/loki /var/lib/prometheus
 sudo chown -R livekit:livekit /etc/livekit 2>/dev/null || true
 
 # ── LiveKit Kurulumu ──────────────────────────────────────────────────────────
@@ -208,11 +209,11 @@ sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS pg_tr
 sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS btree_gin;" || true
 
 echo "==> Redis (Staging) Güvenlik Yapılandırması..."
-REDIS_PASS=$(openssl rand -hex 16)
-if ! sudo grep -q "^requirepass " /etc/redis/redis.conf; then
-  echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
+if sudo grep -q "^requirepass " /etc/redis/redis.conf; then
+  REDIS_PASS=$(sudo grep "^requirepass " /etc/redis/redis.conf | awk '{print $2}')
 else
-  sudo sed -i "s/^requirepass .*/requirepass $REDIS_PASS/" /etc/redis/redis.conf
+  REDIS_PASS=$(openssl rand -hex 16)
+  echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
 fi
 sudo systemctl restart redis-server
 
@@ -249,16 +250,14 @@ if [[ ! -f "$REPO/backend/.env.staging" ]]; then
   if [[ -n "${DB_PASS:-}" ]]; then
       sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://teqlif_staging:$DB_PASS@127.0.0.1:5432/teqlif_staging|g" "$REPO/backend/.env.staging"
   fi
-  
-  # Oluşturulan Redis şifresini yaz
-  if [[ -n "${REDIS_PASS:-}" ]]; then
-      sed -i "s|^REDIS_URL=.*|REDIS_URL=redis://:$REDIS_PASS@127.0.0.1:6379/0|g" "$REPO/backend/.env.staging"
-  fi
-  
-  # Redis URL fix (HELLO hatasını önlemek için)
-  sed -i 's|REDIS_URL=redis://:|REDIS_URL=redis://default:|g' "$REPO/backend/.env.staging"
-  
   echo "==> .env.staging otomatik yapılandırıldı (SECRET_KEY atandı)."
+fi
+
+# Her ihtimale karşı Redis şifresini HER ZAMAN güncelle (eski sürümlerin uyuşmazlığını düzeltir)
+if [[ -n "${REDIS_PASS:-}" ]]; then
+    sed -i "s|^REDIS_URL=.*|REDIS_URL=redis://:$REDIS_PASS@127.0.0.1:6379/0|g" "$REPO/backend/.env.staging"
+    # Redis URL fix (HELLO hatasını önlemek için)
+    sed -i 's|REDIS_URL=redis://:|REDIS_URL=redis://default:|g' "$REPO/backend/.env.staging"
 fi
 
 sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
