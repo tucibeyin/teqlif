@@ -11,7 +11,7 @@ EMAIL="tucibeyin@gmail.com"
 
 # 1. SSL Sertifikalarının Alınması
 echo "==> $DOMAIN, $API_DOMAIN, $STAGING_DOMAIN ve $API_STAGING_DOMAIN için SSL sertifikaları alınıyor..."
-sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" -d "$API_DOMAIN" -d "$STAGING_DOMAIN" -d "$API_STAGING_DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect || echo "SSL alınamadı veya zaten mevcut."
+sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" -d "$API_DOMAIN" -d "$STAGING_DOMAIN" -d "$API_STAGING_DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect --expand || echo "SSL alınamadı veya zaten mevcut."
 
 echo "==> Nginx test ediliyor ve yeniden başlatılıyor..."
 sudo nginx -t
