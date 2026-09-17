@@ -85,7 +85,7 @@ fi
 
 echo "==> Log dizinleri..."
 sudo mkdir -p /var/log/teqlif /var/lib/promtail
-sudo chown "$USER:$USER" /var/log/teqlif /var/lib/promtail
+sudo chown -R "${SUDO_USER:-$USER}:${SUDO_USER:-$USER}" /var/log/teqlif /var/lib/promtail
 if [[ ! -L "$REPO/logs" ]]; then
   ln -s /var/log/teqlif "$REPO/logs"
 fi
