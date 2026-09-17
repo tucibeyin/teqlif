@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # deploy/scale/V1.4/node3/resources/bootstrap_node3.sh
-# node3 (AI Proxy 2)
+# node3 (Monitor, Staging & AI Proxy 2)
 # Idempotent: tekrar çalıştırmak güvenli. V1.4 Generic Pathing kuralına uyar.
 set -euo pipefail
 
@@ -72,16 +72,21 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
 fi
 
 echo "==> systemd servisleri (V1.4)..."
-SERVICES=(teqlif-ai-proxy cf-failover node_exporter promtail)
+SERVICES=(
+  alertmanager livekit loki minio node_exporter prometheus promtail 
+  teqlif-ai-proxy teqlif-staging teqlif-worker-critical-staging teqlif-worker-staging
+)
 
 for svc in "${SERVICES[@]}"; do
   if [[ -f "$REPO/deploy/scale/V1.3/node3/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
+    # Staging servisleri için .env.staging, AI proxy için .env.production kullan
+    if [[ "$svc" == *"staging"* ]]; then
+      ENV_FILE="$REPO/backend/.env.staging"
+    else
+      ENV_FILE="$REPO/backend/.env.production"
+    fi
+    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$ENV_FILE|g" \
       "$REPO/deploy/scale/V1.3/node3/systemd/${svc}.service" > "/tmp/${svc}.service"
-    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
-  elif [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
-      "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
 done
@@ -92,10 +97,13 @@ for svc in "${SERVICES[@]}"; do
 done
 
 # ── Otomatik .env Şablonu ─────────────────────────────────────────────────────
-echo "==> .env.production şablonu kopyalanıyor..."
+echo "==> .env şablonları kopyalanıyor..."
 mkdir -p "$REPO/backend"
 if [[ ! -f "$REPO/backend/.env.production" ]]; then
   cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
+fi
+if [[ ! -f "$REPO/backend/.env.staging" ]]; then
+  cp "$RESOURCES_DIR/.env.staging.template" "$REPO/backend/.env.staging"
 fi
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
@@ -105,8 +113,8 @@ sudo apt-get clean -q
 "$VENV/bin/pip" cache purge 2>/dev/null || true
 
 echo "=============================================="
-echo " Node3 (AI Proxy 2) Bootstrap Tamamlandı!"
-echo " Lütfen .env.production dosyasını API anahtarlarıyla (GROQ, GEMINI) doldurun."
+echo " Node3 (Monitor & Staging) Bootstrap Tamamlandı!"
+echo " Lütfen .env.staging ve monitor/ konfigürasyonlarını gözden geçirin."
 echo "=============================================="
 
 echo " "
