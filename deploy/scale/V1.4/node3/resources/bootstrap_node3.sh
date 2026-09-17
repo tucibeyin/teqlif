@@ -31,7 +31,7 @@ if ! grep -q "apt.grafana.com" /etc/apt/sources.list.d/grafana.list 2>/dev/null;
   echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
 fi
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana postgresql postgresql-contrib
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana postgresql postgresql-contrib postgresql-server-dev-all
 
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
@@ -152,10 +152,30 @@ sudo systemctl start postgresql 2>/dev/null || true
 if sudo -u postgres psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw teqlif_staging; then
     echo "==> teqlif_staging veritabanı zaten var."
 else
+    # Rastgele veritabanı şifresi üret
+    DB_PASS=$(openssl rand -hex 32)
     echo "==> teqlif_staging veritabanı oluşturuluyor..."
-    sudo -u postgres psql -c "CREATE USER teqlif_staging WITH PASSWORD 'password';" || true
+    sudo -u postgres psql -c "CREATE USER teqlif_staging WITH PASSWORD '$DB_PASS';" || true
+    sudo -u postgres psql -c "ALTER USER teqlif_staging WITH PASSWORD '$DB_PASS';" || true
     sudo -u postgres psql -c "CREATE DATABASE teqlif_staging OWNER teqlif_staging;" || true
 fi
+
+echo "==> pgvector ve uzantılar kuruluyor..."
+if ! sudo -u postgres psql -d teqlif_staging -c "SELECT 1 FROM pg_extension WHERE extname = 'vector';" | grep -q 1; then
+    echo "==> pgvector kaynaktan derleniyor..."
+    TMP_PGV=$(mktemp -d)
+    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git "$TMP_PGV"
+    cd "$TMP_PGV"
+    make
+    sudo make install
+    cd "$RESOURCES_DIR"
+    sudo rm -rf "$TMP_PGV"
+fi
+
+# Uzantıları aktifleştir
+sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS vector;" || true
+sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" || true
+sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS btree_gin;" || true
 
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(
@@ -165,15 +185,7 @@ SERVICES=(
 
 for svc in "${SERVICES[@]}"; do
   if [[ -f "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" ]]; then
-    # Staging servisleri için .env.staging, AI proxy için .env.production kullan
-    if [[ "$svc" == *"staging"* ]]; then
-      ENV_FILE="$REPO/backend/.env.staging"
-    else
-      ENV_FILE="$REPO/backend/.env.production"
-    fi
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$ENV_FILE|g" \
-      "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" > "/tmp/${svc}.service"
-    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
+    sudo cp "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" /etc/systemd/system/
   fi
 done
 
@@ -193,8 +205,19 @@ if [[ ! -f "$REPO/backend/.env.staging" ]]; then
   # Rastgele güçlü bir şifre üret ve SECRET_KEY alanına yaz
   YENI_SECRET=$(openssl rand -hex 32)
   sed -i "s/^SECRET_KEY=.*/SECRET_KEY=$YENI_SECRET/g" "$REPO/backend/.env.staging"
+  
+  # Oluşturulan DB şifresini yaz
+  if [[ -n "${DB_PASS:-}" ]]; then
+      sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://teqlif_staging:$DB_PASS@127.0.0.1:5432/teqlif_staging|g" "$REPO/backend/.env.staging"
+  fi
+  
+  # Redis URL fix (HELLO hatasını önlemek için)
+  sed -i 's|REDIS_URL=redis://:|REDIS_URL=redis://default:|g' "$REPO/backend/.env.staging"
+  
   echo "==> .env.staging otomatik yapılandırıldı (SECRET_KEY atandı)."
 fi
+
+sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
