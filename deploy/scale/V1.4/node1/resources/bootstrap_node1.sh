@@ -104,6 +104,10 @@ for svc in "${SERVICES[@]}"; do
   fi
 done
 
+# Install the edge-metrics-agent
+sudo cp "$RESOURCES_DIR/edge-metrics-agent.service" /etc/systemd/system/
+SERVICES+=("edge-metrics-agent")
+
 sudo systemctl daemon-reload
 for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
