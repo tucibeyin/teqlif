@@ -243,6 +243,7 @@ cd "$REPO" || true
 
 # ── Backend Servislerini Başlat ───────────────────────────────────────────────
 echo "==> Servisler başlatılıyor..."
+sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
 for svc in "${SERVICES[@]}"; do
   sudo systemctl restart "$svc" 2>/dev/null || true
 done

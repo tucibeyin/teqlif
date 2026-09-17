@@ -165,6 +165,7 @@ mkdir -p "$REPO/backend"
 if [[ ! -f "$REPO/backend/.env.production" ]]; then
   cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
 fi
+sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
 sudo systemctl restart edge-metrics-agent || true
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────

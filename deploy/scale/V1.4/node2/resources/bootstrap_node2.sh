@@ -126,6 +126,7 @@ fi
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
+sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
 sudo apt-get autoremove -y -q
 sudo apt-get clean -q
 "$VENV/bin/pip" cache purge 2>/dev/null || true
