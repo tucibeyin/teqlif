@@ -58,7 +58,8 @@ MINIO_KEY_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/privkey.pem"
 # 1. MinIO Kurulumu (MinIO artık hazır binary sunmadığı için Go ile derliyoruz)
 echo "==> MinIO kaynak koddan derleniyor (Bu işlem 1-2 dakika sürebilir)..."
 if ! command -v go &> /dev/null; then
-    wget -q https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+    echo "==> Go (Golang) indiriliyor..."
+    wget --show-progress -q https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
     sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
     rm go1.24.0.linux-amd64.tar.gz
 fi
@@ -71,6 +72,7 @@ go install github.com/minio/minio@latest
 
 sudo mv $GOPATH/bin/minio /usr/local/bin/
 sudo chmod +x /usr/local/bin/minio
+echo "✅ MinIO başarıyla derlendi ve kuruldu!"
 
 sudo mkdir -p /var/lib/minio
 sudo chown -R tucibeyin:tucibeyin /var/lib/minio
@@ -104,6 +106,7 @@ EOF
 # 2. LiveKit Kurulumu
 echo "==> LiveKit kuruluyor..."
 curl -sSL https://get.livekit.io | bash
+echo "✅ LiveKit başarıyla kuruldu!"
 sudo mkdir -p /etc/livekit
 
 cat <<EOF | sudo tee /etc/livekit/livekit.yaml
