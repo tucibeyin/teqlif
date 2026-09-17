@@ -11,7 +11,6 @@ User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/backend/.env.staging
-EnvironmentFile=/var/www/teqlif.com/backend/.env.staging
 ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettingsCritical
 Restart=always
 RestartSec=3
