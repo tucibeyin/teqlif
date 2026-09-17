@@ -52,7 +52,7 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
 2. **IP Adreslemesi (10.10.0.x/24):**
    - `10.10.0.1`: Node1 (Edge 1 - 135.125.175.223)
    - `10.10.0.2`: Gateway (Proxy - 94.16.105.135)
-   - `10.10.0.3`: Node2 (Worker - 198.12.123.33)
+   - `10.10.0.3`: Node2 (AI Proxy 1 - 198.12.123.33)
    - `10.10.0.4`: Node3 (Staging - 5.249.165.10)
    - `10.10.0.5`: Node5 (Core - 45.146.252.165)
    - `10.10.0.6`: Node4 (Edge 2 - 51.75.74.124)

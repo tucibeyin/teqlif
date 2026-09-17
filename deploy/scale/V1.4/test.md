@@ -61,14 +61,14 @@
 ---
 
 ## Görev 1.4: Gateway, Node2 ve Node3 Testi
-**Amaç:** Kalan node'ların (Gateway ve Async Worker'lar) V1.4 Core-Edge topolojisi ile entegre olduğunu onaylamak.
+**Amaç:** Kalan node'ların (Gateway ve AI Proxy/Staging) V1.4 Core-Edge topolojisi ile entegre olduğunu onaylamak.
 
 **Test Adımları (Review):**
 1. `gateway/resources/certbot_gateway.sh` scriptinde Nginx proxy_pass ayarının `10.10.0.1` yerine `10.10.0.5` (Yeni Node5 Core IP'si) olarak güncellendiğini (`sed` komutu) doğrula.
-2. Node2 ve Node3 (Worker'lar) için `bootstrap` scriptlerinin yazıldığını ve V1.4'te veritabanı (Postgres vb.) barındırmadıklarını onayla.
+2. Node2 (AI Proxy) ve Node3 (Monitor/Staging/AI Proxy) için `bootstrap` scriptlerinin yazıldığını ve V1.4'te veritabanı barındırmadıklarını onayla.
 3. Her üç node'un `bootstrap` scriptinde `Clean State` (Önbellek temizlik) kuralına uyulduğunu doğrula.
 
-**Beklenen Sonuç:** Tüm sunucu yelpazesinin tam V1.4 (Orchestrator=Node5, Edge=Node1/4, Workers=Node2/3, Proxy=Gateway) senaryosuna göre scriptlerinin tamamlanması.
+**Beklenen Sonuç:** Tüm sunucu yelpazesinin tam V1.4 (Orchestrator=Node5, Edge=Node1/4, AI Proxy=Node2/3, Gateway=Gateway) senaryosuna göre scriptlerinin tamamlanması.
 
 **Durum:** ✅ Tamamlandı (Commit: 8827ba8b)
 
