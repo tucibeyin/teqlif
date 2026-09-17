@@ -123,3 +123,8 @@ echo " Node4 (Edge 2) Bootstrap Tamamlandı!"
 echo " Clean State (Sıfır Kurulum) kuralı gereği önbellekler temizlendi."
 echo " Lütfen LiveKit ve MinIO kurulumlarınızı gerçekleştirin."
 echo "=============================================="
+
+echo " "
+echo "==> Servis Durumları (Son Kontrol):"
+bash "$RESOURCES_DIR/node4_services.sh" status || true
+echo " "

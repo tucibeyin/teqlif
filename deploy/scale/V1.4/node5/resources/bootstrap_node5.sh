@@ -181,3 +181,8 @@ echo " Node5 (Core) Bootstrap Tamamlandı!"
 echo " Clean State (Sıfır Kurulum) kuralı gereği önbellekler temizlendi."
 echo " V1.4 Tuning scriptlerini (apply_pg_tuning.sh ve apply_ch_tuning.sh) çalıştırabilirsiniz."
 echo "=============================================="
+
+echo " "
+echo "==> Servis Durumları (Son Kontrol):"
+bash "$RESOURCES_DIR/node5_services.sh" status || true
+echo " "

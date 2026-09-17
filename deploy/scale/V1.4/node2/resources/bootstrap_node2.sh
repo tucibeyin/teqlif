@@ -86,3 +86,8 @@ echo "=============================================="
 echo " Node2 (Worker 1) Bootstrap Tamamlandı!"
 echo " Lütfen .env.production dosyasını Node5 veritabanlarına işaret edecek şekilde doldurun."
 echo "=============================================="
+
+echo " "
+echo "==> Servis Durumları (Son Kontrol):"
+bash "$RESOURCES_DIR/node2_services.sh" status || true
+echo " "
