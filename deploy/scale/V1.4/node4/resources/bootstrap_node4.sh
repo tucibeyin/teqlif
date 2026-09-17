@@ -124,6 +124,9 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 
+sudo cp "$RESOURCES_DIR/../node1/resources/promtail-config.yml" /etc/promtail-config.yml 2>/dev/null || true
+sudo sed -i "s/node1/node4/g" /etc/promtail-config.yml 2>/dev/null || true
+
 # ── Systemd Servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri (V1.4 dinamik env referansları ile)..."
 SERVICES=(node_exporter promtail)
@@ -132,6 +135,8 @@ for svc in "${SERVICES[@]}"; do
   if [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
     sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
       "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
+    # Eğer Node4 ise, 10.10.0.1 IP'sini Node4 IP'si olan 10.10.0.6 ile değiştir
+    sudo sed -i "s|10.10.0.1|10.10.0.6|g" "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
 done
