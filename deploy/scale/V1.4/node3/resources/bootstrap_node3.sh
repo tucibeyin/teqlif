@@ -17,8 +17,9 @@ sudo rm -f /etc/apt/sources.list.d/pgdg.list 2>/dev/null || true
 # gnupg ve wget önce kurulmalı (Grafana keyring için gerekli)
 sudo apt update -q
 sudo apt install -y gnupg wget
-# Grafana OSS apt kaynağı ekle (idempotent)
-if [[ ! -f /etc/apt/sources.list.d/grafana.list ]]; then
+# Grafana OSS apt kaynağı ekle (idempotent - içerik kontrolü)
+if ! grep -q "apt.grafana.com" /etc/apt/sources.list.d/grafana.list 2>/dev/null; then
+  sudo rm -f /etc/apt/sources.list.d/grafana.list /etc/apt/keyrings/grafana.gpg
   sudo mkdir -p /etc/apt/keyrings
   wget -q -O - https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
   echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
