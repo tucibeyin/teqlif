@@ -50,7 +50,7 @@
 - `[x]` Görev 5.1: Gateway'in `bootstrap_gateway.sh` ile V1.4 (Saf Ters Vekil) formatına formatlanması ve WireGuard key'inin üretilmesi.
 - `[x]` Görev 5.2: Node2'nin (AI Proxy 1) `bootstrap_node2.sh` ile V1.4 formatına getirilmesi ve WireGuard key'inin üretilmesi.
 - `[x]` Görev 5.3: Node3'ün (AI Proxy 2 & Staging & Monitoring) `bootstrap_node3.sh` ile V1.4 formatına getirilmesi ve WireGuard key'inin üretilmesi.
-- `[ ]` Görev 5.4: Üretilen tüm WireGuard Public Key'lerin `deploy/scale/V1.4/*/resources/wg0.conf` şablonlarında güncellenmesi ve ağın "Full-Mesh" (Herkes birbirini görür) olarak tüm sunucularda ayağa kaldırılması (Senkronizasyon).
+- `[x]` Görev 5.4: Üretilen tüm WireGuard Public Key'lerin `deploy/scale/V1.4/*/resources/wg0.conf` şablonlarında güncellenmesi ve ağın "Full-Mesh" (Herkes birbirini görür) olarak tüm sunucularda ayağa kaldırılması (Senkronizasyon).
 
 ## 🌍 Aşama 6: DNS ve SSL Sertifikasyonu
 - `[ ]` Görev 6.1: Cloudflare DNS A kayıtlarının `plan.md` "Faz 7" tablosuna uygun olarak Gateway (Proxied) ve Edge sunucular (DNS Only) için güncellenmesi.
