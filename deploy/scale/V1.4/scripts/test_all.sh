@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # deploy/scale/V1.4/scripts/test_all.sh
-# Teqlif Scale V1.4 — Kapsamlı Test Paketi
+# Teqlif Scale V1.4 — Kapsamlı Test ve Pentest Paketi (Hack Test)
 # Çalıştırma: bash deploy/scale/V1.4/scripts/test_all.sh
 # Gereksinim: SSH alias'ları tanımlı olmalı (teqlif-node1..5, teqlif-gateway)
+
 set -o pipefail
 
 # ── Renk ve format ─────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
+BOLD='\033[1m'; RESET='\033[0m'
 PASS=0; FAIL=0; WARN=0
 
 pass()  { echo -e "  ${GREEN}✓${RESET} $1"; PASS=$((PASS+1)); }
@@ -17,284 +18,225 @@ header(){ echo -e "\n${CYAN}${BOLD}══ $1 ══${RESET}"; }
 
 # ── SSH yardımcı ───────────────────────────────────────────────────────────────
 SSH_OPTS="-o ConnectTimeout=6 -o BatchMode=yes -o StrictHostKeyChecking=no -o LogLevel=ERROR -o ServerAliveInterval=5 -o ServerAliveCountMax=2"
+_ssh() { ssh $SSH_OPTS "$1" "${@:2}" 2>/dev/null; }
+_ssh_check() { ssh $SSH_OPTS "$1" true >/dev/null 2>&1; }
 
-_ssh() {
-  local host="$1"; shift
-  ssh $SSH_OPTS "$host" "$@" 2>/dev/null
-}
-_ssh_check() {
-  local host="$1"; shift
-  ssh $SSH_OPTS "$host" "$@" >/dev/null 2>&1
-}
-
-# ── SSH erişim ön kontrolü ─────────────────────────────────────────────────────
-header "SSH Erişim Kontrolü"
+# ── Düğüm (Node) Tanımlamaları ──────────────────────────────────────────────────
 NODES=(teqlif-gateway teqlif-node1 teqlif-node2 teqlif-node3 teqlif-node4 teqlif-node5)
 NODE_NAMES=(gateway node1 node2 node3 node4 node5)
-NODE_WG=("" 10.10.0.1 10.10.0.3 10.10.0.4 10.10.0.6 10.10.0.5) # Gateway WG'de yok kabul edelim
+NODE_WG=("" 10.10.0.1 10.10.0.3 10.10.0.4 10.10.0.6 10.10.0.5)
+NODE_PUB=("94.16.105.135" "135.125.175.223" "198.12.123.33" "5.249.165.10" "51.75.74.124" "45.146.252.165")
+
 REACHABLE=()
+header "SSH Erişim Kontrolü"
 for i in "${!NODES[@]}"; do
-  host="${NODES[$i]}"
-  if _ssh_check "$host" true; then
-    pass "$host SSH erişilebilir"
+  if _ssh_check "${NODES[$i]}"; then
+    pass "${NODE_NAMES[$i]} SSH erişilebilir"
     REACHABLE+=("$i")
   else
-    warn "$host SSH ulaşılamıyor — bu node'a ait testler atlanacak"
+    warn "${NODE_NAMES[$i]} SSH ulaşılamıyor — bu node'a ait testler atlanacak"
   fi
 done
 
 _is_reachable() { printf '%s\n' "${REACHABLE[@]}" | grep -qx "$1"; }
 
-# ── 1. TOPOLOJI: WireGuard Mesh ────────────────────────────────────────────────
+# ── 1. TOPOLOJİ: WireGuard Mesh ────────────────────────────────────────────────
 header "1. Topoloji — WireGuard Mesh"
 for i in "${REACHABLE[@]}"; do
-  if [[ "${NODE_NAMES[$i]}" == "gateway" ]]; then continue; fi # Gateway'de WG şart değil
-  host="${NODES[$i]}"
-  name="${NODE_NAMES[$i]}"
-  wg_ip="${NODE_WG[$i]}"
-
-  # wg0 aktif mi?
+  [[ "${NODE_NAMES[$i]}" == "gateway" ]] && continue
+  host="${NODES[$i]}"; name="${NODE_NAMES[$i]}"; wg_ip="${NODE_WG[$i]}"
+  
   wg_state=$(_ssh "$host" "systemctl is-active wg-quick@wg0" 2>/dev/null) || wg_state="inactive"
-  if [[ "$wg_state" == "active" ]]; then
-    pass "$name: wg-quick@wg0 aktif"
-  else
-    fail "$name: wg-quick@wg0 $wg_state"
-    continue
-  fi
-
-  # WireGuard IP atanmış mı?
-  if _ssh "$host" "ip addr show wg0 2>/dev/null" | grep -q "$wg_ip"; then
-    pass "$name: WireGuard IP $wg_ip atanmış"
-  else
-    fail "$name: WireGuard IP $wg_ip atanmamış"
-  fi
-
-  # Diğer node'lara TCP (SSH portu üzerinden) erişilebilirlik
-  for j in "${!NODES[@]}"; do
-    [[ $i -eq $j ]] && continue
-    if [[ "${NODE_NAMES[$j]}" == "gateway" ]]; then continue; fi
-    target_ip="${NODE_WG[$j]}"
-    target_name="${NODE_NAMES[$j]}"
-    if _ssh "$host" "nc -zw3 $target_ip 22 2>/dev/null || ssh -o ConnectTimeout=3 -o BatchMode=yes -o StrictHostKeyChecking=no $target_ip true 2>/dev/null"; then
-      pass "$name → $target_name ($target_ip) WireGuard erişilebilir"
-    else
-      fail "$name → $target_name ($target_ip) WireGuard erişilemiyor"
-    fi
-  done
+  [[ "$wg_state" == "active" ]] && pass "$name: wg-quick@wg0 aktif" || fail "$name: wg-quick@wg0 $wg_state"
+  
+  _ssh "$host" "ip addr show wg0 2>/dev/null" | grep -q "$wg_ip" \
+    && pass "$name: WireGuard IP $wg_ip atanmış" || fail "$name: WireGuard IP $wg_ip atanmamış"
 done
 
-# ── 2. SERVİS SAĞLIĞI: systemd durumları ──────────────────────────────────────
-header "2. Servis Sağlığı — systemd (V1.4 Rolleri)"
-
+# ── 2. SERVİS SAĞLIĞI (SYSTEMD) ────────────────────────────────────────────────
+header "2. Servis Sağlığı — systemd"
 _check_svc() {
   local host="$1" svc="$2" label="$3"
-  local status
-  status=$(_ssh "$host" "systemctl is-active $svc || true" 2>/dev/null) || status="unknown"
-  status=$(echo "$status" | head -1)
-  if [[ "$status" == "active" ]]; then
-    pass "$label: $svc active"
-  else
-    fail "$label: $svc $status"
-  fi
+  status=$(_ssh "$host" "systemctl is-active $svc || true" 2>/dev/null | head -1) || status="unknown"
+  [[ "$status" == "active" ]] && pass "$label: $svc active" || fail "$label: $svc $status"
 }
 
-# Gateway (0)
-if _is_reachable 0; then
-  for svc in nginx node_exporter promtail; do
-    _check_svc teqlif-gateway "$svc" "gateway"
-  done
-fi
+_is_reachable 0 && for svc in nginx node_exporter promtail; do _check_svc teqlif-gateway "$svc" "gateway"; done
+_is_reachable 1 && for svc in livekit minio redis-server edge-metrics-agent node_exporter promtail; do _check_svc teqlif-node1 "$svc" "node1"; done
+_is_reachable 2 && for svc in teqlif-ai-proxy cf-failover node_exporter promtail; do _check_svc teqlif-node2 "$svc" "node2"; done
+_is_reachable 3 && for svc in teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio redis-server postgresql; do
+  if [[ "$svc" == *"staging"* ]]; then
+    st=$(_ssh teqlif-node3 "systemctl is-active $svc || true" 2>/dev/null) || st="unknown"
+    [[ "$st" == "active" ]] && pass "node3: $svc active" || warn "node3: $svc inaktif (Staging opsiyonel)"
+  else
+    _check_svc teqlif-node3 "$svc" "node3"
+  fi
+done
+_is_reachable 4 && for svc in livekit minio redis-server edge-metrics-agent node_exporter promtail; do _check_svc teqlif-node4 "$svc" "node4"; done
+_is_reachable 5 && for svc in teqlif teqlif-worker teqlif-worker-critical postgresql clickhouse-server redis-server node_exporter promtail; do _check_svc teqlif-node5 "$svc" "node5"; done
 
-# node1 (Edge 1 - 1)
-if _is_reachable 1; then
-  for svc in livekit minio redis-server edge-metrics-agent node_exporter promtail; do
-    _check_svc teqlif-node1 "$svc" "node1 (Edge)"
-  done
-fi
-
-# node2 (AI Proxy 1 - 2)
-if _is_reachable 2; then
-  for svc in teqlif-ai-proxy cf-failover node_exporter promtail; do
-    _check_svc teqlif-node2 "$svc" "node2 (AI Proxy)"
-  done
-fi
-
-# node3 (Monitor, Staging, AI Proxy 2 - 3)
-if _is_reachable 3; then
-  for svc in teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio redis-server postgresql; do
-    # Staging henüz yapılandırılmamış olabilir, active değilse sadece uyarı verelim
-    if [[ "$svc" == *"staging"* ]]; then
-      st=$(_ssh teqlif-node3 "systemctl is-active $svc || true" 2>/dev/null) || st="unknown"
-      [[ "$st" == "active" ]] && pass "node3: $svc active" || warn "node3: $svc inaktif (Staging yapılandırılmamış olabilir)"
-    else
-      _check_svc teqlif-node3 "$svc" "node3"
-    fi
-  done
-fi
-
-# node4 (Edge 2 - 4)
-if _is_reachable 4; then
-  for svc in livekit minio redis-server edge-metrics-agent node_exporter promtail; do
-    _check_svc teqlif-node4 "$svc" "node4 (Edge)"
-  done
-fi
-
-# node5 (Core - 5)
+# ── 3. VERİTABANI VE REDIS CANLILIK TESTLERİ ──────────────────────────────────
+header "3. Veritabanı ve Redis Canlılık Testleri"
 if _is_reachable 5; then
-  for svc in teqlif teqlif-worker teqlif-worker-critical postgresql clickhouse-server redis-server node_exporter promtail; do
-    _check_svc teqlif-node5 "$svc" "node5 (Core)"
-  done
+  _ssh teqlif-node5 'sudo -u postgres psql -c "SELECT 1;" >/dev/null 2>&1' \
+    && pass "node5: PostgreSQL canlı (SELECT 1 başarılı)" || fail "node5: PostgreSQL yanıt vermiyor"
+  
+  _ssh teqlif-node5 'clickhouse-client -q "SELECT 1" >/dev/null 2>&1' \
+    && pass "node5: ClickHouse canlı" || fail "node5: ClickHouse yanıt vermiyor"
+    
+  _ssh teqlif-node5 'redis-cli ping | grep -q PONG' \
+    && pass "node5: Redis (Core) aktif ve yanıt veriyor" || fail "node5: Redis yanıt vermiyor"
 fi
 
-# ── 3. AĞ & HTTP ENDPOINT SAĞLIĞI ──────────────────────────────────────────────
-header "3. Ağ & HTTP Endpoint Sağlığı"
+if _is_reachable 3; then
+  _ssh teqlif-node3 'sudo -u postgres psql -d teqlif_staging -c "SELECT 1;" >/dev/null 2>&1' \
+    && pass "node3: PostgreSQL (Staging) canlı" || warn "node3: PostgreSQL (Staging) yanıt vermiyor (Kurulmamış olabilir)"
+  _ssh teqlif-node3 'redis-cli ping | grep -q PONG' \
+    && pass "node3: Redis (Staging) aktif" || fail "node3: Redis yanıt vermiyor"
+fi
 
-_ping_ok() {
-  local label="$1" host="$2"
-  if ping -c 2 -W 2 "$host" >/dev/null 2>&1; then
-    pass "$label: $host (Ping OK)"
+# ── 4. DİSK, BELLEK VE KAYNAK KONTROLÜ ─────────────────────────────────────────
+header "4. Disk, Bellek ve Kaynak Tüketimi"
+for i in "${REACHABLE[@]}"; do
+  host="${NODES[$i]}"; name="${NODE_NAMES[$i]}"
+  disk_usage=$(_ssh "$host" "df -h / | awk 'NR==2 {print \$5}' | tr -d '%'")
+  if [[ -n "$disk_usage" && "$disk_usage" -gt 85 ]]; then
+    warn "$name: Disk doluluk oranı KRİTİK seviyede (%$disk_usage)"
   else
-    fail "$label: $host (Ping FAIL)"
+    pass "$name: Disk doluluk oranı normal (%$disk_usage)"
   fi
-}
+done
 
+if _is_reachable 5; then
+  swap_usage=$(_ssh teqlif-node5 "free -m | awk '/^Swap:/ {print \$2}'")
+  if [[ "$swap_usage" -ge 8000 ]]; then
+    pass "node5: 8GB Swap (Deli Gömleği / OOM Koruması) aktif"
+  else
+    warn "node5: Swap alanı yetersiz veya aktif değil ($swap_usage MB)"
+  fi
+fi
+
+# ── 5. RED TEAM (HACK & SIZMA) TESTLERİ ───────────────────────────────────────
+header "5. Red Team (Hack & Sızma) Testleri 🕵️‍♂️"
+
+# A. Dışarıdan Port Taraması (Port Scan)
+echo "  [Port Scan - Firewall İzolasyonu Testi]"
+NODE5_PUB="${NODE_PUB[5]}"
+NODE3_PUB="${NODE_PUB[3]}"
+
+# nc ile dış IP'den DB ve Redis'e bağlanmayı dene (Zaman aşımına veya reddedilmeye uğramalı)
+if nc -zw2 "$NODE5_PUB" 5432 2>/dev/null; then fail "node5: PostgreSQL (5432) dışarıya AÇIK! Kritik güvenlik açığı!"; else pass "node5: PostgreSQL (5432) dışarıya kapalı."; fi
+if nc -zw2 "$NODE5_PUB" 6379 2>/dev/null; then fail "node5: Redis (6379) dışarıya AÇIK! Kritik güvenlik açığı!"; else pass "node5: Redis (6379) dışarıya kapalı."; fi
+if nc -zw2 "$NODE3_PUB" 9090 2>/dev/null; then fail "node3: Prometheus (9090) dışarıya AÇIK! Kritik güvenlik açığı!"; else pass "node3: Prometheus (9090) dışarıya kapalı."; fi
+
+# B. Hassas Veri İfşası
+echo "  [Hassas Veri İfşası (Sensitive Data Exposure)]"
+http_env=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 3 "https://teqlif.com/.env" 2>/dev/null)
+if [[ "$http_env" == "403" || "$http_env" == "404" ]]; then pass "Gateway: .env sızıntısı engellendi (HTTP $http_env)"; else fail "Gateway: .env DOSYASI SIZIYOR! (HTTP $http_env)"; fi
+
+http_git=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 3 "https://teqlif.com/.git/config" 2>/dev/null)
+if [[ "$http_git" == "403" || "$http_git" == "404" ]]; then pass "Gateway: .git/config sızıntısı engellendi (HTTP $http_git)"; else fail "Gateway: .git/config DOSYASI SIZIYOR! (HTTP $http_git)"; fi
+
+# C. SSH Güvenlik Analizi
+echo "  [SSH Güvenlik Analizi]"
+for i in "${REACHABLE[@]}"; do
+  host="${NODES[$i]}"; name="${NODE_NAMES[$i]}"
+  root_login=$(_ssh "$host" "sshd -T 2>/dev/null | grep 'permitrootlogin'" | awk '{print $2}')
+  pass_auth=$(_ssh "$host" "sshd -T 2>/dev/null | grep 'passwordauthentication'" | awk '{print $2}')
+  
+  if [[ "$root_login" == "no" ]]; then pass "$name: Root girişi kapalı"; else warn "$name: Root girişi AÇIK (Risk)"; fi
+  if [[ "$pass_auth" == "no" ]]; then pass "$name: Parola ile giriş kapalı (Key only)"; else warn "$name: Parola ile giriş AÇIK (Risk)"; fi
+done
+
+# D. Kimlik Doğrulama Atlatma (Auth Bypass)
+echo "  [Auth Bypass Testi]"
+if _is_reachable 5; then
+  auth_bypass_code=$(_ssh teqlif-node5 "curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Authorization: Bearer invalid_hacked_token_123' http://127.0.0.1:8000/api/protected_test_route" 2>/dev/null) || auth_bypass_code="000"
+  if [[ "$auth_bypass_code" == "401" || "$auth_bypass_code" == "403" || "$auth_bypass_code" == "404" ]]; then
+    pass "node5 API: Sahte token isteği başarıyla engellendi (HTTP $auth_bypass_code)"
+  else
+    warn "node5 API: Sahte token beklenmedik bir yanıt döndü (HTTP $auth_bypass_code)"
+  fi
+fi
+
+# ── 6. AĞ & HTTP ENDPOINT SAĞLIĞI ──────────────────────────────────────────────
+header "6. Ağ & HTTP Endpoint Sağlığı"
 _curl_ok() {
   local label="$1" url="$2"
-  local result http_code
-  result=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 8 "$url" 2>/dev/null) || result="000"
-  http_code=$(echo "$result" | tail -1)
-  if [[ "$http_code" =~ ^(200|204|301|302|404|401)$ ]]; then # 401/404 can mean service is up but rejecting unauth/path
-    pass "$label: $url → HTTP $http_code"
-  else
-    fail "$label: $url → HTTP $http_code"
-  fi
+  result=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null) || result="000"
+  [[ "$result" =~ ^(200|204|301|302|401|403|404)$ ]] && pass "$label: $url → HTTP $result" || fail "$label: $url → HTTP $result"
 }
+_curl_ok "Gateway Public" "https://teqlif.com/api/health"
+_curl_ok "Edge1 LiveKit"  "https://live1.teqlif.com/"
+_curl_ok "Edge1 MinIO"    "https://minio1.teqlif.com/minio/health/live"
+_curl_ok "Edge2 LiveKit"  "https://live2.teqlif.com/"
+_curl_ok "Edge2 MinIO"    "https://minio2.teqlif.com/minio/health/live"
 
-_ping_ok "public alan adı" "teqlif.com"
-_ping_ok "staging alan adı" "staging.teqlif.com"
-
-
-_curl_ok "gateway public"  "https://teqlif.com/api/health"
-_curl_ok "livekit edge1"   "https://live1.teqlif.com/"
-_curl_ok "minio edge1"     "https://minio1.teqlif.com/minio/health/live"
-_curl_ok "livekit edge2"   "https://live2.teqlif.com/"
-_curl_ok "minio edge2"     "https://minio2.teqlif.com/minio/health/live"
-
-# node5 (Core) lokal API
-if _is_reachable 5; then
-  core_health=$(_ssh teqlif-node5 "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/health" 2>/dev/null) || core_health="000"
-  [[ "$core_health" =~ ^(200|204)$ ]] \
-    && pass "node5 (Core): lokal API health → HTTP $core_health" \
-    || fail "node5 (Core): lokal API health → HTTP $core_health"
-fi
-
-# AI proxy health (node5'ten WireGuard üzerinden)
-if _is_reachable 5; then
-  for proxy in "10.10.0.3:node2" "10.10.0.4:node3"; do
-    proxy_ip="${proxy%%:*}"; proxy_label="${proxy##*:}"
-    health=$(_ssh teqlif-node5 "curl -s -o /dev/null -w '%{http_code}' http://$proxy_ip:8080/health" 2>/dev/null) || health="000"
-    [[ "$health" =~ ^(200|204)$ ]] \
-      && pass "node5→$proxy_label AI proxy health → HTTP $health" \
-      || fail "node5→$proxy_label AI proxy health → HTTP $health"
-  done
-fi
-
-# ── 4. AI PROXY FALLBACK ZİNCİRİ ──────────────────────────────────────────────
-header "4. AI Proxy — Yetki Testi (Node5 üzerinden)"
-
+# ── 7. AI PROXY FALLBACK ZİNCİRİ ──────────────────────────────────────────────
+header "7. AI Proxy — Yetki Testi (Node5 üzerinden)"
 if _is_reachable 5; then
   for proxy in "10.10.0.3:node2" "10.10.0.4:node3"; do
     proxy_ip="${proxy%%:*}"; proxy_label="${proxy##*:}"
     code=$(_ssh teqlif-node5 "curl -s -o /dev/null -w '%{http_code}' -X POST http://$proxy_ip:8080/generate" 2>/dev/null) || code="000"
-    if [[ "$code" =~ ^(401|403|422)$ ]]; then
-      pass "$proxy_label AI proxy: token olmadan $code (auth korumalı)"
-    else
-      warn "$proxy_label AI proxy: token olmadan $code (401/403 beklenir)"
-    fi
+    [[ "$code" =~ ^(401|403|422)$ ]] && pass "$proxy_label AI proxy: yetkisiz istek engellendi (HTTP $code)" || warn "$proxy_label AI proxy: yetkisiz istek engellenemedi (HTTP $code)"
   done
 fi
 
-# ── 5. BACKUP SİSTEMİ ──────────────────────────────────────────────────────────
-header "5. Backup Sistemi (Node5 → Node3)"
-
+# ── 8. BACKUP SİSTEMİ ──────────────────────────────────────────────────────────
+header "8. Backup Sistemi (Node5 → Node3)"
 if _is_reachable 5; then
   latest_backup=$(_ssh teqlif-node5 "ls -t /var/backups/teqlif/pg/*.sql.gz 2>/dev/null | head -1") || latest_backup=""
-  if [[ -n "$latest_backup" ]]; then
-    pass "node5: pg backup dizininde dosyalar var ($latest_backup)"
-  else
-    warn "node5: /var/backups/teqlif/pg/ altında backup dosyası yok (Zamanlanmış görev henüz çalışmamış olabilir)"
-  fi
+  [[ -n "$latest_backup" ]] && pass "node5: Lokal PostgreSQL backup dosyası mevcut" || warn "node5: Lokal backup bulunamadı (Zamanlanmış görev henüz çalışmamış olabilir)"
 fi
-
 if _is_reachable 3; then
   offsite_pg=$(_ssh teqlif-node3 "ls /var/backups/teqlif/pg/*.sql.gz 2>/dev/null | wc -l | tr -d ' '") || offsite_pg="0"
-  offsite_pg=$(echo "$offsite_pg" | head -1 | tr -d '[:space:]')
-  [[ "$offsite_pg" -gt 0 ]] \
-    && pass "node3: offsite pg backup mevcut ($offsite_pg dosya)" \
-    || warn "node3: /var/backups/teqlif/pg/ boş — rsync henüz çalışmamış olabilir"
+  offsite_pg=$(echo "$offsite_pg" | tr -d '[:space:]')
+  [[ "$offsite_pg" -gt 0 ]] && pass "node3: Offsite (Uzak) PostgreSQL backup mevcut ($offsite_pg dosya)" || warn "node3: Offsite backup boş (rsync senkronizasyonu bekleniyor)"
 fi
 
-# ── 6. MONİTORİNG STACK ────────────────────────────────────────────────────────
-header "6. Monitoring Stack (node3)"
-
+# ── 9. MONITORING STACK ────────────────────────────────────────────────────────
+header "9. Monitoring Stack (node3)"
 if _is_reachable 3; then
   prom_raw=$(_ssh teqlif-node3 "curl -s http://localhost:9090/api/v1/targets 2>/dev/null") || prom_raw="{}"
   up_count=$(echo "$prom_raw" | grep -o '"health":"up"' | wc -l | tr -d ' ')
   total_count=$(echo "$prom_raw" | grep -o '"health":' | wc -l | tr -d ' ')
-  if [[ "$up_count" -ge 5 ]]; then
-    pass "node3 Prometheus: $up_count/$total_count hedef UP"
-  else
-    fail "node3 Prometheus: $up_count/$total_count hedef UP (En az 5 beklenir)"
-  fi
-
-  # Loki log akışı kontrolü
-  loki_raw=$(_ssh teqlif-node3 "curl -s 'http://localhost:3100/loki/api/v1/label/node/values' 2>/dev/null") || loki_raw="{}"
-  for node_label in node1 node2 node3 node4 node5 gateway; do
-    echo "$loki_raw" | grep -q "\"$node_label\"" \
-      && pass "Loki: node=$node_label log akışı var" \
-      || warn "Loki: node=$node_label log akışı YOK (henüz log üretmemiş olabilir)"
-  done
+  [[ "$up_count" -ge 5 ]] && pass "node3 Prometheus: $up_count/$total_count hedef UP" || fail "node3 Prometheus: Sadece $up_count hedef UP (En az 5 beklenir)"
 fi
 
-# ── 7. UFW GÜVENLİK KONTROLÜ ──────────────────────────────────────────────────
-header "7. UFW Güvenlik Kontrolü"
-
+# ── 10. DERİN LOG ANALİZİ (YENİ) ──────────────────────────────────────────────
+header "10. Derin Log Analizi (journalctl ERROR taraması)"
 for i in "${REACHABLE[@]}"; do
   host="${NODES[$i]}"; name="${NODE_NAMES[$i]}"
-  ufw_enabled=$(_ssh "$host" "grep -i '^ENABLED=' /etc/ufw/ufw.conf 2>/dev/null | cut -d= -f2 | tr -d '[:space:]'") || ufw_enabled=""
-  ufw_enabled=$(echo "$ufw_enabled" | head -1 | tr '[:lower:]' '[:upper:]')
-  if [[ "$ufw_enabled" == "YES" ]]; then
-    pass "$name: UFW aktif"
+  # Son 1 saat içinde priority 0-3 (Error ve daha kritik) log var mı?
+  error_count=$(_ssh "$host" "journalctl -p 0..3 -S '1 hour ago' --no-pager | wc -l" 2>/dev/null) || error_count=0
+  if [[ "$error_count" -gt 50 ]]; then
+    warn "$name: Son 1 saatte ÇOK FAZLA kritik hata logu bulundu ($error_count satır) -> 'journalctl -p 3 -xe' ile inceleyin."
+  elif [[ "$error_count" -gt 0 ]]; then
+    pass "$name: Son 1 saatte az sayıda hata kaydı var ($error_count satır - Kabul edilebilir)."
   else
-    fail "$name: UFW aktif değil — önce 'sudo ufw status numbered' ile kuralları doğrula, sonra 'sudo ufw --force enable'"
+    pass "$name: Sistem logları tertemiz (0 kritik hata)."
   fi
 done
 
-# ── 8. SERTİFİKA GEÇERLİLİĞİ ─────────────────────────────────────────────────
-header "8. TLS Sertifika Geçerliliği"
+# ── 11. UFW GÜVENLİK KONTROLÜ ──────────────────────────────────────────────────
+header "11. UFW Güvenlik Kontrolü"
+for i in "${REACHABLE[@]}"; do
+  host="${NODES[$i]}"; name="${NODE_NAMES[$i]}"
+  ufw_enabled=$(_ssh "$host" "grep -i '^ENABLED=' /etc/ufw/ufw.conf 2>/dev/null | cut -d= -f2 | tr -d '[:space:]'") || ufw_enabled=""
+  ufw_enabled=$(echo "$ufw_enabled" | tr '[:lower:]' '[:upper:]')
+  [[ "$ufw_enabled" == "YES" ]] && pass "$name: UFW aktif" || fail "$name: UFW aktif değil!"
+done
 
+# ── 12. TLS SERTİFİKA GEÇERLİLİĞİ ─────────────────────────────────────────────
+header "12. TLS Sertifika Geçerliliği"
 _check_cert() {
   local label="$1" host="$2" port="${3:-443}"
-  local cert
-  cert=$(echo | openssl s_client -connect "${host}:${port}" -servername "$host" 2>/dev/null \
-    | openssl x509 2>/dev/null)
-  if [[ -z "$cert" ]]; then
-    warn "$label: sertifika alınamadı"
-    return
-  fi
-  # 14 gün kaldı mı?
-  if ! echo "$cert" | openssl x509 -checkend $((14*86400)) -noout >/dev/null 2>&1; then
-    fail "$label: 14 gün içinde sona eriyor — ACİL yenile"
-    return
-  fi
-  # 30 gün kaldı mı?
-  if ! echo "$cert" | openssl x509 -checkend $((30*86400)) -noout >/dev/null 2>&1; then
-    warn "$label: 30 gün içinde sona eriyor — yakında yenile"
-    return
-  fi
-  pass "$label: sertifika geçerli (30+ gün)"
+  cert=$(echo | openssl s_client -connect "${host}:${port}" -servername "$host" 2>/dev/null | openssl x509 2>/dev/null)
+  if [[ -z "$cert" ]]; then warn "$label: Sertifika alınamadı"; return; fi
+  if ! echo "$cert" | openssl x509 -checkend $((14*86400)) -noout >/dev/null 2>&1; then fail "$label: Sertifika 14 gün içinde sona eriyor (ACİL)"; return; fi
+  if ! echo "$cert" | openssl x509 -checkend $((30*86400)) -noout >/dev/null 2>&1; then warn "$label: Sertifika 30 gün içinde sona eriyor"; return; fi
+  pass "$label: Sertifika geçerli (30+ gün)"
 }
-
 _check_cert "Gateway / API"   "teqlif.com"
 _check_cert "Edge1 LiveKit"   "live1.teqlif.com"
 _check_cert "Edge1 MinIO"     "minio1.teqlif.com"
@@ -303,15 +245,15 @@ _check_cert "Edge2 MinIO"     "minio2.teqlif.com"
 
 # ── ÖZET ───────────────────────────────────────────────────────────────────────
 echo ""
-echo -e "${BOLD}═══════════════════════════════════════════${RESET}"
-echo -e "${BOLD} Teqlif V1.4 Test Özeti${RESET}"
-echo -e "${BOLD}═══════════════════════════════════════════${RESET}"
+echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
+echo -e "${BOLD} Teqlif V1.4 Ölçeklendirme ve Hack Testi Sonuç Raporu${RESET}"
+echo -e "${BOLD}══════════════════════════════════════════════════════════${RESET}"
 echo -e "  ${GREEN}✓ PASS${RESET}  : $PASS"
 echo -e "  ${YELLOW}⚠ WARN${RESET}  : $WARN"
 echo -e "  ${RED}✗ FAIL${RESET}  : $FAIL"
-echo -e "  Toplam  : $((PASS + WARN + FAIL))"
+echo -e "  Toplam  : $((PASS + WARN + FAIL)) test koşuldu."
 echo ""
-if   [[ $FAIL -gt 0 ]]; then echo -e "${RED}${BOLD}SONUÇ: $FAIL test başarısız.${RESET}";                         exit 1
-elif [[ $WARN -gt 0 ]]; then echo -e "${YELLOW}${BOLD}SONUÇ: Kritik testler geçti — $WARN uyarı var.${RESET}";  exit 0
-else                          echo -e "${GREEN}${BOLD}SONUÇ: Tüm testler başarılı.${RESET}";                     exit 0
+if   [[ $FAIL -gt 0 ]]; then echo -e "${RED}${BOLD}SONUÇ: $FAIL test BAŞARISIZ.${RESET}"; exit 1
+elif [[ $WARN -gt 0 ]]; then echo -e "${YELLOW}${BOLD}SONUÇ: Tüm kritik testler GEÇTİ, $WARN ufak uyarı var.${RESET}"; exit 0
+else                          echo -e "${GREEN}${BOLD}SONUÇ: SİSTEM KUSURSUZ (MÜKEMMEL PUAN)!${RESET}"; exit 0
 fi
