@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # deploy/scale/V1.4/node2/resources/bootstrap_node2.sh
-# node2 (Async Worker 1 - Audio/AI)
+# node2 (AI Proxy 1)
 # Idempotent: tekrar çalıştırmak güvenli. V1.4 Generic Pathing kuralına uyar.
 set -euo pipefail
 
@@ -72,10 +72,14 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
 fi
 
 echo "==> systemd servisleri (V1.4)..."
-SERVICES=(teqlif-worker teqlif-worker-critical node_exporter promtail)
+SERVICES=(teqlif-ai-proxy cf-failover node_exporter promtail)
 
 for svc in "${SERVICES[@]}"; do
-  if [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
+  if [[ -f "$REPO/deploy/scale/V1.3/node2/systemd/${svc}.service" ]]; then
+    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
+      "$REPO/deploy/scale/V1.3/node2/systemd/${svc}.service" > "/tmp/${svc}.service"
+    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
+  elif [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
     sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
       "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
@@ -101,8 +105,8 @@ sudo apt-get clean -q
 "$VENV/bin/pip" cache purge 2>/dev/null || true
 
 echo "=============================================="
-echo " Node2 (Worker 1) Bootstrap Tamamlandı!"
-echo " Lütfen .env.production dosyasını Node5 veritabanlarına işaret edecek şekilde doldurun."
+echo " Node2 (AI Proxy 1) Bootstrap Tamamlandı!"
+echo " Lütfen .env.production dosyasını API anahtarlarıyla (GROQ, GEMINI) doldurun."
 echo "=============================================="
 
 echo " "
