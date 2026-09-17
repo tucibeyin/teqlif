@@ -163,3 +163,15 @@
 3. Gateway Nginx `teqlif.com.conf` devresi açıldığında; tarayıcıdan `teqlif.com` ve `staging.teqlif.com`'a girilince statik frontend'in Gateway'den sunulduğunu, `api.teqlif.com` ve `api-staging.teqlif.com` üzerinden ise Node5 ve Node3 API'lerine sorunsuz bağlanıldığını onayla. (Gateway proxy_pass konfigürasyonu tamamlandı ✅)
 
 **Durum:** ⏳ Faz 6 (Canlıya Geçiş) esnasında tüm Node'lar tamamlandığında test edilecek. (Kısmen Tamamlandı)
+
+---
+
+## Görev 5 & 6 & 7: Gateway, WireGuard Mesh ve SSL Testi
+**Amaç:** Kalan tüm ağ düğümlerinin (Node2, Node3, Gateway) WireGuard mesh ağına sorunsuz katıldığını ve Gateway'in HTTPS trafiğini başarıyla şifreleyip proxy ettiğini doğrulamak.
+
+**Test Adımları (Execution):**
+1. Gateway `bootstrap_gateway.sh` ve `certbot_gateway.sh` tamamlandıktan sonra tarayıcıdan `https://api.teqlif.com/cf-health` adresine girip (200 OK) alındığını onayla.
+2. Tüm Node'ların (1'den 6'ya) `/etc/wireguard/wg0.conf` dosyalarına Public Key'ler yazıldıktan sonra Node1 üzerinden `ping 10.10.0.5` ve `ping 10.10.0.2` yapılabildiğini (Full-Mesh tüneli) doğrula.
+3. Gateway Nginx SSL testlerinin `ssllabs.com` üzerinden "A" skoru aldığını (isteğe bağlı) teyit et.
+
+**Durum:** ⏳ Faz 6 ve 7 (Canlıya Geçiş) tamamen bittiğinde test edilecek.
