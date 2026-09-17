@@ -31,8 +31,12 @@ sudo usermod -aG adm tucibeyin 2>/dev/null || true
 echo "==> WireGuard ağı (Mesh) yapılandırılıyor..."
 if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
   sudo mkdir -p /etc/wireguard
-  sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
-  sudo chmod 600 /etc/wireguard/wg0.conf
+  if [[ ! -f "/etc/wireguard/wg0.conf" ]]; then
+    sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
+    sudo chmod 600 /etc/wireguard/wg0.conf
+  else
+    echo "==> Mevcut wg0.conf bulundu, üzerine yazılmıyor (Private Key korundu)."
+  fi
   
   if grep -q "<NODE2_PRIVATE_KEY>" /etc/wireguard/wg0.conf; then
     echo "==> Otomatik WireGuard Anahtarı Üretiliyor..."
