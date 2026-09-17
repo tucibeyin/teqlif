@@ -14,10 +14,22 @@ PROMTAIL_VERSION="3.0.0"
 echo "==> REPO Root: $REPO"
 echo "==> Resources Dir: $RESOURCES_DIR"
 
-# ── apt ───────────────────────────────────────────────────────────────────────
-echo "==> apt paketleri..."
+# ── apt & Veritabanı Kurulumları ──────────────────────────────────────────────
+echo "==> apt paketleri ve ana servisler (PostgreSQL, Redis)..."
+export DEBIAN_FRONTEND=noninteractive
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban postgresql postgresql-contrib redis-server apt-transport-https ca-certificates dirmngr
+
+echo "==> ClickHouse kurulumu..."
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
+echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee /etc/apt/sources.list.d/clickhouse.list
+sudo apt update -q
+sudo apt install -y clickhouse-server clickhouse-client
+
+echo "==> Servisler aktifleştiriliyor..."
+sudo systemctl enable --now postgresql
+sudo systemctl enable --now redis-server
+sudo systemctl enable --now clickhouse-server
 
 # ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
@@ -125,6 +137,5 @@ sudo apt-get clean -q
 echo "=============================================="
 echo " Node5 (Core) Bootstrap Tamamlandı!"
 echo " Clean State (Sıfır Kurulum) kuralı gereği önbellekler temizlendi."
-echo " Lütfen PostgreSQL, ClickHouse ve Redis kurulumlarından"
-echo " sonra V1.4 Tuning scriptlerini çalıştırın."
+echo " V1.4 Tuning scriptlerini (apply_pg_tuning.sh ve apply_ch_tuning.sh) çalıştırabilirsiniz."
 echo "=============================================="
