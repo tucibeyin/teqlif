@@ -3,7 +3,7 @@
 set -euo pipefail
 CMD="${1:-status}"
 # Node3: Monitor (Prometheus, Loki, Grafana, Alertmanager), Staging (API, MinIO, Worker), ve AI Proxy 2
-SERVICES=(teqlif-staging teqlif-worker-staging minio-staging teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail)
+SERVICES=(teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail)
 case "$CMD" in
   start|stop|restart)
     for svc in "${SERVICES[@]}"; do sudo systemctl "$CMD" "$svc" 2>/dev/null || true; done
