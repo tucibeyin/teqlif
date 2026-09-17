@@ -1,7 +1,7 @@
 import os
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -76,9 +76,10 @@ class Settings(BaseSettings):
     ios_bundle_id: str = "teqlif"
     apns_use_sandbox: bool = False
 
-    class Config:
-        env_file = os.environ.get("TEQLIF_ENV_FILE", "")
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=os.environ.get("TEQLIF_ENV_FILE", ".env.production"),
+        extra="ignore"
+    )
 
 
 settings = Settings()
