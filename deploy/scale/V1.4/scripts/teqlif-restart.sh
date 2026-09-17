@@ -76,7 +76,7 @@ bash "$SCRIPT" status | while read -r line; do
     svc=$(echo "$line" | awk '{print $1}')
     status=$(echo "$line" | cut -d' ' -f2-)
     
-    if [[ "$status" == "active" ]]; then
+    if [[ "$status" == *"active"* ]]; then
         printf "  ${GREEN}✓${RESET} %-35s : ${GREEN}%s${RESET}\n" "$svc" "$status"
     elif [[ "$status" == "kurulu değil" || "$status" == *"not-found"* ]]; then
         printf "  ${YELLOW}⚠${RESET} %-35s : ${YELLOW}%s${RESET}\n" "$svc" "$status"
