@@ -47,14 +47,14 @@
 - `[x]` Görev 4.4: Node1'in üzerindeki ağır yüklerden arındırılarak `bootstrap_node1.sh` (V1.4) ile Edge rolüne (Node4'ün ikizi) formatlanması.
 - `[x]` Görev 4.5: Gateway `teqlif.com.conf` ayarlarının güncellenmesi: `teqlif.com` isteklerinin Gateway üzerinden `/var/www/teqlif.com/frontend` dizininden statik sunulması, `api.teqlif.com` isteklerinin ise Node5'e (FastAPI) proxy edilmesi (Decoupling). (Commit: f0dbf30, Date: 2026-09-17)
 ## 📡 Aşama 5: Ağ Birleştirme ve İzleme Dağıtımı (Gateway & AI Proxies)
-- `[ ]` Görev 5.1: Gateway'in `bootstrap_gateway.sh` ile V1.4 (Saf Ters Vekil) formatına formatlanması ve WireGuard key'inin üretilmesi.
+- `[x]` Görev 5.1: Gateway'in `bootstrap_gateway.sh` ile V1.4 (Saf Ters Vekil) formatına formatlanması ve WireGuard key'inin üretilmesi.
 - `[ ]` Görev 5.2: Node2'nin (AI Proxy 1) `bootstrap_node2.sh` ile V1.4 formatına getirilmesi ve WireGuard key'inin üretilmesi.
 - `[ ]` Görev 5.3: Node3'ün (AI Proxy 2 & Staging & Monitoring) `bootstrap_node3.sh` ile V1.4 formatına getirilmesi ve WireGuard key'inin üretilmesi.
 - `[ ]` Görev 5.4: Üretilen tüm WireGuard Public Key'lerin `deploy/scale/V1.4/*/resources/wg0.conf` şablonlarında güncellenmesi ve ağın "Full-Mesh" (Herkes birbirini görür) olarak tüm sunucularda ayağa kaldırılması (Senkronizasyon).
 
 ## 🌍 Aşama 6: DNS ve SSL Sertifikasyonu
 - `[ ]` Görev 6.1: Cloudflare DNS A kayıtlarının `plan.md` "Faz 7" tablosuna uygun olarak Gateway (Proxied) ve Edge sunucular (DNS Only) için güncellenmesi.
-- `[ ]` Görev 6.2: Gateway'de `certbot_gateway.sh` çalıştırılarak wildcard/Nginx sertifikalarının alınması.
+- `[x]` Görev 6.2: Gateway'de `certbot_gateway.sh` çalıştırılarak wildcard/Nginx sertifikalarının alınması.
 - `[ ]` Görev 6.3: Node1 ve Node4'te `certbot_nodeX.sh` çalıştırılarak Edge (LiveKit ve MinIO) sertifikalarının alınması.
 
 ## 🏁 Aşama 7: Son Başlatma ve Final Testleri
