@@ -240,6 +240,12 @@ mkdir -p "$REPO/backend"
 if [[ ! -f "$REPO/backend/.env.production" ]]; then
   cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
 fi
+if ! grep -q "TELEGRAM_BOT_TOKEN" "$REPO/backend/.env.production"; then
+  echo "" >> "$REPO/backend/.env.production"
+  echo "# Alertmanager (Prometheus) Monitoring Telegram Bildirimleri" >> "$REPO/backend/.env.production"
+  echo "TELEGRAM_BOT_TOKEN=\"DUMMY_TOKEN\"" >> "$REPO/backend/.env.production"
+  echo "TELEGRAM_CHAT_ID=123456789" >> "$REPO/backend/.env.production"
+fi
 if [[ ! -f "$REPO/backend/.env.staging" ]]; then
   cp "$RESOURCES_DIR/.env.staging.template" "$REPO/backend/.env.staging"
   # Rastgele güçlü bir şifre üret ve SECRET_KEY alanına yaz
