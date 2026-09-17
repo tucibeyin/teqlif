@@ -117,7 +117,7 @@ SERVICES=(teqlif teqlif-worker node_exporter promtail)
 for svc in "${SERVICES[@]}"; do
   # Eğer V1.4 içinde özel systemd klasörü açılırsa ordan okur, yoksa eski repodan okuyup sed ile V1.4'e çevirir.
   if [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$RESOURCES_DIR/.env.production|g" \
+    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/.env.production|g" \
       "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
