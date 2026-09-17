@@ -151,10 +151,11 @@ for svc in "${SERVICES[@]}"; do
 done
 
 echo "==> Redis (Edge) Güvenlik Yapılandırması..."
+REDIS_PASS=$(openssl rand -hex 16)
 if ! grep -q "^requirepass " /etc/redis/redis.conf; then
-  echo "requirepass TeqlifEdgeRedis2026!" | sudo tee -a /etc/redis/redis.conf
+  echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
 else
-  sudo sed -i "s/^requirepass .*/requirepass TeqlifEdgeRedis2026!/" /etc/redis/redis.conf
+  sudo sed -i "s/^requirepass .*/requirepass $REDIS_PASS/" /etc/redis/redis.conf
 fi
 sudo systemctl restart redis-server
 

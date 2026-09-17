@@ -178,10 +178,11 @@ sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS pg_tr
 sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS btree_gin;" || true
 
 echo "==> Redis (Staging) Güvenlik Yapılandırması..."
+REDIS_PASS=$(openssl rand -hex 16)
 if ! grep -q "^requirepass " /etc/redis/redis.conf; then
-  echo "requirepass TeqlifStagingRedis2026!" | sudo tee -a /etc/redis/redis.conf
+  echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
 else
-  sudo sed -i "s/^requirepass .*/requirepass TeqlifStagingRedis2026!/" /etc/redis/redis.conf
+  sudo sed -i "s/^requirepass .*/requirepass $REDIS_PASS/" /etc/redis/redis.conf
 fi
 sudo systemctl restart redis-server
 
@@ -217,6 +218,11 @@ if [[ ! -f "$REPO/backend/.env.staging" ]]; then
   # Oluşturulan DB şifresini yaz
   if [[ -n "${DB_PASS:-}" ]]; then
       sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://teqlif_staging:$DB_PASS@127.0.0.1:5432/teqlif_staging|g" "$REPO/backend/.env.staging"
+  fi
+  
+  # Oluşturulan Redis şifresini yaz
+  if [[ -n "${REDIS_PASS:-}" ]]; then
+      sed -i "s|^REDIS_URL=.*|REDIS_URL=redis://:$REDIS_PASS@127.0.0.1:6379/0|g" "$REPO/backend/.env.staging"
   fi
   
   # Redis URL fix (HELLO hatasını önlemek için)
