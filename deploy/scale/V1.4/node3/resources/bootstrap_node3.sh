@@ -12,8 +12,16 @@ PROMTAIL_VERSION="3.0.0"
 
 echo "==> REPO Root: $REPO"
 echo "==> apt paketleri..."
+# Eski pgdg kaynağı kaldığıysa temizle (postgresql purge sonrası)
+sudo rm -f /etc/apt/sources.list.d/pgdg.list 2>/dev/null || true
+# Grafana OSS apt kaynağı ekle (idempotent)
+if [[ ! -f /etc/apt/sources.list.d/grafana.list ]]; then
+  sudo mkdir -p /etc/apt/keyrings
+  wget -q -O - https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+fi
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server
+sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana
 
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
@@ -87,7 +95,7 @@ fi
 
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(
-  alertmanager livekit loki minio node_exporter prometheus promtail 
+  alertmanager grafana-server livekit loki minio node_exporter prometheus promtail redis-server
   teqlif-ai-proxy teqlif-staging teqlif-worker-critical-staging teqlif-worker-staging
 )
 
