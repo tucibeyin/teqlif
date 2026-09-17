@@ -19,6 +19,8 @@ echo "==> apt paketleri ve ana servisler (PostgreSQL, Redis)..."
 export DEBIAN_FRONTEND=noninteractive
 sudo apt update -q
 sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban postgresql postgresql-contrib redis-server apt-transport-https ca-certificates curl gnupg
+PG_VER=$(psql -V | grep -oE '[0-9]+' | head -1)
+sudo apt install -y "postgresql-${PG_VER}-pgvector" || echo "Uyarı: pgvector kurulamadı, manuel derleme (make) gerekebilir!"
 
 echo "==> ClickHouse kurulumu..."
 curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg --yes
@@ -133,6 +135,8 @@ echo "==> PostgreSQL Veritabanı teqlif yaratılıyor..."
 sudo -u postgres psql -c "CREATE USER teqlif WITH PASSWORD 'teqlif_db_pass';" 2>/dev/null || true
 sudo -u postgres psql -c "CREATE DATABASE teqlif OWNER teqlif;" 2>/dev/null || true
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE teqlif TO teqlif;" 2>/dev/null || true
+sudo -u postgres psql -d teqlif -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
+sudo -u postgres psql -d teqlif -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" 2>/dev/null || true
 
 echo "==> .env.production dosyası oluşturuluyor..."
 if [[ ! -f "$REPO/backend/.env.production" ]]; then
