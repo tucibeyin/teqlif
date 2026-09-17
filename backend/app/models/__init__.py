@@ -21,6 +21,7 @@ from .bid import Bid
 from .ad_campaign import AdCampaign
 from .analytics import AnalyticsEvent, UserInteraction
 from .category import Category
+from .subcategory import Subcategory
 from .state import State
 from .district import District
 from .category_field import CategoryField, FieldOption
