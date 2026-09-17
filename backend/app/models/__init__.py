@@ -23,6 +23,7 @@ from .analytics import AnalyticsEvent, UserInteraction
 from .category import Category
 from .subcategory import Subcategory
 from .country import Country
+from .translation import Translation
 from .state import State
 from .district import District
 from .category_field import CategoryField, FieldOption
