@@ -61,11 +61,17 @@ fi
 
 # ── Systemd Servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri (node_exporter, promtail)..."
-SERVICES=(node_exporter promtail nginx)
+SERVICES=(node_exporter promtail)
 for svc in "${SERVICES[@]}"; do
+  if [[ -f "$REPO/deploy/scale/V1.3/gateway/systemd/${svc}.service" ]]; then
+    sudo cp "$REPO/deploy/scale/V1.3/gateway/systemd/${svc}.service" "/tmp/${svc}.service"
+    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
+  fi
   sudo systemctl enable "$svc" 2>/dev/null || true
   sudo systemctl restart "$svc" 2>/dev/null || true
 done
+sudo systemctl enable nginx 2>/dev/null || true
+sudo systemctl restart nginx 2>/dev/null || true
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
