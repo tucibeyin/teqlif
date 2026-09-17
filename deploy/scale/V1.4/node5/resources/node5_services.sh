@@ -3,8 +3,8 @@
 # Kullanım: bash node5_services.sh <start|stop|restart|status>
 set -euo pipefail
 CMD="${1:-status}"
-# Core Node5 servisleri: teqlif (API), teqlif-worker (ARQ), exporter'lar ve veritabanları
-SERVICES=(teqlif teqlif-worker node_exporter promtail postgresql clickhouse-server redis-server)
+# Core Node5 servisleri: teqlif (API), teqlif-worker (ARQ), teqlif-worker-critical, exporter'lar ve veritabanları
+SERVICES=(teqlif teqlif-worker teqlif-worker-critical node_exporter promtail postgresql clickhouse-server redis-server)
 
 case "$CMD" in
   start|stop|restart)

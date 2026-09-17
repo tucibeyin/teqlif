@@ -113,7 +113,7 @@ fi
 
 # ── Systemd Servisleri (Dinamik Path Injector) ────────────────────────────────
 echo "==> systemd servisleri (V1.4 dinamik env referansları ile)..."
-SERVICES=(teqlif teqlif-worker node_exporter promtail)
+SERVICES=(teqlif teqlif-worker teqlif-worker-critical node_exporter promtail)
 
 # V1.3 systemd dosyalarını al, içlerindeki eski EnvironmentFile path'ini dinamik olarak V1.4'e çevir ve kur
 for svc in "${SERVICES[@]}"; do
