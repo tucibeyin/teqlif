@@ -53,7 +53,7 @@
 - `[x]` Görev 5.4: Üretilen tüm WireGuard Public Key'lerin `deploy/scale/V1.4/*/resources/wg0.conf` şablonlarında güncellenmesi ve ağın "Full-Mesh" (Herkes birbirini görür) olarak tüm sunucularda ayağa kaldırılması (Senkronizasyon).
 
 ## 🌍 Aşama 6: DNS ve SSL Sertifikasyonu
-- `[ ]` Görev 6.1: Cloudflare DNS A kayıtlarının `plan.md` "Faz 7" tablosuna uygun olarak Gateway (Proxied) ve Edge sunucular (DNS Only) için güncellenmesi.
+- `[x]` Görev 6.1: Cloudflare DNS A kayıtlarının `plan.md` "Faz 7" tablosuna uygun olarak Gateway (Proxied) ve Edge sunucular (DNS Only) için güncellenmesi.
 - `[x]` Görev 6.2: Gateway'de `certbot_gateway.sh` çalıştırılarak wildcard/Nginx sertifikalarının alınması.
 - `[ ]` Görev 6.3: Node1 ve Node4'te `certbot_nodeX.sh` çalıştırılarak Edge (LiveKit ve MinIO) sertifikalarının alınması.
 
