@@ -107,6 +107,36 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 
+echo "==> Prometheus & Alertmanager & Loki Binery Kurulumları..."
+PROMETHEUS_VERSION="2.54.1"
+ALERTMANAGER_VERSION="0.27.0"
+LOKI_VERSION="3.0.0"
+
+if ! command -v prometheus &> /dev/null; then
+  TMP=$(mktemp -d)
+  curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" | tar xz -C "$TMP"
+  sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/prometheus" /usr/local/bin/
+  sudo mv "$TMP/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool" /usr/local/bin/
+  rm -rf "$TMP"
+fi
+
+if ! command -v alertmanager &> /dev/null; then
+  TMP=$(mktemp -d)
+  curl -fsSL "https://github.com/prometheus/alertmanager/releases/download/v${ALERTMANAGER_VERSION}/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64.tar.gz" | tar xz -C "$TMP"
+  sudo mv "$TMP/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/alertmanager" /usr/local/bin/
+  sudo mv "$TMP/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/amtool" /usr/local/bin/
+  rm -rf "$TMP"
+fi
+
+if ! command -v loki &> /dev/null; then
+  TMP=$(mktemp -d)
+  curl -fsSL -o "$TMP/loki.zip" "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip"
+  unzip -q "$TMP/loki.zip" -d "$TMP"
+  sudo mv "$TMP/loki-linux-amd64" /usr/local/bin/loki
+  sudo chmod +x /usr/local/bin/loki
+  rm -rf "$TMP"
+fi
+
 echo "==> Yapılandırma Dosyaları (Prometheus, Loki, Alertmanager, LiveKit)..."
 sudo mkdir -p /etc/prometheus /etc/loki /etc/livekit /var/lib/alertmanager /var/lib/loki
 sudo cp "$RESOURCES_DIR/prometheus.yml" /etc/prometheus/prometheus.yml || true
