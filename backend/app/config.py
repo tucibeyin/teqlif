@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     brevo_sender_email: str = "noreply@teqlif.com"
     brevo_sender_name: str = "teqlif"
     # --- V1.4 EDGE MİMARİSİ (Dinamik Medya & Yayın) ---
-    edge_livekit_urls: list[str] = []
-    edge_minio_urls: list[str] = []
+    edge_livekit_urls: str | list[str] = []
+    edge_minio_urls: str | list[str] = []
     minio_storage_quota_percent: int = 80
     edge_metrics_interval_sec: int = 3
 
