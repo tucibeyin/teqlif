@@ -20,8 +20,10 @@ from app.core.task_queue import get_pool
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
-_receiver = WebhookReceiver(TokenVerifier(settings.livekit_api_key, settings.livekit_api_secret))
-
+if settings.livekit_api_key and settings.livekit_api_secret:
+    _receiver = WebhookReceiver(TokenVerifier(settings.livekit_api_key, settings.livekit_api_secret))
+else:
+    _receiver = None
 
 @router.api_route("/livekit", methods=["GET", "POST"], include_in_schema=False)
 async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
@@ -32,6 +34,10 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
         return {"status": "ok"}
 
     auth_header = request.headers.get("Authorization", "")
+    if not _receiver:
+        logger.error("LiveKit credentials not configured. Webhook rejected.")
+        raise UnauthorizedException()
+
     try:
         event = _receiver.receive(body.decode(), auth_header)
     except Exception:
