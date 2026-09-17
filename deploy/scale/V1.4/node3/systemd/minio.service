@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=tucibeyin
 Group=tucibeyin
-EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.staging
+EnvironmentFile=/var/www/teqlif.com/backend/.env.staging
 ExecStart=/usr/local/bin/minio server /var/lib/minio --address 127.0.0.1:9010 --console-address 127.0.0.1:9011
 Restart=always
 RestartSec=5

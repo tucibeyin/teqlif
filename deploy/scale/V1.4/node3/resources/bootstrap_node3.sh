@@ -109,6 +109,16 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 
+echo "==> Yapılandırma Dosyaları (Prometheus, Loki, Alertmanager, LiveKit)..."
+sudo mkdir -p /etc/prometheus /etc/loki /etc/livekit /var/lib/alertmanager /var/lib/loki
+sudo cp "$RESOURCES_DIR/prometheus.yml" /etc/prometheus/prometheus.yml || true
+sudo cp "$RESOURCES_DIR/prometheus-rules.yml" /etc/prometheus/prometheus-rules.yml || true
+sudo cp "$RESOURCES_DIR/loki-config.yml" /etc/loki/config.yml || true
+sudo cp "$RESOURCES_DIR/promtail-config.yml" /etc/promtail-config.yml || true
+sudo cp "$RESOURCES_DIR/livekit.yaml" /etc/livekit/livekit.yaml || true
+sudo chown -R "$USER:$USER" /etc/prometheus /etc/loki /var/lib/alertmanager /var/lib/loki
+sudo chown -R livekit:livekit /etc/livekit 2>/dev/null || true
+
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(
   alertmanager grafana-server livekit loki minio node_exporter prometheus promtail redis-server

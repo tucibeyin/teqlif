@@ -1,3 +1,7 @@
+# /etc/promtail-config.yml — node3
+# Scale V1.3: node3 kendi loglarını lokal Loki'ye gönderir (localhost:3100)
+# Sadece systemd-journal job'u — dosya bazlı job yok (Loki duplikasyon önlemi)
+
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
@@ -6,13 +10,15 @@ positions:
   filename: /var/lib/promtail/positions.yaml
 
 clients:
-  - url: http://10.10.0.2:3100/loki/api/v1/push
+  - url: http://localhost:3100/loki/api/v1/push
 
 scrape_configs:
-- job_name: system
-  static_configs:
-  - targets:
-      - localhost
-    labels:
-      job: varlogs
-      __path__: /var/log/*log
+  - job_name: systemd-journal
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+        node: node3
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: unit
