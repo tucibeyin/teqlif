@@ -24,6 +24,17 @@ echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
 
+# ── WireGuard (Mesh Network) ──────────────────────────────────────────────────
+echo "==> WireGuard ağı (Mesh) yapılandırılıyor..."
+if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
+  sudo mkdir -p /etc/wireguard
+  sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
+  sudo chmod 600 /etc/wireguard/wg0.conf
+  sudo systemctl enable --now wg-quick@wg0
+else
+  echo "Uyarı: wg0.conf bulunamadı, WireGuard ağı kurulamadı!"
+fi
+
 # ── UFW (Güvenlik Duvarı) Edge Profili ────────────────────────────────────────
 echo "==> UFW (Güvenlik Duvarı) Edge kuralları uygulanıyor..."
 sudo ufw --force reset
