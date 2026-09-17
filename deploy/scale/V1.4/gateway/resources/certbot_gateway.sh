@@ -5,12 +5,13 @@ set -euo pipefail
 
 DOMAIN="teqlif.com"
 API_DOMAIN="api.teqlif.com"
+API_STAGING_DOMAIN="api-staging.teqlif.com"
 STAGING_DOMAIN="staging.teqlif.com"
 EMAIL="tucibeyin@gmail.com"
 
 # 1. SSL Sertifikalarının Alınması
-echo "==> $DOMAIN, $API_DOMAIN ve $STAGING_DOMAIN için SSL sertifikaları alınıyor..."
-sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" -d "$API_DOMAIN" -d "$STAGING_DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect || echo "SSL alınamadı veya zaten mevcut."
+echo "==> $DOMAIN, $API_DOMAIN, $STAGING_DOMAIN ve $API_STAGING_DOMAIN için SSL sertifikaları alınıyor..."
+sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" -d "$API_DOMAIN" -d "$STAGING_DOMAIN" -d "$API_STAGING_DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect || echo "SSL alınamadı veya zaten mevcut."
 
 echo "==> Nginx test ediliyor ve yeniden başlatılıyor..."
 sudo nginx -t
