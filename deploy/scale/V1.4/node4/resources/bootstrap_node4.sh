@@ -17,7 +17,7 @@ echo "==> Resources Dir: $RESOURCES_DIR"
 # ── apt ───────────────────────────────────────────────────────────────────────
 echo "==> apt paketleri (Edge profili)..."
 sudo apt update -q
-sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban redis-server
+sudo apt install -y ufw python3.13-venv wireguard wireguard-tools unzip rsync fail2ban redis-server
 
 # ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."

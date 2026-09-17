@@ -38,13 +38,28 @@ echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
 
-# ── WireGuard (Mesh Network) ──────────────────────────────────────────────────
+# ── WireGuard (Mesh Network) ────────────────────────────────────────────
 echo "==> WireGuard ağı (Mesh) yapılandırılıyor..."
+# wireguard-tools wg gen key için şart
+sudo apt-get install -y -q wireguard-tools
 if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
   sudo mkdir -p /etc/wireguard
   sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
   sudo chmod 600 /etc/wireguard/wg0.conf
-  sudo systemctl enable --now wg-quick@wg0 || echo "Uyarı: WireGuard başlatılamadı. Lütfen wg0.conf içerisindeki PrivateKey/PublicKey kısımlarını doldurun!"
+
+  if grep -q "<NODE5_PRIVATE_KEY>" /etc/wireguard/wg0.conf; then
+    echo "==> Otomatik WireGuard Anahtarı Üretiliyor..."
+    PRIV_KEY=$(wg genkey)
+    PUB_KEY=$(echo "$PRIV_KEY" | wg pubkey)
+    sudo sed -i "s|<NODE5_PRIVATE_KEY>|$PRIV_KEY|" /etc/wireguard/wg0.conf
+    echo "================================================================="
+    echo " 🚨 DİKKAT: Node5 için YENİ WireGuard Public Key üretildi! 🚨"
+    echo " PUBLIC KEY: \"$PUB_KEY\""
+    echo " Lütfen bu anahtarı diğer sunucularda wg0.conf içindeki Node5 [Peer] kısmına kopyalayın!"
+    echo "================================================================="
+  fi
+
+  sudo systemctl enable --now wg-quick@wg0 || echo "Uyarı: WireGuard başlatılamadı (peer public key'ler henüz eksik olabilir)."
 else
   echo "Uyarı: wg0.conf bulunamadı, WireGuard ağı kurulamadı!"
 fi
