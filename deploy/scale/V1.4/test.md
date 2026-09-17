@@ -158,8 +158,8 @@
 **Amaç:** Backend refaktörleri bittikten sonra canlı sunucuların (SSH) V1.4 mimarisine, "Sıfır Veri Göçü" kuralına ve "Frontend Decoupling" stratejisine uygun şekilde geçmesini doğrulamak.
 
 **Test Adımları:**
-1. Node5, Node4 ve Node1'e SSH ile girilip `bootstrap` scriptlerinin hatasız çalıştığını onayla.
-2. Node1'deki eski verilerin taşınmadığını, sistemin sıfır veritabanı ve sıfır medya ile "Clean Start" yaptığını doğrula (Migration İptali).
-3. Gateway Nginx `teqlif.com.conf` devresi açıldığında; tarayıcıdan `teqlif.com` ve `staging.teqlif.com`'a girilince statik frontend'in Gateway'den sunulduğunu, `api.teqlif.com` ve `api-staging.teqlif.com` üzerinden ise Node5 ve Node3 API'lerine sorunsuz bağlanıldığını onayla.
+1. Node5, Node4 ve Node1'e SSH ile girilip `bootstrap` scriptlerinin hatasız çalıştığını onayla. (Node5 Test Edildi ✅)
+2. Node1'deki eski verilerin taşınmadığını, sistemin sıfır veritabanı ve sıfır medya ile "Clean Start" yaptığını doğrula (Migration İptali). (Migration İptal Edildi ✅)
+3. Gateway Nginx `teqlif.com.conf` devresi açıldığında; tarayıcıdan `teqlif.com` ve `staging.teqlif.com`'a girilince statik frontend'in Gateway'den sunulduğunu, `api.teqlif.com` ve `api-staging.teqlif.com` üzerinden ise Node5 ve Node3 API'lerine sorunsuz bağlanıldığını onayla. (Gateway proxy_pass konfigürasyonu tamamlandı ✅)
 
-**Durum:** ⏳ Faz 6 (Canlıya Geçiş) esnasında test edilecek.
+**Durum:** ⏳ Faz 6 (Canlıya Geçiş) esnasında tüm Node'lar tamamlandığında test edilecek. (Kısmen Tamamlandı)
