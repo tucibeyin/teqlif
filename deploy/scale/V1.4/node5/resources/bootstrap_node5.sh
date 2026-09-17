@@ -53,7 +53,7 @@ echo "==> WireGuard ağı (Mesh) yapılandırılıyor..."
 sudo apt-get install -y -q wireguard-tools
 if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
   sudo mkdir -p /etc/wireguard
-  sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
+  if [[ ! -f "/etc/wireguard/wg0.conf" ]]; then sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf; else echo "Mevcut wg0.conf korundu."; fi
   sudo chmod 600 /etc/wireguard/wg0.conf
 
   if grep -q "<NODE5_PRIVATE_KEY>" /etc/wireguard/wg0.conf; then

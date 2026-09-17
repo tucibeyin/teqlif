@@ -42,7 +42,7 @@ echo "==> WireGuard ağı (Mesh) yapılandırılıyor..."
 if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
   sudo mkdir -p /etc/wireguard
   if [[ ! -f "/etc/wireguard/wg0.conf" ]]; then
-    sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf
+    if [[ ! -f "/etc/wireguard/wg0.conf" ]]; then sudo cp "$RESOURCES_DIR/wg0.conf" /etc/wireguard/wg0.conf; else echo "Mevcut wg0.conf korundu."; fi
     sudo chmod 600 /etc/wireguard/wg0.conf
   else
     echo "==> Mevcut wg0.conf bulundu, üzerine yazılmıyor (Private Key korundu)."
