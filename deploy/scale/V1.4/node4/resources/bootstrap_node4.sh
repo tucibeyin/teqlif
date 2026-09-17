@@ -69,6 +69,8 @@ sudo ufw allow 9010/tcp     # MinIO Standalone Web/API
 sudo ufw allow 7880/tcp     # LiveKit TCP
 sudo ufw allow 50000:60000/udp # LiveKit WebRTC UDP
 sudo ufw allow 51820/udp    # WireGuard
+sudo ufw allow in on wg0 to any 2>/dev/null || echo "Uyarı: wg0 henüz aktif olmayabilir."
+
 sudo ufw --force enable
 
 # ── Swap Alanı (8GB - Edge Media/Storage Buffer) ──────────────────────────────

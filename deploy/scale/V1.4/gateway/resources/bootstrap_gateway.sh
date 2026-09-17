@@ -35,6 +35,8 @@ sudo ufw allow 22/tcp       # SSH
 sudo ufw allow 80/tcp       # HTTP
 sudo ufw allow 443/tcp      # HTTPS
 sudo ufw allow 51820/udp    # WireGuard
+sudo ufw allow in on wg0 to any 2>/dev/null || echo "Uyarı: wg0 henüz aktif olmayabilir."
+
 sudo ufw --force enable
 
 # ── WireGuard (Mesh Network) ──────────────────────────────────────────────────
