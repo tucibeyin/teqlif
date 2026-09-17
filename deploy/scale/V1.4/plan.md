@@ -139,7 +139,8 @@ Aşağıdaki tabloya göre Cloudflare üzerindeki DNS (A kayıtları) güncellem
 | :--- | :--- | :--- | :--- | :--- |
 | A | `teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Statik Web Frontend (Gateway'den sunulur) |
 | A | `api.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Backend API (Node5'e proxy edilir) |
-| A | `staging.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Staging |
+| A | `staging.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Staging Frontend (Gateway'den sunulur) |
+| A | `api-staging.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Staging Backend (Node3'e proxy edilir) |
 
 ### 2. Edge 1 - Node1 (DNS Only)
 LiveKit WebRTC UDP trafiği ve yüksek boyutlu MinIO veri akışı için Cloudflare proxy'si (Turuncu bulut) **KESİNLİKLE KAPALI** (Gri bulut) olmalıdır.
@@ -157,9 +158,17 @@ Yeni kurulan Node4 Edge sunucusu.
 | A | `live2.teqlif.com` | `51.75.74.124` | ☁️ DNS Only (Gri) | Edge 2 LiveKit adresi |
 | A | `minio2.teqlif.com` | `51.75.74.124` | ☁️ DNS Only (Gri) | Edge 2 MinIO adresi |
 
+### 4. Staging - Node3 (DNS Only)
+Staging ortamının Edge (Medya ve Depolama) kayıtları.
+
+| Kayıt Tipi | İsim | Hedef IPv4 (Node3 IP) | Proxy Durumu | Not |
+| :--- | :--- | :--- | :--- | :--- |
+| A | `live-staging.teqlif.com` | `5.249.165.10` | ☁️ DNS Only (Gri) | Staging LiveKit adresi |
+| A | `minio-staging.teqlif.com` | `5.249.165.10` | ☁️ DNS Only (Gri) | Staging MinIO adresi |
+
 > [!WARNING]  
 > **Silinecek / Değişecek Eski Kayıtlar:**
-> V1.3'ten kalan `live.teqlif.com`, `live-staging.teqlif.com`, `uploads.teqlif.com`, `uploads-staging.teqlif.com` ve `minio.teqlif.com` kayıtları karmaşayı önlemek için Cloudflare'dan **SİLİNMELİDİR**. 
+> V1.3'ten kalan `live.teqlif.com`, `uploads.teqlif.com`, `minio.teqlif.com` ve `uploads-staging.teqlif.com` kayıtları karmaşayı önlemek için Cloudflare'dan **SİLİNMELİDİR**. 
 > V1.4 Orchestrator'u artık istemcilere tek bir adres değil, dinamik olarak `live1`, `live2`, `minio1`, `minio2` gibi Edge spesifik adresler verecektir.
 
 ---

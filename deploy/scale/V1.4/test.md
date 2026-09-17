@@ -80,7 +80,7 @@
 **Test Adımları (Review):**
 1. `deploy/scale/V1.4/plan.md` dosyasının en altındaki **Faz 7: Cloudflare DNS Yapılandırması** bölümünü aç ve incele.
 2. Gateway için `teqlif.com` (Frontend statik sunumu) ve `api.teqlif.com` (Backend proxy) yönlendirmelerinin **Proxied** olarak `94.16.105.135` (Gateway) hedefine ayarlandığını doğrula.
-3. Edge sunucuları (Node1 ve Node4) için sırasıyla `live1`/`minio1` ve `live2`/`minio2` olarak her makineye özel yeni subdomain kayıtlarının açıldığını ve bunların Cloudflare Proxy'den bağımsız (**DNS Only**) ayarlandığını doğrula.
+3. Edge sunucuları (Node1, Node4) ve Staging (Node3) için sırasıyla `live1`/`minio1`, `live2`/`minio2`, `live-staging`/`minio-staging` olarak özel subdomain kayıtlarının açıldığını ve bunların Cloudflare Proxy'den bağımsız (**DNS Only**) ayarlandığını doğrula.
 4. Eski, tekil (single-point-of-failure) `live.teqlif.com` gibi kayıtların uyarı blokunda silinecekler listesine eklendiğini kontrol et.
 5. `plan.md` içerisindeki **Faz 8: SSL (Sertifika) Yönetimi** bölümünü kontrol et, Node1 ve Node4'te standalone certbot alınabilmesi için scriptlerin (`certbot_node1.sh`, `certbot_node4.sh`) eklendiğini onayla.
 6. `node1_cleanup.sh` içerisine eski monolitik yapının SSL kalıntılarını silmek için `/etc/letsencrypt` kaldırma komutunun eklendiğini doğrula.
@@ -160,6 +160,6 @@
 **Test Adımları:**
 1. Node5, Node4 ve Node1'e SSH ile girilip `bootstrap` scriptlerinin hatasız çalıştığını onayla.
 2. Node1'deki eski verilerin taşınmadığını, sistemin sıfır veritabanı ve sıfır medya ile "Clean Start" yaptığını doğrula (Migration İptali).
-3. Gateway Nginx `teqlif.com.conf` devresi açıldığında; tarayıcıdan `teqlif.com`'a girilince frontend'in Gateway'den sunulduğunu, mobil uygulamanın ise `api.teqlif.com` üzerinden Node5'e sorunsuz bağlandığını onayla.
+3. Gateway Nginx `teqlif.com.conf` devresi açıldığında; tarayıcıdan `teqlif.com` ve `staging.teqlif.com`'a girilince statik frontend'in Gateway'den sunulduğunu, `api.teqlif.com` ve `api-staging.teqlif.com` üzerinden ise Node5 ve Node3 API'lerine sorunsuz bağlanıldığını onayla.
 
 **Durum:** ⏳ Faz 6 (Canlıya Geçiş) esnasında test edilecek.
