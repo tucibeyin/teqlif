@@ -128,6 +128,32 @@ for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
 done
 
+# ── Veritabanı ve Çevresel Değişken (Env) Hazırlığı ───────────────────────────
+echo "==> PostgreSQL Veritabanı teqlif yaratılıyor..."
+sudo -u postgres psql -c "CREATE USER teqlif WITH PASSWORD 'teqlif_db_pass';" 2>/dev/null || true
+sudo -u postgres psql -c "CREATE DATABASE teqlif OWNER teqlif;" 2>/dev/null || true
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE teqlif TO teqlif;" 2>/dev/null || true
+
+echo "==> .env.production dosyası oluşturuluyor..."
+if [[ ! -f "$REPO/.env.production" ]]; then
+  cp "$RESOURCES_DIR/.env.production.template" "$REPO/.env.production"
+  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:teqlif_db_pass@localhost/teqlif\"|" "$REPO/.env.production"
+  sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://localhost:6379\"|" "$REPO/.env.production"
+  echo ".env.production otomatik ayarlandı."
+fi
+
+echo "==> Alembic Migration çalıştırılıyor..."
+cd "$REPO/backend" || true
+export ENV=production
+"$VENV/bin/alembic" upgrade head || echo "Uyarı: Alembic migration başarısız oldu."
+cd "$REPO" || true
+
+# ── Backend Servislerini Başlat ───────────────────────────────────────────────
+echo "==> Servisler başlatılıyor..."
+for svc in "${SERVICES[@]}"; do
+  sudo systemctl restart "$svc" 2>/dev/null || true
+done
+
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
 sudo apt-get autoremove -y -q
