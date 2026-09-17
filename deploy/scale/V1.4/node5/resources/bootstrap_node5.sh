@@ -155,11 +155,33 @@ sudo -u postgres psql -d teqlif -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" 2>/
 echo "==> .env.production dosyası oluşturuluyor..."
 if [[ ! -f "$REPO/backend/.env.production" ]]; then
   cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
-  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:teqlif_db_pass@localhost/teqlif\"|" "$REPO/backend/.env.production"
-  sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://localhost:6379\"|" "$REPO/backend/.env.production"
+  
+  # Veritabanı Şifresi (Otomatik oluşturulur)
+  DB_PASS=$(openssl rand -hex 16)
+  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:$DB_PASS@localhost/teqlif\"|" "$REPO/backend/.env.production"
+  sudo -u postgres psql -c "ALTER USER teqlif WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
+
+  # Redis Şifresi (Otomatik oluşturulur)
+  REDIS_PASS=$(openssl rand -hex 16)
+  sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://:$REDIS_PASS@10.10.0.5:6379/0\"|" "$REPO/backend/.env.production"
+  
+  # Nonlocal bind (WireGuard IP'si henüz yokken Redis'in çökmesini engeller)
+  sudo sysctl -w net.ipv4.ip_nonlocal_bind=1
+  echo "net.ipv4.ip_nonlocal_bind = 1" | sudo tee -a /etc/sysctl.d/99-teqlif.conf
+  
+  # Redis Config Güncellemesi (Bind ve Requirepass)
+  sudo sed -i 's/^bind 127.0.0.1 -::1/bind 127.0.0.1 10.10.0.5 -::1/' /etc/redis/redis.conf
+  if ! grep -q "^requirepass " /etc/redis/redis.conf; then
+    echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
+  else
+    sudo sed -i "s/^requirepass .*/requirepass $REDIS_PASS/" /etc/redis/redis.conf
+  fi
+  sudo systemctl restart redis-server
+
+  # Secret Key
   SECRET=$(openssl rand -hex 32)
   sed -i "s|^SECRET_KEY=.*|SECRET_KEY=\"$SECRET\"|" "$REPO/backend/.env.production"
-  echo ".env.production otomatik ayarlandı."
+  echo ".env.production ve Redis güvenlik ayarları otomatik yapılandırıldı."
 fi
 
 echo "==> Veritabanı tabloları ve göç (Migration) ayarları yapılıyor..."
