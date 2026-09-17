@@ -117,7 +117,7 @@ SERVICES=(teqlif teqlif-worker node_exporter promtail)
 for svc in "${SERVICES[@]}"; do
   # Eğer V1.4 içinde özel systemd klasörü açılırsa ordan okur, yoksa eski repodan okuyup sed ile V1.4'e çevirir.
   if [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/.env.production|g" \
+    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
       "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
@@ -135,10 +135,10 @@ sudo -u postgres psql -c "CREATE DATABASE teqlif OWNER teqlif;" 2>/dev/null || t
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE teqlif TO teqlif;" 2>/dev/null || true
 
 echo "==> .env.production dosyası oluşturuluyor..."
-if [[ ! -f "$REPO/.env.production" ]]; then
-  cp "$RESOURCES_DIR/.env.production.template" "$REPO/.env.production"
-  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:teqlif_db_pass@localhost/teqlif\"|" "$REPO/.env.production"
-  sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://localhost:6379\"|" "$REPO/.env.production"
+if [[ ! -f "$REPO/backend/.env.production" ]]; then
+  cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
+  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:teqlif_db_pass@localhost/teqlif\"|" "$REPO/backend/.env.production"
+  sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://localhost:6379\"|" "$REPO/backend/.env.production"
   echo ".env.production otomatik ayarlandı."
 fi
 
