@@ -6,6 +6,7 @@ Import izolasyonu: database.py / redis_client.py / LiveKit / MinIO import edilme
 node1'deki main.py bu dosyayı import etmez; node2'de teqlif.service kurulu değildir.
 """
 from contextlib import asynccontextmanager
+import sentry_sdk
 
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
@@ -31,8 +32,15 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+# --- SENTRY ENTEGRASYONU ---
+if settings.sentry_backend_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_backend_dsn,
+        traces_sample_rate=0.05,
+        profiles_sample_rate=0.05,
+    )
 
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/generate")
 async def generate(
