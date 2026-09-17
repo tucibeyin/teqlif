@@ -145,7 +145,7 @@ sudo cp "$RESOURCES_DIR/alertmanager.yml.template" /etc/alertmanager/alertmanage
 sudo cp "$RESOURCES_DIR/loki-config.yml" /etc/loki/config.yml || true
 sudo cp "$RESOURCES_DIR/promtail-config.yml" /etc/promtail-config.yml || true
 sudo cp "$RESOURCES_DIR/livekit.yaml" /etc/livekit/livekit.yaml || true
-sudo chown -R "$USER:$USER" /etc/prometheus /etc/loki /etc/alertmanager /var/lib/alertmanager /var/lib/loki /var/lib/prometheus
+sudo chown -R "${SUDO_USER:-$USER}:${SUDO_USER:-$USER}" /etc/prometheus /etc/loki /etc/alertmanager /var/lib/alertmanager /var/lib/loki /var/lib/prometheus
 sudo chown -R livekit:livekit /etc/livekit 2>/dev/null || true
 
 # ── LiveKit Kurulumu ──────────────────────────────────────────────────────────
