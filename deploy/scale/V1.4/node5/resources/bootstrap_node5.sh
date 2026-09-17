@@ -31,6 +31,7 @@ PG_VER=$(psql -V | grep -oE '[0-9]+' | head -1)
 sudo apt install -y "postgresql-${PG_VER}-pgvector" || echo "Uyarı: pgvector kurulamadı, manuel derleme (make) gerekebilir!"
 
 echo "==> ClickHouse kurulumu..."
+# GPG anahtarını her seferinde tazele (rotasyon/süre dolumu önlemi)
 curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg --yes
 echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" | sudo tee /etc/apt/sources.list.d/clickhouse.list
 sudo apt update -q
