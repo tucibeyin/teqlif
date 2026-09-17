@@ -20,6 +20,6 @@ sudo systemctl reload nginx
 echo "=============================================="
 echo " V1.4 Gateway Trafik Yönlendirmesi Tamamlandı."
 echo " API istekleri -> Node5 (10.10.0.5:8000)"
-echo " Staging istekleri -> Node3 (10.10.0.3:8000)"
+echo " Staging istekleri -> Node3 (10.10.0.4:8000)"
 echo " Canlı Medya (Bypass) -> Node1 & Node4"
 echo "=============================================="
