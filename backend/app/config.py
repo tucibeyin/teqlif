@@ -78,6 +78,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=os.environ.get("TEQLIF_ENV_FILE", ".env.production"),
+        env_ignore_empty=True,
         extra="ignore"
     )
 
