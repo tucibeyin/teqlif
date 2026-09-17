@@ -1,0 +1,23 @@
+[Unit]
+Description=Alertmanager — node3
+After=network.target prometheus.service
+
+[Service]
+Type=simple
+User=tucibeyin
+EnvironmentFile=/var/www/teqlif.com/deploy/scale/resources/node3/.env.production
+ExecStartPre=/bin/bash -c 'envsubst < /var/www/teqlif.com/deploy/scale/V1.3/node3/alertmanager.yml.template > /var/lib/alertmanager/alertmanager.yml'
+ExecStart=/usr/local/bin/alertmanager \
+    --config.file=/var/lib/alertmanager/alertmanager.yml \
+    --storage.path=/var/lib/alertmanager \
+    --web.listen-address=localhost:9093
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/alertmanager
+
+[Install]
+WantedBy=multi-user.target

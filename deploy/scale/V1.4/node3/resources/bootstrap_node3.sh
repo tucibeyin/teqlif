@@ -112,7 +112,7 @@ SERVICES=(
 )
 
 for svc in "${SERVICES[@]}"; do
-  if [[ -f "$REPO/deploy/scale/V1.3/node3/systemd/${svc}.service" ]]; then
+  if [[ -f "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" ]]; then
     # Staging servisleri için .env.staging, AI proxy için .env.production kullan
     if [[ "$svc" == *"staging"* ]]; then
       ENV_FILE="$REPO/backend/.env.staging"
@@ -120,7 +120,7 @@ for svc in "${SERVICES[@]}"; do
       ENV_FILE="$REPO/backend/.env.production"
     fi
     sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$ENV_FILE|g" \
-      "$REPO/deploy/scale/V1.3/node3/systemd/${svc}.service" > "/tmp/${svc}.service"
+      "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
 done
