@@ -43,6 +43,6 @@
 - `[x]` `teqlif` servisinin `Active (running)` durumuna getirilmesi ve Node5 entegrasyonunun tamamlanması. (Commit: 72cd6c91, Date: 2026-09-17)
 
 - `[x]` Görev 4.2: Node1'deki (Eski) verilerin (`pg_dump`, MinIO dosyaları) göçünün **İPTAL EDİLMESİ** — Sistem sıfırdan kurulum (No Migration) kuralıyla baştan kurulacak. (Commit: -, Date: 2026-09-17)
-- `[/]` Görev 4.3: Node4'ün (Yeni Edge) `bootstrap_node4.sh` ile tamamen formatlanarak devreye alınması (LiveKit, Local Redis, %80 Quota MinIO, edge-metrics-agent). (Commit: 2026fa30)
-- `[ ]` Görev 4.4: Node1'in üzerindeki ağır yüklerden arındırılarak `bootstrap_node1.sh` (V1.4) ile Edge rolüne (Node4'ün ikizi) formatlanması.
+- `[x]` Görev 4.3: Node4'ün (Yeni Edge) `bootstrap_node4.sh` ile tamamen formatlanarak devreye alınması (LiveKit, Local Redis, %80 Quota MinIO, edge-metrics-agent). (Commit: 2026fa30)
+- `[/]` Görev 4.4: Node1'in üzerindeki ağır yüklerden arındırılarak `bootstrap_node1.sh` (V1.4) ile Edge rolüne (Node4'ün ikizi) formatlanması.
 - `[x]` Görev 4.5: Gateway `teqlif.com.conf` ayarlarının güncellenmesi: `teqlif.com` isteklerinin Gateway üzerinden `/var/www/teqlif.com/frontend` dizininden statik sunulması, `api.teqlif.com` isteklerinin ise Node5'e (FastAPI) proxy edilmesi (Decoupling). (Commit: f0dbf30, Date: 2026-09-17)
