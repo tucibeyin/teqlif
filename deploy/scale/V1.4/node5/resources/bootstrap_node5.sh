@@ -196,7 +196,7 @@ if [[ ! -f "$REPO/backend/.env.production" ]]; then
   
   # Redis Config Güncellemesi (Bind ve Requirepass)
   sudo sed -i 's/^bind 127.0.0.1 -::1/bind 127.0.0.1 10.10.0.5 -::1/' /etc/redis/redis.conf
-  if ! grep -q "^requirepass " /etc/redis/redis.conf; then
+  if ! sudo grep -q "^requirepass " /etc/redis/redis.conf; then
     echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
   else
     sudo sed -i "s/^requirepass .*/requirepass $REDIS_PASS/" /etc/redis/redis.conf

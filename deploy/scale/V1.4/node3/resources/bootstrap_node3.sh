@@ -179,7 +179,7 @@ sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS btree
 
 echo "==> Redis (Staging) Güvenlik Yapılandırması..."
 REDIS_PASS=$(openssl rand -hex 16)
-if ! grep -q "^requirepass " /etc/redis/redis.conf; then
+if ! sudo grep -q "^requirepass " /etc/redis/redis.conf; then
   echo "requirepass $REDIS_PASS" | sudo tee -a /etc/redis/redis.conf
 else
   sudo sed -i "s/^requirepass .*/requirepass $REDIS_PASS/" /etc/redis/redis.conf
