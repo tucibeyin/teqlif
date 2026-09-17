@@ -49,11 +49,11 @@ if [[ -z "${MINIO_ROOT_PASSWORD:-}" || -z "${LIVEKIT_API_SECRET:-}" ]]; then
     exit 1
 fi
 
-# SSL Sertifika Yolları
+# SSL Sertifika Yolları (Certbot tek bir sertifika oluşturup ilk domainin adıyla kaydeder)
 CERT_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/fullchain.pem"
 KEY_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/privkey.pem"
-MINIO_CERT_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/fullchain.pem"
-MINIO_KEY_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/privkey.pem"
+MINIO_CERT_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/fullchain.pem"
+MINIO_KEY_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/privkey.pem"
 
 # 1. MinIO Kurulumu (MinIO artık hazır binary sunmadığı için Go ile derliyoruz)
 echo "==> Go (Golang) kontrol ediliyor..."
