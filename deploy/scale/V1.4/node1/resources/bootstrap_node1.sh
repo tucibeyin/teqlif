@@ -40,7 +40,7 @@ if [[ -f "$RESOURCES_DIR/wg0.conf" ]]; then
     sudo sed -i "s|<NODE1_PRIVATE_KEY>|$PRIV_KEY|" /etc/wireguard/wg0.conf
     echo "=================================================================="
     echo " 🚨 DİKKAT: Node1 için YENİ WireGuard Public Key üretildi! 🚨"
-    echo " PUBLIC KEY: $PUB_KEY"
+    echo " PUBLIC KEY: \"$PUB_KEY\""
     echo " Lütfen bu anahtarı diğer sunucularda (Node2, Node3, Node4, Node5, Gateway)"
     echo " wg0.conf içindeki Node1 [Peer] kısmına kopyalamayı unutmayın!"
     echo "=================================================================="
