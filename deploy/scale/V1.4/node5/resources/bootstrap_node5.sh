@@ -182,7 +182,25 @@ if [[ ! -f "$REPO/backend/.env.production" ]]; then
   # Secret Key
   SECRET=$(openssl rand -hex 32)
   sed -i "s|^SECRET_KEY=.*|SECRET_KEY=\"$SECRET\"|" "$REPO/backend/.env.production"
-  echo ".env.production ve Redis güvenlik ayarları otomatik yapılandırıldı."
+  
+  # --- İç Küme Sırları (Cluster Secrets) ---
+  # Node5 (Core) master olarak bu şifreleri üretir.
+  # Edge ve Proxy node'ları kurulurken bu şifreler buradan kopyalanacaktır.
+  
+  LK_KEY=$(openssl rand -hex 10)
+  LK_SEC=$(openssl rand -hex 20)
+  sed -i "s|^LIVEKIT_API_KEY=.*|LIVEKIT_API_KEY=\"$LK_KEY\"|" "$REPO/backend/.env.production"
+  sed -i "s|^LIVEKIT_API_SECRET=.*|LIVEKIT_API_SECRET=\"$LK_SEC\"|" "$REPO/backend/.env.production"
+
+  MINIO_ACC=$(openssl rand -hex 10)
+  MINIO_SEC=$(openssl rand -hex 20)
+  sed -i "s|^MINIO_ACCESS_KEY=.*|MINIO_ACCESS_KEY=\"$MINIO_ACC\"|" "$REPO/backend/.env.production"
+  sed -i "s|^MINIO_SECRET_KEY=.*|MINIO_SECRET_KEY=\"$MINIO_SEC\"|" "$REPO/backend/.env.production"
+
+  AI_PROXY_TOK=$(openssl rand -hex 16)
+  sed -i "s|^AI_PROXY_INTERNAL_TOKEN=.*|AI_PROXY_INTERNAL_TOKEN=\"$AI_PROXY_TOK\"|" "$REPO/backend/.env.production"
+
+  echo ".env.production ve tüm cluster güvenlik ayarları (DB, Redis, LiveKit, MinIO, AI) otomatik yapılandırıldı."
 fi
 
 echo "==> Veritabanı tabloları ve göç (Migration) ayarları yapılıyor..."
