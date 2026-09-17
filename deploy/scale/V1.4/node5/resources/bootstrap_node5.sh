@@ -89,9 +89,10 @@ fi
 "$VENV/bin/pip" install -r "$RESOURCES_DIR/node5_production_requirements.txt"
 
 # ── Log ve Konum Dizinleri ────────────────────────────────────────────────────
-echo "==> Log ve Promtail dizinleri..."
-sudo mkdir -p /var/log/teqlif /var/lib/promtail
-sudo chown "$USER:$USER" /var/log/teqlif /var/lib/promtail
+echo "==> Log, Promtail ve Upload dizinleri..."
+sudo mkdir -p /var/log/teqlif /var/lib/promtail /var/www/teqlif.com/uploads
+sudo chown -R "$USER:$USER" /var/www/teqlif.com
+sudo chown "$USER:$USER" /var/log/teqlif /var/lib/promtail /var/www/teqlif.com/uploads
 if [[ ! -L "$REPO/logs" ]]; then
   ln -s /var/log/teqlif "$REPO/logs"
 fi
