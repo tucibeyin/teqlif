@@ -12,6 +12,14 @@ NODE_EXPORTER_VERSION="1.8.2"
 PROMTAIL_VERSION="3.0.0"
 
 echo "==> REPO Root: $REPO"
+# ── Git Dizin Sahipliği Düzeltmesi ───────────────────────────────────────────
+# sudo ile çalıştırıldığında .git sahipliği root'a geçebilir; düzelt.
+REPO_OWNER=$(stat -c '%U' "$REPO" 2>/dev/null || echo "tucibeyin")
+if [[ "$(stat -c '%U' "$REPO/.git" 2>/dev/null)" != "$REPO_OWNER" ]]; then
+  echo "==> .git dizin sahipliği düzeltiliyor..."
+  sudo chown -R "$REPO_OWNER:$REPO_OWNER" "$REPO/.git"
+fi
+
 echo "==> Resources Dir: $RESOURCES_DIR"
 
 # ── apt & Veritabanı Kurulumları ──────────────────────────────────────────────
