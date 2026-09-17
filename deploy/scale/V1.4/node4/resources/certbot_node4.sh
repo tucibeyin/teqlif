@@ -56,18 +56,21 @@ MINIO_CERT_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/fullchain.pem"
 MINIO_KEY_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/privkey.pem"
 
 # 1. MinIO Kurulumu (MinIO artık hazır binary sunmadığı için Go ile derliyoruz)
-echo "==> MinIO kaynak koddan derleniyor (Bu işlem 1-2 dakika sürebilir)..."
+echo "==> Go (Golang) kontrol ediliyor..."
 if ! command -v go &> /dev/null; then
     echo "==> Go (Golang) indiriliyor..."
-    wget --show-progress -q https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+    sudo apt-get update && sudo apt-get install -y curl
+    curl -L -O https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
     sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
     rm go1.24.0.linux-amd64.tar.gz
 fi
 export PATH=$PATH:/usr/local/go/bin
 
 # GOPATH ayarla ve derle
+echo "==> MinIO kaynak koddan derleniyor (Bu işlem 1-2 dakika sürebilir)..."
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOPATH/bin
+export CGO_ENABLED=0
 go install github.com/minio/minio@latest
 
 sudo mv $GOPATH/bin/minio /usr/local/bin/
