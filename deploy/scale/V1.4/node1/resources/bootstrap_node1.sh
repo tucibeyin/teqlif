@@ -92,6 +92,8 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 
+sudo cp "$RESOURCES_DIR/promtail-config.yml" /etc/promtail-config.yml 2>/dev/null || true
+
 # ── Systemd Servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri (V1.4 dinamik env referansları ile)..."
 SERVICES=(node_exporter promtail)
