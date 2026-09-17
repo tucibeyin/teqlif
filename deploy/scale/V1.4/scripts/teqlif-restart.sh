@@ -74,8 +74,24 @@ for svc in $SERVICES_LIST; do
     fi
 done
 
-# Servislerin oturması için kısa bir bekleme
-sleep 2
+# Servislerin oturması için dinamik bekleme (En fazla 10 saniye)
+echo -ne "\n  ${CYAN}Tüm servislerin hazır duruma gelmesi bekleniyor... ${RESET}"
+for i in {1..10}; do
+    activating=0
+    for svc in $SERVICES_LIST; do
+        state=$(systemctl show -p ActiveState "$svc" | cut -d= -f2)
+        if [[ "$state" == "activating" ]]; then
+            activating=1
+            break
+        fi
+    done
+    if [[ $activating -eq 0 ]]; then
+        break
+    fi
+    echo -ne "."
+    sleep 1
+done
+echo -e " Bitti."
 
 # ── 5. Gelişmiş Raporlama (Dashboard) ──
 echo -e "\n${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}"
