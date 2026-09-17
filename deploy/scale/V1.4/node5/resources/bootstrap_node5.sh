@@ -139,6 +139,8 @@ if [[ ! -f "$REPO/backend/.env.production" ]]; then
   cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
   sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:teqlif_db_pass@localhost/teqlif\"|" "$REPO/backend/.env.production"
   sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://localhost:6379\"|" "$REPO/backend/.env.production"
+  SECRET=$(openssl rand -hex 32)
+  sed -i "s|^SECRET_KEY=.*|SECRET_KEY=\"$SECRET\"|" "$REPO/backend/.env.production"
   echo ".env.production otomatik ayarlandı."
 fi
 
