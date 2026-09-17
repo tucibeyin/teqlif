@@ -34,6 +34,20 @@ echo "=========================================================="
 # Sertifikalar alındığına göre Edge servislerini (MinIO & LiveKit) kur
 echo "==> Edge servisleri otomatik kuruluyor..."
 WG_IP="10.10.0.6"
+ENV_FILE="/var/www/teqlif.com/backend/.env.production"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "HATA: $ENV_FILE bulunamadı! Lütfen önce .env dosyanızı oluşturun."
+    exit 1
+fi
+
+source "$ENV_FILE"
+
+if [[ -z "${MINIO_ROOT_PASSWORD:-}" || -z "${LIVEKIT_API_SECRET:-}" ]]; then
+    echo "HATA: .env.production dosyasında MINIO_ROOT_PASSWORD veya LIVEKIT_API_SECRET eksik!"
+    echo "Lütfen /var/www/teqlif.com/backend/.env.production dosyasına güçlü şifreler tanımlayın ve tekrar çalıştırın."
+    exit 1
+fi
 
 # SSL Sertifika Yolları
 CERT_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/fullchain.pem"
@@ -64,8 +78,8 @@ After=network.target
 [Service]
 User=tucibeyin
 Group=tucibeyin
-Environment="MINIO_ROOT_USER=admin"
-Environment="MINIO_ROOT_PASSWORD=teqlif_minio_admin"
+Environment="MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}"
+Environment="MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}"
 Environment="MINIO_SERVER_URL=https://$DOMAIN_MINIO:9010"
 ExecStart=/usr/local/bin/minio server /var/lib/minio --address $WG_IP:9010 --console-address $WG_IP:9011 --certs-dir $MINIO_CERTS_DIR
 Restart=always
@@ -102,7 +116,7 @@ turn:
   udp_port: 3478
 
 keys:
-  teqlif_livekit_key: "teqlif_livekit_secret_123!"
+  ${LIVEKIT_API_KEY:-devkey}: "${LIVEKIT_API_SECRET}"
 
 logging:
   level: info
