@@ -146,8 +146,17 @@ if _is_reachable 5; then
   done
 fi
 
-# ── 3. HTTP ENDPOINT SAĞLIĞI ───────────────────────────────────────────────────
-header "3. HTTP Endpoint Sağlığı"
+# ── 3. AĞ & HTTP ENDPOINT SAĞLIĞI ──────────────────────────────────────────────
+header "3. Ağ & HTTP Endpoint Sağlığı"
+
+_ping_ok() {
+  local label="$1" host="$2"
+  if ping -c 2 -W 2 "$host" >/dev/null 2>&1; then
+    pass "$label: $host (Ping OK)"
+  else
+    fail "$label: $host (Ping FAIL)"
+  fi
+}
 
 _curl_ok() {
   local label="$1" url="$2"
@@ -160,6 +169,10 @@ _curl_ok() {
     fail "$label: $url → HTTP $http_code"
   fi
 }
+
+_ping_ok "public alan adı" "teqlif.com"
+_ping_ok "staging alan adı" "staging.teqlif.com"
+
 
 _curl_ok "gateway public"  "https://teqlif.com/api/health"
 _curl_ok "livekit edge1"   "https://live1.teqlif.com/"
