@@ -186,8 +186,8 @@ if [[ ! -f "$REPO/backend/.env.production" ]]; then
   sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql+asyncpg://teqlif:$DB_PASS@localhost/teqlif\"|" "$REPO/backend/.env.production"
   sudo -u postgres psql -c "ALTER USER teqlif WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
 
-  # Redis Şifresi (Otomatik oluşturulur)
-  REDIS_PASS=$(openssl rand -hex 16)
+  # Redis Şifresi (Sabit ve Güçlü - Node2 ile Ortak)
+  REDIS_PASS="TeqlifCoreRedis2026!"
   sed -i "s|^REDIS_URL=.*|REDIS_URL=\"redis://:$REDIS_PASS@10.10.0.5:6379/0\"|" "$REPO/backend/.env.production"
   
   # Nonlocal bind (WireGuard IP'si henüz yokken Redis'in çökmesini engeller)

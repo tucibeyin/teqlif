@@ -177,6 +177,14 @@ sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS vecto
 sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" || true
 sudo -u postgres psql -d teqlif_staging -c "CREATE EXTENSION IF NOT EXISTS btree_gin;" || true
 
+echo "==> Redis (Staging) Güvenlik Yapılandırması..."
+if ! grep -q "^requirepass " /etc/redis/redis.conf; then
+  echo "requirepass TeqlifStagingRedis2026!" | sudo tee -a /etc/redis/redis.conf
+else
+  sudo sed -i "s/^requirepass .*/requirepass TeqlifStagingRedis2026!/" /etc/redis/redis.conf
+fi
+sudo systemctl restart redis-server
+
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(
   alertmanager grafana-server livekit loki minio node_exporter prometheus promtail redis-server

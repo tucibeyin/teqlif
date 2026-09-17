@@ -150,6 +150,14 @@ for svc in "${SERVICES[@]}"; do
   sudo systemctl enable "$svc" 2>/dev/null || true
 done
 
+echo "==> Redis (Edge) Güvenlik Yapılandırması..."
+if ! grep -q "^requirepass " /etc/redis/redis.conf; then
+  echo "requirepass TeqlifEdgeRedis2026!" | sudo tee -a /etc/redis/redis.conf
+else
+  sudo sed -i "s/^requirepass .*/requirepass TeqlifEdgeRedis2026!/" /etc/redis/redis.conf
+fi
+sudo systemctl restart redis-server
+
 # ── Otomatik .env ve Servis Başlatma ──────────────────────────────────────────
 echo "==> .env.production şablonu kopyalanıyor ve Ajan başlatılıyor..."
 mkdir -p "$REPO/backend"
