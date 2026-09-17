@@ -28,8 +28,7 @@ def _stamp_head() -> None:
 async def bootstrap() -> None:
     print("[bootstrap] Tablolar oluşturuluyor...")
     await _create_tables()
-    print("[bootstrap] Alembic head olarak işaretleniyor...")
-    _stamp_head()
+
     print("[bootstrap] Seed verisi yükleniyor...")
     from sync_main import main as sync_main
     await sync_main()
@@ -38,3 +37,5 @@ async def bootstrap() -> None:
 
 if __name__ == "__main__":
     asyncio.run(bootstrap())
+    print("[bootstrap] Alembic head olarak işaretleniyor...")
+    _stamp_head()
