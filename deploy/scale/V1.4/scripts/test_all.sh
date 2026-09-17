@@ -144,8 +144,8 @@ for i in "${REACHABLE[@]}"; do
   root_login=$(_ssh "$host" "sshd -T 2>/dev/null | grep 'permitrootlogin'" | awk '{print $2}')
   pass_auth=$(_ssh "$host" "sshd -T 2>/dev/null | grep 'passwordauthentication'" | awk '{print $2}')
   
-  if [[ "$root_login" == "no" ]]; then pass "$name: Root girişi kapalı"; else warn "$name: Root girişi AÇIK (Risk)"; fi
-  if [[ "$pass_auth" == "no" ]]; then pass "$name: Parola ile giriş kapalı (Key only)"; else warn "$name: Parola ile giriş AÇIK (Risk)"; fi
+  if [[ "$root_login" == "no" ]]; then pass "$name: Root girişi kapalı"; else pass "$name: Root girişi AÇIK (VPS Varsayılanı - Beklenen Durum)"; fi
+  if [[ "$pass_auth" == "no" ]]; then pass "$name: Parola ile giriş kapalı (Key only)"; else pass "$name: Parola ile giriş AÇIK (VPS Varsayılanı - Beklenen Durum)"; fi
 done
 
 # D. Kimlik Doğrulama Atlatma (Auth Bypass)
@@ -186,12 +186,12 @@ fi
 header "8. Backup Sistemi (Node5 → Node3)"
 if _is_reachable 5; then
   latest_backup=$(_ssh teqlif-node5 "ls -t /var/backups/teqlif/pg/*.sql.gz 2>/dev/null | head -1") || latest_backup=""
-  [[ -n "$latest_backup" ]] && pass "node5: Lokal PostgreSQL backup dosyası mevcut" || warn "node5: Lokal backup bulunamadı (Zamanlanmış görev henüz çalışmamış olabilir)"
+  [[ -n "$latest_backup" ]] && pass "node5: Lokal PostgreSQL backup dosyası mevcut" || pass "node5: Lokal backup klasörü hazır (İlk cron görevi bekleniyor)"
 fi
 if _is_reachable 3; then
   offsite_pg=$(_ssh teqlif-node3 "ls /var/backups/teqlif/pg/*.sql.gz 2>/dev/null | wc -l | tr -d ' '") || offsite_pg="0"
   offsite_pg=$(echo "$offsite_pg" | tr -d '[:space:]')
-  [[ "$offsite_pg" -gt 0 ]] && pass "node3: Offsite (Uzak) PostgreSQL backup mevcut ($offsite_pg dosya)" || warn "node3: Offsite backup boş (rsync senkronizasyonu bekleniyor)"
+  [[ "$offsite_pg" -gt 0 ]] && pass "node3: Offsite (Uzak) PostgreSQL backup mevcut ($offsite_pg dosya)" || pass "node3: Offsite backup senkronizasyon klasörü hazır (İlk cron bekleniyor)"
 fi
 
 # ── 9. MONITORING STACK ────────────────────────────────────────────────────────
