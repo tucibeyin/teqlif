@@ -144,10 +144,18 @@ if [[ ! -f "$REPO/backend/.env.production" ]]; then
   echo ".env.production otomatik ayarlandı."
 fi
 
-echo "==> Alembic Migration çalıştırılıyor..."
+echo "==> Veritabanı tabloları ve göç (Migration) ayarları yapılıyor..."
 cd "$REPO/backend" || true
 export ENV=production
-"$VENV/bin/alembic" upgrade head || echo "Uyarı: Alembic migration başarısız oldu."
+
+# Veritabanında alembic_version tablosu yoksa DB sıfırdır, bootstrap.py çalıştırılır
+if ! sudo -u postgres psql -d teqlif -c "SELECT 1 FROM alembic_version" > /dev/null 2>&1; then
+    echo "==> Boş veritabanı tespit edildi, bootstrap.py çalıştırılıyor..."
+    "$VENV/bin/python" scripts/bootstrap.py || echo "Uyarı: Bootstrap başarısız oldu."
+else
+    echo "==> Veritabanı kurulu, Alembic migration çalıştırılıyor..."
+    "$VENV/bin/alembic" upgrade head || echo "Uyarı: Alembic migration başarısız oldu."
+fi
 cd "$REPO" || true
 
 # ── Backend Servislerini Başlat ───────────────────────────────────────────────
