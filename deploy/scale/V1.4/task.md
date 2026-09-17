@@ -34,7 +34,7 @@
 ## 🚀 Aşama 4: Canlı Sunucu Operasyonları (Execution & Migration)
 *Not: Bu aşamada sunuculara SSH ile erişilecektir.*
 - `[ ]` Görev 4.1: Node5 (Core) sunucusunda `bootstrap_node5.sh` çalıştırılması, PostgreSQL, Core Redis, limitli ClickHouse (1.5GB) servislerinin ayağa kalkması. (Commit: -, Date: -)
-- `[ ]` Görev 4.2: Node1'deki (Eski) verilerin (`pg_dump`, MinIO dosyaları) Node5 ve Node4'e göçünün (Migration) sağlanması. (Commit: -, Date: -)
+- `[ ]` Görev 4.2: Node1'deki (Eski) verilerin (`pg_dump`, MinIO dosyaları) göçünün **İPTAL EDİLMESİ** — Sistem sıfırdan kurulum (No Migration) kuralıyla baştan kurulacak. (Commit: -, Date: -)
 - `[ ]` Görev 4.3: Node4'ün (Yeni Edge) `bootstrap_node4.sh` ile tamamen formatlanarak devreye alınması (LiveKit, Local Redis, %80 Quota MinIO). (Commit: -, Date: -)
 - `[ ]` Görev 4.4: Node1'in üzerindeki ağır yüklerden arındırılarak `bootstrap_node1.sh` (V1.4) ile Edge rolüne (Node4'ün ikizi) formatlanması. (Commit: -, Date: -)
-- `[ ]` Görev 4.5: Gateway `nginx.conf` ayarlarının devreye alınarak API trafiğinin doğrudan Node5'e (Core) kaydırılması. (Commit: -, Date: -)
+- `[ ]` Görev 4.5: Gateway `teqlif.com.conf` ayarlarının güncellenmesi: `teqlif.com` isteklerinin Gateway üzerinden `/var/www/teqlif.com/frontend` dizininden statik sunulması, `api.teqlif.com` isteklerinin ise Node5'e (FastAPI) proxy edilmesi (Decoupling). (Commit: -, Date: -)

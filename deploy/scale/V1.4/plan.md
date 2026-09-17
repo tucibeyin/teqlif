@@ -118,7 +118,7 @@ Bu matris, `teqlif/README.md` (V1.3 Mimari Belgesi) ve `deploy/scale/resources` 
 3. **Edge'lerin Formatlanması:**
    - Node4 (Yeni) saf Edge medyası olarak V1.4 scriptiyle kurulacak. (İzole Local Redis, Standalone MinIO %80 quota, LiveKit).
    - Node1'in sırtındaki veritabanları ve core yükler silinip Node4'ün ikizi (Edge 1) haline getirilecek (Yine V1.4 scripti kullanılacak).
-4. **Gateway Yönlendirmesi:** Gateway'in V1.4 dizinindeki Nginx konfigürasyonu değiştirilerek API trafiği tamamen Node5'e (Core) kaydırılacak. 
+4. **Gateway Yönlendirmesi (Decoupling):** Gateway Nginx yapılandırması değiştirilerek; `teqlif.com` istekleri Gateway'deki `/var/www/teqlif.com/frontend` dizininden statik olarak sunulacak, `api.teqlif.com` istekleri ise Node5'e (FastAPI) yönlendirilecek. Mobil ve Web istemcileri yalnızca `api.teqlif.com` ile konuşacak.
 
 ---
 > **Not:** Her faz, bitiminde doğrulanacak ve onaylandıktan sonra bir sonrakine geçilecektir. Tüm kodlamalar `teqlif_architectural_decisions.md` (Clean Architecture) anayasasına bağlı kalacaktır.
@@ -132,12 +132,13 @@ V1.4 mimarisinde Edge sunucularının (LiveKit ve MinIO) istemciler (kullanıcı
 Aşağıdaki tabloya göre Cloudflare üzerindeki DNS (A kayıtları) güncellemelerini yapınız.
 
 ### 1. Gateway & Core (Proxied)
-API ve Frontend trafiğini Gateway (Nginx proxy) karşılayıp Wireguard üzerinden Core sunucuya (Node5) aktarır.
+`teqlif.com` trafiğini Gateway karşılar ve doğrudan kendi üzerindeki `/frontend` dizininden statik web istemcisini sunar (Yük Backend'den alınır).
+`api.teqlif.com` trafiğini Gateway karşılar ve Wireguard üzerinden Node5'teki FastAPI Backend'e aktarır.
 
 | Kayıt Tipi | İsim | Hedef IPv4 (Gateway IP) | Proxy Durumu | Not |
 | :--- | :--- | :--- | :--- | :--- |
-| A | `teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Ana domain |
-| A | `api.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Backend API |
+| A | `teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Statik Web Frontend (Gateway'den sunulur) |
+| A | `api.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Backend API (Node5'e proxy edilir) |
 | A | `staging.teqlif.com` | `94.16.105.135` | ☁️ Proxied (Turuncu) | Staging |
 
 ### 2. Edge 1 - Node1 (DNS Only)
