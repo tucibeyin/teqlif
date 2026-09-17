@@ -55,11 +55,22 @@ KEY_FILE="/etc/letsencrypt/live/$DOMAIN_LIVE/privkey.pem"
 MINIO_CERT_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/fullchain.pem"
 MINIO_KEY_FILE="/etc/letsencrypt/live/$DOMAIN_MINIO/privkey.pem"
 
-# 1. MinIO Kurulumu
-echo "==> MinIO kuruluyor..."
-wget -q -nc https://dl.min.io/server/minio/release/linux-amd64/minio
-chmod +x minio
-sudo mv minio /usr/local/bin/
+# 1. MinIO Kurulumu (MinIO artık hazır binary sunmadığı için Go ile derliyoruz)
+echo "==> MinIO kaynak koddan derleniyor (Bu işlem 1-2 dakika sürebilir)..."
+if ! command -v go &> /dev/null; then
+    wget -q https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
+    rm go1.24.0.linux-amd64.tar.gz
+fi
+export PATH=$PATH:/usr/local/go/bin
+
+# GOPATH ayarla ve derle
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+go install github.com/minio/minio@latest
+
+sudo mv $GOPATH/bin/minio /usr/local/bin/
+sudo chmod +x /usr/local/bin/minio
 
 sudo mkdir -p /var/lib/minio
 sudo chown -R tucibeyin:tucibeyin /var/lib/minio
