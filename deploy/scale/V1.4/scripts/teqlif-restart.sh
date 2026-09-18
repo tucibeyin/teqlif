@@ -12,6 +12,39 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
+# ── Repo Dizini ──
+# Bootstrap sırasında bootstrap_node*.sh tarafından sed ile gerçek path'e çevrilir.
+REPO_DIR="__REPO_DIR__"
+if [[ "$REPO_DIR" == "__REPO_DIR__" ]]; then
+  REPO_DIR=$(git -C "$(dirname "$(readlink -f "$0")")" rev-parse --show-toplevel 2>/dev/null || echo "")
+fi
+
+# ── Fonksiyonlar ──
+
+# Template'de var, active .env'de eksik olan KEY'leri ekler.
+# Mevcut değerlere asla dokunmaz — sadece APPEND yapar.
+sync_env_template() {
+  local template="$1"
+  local target="$2"
+  [[ ! -f "$template" || ! -f "$target" ]] && return 0
+  local added=0
+  while IFS= read -r line; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    [[ "$line" != *=* ]] && continue
+    local key="${line%%=*}"
+    [[ -z "$key" ]] && continue
+    if grep -q "^${key}=" "$target" 2>/dev/null; then
+      continue
+    fi
+    echo "$line" >> "$target"
+    echo -e "    ${CYAN}+${RESET} ${BOLD}${key}${RESET} eklendi"
+    added=$((added + 1))
+  done < "$template"
+  if [[ $added -gt 0 ]]; then
+    echo -e "    ${GREEN}→ ${added} yeni değişken eklendi: $(basename "$target")${RESET}"
+  fi
+}
+
 # ── 2. Topoloji (Hardcoded Services) ──
 # Her node için yönetilecek servislerin tam listesi. Yeni bir servis eklendiğinde buraya eklenmelidir.
 declare -A NODE_SERVICES
@@ -19,7 +52,7 @@ NODE_SERVICES=(
     ["gateway"]="nginx node_exporter promtail"
     ["node1"]="livekit minio redis-server edge-metrics-agent node_exporter promtail"
     ["node2"]="teqlif-ai-proxy cf-failover node_exporter promtail"
-    ["node3"]="teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging minio teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail redis-server postgresql"
+    ["node3"]="teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging livekit minio teqlif-ai-proxy prometheus loki grafana-server alertmanager node_exporter promtail redis-server postgresql"
     ["node4"]="livekit minio redis-server edge-metrics-agent node_exporter promtail"
     ["node5"]="teqlif teqlif-worker teqlif-worker-critical postgresql clickhouse-server redis-server node_exporter promtail"
 )
@@ -64,6 +97,43 @@ fi
 echo -e "\n${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}"
 echo -e "${CYAN}${BOLD} 🚀 TEQLIF RESTART — $NODE Servisleri Yeniden Başlatılıyor ${RESET}"
 echo -e "${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}\n"
+
+# ── Git Pull ──
+if [[ -n "$REPO_DIR" && -d "$REPO_DIR/.git" ]]; then
+  echo -ne "  ${CYAN}📥 git pull ($REPO_DIR)...${RESET} "
+  if git -C "$REPO_DIR" pull --ff-only 2>&1 | tail -1; then
+    true
+  else
+    echo -e "${YELLOW}Uyarı: git pull başarısız — mevcut kod kullanılıyor.${RESET}"
+  fi
+  echo ""
+fi
+
+# ── Env Senkronizasyonu ──
+# Template'de yeni eklenen KEY'leri active .env'e ekler; mevcut değerlere dokunmaz.
+if [[ -n "$REPO_DIR" && "$NODE" != "gateway" ]]; then
+  TEMPLATE_DIR="$REPO_DIR/deploy/scale/V1.4/$NODE/resources"
+  if [[ -d "$TEMPLATE_DIR" ]]; then
+    _env_synced=0
+    for _tmpl in "$TEMPLATE_DIR"/.env.*.template; do
+      [[ -f "$_tmpl" ]] || continue
+      _suffix="${_tmpl##*/.env.}"
+      _suffix="${_suffix%.template}"
+      _target="$REPO_DIR/backend/.env.${_suffix}"
+      if [[ -f "$_target" ]]; then
+        if [[ $_env_synced -eq 0 ]]; then
+          echo -e "  ${CYAN}🔄 Env senkronizasyonu (${NODE})...${RESET}"
+          _env_synced=1
+        fi
+        sync_env_template "$_tmpl" "$_target"
+      fi
+    done
+    if [[ $_env_synced -eq 0 ]]; then
+      true  # Template veya aktif .env yok — atla
+    fi
+    unset _tmpl _suffix _target _env_synced
+  fi
+fi
 
 if [[ "$NODE" == "gateway" ]]; then
     SCRIPT_DIR=$(dirname "$(readlink -f "$0")")

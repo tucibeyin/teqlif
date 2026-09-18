@@ -225,7 +225,10 @@ SERVICES=(
 
 for svc in "${SERVICES[@]}"; do
   if [[ -f "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" ]]; then
-    sudo cp "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" /etc/systemd/system/
+    sudo sed -e "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
+             -e "s|Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/backend/|Environment=TEQLIF_ENV_FILE=$REPO/backend/|g" \
+      "$REPO/deploy/scale/V1.4/node3/systemd/${svc}.service" > "/tmp/${svc}.service"
+    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
 done
 
@@ -266,7 +269,9 @@ if [[ -n "${REDIS_PASS:-}" ]]; then
     sed -i 's|REDIS_URL=redis://:|REDIS_URL=redis://default:|g' "$REPO/backend/.env.staging"
 fi
 
-sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
+sudo sed "s|__REPO_DIR__|$REPO|g" "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" > /tmp/teqlif-restart
+sudo install -m 755 /tmp/teqlif-restart /usr/local/bin/teqlif-restart
+rm /tmp/teqlif-restart
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."

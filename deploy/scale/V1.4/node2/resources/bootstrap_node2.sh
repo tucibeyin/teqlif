@@ -102,12 +102,9 @@ SERVICES=(teqlif-ai-proxy cf-failover node_exporter promtail)
 
 for svc in "${SERVICES[@]}"; do
   if [[ -f "$REPO/deploy/scale/V1.4/node2/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
+    sudo sed -e "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
+             -e "s|Environment=TEQLIF_ENV_FILE=.*|Environment=TEQLIF_ENV_FILE=$REPO/backend/.env.production|g" \
       "$REPO/deploy/scale/V1.4/node2/systemd/${svc}.service" > "/tmp/${svc}.service"
-    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
-  elif [[ -f "$REPO/deploy/scale/V1.4/node1/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
-      "$REPO/deploy/scale/V1.4/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
 done
@@ -126,7 +123,9 @@ fi
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
-sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
+sudo sed "s|__REPO_DIR__|$REPO|g" "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" > /tmp/teqlif-restart
+sudo install -m 755 /tmp/teqlif-restart /usr/local/bin/teqlif-restart
+rm /tmp/teqlif-restart
 sudo apt-get autoremove -y -q
 sudo apt-get clean -q
 "$VENV/bin/pip" cache purge 2>/dev/null || true

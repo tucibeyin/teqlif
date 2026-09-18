@@ -1,6 +1,8 @@
 [Unit]
-Description=Teqlif AI Proxy — node3 (US IP, Gemini + Groq, secondary)
-After=network.target
+Description=Teqlif ARQ Critical Worker (Bulkhead — push notifications, outbid, loser cascade)
+After=network.target postgresql.service redis.service teqlif.service
+BindsTo=teqlif.service
+PartOf=teqlif.service
 StartLimitBurst=10
 StartLimitIntervalSec=600
 
@@ -8,22 +10,17 @@ StartLimitIntervalSec=600
 User=tucibeyin
 Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
-Environment=TEQLIF_ENV_FILE=/var/www/teqlif.com/backend/.env.production
 EnvironmentFile=/var/www/teqlif.com/backend/.env.production
-ExecStart=/var/www/teqlif.com/venv/bin/uvicorn app.ai_proxy_main:app \
-    --host 10.10.0.4 \
-    --port 8080 \
-    --workers 1 \
-    --loop uvloop
+ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettingsCritical
 Restart=always
-RestartSec=5
-KillMode=mixed
+RestartSec=3
+KillMode=process
 KillSignal=SIGTERM
-TimeoutStopSec=60
-LimitNOFILE=4096
-MemoryMax=768M
-MemorySwapMax=0
-OOMScoreAdj=0
+TimeoutStopSec=600
+OOMScoreAdjust=100
+CPUWeight=100
+IOWeight=100
+LimitNOFILE=65536
 StandardOutput=journal
 StandardError=journal
 NoNewPrivileges=yes

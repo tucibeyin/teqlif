@@ -147,19 +147,15 @@ fi
 # Not: promtail-config.yml şablonunuz varsa kopyalayın
 sudo cp "$RESOURCES_DIR/promtail-config.yml" /etc/promtail-config.yml 2>/dev/null || true
 
-# ── Systemd Servisleri (Dinamik Path Injector) ────────────────────────────────
-echo "==> systemd servisleri (V1.4 dinamik env referansları ile)..."
+# ── Systemd Servisleri ────────────────────────────────────────────────────────
+echo "==> systemd servisleri (V1.4)..."
 SERVICES=(teqlif teqlif-worker teqlif-worker-critical node_exporter promtail)
 
-# V1.3 systemd dosyalarını al, içlerindeki eski EnvironmentFile path'ini dinamik olarak V1.4'e çevir ve kur
 for svc in "${SERVICES[@]}"; do
-  # Eğer V1.4 içinde özel systemd klasörü açılırsa ordan okur, yoksa eski repodan okuyup sed ile V1.4'e çevirir.
-  if [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
+  if [[ -f "$REPO/deploy/scale/V1.4/node5/systemd/${svc}.service" ]]; then
     sudo sed -e "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
              -e "s|Environment=TEQLIF_ENV_FILE=.*|Environment=TEQLIF_ENV_FILE=$REPO/backend/.env.production|g" \
-             -e "s|OOMScoreAdj|OOMScoreAdjust|g" \
-             -e "s|10.10.0.1|10.10.0.5|g" \
-      "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
+      "$REPO/deploy/scale/V1.4/node5/systemd/${svc}.service" > "/tmp/${svc}.service"
     sudo mv "/tmp/${svc}.service" /etc/systemd/system/
   fi
 done
@@ -243,7 +239,9 @@ cd "$REPO" || true
 
 # ── Backend Servislerini Başlat ───────────────────────────────────────────────
 echo "==> Servisler başlatılıyor..."
-sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
+sudo sed "s|__REPO_DIR__|$REPO|g" "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" > /tmp/teqlif-restart
+sudo install -m 755 /tmp/teqlif-restart /usr/local/bin/teqlif-restart
+rm /tmp/teqlif-restart
 for svc in "${SERVICES[@]}"; do
   sudo systemctl restart "$svc" 2>/dev/null || true
 done

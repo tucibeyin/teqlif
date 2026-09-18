@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/theme.dart';
 import 'core/logger_service.dart';
+import 'core/network/api_client.dart';
 import 'firebase_options.dart';
 import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
@@ -29,6 +30,8 @@ import 'widgets/global_call_overlay.dart';
 import 'widgets/incoming_call_overlay.dart';
 import 'utils/call_route_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+late final ProviderContainer providerContainer;
 
 void main() async {
   // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU ---
@@ -64,13 +67,13 @@ void main() async {
 
       // (Removed custom debugPrint filter to allow all logs)
 
-      final _sw = Stopwatch()..start();
+      final sw = Stopwatch()..start();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] main() appRunner start');
 
       // iOS'ta Keychain uygulama silinse de korunur; SharedPreferences silinir.
       // Fresh install tespiti: SharedPreferences'ta flag yoksa → stale Keychain'i temizle.
       final prefs = await SharedPreferences.getInstance();
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] SharedPreferences done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] SharedPreferences done | ${sw.elapsedMilliseconds}ms');
       if (prefs.getBool('app_installed') != true) {
         await StorageService.clear();
         await prefs.setBool('app_installed', true);
@@ -82,42 +85,40 @@ void main() async {
       // Pre-load locale + translation pack before runApp so providers start
       // with correct values — eliminates the first-render flash of keys.
       final savedLang = prefs.getString('app_locale_language_code') ?? 'tr';
-      final _initialLocale = Locale(savedLang);
-      final _initialPack = LocalizationService.readCacheSync(savedLang);
+      final initialLocale = Locale(savedLang);
+      final initialPack = LocalizationService.readCacheSync(savedLang);
+      // We must override the providers in the global container before runApp
+      providerContainer = ProviderContainer(overrides: [
+        localeProvider.overrideWith((ref) => LocaleNotifier(ref.watch(apiClientProvider), initial: initialLocale)),
+        localizationProvider.overrideWith((ref) => LocalizationService(ref, initialPack: initialPack)),
+      ]);
       CatalogService.readCacheSync();
       TeqToast.init(TeqlifApp.navigatorKey);
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] CacheService.init done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] CacheService.init done | ${sw.elapsedMilliseconds}ms');
       // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
       CacheService.clearExpired().ignore();
       await StorageService.restoreAvatarUrl();
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] StorageService.restoreAvatarUrl done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] StorageService.restoreAvatarUrl done | ${sw.elapsedMilliseconds}ms');
       await OfflineQueueService.init();
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] OfflineQueueService.init done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] OfflineQueueService.init done | ${sw.elapsedMilliseconds}ms');
       OfflineQueueService.startDrainOnReconnect();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] Firebase.initializeApp done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] Firebase.initializeApp done | ${sw.elapsedMilliseconds}ms');
       await ThemeProvider.instance.load();
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] ThemeProvider.load done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] ThemeProvider.load done | ${sw.elapsedMilliseconds}ms');
       // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
       // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
       PushNotificationService.initEarly();
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] PushNotificationService.initEarly done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] PushNotificationService.initEarly done | ${sw.elapsedMilliseconds}ms');
       FeedTelemetryService.instance.init();
       await initBackgroundAudio();
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] initBackgroundAudio done | ${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] initBackgroundAudio done | ${sw.elapsedMilliseconds}ms');
 
-      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] runApp starting | totalMs=${_sw.elapsedMilliseconds}ms');
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] runApp starting | totalMs=${sw.elapsedMilliseconds}ms');
       // Sentry appRunner zaten runZonedGuarded ile sarılı olduğundan
       // async hataları da Sentry tarafından yakalanır.
-      runApp(ProviderScope(
-        overrides: [
-          localeProvider.overrideWith(
-            (ref) => LocaleNotifier(initial: _initialLocale),
-          ),
-          localizationProvider.overrideWith(
-            (ref) => LocalizationService(ref, initialPack: _initialPack),
-          ),
-        ],
+      runApp(UncontrolledProviderScope(
+        container: providerContainer,
         child: const TeqlifApp(),
       ));
       CatalogService.checkAndRefresh().ignore();
@@ -136,12 +137,16 @@ class TeqlifApp extends ConsumerStatefulWidget {
 }
 
 class _TeqlifAppState extends ConsumerState<TeqlifApp> {
-  final _lifecycleObserver = AnalyticsLifecycleObserver();
+  late final AnalyticsLifecycleObserver _lifecycleObserver;
+  late final AnalyticsRouteObserver _routeObserver;
   final _callRouteObserver = CallRouteObserver();
 
   @override
   void initState() {
     super.initState();
+    final analytics = ref.read(analyticsServiceProvider);
+    _lifecycleObserver = AnalyticsLifecycleObserver(analytics);
+    _routeObserver = AnalyticsRouteObserver(analytics);
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
   }
 
@@ -175,7 +180,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
           Locale('ru'),
         ],
         navigatorKey: TeqlifApp.navigatorKey,
-        navigatorObservers: [AnalyticsRouteObserver(), _callRouteObserver],
+        navigatorObservers: [_routeObserver, _callRouteObserver],
         builder: (context, child) {
           return IncomingCallOverlay(
             navigatorKey: TeqlifApp.navigatorKey,

@@ -95,12 +95,11 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
 fi
 
 # ── Systemd Servisleri ────────────────────────────────────────────────────────
-echo "==> systemd servisleri (node_exporter, promtail)..."
+echo "==> systemd servisleri (V1.4)..."
 SERVICES=(node_exporter promtail)
 for svc in "${SERVICES[@]}"; do
-  if [[ -f "$REPO/deploy/scale/V1.3/gateway/systemd/${svc}.service" ]]; then
-    sudo cp "$REPO/deploy/scale/V1.3/gateway/systemd/${svc}.service" "/tmp/${svc}.service"
-    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
+  if [[ -f "$REPO/deploy/scale/V1.4/gateway/systemd/${svc}.service" ]]; then
+    sudo cp "$REPO/deploy/scale/V1.4/gateway/systemd/${svc}.service" /etc/systemd/system/
   fi
   sudo systemctl enable "$svc" 2>/dev/null || true
   sudo systemctl restart "$svc" 2>/dev/null || true

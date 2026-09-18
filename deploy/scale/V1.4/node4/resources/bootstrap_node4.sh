@@ -132,16 +132,12 @@ sudo cp "$RESOURCES_DIR/../node1/resources/promtail-config.yml" /etc/promtail-co
 sudo sed -i "s/node1/node4/g" /etc/promtail-config.yml 2>/dev/null || true
 
 # ── Systemd Servisleri ────────────────────────────────────────────────────────
-echo "==> systemd servisleri (V1.4 dinamik env referansları ile)..."
+echo "==> systemd servisleri (V1.4)..."
 SERVICES=(node_exporter promtail)
 
 for svc in "${SERVICES[@]}"; do
-  if [[ -f "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" ]]; then
-    sudo sed "s|EnvironmentFile=.*|EnvironmentFile=$REPO/backend/.env.production|g" \
-      "$REPO/deploy/scale/V1.3/node1/systemd/${svc}.service" > "/tmp/${svc}.service"
-    # Eğer Node4 ise, 10.10.0.1 IP'sini Node4 IP'si olan 10.10.0.6 ile değiştir
-    sudo sed -i "s|10.10.0.1|10.10.0.6|g" "/tmp/${svc}.service"
-    sudo mv "/tmp/${svc}.service" /etc/systemd/system/
+  if [[ -f "$REPO/deploy/scale/V1.4/node4/systemd/${svc}.service" ]]; then
+    sudo cp "$REPO/deploy/scale/V1.4/node4/systemd/${svc}.service" /etc/systemd/system/
   fi
 done
 
@@ -169,7 +165,9 @@ mkdir -p "$REPO/backend"
 if [[ ! -f "$REPO/backend/.env.production" ]]; then
   cp "$RESOURCES_DIR/.env.production.template" "$REPO/backend/.env.production"
 fi
-sudo install -m 755 "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" /usr/local/bin/teqlif-restart
+sudo sed "s|__REPO_DIR__|$REPO|g" "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" > /tmp/teqlif-restart
+sudo install -m 755 /tmp/teqlif-restart /usr/local/bin/teqlif-restart
+rm /tmp/teqlif-restart
 sudo systemctl restart edge-metrics-agent || true
 
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
