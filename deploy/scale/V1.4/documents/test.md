@@ -182,38 +182,85 @@
 
 **Amaç:** Her node'da VPS'te çalışan `.env` dosyalarını key bazında doğrulamak. Değerlerin dolu, doğru formatta ve cross-node tutarlı olduğunu teyit etmek.
 
-**Yöntem:**
-1. Her node için sırayla `cat` komutu çalıştır, çıktıyı buraya yapıştır
-2. Her key için aşağıdaki tabloyu birlikte gez
-3. Sorunları işaretle → düzelt → bir sonraki adıma geç
-
-**Öncelik Sırası:** node2 → node3 production → node3 staging → node5 → node1 → node4
-
-**Durum:** ⏳ Devam ediyor.
+**Durum:** ⏳ Devam ediyor — Adım 8.A'dan başla.
 
 ---
 
-### Adım 8.0 — Dosyaları Al
+### Adım 8.A — Pre-Flight: Tüm Node'larda Senkronizasyon ⬅ BURADAN BAŞLA
 
-Her node için çalıştırılacak komutlar (VPS'te):
+**Neden önce bu?**
+Son commit'lerde template hataları düzeltildi (`fa0a9cfd`). `sudo teqlif-restart` üç işi birden yapar:
+1. `git pull --ff-only` → template düzeltmelerini çeker
+2. `env sync` → şablonda olup `.env`'de eksik keyleri ekler (node3 staging'e `CAPTCHA_*` eklenir)
+3. Servisleri yeniden başlatır
+
+Her node'da sırayla çalıştır (edge'lerden başla, core son):
 
 ```bash
-# node2
-cat /var/www/teqlif.com/backend/.env.production
-
-# node3 (iki dosya)
-cat /var/www/teqlif.com/backend/.env.production
-cat /var/www/teqlif.com/backend/.env.staging
-
-# node5
-cat /var/www/teqlif.com/backend/.env.production
-
-# node1
-cat /var/www/teqlif.com/backend/.env.production
-
-# node4
-cat /var/www/teqlif.com/backend/.env.production
+# node1 → node4 → node2 → node3 → node5 → gateway
+sudo teqlif-restart
 ```
+
+Her node'dan "✓ Tüm servisler başarıyla çalışıyor" çıktısı onaylandıktan sonra sonraki node'a geç.
+
+**Durum:**
+- [ ] node1
+- [ ] node4
+- [ ] node2
+- [ ] node3
+- [ ] node5
+- [ ] gateway
+
+---
+
+### Adım 8.B — Bilinen Mevcut Değer Hataları (Manuel Düzeltme)
+
+`env sync` sadece **eksik** key ekler; **var olan yanlış değerleri düzeltemez.**
+Teqlif-restart tamamlandıktan sonra şunları kontrol et ve gerekirse düzelt:
+
+**node3 — `.env.production` → REDIS_URL şifre kontrolü:**
+```bash
+grep "^REDIS_URL" /var/www/teqlif.com/backend/.env.production
+# Beklenen: redis://:<ŞIFRE>@10.10.0.5:6379/1
+# Eğer şifre yoksa (redis://10.10.0.5:6379/1 veya redis://@10.10.0.5...):
+#   nano ile düzelt → REDIS_URL="redis://:<CORE_REDIS_SIFRE>@10.10.0.5:6379/1"
+sudo systemctl restart teqlif-ai-proxy
+```
+
+**node5 — `.env.production` → EDGE_LIVEKIT_URLS scheme kontrolü:**
+```bash
+grep "^EDGE_LIVEKIT_URLS" /var/www/teqlif.com/backend/.env.production
+# Beklenen: http:// (https:// ise WireGuard üzerinde TLS sertifikası yok → hata)
+# Eğer https:// varsa:
+sed -i 's|EDGE_LIVEKIT_URLS="https://|EDGE_LIVEKIT_URLS="http://|g' \
+  /var/www/teqlif.com/backend/.env.production
+sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
+```
+
+**Durum:**
+- [ ] node3 REDIS_URL kontrol edildi
+- [ ] node5 EDGE_LIVEKIT_URLS kontrol edildi
+
+---
+
+### Adım 8.C — node3 Staging CAPTCHA Değerlerini Doldur
+
+Env sync `CAPTCHA_ENABLED=True`, `CAPTCHA_PROVIDER=`, `CAPTCHA_SECRET_KEY=` ekledi.
+Provider ve secret key boş — doldur:
+
+```bash
+# node3'te
+grep "^CAPTCHA" /var/www/teqlif.com/backend/.env.staging
+# CAPTCHA_PROVIDER ve CAPTCHA_SECRET_KEY boşsa nano ile doldur (node5 ile aynı değerler)
+nano /var/www/teqlif.com/backend/.env.staging
+sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging
+```
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.1 — node2: backend/.env.production (Review)
 
 ---
 
