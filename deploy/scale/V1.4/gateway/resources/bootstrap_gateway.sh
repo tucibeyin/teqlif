@@ -107,6 +107,10 @@ done
 sudo systemctl enable nginx 2>/dev/null || true
 sudo systemctl restart nginx 2>/dev/null || true
 
+sudo sed "s|__REPO_DIR__|$REPO|g" "$REPO/deploy/scale/V1.4/scripts/teqlif-restart.sh" > /tmp/teqlif-restart
+sudo install -m 755 /tmp/teqlif-restart /usr/local/bin/teqlif-restart
+rm /tmp/teqlif-restart
+
 # ── Temizlik (Clean State) ────────────────────────────────────────────────────
 echo "==> Kurulum artıkları ve önbellek temizleniyor..."
 sudo apt-get autoremove -y -q

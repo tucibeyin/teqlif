@@ -136,8 +136,7 @@ if [[ -n "$REPO_DIR" && "$NODE" != "gateway" ]]; then
 fi
 
 if [[ "$NODE" == "gateway" ]]; then
-    SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-    CONF_SRC="$SCRIPT_DIR/../gateway/resources/teqlif.com.conf"
+    CONF_SRC="$REPO_DIR/deploy/scale/V1.4/gateway/resources/teqlif.com.conf"
     
     echo -ne "  ${YELLOW}↻${RESET} ${BOLD}Nginx konfigürasyonu güncelleniyor... ${RESET}"
     if [[ -f "$CONF_SRC" ]]; then
