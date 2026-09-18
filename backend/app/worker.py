@@ -2801,25 +2801,6 @@ async def optimize_notification_timing_task(ctx: dict) -> None:
         capture_exception(exc)
 
 
-# ── Task: CLIP Visual Embedding Backfill ─────────────────────────────────────
-
-async def clip_visual_backfill_task(ctx: dict) -> None:
-    """
-    Her gece 04:30'da çalışır.
-    visual_embedding'i NULL olan ilanlar için CLIP ViT-B/32 ile görsel embedding üretir.
-    Rate limit: işlem başına 2 saniye bekleme — VPS CPU koruması.
-    Batch: 30 ilan/çalıştırma.
-    """
-    try:
-        from app.services.ml.clip_service import backfill_clip_embeddings
-        count = await backfill_clip_embeddings(batch_size=30)
-        logger.info("[Worker] clip_visual_backfill_task tamamlandı | işlenen=%d", count)
-    except ImportError:
-        logger.warning("[Worker] CLIP bağımlılıkları eksik, atlanıyor")
-    except Exception as exc:
-        logger.error("[Worker] clip_visual_backfill_task başarısız | %s", exc, exc_info=True)
-        capture_exception(exc)
-
 
 async def compute_listing_phash_task(ctx: dict, listing_id: int, image_url: str) -> None:
     """İlan primary görselinden pHash hesapla, DB'ye yaz, kopya varsa logla."""
@@ -3412,7 +3393,6 @@ class WorkerSettings:
         backfill_listing_quality_scores_task,
         train_listing_quality_model_task,
         optimize_notification_timing_task,
-        clip_visual_backfill_task,
         compute_listing_phash_task,
         backfill_phash_task,
         nsfw_check_task,
@@ -3485,8 +3465,6 @@ class WorkerSettings:
         cron(train_feed_als_task, hour=3, minute=45),
         # Her gece 04:00 — kullanıcı bazlı bildirim saat optimizasyonu
         cron(optimize_notification_timing_task, hour=4, minute=0),
-        # Her gece 04:30 — CLIP görsel embedding backfill (30 ilan/çalıştırma)
-        cron(clip_visual_backfill_task, hour=4, minute=30),
         # APNs Feedback Service cron'u kaldırıldı — Apple legacy endpoint'i Kasım 2020'de kapattı
         # Her gece 05:15 — NSFW backfill (20 ilan/çalıştırma)
         cron(nsfw_backfill_task, hour=5, minute=15),

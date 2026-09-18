@@ -49,7 +49,6 @@ class Listing(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)
     embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
-    visual_embedding: Mapped[Optional[Any]] = mapped_column(Vector(512), nullable=True)
 
     image_phash: Mapped[Optional[str]] = mapped_column(String(16), nullable=True, index=True)
     nsfw_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
