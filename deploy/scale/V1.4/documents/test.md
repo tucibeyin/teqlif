@@ -175,3 +175,307 @@
 3. Gateway Nginx SSL testlerinin `ssllabs.com` üzerinden "A" skoru aldığını (isteğe bağlı) teyit et.
 
 **Durum:** ⏳ Faz 6 ve 7 (Canlıya Geçiş) tamamen bittiğinde test edilecek.
+
+---
+
+## Görev 8: Canlı .env Config Denetimi (Key-by-Key)
+
+**Amaç:** Her node'da VPS'te çalışan `.env` dosyalarını key bazında doğrulamak. Değerlerin dolu, doğru formatta ve cross-node tutarlı olduğunu teyit etmek.
+
+**Yöntem:**
+1. Her node için sırayla `cat` komutu çalıştır, çıktıyı buraya yapıştır
+2. Her key için aşağıdaki tabloyu birlikte gez
+3. Sorunları işaretle → düzelt → bir sonraki adıma geç
+
+**Öncelik Sırası:** node2 → node3 production → node3 staging → node5 → node1 → node4
+
+**Durum:** ⏳ Devam ediyor.
+
+---
+
+### Adım 8.0 — Dosyaları Al
+
+Her node için çalıştırılacak komutlar (VPS'te):
+
+```bash
+# node2
+cat /var/www/teqlif.com/backend/.env.production
+
+# node3 (iki dosya)
+cat /var/www/teqlif.com/backend/.env.production
+cat /var/www/teqlif.com/backend/.env.staging
+
+# node5
+cat /var/www/teqlif.com/backend/.env.production
+
+# node1
+cat /var/www/teqlif.com/backend/.env.production
+
+# node4
+cat /var/www/teqlif.com/backend/.env.production
+```
+
+---
+
+### Adım 8.1 — node2: backend/.env.production (AI Proxy 1)
+
+**Komut:** `cat /var/www/teqlif.com/backend/.env.production`
+
+| KEY | Beklenen Değer / Format | Kontrol Notu |
+|-----|------------------------|--------------|
+| `AI_PROXY_INTERNAL_TOKEN` | Dolu, tahmin edilemez string | ⚠️ node3 ve node5 ile **aynı** olmalı |
+| `GROQ_API_KEY` | Dolu, `gsk_...` ile başlar | — |
+| `GEMINI_API_KEY` | Dolu | — |
+| `SENTRY_BACKEND_DSN` | Dolu VEYA bilinçli boş | Optional |
+| `REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/1` | Şifre dolu, host=10.10.0.5, DB=1 |
+| `CF_ZONE_ID` | Dolu, CF Zone ID | CF panelinden alınır |
+| `CF_DNS_RECORD_ID` | Dolu, A kaydı ID'si | CF API ile doğrulanabilir |
+| `CF_API_TOKEN` | Dolu | Sadece node2'de olmalı |
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.2 — node3: backend/.env.production (AI Proxy 2)
+
+**Komut:** `cat /var/www/teqlif.com/backend/.env.production`
+
+| KEY | Beklenen Değer / Format | Kontrol Notu |
+|-----|------------------------|--------------|
+| `AI_PROXY_INTERNAL_TOKEN` | Dolu, tahmin edilemez string | ⚠️ node2 ve node5 ile **aynı** olmalı |
+| `GROQ_API_KEY` | Dolu, `gsk_...` ile başlar | — |
+| `GEMINI_API_KEY` | Dolu | — |
+| `SENTRY_BACKEND_DSN` | Dolu VEYA bilinçli boş | Optional |
+| `REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/1` | ⚠️ **BİLİNEN BUG:** Template'de şifre eksikti; VPS'teki değeri kontrol et |
+| `TELEGRAM_BOT_TOKEN` | Gerçek token (DUMMY_TOKEN değil) | Alertmanager bildirimleri için gerekli |
+| `TELEGRAM_CHAT_ID` | Gerçek chat ID (123456789 değil) | Negatif sayı olabilir (grup kanalı) |
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.3 — node3: backend/.env.staging (Staging Backend)
+
+**Komut:** `cat /var/www/teqlif.com/backend/.env.staging`
+
+| KEY | Beklenen Değer / Format | Kontrol Notu |
+|-----|------------------------|--------------|
+| `DATABASE_URL` | `postgresql+asyncpg://teqlif_staging:<şifre>@127.0.0.1:5432/teqlif_staging` | Lokal DB, şifre dolu; placeholder `<STAGING_DB_PASSWORD>` |
+| `REDIS_URL` | `redis://:<şifre>@127.0.0.1:6379/0` | Lokal Redis, şifre dolu |
+| `SECRET_KEY` | Dolu, uzun rastgele string | JWT imzalama — node5 ile farklı olmalı |
+| `ALGORITHM` | `HS256` | Sabit değer |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `43200` (30 gün) | Sabit değer |
+| `UPLOAD_DIR` | `/var/www/teqlif.com/uploads_staging` | Staging upload dizini |
+| `BREVO_API_KEY` | Dolu | E-posta servisi |
+| `BREVO_SENDER_EMAIL` | `staging@teqlif.com` | Staging sender |
+| `BREVO_SENDER_NAME` | `Teqlif Staging` | — |
+| `EDGE_LIVEKIT_URLS` | `"http://127.0.0.1:7880"` | Staging için lokal LiveKit |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node4, node5 ile **aynı** olmalı |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node4, node5 ile **aynı** olmalı |
+| `EDGE_MINIO_URLS` | `"http://127.0.0.1:9010"` | Staging için lokal MinIO |
+| `MINIO_ACCESS_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_USER ile **aynı** olmalı |
+| `MINIO_SECRET_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_PASSWORD ile **aynı** olmalı |
+| `MINIO_BUCKET` | `teqlif-staging` | Staging bucket |
+| `MINIO_DM_BUCKET` | `teqlif-dm-staging` | Staging DM bucket |
+| `MINIO_SECURE` | `False` | HTTP için False |
+| `MINIO_REGION` | `us-east-1` | MinIO sabit değer |
+| `MINIO_STORAGE_QUOTA_PERCENT` | `80` | — |
+| `EDGE_METRICS_INTERVAL_SEC` | `3` | — |
+| `NODE2_AI_PROXY_URL` | `"http://10.10.0.3:8080"` | node2 WireGuard IP |
+| `NODE3_AI_PROXY_URL` | `"http://10.10.0.4:8080"` | node3 WireGuard IP |
+| `AI_PROXY_INTERNAL_TOKEN` | Dolu | ⚠️ node2, node3 prod, node5 ile **aynı** olmalı |
+| `FIREBASE_SERVICE_ACCOUNT` | Dosya path veya JSON string | FCM push için gerekli |
+| `SENTRY_BACKEND_DSN` | Dolu VEYA bilinçli boş | Optional |
+| `GOOGLE_CLIENT_ID` | Dolu | Google OAuth |
+| `ADMIN_EMAIL` | Dolu, geçerli e-posta | — |
+| `ADMIN_PASSWORD_HASH` | Dolu, bcrypt hash (`$2b$...`) | — |
+| `CAPTCHA_ENABLED` | `True` | node5 ile aynı — mock mod değil, gerçek doğrulama |
+| `CAPTCHA_PROVIDER` | Dolu | ⚠️ node5 ile **aynı** olmalı |
+| `CAPTCHA_SECRET_KEY` | Dolu | ⚠️ node5 ile **aynı** olmalı |
+| `DB_POOL_SIZE` | `20` | Staging default |
+| `DB_MAX_OVERFLOW` | `10` | Staging default |
+| `DB_POOL_TIMEOUT` | `30` | Staging default |
+| `DB_POOL_RECYCLE` | `1800` | Staging default |
+| `APNS_KEY_PATH` | Dosya path VEYA boş | iOS VoIP — opsiyonel staging'de |
+| `APNS_KEY_ID` | Dolu VEYA boş | — |
+| `APNS_TEAM_ID` | Dolu VEYA boş | — |
+| `APNS_CERT_PATH` | Dosya path VEYA boş | — |
+| `IOS_BUNDLE_ID` | `teqlif` | — |
+| `APNS_USE_SANDBOX` | `True` | Staging için True |
+| `SITE_URL` | `https://staging.teqlif.com` | — |
+| `DEBUG` | `True` | Staging için True |
+| `WEB_APP_ENABLED` | `True` | Staging web aktif |
+| `USE_PGBOUNCER` | `False` | — |
+| `CLICKHOUSE_HOST` | `localhost` | Staging ClickHouse lokal |
+| `CLICKHOUSE_PORT` | `8123` | — |
+| `CLICKHOUSE_DB` | `default` | — |
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.4 — node5: backend/.env.production (Core Backend)
+
+**Komut:** `cat /var/www/teqlif.com/backend/.env.production`
+
+| KEY | Beklenen Değer / Format | Kontrol Notu |
+|-----|------------------------|--------------|
+| `DATABASE_URL` | `postgresql+asyncpg://teqlif:<şifre>@127.0.0.1:5432/teqlif` | Lokal DB, şifre dolu |
+| `REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/0` | Lokal Redis (WG IP), şifre dolu, DB=0 |
+| `SECRET_KEY` | Dolu, uzun rastgele string | JWT — node3 staging ile farklı olmalı |
+| `ALGORITHM` | `HS256` | Sabit değer |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `43200` (30 gün) | Sabit değer |
+| `UPLOAD_DIR` | `/var/www/teqlif.com/uploads` | Production upload dizini |
+| `BREVO_API_KEY` | Dolu | E-posta servisi |
+| `BREVO_SENDER_EMAIL` | Dolu, gerçek gönderici adresi | `noreply@teqlif.com` gibi |
+| `BREVO_SENDER_NAME` | `Teqlif` | — |
+| `EDGE_LIVEKIT_URLS` | `"http://10.10.0.1:7880,http://10.10.0.6:7880"` | node1 ve node4 — iki URL; WireGuard tünel zaten şifreli, TLS gereksiz |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node4 ile **aynı** olmalı |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node4 ile **aynı** olmalı |
+| `EDGE_MINIO_URLS` | `"http://10.10.0.1:9010,http://10.10.0.6:9010"` | node1 ve node4 — iki URL |
+| `MINIO_ACCESS_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_USER ile **aynı** olmalı |
+| `MINIO_SECRET_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_PASSWORD ile **aynı** olmalı |
+| `MINIO_BUCKET` | `teqlif` | Production bucket |
+| `MINIO_DM_BUCKET` | `teqlif-dm` | Production DM bucket |
+| `MINIO_SECURE` | `False` | WireGuard üzerinden HTTP |
+| `MINIO_REGION` | `us-east-1` | MinIO sabit değer |
+| `MINIO_STORAGE_QUOTA_PERCENT` | `80` | — |
+| `EDGE_METRICS_INTERVAL_SEC` | `3` | — |
+| `NODE2_AI_PROXY_URL` | `"http://10.10.0.3:8080"` | node2 WireGuard IP |
+| `NODE3_AI_PROXY_URL` | `"http://10.10.0.4:8080"` | node3 WireGuard IP |
+| `AI_PROXY_INTERNAL_TOKEN` | Dolu | ⚠️ node2, node3 prod, node3 staging ile **aynı** olmalı |
+| `FIREBASE_SERVICE_ACCOUNT` | Dosya path veya JSON string | FCM push için zorunlu |
+| `SENTRY_BACKEND_DSN` | Dolu VEYA bilinçli boş | Optional |
+| `GOOGLE_CLIENT_ID` | Dolu | Google OAuth |
+| `ADMIN_EMAIL` | Dolu, geçerli e-posta | — |
+| `ADMIN_PASSWORD_HASH` | Dolu, bcrypt hash (`$2b$...`) | — |
+| `CAPTCHA_ENABLED` | `True` veya `False` | Production'da genellikle True |
+| `CAPTCHA_PROVIDER` | `hcaptcha` veya `recaptcha` | — |
+| `CAPTCHA_SECRET_KEY` | Dolu (CAPTCHA_ENABLED=True ise zorunlu) | — |
+| `DB_POOL_SIZE` | Dolu (örn. `20`) | — |
+| `DB_MAX_OVERFLOW` | Dolu (örn. `10`) | — |
+| `DB_POOL_TIMEOUT` | Dolu (örn. `30`) | — |
+| `DB_POOL_RECYCLE` | Dolu (örn. `1800`) | — |
+| `TELEGRAM_BOT_TOKEN` | Dolu, gerçek token | Sistem bildirimleri için |
+| `TELEGRAM_CHAT_ID` | Dolu, gerçek chat ID | — |
+| `APNS_KEY_PATH` | Dosya path (örn. `/var/www/...`) | iOS VoIP push |
+| `APNS_KEY_ID` | Dolu | — |
+| `APNS_TEAM_ID` | Dolu | Apple Developer Team ID |
+| `APNS_CERT_PATH` | Dosya path VEYA boş | — |
+| `IOS_BUNDLE_ID` | `teqlif` | — |
+| `APNS_USE_SANDBOX` | `False` | Production için False |
+| `SITE_URL` | `https://www.teqlif.com` | — |
+| `DEBUG` | `False` | Production için False |
+| `WEB_APP_ENABLED` | `False` | — |
+| `USE_PGBOUNCER` | `False` | PgBouncer kurulu değilse False |
+| `CLICKHOUSE_HOST` | `localhost` | ClickHouse node5'te lokal |
+| `CLICKHOUSE_PORT` | `8123` | — |
+| `CLICKHOUSE_DB` | `default` | — |
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.5 — node1: backend/.env.production (Edge 1)
+
+**Komut:** `cat /var/www/teqlif.com/backend/.env.production`
+
+| KEY | Beklenen Değer / Format | Kontrol Notu |
+|-----|------------------------|--------------|
+| `CORE_REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/1` | node5'teki Redis şifresi ile eşleşmeli |
+| `EDGE_NODE_ID` | `node1` | — |
+| `EDGE_METRICS_INTERVAL_SEC` | `3` | — |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node4, node5, node3 staging ile **aynı** olmalı |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node4, node5, node3 staging ile **aynı** olmalı |
+| `LIVEKIT_PORT` | `7880` | — |
+| `MINIO_ROOT_USER` | Dolu | ⚠️ node5 MINIO_ACCESS_KEY ve node4 ile **aynı** olmalı |
+| `MINIO_ROOT_PASSWORD` | Dolu | ⚠️ node5 MINIO_SECRET_KEY ve node4 ile **aynı** olmalı |
+| `MINIO_VOLUMES` | `"/var/lib/minio"` | — |
+| `MINIO_SERVER_URL` | `"http://10.10.0.1:9010"` | node1'in WireGuard IP'si |
+| `MINIO_BROWSER` | `"off"` | — |
+| `MINIO_STORAGE_QUOTA_PERCENT` | `80` | — |
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.6 — node4: backend/.env.production (Edge 2)
+
+**Komut:** `cat /var/www/teqlif.com/backend/.env.production`
+
+| KEY | Beklenen Değer / Format | Kontrol Notu |
+|-----|------------------------|--------------|
+| `CORE_REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/1` | node5'teki Redis şifresi ile eşleşmeli |
+| `EDGE_NODE_ID` | `node4` | node1'den farklı olmalı |
+| `EDGE_METRICS_INTERVAL_SEC` | `3` | — |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node5, node3 staging ile **aynı** olmalı |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node5, node3 staging ile **aynı** olmalı |
+| `LIVEKIT_PORT` | `7880` | — |
+| `MINIO_ROOT_USER` | Dolu | ⚠️ node5 MINIO_ACCESS_KEY ve node1 ile **aynı** olmalı |
+| `MINIO_ROOT_PASSWORD` | Dolu | ⚠️ node5 MINIO_SECRET_KEY ve node1 ile **aynı** olmalı |
+| `MINIO_VOLUMES` | `"/var/lib/minio"` | — |
+| `MINIO_SERVER_URL` | `"http://10.10.0.6:9010"` | node4'ün WireGuard IP'si (10.10.0.6) |
+| `MINIO_BROWSER` | `"off"` | — |
+| `MINIO_STORAGE_QUOTA_PERCENT` | `80` | — |
+
+**Durum:** ⏳
+
+---
+
+### Adım 8.7 — Cross-Node Tutarlılık Özeti
+
+Bu adımda tüm node'ların .env içerikleri alındıktan sonra kritik değerlerin eşleşip eşleşmediği kontrol edilir.
+
+#### Aynı Değer Olması Gereken Key'ler
+
+| Key (Grup) | node2 | node3 prod | node3 staging | node5 | node1 | node4 |
+|------------|-------|------------|---------------|-------|-------|-------|
+| `AI_PROXY_INTERNAL_TOKEN` | ✅ | ✅ | ✅ | ✅ | — | — |
+| `LIVEKIT_API_KEY` | — | — | ✅ | ✅ | ✅ | ✅ |
+| `LIVEKIT_API_SECRET` | — | — | ✅ | ✅ | ✅ | ✅ |
+| `MINIO_ACCESS_KEY` / `MINIO_ROOT_USER` | — | — | ✅ (ACCESS_KEY) | ✅ (ACCESS_KEY) | ✅ (ROOT_USER) | ✅ (ROOT_USER) |
+| `MINIO_SECRET_KEY` / `MINIO_ROOT_PASSWORD` | — | — | ✅ (SECRET_KEY) | ✅ (SECRET_KEY) | ✅ (ROOT_PASSWORD) | ✅ (ROOT_PASSWORD) |
+| `CAPTCHA_PROVIDER` / `CAPTCHA_SECRET_KEY` | — | — | ✅ | ✅ | — | — |
+| `GROQ_API_KEY` | ✅ | ✅ | — | — | — | — |
+| `GEMINI_API_KEY` | ✅ | ✅ | — | — | — | — |
+| `TELEGRAM_BOT_TOKEN` | — | ✅ | — | ✅ | — | — |
+| `TELEGRAM_CHAT_ID` | — | ✅ | — | ✅ | — | — |
+| `BREVO_API_KEY` | — | — | ✅ | ✅ | — | — |
+| `FIREBASE_SERVICE_ACCOUNT` | — | — | ✅ | ✅ | — | — |
+| `GOOGLE_CLIENT_ID` | — | — | ✅ | ✅ | — | — |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` | — | — | ✅ | ✅ | — | — |
+| `APNS_KEY_ID` / `APNS_TEAM_ID` | — | — | ✅ | ✅ | — | — |
+
+#### Core Redis Şifresi (Tek Kaynak, Farklı DB Index'ler)
+
+Tüm node'ların Redis bağlantılarında aynı `<CORE_REDIS_PASSWORD>` kullanılır; sadece DB index değişir:
+
+| Node | Key | Bağlantı | DB Index | Kullanım |
+|------|-----|----------|----------|---------|
+| node5 | `REDIS_URL` | `10.10.0.5:6379` | **0** | Core backend (session, pubsub, cache) |
+| node2 | `REDIS_URL` | `10.10.0.5:6379` | **1** | AI proxy rate-limit sayacı |
+| node3 prod | `REDIS_URL` | `10.10.0.5:6379` | **1** | AI proxy rate-limit sayacı |
+| node1 | `CORE_REDIS_URL` | `10.10.0.5:6379` | **1** | Edge metrics yazma (edge-metrics-agent) |
+| node4 | `CORE_REDIS_URL` | `10.10.0.5:6379` | **1** | Edge metrics yazma (edge-metrics-agent) |
+| node3 staging | `REDIS_URL` | `127.0.0.1:6379` | **0** | Staging lokal Redis — **farklı şifre** (`<STAGING_REDIS_PASSWORD>`) |
+
+#### Bilinçli Farklı Olan Key'ler (Normal)
+
+| Key | Farkı |
+|-----|-------|
+| `SECRET_KEY` | node3 staging ≠ node5 production — farklı JWT imzalama sırları |
+| `DATABASE_URL` | node3 staging: lokal staging DB / node5: lokal prod DB |
+| `EDGE_LIVEKIT_URLS` | node3 staging: `http://127.0.0.1:7880` / node5: `http://10.10.0.1:7880,http://10.10.0.6:7880` |
+| `EDGE_MINIO_URLS` | node3 staging: `http://127.0.0.1:9010` / node5: `http://10.10.0.1:9010,http://10.10.0.6:9010` |
+| `MINIO_BUCKET` | node3 staging: `teqlif-staging` / node5: `teqlif` |
+| `MINIO_DM_BUCKET` | node3 staging: `teqlif-dm-staging` / node5: `teqlif-dm` |
+| `EDGE_NODE_ID` | node1: `node1` / node4: `node4` |
+| `MINIO_SERVER_URL` | node1: `http://10.10.0.1:9010` / node4: `http://10.10.0.6:9010` |
+| `APNS_USE_SANDBOX` | node3 staging: `True` / node5: `False` |
+| `DEBUG` | node3 staging: `True` / node5: `False` |
+| `SITE_URL` | node3 staging: `https://staging.teqlif.com` / node5: `https://www.teqlif.com` |
+| `BREVO_SENDER_EMAIL` | node3 staging: `staging@teqlif.com` / node5: gerçek gönderici |
+| `CF_ZONE_ID` / `CF_DNS_RECORD_ID` / `CF_API_TOKEN` | Sadece node2'de — CF failover için |
+| `CAPTCHA_PROVIDER` / `CAPTCHA_SECRET_KEY` | node3 staging ve node5 — aynı değer; `CAPTCHA_ENABLED=True` her ikisinde de |
+
+**Durum:** ⏳
