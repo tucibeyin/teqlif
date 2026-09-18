@@ -65,6 +65,23 @@ echo -e "\n${CYAN}${BOLD}══════════════════�
 echo -e "${CYAN}${BOLD} 🚀 TEQLIF RESTART — $NODE Servisleri Yeniden Başlatılıyor ${RESET}"
 echo -e "${CYAN}${BOLD}══════════════════════════════════════════════════════════════════════${RESET}\n"
 
+if [[ "$NODE" == "gateway" ]]; then
+    SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+    CONF_SRC="$SCRIPT_DIR/../gateway/resources/teqlif.com.conf"
+    
+    echo -ne "  ${YELLOW}↻${RESET} ${BOLD}Nginx konfigürasyonu güncelleniyor... ${RESET}"
+    if [[ -f "$CONF_SRC" ]]; then
+        sudo cp "$CONF_SRC" /etc/nginx/sites-available/teqlif.com.conf
+        if sudo nginx -t >/dev/null 2>&1; then
+            echo -e "${GREEN}BAŞARILI${RESET}"
+        else
+            echo -e "${RED}BAŞARISIZ${RESET} (Nginx -t hata verdi)"
+        fi
+    else
+         echo -e "${RED}BAŞARISIZ${RESET} (Kaynak dosya bulunamadı: $CONF_SRC)"
+    fi
+fi
+
 for svc in $SERVICES_LIST; do
     echo -ne "  ${YELLOW}↻${RESET} ${BOLD}$svc${RESET} yeniden başlatılıyor... "
     if sudo systemctl restart "$svc" 2>/dev/null; then
