@@ -15,7 +15,7 @@ RESET='\033[0m'
 # ── Repo Dizini ──
 # Bootstrap sırasında bootstrap_node*.sh tarafından sed ile gerçek path'e çevrilir.
 REPO_DIR="__REPO_DIR__"
-if [[ "$REPO_DIR" == "__REPO_DIR__" ]]; then
+if [[ ! -d "$REPO_DIR/.git" ]]; then
   REPO_DIR=$(git -C "$(dirname "$(readlink -f "$0")")" rev-parse --show-toplevel 2>/dev/null || echo "")
 fi
 
