@@ -17,7 +17,7 @@ warn()  { echo -e "  ${YELLOW}⚠${RESET} $1"; WARN=$((WARN+1)); }
 header(){ echo -e "\n${CYAN}${BOLD}══ $1 ══${RESET}"; }
 
 # ── SSH yardımcı ───────────────────────────────────────────────────────────────
-SSH_OPTS="-o ConnectTimeout=6 -o BatchMode=yes -o StrictHostKeyChecking=no -o LogLevel=ERROR -o ServerAliveInterval=5 -o ServerAliveCountMax=2"
+SSH_OPTS="-o ConnectTimeout=6 -o BatchMode=yes -o StrictHostKeyChecking=no -o LogLevel=ERROR -o ServerAliveInterval=5 -o ServerAliveCountMax=2 -o ControlMaster=auto -o ControlPath=/tmp/ssh-%r@%h:%p -o ControlPersist=60s"
 _ssh() { ssh $SSH_OPTS "$1" "${@:2}" 2>/dev/null; }
 _ssh_check() { ssh $SSH_OPTS "$1" true >/dev/null 2>&1; }
 
