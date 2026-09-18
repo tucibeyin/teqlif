@@ -46,6 +46,7 @@ detect_node() {
     local wg_ip
     if wg_ip=$(ip -4 addr show wg0 2>/dev/null | grep -oP '(?<=inet\s)10\.10\.0\.\d+'); then
         case "$wg_ip" in
+            "10.10.0.2") echo "gateway"; return 0 ;;
             "10.10.0.1") echo "node1"; return 0 ;;
             "10.10.0.3") echo "node2"; return 0 ;;
             "10.10.0.4") echo "node3"; return 0 ;;
