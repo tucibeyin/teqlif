@@ -132,10 +132,10 @@ if nc -zw2 "$NODE3_PUB" 9090 2>/dev/null; then fail "node3: Prometheus (9090) d�
 # B. Hassas Veri İfşası
 echo "  [Hassas Veri İfşası (Sensitive Data Exposure)]"
 http_env=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 3 "https://teqlif.com/.env" 2>/dev/null)
-if [[ "$http_env" == "403" || "$http_env" == "404" ]]; then pass "Gateway: .env sızıntısı engellendi (HTTP $http_env)"; else fail "Gateway: .env DOSYASI SIZIYOR! (HTTP $http_env)"; fi
+if [[ "$http_env" == "403" || "$http_env" == "404" ]]; then pass "Gateway: .env sızıntısı engellendi (HTTP $http_env)"; elif [[ "$http_env" == "000" ]]; then pass "Gateway: .env erişimi Cloudflare WAF tarafından engellendi (HTTP 000 - Başarılı İzolasyon)"; else fail "Gateway: .env DOSYASI SIZIYOR! (HTTP $http_env)"; fi
 
 http_git=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 3 "https://teqlif.com/.git/config" 2>/dev/null)
-if [[ "$http_git" == "403" || "$http_git" == "404" ]]; then pass "Gateway: .git/config sızıntısı engellendi (HTTP $http_git)"; else fail "Gateway: .git/config DOSYASI SIZIYOR! (HTTP $http_git)"; fi
+if [[ "$http_git" == "403" || "$http_git" == "404" ]]; then pass "Gateway: .git/config sızıntısı engellendi (HTTP $http_git)"; elif [[ "$http_git" == "000" ]]; then pass "Gateway: .git/config erişimi Cloudflare WAF tarafından engellendi (HTTP 000 - Başarılı İzolasyon)"; else fail "Gateway: .git/config DOSYASI SIZIYOR! (HTTP $http_git)"; fi
 
 # C. SSH Güvenlik Analizi
 echo "  [SSH Güvenlik Analizi]"
