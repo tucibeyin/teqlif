@@ -107,8 +107,19 @@ echo ""
 # ── [1/2] git pull ──
 echo -e "${BOLD}[1/2] git pull${RESET}"
 if [[ -n "$REPO_DIR" && -d "$REPO_DIR/.git" ]]; then
-  git_out=$(git -C "$REPO_DIR" pull --ff-only 2>&1 | tail -1)
-  echo -e "  ${git_out}"
+  REPO_OWNER=$(stat -c '%U' "$REPO_DIR/.git" 2>/dev/null || echo "")
+  if [[ -n "$REPO_OWNER" && "$REPO_OWNER" != "root" && "$(id -u)" -eq 0 ]]; then
+    git_result=$(sudo -u "$REPO_OWNER" git -C "$REPO_DIR" pull --ff-only 2>&1)
+  else
+    git_result=$(git -C "$REPO_DIR" pull --ff-only 2>&1)
+  fi
+  git_exit=$?
+  echo -e "  $(echo "$git_result" | tail -1)"
+  if [[ $git_exit -ne 0 ]]; then
+    echo -e "  ${RED}${BOLD}HATA: git pull başarısız — servisler restart edilmedi.${RESET}" >&2
+    echo -e "  ${YELLOW}Manuel düzelt: cd $REPO_DIR && git status${RESET}" >&2
+    exit 1
+  fi
 else
   echo -e "  ${YELLOW}Atlandı — repo dizini tespit edilemedi.${RESET}"
 fi
