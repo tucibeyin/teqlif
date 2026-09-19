@@ -76,29 +76,6 @@ fi
 NODE_ROLE="${NODE_ROLES[$NODE]:-$NODE}"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# ── sync_env_template ──
-# Template'de var, active .env'de eksik olan KEY'leri ekler.
-# Mevcut değerlere asla dokunmaz — sadece APPEND yapar.
-sync_env_template() {
-  local template="$1"
-  local target="$2"
-  [[ ! -f "$template" || ! -f "$target" ]] && return 0
-  local added=0
-  while IFS= read -r line; do
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    [[ "$line" != *=* ]] && continue
-    local key="${line%%=*}"
-    [[ -z "$key" ]] && continue
-    if grep -q "^${key}=" "$target" 2>/dev/null; then continue; fi
-    echo "$line" >> "$target"
-    echo -e "    ${GREEN}+${RESET} ${key}"
-    added=$((added + 1))
-  done < "$template"
-  if [[ $added -gt 0 ]]; then
-    echo -e "    ${CYAN}→${RESET} ${added} yeni değişken eklendi: $(basename "$target")"
-  fi
-}
-
 # ── format_uptime ──
 format_uptime() {
   local start_time=$1
@@ -127,8 +104,8 @@ echo -e "${BOLD}${CYAN}  ${NODE}  ·  ${NODE_ROLE}  ·  ${TIMESTAMP}${RESET}"
 echo -e "$SEP"
 echo ""
 
-# ── [1/3] git pull ──
-echo -e "${BOLD}[1/3] git pull${RESET}"
+# ── [1/2] git pull ──
+echo -e "${BOLD}[1/2] git pull${RESET}"
 if [[ -n "$REPO_DIR" && -d "$REPO_DIR/.git" ]]; then
   git_out=$(git -C "$REPO_DIR" pull --ff-only 2>&1 | tail -1)
   echo -e "  ${git_out}"
@@ -137,54 +114,8 @@ else
 fi
 echo ""
 
-# ── [2/3] nginx konfigürasyon (gateway) / env sync (diğerleri) ──
-if [[ "$NODE" == "gateway" ]]; then
-  echo -e "${BOLD}[2/3] nginx konfigürasyon${RESET}"
-  CONF_SRC="$REPO_DIR/deploy/scale/V1.4/gateway/resources/teqlif.com.conf"
-  if [[ -f "$CONF_SRC" ]]; then
-    sudo cp "$CONF_SRC" /etc/nginx/sites-available/teqlif.com.conf
-    echo -e "  Config güncellendi: /etc/nginx/sites-available/teqlif.com.conf"
-    printf "  nginx -t... "
-    if sudo nginx -t >/dev/null 2>&1; then
-      echo -e "${GREEN}✓${RESET}"
-    else
-      echo -e "${RED}✗${RESET}  (nginx -t hata verdi — restart adımı hata verebilir)"
-    fi
-  else
-    echo -e "  ${RED}✗${RESET}  Kaynak dosya bulunamadı: $CONF_SRC"
-  fi
-else
-  echo -e "${BOLD}[2/3] env sync${RESET}"
-  if [[ -n "$REPO_DIR" ]]; then
-    TEMPLATE_DIR="$REPO_DIR/deploy/scale/V1.4/$NODE/resources"
-    if [[ -d "$TEMPLATE_DIR" ]]; then
-      _any=0
-      for _tmpl in "$TEMPLATE_DIR"/.env.*.template; do
-        [[ -f "$_tmpl" ]] || continue
-        _suffix="${_tmpl##*/.env.}"
-        _suffix="${_suffix%.template}"
-        _target="$REPO_DIR/backend/.env.${_suffix}"
-        if [[ -f "$_target" ]]; then
-          _any=1
-          echo -e "  ${CYAN}·${RESET} .env.${_suffix}"
-          sync_env_template "$_tmpl" "$_target"
-        fi
-      done
-      if [[ $_any -eq 0 ]]; then
-        echo -e "  ${YELLOW}Atlandı — aktif .env dosyası bulunamadı.${RESET}"
-      fi
-      unset _tmpl _suffix _target _any
-    else
-      echo -e "  ${YELLOW}Atlandı — template dizini bulunamadı.${RESET}"
-    fi
-  else
-    echo -e "  ${YELLOW}Atlandı — repo dizini tespit edilemedi.${RESET}"
-  fi
-fi
-echo ""
-
-# ── [3/3] servisler ──
-echo -e "${BOLD}[3/3] servisler yeniden başlatılıyor${RESET}"
+# ── [2/2] servisler ──
+echo -e "${BOLD}[2/2] servisler yeniden başlatılıyor${RESET}"
 for svc in $SERVICES_LIST; do
   printf "  "
   if sudo systemctl restart "$svc" 2>/dev/null; then
