@@ -8,9 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles  # frontend /static için hâlâ gerekli
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, ORJSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, Response, ORJSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.config import settings
@@ -40,10 +38,6 @@ from app.core.task_queue import set_pool, clear_pool
 from app.core.ws_manager import ws_manager
 from app.database import AsyncSessionLocal
 from sqlalchemy import select
-from app.models.listing import Listing
-from app.models.user import User
-from app.models.enums import UserStatus
-from app.models.stream import LiveStream
 import app.models.auction       # noqa: F401 — tablo kaydı için
 import app.models.direct_sale  # noqa: F401 — tablo kaydı için
 import app.models.bid  # noqa: F401 — tablo kaydı için
@@ -257,160 +251,9 @@ app.include_router(catalog.router)
 app.include_router(direct_sale.router)
 
 
-# Frontend dosyalarını sun
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
-templates = Jinja2Templates(directory=frontend_dir)
-
-_DEFAULT_OG_IMAGE = "https://teqlif.com/static/icons/icon.svg"
-
-
-def _listing_og(listing: Listing, listing_id: int) -> dict:
-    """Listing'den OpenGraph context sözlüğü üretir."""
-    urls = json.loads(listing.image_urls) if listing.image_urls else []
-    og_image = urls[0] if urls else (listing.image_url or _DEFAULT_OG_IMAGE)
-    price_str = f"{int(listing.price):,} ₺".replace(",", ".") if listing.price else ""
-    desc_parts = [p for p in [price_str, listing.description] if p]
-    og_description = " — ".join(desc_parts)[:200] if desc_parts else "teqlif'te satılık ilan"
-    return {
-        "og_title": listing.title,
-        "og_description": og_description,
-        "og_image": og_image,
-        "og_url": f"https://teqlif.com/ilan/{listing_id}",
-    }
-
-
-def _user_og(user: User) -> dict:
-    """User'dan OpenGraph context sözlüğü üretir."""
-    name = user.full_name or user.username
-    return {
-        "og_title": f"{name} — teqlif",
-        "og_description": f"{name} kullanıcısının ilanlarını ve satışlarını teqlif'te incele.",
-        "og_image": user.profile_image_url or _DEFAULT_OG_IMAGE,
-        "og_url": f"https://teqlif.com/profil/{user.username}",
-    }
-
-
-def _is_desktop_browser(request: Request) -> bool:
-    """Masaüstü tarayıcı mı? Bot ve mobil cihazlar için False döner."""
-    ua = request.headers.get("user-agent", "").lower()
-    mobile_kw = ("android", "iphone", "ipad", "ipod", "mobile", "webos", "blackberry", "windows phone")
-    bot_kw = (
-        "bot", "crawl", "spider", "facebookexternalhit", "twitterbot", "whatsapp",
-        "slack", "telegram", "discordbot", "linkedinbot", "pinterest", "curl", "python-requests",
-    )
-    return not any(kw in ua for kw in mobile_kw) and not any(kw in ua for kw in bot_kw)
-
-
-if os.path.exists(frontend_dir):
-    app.mount("/static", StaticFiles(directory=os.path.join(frontend_dir, "static")), name="static")
-
-    @app.get("/", include_in_schema=False)
-    async def serve_index():
-        return JSONResponse({"name": "teqlif-api", "version": "1.4"})
-
-    @app.get("/.well-known/apple-app-site-association", include_in_schema=False)
-    async def serve_aasa():
-        return FileResponse(
-            os.path.join(frontend_dir, ".well-known", "apple-app-site-association"),
-            media_type="application/json",
-        )
-
-    @app.get("/ilan/{listing_id}", include_in_schema=False)
-    async def serve_listing_page(request: Request, listing_id: str):
-        try:
-            lid = int(listing_id)
-        except (ValueError, TypeError):
-            return HTMLResponse("<h1>404 — İlan bulunamadı</h1>", status_code=404)
-        listing_id = lid
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(Listing).where(Listing.id == listing_id, Listing.status != "deleted")
-            )
-            listing = result.scalar_one_or_none()
-        if not listing:
-            return HTMLResponse(
-                "<h1>404 — İlan bulunamadı</h1>", status_code=404
-            )
-        # Masaüstü tarayıcılar için doğrudan ilan sayfasına yönlendir
-        if _is_desktop_browser(request):
-            from fastapi.responses import RedirectResponse
-            return RedirectResponse(url=f"/ilan.html?id={listing_id}", status_code=302)
-        ctx = _listing_og(listing, listing_id)
-        ctx["app_scheme"] = f"teqlif://ilan/{listing_id}"
-        ctx["web_url"]    = f"/ilan.html?id={listing_id}"
-        if settings.web_app_enabled:
-            return FileResponse(os.path.join(frontend_dir, "index.html"))
-        return templates.TemplateResponse(request, "app-landing.html", ctx)
-
-    @app.get("/profil/{username}", include_in_schema=False)
-    async def serve_profile_page(request: Request, username: str):
-        async with AsyncSessionLocal() as db:
-            user = await db.scalar(
-                select(User).where(
-                    User.username == username,
-                    User.status == UserStatus.ACTIVE,
-                )
-            )
-        if not user:
-            return HTMLResponse(
-                "<h1>404 — Kullanıcı bulunamadı</h1>", status_code=404
-            )
-        ctx = _user_og(user)
-        ctx["app_scheme"] = f"teqlif://profil/{user.username}"
-        ctx["web_url"]    = f"/profil.html?u={user.username}"
-        if settings.web_app_enabled:
-            return FileResponse(os.path.join(frontend_dir, "index.html"))
-        return templates.TemplateResponse(request, "app-landing.html", ctx)
-
-
-
-    @app.get("/mesajlar", include_in_schema=False)
-    async def serve_messages_page():
-        return FileResponse(os.path.join(frontend_dir, "mesajlar.html"))
-
-    @app.get("/support", include_in_schema=False)
-    async def serve_support_page():
-        return FileResponse(os.path.join(frontend_dir, "support.html"))
-
-    @app.get("/gizlilik-politikasi", include_in_schema=False)
-    async def serve_privacy_page():
-        return FileResponse(os.path.join(frontend_dir, "gizlilik-politikasi.html"))
-
-    @app.get("/yayin/{stream_id}", include_in_schema=False)
-    async def serve_stream_page(request: Request, stream_id: int):
-        async with AsyncSessionLocal() as db:
-            stream = await db.scalar(
-                select(LiveStream).where(LiveStream.id == stream_id)
-            )
-        if not stream:
-            return HTMLResponse(
-                "<h1>404 — Yayın bulunamadı</h1>", status_code=404
-            )
-        og_image = stream.thumbnail_url or _DEFAULT_OG_IMAGE
-        ctx = {
-            "og_title":       f"{stream.title} — teqlif Canlı",
-            "og_description": "teqlif'te canlı yayın izle ve açık artırmaya katıl.",
-            "og_image":        og_image,
-            "og_url":         f"https://www.teqlif.com/yayin/{stream_id}",
-            "app_scheme":     f"teqlif://yayin/{stream_id}",
-            "web_url":        f"/yayin.html?id={stream_id}",
-        }
-        if settings.web_app_enabled:
-            return FileResponse(os.path.join(frontend_dir, "index.html"))
-        return templates.TemplateResponse(request, "app-landing.html", ctx)
-
-    @app.get("/{page}.html", include_in_schema=False)
-    async def serve_page(page: str):
-        path = os.path.join(frontend_dir, f"{page}.html")
-        if os.path.exists(path):
-            return FileResponse(path)
-        return FileResponse(os.path.join(frontend_dir, "index.html"))
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    path = os.path.join(frontend_dir, "static", "icons", "favicon.ico")
-    return FileResponse(path, media_type="image/x-icon")
+@app.get("/", include_in_schema=False)
+async def root():
+    return JSONResponse({"name": "teqlif-api", "version": "1.4"})
 
 
 @app.get("/ads.txt", include_in_schema=False)

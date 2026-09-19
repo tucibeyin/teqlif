@@ -918,7 +918,7 @@ sudo bash bootstrap_<node>.sh
 
 | # | Konu | Açıklama | Öncelik |
 |---|------|----------|---------|
-| 1 | **Backend frontend-serving kodunu kaldır** | `main.py`'deki `if os.path.exists(frontend_dir):` bloğu V1.3'ten kalma. V1.4'te gateway nginx frontend'i statik sunuyor; backend sadece API. `serve_index()` geçici olarak JSON döndürüyor — bu blok ve bağlı tüm HTML route'lar (`/ilan/`, `/profil/`, `/yayin/` vb.) frontend'e taşınmalı veya temizlenmeli. | Orta |
+| 1 | **OG deep link önizlemeleri** | `teqlif.com/ilan/{id}`, `/profil/{username}`, `/yayin/{stream_id}` paylaşıldığında sosyal medya bot'ları OG meta tag görmüyor (nginx statik dosya sunuyor, FastAPI'ya gitmiyor). Çözüm: nginx `teqlif.com` bloğuna SSR veya statik OG proxy eklenmeli. | Orta |
 | 2 | **node4 MinIO + LiveKit bootstrap scripti** | node4 için `bootstrap_node4.sh` henüz yazılmamış; node1 ile aynı yapıda olacak. | Yüksek |
 | 3 | **gateway HTTPS (SSL) doğrudan sunumu** | Şu an CF Full modda gateway :80 dinliyor. CF olmadan doğrudan gateway IP'ye gidilince plain HTTP. Certbot + nginx SSL, CF olmadan da güvenli. | Düşük |
 | 4 | **ClickHouse init_clickhouse() database parametresi** | `init_clickhouse()` database parametresi olmadan bağlanıyor; tablolar bootstrap'ta elle oluşturuluyor. `init_clickhouse()` `settings.clickhouse_db` ile bağlanmalı ve tabloları kendi oluşturmalı. | Orta |
