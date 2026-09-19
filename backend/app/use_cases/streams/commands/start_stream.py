@@ -62,6 +62,7 @@ class StartStreamCommand:
 
             node = await orchestrator.allocate_node(ServiceType.MEDIA)
 
+            room_name = str(uuid.uuid4())
             stream_data = {
                 "room_name": room_name,
                 "host_id": user_id,
@@ -73,6 +74,7 @@ class StartStreamCommand:
                 "livekit_url": node["livekit_url"],  # Edge node kalıcı olarak kayıt altına alınır
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
+            token = make_livekit_token(room_name, user, can_publish=True)
 
         from app.core.event_bus import event_bus
         from app.core.events import StreamStartedEvent
@@ -97,7 +99,6 @@ class StartStreamCommand:
         except Exception as exc:
             logger.warning("[StartStreamCommand] room_to_stream mapping yazılamadı: %s", exc)
 
-        token = make_livekit_token(room_name, user, can_publish=True)
         logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s", new_stream.id, node.get("node_id"))
         
         return {
