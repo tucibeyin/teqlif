@@ -42,6 +42,8 @@ NODE_SERVICES=(
 # Node5'te redis-server/minio/livekit uçuşta olduğundan restart skip edilir.
 declare -A NODE_SKIP_RESTART
 NODE_SKIP_RESTART=(
+    ["node1"]="minio livekit"
+    ["node4"]="minio livekit"
     ["node5"]="redis-server minio livekit"
 )
 
