@@ -306,9 +306,7 @@ if os.path.exists(frontend_dir):
 
     @app.get("/", include_in_schema=False)
     async def serve_index():
-        if settings.web_app_enabled:
-            return FileResponse(os.path.join(frontend_dir, "index.html"))
-        return FileResponse(os.path.join(frontend_dir, "app-landing.html"))
+        return JSONResponse({"name": "teqlif-api", "version": "1.4"})
 
     @app.get("/.well-known/apple-app-site-association", include_in_schema=False)
     async def serve_aasa():
