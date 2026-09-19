@@ -38,6 +38,23 @@ NODE_SERVICES=(
     ["node5"]="postgresql redis-server clickhouse-server teqlif teqlif-worker teqlif-worker-critical node_exporter promtail"
 )
 
+# ── Production'da restart edilmeyecek servisler (durum tablosunda görünür) ──
+# Node5'te redis-server/minio/livekit uçuşta olduğundan restart skip edilir.
+declare -A NODE_SKIP_RESTART
+NODE_SKIP_RESTART=(
+    ["node5"]="redis-server minio livekit"
+)
+
+is_skip_restart() {
+    local svc="$1"
+    local skip_list="${NODE_SKIP_RESTART[$NODE]:-}"
+    [[ -z "$skip_list" ]] && return 1
+    for s in $skip_list; do
+        [[ "$s" == "$svc" ]] && return 0
+    done
+    return 1
+}
+
 # ── Node Tespiti ──
 detect_node() {
     local wg_ip
@@ -126,7 +143,9 @@ echo ""
 echo -e "${BOLD}[2/2] servisler yeniden başlatılıyor${RESET}"
 for svc in $SERVICES_LIST; do
   printf "  "
-  if sudo systemctl restart "$svc" 2>/dev/null; then
+  if is_skip_restart "$svc"; then
+    echo -e "${YELLOW}⊘${RESET}  ${svc}  ${YELLOW}← SKIP${RESET}"
+  elif sudo systemctl restart "$svc" 2>/dev/null; then
     echo -e "${GREEN}✓${RESET}  ${svc}"
   else
     echo -e "${RED}✗${RESET}  ${svc}  ${RED}← journalctl -u ${svc}${RESET}"
@@ -138,6 +157,7 @@ sleep 1
 for ((i=1; i<=10; i++)); do
   _waiting=0
   for svc in $SERVICES_LIST; do
+    is_skip_restart "$svc" && continue
     _state=$(systemctl show -p ActiveState "$svc" 2>/dev/null | cut -d= -f2)
     if [[ "$_state" != "active" && "$_state" != "failed" ]]; then
       _waiting=1; break
