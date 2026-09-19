@@ -171,3 +171,6 @@ Ray Tracer	7127
     6.90 Mpixels/sec
 Structure from Motion	5959
     188.7 Kpixels/sec
+---
+## Güncellemeler
+- **Swap:** Benchmark sonrası 8 GiB swap eklendi (2026-09-19)
