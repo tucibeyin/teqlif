@@ -81,7 +81,7 @@ async def get_user_subcategory_affinity(
                 END
             ) AS score
         FROM feed_analytics
-        WHERE user_id = {uid}
+        WHERE user_id = {uid_str}
           AND listing_subcategory != ''
           AND timestamp >= now() - INTERVAL {_AFFINITY_DAYS} DAY
         GROUP BY listing_id, listing_subcategory
@@ -187,7 +187,7 @@ async def get_user_category_affinity(
                 END
             ) AS score
         FROM feed_analytics
-        WHERE user_id = {uid}
+        WHERE user_id = {uid_str}
           AND timestamp >= now() - INTERVAL {_AFFINITY_DAYS} DAY
         GROUP BY listing_id
         HAVING score > 0
