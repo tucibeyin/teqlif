@@ -41,6 +41,12 @@ if ! command -v clickhouse-server &>/dev/null; then
     | sudo tee /etc/apt/sources.list.d/clickhouse.list
   sudo apt-get update -q && sudo apt-get install -y clickhouse-server clickhouse-client
 fi
+sudo systemctl enable --now clickhouse-server 2>/dev/null || true
+sleep 2  # clickhouse-server'ın hazır olması için
+# Staging DB — tablolar init_clickhouse() (backend staging startup) tarafından oluşturulur
+clickhouse-client --query "CREATE DATABASE IF NOT EXISTS teqlif_staging_analytics" 2>/dev/null \
+  && echo "==> teqlif_staging_analytics DB hazır." \
+  || echo "Uyarı: ClickHouse staging DB oluşturulamadı — backend startup'ta tekrar denenecek."
 
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true

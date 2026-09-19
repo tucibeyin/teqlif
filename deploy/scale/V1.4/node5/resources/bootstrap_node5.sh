@@ -42,6 +42,13 @@ sudo systemctl enable --now postgresql
 sudo systemctl enable --now redis-server
 sudo systemctl enable --now clickhouse-server
 
+# ClickHouse prod DB — tablolar init_clickhouse() (backend startup) tarafından oluşturulur
+echo "==> ClickHouse: teqlif_prod_analytics DB oluşturuluyor (tablolar backend startup'ta oluşturulur)..."
+sleep 2  # clickhouse-server'ın hazır olması için
+clickhouse-client --query "CREATE DATABASE IF NOT EXISTS teqlif_prod_analytics" 2>/dev/null \
+  && echo "==> teqlif_prod_analytics DB hazır." \
+  || echo "Uyarı: ClickHouse DB oluşturulamadı — servis başlamış olabilir, backend startup'ta tekrar denenecek."
+
 # ── Grup üyelikleri ──────────────────────────────────────────────────────────
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true

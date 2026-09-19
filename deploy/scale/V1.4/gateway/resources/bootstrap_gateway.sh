@@ -76,6 +76,20 @@ sudo ln -sf /etc/nginx/sites-available/teqlif.com.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
+# ── SSL Sertifikaları (Certbot) ───────────────────────────────────────────────
+# Nginx config her yeniden uygulandığında certbot'un eklediği 443 blokları silinir.
+# Bu blok mevcut sertifikaları nginx'e geri yükler.
+echo "==> SSL sertifikaları nginx'e yeniden uygulanıyor..."
+CERT_NAME=$(sudo certbot certificates 2>/dev/null | grep "Certificate Name:" | head -1 | awk '{print $3}' || echo "")
+if [[ -n "$CERT_NAME" ]]; then
+  sudo certbot install --cert-name "$CERT_NAME" --nginx --non-interactive --agree-tos --redirect 2>/dev/null \
+    && echo "==> SSL sertifikaları başarıyla uygulandı: $CERT_NAME" \
+    || echo "Uyarı: Certbot yeniden yükleme başarısız — manuel olarak çalıştırın."
+else
+  echo "==> SSL sertifikası bulunamadı. Bootstrap sonrası çalıştırın:"
+  echo "    sudo certbot --nginx -d teqlif.com -d www.teqlif.com -d api.teqlif.com -d staging.teqlif.com -d api-staging.teqlif.com"
+fi
+
 # ── node_exporter & promtail ──────────────────────────────────────────────────
 echo "==> Binery kurulumları..."
 if ! /usr/local/bin/node_exporter --version 2>&1 | grep -q "$NODE_EXPORTER_VERSION" 2>/dev/null; then
