@@ -1,0 +1,14 @@
+[Unit]
+Description=Teqlif Backup — Her gün 02:45 UTC
+Documentation=deploy/scale/V1.4/scripts/teqlif-backup.sh
+
+[Timer]
+# Her gün 02:45 UTC — ML training (00:30-02:30) bittikten sonra, cleanup (03:00) başlamadan önce
+OnCalendar=*-*-* 02:45:00 UTC
+# Sunucu 02:45'i geçmiş uyanırsa (reboot, sleep) en geç 15 dakika içinde çalıştır
+RandomizedDelaySec=0
+Persistent=true
+Unit=teqlif-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -297,9 +297,10 @@ async def cleanup_old_analytics_task(ctx: dict) -> None:
 
     Bu tablo en hızlı büyüyen tablodur; retention olmadan GB'larca büyür.
     90 günlük veri çoğu analiz ihtiyacı için fazlasıyla yeterli.
+    Büyük silme sonrası VACUUM ANALYZE dead tuple'ları temizler, sorgu planını yeniler.
     """
     try:
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, engine
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -309,8 +310,42 @@ async def cleanup_old_analytics_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Analytics cleanup tamamlandı | silinen=%d", result.rowcount
             )
+        # VACUUM transaction dışında çalışmalı (DDL, autocommit gerekir)
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE analytics_events"))
+            logger.info("[Worker] VACUUM ANALYZE analytics_events tamamlandı")
     except Exception as exc:
         logger.error("[Worker] Analytics cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+async def cleanup_old_user_interactions_task(ctx: dict) -> None:
+    """
+    Her Salı 04:00'da çalışır; 90 günden eski user_interactions kayıtlarını siler.
+
+    flush_interactions_to_db her 5 dakikada INSERT eder — temizlenmezse tablo
+    sınırsız büyür ve compute_trending_listings_task sorguları yavaşlar.
+    Büyük silme sonrası VACUUM ANALYZE çalıştırılır.
+    """
+    try:
+        from app.database import AsyncSessionLocal, engine
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                text("DELETE FROM user_interactions WHERE created_at < NOW() - INTERVAL '90 days'")
+            )
+            await db.commit()
+            logger.info(
+                "[Worker] user_interactions cleanup tamamlandı | silinen=%d", result.rowcount
+            )
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE user_interactions"))
+            logger.info("[Worker] VACUUM ANALYZE user_interactions tamamlandı")
+    except Exception as exc:
+        logger.error("[Worker] user_interactions cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
         raise
 
@@ -381,7 +416,7 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
 
 async def cleanup_old_media_messages_task(ctx: dict) -> None:
     """
-    Her gün 06:30'da çalışır; 3 günden eski medya mesajlarını (image/video/voice/file)
+    Her gün 06:30'da çalışır; 7 günden eski medya mesajlarını (image/video/voice/file)
     MinIO'dan ve DB'den siler.
 
     text dışındaki tüm content_type'lar hedeflenir.
@@ -393,7 +428,7 @@ async def cleanup_old_media_messages_task(ctx: dict) -> None:
     from app.services import storage_service as storage
     from sqlalchemy import select
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
     try:
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -3375,6 +3410,7 @@ class WorkerSettings:
         sync_ad_campaigns_task,
         process_churn_and_airdrop,
         cleanup_hype_highlights_task,
+        cleanup_old_user_interactions_task,
         deactivate_expired_listings_task,
         delete_expired_inactive_listings_task,
         compute_seller_badges_task,
@@ -3459,10 +3495,10 @@ class WorkerSettings:
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
         # Her 30 dakikada — velocity tabanlı trend ilanları (Redis cache, TTL:30dk)
         cron(compute_trending_listings_task, minute={0, 30}),
-        # Her gece 03:15 — SwipeLive ALS collaborative filtering modeli eğit
-        cron(train_swipe_live_als_task, hour=3, minute=15),
-        # Her gece 03:45 — İlan feed ALS collaborative filtering modeli eğit
-        cron(train_feed_als_task, hour=3, minute=45),
+        # Her gece 01:00 — SwipeLive ALS collaborative filtering modeli eğit (03:15'ten taşındı)
+        cron(train_swipe_live_als_task, hour=1, minute=0),
+        # Her gece 01:30 — İlan feed ALS collaborative filtering modeli eğit (03:45'ten taşındı)
+        cron(train_feed_als_task, hour=1, minute=30),
         # Her gece 04:00 — kullanıcı bazlı bildirim saat optimizasyonu
         cron(optimize_notification_timing_task, hour=4, minute=0),
         # APNs Feedback Service cron'u kaldırıldı — Apple legacy endpoint'i Kasım 2020'de kapattı
@@ -3470,8 +3506,8 @@ class WorkerSettings:
         cron(nsfw_backfill_task, hour=5, minute=15),
         # Her gece 05:30 — pHash backfill (50 ilan/çalıştırma)
         cron(backfill_phash_task, hour=5, minute=30),
-        # Günde 2x 00:30 + 12:30 — FAISS index yeniden kur
-        cron(rebuild_faiss_index_task, hour={0, 12}, minute=30),
+        # Günde 2x 00:00 + 12:00 — FAISS index yeniden kur (ML penceresinden önce)
+        cron(rebuild_faiss_index_task, hour={0, 12}, minute=0),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her 30 dakikada — embedding'i olmayan ilanlar için backfill (100'er batch)
@@ -3480,12 +3516,12 @@ class WorkerSettings:
         cron(backfill_listing_quality_scores_task, minute=45),
         # Her Pazar 02:30 — listing kalite modeli haftalık eğitim
         cron(train_listing_quality_model_task, weekday=6, hour=2, minute=30),
-        # Her Pazar 04:00 — Item2Vec oturum tabanlı collaborative model
-        cron(train_item2vec_task, weekday=6, hour=4, minute=0),
-        # Çarşamba + Pazar 05:00 — K-Means cold start clustering (yeni kullanıcılar)
-        cron(train_kmeans_cold_start_task, weekday={2, 6}, hour=5, minute=0),
-        # Pazartesi + Çarşamba + Cumartesi 03:00 — BPR collaborative filtering
-        cron(train_bpr_task, weekday={0, 2, 5}, hour=3, minute=0),
+        # Her Pazar 02:00 — Item2Vec oturum tabanlı collaborative model (04:00'dan taşındı)
+        cron(train_item2vec_task, weekday=6, hour=2, minute=0),
+        # Çarşamba + Pazar 02:15 — K-Means cold start clustering (05:00'dan taşındı)
+        cron(train_kmeans_cold_start_task, weekday={2, 6}, hour=2, minute=15),
+        # Pazartesi + Çarşamba + Cumartesi 00:30 — BPR collaborative filtering (03:00'dan taşındı)
+        cron(train_bpr_task, weekday={0, 2, 5}, hour=0, minute=30),
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi
@@ -3493,10 +3529,12 @@ class WorkerSettings:
         cron(hesitation_retarget_task, hour=6, minute=0),
         # Her gün 02:15 — çok sinyalli kullanıcı güven skoru (Redis cache)
         cron(compute_trust_scores_task, hour=2, minute=15),
-        # Her Pazartesi 05:00 — GradientBoosting churn modeli eğitimi
-        cron(train_churn_model_task, weekday=0, hour=5, minute=0),
+        # Her Pazartesi 02:30 — GradientBoosting churn modeli eğitimi (05:00'dan taşındı)
+        cron(train_churn_model_task, weekday=0, hour=2, minute=30),
         # Her Pazar 05:30 — NetworkX PageRank influence scoring
         cron(compute_influence_scores_task, weekday=6, hour=5, minute=30),
+        # Her Salı 04:00 — 90 günden eski user_interactions temizle + VACUUM
+        cron(cleanup_old_user_interactions_task, weekday=1, hour=4, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

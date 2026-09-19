@@ -1,0 +1,20 @@
+[Unit]
+Description=Teqlif Backup — PostgreSQL, Redis, ClickHouse
+Documentation=deploy/scale/V1.4/scripts/teqlif-backup.sh
+After=network.target postgresql.service redis.service clickhouse-server.service
+# Backup başarısız olursa teqlif servisini durdurmaz
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-backup.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=teqlif-backup
+# 30 dakika timeout — büyük DB'ler için yeterli
+TimeoutStartSec=1800
+# Backup başarısız olsa da timer bir sonraki gün tetiklenir
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target
