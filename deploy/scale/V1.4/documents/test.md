@@ -182,7 +182,7 @@
 
 **Amaç:** Her node'da VPS'te çalışan `.env` dosyalarını key bazında doğrulamak. Değerlerin dolu, doğru formatta ve cross-node tutarlı olduğunu teyit etmek.
 
-**Durum:** ⏳ Devam ediyor — Adım 8.A'dan başla.
+**Durum:** ✅ Tamamlandı (2026-09-19)
 
 ---
 
@@ -204,12 +204,12 @@ sudo teqlif-restart
 Her node'dan "✓ Tüm servisler başarıyla çalışıyor" çıktısı onaylandıktan sonra sonraki node'a geç.
 
 **Durum:**
-- [ ] node1
-- [ ] node4
-- [ ] node2
-- [ ] node3
-- [ ] node5
-- [ ] gateway
+- [x] node1
+- [x] node4
+- [x] node2
+- [x] node3 (CAPTCHA_ENABLED/PROVIDER/SECRET_KEY .env.staging'e eklendi; /usr/local/sbin'deki eski script güncellendi)
+- [x] node5
+- [x] gateway (/usr/local/sbin'deki eski script güncellendi)
 
 ---
 
@@ -238,8 +238,8 @@ sudo systemctl restart teqlif teqlif-worker teqlif-worker-critical
 ```
 
 **Durum:**
-- [ ] node3 REDIS_URL kontrol edildi
-- [ ] node5 EDGE_LIVEKIT_URLS kontrol edildi
+- [x] node3 REDIS_URL düzeltildi (şifre eklendi)
+- [x] node5 EDGE_LIVEKIT_URLS düzeltildi (https:// → http://)
 
 ---
 
@@ -256,11 +256,7 @@ nano /var/www/teqlif.com/backend/.env.staging
 sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging
 ```
 
-**Durum:** ⏳
-
----
-
-### Adım 8.1 — node2: backend/.env.production (Review)
+**Durum:** ✅ Tamamlandı
 
 ---
 
@@ -279,7 +275,7 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `CF_DNS_RECORD_ID` | Dolu, A kaydı ID'si | CF API ile doğrulanabilir |
 | `CF_API_TOKEN` | Dolu | Sadece node2'de olmalı |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı
 
 ---
 
@@ -297,7 +293,7 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `TELEGRAM_BOT_TOKEN` | Gerçek token (DUMMY_TOKEN değil) | Alertmanager bildirimleri için gerekli |
 | `TELEGRAM_CHAT_ID` | Gerçek chat ID (123456789 değil) | Negatif sayı olabilir (grup kanalı) |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı (REDIS_URL şifre düzeltildi)
 
 ---
 
@@ -317,8 +313,8 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `BREVO_SENDER_EMAIL` | `staging@teqlif.com` | Staging sender |
 | `BREVO_SENDER_NAME` | `Teqlif Staging` | — |
 | `EDGE_LIVEKIT_URLS` | `"http://127.0.0.1:7880"` | Staging için lokal LiveKit |
-| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node4, node5 ile **aynı** olmalı |
-| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node4, node5 ile **aynı** olmalı |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node3 `/etc/livekit/livekit.yaml` ile eşleşmeli — production grubundan (node1/node4/node5) **farklı** |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node3 `/etc/livekit/livekit.yaml` ile eşleşmeli — production grubundan **farklı** |
 | `EDGE_MINIO_URLS` | `"http://127.0.0.1:9010"` | Staging için lokal MinIO |
 | `MINIO_ACCESS_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_USER ile **aynı** olmalı |
 | `MINIO_SECRET_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_PASSWORD ile **aynı** olmalı |
@@ -357,7 +353,7 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `CLICKHOUSE_PORT` | `8123` | — |
 | `CLICKHOUSE_DB` | `default` | — |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı (CAPTCHA keyleri env sync ile eklendi ve dolduruldu; staging LiveKit key yeniden üretildi)
 
 ---
 
@@ -377,8 +373,8 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `BREVO_SENDER_EMAIL` | Dolu, gerçek gönderici adresi | `noreply@teqlif.com` gibi |
 | `BREVO_SENDER_NAME` | `Teqlif` | — |
 | `EDGE_LIVEKIT_URLS` | `"http://10.10.0.1:7880,http://10.10.0.6:7880"` | node1 ve node4 — iki URL; WireGuard tünel zaten şifreli, TLS gereksiz |
-| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node4 ile **aynı** olmalı |
-| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node4 ile **aynı** olmalı |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1/node4 `/etc/livekit/livekit.yaml` keys ile **aynı** olmalı (production grubu) |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1/node4 `/etc/livekit/livekit.yaml` keys ile **aynı** olmalı (production grubu) |
 | `EDGE_MINIO_URLS` | `"http://10.10.0.1:9010,http://10.10.0.6:9010"` | node1 ve node4 — iki URL |
 | `MINIO_ACCESS_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_USER ile **aynı** olmalı |
 | `MINIO_SECRET_KEY` | Dolu | ⚠️ node1/node4 MINIO_ROOT_PASSWORD ile **aynı** olmalı |
@@ -419,7 +415,7 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `CLICKHOUSE_PORT` | `8123` | — |
 | `CLICKHOUSE_DB` | `default` | — |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı (EDGE_LIVEKIT_URLS https→http düzeltildi)
 
 ---
 
@@ -432,8 +428,8 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `CORE_REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/1` | node5'teki Redis şifresi ile eşleşmeli |
 | `EDGE_NODE_ID` | `node1` | — |
 | `EDGE_METRICS_INTERVAL_SEC` | `3` | — |
-| `LIVEKIT_API_KEY` | Dolu | ⚠️ node4, node5, node3 staging ile **aynı** olmalı |
-| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node4, node5, node3 staging ile **aynı** olmalı |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node4, node5 ile **aynı** olmalı (production grubu); node3 staging farklı |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node4, node5 ile **aynı** olmalı (production grubu); node3 staging farklı |
 | `LIVEKIT_PORT` | `7880` | — |
 | `MINIO_ROOT_USER` | Dolu | ⚠️ node5 MINIO_ACCESS_KEY ve node4 ile **aynı** olmalı |
 | `MINIO_ROOT_PASSWORD` | Dolu | ⚠️ node5 MINIO_SECRET_KEY ve node4 ile **aynı** olmalı |
@@ -442,7 +438,7 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `MINIO_BROWSER` | `"off"` | — |
 | `MINIO_STORAGE_QUOTA_PERCENT` | `80` | — |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı (LIVEKIT_API_KEY/MINIO_ROOT_USER boştu, dolduruldu; livekit.yaml devkey→gerçek key güncellendi)
 
 ---
 
@@ -455,8 +451,8 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `CORE_REDIS_URL` | `redis://:<şifre>@10.10.0.5:6379/1` | node5'teki Redis şifresi ile eşleşmeli |
 | `EDGE_NODE_ID` | `node4` | node1'den farklı olmalı |
 | `EDGE_METRICS_INTERVAL_SEC` | `3` | — |
-| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node5, node3 staging ile **aynı** olmalı |
-| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node5, node3 staging ile **aynı** olmalı |
+| `LIVEKIT_API_KEY` | Dolu | ⚠️ node1, node5 ile **aynı** olmalı (production grubu); node3 staging farklı |
+| `LIVEKIT_API_SECRET` | Dolu | ⚠️ node1, node5 ile **aynı** olmalı (production grubu); node3 staging farklı |
 | `LIVEKIT_PORT` | `7880` | — |
 | `MINIO_ROOT_USER` | Dolu | ⚠️ node5 MINIO_ACCESS_KEY ve node1 ile **aynı** olmalı |
 | `MINIO_ROOT_PASSWORD` | Dolu | ⚠️ node5 MINIO_SECRET_KEY ve node1 ile **aynı** olmalı |
@@ -465,7 +461,7 @@ sudo systemctl restart teqlif-staging teqlif-worker-staging teqlif-worker-critic
 | `MINIO_BROWSER` | `"off"` | — |
 | `MINIO_STORAGE_QUOTA_PERCENT` | `80` | — |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı (MINIO_ROOT_USER boştu, dolduruldu; livekit.yaml devkey→gerçek key güncellendi)
 
 ---
 
@@ -478,8 +474,9 @@ Bu adımda tüm node'ların .env içerikleri alındıktan sonra kritik değerler
 | Key (Grup) | node2 | node3 prod | node3 staging | node5 | node1 | node4 |
 |------------|-------|------------|---------------|-------|-------|-------|
 | `AI_PROXY_INTERNAL_TOKEN` | ✅ | ✅ | ✅ | ✅ | — | — |
-| `LIVEKIT_API_KEY` | — | — | ✅ | ✅ | ✅ | ✅ |
-| `LIVEKIT_API_SECRET` | — | — | ✅ | ✅ | ✅ | ✅ |
+| `LIVEKIT_API_KEY` (prod grubu) | — | — | — | ✅ | ✅ | ✅ |
+| `LIVEKIT_API_SECRET` (prod grubu) | — | — | — | ✅ | ✅ | ✅ |
+| `LIVEKIT_API_KEY` (staging grubu) | — | — | ✅ (kendi yaml'ı ile) | — | — | — |
 | `MINIO_ACCESS_KEY` / `MINIO_ROOT_USER` | — | — | ✅ (ACCESS_KEY) | ✅ (ACCESS_KEY) | ✅ (ROOT_USER) | ✅ (ROOT_USER) |
 | `MINIO_SECRET_KEY` / `MINIO_ROOT_PASSWORD` | — | — | ✅ (SECRET_KEY) | ✅ (SECRET_KEY) | ✅ (ROOT_PASSWORD) | ✅ (ROOT_PASSWORD) |
 | `CAPTCHA_PROVIDER` / `CAPTCHA_SECRET_KEY` | — | — | ✅ | ✅ | — | — |
@@ -524,5 +521,6 @@ Tüm node'ların Redis bağlantılarında aynı `<CORE_REDIS_PASSWORD>` kullanı
 | `BREVO_SENDER_EMAIL` | node3 staging: `staging@teqlif.com` / node5: gerçek gönderici |
 | `CF_ZONE_ID` / `CF_DNS_RECORD_ID` / `CF_API_TOKEN` | Sadece node2'de — CF failover için |
 | `CAPTCHA_PROVIDER` / `CAPTCHA_SECRET_KEY` | node3 staging ve node5 — aynı değer; `CAPTCHA_ENABLED=True` her ikisinde de |
+| `LIVEKIT` prod/staging ayrımı | node1/node4/node5 = production grubu (aynı key); node3 staging = ayrı grup (farklı key) |
 
-**Durum:** ⏳
+**Durum:** ✅ Tamamlandı (2026-09-19)
