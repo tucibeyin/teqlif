@@ -149,7 +149,7 @@ Onarım: `deploy/scale/V1.4/scripts/repair_wireguard.sh`
 | REST API (prod) | HTTPS → HTTP | İnternet → CF → Gateway:443 → node5:8000 (wg0) |
 | REST API (staging) | HTTPS → HTTP | İnternet → CF → Gateway → node3:8001 (wg0) |
 | WebRTC medya (prod) | UDP | İnternet → CF DNS Only → node1/node4 public IP:50000-60000 |
-| WebRTC medya (staging) | UDP | İnternet → node3 public IP:50000-60000 |
+| WebRTC medya (staging) | UDP | İnternet → CF DNS Only → node3 public IP:50000-60000 |
 | LiveKit API çağrıları | HTTP | node5 wg0 → node1/node4:7880 |
 | Dosya upload/download | HTTPS | İnternet → CF DNS Only → node1/node4 public IP:9010 |
 | Log akışı | HTTP | Tüm node'lar (wg0) → node3:3100 |
