@@ -14,18 +14,18 @@ Limiter Redis'i arka depo olarak kullanır; redis://localhost:6379 env'de
 REDIS_URL ile override edilebilir.
 """
 
-import os
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from app.config import settings
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+_REDIS_URL = settings.redis_url
 
 def get_user_id_or_ip(request: Request) -> str:
     """
