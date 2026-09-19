@@ -381,7 +381,8 @@ async def create_user(
         email=data.email,
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
-        status = 'active'
+        status='active',
+        email_verified=True,
     )
     db.add(new_user)
     await db.commit()
