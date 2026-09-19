@@ -759,7 +759,7 @@ header "16. Kritik Log Analizi — Son 1 Saat"
 
 for i in "${REACHABLE[@]}"; do
   name="${NODE_NAMES[$i]}"
-  cnt=$(_rc "$i" "journalctl -p 0..3 -S '1 hour ago' --no-pager 2>/dev/null | grep -v 'maximum authentication attempts\|Protocol major versions differ\|pam_unix.*conversation failed\|pam_unix.*auth could not' | wc -l" || echo 0)
+  cnt=$(_rc "$i" "journalctl -p 0..3 -S '1 hour ago' --no-pager 2>/dev/null | grep -v 'maximum authentication attempts\|Protocol major versions differ\|pam_unix.*conversation failed\|pam_unix.*auth could not\|kex_exchange_identification\|systemd-ssh-generator\|AF_VSOCK' | wc -l" || echo 0)
   cnt=$(echo "$cnt" | tr -d '[:space:]')
   if   [[ "$cnt" -gt 50 ]]; then warn "$name: $cnt kritik log — journalctl -p 3 -xe ile incele"
   elif [[ "$cnt" -gt 10 ]]; then warn "$name: $cnt kritik log satırı (sınırda)"
