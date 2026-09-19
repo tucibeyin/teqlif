@@ -1,12 +1,17 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, Integer, String, ForeignKey, func, false
+from sqlalchemy import Boolean, DateTime, Integer, String, ForeignKey, func, false, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
 class MessageThread(Base):
     __tablename__ = "message_threads"
+    __table_args__ = (
+        # user_b_id tek başına sorgulanır: "kullanıcının tüm thread'leri"
+        # PK (user_a_id, user_b_id) yalnızca user_a_id üzerinden hızlı çalışır
+        Index("ix_message_threads_user_b", "user_b_id"),
+    )
 
     # user_a_id < user_b_id — canonical pair, CONSTRAINT ordered_user_pair
     user_a_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

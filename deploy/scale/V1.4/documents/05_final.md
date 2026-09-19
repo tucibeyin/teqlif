@@ -573,6 +573,54 @@ teqlif-worker-critical.service → BindsTo + PartOf teqlif.service
 `sudo systemctl restart teqlif` komutu 3 servisi birlikte restart eder.  
 (node3 staging'de aynı pattern: `teqlif-staging.service`, `teqlif-worker-staging.service`, `teqlif-worker-critical-staging.service`)
 
+### Backup Sistemi (node5 → node3)
+
+```
+teqlif-backup.timer  (02:45 UTC)
+  → teqlif-backup.service (Type=oneshot, User=root)
+      → /var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-backup.sh
+```
+
+Script node bağımsız çalışır: `teqlif` servisi aktifse prod node, `teqlif-staging` aktif ama `teqlif` değilse skip.
+
+| Servis | Yöntem | Dosya adı |
+|--------|--------|-----------|
+| PostgreSQL | `pg_dump --format=custom` (Unix socket, peer auth) | `teqlif_pg_{db}_{ISO8601Z}.pgdump` |
+| Redis | `BGSAVE` + `gzip` | `teqlif_redis_{ISO8601Z}.rdb.gz` |
+| ClickHouse | `BACKUP DATABASE` + `tar.zst` | `teqlif_ch_{db}_{ISO8601Z}.tar.zst` |
+
+**Retention:** Local (node5) 2 gün · Remote (node3) 7 gün · Temizlik yalnızca başarılı backup sonrası  
+**Rsync hedefi:** `tucibeyin@10.10.0.4:/var/backups/teqlif/node5/` (WireGuard SSH, root key)  
+**Bildirim:** Her backup sonucu Telegram'a gönderilir  
+**Disk eşiği:** %85 uyarı · %95 dur
+
+**node5'te bir kez yapılacaklar (bootstrap sonrası):**
+```bash
+# Systemd timer kur
+sudo cp deploy/scale/V1.4/node5/systemd/teqlif-backup.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now teqlif-backup.timer
+
+# SSH key (root → node3 tucibeyin)
+sudo ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519 -N ""
+# Public key'i node3'e ekle: sudo cat /root/.ssh/id_ed25519.pub
+# node3'te: echo "<key>" >> ~/.ssh/authorized_keys
+
+# .env.production'a ekle (template'den)
+# BACKUP_REMOTE_HOST=10.10.0.4 · BACKUP_REMOTE_USER=tucibeyin
+# BACKUP_REMOTE_PATH=/var/backups/teqlif · BACKUP_RETENTION_LOCAL_DAYS=2 · BACKUP_RETENTION_REMOTE_DAYS=7
+```
+
+**node3'te bir kez yapılacaklar:**
+```bash
+sudo mkdir -p /var/backups/teqlif
+sudo chown tucibeyin:tucibeyin /var/backups/teqlif
+```
+
+**Manuel test:**
+```bash
+sudo /var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-backup.sh
+```
+
 ### Bootstrap Akışı
 
 ```bash
@@ -927,5 +975,8 @@ sudo bash bootstrap_<node>.sh
 | 2 | **node4 MinIO + LiveKit bootstrap scripti** | node4 için `bootstrap_node4.sh` henüz yazılmamış; node1 ile aynı yapıda olacak. | Yüksek |
 | 3 | **gateway HTTPS (SSL) doğrudan sunumu** | Şu an CF Full modda gateway :80 dinliyor. CF olmadan doğrudan gateway IP'ye gidilince plain HTTP. Certbot + nginx SSL, CF olmadan da güvenli. | Düşük |
 | 4 | **ClickHouse init_clickhouse() database parametresi** | `init_clickhouse()` database parametresi olmadan bağlanıyor; tablolar bootstrap'ta elle oluşturuluyor. `init_clickhouse()` `settings.clickhouse_db` ile bağlanmalı ve tabloları kendi oluşturmalı. | Orta |
+| 5 | **edge_metrics TTL artışı** | `edge-metrics-agent`: TTL `interval×2` (6s) → `interval×4` (12s). Prometheus scrape interval 15s — mevcut TTL race condition'a açık; edge metriği dolmadan süresi dolabilir. | Düşük |
+| 6 | **Prometheus FastAPI scrape** | `prometheus.yml`'e `node5:8000/metrics` hedefi eklenmeli. `prometheus-fastapi-instrumentator` kurulu ama Prometheus bunu scrape etmiyor — API latency/request metrikleri toplanmıyor. | Orta |
+| 7 | **Alarm eşiği sıkılaştırması** | `prometheus-rules.yml`: `DiskSpaceLow` %80 → %70, `HighMemoryUsage` %85 → %75. Mevcut eşikler node3 (3.8 GiB) gibi kısıtlı node'lar için geç uyarı veriyor. | Orta |
 
-*Son güncelleme: 2026-09-19 · deploy/scale/V1.4/documents/final_V1.4.md*
+*Son güncelleme: 2026-09-19 · deploy/scale/V1.4/documents/05_final.md*

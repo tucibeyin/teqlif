@@ -273,7 +273,7 @@ async def cleanup_old_notifications_task(ctx: dict) -> None:
     30 günlük retention yeterli; daha eskisi operasyonel değer taşımaz.
     """
     try:
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, engine
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -283,6 +283,10 @@ async def cleanup_old_notifications_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Bildirim cleanup tamamlandı | silinen=%d", result.rowcount
             )
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE notifications"))
+            logger.info("[Worker] VACUUM ANALYZE notifications tamamlandı")
     except Exception as exc:
         logger.error("[Worker] Bildirim cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -364,7 +368,7 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
     Bu job, o temizliği atlayan edge case'leri yakalar.
     """
     try:
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, engine
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -374,6 +378,10 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Stream likes cleanup tamamlandı | silinen=%d", result.rowcount
             )
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE stream_likes"))
+            logger.info("[Worker] VACUUM ANALYZE stream_likes tamamlandı")
     except Exception as exc:
         logger.error("[Worker] Stream likes cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -392,7 +400,7 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
     sayılır ve kayıtlar silinebilir.
     """
     try:
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, engine
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -406,6 +414,10 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Gizli mesaj cleanup tamamlandı | silinen=%d", result.rowcount
             )
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE direct_messages"))
+            logger.info("[Worker] VACUUM ANALYZE direct_messages tamamlandı")
     except Exception as exc:
         logger.error("[Worker] Gizli mesaj cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -1758,7 +1770,7 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
     """Her gün 05:00'da çalışır; 30 günden eski listing_impressions kayıtlarını siler."""
     try:
         from sqlalchemy import text
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, engine
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 text("DELETE FROM listing_impressions WHERE seen_at < NOW() - INTERVAL '30 days'")
@@ -1767,6 +1779,10 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Impression cleanup tamamlandı | silinen=%d", result.rowcount
             )
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE listing_impressions"))
+            logger.info("[Worker] VACUUM ANALYZE listing_impressions tamamlandı")
     except Exception as exc:
         logger.error("[Worker] Impression cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)

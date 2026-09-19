@@ -11,6 +11,8 @@ class DirectMessage(Base):
     __table_args__ = (
         Index("ix_direct_messages_conv_created", "sender_id", "receiver_id", "created_at"),
         Index("ix_dm_receiver_is_read", "receiver_id", "is_read"),
+        # cleanup_old_media_messages_task: content_type IN (...) AND created_at < cutoff
+        Index("ix_dm_content_type_created", "content_type", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
