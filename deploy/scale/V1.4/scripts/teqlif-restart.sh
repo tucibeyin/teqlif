@@ -13,21 +13,7 @@ RESET='\033[0m'
 SEP="${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
 # ── Repo Dizini ──
-# Bootstrap sırasında bootstrap_node*.sh tarafından sed ile gerçek path'e çevrilir.
-# Değiştirilmemişse yaygın konumları dener.
-REPO_DIR="__REPO_DIR__"
-if [[ ! -d "$REPO_DIR/.git" ]]; then
-  for _candidate in \
-      "/var/www/teqlif.com" \
-      "/home/tucibeyin/teqlif" \
-      "$HOME/teqlif" \
-      "$(git -C "$(dirname "$(readlink -f "$0")")" rev-parse --show-toplevel 2>/dev/null)"; do
-    if [[ -d "$_candidate/.git" ]]; then
-      REPO_DIR="$_candidate"
-      break
-    fi
-  done
-fi
+REPO_DIR="/var/www/teqlif.com"
 
 # ── Node Rolleri ──
 declare -A NODE_ROLES
