@@ -33,7 +33,7 @@ NODE_SERVICES=(
     ["gateway"]="nginx node_exporter promtail"
     ["node1"]="redis-server livekit minio edge-metrics-agent node_exporter promtail"
     ["node2"]="teqlif-ai-proxy cf-failover node_exporter promtail"
-    ["node3"]="postgresql redis-server clickhouse-server livekit minio teqlif-ai-proxy teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging prometheus loki grafana-server alertmanager node_exporter promtail"
+    ["node3"]="postgresql redis-server clickhouse-server livekit minio edge-metrics-agent teqlif-ai-proxy teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging prometheus loki grafana-server alertmanager node_exporter promtail"
     ["node4"]="redis-server livekit minio edge-metrics-agent node_exporter promtail"
     ["node5"]="postgresql redis-server clickhouse-server teqlif teqlif-worker teqlif-worker-critical node_exporter promtail"
 )
