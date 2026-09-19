@@ -86,6 +86,8 @@ sudo ufw --force reset
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 22/tcp            # SSH
+sudo ufw allow 80/tcp            # HTTP (Let's Encrypt ACME + redirect)
+sudo ufw allow 443/tcp           # HTTPS (nginx SSL proxy)
 sudo ufw allow 51820/udp         # WireGuard (Mesh)
 sudo ufw allow 7880/tcp          # LiveKit API/WS (staging)
 sudo ufw allow 7882/tcp          # LiveKit TURN TCP
