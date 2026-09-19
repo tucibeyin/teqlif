@@ -156,8 +156,7 @@ else
             if sudo -u postgres pg_dump \
                     --format=custom \
                     --compress=6 \
-                    "$db" \
-                    --file="$DEST" 2>/dev/null && [[ -s "$DEST" ]]; then
+                    "$db" 2>/dev/null > "$DEST" && [[ -s "$DEST" ]]; then
                 echo -e "${GREEN}✓  $(_size "$DEST")${RESET}"
                 BACKED_UP+=("pg/${db} $(_size "$DEST")")
             else
