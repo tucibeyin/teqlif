@@ -127,7 +127,7 @@ if [[ "$_pg_active" == false ]]; then
     SKIPPED+=("postgresql")
 else
     # Üretim DB'lerini keşfet: template/postgres/staging/test dışı
-    PG_DBS=$(sudo -u postgres psql -h 127.0.0.1 -tAc \
+    PG_DBS=$(sudo -u postgres psql -tAc \
         "SELECT datname FROM pg_database
          WHERE datistemplate = false
            AND datname NOT IN ('postgres')
@@ -139,7 +139,7 @@ else
         SKIPPED+=("postgresql (no production dbs)")
     else
         for db in $PG_DBS; do
-            TABLE_COUNT=$(sudo -u postgres psql -h 127.0.0.1 -d "$db" -tAc \
+            TABLE_COUNT=$(sudo -u postgres psql -d "$db" -tAc \
                 "SELECT COUNT(*) FROM information_schema.tables
                  WHERE table_schema = 'public'" \
                 2>/dev/null | tr -d ' \n' || echo "0")
@@ -154,10 +154,8 @@ else
             printf "  ↻  %-32s " "${db} (${TABLE_COUNT} tablo)..."
 
             if sudo -u postgres pg_dump \
-                    -h 127.0.0.1 \
                     --format=custom \
                     --compress=6 \
-                    --no-password \
                     "$db" \
                     --file="$DEST" 2>/dev/null && [[ -s "$DEST" ]]; then
                 echo -e "${GREEN}✓  $(_size "$DEST")${RESET}"
