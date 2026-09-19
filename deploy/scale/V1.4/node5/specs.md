@@ -14,7 +14,7 @@ CPU cores  : 4 @ 2449.998 MHz
 AES-NI     : ✔ Enabled
 VM-x/AMD-V : ✔ Enabled
 RAM        : 7.8 GiB
-Swap       : 0.0 KiB
+Swap       : 8.0 GiB
 Disk       : 49.1 GiB
 Distro     : Debian GNU/Linux 13 (trixie)
 Kernel     : 6.12.41+deb13-amd64

@@ -97,8 +97,8 @@ Monitoring stack kaynak tüketimi modest (~500 MB RAM). Staging trafik yükü d�
 | Node | Rol | Sağlayıcı | Konum | CPU | RAM | Disk | Ağ | WireGuard IP | Public IP |
 |------|-----|-----------|-------|-----|-----|------|----|-------------|-----------|
 | **gateway** | EDGE PROXY | Netcup | Nürnberg, DE | 2 vCore QEMU 2.29GHz | 1.9 GB + 1 GB Swap | 58.9 GB SSD | 1 Gbps *(24h ort. 100Mbps throttle!)* | 10.10.0.2 | Netcup IP |
-| **node1** | EDGE 1 | OVHcloud | Limburg, DE | 6 Core Intel Haswell 3.09GHz | 11.4 GB + 8 GB Swap | 98.3 GB NVMe | 2 Gbps unmetered | 10.10.0.1 | OVH IP |
-| **node2** | AI PROXY 1 | VPSHostingService | ABD | 1 Core | 1 GB | — | — | 10.10.0.3 | US IP |
+| **node1** | EDGE 1 | OVHcloud | Limburg, DE | 6 Core Intel Haswell 3.09GHz | 11.4 GB + 2 GB Swap | 98.3 GB NVMe | 2 Gbps unmetered | 10.10.0.1 | OVH IP |
+| **node2** | AI PROXY 1 | VPSHostingService | ABD | 1 Core | 1.4 GB + 2 GB Swap | — | — | 10.10.0.3 | US IP |
 | **node3** | MONITOR & STAGING | Zap-Hosting | Ashburn, VA, ABD | 4 Core AMD EPYC | ~4 GB + 4 GB Swap | — | 5 TB/ay *(10 Mbit sonrası throttle)* | 10.10.0.4 | **5.249.165.10** |
 | **node4** | EDGE 2 | OVHcloud | Limburg, DE | 6 Core Intel Haswell | 11.4 GB + 8 GB Swap | 98.3 GB NVMe | 2 Gbps unmetered | 10.10.0.6 | OVH IP |
 | **node5** | CORE | Zap-Hosting | — | 4 Core AMD EPYC | 7.8 GB + 8 GB Swap | 50 GB SSD | 1 Gbps unmetered | 10.10.0.5 | Zap IP |
