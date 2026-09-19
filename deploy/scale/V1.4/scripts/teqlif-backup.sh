@@ -95,7 +95,8 @@ if [[ "$IS_PROD" == false ]]; then
 fi
 
 # Disk doluluk kontrolü — %85 üstünde uyarı, %95 üstünde dur
-DISK_PCT=$(df -h "$BACKUP_LOCAL_ROOT" 2>/dev/null || df -h / 2>/dev/null | tail -1 | awk '{print $5}' | tr -d '%')
+DISK_PCT=$(df "$BACKUP_LOCAL_ROOT" 2>/dev/null | tail -1 | awk '{print $5}' | tr -d '%')
+[[ -z "$DISK_PCT" ]] && DISK_PCT=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
 if [[ "${DISK_PCT:-0}" -ge 95 ]]; then
     MSG="🔴 <b>teqlif-backup DURDU</b> · ${HOSTNAME}
 Disk doluluk %${DISK_PCT} — backup başlatılmadı. Temizlik gerekli."
