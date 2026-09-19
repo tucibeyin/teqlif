@@ -36,9 +36,9 @@ NODE_SERVICES=(
     ["gateway"]="nginx node_exporter promtail"
     ["node1"]="livekit minio redis-server edge-metrics-agent node_exporter promtail"
     ["node2"]="teqlif-ai-proxy cf-failover node_exporter promtail"
-    ["node3"]="teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging livekit minio teqlif-ai-proxy clickhouse-server prometheus loki grafana-server alertmanager node_exporter promtail redis-server postgresql"
+    ["node3"]="postgresql redis-server clickhouse-server livekit minio teqlif-ai-proxy teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging prometheus loki grafana-server alertmanager node_exporter promtail"
     ["node4"]="livekit minio redis-server edge-metrics-agent node_exporter promtail"
-    ["node5"]="teqlif teqlif-worker teqlif-worker-critical postgresql clickhouse-server redis-server node_exporter promtail"
+    ["node5"]="postgresql redis-server clickhouse-server teqlif teqlif-worker teqlif-worker-critical node_exporter promtail"
 )
 
 # ── Node Tespiti ──
