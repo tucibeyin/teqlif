@@ -94,6 +94,7 @@ sudo ufw allow 7882/tcp          # LiveKit TURN TCP
 sudo ufw allow 7882/udp          # LiveKit TURN UDP
 sudo ufw allow 5349/tcp          # LiveKit TURN TLS
 sudo ufw allow 3478/udp          # STUN
+sudo ufw allow 30000:40000/udp   # LiveKit TURN relay
 sudo ufw allow 9010/tcp          # MinIO S3 API (staging)
 sudo ufw allow 9011/tcp          # MinIO Console (staging)
 sudo ufw allow 50000:60000/udp   # LiveKit WebRTC medya
