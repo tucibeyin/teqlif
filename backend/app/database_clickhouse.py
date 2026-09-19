@@ -212,9 +212,23 @@ async def init_clickhouse() -> None:
     """Startup: bağlantı kur + tablolar oluştur."""
     global _client
     try:
+        from app.config import settings as _settings
+        # DB yoksa oluştur (default DB üzerinden)
+        _bootstrap = await clickhouse_connect.get_async_client(
+            host=_settings.clickhouse_host,
+            port=_settings.clickhouse_port,
+            connect_timeout=5,
+            send_receive_timeout=30,
+        )
+        await _bootstrap.command(
+            f"CREATE DATABASE IF NOT EXISTS `{_settings.clickhouse_db}`"
+        )
+        await _bootstrap.close()
+
         _client = await clickhouse_connect.get_async_client(
-            host="localhost",
-            port=8123,
+            host=_settings.clickhouse_host,
+            port=_settings.clickhouse_port,
+            database=_settings.clickhouse_db,
             connect_timeout=5,
             send_receive_timeout=30,
         )

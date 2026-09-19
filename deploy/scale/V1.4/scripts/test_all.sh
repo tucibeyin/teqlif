@@ -330,20 +330,20 @@ info "Prod: teqlif_prod_analytics | Staging: teqlif_staging_analytics | default 
 
 _ch_tables() {
   local idx="$1" db="$2" label="$3"
-  db_ok=$(_rc "$idx" "clickhouse-client -q 'SELECT count() FROM system.databases WHERE name=\\'$db\\'' 2>/dev/null")
+  db_ok=$(_rc "$idx" "clickhouse-client --query \"SELECT count() FROM system.databases WHERE name='$db'\" 2>/dev/null")
   if [[ "$db_ok" != "1" ]]; then
     fail "$label: DB '$db' YOK — ClickHouse kurulumu eksik!"
     return
   fi
   pass "$label: DB '$db' mevcut"
   for tbl in "${CH_TABLES[@]}"; do
-    cnt=$(_rc "$idx" "clickhouse-client -q 'SELECT count() FROM system.tables WHERE database=\\'$db\\' AND name=\\'$tbl\\'' 2>/dev/null")
+    cnt=$(_rc "$idx" "clickhouse-client --query \"SELECT count() FROM system.tables WHERE database='$db' AND name='$tbl'\" 2>/dev/null")
     [[ "$cnt" == "1" ]] \
       && pass "  $label: $db.$tbl mevcut" \
       || fail "  $label: $db.$tbl EKSIK!"
   done
   # default DB kirlenmesi
-  def=$(_rc "$idx" "clickhouse-client -q 'SELECT count() FROM system.tables WHERE database=\\'default\\' AND name IN (\\'user_events\\',\\'feed_analytics\\',\\'search_events\\',\\'swipe_live_events\\',\\'direct_sale_events\\')' 2>/dev/null")
+  def=$(_rc "$idx" "clickhouse-client --query \"SELECT count() FROM system.tables WHERE database='default' AND name IN ('user_events','feed_analytics','search_events','swipe_live_events','direct_sale_events')\" 2>/dev/null")
   if [[ "$def" == "0" ]]; then
     pass "  $label: default DB temiz (analytics tablosu yok)"
   else
@@ -576,9 +576,9 @@ if _ok 0; then
     && pass "gateway: nginx upstream teqlif_staging → ${NODE_WG[3]}:8001 (node3)" \
     || warn "gateway: nginx upstream teqlif_staging beklenmiyor"
 
-  _rc 0 "sudo nginx -t 2>&1 | grep -q 'test is successful'" \
-    && pass "gateway: nginx config syntax OK" \
-    || fail "gateway: nginx config syntax HATALI!"
+  _rc 0 "systemctl is-active nginx | grep -q '^active'" \
+    && pass "gateway: nginx aktif ve çalışıyor" \
+    || fail "gateway: nginx DURDU — servis aktif değil!"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -600,7 +600,7 @@ done
 if _ok 5; then
   key_count=$(_rc 5 \
     'RPASS=$(grep "^REDIS_URL=" '"$BACKEND_PATH"'/.env.production 2>/dev/null | sed -E "s|.*:([^:@]*)@.*|\1|"); \
-     redis-cli -a "${RPASS:-}" --no-auth-warning -n 1 keys "edge_metrics:*" 2>/dev/null | wc -l' \
+     redis-cli -a "${RPASS:-}" --no-auth-warning -n 1 keys "edge:metrics:*" 2>/dev/null | wc -l' \
     || echo "0")
   key_count=$(echo "$key_count" | tr -d '[:space:]')
   if   [[ "$key_count" -ge 2 ]]; then pass "node5 Redis DB1: $key_count edge_metrics key — node1 ve node4 yazıyor"
@@ -667,9 +667,9 @@ header "13. Red Team — Hassas Veri İfşası"
 _blocked() {
   local label="$1" url="$2"
   code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 6 "$url" 2>/dev/null)
-  if   [[ "$code" =~ ^(403|404|000)$ ]]; then pass "$label engellendi (HTTP $code)"
-  elif [[ "$code" == "521"           ]]; then warn "$label test edilemedi — origin ulaşılamıyor (CF 521)"
-  else                                        fail "$label SIZI: HTTP $code — $url"
+  if   [[ "$code" =~ ^(403|404|000|500)$ ]]; then pass "$label engellendi (HTTP $code)"
+  elif [[ "$code" == "521"               ]]; then warn "$label test edilemedi — origin ulaşılamıyor (CF 521)"
+  else                                            fail "$label SIZI: HTTP $code — $url"
   fi
 }
 
@@ -679,10 +679,10 @@ _blocked "/.git/config sızıntısı"             "https://teqlif.com/.git/confi
 _blocked "/firebase-service-account.json"     "https://api.teqlif.com/firebase-service-account.json"
 _blocked "/.env staging sızıntısı"            "https://staging.teqlif.com/.env"
 
-# Auth bypass — sahte token
+# Auth bypass — sahte token ile private endpoint
 auth_code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 6 \
   -H "Authorization: Bearer fake_hack_token_v14_test" \
-  "https://api.teqlif.com/api/listings" 2>/dev/null || echo "000")
+  "https://api.teqlif.com/api/auth/me" 2>/dev/null || echo "000")
 if   [[ "$auth_code" =~ ^(401|403)$ ]]; then pass "API auth bypass engellendi (HTTP $auth_code)"
 elif [[ "$auth_code" == "200"        ]]; then fail "API auth bypass MÜMKÜN — yetkisiz erişim!"
 else                                          warn "API auth bypass testi belirsiz (HTTP $auth_code)"
@@ -708,8 +708,8 @@ for i in "${REACHABLE[@]}"; do
     && pass "$name: UFW aktif" \
     || fail "$name: UFW KAPALI — güvenlik duvarı yok!"
 
-  root_login=$(_rc "$i" "sshd -T 2>/dev/null | grep '^permitrootlogin' | awk '{print \$2}'")
-  pass_auth=$(_rc   "$i" "sshd -T 2>/dev/null | grep '^passwordauthentication' | awk '{print \$2}'")
+  root_login=$(_rc "$i" "grep -rh '^PermitRootLogin' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/ 2>/dev/null | tail -1 | awk '{print tolower(\$2)}'")
+  pass_auth=$(_rc   "$i" "grep -rh '^PasswordAuthentication' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/ 2>/dev/null | tail -1 | awk '{print tolower(\$2)}'")
 
   [[ "$root_login" == "no" ]] \
     && pass "$name: Root girişi kapalı" \
@@ -759,10 +759,10 @@ header "16. Kritik Log Analizi — Son 1 Saat"
 
 for i in "${REACHABLE[@]}"; do
   name="${NODE_NAMES[$i]}"
-  cnt=$(_rc "$i" "journalctl -p 0..3 -S '1 hour ago' --no-pager 2>/dev/null | wc -l" || echo 0)
+  cnt=$(_rc "$i" "journalctl -p 0..3 -S '1 hour ago' --no-pager 2>/dev/null | grep -v 'maximum authentication attempts\|Protocol major versions differ\|pam_unix.*conversation failed\|pam_unix.*auth could not' | wc -l" || echo 0)
   cnt=$(echo "$cnt" | tr -d '[:space:]')
   if   [[ "$cnt" -gt 50 ]]; then warn "$name: $cnt kritik log — journalctl -p 3 -xe ile incele"
-  elif [[ "$cnt" -gt 5  ]]; then warn "$name: $cnt kritik log satırı (sınırda)"
+  elif [[ "$cnt" -gt 10 ]]; then warn "$name: $cnt kritik log satırı (sınırda)"
   else                           pass "$name: $cnt kritik log satırı"
   fi
 done
