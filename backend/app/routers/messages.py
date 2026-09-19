@@ -36,6 +36,7 @@ from app.use_cases.messages.commands.delete_message_command import DeleteMessage
 from app.use_cases.messages.commands.delete_conversation_command import DeleteConversationCommand
 from app.use_cases.messages.commands.accept_message_request_command import AcceptMessageRequestCommand
 from app.use_cases.messages.commands.decline_message_request_command import DeclineMessageRequestCommand
+from app.use_cases.messages.commands.dismiss_message_request_command import DismissMessageRequestCommand
 from app.use_cases.messages.commands.mark_messages_read_command import MarkMessagesReadCommand
 
 logger = get_logger(__name__)
@@ -216,6 +217,15 @@ async def decline_message_request(
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     await DeclineMessageRequestCommand(uow).execute(current_user.id, requester_id)
+
+
+@router.delete("/requests/{requester_id}", status_code=204)
+async def dismiss_message_request(
+    requester_id: int,
+    current_user: User = Depends(get_current_user),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    await DismissMessageRequestCommand(uow).execute(current_user.id, requester_id)
 
 
 class _CallPermissionBody(BaseModel):

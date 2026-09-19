@@ -19,7 +19,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../utils/number_formatter.dart';
@@ -423,7 +423,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab>
                     backgroundColor: kPrimary.withValues(alpha: 0.15),
                     backgroundImage:
                         otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
-                        ? CachedNetworkImageProvider(imgUrl(otherAvatarUrl))
+                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(otherAvatarUrl))
                         : null,
                     child: otherAvatarUrl == null || otherAvatarUrl.isEmpty
                         ? Text(
@@ -601,6 +601,59 @@ class _RequestsListTab extends ConsumerWidget {
       );
     }
 
+    Future<void> dismissRequest(int otherId) async {
+      final confirmed = await showModalBottomSheet<bool>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  loc.t("msgDismissRequestConfirm"),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: Text(
+                  loc.t("msgDismissRequest"),
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () => Navigator.pop(ctx, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: Text(loc.t("btnCancel")),
+                onTap: () => Navigator.pop(ctx, false),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+      if (confirmed != true) return;
+      try {
+        await ref.read(notificationServiceProvider).dismissMessageRequest(otherId);
+        ref.read(requestsTabViewModelProvider.notifier).load(silent: true);
+        TeqSnackBar.show(message: loc.t("msgDismissRequestSuccess"));
+      } catch (_) {
+        TeqSnackBar.show(message: loc.t("msgDismissRequestFailed"));
+      }
+    }
+
     return RefreshIndicator(
       color: kPrimary,
       onRefresh: () async => ref.read(requestsTabViewModelProvider.notifier).load(silent: true),
@@ -626,7 +679,7 @@ class _RequestsListTab extends ConsumerWidget {
               backgroundColor: kPrimary.withValues(alpha: 0.15),
               backgroundImage:
                   otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
-                  ? CachedNetworkImageProvider(imgUrl(otherAvatarUrl))
+                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(otherAvatarUrl))
                   : null,
               child: otherAvatarUrl == null || otherAvatarUrl.isEmpty
                   ? Text(
@@ -701,6 +754,7 @@ class _RequestsListTab extends ConsumerWidget {
                 ref.read(messagesTabViewModelProvider.notifier).load(silent: true);
               });
             },
+            onLongPress: () => dismissRequest(otherId),
           );
         },
       ),
@@ -934,7 +988,7 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
       case 'outbid':
       case 'smart_auction_alert':
         if (relatedId != null && !StreamService.isHosting) {
-          final active = await StreamService.isStreamActive(relatedId);
+          final active = await ref.read(streamServiceProvider).isStreamActive(relatedId);
           if (!mounted) return;
           if (!active) {
             final loc = ref.read(localizationProvider);
@@ -1235,8 +1289,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     }
     try {
       // SWR: önce Hive cache (anlık), sonra API (taze)
-      await for (final data in ApiService.get<List<Map<String, dynamic>>>(
-        url: '$kBaseUrl/messages/${widget.otherUserId}',
+      await for (final data in ref.read(apiServiceProvider).get<List<Map<String, dynamic>>>(
+        url: '${ref.read(apiClientProvider).config.baseUrl}/messages/${widget.otherUserId}',
         cacheKey: 'chat_${widget.otherUserId}',
         cacheTtl: const Duration(minutes: 2),
         bypassCache: bypassCache,
@@ -1289,7 +1343,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   }
 
   void _listenWs() {
-    _wsSub = WsService.messageStream.stream.listen((data) {
+    _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       final type = data['type'] as String?;
 
       if (type == 'connected') {
@@ -1383,7 +1437,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   void _sendTypingStopped() {
     _typingDebounce?.cancel();
     _typingThrottle?.cancel();
-    WsService.sendJson({'type': 'typing_stopped', 'target_user_id': widget.otherUserId});
+    ref.read(wsServiceProvider).sendJson({'type': 'typing_stopped', 'target_user_id': widget.otherUserId});
   }
 
   void _onTextChanged(String text) {
@@ -1400,7 +1454,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     if (_typingThrottle != null) return;
 
     // İlk harf veya throttle süresi dolduysa hemen gönder
-    WsService.sendJson({'type': 'typing', 'target_user_id': widget.otherUserId});
+    ref.read(wsServiceProvider).sendJson({'type': 'typing', 'target_user_id': widget.otherUserId});
     _typingThrottle = Timer(const Duration(seconds: 3), () {
       _typingThrottle = null;
     });
@@ -1436,7 +1490,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     if (token == null || !mounted) return;
     setState(() => _uploadState = const UploadSending(0.0));
     try {
-      final uri = Uri.parse('$kBaseUrl/messages/upload');
+      final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/messages/upload');
       final req = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['receiver_id'] = widget.otherUserId.toString()
@@ -1648,6 +1702,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (!mounted) return;
       final perm = source == ImageSource.camera ? Permission.camera : Permission.videos;
       final status = await perm.status;
+      if (!mounted) return;
       if (!status.isGranted) {
         showPermissionDeniedDialog(context, title: loc.t('attachCameraPermission'), message: loc.t('permPermanentlyDenied'), openSettingsLabel: loc.t('permOpenSettings'), cancelLabel: loc.t('btnCancel'));
       }
@@ -1857,7 +1912,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       });
     }
     try {
-      await _audioPlayer.play(UrlSource(imgUrl(url)));
+      await _audioPlayer.play(UrlSource(ref.read(apiClientProvider).imgUrl(url)));
       if (mounted) setState(() => _audioPlaying = true);
     } catch (_) {
       if (mounted) {
@@ -1871,7 +1926,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   Future<void> _downloadAndOpen(String url, String? fileName) async {
     final loc = ref.read(localizationProvider);
     try {
-      final response = await http.get(Uri.parse(imgUrl(url)));
+      final response = await http.get(Uri.parse(ref.read(apiClientProvider).imgUrl(url)));
       final dir = await getTemporaryDirectory();
       final name = fileName ?? url.split('/').last;
       final file = File('${dir.path}/$name');
@@ -2012,7 +2067,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => _FullScreenImagePage(url: imgUrl(mediaUrl)),
+                  builder: (_) => _FullScreenImagePage(url: ref.read(apiClientProvider).imgUrl(mediaUrl)),
                 ),
               );
             }
@@ -2020,7 +2075,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: CachedNetworkImage(
-              imageUrl: imgUrl(thumbUrl ?? mediaUrl ?? ''),
+              imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl ?? mediaUrl ?? ''),
               width: 200,
               height: 200,
               fit: BoxFit.cover,
@@ -2041,7 +2096,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => _FullScreenVideoPage(url: imgUrl(mediaUrl)),
+                  builder: (_) => _FullScreenVideoPage(url: ref.read(apiClientProvider).imgUrl(mediaUrl)),
                 ),
               );
             }
@@ -2053,7 +2108,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 borderRadius: BorderRadius.circular(12),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
-                        imageUrl: imgUrl(thumbUrl),
+                        imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
                         width: 200,
                         height: 200,
                         fit: BoxFit.cover,
@@ -2205,7 +2260,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     if (scope == null || !mounted) return;
     // Optimistik kaldır
     setState(() => _messages.removeWhere((m) => m['id'] == messageId));
-    final ok = await NotificationService.deleteMessage(messageId, scope: scope);
+    final ok = await ref.read(notificationServiceProvider).deleteMessage(messageId, scope: scope);
     if (!mounted) return;
     if (!ok) {
       TeqSnackBar.show(message: loc.t("msgDeleteMessageFailed"));
@@ -2258,7 +2313,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     }
 
     // Çevrimiçi → API'ye gönder
-    final ok = await NotificationService.sendMessage(
+    final ok = await ref.read(notificationServiceProvider).sendMessage(
       widget.otherUserId,
       text,
       listingId: widget.listingId,
@@ -2343,9 +2398,6 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
               final state = requestState.valueOrNull;
               final canCall = state?.canCall ?? false;
               final canCallReason = state?.canCallReason;
-              final isAcceptor = !(state?.isInitiator ?? true);
-              final isAccepted = state?.status == 'accepted';
-              final callAllowed = state?.callAllowed ?? false;
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2357,8 +2409,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                         debugPrint(
                           '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
                         );
-                        if (CallService.instance.hasActiveCall) return;
-                        CallService.instance.startCall(
+                        if (ref.read(callServiceProvider).hasActiveCall) return;
+                        ref.read(callServiceProvider).startCall(
                           calleeId: widget.otherUserId,
                           calleeUsername: widget.otherHandle,
                           calleeAvatar: widget.otherAvatarUrl,
@@ -2975,7 +3027,7 @@ class _ContextBanner extends ConsumerWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: CachedNetworkImage(
-                  imageUrl: imgUrl(thumbnailUrl),
+                  imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
@@ -3063,9 +3115,9 @@ class _MessageText extends ConsumerWidget {
     r'(https?://[^\s]+/ilan/(\d+)|teqlif://auction/(\d+)|teqlif://direct-sale/(\d+))',
   );
 
-  Future<void> _openListing(BuildContext context, int listingId) async {
+  Future<void> _openListing(BuildContext context, WidgetRef ref, int listingId) async {
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/listings/$listingId'));
+      final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$listingId'));
       if (resp.statusCode == 200 && context.mounted) {
         final listing = jsonDecode(resp.body) as Map<String, dynamic>;
         Navigator.push(
@@ -3078,12 +3130,12 @@ class _MessageText extends ConsumerWidget {
     } catch (_) {}
   }
 
-  Future<void> _openAuctionDetail(BuildContext context, int auctionId) async {
+  Future<void> _openAuctionDetail(BuildContext context, WidgetRef ref, int auctionId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/auth/me/auction/$auctionId'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/me/auction/$auctionId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200 && context.mounted) {
@@ -3157,7 +3209,7 @@ class _MessageText extends ConsumerWidget {
               decorationColor: linkColor,
             ),
             recognizer: TapGestureRecognizer()
-              ..onTap = () => _openListing(context, listingId),
+              ..onTap = () => _openListing(context, ref, listingId),
           ),
         );
       } else if (match.group(3) != null) {
@@ -3174,7 +3226,7 @@ class _MessageText extends ConsumerWidget {
               decorationColor: auctionLinkColor,
             ),
             recognizer: TapGestureRecognizer()
-              ..onTap = () => _openAuctionDetail(context, auctionId),
+              ..onTap = () => _openAuctionDetail(context, ref, auctionId),
           ),
         );
       } else if (match.group(4) != null) {
@@ -3463,7 +3515,7 @@ class _GlowCallIconState extends State<_GlowCallIcon>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: kPrimary.withOpacity(0.12 + _anim.value * 0.28),
+                color: kPrimary.withValues(alpha: 0.12 + _anim.value * 0.28),
                 blurRadius: 6 + _anim.value * 10,
                 spreadRadius: _anim.value * 2,
               ),
