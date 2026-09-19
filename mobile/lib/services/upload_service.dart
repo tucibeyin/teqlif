@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../core/media_constants.dart';
 import 'storage_service.dart';
@@ -14,6 +15,9 @@ typedef UploadResult = ({String url, String? thumbUrl});
 typedef VideoUploadResult = ({String videoUrl, String? thumbUrl});
 
 class UploadService {
+  final ApiClient _api;
+  UploadService(this._api);
+
   /// Dosya stream'ini progress callback ile sarar.
   static Stream<List<int>> _progressStream(
     Stream<List<int>> source,
@@ -43,7 +47,7 @@ class UploadService {
 
   /// İlan videosunu backend'e yükler.
   /// [onProgress]: 0.0–1.0 arası ilerleme callback'i.
-  static Future<VideoUploadResult> uploadVideo(
+  Future<VideoUploadResult> uploadVideo(
     File file, {
     void Function(double)? onProgress,
   }) async {
@@ -59,7 +63,7 @@ class UploadService {
 
     final req = http.MultipartRequest(
       'POST',
-      Uri.parse('$kBaseUrl/upload/listing-video'),
+      Uri.parse('${_api.config.baseUrl}/upload/listing-video'),
     );
     req.headers['Authorization'] = 'Bearer $token';
 
@@ -93,7 +97,7 @@ class UploadService {
   }
 
   /// İlan videosunu bytes olarak backend'e yükler.
-  static Future<VideoUploadResult> uploadVideoBytes(
+  Future<VideoUploadResult> uploadVideoBytes(
     List<int> bytes, {
     void Function(double)? onProgress,
   }) async {
@@ -106,7 +110,7 @@ class UploadService {
       throw const AppException('', code: 'VIDEO_TOO_LARGE', statusCode: 400);
     }
 
-    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload/listing-video'));
+    final req = http.MultipartRequest('POST', Uri.parse('${_api.config.baseUrl}/upload/listing-video'));
     req.headers['Authorization'] = 'Bearer $token';
 
     if (onProgress != null) {
@@ -140,7 +144,7 @@ class UploadService {
 
   /// İlan fotoğrafını backend'e yükler.
   /// [onProgress]: 0.0–1.0 arası ilerleme callback'i.
-  static Future<UploadResult> uploadFile(
+  Future<UploadResult> uploadFile(
     File file, {
     void Function(double)? onProgress,
   }) async {
@@ -153,7 +157,7 @@ class UploadService {
       throw const AppException('', code: 'FILE_TOO_LARGE', statusCode: 400);
     }
 
-    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+    final req = http.MultipartRequest('POST', Uri.parse('${_api.config.baseUrl}/upload'));
     req.headers['Authorization'] = 'Bearer $token';
 
     if (onProgress != null) {
@@ -182,7 +186,7 @@ class UploadService {
   }
 
   /// Bytes olarak upload (profil fotoğrafı gibi kameradan alınan ham veri).
-  static Future<UploadResult> uploadBytes(Uint8List bytes, String filename) async {
+  Future<UploadResult> uploadBytes(Uint8List bytes, String filename) async {
     final token = await StorageService.getToken();
     if (token == null) throw const AppException('Oturum açık değil', code: 'UNAUTHORIZED');
 
@@ -190,7 +194,7 @@ class UploadService {
       throw const AppException('', code: 'FILE_TOO_LARGE', statusCode: 400);
     }
 
-    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+    final req = http.MultipartRequest('POST', Uri.parse('${_api.config.baseUrl}/upload'));
     req.headers['Authorization'] = 'Bearer $token';
     req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
 
@@ -208,3 +212,6 @@ class UploadService {
     );
   }
 }
+
+final uploadServiceProvider = Provider<UploadService>((ref) =>
+    UploadService(ref.watch(apiClientProvider)));

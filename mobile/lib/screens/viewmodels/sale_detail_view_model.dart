@@ -6,11 +6,11 @@ import '../../services/listing_service.dart';
 class SaleDetailViewModel extends AutoDisposeFamilyAsyncNotifier<List<(String, String)>?, String> {
   @override
   FutureOr<List<(String, String)>?> build(String locale) async {
-    return CategoryService.getCategories(locale: locale);
+    return ref.read(categoryServiceProvider).getCategories(locale: locale);
   }
 
   Future<Map<String, dynamic>?> getListing(int listingId) async {
-    return ListingService.getListingById(listingId);
+    return ref.read(listingServiceProvider).getListingById(listingId);
   }
 }
 

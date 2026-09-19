@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../models/story.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -12,7 +12,7 @@ class StoryGroupsNotifier
     extends AutoDisposeAsyncNotifier<List<UserStoryGroup>> {
   bool _disposed = false;
 
-  static const _url = '$kBaseUrl/stories/following';
+  String get _url => '${ref.read(apiClientProvider).config.baseUrl}/stories/following';
 
   static List<UserStoryGroup> _parse(dynamic raw) {
     final result = <UserStoryGroup>[];
@@ -31,7 +31,7 @@ class StoryGroupsNotifier
     ref.onDispose(() => _disposed = true);
 
     List<UserStoryGroup>? last;
-    await for (final groups in ApiService.get<List<UserStoryGroup>>(
+    await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
       url: _url,
       cacheKey: StorageService.cacheStories,
       cacheTtl: const Duration(minutes: 2),
@@ -46,7 +46,7 @@ class StoryGroupsNotifier
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
-      await for (final groups in ApiService.get<List<UserStoryGroup>>(
+      await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
         url: _url,
         cacheKey: StorageService.cacheStories,
         cacheTtl: const Duration(minutes: 2),
@@ -74,7 +74,7 @@ final storyGroupsProvider = AsyncNotifierProvider.autoDispose<
 class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   bool _disposed = false;
 
-  static const _url = '$kBaseUrl/stories/mine';
+  String get _url => '${ref.read(apiClientProvider).config.baseUrl}/stories/mine';
 
   static List<StoryItem> _parse(dynamic raw) {
     // Backend {items:[...], total:N} veya düz liste döndürebilir
@@ -87,7 +87,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
     ref.onDispose(() => _disposed = true);
 
     List<StoryItem>? last;
-    await for (final items in ApiService.get<List<StoryItem>>(
+    await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
       url: _url,
       cacheKey: StorageService.cacheMyStories,
       cacheTtl: const Duration(minutes: 2),
@@ -102,7 +102,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
-      await for (final items in ApiService.get<List<StoryItem>>(
+      await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
         url: _url,
         cacheKey: StorageService.cacheMyStories,
         cacheTtl: const Duration(minutes: 2),

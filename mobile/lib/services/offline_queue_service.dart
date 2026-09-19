@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../main.dart' show providerContainer;
 import 'connectivity_service.dart';
 import 'notification_service.dart';
 
@@ -76,7 +77,7 @@ class OfflineQueueService {
         final receiverId = data['receiver_id'] as int;
         final content    = data['content'] as String;
         final listingId  = data['listing_id'] as int?;
-        final ok = await NotificationService.sendMessage(receiverId, content, listingId: listingId);
+        final ok = await providerContainer.read(notificationServiceProvider).sendMessage(receiverId, content, listingId: listingId);
         if (ok) {
           await box.delete(kv.key);
           debugPrint('[OfflineQueue] gönderildi + silindi: ${kv.key}');

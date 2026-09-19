@@ -14,9 +14,9 @@ class CategoryOnboardingViewModel extends AutoDisposeAsyncNotifier<void> {
   Future<bool> submitCategories(List<String> selected) async {
     state = const AsyncValue.loading();
     try {
-      await AuthService.seedOnboardingInterests(selected);
+      await ref.read(authServiceProvider).seedOnboardingInterests(selected);
       try {
-        final user = await AuthService.me();
+        final user = await ref.read(authServiceProvider).me();
         await StorageService.saveUserInfo(
           id: user.id,
           email: user.email,

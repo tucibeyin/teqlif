@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 class LiveStreamAnalyticsState {
@@ -41,8 +41,8 @@ class LiveStreamAnalyticsViewModel extends AutoDisposeFamilyNotifier<LiveStreamA
     try {
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/seller-report/$arg'),
-        headers: await buildApiHeaders(token),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/analytics/seller-report/$arg'),
+        headers: await ref.read(apiClientProvider).buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {
         state = state.copyWith(

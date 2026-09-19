@@ -1,71 +1,68 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import 'storage_service.dart';
 
 class ModerationService {
-  static Future<Map<String, String>> _headers() async {
+  final ApiClient _api;
+  ModerationService(this._api);
+
+  Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
-  static Future<void> mute(int streamId, String username) async {
-    await apiCall(
+  Future<void> mute(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/moderation/$streamId/mute'),
+        Uri.parse('${_api.config.baseUrl}/moderation/$streamId/mute'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
       ),
     );
   }
 
-  static Future<void> unmute(int streamId, String username) async {
-    await apiCall(
+  Future<void> unmute(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/moderation/$streamId/unmute'),
+        Uri.parse('${_api.config.baseUrl}/moderation/$streamId/unmute'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
       ),
     );
   }
 
-  static Future<void> kick(int streamId, String username) async {
-    await apiCall(
+  Future<void> kick(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/moderation/$streamId/kick'),
+        Uri.parse('${_api.config.baseUrl}/moderation/$streamId/kick'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
       ),
     );
   }
 
-  /// Belirtilen kullanıcıyı yayının Co-Host (moderatör) olarak atar.
-  ///
-  /// Sadece yayının asıl host'u çağırabilir.
-  /// Başarı durumunda backend, odanın WebSocket kanalına
-  /// `{"type": "mod_promoted", "username": "...", "promoted_by": "..."}` eventi fırlatır.
-  static Future<void> promoteUser(int streamId, String username) async {
-    await apiCall(
+  Future<void> promoteUser(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/moderation/$streamId/promote'),
+        Uri.parse('${_api.config.baseUrl}/moderation/$streamId/promote'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
       ),
     );
   }
 
-  /// Belirtilen kullanıcının moderatörlüğünü geri alır.
-  ///
-  /// Sadece yayının asıl host'u çağırabilir.
-  /// Başarı durumunda backend, odanın WebSocket kanalına
-  /// `{"type": "mod_demoted", "username": "...", "demoted_by": "..."}` eventi fırlatır.
-  static Future<void> demoteUser(int streamId, String username) async {
-    await apiCall(
+  Future<void> demoteUser(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/moderation/$streamId/demote'),
+        Uri.parse('${_api.config.baseUrl}/moderation/$streamId/demote'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
       ),
     );
   }
 }
+
+final moderationServiceProvider = Provider<ModerationService>((ref) =>
+    ModerationService(ref.watch(apiClientProvider)));

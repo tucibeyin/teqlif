@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/theme.dart' show kPrimary;
 import '../models/direct_sale.dart';
 import '../providers/direct_sale_provider.dart';
@@ -17,7 +17,7 @@ import 'proof_capture_sheet.dart';
 import 'swipe_paginated_list.dart';
 
 final _listingDetailProvider = FutureProvider.family.autoDispose<Map<String, dynamic>?, int>(
-  (ref, listingId) => ListingService.getListingById(listingId),
+  (ref, listingId) => ref.read(listingServiceProvider).getListingById(listingId),
 );
 
 class DirectSalePanel extends ConsumerStatefulWidget {
@@ -117,7 +117,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
       // Viewer'ın satışı ilk gördüğü an — impression (Faz 5.3)
       if (!widget.isHost && !_impressionFired && !next.isIdle && next.saleId > 0) {
         _impressionFired = true;
-        AnalyticsService.logInteraction(
+        ref.read(analyticsServiceProvider).logInteraction(
           itemId: next.saleId,
           itemType: 'direct_sale',
           interactionType: 'sale_impression',
@@ -176,7 +176,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
   }
 
   void _showBuySheet(BuildContext context, DirectSaleState state) {
-    AnalyticsService.logInteraction(
+    ref.read(analyticsServiceProvider).logInteraction(
       itemId: state.saleId,
       itemType: 'direct_sale',
       interactionType: 'purchase_intent',
@@ -247,7 +247,7 @@ class _StartFormTriggerState extends ConsumerState<_StartFormTrigger> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -300,7 +300,7 @@ class _ActivePanel extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(10),
@@ -316,11 +316,11 @@ class _ActivePanel extends ConsumerWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: CachedNetworkImage(
-                      imageUrl: imgUrl(state.displayImageUrl),
+                      imageUrl: ref.read(apiClientProvider).imgUrl(state.displayImageUrl),
                       width: 52,
                       height: 52,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const Icon(
+                      errorWidget: (_, _, _) => const Icon(
                         Icons.image_not_supported,
                         color: Colors.white38,
                         size: 52,
@@ -535,9 +535,9 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
               GestureDetector(
                 onTap: () => showFullscreenImage(
                   context,
-                  imgUrl(widget.initialState.displayImageUrl),
+                  ref.read(apiClientProvider).imgUrl(widget.initialState.displayImageUrl),
                 ),
-                child: _singleImage(imgUrl(widget.initialState.displayImageUrl)),
+                child: _singleImage(ref.read(apiClientProvider).imgUrl(widget.initialState.displayImageUrl)),
               ),
             const SizedBox(height: 16),
 
@@ -650,7 +650,7 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
           width: double.infinity,
           height: 220,
           fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => _imagePlaceholder(),
+          errorWidget: (_, _, _) => _imagePlaceholder(),
         ),
       );
 
@@ -685,8 +685,8 @@ class _ListingImageGallery extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final listingAsync = ref.watch(_listingDetailProvider(listingId));
     return listingAsync.when(
-      loading: () => _buildGallery(context, fallbackUrl != null ? [fallbackUrl!] : []),
-      error: (_, __) => _buildGallery(context, fallbackUrl != null ? [fallbackUrl!] : []),
+      loading: () => _buildGallery(context, ref, fallbackUrl != null ? [fallbackUrl!] : []),
+      error: (_, _) => _buildGallery(context, ref, fallbackUrl != null ? [fallbackUrl!] : []),
       data: (listing) {
         final rawUrls = (listing?['image_urls'] as List?)
                 ?.map((e) => e as String)
@@ -698,12 +698,12 @@ class _ListingImageGallery extends ConsumerWidget {
         final all = rawUrls.isNotEmpty
             ? rawUrls
             : (primary != null ? [primary] : <String>[]);
-        return _buildGallery(context, all);
+        return _buildGallery(context, ref, all);
       },
     );
   }
 
-  Widget _buildGallery(BuildContext context, List<String> urls) {
+  Widget _buildGallery(BuildContext context, WidgetRef ref, List<String> urls) {
     if (urls.isEmpty) {
       return Container(
         height: 220,
@@ -725,11 +725,11 @@ class _ListingImageGallery extends ConsumerWidget {
               onPageChanged: onPageChanged,
               itemCount: urls.length,
               itemBuilder: (ctx, i) => GestureDetector(
-                onTap: () => showFullscreenImage(ctx, imgUrl(urls[i])),
+                onTap: () => showFullscreenImage(ctx, ref.read(apiClientProvider).imgUrl(urls[i])),
                 child: CachedNetworkImage(
-                  imageUrl: imgUrl(urls[i]),
+                  imageUrl: ref.read(apiClientProvider).imgUrl(urls[i]),
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => const Center(
+                  errorWidget: (_, _, _) => const Center(
                     child: Icon(Icons.image_not_supported, color: Colors.white38, size: 48),
                   ),
                 ),
@@ -772,7 +772,7 @@ class _ListingDetails extends ConsumerWidget {
     final listingAsync = ref.watch(_listingDetailProvider(listingId));
     return listingAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (listing) {
         if (listing == null) return const SizedBox.shrink();
         final category = listing['category'] as String?;
@@ -830,19 +830,19 @@ class _ListingDetails extends ConsumerWidget {
 
 // ── Banner ─────────────────────────────────────────────────────────────────────
 
-class _Banner extends StatelessWidget {
+class _Banner extends ConsumerWidget {
   final String text;
   final Color color;
 
   const _Banner({required this.text, required this.color});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
@@ -861,14 +861,14 @@ class _Banner extends StatelessWidget {
 
 // ── Terminal Banner ────────────────────────────────────────────────────────────
 
-class _TerminalBanner extends StatelessWidget {
+class _TerminalBanner extends ConsumerWidget {
   final DirectSaleState state;
   final TranslationPack loc;
 
   const _TerminalBanner({required this.state, required this.loc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final msg = state.isEnded
         ? switch (state.endReason) {
             'sold_out' => loc.t('directSaleEndedSoldOut'),
@@ -880,7 +880,7 @@ class _TerminalBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -894,14 +894,14 @@ class _TerminalBanner extends StatelessWidget {
 
 // ── Status Badge ──────────────────────────────────────────────────────────────
 
-class _StatusBadge extends StatelessWidget {
+class _StatusBadge extends ConsumerWidget {
   final DirectSaleState state;
   final TranslationPack loc;
 
   const _StatusBadge({required this.state, required this.loc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final (label, color) = switch (state.status) {
       'active' => (loc.t('directSaleStatusActive'), Colors.green),
       'paused' => (loc.t('directSaleStatusPaused'), Colors.orange),
@@ -911,7 +911,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.25),
+        color: color.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -928,7 +928,7 @@ class _StatusBadge extends StatelessWidget {
 
 // ── Host Buton ────────────────────────────────────────────────────────────────
 
-class _HostBtn extends StatelessWidget {
+class _HostBtn extends ConsumerWidget {
   final String label;
   final Color color;
   final VoidCallback? onTap;
@@ -936,14 +936,14 @@ class _HostBtn extends StatelessWidget {
   const _HostBtn({required this.label, required this.color, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.8),
+            color: color.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -1115,11 +1115,11 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(
-                    imageUrl: imgUrl(widget.state.displayImageUrl),
+                    imageUrl: ref.read(apiClientProvider).imgUrl(widget.state.displayImageUrl),
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
+                    errorWidget: (_, _, _) =>
                         const Icon(Icons.image, color: Colors.white38, size: 48),
                   ),
                 ),
@@ -1241,14 +1241,14 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   }
 }
 
-class _QtyBtn extends StatelessWidget {
+class _QtyBtn extends ConsumerWidget {
   final IconData icon;
   final VoidCallback? onTap;
 
   const _QtyBtn({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1256,8 +1256,8 @@ class _QtyBtn extends StatelessWidget {
         height: 32,
         decoration: BoxDecoration(
           color: onTap != null
-              ? kPrimary.withOpacity(0.8)
-              : Colors.grey.withOpacity(0.3),
+              ? kPrimary.withValues(alpha: 0.8)
+              : Colors.grey.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: Colors.white, size: 18),
@@ -1301,7 +1301,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchListings(int offset) =>
-      DirectSaleService.fetchListingsForDialog(
+      ref.read(directSaleServiceProvider).fetchListingsForDialog(
         hostUserId: widget.hostUserId,
         offset: offset,
       );
@@ -1417,7 +1417,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   final rawImg = imgs.isNotEmpty
                       ? imgs[0] as String?
                       : item['image_url'] as String?;
-                  final thumbUrl = rawImg != null ? imgUrl(rawImg) : null;
+                  final thumbUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
                   return GestureDetector(
                     onTap: () => setState(() {
                       _selectedListing = item;
@@ -1448,7 +1448,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                                     width: 38,
                                     height: 38,
                                     fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => const _ListingThumbPlaceholder(),
+                                    errorWidget: (_, _, _) => const _ListingThumbPlaceholder(),
                                   )
                                 : const _ListingThumbPlaceholder(),
                           ),
@@ -1582,7 +1582,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
-          color: active ? kPrimary.withOpacity(0.2) : Colors.transparent,
+          color: active ? kPrimary.withValues(alpha: 0.2) : Colors.transparent,
           border: Border.all(color: active ? kPrimary : Colors.white24),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -1653,7 +1653,7 @@ class _SuggestionChip extends ConsumerWidget {
 
     return async.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (s) {
         if (!s.hasData) return const SizedBox.shrink();
 
@@ -1700,10 +1700,10 @@ class _SuggestionChip extends ConsumerWidget {
   }
 }
 
-class _ListingThumbPlaceholder extends StatelessWidget {
+class _ListingThumbPlaceholder extends ConsumerWidget {
   const _ListingThumbPlaceholder();
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
         width: 38,
         height: 38,
         color: const Color(0xFF1E293B),

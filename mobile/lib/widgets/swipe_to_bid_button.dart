@@ -124,7 +124,7 @@ class _SwipeToBidButtonState extends ConsumerState<SwipeToBidButton>
     // _gestureStartProgress ile net mesafe ölçülür; önceki spring-back pozisyonu false-positive yaratmaz
     final netProgress = _peakProgress - _gestureStartProgress;
     if (netProgress >= 0.15 && widget.itemId != null) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: widget.itemId!,
         itemType: 'listing',
         interactionType: 'bid_hesitation',
@@ -144,7 +144,7 @@ class _SwipeToBidButtonState extends ConsumerState<SwipeToBidButton>
     _isDragging = false;
     HapticFeedback.heavyImpact();
     if (widget.itemId != null) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: widget.itemId!,
         itemType: 'listing',
         interactionType: 'stream_bid',

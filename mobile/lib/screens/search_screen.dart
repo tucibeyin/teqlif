@@ -5,19 +5,17 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/stream.dart';
 import '../services/analytics_service.dart';
-import '../services/api_service.dart';
 import '../services/feed_telemetry_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
-import '../services/stream_service.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
@@ -184,7 +182,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
       }
       http
           .post(
-            Uri.parse('$kBaseUrl/analytics/interaction'),
+            Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/analytics/interaction'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
@@ -378,7 +376,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               final u = visibleUsers[i];
               final imgRaw = u['profile_image_url'] as String?;
               final img = imgRaw != null && imgRaw.isNotEmpty
-                  ? imgUrl(imgRaw)
+                  ? ref.read(apiClientProvider).imgUrl(imgRaw)
                   : null;
               return Column(
                 mainAxisSize: MainAxisSize.min,
@@ -484,7 +482,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                     if (id != null && state.isLoggedIn) {
                       _trackInteraction(id, ownerId);
                     }
-                    AnalyticsService.trackEvent('search_result_tap', {
+                    ref.read(analyticsServiceProvider).trackEvent('search_result_tap', {
                       'item_type': 'listing',
                       'item_id': id,
                       'position': i,
@@ -1018,7 +1016,7 @@ class _StreamCard extends ConsumerWidget {
             if (hasThumbnail)
               CachedNetworkImage(
                   cacheManager: TeqlifCacheManager(),
-                imageUrl: imgUrl(stream.thumbnailUrl),
+                imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl),
                 fit: BoxFit.cover,
                 placeholder: (_, _) => const Center(
                   child: CircularProgressIndicator(strokeWidth: 2),
@@ -1137,7 +1135,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
     }
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
-      if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+      if (cid != null) ref.read(analyticsServiceProvider).trackAdImpression(cid as int);
     }
     final lid = widget.listing['id'];
     if (lid != null) {
@@ -1179,7 +1177,7 @@ class _HorizontalListingCardState extends ConsumerState<_HorizontalListingCard>
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
         : widget.listing['image_url'] as String?;
-    final photo = raw != null ? imgUrl(raw) : null;
+    final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
     final price = _fmt(widget.listing['price']);
 
     return GestureDetector(
@@ -1395,7 +1393,7 @@ class _ListingTile extends ConsumerWidget {
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
         : (listing['image_url'] as String?);
-    final photo = raw != null ? imgUrl(raw) : null;
+    final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
     final price = _fmt(listing['price']);
 
     return RepaintBoundary(

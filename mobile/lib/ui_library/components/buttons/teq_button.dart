@@ -21,7 +21,7 @@ class TeqButton extends StatelessWidget {
   final bool isExpanded;
 
   const TeqButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.type = TeqButtonType.primary,
@@ -31,11 +31,11 @@ class TeqButton extends StatelessWidget {
     this.icon,
     this.customColor,
     this.isExpanded = true,
-  }) : super(key: key);
+  });
 
   /// Sadece Outline buton dönen constructor
   const TeqButton.outline({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.size = TeqButtonSize.medium,
@@ -44,12 +44,11 @@ class TeqButton extends StatelessWidget {
     this.icon,
     this.customColor,
     this.isExpanded = true,
-  }) : type = TeqButtonType.outline,
-       super(key: key);
+  }) : type = TeqButtonType.outline;
 
   /// Sadece Text buton dönen constructor
   const TeqButton.text({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.size = TeqButtonSize.medium,
@@ -58,8 +57,7 @@ class TeqButton extends StatelessWidget {
     this.icon,
     this.customColor,
     this.isExpanded = true,
-  }) : type = TeqButtonType.text,
-       super(key: key);
+  }) : type = TeqButtonType.text;
 
   double get _buttonHeight {
     switch (size) {

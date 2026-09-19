@@ -9,7 +9,7 @@ import '../ui_library/foundation/teq_spacing.dart';
 import '../ui_library/foundation/teq_typography.dart';
 
 class TeqTestScreen extends StatelessWidget {
-  const TeqTestScreen({Key? key}) : super(key: key);
+  const TeqTestScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

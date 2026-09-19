@@ -4,7 +4,8 @@ import '../services/stream_service.dart';
 
 class CommerceActivityNotifier
     extends StateNotifier<List<CommerceEventGroup>> {
-  CommerceActivityNotifier() : super([]);
+  final StreamService _streamService;
+  CommerceActivityNotifier(this._streamService) : super([]);
 
   void addBidEvent(String bidder, double amount, String? itemName) {
     final groups = _mutableGroups();
@@ -65,7 +66,7 @@ class CommerceActivityNotifier
   void resetGroups() => state = [];
 
   Future<void> loadHistory(int streamId) async {
-    final items = await StreamService.fetchCommerceActivity(streamId);
+    final items = await _streamService.fetchCommerceActivity(streamId);
     state = _buildGroups(items);
   }
 
@@ -123,5 +124,5 @@ class CommerceActivityNotifier
 
 final commerceActivityProvider = StateNotifierProvider.autoDispose
     .family<CommerceActivityNotifier, List<CommerceEventGroup>, int>(
-  (ref, streamId) => CommerceActivityNotifier(),
+  (ref, streamId) => CommerceActivityNotifier(ref.watch(streamServiceProvider)),
 );

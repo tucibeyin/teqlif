@@ -5,7 +5,7 @@ import 'call_notif_adapter.dart';
 
 class AndroidCallNotifAdapter extends CallNotifAdapter {
   @override
-  Future<void> registerTokens({String? fcmToken}) async {
+  Future<void> registerTokens({String? fcmToken, AuthService? authService}) async {
     notifLog('TOKEN | registerTokens Android');
     try {
       final token = fcmToken ?? await FirebaseMessaging.instance.getToken();
@@ -18,7 +18,7 @@ class AndroidCallNotifAdapter extends CallNotifAdapter {
       await CallNotifAdapter.sendWithRetry(
         context: 'Android fcmLen=${captured.length}',
         // Android: no VoIP push channel — clear any stale VoIP token left by a prior iOS session
-        send: () => AuthService.saveDeviceTokens(fcmToken: captured, clearVoipToken: true),
+        send: () => authService?.saveDeviceTokens(fcmToken: captured, clearVoipToken: true) ?? Future.value(),
       );
     } catch (e) {
       notifLog('TOKEN | registerTokens FAILED | $e');

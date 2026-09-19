@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
-import '../config/api.dart';
+import '../core/network/api_client.dart';
+import '../main.dart' show providerContainer;
 import 'video_cache_manager.dart';
 
 class ListingVideoManager {
@@ -61,7 +62,7 @@ class ListingVideoManager {
       debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_VIDEO_LOAD] CACHE BULUNAMADI, NETWORK üzerinden başlatılacak: $id (canceling bg download if any)');
       VideoCacheManager.instance.cancelDownload(id);
       
-      final fullUrl = imgUrl(rawUrl);
+      final fullUrl = providerContainer.read(apiClientProvider).imgUrl(rawUrl);
       ctrl = VideoPlayerController.networkUrl(Uri.parse(fullUrl));
       debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_VIDEO_LOAD] NETWORK başlatıldı: $id');
     }

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 class BlockedUsersState {
@@ -13,13 +13,13 @@ class BlockedUsersState {
 class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> {
   Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return buildApiHeaders(token, json: true);
+    return ref.read(apiClientProvider).buildApiHeaders(token, json: true);
   }
 
   @override
   FutureOr<BlockedUsersState> build() async {
     final resp = await http.get(
-      Uri.parse('$kBaseUrl/users/blocked'),
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/blocked'),
       headers: await _headers(),
     );
     if (resp.statusCode == 200) {
@@ -32,7 +32,7 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
   Future<void> unblock(String username, int userId) async {
     try {
       final resp = await http.delete(
-        Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(username)}/block'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/${Uri.encodeComponent(username)}/block'),
         headers: await _headers(),
       );
       if (resp.statusCode == 200 || resp.statusCode == 404) {

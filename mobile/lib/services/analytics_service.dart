@@ -5,7 +5,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/pro_insights_data.dart';
 import '../services/api_service.dart';
@@ -17,6 +18,11 @@ class AiInsufficientTuciException implements Exception {
 }
 
 class AnalyticsService {
+  final ApiClient _api;
+  AnalyticsService(this._api);
+  late final _apiService = ApiService(_api);
+
+  // Static session state — app-wide, single instance
   static String? _sessionId;
   static bool? _consentAccepted;
   static final Set<int> _impressedCampaigns = {};
@@ -33,9 +39,9 @@ class AnalyticsService {
     return '${hex(8)}-${hex(4)}-4${hex(3)}-a${hex(3)}-${hex(12)}';
   }
 
-  static Future<void> init() async {
+  Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     _consentAccepted = prefs.getBool('teqlif_tracking_consent');
     if (_consentAccepted == true) {
       _sessionId = prefs.getString('teqlif_session_id');
@@ -47,16 +53,16 @@ class AnalyticsService {
     }
   }
 
-  static Future<bool?> getConsentStatus() async {
+  Future<bool?> getConsentStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('teqlif_tracking_consent');
   }
 
-  static Future<void> setConsent(bool accepted) async {
+  Future<void> setConsent(bool accepted) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('teqlif_tracking_consent', accepted);
     _consentAccepted = accepted;
-    
+
     if (accepted) {
       _sessionId = prefs.getString('teqlif_session_id');
       if (_sessionId == null) {
@@ -68,7 +74,7 @@ class AnalyticsService {
   }
 
   /// Kitle büyüklüğü tahmini → `GET /api/leads/audience-size`
-  static Future<Map<String, dynamic>?> getAudienceSize({
+  Future<Map<String, dynamic>?> getAudienceSize({
     required String title,
     String category = '',
     String subcategory = '',
@@ -76,7 +82,7 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final uri = Uri.parse('$kBaseUrl/leads/audience-size').replace(
+      final uri = Uri.parse('${_api.config.baseUrl}/leads/audience-size').replace(
         queryParameters: {
           'title': title,
           if (category.isNotEmpty) 'category': category,
@@ -95,7 +101,7 @@ class AnalyticsService {
   }
 
   /// Lead blast gönder → `POST /api/leads/send-blast`
-  static Future<Map<String, dynamic>?> sendLeadBlast({
+  Future<Map<String, dynamic>?> sendLeadBlast({
     required String title,
     required String category,
     String subcategory = '',
@@ -108,7 +114,7 @@ class AnalyticsService {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/leads/send-blast'),
+        Uri.parse('${_api.config.baseUrl}/leads/send-blast'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -118,9 +124,9 @@ class AnalyticsService {
           'category': category,
           'subcategory': subcategory,
           'estimated_cost': estimatedCost,
-          if (listingId != null) 'listing_id': listingId,
-          if (streamId != null) 'stream_id': streamId,
-          if (recipientCount != null) 'recipient_count': recipientCount,
+          'listing_id': ?listingId,
+          'stream_id': ?streamId,
+          'recipient_count': ?recipientCount,
         }),
       );
       if (resp.statusCode == 202) {
@@ -140,7 +146,7 @@ class AnalyticsService {
   /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
   /// Throws [AiInsufficientTuciException] on HTTP 402 (INSUFFICIENT_FUNDS).
   /// Returns null on other errors.
-  static Future<Map<String, dynamic>?> getPriceEstimate({
+  Future<Map<String, dynamic>?> getPriceEstimate({
     required String title,
     required String description,
     required String category,
@@ -153,10 +159,10 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final headers = await buildApiHeaders(token, json: true);
-      return await apiCall(
+      final headers = await _api.buildApiHeaders(token, json: true);
+      return await _api.call(
         () => http.post(
-          Uri.parse('$kBaseUrl/analytics/price-estimate'),
+          Uri.parse('${_api.config.baseUrl}/analytics/price-estimate'),
           headers: headers,
           body: jsonEncode({
             'title': title,
@@ -183,17 +189,17 @@ class AnalyticsService {
 
   /// Pro satıcı kapsamlı analitik — SWR stream (cache → network).
   /// Önce Hive cache'den anlık emit, sonra `/api/analytics/pro-insights`'tan taze veri.
-  static Stream<ProInsightsData> getProInsights({
+  Stream<ProInsightsData> getProInsights({
     String? startDate,
     String? endDate,
     bool bypassCache = false,
   }) {
-    var url = '$kBaseUrl/analytics/pro-insights';
+    var url = '${_api.config.baseUrl}/analytics/pro-insights';
     final params = <String>[];
     if (startDate != null) params.add('start_date=$startDate');
     if (endDate != null) params.add('end_date=$endDate');
     if (params.isNotEmpty) url += '?${params.join('&')}';
-    return ApiService.get<ProInsightsData>(
+    return _apiService.get<ProInsightsData>(
       url: url,
       cacheKey: 'pro_insights_${startDate ?? ''}_${endDate ?? ''}',
       fromJson: (raw) => ProInsightsData.fromJson(raw as Map<String, dynamic>),
@@ -204,9 +210,9 @@ class AnalyticsService {
   }
 
   /// PRO gelişmiş metrikler — SWR stream (cache → network).
-  static Stream<ProMetrics> getProMetrics({bool bypassCache = false}) =>
-      ApiService.get<ProMetrics>(
-        url: '$kBaseUrl/analytics/pro/metrics',
+  Stream<ProMetrics> getProMetrics({bool bypassCache = false}) =>
+      _apiService.get<ProMetrics>(
+        url: '${_api.config.baseUrl}/analytics/pro/metrics',
         cacheKey: 'pro_metrics',
         fromJson: (raw) => ProMetrics.fromJson(raw as Map<String, dynamic>),
         bypassCache: bypassCache,
@@ -214,18 +220,14 @@ class AnalyticsService {
         timeout: const Duration(seconds: 20),
       );
 
-  static Map<String, dynamic> _safeJsonBody(String body) {
-    try { return jsonDecode(body) as Map<String, dynamic>; } catch (_) { return {}; }
-  }
-
   /// Sektörel pazar trendleri → `GET /api/analytics/market-trends`
-  static Future<Map<String, dynamic>?> getMarketTrends() async {
+  Future<Map<String, dynamic>?> getMarketTrends() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/market-trends'),
-        headers: await buildApiHeaders(token, json: true),
+        Uri.parse('${_api.config.baseUrl}/analytics/market-trends'),
+        headers: await _api.buildApiHeaders(token, json: true),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -235,12 +237,12 @@ class AnalyticsService {
   }
 
   /// Aylık blast kredi durumu → `GET /api/leads/blast-credits`
-  static Future<Map<String, dynamic>?> getBlastCredits() async {
+  Future<Map<String, dynamic>?> getBlastCredits() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/leads/blast-credits'),
+        Uri.parse('${_api.config.baseUrl}/leads/blast-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -248,12 +250,12 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getBoostCredits() async {
+  Future<Map<String, dynamic>?> getBoostCredits() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/ads/boost-credits'),
+        Uri.parse('${_api.config.baseUrl}/ads/boost-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -261,12 +263,12 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getAiPriceCredits() async {
+  Future<Map<String, dynamic>?> getAiPriceCredits() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/ai-price-credits'),
+        Uri.parse('${_api.config.baseUrl}/analytics/ai-price-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -274,12 +276,12 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getAiDescCredits() async {
+  Future<Map<String, dynamic>?> getAiDescCredits() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/ai-desc-credits'),
+        Uri.parse('${_api.config.baseUrl}/listings/ai-desc-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -287,12 +289,12 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getReactivationCredits() async {
+  Future<Map<String, dynamic>?> getReactivationCredits() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/reactivation-credits'),
+        Uri.parse('${_api.config.baseUrl}/analytics/reactivation-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -301,12 +303,12 @@ class AnalyticsService {
   }
 
   /// Feed istatistikleri → `GET /api/analytics/my-feed-stats?days=7|30`
-  static Future<Map<String, dynamic>?> getFeedStats({int days = 7}) async {
+  Future<Map<String, dynamic>?> getFeedStats({int days = 7}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/my-feed-stats?days=$days'),
+        Uri.parse('${_api.config.baseUrl}/analytics/my-feed-stats?days=$days'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -315,13 +317,13 @@ class AnalyticsService {
   }
 
   /// Yayın sonu satıcı raporu → `GET /api/analytics/seller-report/{streamId}`
-  static Future<Map<String, dynamic>?> getSellerReport(int streamId) async {
+  Future<Map<String, dynamic>?> getSellerReport(int streamId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/seller-report/$streamId'),
-        headers: await buildApiHeaders(token, json: true),
+        Uri.parse('${_api.config.baseUrl}/analytics/seller-report/$streamId'),
+        headers: await _api.buildApiHeaders(token, json: true),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -331,7 +333,7 @@ class AnalyticsService {
   }
 
   /// Mobil etkileşim sinyali → `/api/analytics/interaction`. Fire-and-forget.
-  static Future<void> logInteraction({
+  Future<void> logInteraction({
     required int itemId,
     required String itemType,
     required String interactionType,
@@ -365,7 +367,7 @@ class AnalyticsService {
         'user_id': ?myUserId,
       };
       http
-          .post(Uri.parse('$kBaseUrl/analytics/interaction'),
+          .post(Uri.parse('${_api.config.baseUrl}/analytics/interaction'),
               headers: headers, body: jsonEncode(body))
           .catchError((_) => http.Response('', 500));
     } catch (_) {}
@@ -373,7 +375,7 @@ class AnalyticsService {
 
   /// Keşfet bölümü yüklendiğinde görünen ilanları toplu impression olarak loglar.
   /// Fire-and-forget; ağ hatası sessizce görmezden gelinir.
-  static Future<void> logListingImpressions({
+  Future<void> logListingImpressions({
     required List<int> listingIds,
     required String section,
   }) async {
@@ -391,11 +393,11 @@ class AnalyticsService {
         'item_type': 'listing',
         'interaction_type': 'listing_impression',
         'metadata': {'section': section},
-        if (myUserId != null) 'user_id': myUserId,
+        'user_id': ?myUserId,
       }).toList();
       for (final body in events) {
         http
-            .post(Uri.parse('$kBaseUrl/analytics/interaction'),
+            .post(Uri.parse('${_api.config.baseUrl}/analytics/interaction'),
                 headers: headers, body: jsonEncode(body))
             .catchError((_) => http.Response('', 500));
       }
@@ -403,7 +405,7 @@ class AnalyticsService {
   }
 
   /// Arama sorgusu → `/api/analytics/track-search`. Fire-and-forget.
-  static Future<void> trackSearch({
+  Future<void> trackSearch({
     required String query,
     String category = '',
     String subcategory = '',
@@ -417,7 +419,7 @@ class AnalyticsService {
       };
       http
           .post(
-            Uri.parse('$kBaseUrl/analytics/track-search'),
+            Uri.parse('${_api.config.baseUrl}/analytics/track-search'),
             headers: headers,
             body: jsonEncode({
               'query': query,
@@ -430,11 +432,11 @@ class AnalyticsService {
     } catch (_) {}
   }
 
-  static Future<Map<String, dynamic>?> getCampaignReport(int campaignId) async {
+  Future<Map<String, dynamic>?> getCampaignReport(int campaignId) async {
     try {
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/ads/campaigns/$campaignId/report'),
+        Uri.parse('${_api.config.baseUrl}/ads/campaigns/$campaignId/report'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -449,12 +451,12 @@ class AnalyticsService {
     }
   }
 
-  static Future<void> trackAdClick(int campaignId) async {
+  Future<void> trackAdClick(int campaignId) async {
     try {
       final token = await StorageService.getToken();
       http
           .post(
-            Uri.parse('$kBaseUrl/ads/click/$campaignId'),
+            Uri.parse('${_api.config.baseUrl}/ads/click/$campaignId'),
             headers: {
               'Content-Type': 'application/json',
               if (token != null) 'Authorization': 'Bearer $token',
@@ -464,14 +466,14 @@ class AnalyticsService {
     } catch (_) {}
   }
 
-  static Future<void> trackAdImpression(int campaignId) async {
+  Future<void> trackAdImpression(int campaignId) async {
     if (_impressedCampaigns.contains(campaignId)) return;
     _impressedCampaigns.add(campaignId);
     try {
       final token = await StorageService.getToken();
       http
           .post(
-            Uri.parse('$kBaseUrl/ads/impression/$campaignId'),
+            Uri.parse('${_api.config.baseUrl}/ads/impression/$campaignId'),
             headers: {
               'Content-Type': 'application/json',
               if (token != null) 'Authorization': 'Bearer $token',
@@ -481,71 +483,71 @@ class AnalyticsService {
     } catch (_) {}
   }
 
-  static Future<Map<String, dynamic>?> getVideoRoi({String? startDate, String? endDate, String? category, String? subcategory}) async {
+  Future<Map<String, dynamic>?> getVideoRoi({String? startDate, String? endDate, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      var url = '$kBaseUrl/analytics/video-roi';
+      var url = '${_api.config.baseUrl}/analytics/video-roi';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
       if (subcategory != null && subcategory.isNotEmpty) params.add('subcategory=$subcategory');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
+      final resp = await http.get(Uri.parse(url), headers: await _api.buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getGalleryStats({String? startDate, String? endDate, String? category, String? subcategory}) async {
+  Future<Map<String, dynamic>?> getGalleryStats({String? startDate, String? endDate, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      var url = '$kBaseUrl/analytics/gallery-stats';
+      var url = '${_api.config.baseUrl}/analytics/gallery-stats';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
       if (subcategory != null && subcategory.isNotEmpty) params.add('subcategory=$subcategory');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
+      final resp = await http.get(Uri.parse(url), headers: await _api.buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getVideoPerformance({String? startDate, String? endDate, String? category, String? subcategory}) async {
+  Future<Map<String, dynamic>?> getVideoPerformance({String? startDate, String? endDate, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      var url = '$kBaseUrl/analytics/video-performance';
+      var url = '${_api.config.baseUrl}/analytics/video-performance';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
       if (subcategory != null && subcategory.isNotEmpty) params.add('subcategory=$subcategory');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
+      final resp = await http.get(Uri.parse(url), headers: await _api.buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getDemandRadar({int days = 7}) async {
+  Future<Map<String, dynamic>?> getDemandRadar({int days = 7}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/demand-radar?days=$days'),
-        headers: await buildApiHeaders(token),
+        Uri.parse('${_api.config.baseUrl}/analytics/demand-radar?days=$days'),
+        headers: await _api.buildApiHeaders(token),
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
-  static Future<void> trackEvent(String eventType, [Map<String, dynamic>? metadata]) async {
+  Future<void> trackEvent(String eventType, [Map<String, dynamic>? metadata]) async {
     if (_consentAccepted != true || _sessionId == null) return;
 
     try {
@@ -563,8 +565,8 @@ class AnalyticsService {
         'event_metadata': metadata ?? {},
       };
 
-      final uri = Uri.parse('$kBaseUrl/analytics/track');
-      
+      final uri = Uri.parse('${_api.config.baseUrl}/analytics/track');
+
       // Fire and forget
       http.post(uri, headers: headers, body: jsonEncode(payload)).catchError((_) => http.Response('', 500));
     } catch (_) {
@@ -573,13 +575,13 @@ class AnalyticsService {
   }
 
   /// Rakip Fiyat Radarı → `/api/analytics/competitor-radar/{listing_id}`
-  static Future<Map<String, dynamic>?> competitorRadar(int listingId) async {
+  Future<Map<String, dynamic>?> competitorRadar(int listingId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/competitor-radar/$listingId'),
-        headers: await buildApiHeaders(token),
+        Uri.parse('${_api.config.baseUrl}/analytics/competitor-radar/$listingId'),
+        headers: await _api.buildApiHeaders(token),
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
@@ -587,25 +589,25 @@ class AnalyticsService {
   }
 
   /// Satış Hızı → `/api/analytics/category-velocity`
-  static Future<Map<String, dynamic>?> categoryVelocity(String category, {int? listingId}) async {
+  Future<Map<String, dynamic>?> categoryVelocity(String category, {int? listingId}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      var url = '$kBaseUrl/analytics/category-velocity?category=${Uri.encodeComponent(category)}';
+      var url = '${_api.config.baseUrl}/analytics/category-velocity?category=${Uri.encodeComponent(category)}';
       if (listingId != null) url += '&listing_id=$listingId';
-      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
+      final resp = await http.get(Uri.parse(url), headers: await _api.buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
   /// Retargeting kitlesi → `GET /api/leads/retargeting-audience/{listing_id}`
-  static Future<Map<String, dynamic>?> retargetingAudience(int listingId) async {
+  Future<Map<String, dynamic>?> retargetingAudience(int listingId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/leads/retargeting-audience/$listingId'),
+        Uri.parse('${_api.config.baseUrl}/leads/retargeting-audience/$listingId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -615,7 +617,7 @@ class AnalyticsService {
   }
 
   /// Retargeting blast gönder → `POST /api/leads/send-retargeting`
-  static Future<Map<String, dynamic>?> sendRetargeting({
+  Future<Map<String, dynamic>?> sendRetargeting({
     required int listingId,
     required int estimatedAudience,
     required int estimatedCost,
@@ -625,7 +627,7 @@ class AnalyticsService {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/leads/send-retargeting'),
+        Uri.parse('${_api.config.baseUrl}/leads/send-retargeting'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -652,11 +654,11 @@ class AnalyticsService {
   }
 
   /// İlanlar için kitle büyüklüğü tahmini → `GET /api/listings/{listingId}/audience-estimate`
-  static Future<Map<String, dynamic>?> estimateAudienceForListing(int listingId) async {
+  Future<Map<String, dynamic>?> estimateAudienceForListing(int listingId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final uri = Uri.parse('$kBaseUrl/listings/$listingId/audience-estimate');
+      final uri = Uri.parse('${_api.config.baseUrl}/listings/$listingId/audience-estimate');
       final resp = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
@@ -669,12 +671,12 @@ class AnalyticsService {
   }
 
   /// İlan başına 24h bildirim cooldown süresi (saniye). 0 = gönderim yapılabilir.
-  static Future<int> getNotificationCooldown(int listingId) async {
+  Future<int> getNotificationCooldown(int listingId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return 0;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$listingId/notification-cooldown'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/notification-cooldown'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -687,7 +689,7 @@ class AnalyticsService {
 
   /// İlanlar için toplu kitle bildirimi gönder → `POST /api/listings/{listingId}/send-mass-notification`
   /// Dönen map: success → blast result; cooldown → {'cooldown': true, 'seconds_remaining': N}; error → {'error': msg}
-  static Future<Map<String, dynamic>?> sendMassNotificationForListing({
+  Future<Map<String, dynamic>?> sendMassNotificationForListing({
     required int listingId,
     required int estimatedCost,
     int? recipientCount,
@@ -696,7 +698,7 @@ class AnalyticsService {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/listings/$listingId/send-mass-notification'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/send-mass-notification'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -726,24 +728,24 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>> getMassNotificationReport({int? listingId}) async {
+  Future<Map<String, dynamic>> getMassNotificationReport({int? listingId}) async {
     final token = await StorageService.getToken();
     if (token == null) throw const AppException('Oturumunuz sona ermiş.', code: 'UNAUTHORIZED', statusCode: 401);
 
     final uri = listingId != null
-        ? Uri.parse('$kBaseUrl/leads/mass-notification-report?listing_id=$listingId')
-        : Uri.parse('$kBaseUrl/leads/mass-notification-report');
+        ? Uri.parse('${_api.config.baseUrl}/leads/mass-notification-report?listing_id=$listingId')
+        : Uri.parse('${_api.config.baseUrl}/leads/mass-notification-report');
 
-    return apiCall(() => http.get(uri, headers: {'Authorization': 'Bearer $token'}));
+    return _api.call(() => http.get(uri, headers: {'Authorization': 'Bearer $token'}));
   }
-  
-  static Future<void> trackCampaignClick(int campaignId) async {
+
+  Future<void> trackCampaignClick(int campaignId) async {
     final token = await StorageService.getToken();
     if (token == null) return;
 
     try {
       await http.post(
-        Uri.parse('$kBaseUrl/leads/campaign/$campaignId/click'),
+        Uri.parse('${_api.config.baseUrl}/leads/campaign/$campaignId/click'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -753,16 +755,16 @@ class AnalyticsService {
     }
   }
 
-  static Future<Map<String, dynamic>?> demandTrends({int weeks = 8, String? category, String? subcategory}) async {
+  Future<Map<String, dynamic>?> demandTrends({int weeks = 8, String? category, String? subcategory}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      var url = '$kBaseUrl/analytics/demand-trends?weeks=$weeks';
+      var url = '${_api.config.baseUrl}/analytics/demand-trends?weeks=$weeks';
       if (category != null && category.isNotEmpty) url += '&category=${Uri.encodeComponent(category)}';
       if (subcategory != null && subcategory.isNotEmpty) url += '&subcategory=${Uri.encodeComponent(subcategory)}';
       final resp = await http.get(
         Uri.parse(url),
-        headers: await buildApiHeaders(token),
+        headers: await _api.buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -772,13 +774,19 @@ class AnalyticsService {
   }
 }
 
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) =>
+    AnalyticsService(ref.watch(apiClientProvider)));
+
 // --- Screen Tracking Observer ---
 class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
+  final AnalyticsService _service;
+  AnalyticsRouteObserver(this._service);
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
     if (route is PageRoute) {
-      AnalyticsService.trackEvent('screen_view', {'screen_name': route.settings.name ?? 'unknown'});
+      _service.trackEvent('screen_view', {'screen_name': route.settings.name ?? 'unknown'});
     }
   }
 
@@ -786,13 +794,16 @@ class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
     if (newRoute is PageRoute) {
-      AnalyticsService.trackEvent('screen_view', {'screen_name': newRoute.settings.name ?? 'unknown'});
+      _service.trackEvent('screen_view', {'screen_name': newRoute.settings.name ?? 'unknown'});
     }
   }
 }
 
 // --- App Time Spent Tracking Observer ---
 class AnalyticsLifecycleObserver extends WidgetsBindingObserver {
+  final AnalyticsService _service;
+  AnalyticsLifecycleObserver(this._service);
+
   DateTime? _appStartTime;
 
   @override
@@ -803,11 +814,10 @@ class AnalyticsLifecycleObserver extends WidgetsBindingObserver {
       if (_appStartTime != null) {
         final timeSpent = DateTime.now().difference(_appStartTime!).inSeconds;
         if (timeSpent > 2) {
-          AnalyticsService.trackEvent('time_spent', {'seconds': timeSpent});
+          _service.trackEvent('time_spent', {'seconds': timeSpent});
         }
         _appStartTime = null;
       }
     }
   }
 }
-

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/localization_service.dart';
-import '../../services/analytics_service.dart';
 import 'viewmodels/seller_report_view_model.dart';
 
 class SellerReportScreen extends ConsumerStatefulWidget {
@@ -80,7 +79,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
       body: SafeArea(
         child: reportAsync.when(
           data: (report) => report == null ? _buildError() : _buildReport(report),
-          error: (_, __) => _buildError(),
+          error: (_, _) => _buildError(),
           loading: () => _buildLoading(),
         ),
       ),

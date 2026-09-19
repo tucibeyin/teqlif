@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -8,10 +7,11 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:vibration/vibration.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_exception.dart';
 import 'push_notification_service.dart';
-import 'ws_service.dart';
+import 'ws_service.dart' show wsServiceProvider, WsService;
 import '../models/call_event.dart';
 import '../call/state/call_status.dart';
 import '../call/state/call_role.dart';
@@ -42,8 +42,16 @@ void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
 }
 
+final callServiceProvider = Provider<CallService>((ref) {
+  final wsService = ref.watch(wsServiceProvider);
+  return CallService(wsService, ref.watch(apiClientProvider));
+});
+
 class CallService {
-  CallService._() {
+  final WsService _wsService;
+  final ApiClient _api;
+
+  CallService(this._wsService, this._api) {
     _roomAdapter = CallRoomAdapter(
       hardware: _hardware,
       preventCallScreenAutoOpen: preventCallScreenAutoOpen,
@@ -65,9 +73,8 @@ class CallService {
       _initCallkitChannelHandler();
     }
   }
-  static final CallService instance = CallService._();
 
-  final _repository = CallRepository();
+  late final _repository = CallRepository(_api);
   final _router = CallScreenRouter();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
@@ -205,12 +212,12 @@ class CallService {
     // background lifecycle observer cannot close the socket mid-call.
     if (!_wsLockHeld && _isActiveCallStatus(newStatus)) {
       _wsLockHeld = true;
-      WsService.acquireConnectionLock('call-${state.value.callId}-$newStatus');
+      _wsService.acquireConnectionLock('call-${state.value.callId}-$newStatus');
     }
     // Release lock when leaving all active-call states (terminal or idle).
     if (_wsLockHeld && !_isActiveCallStatus(newStatus)) {
       _wsLockHeld = false;
-      WsService.releaseConnectionLock('call-${state.value.callId}-$newStatus');
+      _wsService.releaseConnectionLock('call-${state.value.callId}-$newStatus');
     }
 
     // Cancel connecting timeout whenever we leave connecting state
@@ -1170,7 +1177,7 @@ class CallService {
     // Safety net: release WS lock if still held (error path bypassed _handleStatusChange).
     if (_wsLockHeld) {
       _wsLockHeld = false;
-      WsService.releaseConnectionLock('call-reset-safety');
+      _wsService.releaseConnectionLock('call-reset-safety');
     }
     _cpLog('HW', 'wakelock DISABLE | context=reset');
     WakelockPlus.disable();

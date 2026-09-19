@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
+import '../main.dart' show providerContainer;
 import '../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../ui_library/foundation/teq_colors.dart';
 
@@ -43,9 +43,7 @@ class PermissionService {
 
     // 3. UI Kontrolü: Ekrana uyarıyı bas ve false dön
     if (context.mounted) {
-      final loc = ProviderScope.containerOf(context, listen: false)
-          .read(localizationProvider);
-      
+            
       final theme = Theme.of(context);
       final isDark = theme.brightness == Brightness.dark;
       final iconColor = isDark ? TeqColors.textSecondaryDark : TeqColors.textSecondaryLight;
@@ -79,8 +77,7 @@ class PermissionService {
     // reddedilenlere göre mesajı sonradan belirlemek daha zordur.
     // Şimdilik en kapsayıcı "Kamera ve mikrofon izni gerekli" mesajını kullanıyoruz.
     if (!context.mounted) return false;
-    final loc = ProviderScope.containerOf(context, listen: false).read(localizationProvider);
-    
+    final loc = providerContainer.read(localizationProvider);
     return requestPermissions(
       context,
       permissions: [Permission.camera, Permission.microphone],

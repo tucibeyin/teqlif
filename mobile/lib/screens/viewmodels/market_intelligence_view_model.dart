@@ -45,8 +45,8 @@ class MarketIntelligenceViewModel extends AutoDisposeNotifier<MarketIntelligence
     
     try {
       final results = await Future.wait([
-        AnalyticsService.getMarketTrends(),
-        AnalyticsService.getDemandRadar(days: state.searchDays),
+        ref.read(analyticsServiceProvider).getMarketTrends(),
+        ref.read(analyticsServiceProvider).getDemandRadar(days: state.searchDays),
       ]);
       
       final trends = results[0];
@@ -71,7 +71,7 @@ class MarketIntelligenceViewModel extends AutoDisposeNotifier<MarketIntelligence
   Future<void> reloadDemand(int days) async {
     state = state.copyWith(searchDays: days);
     try {
-      final data = await AnalyticsService.getDemandRadar(days: days);
+      final data = await ref.read(analyticsServiceProvider).getDemandRadar(days: days);
       state = state.copyWith(demand: data);
     } catch (_) {
       // ignore

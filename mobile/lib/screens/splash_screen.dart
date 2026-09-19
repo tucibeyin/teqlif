@@ -1,24 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:in_app_update/in_app_update.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
-import '../services/analytics_service.dart';
-import '../services/auth_service.dart';
-import '../services/biometric_service.dart';
-import '../services/deep_link_service.dart';
-import '../services/push_notification_service.dart';
-import '../services/storage_service.dart';
-import '../services/version_service.dart';
 import 'force_update_screen.dart';
 import '../widgets/soft_update_dialog.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/locale_provider.dart';
 import '../services/localization_service.dart';
 
@@ -119,7 +109,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       final thumbUrl = user['profile_image_thumb_url'] as String?;
       final imageUrl = thumbUrl ?? user['profile_image_url'] as String?;
       if (imageUrl != null && imageUrl.isNotEmpty) {
-        urlsToPrecache.add(imgUrl(imageUrl));
+        urlsToPrecache.add(ref.read(apiClientProvider).imgUrl(imageUrl));
       }
     }
 
@@ -129,7 +119,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         final thumbUrl = m['thumbnail_url'] as String?;
         final imageUrl = thumbUrl ?? m['image_url'] as String?;
         if (imageUrl != null && imageUrl.isNotEmpty) {
-          urlsToPrecache.add(imgUrl(imageUrl));
+          urlsToPrecache.add(ref.read(apiClientProvider).imgUrl(imageUrl));
         }
       }
     }

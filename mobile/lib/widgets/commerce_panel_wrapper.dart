@@ -162,7 +162,7 @@ class _IdleChip extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
       ),
       child: isHost
@@ -205,7 +205,7 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: kPrimary.withOpacity(0.85),
+          color: kPrimary.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

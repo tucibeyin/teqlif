@@ -6,7 +6,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/analytics_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
@@ -73,7 +73,7 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
       FlutterNativeSplash.remove();
 
       bool isSoftUpdate = false;
-      final updateStatus = await VersionService.checkVersion();
+      final updateStatus = await ref.read(versionServiceProvider).checkVersion();
       if (updateStatus == VersionStatus.forceUpdate) {
         final st = state.value?.copyWith(result: SplashResult.forceUpdate) ?? SplashState(result: SplashResult.forceUpdate);
         state = AsyncValue.data(st);
@@ -82,10 +82,10 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
         isSoftUpdate = true;
       }
 
-      await AnalyticsService.setConsent(true);
-      await AnalyticsService.init();
+      await ref.read(analyticsServiceProvider).setConsent(true);
+      await ref.read(analyticsServiceProvider).init();
 
-      AnalyticsService.trackEvent('session_start', {
+      ref.read(analyticsServiceProvider).trackEvent('session_start', {
         'platform': Platform.isIOS ? 'ios' : 'android',
       });
 
@@ -167,7 +167,7 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
 
   Future<Map<String, dynamic>?> _fetchUser(String token) async {
     try {
-      final user = await AuthService.me();
+      final user = await ref.read(authServiceProvider).me();
       
       await StorageService.saveUserInfo(
         id: user.id,
@@ -193,7 +193,7 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
 
   Future<List<dynamic>?> _fetchListings() async {
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/listings'));
+      final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings'));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as List;
       }

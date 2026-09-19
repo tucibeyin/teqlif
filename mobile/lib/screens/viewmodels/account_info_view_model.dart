@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 
@@ -16,7 +16,7 @@ class AccountInfoState {
 class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
   @override
   FutureOr<AccountInfoState> build() async {
-    final u = await AuthService.me();
+    final u = await ref.read(authServiceProvider).me();
     return AccountInfoState(user: {
       'id': u.id,
       'email': u.email,
@@ -30,7 +30,7 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
   Future<void> reload() async {
     state = const AsyncValue.loading();
     try {
-      final u = await AuthService.me();
+      final u = await ref.read(authServiceProvider).me();
       state = AsyncValue.data(AccountInfoState(user: {
         'id': u.id,
         'email': u.email,
@@ -57,8 +57,8 @@ class EmailChangeViewModel extends AutoDisposeNotifier<void> {
 
   Future<void> requestCode(String email) async {
     final token = await StorageService.getToken();
-    await apiCall(() => http.post(
-      Uri.parse('$kBaseUrl/auth/email-change/request'),
+    await ref.read(apiClientProvider).call(() => http.post(
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/email-change/request'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       body: jsonEncode({'new_email': email}),
     ));
@@ -66,8 +66,8 @@ class EmailChangeViewModel extends AutoDisposeNotifier<void> {
 
   Future<void> verifyCode(String email, String code) async {
     final token = await StorageService.getToken();
-    await apiCall(() => http.post(
-      Uri.parse('$kBaseUrl/auth/email-change/verify'),
+    await ref.read(apiClientProvider).call(() => http.post(
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/email-change/verify'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       body: jsonEncode({'new_email': email, 'code': code}),
     ));
@@ -86,8 +86,8 @@ class PhoneChangeViewModel extends AutoDisposeNotifier<void> {
 
   Future<void> requestVerification(String phone) async {
     final token = await StorageService.getToken();
-    await apiCall(() => http.post(
-      Uri.parse('$kBaseUrl/auth/phone-verify/request'),
+    await ref.read(apiClientProvider).call(() => http.post(
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/phone-verify/request'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       body: jsonEncode({'phone': phone}),
     ));

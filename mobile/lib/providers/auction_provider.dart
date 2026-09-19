@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../models/auction.dart';
 import '../services/auction_service.dart';
 import 'stream_commerce_notifier.dart';
@@ -8,13 +9,16 @@ import 'stream_commerce_notifier.dart';
 /// WS altyapısı [StreamCommerceNotifier] base class'ında; bu sınıf yalnızca
 /// auction domain logic'ini içerir.
 class AuctionNotifier extends StreamCommerceNotifier<AuctionState> {
-  AuctionNotifier(int streamId) : super(streamId, AuctionState.idle()) {
+  final AuctionService _auctionService;
+
+  AuctionNotifier(int streamId, ApiClient api, this._auctionService)
+      : super(streamId, AuctionState.idle(), api) {
     unawaited(_prefetch());
   }
 
   Future<void> _prefetch() async {
     try {
-      final s = await AuctionService.getState(streamId);
+      final s = await _auctionService.getState(streamId);
       if (mounted && !s.isIdle) applyState(s);
     } catch (_) {}
   }
@@ -53,5 +57,9 @@ class AuctionNotifier extends StreamCommerceNotifier<AuctionState> {
 /// Widget ağacından ayrıldığında WS bağlantısı kapatılır.
 final auctionProvider =
     StateNotifierProvider.family.autoDispose<AuctionNotifier, AuctionState, int>(
-  (ref, streamId) => AuctionNotifier(streamId),
+  (ref, streamId) => AuctionNotifier(
+    streamId,
+    ref.watch(apiClientProvider),
+    ref.watch(auctionServiceProvider),
+  ),
 );

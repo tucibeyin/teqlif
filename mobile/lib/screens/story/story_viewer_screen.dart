@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../config/app_colors.dart';
 import '../../core/app_exception.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
@@ -267,7 +267,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
     final nextItem = widget.group.items[nextIndex];
     if (!nextItem.isVideo) return; // Fotoğraf/canlı için preload gerekmez
 
-    final nextUrl = nextItem.videoUrl != null ? imgUrl(nextItem.videoUrl!) : '';
+    final nextUrl = nextItem.videoUrl != null ? ref.read(apiClientProvider).imgUrl(nextItem.videoUrl!) : '';
     if (nextUrl.isEmpty) return;
 
     // Zaten bu URL için hazırlanmış bir controller varsa tekrar oluşturma
@@ -307,7 +307,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
   // ── Video yükle ve oynat ──────────────────────────────────────────────────
 
   Future<void> _loadVideo(StoryItem item) async {
-    final url = item.videoUrl != null ? imgUrl(item.videoUrl!) : '';
+    final url = item.videoUrl != null ? ref.read(apiClientProvider).imgUrl(item.videoUrl!) : '';
     if (url.isEmpty) {
       _advanceItem();
       return;
@@ -566,7 +566,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
 
     List<StreamOut> streams;
     try {
-      streams = await StreamService.getActiveStreams();
+      streams = await ref.read(streamServiceProvider).getActiveStreams();
     } catch (_) {
       streams = [];
     }
@@ -749,7 +749,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
         ),
       );
     }
-    final url = imgUrl(rawUrl);
+    final url = ref.read(apiClientProvider).imgUrl(rawUrl);
     return ColoredBox(
       color: Colors.black,
       child: Center(
@@ -776,7 +776,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
     final loc = ref.watch(localizationProvider);
     final user = widget.group.user;
     final avatarUrl = user.profileImageThumbUrl ?? user.profileImageUrl;
-    final resolved = avatarUrl != null ? imgUrl(avatarUrl) : null;
+    final resolved = avatarUrl != null ? ref.read(apiClientProvider).imgUrl(avatarUrl) : null;
 
     return ColoredBox(
       color: Colors.black,
@@ -1046,7 +1046,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
   Widget _buildUserOverlay(BuildContext context) {
     final user = widget.group.user;
     final avatarUrl = user.profileImageThumbUrl ?? user.profileImageUrl;
-    final resolved = avatarUrl != null ? imgUrl(avatarUrl) : null;
+    final resolved = avatarUrl != null ? ref.read(apiClientProvider).imgUrl(avatarUrl) : null;
     final topPad = MediaQuery.of(context).padding.top + 28;
 
     return Positioned(
@@ -1276,7 +1276,7 @@ class _ViewersSheetState extends ConsumerState<_ViewersSheet> {
             Padding(
               padding: const EdgeInsets.all(32),
               child: Text(
-                errorMsg!,
+                errorMsg,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary(context)),
               ),

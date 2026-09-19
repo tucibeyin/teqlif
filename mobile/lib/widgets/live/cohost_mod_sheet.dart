@@ -124,7 +124,7 @@ class _CoHostModSheetState extends ConsumerState<CoHostModSheet> {
               color: const Color(0xFFD97706),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.mute(widget.streamId, widget.username),
+                () => ref.read(moderationServiceProvider).mute(widget.streamId, widget.username),
                 successMsg: '@${widget.username} susturuldu',
                 onSuccess: () {
                   widget.onMuted();
@@ -140,7 +140,7 @@ class _CoHostModSheetState extends ConsumerState<CoHostModSheet> {
               loading: _loading,
               onTap: () => _act(
                 () =>
-                    ModerationService.unmute(widget.streamId, widget.username),
+                    ref.read(moderationServiceProvider).unmute(widget.streamId, widget.username),
                 successMsg: loc.t("modUnmutedMsg"),
                 onSuccess: () {
                   widget.onUnmuted();
@@ -157,7 +157,7 @@ class _CoHostModSheetState extends ConsumerState<CoHostModSheet> {
             color: const Color(0xFFEF4444),
             loading: _loading,
             onTap: () => _act(
-              () => ModerationService.kick(widget.streamId, widget.username),
+              () => ref.read(moderationServiceProvider).kick(widget.streamId, widget.username),
               successMsg: '@${widget.username} yayından atıldı',
             ),
           ),

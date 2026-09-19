@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/analytics_service.dart';
 import '../../../models/listing_filter_state.dart';
@@ -144,7 +144,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<void> _fetchRecent(String token) async {
-    final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?page=0'), headers: {
+    final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=0'), headers: {
       'Authorization': 'Bearer $token',
     });
 
@@ -170,7 +170,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
   Future<void> _fetchHesitated(String token) async {
     state = AsyncValue.data(state.value!.copyWith(isHesitatedLoading: true));
-    final resp = await http.get(Uri.parse('$kBaseUrl/feed/hesitated'), headers: {
+    final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/hesitated'), headers: {
       'Authorization': 'Bearer $token',
     });
 
@@ -206,7 +206,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     if (filter.dateTo != null) {
       params['date_to'] = filter.dateTo!.toIso8601String().substring(0, 10);
     }
-    final uri = Uri.parse('$kBaseUrl/listings').replace(queryParameters: params);
+    final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings').replace(queryParameters: params);
     
     final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
@@ -234,7 +234,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     try {
       // 1. Delta Fetching: Sadece yeni ilanları getir
       final sinceId = current.recentListings.first['id'];
-      final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?since_id=$sinceId'), headers: {
+      final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?since_id=$sinceId'), headers: {
         'Authorization': 'Bearer $token',
       });
       
@@ -284,7 +284,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
       final nextPage = current.currentPage + 1;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/recent?page=$nextPage'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=$nextPage'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -312,7 +312,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   
   void applyFilter(ListingFilterState newFilter) {
     if (!newFilter.isEmpty) {
-      AnalyticsService.trackEvent('filter_applied', {
+      ref.read(analyticsServiceProvider).trackEvent('filter_applied', {
         if (newFilter.category != null) 'category': newFilter.category!,
         'source': 'home',
       });
@@ -337,7 +337,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     if (token != null) {
       try {
         await http.delete(
-          Uri.parse('$kBaseUrl/feed/hesitated/$listingId'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/hesitated/$listingId'),
           headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         );
       } catch (_) {}

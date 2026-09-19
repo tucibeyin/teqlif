@@ -927,6 +927,5 @@ sudo bash bootstrap_<node>.sh
 | 2 | **node4 MinIO + LiveKit bootstrap scripti** | node4 için `bootstrap_node4.sh` henüz yazılmamış; node1 ile aynı yapıda olacak. | Yüksek |
 | 3 | **gateway HTTPS (SSL) doğrudan sunumu** | Şu an CF Full modda gateway :80 dinliyor. CF olmadan doğrudan gateway IP'ye gidilince plain HTTP. Certbot + nginx SSL, CF olmadan da güvenli. | Düşük |
 | 4 | **ClickHouse init_clickhouse() database parametresi** | `init_clickhouse()` database parametresi olmadan bağlanıyor; tablolar bootstrap'ta elle oluşturuluyor. `init_clickhouse()` `settings.clickhouse_db` ile bağlanmalı ve tabloları kendi oluşturmalı. | Orta |
-| 5 | ~~**edge-metrics-agent CORE_REDIS_URL DB uyumsuzluğu**~~ ✓ **ÇÖZÜLDÜ** | node1/node4 `.env.production` ve template'lerde `/1` → `/0` düzeltildi. node3 staging'de DB/0 ile doğrulandı. Orkestratör artık gerçek edge metriklerini görüyor. | ~~Yüksek~~ |
 
 *Son güncelleme: 2026-09-19 · deploy/scale/V1.4/documents/final_V1.4.md*

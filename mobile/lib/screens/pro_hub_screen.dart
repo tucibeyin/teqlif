@@ -287,7 +287,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
   }
 
   void _showUpgrade(BuildContext context) {
-    AnalyticsService.trackEvent('pro_upgrade_intent', {});
+    ref.read(analyticsServiceProvider).trackEvent('pro_upgrade_intent', {});
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

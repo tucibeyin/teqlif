@@ -35,7 +35,7 @@ class _FullscreenImageDialog extends StatelessWidget {
                     child: CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.contain,
-                      errorWidget: (_, __, ___) => const Icon(
+                      errorWidget: (_, _, _) => const Icon(
                         Icons.image_not_supported,
                         color: Colors.white38,
                         size: 64,

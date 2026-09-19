@@ -56,7 +56,15 @@ class CallRoomAdapter {
       return;
     }
     _isJoiningRoom = true;
-    _room = Room();
+    _room = Room(
+      roomOptions: RoomOptions(
+        defaultAudioOutputOptions: const AudioOutputOptions(speakerOn: false),
+        defaultAudioPublishOptions: AudioPublishOptions(
+          dtx: true,
+          audioBitrate: 16000,
+        ),
+      ),
+    );
 
     // callStatus'u snapshot alıyoruz — async boyunca değişebilir
     final callStatusAtEntry = getState().status;
@@ -76,16 +84,11 @@ class CallRoomAdapter {
       // ── Ağ bağlantısı (audio session gerektirmez) ────────────────────────────
       // Opus DTX (Discontinuous Transmission): sessizlikte paket gönderilmez → %40 bant genişliği tasarrufu.
       // audioBitrate=16000: WhatsApp-grade voice quality (12kbps telephone / 16kbps HD voice / 48kbps music).
-      const audioPublishOpts = AudioPublishOptions(dtx: true, audioBitrate: 16000);
       _log('LK', 'room.connect() → calling LiveKit | dtx=true bitrate=16kbps e2ee=false');
 
       await _room!.connect(
         livekitUrl,
         token,
-        roomOptions: RoomOptions(
-          defaultAudioOutputOptions: const AudioOutputOptions(speakerOn: false),
-          defaultAudioPublishOptions: audioPublishOpts,
-        ),
       );
       _log('LK', 'room.connect() SUCCESS');
 

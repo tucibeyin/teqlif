@@ -18,13 +18,13 @@ class SwipeLiveViewModel extends AsyncNotifier<SwipeLiveState> {
 
   Future<void> sendSwipeLiveEvents(List<Map<String, dynamic>> events) async {
     try {
-      await StreamService.sendSwipeLiveEvents(events);
+      await ref.read(streamServiceProvider).sendSwipeLiveEvents(events);
     } catch (_) {}
   }
 
   Future<List<StreamOut>> getActiveStreams() async {
     try {
-      return await StreamService.getActiveStreams();
+      return await ref.read(streamServiceProvider).getActiveStreams();
     } catch (_) {
       return [];
     }
@@ -32,7 +32,7 @@ class SwipeLiveViewModel extends AsyncNotifier<SwipeLiveState> {
 
   Future<dynamic> getSwipeLiveConfig() async {
     try {
-      return await StreamService.getSwipeLiveConfig();
+      return await ref.read(streamServiceProvider).getSwipeLiveConfig();
     } catch (_) {
       return null;
     }
@@ -57,17 +57,17 @@ class SwipeLivePageViewModel extends AutoDisposeFamilyAsyncNotifier<SwipeLivePag
 
   Future<void> likeStream() async {
     try {
-      await StreamService.likeStream(arg);
+      await ref.read(streamServiceProvider).likeStream(arg);
     } catch (_) {}
   }
 
   Future<StreamTokenOut> acceptCoHostInvite() async {
-    return await StreamService.acceptCoHostInvite(arg);
+    return await ref.read(streamServiceProvider).acceptCoHostInvite(arg);
   }
 
   Future<bool> leaveCoHost() async {
     try {
-      await StreamService.leaveCoHost(arg);
+      await ref.read(streamServiceProvider).leaveCoHost(arg);
       return true;
     } catch (_) {
       return false;

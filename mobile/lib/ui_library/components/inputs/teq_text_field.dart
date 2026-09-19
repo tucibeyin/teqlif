@@ -31,7 +31,7 @@ class TeqTextField extends StatelessWidget {
   final bool floatingLabel;
 
   const TeqTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.labelText,
     this.hintText,
@@ -54,7 +54,7 @@ class TeqTextField extends StatelessWidget {
     this.textInputAction,
     this.prefixText,
     this.floatingLabel = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

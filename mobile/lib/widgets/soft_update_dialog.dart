@@ -19,7 +19,7 @@ class _SoftUpdateDialogState extends ConsumerState<SoftUpdateDialog> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService.trackEvent('update_prompt_shown', {});
+    ref.read(analyticsServiceProvider).trackEvent('update_prompt_shown', {});
   }
 
   Future<void> _launchStore() async {
@@ -58,7 +58,7 @@ class _SoftUpdateDialogState extends ConsumerState<SoftUpdateDialog> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  AnalyticsService.trackEvent('update_prompt_accepted', {});
+                  ref.read(analyticsServiceProvider).trackEvent('update_prompt_accepted', {});
                   _launchStore();
                   Navigator.pop(context);
                 },
@@ -69,7 +69,7 @@ class _SoftUpdateDialogState extends ConsumerState<SoftUpdateDialog> {
             const SizedBox(height: 8),
             TextButton(
               onPressed: () {
-                AnalyticsService.trackEvent('update_prompt_dismissed', {});
+                ref.read(analyticsServiceProvider).trackEvent('update_prompt_dismissed', {});
                 Navigator.pop(context);
               },
               child: Text(

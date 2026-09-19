@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/call_service.dart';
+import '../services/call_service.dart' show callServiceProvider;
+import '../main.dart' show providerContainer;
 
 void _uiLog(String component, String event, String detail) {
   debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
@@ -14,9 +15,9 @@ class CallRouteObserver extends NavigatorObserver {
   static const _incomingScreenName = '/incoming_call_screen';
 
   void _setVisible(bool value) {
-    if (CallService.instance.isCallScreenVisible.value != value) {
-      CallService.instance.isCallScreenVisible.value = value;
-      _uiLog('ROUTE', 'VISIBILITY_CHANGE', 'isCallScreenVisible=$value callId=${CallService.instance.state.value.callId}');
+    if (providerContainer.read(callServiceProvider).isCallScreenVisible.value != value) {
+      providerContainer.read(callServiceProvider).isCallScreenVisible.value = value;
+      _uiLog('ROUTE', 'VISIBILITY_CHANGE', 'isCallScreenVisible=$value callId=${providerContainer.read(callServiceProvider).state.value.callId}');
     }
   }
 

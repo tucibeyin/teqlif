@@ -1,27 +1,32 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/stream.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 
 class StreamService {
+  final ApiClient _api;
+  StreamService(this._api);
+  late final _apiService = ApiService(_api);
+
   /// Kullanıcı aktif olarak yayın yapıyor mu?
   /// HostStreamScreen initState/dispose tarafından set edilir.
   /// _handleNotifNavigation bu flag'i kontrol ederek yayıncıyı
   /// başka yayınlara yönlendirmez.
   static bool isHosting = false;
 
-  static Future<Map<String, String>> _headers() async {
+  Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
-  static Future<List<StreamOut>> getActiveStreams() async {
+  Future<List<StreamOut>> getActiveStreams() async {
     final headers = await _headers();
-    final resp = await http.get(Uri.parse('$kBaseUrl/streams/active'), headers: headers);
+    final resp = await http.get(Uri.parse('${_api.config.baseUrl}/streams/active'), headers: headers);
     debugPrint('[StreamService] getActiveStreams → HTTP ${resp.statusCode}, body: ${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}');
     if (resp.statusCode >= 400) _throwHttpError(resp.statusCode, resp.body);
     final list = _tryDecodeList(resp.body);
@@ -40,9 +45,9 @@ class StreamService {
   /// SWR Stream versiyonu: önce Hive cache (anlık), sonra API (taze).
   /// [bypassCache]: pull-to-refresh veya LiveList her açılışında true.
   /// TTL: 1 dakika (yayınlar gerçek zamanlı değişir).
-  static Stream<List<StreamOut>> getActiveStreamsStream({bool bypassCache = false}) =>
-      ApiService.get<List<StreamOut>>(
-        url: '$kBaseUrl/streams/active',
+  Stream<List<StreamOut>> getActiveStreamsStream({bool bypassCache = false}) =>
+      _apiService.get<List<StreamOut>>(
+        url: '${_api.config.baseUrl}/streams/active',
         cacheKey: 'active_streams',
         cacheTtl: const Duration(minutes: 1),
         bypassCache: bypassCache,
@@ -60,11 +65,11 @@ class StreamService {
         },
       );
 
-  static Future<List<StreamOut>> getRecommendedStreams() async {
+  Future<List<StreamOut>> getRecommendedStreams() async {
     final headers = await _headers();
     final token = await StorageService.getToken();
     if (token == null) return [];
-    final resp = await http.get(Uri.parse('$kBaseUrl/streams/recommended'), headers: headers);
+    final resp = await http.get(Uri.parse('${_api.config.baseUrl}/streams/recommended'), headers: headers);
     if (resp.statusCode >= 400) return [];
     final list = _tryDecodeList(resp.body);
     final result = <StreamOut>[];
@@ -76,22 +81,22 @@ class StreamService {
     return result;
   }
 
-  static Future<List<Map<String, dynamic>>> getSuggestedStreamers() async {
+  Future<List<Map<String, dynamic>>> getSuggestedStreamers() async {
     final token = await StorageService.getToken();
     if (token == null) return [];
     final headers = await _headers();
     final resp = await http.get(
-      Uri.parse('$kBaseUrl/streams/suggested-streamers'),
+      Uri.parse('${_api.config.baseUrl}/streams/suggested-streamers'),
       headers: headers,
     );
     if (resp.statusCode >= 400) return [];
     return _tryDecodeList(resp.body).cast<Map<String, dynamic>>();
   }
 
-  static Future<List<StreamOut>> getFollowedLiveStreams() async {
+  Future<List<StreamOut>> getFollowedLiveStreams() async {
     final headers = await _headers();
     final resp = await http.get(
-      Uri.parse('$kBaseUrl/streams/following/live'),
+      Uri.parse('${_api.config.baseUrl}/streams/following/live'),
       headers: headers,
     );
     if (resp.statusCode >= 400) _throwHttpError(resp.statusCode, resp.body);
@@ -101,7 +106,7 @@ class StreamService {
         .toList();
   }
 
-  static Future<StreamTokenOut> startStream(
+  Future<StreamTokenOut> startStream(
     String title,
     String category,
     String subcategory, {
@@ -111,9 +116,9 @@ class StreamService {
     if (captchaToken != null && captchaToken.isNotEmpty) {
       headers['X-Captcha-Token'] = captchaToken;
     }
-    final body = await apiCall(
+    final body = await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/streams/start'),
+        Uri.parse('${_api.config.baseUrl}/streams/start'),
         headers: headers,
         body: jsonEncode({'title': title, 'category': category, 'subcategory': subcategory}),
       ),
@@ -121,36 +126,36 @@ class StreamService {
     return StreamTokenOut.fromJson(body);
   }
 
-  static Future<void> endStream(int streamId) async {
-    await apiCall(
-      () async => http.post(Uri.parse('$kBaseUrl/streams/$streamId/end'), headers: await _headers()),
+  Future<void> endStream(int streamId) async {
+    await _api.call(
+      () async => http.post(Uri.parse('${_api.config.baseUrl}/streams/$streamId/end'), headers: await _headers()),
     );
   }
 
   /// LiveKit bağlantısı kurulduktan sonra çağrılır — yayını canlıya alır ve bildirimleri tetikler.
-  static Future<void> confirmLive(int streamId) async {
-    await apiCall(
+  Future<void> confirmLive(int streamId) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/streams/$streamId/confirm-live'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/confirm-live'),
         headers: await _headers(),
       ),
     );
   }
 
   /// LiveKit bağlantısı kurulamazsa çağrılır — pending kaydı siler.
-  static Future<void> cancelStream(int streamId) async {
+  Future<void> cancelStream(int streamId) async {
     try {
       await http.delete(
-        Uri.parse('$kBaseUrl/streams/$streamId/cancel'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/cancel'),
         headers: await _headers(),
       ).timeout(const Duration(seconds: 5));
     } catch (_) {}
   }
 
-  static Future<bool> isStreamActive(int streamId) async {
+  Future<bool> isStreamActive(int streamId) async {
     try {
-      final body = await apiCall(
-        () async => http.get(Uri.parse('$kBaseUrl/streams/$streamId/check'), headers: await _headers()),
+      final body = await _api.call(
+        () async => http.get(Uri.parse('${_api.config.baseUrl}/streams/$streamId/check'), headers: await _headers()),
       );
       return body['active'] as bool? ?? false;
     } catch (_) {
@@ -158,49 +163,49 @@ class StreamService {
     }
   }
 
-  static Future<JoinTokenOut> joinStream(int streamId) async {
-    final body = await apiCall(
-      () async => http.post(Uri.parse('$kBaseUrl/streams/$streamId/join'), headers: await _headers()),
+  Future<JoinTokenOut> joinStream(int streamId) async {
+    final body = await _api.call(
+      () async => http.post(Uri.parse('${_api.config.baseUrl}/streams/$streamId/join'), headers: await _headers()),
     );
     return JoinTokenOut.fromJson(body);
   }
 
   /// Canlı yayına kalp gönder (add-only, backend throttle olmadan — istemci throttle'ı kullanır).
-  static Future<void> likeStream(int streamId) async {
+  Future<void> likeStream(int streamId) async {
     await http.post(
-      Uri.parse('$kBaseUrl/streams/$streamId/like'),
+      Uri.parse('${_api.config.baseUrl}/streams/$streamId/like'),
       headers: await _headers(),
     );
   }
 
-  static Future<void> leaveStream(int streamId) async {
+  Future<void> leaveStream(int streamId) async {
     await http.delete(
-      Uri.parse('$kBaseUrl/streams/$streamId/leave'),
+      Uri.parse('${_api.config.baseUrl}/streams/$streamId/leave'),
       headers: await _headers(),
     );
   }
 
-  static Future<void> pipEnter(int streamId) async {
+  Future<void> pipEnter(int streamId) async {
     try {
       await http.post(
-        Uri.parse('$kBaseUrl/streams/$streamId/pip-enter'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/pip-enter'),
         headers: await _headers(),
       );
     } catch (_) {}
   }
 
-  static Future<void> pipExit(int streamId) async {
+  Future<void> pipExit(int streamId) async {
     try {
       await http.delete(
-        Uri.parse('$kBaseUrl/streams/$streamId/pip-exit'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/pip-exit'),
         headers: await _headers(),
       );
     } catch (_) {}
   }
 
-  static Future<List<Map<String, dynamic>>> getViewers(int streamId) async {
+  Future<List<Map<String, dynamic>>> getViewers(int streamId) async {
     final headers = await _headers();
-    final resp = await http.get(Uri.parse('$kBaseUrl/streams/$streamId/viewers'), headers: headers);
+    final resp = await http.get(Uri.parse('${_api.config.baseUrl}/streams/$streamId/viewers'), headers: headers);
     if (resp.statusCode >= 400) {
       throw AppException('İzleyiciler alınamadı', statusCode: resp.statusCode);
     }
@@ -210,11 +215,11 @@ class StreamService {
     );
   }
 
-  static Future<String> uploadThumbnail(int streamId, Uint8List bytes, String filename) async {
+  Future<String> uploadThumbnail(int streamId, Uint8List bytes, String filename) async {
     final token = await StorageService.getToken();
     final req = http.MultipartRequest(
       'PATCH',
-      Uri.parse('$kBaseUrl/streams/$streamId/thumbnail'),
+      Uri.parse('${_api.config.baseUrl}/streams/$streamId/thumbnail'),
     );
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
     req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
@@ -227,10 +232,10 @@ class StreamService {
   }
 
   /// Bir izleyiciyi sahneye davet et (host → POST /cohost/invite).
-  static Future<void> inviteCoHost(int streamId, String username) async {
-    await apiCall(
+  Future<void> inviteCoHost(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/streams/$streamId/cohost/invite'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/cohost/invite'),
         headers: await _headers(),
         body: jsonEncode({'target_username': username}),
       ),
@@ -238,10 +243,10 @@ class StreamService {
   }
 
   /// Sahne davetini kabul et — yeni can_publish=true token döner (viewer → POST /cohost/accept).
-  static Future<StreamTokenOut> acceptCoHostInvite(int streamId) async {
-    final body = await apiCall(
+  Future<StreamTokenOut> acceptCoHostInvite(int streamId) async {
+    final body = await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/streams/$streamId/cohost/accept'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/cohost/accept'),
         headers: await _headers(),
       ),
     );
@@ -249,10 +254,10 @@ class StreamService {
   }
 
   /// Sahnedeki konuğu kaldır (host → POST /cohost/remove).
-  static Future<void> removeCoHost(int streamId, String username) async {
-    await apiCall(
+  Future<void> removeCoHost(int streamId, String username) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/streams/$streamId/cohost/remove'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/cohost/remove'),
         headers: await _headers(),
         body: jsonEncode({'target_username': username}),
       ),
@@ -261,10 +266,10 @@ class StreamService {
 
   /// Reconnect için taze token al — stream sona erdiyse 410 → STREAM_ENDED fırlatır.
   /// Host: can_publish=True token. Viewer: can_publish=False token.
-  static Future<StreamTokenOut> refreshStreamToken(int streamId) async {
-    final body = await apiCall(
+  Future<StreamTokenOut> refreshStreamToken(int streamId) async {
+    final body = await _api.call(
       () async => http.get(
-        Uri.parse('$kBaseUrl/streams/$streamId/token'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/token'),
         headers: await _headers(),
       ),
     );
@@ -272,10 +277,10 @@ class StreamService {
   }
 
   /// Gönüllü sahneden ayrıl — cohost_removed WS sinyali yayınlanır (viewer → POST /cohost/leave).
-  static Future<void> leaveCoHost(int streamId) async {
-    await apiCall(
+  Future<void> leaveCoHost(int streamId) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/streams/$streamId/cohost/leave'),
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/cohost/leave'),
         headers: await _headers(),
       ),
     );
@@ -300,10 +305,10 @@ class StreamService {
     try { return jsonDecode(body) as List; } catch (_) { return []; }
   }
 
-  static Future<Map<String, dynamic>> fetchAudienceInsights(int streamId) async {
+  Future<Map<String, dynamic>> fetchAudienceInsights(int streamId) async {
     final token = await StorageService.getToken();
     final resp = await http.get(
-      Uri.parse('$kBaseUrl/streams/$streamId/audience-insights'),
+      Uri.parse('${_api.config.baseUrl}/streams/$streamId/audience-insights'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -312,11 +317,11 @@ class StreamService {
 
   /// Kullanıcıya özel SwipeLive konfigürasyonu: sıralanmış yayınlar + listings_per_group.
   /// Hata olursa null döner — çağıran varsayılan davranışa düşer.
-  static Future<SwipeLiveConfig?> getSwipeLiveConfig() async {
+  Future<SwipeLiveConfig?> getSwipeLiveConfig() async {
     try {
       final headers = await _headers();
       final resp = await http
-          .get(Uri.parse('$kBaseUrl/streams/swipe-live-config'), headers: headers)
+          .get(Uri.parse('${_api.config.baseUrl}/streams/swipe-live-config'), headers: headers)
           .timeout(const Duration(seconds: 4));
       if (resp.statusCode == 200) {
         return SwipeLiveConfig.fromJson(
@@ -326,11 +331,11 @@ class StreamService {
     return null;
   }
 
-  static Future<List<Map<String, dynamic>>> fetchCommerceActivity(int streamId) async {
+  Future<List<Map<String, dynamic>>> fetchCommerceActivity(int streamId) async {
     try {
       final headers = await _headers();
       final resp = await http
-          .get(Uri.parse('$kBaseUrl/streams/$streamId/commerce-activity'), headers: headers)
+          .get(Uri.parse('${_api.config.baseUrl}/streams/$streamId/commerce-activity'), headers: headers)
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode == 200) {
         final list = jsonDecode(resp.body) as List<dynamic>;
@@ -341,14 +346,14 @@ class StreamService {
   }
 
   /// SwipeLive davranış eventlerini batch olarak gönderir. Fire-and-forget.
-  static Future<void> sendSwipeLiveEvents(
+  Future<void> sendSwipeLiveEvents(
       List<Map<String, dynamic>> events) async {
     if (events.isEmpty) return;
     try {
       final headers = await _headers();
       await http
           .post(
-            Uri.parse('$kBaseUrl/analytics/swipe-live-events'),
+            Uri.parse('${_api.config.baseUrl}/analytics/swipe-live-events'),
             headers: headers,
             body: jsonEncode({'events': events}),
           )
@@ -356,3 +361,6 @@ class StreamService {
     } catch (_) {}
   }
 }
+
+final streamServiceProvider = Provider<StreamService>((ref) =>
+    StreamService(ref.watch(apiClientProvider)));

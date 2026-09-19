@@ -6,11 +6,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import '../services/call_service.dart';
-import '../services/follows_service.dart';
 import '../models/call_participant.dart';
 import 'viewmodels/invite_to_call_view_model.dart';
 import 'messages_screen.dart';
@@ -42,7 +41,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (_isTogglingMic) return;
     setState(() => _isTogglingMic = true);
     try {
-      await CallService.instance.toggleMute();
+      await ref.read(callServiceProvider).toggleMute();
       await Future.delayed(const Duration(milliseconds: 500));
     } finally {
       if (mounted) setState(() => _isTogglingMic = false);
@@ -53,8 +52,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (_isTogglingCamera) return;
     setState(() => _isTogglingCamera = true);
     try {
-      _cpLog('UI', 'Camera toggle tap | localVideo=${CallService.instance.localVideoEnabled.value}');
-      await CallService.instance.toggleCamera();
+      _cpLog('UI', 'Camera toggle tap | localVideo=${ref.read(callServiceProvider).localVideoEnabled.value}');
+      await ref.read(callServiceProvider).toggleCamera();
       await Future.delayed(const Duration(milliseconds: 500));
     } finally {
       if (mounted) setState(() => _isTogglingCamera = false);
@@ -75,19 +74,19 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   @override
   void initState() {
     super.initState();
-    _cpLog('UI', 'CallScreen initState | callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
-    _uiLog('CALL_SCREEN', 'OPEN', 'callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
+    _cpLog('UI', 'CallScreen initState | callId=${ref.read(callServiceProvider).state.value.callId} status=${ref.read(callServiceProvider).state.value.status.name}');
+    _uiLog('CALL_SCREEN', 'OPEN', 'callId=${ref.read(callServiceProvider).state.value.callId} status=${ref.read(callServiceProvider).state.value.status.name}');
     // isCallScreenVisible → CallRouteObserver yönetir (call_route_observer.dart).
     // initState'den set etmek observer'a ihtiyaç bırakmaz ve frame gecikmesi yaratırdı.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _onStateChange();
     });
-    CallService.instance.state.addListener(_onStateChange);
-    CallService.instance.state.addListener(_onParticipantStateChange);
+    ref.read(callServiceProvider).state.addListener(_onStateChange);
+    ref.read(callServiceProvider).state.addListener(_onParticipantStateChange);
     // D-7: adapter notifier'ları doğrudan dinle — isSpeaker/video artık CallState'te değil.
-    CallService.instance.isSpeaker.addListener(_onAdapterStateChange);
-    CallService.instance.localVideoEnabled.addListener(_onAdapterStateChange);
-    CallService.instance.remoteVideoEnabled.addListener(_onAdapterStateChange);
+    ref.read(callServiceProvider).isSpeaker.addListener(_onAdapterStateChange);
+    ref.read(callServiceProvider).localVideoEnabled.addListener(_onAdapterStateChange);
+    ref.read(callServiceProvider).remoteVideoEnabled.addListener(_onAdapterStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
         final isNear = event > 0;
@@ -127,8 +126,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   }
 
   void _onStateChange() {
-    final s = CallService.instance.state.value.status;
-    final isVideoNow = CallService.instance.remoteVideoEnabled.value &&
+    final s = ref.read(callServiceProvider).state.value.status;
+    final isVideoNow = ref.read(callServiceProvider).remoteVideoEnabled.value &&
         s == CallStatus.active;
     if (isVideoNow && !_wasVideoMode) {
       _wasVideoMode = true;
@@ -139,16 +138,16 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       if (!_isControlsExpanded && mounted) setState(() => _isControlsExpanded = true);
     }
     // elapsed artık CallState'te değil — ayrı notifier'da. _onStateChange'de kullanılmaz.
-    final acceptedAt = CallService.instance.state.value.acceptedAt;
-    _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
-    _uiLog('CALL_SCREEN', 'STATUS_CHANGE', 'callId=${CallService.instance.state.value.callId} status=${s.name}');
-    if (s == CallStatus.active && CallService.instance.elapsed.value == Duration.zero) {
+    final acceptedAt = ref.read(callServiceProvider).state.value.acceptedAt;
+    _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${ref.read(callServiceProvider).hasActiveCall} hasPopped=$_hasPopped');
+    _uiLog('CALL_SCREEN', 'STATUS_CHANGE', 'callId=${ref.read(callServiceProvider).state.value.callId} status=${s.name}');
+    if (s == CallStatus.active && ref.read(callServiceProvider).elapsed.value == Duration.zero) {
       final nowUtc = DateTime.now().toUtc();
-      _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsedNotifier=${CallService.instance.elapsed.value.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
-      _uiLog('CALL_SCREEN', 'CONNECTED', 'callId=${CallService.instance.state.value.callId} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"}');
+      _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsedNotifier=${ref.read(callServiceProvider).elapsed.value.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
+      _uiLog('CALL_SCREEN', 'CONNECTED', 'callId=${ref.read(callServiceProvider).state.value.callId} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"}');
     }
-    if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
-      final endReason = CallService.instance.state.value.endReason;
+    if (!ref.read(callServiceProvider).hasActiveCall && mounted && !_hasPopped) {
+      final endReason = ref.read(callServiceProvider).state.value.endReason;
       final isNamedEnd = endReason == EndReason.rejected ||
           endReason == EndReason.missed ||
           endReason == EndReason.busy ||
@@ -173,8 +172,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   @override
   void dispose() {
-    _cpLog('UI', 'CallScreen dispose | callId=${CallService.instance.state.value.callId}');
-    _uiLog('CALL_SCREEN', 'CLOSE', 'callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
+    _cpLog('UI', 'CallScreen dispose | callId=${ref.read(callServiceProvider).state.value.callId}');
+    _uiLog('CALL_SCREEN', 'CLOSE', 'callId=${ref.read(callServiceProvider).state.value.callId} status=${ref.read(callServiceProvider).state.value.status.name}');
     try {
       _proximitySubscription.cancel().catchError((e) {
         _cpLog('UI', 'CallScreen proximity cancel error | $e');
@@ -182,11 +181,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     } catch (e) {
       _cpLog('UI', 'CallScreen proximity cancel sync error | $e');
     }
-    CallService.instance.state.removeListener(_onStateChange);
-    CallService.instance.state.removeListener(_onParticipantStateChange);
-    CallService.instance.isSpeaker.removeListener(_onAdapterStateChange);
-    CallService.instance.localVideoEnabled.removeListener(_onAdapterStateChange);
-    CallService.instance.remoteVideoEnabled.removeListener(_onAdapterStateChange);
+    ref.read(callServiceProvider).state.removeListener(_onStateChange);
+    ref.read(callServiceProvider).state.removeListener(_onParticipantStateChange);
+    ref.read(callServiceProvider).isSpeaker.removeListener(_onAdapterStateChange);
+    ref.read(callServiceProvider).localVideoEnabled.removeListener(_onAdapterStateChange);
+    ref.read(callServiceProvider).remoteVideoEnabled.removeListener(_onAdapterStateChange);
     _toastTimer?.cancel();
     _autoHideTimer?.cancel();
     // isCallScreenVisible → Navigator.pop tetikler didPop → CallRouteObserver false set eder.
@@ -196,7 +195,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   List<CallParticipant> _prevParticipants = [];
 
   void _onParticipantStateChange() {
-    final cs = CallService.instance.state.value;
+    final cs = ref.read(callServiceProvider).state.value;
     final current = cs.participants;
 
     // Detect joined
@@ -262,7 +261,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                           onPressed: () {
                             Navigator.pop(context);
                             _cpLog('UI', 'Remove participant confirmed | userId=${p.userId}');
-                            CallService.instance.removeParticipant(p.userId).catchError((e) {
+                            ref.read(callServiceProvider).removeParticipant(p.userId).catchError((e) {
                               _cpLog('UI', 'removeParticipant ERROR | $e');
                             });
                           },
@@ -288,19 +287,19 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _cpLog('UI', 'CallScreen build | status=${CallService.instance.state.value.status.name}');
+    _cpLog('UI', 'CallScreen build | status=${ref.read(callServiceProvider).state.value.status.name}');
     final loc = ref.watch(localizationProvider);
     return ValueListenableBuilder<CallState>(
-      valueListenable: CallService.instance.state,
+      valueListenable: ref.read(callServiceProvider).state,
       builder: (context, cs, _) {
         final avatarUrl = (cs.otherAvatar ?? '').isNotEmpty
-            ? imgUrl(cs.otherAvatar)
+            ? ref.read(apiClientProvider).imgUrl(cs.otherAvatar)
             : null;
         final username = cs.otherUsername ?? '';
         // D-7: video/speaker state from adapter notifiers (not CallState)
-        final isSpeaker = CallService.instance.isSpeaker.value;
-        final localVideoEnabled = CallService.instance.localVideoEnabled.value;
-        final remoteVideoEnabled = CallService.instance.remoteVideoEnabled.value;
+        final isSpeaker = ref.read(callServiceProvider).isSpeaker.value;
+        final localVideoEnabled = ref.read(callServiceProvider).localVideoEnabled.value;
+        final remoteVideoEnabled = ref.read(callServiceProvider).remoteVideoEnabled.value;
         final isVideoMode = remoteVideoEnabled && cs.status == CallStatus.active;
 
         return Scaffold(
@@ -327,7 +326,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               if (remoteVideoEnabled && cs.status == CallStatus.active) ...[
                 Positioned.fill(
                   child: _RemoteVideoView(
-                    room: CallService.instance.room,
+                    room: ref.read(callServiceProvider).room,
                   ),
                 ),
                 Positioned.fill(
@@ -359,11 +358,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                         ),
                         onPressed: () {
                           _cpLog('UI', 'CallScreen minimize tapped → pop');
-                          _uiLog('CALL_SCREEN', 'MINIMIZE_TAP', 'callId=${CallService.instance.state.value.callId}');
+                          _uiLog('CALL_SCREEN', 'MINIMIZE_TAP', 'callId=${ref.read(callServiceProvider).state.value.callId}');
                           _hasPopped = true;
                           // Prevent overlay from auto-pushing call screen back when
                           // isCallScreenVisible drops to false during the pop.
-                          CallService.instance.preventCallScreenAutoOpen.value = true;
+                          ref.read(callServiceProvider).preventCallScreenAutoOpen.value = true;
                           Navigator.of(context).pop();
                         },
                       ),
@@ -464,7 +463,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
                           // Status / timer
                           ValueListenableBuilder<Duration>(
-                            valueListenable: CallService.instance.elapsed,
+                            valueListenable: ref.read(callServiceProvider).elapsed,
                             builder: (context, elapsedDuration, _) {
                               return Text(
                                 _statusText(cs.status, loc, elapsedDuration),
@@ -495,7 +494,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                         ),
                                       ),
                                       ValueListenableBuilder<Duration>(
-                                        valueListenable: CallService.instance.elapsed,
+                                        valueListenable: ref.read(callServiceProvider).elapsed,
                                         builder: (context, elapsed, _) => Text(
                                           _statusText(cs.status, loc, elapsed),
                                           style: const TextStyle(
@@ -610,7 +609,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                                     : AppColors.isDark(context)
                                                     ? Colors.white.withValues(alpha: 0.2)
                                                     : Colors.black.withValues(alpha: 0.05),
-                                                onTap: () => CallService.instance
+                                                onTap: () => ref.read(callServiceProvider)
                                                     .setSpeaker(!isSpeaker),
                                               ),
                                             ],
@@ -641,7 +640,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                         if (id != null) {
                                           // Prevent overlay from re-pushing call screen when
                                           // pushReplacement drops isCallScreenVisible to false.
-                                          CallService.instance.preventCallScreenAutoOpen.value = true;
+                                          ref.read(callServiceProvider).preventCallScreenAutoOpen.value = true;
                                           Navigator.pushReplacement(
                                             context,
                                             MaterialPageRoute(
@@ -669,7 +668,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       cs.status == CallStatus.reconnecting)
                                     GestureDetector(
                                       onTap: () {
-                                        final svc = CallService.instance;
+                                        final svc = ref.read(callServiceProvider);
                                         _cpLog('END', 'CallScreen END/LEAVE tapped | callId=${svc.state.value.callId} isGroupGuest=${svc.state.value.isGroupGuest}');
                                         _uiLog('CALL_SCREEN', 'END_TAP', 'callId=${svc.state.value.callId} isGroupGuest=${svc.state.value.isGroupGuest}');
                                         if (svc.state.value.isGroupGuest) {
@@ -757,7 +756,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                           height: pipH,
                           child: IgnorePointer(
                             child: _LocalVideoView(
-                              room: CallService.instance.room,
+                              room: ref.read(callServiceProvider).room,
                             ),
                           ),
                         ),
@@ -775,7 +774,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     child: GestureDetector(
                       onTap: () {
                         _cpLog('UI', 'Camera switch tap');
-                        CallService.instance.switchCamera();
+                        ref.read(callServiceProvider).switchCamera();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(10),
@@ -841,12 +840,12 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (s == CallStatus.active) {
       final formatted = _formatElapsed(elapsed);
       if (elapsed.inSeconds <= 5) {
-        _cpLog('TIMER', 'CallScreen UI RENDER | elapsed=${elapsed.inMilliseconds}ms ($formatted) acceptedAt=${CallService.instance.state.value.acceptedAt?.toIso8601String() ?? "NULL"}');
+        _cpLog('TIMER', 'CallScreen UI RENDER | elapsed=${elapsed.inMilliseconds}ms ($formatted) acceptedAt=${ref.read(callServiceProvider).state.value.acceptedAt?.toIso8601String() ?? "NULL"}');
       }
       return formatted;
     }
     if (s == CallStatus.ended) {
-      final endReason = CallService.instance.state.value.endReason;
+      final endReason = ref.read(callServiceProvider).state.value.endReason;
       return switch (endReason) {
         EndReason.rejected => loc.t('callRejected'),
         EndReason.missed => loc.t('callMissed'),
@@ -866,7 +865,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   }
 }
 
-class _ControlButton extends StatelessWidget {
+class _ControlButton extends ConsumerWidget {
   final IconData icon;
   final String label;
   final Color color;
@@ -882,7 +881,7 @@ class _ControlButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: isLoading ? null : onTap,
       child: Opacity(
@@ -925,12 +924,12 @@ class _ControlButton extends StatelessWidget {
   }
 }
 
-class _Initials extends StatelessWidget {
+class _Initials extends ConsumerWidget {
   final String username;
   const _Initials({required this.username});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       color: AppColors.surfaceVariant(context),
       alignment: Alignment.center,
@@ -948,12 +947,12 @@ class _Initials extends StatelessWidget {
 
 // ── Remote video fullscreen view ─────────────────────────────────────────────
 
-class _RemoteVideoView extends StatelessWidget {
+class _RemoteVideoView extends ConsumerWidget {
   final Room? room;
   const _RemoteVideoView({this.room});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final room = this.room;
     if (room == null) return const SizedBox.shrink();
     final remote = room.remoteParticipants.values.firstOrNull;
@@ -968,12 +967,12 @@ class _RemoteVideoView extends StatelessWidget {
 
 // ── Local video PiP view ──────────────────────────────────────────────────────
 
-class _LocalVideoView extends StatelessWidget {
+class _LocalVideoView extends ConsumerWidget {
   final Room? room;
   const _LocalVideoView({this.room});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final room = this.room;
     if (room == null) return const SizedBox.shrink();
     final pub = room.localParticipant?.videoTrackPublications
@@ -986,7 +985,7 @@ class _LocalVideoView extends StatelessWidget {
 
 // ── Participant avatar strip ──────────────────────────────────────────────────
 
-class _ParticipantStrip extends StatelessWidget {
+class _ParticipantStrip extends ConsumerWidget {
   final List<CallParticipant> participants;
   final void Function(CallParticipant) onLongPress;
 
@@ -996,7 +995,7 @@ class _ParticipantStrip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shown = participants.take(3).toList();
     final extra = participants.length - 3;
     return Center(
@@ -1019,7 +1018,7 @@ class _ParticipantStrip extends StatelessWidget {
                   child: ClipOval(
                     child: p.avatar != null && p.avatar!.isNotEmpty
                         ? CachedNetworkImage(
-                            imageUrl: imgUrl(p.avatar!),
+                            imageUrl: ref.read(apiClientProvider).imgUrl(p.avatar!),
                             fit: BoxFit.cover,
                           )
                         : Container(
@@ -1174,7 +1173,7 @@ class _InviteToCallModalState extends ConsumerState<InviteToCallModal> {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundImage: (avatar != null && avatar.isNotEmpty)
-                            ? CachedNetworkImageProvider(imgUrl(avatar))
+                            ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatar))
                             : null,
                         child: (avatar == null || avatar.isEmpty)
                             ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?')
@@ -1201,7 +1200,7 @@ class _InviteToCallModalState extends ConsumerState<InviteToCallModal> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('Bir hata oluştu')),
+            error: (_, _) => const Center(child: Text('Bir hata oluştu')),
           ),
         ],
       ),

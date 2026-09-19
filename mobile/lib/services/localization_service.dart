@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../providers/locale_provider.dart';
 
 const _kBoxName = 'i18n_cache';
@@ -120,7 +120,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
   Future<void> _checkStale(String lang, Box<String> box) async {
     try {
       final cachedVersion = box.get('version_$lang') ?? '';
-      final vResp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang/version'));
+      final vResp = await http.get(Uri.parse('${_ref.read(apiClientProvider).config.baseUrl}/i18n/$lang/version'));
       if (vResp.statusCode != 200) return;
       final serverVersion = (jsonDecode(vResp.body) as Map)['version'] as String;
 
@@ -157,7 +157,7 @@ class LocalizationService extends StateNotifier<TranslationPack> {
 
   Future<bool> _fetchAndCache(String lang, Box<String> box) async {
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/i18n/$lang'));
+      final resp = await http.get(Uri.parse('${_ref.read(apiClientProvider).config.baseUrl}/i18n/$lang'));
       if (resp.statusCode != 200) return false;
       final body = jsonDecode(resp.body) as Map;
       final version = body['version'] as String;

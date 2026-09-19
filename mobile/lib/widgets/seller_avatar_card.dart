@@ -3,18 +3,19 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SellerAvatarCard extends StatelessWidget {
+class SellerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> seller;
   final VoidCallback onTap;
 
   const SellerAvatarCard({super.key, required this.seller, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final rawAvatar = seller['profile_image_url'] as String?;
-    final avatarUrl = rawAvatar != null ? imgUrl(rawAvatar) : null;
+    final avatarUrl = rawAvatar != null ? ref.read(apiClientProvider).imgUrl(rawAvatar) : null;
     final username = seller['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final isVerified = seller['is_verified'] == true;

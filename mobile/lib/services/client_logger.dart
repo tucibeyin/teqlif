@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../core/logger_service.dart';
+import '../main.dart' show providerContainer;
 import 'storage_service.dart';
 
 /// Mobil cihazda yakalanan kritik hataları VPS uvicorn log'una iletir.
@@ -59,7 +60,7 @@ class ClientLogger {
         'platform': Platform.isIOS ? 'ios' : 'android',
       });
       await http
-          .post(Uri.parse('$kBaseUrl/client-log'), headers: headers, body: body)
+          .post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/client-log'), headers: headers, body: body)
           .timeout(const Duration(seconds: 5));
     } catch (_) {
       // Log gönderimi başarısız olursa sessizce geç

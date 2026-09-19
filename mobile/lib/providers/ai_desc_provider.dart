@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../services/cache_service.dart';
 import '../services/storage_service.dart';
 
@@ -24,7 +24,8 @@ class AiDescState {
 }
 
 class AiDescNotifier extends StateNotifier<AiDescState> {
-  AiDescNotifier() : super(const AiDescState());
+  final ApiClient _api;
+  AiDescNotifier(this._api) : super(const AiDescState());
 
   Future<void> generate({
     required String title,
@@ -38,8 +39,8 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
     state = const AiDescState(status: AiDescStatus.loading);
     try {
       final token = await StorageService.getToken();
-      final data = await apiCall(() => http.post(
-            Uri.parse('$kBaseUrl/listings/generate-description'),
+      final data = await _api.call(() => http.post(
+            Uri.parse('${_api.config.baseUrl}/listings/generate-description'),
             headers: {
               'Content-Type': 'application/json',
               if (token != null) 'Authorization': 'Bearer $token',
@@ -80,5 +81,5 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
 
 final aiDescProvider =
     StateNotifierProvider.autoDispose<AiDescNotifier, AiDescState>(
-  (ref) => AiDescNotifier(),
+  (ref) => AiDescNotifier(ref.watch(apiClientProvider)),
 );

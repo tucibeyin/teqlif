@@ -34,7 +34,7 @@ class StoryViewerViewModel extends AsyncNotifier<StoryViewerState> {
 
   Future<Map<String, dynamic>?> toggleLike(int storyId) async {
     try {
-      final result = await StoryService.toggleLike(storyId);
+      final result = await ref.read(storyServiceProvider).toggleLike(storyId);
       return result;
     } catch (e) {
       return null;
@@ -43,7 +43,7 @@ class StoryViewerViewModel extends AsyncNotifier<StoryViewerState> {
 
   Future<bool> deleteStory(int storyId) async {
     try {
-      await StoryService.deleteStory(storyId);
+      await ref.read(storyServiceProvider).deleteStory(storyId);
       return true;
     } catch (e) {
       return false;
@@ -51,12 +51,12 @@ class StoryViewerViewModel extends AsyncNotifier<StoryViewerState> {
   }
 
   void recordView(int storyId) {
-    StoryService.recordStoryView(storyId).catchError((_) {});
+    ref.read(storyServiceProvider).recordStoryView(storyId).catchError((_) {});
   }
 
   Future<StreamOut?> getActiveStreamForUser(int userId) async {
     try {
-      final streams = await StreamService.getActiveStreams();
+      final streams = await ref.read(streamServiceProvider).getActiveStreams();
       final idx = streams.indexWhere((s) => s.host.id == userId);
       if (idx != -1) return streams[idx];
     } catch (e) {
@@ -75,7 +75,7 @@ final storyViewerViewModelProvider = AsyncNotifierProvider<StoryViewerViewModel,
 class StoryViewersViewModel extends AutoDisposeFamilyAsyncNotifier<List<StoryViewer>, int> {
   @override
   FutureOr<List<StoryViewer>> build(int arg) async {
-    return StoryService.getStoryViewers(arg);
+    return ref.read(storyServiceProvider).getStoryViewers(arg);
   }
 }
 

@@ -3,7 +3,6 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../services/localization_service.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
@@ -21,7 +20,6 @@ import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 
 import '../services/analytics_service.dart';
-import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/cache_service.dart';
 import '../services/image_cache_manager.dart';
@@ -99,7 +97,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
 
 
-  String _buildImageUrl(String url) => imgUrl(url);
+  String _buildImageUrl(String url) => ref.read(apiClientProvider).imgUrl(url);
 
   /// Profil fotoğrafı — CachedNetworkImage ile disk'e önbelleğe alınır.
   Widget _buildAvatar({
@@ -153,7 +151,6 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         user?['username'] ??
         loc.t('defaultUserFallback');
     final username = user?['username'] ?? '';
-    final email = user?['email'] ?? '';
     final isVerified = user?['is_verified'] == true;
 
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
@@ -470,7 +467,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               _ScoreBadge(
                                 icon: FontAwesomeIcons.rankingStar,
                                 title: loc.t("influenceRankLabel"),
-                                value: '${user!['influence_rank']}',
+                                value: '${user['influence_rank']}',
                                 hint: loc.t("influenceRankHint"),
                                 color: const Color(0xFF8B5CF6),
                               ),
@@ -514,7 +511,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                           const SizedBox(height: 4),
                           GestureDetector(
                             onTap: () => _websiteGuard.run(() async {
-                              final raw = user!['website_url'] as String;
+                              final raw = user['website_url'] as String;
                               final uri = Uri.tryParse(raw);
                               if (uri != null && await canLaunchUrl(uri)) {
                                 launchUrl(
@@ -728,13 +725,13 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-class _StatItem extends StatelessWidget {
+class _StatItem extends ConsumerWidget {
   final int count;
   final String label;
   const _StatItem({required this.count, required this.label});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         Text(
@@ -779,7 +776,7 @@ class _ListingGridItem extends ConsumerWidget {
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
         : listing['image_url'] as String?;
-    final imageUrl = raw != null ? imgUrl(raw) : null;
+    final imageUrl = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
     final price = _fmt(listing['price']);
 
     final isSponsored = listing['is_sponsored'] == true;
@@ -940,9 +937,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
-      final body = await apiCall(
+      final body = await ref.read(apiClientProvider).call(
         () => http.get(
-          Uri.parse('$kBaseUrl/auth/me/consent'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/me/consent'),
           headers: {'Authorization': 'Bearer $token'},
         ),
       );
@@ -989,7 +986,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/ratings/me/unread-count'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/unread-count'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -1008,7 +1005,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/follows/requests'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/requests'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -1052,7 +1049,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.patch(
-        Uri.parse('$kBaseUrl/auth/me'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/me'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -1104,7 +1101,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     String? expiresAt;
     try {
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/users/my-referral'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/my-referral'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -1471,10 +1468,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       if (!codeSent) {
                         // Doğrulama kodunu gönder
                         try {
-                          await apiCall(
+                          await ref.read(apiClientProvider).call(
                             () => http.post(
                               Uri.parse(
-                                '$kBaseUrl/auth/change-password/send-code',
+                                '${ref.read(apiClientProvider).config.baseUrl}/auth/change-password/send-code',
                               ),
                               headers: {'Authorization': 'Bearer $token'},
                             ),
@@ -1516,10 +1513,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           return;
                         }
                         try {
-                          await apiCall(
+                          await ref.read(apiClientProvider).call(
                             () => http.post(
                               Uri.parse(
-                                '$kBaseUrl/auth/change-password/confirm',
+                                '${ref.read(apiClientProvider).config.baseUrl}/auth/change-password/confirm',
                               ),
                               headers: {
                                 'Content-Type': 'application/json',
@@ -1616,7 +1613,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
                     try {
-                      await AuthService.deleteAccount(passCtrl.text);
+                      await ref.read(authServiceProvider).deleteAccount(passCtrl.text);
                       if (ctx.mounted) {
                         Navigator.of(ctx).pop();
                         Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
@@ -1931,7 +1928,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 ),
                 trailing: Switch(
                   value: _isPrivate,
-                  activeColor: kPrimary,
+                  activeThumbColor: kPrimary,
                   onChanged: _togglePrivateAccount,
                 ),
               ),
@@ -1978,7 +1975,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     consentAt: _consentAt,
                     consentLocale: _consentLocale,
                   );
-                  if (shouldDelete == true && mounted) {
+                  if (!context.mounted) return;
+                  if (shouldDelete == true) {
                     _showDeleteAccountDialog(context);
                   }
                 },
@@ -2025,7 +2023,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                   trailing: Switch(
                     value: _biometricEnabled,
-                    activeColor: kPrimary,
+                    activeThumbColor: kPrimary,
                     onChanged: _toggleBiometric,
                   ),
                 ),
@@ -2062,7 +2060,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 ),
                 trailing: Switch(
                   value: ThemeProvider.instance.isDark,
-                  activeColor: kPrimary,
+                  activeThumbColor: kPrimary,
                   onChanged: (_) async {
                     await ThemeProvider.instance.toggle();
                     if (mounted) setState(() {});
@@ -2195,7 +2193,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                   onTap: () => _logoutGuard.run(() async {
                     final nav = Navigator.of(context);
-                    await AuthService.logout();
+                    await ref.read(authServiceProvider).logout();
                     nav.pushNamedAndRemoveUntil('/login', (_) => false);
                   }),
                 ),
@@ -2210,13 +2208,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   }
 }
 
-class _SettingsSection extends StatelessWidget {
+class _SettingsSection extends ConsumerWidget {
   final String title;
   final List<Widget> items;
   const _SettingsSection({required this.title, required this.items});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       color: AppColors.surface(context),
       child: Column(
@@ -2241,7 +2239,7 @@ class _SettingsSection extends StatelessWidget {
   }
 }
 
-class _SettingsTile extends StatelessWidget {
+class _SettingsTile extends ConsumerWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -2259,7 +2257,7 @@ class _SettingsTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
       leading:
           leadingWidget ??
@@ -2399,10 +2397,10 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       final excludeId = widget.user?['id'] as int?;
       final params = {'username': val};
       if (excludeId != null) params['exclude_id'] = excludeId.toString();
-      final data = await apiCall(
+      final data = await ref.read(apiClientProvider).call(
         () => http.get(
           Uri.parse(
-            '$kBaseUrl/auth/check-username',
+            '${ref.read(apiClientProvider).config.baseUrl}/auth/check-username',
           ).replace(queryParameters: params),
         ),
       );
@@ -2421,7 +2419,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     }
   }
 
-  String _buildImageUrl(String url) => imgUrl(url);
+  String _buildImageUrl(String url) => ref.read(apiClientProvider).imgUrl(url);
 
   Future<void> _pickAndUploadAvatar() async {
     final loc = ref.read(localizationProvider);
@@ -2471,7 +2469,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     });
     try {
       final compressed = await MediaCompressor.compress(picked.path, MediaCompressType.dmPhoto);
-      final upload = await UploadService.uploadBytes(Uint8List.fromList(compressed.bytes), 'avatar.jpg');
+      final upload = await ref.read(uploadServiceProvider).uploadBytes(Uint8List.fromList(compressed.bytes), 'avatar.jpg');
 
       final patchBody = <String, dynamic>{'profile_image_url': upload.url};
       if (upload.thumbUrl != null) {
@@ -2479,7 +2477,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       }
 
       final patchResp = await http.patch(
-        Uri.parse('$kBaseUrl/auth/me'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -2512,11 +2510,12 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       if (!mounted) return;
       TeqSnackBar.show(message: ref.read(localizationProvider).t('profilePhotoUploadError'), type: TeqSnackBarType.info);
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _saving = false;
           _uploadingAvatar = false;
         });
+      }
     }
   }
 
@@ -2564,9 +2563,9 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         return u.isEmpty ? null : '$prefix$u';
       }
 
-      final updatedUser = await apiCall(
+      final updatedUser = await ref.read(apiClientProvider).call(
         () => http.patch(
-          Uri.parse('$kBaseUrl/auth/me'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/me'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -2809,11 +2808,12 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     if (url.startsWith(prefix)) return url.substring(prefix.length);
     // legacy: tam URL girişlerini de temizle
     final uri = Uri.tryParse(url);
-    if (uri != null && url.startsWith('http'))
+    if (uri != null && url.startsWith('http')) {
       return uri.pathSegments
           .where((s) => s.isNotEmpty)
           .join('/')
           .replaceAll('@', '');
+    }
     return url;
   }
 
@@ -2896,7 +2896,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       final q = _filter.searchQuery ?? '';
       final cat = _filter.category ?? '';
       var listingsUrl =
-          '$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset';
+          '${ref.read(apiClientProvider).config.baseUrl}/listings/my?active=$activeParam&limit=20&offset=$_offset';
       if (q.isNotEmpty) listingsUrl += '&q=${Uri.encodeComponent(q)}';
       if (cat.isNotEmpty) {
         listingsUrl += '&category=${Uri.encodeComponent(cat)}';
@@ -2945,7 +2945,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
     final status = ListingStatusExtension.fromJson(listing);
     final isActive = status == ListingStatus.active;
 
-    final costData = await ListingService.getReactivationCost(id);
+    final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
     if (!mounted) return;
 
     final isPremium = costData?['is_premium'] as bool? ?? false;
@@ -3040,7 +3040,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
     if (token == null) return;
     try {
       final resp = await http.patch(
-        Uri.parse('$kBaseUrl/listings/$id/toggle'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$id/toggle'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -3082,7 +3082,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
     final id = listing['id'];
     try {
       final resp = await http.delete(
-        Uri.parse('$kBaseUrl/listings/$id'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) await _load();
@@ -3184,7 +3184,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
                         final rawImg = imgs.isNotEmpty
                             ? imgs[0] as String
                             : l['image_url'] as String?;
-                        final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+                        final imageUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
                         return TeqCard(
                           padding: EdgeInsets.zero,
                           child: ListTile(
@@ -3354,24 +3354,26 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   Future<void> _load() async {
     final cached = CacheService.getData('user_favorites');
     if (cached != null) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _listings = List.from(cached as List);
           _loading = false;
           _hasError = false;
         });
+      }
     } else {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = true;
           _hasError = false;
         });
+      }
     }
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/favorites'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/favorites'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200 && mounted) {
@@ -3381,11 +3383,12 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
           data,
           ttl: const Duration(minutes: 10),
         );
-        if (mounted)
+        if (mounted) {
           setState(() {
             _listings = data;
             _hasError = false;
           });
+        }
       }
     } catch (e) {
       LoggerService.instance.warning(
@@ -3404,7 +3407,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
     ListingService.setLikeCache(id, false);
     setState(() => _listings.removeWhere((l) => l['id'] == id));
     try {
-      await ListingService.toggleFavoriteAndLike(id, true);
+      await ref.read(listingServiceProvider).toggleFavoriteAndLike(id, true);
     } catch (e) {
       LoggerService.instance.warning(
         'FavoritesScreen',
@@ -3499,7 +3502,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
                               ? imgs[0] as String
                               : l['image_url'] as String?;
                           final imageUrl = rawImg != null
-                              ? imgUrl(rawImg)
+                              ? ref.read(apiClientProvider).imgUrl(rawImg)
                               : null;
                           return TeqCard(
                             padding: EdgeInsets.zero,
@@ -4265,13 +4268,13 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   }
 }
 
-class _SummaryRow extends StatelessWidget {
+class _SummaryRow extends ConsumerWidget {
   final String label;
   final int amount;
   const _SummaryRow({required this.label, required this.amount});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -4308,7 +4311,7 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-class _TxnRow extends StatelessWidget {
+class _TxnRow extends ConsumerWidget {
   final String label;
   final int amount;
   final bool isPositive;
@@ -4321,7 +4324,7 @@ class _TxnRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -4500,7 +4503,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
-                    imageUrl: imgUrl(imageUrl),
+                    imageUrl: ref.read(apiClientProvider).imgUrl(imageUrl),
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -4609,7 +4612,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                       onTap: () async {
                         final listingId = listing['id'] as int?;
                         if (listingId == null) return;
-                        final full = await ListingService.getListingById(
+                        final full = await ref.read(listingServiceProvider).getListingById(
                           listingId,
                         );
                         if (full != null && ctx.mounted) {
@@ -4846,7 +4849,7 @@ class _GiftNameBadge extends ConsumerWidget {
   }
 }
 
-class _NavButton extends StatelessWidget {
+class _NavButton extends ConsumerWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -4857,7 +4860,7 @@ class _NavButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -4901,14 +4904,14 @@ class _NavButton extends StatelessWidget {
   }
 }
 
-class _DetailRow extends StatelessWidget {
+class _DetailRow extends ConsumerWidget {
   final String label;
   final String value;
   final String? badge;
   const _DetailRow({required this.label, required this.value, this.badge});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
@@ -4970,7 +4973,7 @@ class _DetailRow extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SocialLinksRow extends StatelessWidget {
+class _SocialLinksRow extends ConsumerWidget {
   final Map<String, dynamic>? user;
   final int? userId;
 
@@ -5012,7 +5015,7 @@ class _SocialLinksRow extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final active = _platforms
         .where((p) => (user?[p.field] as String?)?.isNotEmpty == true)
@@ -5036,7 +5039,7 @@ class _SocialLinksRow extends StatelessWidget {
                 raw.startsWith('http') ? raw : 'https://$raw',
               );
               if (uri != null && await canLaunchUrl(uri)) {
-                AnalyticsService.logInteraction(
+                ref.read(analyticsServiceProvider).logInteraction(
                   itemId: userId ?? 0,
                   itemType: 'user',
                   interactionType: 'social_link_tap',
@@ -5084,7 +5087,7 @@ class _SocialPlatform {
   const _SocialPlatform(this.field, this.faIcon, this.color, this.key);
 }
 
-class _ScoreBadge extends StatelessWidget {
+class _ScoreBadge extends ConsumerWidget {
   final IconData icon;
   final String title;
   final String value;
@@ -5116,7 +5119,7 @@ class _ScoreBadge extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () => _showInfo(context),
       behavior: HitTestBehavior.opaque,
@@ -5166,9 +5169,9 @@ class _PrivacyBanner extends ConsumerWidget {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: kPrimary.withOpacity(0.08),
+        color: kPrimary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kPrimary.withOpacity(0.25)),
+        border: Border.all(color: kPrimary.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../main.dart' show providerContainer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
@@ -25,7 +26,7 @@ Future<void> showStartStreamDialog(
   final locale = context.mounted
       ? Localizations.localeOf(context).languageCode
       : 'tr';
-  final categories = await CategoryService.getCategories(
+  final categories = await providerContainer.read(categoryServiceProvider).getCategories(
     locale: locale,
     forStream: true,
   );
@@ -70,7 +71,7 @@ Future<void> showStartStreamDialog(
       return;
     }
     setS(() => audienceLoading = true);
-    final result = await AnalyticsService.getAudienceSize(
+    final result = await providerContainer.read(analyticsServiceProvider).getAudienceSize(
       title: title,
       category: category,
       subcategory: subcategory ?? '',
@@ -84,6 +85,7 @@ Future<void> showStartStreamDialog(
     });
   }
 
+  if (!context.mounted) return;
   final result = await showDialog<(String, String, String, bool, int)?>(
     context: context,
     builder: (ctx) => StatefulBuilder(
@@ -138,6 +140,7 @@ Future<void> showStartStreamDialog(
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 key: const Key('live_dialog_select_alt_kategori'),
+                // ignore: deprecated_member_use
                 value: selectedSubcategory,
                 decoration: InputDecoration(
                   labelText: loc.t('liveSubcategoryLabel'),
@@ -318,7 +321,7 @@ Future<void> showStartStreamDialog(
   if (result == null) return;
   final (title, category, subcategory, blastApproved, blastCost) = result;
 
-  AnalyticsService.trackEvent('stream_start_intent', {
+  providerContainer.read(analyticsServiceProvider).trackEvent('stream_start_intent', {
     'category': category,
     'subcategory': subcategory,
     'blast_approved': blastApproved,
@@ -340,7 +343,7 @@ Future<void> showStartStreamDialog(
   if (!context.mounted) return;
 
   try {
-    final streamToken = await StreamService.startStream(
+    final streamToken = await providerContainer.read(streamServiceProvider).startStream(
       title,
       category,
       subcategory,

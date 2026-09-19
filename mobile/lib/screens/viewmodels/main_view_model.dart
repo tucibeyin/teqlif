@@ -99,7 +99,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
     
     _fcmSub = FirebaseMessaging.onMessage.listen((msg) {
       _refreshBadges();
-      AnalyticsService.trackEvent('push_received', {
+      ref.read(analyticsServiceProvider).trackEvent('push_received', {
         'notification_type': msg.data['type'] ?? 'unknown',
       });
     });
@@ -115,8 +115,8 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       }
     });
     
-    _authFailedSub = AuthService.authFailedStream.stream.listen((_) {
-      AuthService.logout().then((_) {
+    _authFailedSub = ref.read(authServiceProvider).authFailedStream.stream.listen((_) {
+      ref.read(authServiceProvider).logout().then((_) {
         state = AsyncValue.data(state.value!.copyWith(
           navigationData: const MainNavigationData(event: MainNavigationEvent.toLogin)
         ));
@@ -134,8 +134,8 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
     final token = await StorageService.getToken();
     if (token == null) return;
     try {
-      final msgs = await NotificationService.getUnreadMessageCount();
-      final notifs = await NotificationService.getUnreadNotifCount();
+      final msgs = await ref.read(notificationServiceProvider).getUnreadMessageCount();
+      final notifs = await ref.read(notificationServiceProvider).getUnreadNotifCount();
       
       final current = state.value ?? const MainState();
       state = AsyncValue.data(current.copyWith(
@@ -160,7 +160,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       if (ok) AppBadgePlus.updateBadge(0);
     });
     _refreshBadges();
-    WsService.connect();
+    ref.read(wsServiceProvider).connect();
     PushNotificationService.notificationStream.add({});
     _sessionStart = DateTime.now();
   }
@@ -168,7 +168,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
   void handleLifecyclePausedOrDetached(String currentTabName) {
     final durationSec = DateTime.now().difference(_sessionStart).inSeconds;
     if (durationSec > 2) {
-      AnalyticsService.trackEvent('session_end', {
+      ref.read(analyticsServiceProvider).trackEvent('session_end', {
         'duration_sec': durationSec,
         'active_tab': currentTabName,
       });
@@ -253,8 +253,8 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         if (campaignIdRaw != null) {
           final campaignId = int.tryParse(campaignIdRaw.toString());
           if (campaignId != null) {
-            AnalyticsService.trackCampaignClick(campaignId);
-            AnalyticsService.trackEvent('push_click', {'campaign_id': campaignId});
+            ref.read(analyticsServiceProvider).trackCampaignClick(campaignId);
+            ref.read(analyticsServiceProvider).trackEvent('push_click', {'campaign_id': campaignId});
           }
         }
         
@@ -295,9 +295,9 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
 
       case 'incoming_call':
       case 'call_incoming':
-        if (CallService.instance.state.value.status == CallStatus.idle &&
+        if (ref.read(callServiceProvider).state.value.status == CallStatus.idle &&
             data['call_id'] != null) {
-          CallService.instance.onIncomingCall(data);
+          ref.read(callServiceProvider).onIncomingCall(data);
         }
         break;
 

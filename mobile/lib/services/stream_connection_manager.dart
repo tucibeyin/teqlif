@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/app_exception.dart';
+import '../main.dart' show providerContainer;
 import '../models/stream.dart';
 import 'stream_service.dart';
 import 'background_audio_handler.dart';
@@ -226,7 +226,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
     session.update();
 
     try {
-      final token = await StreamService.joinStream(session.streamId);
+      final token = await providerContainer.read(streamServiceProvider).joinStream(session.streamId);
       final room = Room();
       session.listener = room.createListener();
       
@@ -284,7 +284,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
     if (session.isDisposed || session.room == null) return;
     try {
       final freshToken =
-          await StreamService.refreshStreamToken(session.streamId);
+          await providerContainer.read(streamServiceProvider).refreshStreamToken(session.streamId);
       await session.room!.connect(
         freshToken.livekitUrl,
         freshToken.token,
@@ -391,7 +391,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
 
       session.state = SessionState.none;
       if (session.isConnected) {
-        StreamService.leaveStream(id).catchError((_) {});
+        providerContainer.read(streamServiceProvider).leaveStream(id).catchError((_) {});
       }
       session.isConnected = false;
       session.isConnecting = false;
@@ -423,7 +423,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
       debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Disconnecting stream: $id');
       session.state = SessionState.none;
       if (session.isConnected) {
-        StreamService.leaveStream(id).catchError((_) {});
+        providerContainer.read(streamServiceProvider).leaveStream(id).catchError((_) {});
       }
       session.dispose();
     }

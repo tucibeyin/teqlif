@@ -5,15 +5,17 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../config/api.dart';
-import '../config/theme.dart';
-import '../core/logger_service.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/theme.dart';
+import '../services/auth_service.dart' show authServiceProvider;
+import '../core/logger_service.dart';
 import '../services/localization_service.dart';
+import '../../main.dart' show providerContainer;
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
 import '../services/analytics_service.dart';
-import '../services/auth_service.dart' show AuthService, RefreshOutcome;
+import '../services/auth_service.dart' show RefreshOutcome;
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
@@ -319,7 +321,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
   }
 
   String get _wsBaseUrl {
-    return kBaseUrl
+    return ref.read(apiClientProvider).config.baseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
   }
@@ -713,7 +715,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
     if (freshToken == null) return;
     if (freshToken == _token) {
       // WsService yenileyemediyse biz deneyelim
-      final outcome = await AuthService.tryRefresh();
+      final outcome = await ref.read(authServiceProvider).tryRefresh();
       if (outcome != RefreshOutcome.succeeded) {
         debugPrint('[CHAT WS] Token yenilenemedi ($outcome)');
         return;
@@ -728,7 +730,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
   void _sendMessage() {
     final content = _inputCtrl.text.trim();
     if (content.isEmpty) return;
-    AnalyticsService.logInteraction(
+    ref.read(analyticsServiceProvider).logInteraction(
       itemId: widget.streamId,
       itemType: 'stream',
       interactionType: 'stream_chat_send',
@@ -1119,14 +1121,11 @@ class _HistorySheet extends ConsumerWidget {
     );
   }
 }
-
-/// Relative URL'leri (/uploads/...) tam URL'ye çevirir.
-/// /uploads/ → kUploadsHost (node1 direkt); diğerleri → kBaseHost.
-String _resolveImageUrl(String url) => imgUrl(url);
+String _resolveImageUrl(String url) => providerContainer.read(apiClientProvider).imgUrl(url);
 
 /// Satır içi avatar: 18×18 yuvarlak resim, OOM korumalı (memCache 60×60).
 /// URL null/boş veya hata durumunda kullanıcı baş harfini gösterir.
-class _ChatAvatar extends StatelessWidget {
+class _ChatAvatar extends ConsumerWidget {
   final String username;
   final String? imageUrl;
   static const double _size = 18;
@@ -1134,7 +1133,7 @@ class _ChatAvatar extends StatelessWidget {
   const _ChatAvatar({required this.username, this.imageUrl});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = usernameColor(username);
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
 
@@ -1169,14 +1168,14 @@ class _ChatAvatar extends StatelessWidget {
   }
 }
 
-class _MessageItem extends StatelessWidget {
+class _MessageItem extends ConsumerWidget {
   final ChatMessage message;
   final void Function(String username)? onUsernameTap;
 
   const _MessageItem(this.message, {this.onUsernameTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const shadow = [
       Shadow(blurRadius: 6, color: Colors.black),
       Shadow(blurRadius: 12, color: Colors.black),

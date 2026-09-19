@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -46,16 +46,16 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
 
     WidgetsBinding.instance.addObserver(this);
     // If the caller ends before we answer, pop automatically
-    CallService.instance.state.addListener(_onStateChange);
+    ref.read(callServiceProvider).state.addListener(_onStateChange);
 
-    _cpLog('UI', 'IncomingCallScreen initState | callId=${CallService.instance.state.value.callId} caller=${widget.callData['caller_username']}');
-    _uiLog('INCOMING_SCREEN', 'OPEN', 'callId=${CallService.instance.state.value.callId} caller=${widget.callData['caller_username']}');
+    _cpLog('UI', 'IncomingCallScreen initState | callId=${ref.read(callServiceProvider).state.value.callId} caller=${widget.callData['caller_username']}');
+    _uiLog('INCOMING_SCREEN', 'OPEN', 'callId=${ref.read(callServiceProvider).state.value.callId} caller=${widget.callData['caller_username']}');
     _cpLog('SOUND', 'startRingtoneAndVibration → IncomingCallScreen open');
-    CallService.instance.startRingtoneAndVibration();
+    ref.read(callServiceProvider).startRingtoneAndVibration();
   }
 
   Future<void> _onStateChange() async {
-    final cs = CallService.instance.state.value;
+    final cs = ref.read(callServiceProvider).state.value;
     _cpLog('UI', 'IncomingCallScreen._onStateChange | status=${cs.status.name} hasNavigated=$_hasNavigated permPerm=${cs.permPermanentlyDenied}');
 
     // Callee permanentlyDenied: state stays ringing, show modal in-place (VoIP.md §15.3).
@@ -99,7 +99,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
             onPressed: () {
               Navigator.pop(ctx);
               _cpLog('UI', 'IncomingCallScreen permPermanentlyDenied → İptal → rejectCall');
-              CallService.instance.rejectCall();
+              ref.read(callServiceProvider).rejectCall();
             },
             child: Text(loc.t('btnCancel')),
           ),
@@ -129,7 +129,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   // Kullanıcı Ayarlar'dan döndüğünde mic iznini kontrol et.
   // permPermanentlyDenied bayrağı ayarlıyken uygulama resume olursa devreye girer.
   Future<void> _checkPermissionAfterSettings() async {
-    final cs = CallService.instance.state.value;
+    final cs = ref.read(callServiceProvider).state.value;
     if (cs.status != CallStatus.ringing) return;
     if (!cs.permPermanentlyDenied) return;
 
@@ -138,7 +138,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
 
     if (micStatus.isGranted) {
       _cpLog('UI', 'IncomingCallScreen settings-return: mic granted → auto-accept');
-      CallService.instance.clearPermPermanentlyDenied();
+      ref.read(callServiceProvider).clearPermPermanentlyDenied();
       await _accept();
     } else {
       _cpLog('UI', 'IncomingCallScreen settings-return: mic still denied → re-show modal');
@@ -150,20 +150,20 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pulseCtrl.dispose();
-    CallService.instance.stopRingtoneAndVibration();
-    CallService.instance.state.removeListener(_onStateChange);
+    ref.read(callServiceProvider).stopRingtoneAndVibration();
+    ref.read(callServiceProvider).state.removeListener(_onStateChange);
     super.dispose();
   }
 
   Future<void> _accept() async {
-    _cpLog('IN', 'IncomingCallScreen ACCEPT tapped | callId=${CallService.instance.state.value.callId}');
-    _uiLog('INCOMING_SCREEN', 'ACCEPT_TAP', 'callId=${CallService.instance.state.value.callId}');
-    await CallService.instance.acceptCall();
+    _cpLog('IN', 'IncomingCallScreen ACCEPT tapped | callId=${ref.read(callServiceProvider).state.value.callId}');
+    _uiLog('INCOMING_SCREEN', 'ACCEPT_TAP', 'callId=${ref.read(callServiceProvider).state.value.callId}');
+    await ref.read(callServiceProvider).acceptCall();
     if (!mounted) return;
     // Only navigate if mic was granted and state moved to connecting.
     // - denied → ended: _onStateChange pops the screen
     // - permanentlyDenied → ringing: _onStateChange shows the modal
-    if (CallService.instance.state.value.status == CallStatus.connecting) {
+    if (ref.read(callServiceProvider).state.value.status == CallStatus.connecting) {
       _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen after acceptCall');
       _hasNavigated = true;
       Navigator.of(context).pushReplacement(
@@ -177,9 +177,9 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   }
 
   Future<void> _decline() async {
-    _cpLog('IN', 'IncomingCallScreen DECLINE tapped | callId=${CallService.instance.state.value.callId}');
-    _uiLog('INCOMING_SCREEN', 'DECLINE_TAP', 'callId=${CallService.instance.state.value.callId}');
-    await CallService.instance.rejectCall();
+    _cpLog('IN', 'IncomingCallScreen DECLINE tapped | callId=${ref.read(callServiceProvider).state.value.callId}');
+    _uiLog('INCOMING_SCREEN', 'DECLINE_TAP', 'callId=${ref.read(callServiceProvider).state.value.callId}');
+    await ref.read(callServiceProvider).rejectCall();
   }
 
   @override
@@ -187,7 +187,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
     final loc = ref.watch(localizationProvider);
     final username = widget.callData['caller_username'] as String? ?? '';
     final avatarRaw = widget.callData['caller_avatar'] as String? ?? '';
-    final avatarUrl = avatarRaw.isNotEmpty ? imgUrl(avatarRaw) : null;
+    final avatarUrl = avatarRaw.isNotEmpty ? ref.read(apiClientProvider).imgUrl(avatarRaw) : null;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -324,7 +324,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   }
 }
 
-class _CallActionButton extends StatelessWidget {
+class _CallActionButton extends ConsumerWidget {
   final Color color;
   final IconData icon;
   final String label;
@@ -338,7 +338,7 @@ class _CallActionButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         GestureDetector(
@@ -370,12 +370,12 @@ class _CallActionButton extends StatelessWidget {
   }
 }
 
-class _InitialAvatar extends StatelessWidget {
+class _InitialAvatar extends ConsumerWidget {
   final String username;
   const _InitialAvatar({required this.username});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       color: AppColors.surfaceVariant(context),
       alignment: Alignment.center,

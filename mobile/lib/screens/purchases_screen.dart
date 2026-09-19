@@ -8,13 +8,13 @@ import '../../services/category_service.dart';
 import '../../utils/number_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import 'purchase_detail_screen.dart';
 
 import "../../ui_library/components/cards/teq_card.dart";
 import '../../ui_library/components/filters/teq_filter_bar.dart';
 
-class _TypeBadge extends StatelessWidget {
+class _TypeBadge extends ConsumerWidget {
   final String itemType;
   final bool isBuyItNow;
   final TranslationPack loc;
@@ -26,7 +26,7 @@ class _TypeBadge extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final (label, color) = itemType == 'direct'
         ? (loc.t('saleTypeDirect'), const Color(0xFF6366F1))
         : isBuyItNow
@@ -59,7 +59,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
     super.didChangeDependencies();
     final currentState = ref.read(purchasesProvider).valueOrNull;
     if (currentState != null && currentState.categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode).then((cats) {
+      ref.read(categoryServiceProvider).getCategories(locale: Localizations.localeOf(context).languageCode).then((cats) {
         if (mounted) {
           ref.read(purchasesProvider.notifier).setCategories(cats);
         }
@@ -191,7 +191,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                     child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
                                         ? CachedNetworkImage(
-                                            imageUrl: imgUrl(thumbnailUrl),
+                                            imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
                                             width: 72,
                                             height: 72,
                                             fit: BoxFit.cover,

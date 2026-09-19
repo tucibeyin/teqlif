@@ -1,56 +1,56 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/widgets.dart'; // Lifecycle dinleyicisi için eklendi
+import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../config/api.dart';
-import 'auth_service.dart' show AuthService, RefreshOutcome;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/network/api_client.dart';
+import 'auth_service.dart' show authServiceProvider, AuthService, RefreshOutcome;
 import 'storage_service.dart';
 
-/// Uygulamanın arka plan/ön plan durumunu dinleyen özel sınıf
-class _WsLifecycleObserver extends WidgetsBindingObserver {
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Debounce: Flutter didChangeAppLifecycleState fires multiple times (~100ms apart)
-    // for a single background transition. 200ms debounce fires only once with the final state.
-    WsService._debounceLifecycle(state);
-  }
-}
+final wsServiceProvider = Provider<WsService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  final authService = ref.watch(authServiceProvider);
+  final ws = WsService(apiClient, authService);
+  
+  ref.onDispose(() {
+    ws.dispose();
+  });
+  
+  return ws;
+});
 
-/// Uygulama genelinde tek bir WebSocket bağlantısı yönetir.
-/// Mesajlar [messageStream] üzerinden broadcast edilir.
-class WsService {
-  WsService._();
+class WsService with WidgetsBindingObserver {
+  final ApiClient _api;
+  final AuthService _authService;
 
-  static WebSocketChannel? _channel;
-  static StreamSubscription<dynamic>? _channelSub;
-  static Timer? _pingTimer;
-  static Timer? _reconnectTimer;
-  static bool _shouldStay = false;
-  static bool _connecting = false;
-  static StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
-  // WS event replay: tracks last received call event timestamp for since_ts on reconnect
-  static double? _lastCallEventTs;
-  // Lifecycle debounce: prevents triple-fire when OS sends multiple lifecycle events
-  static Timer? _lifecycleDebounce;
-  static AppLifecycleState? _pendingLifecycleState;
+  WebSocketChannel? _channel;
+  StreamSubscription<dynamic>? _channelSub;
+  Timer? _pingTimer;
+  Timer? _reconnectTimer;
+  bool _shouldStay = false;
+  bool _connecting = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  
+  double? _lastCallEventTs;
+  Timer? _lifecycleDebounce;
+  AppLifecycleState? _pendingLifecycleState;
 
-  // Connection lock: prevents socket close while an active call holds the lock.
-  // Callers: CallService.acquireConnectionLock / releaseConnectionLock.
-  // WsService never imports CallService — coupling is one-way through this counter.
-  static int _connectionLocks = 0;
-  static bool _pendingPause = false;
+  int _connectionLocks = 0;
+  bool _pendingPause = false;
 
-  // Dedup: guards against the rare case where the server-side Redis Stream
-  // listener replays a message batch after a failed position-save on reconnect.
-  // Bounded at 200 entries — each key is ~20 chars, total ~4 KB max.
-  static final Set<String> _seenKeys = {};
+  final Set<String> _seenKeys = {};
   static const int _maxSeenKeys = 200;
 
-  /// Returns a dedup key for messages that carry a stable unique identifier.
-  /// Returns null for ephemeral events (typing, read receipts) — those are
-  /// idempotent and don't need deduplication.
-  static String? _dedupeKey(Map<String, dynamic> data) {
+  final StreamController<Map<String, dynamic>> messageStream =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  bool _isObserverRegistered = false;
+
+  WsService(this._api, this._authService);
+
+  String? _dedupeKey(Map<String, dynamic> data) {
     final type = data['type'];
     if (type == null) return null;
     final id = data['id'];
@@ -60,7 +60,7 @@ class WsService {
     return null;
   }
 
-  static void _debounceLifecycle(AppLifecycleState state) {
+  void _debounceLifecycle(AppLifecycleState state) {
     _pendingLifecycleState = state;
     _lifecycleDebounce?.cancel();
     _lifecycleDebounce = Timer(const Duration(milliseconds: 200), () {
@@ -78,23 +78,16 @@ class WsService {
     });
   }
 
-  // Lifecycle dinleyicisi tanımlamaları
-  static final _WsLifecycleObserver _observer = _WsLifecycleObserver();
-  static bool _isObserverRegistered = false;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _debounceLifecycle(state);
+  }
 
-  /// Gelen WS mesajlarını tüm dinleyicilere iletir.
-  /// Özel dahili event'ler de bu stream üzerinden gider:
-  ///   {"type": "connected"}  — WS başarıyla (yeniden) bağlandı
-  static final StreamController<Map<String, dynamic>> messageStream =
-      StreamController<Map<String, dynamic>>.broadcast();
-
-  /// Kullanıcı giriş yaptıktan sonra çağrılır.
-  static Future<void> connect() async {
+  Future<void> connect() async {
     _shouldStay = true;
     
-    // Observer daha önce kaydedilmediyse kaydet
     if (!_isObserverRegistered) {
-      WidgetsBinding.instance.addObserver(_observer);
+      WidgetsBinding.instance.addObserver(this);
       _isObserverRegistered = true;
     }
 
@@ -114,20 +107,17 @@ class WsService {
     await _connect();
   }
 
-  /// WS üzerinden JSON mesajı gönderir (typing event gibi).
-  static void sendJson(Map<String, dynamic> data) {
+  void sendJson(Map<String, dynamic> data) {
     try {
       _channel?.sink.add(jsonEncode(data));
     } catch (_) {}
   }
 
-  /// Kullanıcı çıkış yaptığında çağrılır.
-  static void disconnect() {
+  void disconnect() {
     _shouldStay = false;
     
-    // Çıkış yapıldığında Observer'ı kaldır
     if (_isObserverRegistered) {
-      WidgetsBinding.instance.removeObserver(_observer);
+      WidgetsBinding.instance.removeObserver(this);
       _isObserverRegistered = false;
     }
 
@@ -139,17 +129,12 @@ class WsService {
     _closeResources();
   }
 
-  /// Acquires a connection lock. While at least one lock is held,
-  /// [pauseConnection] is deferred — the socket stays alive for the active call.
-  static void acquireConnectionLock(String reason) {
+  void acquireConnectionLock(String reason) {
     _connectionLocks++;
     debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] acquired ($reason) | locks=$_connectionLocks');
   }
 
-  /// Releases a previously acquired lock. If this was the last lock and
-  /// [pauseConnection] was deferred while the lock was held, the socket is
-  /// closed now (the app is still in background).
-  static void releaseConnectionLock(String reason) {
+  void releaseConnectionLock(String reason) {
     _connectionLocks = (_connectionLocks - 1).clamp(0, 999);
     debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] released ($reason) | locks=$_connectionLocks');
     if (_connectionLocks == 0 && _pendingPause) {
@@ -159,9 +144,7 @@ class WsService {
     }
   }
 
-  /// İşletim sistemi uygulamayı arka plana attığında çağrılır.
-  /// Eğer aktif bir arama lock tutuyorsa kapatma ertelenir.
-  static void pauseConnection() {
+  void pauseConnection() {
     if (_connectionLocks > 0) {
       _pendingPause = true;
       debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] pauseConnection DEFERRED | locks=$_connectionLocks');
@@ -171,17 +154,19 @@ class WsService {
     _closeResources();
   }
 
-  /// Uygulama tekrar ekrana geldiğinde çağrılır
-  static void resumeConnection() {
-    // Clear any pending pause — app is foreground again, no need to close on lock release
+  void resumeConnection() {
     _pendingPause = false;
     if (_shouldStay && _channel == null) {
       _connect();
     }
   }
 
-  /// Tüm zamanlayıcıları ve soketleri güvenli bir şekilde temizler
-  static void _closeResources() {
+  void dispose() {
+    disconnect();
+    messageStream.close();
+  }
+
+  void _closeResources() {
     _pingTimer?.cancel();
     _reconnectTimer?.cancel();
     _channelSub?.cancel();
@@ -189,7 +174,7 @@ class WsService {
     _channel = null;
   }
 
-  static Future<void> _connect() async {
+  Future<void> _connect() async {
     if (_connecting || _channel != null) return;
     _connecting = true;
     final token = await StorageService.getToken();
@@ -198,17 +183,14 @@ class WsService {
       return;
     }
 
-    final wsBase = kBaseUrl
+    final wsBase = _api.config.baseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
 
     try {
       final uri = Uri.parse('$wsBase/messages/ws');
       _channel = WebSocketChannel.connect(uri);
-      // Token URL'de taşınmaz — bağlantı açılır açılmaz ilk mesaj olarak gönderilir
-      // since_ts: son alınan call event'in Unix timestamp'i — sunucu kaçırılan eventleri replay eder
-      // Fresh start'ta _lastCallEventTs null olursa backend replay'i atlar. İlk connect zamanını
-      // baseline olarak kullan (5s clock-skew buffer ile) — arka planda gelen çağrılar yakalanır.
+      
       _lastCallEventTs ??= DateTime.now().millisecondsSinceEpoch / 1000.0 - 5.0;
       final authMsg = <String, dynamic>{'type': 'auth', 'token': token};
       if (_lastCallEventTs != null) authMsg['since_ts'] = _lastCallEventTs;
@@ -222,7 +204,6 @@ class WsService {
             final data = jsonDecode(raw) as Map<String, dynamic>;
             final type = data['type'] as String?;
 
-            // Dedup: skip messages already delivered in this session.
             final key = _dedupeKey(data);
             if (key != null) {
               if (_seenKeys.contains(key)) {
@@ -238,8 +219,6 @@ class WsService {
             if (type != null && type.startsWith('call_')) {
               debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService received message type: $type');
               _lastCallEventTs = DateTime.now().millisecondsSinceEpoch / 1000.0;
-              // ACK: call_incoming alındığında sunucuya hemen bildir.
-              // Backend bu ACK'i bekler (max 500ms); gelirse push atlar → iOS CallKit flash önlenir.
               if (type == 'call_incoming') {
                 final callId = data['call_id'];
                 if (callId != null) {
@@ -254,7 +233,6 @@ class WsService {
         onDone: _onDisconnected,
         onError: (error) {
           final errStr = error.toString();
-          // SENTRY ÇÖZÜMÜ: İşletim sisteminin attığı sahte fatal hataları filtrele
           if (errStr.contains('Bad file descriptor') || errStr.contains('errno = 9')) {
             debugPrint('[WS][${DateTime.now().toIso8601String()}] OS tarafından soket kapatıldı (Normal davranış).');
           } else {
@@ -271,7 +249,6 @@ class WsService {
         } catch (_) {}
       });
 
-      // Dinleyicilere "bağlandı" sinyali — DirectChatScreen kaçırılan mesajları çeker
       messageStream.add({'type': 'connected'});
       _connecting = false;
       debugPrint('[WS][${DateTime.now().toIso8601String()}] Bağlandı');
@@ -282,7 +259,7 @@ class WsService {
     }
   }
 
-  static void _onDisconnected() {
+  void _onDisconnected() {
     final closeCode = _channel?.closeCode;
     _pingTimer?.cancel();
     _channelSub?.cancel();
@@ -293,15 +270,14 @@ class WsService {
     if (closeCode == 4001) {
       _refreshAndReconnect();
     } else if (closeCode == 4008) {
-      // Sunucu session limitini aştı — 15 sn bekle, döngüden kaç
       _scheduleReconnect(delay: const Duration(seconds: 15));
     } else {
       _scheduleReconnect();
     }
   }
 
-  static Future<void> _refreshAndReconnect() async {
-    final outcome = await AuthService.tryRefresh();
+  Future<void> _refreshAndReconnect() async {
+    final outcome = await _authService.tryRefresh();
     if (outcome == RefreshOutcome.succeeded) {
       debugPrint('[WS][${DateTime.now().toIso8601String()}] Token yenilendi, yeniden bağlanılıyor');
       _scheduleReconnect();
@@ -311,7 +287,7 @@ class WsService {
     }
   }
 
-  static void _scheduleReconnect({Duration delay = const Duration(seconds: 3)}) {
+  void _scheduleReconnect({Duration delay = const Duration(seconds: 3)}) {
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, () async {
       if (!_shouldStay || _channel != null) return;

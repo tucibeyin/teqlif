@@ -14,7 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/cache_service.dart';
@@ -25,7 +25,6 @@ import '../../services/call_service.dart';
 import '../../widgets/live/gift_hud.dart';
 import '../main_screen.dart';
 import '../../widgets/live/hype_meter_widget.dart';
-import '../../widgets/auction_panel.dart';
 import '../../widgets/commerce_panel_wrapper.dart';
 import '../../widgets/chat_panel.dart';
 import '../../widgets/live/cohost_mod_sheet.dart';
@@ -133,7 +132,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
   @override
   void initState() {
     super.initState();
-    CallService.instance.preventCallScreenAutoOpen.value = true;
+    ref.read(callServiceProvider).preventCallScreenAutoOpen.value = true;
     activeScreenCount++;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
@@ -179,11 +178,11 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     });
 
     globalIsLiveTabVisible.addListener(_onVisibilityChanged);
-    CallService.instance.state.addListener(_onCallStateChanged);
+    ref.read(callServiceProvider).state.addListener(_onCallStateChanged);
   }
 
   void _onCallStateChanged() {
-    final status = CallService.instance.state.value.status;
+    final status = ref.read(callServiceProvider).state.value.status;
     final isCallActive = status != CallStatus.idle &&
                          status != CallStatus.ended;
     
@@ -240,9 +239,9 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
 
   @override
   void dispose() {
-    CallService.instance.preventCallScreenAutoOpen.value = false;
+    ref.read(callServiceProvider).preventCallScreenAutoOpen.value = false;
     globalIsLiveTabVisible.removeListener(_onVisibilityChanged);
-    CallService.instance.state.removeListener(_onCallStateChanged);
+    ref.read(callServiceProvider).state.removeListener(_onCallStateChanged);
     activeScreenCount--;
     _notifSub?.cancel();
     _streamCheckTimer?.cancel();
@@ -271,7 +270,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     if (_pendingEvents.isEmpty) return;
     final toSend = List<Map<String, dynamic>>.from(_pendingEvents);
     _pendingEvents.clear();
-    StreamService.sendSwipeLiveEvents(toSend);
+    ref.read(streamServiceProvider).sendSwipeLiveEvents(toSend);
   }
 
   void _trackStreamDwell(int dwellMs) {
@@ -582,7 +581,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
       
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/swipe-feed?limit=10&page=$_listingPage'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/swipe-feed?limit=10&page=$_listingPage'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -822,7 +821,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         if (mounted) widget.onCoHostStateChanged?.call(_isSelfCoHost);
       });
       if (widget.session.isConnected) {
-        AnalyticsService.logInteraction(
+        ref.read(analyticsServiceProvider).logInteraction(
           itemId: widget.stream.id,
           itemType: 'stream',
           interactionType: 'swipe_impression',
@@ -911,7 +910,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   Future<void> _showGiftSheet() async {
     final hostUsername = _resolvedHostUsername ?? widget.stream.host.username;
     if (hostUsername.isEmpty) return;
-    AnalyticsService.logInteraction(
+    ref.read(analyticsServiceProvider).logInteraction(
       itemId: widget.stream.id,
       itemType: 'stream',
       interactionType: 'stream_gift_sheet_open',
@@ -1134,7 +1133,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (track == null || room == null) return; // Video yok, PiP açılamaz
 
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] _pipForBackGesture called for stream: ${widget.stream.id}');
-    StreamService.pipEnter(widget.stream.id);
+    ref.read(streamServiceProvider).pipEnter(widget.stream.id);
 
     ref.read(pipProvider.notifier).enablePip(
       streamId: widget.stream.id,
@@ -1220,7 +1219,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         else if (hasThumbnail)
           Positioned.fill(
             child: CachedNetworkImage(
-              imageUrl: imgUrl(widget.stream.thumbnailUrl),
+              imageUrl: ref.read(apiClientProvider).imgUrl(widget.stream.thumbnailUrl),
               fit: BoxFit.cover,
               placeholder: (_, _) => _darkBg(),
               errorWidget: (_, _, _) => _darkBg(),
@@ -1317,7 +1316,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                           onTap: () async {
                             final sid = widget.session.token?.streamId;
                             if (sid != null) {
-                              try { await StreamService.leaveCoHost(sid); } catch (_) {}
+                              try { await ref.read(streamServiceProvider).leaveCoHost(sid); } catch (_) {}
                             }
                             _handleCoHostRemoved();
                           },
@@ -1433,7 +1432,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     onCoHostInvite: (hostUsername, targetUsername) {
                       if (!mounted || _isSelfCoHost) return;
                       if (targetUsername == _myUsername) {
-                        if (CallService.instance.hasActiveCall) {
+                        if (ref.read(callServiceProvider).hasActiveCall) {
                           debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] User invited to co-host but has active call. Auto-rejecting locally.');
                           TeqToast.warning(ref.read(localizationProvider).t('errorCoHostDuringCall', {'hostUsername': hostUsername}), duration: const Duration(seconds: 4));
                         } else {
@@ -1589,7 +1588,7 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
     setState(() => _sending = false);
     if (result['ok'] == true) {
       CacheService.clearData('user_wallet_data');
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: widget.streamId,
         itemType: 'stream',
         interactionType: 'stream_gift_sent',
@@ -2012,7 +2011,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
             Builder(builder: (_) {
               debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
               return CachedNetworkImage(
-                imageUrl: imgUrl(thumbUrl),
+                imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
                 fit: BoxFit.cover,
                 placeholder: (_, _) => const ColoredBox(color: Colors.black),
                 errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),

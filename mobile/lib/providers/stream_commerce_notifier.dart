@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../services/storage_service.dart';
 
 /// Tüm commerce ViewModel'leri için ortak WS altyapısı.
@@ -16,6 +16,7 @@ import '../services/storage_service.dart';
 /// Viewer WS bağlantısı açmaz; state'i host notifier üzerinden gelir.
 abstract class StreamCommerceNotifier<S> extends StateNotifier<S> {
   final int streamId;
+  final ApiClient _api;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _sub;
@@ -23,11 +24,11 @@ abstract class StreamCommerceNotifier<S> extends StateNotifier<S> {
   bool _reconnecting = false;
   int _reconnectAttempt = 0;
 
-  StreamCommerceNotifier(this.streamId, S initialState) : super(initialState) {
+  StreamCommerceNotifier(this.streamId, S initialState, this._api) : super(initialState) {
     unawaited(_connect());
   }
 
-  String get _wsBase => kBaseUrl
+  String get _wsBase => _api.config.baseUrl
       .replaceFirst('https://', 'wss://')
       .replaceFirst('http://', 'ws://');
 
@@ -101,7 +102,7 @@ abstract class StreamCommerceNotifier<S> extends StateNotifier<S> {
     _heartbeat?.cancel();
     _sub?.cancel();
     try { _channel?.sink.close(); } catch (_) {}
-    _wsLog('disposed | streamId=$streamId type=${runtimeType}');
+    _wsLog('disposed | streamId=$streamId type=$runtimeType');
     super.dispose();
   }
 }

@@ -1,12 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import '../main.dart' show providerContainer;
+import '../core/network/api_client.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
 class WalletService {
-  static Future<Map<String, String>> _headers(String? token, {bool json = false}) =>
-      buildApiHeaders(token, json: json);
+  static Future<Map<String, String>> _headers(String? token, {bool json = false}) async {
+    final h = <String, String>{};
+    if (token != null) h['Authorization'] = 'Bearer $token';
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
 
   static Future<Map<String, dynamic>> sendGift({
     required int streamId,
@@ -18,7 +23,7 @@ class WalletService {
       final token = await StorageService.getToken();
       if (token == null) return {'ok': false, 'error': 'Oturum bulunamadı.'};
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/wallet/send-gift'),
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/send-gift'),
         headers: await _headers(token, json: true),
         body: jsonEncode({
           'stream_id': streamId,
@@ -44,7 +49,7 @@ class WalletService {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/wallet/balance?limit=$limit'),
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/balance?limit=$limit'),
         headers: await _headers(token),
       );
       if (resp.statusCode == 200) {
@@ -59,7 +64,7 @@ class WalletService {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/wallet/transaction/$txnId'),
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/transaction/$txnId'),
         headers: await _headers(token),
       );
       if (resp.statusCode == 200) {
@@ -76,8 +81,8 @@ class WalletService {
     int limit = 5,
     bool bypassCache = false,
   }) =>
-      ApiService.get<Map<String, dynamic>>(
-        url: '$kBaseUrl/wallet/balance?limit=$limit',
+      ApiService(providerContainer.read(apiClientProvider)).get<Map<String, dynamic>>(
+        url: '${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/balance?limit=$limit',
         cacheKey: 'user_wallet_data',
         cacheTtl: const Duration(minutes: 2),
         bypassCache: bypassCache,

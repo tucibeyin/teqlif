@@ -142,13 +142,13 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
 
 // ---------------------------------------------------------------------------
 
-class _SectionCard extends StatelessWidget {
+class _SectionCard extends ConsumerWidget {
   final String title;
   final Widget child;
   const _SectionCard({required this.title, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

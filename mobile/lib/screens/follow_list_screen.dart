@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/error_mapper.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
@@ -77,7 +77,7 @@ class FollowListScreen extends ConsumerWidget {
                     radius: 22,
                     backgroundColor: kPrimary.withValues(alpha: 0.12),
                     backgroundImage: rawImg != null
-                        ? CachedNetworkImageProvider(imgUrl(rawImg))
+                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg))
                         : null,
                     child: rawImg == null
                         ? Text(

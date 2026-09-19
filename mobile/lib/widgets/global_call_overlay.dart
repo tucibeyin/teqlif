@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../services/call_service.dart';
+import '../services/call_service.dart' show callServiceProvider, CallStatus, EndReason;
 import '../screens/call_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 void _uiLog(String component, String event, String detail) {
@@ -26,7 +26,7 @@ class GlobalCallOverlay extends ConsumerStatefulWidget {
 }
 
 class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
-  final _cs = CallService.instance;
+  late final _cs = ref.read(callServiceProvider);
   bool _prevPillVisible = false;
   bool _permDialogShown = false;
 
@@ -207,7 +207,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
                                   backgroundColor: Colors.white24,
                                   backgroundImage: cs.otherAvatar!.isNotEmpty
                                       ? CachedNetworkImageProvider(
-                                          imgUrl(cs.otherAvatar!))
+                                          ref.read(apiClientProvider).imgUrl(cs.otherAvatar!))
                                       : null,
                                   child: cs.otherAvatar!.isEmpty &&
                                           cs.otherUsername != null

@@ -30,7 +30,7 @@ class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> 
   FutureOr<MessagesUiState> build() async {
     _badgeSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) => _loadCounts());
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _loadCounts());
-    _wsSub = WsService.messageStream.stream.listen((data) {
+    _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       if (data['type'] == 'message') _loadCounts();
     });
 
@@ -41,8 +41,8 @@ class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> 
     });
 
     final results = await Future.wait([
-      NotificationService.getUnreadNotifCount(),
-      NotificationService.getMessageRequests(),
+      ref.read(notificationServiceProvider).getUnreadNotifCount(),
+      ref.read(notificationServiceProvider).getMessageRequests(),
     ]);
     return MessagesUiState(
       unreadNotifs: results[0] as int,
@@ -52,8 +52,8 @@ class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> 
 
   Future<void> _loadCounts() async {
     final results = await Future.wait([
-      NotificationService.getUnreadNotifCount(),
-      NotificationService.getMessageRequests(),
+      ref.read(notificationServiceProvider).getUnreadNotifCount(),
+      ref.read(notificationServiceProvider).getMessageRequests(),
     ]);
     if (state.hasValue) {
       state = AsyncValue.data(state.value!.copyWith(
@@ -64,7 +64,7 @@ class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> 
   }
 
   Future<void> markAllRead() async {
-    await NotificationService.markAllRead();
+    await ref.read(notificationServiceProvider).markAllRead();
     if (state.hasValue) {
       state = AsyncValue.data(state.value!.copyWith(unreadNotifs: 0));
       PushNotificationService.badgeRefreshNeeded.add(null);
@@ -114,7 +114,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
   @override
   FutureOr<ConversationsUiState> build() async {
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
-    _wsSub = WsService.messageStream.stream.listen((data) {
+    _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       if (data['type'] == 'message') {
         _updateConversationInMemory(data);
         PushNotificationService.badgeRefreshNeeded.add(null);
@@ -149,7 +149,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
 
     try {
-      final data = await NotificationService.getConversations();
+      final data = await ref.read(notificationServiceProvider).getConversations();
       await StorageService.cacheData(StorageService.cacheMessages, data);
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
@@ -207,7 +207,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
   }
 
   Future<bool> deleteConversation(int otherId) async {
-    final ok = await NotificationService.deleteConversation(otherId);
+    final ok = await ref.read(notificationServiceProvider).deleteConversation(otherId);
     if (ok && state.hasValue) {
       final updated = List<dynamic>.from(state.value!.conversations);
       updated.removeWhere((c) => (c['user_id'] as int?) == otherId);
@@ -272,7 +272,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
     }
 
     try {
-      final data = await NotificationService.getNotifications();
+      final data = await ref.read(notificationServiceProvider).getNotifications();
       await StorageService.cacheData(StorageService.cacheNotifications, data);
       state = AsyncValue.data(state.value!.copyWith(
         notifications: data,
@@ -314,7 +314,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
   @override
   FutureOr<ConversationsUiState> build() async {
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
-    _wsSub = WsService.messageStream.stream.listen((data) {
+    _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       if (data['type'] == 'message') load(silent: true);
     });
     ref.onDispose(() {
@@ -339,7 +339,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
       state = AsyncValue.data(state.value!.copyWith(loading: true));
     }
     try {
-      final data = await NotificationService.getMessageRequests();
+      final data = await ref.read(notificationServiceProvider).getMessageRequests();
       await StorageService.cacheData(StorageService.cacheMessageRequests, data);
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,

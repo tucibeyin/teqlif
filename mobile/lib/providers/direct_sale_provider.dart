@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../models/direct_sale.dart';
 import '../services/direct_sale_service.dart';
 import '../services/listing_service.dart';
@@ -14,17 +15,17 @@ void _dsLog(String phase, String msg) {
 
 // ── Host ViewModel (Task 4.4) ─────────────────────────────────────────────────
 
-/// Host tarafı — satış yaşam döngüsünü (start/pause/resume/end/cancel) yönetir.
-/// WS bağlantısı ve reconnect altyapısı [StreamCommerceNotifier]'da; bu sınıf
-/// yalnızca direct sale domain logic'ini içerir.
 class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
-  DirectSaleHostNotifier(int streamId) : super(streamId, DirectSaleState.idle()) {
+  final DirectSaleService _dsService;
+
+  DirectSaleHostNotifier(int streamId, ApiClient api, this._dsService)
+      : super(streamId, DirectSaleState.idle(), api) {
     unawaited(_prefetch());
   }
 
   Future<void> _prefetch() async {
     try {
-      final s = await DirectSaleService.getState(streamId);
+      final s = await _dsService.getState(streamId);
       if (mounted && !s.isIdle) applyState(s);
     } catch (_) {}
   }
@@ -69,7 +70,6 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     _dsLog('STATE', '$type → $prevStatus → ${state.status} | saleId=${state.saleId}');
   }
 
-  /// API çağrısı başarılıysa WS broadcast beklenmeden anında güncelle.
   void applyState(DirectSaleState newState) {
     _dsLog('STATE', 'applyState | ${state.status} → ${newState.status} saleId=${newState.saleId}');
     state = newState;
@@ -80,8 +80,6 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     state = DirectSaleState.idle();
   }
 
-  // ── Action metodları (View'dan çağrılır, BuildContext almaz) ───────────────
-
   bool _busy = false;
 
   Future<void> pause(TranslationPack loc) async {
@@ -89,7 +87,7 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'pause | saleId=${state.saleId}');
     try {
-      await DirectSaleService.pauseSale(state.saleId);
+      await _dsService.pauseSale(state.saleId);
       _dsLog('API', 'pause OK (WS will update state)');
     } catch (e) {
       _dsLog('API', 'pause ERROR | $e');
@@ -104,7 +102,7 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'resume | saleId=${state.saleId}');
     try {
-      await DirectSaleService.resumeSale(state.saleId);
+      await _dsService.resumeSale(state.saleId);
       _dsLog('API', 'resume OK (WS will update state)');
     } catch (e) {
       _dsLog('API', 'resume ERROR | $e');
@@ -119,7 +117,7 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'end | saleId=${state.saleId}');
     try {
-      await DirectSaleService.endSale(state.saleId);
+      await _dsService.endSale(state.saleId);
       _dsLog('API', 'end OK (WS will update state)');
     } catch (e) {
       _dsLog('API', 'end ERROR | $e');
@@ -134,7 +132,7 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     _busy = true;
     _dsLog('API', 'cancel | saleId=${state.saleId} ordersVoided=$ordersVoided');
     try {
-      await DirectSaleService.cancelSale(state.saleId, ordersVoided: ordersVoided);
+      await _dsService.cancelSale(state.saleId, ordersVoided: ordersVoided);
       state = state.copyWith(status: 'cancelled');
       _dsLog('API', 'cancel OK');
     } catch (e) {
@@ -145,7 +143,6 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     }
   }
 
-  /// Satış başlatıldıktan sonra state'i günceller (start dialog'dan dönen değer).
   Future<void> startSale(
     int streamId, {
     int? listingId,
@@ -162,7 +159,7 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
       ' price=$price stock=$stock',
     );
     try {
-      state = await DirectSaleService.startSale(
+      state = await _dsService.startSale(
         streamId,
         listingId: listingId,
         title: title,
@@ -178,37 +175,36 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
     }
   }
 
-  /// Dialog öncesi sipariş sayısını çekmek için kullanılır.
   Future<int> fetchOrderCount() async {
     try {
-      final orders = await DirectSaleService.getOrders(state.saleId);
+      final orders = await _dsService.getOrders(state.saleId);
       return orders.length;
     } catch (_) {
       return 0;
     }
   }
-
 }
 
 final directSaleHostProvider = StateNotifierProvider.family
     .autoDispose<DirectSaleHostNotifier, DirectSaleState, int>(
-  (ref, streamId) => DirectSaleHostNotifier(streamId),
+  (ref, streamId) => DirectSaleHostNotifier(
+    streamId,
+    ref.watch(apiClientProvider),
+    ref.watch(directSaleServiceProvider),
+  ),
 );
 
 // ── Viewer ViewModel (Task 4.5) ───────────────────────────────────────────────
 
-/// Viewer purchase akışını yönetir.
-/// Satış durumu için DirectSaleHostNotifier tek kaynak; bu notifier yalnızca
-/// purchase işleminin loading/success/error geçişini tutar (T-2: no duplicate WS).
 class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
-  DirectSaleViewerNotifier() : super(const DirectSaleViewerState());
+  final DirectSaleService _dsService;
+  DirectSaleViewerNotifier(this._dsService) : super(const DirectSaleViewerState());
 
-  /// Satın alma işlemi — loading state + API çağrısı + hata yönetimi.
   Future<void> purchase(int saleId, int quantity, TranslationPack loc) async {
     _dsLog('PURCHASE', 'attempt | saleId=$saleId qty=$quantity');
     state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.loading);
     try {
-      await DirectSaleService.purchase(saleId, quantity: quantity);
+      await _dsService.purchase(saleId, quantity: quantity);
       state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.success);
       _dsLog('PURCHASE', 'OK | saleId=$saleId qty=$quantity');
     } catch (e) {
@@ -243,17 +239,17 @@ class DirectSaleViewerState {
 
 final directSaleViewerProvider = StateNotifierProvider.family
     .autoDispose<DirectSaleViewerNotifier, DirectSaleViewerState, int>(
-  (ref, _) => DirectSaleViewerNotifier(),
+  (ref, _) => DirectSaleViewerNotifier(ref.watch(directSaleServiceProvider)),
 );
 
 final directSaleDetailProvider = FutureProvider.family
     .autoDispose<DirectSaleSummary, int>((ref, saleId) async {
-  return DirectSaleService.getSummary(saleId);
+  return ref.read(directSaleServiceProvider).getSummary(saleId);
 });
 
 final listingPriceSignalProvider = FutureProvider.family
     .autoDispose<ListingPriceSignal, int>((ref, listingId) async {
-  final raw = await ListingService.getPriceSignal(listingId);
+  final raw = await ref.read(listingServiceProvider).getPriceSignal(listingId);
   if (raw == null) return const ListingPriceSignal(sampleCount: 0, confidence: 'low');
   return ListingPriceSignal.fromJson(raw);
 });

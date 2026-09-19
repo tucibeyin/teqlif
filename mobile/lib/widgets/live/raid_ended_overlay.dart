@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/theme.dart';
 import '../../services/storage_service.dart';
 import '../shimmer_loading.dart';
 
-class RaidEndedOverlay extends StatefulWidget {
+class RaidEndedOverlay extends ConsumerStatefulWidget {
   final int streamId;
   final String hostUsername;
   final String? hostThumbnailUrl;
@@ -24,10 +25,10 @@ class RaidEndedOverlay extends StatefulWidget {
   });
 
   @override
-  State<RaidEndedOverlay> createState() => _RaidEndedOverlayState();
+  ConsumerState<RaidEndedOverlay> createState() => _RaidEndedOverlayState();
 }
 
-class _RaidEndedOverlayState extends State<RaidEndedOverlay>
+class _RaidEndedOverlayState extends ConsumerState<RaidEndedOverlay>
     with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>>? _targets;
   bool _loading = true;
@@ -60,7 +61,7 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
         return;
       }
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/streams/${widget.streamId}/raid-targets'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/streams/${widget.streamId}/raid-targets'),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 8));
       if (!mounted) return;
@@ -224,14 +225,14 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
 
 // ── Kompakt host banner ───────────────────────────────────────────────────────
 
-class _HostBanner extends StatelessWidget {
+class _HostBanner extends ConsumerWidget {
   final String username;
   final String? thumbnailUrl;
 
   const _HostBanner({required this.username, this.thumbnailUrl});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         ShaderMask(
@@ -252,7 +253,7 @@ class _HostBanner extends StatelessWidget {
             child: ClipOval(
               child: thumbnailUrl != null
                   ? CachedNetworkImage(
-                      memCacheWidth: 400, memCacheHeight: 400, imageUrl: imgUrl(thumbnailUrl!),
+                      memCacheWidth: 400, memCacheHeight: 400, imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl!),
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) => _fallback(),
                     )
@@ -285,14 +286,14 @@ class _HostBanner extends StatelessWidget {
 
 // ── Küçük dikey raid kartı ────────────────────────────────────────────────────
 
-class _RaidTargetCard extends StatelessWidget {
+class _RaidTargetCard extends ConsumerWidget {
   final Map<String, dynamic> data;
   final VoidCallback onTap;
 
   const _RaidTargetCard({required this.data, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final thumbUrl = data['thumbnail_url'] as String?;
     final title = data['title'] as String? ?? '';
     final hostName = data['host_name'] as String? ?? '';
@@ -327,7 +328,7 @@ class _RaidTargetCard extends StatelessWidget {
                     const BorderRadius.vertical(top: Radius.circular(13)),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
-                        memCacheWidth: 400, memCacheHeight: 400, imageUrl: imgUrl(thumbUrl),
+                        memCacheWidth: 400, memCacheHeight: 400, imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
                         fit: BoxFit.cover,
                         placeholder: (_, _) => const ShimmerBox(
                           width: double.infinity,

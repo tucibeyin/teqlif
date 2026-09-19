@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 class FollowRequestsState {
@@ -25,11 +25,11 @@ class FollowRequestsViewModel extends AutoDisposeAsyncNotifier<FollowRequestsSta
 
     final futures = await Future.wait([
       http.get(
-        Uri.parse('$kBaseUrl/follows/requests'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/requests'),
         headers: {'Authorization': 'Bearer $token'},
       ),
       http.get(
-        Uri.parse('$kBaseUrl/follows/requests/sent'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/requests/sent'),
         headers: {'Authorization': 'Bearer $token'},
       ),
     ]);
@@ -52,11 +52,11 @@ class FollowRequestsViewModel extends AutoDisposeAsyncNotifier<FollowRequestsSta
 
       final futures = await Future.wait([
         http.get(
-          Uri.parse('$kBaseUrl/follows/requests'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/requests'),
           headers: {'Authorization': 'Bearer $token'},
         ),
         http.get(
-          Uri.parse('$kBaseUrl/follows/requests/sent'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/requests/sent'),
           headers: {'Authorization': 'Bearer $token'},
         ),
       ]);
@@ -79,7 +79,7 @@ class FollowRequestsViewModel extends AutoDisposeAsyncNotifier<FollowRequestsSta
       final token = await StorageService.getToken();
       if (token == null) throw Exception('Unauthenticated');
       
-      final uri = Uri.parse('$kBaseUrl/follows/$followerId/$action');
+      final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/$followerId/$action');
       final resp = await http.post(
         uri,
         headers: {'Authorization': 'Bearer $token'},
@@ -108,7 +108,7 @@ class FollowRequestsViewModel extends AutoDisposeAsyncNotifier<FollowRequestsSta
       final token = await StorageService.getToken();
       if (token == null) throw Exception('Unauthenticated');
       
-      final uri = Uri.parse('$kBaseUrl/follows/$targetUserId');
+      final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/$targetUserId');
       final resp = await http.delete(
         uri,
         headers: {'Authorization': 'Bearer $token'},

@@ -7,14 +7,13 @@ import '../services/analytics_service.dart';
 import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
-import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/call_permission_helper.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import 'messages_screen.dart';
 import '../services/call_service.dart';
@@ -25,6 +24,7 @@ import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/public_profile_view_model.dart';
+import '../main.dart' show providerContainer;
 
 const _starColor = Color(0xFFF59E0B);
 
@@ -180,9 +180,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
               color: _canCall ? null : Theme.of(context).disabledColor,
               onPressed: _canCall
                   ? () {
-                      if (CallService.instance.hasActiveCall) return;
+                      if (ref.read(callServiceProvider).hasActiveCall) return;
                       final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
-                      CallService.instance.startCall(
+                      ref.read(callServiceProvider).startCall(
                         calleeId: uid,
                         calleeUsername: widget.username,
                         calleeAvatar: _user?['profile_image_thumb_url'] as String?,
@@ -704,7 +704,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 final raw = imgs.isNotEmpty
                     ? imgs[0] as String
                     : listing['image_url'] as String?;
-                final photo = raw != null ? imgUrl(raw) : null;
+                final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
                 final price = listing['price'];
                 final priceStr = price != null
                     ? () {
@@ -802,7 +802,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     Widget avatarWidget = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withValues(alpha: 0.15),
-      backgroundImage: rawImg != null ? CachedNetworkImageProvider(imgUrl(rawImg)) : null,
+      backgroundImage: rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg)) : null,
       child: rawImg == null
           ? Text(
               initial,
@@ -1380,7 +1380,7 @@ class _PublicRatingItemState extends State<_PublicRatingItem> {
                   radius: 20,
                   backgroundColor: kPrimary.withValues(alpha: 0.12),
                   backgroundImage:
-                      raterImg != null ? CachedNetworkImageProvider(imgUrl(raterImg)) : null,
+                      raterImg != null ? CachedNetworkImageProvider(providerContainer.read(apiClientProvider).imgUrl(raterImg)) : null,
                   child: raterImg == null
                       ? Text(
                           raterInitial,
@@ -1695,7 +1695,7 @@ class _LiveAvatarRingState extends ConsumerState<_LiveAvatarRing>
   }
 }
 
-class _SocialLinksRow extends StatelessWidget {
+class _SocialLinksRow extends ConsumerWidget {
   final Map<String, dynamic>? user;
   final int? userId;
 
@@ -1742,7 +1742,7 @@ class _SocialLinksRow extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final active = _platforms
         .where((p) => (user?[p.field] as String?)?.isNotEmpty == true)
@@ -1766,7 +1766,7 @@ class _SocialLinksRow extends StatelessWidget {
                 raw.startsWith('http') ? raw : 'https://$raw',
               );
               if (uri != null && await canLaunchUrl(uri)) {
-                AnalyticsService.logInteraction(
+                ref.read(analyticsServiceProvider).logInteraction(
                   itemId: userId ?? 0,
                   itemType: 'user',
                   interactionType: 'social_link_tap',
@@ -1814,7 +1814,7 @@ class _SocialPlatform {
   const _SocialPlatform(this.field, this.faIcon, this.color, this.key);
 }
 
-class _ProfileBadge extends StatelessWidget {
+class _ProfileBadge extends ConsumerWidget {
   final IconData icon;
   final String title;
   final String value;
@@ -1840,7 +1840,7 @@ class _ProfileBadge extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () => _showInfo(context),
       behavior: HitTestBehavior.opaque,

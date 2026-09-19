@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 import '../../services/analytics_service.dart';
 import '../../services/cache_service.dart';
@@ -92,7 +92,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     if (token == null) return;
     try {
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/my?limit=20&offset=0&active=true'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/my?limit=20&offset=0&active=true'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -129,7 +129,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
   Future<void> _fetchReport(int? listingId) async {
     state = state.copyWith(reportData: const AsyncValue.loading());
     try {
-      final data = await AnalyticsService.getMassNotificationReport(listingId: listingId);
+      final data = await ref.read(analyticsServiceProvider).getMassNotificationReport(listingId: listingId);
       state = state.copyWith(reportData: AsyncValue.data(data));
     } catch (e, st) {
       state = state.copyWith(reportData: AsyncValue.error(e, st));
@@ -150,8 +150,8 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     final listingId = listing['id'] as int;
     try {
       final results = await Future.wait([
-        AnalyticsService.retargetingAudience(listingId),
-        AnalyticsService.getNotificationCooldown(listingId),
+        ref.read(analyticsServiceProvider).retargetingAudience(listingId),
+        ref.read(analyticsServiceProvider).getNotificationCooldown(listingId),
       ]);
       
       final audienceData = results[0] as Map<String, dynamic>?;
@@ -186,7 +186,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     if (listing == null) return null;
     
     state = state.copyWith(sending: true);
-    final result = await AnalyticsService.sendRetargeting(
+    final result = await ref.read(analyticsServiceProvider).sendRetargeting(
       listingId: listing['id'] as int,
       estimatedAudience: actualCount,
       estimatedCost: tuciCost,

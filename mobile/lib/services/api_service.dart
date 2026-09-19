@@ -3,7 +3,8 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import 'cache_service.dart';
 import 'storage_service.dart';
@@ -21,19 +22,22 @@ import 'storage_service.dart';
 /// Kullanım örneği (Riverpod provider):
 /// ```dart
 /// await for (final items in ApiService.get<List<Foo>>(
-///   url: '$kBaseUrl/foos',
+///   url: '${ref.read(apiClientProvider).config.baseUrl}/foos',
 ///   cacheKey: 'foo_list',
 ///   fromJson: (raw) => (raw as List).cast<Map<String,dynamic>>().map(Foo.fromJson).toList(),
 /// )) {
 ///   if (!_disposed) state = AsyncData(items);
 /// }
 /// ```
-class ApiService {
-  ApiService._();
+final apiServiceProvider = Provider<ApiService>((ref) => ApiService(ref.watch(apiClientProvider)));
 
-  static Future<Map<String, String>> _headers({bool auth = true}) async {
+class ApiService {
+  final ApiClient _api;
+  ApiService(this._api);
+
+  Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
   /// SWR GET isteği — önce cache, sonra network olmak üzere iki kez emit eder.
@@ -48,7 +52,7 @@ class ApiService {
   ///   [auth]         : `false` ise Authorization header eklenmez.
   ///   [extraHeaders] : Ek HTTP başlıkları.
   ///   [timeout]      : İstek zaman aşımı. Varsayılan 10 saniye.
-  static Stream<T> get<T>({
+  Stream<T> get<T>({
     required String url,
     String? cacheKey,
     required T Function(dynamic raw) fromJson,
@@ -115,7 +119,7 @@ class ApiService {
     }
   }
 
-  static Map<String, dynamic> _safeBody(String raw) {
+  Map<String, dynamic> _safeBody(String raw) {
     try {
       return jsonDecode(raw) as Map<String, dynamic>;
     } catch (_) {

@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../../services/localization_service.dart";
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 
 import '../../config/theme.dart';
 import '../../config/app_colors.dart';
@@ -95,7 +95,6 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     final loc = ref.watch(localizationProvider);
     final stateAsync = ref.watch(liveListViewModelProvider);
     final stateVal = stateAsync.valueOrNull;
-    final isOffline = stateVal?.isOffline ?? false;
     final cats = _getCategories(stateVal?.streams ?? []);
     final showFilter = !stateAsync.isLoading && cats.isNotEmpty;
     final filtered = _getFiltered(stateVal?.streams ?? []);
@@ -502,7 +501,6 @@ class _SubcategoryChip extends ConsumerWidget {
   final VoidCallback onTap;
 
   const _SubcategoryChip({
-    super.key,
     required this.label,
     this.icon,
     required this.active,
@@ -553,9 +551,6 @@ class _EmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final stateAsync = ref.watch(liveListViewModelProvider);
-    final stateVal = stateAsync.valueOrNull;
-    final isOffline = stateVal?.isOffline ?? false;
     return ListView(
       children: [
         const SizedBox(height: 120),
@@ -591,11 +586,8 @@ class _StreamerAvatarCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final stateAsync = ref.watch(liveListViewModelProvider);
-    final stateVal = stateAsync.valueOrNull;
-    final isOffline = stateVal?.isOffline ?? false;
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
-    final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
+    final imageUrl = rawUrl.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
     final isPremium = streamer['is_premium'] == true;
     final isLive = streamer['is_live'] == true;
@@ -782,9 +774,6 @@ class _StreamGridTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final stateAsync = ref.watch(liveListViewModelProvider);
-    final stateVal = stateAsync.valueOrNull;
-    final isOffline = stateVal?.isOffline ?? false;
     final hasThumbnail =
         stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
 
@@ -815,7 +804,7 @@ class _StreamGridTile extends ConsumerWidget {
                     // Background
                     if (hasThumbnail)
                       CachedNetworkImage(
-                        imageUrl: imgUrl(stream.thumbnailUrl),
+                        imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl),
                         fit: BoxFit.cover,
                         placeholder: (_, _) => const Center(
                           child: CircularProgressIndicator(strokeWidth: 2),

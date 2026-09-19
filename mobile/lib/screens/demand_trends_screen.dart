@@ -17,28 +17,28 @@ class DemandTrendsScreen extends ConsumerWidget {
     final state = ref.watch(demandTrendsProvider);
     final viewModel = ref.read(demandTrendsProvider.notifier);
     
-    final _loading = state.loading;
-    final _error = state.error;
-    final _trends = state.trends;
-    final _filter = state.filter;
+    final loading = state.loading;
+    final error = state.error;
+    final trends = state.trends;
+    final filter = state.filter;
 
-    List<Map<String, dynamic>> _filteredTrends() {
-      if (_filter.category == null) return _trends;
-      return _trends.where((t) => 
-        t['category'] == _filter.category &&
-        (_filter.subcategory == null || t['subcategory'] == _filter.subcategory)
+    List<Map<String, dynamic>> filteredTrends() {
+      if (filter.category == null) return trends;
+      return trends.where((t) => 
+        t['category'] == filter.category &&
+        (filter.subcategory == null || t['subcategory'] == filter.subcategory)
       ).toList();
     }
 
-    final filtered = _filteredTrends();
+    final filtered = filteredTrends();
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.t("demandTrendsTitle")),
         centerTitle: false,
       ),
-      body: _loading
+      body: loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
-          : _error != null || _trends.isEmpty
+          : error != null || trends.isEmpty
               ? _Empty(loc: loc, onRetry: () => viewModel.load())
               : RefreshIndicator(
                   color: kPrimary,
@@ -52,7 +52,7 @@ class DemandTrendsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 10),
                       TeqFilterBar(
-                        filter: _filter,
+                        filter: filter,
                         onChanged: (f) => viewModel.updateFilter(f),
                         showSearchBar: false,
                         showExtraFields: false,

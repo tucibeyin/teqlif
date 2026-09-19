@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_exception.dart';
 import '../../services/storage_service.dart';
 import '../../models/call_participant.dart';
+
+final callRepositoryProvider = Provider<CallRepository>(
+  (ref) => CallRepository(ref.watch(apiClientProvider)),
+);
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
@@ -63,6 +68,9 @@ class CalleeTokenResult {
 // ── Repository ────────────────────────────────────────────────────────────────
 
 class CallRepository {
+  final ApiClient _api;
+  CallRepository(this._api);
+
   void _log(String phase, String msg) =>
       debugPrint('[CALL_REPO][${DateTime.now().toIso8601String()}][$phase] $msg');
 
@@ -78,15 +86,15 @@ class CallRepository {
   }
 
   Future<Map<String, dynamic>> _post(String path, [Map<String, dynamic>? body]) =>
-      apiCall(() async => http.post(
-            Uri.parse('$kBaseUrl$path'),
+      _api.call(() async => http.post(
+            Uri.parse('${_api.config.baseUrl}$path'),
             headers: await _authHeaders(),
             body: body != null ? jsonEncode(body) : null,
           ));
 
   Future<Map<String, dynamic>> _get(String path) =>
-      apiCall(() async => http.get(
-            Uri.parse('$kBaseUrl$path'),
+      _api.call(() async => http.get(
+            Uri.parse('${_api.config.baseUrl}$path'),
             headers: await _authHeaders(),
           ));
 

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 
-import '../config/api.dart';
+import '../core/config/app_config.dart';
 import '../models/catalog.dart';
 import '../utils/listing_fields.dart';
 
@@ -92,7 +92,7 @@ class CatalogService {
     // field options after migrations) even before the 24 h stale window expires.
     try {
       final cachedVersion = box.get('catalog_version') ?? '';
-      final vResp = await http.get(Uri.parse('$kBaseUrl/catalog/version'));
+      final vResp = await http.get(Uri.parse('${AppConfig.fromEnvironment().baseUrl}/catalog/version'));
       if (vResp.statusCode == 200) {
         final serverVersion = (jsonDecode(vResp.body) as Map)['version'] as String;
         if (serverVersion != cachedVersion) {
@@ -118,7 +118,7 @@ class CatalogService {
 
   static Future<void> _fetchAndCache(Box<String> box) async {
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/catalog'));
+      final resp = await http.get(Uri.parse('${AppConfig.fromEnvironment().baseUrl}/catalog'));
       if (resp.statusCode != 200) return;
       final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
       final version = decoded['version'] as String? ?? '';

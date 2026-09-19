@@ -48,7 +48,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   @override
   FutureOr<LiveListState> build() async {
     // WebSocket dinleyicisi
-    _wsSub ??= WsService.messageStream.stream.listen(_onWsMessage);
+    _wsSub ??= ref.read(wsServiceProvider).messageStream.stream.listen(_onWsMessage);
     
     // Connectivity dinleyicisi
     _connectSub ??= _connectSvc.onConnectivityChanged.listen((online) {
@@ -80,18 +80,18 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     if (isLoggedIn) {
       // Arka planda başlasın ama beklesin ki state'i düzgün kurabilelim
       try {
-        rec = await StreamService.getRecommendedStreams();
+        rec = await ref.read(streamServiceProvider).getRecommendedStreams();
       } catch (_) {}
 
       try {
-        sugg = await StreamService.getSuggestedStreamers();
+        sugg = await ref.read(streamServiceProvider).getSuggestedStreamers();
       } catch (_) {}
     }
 
     final completer = Completer<List<StreamOut>>();
-    
+
     _swrSub?.cancel();
-    _swrSub = StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen(
+    _swrSub = ref.read(streamServiceProvider).getActiveStreamsStream(bypassCache: bypassCache).listen(
       (streams) {
         if (!completer.isCompleted) {
           completer.complete(streams);

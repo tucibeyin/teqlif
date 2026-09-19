@@ -8,7 +8,7 @@ import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import 'messages_screen.dart';
 
 import '../../ui_library/components/cards/teq_card.dart';
@@ -75,7 +75,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
-                  imageUrl: imgUrl(thumbnailUrl),
+                  imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
                   height: 220,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => _imagePlaceholder(),
@@ -171,7 +171,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
-                  imageUrl: imgUrl(proofImageUrl),
+                  imageUrl: ref.read(apiClientProvider).imgUrl(proofImageUrl),
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => _imagePlaceholder(),
                   placeholder: (_, _) => _imagePlaceholder(),
@@ -261,7 +261,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
-                  imageUrl: imgUrl(proofImageUrl),
+                  imageUrl: ref.read(apiClientProvider).imgUrl(proofImageUrl),
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => Container(
                     height: 200,

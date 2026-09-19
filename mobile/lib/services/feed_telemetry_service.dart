@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import '../core/config/app_config.dart';
 import 'storage_service.dart';
 
 /// Canlı yayın akışındaki video ilan davranışlarını (impression/skip/click)
@@ -19,7 +19,7 @@ class FeedTelemetryService with WidgetsBindingObserver {
   static final FeedTelemetryService instance = FeedTelemetryService._();
 
   static const int _flushThreshold = 5;
-  static const String _endpoint = '$kBaseUrl/analytics/feed-events';
+  String get _endpoint => '${AppConfig.fromEnvironment().baseUrl}/analytics/feed-events';
 
   final List<Map<String, dynamic>> _eventQueue = [];
   bool _flushing = false;

@@ -9,10 +9,17 @@ import '../../../services/stream_service.dart';
 
 
 class HostStreamViewModel {
+  final AnalyticsService _analytics;
+  final AuctionService _auction;
+  final ModerationService _moderation;
+  final StreamService _stream;
+
+  HostStreamViewModel(this._analytics, this._auction, this._moderation, this._stream);
+
   // Analytics
   Future<Map<String, dynamic>?> getAudienceSize(String title, String category) async {
     try {
-      return await AnalyticsService.getAudienceSize(title: title, category: category);
+      return await _analytics.getAudienceSize(title: title, category: category);
     } catch (_) {
       return null;
     }
@@ -20,7 +27,7 @@ class HostStreamViewModel {
 
   Future<Map<String, dynamic>?> sendLeadBlast(String title, String category, int estimatedCost) async {
     try {
-      return await AnalyticsService.sendLeadBlast(
+      return await _analytics.sendLeadBlast(
         title: title,
         category: category,
         estimatedCost: estimatedCost,
@@ -33,7 +40,7 @@ class HostStreamViewModel {
   // Auction
   Future<List<Map<String, dynamic>>> fetchBids(int streamId) async {
     try {
-      return await AuctionService.fetchBids(streamId);
+      return await _auction.fetchBids(streamId);
     } catch (_) {
       return [];
     }
@@ -42,7 +49,7 @@ class HostStreamViewModel {
   // Moderation
   Future<bool> promoteUser(int streamId, String username) async {
     try {
-      await ModerationService.promoteUser(streamId, username);
+      await _moderation.promoteUser(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -51,7 +58,7 @@ class HostStreamViewModel {
 
   Future<bool> demoteUser(int streamId, String username) async {
     try {
-      await ModerationService.demoteUser(streamId, username);
+      await _moderation.demoteUser(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -60,7 +67,7 @@ class HostStreamViewModel {
 
   Future<bool> muteUser(int streamId, String username) async {
     try {
-      await ModerationService.mute(streamId, username);
+      await _moderation.mute(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -69,7 +76,7 @@ class HostStreamViewModel {
 
   Future<bool> unmuteUser(int streamId, String username) async {
     try {
-      await ModerationService.unmute(streamId, username);
+      await _moderation.unmute(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -78,7 +85,7 @@ class HostStreamViewModel {
 
   Future<bool> kickUser(int streamId, String username) async {
     try {
-      await ModerationService.kick(streamId, username);
+      await _moderation.kick(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -87,20 +94,20 @@ class HostStreamViewModel {
 
   // Stream Actions
   Future<void> confirmLive(int streamId) async {
-    await StreamService.confirmLive(streamId);
+    await _stream.confirmLive(streamId);
   }
 
   Future<void> endStream(int streamId) async {
-    await StreamService.endStream(streamId);
+    await _stream.endStream(streamId);
   }
 
   Future<void> cancelStream(int streamId) async {
-    await StreamService.cancelStream(streamId);
+    await _stream.cancelStream(streamId);
   }
 
   Future<Map<String, dynamic>?> fetchAudienceInsights(int streamId) async {
     try {
-      return await StreamService.fetchAudienceInsights(streamId);
+      return await _stream.fetchAudienceInsights(streamId);
     } catch (_) {
       return null;
     }
@@ -108,7 +115,7 @@ class HostStreamViewModel {
 
   Future<List<Map<String, dynamic>>> getViewers(int streamId) async {
     try {
-      return await StreamService.getViewers(streamId);
+      return await _stream.getViewers(streamId);
     } catch (_) {
       return [];
     }
@@ -116,7 +123,7 @@ class HostStreamViewModel {
 
   Future<bool> inviteCoHost(int streamId, String username) async {
     try {
-      await StreamService.inviteCoHost(streamId, username);
+      await _stream.inviteCoHost(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -125,7 +132,7 @@ class HostStreamViewModel {
 
   Future<bool> removeCoHost(int streamId, String username) async {
     try {
-      await StreamService.removeCoHost(streamId, username);
+      await _stream.removeCoHost(streamId, username);
       return true;
     } catch (_) {
       return false;
@@ -134,7 +141,7 @@ class HostStreamViewModel {
 
   Future<bool> uploadThumbnail(int streamId, Uint8List imageBytes) async {
     try {
-      await StreamService.uploadThumbnail(streamId, imageBytes, 'thumb.png');
+      await _stream.uploadThumbnail(streamId, imageBytes, 'thumb.png');
       return true;
     } catch (_) {
       return false;
@@ -143,5 +150,10 @@ class HostStreamViewModel {
 }
 
 final hostStreamViewModelProvider = Provider<HostStreamViewModel>((ref) {
-  return HostStreamViewModel();
+  return HostStreamViewModel(
+    ref.watch(analyticsServiceProvider),
+    ref.watch(auctionServiceProvider),
+    ref.watch(moderationServiceProvider),
+    ref.watch(streamServiceProvider),
+  );
 });

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
 import '../models/call_history_item.dart';
@@ -249,7 +249,7 @@ class _CallTile extends ConsumerWidget {
             backgroundColor: cs.surfaceContainerHighest,
             backgroundImage: item.otherAvatar != null &&
                     item.otherAvatar!.isNotEmpty
-                ? CachedNetworkImageProvider(imgUrl(item.otherAvatar))
+                ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(item.otherAvatar))
                 : null,
             child: item.otherAvatar == null || item.otherAvatar!.isEmpty
                 ? Text(

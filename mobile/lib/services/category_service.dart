@@ -1,13 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/logger_service.dart';
 import 'localization_service.dart';
 
 class CategoryService {
+  final ApiClient _api;
+  CategoryService(this._api);
+
   static final Map<String, List<(String, String)>> _cache = {};
 
-  static Future<List<(String, String)>> getCategories({
+  Future<List<(String, String)>> getCategories({
     String locale = 'tr',
     bool forStream = false,
   }) async {
@@ -15,7 +19,7 @@ class CategoryService {
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
     try {
       final uri = Uri.parse(
-        forStream ? '$kBaseUrl/categories?context=stream' : '$kBaseUrl/categories',
+        forStream ? '${_api.config.baseUrl}/categories?context=stream' : '${_api.config.baseUrl}/categories',
       );
       final response = await http.get(uri, headers: {'Accept-Language': locale});
       if (response.statusCode == 200) {
@@ -62,3 +66,6 @@ class CategoryService {
     };
   }
 }
+
+final categoryServiceProvider = Provider<CategoryService>((ref) =>
+    CategoryService(ref.watch(apiClientProvider)));

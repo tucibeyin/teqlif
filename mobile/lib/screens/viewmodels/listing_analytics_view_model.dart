@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/network/api_client.dart';
 import '../../models/listing_filter_state.dart';
 import '../../services/analytics_service.dart';
-import '../../config/api.dart';
 
 class ListingMetric {
   final String id;
@@ -91,9 +91,9 @@ class ListingAnalyticsViewModel extends AutoDisposeNotifier<ListingAnalyticsStat
 
     try {
       final results = await Future.wait([
-        AnalyticsService.getVideoRoi(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
-        AnalyticsService.getVideoPerformance(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
-        AnalyticsService.getGalleryStats(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
+        ref.read(analyticsServiceProvider).getVideoRoi(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
+        ref.read(analyticsServiceProvider).getVideoPerformance(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
+        ref.read(analyticsServiceProvider).getGalleryStats(startDate: sd, endDate: ed, category: cat, subcategory: subcat),
       ]);
       final roi = results[0];
       final videoPerf = results[1];
@@ -121,7 +121,7 @@ class ListingAnalyticsViewModel extends AutoDisposeNotifier<ListingAnalyticsStat
         final lid = l['listing_id'].toString();
         final isVideo = (l['content_type'] as String?) == 'video';
         final rawImg = l['image_url'] as String?;
-        final resolvedImg = rawImg != null && rawImg.isNotEmpty ? imgUrl(rawImg) : null;
+        final resolvedImg = rawImg != null && rawImg.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
         return ListingMetric(
           id: lid,
           title: l['title'] as String? ?? '—',

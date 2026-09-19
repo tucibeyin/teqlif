@@ -114,7 +114,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
         }
         // TTL dolmamış: içerik olduğu gibi kalır, ağ isteği atılmaz
       }
-      AnalyticsService.trackEvent('tab_switch', {
+      ref.read(analyticsServiceProvider).trackEvent('tab_switch', {
         'from': _kTabNames[_currentIndex],
         'to': _kTabNames[index],
       });

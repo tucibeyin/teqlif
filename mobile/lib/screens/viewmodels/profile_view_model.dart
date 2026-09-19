@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
@@ -128,7 +128,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
       final token = await StorageService.getToken();
       if (token != null) {
         await http.get(
-          Uri.parse('$kBaseUrl/auth/me/purchases'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/me/purchases'),
           headers: {'Authorization': 'Bearer $token'},
         );
       }
@@ -169,8 +169,8 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
       return;
     }
 
-    _profileSub = ApiService.get<Map<String, dynamic>>(
-      url: '$kBaseUrl/users/$username',
+    _profileSub = ref.read(apiServiceProvider).get<Map<String, dynamic>>(
+      url: '${ref.read(apiClientProvider).config.baseUrl}/users/$username',
       cacheKey: StorageService.cacheProfile,
       cacheTtl: const Duration(minutes: 10),
       bypassCache: bypassCache,
@@ -212,8 +212,8 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
       },
     );
 
-    _listingsSub = ApiService.get<List<dynamic>>(
-      url: '$kBaseUrl/listings/my?limit=1000',
+    _listingsSub = ref.read(apiServiceProvider).get<List<dynamic>>(
+      url: '${ref.read(apiClientProvider).config.baseUrl}/listings/my?limit=1000',
       cacheKey: StorageService.cacheUserListings,
       cacheTtl: const Duration(minutes: 5),
       bypassCache: bypassCache,

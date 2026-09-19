@@ -5,13 +5,13 @@ import '../../../services/analytics_service.dart';
 class SellerReportViewModel extends AutoDisposeFamilyAsyncNotifier<Map<String, dynamic>?, int> {
   @override
   FutureOr<Map<String, dynamic>?> build(int arg) async {
-    return AnalyticsService.getSellerReport(arg);
+    return ref.read(analyticsServiceProvider).getSellerReport(arg);
   }
-  
+
   Future<void> retry() async {
     state = const AsyncValue.loading();
     try {
-      final report = await AnalyticsService.getSellerReport(arg);
+      final report = await ref.read(analyticsServiceProvider).getSellerReport(arg);
       state = AsyncValue.data(report);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/listing_filter_state.dart';
@@ -91,7 +91,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
 
   @override
   FutureOr<PublicProfileState> build(PublicProfileArgs arg) async {
-    final data = await NotificationService.getUserByUsername(arg.username);
+    final data = await ref.read(notificationServiceProvider).getUserByUsername(arg.username);
     final info = await StorageService.getUserInfo();
     final isOwn = info != null && info['username'] == arg.username;
 
@@ -109,7 +109,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       try {
         final headers = await _authHeaders();
         final resp = await http.get(
-          Uri.parse('$kBaseUrl/listings?user_id=$userId'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings?user_id=$userId'),
           headers: headers,
         );
         if (resp.statusCode == 200) listings = jsonDecode(resp.body) as List;
@@ -126,7 +126,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       try {
         final headers = await _authHeaders();
         final resp = await http.get(
-          Uri.parse('$kBaseUrl/ratings/$userId/summary'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/$userId/summary'),
           headers: headers,
         );
         if (resp.statusCode == 200) {
@@ -163,7 +163,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
     try {
       final headers = await _authHeaders();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/ratings/$userId/summary'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/$userId/summary'),
         headers: headers,
       );
       if (resp.statusCode == 200) {
@@ -186,13 +186,13 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       String newStatus = current.followStatus;
       if (current.followStatus != 'none') {
         await http.delete(
-          Uri.parse('$kBaseUrl/follows/$userId'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/$userId'),
           headers: headers,
         );
         newStatus = 'none';
       } else {
         final resp = await http.post(
-          Uri.parse('$kBaseUrl/follows/$userId'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/$userId'),
           headers: headers,
         );
         if (resp.statusCode == 200) {
@@ -201,7 +201,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
         }
       }
       
-      final fresh = await NotificationService.getUserByUsername(arg.username);
+      final fresh = await ref.read(notificationServiceProvider).getUserByUsername(arg.username);
       
       final st = state.value;
       if (st != null) {
@@ -227,13 +227,13 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       final headers = await _authHeaders();
       if (current.isBlocked) {
         await http.delete(
-          Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(arg.username)}/block'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/${Uri.encodeComponent(arg.username)}/block'),
           headers: headers,
         );
         state = AsyncValue.data(current.copyWith(isBlocked: false));
       } else {
         await http.post(
-          Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(arg.username)}/block'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/${Uri.encodeComponent(arg.username)}/block'),
           headers: headers,
         );
         state = AsyncValue.data(current.copyWith(isBlocked: true));
@@ -250,7 +250,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
     
     final headers = await _authHeaders();
     final resp = await http.post(
-      Uri.parse('$kBaseUrl/ratings/$userId'),
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/$userId'),
       headers: headers,
       body: jsonEncode({
         'score': score,
@@ -280,7 +280,7 @@ final ratingsListProvider = FutureProvider.autoDispose.family<List<dynamic>, Rat
     'Content-Type': 'application/json',
     if (token != null) 'Authorization': 'Bearer $token',
   };
-  final resp = await http.get(Uri.parse('$kBaseUrl/ratings/${arg.userId}'), headers: headers);
+  final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/${arg.userId}'), headers: headers);
   if (resp.statusCode == 200) {
     return jsonDecode(resp.body) as List<dynamic>;
   }

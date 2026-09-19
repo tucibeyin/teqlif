@@ -2,22 +2,26 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 
 enum VersionStatus { upToDate, softUpdate, forceUpdate }
 
 class VersionService {
+  final ApiClient _api;
+  VersionService(this._api);
+
   static String _iosStoreUrl = 'https://apps.apple.com/tr/app/teqlif/id6759490205';
   static String _androidStoreUrl = 'https://play.google.com/store/apps/details?id=com.teqlif.app';
 
   static String get iosStoreUrl => _iosStoreUrl;
   static String get androidStoreUrl => _androidStoreUrl;
 
-  static Future<VersionStatus> checkVersion() async {
+  Future<VersionStatus> checkVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
       final resp = await http
-          .get(Uri.parse('$kBaseUrl/config/version'))
+          .get(Uri.parse('${_api.config.baseUrl}/config/version'))
           .timeout(const Duration(seconds: 5));
 
       if (resp.statusCode != 200) return VersionStatus.upToDate;
@@ -72,3 +76,6 @@ class VersionService {
     return false;
   }
 }
+
+final versionServiceProvider = Provider<VersionService>((ref) =>
+    VersionService(ref.watch(apiClientProvider)));

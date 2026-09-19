@@ -62,7 +62,7 @@ class ProInsightsViewModel extends AutoDisposeNotifier<ProInsightsState> {
     // We use streams but they emit once usually or we take latest
     Future<void> loadIns() async {
       try {
-        await for (final d in AnalyticsService.getProInsights(startDate: sd, endDate: ed, bypassCache: bypassCache)) {
+        await for (final d in ref.read(analyticsServiceProvider).getProInsights(startDate: sd, endDate: ed, bypassCache: bypassCache)) {
           state = state.copyWith(data: d, loading: false);
         }
       } catch (e) {
@@ -74,7 +74,7 @@ class ProInsightsViewModel extends AutoDisposeNotifier<ProInsightsState> {
 
     Future<void> loadMet() async {
       try {
-        await for (final m in AnalyticsService.getProMetrics(bypassCache: bypassCache)) {
+        await for (final m in ref.read(analyticsServiceProvider).getProMetrics(bypassCache: bypassCache)) {
           state = state.copyWith(metrics: m);
         }
       } catch (_) {}

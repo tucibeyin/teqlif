@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 import '../../services/analytics_service.dart';
 import '../../models/listing_filter_state.dart';
@@ -60,7 +60,7 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
   Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
     final token = await StorageService.getToken();
     if (token == null) return [];
-    var url = '$kBaseUrl/listings/my?limit=50&offset=$offset&active=true';
+    var url = '${ref.read(apiClientProvider).config.baseUrl}/listings/my?limit=50&offset=$offset&active=true';
     if (state.filter.searchQuery != null && state.filter.searchQuery!.isNotEmpty) {
       url += '&q=${Uri.encodeComponent(state.filter.searchQuery!)}';
     }
@@ -120,8 +120,8 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
     
     try {
       final results = await Future.wait([
-        AnalyticsService.competitorRadar(id),
-        AnalyticsService.categoryVelocity(category, listingId: id),
+        ref.read(analyticsServiceProvider).competitorRadar(id),
+        ref.read(analyticsServiceProvider).categoryVelocity(category, listingId: id),
       ]);
       
       state = state.copyWith(

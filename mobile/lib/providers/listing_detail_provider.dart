@@ -58,7 +58,8 @@ class ListingDetailState {
 }
 
 class ListingDetailNotifier extends StateNotifier<ListingDetailState> {
-  ListingDetailNotifier(int listingId) : super(ListingDetailState(id: listingId));
+  final ListingService _listingService;
+  ListingDetailNotifier(int listingId, this._listingService) : super(ListingDetailState(id: listingId));
 
   Timer? _cooldownTimer;
 
@@ -78,7 +79,7 @@ class ListingDetailNotifier extends StateNotifier<ListingDetailState> {
   Future<void> refreshStatus() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final data = await ListingService.getListingById(state.id);
+      final data = await _listingService.getListingById(state.id);
       if (data != null) {
         state = state.copyWith(
           status: ListingStatusExtension.fromJson(data),
@@ -125,5 +126,5 @@ class ListingDetailNotifier extends StateNotifier<ListingDetailState> {
 
 final listingDetailProvider =
     StateNotifierProvider.family.autoDispose<ListingDetailNotifier, ListingDetailState, int>(
-  (ref, id) => ListingDetailNotifier(id),
+  (ref, id) => ListingDetailNotifier(id, ref.watch(listingServiceProvider)),
 );

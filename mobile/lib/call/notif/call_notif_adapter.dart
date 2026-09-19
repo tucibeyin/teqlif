@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../services/auth_service.dart';
 
 void _notifLog(String msg) {
   debugPrint('[CALL_NOTIF][${DateTime.now().toIso8601String()}] $msg');
@@ -15,7 +16,7 @@ abstract class CallNotifAdapter {
   /// iOS: fetches both VoIP token and FCM token.
   /// Android: FCM token only (no VoIP token).
   /// Pass [fcmToken] when the token is already known (e.g. onTokenRefresh).
-  Future<void> registerTokens({String? fcmToken});
+  Future<void> registerTokens({String? fcmToken, AuthService? authService});
 
   /// Dismiss the incoming call UI or CallKit notification for [callId].
   /// [callId] null → no specific call to dismiss (endAllCalls handles cleanup).

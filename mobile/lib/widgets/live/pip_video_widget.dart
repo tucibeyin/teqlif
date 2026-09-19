@@ -125,7 +125,7 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
   void _closePip() {
     final streamId = ref.read(pipProvider).currentStreamId;
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] _closePip called. streamId: $streamId');
-    if (streamId != null) StreamService.pipExit(streamId);
+    if (streamId != null) ref.read(streamServiceProvider).pipExit(streamId);
     
     // Kullanıcı tamamen kapattığı için odayı da kapat
     ref.read(pipProvider.notifier).disablePip(disconnectRoom: true);
@@ -138,7 +138,7 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
     
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] _expandToFullScreen called. streamId: $streamId');
     // PiP'ten tam ekrana geçince pip_viewer_set'ten çıkar (joinStream yeniden ekleyecek)
-    StreamService.pipExit(streamId);
+    ref.read(streamServiceProvider).pipExit(streamId);
     
     // Odayı kapatmadan (seamless) devre dışı bırak
     ref.read(pipProvider.notifier).disablePip(disconnectRoom: false);

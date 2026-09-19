@@ -172,8 +172,9 @@ class _SafeVideoRendererState extends State<_SafeVideoRenderer> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready || _renderer == null)
+    if (!_ready || _renderer == null) {
       return const ColoredBox(color: Colors.black);
+    }
     return rtc.RTCVideoView(
       _renderer!,
       objectFit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,

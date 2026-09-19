@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../core/logger_service.dart';
+import '../main.dart' show providerContainer;
 import '../models/catalog.dart';
 import '../services/catalog_service.dart';
 import '../utils/listing_fields.dart';
@@ -24,7 +25,7 @@ class FieldConfigService {
 
     try {
       final resp = await http
-          .get(Uri.parse('$kBaseUrl/field-config/$subcategory'))
+          .get(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/field-config/$subcategory'))
           .timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {

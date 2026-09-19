@@ -2,13 +2,18 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:sentry_flutter/sentry_flutter.dart';
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/listing_offer.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 
 class ListingService {
+  final ApiClient _api;
+  ListingService(this._api);
+  late final _apiService = ApiService(_api);
+
   // Uygulama oturumu boyunca beğeni durumunu tutan merkezi cache.
   // Herhangi bir ekrandan toggleLike / setLikeCache çağrılınca güncellenir;
   // _GridItem.initState önce buraya bakarak en güncel durumu okur.
@@ -24,9 +29,9 @@ class ListingService {
     } catch (_) {}
   }
 
-  static Future<Map<String, String>> _headers({bool auth = true}) async {
+  Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
   /// ClickHouse telemetri tabanlı epsilon-greedy kişiselleştirilmiş feed.
@@ -34,15 +39,15 @@ class ListingService {
   /// SWR Stream: ilk event Hive cache'ten (anlık), ikinci event API'den (taze).
   /// Giriş yapılmamışsa tek `[]` emit edilir.
   /// [bypassCache]: `true` ise cache okuma atlanır (pull-to-refresh).
-  static Stream<List<Map<String, dynamic>>> getPersonalizedFeed({
+  Stream<List<Map<String, dynamic>>> getPersonalizedFeed({
     int limit = 10,
     bool bypassCache = false,
   }) async* {
     final token = await StorageService.getToken();
     if (token == null) { yield []; return; }
 
-    yield* ApiService.get<List<Map<String, dynamic>>>(
-      url: '$kBaseUrl/feed/personalized?limit=$limit',
+    yield* _apiService.get<List<Map<String, dynamic>>>(
+      url: '${_api.config.baseUrl}/feed/personalized?limit=$limit',
       cacheKey: 'feed_personalized',
       cacheTtl: const Duration(minutes: 10),
       bypassCache: bypassCache,
@@ -50,12 +55,12 @@ class ListingService {
     );
   }
 
-  static Future<Map<String, dynamic>?> getReactivationCost(int listingId) async {
+  Future<Map<String, dynamic>?> getReactivationCost(int listingId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$listingId/reactivation-cost'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/reactivation-cost'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -63,10 +68,10 @@ class ListingService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getListingById(int listingId) async {
+  Future<Map<String, dynamic>?> getListingById(int listingId) async {
     try {
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$listingId'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId'),
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
@@ -79,10 +84,10 @@ class ListingService {
   }
 
   /// İlana ait teklifleri miktara göre büyükten küçüğe döner.
-  static Future<List<ListingOffer>> getOffers(int listingId) async {
+  Future<List<ListingOffer>> getOffers(int listingId) async {
     try {
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$listingId/offers'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/offers'),
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
@@ -103,12 +108,12 @@ class ListingService {
 
   /// Evrensel Etkileşim Metodu (Beğeni & Favori Atomik Senkronizasyon).
   /// İyimser Arayüz (Optimistic UI) prensibiyle cache'i anında günceller.
-  static Future<Map<String, dynamic>> toggleFavoriteAndLike(int listingId, bool currentLiked) async {
+  Future<Map<String, dynamic>> toggleFavoriteAndLike(int listingId, bool currentLiked) async {
     final newStatus = !currentLiked;
     setLikeCache(listingId, newStatus);
     try {
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/listings/$listingId/like'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/like'),
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
@@ -133,17 +138,17 @@ class ListingService {
   }
 
   /// Geriye dönük uyumluluk için toggleLike metodu evrensel toggleFavoriteAndLike'a yönlendirildi.
-  static Future<Map<String, dynamic>> toggleLike(int listingId) async {
+  Future<Map<String, dynamic>> toggleLike(int listingId) async {
     final current = getCachedLike(listingId) ?? false;
     return toggleFavoriteAndLike(listingId, current);
   }
 
   /// Verilen [listingId]'ye [amount] tutarında teklif verir.
   /// Başarısız olursa hata mesajını içeren [Exception] fırlatır.
-  static Future<ListingOffer> placeOffer(int listingId, double amount) async {
+  Future<ListingOffer> placeOffer(int listingId, double amount) async {
     try {
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/listings/$listingId/offers'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/offers'),
         headers: await _headers(auth: true),
         body: jsonEncode({'amount': amount}),
       );
@@ -166,10 +171,10 @@ class ListingService {
     }
   }
 
-  static Future<Map<String, dynamic>> toggleStatus(int listingId) async {
+  Future<Map<String, dynamic>> toggleStatus(int listingId) async {
     try {
       final resp = await http.patch(
-        Uri.parse('$kBaseUrl/listings/$listingId/toggle'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/toggle'),
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200 || resp.statusCode == 402) {
@@ -189,12 +194,12 @@ class ListingService {
   /// İlanlı DS / Auction start için fiyat sinyali.
   /// Teqlif'in organik satış verisinden beslenir — TUCi harcanmaz.
   /// Veri yoksa null döner.
-  static Future<Map<String, dynamic>?> getPriceSignal(int listingId) async {
+  Future<Map<String, dynamic>?> getPriceSignal(int listingId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$listingId/price-signal'),
+        Uri.parse('${_api.config.baseUrl}/listings/$listingId/price-signal'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
@@ -204,3 +209,6 @@ class ListingService {
     return null;
   }
 }
+
+final listingServiceProvider = Provider<ListingService>((ref) =>
+    ListingService(ref.watch(apiClientProvider)));

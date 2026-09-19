@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../../config/api.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/logger_service.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/localization_service.dart';
@@ -25,7 +25,7 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      await AuthService.register(
+      await ref.read(authServiceProvider).register(
         email: email,
         username: username,
         fullName: fullName,
@@ -48,9 +48,9 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<void> {
 
   Future<String?> checkUsername(String username) async {
     try {
-      final body = await apiCall(
+      final body = await ref.read(apiClientProvider).call(
         () => http.get(
-          Uri.parse('$kBaseUrl/auth/check-username')
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/check-username')
               .replace(queryParameters: {'username': username}),
         ),
       );

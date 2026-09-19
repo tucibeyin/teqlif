@@ -32,13 +32,13 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      await AuthService.login(
+      await ref.read(authServiceProvider).login(
         identifier: identifier,
         password: password,
       );
 
       try {
-        final user = await AuthService.me();
+        final user = await ref.read(authServiceProvider).me();
         if (user.locale != null && user.locale!.isNotEmpty) {
           if (userChangedLang) {
             ref.read(localeProvider.notifier).setLocale(Locale(displayedLang)).ignore();
@@ -58,7 +58,7 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<void> {
       if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED') {
         final email = e.extra['email']?.toString() ?? identifier;
         try {
-          await AuthService.resendCode(email);
+          await ref.read(authServiceProvider).resendCode(email);
         } catch (_) {}
         state = const AsyncValue.data(null);
         return LoginUnverified(email);

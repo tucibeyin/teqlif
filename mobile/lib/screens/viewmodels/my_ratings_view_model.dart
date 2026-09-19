@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 class MyRatingsState {
@@ -27,7 +27,7 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
     if (token == null) return;
     try {
       await http.patch(
-        Uri.parse('$kBaseUrl/ratings/me/mark-read'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/mark-read'),
         headers: {'Authorization': 'Bearer $token'},
       );
     } catch (_) {}
@@ -38,8 +38,8 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
     if (token == null) return const MyRatingsState();
     
     final futures = await Future.wait([
-      http.get(Uri.parse('$kBaseUrl/ratings/me/received'), headers: {'Authorization': 'Bearer $token'}),
-      http.get(Uri.parse('$kBaseUrl/ratings/me/given'), headers: {'Authorization': 'Bearer $token'}),
+      http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/received'), headers: {'Authorization': 'Bearer $token'}),
+      http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/given'), headers: {'Authorization': 'Bearer $token'}),
     ]);
     
     List<dynamic> received = [];
@@ -64,7 +64,7 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
       final token = await StorageService.getToken();
       if (token == null) return false;
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/ratings/reply/$ratingId'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/reply/$ratingId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
       final token = await StorageService.getToken();
       if (token == null) return false;
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/ratings/$userId'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/$userId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

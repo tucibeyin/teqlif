@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
 import '../core/error_mapper.dart';
@@ -114,7 +114,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     _quickAuctionCount++;
     final loc = ref.watch(localizationProvider);
     try {
-      final newState = await AuctionService.startAuction(
+      final newState = await ref.read(auctionServiceProvider).startAuction(
         widget.streamId,
         itemName: loc.t("quickAuctionItem", {"count": _quickAuctionCount.toString()}),
         startPrice: 1.0,
@@ -137,7 +137,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
     if (result == null) return;
     try {
-      final newState = await AuctionService.startAuction(
+      final newState = await ref.read(auctionServiceProvider).startAuction(
         widget.streamId,
         itemName: result['item'] as String?,
         startPrice: result['price'] as double?,
@@ -152,7 +152,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _pauseAuction() async {
     try {
-      final newState = await AuctionService.pauseAuction(widget.streamId);
+      final newState = await ref.read(auctionServiceProvider).pauseAuction(widget.streamId);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
@@ -161,7 +161,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _resumeAuction() async {
     try {
-      final newState = await AuctionService.resumeAuction(widget.streamId);
+      final newState = await ref.read(auctionServiceProvider).resumeAuction(widget.streamId);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
@@ -277,7 +277,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     }
 
     try {
-      final newState = await AuctionService.acceptBid(
+      final newState = await ref.read(auctionServiceProvider).acceptBid(
         widget.streamId,
         proofImageUrl: proofUrl,
       );
@@ -328,7 +328,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     );
     if (ok != true) return;
     try {
-      final newState = await AuctionService.endAuction(widget.streamId);
+      final newState = await ref.read(auctionServiceProvider).endAuction(widget.streamId);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
@@ -534,7 +534,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _showListingPopup(BuildContext context, int id) async {
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/listings/$id'));
+      final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$id'));
       if (resp.statusCode != 200 || !mounted) return;
       final listing = jsonDecode(resp.body) as Map<String, dynamic>;
       if (!mounted || !context.mounted) return;
@@ -545,12 +545,12 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   void _openListingSheet(BuildContext context, Map<String, dynamic> listing) {
     final rawImgs = listing['image_urls'] as List? ?? [];
     final imageUrls = rawImgs
-        .map((e) => imgUrl(e as String))
+        .map((e) => ref.read(apiClientProvider).imgUrl(e as String))
         .where((u) => u.isNotEmpty)
         .toList();
     if (imageUrls.isEmpty) {
       final single = listing['image_url'] as String?;
-      if (single != null) imageUrls.add(imgUrl(single));
+      if (single != null) imageUrls.add(ref.read(apiClientProvider).imgUrl(single));
     }
 
     final price = listing['price'];
@@ -1004,7 +1004,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                         onPressed: () async {
                           setS(() => waiting = true);
                           try {
-                            await AuctionService.buyItNow(widget.streamId);
+                            await ref.read(auctionServiceProvider).buyItNow(widget.streamId);
                             // Başarılı → bu viewer BIN alıcısı olarak işaretlenir
                             _iAmBinBuyer = true;
                             // Dialog ref.listen üzerinden kapanacak (host kararıyla)
@@ -1153,7 +1153,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
 
       try {
-        await AuctionService.acceptBuyItNow(
+        await ref.read(auctionServiceProvider).acceptBuyItNow(
           widget.streamId,
           proofImageUrl: proofUrl,
         );
@@ -1169,7 +1169,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
     } else if (ok == false) {
       try {
-        await AuctionService.rejectBuyItNow(widget.streamId);
+        await ref.read(auctionServiceProvider).rejectBuyItNow(widget.streamId);
       } on AppException catch (e) {
         _setMsg(ErrorMapper.toMessage(e, ref.read(localizationProvider)), error: true);
       } catch (e, st) {
@@ -1360,7 +1360,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       debugPrint(
         '[DEBUG_PROOF] Calling AuctionService.acceptBuyItNow with proofImageUrl: $proofUrl',
       );
-      await AuctionService.acceptBuyItNow(
+      await ref.read(auctionServiceProvider).acceptBuyItNow(
         widget.streamId,
         proofImageUrl: proofUrl,
       );
@@ -1392,7 +1392,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     if (_binLoading) return;
     setState(() => _binLoading = true);
     try {
-      await AuctionService.rejectBuyItNow(widget.streamId);
+      await ref.read(auctionServiceProvider).rejectBuyItNow(widget.streamId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1474,7 +1474,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     // context'i async öncesi sakla (use_build_context_synchronously için)
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await AuctionService.placeBid(widget.streamId, amount);
+      await ref.read(auctionServiceProvider).placeBid(widget.streamId, amount);
       _customBidCtrl.clear();
       _setMsg(loc.t("auctionBidReceived", {"amount": _fmt(amount)}));
     } on AppException catch (e) {
@@ -1555,7 +1555,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     setState(() => _loading = true);
     final loc = ref.read(localizationProvider);
     try {
-      await AuctionService.buyItNow(widget.streamId);
+      await ref.read(auctionServiceProvider).buyItNow(widget.streamId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2104,10 +2104,10 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
     if (token == null) return [];
     final uri = widget.hostUserId != null
         ? Uri.parse(
-            '$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true&limit=20&offset=$offset',
+            '${ref.read(apiClientProvider).config.baseUrl}/listings?user_id=${widget.hostUserId}&active=true&limit=20&offset=$offset',
           )
         : Uri.parse(
-            '$kBaseUrl/listings/my?active=true&limit=20&offset=$offset',
+            '${ref.read(apiClientProvider).config.baseUrl}/listings/my?active=true&limit=20&offset=$offset',
           );
     try {
       final resp = await http.get(
@@ -2224,7 +2224,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
                                   ? imgs[0] as String
                                   : (lItem['image_url'] as String?);
                               final url = rawImg != null
-                                  ? imgUrl(rawImg)
+                                  ? ref.read(apiClientProvider).imgUrl(rawImg)
                                   : null;
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
@@ -2521,7 +2521,7 @@ class _BidBlockedSheet extends ConsumerWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E40AF).withOpacity(0.12),
+              color: const Color(0xFF1E40AF).withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(

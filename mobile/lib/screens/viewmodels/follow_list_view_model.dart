@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../core/app_exception.dart';
 import '../../services/storage_service.dart';
 
@@ -45,7 +45,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
     final segment = arg.type == FollowListType.followers ? 'followers' : 'following';
     final headers = await _authHeaders();
     final resp = await http.get(
-      Uri.parse('$kBaseUrl/follows/${arg.userId}/$segment'),
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/${arg.userId}/$segment'),
       headers: headers,
     );
     if (resp.statusCode == 200) {
@@ -76,7 +76,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
 
     try {
       final headers = await _authHeaders();
-      final uri = Uri.parse('$kBaseUrl/follows/$userId');
+      final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/follows/$userId');
       final resp = isFollowing
           ? await http.delete(uri, headers: headers)
           : await http.post(uri, headers: headers);

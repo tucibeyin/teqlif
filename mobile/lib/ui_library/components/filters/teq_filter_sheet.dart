@@ -90,7 +90,7 @@ class _TeqFilterSheetState extends ConsumerState<TeqFilterSheet> {
       _maxController.text = TeqNumberFormatter.format(_pending.maxPrice);
     }
     if (widget.showCity) {
-      StateService.getStates().then((c) {
+      ref.read(stateServiceProvider).getStates().then((c) {
         if (mounted) setState(() { _cities = c; _citiesLoaded = true; });
       });
     }

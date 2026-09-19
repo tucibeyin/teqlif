@@ -34,7 +34,7 @@ class PurchasesViewModel extends AutoDisposeAsyncNotifier<PurchasesState> {
   }
 
   Future<PurchasesState> _fetchData() async {
-    final purchases = await AuthService.getMyPurchases();
+    final purchases = await ref.read(authServiceProvider).getMyPurchases();
     final categories = state.valueOrNull?.categories;
     final filter = state.valueOrNull?.filter ?? const ListingFilterState();
     return PurchasesState(purchases: purchases, categories: categories, filter: filter);

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 class NotificationSettingsState {
@@ -72,7 +72,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
     }
     
     final resp = await http.get(
-      Uri.parse('$kBaseUrl/auth/notification-prefs'),
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
       headers: {'Authorization': 'Bearer $token'},
     );
     
@@ -112,7 +112,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
     if (token == null) return;
     try {
       await http.patch(
-        Uri.parse('$kBaseUrl/auth/notification-prefs'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -136,7 +136,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
     if (token == null) return;
     try {
       final resp = await http.patch(
-        Uri.parse('$kBaseUrl/auth/notification-prefs'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

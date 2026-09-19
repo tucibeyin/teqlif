@@ -47,7 +47,7 @@ class InviteToCallViewModel extends AutoDisposeAsyncNotifier<InviteToCallState> 
     ));
 
     try {
-      await CallService.instance.inviteToCall(userId);
+      await ref.read(callServiceProvider).inviteToCall(userId);
       final st = state.value;
       if (st != null) {
         state = AsyncValue.data(st.copyWith(

@@ -16,7 +16,7 @@ class ResetPasswordViewModel extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      await AuthService.resetPassword(
+      await ref.read(authServiceProvider).resetPassword(
         email: email,
         code: code,
         newPassword: newPassword,

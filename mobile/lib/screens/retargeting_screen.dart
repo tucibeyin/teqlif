@@ -3,7 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import 'package:cached_network_image/cached_network_image.dart';
 import "../services/localization_service.dart";
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
@@ -149,7 +149,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
               final sel = state.selectedReportListingId == lid;
               final imageUrls = listing['image_urls'] as List? ?? [];
               final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : listing['image_url'] as String?;
-              final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+              final imageUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
               final title = listing['title'] as String? ?? '';
               return GestureDetector(
                 onTap: () => viewModel.selectReportListing(lid),
@@ -994,7 +994,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
               final isSelected = state.selectedListing != null && item['id'] == state.selectedListing!['id'];
               final imageUrls = item['image_urls'] as List? ?? [];
               final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : item['image_url'] as String?;
-              final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+              final imageUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
               return GestureDetector(
                 onTap: () => viewModel.selectCampaignListing(item),
                 child: Container(

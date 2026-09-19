@@ -31,7 +31,7 @@ class VerifyViewModel extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      await AuthService.verify(
+      await ref.read(authServiceProvider).verify(
         email: email,
         code: code,
       );
@@ -50,8 +50,8 @@ class VerifyViewModel extends AutoDisposeAsyncNotifier<void> {
     // UI handles its own `_resending` bool for the resend button.
     try {
       final lang = ref.read(localizationProvider).lang;
-      final msg = await AuthService.resendCode(email, lang: lang);
-      return ResendSent(msg ?? '');
+      final msg = await ref.read(authServiceProvider).resendCode(email, lang: lang);
+      return ResendSent(msg);
     } catch (e) {
       if (e is AppException && e.code == 'CODE_ALREADY_SENT') {
         final secs = (e.extra['seconds_remaining'] as num?)?.toInt() ?? 600;

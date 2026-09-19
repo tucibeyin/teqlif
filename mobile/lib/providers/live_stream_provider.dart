@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../models/stream.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -15,7 +15,7 @@ class FollowedStreamsNotifier
     extends AutoDisposeAsyncNotifier<List<StreamOut>> {
   bool _disposed = false;
 
-  static const _url = '$kBaseUrl/streams/following/live';
+  String get _url => '${ref.read(apiClientProvider).config.baseUrl}/streams/following/live';
 
   static List<StreamOut> _parse(dynamic raw) =>
       (raw as List)
@@ -28,7 +28,7 @@ class FollowedStreamsNotifier
     ref.onDispose(() => _disposed = true);
 
     List<StreamOut>? last;
-    await for (final batch in ApiService.get<List<StreamOut>>(
+    await for (final batch in ref.read(apiServiceProvider).get<List<StreamOut>>(
       url: _url,
       cacheKey: StorageService.cacheStreams,
       cacheTtl: const Duration(minutes: 3),
@@ -45,7 +45,7 @@ class FollowedStreamsNotifier
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
-      await for (final batch in ApiService.get<List<StreamOut>>(
+      await for (final batch in ref.read(apiServiceProvider).get<List<StreamOut>>(
         url: _url,
         cacheKey: StorageService.cacheStreams,
         cacheTtl: const Duration(minutes: 3),

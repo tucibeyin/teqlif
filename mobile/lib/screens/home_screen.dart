@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
@@ -8,11 +7,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
-import '../services/api_service.dart';
 import '../services/image_cache_manager.dart';
 
 import '../services/storage_service.dart';
@@ -23,13 +21,11 @@ import '../services/listing_service.dart';
 import '../providers/listing_interaction_provider.dart';
 import '../widgets/shimmer_loading.dart';
 import '../utils/once.dart';
-import '../utils/error_helper.dart';
 import '../utils/number_formatter.dart';
 import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
-import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
@@ -258,7 +254,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                     true) {
                                   final cid = state.recentListings[i]['campaign_id'];
                                   if (cid != null) {
-                                    AnalyticsService.trackAdClick(cid as int);
+                                    ref.read(analyticsServiceProvider).trackAdClick(cid as int);
                                   }
                                 }
                                 Navigator.push(
@@ -314,7 +310,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                       scrollDirection: Axis.horizontal,
                                       padding: const EdgeInsets.symmetric(horizontal: 14),
                                       itemCount: 4,
-                                      itemBuilder: (_, __) => Container(
+                                      itemBuilder: (_, _) => Container(
                                         width: 100,
                                         margin: const EdgeInsetsDirectional.only(end: 8),
                                         child: ShimmerBox(
@@ -330,7 +326,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                   final item = state.hesitatedListings[i] as Map<String, dynamic>;
                                   final lid = item['id'] as int?;
                                   final raw = item['image_url'] as String?;
-                                  final photo = raw != null ? imgUrl(raw) : null;
+                                  final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
                                   final price = item['price'] != null
                                       ? TeqNumberFormatter.format(item['price'], fieldKey: 'price', unit: '₺')
                                       : '';
@@ -340,7 +336,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                   return GestureDetector(
                                     onTap: () {
                                       if (lid != null) {
-                                        AnalyticsService.logInteraction(
+                                        ref.read(analyticsServiceProvider).logInteraction(
                                           itemId: lid,
                                           itemType: 'listing',
                                           interactionType: 'hesitated_shelf_tap',
@@ -530,7 +526,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                 if (item['is_sponsored'] == true) {
                                   final cid = item['campaign_id'];
                                   if (cid != null) {
-                                    AnalyticsService.trackAdClick(cid as int);
+                                    ref.read(analyticsServiceProvider).trackAdClick(cid as int);
                                   }
                                 } else if (_isLoggedIn) {
                                   final id = item['id'] as int?;
@@ -538,7 +534,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                     final ownerId =
                                         (item['user'] as Map?)?['id'] as int?;
                                     unawaited(
-                                      AnalyticsService.logInteraction(
+                                      ref.read(analyticsServiceProvider).logInteraction(
                                         itemId: id,
                                         itemType: 'listing',
                                         interactionType: 'click',
@@ -617,7 +613,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
-      if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+      if (cid != null) ref.read(analyticsServiceProvider).trackAdImpression(cid as int);
     }
   }
 
@@ -628,7 +624,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
       _likesCount = widget.listing['likes_count'] as int? ?? 0;
       if (widget.listing['is_sponsored'] == true) {
         final cid = widget.listing['campaign_id'];
-        if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+        if (cid != null) ref.read(analyticsServiceProvider).trackAdImpression(cid as int);
       }
     }
   }
@@ -641,7 +637,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final http.Response resp = await http.post(
-        Uri.parse('$kBaseUrl/feed/not-interested/$listingId'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/not-interested/$listingId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 204 && mounted) {
@@ -685,7 +681,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
       _likesCount += prevLiked ? -1 : 1;
     });
     try {
-      final result = await ListingService.toggleFavoriteAndLike(id, prevLiked);
+      final result = await ref.read(listingServiceProvider).toggleFavoriteAndLike(id, prevLiked);
       final newCount = result['likes_count'] as int? ?? _likesCount;
       final newLiked = result['is_liked'] as bool? ?? result['is_favorited'] as bool? ?? !prevLiked;
       widget.listing['likes_count'] = newCount;
@@ -725,7 +721,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
         : (widget.listing['image_url'] as String?);
-    final photo = raw != null ? imgUrl(raw) : null;
+    final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
     final price = _fmt(widget.listing['price']);
 
     return RepaintBoundary(

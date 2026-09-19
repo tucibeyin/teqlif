@@ -13,7 +13,7 @@ class ForgotPasswordViewModel extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncValue.loading();
     try {
       final lang = ref.read(localizationProvider).lang;
-      await AuthService.requestPasswordReset(email, lang: lang);
+      await ref.read(authServiceProvider).requestPasswordReset(email, lang: lang);
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {

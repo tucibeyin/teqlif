@@ -55,7 +55,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
       loadLocalPlanType();
       verifyPremium();
       loadCredits();
-      AnalyticsService.trackEvent('pro_hub_view', {'is_premium': arg});
+      ref.read(analyticsServiceProvider).trackEvent('pro_hub_view', {'is_premium': arg});
     });
     return ProHubState(isPremium: arg);
   }
@@ -69,7 +69,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
 
   Future<void> verifyPremium() async {
     try {
-      final user = await AuthService.me();
+      final user = await ref.read(authServiceProvider).me();
       if (user.isPremium != state.isPremium || user.planType != state.planType) {
         state = state.copyWith(isPremium: user.isPremium, planType: user.planType);
       }
@@ -90,10 +90,10 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
   Future<void> loadCredits() async {
     state = state.copyWith(isLoading: true);
     final results = await Future.wait([
-      AnalyticsService.getBlastCredits(),
-      AnalyticsService.getBoostCredits(),
-      AnalyticsService.getAiDescCredits(),
-      AnalyticsService.getReactivationCredits(),
+      ref.read(analyticsServiceProvider).getBlastCredits(),
+      ref.read(analyticsServiceProvider).getBoostCredits(),
+      ref.read(analyticsServiceProvider).getAiDescCredits(),
+      ref.read(analyticsServiceProvider).getReactivationCredits(),
     ]);
 
     state = state.copyWith(

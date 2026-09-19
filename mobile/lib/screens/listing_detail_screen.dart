@@ -9,7 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'retargeting_screen.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/analytics_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/share_service.dart';
@@ -27,7 +28,6 @@ import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'edit_listing_screen.dart';
 import 'messages_screen.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../providers/listing_detail_provider.dart';
 import '../models/enums.dart';
@@ -126,9 +126,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     _enteredAt = DateTime.now();
     _pageCtrl = PageController();
     final imgs = widget.listing['image_urls'] as List? ?? [];
-    _images = imgs.cast<String>().map(imgUrl).toList();
+    _images = imgs.cast<String>().map((u) => ref.read(apiClientProvider).imgUrl(u)).toList();
     if (_images.isEmpty && widget.listing['image_url'] != null) {
-      _images.add(imgUrl(widget.listing['image_url'] as String));
+      _images.add(ref.read(apiClientProvider).imgUrl(widget.listing['image_url'] as String));
     }
 
     // StateNotifier build döngüsü içinde state değişikliğine izin vermez.
@@ -147,7 +147,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     _campaignId = widget.listing['campaign_id'] as int?;
     if (_videoUrl != null) {
       _videoCtrl = VideoPlayerController.networkUrl(
-        Uri.parse(imgUrl(_videoUrl!)),
+        Uri.parse(ref.read(apiClientProvider).imgUrl(_videoUrl!)),
       );
       _videoCtrl!.initialize().then((_) {
         if (!mounted || !context.mounted) return;
@@ -191,7 +191,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     // Fallback: SharedPreferences'ta id yoksa ama token varsa backend'den çek
     if (userId == null && token != null) {
       try {
-        final user = await AuthService.me();
+        final user = await ref.read(authServiceProvider).me();
         await StorageService.saveUserInfo(
           id: user.id,
           email: user.email,
@@ -223,7 +223,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   Future<void> _loadNotificationCooldown(int listingId) async {
-    final secs = await AnalyticsService.getNotificationCooldown(listingId);
+    final secs = await ref.read(analyticsServiceProvider).getNotificationCooldown(listingId);
     if (!mounted) return;
     ref.read(listingDetailProvider(listingId).notifier).startCooldown(secs);
   }
@@ -244,7 +244,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (id == null) return;
     try {
       await http.post(
-        Uri.parse('$kBaseUrl/listings/$id/view'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$id/view'),
         headers: {'Authorization': 'Bearer $token'},
       );
     } catch (_) {}
@@ -254,7 +254,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final id = widget.listing['id'] as int?;
     if (id == null) return;
     try {
-      final data = await ListingService.getListingById(id);
+      final data = await ref.read(listingServiceProvider).getListingById(id);
       if (data != null && mounted) {
         setState(() {
           widget.listing.addAll(data);
@@ -282,7 +282,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       _likesCount += prevLiked ? -1 : 1;
     });
     try {
-      final result = await ListingService.toggleFavoriteAndLike(listingId, prevLiked);
+      final result = await ref.read(listingServiceProvider).toggleFavoriteAndLike(listingId, prevLiked);
       final newCount = result['likes_count'] as int? ?? _likesCount;
       final newLiked = result['is_liked'] as bool? ?? result['is_favorited'] as bool? ?? !prevLiked;
       widget.listing['likes_count'] = newCount;
@@ -291,7 +291,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         setState(() {
           _likesCount = newCount;
         });
-        AnalyticsService.logInteraction(
+        ref.read(analyticsServiceProvider).logInteraction(
           itemId: listingId,
           itemType: 'listing',
           interactionType: newLiked ? 'listing_like' : 'listing_unlike',
@@ -339,7 +339,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final loc = ref.read(localizationProvider);
     final id = widget.listing['id'] as int;
 
-    final costData = await ListingService.getReactivationCost(id);
+    final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
     if (!mounted || !context.mounted) return;
 
     final isPremium = costData?['is_premium'] as bool? ?? false;
@@ -408,7 +408,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final token = await StorageService.getToken();
     if (token == null) return;
     try {
-      final resp = await ListingService.toggleStatus(id);
+      final resp = await ref.read(listingServiceProvider).toggleStatus(id);
       if (resp['statusCode'] == 200 && mounted) {
         final data = resp['body'] as Map<String, dynamic>;
         final newStatus = data['status'] as String? ?? 'active';
@@ -438,7 +438,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final rawPrice = widget.listing['price'];
     final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
     if (listingId != null && durationSec >= 2) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'view',
@@ -449,7 +449,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     // Detail dwell: kullanıcı 30+ saniye harcadıysa güçlü ilgi sinyali
     if (listingId != null && durationSec >= 30) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'detail_dwell',
@@ -460,7 +460,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     // Photo swipe depth
     if (listingId != null && _maxPhotoReached > 0) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'listing_photo_swipe',
@@ -470,7 +470,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     // Scroll depth
     if (listingId != null && _maxScrollDepth > 0.1) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'listing_scroll_depth',
@@ -486,7 +486,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         final pos = _videoCtrl!.value.position.inMilliseconds;
         final pct = (pos / dur).clamp(0.0, 1.0);
         if (pct > 0.01) {
-          AnalyticsService.logInteraction(
+          ref.read(analyticsServiceProvider).logInteraction(
             itemId: listingId,
             itemType: 'listing',
             interactionType: 'listing_video_watch',
@@ -504,7 +504,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (_offerFieldTouched) {
       final id = widget.listing['id'] as int?;
       if (id != null) {
-        AnalyticsService.logInteraction(
+        ref.read(analyticsServiceProvider).logInteraction(
           itemId: id,
           itemType: 'listing',
           interactionType: 'bid_hesitation',
@@ -530,7 +530,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   Future<void> _loadOffers() async {
     final id = widget.listing['id'] as int;
     try {
-      final offers = await ListingService.getOffers(id);
+      final offers = await ref.read(listingServiceProvider).getOffers(id);
       if (!mounted || !context.mounted) return;
       _offersNotifier.value = offers;
     } finally {
@@ -546,7 +546,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
-          .get(Uri.parse('$kBaseUrl/listings/$lid/similar'), headers: headers)
+          .get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$lid/similar'), headers: headers)
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode == 200 && mounted) {
         final data = jsonDecode(resp.body) as List;
@@ -565,12 +565,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     setState(() => _offerSubmitting = true);
     try {
       final id = widget.listing['id'] as int;
-      await ListingService.placeOffer(id, amount);
+      await ref.read(listingServiceProvider).placeOffer(id, amount);
       if (!mounted || !context.mounted) return;
       _offerCtrl.clear();
       _offerFieldTouched = false;
       _offerTypedAmount = null;
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: id,
         itemType: 'listing',
         interactionType: 'listing_offer_submit',
@@ -578,7 +578,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         subcategory: widget.listing['subcategory'] as String? ?? '',
       );
       TeqSnackBar.show(message: loc.t("offerSuccess"), type: TeqSnackBarType.success);
-      final offers = await ListingService.getOffers(id);
+      final offers = await ref.read(listingServiceProvider).getOffers(id);
       if (mounted && context.mounted) _offersNotifier.value = offers;
     } catch (e) {
       if (!mounted || !context.mounted) return;
@@ -603,7 +603,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (user == null) return;
     final sellerId = user['id'] as int?;
     if (sellerId != null && sellerId != _myUserId) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: widget.listing['id'] as int? ?? 0,
         itemType: 'listing',
         interactionType: 'listing_profile_tap',
@@ -646,7 +646,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       return;
     }
 
-    AnalyticsService.logInteraction(
+    ref.read(analyticsServiceProvider).logInteraction(
       itemId: widget.listing['id'] as int? ?? 0,
       itemType: 'listing',
       interactionType: 'listing_chat_open',
@@ -693,7 +693,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final id = widget.listing['id'];
     try {
       final resp = await http.delete(
-        Uri.parse('$kBaseUrl/listings/$id'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (!mounted || !context.mounted) return;
@@ -737,7 +737,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     notifier.setSending(true);
 
     // Hedef kitle büyüklüğünü çek
-    final est = await AnalyticsService.estimateAudienceForListing(listingId);
+    final est = await ref.read(analyticsServiceProvider).estimateAudienceForListing(listingId);
     if (est == null || !mounted || !context.mounted) {
       notifier.setSending(false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -775,7 +775,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (result == null || !mounted || !context.mounted) return;
 
     notifier.setSending(true);
-    final apiResult = await AnalyticsService.sendMassNotificationForListing(
+    final apiResult = await ref.read(analyticsServiceProvider).sendMassNotificationForListing(
       listingId: listingId,
       estimatedCost: result['cost']!,
       recipientCount: result['count']!,
@@ -824,7 +824,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     try {
       final token = await StorageService.getToken();
       final cr = await http.get(
-        Uri.parse('$kBaseUrl/ads/boost-credits'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ads/boost-credits'),
         headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (cr.statusCode == 200) {
@@ -835,7 +835,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         // TUCi bakiyesini de çek
         final tokenInner = await StorageService.getToken();
         final ur = await http.get(
-          Uri.parse('$kBaseUrl/users/me'),
+          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/me'),
           headers: {
             if (tokenInner != null) 'Authorization': 'Bearer $tokenInner',
           },
@@ -872,7 +872,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           final token = await StorageService.getToken();
           try {
             final resp = await http.post(
-              Uri.parse('$kBaseUrl/ads/campaigns'),
+              Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ads/campaigns'),
               headers: {
                 'Content-Type': 'application/json',
                 if (token != null) 'Authorization': 'Bearer $token',
@@ -1180,7 +1180,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final id = widget.listing['id'];
     try {
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/reports'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/reports'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -1216,8 +1216,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     // autoDispose provider'ı isMine ve _isLoggedIn durumundan bağımsız canlı tut.
     // _isActive/_isPassive/_isListingInitialized getterları koşullu branch'larda çağrılıyor;
     // hiç izleyici olmazsa provider dispose olup isInitialized sıfırlanır.
-    final _listingDetailId = widget.listing['id'] as int?;
-    if (_listingDetailId != null) ref.watch(listingDetailProvider(_listingDetailId));
+    final listingDetailId = widget.listing['id'] as int?;
+    if (listingDetailId != null) ref.watch(listingDetailProvider(listingDetailId));
 
     return Scaffold(
       backgroundColor: AppColors.bg(context),
@@ -1245,7 +1245,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     : box.localToGlobal(Offset.zero) & box.size;
                 final imageUrl = (_images.isNotEmpty) ? _images.first : null;
                 if (id != null) {
-                  AnalyticsService.logInteraction(
+                  ref.read(analyticsServiceProvider).logInteraction(
                     itemId: id,
                     itemType: 'listing',
                     interactionType: 'listing_share',
@@ -1557,7 +1557,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           Builder(builder: (ctx) {
                             final rawImg = user['profile_image_thumb_url'] as String?
                                 ?? user['profile_image_url'] as String?;
-                            final photoUrl = rawImg != null ? imgUrl(rawImg) : null;
+                            final photoUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
                             return CircleAvatar(
                               radius: 24,
                               backgroundColor: AppColors.primaryBg(context),
@@ -1781,7 +1781,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     final rawPhoto = imgs.isNotEmpty
                         ? imgs[0] as String
                         : item['image_url'] as String?;
-                    final photo = rawPhoto != null ? imgUrl(rawPhoto) : null;
+                    final photo = rawPhoto != null ? ref.read(apiClientProvider).imgUrl(rawPhoto) : null;
                     return GestureDetector(
                       onTap: () => Navigator.push(
                         ctx,
@@ -2323,7 +2323,6 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final theme = Theme.of(ctx);
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
           minChildSize: 0.4,
@@ -2342,7 +2341,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.textSecondary(ctx).withOpacity(0.3),
+                    color: AppColors.textSecondary(ctx).withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -2535,7 +2534,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               radius: 18,
               backgroundColor: AppColors.primaryBg(context),
               backgroundImage: offer.profileImageUrl != null
-                  ? CachedNetworkImageProvider(imgUrl(offer.profileImageUrl!))
+                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(offer.profileImageUrl!))
                   : null,
               child: offer.profileImageUrl == null
                   ? Text(
@@ -2589,7 +2588,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   void _openFullscreen(int startIndex) {
     final listingId = widget.listing['id'] as int?;
     if (listingId != null) {
-      AnalyticsService.logInteraction(
+      ref.read(analyticsServiceProvider).logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'listing_photo_fullscreen',
@@ -2719,7 +2718,7 @@ class _SellerTrustRow extends ConsumerWidget {
   }
 }
 
-class _TrustChip extends StatelessWidget {
+class _TrustChip extends ConsumerWidget {
   final IconData icon;
   final String value;
   final String title;
@@ -2744,7 +2743,7 @@ class _TrustChip extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.fromLTRB(6, 2, 4, 2),
       decoration: BoxDecoration(
@@ -2802,7 +2801,7 @@ class _ListingDeepLinkLoaderState extends ConsumerState<ListingDeepLinkLoader> {
         if (token != null) 'Authorization': 'Bearer $token',
       };
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/${widget.listingId}'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/${widget.listingId}'),
         headers: headers,
       );
       if (!mounted || !context.mounted) return;
@@ -2829,7 +2828,7 @@ class _ListingDeepLinkLoaderState extends ConsumerState<ListingDeepLinkLoader> {
 
 // ── Yardımcı widget ───────────────────────────────────────────────────────────
 
-class _BoostRow extends StatelessWidget {
+class _BoostRow extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String value;
@@ -2843,7 +2842,7 @@ class _BoostRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -2932,8 +2931,9 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
           ? widget.maxAudience
           : widget.perBlastCap;
     }
-    if (requestedCount > widget.maxAudience)
+    if (requestedCount > widget.maxAudience) {
       requestedCount = widget.maxAudience;
+    }
 
     final actualCount = requestedCount;
     final freeUsed = widget.creditsLeft < actualCount

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../models/call_history_item.dart';
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 class CallHistoryFilterState {
@@ -43,7 +43,7 @@ class CallHistoryViewModel extends AutoDisposeFamilyAsyncNotifier<CallHistoryFil
 
   Future<CallHistoryFilterState> _fetchPage(int page) async {
     final token = await StorageService.getToken();
-    final uri = Uri.parse('$kBaseUrl/calls/history?page=$page&per_page=20&filter=$arg');
+    final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/calls/history?page=$page&per_page=20&filter=$arg');
     
     final resp = await http.get(
       uri,
@@ -83,7 +83,7 @@ class CallHistoryViewModel extends AutoDisposeFamilyAsyncNotifier<CallHistoryFil
         page: newState.page,
         loadingMore: false,
       ));
-    } catch (e, st) {
+    } catch (e) {
       state = AsyncValue.data(currentState.copyWith(loadingMore: false));
       // Optionally surface error to UI via toast in the View, not overriding state.
     }

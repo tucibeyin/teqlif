@@ -1,37 +1,39 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../core/logger_service.dart';
 import '../models/user.dart';
 import 'storage_service.dart';
+import '../core/network/api_client.dart';
 
 final _log = LoggerService.instance;
 
-/// Describes WHY a token refresh attempt failed.
-///
-/// - [succeeded]     — new tokens saved, caller can retry the original request
-/// - [noToken]       — no refresh token in storage; user was never logged in
-///                     or was already explicitly logged out → do NOT signal logout
-/// - [networkError]  — transient failure (no connectivity, server 5xx, timeout)
-///                     → do NOT signal logout; the session may still be valid
-/// - [revoked]       — backend returned 401 on the refresh endpoint; the
-///                     refresh token is genuinely invalid → signal logout
 enum RefreshOutcome { succeeded, noToken, networkError, revoked }
 
+final authServiceProvider = Provider<AuthService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return AuthService(apiClient);
+});
+
 class AuthService {
+  final ApiClient _api;
+
+  AuthService(this._api);
+
   // Her iki token da geçersizleştiğinde login ekranına yönlendirme sinyali
-  static final StreamController<void> authFailedStream =
-      StreamController<void>.broadcast();
+  final StreamController<void> authFailedStream = StreamController<void>.broadcast();
 
   // Aynı anda birden fazla refresh isteği olmasın (race condition önlemi)
-  static Completer<RefreshOutcome>? _refreshInProgress;
-  static Future<Map<String, String>> _headers({bool auth = false}) async {
+  Completer<RefreshOutcome>? _refreshInProgress;
+
+  Future<Map<String, String>> _headers({bool auth = false}) async {
     final token = auth ? await StorageService.getToken() : null;
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
-  static Future<String> register({
+  Future<String> register({
     required String email,
     required String username,
     required String fullName,
@@ -55,9 +57,9 @@ class AuthService {
       if (crossBorderConsent && consentLocale != null) 'consent_locale': consentLocale,
       if (referredBy != null && referredBy.isNotEmpty) 'referred_by': referredBy,
     };
-    final body = await apiCall(
+    final body = await _api.call(
       () => http.post(
-        Uri.parse('$kBaseUrl/auth/register'),
+        Uri.parse('${_api.config.baseUrl}/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
       ),
@@ -65,13 +67,13 @@ class AuthService {
     return body['message'] as String;
   }
 
-  static Future<User> verify({
+  Future<User> verify({
     required String email,
     required String code,
   }) async {
-    final body = await apiCall(
+    final body = await _api.call(
       () => http.post(
-        Uri.parse('$kBaseUrl/auth/verify'),
+        Uri.parse('${_api.config.baseUrl}/auth/verify'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'code': code}),
       ),
@@ -95,10 +97,10 @@ class AuthService {
     return user;
   }
 
-  static Future<String> resendCode(String email, {String lang = "tr"}) async {
-    final body = await apiCall(
+  Future<String> resendCode(String email, {String lang = "tr"}) async {
+    final body = await _api.call(
       () => http.post(
-        Uri.parse('$kBaseUrl/auth/resend-code'),
+        Uri.parse('${_api.config.baseUrl}/auth/resend-code'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'lang': lang}),
       ),
@@ -106,13 +108,13 @@ class AuthService {
     return body['message'] as String;
   }
 
-  static Future<User> login({
+  Future<User> login({
     required String identifier,
     required String password,
   }) async {
-    final body = await apiCall(
+    final body = await _api.call(
       () => http.post(
-        Uri.parse('$kBaseUrl/auth/login'),
+        Uri.parse('${_api.config.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'login_identifier': identifier, 'password': password}),
       ),
@@ -136,24 +138,18 @@ class AuthService {
     return user;
   }
 
-  /// Access token süresi dolduğunda yeni token çifti almayı dener.
-  /// Aynı anda birden fazla çağrı olursa ilk çağrının sonucunu beklerler (mutex).
-  /// Dönüş değeri [RefreshOutcome] — caller neden başarısız olduğunu bilir ve
-  /// yalnızca gerçek bir revoke durumunda logout sinyali verir.
-  static Future<RefreshOutcome> tryRefresh() async {
-    // Halihazırda refresh yapılıyorsa sonucunu bekle
+  Future<RefreshOutcome> tryRefresh() async {
     if (_refreshInProgress != null) {
       return _refreshInProgress!.future;
     }
 
     final rt = await StorageService.getRefreshToken();
-    // Refresh token yoksa kullanıcı zaten logout — logout sinyali gerekmez
     if (rt == null) return RefreshOutcome.noToken;
 
     _refreshInProgress = Completer<RefreshOutcome>();
     try {
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/auth/refresh'),
+        Uri.parse('${_api.config.baseUrl}/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': rt}),
       );
@@ -165,8 +161,6 @@ class AuthService {
         _refreshInProgress = null;
         return RefreshOutcome.succeeded;
       }
-      // 401 = backend refresh token'ı açıkça reddetti → gerçek revoke
-      // Diğer kodlar (500, 503, vb.) geçici sorun → logout tetikleme
       final outcome = resp.statusCode == 401
           ? RefreshOutcome.revoked
           : RefreshOutcome.networkError;
@@ -181,24 +175,24 @@ class AuthService {
     }
   }
   
-  static Future<void> requestPasswordReset(String email, {String lang = "tr"}) async {
-    await apiCall(
+  Future<void> requestPasswordReset(String email, {String lang = "tr"}) async {
+    await _api.call(
       () => http.post(
-        Uri.parse('$kBaseUrl/auth/forgot-password'),
+        Uri.parse('${_api.config.baseUrl}/auth/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'lang': lang}),
       ),
     );
   }
 
-  static Future<void> resetPassword({
+  Future<void> resetPassword({
     required String email,
     required String code,
     required String newPassword,
   }) async {
-    await apiCall(
+    await _api.call(
       () => http.post(
-        Uri.parse('$kBaseUrl/auth/reset-password'),
+        Uri.parse('${_api.config.baseUrl}/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -209,20 +203,20 @@ class AuthService {
     );
   }
 
-  static Future<User> me() async {
-    final body = await apiCall(
+  Future<User> me() async {
+    final body = await _api.call(
       () async => http.get(
-        Uri.parse('$kBaseUrl/auth/me'),
+        Uri.parse('${_api.config.baseUrl}/auth/me'),
         headers: await _headers(auth: true),
       ),
     );
     return User.fromJson(body);
   }
 
-  static Future<void> deleteAccount(String password) async {
-    await apiCall(
+  Future<void> deleteAccount(String password) async {
+    await _api.call(
       () async => http.delete(
-        Uri.parse('$kBaseUrl/auth/delete-account'),
+        Uri.parse('${_api.config.baseUrl}/auth/delete-account'),
         headers: await _headers(auth: true),
         body: jsonEncode({'password': password}),
       ),
@@ -230,9 +224,7 @@ class AuthService {
     await StorageService.clear();
   }
 
-  /// FCM ve/veya VoIP token'ı backend'e kaydeder.
-  /// En az biri non-null olmalıdır; ikisi de null ise istek atılmaz.
-  static Future<void> saveDeviceTokens({
+  Future<void> saveDeviceTokens({
     String? fcmToken,
     String? voipToken,
     bool clearVoipToken = false,
@@ -247,48 +239,49 @@ class AuthService {
     }
     if (apnsSandbox != null) body['apns_sandbox'] = apnsSandbox;
 
-    if (body.isEmpty) return; // Gönderilebilecek bir şey yok
+    if (body.isEmpty) return;
 
-    await apiCall(
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auth/device-tokens'),
+        Uri.parse('${_api.config.baseUrl}/auth/device-tokens'),
         headers: await _headers(auth: true),
         body: jsonEncode(body),
       ),
     );
   }
 
-  static Future<void> logout() async {
+  Future<void> logout() async {
     await StorageService.clear();
   }
 
-  static Future<void> seedOnboardingInterests(List<String> categories) async {
-    await apiCall(
+  Future<void> seedOnboardingInterests(List<String> categories) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/onboarding/interests'),
+        Uri.parse('${_api.config.baseUrl}/onboarding/interests'),
         headers: await _headers(auth: true),
         body: jsonEncode({'categories': categories}),
       ),
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getMyPurchases() async {
-    final body = await apiCallList(
+  Future<List<Map<String, dynamic>>> getMyPurchases() async {
+    final body = await _api.callList(
       () async => http.get(
-        Uri.parse('$kBaseUrl/auth/me/commerce/purchases'),
+        Uri.parse('${_api.config.baseUrl}/auth/me/commerce/purchases'),
         headers: await _headers(auth: true),
       ),
     );
     return List<Map<String, dynamic>>.from(body);
   }
 
-  static Future<List<Map<String, dynamic>>> getMySales() async {
-    final body = await apiCallList(
+  Future<List<Map<String, dynamic>>> getMySales() async {
+    final body = await _api.callList(
       () async => http.get(
-        Uri.parse('$kBaseUrl/auth/me/commerce/sales'),
+        Uri.parse('${_api.config.baseUrl}/auth/me/commerce/sales'),
         headers: await _headers(auth: true),
       ),
     );
     return List<Map<String, dynamic>>.from(body);
   }
 }
+

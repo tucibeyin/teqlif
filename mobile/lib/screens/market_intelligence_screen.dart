@@ -76,8 +76,6 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
     final catSearch   = (state.demand?['by_category']          as List? ?? []).cast<Map<String, dynamic>>();
     final peakHours   = (state.trends?['peak_hours']           as List? ?? []).cast<Map<String, dynamic>>();
     final trendCats   = (state.trends?['trending_categories']  as List? ?? []).cast<Map<String, dynamic>>();
-    final growth      = state.trends?['average_spend_growth']  as double?;
-
     final maxQCount  = queries.isEmpty  ? 1 : (queries.map((q) => (q['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b));
     final maxHrCount = peakHours.isEmpty ? 1 : (peakHours.map((h) => (h['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b));
 

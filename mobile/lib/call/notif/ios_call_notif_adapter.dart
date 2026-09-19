@@ -9,7 +9,7 @@ import 'call_notif_adapter.dart';
 
 class IosCallNotifAdapter extends CallNotifAdapter {
   @override
-  Future<void> registerTokens({String? fcmToken}) async {
+  Future<void> registerTokens({String? fcmToken, AuthService? authService}) async {
     notifLog('TOKEN | registerTokens iOS');
     final isChina = await ChinaMarketDetector.isChina();
     try {
@@ -41,11 +41,11 @@ class IosCallNotifAdapter extends CallNotifAdapter {
       final sandbox = Platform.isIOS ? await _detectApnsSandbox() : null;
       await CallNotifAdapter.sendWithRetry(
         context: 'iOS fcmLen=${captured.length} voip=${capturedVoip != null ? "present" : "absent"} china=$isChina sandbox=$sandbox',
-        send: () => AuthService.saveDeviceTokens(
+        send: () => authService?.saveDeviceTokens(
           fcmToken: captured,
           voipToken: capturedVoip,
           apnsSandbox: sandbox,
-        ),
+        ) ?? Future.value(),
       );
     } catch (e) {
       notifLog('TOKEN | registerTokens FAILED | $e');

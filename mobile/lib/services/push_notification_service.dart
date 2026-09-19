@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -15,8 +14,9 @@ import 'call_service.dart';
 import 'localization_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../utils/china_market_detector.dart';
+import '../main.dart' show providerContainer;
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -61,7 +61,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // bu yüzden ACK ondan önce gitmelidir.
     if (callId.isNotEmpty) {
       try {
-        await http.post(Uri.parse('$kBaseUrl/calls/$callId/ack')).timeout(const Duration(seconds: 5));
+        await http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack')).timeout(const Duration(seconds: 5));
         debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
       } catch (e) {
         debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
@@ -240,7 +240,7 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
         return;
       }
       var r = await http.post(
-        Uri.parse('$kBaseUrl/calls/$callId/reject'),
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/reject'),
         headers: {'Authorization': 'Bearer $authToken'},
       );
       debugPrint('[FLNP][BG] reject yanıtı: ${r.statusCode}');
@@ -251,7 +251,7 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
         final refreshToken = await StorageService.getRefreshToken();
         if (refreshToken != null) {
           final refreshResp = await http.post(
-            Uri.parse('$kBaseUrl/auth/refresh'),
+            Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/auth/refresh'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'refresh_token': refreshToken}),
           );
@@ -263,7 +263,7 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
               await StorageService.saveToken(newAccess);
               if (newRefresh != null) await StorageService.saveRefreshToken(newRefresh);
               r = await http.post(
-                Uri.parse('$kBaseUrl/calls/$callId/reject'),
+                Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/reject'),
                 headers: {'Authorization': 'Bearer $newAccess'},
               );
               debugPrint('[FLNP][BG] reject retry yanıtı: ${r.statusCode}');
@@ -392,9 +392,9 @@ class PushNotificationService {
         if (Platform.isAndroid) {
           final callId = data['call_id']?.toString() ?? '';
           if (callId.isNotEmpty) {
-            http.post(Uri.parse('$kBaseUrl/calls/$callId/ack'))
+            http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'))
                 .timeout(const Duration(seconds: 5))
-                .catchError((_) {});
+                .then((_) {}, onError: (_) {});
             debugPrint('[FCM] Foreground Android ACK fired | callId=$callId');
           }
         }
@@ -442,7 +442,8 @@ class PushNotificationService {
 
     // CallKit Listener — Çin pazarında CallKit devre dışı (Apple Guideline 5)
     final isChina = await ChinaMarketDetector.isChina();
-    if (!isChina) FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
+    if (!isChina) {
+      FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
       _cpLog('PUSH', 'CallKit onEvent | event=${event.eventName} platform=${Platform.isIOS ? "iOS" : "Android"} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
 
@@ -464,18 +465,18 @@ class PushNotificationService {
           // VoIP push alındı → hemen HTTP ACK gönder. WS bağlı olmayabilir (reconnecting),
           // WS'e güvenmek yerine anlık HTTP ile backend'in BLPOP'unu tetikliyoruz.
           if (callId != 'NULL') {
-            http.post(Uri.parse('$kBaseUrl/calls/$callId/ack'))
+            http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'))
                 .timeout(const Duration(seconds: 5))
-                .catchError((_) {});
+                .then((_) {}, onError: (_) {});
             _cpLog('PUSH', 'CallEventActionCallIncoming | HTTP ACK fired | callId=$callId');
           }
         }
-        await CallService.instance.onIncomingCall({
+        await providerContainer.read(callServiceProvider).onIncomingCall({
           ...data,
           'type': 'incoming_call',
           '_source': 'CallEventActionCallIncoming',
         });
-        _cpLog('PUSH', 'CallEventActionCallIncoming done | callId=$callId status=${CallService.instance.state.value.status.name}');
+        _cpLog('PUSH', 'CallEventActionCallIncoming done | callId=$callId status=${providerContainer.read(callServiceProvider).state.value.status.name}');
         // Android: FCM background handler always calls showCallkitIncoming which shows a
         // persistent notification (Accept/Decline buttons). When the app is in foreground
         // the IncomingCallBar is the correct UI — dismiss the native notification so the
@@ -495,23 +496,23 @@ class PushNotificationService {
       } else if (event is CallEventActionCallAccept) {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? 'NULL';
-        final roomReady = CallService.instance.state.value.calleeToken != null;
-        _cpLog('PUSH', 'CallEventActionCallAccept | callId=$callId preConnectTokenReady=$roomReady currentStatus=${CallService.instance.state.value.status.name} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        final roomReady = providerContainer.read(callServiceProvider).state.value.calleeToken != null;
+        _cpLog('PUSH', 'CallEventActionCallAccept | callId=$callId preConnectTokenReady=$roomReady currentStatus=${providerContainer.read(callServiceProvider).state.value.status.name} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
         // Not: CallEventActionCallIncoming zaten onIncomingCall'u çağırdı (status=ringing).
         // Burada ikinci çağrı hasActiveCall nedeniyle engellenir — sorun yok.
-        await CallService.instance.onIncomingCall({
+        await providerContainer.read(callServiceProvider).onIncomingCall({
           ...data,
           'type': 'incoming_call',
           '_source': 'CallEventActionCallAccept',
         });
-        CallService.instance.acceptCall();
+        providerContainer.read(callServiceProvider).acceptCall();
         notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
         _cpLog('PUSH', 'CallEventActionCallAccept: acceptCall triggered | callId=$callId');
       } else if (event is CallEventActionCallDecline) {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? '';
         final callIdInt = int.tryParse(callId);
-        final cs = CallService.instance;
+        final cs = providerContainer.read(callServiceProvider);
         final currentStatus = cs.state.value.status;
         _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId status=$currentStatus autoDismissExpected=$_callKitAutoDismissExpected');
 
@@ -554,7 +555,7 @@ class PushNotificationService {
 
         final data = Map<String, dynamic>.from(params?.extra ?? {});
         final callIdStr = data['call_id']?.toString() ?? '';
-        final currentStatus = CallService.instance.state.value.status;
+        final currentStatus = providerContainer.read(callServiceProvider).state.value.status;
         _cpLog('PUSH', '${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr status=$currentStatus autoDismissExpected=$_callKitAutoDismissExpected');
 
         // Skip if ringing OR if AppDelegate will auto-dismiss (foreground VoIP push).
@@ -575,18 +576,18 @@ class PushNotificationService {
           return;
         }
 
-        if (CallService.instance.state.value.callId != null) {
-          CallService.instance.endCall();
+        if (providerContainer.read(callServiceProvider).state.value.callId != null) {
+          providerContainer.read(callServiceProvider).endCall();
         } else if (callIdStr.isNotEmpty) {
           _endCallById(callIdStr);
-          CallService.instance.reset();
+          providerContainer.read(callServiceProvider).reset();
         } else {
-          CallService.instance.reset();
+          providerContainer.read(callServiceProvider).reset();
         }
       } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
         _cpLog('TOKEN', 'VoIP token async update (PKPushRegistry) → notifAdapter.registerTokens');
         try {
-          await CallService.instance.notifAdapter.registerTokens();
+          await providerContainer.read(callServiceProvider).notifAdapter.registerTokens();
           _cpLog('TOKEN', 'VoIP async update → notifAdapter done');
         } catch (e) {
           _cpLog('TOKEN', 'VoIP async update FAILED | $e');
@@ -604,6 +605,7 @@ class PushNotificationService {
       // activate/deactivate. Suppress silently — it's a plugin bug, not a call logic error.
       _cpLog('PUSH', 'CallKit onEvent stream error (suppressed) | $error');
     }); // end CallKit onEvent listener (non-China only)
+    } // end if (!isChina)
 
     debugPrint('[FCM] initEarly tamamlandı');
   }
@@ -635,7 +637,7 @@ class PushNotificationService {
       // Kabul Et aksiyonu veya normal tap → CallService state'i kur + stream'e gönder
       debugPrint('[FLNP] Kabul/tap — CallService.onIncomingCall çağrılıyor');
       // State'i direkt kur; IncomingCallOverlay addPostFrameCallback ile alır
-      CallService.instance.onIncomingCall({
+      providerContainer.read(callServiceProvider).onIncomingCall({
         ...data,
         'type': 'incoming_call',
       });
@@ -650,7 +652,7 @@ class PushNotificationService {
 
   static Future<void> _rejectCallById(String callId) async {
     // Final defense: never send /reject if call has moved past ringing (already accepted).
-    final status = CallService.instance.state.value.status;
+    final status = providerContainer.read(callServiceProvider).state.value.status;
     if (status == CallStatus.connecting ||
         status == CallStatus.active ||
         status == CallStatus.reconnecting) {
@@ -661,7 +663,7 @@ class PushNotificationService {
 
     // Optimistic reset: state clears immediately so the Flutter call bar disappears
     // without waiting for the HTTP round-trip (~1-2s).
-    final cs = CallService.instance;
+    final cs = providerContainer.read(callServiceProvider);
     if ((cs.state.value.status == CallStatus.ringing ||
          cs.state.value.status == CallStatus.waiting) &&
         cs.state.value.callId?.toString() == callId) {
@@ -702,7 +704,7 @@ class PushNotificationService {
       final token = await StorageService.getToken();
       if (token != null) {
         final r = await http.post(
-          Uri.parse('$kBaseUrl/calls/$callId/reject'),
+          Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/reject'),
           headers: {'Authorization': 'Bearer $token'},
         );
         _cpLog('PUSH', '_rejectCallById response | callId=$callId statusCode=${r.statusCode}');
@@ -719,7 +721,7 @@ class PushNotificationService {
       final token = await StorageService.getToken();
       if (token != null) {
         final r = await http.post(
-          Uri.parse('$kBaseUrl/calls/$callId/end'),
+          Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/end'),
           headers: {'Authorization': 'Bearer $token'},
         );
         debugPrint('[FLNP] end yanıtı: ${r.statusCode}');
@@ -747,13 +749,13 @@ class PushNotificationService {
       // onTokenRefresh listener yalnızca bir kez eklenmeli.
       _messaging.onTokenRefresh.listen((t) {
         _cpLog('TOKEN', 'FCM onTokenRefresh → re-registering via notifAdapter');
-        CallService.instance.notifAdapter.registerTokens(fcmToken: t);
+        providerContainer.read(callServiceProvider).notifAdapter.registerTokens(fcmToken: t);
       });
 
     }
 
     // Token kaydı her initialize() çağrısında yapılır — izin durumu fark etmez.
-    await CallService.instance.notifAdapter.registerTokens();
+    await providerContainer.read(callServiceProvider).notifAdapter.registerTokens();
 
     // Android: OEM pil optimizasyonu FCM yüksek öncelikli mesajları engelleyebilir.
     // Muafiyet istenmemişse sistem diyaloğunu göster (yalnızca bir kez).
@@ -779,7 +781,7 @@ class PushNotificationService {
 
   static Future<void> refreshToken() async {
     _cpLog('TOKEN', 'refreshToken called → notifAdapter.registerTokens');
-    await CallService.instance.notifAdapter.registerTokens();
+    await providerContainer.read(callServiceProvider).notifAdapter.registerTokens();
   }
 
 }

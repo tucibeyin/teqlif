@@ -14,7 +14,7 @@ class TeqCard extends StatelessWidget {
   final bool hasBorder;
 
   const TeqCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding = const EdgeInsets.all(TeqSpacing.m),
     this.margin,
@@ -22,7 +22,7 @@ class TeqCard extends StatelessWidget {
     this.onTap,
     this.color,
     this.hasBorder = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

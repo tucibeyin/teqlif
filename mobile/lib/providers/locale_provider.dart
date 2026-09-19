@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../core/logger_service.dart';
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../services/storage_service.dart';
 
 /// SharedPreferences anahtarı — kalıcı dil tercihi.
@@ -18,11 +18,12 @@ const _kLocaleUpdatedAtKey = 'app_locale_updated_at';
 /// [setLocale] çağrıldığında yeni dili hem state'e hem de
 /// SharedPreferences'a yazar.
 class LocaleNotifier extends StateNotifier<Locale> {
+  final ApiClient _api;
   static const _tag = 'LocaleNotifier';
 
   /// [initial] verilirse SharedPreferences async yükleme atlanır (main'de
   /// önceden okunan değer kullanılır → provider ilk render'dan önce doğru).
-  LocaleNotifier({Locale? initial}) : super(initial ?? const Locale('tr')) {
+  LocaleNotifier(this._api, {Locale? initial}) : super(initial ?? const Locale('tr')) {
     if (initial == null) _loadSavedLocale();
   }
 
@@ -64,10 +65,10 @@ class LocaleNotifier extends StateNotifier<Locale> {
       try {
         final token = await StorageService.getToken();
         if (token == null) return;
-        await apiCall(
+        await _api.call(
           () async => http.patch(
-            Uri.parse('$kBaseUrl/auth/me'),
-            headers: await buildApiHeaders(token, json: true),
+            Uri.parse('${_api.config.baseUrl}/auth/me'),
+            headers: await _api.buildApiHeaders(token, json: true),
             body: jsonEncode({
               'locale': langCode,
               'locale_updated_at': updatedAtStr,
@@ -90,7 +91,7 @@ class LocaleNotifier extends StateNotifier<Locale> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final localUpdatedAtStr = prefs.getString(_kLocaleUpdatedAtKey);
-      
+
       DateTime? localDt;
       if (localUpdatedAtStr != null) localDt = DateTime.tryParse(localUpdatedAtStr)?.toUtc();
       DateTime? serverDt;
@@ -139,5 +140,5 @@ class LocaleNotifier extends StateNotifier<Locale> {
 /// ref.read(localeProvider.notifier).setLocale(const Locale('en'));
 /// ```
 final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>(
-  (ref) => LocaleNotifier(),
+  (ref) => LocaleNotifier(ref.watch(apiClientProvider)),
 );

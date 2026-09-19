@@ -6,7 +6,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/media_compressor.dart';
@@ -108,7 +108,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     try {
       final compressed = await MediaCompressor.compress(picked.path, MediaCompressType.storyPhoto);
       if (!mounted) return;
-      await StoryService.uploadStoryBytes(compressed.bytes, fileName: 'story.jpg', mimeType: 'image/jpeg');
+      await ref.read(storyServiceProvider).uploadStoryBytes(compressed.bytes, fileName: 'story.jpg', mimeType: 'image/jpeg');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(loc.t("storyUploadSuccess"))),
@@ -162,7 +162,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         targetDurationMs: 15000,
       );
       if (!mounted) return;
-      await StoryService.uploadStoryBytes(compressed.bytes, fileName: 'story.mp4', mimeType: 'video/mp4');
+      await ref.read(storyServiceProvider).uploadStoryBytes(compressed.bytes, fileName: 'story.mp4', mimeType: 'video/mp4');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(loc.t("storyUploadSuccess"))),
@@ -486,7 +486,7 @@ class _StoryGroupItem extends ConsumerWidget {
     final loc = ref.watch(localizationProvider);
     final avatarUrl =
         group.user.profileImageThumbUrl ?? group.user.profileImageUrl;
-    final resolvedUrl = avatarUrl != null ? imgUrl(avatarUrl) : null;
+    final resolvedUrl = avatarUrl != null ? ref.read(apiClientProvider).imgUrl(avatarUrl) : null;
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -607,14 +607,14 @@ class _StoryGroupItem extends ConsumerWidget {
 
 // ── Profil fotoğrafı olmadığında: baş harf avatar ───────────────────────────
 
-class _InitialAvatar extends StatelessWidget {
+class _InitialAvatar extends ConsumerWidget {
   final String username;
   final BuildContext context;
 
   const _InitialAvatar({required this.username, required this.context});
 
   @override
-  Widget build(BuildContext _) {
+  Widget build(BuildContext _, WidgetRef ref) {
     return Container(
       color: AppColors.primaryBg(context),
       alignment: Alignment.center,
@@ -634,12 +634,12 @@ class _InitialAvatar extends StatelessWidget {
 
 enum _MediaSource { videoCamera, videoGallery, photoCamera, photoGallery }
 
-class _MediaSourceSheet extends StatelessWidget {
+class _MediaSourceSheet extends ConsumerWidget {
   final TranslationPack loc;
   const _MediaSourceSheet({required this.loc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface(context),
@@ -687,14 +687,14 @@ class _MediaSourceSheet extends StatelessWidget {
   }
 }
 
-class _SourceTile extends StatelessWidget {
+class _SourceTile extends ConsumerWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   const _SourceTile({required this.icon, required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
       leading: Icon(icon, color: kPrimary, size: 26),
       title: Text(

@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/direct_sale.dart';
@@ -45,7 +45,7 @@ class DirectSaleDetailScreen extends ConsumerWidget {
   }
 }
 
-class _Body extends StatelessWidget {
+class _Body extends ConsumerWidget {
   final DirectSaleSummary summary;
   final TranslationPack loc;
 
@@ -71,7 +71,7 @@ class _Body extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final imageUrl = summary.displayImageUrl;
 
     return SingleChildScrollView(
@@ -83,7 +83,7 @@ class _Body extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
-                imageUrl: imgUrl(imageUrl),
+                imageUrl: ref.read(apiClientProvider).imgUrl(imageUrl),
                 width: double.infinity,
                 height: 220,
                 fit: BoxFit.cover,
@@ -207,7 +207,7 @@ class _Body extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _InfoRow extends ConsumerWidget {
   final String label;
   final String value;
   final Color? valueColor;
@@ -223,7 +223,7 @@ class _InfoRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         Padding(
@@ -260,9 +260,9 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _Divider extends StatelessWidget {
+class _Divider extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Divider(
       height: 1,
       color: AppColors.border(context),
@@ -291,7 +291,7 @@ class _BuyersSheetState extends ConsumerState<_BuyersSheet> {
 
   Future<void> _load() async {
     try {
-      final orders = await DirectSaleService.getOrders(widget.saleId);
+      final orders = await ref.read(directSaleServiceProvider).getOrders(widget.saleId);
       if (mounted) setState(() { _orders = orders; _loading = false; });
     } catch (e) {
       if (mounted) {

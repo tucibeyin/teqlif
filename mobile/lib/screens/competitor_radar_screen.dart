@@ -3,9 +3,8 @@ import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
-import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/number_formatter.dart';
@@ -23,29 +22,29 @@ class CompetitorRadarScreen extends ConsumerWidget {
     final viewModel = ref.read(competitorRadarProvider.notifier);
 
     // Helpers to access state instead of modifying instance variables
-    final _selectedListing = state.selectedListing;
-    final _radarData = state.radarData;
-    final _velocityData = state.velocityData;
-    final _loadingData = state.loadingData;
-    final _filter = state.filter;
-    final _listingsLoading = state.listingsLoading;
+    final selectedListing = state.selectedListing;
+    final radarData = state.radarData;
+    final velocityData = state.velocityData;
+    final loadingData = state.loadingData;
+    final filter = state.filter;
+    final listingsLoading = state.listingsLoading;
     
-    // The getter logic for _filteredListings:
-    List<Map<String, dynamic>> _filteredListings() {
+    // The getter logic for filteredListings:
+    List<Map<String, dynamic>> filteredListings() {
       var result = state.listings;
-      if (_filter.searchQuery != null && _filter.searchQuery!.isNotEmpty) {
-        final q = _filter.searchQuery!.toLowerCase();
+      if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+        final q = filter.searchQuery!.toLowerCase();
         result = result.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
       }
-      if (_filter.category != null && _filter.category!.isNotEmpty) {
-        result = result.where((l) => l['category'] == _filter.category).toList();
+      if (filter.category != null && filter.category!.isNotEmpty) {
+        result = result.where((l) => l['category'] == filter.category).toList();
       }
-      if (_filter.subcategory != null && _filter.subcategory!.isNotEmpty) {
-        result = result.where((l) => l['subcategory'] == _filter.subcategory).toList();
+      if (filter.subcategory != null && filter.subcategory!.isNotEmpty) {
+        result = result.where((l) => l['subcategory'] == filter.subcategory).toList();
       }
-      if (_filter.dateFrom != null && _filter.dateTo != null) {
-        final start = _filter.dateFrom!;
-        final end = _filter.dateTo!.add(const Duration(days: 1));
+      if (filter.dateFrom != null && filter.dateTo != null) {
+        final start = filter.dateFrom!;
+        final end = filter.dateTo!.add(const Duration(days: 1));
         result = result.where((l) {
           final raw = l['created_at'] as String?;
           if (raw == null) return false;
@@ -64,7 +63,7 @@ class CompetitorRadarScreen extends ConsumerWidget {
         padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           TeqFilterBar(
-            filter: _filter,
+            filter: filter,
             onChanged: (f) {
               viewModel.updateFilter(f);
             },
@@ -75,21 +74,21 @@ class CompetitorRadarScreen extends ConsumerWidget {
             showPriceRange: false,
           ),
           const SizedBox(height: 8),
-          _buildHorizontalCarousel(context, _listingsLoading, _filteredListings(), _selectedListing, viewModel, loc),
+          _buildHorizontalCarousel(context, ref, listingsLoading, filteredListings(), selectedListing, viewModel, loc),
           const SizedBox(height: 20),
-          if (_loadingData)
+          if (loadingData)
             const _RadarSkeleton()
-          else if (_selectedListing != null) ...[
-            if (_radarData != null)
+          else if (selectedListing != null) ...[
+            if (radarData != null)
               _RadarSection(
-                data: _radarData,
-                listingTitle: _selectedListing['title'] as String? ?? '',
+                data: radarData,
+                listingTitle: selectedListing['title'] as String? ?? '',
               ),
-            if (_velocityData != null) ...[
+            if (velocityData != null) ...[
               const SizedBox(height: 16),
-              _VelocitySection(data: _velocityData),
+              _VelocitySection(data: velocityData),
             ],
-            if (_radarData == null && _velocityData == null)
+            if (radarData == null && velocityData == null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 48),
                 child: Center(
@@ -115,7 +114,7 @@ class CompetitorRadarScreen extends ConsumerWidget {
         backgroundColor: AppColors.bg(context),
         elevation: 0,
         actions: [
-          if (_selectedListing != null && !_loadingData)
+          if (selectedListing != null && !loadingData)
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => viewModel.loadData(),
@@ -126,8 +125,8 @@ class CompetitorRadarScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHorizontalCarousel(BuildContext context, bool _listingsLoading, List<Map<String, dynamic>> items, Map<String, dynamic>? _selectedListing, CompetitorRadarViewModel viewModel, var loc) {
-    if (_listingsLoading) {
+  Widget _buildHorizontalCarousel(BuildContext context, WidgetRef ref, bool listingsLoading, List<Map<String, dynamic>> items, Map<String, dynamic>? selectedListing, CompetitorRadarViewModel viewModel, var loc) {
+    if (listingsLoading) {
       return const SizedBox(
         height: 112,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -141,10 +140,10 @@ class CompetitorRadarScreen extends ConsumerWidget {
         itemCount: items.length,
         itemBuilder: (ctx, i) {
           final item = items[i];
-          final isSelected = _selectedListing != null && item['id'] == _selectedListing['id'];
+          final isSelected = selectedListing != null && item['id'] == selectedListing['id'];
           final imageUrls = item['image_urls'] as List? ?? [];
           final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : item['image_url'] as String?;
-          final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+          final imageUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
           return GestureDetector(
             onTap: () {
               viewModel.selectListing(item);

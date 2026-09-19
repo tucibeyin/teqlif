@@ -42,7 +42,7 @@ class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
   Future<void> load() async {
     state = state.copyWith(loading: true, clearError: true);
     try {
-      final data = await AnalyticsService.demandTrends(
+      final data = await ref.read(analyticsServiceProvider).demandTrends(
         weeks: 8,
         category: state.filter.category,
         subcategory: state.filter.subcategory,

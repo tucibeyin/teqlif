@@ -100,10 +100,6 @@ class CommerceActivityOverlay extends ConsumerWidget {
                       return _buildGroupHeader(item.group, loc);
                     } else if (item is _EventItem) {
                       // Rank within its group: find position among siblings
-                      final groupItem = items
-                          .take(i)
-                          .whereType<_GroupHeaderItem>()
-                          .lastOrNull;
                       // count events before this one in the same group
                       int rank = 0;
                       for (int j = i - 1; j >= 0; j--) {

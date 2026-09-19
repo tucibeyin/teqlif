@@ -12,7 +12,7 @@ import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../../utils/number_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../ui_library/components/cards/teq_card.dart';
 import 'sale_detail_screen.dart';
 
@@ -29,7 +29,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     super.didChangeDependencies();
     final currentState = ref.read(salesProvider).valueOrNull;
     if (currentState != null && currentState.categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode).then((cats) {
+      ref.read(categoryServiceProvider).getCategories(locale: Localizations.localeOf(context).languageCode).then((cats) {
         if (mounted) {
           ref.read(salesProvider.notifier).setCategories(cats);
         }
@@ -169,7 +169,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                 borderRadius: BorderRadius.circular(8),
                                 child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
                                     ? CachedNetworkImage(
-                                        imageUrl: imgUrl(thumbnailUrl),
+                                        imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
                                         width: 72,
                                         height: 72,
                                         fit: BoxFit.cover,
@@ -339,7 +339,7 @@ class _DirectSaleCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: imageUrl != null && imageUrl.isNotEmpty
                     ? CachedNetworkImage(
-                        imageUrl: imgUrl(imageUrl),
+                        imageUrl: ref.read(apiClientProvider).imgUrl(imageUrl),
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,
@@ -469,7 +469,7 @@ class _BuyersSheetState extends ConsumerState<_BuyersSheet> {
 
   Future<void> _load() async {
     try {
-      final orders = await DirectSaleService.getOrders(widget.saleId);
+      final orders = await ref.read(directSaleServiceProvider).getOrders(widget.saleId);
       if (mounted) setState(() { _orders = orders; _loading = false; });
     } catch (e) {
       if (mounted) {

@@ -1,19 +1,24 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../models/auction.dart';
 import 'storage_service.dart';
 import 'analytics_service.dart';
 
 class AuctionService {
-  static Future<Map<String, String>> _headers() async {
+  final ApiClient _api;
+  final AnalyticsService _analytics;
+  AuctionService(this._api, this._analytics);
+
+  Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
-  static Future<AuctionState> getState(int streamId) async {
-    final body = await apiCall(
-      () async => http.get(Uri.parse('$kBaseUrl/auction/$streamId'), headers: await _headers()),
+  Future<AuctionState> getState(int streamId) async {
+    final body = await _api.call(
+      () async => http.get(Uri.parse('${_api.config.baseUrl}/auction/$streamId'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
@@ -21,7 +26,7 @@ class AuctionService {
   /// İlan seçilerek başlatmak için [listingId] gönderilir;
   /// manuel girildiğinde [itemName] ve [startPrice] gönderilir.
   /// [buyItNowPrice] opsiyonel; belirtilirse Hemen Al özelliği aktif olur.
-  static Future<AuctionState> startAuction(
+  Future<AuctionState> startAuction(
     int streamId, {
     String? itemName,
     double? startPrice,
@@ -32,9 +37,9 @@ class AuctionService {
         ? {'listing_id': listingId, 'start_price': startPrice!}
         : {'item_name': itemName!, 'start_price': startPrice!};
     if (buyItNowPrice != null) payload['buy_it_now_price'] = buyItNowPrice;
-    final body = await apiCall(
+    final body = await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/start'),
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/start'),
         headers: await _headers(),
         body: jsonEncode(payload),
       ),
@@ -42,54 +47,54 @@ class AuctionService {
     return AuctionState.fromJson(body);
   }
 
-  static Future<void> buyItNow(int streamId) async {
-    await apiCall(
+  Future<void> buyItNow(int streamId) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now'),
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/buy-it-now'),
         headers: await _headers(),
       ),
     );
   }
 
-  static Future<void> acceptBuyItNow(int streamId, {String? proofImageUrl}) async {
+  Future<void> acceptBuyItNow(int streamId, {String? proofImageUrl}) async {
     final bodyStr = proofImageUrl != null ? jsonEncode({'proof_image_url': proofImageUrl}) : null;
-    await apiCall(
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now/accept'),
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/buy-it-now/accept'),
         headers: await _headers(),
         body: bodyStr,
       ),
     );
   }
 
-  static Future<void> rejectBuyItNow(int streamId) async {
-    await apiCall(
+  Future<void> rejectBuyItNow(int streamId) async {
+    await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now/reject'),
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/buy-it-now/reject'),
         headers: await _headers(),
       ),
     );
   }
 
-  static Future<AuctionState> pauseAuction(int streamId) async {
-    final body = await apiCall(
-      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/pause'), headers: await _headers()),
+  Future<AuctionState> pauseAuction(int streamId) async {
+    final body = await _api.call(
+      () async => http.post(Uri.parse('${_api.config.baseUrl}/auction/$streamId/pause'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
 
-  static Future<AuctionState> resumeAuction(int streamId) async {
-    final body = await apiCall(
-      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/resume'), headers: await _headers()),
+  Future<AuctionState> resumeAuction(int streamId) async {
+    final body = await _api.call(
+      () async => http.post(Uri.parse('${_api.config.baseUrl}/auction/$streamId/resume'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
 
-  static Future<AuctionState> endAuction(int streamId, {String? proofImageUrl}) async {
+  Future<AuctionState> endAuction(int streamId, {String? proofImageUrl}) async {
     final bodyStr = proofImageUrl != null ? jsonEncode({'proof_image_url': proofImageUrl}) : null;
-    final body = await apiCall(
+    final body = await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/end'), 
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/end'),
         headers: await _headers(),
         body: bodyStr,
       ),
@@ -97,11 +102,11 @@ class AuctionService {
     return AuctionState.fromJson(body);
   }
 
-  static Future<AuctionState> placeBid(int streamId, double amount) async {
-    AnalyticsService.trackEvent('bid_attempt', {'stream_id': streamId, 'amount': amount});
-    final body = await apiCall(
+  Future<AuctionState> placeBid(int streamId, double amount) async {
+    _analytics.trackEvent('bid_attempt', {'stream_id': streamId, 'amount': amount});
+    final body = await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/bid'),
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/bid'),
         headers: await _headers(),
         body: jsonEncode({'amount': amount}),
       ),
@@ -109,11 +114,11 @@ class AuctionService {
     return AuctionState.fromJson(body);
   }
 
-  static Future<AuctionState> acceptBid(int streamId, {String? proofImageUrl}) async {
+  Future<AuctionState> acceptBid(int streamId, {String? proofImageUrl}) async {
     final bodyStr = proofImageUrl != null ? jsonEncode({'proof_image_url': proofImageUrl}) : null;
-    final body = await apiCall(
+    final body = await _api.call(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auction/$streamId/accept'),
+        Uri.parse('${_api.config.baseUrl}/auction/$streamId/accept'),
         headers: await _headers(),
         body: bodyStr,
       ),
@@ -122,9 +127,9 @@ class AuctionService {
   }
 
   /// Teklif geçmişini döner: [{bidder_username, amount, created_at}, ...]
-  static Future<List<Map<String, dynamic>>> fetchBids(int streamId) async {
-    final body = await apiCall(
-      () async => http.get(Uri.parse('$kBaseUrl/auction/$streamId/bids'), headers: await _headers()),
+  Future<List<Map<String, dynamic>>> fetchBids(int streamId) async {
+    final body = await _api.call(
+      () async => http.get(Uri.parse('${_api.config.baseUrl}/auction/$streamId/bids'), headers: await _headers()),
     );
     if (body is List) {
       return List<Map<String, dynamic>>.from(
@@ -134,3 +139,6 @@ class AuctionService {
     return [];
   }
 }
+
+final auctionServiceProvider = Provider<AuctionService>((ref) =>
+    AuctionService(ref.watch(apiClientProvider), ref.watch(analyticsServiceProvider)));

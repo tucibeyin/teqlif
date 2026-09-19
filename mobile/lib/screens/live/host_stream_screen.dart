@@ -14,9 +14,7 @@ import '../../services/cache_service.dart';
 import '../../services/stream_service.dart';
 import 'viewmodels/host_stream_view_model.dart';
 import 'seller_report_screen.dart';
-import '../../utils/number_formatter.dart';
 import '../../utils/username_color.dart';
-import '../../widgets/auction_panel.dart';
 import '../../widgets/commerce_panel_wrapper.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
@@ -503,7 +501,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (anyDenied) {
       final permanent =
           camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
-      StreamService.cancelStream(widget.streamToken.streamId).ignore();
+      ref.read(streamServiceProvider).cancelStream(widget.streamToken.streamId).ignore();
       if (mounted) {
         final loc = ref.read(localizationProvider);
         setState(() {
@@ -610,9 +608,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
       // LiveKit bağlantısı başarılı — yayını canlıya al ve bildirimleri gönder
       try {
-        await StreamService.confirmLive(widget.streamToken.streamId);
+        await ref.read(streamServiceProvider).confirmLive(widget.streamToken.streamId);
       } catch (e) {
-        StreamService.cancelStream(widget.streamToken.streamId).ignore();
+        ref.read(streamServiceProvider).cancelStream(widget.streamToken.streamId).ignore();
         if (mounted) {
           setState(() => _error = ref.read(localizationProvider).tOr(
                 'streamConfirmFailed',
@@ -624,7 +622,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
       // Blast onaylandıysa şimdi gönder (LiveKit bağlantısı kesinleşti)
       if (widget.blastApproved) {
-        AnalyticsService.sendLeadBlast(
+        ref.read(analyticsServiceProvider).sendLeadBlast(
           title: widget.title,
           category: widget.streamToken.category,
           estimatedCost: widget.blastCost.toInt(),
@@ -649,7 +647,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       );
     } catch (e, st) {
       // Bağlantı başarısız — pending kaydı temizle
-      StreamService.cancelStream(widget.streamToken.streamId).ignore();
+      ref.read(streamServiceProvider).cancelStream(widget.streamToken.streamId).ignore();
       ClientLogger.report(
         tag: 'HostConnect',
         message: 'LiveKit bağlantısı kurulamadı',
@@ -676,8 +674,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       if (!mounted || _localVideoTrack != null) return;
       for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
         if (pub.track != null) {
-          if (mounted)
+          if (mounted) {
             setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
+          }
           return;
         }
       }
@@ -849,7 +848,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     if (!mounted || _room == null) return;
     try {
       final freshToken =
-          await StreamService.refreshStreamToken(widget.streamToken.streamId);
+          await ref.read(streamServiceProvider).refreshStreamToken(widget.streamToken.streamId);
       await _room!.connect(freshToken.livekitUrl, freshToken.token);
       _reconnectAttempts = 0;
     } on AppException catch (e) {
@@ -1004,7 +1003,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return null;
 
-      final result = await UploadService.uploadBytes(
+      final result = await ref.read(uploadServiceProvider).uploadBytes(
         byteData.buffer.asUint8List(),
         'proof.jpg',
       );
@@ -1029,7 +1028,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     _activityPanelTop ??= topPad + 66;
 
     // Auto-scroll to top whenever new activity arrives
-    ref.listen(commerceActivityProvider(widget.streamToken.streamId), (_, __) {
+    ref.listen(commerceActivityProvider(widget.streamToken.streamId), (_, _) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_activityScrollCtrl.hasClients) {
           _activityScrollCtrl.jumpTo(0);
@@ -1520,7 +1519,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                                 final target = _coHostUsername;
                                 if (target == null) return;
                                 try {
-                                  await StreamService.removeCoHost(
+                                  await ref.read(streamServiceProvider).removeCoHost(
                                     widget.streamToken.streamId,
                                     target,
                                   );
@@ -1898,22 +1897,24 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
     try {
       await fn();
       onSuccess?.call();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _msg = successMsg;
           _isError = false;
         });
+      }
       await Future.delayed(const Duration(milliseconds: 900));
       if (mounted) Navigator.pop(context);
     } catch (e) {
       final msg = e is AppException ? e.message : 'İşlem gerçekleştirilemedi.';
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _msg = msg;
           _isError = true;
         });
+      }
     }
   }
 
@@ -1975,7 +1976,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               color: const Color(0xFFD97706),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.mute(widget.streamId, widget.username),
+                () => ref.read(moderationServiceProvider).mute(widget.streamId, widget.username),
                 successMsg: ref.read(localizationProvider).t(
                   'hostMuteSuccess',
                   {'username': widget.username},
@@ -1994,7 +1995,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               loading: _loading,
               onTap: () => _act(
                 () =>
-                    ModerationService.unmute(widget.streamId, widget.username),
+                    ref.read(moderationServiceProvider).unmute(widget.streamId, widget.username),
                 successMsg: ref
                     .read(localizationProvider)
                     .t('hostUnmuteSuccess'),
@@ -2014,7 +2015,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               color: const Color(0xFFF59E0B),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.promoteUser(
+                () => ref.read(moderationServiceProvider).promoteUser(
                   widget.streamId,
                   widget.username,
                 ),
@@ -2046,7 +2047,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
               color: const Color(0xFF475569),
               loading: _loading,
               onTap: () => _act(
-                () => ModerationService.demoteUser(
+                () => ref.read(moderationServiceProvider).demoteUser(
                   widget.streamId,
                   widget.username,
                 ),
@@ -2109,7 +2110,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
             color: const Color(0xFFEF4444),
             loading: _loading,
             onTap: () => _act(
-              () => ModerationService.kick(widget.streamId, widget.username),
+              () => ref.read(moderationServiceProvider).kick(widget.streamId, widget.username),
               successMsg: ref.read(localizationProvider).t('hostKickSuccess', {
                 'username': widget.username,
               }),
@@ -2158,7 +2159,7 @@ class _ModerationSheetState extends ConsumerState<_ModerationSheet> {
   }
 }
 
-class _ModBtn extends StatelessWidget {
+class _ModBtn extends ConsumerWidget {
   final String icon;
   final String label;
   final Color color;
@@ -2174,7 +2175,7 @@ class _ModBtn extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(

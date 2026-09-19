@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 
 // ── Best Stream Time ──
@@ -47,8 +47,8 @@ class BestStreamTimeViewModel extends AutoDisposeNotifier<BestStreamTimeState> {
     try {
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/pro/best-stream-time'),
-        headers: await buildApiHeaders(token),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/analytics/pro/best-stream-time'),
+        headers: await ref.read(apiClientProvider).buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {
         final d = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -112,8 +112,8 @@ class ConversionBreakdownViewModel extends AutoDisposeNotifier<ConversionBreakdo
     try {
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/pro/conversion-breakdown'),
-        headers: await buildApiHeaders(token),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/analytics/pro/conversion-breakdown'),
+        headers: await ref.read(apiClientProvider).buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {
         final d = jsonDecode(resp.body) as List<dynamic>;

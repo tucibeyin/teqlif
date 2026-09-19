@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:teqlif/main.dart' show providerContainer;
 
-import '../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 
 class VideoCacheManager {
   static final VideoCacheManager instance = VideoCacheManager._internal();
@@ -78,7 +79,7 @@ class VideoCacheManager {
       final rawUrl = urls[id];
       if (rawUrl != null && rawUrl.isNotEmpty) {
         _queue.add(id);
-        _urls[id] = imgUrl(rawUrl);
+        _urls[id] = providerContainer.read(apiClientProvider).imgUrl(rawUrl);
       }
     }
     

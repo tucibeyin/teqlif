@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/api.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
+import '../main.dart' show providerContainer;
 import '../services/storage_service.dart';
 
 void _log(String msg) {
@@ -30,7 +31,7 @@ class FollowsService {
       _log('fetchFollowingForInvite | userId=$myId');
       final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$kBaseUrl/follows/$myId/following'),
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/follows/$myId/following'),
         headers: headers,
       );
       if (response.statusCode != 200) {

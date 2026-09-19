@@ -17,10 +17,10 @@ class ErrorMapper {
 
     // Upload servisi string-tabanlı HTTP hataları fırlatır
     final s = error.toString();
-    if (s.contains('HTTP 413')) return loc.t('uploadErrorTooLarge');
+    if (s.contains('HTTP 413')) { return loc.t('uploadErrorTooLarge'); }
     if (s.contains('HTTP 502') ||
         s.contains('HTTP 503') ||
-        s.contains('HTTP 504')) return loc.t('uploadErrorServerBusy');
+        s.contains('HTTP 504')) { return loc.t('uploadErrorServerBusy'); }
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
       return loc.t('uploadErrorAuthExpired');
     }

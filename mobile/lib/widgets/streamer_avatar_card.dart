@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../config/api.dart'; // for imgUrl
+import 'package:teqlif/core/network/api_client.dart';
 
 class StreamerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> streamer;
@@ -16,7 +16,7 @@ class StreamerAvatarCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
-    final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
+    final imageUrl = rawUrl.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
     final isPremium = streamer['is_premium'] == true;
     final isLive = streamer['is_live'] == true;
@@ -148,13 +148,13 @@ class StreamerAvatarCard extends ConsumerWidget {
   }
 }
 
-class _AvatarInitial extends StatelessWidget {
+class _AvatarInitial extends ConsumerWidget {
   final String initial;
   final BuildContext context;
   const _AvatarInitial({required this.initial, required this.context});
 
   @override
-  Widget build(BuildContext _) {
+  Widget build(BuildContext _, WidgetRef ref) {
     return Container(
       color: AppColors.primaryBg(context),
       alignment: Alignment.center,

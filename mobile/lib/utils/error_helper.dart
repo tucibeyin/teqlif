@@ -13,14 +13,14 @@ import '../services/connectivity_service.dart';
 ///   handleError(e, ref.read(localizationProvider));
 /// }
 /// ```
-void handleError(Object error, TranslationPack loc) {
+void handleError(Object error, TranslationPack loc, {AuthService? authService}) {
   // 401: oturum süresi dolmuş (login/register dışındaki istekler) → authFailedStream'e sinyal ver.
   // INVALID_CREDENTIALS / UNAUTHORIZED giriş hataları ise kullanıcıya gösterilmelidir.
   if (error is AppException &&
       error.statusCode == 401 &&
       error.code != 'INVALID_CREDENTIALS' &&
       error.code != 'UNAUTHORIZED') {
-    AuthService.authFailedStream.add(null);
+    authService?.authFailedStream.add(null);
     return;
   }
 

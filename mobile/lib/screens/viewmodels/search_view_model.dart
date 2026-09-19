@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../config/api.dart';
+import '../../../core/network/api_client.dart';
 import '../../../models/stream.dart';
 import '../../../services/analytics_service.dart';
 import '../../../services/api_service.dart';
@@ -181,7 +181,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
 
     if (loggedIn) {
       _loadSuggestedSellers();
-      StreamService.getSuggestedStreamers().then((streamers) {
+      ref.read(streamServiceProvider).getSuggestedStreamers().then((streamers) {
         final current = state.value;
         if (current != null) {
           state = AsyncValue.data(current.copyWith(suggestedStreamers: streamers));
@@ -210,7 +210,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     _loadExploreStreams(bypassCache, () {});
     if (loggedIn) {
       _loadSuggestedSellers();
-      StreamService.getSuggestedStreamers().then((streamers) {
+      ref.read(streamServiceProvider).getSuggestedStreamers().then((streamers) {
         final current = state.value;
         if (current != null) {
           state = AsyncValue.data(current.copyWith(suggestedStreamers: streamers));
@@ -224,7 +224,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       if (loggedIn) {
         // 1. Delta Fetching: For-You Feed (Giriş yapmış kullanıcılar)
         final sinceId = current.exploreListings.first['id'];
-        final resp = await http.get(Uri.parse('$kBaseUrl/feed/for-you?since_id=$sinceId'), headers: {
+        final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/for-you?since_id=$sinceId'), headers: {
           'Authorization': 'Bearer $token',
         });
         
@@ -246,7 +246,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       } else {
         // 2. Delta Fetching: Recent Feed (Misafir kullanıcılar)
         final sinceId = current.recentListings.first['id'];
-        final resp = await http.get(Uri.parse('$kBaseUrl/feed/recent?since_id=$sinceId'));
+        final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?since_id=$sinceId'));
         
         if (resp.statusCode == 200) {
           final parsed = jsonDecode(resp.body);
@@ -269,7 +269,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
 
   void _loadExploreStreams(bool bypassCache, void Function() onData) {
     _streamsSub?.cancel();
-    _streamsSub = StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen((streams) {
+    _streamsSub = ref.read(streamServiceProvider).getActiveStreamsStream(bypassCache: bypassCache).listen((streams) {
       final current = state.value;
       if (current != null) {
         state = AsyncValue.data(current.copyWith(exploreStreams: streams.take(4).toList()));
@@ -283,7 +283,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/users/suggested-sellers'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/suggested-sellers'),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 5));
       
@@ -302,11 +302,11 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     required bool bypassCache,
     required void Function() onData,
   }) {
-    final url = loggedIn ? '$kBaseUrl/feed/for-you?page=0' : '$kBaseUrl/listings';
+    final url = loggedIn ? '${ref.read(apiClientProvider).config.baseUrl}/feed/for-you?page=0' : '${ref.read(apiClientProvider).config.baseUrl}/listings';
     final cacheKey = loggedIn ? 'explore_for_you' : 'explore_listings';
     final ttl = const Duration(minutes: 5);
 
-    ApiService.get<List<dynamic>>(
+    ref.read(apiServiceProvider).get<List<dynamic>>(
       url: url,
       cacheKey: cacheKey,
       cacheTtl: ttl,
@@ -332,7 +332,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       ));
 
       if (loggedIn && ids.isNotEmpty) {
-        AnalyticsService.logListingImpressions(
+        ref.read(analyticsServiceProvider).logListingImpressions(
           listingIds: ids.take(10).toList(),
           section: 'for_you',
         );
@@ -353,14 +353,14 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
   }) {
     final isLoggedIn = state.value?.isLoggedIn == true;
     final url = isLoggedIn
-        ? '$kBaseUrl/feed/personalized?limit=100'
-        : '$kBaseUrl/feed/recent?page=0';
+        ? '${ref.read(apiClientProvider).config.baseUrl}/feed/personalized?limit=100'
+        : '${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=0';
     final cacheKey = isLoggedIn ? 'explore_personalized_feed' : 'explore_recent_feed';
     final ttl = isLoggedIn
         ? const Duration(minutes: 15) // Backend Redis affinity TTL ile senkron
         : const Duration(minutes: 5);
 
-    ApiService.get<List<dynamic>>(
+    ref.read(apiServiceProvider).get<List<dynamic>>(
       url: url,
       cacheKey: cacheKey,
       cacheTtl: ttl,
@@ -385,7 +385,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
             .take(10)
             .toList();
         if (ids.isNotEmpty) {
-          AnalyticsService.logListingImpressions(
+          ref.read(analyticsServiceProvider).logListingImpressions(
             listingIds: ids,
             section: 'personalized_grid',
           );
@@ -403,7 +403,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
             .take(10)
             .toList();
         if (ids.isNotEmpty) {
-          AnalyticsService.logListingImpressions(
+          ref.read(analyticsServiceProvider).logListingImpressions(
             listingIds: ids,
             section: 'recent',
           );
@@ -448,7 +448,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       final excludeParams = current.forYouIds.isNotEmpty
           ? '&exclude_ids=${current.forYouIds.join(',')}'
           : '';
-      final url = '$kBaseUrl/feed/recent?page=${current.recentPage}$excludeParams';
+      final url = '${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=${current.recentPage}$excludeParams';
 
       final resp = await http.get(Uri.parse(url), headers: headers);
 
@@ -492,7 +492,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       }
       
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/for-you?page=${current.forYouPage}'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/for-you?page=${current.forYouPage}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       
@@ -561,7 +561,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       final token = await StorageService.getToken();
       final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/search/all').replace(queryParameters: {'q': query}),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/search/all').replace(queryParameters: {'q': query}),
         headers: headers,
       );
 
@@ -593,9 +593,9 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
         isSearching: false,
       ));
 
-      AnalyticsService.trackSearch(query: query, resultCount: resultCount);
+      ref.read(analyticsServiceProvider).trackSearch(query: query, resultCount: resultCount);
       if (resultCount == 0) {
-        AnalyticsService.trackEvent('search_no_results', {'query': query});
+        ref.read(analyticsServiceProvider).trackEvent('search_no_results', {'query': query});
       }
     } catch (_) {
       if (myToken == _searchToken) {
@@ -623,7 +623,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     try {
       final token = await StorageService.getToken();
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/search-alerts'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/search-alerts'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -647,7 +647,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/feed/not-interested/$listingId'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/not-interested/$listingId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 204) {

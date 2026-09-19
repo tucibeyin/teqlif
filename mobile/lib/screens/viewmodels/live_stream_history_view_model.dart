@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:teqlif/core/network/api_client.dart';
 import '../../services/storage_service.dart';
 import '../../models/listing_filter_state.dart';
 
@@ -74,7 +74,7 @@ class LiveStreamHistoryViewModel extends AutoDisposeNotifier<LiveStreamHistorySt
 
     try {
       final token = await StorageService.getToken();
-      String url = '$kBaseUrl/streams/my-history?limit=20';
+      String url = '${ref.read(apiClientProvider).config.baseUrl}/streams/my-history?limit=20';
       if (state.cursor != null) url += '&cursor=${state.cursor}';
 
       final resp = await http.get(

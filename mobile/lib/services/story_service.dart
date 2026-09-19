@@ -3,23 +3,27 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import '../config/api.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/story.dart';
 import 'storage_service.dart';
 
 class StoryService {
-  static Future<Map<String, String>> _headers() async {
+  final ApiClient _api;
+  StoryService(this._api);
+
+  Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
-    return buildApiHeaders(token, json: true);
+    return _api.buildApiHeaders(token, json: true);
   }
 
   // ── Hybrid: video hikayeleri + canlı yayın harmanlama ─────────────────────
 
-  static Future<List<UserStoryGroup>> getFollowingStories() async {
+  Future<List<UserStoryGroup>> getFollowingStories() async {
     final headers = await _headers();
-    final list = await apiCallList(
-      () => http.get(Uri.parse('$kBaseUrl/stories/following'), headers: headers),
+    final list = await _api.callList(
+      () => http.get(Uri.parse('${_api.config.baseUrl}/stories/following'), headers: headers),
     );
     final result = <UserStoryGroup>[];
     for (final e in list) {
@@ -34,10 +38,10 @@ class StoryService {
 
   // ── Kendi hikayelerim ─────────────────────────────────────────────────────
 
-  static Future<List<StoryItem>> getMyStories() async {
+  Future<List<StoryItem>> getMyStories() async {
     final headers = await _headers();
-    final data = await apiCall(
-      () => http.get(Uri.parse('$kBaseUrl/stories/mine'), headers: headers),
+    final data = await _api.call(
+      () => http.get(Uri.parse('${_api.config.baseUrl}/stories/mine'), headers: headers),
     );
     final itemsList = data['items'] as List? ?? [];
     return itemsList
@@ -47,20 +51,20 @@ class StoryService {
 
   // ── Hikaye beğeni toggle ──────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> toggleLike(int storyId) async {
+  Future<Map<String, dynamic>> toggleLike(int storyId) async {
     final headers = await _headers();
-    return apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/stories/$storyId/like'), headers: headers),
+    return _api.call(
+      () => http.post(Uri.parse('${_api.config.baseUrl}/stories/$storyId/like'), headers: headers),
     );
   }
 
   // ── Hikaye görüntüleme kaydı ──────────────────────────────────────────────
 
-  static Future<void> recordStoryView(int storyId) async {
+  Future<void> recordStoryView(int storyId) async {
     final headers = await _headers();
     try {
-      await apiCall(
-        () => http.post(Uri.parse('$kBaseUrl/stories/$storyId/view'), headers: headers),
+      await _api.call(
+        () => http.post(Uri.parse('${_api.config.baseUrl}/stories/$storyId/view'), headers: headers),
       );
     } on AppException catch (e) {
       debugPrint('[StoryService] recordStoryView hata: ${e.message}');
@@ -69,10 +73,10 @@ class StoryService {
 
   // ── Hikaye görüntüleyenler ────────────────────────────────────────────────
 
-  static Future<List<StoryViewer>> getStoryViewers(int storyId) async {
+  Future<List<StoryViewer>> getStoryViewers(int storyId) async {
     final headers = await _headers();
-    final data = await apiCall(
-      () => http.get(Uri.parse('$kBaseUrl/stories/$storyId/viewers'), headers: headers),
+    final data = await _api.call(
+      () => http.get(Uri.parse('${_api.config.baseUrl}/stories/$storyId/viewers'), headers: headers),
     );
     final viewers = data['viewers'] as List? ?? [];
     return viewers
@@ -82,23 +86,23 @@ class StoryService {
 
   // ── Hikaye silme ──────────────────────────────────────────────────────────
 
-  static Future<void> deleteStory(int storyId) async {
+  Future<void> deleteStory(int storyId) async {
     final headers = await _headers();
-    await apiCall(
-      () => http.delete(Uri.parse('$kBaseUrl/stories/$storyId'), headers: headers),
+    await _api.call(
+      () => http.delete(Uri.parse('${_api.config.baseUrl}/stories/$storyId'), headers: headers),
     );
   }
 
   // ── Hikaye yükleme (video dosyası → backend) ───────────────────────────────
-  // MultipartRequest StreamedResponse döndürdüğü için apiCall kullanılamaz.
+  // MultipartRequest StreamedResponse döndürdüğü için _api.call kullanılamaz.
 
-  static Future<void> uploadStoryBytes(
+  Future<void> uploadStoryBytes(
     List<int> bytes, {
     required String fileName,
     required String mimeType,
   }) async {
     final token = await StorageService.getToken();
-    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/stories/upload'));
+    final req = http.MultipartRequest('POST', Uri.parse('${_api.config.baseUrl}/stories/upload'));
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
     final parts = mimeType.split('/');
     final mediaType = MediaType(parts[0], parts.length > 1 ? parts[1] : 'octet-stream');
@@ -128,9 +132,9 @@ class StoryService {
     }
   }
 
-  static Future<void> uploadStory(File mediaFile) async {
+  Future<void> uploadStory(File mediaFile) async {
     final token = await StorageService.getToken();
-    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/stories/upload'));
+    final req = http.MultipartRequest('POST', Uri.parse('${_api.config.baseUrl}/stories/upload'));
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
 
     final ext = mediaFile.path.split('.').last.toLowerCase();
@@ -165,3 +169,6 @@ class StoryService {
     }
   }
 }
+
+final storyServiceProvider = Provider<StoryService>((ref) =>
+    StoryService(ref.watch(apiClientProvider)));
