@@ -53,9 +53,12 @@ V1.4'ün temel prensibi: **medya trafiğini (WebRTC/dosya) ile işlem trafiğini
 ### DNS Bypass Mantığı
 
 ```
-uploads.teqlif.com → DNS Only → node1 direkt
-live.teqlif.com    → DNS Only → node1 direkt
-minio.teqlif.com   → DNS Only → node1 direkt
+live1.teqlif.com        → DNS Only → node1 direkt (LiveKit prod)
+live2.teqlif.com        → DNS Only → node4 direkt (LiveKit prod yedek)
+minio1.teqlif.com       → DNS Only → node1 direkt (MinIO prod)
+minio2.teqlif.com       → DNS Only → node4 direkt (MinIO prod yedek)
+live-staging.teqlif.com → DNS Only → node3 direkt (LiveKit staging)
+minio-staging.teqlif.com→ DNS Only → node3 direkt (MinIO staging)
 ```
 
 - WebRTC UDP: Cloudflare yalnızca TCP taşır — UDP medya akışı proxy'den geçemez
@@ -170,9 +173,12 @@ ssh tucibeyin@5.249.165.10            # node3 public IP (direkt)
 ```
 Mobil App
   ├─ REST/WebSocket → api.teqlif.com → gateway → node5:8000
-  ├─ LiveKit SDK    → live.teqlif.com → node1:7880 (prod)
+  ├─ LiveKit SDK    → live1.teqlif.com → node1:7880 (prod)
+  │                 → live2.teqlif.com → node4:7880 (prod yedek)
   │                 → live-staging.teqlif.com → node3:7880 (staging)
-  └─ MinIO S3 API  → uploads.teqlif.com / minio.teqlif.com → node1:9010
+  └─ MinIO S3 API  → minio1.teqlif.com → node1:9010 (prod)
+                   → minio2.teqlif.com → node4:9010 (prod yedek)
+                   → minio-staging.teqlif.com → node3:9010 (staging)
 ```
 
 ### Servisler Arası İletişim (WireGuard)
@@ -657,10 +663,12 @@ Bootstrap: apt kurulum → UFW → WireGuard (key üretir, public key'i ekrana y
 | `api.teqlif.com` | gateway | ✓ Proxied | REST API |
 | `staging.teqlif.com` | gateway | ✓ Proxied | Staging frontend |
 | `api-staging.teqlif.com` | gateway | ✓ Proxied | Staging REST API |
-| `uploads.teqlif.com` | node1 public IP | ✗ DNS Only | MinIO dosya erişimi |
-| `live.teqlif.com` | node1 public IP | ✗ DNS Only | LiveKit prod |
-| `minio.teqlif.com` | node1 public IP | ✗ DNS Only | MinIO Console |
+| `live1.teqlif.com` | node1 public IP | ✗ DNS Only | LiveKit prod (node1) |
+| `live2.teqlif.com` | node4 public IP | ✗ DNS Only | LiveKit prod (node4) |
+| `minio1.teqlif.com` | node1 public IP | ✗ DNS Only | MinIO prod (node1) |
+| `minio2.teqlif.com` | node4 public IP | ✗ DNS Only | MinIO prod (node4) |
 | `live-staging.teqlif.com` | 5.249.165.10 (node3) | ✗ DNS Only | LiveKit staging |
+| `minio-staging.teqlif.com` | 5.249.165.10 (node3) | ✗ DNS Only | MinIO staging |
 
 ### Nginx Server Block Özeti
 

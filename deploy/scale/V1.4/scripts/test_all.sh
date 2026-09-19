@@ -439,10 +439,12 @@ _curl_ok "staging.teqlif.com"     "https://staging.teqlif.com/api/health"
 _curl_ok "api-staging.teqlif.com" "https://api-staging.teqlif.com/api/health"
 
 # DNS Only — direkt node'a gider
-_curl_ok "live.teqlif.com"           "http://live.teqlif.com:7880"
-_curl_ok "uploads.teqlif.com"        "https://uploads.teqlif.com/minio/health/live"
-_curl_ok "minio.teqlif.com"          "http://minio.teqlif.com:9011"
+_curl_ok "live1.teqlif.com"          "http://live1.teqlif.com:7880"
+_curl_ok "live2.teqlif.com"          "http://live2.teqlif.com:7880"
+_curl_ok "minio1.teqlif.com"         "http://minio1.teqlif.com:9010/minio/health/live"
+_curl_ok "minio2.teqlif.com"         "http://minio2.teqlif.com:9010/minio/health/live"
 _curl_ok "live-staging.teqlif.com"   "http://live-staging.teqlif.com:7880"
+_curl_ok "minio-staging.teqlif.com"  "http://minio-staging.teqlif.com:9010/minio/health/live"
 
 # node5 FastAPI — gateway üzerinden (WireGuard bypass yok)
 _curl_ok "API gateway proxy"         "https://api.teqlif.com"
@@ -743,10 +745,12 @@ _cert "api.teqlif.com"       "api.teqlif.com"
 _cert "staging.teqlif.com"   "staging.teqlif.com"
 
 # DNS Only → node sertifikası
-_cert "live.teqlif.com"           "live.teqlif.com"
-_cert "uploads.teqlif.com"        "uploads.teqlif.com"
-_cert "minio.teqlif.com"          "minio.teqlif.com"
+_cert "live1.teqlif.com"          "live1.teqlif.com"
+_cert "live2.teqlif.com"          "live2.teqlif.com"
+_cert "minio1.teqlif.com"         "minio1.teqlif.com"
+_cert "minio2.teqlif.com"         "minio2.teqlif.com"
 _cert "live-staging.teqlif.com"   "live-staging.teqlif.com"
+_cert "minio-staging.teqlif.com"  "minio-staging.teqlif.com"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 16. KRİTİK LOG ANALİZİ — son 1 saat
