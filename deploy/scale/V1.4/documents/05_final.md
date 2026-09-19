@@ -195,8 +195,8 @@ Mobil App
 | node5 API | node3:8080 | HTTP | AI çağrısı (secondary) |
 | node2 AI Proxy | node5:6379/1 | Redis | Rate limit sayacı |
 | node3 AI Proxy (prod) | node5:6379/1 | Redis | Rate limit sayacı |
-| node1 edge-metrics | node5:6379/1 | Redis | CPU/RAM/disk/net metrikleri |
-| node4 edge-metrics | node5:6379/1 | Redis | CPU/RAM/disk/net metrikleri |
+| node1 edge-metrics | node5:6379/0 | Redis | CPU/RAM/disk/net metrikleri |
+| node4 edge-metrics | node5:6379/0 | Redis | CPU/RAM/disk/net metrikleri |
 | promtail (tüm node'lar) | node3:3100 | HTTP | Log akışı → Loki |
 | Prometheus (node3) | tüm node'lar:9100 | HTTP scrape | Sistem metrikleri |
 
@@ -266,7 +266,7 @@ upstream teqlif_staging { server 10.10.0.4:8001; }  # node3
 | WebRTC SFU | **LiveKit** | 7880 (API), UDP 50000-60000 (medya), 7881 (Prometheus) | `/etc/livekit/livekit.yaml` |
 | Object Storage | **MinIO Standalone** | 9010 (S3 API), 9011 (Console) | `/var/lib/minio`, %80 disk kotası |
 | Edge cache | **Redis 7** | 127.0.0.1:6379 | ACL şifreli |
-| Yük metrikleri | **edge-metrics-agent** | — | Python daemon, her 3s node5 Redis DB1'e yazar |
+| Yük metrikleri | **edge-metrics-agent** | — | Python daemon, her 3s node5 Redis DB0'a yazar |
 | Log ajanı | **promtail** | 9080 | → node3:3100 |
 | Metrik | **node_exporter** | 9100 | |
 
@@ -709,7 +709,7 @@ Katman 8: fail2ban (SSH brute force)
 | Kullanıcı → REST API | Cloudflare Turnstile (CAPTCHA) + JWT Bearer |
 | LiveKit webhook → API | LiveKit imzalı webhook token |
 | node5 → AI Proxy | `Authorization: Bearer AI_PROXY_INTERNAL_TOKEN` |
-| edge-metrics → Redis Core | Redis ACL şifre + DB 1 |
+| edge-metrics → Redis Core | Redis ACL şifre + DB 0 |
 | Prometheus → node_exporter | Açık (WireGuard korumasında) |
 
 ### Credential Kuralları
@@ -842,6 +842,11 @@ sudo teqlif-restart
 
 Her node'da çalışır. WireGuard IP'sini okuyarak kendini tespit eder → git pull → servisleri restart eder → durum tablosu.
 
+**Wrapper kurulumu** (her node'da bir kez yapılır, sonrasında `git pull` ile script otomatik güncellenir):
+```bash
+printf '#!/bin/sh\nexec /var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-restart.sh "$@"\n' | sudo tee /usr/local/bin/teqlif-restart && sudo chmod +x /usr/local/bin/teqlif-restart
+```
+
 ### Servis Logları
 
 ```bash
@@ -922,6 +927,6 @@ sudo bash bootstrap_<node>.sh
 | 2 | **node4 MinIO + LiveKit bootstrap scripti** | node4 için `bootstrap_node4.sh` henüz yazılmamış; node1 ile aynı yapıda olacak. | Yüksek |
 | 3 | **gateway HTTPS (SSL) doğrudan sunumu** | Şu an CF Full modda gateway :80 dinliyor. CF olmadan doğrudan gateway IP'ye gidilince plain HTTP. Certbot + nginx SSL, CF olmadan da güvenli. | Düşük |
 | 4 | **ClickHouse init_clickhouse() database parametresi** | `init_clickhouse()` database parametresi olmadan bağlanıyor; tablolar bootstrap'ta elle oluşturuluyor. `init_clickhouse()` `settings.clickhouse_db` ile bağlanmalı ve tabloları kendi oluşturmalı. | Orta |
-| 5 | **edge-metrics-agent CORE_REDIS_URL DB uyumsuzluğu** | node1/node4'teki agent `CORE_REDIS_URL` DB/1 kullanıyor, backend `get_redis()` DB/0 okuyor. Orkestratör hiçbir zaman gerçek edge metriği göremez. Tüm `CORE_REDIS_URL` değerlerinde `/1` → `/0` yapılmalı. Staging'de DB/0 kullanılarak düzeltildi. | Yüksek |
+| 5 | ~~**edge-metrics-agent CORE_REDIS_URL DB uyumsuzluğu**~~ ✓ **ÇÖZÜLDÜ** | node1/node4 `.env.production` ve template'lerde `/1` → `/0` düzeltildi. node3 staging'de DB/0 ile doğrulandı. Orkestratör artık gerçek edge metriklerini görüyor. | ~~Yüksek~~ |
 
 *Son güncelleme: 2026-09-19 · deploy/scale/V1.4/documents/final_V1.4.md*
