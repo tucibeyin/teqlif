@@ -32,6 +32,7 @@ class DeleteConversationCommand:
         user_b_id = max(uid, other_user_id)
         media_urls: list[str] = []
         rel_state = None
+        session = None
 
         async with self.uow:
             result = await self.uow.session.execute(
@@ -86,15 +87,16 @@ class DeleteConversationCommand:
                 )
             )
 
-            # Thread'i hard-delete et; autoflush DELETE SQL'i recompute sorgusundan önce çalıştırır
+            # Thread'i hard-delete et
             await self.uow.session.delete(thread)
+            session = self.uow.session  # commit sonrası recompute için referansı sakla
 
-            # Thread artık silindiği için recompute can_call=False (follow yoksa) döner
+        # ── Commit sonrası: thread silinmiş, recompute + MinIO + WS broadcast ──
+        if rel_state is None and session is not None:
+            # Hard-delete tamamlandı; thread artık DB'de yok — recompute "no thread" döner
             rel_state = await RelationshipStateService.recompute_and_cache(
-                user_a_id, user_b_id, self.uow.session
+                user_a_id, user_b_id, session
             )
-
-        # ── Commit sonrası: MinIO temizliği + WS broadcast ──
         if media_urls:
             asyncio.create_task(_purge_media(media_urls))
             logger.info("[DeleteConversation] %d medya dosyası silinmek üzere kuyruğa alındı", len(media_urls))

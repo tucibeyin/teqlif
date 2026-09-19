@@ -64,7 +64,7 @@ class DirectChatRequestNotifier
 
   Future<DirectChatRequestState> _fetch() async {
     try {
-      final data = await NotificationService.getThreadStatus(arg);
+      final data = await ref.read(notificationServiceProvider).getThreadStatus(arg);
       return DirectChatRequestState(
         status: data['status'] as String?,
         isInitiator: (data['is_initiator'] as bool?) ?? false,
@@ -86,8 +86,12 @@ class DirectChatRequestNotifier
     if (current == null || current.isActioning) return;
     state = AsyncValue.data(current.copyWith(isActioning: true));
     try {
-      await NotificationService.acceptMessageRequest(arg);
-      state = AsyncValue.data(current.copyWith(status: 'accepted', isActioning: false));
+      await ref.read(notificationServiceProvider).acceptMessageRequest(arg);
+      state = AsyncValue.data(current.copyWith(
+        status: 'accepted',
+        isActioning: false,
+        callPermissionEditable: !current.isInitiator, // acceptor görür, initiator görmez
+      ));
     } catch (e) {
       handleError(e, ref.read(localizationProvider));
       state = AsyncValue.data(current.copyWith(isActioning: false));
@@ -99,7 +103,7 @@ class DirectChatRequestNotifier
     if (current == null || current.isActioning) return;
     state = AsyncValue.data(current.copyWith(isActioning: true));
     try {
-      await NotificationService.declineMessageRequest(arg);
+      await ref.read(notificationServiceProvider).declineMessageRequest(arg);
       state = AsyncValue.data(current.copyWith(status: 'declined', isActioning: false));
     } catch (e) {
       handleError(e, ref.read(localizationProvider));
@@ -112,7 +116,7 @@ class DirectChatRequestNotifier
     if (current == null) return;
     state = AsyncValue.data(current.copyWith(callAllowed: allowed));
     try {
-      await NotificationService.updateCallPermission(arg, allowed);
+      await ref.read(notificationServiceProvider).updateCallPermission(arg, allowed);
     } catch (e) {
       handleError(e, ref.read(localizationProvider));
       state = AsyncValue.data(current.copyWith(callAllowed: current.callAllowed));
