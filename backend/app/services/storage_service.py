@@ -44,7 +44,7 @@ def _get_client_for_internal_url(internal_url: str) -> Minio:
 async def _get_client_from_public_url(public_url: str) -> Minio:
     """URL'i parse edip hangi MinIO sunucusunda olduğunu bulur (Media Routing)."""
     parsed = urllib.parse.urlparse(public_url)
-    domain = parsed.netloc
+    domain = parsed.hostname  # strip port — "minio-staging.teqlif.com:9010" → "minio-staging.teqlif.com"
 
     # Fallback to default internal edge if not absolute
     if not domain:
@@ -66,10 +66,10 @@ async def _get_client_from_public_url(public_url: str) -> Minio:
     raise ValueError(f"Could not route media for domain: {domain}")
 
 
-def _build_public_url(node_id: str, path: str) -> str:
-    """live1.teqlif.com -> https://minio1.teqlif.com/path"""
+def _build_public_url(node_id: str, bucket: str, key: str) -> str:
+    """live1.teqlif.com -> http://minio1.teqlif.com:9010/{bucket}/{key}"""
     domain = node_id.replace("live", "minio")
-    return f"https://{domain}{path}"
+    return f"http://{domain}:9010/{bucket}/{key}"
 
 
 # ── Public bucket ─────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ async def upload_bytes(key: str, data: bytes, content_type: str) -> str:
     
     await asyncio.to_thread(_upload)
     logger.debug("[STORAGE] Yüklendi: %s (%d bytes) -> %s", key, len(data), node["node_id"])
-    return _build_public_url(node["node_id"], f"/uploads/{key}")
+    return _build_public_url(node["node_id"], settings.minio_bucket, key)
 
 
 async def upload_file(key: str, path: str, content_type: str) -> str:
@@ -106,7 +106,7 @@ async def upload_file(key: str, path: str, content_type: str) -> str:
     
     await asyncio.to_thread(_upload)
     logger.debug("[STORAGE] Dosya yüklendi: %s → %s", path, key)
-    return _build_public_url(node["node_id"], f"/uploads/{key}")
+    return _build_public_url(node["node_id"], settings.minio_bucket, key)
 
 
 async def delete_object(url_or_key: str) -> None:
@@ -124,11 +124,10 @@ async def delete_object(url_or_key: str) -> None:
 
 
 def url_to_key(url: str) -> str:
-    """https://minio1.teqlif.com/uploads/stories/foo.mp4  →  stories/foo.mp4"""
+    """http://minio1.teqlif.com:9010/teqlif/stories/foo.mp4  →  stories/foo.mp4"""
     parsed = urllib.parse.urlparse(url)
-    path = parsed.path
-    prefix = "/uploads/"
-    return path[len(prefix):] if path.startswith(prefix) else path
+    parts = parsed.path.lstrip('/').split('/', 1)
+    return parts[1] if len(parts) > 1 else parsed.path
 
 
 # ── Eski sync alias (Backward compat'ı kapattığımız için asyncio wrap) ─────────
@@ -141,8 +140,6 @@ async def upload_file_async(key: str, path: str, content_type: str) -> str:
 
 
 # ── Private DM bucket ─────────────────────────────────────────────────────────
-
-_DM_PREFIX = "/dm/"
 
 
 async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
@@ -160,7 +157,7 @@ async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
     
     await asyncio.to_thread(_upload)
     logger.debug("[STORAGE_DM] Yüklendi: %s (%d bytes)", key, len(data))
-    return _build_public_url(node["node_id"], f"{_DM_PREFIX}{key}")
+    return _build_public_url(node["node_id"], settings.minio_dm_bucket, key)
 
 
 async def upload_file_dm(key: str, path: str, content_type: str) -> str:
@@ -177,7 +174,7 @@ async def upload_file_dm(key: str, path: str, content_type: str) -> str:
     
     await asyncio.to_thread(_upload)
     logger.debug("[STORAGE_DM] Dosya yüklendi: %s → %s", path, key)
-    return _build_public_url(node["node_id"], f"{_DM_PREFIX}{key}")
+    return _build_public_url(node["node_id"], settings.minio_dm_bucket, key)
 
 
 async def delete_object_dm(url_or_key: str) -> None:
@@ -206,11 +203,14 @@ async def presign_get(url_or_key: str, expires: timedelta = timedelta(days=7)) -
 
 
 def is_dm_url(url: str | None) -> bool:
-    return bool(url and url.startswith(_DM_PREFIX))
+    if not url:
+        return False
+    parsed = urllib.parse.urlparse(url)
+    return parsed.path.startswith(f"/{settings.minio_dm_bucket}/")
 
 
 def dm_url_to_key(url: str) -> str:
-    """https://minio1.teqlif.com/dm/messages/img/xxx.jpg  →  messages/img/xxx.jpg"""
+    """http://minio1.teqlif.com:9010/teqlif-dm/messages/img/xxx.jpg  →  messages/img/xxx.jpg"""
     parsed = urllib.parse.urlparse(url)
-    path = parsed.path
-    return path[len(_DM_PREFIX):] if path.startswith(_DM_PREFIX) else path
+    parts = parsed.path.lstrip('/').split('/', 1)
+    return parts[1] if len(parts) > 1 else parsed.path
