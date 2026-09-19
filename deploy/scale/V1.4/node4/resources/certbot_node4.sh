@@ -93,7 +93,7 @@ Group=tucibeyin
 Environment="MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}"
 Environment="MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}"
 Environment="MINIO_SERVER_URL=https://$DOMAIN_MINIO:9010"
-ExecStart=/usr/local/bin/minio server /var/lib/minio --address $WG_IP:9010 --console-address $WG_IP:9011 --certs-dir $MINIO_CERTS_DIR
+ExecStart=/usr/local/bin/minio server /var/lib/minio --address :9010 --console-address :9011 --certs-dir $MINIO_CERTS_DIR
 Restart=always
 RestartSec=5
 LimitNOFILE=65536
