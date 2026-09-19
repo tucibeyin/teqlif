@@ -33,6 +33,15 @@ fi
 sudo apt update -q
 sudo apt install -y ufw python3.13-venv wireguard unzip rsync fail2ban build-essential ffmpeg redis-server grafana postgresql postgresql-contrib postgresql-server-dev-all gettext-base
 
+# ClickHouse (Staging Analytics — tam izolasyon)
+if ! command -v clickhouse-server &>/dev/null; then
+  curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' \
+    | sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg
+  echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" \
+    | sudo tee /etc/apt/sources.list.d/clickhouse.list
+  sudo apt-get update -q && sudo apt-get install -y clickhouse-server clickhouse-client
+fi
+
 echo "==> Grup üyelikleri..."
 sudo usermod -aG systemd-journal tucibeyin 2>/dev/null || true
 sudo usermod -aG adm tucibeyin 2>/dev/null || true
@@ -219,7 +228,7 @@ sudo systemctl restart redis-server
 
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(
-  alertmanager grafana-server livekit loki minio node_exporter prometheus promtail redis-server
+  alertmanager clickhouse-server grafana-server livekit loki minio node_exporter prometheus promtail redis-server
   teqlif-ai-proxy teqlif-staging teqlif-worker-critical-staging teqlif-worker-staging
 )
 

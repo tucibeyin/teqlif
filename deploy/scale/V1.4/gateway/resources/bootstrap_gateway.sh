@@ -94,6 +94,10 @@ if ! /usr/local/bin/promtail --version 2>&1 | grep -q "$PROMTAIL_VERSION" 2>/dev
   rm -rf "$TMP"
 fi
 
+sudo mkdir -p /var/lib/promtail
+sudo cp "$RESOURCES_DIR/promtail-config.yml" /etc/promtail-config.yml 2>/dev/null || true
+sudo chown tucibeyin:tucibeyin /var/lib/promtail
+
 # ── Systemd Servisleri ────────────────────────────────────────────────────────
 echo "==> systemd servisleri (V1.4)..."
 SERVICES=(node_exporter promtail)
