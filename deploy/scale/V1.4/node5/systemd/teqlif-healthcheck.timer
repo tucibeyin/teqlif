@@ -1,0 +1,12 @@
+[Unit]
+Description=Teqlif Sistem Sağlık Raporu — Her gün 06:00 UTC (09:00 TRT)
+Documentation=deploy/scale/V1.4/scripts/teqlif-healthcheck.py
+
+[Timer]
+OnCalendar=*-*-* 06:00:00 UTC
+RandomizedDelaySec=0
+Persistent=true
+Unit=teqlif-healthcheck.service
+
+[Install]
+WantedBy=timers.target

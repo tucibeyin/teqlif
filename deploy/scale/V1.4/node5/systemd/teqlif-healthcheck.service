@@ -1,0 +1,18 @@
+[Unit]
+Description=Teqlif Günlük Sistem Sağlık Raporu
+Documentation=deploy/scale/V1.4/scripts/teqlif-healthcheck.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-healthcheck.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=teqlif-healthcheck
+# Prometheus + Loki sorguları dahil max 3 dakika
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target
