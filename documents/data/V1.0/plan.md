@@ -1417,6 +1417,15 @@ Bu yapılar endüstri standardında, dokunma:
   [D48] Flutter: tüm 'TUCi' string literalleri → 'Teqlik'              (Faz 12)
   [D49] i18n ARB: tüm "TUCi" display string'leri → "Teqlik"            (Faz 12)
   [D50] i18n ARB: tuciSpent key yeniden adlandır → teqlikSpent         (Faz 12)
+
+🔴 ClickHouse / Analytics:
+  [D51b] init_clickhouse() database parametresi eksik → default DB'ye yazıyor (Faz 5)
+  [D52b] ClickHouse TTL ekle (user_events, feed_analytics vb. 90 gün) (Faz 15.5)
+  [D53b] ClickHouse memory limit — node5: 512 MB, node3: 256 MB          (Faz 15.5)
+
+🟡 Monitoring:
+  [D54b] Prometheus FastAPI scrape ekle (node5:8000/metrics)              (V1.5)
+  [D55b] Prometheus alarm eşiği sıkılaştırması (DiskSpaceLow %80→%70)    (V1.5)
 ```
 
 ---
@@ -1693,32 +1702,51 @@ return {
 
 | Node | Rol | CPU | RAM | Disk | Ağ |
 |------|-----|-----|-----|------|-----|
-| **node5** | Core/Prod backend | 4× EPYC 7763 | 7.8 GB + 8 GB swap | 49 GB SSD | — |
-| **node3** | Staging + Monitoring | 4× EPYC 7763 | 3.8 GB + 4 GB swap | 49 GB SSD | 5 TB/ay, throttle sonrası 10 Mbit/s |
-| **node1** | Edge 1 (Prod) | 6× Intel Haswell | 11.4 GB + 2 GB swap | 98 GB NVMe | 2 Gbps **unmetered** |
-| **node4** | Edge 2 | 6× Intel Haswell | 11.4 GB + 8 GB swap | 98 GB NVMe | — |
-| **gateway** | Reverse Proxy | 2× QEMU 2.29 GHz | 1.9 GB + 1 GB swap | 58.9 GB SSD | 1 Gbps, 100 Mbps 24h ort. throttle |
-| **node2** | AI Proxy | 1× Xeon E5-2670 | 1.4 GB + 2 GB swap | 14.7 GB | — |
+| **node5** | CORE — API, DB, Cache, Analytics | 4× EPYC 7763 | 7.8 GB + 8 GB swap | 50 GB SSD | 1 Gbps unmetered |
+| **node3** | MONITOR + STAGING + AI PROXY (secondary) | 4× EPYC 7763 | ~4 GB + 4 GB swap | ~49 GB SSD | 5 TB/ay, throttle sonrası 10 Mbit/s |
+| **node1** | EDGE 1 — LiveKit, MinIO | 6× Intel Haswell 3.09 GHz | 11.4 GB + 2 GB swap | 98.3 GB NVMe | 2 Gbps **unmetered** |
+| **node4** | EDGE 2 — LiveKit, MinIO (node1 yedek) | 6× Intel Haswell | 11.4 GB + 8 GB swap | 98.3 GB NVMe | 2 Gbps **unmetered** |
+| **gateway** | EDGE PROXY — nginx L7 | 2× QEMU 2.29 GHz | 1.9 GB + 1 GB swap | 58.9 GB SSD | 1 Gbps, **24h ort. 100 Mbps throttle** |
+| **node2** | AI PROXY 1 (primary) + cf-failover | 1× Xeon E5-2670 | 1.4 GB + 2 GB swap | — | — |
+
+> Kaynak: `deploy/scale/V1.4/documents/05_final.md` — Debian 13 (trixie), KVM sanallaştırma, tüm node'larda `tucibeyin` kullanıcısı.
 
 ---
 
 ### 15.2 — node5 RAM Bütçesi
 
-**Sorun:** Redis 4 GB + PG shared_buffers ~2 GB = **6 GB tüketilmiş** → FastAPI + ARQ workers için ~1.8 GB kalıyor. Swap kullanımı zaten aktif.
+**Sorun:** Redis 4 GB + PG shared_buffers ~2 GB + ClickHouse = **6+ GB tüketilmiş** → FastAPI (4 worker) + ARQ (2 worker) + ClickHouse için ~1.5 GB kalıyor. Swap kullanımı aktif.
 
-**Mevcut → hedef konfigürasyon:**
+**node5'te çalışan tüm servisler (05_final.md):**
+
+```
+Servis                    Tahmini      Not
+─────────────────────────────────────────────────────────────────
+Redis Core (maxmemory)    4.0 GB       10.10.0.5:6379, AOF+RDB
+PostgreSQL 16 + pgvector  ~1.5 GB      shared_buffers hedef
+ClickHouse                ~300–500 MB  127.0.0.1:8123, DB teqlif_prod_analytics
+FastAPI (4 worker)        ~400 MB      uvicorn + uvloop, 0.0.0.0:8000
+ARQ worker (default)      ~150 MB      CPUWeight=50
+ARQ worker-critical       ~150 MB      öncelikli kuyruk
+OS + sistem               ~400 MB
+─────────────────────────────────────────────────────────────────
+Toplam tahmini            ~6.9–7.1 GB  (marj ~0.7–0.9 GB)
+```
+
+**Hedef konfigürasyon:**
 
 ```
 Servis                    Mevcut       Hedef
 ─────────────────────────────────────────────────
-Redis maxmemory           4.0 GB       4.0 GB (sabit — AOF + hot data)
+Redis maxmemory           4.0 GB       4.0 GB (sabit)
 PG shared_buffers         ~2.0 GB      1.5 GB  ← düşür
-PG work_mem               4 MB/conn    4 MB/conn (PgBouncer sonrası conn az)
-FastAPI worker sayısı     4            3       ← 1 azalt
-ARQ worker sayısı         ?            2 max   ← rate limit
+PG max_connections        100 (default) 30     ← PgBouncer sonrası
+ClickHouse max_memory     —            512 MB  ← limit ekle (bkz. 15.5)
+FastAPI worker sayısı     4            4       (sabit — uvloop etkili)
+ARQ worker sayısı         2            2       (sabit)
 OS + diğer                ~0.5 GB      ~0.5 GB
 ─────────────────────────────────────────────────
-Toplam hedef              ~7.5 GB      ~7.0 GB  (0.8 GB marj kaldı)
+Toplam hedef              ~7.1 GB      ~6.7 GB  (~1.1 GB marj)
 ```
 
 **PostgreSQL `postgresql.conf` değişiklikleri:**
@@ -1746,87 +1774,153 @@ Servis                    Tahmini      Risk
 ──────────────────────────────────────────────────────
 PostgreSQL data           5–15 GB      📈 büyüyor
 Redis AOF dump            1–2 GB       sabit
-Hikayeler (yerel disk)    ? GB         📈 BOMBa — Faz 0/D13 acil
-Loglar                    2–3 GB       rotasyon var mı?
+ClickHouse data           1–5 GB       📈 büyüyor (analytics events)
+Hikayeler/videolar        ? GB         📈 BOMBa — D13 acil (Faz 2)
+Backup (local, 2 gün)     2–4 GB       pg_dump + redis + clickhouse
+Loglar                    1–2 GB       journald rotation var
 OS + sistem               3–4 GB       sabit
 ──────────────────────────────────────────────────────
-Kalan                     ~20–30 GB    daralıyor
+Toplam tahmini            ~13–32 GB
+Kalan (50 GB'dan)         ~18–37 GB    dikizle
 ```
+
+> **Backup sistemi (05_final.md §8):** Yedek script 02:45 UTC'de çalışır; local 2 gün, remote (node3) 7 gün tutar. Disk eşiği: %85 uyarı, %95 dur. `journalctl -u teqlif-backup` ile izle.
 
 **Aksiyonlar:**
 
-1. **D13 — stories.video_path → MinIO (Faz 2):** Yerel videolar node5 diskini dolduruyor. Bu Faz 2'nin en yüksek öncelikli öğesi — disk alanı açar.
-2. **Log rotasyonu denetimi:** `journalctl --disk-usage` ile mevcut log hacmini ölç.
-3. **PG WAL:** `wal_keep_size = 64MB` (default 0, ama replication yoksa büyük WAL gereksiz).
-4. **ClickHouse node5'te OLMAYACAK** — bkz. 15.5.
+1. **D13 — stories.video_path → MinIO (Faz 2):** Yerel videolar node5 diskini dolduruyor. Faz 2'nin en yüksek öncelikli öğesi.
+2. **ClickHouse data retention:** analytics_events tablolarında eski veriyi ClickHouse TTL ile sil (bkz. Faz 15.5).
+3. **Log rotasyonu denetimi:** `journalctl --disk-usage` ile mevcut log hacmini ölç.
+4. **PG WAL:** `wal_keep_size = 64MB` — replication yok, büyük WAL gereksiz.
 
 ---
 
 ### 15.4 — node3 Kaynak Kısıtları
 
-**3.8 GB RAM, 15+ servis** — en kalabalık node. Her yeni servis doğrudan swap'a yansır.
+**~4 GB RAM, 15+ servis** — en kalabalık node. Her yeni servis doğrudan swap'a yansır. Panel'e 90 günde bir manuel giriş zorunlu — yoksa RAM 1.8 GB'a düşer (balloon). **Sonraki deadline: 2026-12-10.**
 
-**RAM dağılımı (tahmini):**
+**RAM dağılımı (tahmini) — 05_final.md servis listesine göre:**
 
 ```
-Servis                    Tahmini
-──────────────────────────────────
-Staging FastAPI (2 worker) ~300 MB
-Staging PostgreSQL         ~400 MB
-Staging Redis              ~200 MB
-Staging ARQ (2 worker)     ~200 MB
-Prometheus                 ~300 MB
-Loki                       ~200 MB
-Alertmanager               ~50 MB
-LiveKit staging            ~200 MB
-MinIO staging              ~150 MB
-AI proxy                   ~100 MB
-OS + diğer                 ~300 MB
-──────────────────────────────────
-Toplam tahmini             ~2.4 GB  (swap: ~1.4 GB)
+Servis                       Tahmini    Not
+──────────────────────────────────────────────────────────────
+Staging FastAPI (2 worker)   ~300 MB    port 8001
+Staging PostgreSQL           ~400 MB    127.0.0.1:5432
+Staging Redis                ~200 MB    127.0.0.1:6379
+Staging ARQ (2 worker)       ~200 MB    default + critical
+Staging ClickHouse           ~300 MB    127.0.0.1:8123 (teqlif_staging_analytics)
+AI Proxy (prod secondary)    ~100 MB    port 8080 — PRODUCTION trafiği alır
+LiveKit staging              ~200 MB    port 7880
+MinIO staging                ~150 MB    port 9010
+Prometheus                   ~300 MB    14 gün retention (7 scrape target)
+Loki                         ~200 MB    14 gün retention
+Grafana                      ~150 MB    port 3000
+Alertmanager                 ~50 MB     port 9093
+node_exporter + promtail     ~50 MB
+OS + diğer                   ~300 MB
+──────────────────────────────────────────────────────────────
+Toplam tahmini               ~2.9 GB    (swap: ~1.1 GB)
 ```
+
+> **Kritik not:** AI Proxy (port 8080) production trafiği alır — bu servis düşerse node2 tek primary olur, Groq fallback devreye girer. Staging yük yüksekse AI proxy cevap süresi uzayabilir.
 
 **Tuning:**
 
 ```ini
-# Prometheus — tsdb retention düşür (staging'de 30 gün gerekmez)
---storage.tsdb.retention.time=7d   # 30d yerine
+# Prometheus — retention düşür (tüm sistemi izliyor, 14 gün yeterli; V1.5 önerisi: 7g)
+# mevcut: 30d → şimdilik 14d (Loki ile aynı)
+--storage.tsdb.retention.time=14d
 
-# Loki — chunk boyutu küçült, memory cache azalt  
+# Loki — chunk boyutu küçült
+# /etc/loki/config.yml:
 chunk_target_size: 524288    # 1048576 → 512KB
-ingestion_rate_mb: 4         # küçük staging için
+ingestion_rate_mb: 4
 
-# Staging FastAPI — 1 worker yeterli
-# teqlif-staging.service: ExecStart içinde --workers 1
+# Staging ClickHouse — memory limit ekle
+# /etc/clickhouse-server/users.d/memory-limit.xml:
+# <max_memory_usage>256000000</max_memory_usage>  (256 MB staging için yeterli)
+
+# Staging FastAPI — 2 worker mevcut, 1'e düşürülebilir (düşük trafik)
 ```
 
 **Bandwidth (5 TB/ay, 10 Mbit/s throttle):**
 
 - 5 TB/ay ≈ 1.67 GB/gün ≈ 19 Mbit/s ortalama
-- Prometheus scraping + Loki log shipping **WireGuard içinden** (iç ağ) yapılmalı — dış IP'ye çıkmamalı
-- MinIO staging: büyük medya upload/download testleri node3 bandwithini yakabilir → staging testlerinde dikkat
-- **Plan Faz 5 (ClickHouse):** ClickHouse node3'e kurulmayacak (hem RAM hem disk hem bandwidth sorunlu)
+- Prometheus scraping (node3 → tüm node'lar:9100) ve Loki log shipping (tüm node'lar → node3:3100) **WireGuard iç ağından** gider — dış bant genişliğini etkilemez
+- MinIO staging: büyük medya testleri node3 bant genişliğini yakabilir — staging testlerinde dikkat
+- Backup rsync (node5 → node3): 02:45 UTC — gece saati, throttle düşük; rsync delta transfer bant tasarrufu sağlar
 
 ---
 
-### 15.5 — ClickHouse Yerleşimi
+### 15.5 — ClickHouse Mevcut Durumu ve Yönetimi
 
-**Faz 5'teki ClickHouse hangi node'a gidecek?**
+**Durum:** ClickHouse **zaten kurulu ve çalışıyor** — hem production'da hem staging'de.
 
-| Node | Uygunluk | Gerekçe |
-|------|---------|---------|
-| **node1** ✅ | **En uygun** | 11.4 GB RAM, 98 GB NVMe, 2 Gbps unmetered |
-| node4 | Uygun | node1 ile aynı specs, yedek seçenek |
-| node5 | ❌ Uygun değil | Disk sıkışık (49 GB), RAM bütçesi dar |
-| node3 | ❌ Uygun değil | 3.8 GB RAM, bant genişliği sınırlı, disk sıkışık |
+| Ortam | Node | Adres | DB |
+|-------|------|-------|----|
+| Production | node5 | `127.0.0.1:8123` | `teqlif_prod_analytics` |
+| Staging | node3 | `127.0.0.1:8123` | `teqlif_staging_analytics` |
 
-**Bağlantı mimarisi:**
+`default` DB **kullanılmaz** — tablolar bootstrap'ta elle doğru DB içinde oluşturulur.
+
+**Bilinen bug (05_final.md §16.4 — V1.5 adayı):** `init_clickhouse()` fonksiyonu `database` parametresi olmadan bağlanıyor → `default` DB'ye yazıyor. `get_clickhouse_client()` doğru DB'yi kullanıyor ama `init_clickhouse()` düzeltilmeli:
+
+```python
+# backend/app/database_clickhouse.py — düzeltilecek:
+def get_clickhouse_client():
+    return clickhouse_connect.get_client(
+        host=settings.clickhouse_host,
+        database=settings.clickhouse_db,  # ✅ doğru
+        ...
+    )
+
+# init_clickhouse() — aynı database parametresi eklenmeli
+async def init_clickhouse():
+    client = clickhouse_connect.get_client(
+        host=settings.clickhouse_host,
+        database=settings.clickhouse_db,  # ❌ eksik → ekle
+        ...
+    )
+```
+
+**Mevcut analytics veri akışı (zaten implement edilmiş):**
 
 ```
-node5 (FastAPI) → WireGuard 10.10.0.1 → node1 (ClickHouse :9000)
+API router → Redis RPUSH ch_buf:<tablo>  [fire-and-forget, <1ms]
+                  ↓ (her 30s VEYA 5000 satır)
+           ClickHouse batch INSERT INTO <tablo>
 ```
 
-**Neden node1:** node5'ten event'ler outbox worker ile node1'deki ClickHouse'a WireGuard üzerinden yazılır. Bu trafik iç ağda kalır, dış bant genişliğini etkilemez. node1'in 98 GB NVMe'si ClickHouse'un compressed columnar storage için ideal.
+Buffer key'leri: `ch_buf:user_events`, `ch_buf:search_events`, `ch_buf:direct_sale_events`  
+`feed_analytics` ve `swipe_live_events` → doğrudan batch INSERT (buffer bypass).
+
+> **Faz 9 (outbox) kapsamı:** Bu pattern analytics için zaten var. Faz 9'daki outbox, **finansal/kritik PostgreSQL event'leri** için (teqlik_transactions, auction bid confirmations) — analytics için değil.
+
+**node5 ClickHouse RAM yönetimi:**
+
+```xml
+<!-- /etc/clickhouse-server/users.d/memory-limit.xml (production) -->
+<clickhouse>
+  <profiles>
+    <default>
+      <max_memory_usage>536870912</max_memory_usage>  <!-- 512 MB -->
+      <max_memory_usage_for_all_queries>1073741824</max_memory_usage_for_all_queries>  <!-- 1 GB toplam -->
+    </default>
+  </profiles>
+</clickhouse>
+```
+
+**node5 ClickHouse disk yönetimi (TTL):**
+
+ClickHouse tabloları zaten `PARTITION BY toYYYYMM(timestamp)` ile tanımlı. TTL eklenebilir:
+
+```sql
+-- user_events, feed_analytics vb. için 90 gün TTL
+ALTER TABLE teqlif_prod_analytics.user_events
+MODIFY TTL timestamp + INTERVAL 90 DAY DELETE;
+```
+
+Bu sayede eski partition'lar otomatik silinir, disk büyümesi kontrol altına alınır.
 
 ---
 
@@ -1836,10 +1930,15 @@ node5 (FastAPI) → WireGuard 10.10.0.1 → node1 (ClickHouse :9000)
 
 **Kural: gateway'den veri geçmez, sadece yönlendirilir.**
 
-Halihazırda doğru yapılandırılmış olanlar (memory: `project_dns_records.md`):
-- `uploads.teqlif.com` → DNS Only → node1 direkt
-- `live.teqlif.com` → DNS Only → LiveKit direkt
-- `minio.teqlif.com` → DNS Only → MinIO direkt
+Halihazırda doğru yapılandırılmış olanlar (05_final.md §11):
+- `live1.teqlif.com` → DNS Only → node1 direkt (LiveKit prod)
+- `live2.teqlif.com` → DNS Only → node4 direkt (LiveKit prod yedek)
+- `minio1.teqlif.com` → DNS Only → node1 direkt (MinIO prod)
+- `minio2.teqlif.com` → DNS Only → node4 direkt (MinIO prod yedek)
+- `live-staging.teqlif.com` → DNS Only → node3 direkt
+- `minio-staging.teqlif.com` → DNS Only → node3 direkt
+
+`api.teqlif.com` ve `teqlif.com` → Cloudflare Proxied → gateway → node5 (bu yoldan JSON API ve WebSocket geçer).
 
 **Plan kapsamındaki dikkat noktaları:**
 
@@ -1889,14 +1988,14 @@ Her Faz'ın hangi node'u nasıl etkilediğini gösteren özet:
 | Faz | Etkilenen Node | CPU | RAM | Disk | Ağ | Önlem |
 |-----|--------------|-----|-----|------|-----|-------|
 | Faz 0 (Float→Numeric) | node5, node3 | - | - | +küçük | - | Migration bakım penceresi |
-| Faz 1 (BigInt, index) | node5, node3 | ↑ geçici | - | +küçük | - | Index migration CONCURRENTLY yasak |
-| Faz 2 (MinIO) | node5 ↓, node1 ↑ | - | - | **↓ önemli** | ↑ node1 | Media taşıma önce staging'de test |
-| Faz 3 (Redis) | node5 | - | ↑ dikkat | - | - | maxmemory 4 GB aşılmamalı |
-| Faz 5 (ClickHouse) | **node1** | ↑ | ↑ | ↑ | ↑ iç ağ | node5/node3'e kurma |
-| Faz 7 (ML) | node5 | **↑ yüksek** | ↑ 500 MB | ↑ model dosyası | - | CPU thread limit zorunlu |
-| Faz 9 (outbox) | node5 | ↑ küçük | - | ↑ küçük | ↑ iç ağ | node5→node1 WireGuard event akışı |
-| Faz 13 (PgBouncer) | node5 | - | **↓ 450 MB kurtarır** | - | - | max_connections 30'a düşür |
-| Faz 14 (cache) | node5 Redis | - | ↑ dikkat | - | - | Redis kullanımı izle |
+| Faz 1 (BigInt, index) | node5, node3 | ↑ geçici | - | +küçük | - | CONCURRENTLY yasak (bkz. memory) |
+| Faz 2 (MinIO) | node5 ↓, node1/node4 ↑ | - | - | **↓ önemli node5** | ↑ node1 iç | Staging'de test — minio1/minio2 DNS Only |
+| Faz 3 (Redis) | node5 | - | ↑ izle | - | - | maxmemory 4 GB, allkeys-lru policy |
+| Faz 5 (ClickHouse) | node5 (zaten kurulu!) | ↑ | ↑ izle | ↑ TTL ile kontrol | - | 512 MB memory limit + TTL ekle (15.5) |
+| Faz 7 (ML) | node5 | **↑ yüksek** | ↑ 500 MB | ↑ model dosyası | - | torch.set_num_threads(1), off-peak |
+| Faz 9 (outbox) | node5 | ↑ küçük | - | ↑ küçük | - | Analytics zaten Redis buffer; outbox = finansal PG event'ler |
+| Faz 13 (PgBouncer) | node5 | - | **↓ 450 MB kurtarır** | - | - | max_connections 30, pool_size 5/worker |
+| Faz 14 (cache) | node5 Redis DB0 | - | ↑ izle | - | - | allkeys-lru aktif, used_memory takip et |
 
 ---
 
@@ -1917,7 +2016,13 @@ node_filesystem_free_bytes{node3} < 3GB        → WARNING
 
 # gateway için
 node_network_transmit_bytes_total (rate) > 100Mbit/s sustained → WARNING
-``` — DB Mimarisi
+```
+
+> **Mevcut alarm kuralları** (05_final.md §13): NodeDown 1dk/critical, HighMemoryUsage %85/5dk/warning, DiskSpaceLow %80/5dk/warning, HighSwapUsage %50/5dk/warning, HighCPULoad %90/10dk/warning. Bu plan tamamlanınca eşikler sıkılaştırılabilir: DiskSpaceLow %80 → %70, HighMemoryUsage %85 → %75 (özellikle node3 ve node5 için — V1.5 adayı).
+
+---
+
+## Faz 13 — DB Mimarisi
 
 **Ön koşul:** Faz 0–6 tamamlanmış olmalı (yanlış tipe index koymak boşa gider).
 
@@ -2210,29 +2315,41 @@ fav_set = set(fav_listing_ids.scalars())
 
 ---
 
-### 14.3 — Redis Key Namespace Düzenlemesi
+### 14.3 — Redis Key Namespace
 
-**Mevcut durum:** Key'ler tutarsız:
-- `interests:{uid}` (prefix yok)
-- `cache:market_trends_global_{locale}` (`cache:` prefix)
-- `seller:badge:{uid}` (`seller:` prefix)
-- `trust_score:{uid}` (prefix yok)
-
-**Hedef namespace:**
+**Mevcut yapı (05_final.md §5):**
 
 ```
-teqlif:{env}:{domain}:{identifier}
+DB 0 — Uygulama (node5 Redis, 10.10.0.5:6379)
+  session:<token>        → Kullanıcı session verileri
+  i18n:pack:<lang>       → Çeviri paketleri
+  i18n:ver:<lang>        → Çeviri versiyon sayacı
+  ch_buf:<tablo>         → ClickHouse batch buffer (analytics)
+  interests:{uid}        → Feed affinity (15dk)
+  subcat_interests:{uid} → Feed subcategory (15dk)
+  seller:badge:{uid}     → Seller badge (25sa)
+  trust_score:{uid}      → Trust score (~15dk)
+  cache:*                → Analytics cache key'leri (5dk)
+  (pubsub kanalları)     → Gerçek zamanlı olaylar
 
-Örnekler:
-  teqlif:prod:feed:interests:{uid}
-  teqlif:prod:listing:detail:{id}
-  teqlif:prod:user:profile:{username}
-  teqlif:prod:analytics:market_trends:{locale}
-  teqlif:prod:auth:refresh:{token}
-  teqlif:prod:stream:live_list
+DB 1 — Operasyon (node2/node3 AI proxy ve edge-metrics bu DB'yi kullanır)
+  rate:<endpoint>        → AI Proxy rate limit sayaçları
+  edge_metrics:<nodeX>   → edge-metrics-agent (her 3s node1/node4 yazar)
 ```
 
-**Not:** Namespace değişikliği tüm Redis key okuma/yazma kodunu etkiler. Tek seferde değil, aşamalı geçiş yapılmalı. Eski key'ler TTL süresi dolunca kendiliğinden temizlenir.
+**Kural:** Mevcut key'ler değiştirilmez — onlarca yerden referans ediliyorlar. Bu plan kapsamında eklenen yeni cache key'leri `cache:` prefix'iyle uyumlu tutulur:
+
+```
+# Yeni eklenecek key'ler (Faz 14.1):
+cache:listing:{id}              → Listing detay (60s, DB0)
+cache:user_profile:{username}   → Profil (5dk, DB0)
+cache:categories:{locale}       → Kategoriler (1sa, DB0)
+cache:app_config:{key}          → App config (10dk, DB0)
+cache:streams:live              → Aktif yayınlar (30s, DB0)
+cache:listing_offers:{id}       → Teklifler (30s, DB0)
+```
+
+**DB 0 Redis memory baskısı:** Mevcut key'ler + yeni cache'ler birlikte 4 GB maxmemory limitine yaklaşabilir. `redis-cli INFO memory` ile `used_memory_human` izlenmeli. `maxmemory-policy = allkeys-lru` aktif olmalı — dolunca LRU cache key'leri kendiliğinden silinir.
 
 ---
 
