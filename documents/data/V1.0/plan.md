@@ -1683,7 +1683,241 @@ return {
 
 ---
 
-## Faz 13 — DB Mimarisi
+## Faz 15 — Kaynak Sınırları ve Node Kısıtları
+
+**Amaç:** Planın her fazının hangi node'u nasıl etkilediğini donanım sınırlarıyla eşleştirmek. Her Faz uygulanmadan önce bu bölüme bakılmalı.
+
+---
+
+### 15.1 — Node Haritası
+
+| Node | Rol | CPU | RAM | Disk | Ağ |
+|------|-----|-----|-----|------|-----|
+| **node5** | Core/Prod backend | 4× EPYC 7763 | 7.8 GB + 8 GB swap | 49 GB SSD | — |
+| **node3** | Staging + Monitoring | 4× EPYC 7763 | 3.8 GB + 4 GB swap | 49 GB SSD | 5 TB/ay, throttle sonrası 10 Mbit/s |
+| **node1** | Edge 1 (Prod) | 6× Intel Haswell | 11.4 GB + 2 GB swap | 98 GB NVMe | 2 Gbps **unmetered** |
+| **node4** | Edge 2 | 6× Intel Haswell | 11.4 GB + 8 GB swap | 98 GB NVMe | — |
+| **gateway** | Reverse Proxy | 2× QEMU 2.29 GHz | 1.9 GB + 1 GB swap | 58.9 GB SSD | 1 Gbps, 100 Mbps 24h ort. throttle |
+| **node2** | AI Proxy | 1× Xeon E5-2670 | 1.4 GB + 2 GB swap | 14.7 GB | — |
+
+---
+
+### 15.2 — node5 RAM Bütçesi
+
+**Sorun:** Redis 4 GB + PG shared_buffers ~2 GB = **6 GB tüketilmiş** → FastAPI + ARQ workers için ~1.8 GB kalıyor. Swap kullanımı zaten aktif.
+
+**Mevcut → hedef konfigürasyon:**
+
+```
+Servis                    Mevcut       Hedef
+─────────────────────────────────────────────────
+Redis maxmemory           4.0 GB       4.0 GB (sabit — AOF + hot data)
+PG shared_buffers         ~2.0 GB      1.5 GB  ← düşür
+PG work_mem               4 MB/conn    4 MB/conn (PgBouncer sonrası conn az)
+FastAPI worker sayısı     4            3       ← 1 azalt
+ARQ worker sayısı         ?            2 max   ← rate limit
+OS + diğer                ~0.5 GB      ~0.5 GB
+─────────────────────────────────────────────────
+Toplam hedef              ~7.5 GB      ~7.0 GB  (0.8 GB marj kaldı)
+```
+
+**PostgreSQL `postgresql.conf` değişiklikleri:**
+
+```ini
+shared_buffers = 1536MB          # 2048MB'dan düşür
+effective_cache_size = 4GB       # shared_buffers + OS page cache
+work_mem = 4MB                   # connection başına, düşük tut
+maintenance_work_mem = 128MB     # VACUUM/INDEX için
+max_connections = 30             # PgBouncer'dan sonra direkt bağlantı az
+```
+
+**Etki:** PgBouncer aktif edilince (Faz 13.2) 120 bağlantı → 20-30'a düşer. Her PG backend ~5 MB → **~450-500 MB RAM kurtarılır.**
+
+---
+
+### 15.3 — node5 Disk Bütçesi
+
+**Sorun:** 49 GB SSD → küçük.
+
+**Mevcut tahmini kullanım:**
+
+```
+Servis                    Tahmini      Risk
+──────────────────────────────────────────────────────
+PostgreSQL data           5–15 GB      📈 büyüyor
+Redis AOF dump            1–2 GB       sabit
+Hikayeler (yerel disk)    ? GB         📈 BOMBa — Faz 0/D13 acil
+Loglar                    2–3 GB       rotasyon var mı?
+OS + sistem               3–4 GB       sabit
+──────────────────────────────────────────────────────
+Kalan                     ~20–30 GB    daralıyor
+```
+
+**Aksiyonlar:**
+
+1. **D13 — stories.video_path → MinIO (Faz 2):** Yerel videolar node5 diskini dolduruyor. Bu Faz 2'nin en yüksek öncelikli öğesi — disk alanı açar.
+2. **Log rotasyonu denetimi:** `journalctl --disk-usage` ile mevcut log hacmini ölç.
+3. **PG WAL:** `wal_keep_size = 64MB` (default 0, ama replication yoksa büyük WAL gereksiz).
+4. **ClickHouse node5'te OLMAYACAK** — bkz. 15.5.
+
+---
+
+### 15.4 — node3 Kaynak Kısıtları
+
+**3.8 GB RAM, 15+ servis** — en kalabalık node. Her yeni servis doğrudan swap'a yansır.
+
+**RAM dağılımı (tahmini):**
+
+```
+Servis                    Tahmini
+──────────────────────────────────
+Staging FastAPI (2 worker) ~300 MB
+Staging PostgreSQL         ~400 MB
+Staging Redis              ~200 MB
+Staging ARQ (2 worker)     ~200 MB
+Prometheus                 ~300 MB
+Loki                       ~200 MB
+Alertmanager               ~50 MB
+LiveKit staging            ~200 MB
+MinIO staging              ~150 MB
+AI proxy                   ~100 MB
+OS + diğer                 ~300 MB
+──────────────────────────────────
+Toplam tahmini             ~2.4 GB  (swap: ~1.4 GB)
+```
+
+**Tuning:**
+
+```ini
+# Prometheus — tsdb retention düşür (staging'de 30 gün gerekmez)
+--storage.tsdb.retention.time=7d   # 30d yerine
+
+# Loki — chunk boyutu küçült, memory cache azalt  
+chunk_target_size: 524288    # 1048576 → 512KB
+ingestion_rate_mb: 4         # küçük staging için
+
+# Staging FastAPI — 1 worker yeterli
+# teqlif-staging.service: ExecStart içinde --workers 1
+```
+
+**Bandwidth (5 TB/ay, 10 Mbit/s throttle):**
+
+- 5 TB/ay ≈ 1.67 GB/gün ≈ 19 Mbit/s ortalama
+- Prometheus scraping + Loki log shipping **WireGuard içinden** (iç ağ) yapılmalı — dış IP'ye çıkmamalı
+- MinIO staging: büyük medya upload/download testleri node3 bandwithini yakabilir → staging testlerinde dikkat
+- **Plan Faz 5 (ClickHouse):** ClickHouse node3'e kurulmayacak (hem RAM hem disk hem bandwidth sorunlu)
+
+---
+
+### 15.5 — ClickHouse Yerleşimi
+
+**Faz 5'teki ClickHouse hangi node'a gidecek?**
+
+| Node | Uygunluk | Gerekçe |
+|------|---------|---------|
+| **node1** ✅ | **En uygun** | 11.4 GB RAM, 98 GB NVMe, 2 Gbps unmetered |
+| node4 | Uygun | node1 ile aynı specs, yedek seçenek |
+| node5 | ❌ Uygun değil | Disk sıkışık (49 GB), RAM bütçesi dar |
+| node3 | ❌ Uygun değil | 3.8 GB RAM, bant genişliği sınırlı, disk sıkışık |
+
+**Bağlantı mimarisi:**
+
+```
+node5 (FastAPI) → WireGuard 10.10.0.1 → node1 (ClickHouse :9000)
+```
+
+**Neden node1:** node5'ten event'ler outbox worker ile node1'deki ClickHouse'a WireGuard üzerinden yazılır. Bu trafik iç ağda kalır, dış bant genişliğini etkilemez. node1'in 98 GB NVMe'si ClickHouse'un compressed columnar storage için ideal.
+
+---
+
+### 15.6 — gateway Kısıtları
+
+**1.9 GB RAM, 100 Mbps 24h ort. throttle.**
+
+**Kural: gateway'den veri geçmez, sadece yönlendirilir.**
+
+Halihazırda doğru yapılandırılmış olanlar (memory: `project_dns_records.md`):
+- `uploads.teqlif.com` → DNS Only → node1 direkt
+- `live.teqlif.com` → DNS Only → LiveKit direkt
+- `minio.teqlif.com` → DNS Only → MinIO direkt
+
+**Plan kapsamındaki dikkat noktaları:**
+
+1. **Faz 14.1 — API response gzip:** Listing feed response'u (20 ilan × JSON) ~15 KB → gzip ile ~3 KB. gateway Nginx'te `gzip on` aktif olmalı — CPU maliyeti minimumdur, bant genişliği tasarrufu yüksek.
+
+2. **Faz 6 — Flutter WebSocket:** LiveKit signaling gateway'den geçmiyor (DNS Only) — iyi. Chat WebSocket gateway'den geçiyor — her bağlantı memory'de tutulur. 1.9 GB RAM'de yüzlerce aktif WS bağlantısı sığar ama 10 binlerce sığmaz.
+
+3. **Faz 5 — ClickHouse HTTP arayüzü:** Asla gateway üzerinden expose edilmeyecek. Sadece WireGuard iç ağdan erişim.
+
+4. **Gateway'e yeni servis eklenmeyecek** — nginx dışında hiçbir uygulama çalışmamalı.
+
+---
+
+### 15.7 — ML Pipeline Kaynak Sınırları (Faz 7)
+
+GPU yok, tüm node'lar CPU-only. ML inference node5'te çalışacak (4 core EPYC).
+
+**CPU bütçesi:**
+
+```python
+# backend/app/services/ml/*.py
+import torch
+torch.set_num_threads(1)  # ML inference için max 1 core
+torch.set_num_interop_threads(1)
+```
+
+**ARQ worker kısıtı:**
+
+```python
+# Embedding görevi — önce devre dışı (Faz 3'te)
+# Faz 7'de aktifleştirilince:
+# ARQ'da rate limit: dakikada max 10 embedding görevi
+# Off-peak scheduling: 02:00–06:00 arası batch embedding
+```
+
+**RAM kısıtı:**
+- FAISS index: model boyutuna göre değişir (küçük model = ~200 MB, büyük = 1+ GB)
+- node5'te ML için en fazla **500 MB RAM** ayrılmalı → model seçimi buna göre yapılmalı
+- ALS matrix factorization: scipy sparse matrix, veri boyutuna bağlı — batch işlem, RAM'de tutulmamalı
+
+---
+
+### 15.8 — Plan Fazlarının Node Etki Matrisi
+
+Her Faz'ın hangi node'u nasıl etkilediğini gösteren özet:
+
+| Faz | Etkilenen Node | CPU | RAM | Disk | Ağ | Önlem |
+|-----|--------------|-----|-----|------|-----|-------|
+| Faz 0 (Float→Numeric) | node5, node3 | - | - | +küçük | - | Migration bakım penceresi |
+| Faz 1 (BigInt, index) | node5, node3 | ↑ geçici | - | +küçük | - | Index migration CONCURRENTLY yasak |
+| Faz 2 (MinIO) | node5 ↓, node1 ↑ | - | - | **↓ önemli** | ↑ node1 | Media taşıma önce staging'de test |
+| Faz 3 (Redis) | node5 | - | ↑ dikkat | - | - | maxmemory 4 GB aşılmamalı |
+| Faz 5 (ClickHouse) | **node1** | ↑ | ↑ | ↑ | ↑ iç ağ | node5/node3'e kurma |
+| Faz 7 (ML) | node5 | **↑ yüksek** | ↑ 500 MB | ↑ model dosyası | - | CPU thread limit zorunlu |
+| Faz 9 (outbox) | node5 | ↑ küçük | - | ↑ küçük | ↑ iç ağ | node5→node1 WireGuard event akışı |
+| Faz 13 (PgBouncer) | node5 | - | **↓ 450 MB kurtarır** | - | - | max_connections 30'a düşür |
+| Faz 14 (cache) | node5 Redis | - | ↑ dikkat | - | - | Redis kullanımı izle |
+
+---
+
+### 15.9 — İzleme Eşikleri
+
+Bu plan boyunca Prometheus'ta şu alertler aktif olmalı:
+
+```yaml
+# node5 için kritik eşikler
+node_memory_MemAvailable_bytes < 500MB   → CRITICAL (swap'ta)
+node_filesystem_free_bytes{node5} < 5GB → WARNING
+pg_stat_activity_count > 25             → WARNING (PgBouncer sonrası)
+redis_memory_used_bytes > 3.8GB         → WARNING (4GB limitine yakın)
+
+# node3 için
+node_memory_MemAvailable_bytes{node3} < 200MB  → WARNING
+node_filesystem_free_bytes{node3} < 3GB        → WARNING
+
+# gateway için
+node_network_transmit_bytes_total (rate) > 100Mbit/s sustained → WARNING
+``` — DB Mimarisi
 
 **Ön koşul:** Faz 0–6 tamamlanmış olmalı (yanlış tipe index koymak boşa gider).
 
