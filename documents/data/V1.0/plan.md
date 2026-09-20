@@ -2554,9 +2554,13 @@ Sistemde verinin ne kadar süre tutulduğu, hangi mekanizma ile silindiği:
 | Prometheus metrikleri | TSDB (node3) | **14 gün** | Prometheus retention | Otomatik |
 | Backup (local) | node5 disk | **2 gün** | teqlif-backup.sh | Her gün 02:45 |
 | Backup (remote) | node3 disk | **7 gün** | teqlif-backup.sh | Her gün 02:45 |
-| ClickHouse analytics | ClickHouse (node5) | **TTL yok ← sorun** | Manuel (D52b) | — |
+| ClickHouse `user_events` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
+| ClickHouse `feed_analytics` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
+| ClickHouse `search_events` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
+| ClickHouse `swipe_live_events` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
+| ClickHouse `direct_sale_events` | ClickHouse (node5) | **180 gün** | MergeTree TTL (otomatik) | Arka planda |
 
-> **D52b acil:** ClickHouse tablolarına TTL eklenmeli (önerilen: 90 gün). Aksi halde analytics verisi disk dolana kadar büyür.
+> **Not:** D52b (`ClickHouse TTL ekle`) geçersiz — TTL zaten `database_clickhouse.py` DDL'inde tanımlı. `init_clickhouse()` bug'ı (D51b) düzeltilmeden önce tablolar `default` DB'de açıldıysa o tablolarda TTL olmayabilir. D51b öncelikli.
 
 ---
 
@@ -2782,3 +2786,150 @@ Bu plandan herhangi bir değişiklik uygulanırken uyulacak kurallar (`teqlif_ar
 5. **Flutter'da API response alanı değiştiğinde** (Faz 12): Değişiklik repository (api.dart) katmanında — ViewModel ve View değişmez. DTO map fonksiyonu güncellenir.
 
 6. **Commerce event eklenirken** (Faz 9 outbox): `StreamCommerceNotifier<S>` base class genişletilir (ADR §10). WS altyapısına dokunulmaz.
+
+---
+
+### 16.8 — Tam Sistem Veri Yaşam Döngüsü Denetimi
+
+Sistemdeki her veri tipi: ne zaman oluşuyor, ne zaman işleniyor, ne zaman kaldırılıyor.
+
+#### 16.8.1 Temizleme Mekanizmaları Haritası
+
+**Katman 1: ARQ cron (PostgreSQL)**
+
+| Tablo | Tutulan Süre | Silme Koşulu | Cron Zamanı | Fiziksel Dosya? |
+|-------|-------------|-------------|------------|----------------|
+| `notifications` | 30 gün | `created_at < 30 gün` | Günlük 03:00 | — |
+| `analytics_events` | 90 gün | `created_at < 90 gün` | Haftalık Pzt 04:00 | — |
+| `user_interactions` | 90 gün | `created_at < 90 gün` | Haftalık Sal 04:00 | — |
+| `stream_likes` | 7 gün | `created_at < 7 gün` | Günlük 01:00 | — |
+| `listing_impressions` | 30 gün | `seen_at < 30 gün` | Günlük 05:00 | — |
+| `direct_messages` (hidden) | 60 gün | `is_hidden=true AND created_at < 60 gün` | Günlük 02:30 | — |
+| `direct_messages` (media) | 7 gün | `has_media=true AND created_at < 7 gün` | Günlük 06:30 | MinIO teqlif-dm |
+| `stories` | `expires_at` | `expires_at < now()` | Saatlik | MinIO stories/ |
+| `story_views` | (CASCADE) | Story silinince | Saatlik | — |
+| `story_likes` | (CASCADE) | Story silinince | Saatlik | — |
+| `listings` (aktif→pasif) | 30 gün aktif | Kullanıcı güncellemezse | Günlük 04:00 | — |
+| `listings` (pasif→silindi) | 60 gün pasif | `deactivated_at < 60 gün` | Günlük 04:30 | MinIO listings/ |
+| `live_streams` (stale) | 3 dakika | `started_at < 3dk` + canlı değil | Her 2 dakika | — |
+| `calls` (ghost calling) | 5 dakika | `status=calling AND created < 5dk` | Her 15 dakika | — |
+| `calls` (ghost active) | 1 saat | `status=active AND created < 1 saat` | Her 15 dakika | — |
+| `highlights` (disk) | 2 saat | local disk mtime | Saatlik | /static/highlights/ |
+
+**Katman 2: ClickHouse TTL (MergeTree otomatik)**
+
+| Tablo | Retention | TTL Kolonu |
+|-------|-----------|-----------|
+| `user_events` | **30 gün** | `timestamp` |
+| `feed_analytics` | **30 gün** | `timestamp` |
+| `search_events` | **30 gün** | `timestamp` |
+| `swipe_live_events` | **30 gün** | `timestamp` |
+| `direct_sale_events` | **180 gün** | `created_at` |
+
+ClickHouse TTL'leri MergeTree merge işleminde arka planda uygulanır — ayrı bir cron'a gerek yoktur.
+
+**Katman 3: Redis (otomatik expire)**
+
+| Key Paterni | TTL | Açıklama |
+|------------|-----|---------|
+| `session:{id}` | 30 gün | Kullanıcı oturumu |
+| `blacklist:{jti}` | Token süresine eşit | Revoke edilmiş token |
+| `notif:peak_hours:{uid}` | Recomputed | Bildirim en iyi saati |
+| `interests:{uid}` | invalidate_on_write | Kullanıcı ilgi skoru |
+| `ch_buf:{table}` | flush'a kadar | ClickHouse buffer |
+| `live:viewers:{sid}` | `_VIEWER_TTL` | Canlı izleyici sayısı |
+| `rate:*` | Window boyutu | Rate limit |
+
+**Katman 4: systemd timer**
+
+| Görev | Zamanlama | Ne Yapar |
+|-------|-----------|---------|
+| `teqlif-backup.timer` | Günlük 02:45 UTC | pg_dump + redis BGSAVE + CH backup |
+| `teqlif-healthcheck.timer` | Günlük 06:00 UTC | Sağlık raporu + Telegram |
+| Backup local retention | backup sonrası | 2 günden eski yedekler silinir |
+| Backup remote retention | backup sonrası | 7 günden eski yedekler silinir |
+
+**Katman 5: İzleme sistemi retention**
+
+| Sistem | Tutulan Süre | Yapılandırma |
+|--------|-------------|-------------|
+| Prometheus TSDB | **30 gün** | `--storage.tsdb.retention.time=30d` (node3) |
+| Loki log | **14 gün** | `retention_period: 336h` (node3 loki-config.yml) |
+| Loki compaction | Her 10 dakika | `compaction_interval: 10m` |
+
+---
+
+#### 16.8.2 Temizleme Mekanizması OLMAYAN Tablolar
+
+Aşağıdaki tablolar büyümeye devam eder — kasıtlı (finansal kayıt) veya unutulmuş:
+
+**Kasıtlı — sonsuz saklanması beklenenler (audit/finansal):**
+
+| Tablo | Birikim Hızı | Gerekçe |
+|-------|-------------|---------|
+| `purchases` | Düşük | Satış geçmişi — yasal zorunluluk |
+| `tuci_transactions` | Orta | Para transferi kaydı |
+| `auctions` | Düşük | Açık artırma kaydı |
+| `bids` | Orta | Teklif geçmişi — açık artırma başına N kayıt |
+| `direct_sales` | Düşük | Doğrudan satış kaydı |
+| `direct_sale_orders` | Düşük | Sipariş kaydı |
+| `rating_history` | Düşük | Moderasyon için geçmiş |
+| `ratings` | Düşük | Kullanıcı oylama kaydı |
+| `reports` | Düşük | Moderasyon/yasal kayıt |
+| `referrals` | Düşük | Davet takibi |
+
+**Sosyal graf — kullanıcı aktifken anlamlı:**
+
+| Tablo | Birikim Hızı | Not |
+|-------|-------------|-----|
+| `follows` | Orta | Kullanıcı silinince CASCADE |
+| `favorites` | Orta | Listing silinince CASCADE |
+| `listing_likes` | Orta | Listing silinince CASCADE |
+| `user_blocks` | Düşük | Moderasyon — kasıtlı |
+| `search_alerts` | Düşük | Kullanıcı silmezse birikir |
+| `message_threads` | Orta | Mesajlar silinse de thread kalır |
+
+**Potansiyel sorunlu — birikim riski var:**
+
+| Tablo | Birikim Hızı | Sorun |
+|-------|-------------|-------|
+| `live_stream_viewers` | **Yüksek** | Her stream için her izleyici kayıt — cleanup YOK |
+| `calls` (ended/missed) | Orta | Biten aramalar sonsuza kalır — cleanup sadece ghost |
+| `call_participants` | Orta | Calls'a bağlı — cascade var mı? |
+| `listing_offers` | Orta | Reddedilen teklifler birikir |
+| `exchange_rates` | Düşük | Günlük yeni kayıt — eski oranlar temizlenmiyor |
+| `gift_events` | Orta | Tüm hediye event'leri tutuluyor |
+| `mass_notification_campaigns` | Düşük | Kampanya geçmişi birikir |
+| `user_interests` | Overwrite | Upsert ile güncelleniyor — birikmez ama obsolete row riski |
+
+**MinIO — silinen veri boşluğu:**
+
+| İçerik | Temizleme Var mı? | Not |
+|--------|-----------------|-----|
+| `listings/` images | ✅ Var (listing deleted) | `delete_listing_files()` çağrılıyor |
+| `stories/` videos | ✅ Var (expires_at) | `story_service.cleanup_expired_stories()` |
+| `dm/` media | ✅ Var (7 gün cron) | `cleanup_old_media_messages_task` |
+| `avatars/` | ⚠️ Kısmi | Avatar güncellenince eski siliniyor; hesap silinince? |
+| `highlights/` | ✅ Var (2 saat cron) | Lokal disk, saatlik temizlik |
+| Silinmiş listing için yetim dosyalar | ❓ Belirsiz | listing silinmeden önce `update_listing` çağrısı ile eski fotoğraf değiştirildiyse yetim kalabilir |
+
+> **MinIO lifecycle policy YOK** — sadece uygulama katmanı silme çağrılarına güveniliyor. Uygulama hatalarında dosyalar yetim kalır.
+
+---
+
+#### 16.8.3 Önerilen Yeni Temizleme Görevleri
+
+Onay bekleyen kararlar:
+
+| # | Tablo | Öneri | Frekans | Gerekçe |
+|---|-------|-------|---------|---------|
+| GC1 | `live_stream_viewers` | Her stream bitimsinde veya 30 gün sonra temizle | Günlük 07:00 | Yüksek birikim — her canlı yayın için N kayıt, cleanup yok |
+| GC2 | `calls` (ended/missed) | 90 gün sonra sil | Haftalık Çar 04:00 | Finansal değeri yok, büyüyor |
+| GC3 | `call_participants` | Calls CASCADE kontrolü | calls ile birlikte | FK var mı doğrula |
+| GC4 | `listing_offers` (declined/expired) | 60 gün sonra sil | Günlük 07:00 | Reddedilen teklifler gereksiz birikir |
+| GC5 | `exchange_rates` | 90 günden eskisini sil | Haftalık Paz 05:00 | Günlük rate ekleniyor, eski değer anlamsız |
+| GC6 | `message_threads` (empty) | İçi boş thread'leri 30 gün sonra sil | Haftalık Paz 05:30 | Thread var, mesaj yok — ghost thread |
+| GC7 | `search_alerts` (expired) | 180 gün sonra sil veya kullanıcıya bildir | Haftalık Paz 06:00 | Pasif ilanlar için alert kalıyor |
+| GC8 | MinIO lifecycle policy | Tüm bucket'lara 365 gün lifecycle ekle | MinIO config | Uygulama silme çağrısı kaçırılırsa güvenlik ağı |
+
+> GC1 ve GC8 en kritik. `live_stream_viewers`, canlı yayın başarısıyla doğru orantılı büyüyor ve hiç temizlenmiyor.
