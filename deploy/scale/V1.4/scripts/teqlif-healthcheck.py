@@ -160,7 +160,7 @@ def section_node5() -> str:
                 up_s  = ""
                 try:
                     start = datetime.strptime(ts.strip(), "%a %Y-%m-%d %H:%M:%S %Z")
-                    diff  = int((datetime.utcnow() - start).total_seconds())
+                    diff  = int((datetime.now() - start).total_seconds())
                     d, h, mn = diff // 86400, (diff % 86400) // 3600, (diff % 3600) // 60
                     if d > 0:
                         up_s = f" {d}g" + (f" {h}sa" if h > 0 else "")
@@ -408,14 +408,10 @@ def section_redis() -> str:
             d_icon  = f"  🔴 {dead} ölü" if dead > 0 else ""
             lines.append(f"  {p_icon} {q}: {pending} bekleyen{d_icon}")
 
-        # Worker heartbeat: ARQ base key + per-worker keys
-        hb_base = r.exists("arq:health-check")
-        hb_keys = r.keys("arq:health-check:*") or []
-        hb_total = (1 if hb_base else 0) + len(hb_keys)
-        if hb_total > 0:
-            lines.append(f"  ✅ {hb_total} worker heartbeat aktif")
-        else:
-            lines.append("  ⚠️ worker heartbeat bulunamadı (yeni başladıysa normal)")
+        # In-progress job sayısı (0 = worker boşta, normal)
+        in_progress = len(r.keys("arq:in-progress:*") or [])
+        if in_progress > 0:
+            lines.append(f"  ▶️ {in_progress} job işleniyor")
 
         r.close()
     except Exception as exc:
