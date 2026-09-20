@@ -162,7 +162,12 @@ def section_node5() -> str:
                     start = datetime.strptime(ts.strip(), "%a %Y-%m-%d %H:%M:%S %Z")
                     diff  = int((datetime.utcnow() - start).total_seconds())
                     d, h, mn = diff // 86400, (diff % 86400) // 3600, (diff % 3600) // 60
-                    up_s = f" {d}g {h}s" if d > 0 else (f" {h}s{mn}dk" if h > 0 else f" {mn}dk")
+                    if d > 0:
+                        up_s = f" {d}g" + (f" {h}sa" if h > 0 else "")
+                    elif h > 0:
+                        up_s = f" {h}sa" + (f" {mn}dk" if mn > 0 else "")
+                    else:
+                        up_s = f" {mn}dk"
                 except Exception:
                     pass
                 lines.append(f"✅ {svc}{mem_s}{up_s}")
@@ -180,10 +185,14 @@ def section_node5() -> str:
 async def section_nodes(client: httpx.AsyncClient) -> str:
     lines = ["🌐 <b>Diğer Node'lar</b>"]
     try:
-        # node_exporter up durumu
-        results = await _prom(client, 'up{job=~"node-.*"}')
-        up_map = {r["metric"].get("job", "").replace("node-", ""): r["value"][1] == "1"
-                  for r in results}
+        # node_exporter up durumu — WireGuard IP:9100 üzerinden
+        results = await _prom(client, r'up{instance=~"10\.10\.0\.\d+:9100"}')
+        up_map = {}
+        for row in results:
+            inst = row["metric"].get("instance", "")
+            ip   = inst.split(":")[0]
+            node = IP_TO_NODE.get(ip, ip)
+            up_map[node] = row["value"][1] == "1"
 
         for node in ["gateway", "node1", "node2", "node3", "node4"]:
             if node not in up_map:
@@ -264,8 +273,11 @@ async def section_disk_mem(client: httpx.AsyncClient) -> str:
             pct  = int(used / total * 100)
             icon = "🔴" if pct >= 90 else ("⚠️" if pct >= 75 else "✅")
             rows.append((node, f"{icon} {node:<9} %{pct}  {_gb(used)}/{_gb(total)} GB"))
-        for _, line in sorted(rows):
-            lines.append(line)
+        if rows:
+            for _, line in sorted(rows):
+                lines.append(line)
+        else:
+            lines.append("  ⚠️ Prometheus veri döndürmedi")
     except Exception as exc:
         lines.append(f"⚠️ {exc}")
 
@@ -296,8 +308,11 @@ async def section_disk_mem(client: httpx.AsyncClient) -> str:
                       f"{'⚠️' if swap_pct >= 50 else ''}"
                       if swap_t > 0 else "")
             rows.append((node, f"{icon} {node:<9} RAM {_gb(used)}/{_gb(total)} GB %{pct}{swap_s}"))
-        for _, line in sorted(rows):
-            lines.append(line)
+        if rows:
+            for _, line in sorted(rows):
+                lines.append(line)
+        else:
+            lines.append("  ⚠️ Prometheus veri döndürmedi")
     except Exception as exc:
         lines.append(f"⚠️ {exc}")
 
@@ -359,7 +374,9 @@ def section_redis() -> str:
         used    = info.get("used_memory", 0)
         max_mem = info.get("maxmemory", 0)
         evicted = info.get("evicted_keys", 0)
-        aof_ok  = info.get("aof_last_rewrite_status", "?") == "ok"
+        aof_enabled = info.get("aof_enabled", 0)
+        aof_status  = info.get("aof_last_rewrite_status", "ok")
+        aof_ok  = (not aof_enabled) or (str(aof_status) == "ok")
         rdb_ok  = info.get("rdb_last_bgsave_status",  "?") == "ok"
         hits    = info.get("keyspace_hits",   0)
         misses  = info.get("keyspace_misses", 0)
@@ -391,12 +408,14 @@ def section_redis() -> str:
             d_icon  = f"  🔴 {dead} ölü" if dead > 0 else ""
             lines.append(f"  {p_icon} {q}: {pending} bekleyen{d_icon}")
 
-        # Worker heartbeat: arq:health-check:* keys
+        # Worker heartbeat: ARQ base key + per-worker keys
+        hb_base = r.exists("arq:health-check")
         hb_keys = r.keys("arq:health-check:*") or []
-        if hb_keys:
-            lines.append(f"  ✅ {len(hb_keys)} worker heartbeat aktif")
+        hb_total = (1 if hb_base else 0) + len(hb_keys)
+        if hb_total > 0:
+            lines.append(f"  ✅ {hb_total} worker heartbeat aktif")
         else:
-            lines.append("  ⚠️ worker heartbeat bulunamadı (servis kontrol edin)")
+            lines.append("  ⚠️ worker heartbeat bulunamadı (yeni başladıysa normal)")
 
         r.close()
     except Exception as exc:
