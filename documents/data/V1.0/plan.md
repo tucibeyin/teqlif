@@ -2445,3 +2445,340 @@ WHERE image_urls @> '["https://uploads.teqlif.com/x.jpg"]'::jsonb
 □ Redis hit rate > %80 (listing detail + feed)
 □ pg_stat_activity: waiting connections = 0 normal yükte
 ```
+
+---
+
+## Faz 16 — Mimari Uyum, ARQ Takvimi ve Veri Yaşam Döngüsü
+
+**Amaç:** Bu planın tüm değişikliklerini teqlif'in mimari kararlarıyla (`teqlif_architectural_decisions.md`) ve clean architecture / clean code / MVVM prensipleriyle hizalamak. ARQ worker frekanslarını kaynak bütçesine göre optimize etmek.
+
+---
+
+### 16.1 — Mimari Prensipler: Veri Katmanına Yansıması
+
+#### 16.1.1 Clean Architecture — Katman Kuralları
+
+```
+┌─────────────────────────────────────────────────┐
+│  Flutter (View / ViewModel)                      │
+│  MVVM: ViewModel = AsyncNotifier/Notifier        │
+│  View sadece render — BuildContext bilgisi yok   │
+└───────────────────────┬─────────────────────────┘
+                        │ DTO / response
+┌───────────────────────▼─────────────────────────┐
+│  API Katmanı (FastAPI Router)                    │
+│  Router → Use Case → Repository                  │
+│  Router domain'e bağımlı değil (§10 ADR)        │
+└───────────────────────┬─────────────────────────┘
+                        │ Pydantic schema
+┌───────────────────────▼─────────────────────────┐
+│  Use Case / Service                              │
+│  İş mantığı burada — Router'da değil            │
+└───────────────────────┬─────────────────────────┘
+                        │ SQLAlchemy model
+┌───────────────────────▼─────────────────────────┐
+│  Repository / ORM (SQLAlchemy 2.0 Mapped[])     │
+│  Veri erişimi — tipler burada tanımlanır         │
+└───────────────────────┬─────────────────────────┘
+                        │ PostgreSQL / Redis / ClickHouse
+┌───────────────────────▼─────────────────────────┐
+│  ARQ Worker (arka plan görevleri)                │
+│  Worker = use case coordinator — fat function değil │
+└─────────────────────────────────────────────────┘
+```
+
+**Veri planı değişikliklerinin her katmana yansıması:**
+
+| Değişiklik | Katman | Prensip |
+|-----------|--------|---------|
+| Float → Numeric (Faz 0) | Repository (ORM model) | Single Source of Truth — tip DB'de tanımlanır |
+| Pydantic float → Decimal (Faz 4) | API Schema | DTO tipi DB tipiyle uyumlu olmalı |
+| Flutter `tuciBalance` → `teqlikBalance` (Faz 12) | View / ViewModel | ViewModel DB'den gelen DTO'yu map eder |
+| Redis cache (Faz 14) | Repository/Service | Cache = infrastructure — use case bilmez |
+| ARQ frekans değişikliği (Faz 16) | Worker (koordinatör) | İş mantığı service'te, worker sadece tetikler |
+| ClickHouse TTL (Faz 15.5) | Persistence | Veri yaşam döngüsü persistence katmanında yönetilir |
+
+#### 16.1.2 Cache Taksonomisi (ADR §9)
+
+`teqlif_architectural_decisions.md` §9'dan: Cache'ler beş kategoriye ayrılmıştır. Bu plan kapsamındaki tüm cache değişiklikleri bu taksonomiye göre yapılmalı:
+
+| Kategori | Örnekler | Bu Plandaki Değişiklikler |
+|----------|---------|--------------------------|
+| **SCHEMA_VERSIONED** | `/api/catalog`, `/api/cities`, field-config | Faz 0 sonrası migration'a `bump_schema_version()` eklenmeli |
+| **ALGORITHMIC** | Feed, trending, user_interests, seller badges | Faz 16.3 frekans önerileri burayı etkiliyor |
+| **LIFECYCLE** | Auction state, stream state, call state | Faz 14.1 `listing_offers` cache → LIFECYCLE kategorisi |
+| **SECURITY_CRITICAL** | Session, refresh token, rate limit, ad budget | Asla müdahale edilmez — Faz 13/14 bu key'lere dokunmaz |
+| **EPHEMERAL** | Listing detay cache, user profile cache | Faz 14.1'de eklenenler buraya girer |
+
+**Kural:** Faz 0'daki her migration'ın `upgrade()` ve `downgrade()` sonuna `bump_schema_version()` çağrısı eklenmeli. Aksi halde `/api/catalog` ve `/api/field-config` eski tipi cache'den servis eder.
+
+#### 16.1.3 MVVM — Flutter Veri Akışı
+
+Bu plan kapsamındaki API response değişikliklerinin (tuci → teqlik, Float → Decimal, JSON key isimleri) Flutter MVVM katmanlarına yansıması:
+
+```
+API Response (JSON)
+    ↓
+Repository (api.dart) — HTTP → DTO parse
+    ↓
+ViewModel (AsyncNotifier) — DTO → UI state map
+    ↓
+View (Screen) — ref.watch(provider) → render
+
+Kural: JSON key değişikliği sadece repository'de güncellenir.
+       ViewModel ve View değişmez — sadece DTO field adı değişir.
+```
+
+---
+
+### 16.2 — Veri Yaşam Döngüsü (Retention Tablosu)
+
+Sistemde verinin ne kadar süre tutulduğu, hangi mekanizma ile silindiği:
+
+| Veri | Tablo | Retention | Silme Mekanizması | Silme Zamanı |
+|------|-------|-----------|------------------|-------------|
+| Bildirimler | `notifications` | **30 gün** | ARQ cron DELETE | Her gün 03:00 |
+| Analytics event'leri | `analytics_events` | **90 gün** | ARQ cron DELETE | Her Pazartesi 04:00 |
+| Kullanıcı etkileşimleri | `user_interactions` | **90 gün** | ARQ cron DELETE | Her Pazartesi 04:00 |
+| Listing impression'ları | `listing_impressions` | **30 gün** | ARQ cron DELETE | Her gün 05:00 |
+| Stream beğenileri | `stream_likes` | **7 gün** | ARQ cron DELETE | Her gün 01:00 |
+| Hikayeler | `stories` | **expires_at** | ARQ cron (hourly) | Her saat |
+| Hype highlight'lar | `highlights` | **expires_at** | ARQ cron (hourly) | Her saat |
+| Gizli mesajlar | `direct_messages` (hidden) | Gizlenince | ARQ cron DELETE | Her gün 02:30 |
+| Medya mesajları | `direct_messages` (media) | **7 gün** | ARQ cron DELETE | Her gün 06:30 |
+| Pasifleştirilen ilanlar | `listings` | **30 gün aktif, +60 gün pasif** | ARQ cron | 04:00 + 04:30 |
+| Hayalet yayınlar | `live_streams` | **3 dakika stale** | ARQ cron | Her 2 dakika |
+| Hayalet aramalar | `calls` | **1 saat active** | ARQ cron | Her 15 dakika |
+| Redis interaction queue | Redis buffer | **5 dakika** | flush_interactions_to_db | Her 5 dakika |
+| Loki log'ları | Loki (node3) | **14 gün** | Loki retention | Otomatik |
+| Prometheus metrikleri | TSDB (node3) | **14 gün** | Prometheus retention | Otomatik |
+| Backup (local) | node5 disk | **2 gün** | teqlif-backup.sh | Her gün 02:45 |
+| Backup (remote) | node3 disk | **7 gün** | teqlif-backup.sh | Her gün 02:45 |
+| ClickHouse analytics | ClickHouse (node5) | **TTL yok ← sorun** | Manuel (D52b) | — |
+
+> **D52b acil:** ClickHouse tablolarına TTL eklenmeli (önerilen: 90 gün). Aksi halde analytics verisi disk dolana kadar büyür.
+
+---
+
+### 16.3 — ARQ Cron Takvimi (Tam Liste)
+
+Tüm scheduled görevler, frekansları ve node5 kaynak baskısına göre değerlendirme:
+
+#### Kategori 1: Temizlik (Cleanup)
+
+| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değişiklik Önerisi |
+|-------|---------------|-----------------|-------------------|
+| `cleanup_stale_streams_task` | **Her 2 dakika** | Düşük | ✅ Sabit — LiveKit gerçek zamanlı |
+| `cleanup_ghost_calls_task` | Her 15 dakika | Düşük | ✅ Sabit |
+| `cleanup_expired_stories_task` | Her saat | Düşük | ✅ Sabit |
+| `cleanup_hype_highlights_task` | Her saat | Düşük | ✅ Sabit |
+| `cleanup_old_stream_likes_task` | Günlük 01:00 | Düşük | ✅ Sabit |
+| `cleanup_hidden_messages_task` | Günlük 02:30 | Düşük | ✅ Sabit |
+| `cleanup_old_notifications_task` | Günlük 03:00 | Orta | ✅ Sabit |
+| `cleanup_old_analytics_task` | Haftalık Pzt 04:00 | **Yüksek** (90 gün veri, bulk DELETE) | ✅ Sabit — haftalık doğru |
+| `cleanup_old_impressions_task` | Günlük 05:00 | Orta | ✅ Sabit |
+| `cleanup_old_media_messages_task` | Günlük 06:30 | Düşük | ✅ Sabit |
+
+#### Kategori 2: Kişiselleştirme (En Yüksek Frekans Grubu)
+
+| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
+|-------|---------------|-----------------|--------------|
+| `compute_user_interests_task` | **Her 15 dakika** | **Yüksek** — ClickHouse sorgu + PG write | 🔴 Azalt |
+| `compute_user_condition_preferences_task` | **Her 15 dakika** | Orta — Redis okuma + Redis yazma | 🟡 Azalt |
+| `sync_swipelive_interests_task` | Her 20 dakika | Orta | 🟡 Azalt |
+| `invalidate_swipe_live_configs_task` | Her 15 dakika | Düşük — sadece Redis DEL | ✅ Sabit |
+| `populate_foryou_feed_task` | Her saat | Orta | 🟡 Azalt |
+
+**`compute_user_interests_task` analizi:**
+- Görevi: ClickHouse'dan son 7 günlük `user_events` ve `user_interactions` okur, her kullanıcının `user_interests` skorunu PostgreSQL'e yazar
+- Neden 15 dakika yeterli değil: Kullanıcı ilgisi 15 dakikada değişmez; bugünkü davranış dünün verisini yansıtır
+- Neden 2x/gün yeterli: ALS/BPR zaten haftalık eğitiliyor; feed skoru `user_interests`'i kullanıyor ama 12 saatlik gecikme kabul edilebilir
+- **Kaynak tasarrufu:** 15dk → günde 2x = **96 çalışma → 2 çalışma** = %98 azalma
+
+#### Kategori 3: Hesaplama (Compute)
+
+| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
+|-------|---------------|-----------------|--------------|
+| `compute_trending_listings_task` | **Her 30 dakika** | Orta — ClickHouse sorgu | 🟡 Azalt |
+| `compute_trending_categories_task` | Her 6 saatte | Orta | ✅ Sabit |
+| `compute_seller_badges_task` | Günlük 01:30 | Orta | ✅ Sabit |
+| `calculate_user_budgets_task` | Günlük 02:00 | Orta | ✅ Sabit |
+| `compute_trust_scores_task` | Günlük 02:15 | Yüksek — çok sinyalli | ✅ Sabit |
+| `optimize_notification_timing_task` | Günlük 04:00 | Orta | ✅ Sabit |
+| `hesitation_retarget_task` | Günlük 06:00 | Düşük | ✅ Sabit |
+
+#### Kategori 4: Veri Senkronizasyonu
+
+| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
+|-------|---------------|-----------------|--------------|
+| `flush_interactions_to_db` | **Her 5 dakika** | Düşük | ✅ Sabit — Redis buffer kritik |
+| `sync_ad_campaigns_task` | **Her 10 dakika** | Düşük | ✅ Sabit — reklam bütçe doğruluğu |
+
+#### Kategori 5: ML Eğitimi (Haftalık/Günlük)
+
+ADR §3.3'ten frekanslar zaten belirlenmiş — değişiklik önerilmiyor:
+
+| Görev | Mevcut Frekans | Not |
+|-------|---------------|-----|
+| `train_swipe_live_als_task` | Günlük 01:00 | ADR: haftalık önermiş, ama günlük CPU-off-peak |
+| `train_feed_als_task` | Günlük 01:30 | ADR: haftalık — 🟡 incelenecek |
+| `train_bpr_task` | Pzt+Çar+Cmt 00:30 | ✅ ADR ile uyumlu |
+| `train_kmeans_cold_start_task` | Çar+Paz 02:15 | ✅ ADR ile uyumlu |
+| `train_item2vec_task` | Haftalık Paz 02:00 | ✅ ADR ile uyumlu |
+| `train_churn_model_task` | Haftalık Pzt 02:30 | ✅ Sabit |
+| `train_listing_quality_model_task` | Haftalık Paz 02:30 | ✅ Sabit |
+| `rebuild_faiss_index_task` | 2x/gün (00:00, 12:00) | 🟡 Azalt |
+
+#### Kategori 6: Backfill (Sürekli Çalışan)
+
+| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
+|-------|---------------|-----------------|--------------|
+| `backfill_listing_embeddings_task` | **Her 30 dakika** (100 batch) | **Yüksek** — sentence-transformers CPU | 🔴 Gece saatine al |
+| `backfill_listing_quality_scores_task` | **Her saat :45** | Orta | 🟡 Gündüz azalt |
+| `nsfw_backfill_task` | Günlük 05:15 (20 batch) | Yüksek — NudeNet CPU | ✅ Sabit — gece |
+| `backfill_phash_task` | Günlük 05:30 (50 batch) | Orta | ✅ Sabit — gece |
+
+---
+
+### 16.4 — Frekans Değişiklik Önerileri
+
+Onay bekleyen kararlar — uygulanmadan önce tartışılacak:
+
+#### 🔴 Kritik: compute_user_interests_task
+
+```
+Mevcut: cron(compute_user_interests_task, minute={0, 15, 30, 45})  # 96x/gün
+Öneri:  cron(compute_user_interests_task, hour={8, 20}, minute=0)  # 2x/gün
+```
+
+**Gerekçe:** Kullanıcı ilgi skoru birkaç saatlik etkileşim verisinden hesaplanıyor. 15 dakikada bir çalıştırmak, çıktının değişmediği 94 çalışmayı boşa harcıyor. Feed kalitesi ölçülebilir şekilde etkilenmez.
+
+**Risk:** Yeni kullanıcı kategoriye ilk ilgi gösterdiğinde feed güncellemesi 12 saate kadar gecikebilir. Kabul edilebilir tradeoff.
+
+#### 🔴 Kritik: backfill_listing_embeddings_task
+
+```
+Mevcut: cron(backfill_listing_embeddings_task, minute={0, 30})  # 48x/gün, gündüz dahil
+Öneri:  cron(backfill_listing_embeddings_task, hour={2, 3, 4}, minute=0)  # 3x/gün, sadece gece
+```
+
+**Gerekçe:** sentence-transformers CPU-heavy. Gündüz çalışması node5'te API latency'yi etkiliyor. Yeni ilan eklenince `generate_listing_embedding_task` zaten anında çalışıyor — backfill sadece eski/eksik ilanlar için.
+
+**Risk:** Yeni eklenen toplu ilanlar (örn. import) 24 saate kadar embedding almayabilir. Kabul edilebilir.
+
+#### 🟡 Orta: compute_user_condition_preferences_task
+
+```
+Mevcut: cron(compute_user_condition_preferences_task, minute={3, 18, 33, 48})  # 96x/gün
+Öneri:  cron(compute_user_condition_preferences_task, hour={0, 6, 12, 18}, minute=5)  # 4x/gün
+```
+
+**Gerekçe:** Condition preference (yeni/ikinci el tercihi) saatler içinde değişmez. Redis'ten okuyup Redis'e yazıyor — hafif ama gereksiz.
+
+#### 🟡 Orta: populate_foryou_feed_task
+
+```
+Mevcut: cron(populate_foryou_feed_task, minute=0)  # 24x/gün
+Öneri:  cron(populate_foryou_feed_task, hour={0, 4, 8, 12, 16, 20}, minute=5)  # 6x/gün
+```
+
+**Gerekçe:** For-you feed listesi Redis'te tutulur, 4 saatte bir yenilenmesi yeterli. Feed sorgusu zaten gerçek zamanlı personalization yapıyor — bu görev sadece initial pool'u hazırlıyor.
+
+#### 🟡 Orta: compute_trending_listings_task
+
+```
+Mevcut: cron(compute_trending_listings_task, minute={0, 30})  # 48x/gün
+Öneri:  cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=15)  # 4x/gün
+```
+
+**Gerekçe:** Trend listesi zaten 30 dakika TTL ile Redis'te tutuluyor. Her 30 dakikada yeniden hesaplamak yerine 6 saatlik döngü yeterli.
+
+#### 🟡 İnceleme: train_feed_als_task ve train_swipe_live_als_task
+
+```
+Mevcut: Günlük (01:00 + 01:30)
+ADR §3.3 önerisi: Haftalık
+```
+
+**Gerekçe:** ADR §3.3 ALS modellerini haftalık eğitim öngörüyor. Günlük çalıştırılması 4 core EPYC'i her gece meşgul ediyor. Veri henüz yeterince büyük değilse haftalık yeterli. Karar: kullanıcı sayısına göre değerlendirme.
+
+#### 🟢 Sabit Tutulanlar
+
+```
+flush_interactions_to_db     → 5 dakika (veri kaybı riski — değiştirme)
+sync_ad_campaigns_task        → 10 dakika (reklam bütçe bütünlüğü — değiştirme)
+cleanup_stale_streams_task    → 2 dakika (gerçek zamanlı LiveKit — değiştirme)
+rebuild_faiss_index_task      → 2x/gün (Faz 7 ML aktif değil — aktifleşince gözden geçir)
+```
+
+---
+
+### 16.5 — Değişiklik Özet Tablosu (Karar Bekleniyor)
+
+| # | Görev | Mevcut | Öneri | Kaynak Tasarrufu |
+|---|-------|--------|-------|-----------------|
+| W1 | `compute_user_interests_task` | Her 15dk | **2x/gün** | ~94 ClickHouse sorgusu/gün |
+| W2 | `backfill_listing_embeddings_task` | Her 30dk | **3x/gün (gece 02-04)** | CPU gündüz boşalır |
+| W3 | `compute_user_condition_preferences_task` | Her 15dk | **4x/gün** | ~92 Redis işlemi/gün |
+| W4 | `populate_foryou_feed_task` | Her saat | **6x/gün** | ~18 hesaplama/gün |
+| W5 | `compute_trending_listings_task` | Her 30dk | **4x/gün** | ~44 ClickHouse sorgusu/gün |
+| W6 | `train_feed_als_task` | Günlük | **Haftalık** | 6 gece CPU serblest kalır |
+| W7 | `train_swipe_live_als_task` | Günlük | **Haftalık** | 6 gece CPU serbest kalır |
+
+> Her satır için onay bekleniyor. Onaylanan değişiklikler `worker.py` cron_jobs listesinde güncellenir.
+
+---
+
+### 16.6 — node5 ARQ Gece Zaman Çizelgesi (Gece Yük Haritası)
+
+Şu andaki gece yük yoğunluğu (00:00–07:00):
+
+```
+00:00  rebuild_faiss_index_task       (CPU: yüksek, FAISS)
+00:30  train_bpr_task (Mon/Wed/Sat)   (CPU: çok yüksek, BPR eğitimi)
+01:00  cleanup_old_stream_likes_task  (DB: hafif)
+01:00  train_swipe_live_als_task      (CPU: yüksek, ALS)
+01:30  compute_seller_badges_task     (DB: orta)
+01:30  train_feed_als_task            (CPU: yüksek, ALS)
+02:00  calculate_user_budgets_task    (ClickHouse: orta)
+02:00  train_item2vec_task (Sun)      (CPU: yüksek)
+02:15  compute_trust_scores_task      (DB: yüksek, çok tablo)
+02:15  train_kmeans_cold_start_task (Wed/Sun) (CPU: orta)
+02:30  cleanup_hidden_messages_task   (DB: hafif)
+02:30  train_listing_quality_model (Sun) (CPU: orta)
+02:30  train_churn_model_task (Mon)   (CPU: yüksek)
+02:45  backup (pg_dump + redis + ch)  (IO: yüksek)
+03:00  cleanup_old_notifications_task (DB: orta)
+03:30  process_churn_and_airdrop      (DB: orta + bildirim)
+04:00  deactivate_expired_listings_task (DB: orta)
+04:00  cleanup_old_analytics_task (Mon) (DB: çok yüksek, 90 gün bulk DELETE)
+04:00  optimize_notification_timing_task (DB: orta)
+04:30  delete_expired_inactive_listings_task (DB: orta)
+05:00  cleanup_old_impressions_task   (DB: orta)
+05:15  nsfw_backfill_task             (CPU: yüksek, NudeNet)
+05:30  backfill_phash_task            (CPU: orta)
+06:00  hesitation_retarget_task       (DB + bildirim: hafif)
+06:30  cleanup_old_media_messages_task (DB: hafif)
+```
+
+**Tespit:** 00:00–05:30 arası neredeyse kesintisiz ağır CPU+DB yükü. BPR + ALS + item2vec aynı pencerede çakışıyor. node5'in 4 core'u bu pencerede swap'a girebilir.
+
+**W6+W7 önerisi onaylanırsa:** ALS eğitimleri haftalık olur → 5 gece boyunca 01:00–01:30 penceresi CPU tasarrufu sağlar.
+
+---
+
+### 16.7 — Veri Planı Değişikliklerinde Mimari Kurallar
+
+Bu plandan herhangi bir değişiklik uygulanırken uyulacak kurallar (`teqlif_architectural_decisions.md`'den):
+
+1. **DB şeması değiştiğinde** (Faz 0-1-12): Migration'a `bump_schema_version()` ekle → `/api/catalog` ve field-config cache'i otomatik geçersiz olur.
+
+2. **Yeni cache key eklendiğinde** (Faz 14.1): Cache taksonomisine göre ata (ALGORITHMIC / EPHEMERAL / LIFECYCLE). SECURITY_CRITICAL key'lere asla dokunma.
+
+3. **ClickHouse şeması değiştiğinde** (Faz 5, D51b): `ALTER TABLE ... ADD COLUMN` — yeni tablo açma. Non-blocking, mevcut satırlar default alır (ADR §3.1).
+
+4. **Yeni ARQ görevi eklenirken:** Use case + repository pattern — fat worker function yazma. İş mantığı service katmanında, worker sadece koordinatör.
+
+5. **Flutter'da API response alanı değiştiğinde** (Faz 12): Değişiklik repository (api.dart) katmanında — ViewModel ve View değişmez. DTO map fonksiyonu güncellenir.
+
+6. **Commerce event eklenirken** (Faz 9 outbox): `StreamCommerceNotifier<S>` base class genişletilir (ADR §10). WS altyapısına dokunulmaz.
