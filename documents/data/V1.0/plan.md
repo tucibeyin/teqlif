@@ -897,3 +897,490 @@ Bu, Teqlif'in mevcut ölçeğinde zorunlu değil — ama ClickHouse veri tutars�
 | Veri silme | Yok (soft delete sadece) | KVKK cascade + anonymize | 9 |
 | Veri kalite | Yok | Günlük integrity checks | 10 |
 | Dual-write güvenliği | Sessiz kayıp riski | Outbox pattern | 11 |
+
+---
+
+---
+
+# Tam Veri Modeli Audit — Ham Bulgular
+
+*38 SQLAlchemy model, 13 Pydantic schema, 16 Flutter model incelendi. 2026-09-20*
+
+---
+
+## A. PostgreSQL Model Bulguları
+
+### A.1 Finansal Float Hataları — Tam Liste
+
+Plan Faz 0'da listings/auctions/bids/purchases vardı. Audit'te ek iki tablo bulundu:
+
+| Tablo | Kolon | Dosya |
+|-------|-------|-------|
+| `listings` | price, buy_it_now_price, last_sold_price, last_start_price | models/listing.py |
+| `auctions` | start_price, buy_it_now_price, final_price | models/auction.py |
+| `bids` | amount | models/bid.py |
+| `purchases` | price | models/purchase.py |
+| `listing_offers` | amount | models/listing_offer.py ← **Faz 0'da eksikti** |
+| `search_alerts` | max_price | models/search_alert.py ← **Faz 0'da eksikti** |
+| `users` | max_budget | models/user.py ← **Faz 0'da eksikti** |
+| `exchange_rates` | usd_try, eur_try | models/market_index.py ← kur değeri, Numeric(10,4) |
+
+`exchange_rates` için Numeric(10,4) — dört ondalık basamak kur hassasiyeti için gerekli.
+
+---
+
+### A.2 BigInteger PK/FK — Öncelik Sırası
+
+Hacim beklentisine göre sıralanmış:
+
+| Tablo | Öncelik | Neden |
+|-------|---------|-------|
+| `direct_messages` | 🔴 Kritik | Hiç silinmiyor |
+| `tuci_transactions` | 🔴 Kritik | Her işlem yeni satır |
+| `stream_likes` | 🔴 Kritik | Unique constraint yok, her kalp = satır |
+| `analytics_events` | 🟠 Yüksek | Yüksek frekanslı event |
+| `user_interactions` | 🟠 Yüksek | Yüksek frekanslı event |
+| `story_views` | 🟠 Yüksek | Her kullanıcı × her hikaye |
+| `bids` | 🟠 Yüksek | Yoğun yayınlarda çok satır |
+| `listing_likes` | 🟡 Orta | Büyük ölçek potansiyeli |
+| `notifications` | 🟡 Orta | 30 günde siliniyor, bounded |
+| `follows`, `user_blocks` | 🟢 Düşük | Sınırlı büyüme |
+
+Tüm FK kolonları da ilgili tablolarla aynı tipte olmalı.
+
+---
+
+### A.3 ENUM Dönüşümleri — Tam Liste
+
+| Tablo | Kolon | Mevcut | ENUM Değerleri |
+|-------|-------|--------|----------------|
+| `direct_messages` | content_type | String(20) | text / image / video / voice / file |
+| `message_threads` | status | String(20) | pending / accepted / declined |
+| `follows` | status | String(20) | pending / accepted / declined |
+| `calls` | status | String(20) | calling / active / ended / rejected / missed |
+| `call_participants` | role | String(16) | initiator / callee / guest |
+| `call_participants` | status | String(16) | invited / ringing / joined / left / rejected / timeout / removed |
+| `direct_sales` | status | String(20) | active / paused / ended / cancelled |
+| `direct_sales` | end_reason | String(30) | sold_out / host_ended / stream_closed |
+| `direct_sale_orders` | status | String(20) | completed / cancelled |
+| `purchases` | purchase_type | String(20) | AUCTION / BUY_IT_NOW |
+| `referrals` | status | String(20) | pending / completed |
+| `stories` | media_type | String(10) | video (şimdilik tek değer) |
+| `category_fields` | type | String(20) | text / number / dropdown |
+| `auctions` | status | String(20) | active / paused / ended |
+
+---
+
+### A.4 Kritik Hatalar (Kod Seviyesinde)
+
+#### A.4.1 `auctions.status` default="completed" — YANLIŞ
+
+```python
+# models/auction.py:23
+status: Mapped[str] = mapped_column(String(20), default="completed")
+```
+
+Yeni oluşturulan auction başlangıçta "completed" durumunda. Doğru başlangıç değeri "active" olmalı.
+Flutter `AuctionState` modeli status değerleri: `idle / active / paused / ended / buy_it_now_pending`.
+
+**Düzeltme:** `default="active"` — veya ENUM tanımlanırsa `default=AuctionStatus.ACTIVE`.
+
+#### A.4.2 `report.created_at` — Timezone Eksik
+
+```python
+# models/report.py:15
+created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+```
+
+`DateTime(timezone=True)` yok, `func.now()` yerine Python-side `datetime.utcnow`. PostgreSQL'de timezone-naive sütun.
+
+**Düzeltme:**
+```python
+created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+```
+
+#### A.4.3 `app_configs.updated_at` — Timezone Kendisi Siliniyor
+
+```python
+# models/app_config.py
+updated_at = Column(DateTime,
+    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+```
+
+Timezone'u kendin ekleyip `.replace(tzinfo=None)` ile siliyorsun. Tutarsız.
+
+**Düzeltme:**
+```python
+updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+```
+
+Ayrıca `app_config.key` ve `app_config.value` için uzunluk sınırı yok: `Column(String)`. 
+**Düzeltme:** `Column(String(100))` ve `Column(String(2000))`.
+
+#### A.4.4 `listings.active_room_id` — ForeignKey Eksik
+
+```python
+# models/listing.py:58
+active_room_id: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
+```
+
+`live_streams.id`'ye FK constraint yok. Stream silindiğinde bu sütun eski ID'yi tutar, cascade yok.
+
+**Düzeltme:**
+```python
+active_room_id: Mapped[Optional[int]] = mapped_column(
+    ForeignKey("live_streams.id", ondelete="SET NULL"), nullable=True, index=True
+)
+```
+
+#### A.4.5 `call_participants.livekit_token` — Token DB'de Saklanıyor
+
+```python
+# models/call.py:51
+livekit_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+```
+
+LiveKit token'ları kısa ömürlü JWT. DB'de saklamak:
+- Güvenlik açığı (token leak)
+- Storage israfı
+- Expired token'lar birikir
+
+**Çözüm:** Redis'e taşı, `call:{call_id}:token:{user_id}` key, TTL = call duration + 1 saat.
+
+```python
+# DB'den kaldır, Redis'te sakla:
+await redis.set(f"call:{call_id}:token:{user_id}", token, ex=7200)
+```
+
+#### A.4.6 `stories.video_path` — Lokal Disk
+
+```python
+# models/story.py:26
+video_path: Mapped[str] = mapped_column(String(500), nullable=False)
+```
+
+Story videoları lokal diske yazılıyor (highlights ile aynı sorun). MinIO'ya taşınmalı.
+- Sunucu yeniden başlarsa dosyalar kaybolabilir
+- Multi-node'da çalışmaz (hangi node'da?)
+- Yedekleme yok
+
+**Çözüm:** Yükleme sırasında MinIO'ya yaz, `video_path` kolonunu kaldır, sadece `video_url` (MinIO key) kalsın.
+
+---
+
+### A.5 Yapısal Sorunlar
+
+#### A.5.1 `analytics_events` ve `user_interactions` — Eski Column() Stili
+
+```python
+# models/analytics.py — eski stil, SQLAlchemy 2.0 öncesi
+id = Column(Integer, primary_key=True, index=True)
+session_id = Column(String(255), index=True, nullable=False)
+```
+
+Tüm diğer tablolar `Mapped[int] = mapped_column(...)` kullanıyor. Type checking çalışmıyor.
+
+**Düzeltme:**
+```python
+id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+session_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+```
+
+#### A.5.2 `listings.image_url` + `listings.image_urls` — Tekrar Kolon
+
+İki ayrı kolon:
+- `image_url: String(500)` — tek görsel (thumbnail/birincil)
+- `image_urls: Text` — JSON string array, tüm görseller
+
+`image_url`, `image_urls[0]`'ın tekrarı. **Çözüm:** `image_url` kaldırılır, `image_urls → JSONB`, ilk eleman birincil görsel.
+
+#### A.5.3 `user_interests.raw_signals` — Belgesiz JSONB
+
+```python
+raw_signals: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+```
+
+İçeriği belgelenmiş değil. Ne saklanıyor? `{view: 5, click: 2, purchase: 1}`?
+
+**Çözüm:** Yorum satırı veya tipli alt-schema: `{"view": int, "click": int, "purchase": int, "bid": int}`.
+
+#### A.5.4 `message_threads` — Composite PK, Sequential ID Yok
+
+Mevcut PK: `(user_a_id, user_b_id)`. `direct_messages`'a `thread_id` FK eklemek için `message_threads.id` (sequential BigInteger) gerekiyor.
+
+Plan Faz 1.2'de ele alındı.
+
+---
+
+### A.6 String Uzunlukları — Tam Denetim
+
+| Tablo | Kolon | Mevcut | Gerçek İhtiyaç | Öneri |
+|-------|-------|--------|----------------|-------|
+| `users` | profile_image_url | String(500) | MinIO key ~60 chr | String(255) |
+| `users` | 7× sosyal URL | String(500) her biri | URL ~255 chr max | String(255) |
+| `users` | fcm_token | String(500) | FCM token ~163 chr | String(300) |
+| `users` | voip_token | String(500) | APNs token ~200 chr | String(300) |
+| `users` | locale | String(10) | "tr", "en" = 2-5 chr | String(5) |
+| `listings` | image_url, thumbnail_url, video_url | String(500) | MinIO key ~60 chr | String(255) |
+| `auctions` | proof_image_url | String(2000) | URL ~255 chr | String(500) |
+| `direct_messages` | media_url, thumbnail_url | String(500) | MinIO key ~60 chr | String(255) |
+| `live_streams` | thumbnail_url | String(500) | MinIO key ~60 chr | String(255) |
+| `analytics_events` | session_id | String(255) | UUID = 36 chr | String(36) |
+| `app_configs` | key | String (sınırsız) | ~50 chr | String(100) |
+| `app_configs` | value | String (sınırsız) | ~500 chr | String(2000) |
+| `stories` | video_path, video_url | String(500) | Disk path / URL | String(255) |
+
+---
+
+## B. Pydantic Schema Bulguları
+
+### B.1 Eksik Alanlar
+
+**`UserOut` — `tuci_balance` eksik:**
+```python
+# schemas/user.py — UserOut sınıfında yok
+tuci_balance: int = 100  # ← eklenecek
+```
+Flutter kullanıcı bakiyesini gösteremiyor çünkü API'den gelmiyor.
+
+**`AuctionStateOut.status` — Literal tipi yok:**
+```python
+# Mevcut:
+status: str
+# Olması gereken:
+status: Literal['idle', 'active', 'paused', 'ended', 'buy_it_now_pending']
+```
+
+**`DirectSaleStateOut.status` — Literal tipi yok:**
+```python
+status: Literal['idle', 'active', 'paused', 'sold_out', 'ended', 'cancelled']
+```
+
+---
+
+### B.2 Float → Decimal Geçişi — Tüm Schema'lar
+
+DB'de Numeric'e geçince Pydantic schema'lar da güncellenmeli:
+
+| Dosya | Sınıf | Alan(lar) |
+|-------|-------|-----------|
+| schemas/auction.py | AuctionStart | start_price, buy_it_now_price |
+| schemas/auction.py | BidIn, BidOut | amount |
+| schemas/auction.py | AuctionStateOut | start_price, buy_it_now_price, current_bid |
+| schemas/direct_sale.py | DirectSaleStartIn | price |
+| schemas/direct_sale.py | DirectSaleStateOut | price |
+| schemas/direct_sale.py | DirectSaleSummaryOut | total_revenue, buyer_unit_price, buyer_total |
+| schemas/direct_sale.py | DirectSaleOrderOut | unit_price, total_price |
+| schemas/listing.py | ListingOfferCreate | amount |
+| schemas/listing.py | ListingOfferResponse | amount |
+
+```python
+from decimal import Decimal
+# float yerine:
+price: Decimal
+# Optional ise:
+price: Optional[Decimal] = None
+```
+
+---
+
+### B.3 Eski `class Config` Stili
+
+```python
+# Mevcut (eski stil):
+class BidOut(BaseModel):
+    class Config:
+        from_attributes = True
+
+class DirectSaleOrderOut(BaseModel):
+    class Config:
+        from_attributes = True
+
+# Olması gereken:
+model_config = ConfigDict(from_attributes=True)
+```
+
+---
+
+### B.4 `stream.py` — VALID_CATEGORIES Hardcoded
+
+```python
+VALID_CATEGORIES = {"electronics", "fashion", "home", "vehicles", "sports", "books", "real_estate", "other", "chat"}
+```
+
+DB'deki `categories` tablosuyla senkronize değil. Yeni kategori eklenince schema güncellenmeli.
+
+**Çözüm:** `get_valid_category_keys()` utility kullan (analytics.py'de zaten var):
+```python
+@field_validator("category")
+def category_valid(cls, v: str) -> str:
+    valid = get_valid_category_keys()
+    if valid and v.strip().lower() not in valid:
+        raise ValueError("INVALID_CATEGORY")
+    return v.strip().lower()
+```
+
+---
+
+### B.5 `ConversationOut.is_request` — Mixed Shape
+
+```python
+class ConversationOut(BaseModel):
+    is_request: bool = False  # thread status == "pending" ise True
+```
+
+Normal konuşma ve mesaj isteği aynı schema'da. Plan Faz 4'te ayrıştırılacak.
+
+---
+
+## C. Flutter Model Bulguları
+
+### C.1 Eksik Alanlar — Backend'den Fazlası Geliyor, Flutter Kullanmıyor
+
+**`User` modeli — eksikler:**
+
+| Eksik Alan | Backend Karşılığı | Etki |
+|------------|------------------|------|
+| `tuciBalance` | `tuci_balance: int` | Bakiye gösterilemiyor |
+| `status` | `status: UserStatus` | Hesap durumu bilinmiyor |
+| `bio` | `bio: String?` | Kendi profil sayfasında bio görünmüyor |
+| `websiteUrl` | `website_url: String?` | Profilde sosyal link yok |
+| `instagramUrl` | `instagram_url: String?` | Aynı |
+| `kickUrl`, `twitch_url`, `facebook_url`, `youtube_url`, `tiktok_url` | — | Aynı |
+| `createdAt` | `created_at: DateTime` | Üyelik tarihi yok |
+
+**`StreamOut` / `StreamHost` modeli — eksikler:**
+
+| Eksik Alan | Backend Karşılığı | Etki |
+|------------|------------------|------|
+| `StreamHost.fullName` | `full_name: String` | Host ismi gösterilemiyor |
+| `StreamHost.profileImageThumbUrl` | `profile_image_thumb_url: String?` | Host avatarı yok |
+| `StreamOut.likesCount` | `likes_count: int` | Beğeni sayısı gösterilemiyor |
+| `StreamOut.startedAt` | `started_at: DateTime` | Yayın süresi hesaplanamıyor |
+
+---
+
+### C.2 Tip Güvensizliği
+
+**`AuctionState.status` — Plain String:**
+```dart
+// Mevcut — runtime'da yanlış değer gelirse sessizce çalışmaya devam eder
+final String status;
+
+// Olması gereken:
+enum AuctionStatus { idle, active, paused, ended, buyItNowPending, error }
+final AuctionStatus status;
+```
+
+**`ChatMessage.announcementPayload` — Map<String, dynamic>:**
+```dart
+// Mevcut
+final Map<String, dynamic>? announcementPayload;
+
+// Olması gereken — sealed class (plan Faz 6.2'de ele alındı)
+```
+
+**`StoryItem.storyType` — Plain String:**
+```dart
+// Mevcut
+final String storyType;  // 'video' | 'live_redirect'
+
+// Olması gereken
+enum StoryType { video, liveRedirect }
+final StoryType storyType;
+```
+
+**`CatalogField.type` — Plain String:**
+```dart
+// Mevcut
+final String type;  // 'text' | 'number' | 'dropdown'
+
+// Olması gereken
+enum FieldType { text, number, dropdown }
+```
+
+---
+
+### C.3 Double → Decimal Geçişi
+
+DB Numeric'e, Pydantic Decimal'e geçince JSON'da fiyatlar `"12.50"` (string) olarak gelebilir:
+
+```dart
+// Mevcut — num? cast başarısız olabilir:
+price: (j['price'] as num?)?.toDouble()
+
+// Güvenli çözüm:
+static double _parsePrice(dynamic v) {
+  if (v == null) return 0.0;
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0.0;
+  return 0.0;
+}
+```
+
+Etkilenen modeller: `DirectSaleState`, `DirectSaleOrder`, `DirectSaleSummary`, `CommercePurchase`, `CommerceSale`, `AuctionState`, `ListingOffer`.
+
+---
+
+### C.4 İyi Pattern'lar (Değiştirilmeyecek)
+
+Bu yapılar endüstri standardında, dokunma:
+
+| Dosya | Pattern | Neden İyi |
+|-------|---------|-----------|
+| `call_event.dart` | `sealed class CallSignal` | Tip-güvenli WS event handling |
+| `commerce_activity.dart` | `sealed class CommerceEvent` | Tip-güvenli commerce events |
+| `enums.dart` | enum + extension | Doğru enum pattern |
+| `catalog.dart` | Immutable value objects | İyi yapılandırılmış |
+| `call_participant.dart` | `copyWith` pattern | State management doğru |
+
+---
+
+## D. Öncelik Matrisi — Tam Liste
+
+```
+🔴 Kritik (veri bütünlüğü / güvenlik):
+  [D1]  Float → Numeric: listings, auctions, bids, purchases, listing_offers,
+              search_alerts, users.max_budget                          (Faz 0)
+  [D2]  exchange_rates Float → Numeric(10,4)                           (Faz 0)
+  [D3]  auctions.status default "completed" → "active"                 (Faz 1)
+  [D4]  report.created_at → DateTime(timezone=True) + func.now()       (Faz 1)
+  [D5]  app_configs DateTime + String sınırsız → düzelt                (Faz 1)
+  [D6]  listings.active_room_id → ForeignKey ekle                      (Faz 1)
+  [D7]  call_participants.livekit_token → Redis'e taşı                 (Faz 1)
+
+🟠 Önemli (ölçek / doğruluk):
+  [D8]  BigInteger PKlar (direct_messages, tuci_transactions, stream_likes önce)  (Faz 1.1)
+  [D9]  message_threads sequential id + thread_id FK                   (Faz 1.2)
+  [D10] image_url tekrar kolon kaldır, image_urls → JSONB              (Faz 1.5)
+  [D11] String status'ler → ENUM (tüm tablolar)                        (Faz 1.6)
+  [D12] analytics_events / user_interactions → Mapped[] stile geç      (Faz 1)
+  [D13] stories.video_path → MinIO                                     (Faz 2)
+  [D14] UserOut'a tuci_balance ekle                                    (Faz 4)
+  [D15] AuctionStateOut + DirectSaleStateOut → Literal status          (Faz 4)
+  [D16] BidOut + DirectSaleOrderOut → model_config = ConfigDict(...)   (Faz 4)
+  [D17] stream.py VALID_CATEGORIES → DB'den oku                        (Faz 4)
+  [D18] Pydantic float → Decimal (tüm finansal schema'lar)             (Faz 4)
+
+🟡 Temizlik (tip güvenliği):
+  [D19] users.notification_prefs → ayrı tablo                          (Faz 1.4)
+  [D20] URL String(500) → String(255) + string uzunluk denetimi        (Faz 1.7)
+  [D21] Flutter User modeline eksik alanlar ekle                       (Faz 6)
+  [D22] Flutter StreamHost.fullName + profileImageThumbUrl ekle        (Faz 6)
+  [D23] Flutter AuctionStatus enum                                     (Faz 6)
+  [D24] Flutter StoryType enum                                         (Faz 6)
+  [D25] Flutter CatalogField.type enum                                 (Faz 6)
+  [D26] Flutter Decimal parse helper                                   (Faz 6)
+  [D27] Flutter tüm modeller → Freezed                                 (Faz 6.1)
+  [D28] user_interests.raw_signals — belgeleme                         (Faz 1)
+
+🟢 Mimari (uzun vadeli):
+  [D29] call_participants.livekit_token kaldır (D7 ile birlikte)       (Faz 1)
+  [D30] story.video_path kolonu kaldır (D13 ile birlikte)              (Faz 2)
+  [D31] users bölünmesi (social_links, notification_prefs, consents)   (Faz 1.4)
+  [D32] DirectSaleSummaryOut → discriminated union                     (Faz 4.3)
+  [D33] 4 partial-user schema → UserMiniOut base                       (Faz 4.2)
+  [D34] financial_events append-only tablo                             (Faz 8)
+  [D35] KVKK veri silme zinciri                                        (Faz 9)
+```
