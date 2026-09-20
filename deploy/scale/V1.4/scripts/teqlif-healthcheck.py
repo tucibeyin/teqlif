@@ -528,7 +528,7 @@ async def section_errors(client: httpx.AsyncClient) -> str:
         try:
             r = await client.get(
                 f"{LOKI}/loki/api/v1/query",
-                params={"query": f'sum(count_over_time({{node="{node}"}} |= "ERROR" [24h]))'},
+                params={"query": f'sum(count_over_time({{node="{node}"}} |= "ERROR" != "sshd" != "kex_exchange" [24h]))'},
                 timeout=8)
             data    = r.json().get("data", {}).get("result", [])
             count   = int(float(data[0]["value"][1])) if data else 0
