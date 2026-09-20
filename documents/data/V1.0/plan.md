@@ -1,2935 +1,852 @@
-# Teqlif — Lightweight Veri Mimarisi Uygulama Planı
+# teqlif — Veri Yaşam Döngüsü ve Optimizasyon Planı
 
-**Hedef:** CPU/RAM/disk/bant genişliği dostu, endüstri standardında, sıfırdan doğru kurulmuş veri katmanı.  
-**Bağlam:** Sistem henüz kullanıcıya açık değil — migration maliyeti sıfır, her düzeltme şimdi yapılır.  
-Son güncelleme: 2026-09-20
-
-> **Tamamlanan acil aksiyon:** `POST /analytics/price-estimate` ve `GET /ai-price-credits` durduruldu (`analytics.py`). Her çağrıda tetiklenen numpy/scipy KDE, ARQ embedding görevi ve 150 satır pgvector sorgusu artık çalışmıyor. Kod korundu — Faz 7 tamamlanınca açılacak.
-
-Her faz bağımsız uygulanabilir. Sıra önemlidir: üst katmanlar alttaki düzeltmelere bağımlıdır.
+**Stack:** FastAPI + PostgreSQL + Redis + ClickHouse + MinIO | Flutter  
+**Üretim:** node5 (4c EPYC, 16 GB RAM, 500 GB SSD, 1 Gbps) | node3 staging  
+**Referans:** `deploy/scale/V1.4/documents/05_final.md` · `documents/teqlif_architectural_decisions.md`  
+**Son güncelleme:** 2026-09-20
 
 ---
 
-## Faz 0 — Finansal Veri Tipi Düzeltmesi *(en kritik, ilk yapılacak)*
+## Notasyon
 
-### Problem
-
-Para değerleri `Float` (IEEE 754) ile saklanıyor. `Float` ikili kayan noktalı aritmetik kullandığından para hesaplarında hata birikir:
-
-```python
->>> 0.1 + 0.2
-0.30000000000000004
-```
-
-Etkilenen tablolar ve kolonlar:
-
-| Tablo | Kolon | Mevcut | Olması Gereken |
-|-------|-------|--------|----------------|
-| `listings` | `price` | `Float` | `Numeric(10, 2)` |
-| `listings` | `buy_it_now_price` | `Float` | `Numeric(10, 2)` |
-| `listings` | `last_sold_price` | `Float` | `Numeric(10, 2)` |
-| `listings` | `last_start_price` | `Float` | `Numeric(10, 2)` |
-| `auctions` | `start_price` | `Float` | `Numeric(10, 2)` |
-| `auctions` | `buy_it_now_price` | `Float` | `Numeric(10, 2)` |
-| `auctions` | `final_price` | `Float` | `Numeric(10, 2)` |
-| `bids` | `amount` | `Float` | `Numeric(10, 2)` |
-| `purchases` | `price` | `Float` | `Numeric(10, 2)` |
-| `direct_sales` | `price` | `Numeric(10,2)` | ✅ Zaten doğru |
-| `direct_sale_orders` | `unit_price` | `Numeric(10,2)` | ✅ Zaten doğru |
-
-`nsfw_score`, `quality_score`, `duration_seconds` → bunlar ölçüm değeri, Float kabul edilebilir.
-
-### Çözüm
-
-```python
-# models/listing.py, auction.py, bid.py, purchase.py
-from sqlalchemy import Numeric
-
-price: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
-```
-
-Python tip: `from decimal import Decimal` + `Mapped[Optional[Decimal]]`
-
-### Etki
-
-API'den gelen değerler Pydantic'te `float` olarak parse edilip DB'ye yazılıyor. Pydantic şemalarında da `Decimal` tipine geçilmesi gerekecek (Faz 4 ile birlikte).
+| Sembol | Anlam |
+|--------|-------|
+| 🔴 | Kritik — üretim riski, veri bütünlüğü sorunu veya yüksek birikim |
+| 🟡 | Orta — performans ya da büyüme sorunu |
+| 🟢 | Düşük — iyileştirme fırsatı |
+| ✅ | Mevcut mekanizma çalışıyor |
+| ⚠️ | Mekanizma eksik veya bozuk |
+| □ | Karar bekleniyor |
+| ■ | Onaylandı / uygulandı |
 
 ---
 
-## Faz 1 — PostgreSQL Şema Yeniden Tasarımı
+## Bölüm 1 — Veri Yaşam Döngüsü (Lifecycle Karar Tablosu)
 
-### 1.1 BigInteger PK'lar
+> **İlk karar noktası.** Her satırdaki saklama süresini onaylayın. Onaylanan değerler Bölüm 5'teki cleanup görevlerine dönüşecektir.
 
-**Etkilenen tablolar:**
+### 1.1 — PostgreSQL Tabloları
 
-| Tablo | Neden Kritik |
-|-------|-------------|
-| `direct_messages` | Normal mesajlar hiç silinmiyor → sonsuz büyüme |
-| `notifications` | 30 günde siliniyor → bounded, ama maliyetsiz |
-| `listings` | Her aktif kullanıcı birden fazla ilan açabilir |
-| `analytics_events` | 90 günde siliniyor → bounded |
-| `user_interactions` | 90 günde siliniyor → bounded |
-| `bids` | Yoğun yayınlarda çok satır |
-| `calls` | Bounded ama büyüyebilir |
+#### Yüksek Hacim / Birikim Riski Taşıyanlar
 
-```python
-# Tüm etkilenen modellerde:
-from sqlalchemy import BigInteger
-id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Mekanizma | Öncelik |
+|-------|---------------|--------------|-----------------|-----------|---------|
+| `analytics_events` | Her kullanıcı aksiyonunda | ✅ 90 gün (haftalık cleanup) | □ 90 gün yeterli mi? | ARQ Pzt 04:00 | 🟢 |
+| `user_interactions` | Her browse/tıklama | ✅ 90 gün (haftalık cleanup) | □ 90 gün yeterli mi? | ARQ Sal 04:00 | 🟢 |
+| `listing_impressions` | Her ilan görüntülemesinde | ✅ 30 gün (günlük cleanup) | □ 30 gün yeterli mi? | ARQ 05:00 | 🟢 |
+| `stream_likes` | Her canlı yayın beğenisinde | ✅ 7 gün (günlük cleanup) | □ 7 gün yeterli mi? | ARQ 01:00 | 🟢 |
+| `live_stream_viewers` | Her izleyici giriş/çıkışında | ⚠️ **Hiç silinmiyor** | □ Önerilen: 90 gün | Yeni GC görevi | 🔴 |
+| `notifications` | Her sistem olayında | ✅ 30 gün (günlük cleanup) | □ 30 gün yeterli mi? | ARQ 03:00 | 🟢 |
+| `direct_messages` (text) | Her mesaj gönderiminde | ⚠️ **Hiç silinmiyor** (hidden hariç) | □ Önerilen: sonsuz (konuşma geçmişi) ya da 1 yıl? | Yok | 🟡 |
+| `direct_messages` (hidden/shadowban) | Moderasyon kararında | ✅ 60 gün (günlük cleanup) | □ 60 gün yeterli mi? | ARQ 02:30 | 🟢 |
+| `direct_messages` (media) | Medya mesajı gönderiminde | ✅ 7 gün (günlük cleanup) | □ 7 gün kısa mı? | ARQ 06:30 + MinIO | 🟡 |
+| `message_threads` | İlk mesajda | ⚠️ **Hiç silinmiyor** | □ Önerilen: mesajlar silinince thread da silinsin mi? | Yok | 🟡 |
+
+#### Ticaret ve Finansal Kayıtlar
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Not |
+|-------|---------------|--------------|-----------------|-----|
+| `purchases` | Satın alımda | ⚠️ Sonsuz | □ Sonsuz (yasal) | Finansal kayıt — silme önerilmez |
+| `tuci_transactions` | Bakiye transferinde | ⚠️ Sonsuz | □ Sonsuz (yasal) | Para akışı — silme önerilmez |
+| `auctions` | Açık artırma başladığında | ⚠️ Sonsuz | □ Sonsuz ya da 2 yıl? | Sona erenler anlamsız ama referans olabilir |
+| `bids` | Her teklif verildiğinde | ⚠️ Sonsuz | □ Önerilen: açık artırma bitişinden 1 yıl | Ticaret kanıtı, kısa süre gerekli |
+| `direct_sales` | Doğrudan satış başladığında | ⚠️ Sonsuz | □ Sonsuz (ticaret kaydı) | |
+| `direct_sale_orders` | Sipariş verildiğinde | ⚠️ Sonsuz | □ Sonsuz (ticaret kaydı) | |
+| `gift_events` | Her hediye gönderiminde | ⚠️ Sonsuz | □ Önerilen: 1 yıl | Tuci transferi — finansal ama yüksek hacim |
+| `rating_history` | Değerlendirme güncellendiğinde | ⚠️ Sonsuz | □ Sonsuz (moderasyon kaydı) | |
+| `ratings` | Değerlendirme verildiğinde | ⚠️ Sonsuz | □ Sonsuz (kullanıcı itibarı) | |
+
+#### İlan ve İçerik Verisi
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Mekanizma |
+|-------|---------------|--------------|-----------------|-----------|
+| `listings` (aktif) | İlan oluşturulduğunda | ✅ 30 gün aktif | □ 30 gün uygun mu? | ARQ 04:00 |
+| `listings` (pasif→silindi) | Pasiften 60 gün sonra | ✅ 60 gün pasif sonra soft-delete | □ Onaylı | ARQ 04:30 + MinIO cleanup |
+| `listing_offers` (declined/expired) | Teklif reddedildiğinde | ⚠️ **Hiç silinmiyor** | □ Önerilen: 60 gün | Yeni GC görevi | 🟡 |
+| `stories` | Hikaye yüklendiğinde | ✅ `expires_at` (24 saat tipik) | □ Onaylı | ARQ saatlik + MinIO |
+| `story_views` | Her hikaye görüntülemesinde | ✅ CASCADE silinir | □ Onaylı | — |
+| `story_likes` | Hikaye beğenildiğinde | ✅ CASCADE silinir | □ Onaylı | — |
+| `listing_likes` | İlan beğenildiğinde | ⚠️ Sonsuz (CASCADE ile kullanıcı/ilan silinince) | □ Sonsuz uygun | Sosyal veri |
+| `favorites` | Favorilere eklendiğinde | ⚠️ Sonsuz (CASCADE) | □ Sonsuz uygun | Sosyal veri |
+
+#### Sosyal ve İletişim Verisi
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Not |
+|-------|---------------|--------------|-----------------|-----|
+| `follows` | Takip edildiğinde | ⚠️ Sonsuz (CASCADE) | □ Sonsuz uygun | Sosyal graf |
+| `user_blocks` | Engelleme yapıldığında | ⚠️ Sonsuz (CASCADE) | □ Sonsuz uygun | Güvenlik |
+| `reports` | Şikayet yapıldığında | ⚠️ Sonsuz | □ Sonsuz uygun | Moderasyon/yasal |
+| `referrals` | Davet kullanıldığında | ⚠️ Sonsuz | □ Önerilen: 6 ay | Kampanya kaydı |
+| `mass_notification_campaigns` | Kitlesel bildirim gönderiminde | ⚠️ Sonsuz | □ Önerilen: 1 yıl | Kampanya geçmişi |
+| `search_alerts` | Kullanıcı uyarı kurduğunda | ⚠️ Sonsuz | □ Önerilen: 180 gün inaktif | Kullanıcı silmezse birikir |
+
+#### Canlı Yayın Verisi
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Mekanizma |
+|-------|---------------|--------------|-----------------|-----------|
+| `live_streams` (aktif stale) | Sunucu çökmesinde | ✅ 3 dakika sonra cleanup | □ Onaylı | ARQ 2 dakika |
+| `live_streams` (biten) | Yayın bittiğinde | ⚠️ Sonsuz | □ Önerilen: 1 yıl arşiv, sonra sil | Yeni GC görevi |
+| `live_stream_viewers` | Her izleyici oturumunda | ⚠️ **Hiç silinmiyor** | □ Önerilen: 90 gün | Yeni GC görevi 🔴 |
+
+#### Çağrı Verisi
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Mekanizma |
+|-------|---------------|--------------|-----------------|-----------|
+| `calls` (ghost calling) | Kayıp çağrıda | ✅ 5 dakika | □ Onaylı | ARQ 15 dakika |
+| `calls` (ghost active) | Kayıp çağrıda | ✅ 1 saat | □ Onaylı | ARQ 15 dakika |
+| `calls` (ended/missed) | Çağrı bittiğinde | ⚠️ **Hiç silinmiyor** | □ Önerilen: 1 yıl | Yeni GC görevi 🟡 |
+| `call_participants` | Çağrı başladığında | ✅ CASCADE ile silinir | □ Onaylı | — |
+
+#### Sistem ve Yapılandırma
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Not |
+|-------|---------------|--------------|-----------------|-----|
+| `exchange_rates` | Günlük 1 kayıt | ⚠️ **Hiç silinmiyor** | □ Önerilen: 2 yıl | Günlük birikim |
+| `app_configs` | Manuel güncelleme | ⚠️ Sonsuz | □ Sonsuz uygun | Küçük tablo |
+| `categories` / `subcategories` | Manuel yönetim | ⚠️ Sonsuz | □ Sonsuz uygun | Referans verisi |
+| `users` | Kayıtta | ⚠️ Sonsuz | □ Hesap silme politikası? | Bölüm 6'da |
+
+#### ML / Kişiselleştirme
+
+| Tablo | Oluşma Sıklığı | Şu Anki Durum | Önerilen Saklama | Mekanizma |
+|-------|---------------|--------------|-----------------|-----------|
+| `user_interests` | ARQ her 15 dk (UPSERT) | ✅ Overwrite (birikmez) | □ Onaylı | ARQ compute_user_interests |
+| `user_interactions` | Her etkileşimde | ✅ 90 gün | □ 90 gün uygun? | ARQ Sal 04:00 |
+
+---
+
+### 1.2 — ClickHouse Tabloları
+
+TTL'ler `database_clickhouse.py` DDL'inde tanımlı, MergeTree arka planda uygular.
+
+| Tablo | Şu Anki TTL | Önerilen | Karar |
+|-------|------------|---------|-------|
+| `user_events` | ✅ 30 gün | □ 30 gün yeterli mi? | |
+| `feed_analytics` | ✅ 30 gün | □ 30 gün yeterli mi? | |
+| `search_events` | ✅ 30 gün | □ 30 gün yeterli mi? | |
+| `swipe_live_events` | ✅ 30 gün | □ 30 gün yeterli mi? | |
+| `direct_sale_events` | ✅ 180 gün | □ 180 gün uygun mu? | |
+
+> **Not (D51b):** `init_clickhouse()` fonksiyonunda `database=` parametresi eksik — tablolar `default` DB yerine `teqlif_prod_analytics`'e yazılmıyor. Bölüm 3.4'te düzeltme var.
+
+---
+
+### 1.3 — Redis Key Kalıpları
+
+| Key Kalıbı | TTL | Yönetim | Not |
+|-----------|-----|---------|-----|
+| `session:{id}` | 30 gün | `expire()` | Oturum |
+| `blacklist:{jti}` | Token süresi | `setex()` | Revoke token |
+| `ch_buf:{table}` | Flush'a kadar (~30s) | Flush loop | ClickHouse buffer |
+| `interests:{uid}` | İnvalidate on write | Overwrite | Kullanıcı ilgi skoru |
+| `live:viewers:{sid}` | `_VIEWER_TTL` | `expire()` | Canlı izleyici sayısı |
+| `rate:*` | Window boyutu | `expire()` | Rate limit |
+| `notif:peak_hours:{uid}` | Recompute'da üzerine yazılır | Overwrite | Bildirim saati |
+| `cache:listing:{id}` | 60 sn | `setex()` | İlan detay cache |
+| `cache:categories` | 1 saat | `setex()` | Kategori listesi |
+
+---
+
+### 1.4 — MinIO Nesneleri
+
+| Bucket / Prefix | İçerik | Şu Anki Durum | Lifecycle Policy | Karar |
+|----------------|--------|--------------|-----------------|-------|
+| `teqlif/listings/` | İlan fotoğrafları ve videoları | ✅ Listing soft-delete'de silinir | ⚠️ YOK | □ Güvenlik ağı için 365 gün lifecycle ekle |
+| `teqlif/stories/` | Hikaye videoları ve thumb | ✅ expires_at'da silinir (story_service) | ⚠️ YOK | □ 2 gün lifecycle güvenlik ağı |
+| `teqlif-dm/` | DM medya dosyaları | ✅ 7 gün ARQ cleanup | ⚠️ YOK | □ 14 gün lifecycle güvenlik ağı |
+| `teqlif/avatars/` | Profil fotoğrafları | ⚠️ Eski avatar güncellenmede siliniyor; hesap silinince? | ⚠️ YOK | □ Hesap silme akışı + lifecycle |
+| `teqlif/highlights/` | Hype highlight videoları | ✅ 2 saat ARQ cleanup (local disk) | — | Lokal disk, MinIO değil |
+
+> **Kritik:** MinIO'da lifecycle policy yok. Uygulama katmanı silme çağrısı kaçırılırsa dosyalar sonsuza kalır. Güvenlik ağı olarak her bucket'a lifecycle eklenmeli.
+
+---
+
+### 1.5 — İzleme Sistemi (node3)
+
+| Sistem | Retention | Yapılandırma | Karar |
+|--------|-----------|-------------|-------|
+| Prometheus TSDB | ✅ 30 gün | `--storage.tsdb.retention.time=30d` | □ 30 gün uygun |
+| Loki log | ✅ 14 gün | `retention_period: 336h` | □ 14 gün uygun |
+| Backup (local node5) | ✅ 2 gün | `BACKUP_RETENTION_LOCAL_DAYS=2` | □ 2 gün uygun |
+| Backup (remote node3) | ✅ 7 gün | `BACKUP_RETENTION_REMOTE_DAYS=7` | □ 7 gün uygun |
+
+---
+
+## Bölüm 2 — Veri Yapısı (Schema Audit)
+
+### 2.1 — Finansal Alan Tipleri: Float → Numeric 🔴
+
+Float, IEEE 754 kayan nokta hatası nedeniyle finansal değerler için güvensiz.
+
+| Tablo | Kolon | Şu Anki Tip | Olması Gereken |
+|-------|-------|------------|----------------|
+| `listings` | `price` | `Float` | `Numeric(12, 2)` |
+| `listings` | `buy_it_now_price` | `Float` | `Numeric(12, 2)` |
+| `listings` | `last_sold_price` | `Float` | `Numeric(12, 2)` |
+| `listings` | `last_start_price` | `Float` | `Numeric(12, 2)` |
+| `auctions` | `start_price` | `Float` | `Numeric(12, 2)` |
+| `auctions` | `buy_it_now_price` | `Float` | `Numeric(12, 2)` |
+| `auctions` | `final_price` | `Float` | `Numeric(12, 2)` |
+| `bids` | `amount` | `Float` | `Numeric(12, 2)` |
+| `purchases` | `price` | `Float` | `Numeric(12, 2)` |
+| `listing_offers` | `amount` | `Float` | `Numeric(12, 2)` |
+| `search_alerts` | `max_price` | `Float` | `Numeric(12, 2)` |
+| `users` | `max_budget` | `Float` | `Numeric(12, 2)` |
+| `exchange_rates` | `usd_try`, `eur_try` | `Float` | `Numeric(10, 4)` |
+| `direct_sales` | `price` | `Numeric(10, 2)` | ✅ Doğru |
+| `direct_sale_orders` | `unit_price` | `Numeric(10, 2)` | ✅ Doğru |
+| `tuci_transactions` | `amount` | `Integer` | ✅ Doğru (teqlik tamsayı) |
+
+> Alembic migration: `ALTER TABLE ... ALTER COLUMN ... TYPE NUMERIC(12,2) USING price::numeric`  
+> Tek `op.execute()` per kolon (asyncpg multi-statement yasak — bkz. `feedback_alembic_asyncpg.md`)
+
+---
+
+### 2.2 — Model Hataları
+
+| # | Tablo | Sorun | Etki |
+|---|-------|-------|------|
+| D1 | `image_urls: Text` | JSON array text olarak saklanıyor | JSONB yapılmalı — GIN index, doğrudan sorgu |
+| D2 | `listings.active_room_id` | ForeignKey tanımlanmamış | Referans bütünlüğü yok |
+| D3 | `auctions.status` | `default="completed"` | Yeni açık artırma tamamlanmış görünüyor — `"active"` olmalı |
+| D4 | `reports.created_at` | `DateTime` (timezone=False) + `datetime.utcnow()` | Diğer tablolarla uyumsuz |
+| D5 | `app_configs.updated_at` | `DateTime` (timezone=False) | Tüm diğerleri timezone=True |
+| D6 | `analytics_events` model | `Column()` API (legacy) | Diğerleri `Mapped[]` kullanıyor — tutarsızlık |
+| D7 | `user_interactions` model | `Column()` API (legacy) | Aynı |
+| D8 | `app_configs.value` | `String` (unbounded) | `String(4096)` gibi bir limit konmalı |
+
+---
+
+### 2.3 — Önerilen JSONB Dönüşümleri
+
+| Tablo | Kolon | Şu Anki | Öneri | Gerekçe |
+|-------|-------|---------|-------|---------|
+| `listings` | `image_urls` | `Text` (JSON string) | `JSONB` | GIN index, dizi sorgusu |
+| `users` | `notification_prefs` | `JSON` | `JSONB` | Indekslenebilir |
+| `listings` | `extra_data` | `JSONB` | ✅ Doğru | |
+
+---
+
+### 2.4 — tuci → teqlik Yeniden Adlandırma
+
+Para birimi adı sistem genelinde değişecek:
+
+| Katman | Değişiklik |
+|--------|-----------|
+| DB | `tuci_transactions` → `teqlik_transactions`, `tuci_balance` → `teqlik_balance` |
+| Python | Model, repository, use_case, schema sınıf/alan adları |
+| API | JSON response field isimleri (`tuci_balance` → `teqlik_balance`) |
+| Flutter | ViewModel, DTO, i18n ARB anahtarları |
+
+Strateji: atomic deploy — DB migration + Python deploy + Flutter sürümü aynı anda.  
+Geçiş döneminde API dual-key (hem `tuci_balance` hem `teqlik_balance` döndürülür).
+
+---
+
+## Bölüm 3 — Database Mimarisi
+
+### 3.1 — PostgreSQL: PgBouncer Aktivasyonu 🔴
+
+**Sorun:** 4 ARQ worker × 30 bağlantı = 120, PG default `max_connections=100`'ü aşıyor.  
+**Durum:** `config.py`'de `use_pgbouncer: bool = False` — kodlanmış, devre dışı.
+
+```
+Şu An:
+  API (4 worker) → doğrudan PostgreSQL → bağlantı sınırı aşılıyor
+
+Hedef:
+  API (4 worker) → PgBouncer :5432 → PostgreSQL :5433
+  PgBouncer pool: transaction mode, max 30 PG bağlantısı
 ```
 
-FK kolonları da BigInteger olmalı:
+**Adımlar:**
+1. node5'te PgBouncer kurulumu ve `pgbouncer.ini` yapılandırması
+2. `config.py`: `use_pgbouncer: bool = True`, DB port güncelleme
+3. `systemd/pgbouncer.service` oluşturma
+4. Staging'de test → prod deploy
+
+**Başarı kriteri:** `pg_stat_activity` → max 30 aktif bağlantı, wait = 0
+
+---
+
+### 3.2 — PostgreSQL: Index Stratejisi
+
+**Eksik composite index'ler:**
+
+| Tablo | Index | Sorgu Amacı |
+|-------|-------|------------|
+| `live_streams` | `(stream_id, status)` | Aktiif yayın sorgulama |
+| `tuci_transactions` | `(user_id, created_at DESC)` | Cüzdan geçmişi |
+| `listing_offers` | `(listing_id, status)` | Teklife göre filtreleme |
+| `follows` | `(follower_id, followed_id)` UNIQUE | Takip kontrolü |
+| `purchases` | `(buyer_id, created_at DESC)` | Alıcı satın alım geçmişi |
+| `calls` | `(caller_id, status)`, `(callee_id, status)` | ✅ Var |
+| `bids` | `(stream_id, created_at DESC)` | Açık artırma teklif geçmişi |
+| `analytics_events` | `(user_id, created_at)` | Kullanıcı bazlı analiz |
+| `user_interactions` | `(user_id, created_at)` | ML sorgu performansı |
+
+**Not:** `CREATE INDEX CONCURRENTLY` transaction içinde yasak — teqlif env.py transaction kullandığı için tüm index migration'ları `op.execute()` ile ayrı blokta çalıştırılmalı (bkz. `feedback_alembic_concurrently.md`).
+
+---
+
+### 3.3 — Redis: Namespace ve DB Ayrımı
+
+Mevcut V1.4 yapısı (`05_final.md`'den):
+- **DB0:** Uygulama verisi — session, i18n, ch_buf, interests, cache:*
+- **DB1:** Ops verisi — rate limit, edge_metrics
+
+**Kural:** Mevcut key yapısı değiştirilmez. Yeni cache key'ler `cache:` prefix'i ile DB0'a eklenir. SECURITY_CRITICAL key'lere (session, blacklist, rate limit) dokunulmaz.
+
+**Cache taksonomisi (`teqlif_architectural_decisions.md` §9):**
+
+| Kategori | Örnekler | TTL |
+|---------|---------|-----|
+| SCHEMA_VERSIONED | `/api/catalog`, field-config | Schema migration'da invalidate |
+| ALGORITHMIC | Feed, trending, user_interests | 30s – 5 dk |
+| LIFECYCLE | Auction state, stream state | Event-driven invalidate |
+| SECURITY_CRITICAL | Session, token blacklist | Token süresince |
+| EPHEMERAL | Listing detay, user profile | 30s – 5 dk |
+
+---
+
+### 3.4 — ClickHouse: DDL Hatası
+
+**Sorun (D51b):** `init_clickhouse()` fonksiyonunda `database=` parametresi eksik. Tablolar hedef DB yerine `default` DB'de açılıyor.
+
 ```python
-sender_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ...), ...)
-```
+# Hatalı (database_clickhouse.py):
+_client = await clickhouse_connect.get_async_client(
+    host=settings.clickhouse_host,
+    port=settings.clickhouse_port,
+    # database= eksik!
+)
 
-### 1.2 direct_messages — thread_id + OR Sorgusu Kaldırma
-
-**Problem:** `get_messages_query.py:63` — OR sorgusu: 2× Index Scan + BitmapOr + Heap Fetch.  
-`message_threads` zaten canonical pair (`user_a < user_b`) tutuyor. Eksik: DM'de `thread_id` yok.
-
-**Çözüm:**
-
-```python
-# models/message_thread.py — sequential PK ekle
-id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-# Eski composite uniqueness constraint olarak koru:
-__table_args__ = (
-    UniqueConstraint("user_a_id", "user_b_id", name="uq_thread_pair"),
-    Index("ix_message_threads_user_b", "user_b_id"),
+# Doğru:
+_client = await clickhouse_connect.get_async_client(
+    host=settings.clickhouse_host,
+    port=settings.clickhouse_port,
+    database=settings.clickhouse_db,  # "teqlif_prod_analytics"
 )
 ```
 
-```python
-# models/message.py — thread_id ekle
-thread_id: Mapped[int] = mapped_column(
-    BigInteger, ForeignKey("message_threads.id", ondelete="CASCADE"), nullable=False
-)
-__table_args__ = (
-    Index("ix_dm_thread_created", "thread_id", "id"),       # pagination için
-    Index("ix_dm_receiver_is_read", "receiver_id", "is_read"),
-    Index("ix_dm_content_type_created", "content_type", "created_at"),
-)
-```
-
-```python
-# use_cases/messages/queries/get_messages_query.py — OR kaldır
-base_where = [
-    DirectMessage.thread_id == thread_id,   # tek equality check
-    ~and_(DirectMessage.sender_id == uid, DirectMessage.deleted_for_sender == True),
-    ~and_(DirectMessage.receiver_id == uid, DirectMessage.deleted_for_receiver == True),
-]
-```
-
-### 1.3 direct_messages — Retention Policy
-
-```python
-# worker.py — cleanup_hidden_messages_task'a ek kural:
-DELETE FROM direct_messages
-WHERE deleted_for_sender = TRUE
-  AND deleted_for_receiver = TRUE
-  AND created_at < NOW() - INTERVAL '365 days'
-```
-
-### 1.4 users — God Object Bölünmesi (47 kolon → ~18)
-
-**Mevcut 47 kolon → 4 tabloya bölünür:**
-
-**`users` (core, ~18 kolon — her request'te okunur):**
-```python
-id (BigInteger PK), email, username, full_name, hashed_password,
-status (Enum), email_verified, phone, phone_verified,
-profile_image_url, profile_image_thumb_url,
-is_premium, plan_type, tuci_balance,
-preference_embedding (Vector384), max_budget,
-onboarding_completed, locale, created_at
-```
-
-**`user_social_links` (1:1, sadece dolu olduğunda row var):**
-```python
-user_id (BigInteger PK FK), website_url, instagram_url, kick_url,
-twitch_url, facebook_url, youtube_url, tiktok_url, updated_at
-```
-
-**`user_notification_prefs` (1:1, her kullanıcı için row oluştur):**
-```python
-user_id (BigInteger PK FK),
-messages (bool=True), follows (bool=True), auction_won (bool=True),
-stream_started (bool=True), new_listing (bool=True), new_bid (bool=True),
-outbid (bool=True), smart_alert (bool=True), ratings (bool=True),
-receive_blast_notifications (bool=True),
-bid_threshold_tl (int=0),
-quiet_hours_enabled (bool=False), quiet_from (str="22:00"), quiet_to (str="08:00")
-```
-
-JSON yerine tipli kolonlar → kısmi UPDATE mümkün, type-safe.
-
-**`user_consents` (1:1, GDPR):**
-```python
-user_id (BigInteger PK FK),
-age_confirmed_at (DateTime?),
-cross_border_given (bool=False), cross_border_at (DateTime?),
-cross_border_version (String(10)?), cross_border_ip (String(45)?),
-cross_border_locale (String(5)?), cross_border_revoked_at (DateTime?)
-```
-
-Referral verileri zaten `referrals` tablosuna taşınabilir.
-
-### 1.5 listings — image_urls Text → JSONB + Tekrarlayan Kolon
-
-`listings.image_url` (String) ve `listings.image_urls` (Text/JSON string) → iki ayrı kolon, biri gereksiz.
-
-```python
-# Mevcut:
-image_url: String(500)        # tek görsel
-image_urls: Text               # JSON string array — tip güvensiz
-
-# Olması gereken:
-image_urls: JSONB              # ["url1", "url2", ...] — ilk eleman ana görsel
-# image_url kaldırılır, image_urls[0] kullanılır
-```
-
-`Text` yerine `JSONB` → PostgreSQL JSON operatörleri çalışır, partial update mümkün, GIN index eklenebilir.
-
-### 1.6 String Enum'lar → PostgreSQL ENUM
-
-Durum alanları string yerine ENUM olmalı — geçersiz değer DB seviyesinde reddedilir, disk daha verimli.
-
-| Tablo | Kolon | Mevcut | Olması Gereken |
-|-------|-------|--------|----------------|
-| `direct_messages` | `content_type` | String(20) | ENUM: text/image/video/voice/file |
-| `follows` | `status` | String(20) | ENUM: pending/accepted/declined |
-| `calls` | `status` | String(20) | ENUM: calling/active/ended/missed/rejected |
-| `message_threads` | `status` | String(20) | ENUM: pending/accepted/declined |
-| `direct_sales` | `status` | String(20) | ENUM: active/paused/ended/cancelled |
-| `auctions` | `status` | String(20) | ENUM: active/paused/ended |
-
-`UserStatus`, `ListingStatus` zaten ENUM — doğru pattern, diğerlerine de uygulanmalı.
-
-### 1.7 URL String Uzunlukları
-
-MinIO URL formatı: `http://minio1.teqlif.com:9010/teqlif/uuid.ext` ≈ 60 karakter.  
-Tüm URL kolonları `String(500)` → `String(255)` yeterli. Disk ve buffer cache tasarrufu.
+**Not:** `get_clickhouse_client()` zaten doğru — sadece `init_clickhouse()` bozuk.
 
 ---
 
-## Faz 2 — Media Pipeline
+## Bölüm 4 — Sorgu Optimizasyonu ve Cache
 
-### 2.1 Görsel Yükleme: Kayıpsız WebP'ye Çevir
+### 4.1 — Endpoint Cache Stratejisi
 
-**Mevcut:** Yüklenen format ne ise (JPG, PNG, GIF, WebP) olduğu gibi saklanıyor.  
-Thumbnail: 400×400, JPEG quality=85.
+| Endpoint | Şu An | Öneri | TTL | Cache Kategorisi |
+|---------|-------|-------|-----|----------------|
+| `GET /listings/{id}` | DB sorgusu | Redis cache | 60 sn | EPHEMERAL |
+| `GET /users/{id}` (profil) | DB sorgusu | Redis cache | 5 dk | EPHEMERAL |
+| `GET /catalog/categories` | DB sorgusu | Redis cache | 1 saat | SCHEMA_VERSIONED |
+| `GET /app-config` | DB sorgusu | Redis cache | 10 dk | SCHEMA_VERSIONED |
+| `GET /listings/feed` | DB sorgusu | Redis cache | 30 sn | ALGORITHMIC |
+| `GET /listings/{id}/offers` | DB sorgusu | Redis cache | 30 sn | LIFECYCLE |
+| Listing feed sıralaması | Hesaplanmış | Redis cache | 30 sn | ALGORITHMIC |
 
-**Sorun:** 5MB PNG yüklenir → 5MB PNG saklanır. WebP aynı kalitede %25-35 daha küçük.
-
-**Çözüm:** `upload.py` ve `media_processor.py:ImageProcessor`'da sunucu tarafında WebP'ye çevir:
-
-```python
-# media_processor.py — make_thumbnail yerine tam dönüşüm
-def convert_to_webp(data: bytes, max_dim: int = 1600, quality: int = 82) -> bytes:
-    """Orijinal görseli WebP'ye çevirir, max_dim kısa kenarını sınırlar."""
-    img = Image.open(io.BytesIO(data))
-    try:
-        from PIL import ImageOps
-        img = ImageOps.exif_transpose(img)
-    except Exception:
-        pass
-    if img.mode not in ("RGB", "RGBA"):
-        img = img.convert("RGB")
-    # Uzun kenarı max_dim ile sınırla, oranı koru
-    img.thumbnail((max_dim, max_dim), Image.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="WEBP", quality=quality, method=4)
-    return buf.getvalue()
-
-def make_thumbnail_webp(data: bytes, size: int = 400) -> bytes:
-    """400x400 WebP thumbnail."""
-    img = Image.open(io.BytesIO(data))
-    # ... (mevcut crop logic)
-    img.save(buf, format="WEBP", quality=75, method=4)
-    return buf.getvalue()
-```
-
-**Depolama key değişikliği:** `.jpg/.png` → `.webp`
-
-**İlan görseli limiti:** 5MB → WebP dönüşümü sonrası ortalama boyut ~400-800KB.
-
-### 2.2 Listing Videosu: Gerçek Transcode
-
-**Mevcut:** `ffmpeg -c:v copy` — video stream kopyalanıyor, yeniden kodlanmıyor.  
-50MB H.265 veya ProRes yüklenir → 50MB olduğu gibi saklanır.
-
-**Sorun:**
-- Depolama maliyeti kontrolsüz
-- CDN bant genişliği yüksek
-- Format uyumluluk sorunu (bazı cihazlar H.265 oynatamaz)
-- Progressive streaming çalışmıyor (faststart var ama bitrate normalize değil)
-
-**Çözüm:** Gerçek transcode pipeline:
-
-```python
-# upload.py — _process_listing_video değişikliği
-compress_cmd = [
-    "ffmpeg", "-y", "-i", src,
-    "-c:v", "libx264",          # H.264 — evrensel uyumluluk
-    "-crf", "28",               # ~1-3 Mbps 1080p için (23 yüksek kalite, 28 makul)
-    "-preset", "fast",          # encode hızı / sıkıştırma dengesi
-    "-vf", "scale=-2:720",      # 720p — 1080p gereksiz yük
-    "-c:a", "aac", "-b:a", "96k",  # ses 128k'dan 96k'ya
-    "-movflags", "+faststart",  # progressive HTTP streaming
-    "-t", str(int(LISTING_VIDEO_MAX_SECS)),
-    video_path,
-]
-```
-
-**Beklenen boyut:** 60 saniyelik 720p H.264 CRF28 ≈ 8-15MB (mevcut max 50MB'dan çok daha az).
-
-**Gereklilik:** node1 (medya sunucusu) ve worker node'larında `libx264` ile derlenmiş FFmpeg.  
-Kontrol: `ffmpeg -codecs | grep libx264`
-
-### 2.3 DM Videosu: Thumbnail Kalitesi Düzeltmesi
-
-**Mevcut:** `ffmpeg -q:v 2` ile thumbnail — bu yüksek kalite (1=en iyi, 31=en düşük). İyi.  
-Ama DM videosu için de transcode yok.
-
-**Kısa vadede:** DM videosu için de basit normalize (scale=720, CRF28, faststart).  
-Limit: `VIDEO_MAX_BYTES = 30MB` → transcode sonrası ~5-8MB.
-
-### 2.4 URL'lerin DB'de Saklanma Biçimi
-
-**Mevcut:** Tam MinIO URL saklanıyor: `http://minio1.teqlif.com:9010/teqlif/uuid.webp`
-
-**Sorun:** MinIO node değişirse, domain değişirse, protocol değişirse → tüm URL'ler bozulur. Milyonlarca satır UPDATE gerekir.
-
-**Çözüm:** Sadece `key` sakla, URL çalışma zamanında oluştur:
-
-```python
-# Mevcut: "http://minio1.teqlif.com:9010/teqlif/abc123.webp" (56 bytes)
-# Öneri:  "abc123.webp" (11 bytes) — ~5× daha kısa
-
-# URL oluşturmak için:
-def build_url(key: str) -> str:
-    return f"{settings.uploads_base_url}/{key}"
-```
-
-Bu değişiklik URL kolonlarını `String(255)` → `String(100)` altına çeker.
-
-**Not:** Bu değişiklik `storage_service.py` ve tüm URL dönen endpoint'leri etkiler. Faz 4 API temizliğiyle birlikte yapılmalı.
-
-### 2.5 Profil Görseli: Boyut Sınırı
-
-**Mevcut:** `IMAGE_MAX_BYTES = 5MB` — profil görseli için çok büyük.
-
-**Öneri:**
-```python
-PROFILE_IMAGE_MAX_BYTES = 2 * 1024 * 1024   # 2MB → WebP 800px → ~100-200KB
-LISTING_IMAGE_MAX_BYTES = 5 * 1024 * 1024   # 5MB → WebP 1600px → ~200-500KB
-```
-
-Profil görseli `max_dim=800`, ilan görseli `max_dim=1600`.
-
-### 2.6 Medya Sil → Storage Temizliği
-
-**Mevcut:** Mesaj silindiğinde MinIO'dan silme var (`storage.delete_object`). Listing silindiğinde var mı? Kontrol gerekli.
+**Kural:** Schema değişikliği olan her Alembic migration'ına `bump_schema_version()` çağrısı eklenmeli.
 
 ---
 
-## Faz 3 — Redis Denetimi
+### 4.2 — N+1 Sorgu Düzeltmeleri
 
-### 3.1 TTL'siz Key'ler
-
-Aşağıdaki key'ler `set()` ile yazılıyor, TTL yok:
-
-| Dosya | Key Pattern | Risk | Çözüm |
-|-------|-------------|------|-------|
-| `webhooks.py:259` | `live:viewers:{stream_id}` | Stream biterse key kalır | Stream sonunda DEL veya `ex=86400` |
-| `chat_commands.py:169` | `live:viewers:{stream_id}` | Aynı | Aynı |
-| `direct_sale_redis.py:70` | `stock:{sale_id}` | Sale biterse key kalır | Sale sonunda DEL veya `ex=86400` |
-| `start_stream.py:94` | Stream key | Stream sonunda temizleniyor mu? | Kontrol + TTL |
-| `circuit_breaker.py` | Circuit state key | Kalıcı devre durumu | `ex=3600` |
-
-**Düzeltme şablonu:**
-```python
-# TTL'siz:
-await redis.set(key, 0)
-
-# TTL'li:
-await redis.set(key, 0, ex=86400)  # veya stream/sale ömrüne göre
-```
-
-### 3.2 `direct_sale_redis.py` — Stok Sayacı
-
-`stock:{sale_id}` key'i `redis.set(stock_key, total_stock)` ile yazılıyor.  
-Sale bittiğinde bu key temizleniyor mu? Hayır.
-
-```python
-# Düzeltme: sale sonunda
-await redis.delete(f"stock:{sale_id}")
-# veya yazarken TTL ekle:
-await redis.set(f"stock:{sale_id}", total_stock, ex=86400)
-```
-
-### 3.3 `_redis_blpop` vs `_redis_stream` — Pool Kullanım Denetimi
-
-`_redis_blpop`: BLPOP için, socket_timeout=None. Şu an hangi kodlar kullanıyor?
-
-```bash
-grep -rn "get_redis_blpop\|get_redis_stream" backend/app/ --include="*.py"
-```
-
-Eğer `_redis_blpop` hiç kullanılmıyorsa kaldırılabilir (pool tasarrufu).
-
-### 3.4 Feed Cache — TTL Tutarlılığı
-
-```python
-# routers/feed.py
-await redis.expire(key, 14 * 86400)   # for-you feed cursor: 14 gün
-await redis.setex(cache_key, 900, ...)  # listing cache: 15 dk
-```
-
-For-you feed cursor 14 gün makul. Listing cache 15 dk. TTL'ler mantıklı.
-
----
-
-## Faz 4 — API Şema Temizliği
-
-### 4.1 response_model Tüm Endpoint'lere
-
-```python
-# routers/listings.py
-@router.get("", response_model=Page[ListingOut])
-@router.get("/{id}", response_model=ListingOut)
-
-# routers/auth.py
-@router.get("/me", response_model=UserOut)
-@router.get("/init", response_model=InitResponse)
-@router.get("/me/commerce/purchases", response_model=Page[CommercePurchaseOut])
-@router.get("/me/commerce/sales", response_model=Page[CommerceSaleOut])
-```
-
-### 4.2 UserMiniOut — Duplicate Şema Birleştirme
-
-```python
-# schemas/user.py
-class UserMiniOut(BaseModel):
-    id: int
-    username: str
-    full_name: str
-    profile_image_thumb_url: str | None = None
-    model_config = ConfigDict(from_attributes=True)
-
-# Türevler:
-class StreamHostOut(UserMiniOut): pass          # aynı
-class BlockedUserOut(UserMiniOut): pass         # aynı
-class StoryAuthorOut(UserMiniOut):
-    profile_image_url: str | None = None        # ek alan
-```
-
-### 4.3 DirectSaleSummaryOut — Discriminated Union
-
-```python
-class DirectSaleSummaryBase(BaseModel):
-    sale_id: int; item_name: str; status: str
-    proof_image_url: str | None = None; image_url: str | None = None
-    end_reason: str | None = None; ended_at: datetime | None = None
-
-class DirectSaleSummaryForSeller(DirectSaleSummaryBase):
-    role: Literal["seller"]
-    total_revenue: Decimal | None = None
-    total_quantity_sold: int | None = None
-    order_count: int | None = None
-    seller_username: str | None = None
-
-class DirectSaleSummaryForBuyer(DirectSaleSummaryBase):
-    role: Literal["buyer"]
-    buyer_quantity: int; buyer_unit_price: Decimal; buyer_total: Decimal
-    buyer_order_status: str
-
-DirectSaleSummaryOut = Annotated[
-    DirectSaleSummaryForSeller | DirectSaleSummaryForBuyer,
-    Field(discriminator="role")
-]
-```
-
-### 4.4 UserOut Sadeleştirme
-
-```python
-# UserOut — core (her request'te)
-class UserOut(BaseModel):
-    id: int; email: str; username: str; full_name: str
-    status: UserStatus; is_verified: bool; created_at: datetime
-    is_private: bool = False; phone_verified: bool = False
-    is_premium: bool = False; plan_type: str | None = None
-    onboarding_completed: bool = False; locale: str = "tr"
-    profile_image_url: str | None = None
-    profile_image_thumb_url: str | None = None
-    tuci_balance: int = 100
-
-# Sosyal linkler ayrı endpoint (profil sayfası için):
-class UserProfileOut(UserOut):
-    bio: str | None = None
-    # user_social_links join'den gelir:
-    website_url: str | None = None
-    instagram_url: str | None = None
-    # ...
-```
-
-### 4.5 price Alanları — Decimal
-
-```python
-# schemas'ta:
-from decimal import Decimal
-price: Decimal | None = None
-# Pydantic otomatik JSON serialize eder ("12.50" string olarak)
-```
-
-### 4.6 ConversationOut — is_request Kaldır
-
-```python
-class ConversationOut(BaseModel):     # /conversations
-    user_id: int; username: str; full_name: str
-    last_message: str; last_at: datetime
-    unread_count: int; last_message_type: str = "text"
-
-class MessageRequestOut(BaseModel):   # /requests
-    # Aynı alanlar + request'e özgü
-    initiator_id: int; status: str
-```
-
----
-
-## Faz 5 — ClickHouse Optimizasyonu
-
-### 5.1 Materialized View — Günlük Reklam İstatistikleri
-
-`ads.py:338,352,375` — her API çağrısında `SELECT COUNT FROM user_events WHERE ...` tam tablo taraması.
-
+**Feed sorgusu — şu an:**
 ```sql
-CREATE MATERIALIZED VIEW mv_ad_daily_stats
-ENGINE = AggregatingMergeTree()
-PARTITION BY toYYYYMM(day)
-ORDER BY (item_type, item_id, event_type, day)
-AS
-SELECT
-    item_type,
-    item_id,
-    event_type,
-    toDate(timestamp) AS day,
-    countState() AS cnt
-FROM user_events
-GROUP BY item_type, item_id, event_type, day;
-
--- Sorgu:
-SELECT item_id, event_type, countMerge(cnt) AS total
-FROM mv_ad_daily_stats
-WHERE item_type = 'listing' AND day >= today() - 7
-GROUP BY item_id, event_type;
+SELECT * FROM listings LIMIT 20;
+-- Her listing için: SELECT * FROM users WHERE id = ?   ← N+1
+-- Her listing için: SELECT * FROM favorites WHERE ...  ← N+1
 ```
-
-### 5.2 ORDER BY Uyumu Kontrolü
-
-`user_events` ORDER BY: `(timestamp, item_id)` — sık sorgu: `WHERE item_type = 'X' AND item_id = Y`.  
-Bu sorguda `item_id` ikinci sırada, `item_type` hiç yok → tam index fayda sağlamıyor.
-
-```sql
--- Mevcut:
-ORDER BY (timestamp, item_id)
-
--- Öneri (reklam/ilan sorgularına göre):
-ORDER BY (item_type, item_id, timestamp)
-```
-
-Ama bu değişiklik tablonun tüm verilerini yeniden sıralar. Sıfırdan başlarken doğru ORDER BY ile kur.
-
----
-
-## Faz 6 — Flutter Model Katmanı
-
-### 6.1 Freezed + json_serializable
-
-```yaml
-# pubspec.yaml
-dependencies:
-  freezed_annotation: ^2.4.x
-  json_annotation: ^4.9.x
-
-dev_dependencies:
-  freezed: ^2.4.x
-  json_serializable: ^6.8.x
-  build_runner: ^2.4.x
-```
-
-```dart
-// models/stream.dart — sonrası
-@freezed
-class StreamOut with _$StreamOut {
-  const factory StreamOut({
-    required int id,
-    required String roomName,
-    required String title,
-    required String category,
-    required int viewerCount,
-    required StreamHost host,
-    String? subcategory,
-    String? thumbnailUrl,
-  }) = _StreamOut;
-  factory StreamOut.fromJson(Map<String, dynamic> json) => _$StreamOutFromJson(json);
-}
-```
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-### 6.2 ChatMessage.announcementPayload — Tip Güvenliği
-
-```dart
-// Mevcut:
-Map<String, dynamic>? announcementPayload
-
-// Olması gereken — sealed class:
-@freezed
-sealed class AnnouncementPayload with _$AnnouncementPayload {
-  const factory AnnouncementPayload.auctionResult({
-    required String winner, required double amount,
-  }) = AuctionResultPayload;
-  const factory AnnouncementPayload.saleEnded({
-    required int totalSold,
-  }) = SaleEndedPayload;
-  // ...
-}
-```
-
-### 6.3 Decimal Fiyatlar Flutter'da
-
-Pydantic artık `Decimal` döndürdüğünde JSON'da string ("12.50") gelir.
-
-```dart
-// Yanlış:
-final double price = json['price'] as double;  // null safety sorunu
-
-// Doğru:
-final String priceStr = json['price']?.toString() ?? '0';
-final double price = double.parse(priceStr);
-// veya money_formatter gibi bir paket
-```
-
----
-
-## Uygulama Sırası Özeti
-
-```
-Faz 0: Float → Numeric  (listing.py, auction.py, bid.py, purchase.py)
-  ↓
-Faz 1: PostgreSQL şema
-  1.1 BigInteger PKlar
-  1.2 thread_id + OR kaldır
-  1.3 DM retention
-  1.4 users bölünmesi
-  1.5 image_urls → JSONB
-  1.6 String → ENUM
-  1.7 URL String(500) → String(255)
-  ↓
-Faz 2: Media pipeline
-  2.1 WebP dönüşümü
-  2.2 Video transcode
-  2.3 DM video normalize
-  2.4 URL'ler DB'de key olarak sakla (Faz 4 ile birlikte)
-  ↓
-Faz 3: Redis TTL denetimi
-  ↓
-Faz 4: API şema temizliği
-  response_model + UserMiniOut + DirectSaleSummaryOut + Decimal
-  ↓
-Faz 5: ClickHouse MV + ORDER BY
-  ↓
-Faz 6: Flutter Freezed + Decimal + AnnouncementPayload
-  ↓
-Faz 7: ML Feature Pipeline  [price-estimate şu an DURDURULDU]
-  ↓
-Faz 8: Finansal Audit Trail
-  ↓
-Faz 9: KVKK / Veri Silme Zinciri
-  ↓
-Faz 10: Veri Kalite Monitörü
-  ↓
-Faz 11: Outbox Pattern (opsiyonel)
-```
-
----
-
----
-
-## Faz 7 — ML Feature Pipeline *(price-estimate şu an durduruldu)*
-
-### Durum
-
-`POST /analytics/price-estimate` → **503 FEATURE_TEMPORARILY_DISABLED** (analytics.py:496-498).  
-`GET /ai-price-credits` → **Sabit boş yanıt** döndürüyor.  
-Kod silinmedi — bu faz tamamlandığında erken return kaldırılır.
-
-### Neden Durduruldu
-
-Her `/price-estimate` çağrısında tetiklenen yük:
-- ARQ worker'a `generate_embedding_task` → model inference (CPU yoğun)
-- 150 satır `pgvector` `<=>` distance sorgusu
-- `numpy` + `scipy.stats.gaussian_kde` her request'te import + hesap
-- Redis'te embedding cache (7 gün TTL — büyüme kontrolsüz)
-
-### Yeniden Açılabilmesi İçin Gerekli Altyapı
-
-**7.1 Listing Embedding Pipeline (Zaten Kısmen Var)**
-
-`generate_listing_embedding_task` listing oluşturulunca çalışıyor (`listings.py:205`). Bu iyi.  
-Eksik: **toplu backfill** — mevcut listing'lerin `embedding` kolonu NULL.
-
-```python
-# worker.py — yeni scheduled task
-@cron(hour=2, minute=0)  # Her gece 02:00
-async def backfill_listing_embeddings(ctx):
-    """embedding IS NULL olan listing'ler için embedding üret (max 500/gece)."""
-```
-
-**7.2 User Preference Embedding — Güncelleme Stratejisi**
-
-Şu an cold start trigger (3/5/10/20 etkileşimde) mevcut ama:
-- `update_user_preference_embedding` task ne yapıyor? Hangi modelle vektör üretiyor?
-- Embedding vektörü kayıtlı mı yoksa sadece hesaplanıp kullanılıyor mu?
-
-Bu soruları cevaplamadan `price-estimate`'i açmak anlamsız — cold start sorununu çözmez.
-
-**7.3 Embedding Cache Kontrolü**
-
-```python
-# Cache key: f"cache:embedding:{md5(text)}"  — TTL: 7 gün
-# Sorun: farklı kullanıcılar aynı text → aynı cache, bu doğru
-# Sorun: cache boyutu büyüdükçe Redis memory artar
-# Çözüm: TTL'yi 24 saate indir (price-estimate açılınca)
-await redis.setex(emb_cache_key, 86400, emb_str)
-```
-
-**7.4 scipy/numpy — Lazy Import Koruma**
-
-```python
-# Her request'te import etmek yavaş. Endpoint açılınca module-level import:
-import numpy as np
-from scipy.stats import gaussian_kde
-# analytics.py başına taşı
-```
-
-**7.5 Price-Estimate Açılış Kontrolü**
-
-```python
-# Şu an kapalı (analytics.py:496):
-raise _HTTPException(status_code=503, detail={"code": "FEATURE_TEMPORARILY_DISABLED"})
-# Açmak için bu 2 satırı kaldır, docstring güncelle.
-```
-
----
-
-## Faz 8 — Finansal Audit Trail
-
-### Problem
-
-`bids`, `purchases`, `direct_sale_orders` mutable satırlar. Bir satır güncellendiğinde önceki değer kaybolur.  
-Muhasebe, fraud detection ve KVKK için finansal işlemlerin **değişmez geçmişi** zorunlu.
-
-### Çözüm
-
-```sql
-CREATE TABLE financial_events (
-    id          BIGSERIAL PRIMARY KEY,
-    event_type  TEXT NOT NULL,        -- 'bid_placed', 'bid_cancelled', 'purchase_created',
-                                      --   'auction_ended', 'sale_ended', 'refund'
-    entity_type TEXT NOT NULL,        -- 'bid', 'purchase', 'direct_sale_order', 'auction'
-    entity_id   BIGINT NOT NULL,
-    amount      NUMERIC(10, 2) NOT NULL,
-    currency    TEXT NOT NULL DEFAULT 'TRY',
-    actor_id    BIGINT REFERENCES users(id) ON DELETE SET NULL,
-    metadata    JSONB,                -- ek bağlam (karşı taraf, ödeme yöntemi, vb.)
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Sadece ekle, hiç güncelleme/silme yok
--- Row-level security: sadece INSERT izni
-CREATE INDEX ix_fe_entity ON financial_events (entity_type, entity_id);
-CREATE INDEX ix_fe_actor   ON financial_events (actor_id, created_at);
-```
-
-### Tetikleyici Noktalar
-
-| Olay | Dosya | Eklenecek satır |
-|------|-------|-----------------|
-| Bid placed | `bid_commands.py` | `financial_events` INSERT |
-| Bid cancelled | `bid_commands.py` | `financial_events` INSERT |
-| Auction ended | `auction_commands.py` | `financial_events` INSERT |
-| Purchase created | `purchase_commands.py` | `financial_events` INSERT |
-| Direct sale order | `direct_sale_commands.py` | `financial_events` INSERT |
-
----
-
-## Faz 9 — KVKK / Veri Silme Zinciri
-
-### Yasal Yükümlülük
-
-KVKK md.7: kişisel veri "ilgili kişinin talebiyle" silinmeli ya da anonimleştirilmeli.  
-Şu an `DELETE /auth/me` endpoint'i var mı? Varsa ne yapıyor?
-
-```bash
-grep -rn "delete_account\|account.*delete\|DELETE.*users" backend/app/routers/ --include="*.py"
-```
-
-### Silme Zinciri Tasarımı
-
-```
-Kullanıcı "Hesabı Sil" isteği
-  ↓
-users.status = "pending_deletion"
-users.deletion_requested_at = NOW()
-  ↓
-30 gün sonra scheduled worker:
-  ├── users: email/phone → "deleted_{id}@deleted.com", full_name → "Silinmiş Kullanıcı"
-  ├── direct_messages: content → "[silindi]", media_url → NULL  (satır kalır, thread korunur)
-  ├── listings: soft delete, görsel URL'leri MinIO'dan sil
-  ├── MinIO: profil görseli sil
-  ├── user_notification_prefs: sil
-  ├── user_social_links: sil
-  ├── analytics_events (ClickHouse): user_id → 0 (UPDATE — CH'da yavaş, batch ile)
-  └── user_interactions (ClickHouse): user_id → 0
-```
-
-### financial_events İstisnası
-
-Finansal kayıtlar (`financial_events`) KVKK kapsamında 10 yıl saklanmalı (Türk Ticaret Kanunu).  
-`actor_id` → `NULL` yapılır, `metadata` içindeki PII temizlenir. Satır silinmez.
-
----
-
-## Faz 10 — Veri Kalite Monitörü
-
-### Günlük Bütünlük Kontrolleri
-
-```sql
--- Scheduled worker, her gece 03:00
-
--- 1. Tamamlanmış açık artırmaların final_price boş olmaması
-SELECT COUNT(*) FROM auctions
-WHERE status = 'ended' AND final_price IS NULL;
-
--- 2. Satın alımların tekabül eden auctions ile uyumu
-SELECT COUNT(*) FROM purchases p
-LEFT JOIN auctions a ON a.id = p.auction_id
-WHERE p.auction_id IS NOT NULL AND a.id IS NULL;
-
--- 3. Negative balance (teorik olarak imkansız ama kontrol et)
-SELECT COUNT(*) FROM users WHERE tuci_balance < 0;
-
--- 4. Orphan DM media (MinIO'da var, DB'de yok — veya tersi)
--- Bu daha karmaşık: storage_service audit ile
-```
-
-### ClickHouse Event Volume Alarmı
-
-```python
-# Prometheus metric: clickhouse_event_insert_rate
-# Alarm: son 1 saatte 0 event insert → ClickHouse bağlantısı kopmuş olabilir
-```
-
----
-
-## Faz 11 — Outbox Pattern *(opsiyonel, ölçek büyüdüğünde)*
-
-### Problem
-
-Şu an `analytics_events` ve `user_interactions` ikili yazma (dual-write) ile ClickHouse'a gidiyor.  
-Network hatası → PostgreSQL write başarılı, ClickHouse write başarısız → sessiz veri kaybı.
-
-### Çözüm: Transactional Outbox
-
-```sql
-CREATE TABLE outbox_events (
-    id          BIGSERIAL PRIMARY KEY,
-    topic       TEXT NOT NULL,        -- 'analytics', 'user_interaction'
-    payload     JSONB NOT NULL,
-    created_at  TIMESTAMPTZ DEFAULT NOW(),
-    sent_at     TIMESTAMPTZ           -- NULL = henüz işlenmedi
-);
-```
-
-```python
-# Mevcut dual-write yerine:
-async with db.begin():
-    db.add(analytics_event)
-    db.add(OutboxEvent(topic="analytics", payload=event.dict()))
-    # ClickHouse write BURADA YOK — worker okuyacak
-
-# Worker (5 saniyede bir):
-pending = SELECT * FROM outbox_events WHERE sent_at IS NULL ORDER BY id LIMIT 1000
-# → ClickHouse batch insert
-# → UPDATE outbox_events SET sent_at = NOW() WHERE id = ANY(...)
-```
-
-Bu, Teqlif'in mevcut ölçeğinde zorunlu değil — ama ClickHouse veri tutarsızlığı gözlemlenirse uygulanır.
-
----
-
-## Endüstri Standardı Karşılaştırması
-
-| Konu | Mevcut | Endüstri Standardı | Faz |
-|------|--------|-------------------|-----|
-| Para tipi | Float | Numeric/Decimal | 0 |
-| URL depolama | Tam URL (500 char) | Key (100 char) | 2.4 |
-| Görsel format | Orijinal (jpg/png) | WebP (sunucu side) | 2.1 |
-| Video depolama | Raw (50MB) | Transcoded 720p H.264 (~10MB) | 2.2 |
-| PK tipi | int4 | int8 büyüyen tablolarda | 1.1 |
-| Status alanları | String(20) | ENUM | 1.6 |
-| JSON in Column | Text (string) | JSONB | 1.5 |
-| Bildirim tercihleri | JSON | Tipli kolonlar | 1.4 |
-| God Object tablo | 47 kolon | ~18 kolon | 1.4 |
-| Type-safe models | Manuel fromJson | Freezed generated | 6.1 |
-| Union types | Flat schema | Discriminated union | 4.3 |
-| API type safety | response_model eksik | Her endpoint'te | 4.1 |
-| Redis TTL | Bazı key'lerde yok | Her key'e TTL | 3.1 |
-| CH aggregation | Full scan | Materialized View | 5.1 |
-| CH ORDER BY | timestamp first | Query pattern first | 5.2 |
-| ML pipeline | Yok (price-estimate durduruldu) | Feature store + batch embed | 7 |
-| Finansal audit | Yok (mutable tables) | Append-only event log | 8 |
-| Veri silme | Yok (soft delete sadece) | KVKK cascade + anonymize | 9 |
-| Veri kalite | Yok | Günlük integrity checks | 10 |
-| Dual-write güvenliği | Sessiz kayıp riski | Outbox pattern | 11 |
-
----
-
----
-
-# Tam Veri Modeli Audit — Ham Bulgular
-
-*38 SQLAlchemy model, 13 Pydantic schema, 16 Flutter model incelendi. 2026-09-20*
-
----
-
-## A. PostgreSQL Model Bulguları
-
-### A.1 Finansal Float Hataları — Tam Liste
-
-Plan Faz 0'da listings/auctions/bids/purchases vardı. Audit'te ek iki tablo bulundu:
-
-| Tablo | Kolon | Dosya |
-|-------|-------|-------|
-| `listings` | price, buy_it_now_price, last_sold_price, last_start_price | models/listing.py |
-| `auctions` | start_price, buy_it_now_price, final_price | models/auction.py |
-| `bids` | amount | models/bid.py |
-| `purchases` | price | models/purchase.py |
-| `listing_offers` | amount | models/listing_offer.py ← **Faz 0'da eksikti** |
-| `search_alerts` | max_price | models/search_alert.py ← **Faz 0'da eksikti** |
-| `users` | max_budget | models/user.py ← **Faz 0'da eksikti** |
-| `exchange_rates` | usd_try, eur_try | models/market_index.py ← kur değeri, Numeric(10,4) |
-
-`exchange_rates` için Numeric(10,4) — dört ondalık basamak kur hassasiyeti için gerekli.
-
----
-
-### A.2 BigInteger PK/FK — Öncelik Sırası
-
-Hacim beklentisine göre sıralanmış:
-
-| Tablo | Öncelik | Neden |
-|-------|---------|-------|
-| `direct_messages` | 🔴 Kritik | Hiç silinmiyor |
-| `tuci_transactions` | 🔴 Kritik | Her işlem yeni satır |
-| `stream_likes` | 🔴 Kritik | Unique constraint yok, her kalp = satır |
-| `analytics_events` | 🟠 Yüksek | Yüksek frekanslı event |
-| `user_interactions` | 🟠 Yüksek | Yüksek frekanslı event |
-| `story_views` | 🟠 Yüksek | Her kullanıcı × her hikaye |
-| `bids` | 🟠 Yüksek | Yoğun yayınlarda çok satır |
-| `listing_likes` | 🟡 Orta | Büyük ölçek potansiyeli |
-| `notifications` | 🟡 Orta | 30 günde siliniyor, bounded |
-| `follows`, `user_blocks` | 🟢 Düşük | Sınırlı büyüme |
-
-Tüm FK kolonları da ilgili tablolarla aynı tipte olmalı.
-
----
-
-### A.3 ENUM Dönüşümleri — Tam Liste
-
-| Tablo | Kolon | Mevcut | ENUM Değerleri |
-|-------|-------|--------|----------------|
-| `direct_messages` | content_type | String(20) | text / image / video / voice / file |
-| `message_threads` | status | String(20) | pending / accepted / declined |
-| `follows` | status | String(20) | pending / accepted / declined |
-| `calls` | status | String(20) | calling / active / ended / rejected / missed |
-| `call_participants` | role | String(16) | initiator / callee / guest |
-| `call_participants` | status | String(16) | invited / ringing / joined / left / rejected / timeout / removed |
-| `direct_sales` | status | String(20) | active / paused / ended / cancelled |
-| `direct_sales` | end_reason | String(30) | sold_out / host_ended / stream_closed |
-| `direct_sale_orders` | status | String(20) | completed / cancelled |
-| `purchases` | purchase_type | String(20) | AUCTION / BUY_IT_NOW |
-| `referrals` | status | String(20) | pending / completed |
-| `stories` | media_type | String(10) | video (şimdilik tek değer) |
-| `category_fields` | type | String(20) | text / number / dropdown |
-| `auctions` | status | String(20) | active / paused / ended |
-
----
-
-### A.4 Kritik Hatalar (Kod Seviyesinde)
-
-#### A.4.1 `auctions.status` default="completed" — YANLIŞ
-
-```python
-# models/auction.py:23
-status: Mapped[str] = mapped_column(String(20), default="completed")
-```
-
-Yeni oluşturulan auction başlangıçta "completed" durumunda. Doğru başlangıç değeri "active" olmalı.
-Flutter `AuctionState` modeli status değerleri: `idle / active / paused / ended / buy_it_now_pending`.
-
-**Düzeltme:** `default="active"` — veya ENUM tanımlanırsa `default=AuctionStatus.ACTIVE`.
-
-#### A.4.2 `report.created_at` — Timezone Eksik
-
-```python
-# models/report.py:15
-created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-```
-
-`DateTime(timezone=True)` yok, `func.now()` yerine Python-side `datetime.utcnow`. PostgreSQL'de timezone-naive sütun.
 
 **Düzeltme:**
-```python
-created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-```
-
-#### A.4.3 `app_configs.updated_at` — Timezone Kendisi Siliniyor
-
-```python
-# models/app_config.py
-updated_at = Column(DateTime,
-    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
-    onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
-```
-
-Timezone'u kendin ekleyip `.replace(tzinfo=None)` ile siliyorsun. Tutarsız.
-
-**Düzeltme:**
-```python
-updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-```
-
-Ayrıca `app_config.key` ve `app_config.value` için uzunluk sınırı yok: `Column(String)`. 
-**Düzeltme:** `Column(String(100))` ve `Column(String(2000))`.
-
-#### A.4.4 `listings.active_room_id` — ForeignKey Eksik
-
-```python
-# models/listing.py:58
-active_room_id: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
-```
-
-`live_streams.id`'ye FK constraint yok. Stream silindiğinde bu sütun eski ID'yi tutar, cascade yok.
-
-**Düzeltme:**
-```python
-active_room_id: Mapped[Optional[int]] = mapped_column(
-    ForeignKey("live_streams.id", ondelete="SET NULL"), nullable=True, index=True
-)
-```
-
-#### A.4.5 `call_participants.livekit_token` — Token DB'de Saklanıyor
-
-```python
-# models/call.py:51
-livekit_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-```
-
-LiveKit token'ları kısa ömürlü JWT. DB'de saklamak:
-- Güvenlik açığı (token leak)
-- Storage israfı
-- Expired token'lar birikir
-
-**Çözüm:** Redis'e taşı, `call:{call_id}:token:{user_id}` key, TTL = call duration + 1 saat.
-
-```python
-# DB'den kaldır, Redis'te sakla:
-await redis.set(f"call:{call_id}:token:{user_id}", token, ex=7200)
-```
-
-#### A.4.6 `stories.video_path` — Lokal Disk
-
-```python
-# models/story.py:26
-video_path: Mapped[str] = mapped_column(String(500), nullable=False)
-```
-
-Story videoları lokal diske yazılıyor (highlights ile aynı sorun). MinIO'ya taşınmalı.
-- Sunucu yeniden başlarsa dosyalar kaybolabilir
-- Multi-node'da çalışmaz (hangi node'da?)
-- Yedekleme yok
-
-**Çözüm:** Yükleme sırasında MinIO'ya yaz, `video_path` kolonunu kaldır, sadece `video_url` (MinIO key) kalsın.
-
----
-
-### A.5 Yapısal Sorunlar
-
-#### A.5.1 `analytics_events` ve `user_interactions` — Eski Column() Stili
-
-```python
-# models/analytics.py — eski stil, SQLAlchemy 2.0 öncesi
-id = Column(Integer, primary_key=True, index=True)
-session_id = Column(String(255), index=True, nullable=False)
-```
-
-Tüm diğer tablolar `Mapped[int] = mapped_column(...)` kullanıyor. Type checking çalışmıyor.
-
-**Düzeltme:**
-```python
-id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
-session_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
-```
-
-#### A.5.2 `listings.image_url` + `listings.image_urls` — Tekrar Kolon
-
-İki ayrı kolon:
-- `image_url: String(500)` — tek görsel (thumbnail/birincil)
-- `image_urls: Text` — JSON string array, tüm görseller
-
-`image_url`, `image_urls[0]`'ın tekrarı. **Çözüm:** `image_url` kaldırılır, `image_urls → JSONB`, ilk eleman birincil görsel.
-
-#### A.5.3 `user_interests.raw_signals` — Belgesiz JSONB
-
-```python
-raw_signals: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-```
-
-İçeriği belgelenmiş değil. Ne saklanıyor? `{view: 5, click: 2, purchase: 1}`?
-
-**Çözüm:** Yorum satırı veya tipli alt-schema: `{"view": int, "click": int, "purchase": int, "bid": int}`.
-
-#### A.5.4 `message_threads` — Composite PK, Sequential ID Yok
-
-Mevcut PK: `(user_a_id, user_b_id)`. `direct_messages`'a `thread_id` FK eklemek için `message_threads.id` (sequential BigInteger) gerekiyor.
-
-Plan Faz 1.2'de ele alındı.
-
----
-
-### A.6 String Uzunlukları — Tam Denetim
-
-| Tablo | Kolon | Mevcut | Gerçek İhtiyaç | Öneri |
-|-------|-------|--------|----------------|-------|
-| `users` | profile_image_url | String(500) | MinIO key ~60 chr | String(255) |
-| `users` | 7× sosyal URL | String(500) her biri | URL ~255 chr max | String(255) |
-| `users` | fcm_token | String(500) | FCM token ~163 chr | String(300) |
-| `users` | voip_token | String(500) | APNs token ~200 chr | String(300) |
-| `users` | locale | String(10) | "tr", "en" = 2-5 chr | String(5) |
-| `listings` | image_url, thumbnail_url, video_url | String(500) | MinIO key ~60 chr | String(255) |
-| `auctions` | proof_image_url | String(2000) | URL ~255 chr | String(500) |
-| `direct_messages` | media_url, thumbnail_url | String(500) | MinIO key ~60 chr | String(255) |
-| `live_streams` | thumbnail_url | String(500) | MinIO key ~60 chr | String(255) |
-| `analytics_events` | session_id | String(255) | UUID = 36 chr | String(36) |
-| `app_configs` | key | String (sınırsız) | ~50 chr | String(100) |
-| `app_configs` | value | String (sınırsız) | ~500 chr | String(2000) |
-| `stories` | video_path, video_url | String(500) | Disk path / URL | String(255) |
-
----
-
-## B. Pydantic Schema Bulguları
-
-### B.1 Eksik Alanlar
-
-**`UserOut` — `tuci_balance` eksik:**
-```python
-# schemas/user.py — UserOut sınıfında yok
-tuci_balance: int = 100  # ← eklenecek
-```
-Flutter kullanıcı bakiyesini gösteremiyor çünkü API'den gelmiyor.
-
-**`AuctionStateOut.status` — Literal tipi yok:**
-```python
-# Mevcut:
-status: str
-# Olması gereken:
-status: Literal['idle', 'active', 'paused', 'ended', 'buy_it_now_pending']
-```
-
-**`DirectSaleStateOut.status` — Literal tipi yok:**
-```python
-status: Literal['idle', 'active', 'paused', 'sold_out', 'ended', 'cancelled']
-```
-
----
-
-### B.2 Float → Decimal Geçişi — Tüm Schema'lar
-
-DB'de Numeric'e geçince Pydantic schema'lar da güncellenmeli:
-
-| Dosya | Sınıf | Alan(lar) |
-|-------|-------|-----------|
-| schemas/auction.py | AuctionStart | start_price, buy_it_now_price |
-| schemas/auction.py | BidIn, BidOut | amount |
-| schemas/auction.py | AuctionStateOut | start_price, buy_it_now_price, current_bid |
-| schemas/direct_sale.py | DirectSaleStartIn | price |
-| schemas/direct_sale.py | DirectSaleStateOut | price |
-| schemas/direct_sale.py | DirectSaleSummaryOut | total_revenue, buyer_unit_price, buyer_total |
-| schemas/direct_sale.py | DirectSaleOrderOut | unit_price, total_price |
-| schemas/listing.py | ListingOfferCreate | amount |
-| schemas/listing.py | ListingOfferResponse | amount |
-
-```python
-from decimal import Decimal
-# float yerine:
-price: Decimal
-# Optional ise:
-price: Optional[Decimal] = None
-```
-
----
-
-### B.3 Eski `class Config` Stili
-
-```python
-# Mevcut (eski stil):
-class BidOut(BaseModel):
-    class Config:
-        from_attributes = True
-
-class DirectSaleOrderOut(BaseModel):
-    class Config:
-        from_attributes = True
-
-# Olması gereken:
-model_config = ConfigDict(from_attributes=True)
-```
-
----
-
-### B.4 `stream.py` — VALID_CATEGORIES Hardcoded
-
-```python
-VALID_CATEGORIES = {"electronics", "fashion", "home", "vehicles", "sports", "books", "real_estate", "other", "chat"}
-```
-
-DB'deki `categories` tablosuyla senkronize değil. Yeni kategori eklenince schema güncellenmeli.
-
-**Çözüm:** `get_valid_category_keys()` utility kullan (analytics.py'de zaten var):
-```python
-@field_validator("category")
-def category_valid(cls, v: str) -> str:
-    valid = get_valid_category_keys()
-    if valid and v.strip().lower() not in valid:
-        raise ValueError("INVALID_CATEGORY")
-    return v.strip().lower()
-```
-
----
-
-### B.5 `ConversationOut.is_request` — Mixed Shape
-
-```python
-class ConversationOut(BaseModel):
-    is_request: bool = False  # thread status == "pending" ise True
-```
-
-Normal konuşma ve mesaj isteği aynı schema'da. Plan Faz 4'te ayrıştırılacak.
-
----
-
-## C. Flutter Model Bulguları
-
-### C.1 Eksik Alanlar — Backend'den Fazlası Geliyor, Flutter Kullanmıyor
-
-**`User` modeli — eksikler:**
-
-| Eksik Alan | Backend Karşılığı | Etki |
-|------------|------------------|------|
-| `tuciBalance` | `tuci_balance: int` | Bakiye gösterilemiyor |
-| `status` | `status: UserStatus` | Hesap durumu bilinmiyor |
-| `bio` | `bio: String?` | Kendi profil sayfasında bio görünmüyor |
-| `websiteUrl` | `website_url: String?` | Profilde sosyal link yok |
-| `instagramUrl` | `instagram_url: String?` | Aynı |
-| `kickUrl`, `twitch_url`, `facebook_url`, `youtube_url`, `tiktok_url` | — | Aynı |
-| `createdAt` | `created_at: DateTime` | Üyelik tarihi yok |
-
-**`StreamOut` / `StreamHost` modeli — eksikler:**
-
-| Eksik Alan | Backend Karşılığı | Etki |
-|------------|------------------|------|
-| `StreamHost.fullName` | `full_name: String` | Host ismi gösterilemiyor |
-| `StreamHost.profileImageThumbUrl` | `profile_image_thumb_url: String?` | Host avatarı yok |
-| `StreamOut.likesCount` | `likes_count: int` | Beğeni sayısı gösterilemiyor |
-| `StreamOut.startedAt` | `started_at: DateTime` | Yayın süresi hesaplanamıyor |
-
----
-
-### C.2 Tip Güvensizliği
-
-**`AuctionState.status` — Plain String:**
-```dart
-// Mevcut — runtime'da yanlış değer gelirse sessizce çalışmaya devam eder
-final String status;
-
-// Olması gereken:
-enum AuctionStatus { idle, active, paused, ended, buyItNowPending, error }
-final AuctionStatus status;
-```
-
-**`ChatMessage.announcementPayload` — Map<String, dynamic>:**
-```dart
-// Mevcut
-final Map<String, dynamic>? announcementPayload;
-
-// Olması gereken — sealed class (plan Faz 6.2'de ele alındı)
-```
-
-**`StoryItem.storyType` — Plain String:**
-```dart
-// Mevcut
-final String storyType;  // 'video' | 'live_redirect'
-
-// Olması gereken
-enum StoryType { video, liveRedirect }
-final StoryType storyType;
-```
-
-**`CatalogField.type` — Plain String:**
-```dart
-// Mevcut
-final String type;  // 'text' | 'number' | 'dropdown'
-
-// Olması gereken
-enum FieldType { text, number, dropdown }
-```
-
----
-
-### C.3 Double → Decimal Geçişi
-
-DB Numeric'e, Pydantic Decimal'e geçince JSON'da fiyatlar `"12.50"` (string) olarak gelebilir:
-
-```dart
-// Mevcut — num? cast başarısız olabilir:
-price: (j['price'] as num?)?.toDouble()
-
-// Güvenli çözüm:
-static double _parsePrice(dynamic v) {
-  if (v == null) return 0.0;
-  if (v is num) return v.toDouble();
-  if (v is String) return double.tryParse(v) ?? 0.0;
-  return 0.0;
-}
-```
-
-Etkilenen modeller: `DirectSaleState`, `DirectSaleOrder`, `DirectSaleSummary`, `CommercePurchase`, `CommerceSale`, `AuctionState`, `ListingOffer`.
-
----
-
-### C.4 İyi Pattern'lar (Değiştirilmeyecek)
-
-Bu yapılar endüstri standardında, dokunma:
-
-| Dosya | Pattern | Neden İyi |
-|-------|---------|-----------|
-| `call_event.dart` | `sealed class CallSignal` | Tip-güvenli WS event handling |
-| `commerce_activity.dart` | `sealed class CommerceEvent` | Tip-güvenli commerce events |
-| `enums.dart` | enum + extension | Doğru enum pattern |
-| `catalog.dart` | Immutable value objects | İyi yapılandırılmış |
-| `call_participant.dart` | `copyWith` pattern | State management doğru |
-
----
-
-## D. Öncelik Matrisi — Tam Liste
-
-```
-🔴 Kritik (veri bütünlüğü / güvenlik):
-  [D1]  Float → Numeric: listings, auctions, bids, purchases, listing_offers,
-              search_alerts, users.max_budget                          (Faz 0)
-  [D2]  exchange_rates Float → Numeric(10,4)                           (Faz 0)
-  [D3]  auctions.status default "completed" → "active"                 (Faz 1)
-  [D4]  report.created_at → DateTime(timezone=True) + func.now()       (Faz 1)
-  [D5]  app_configs DateTime + String sınırsız → düzelt                (Faz 1)
-  [D6]  listings.active_room_id → ForeignKey ekle                      (Faz 1)
-  [D7]  call_participants.livekit_token → Redis'e taşı                 (Faz 1)
-
-🟠 Önemli (ölçek / doğruluk):
-  [D8]  BigInteger PKlar (direct_messages, tuci_transactions, stream_likes önce)  (Faz 1.1)
-  [D9]  message_threads sequential id + thread_id FK                   (Faz 1.2)
-  [D10] image_url tekrar kolon kaldır, image_urls → JSONB              (Faz 1.5)
-  [D11] String status'ler → ENUM (tüm tablolar)                        (Faz 1.6)
-  [D12] analytics_events / user_interactions → Mapped[] stile geç      (Faz 1)
-  [D13] stories.video_path → MinIO                                     (Faz 2)
-  [D14] UserOut'a tuci_balance ekle                                    (Faz 4)
-  [D15] AuctionStateOut + DirectSaleStateOut → Literal status          (Faz 4)
-  [D16] BidOut + DirectSaleOrderOut → model_config = ConfigDict(...)   (Faz 4)
-  [D17] stream.py VALID_CATEGORIES → DB'den oku                        (Faz 4)
-  [D18] Pydantic float → Decimal (tüm finansal schema'lar)             (Faz 4)
-
-🟡 Temizlik (tip güvenliği):
-  [D19] users.notification_prefs → ayrı tablo                          (Faz 1.4)
-  [D20] URL String(500) → String(255) + string uzunluk denetimi        (Faz 1.7)
-  [D21] Flutter User modeline eksik alanlar ekle                       (Faz 6)
-  [D22] Flutter StreamHost.fullName + profileImageThumbUrl ekle        (Faz 6)
-  [D23] Flutter AuctionStatus enum                                     (Faz 6)
-  [D24] Flutter StoryType enum                                         (Faz 6)
-  [D25] Flutter CatalogField.type enum                                 (Faz 6)
-  [D26] Flutter Decimal parse helper                                   (Faz 6)
-  [D27] Flutter tüm modeller → Freezed                                 (Faz 6.1)
-  [D28] user_interests.raw_signals — belgeleme                         (Faz 1)
-
-🟢 Mimari (uzun vadeli):
-  [D29] call_participants.livekit_token kaldır (D7 ile birlikte)       (Faz 1)
-  [D30] story.video_path kolonu kaldır (D13 ile birlikte)              (Faz 2)
-  [D31] users bölünmesi (social_links, notification_prefs, consents)   (Faz 1.4)
-  [D32] DirectSaleSummaryOut → discriminated union                     (Faz 4.3)
-  [D33] 4 partial-user schema → UserMiniOut base                       (Faz 4.2)
-  [D34] financial_events append-only tablo                             (Faz 8)
-  [D35] KVKK veri silme zinciri                                        (Faz 9)
-
-🔴 DB Mimarisi:
-  [D51] PgBouncer aktivasyonu (use_pgbouncer=True)                     (Faz 13.2) ← ACİL
-  [D52] auctions composite index (stream_id, status, ended_at)         (Faz 13.1)
-  [D53] teqlik_transactions composite index (user_id, created_at)      (Faz 13.1)
-  [D54] listing_offers composite index (listing_id, status)            (Faz 13.1)
-  [D55] follows composite index (follower_id, followed_id)             (Faz 13.1)
-  [D56] listings.image_urls JSONB → GIN index ekle                     (Faz 13.1)
-  [D57] PostgreSQL partition plan (analytics_events, teqlik_tx, dm)    (Faz 13.3)
-
-🟡 Sorgu + Cache:
-  [D58] Listing detail Redis cache (60s, invalidate on update)         (Faz 14.1)
-  [D59] User profile Redis cache (5min, invalidate on update)          (Faz 14.1)
-  [D60] Categories/AppConfig Redis cache (uzun TTL — 1h/10min)        (Faz 14.1)
-  [D61] Feed: _fetch_seller_meta N+1 → SQL JOIN                        (Faz 14.2)
-  [D62] Redis key namespace düzenlemesi                                 (Faz 14.3)
-  [D63] Keyset pagination — listing feed + wallet history              (Faz 14.4)
-
-🔴 Para birimi yeniden adlandırma (tüm katmanlar):
-  [D36] DB: users.tuci_balance → teqlik_balance                        (Faz 12)
-  [D37] DB: tuci_transactions → teqlik_transactions                    (Faz 12)
-  [D38] DB: gift_events.cost_tuci → cost_teqlik                        (Faz 12)
-  [D39] DB: mass_notification_campaigns.spent_tuci → spent_teqlik      (Faz 12)
-  [D40] Python: TuciTransaction model + dosya yeniden adlandır         (Faz 12)
-  [D41] Python: TuciTransactionRepository + dosya yeniden adlandır     (Faz 12)
-  [D42] Python: transfer_tuci.py + TransferTuciCommand yeniden adlandır (Faz 12)
-  [D43] Python: cost_tuci() + "cost_tuci" dict key → cost_teqlik       (Faz 12)
-  [D44] Python: tüm router'larda tuci_* değişkenleri → teqlik_*        (Faz 12)
-  [D45] Python: API endpoint /wallet/tuci/* → /wallet/teqlik/*         (Faz 12)
-  [D46] API JSON: tüm response field adları tuci → teqlik              (Faz 12)
-  [D47] Flutter: tüm tuciBalance / _TuciWalletCard vb. yeniden adlandır (Faz 12)
-  [D48] Flutter: tüm 'TUCi' string literalleri → 'Teqlik'              (Faz 12)
-  [D49] i18n ARB: tüm "TUCi" display string'leri → "Teqlik"            (Faz 12)
-  [D50] i18n ARB: tuciSpent key yeniden adlandır → teqlikSpent         (Faz 12)
-
-🔴 ClickHouse / Analytics:
-  [D51b] init_clickhouse() database parametresi eksik → default DB'ye yazıyor (Faz 5)
-  [D52b] ClickHouse TTL ekle (user_events, feed_analytics vb. 90 gün) (Faz 15.5)
-  [D53b] ClickHouse memory limit — node5: 512 MB, node3: 256 MB          (Faz 15.5)
-
-🟡 Monitoring:
-  [D54b] Prometheus FastAPI scrape ekle (node5:8000/metrics)              (V1.5)
-  [D55b] Prometheus alarm eşiği sıkılaştırması (DiskSpaceLow %80→%70)    (V1.5)
-```
-
----
-
-## Faz 12 — Para Birimi Yeniden Adlandırma: "tuci" → "teqlik"
-
-**Amaç:** Sistemdeki tüm katmanlardan "tuci" adını kaldırıp yerine "teqlik" koymak. Hiçbir yerde "tuci" verisi kalmayacak.
-
-**Kapsam:** 23 Python dosyası (224 referans) + 15 Flutter dosyası (87 referans) + 4 ARB dil dosyası.
-
-**Bağımlılık:** Bu faz bağımsızdır; diğer fazlarla çakışmaz. Ancak Alembic migration yazılmadan önce var olan `tuci_transaction` tablosunu kullanan tüm arka uç servislerinin migration'ı kesmemesi için tek adımda uygulanmalıdır (eski isim → yeni isim atomik).
-
----
-
-### 12.1 — Veritabanı (Alembic Migration)
-
-**Dosya:** `backend/alembic/versions/<revision>_rename_tuci_to_teqlik.py`
-
-Her komut ayrı `op.execute()` olmalı (asyncpg multi-statement yasağı — bkz. `feedback_alembic_asyncpg.md`):
-
-```python
-def upgrade():
-    # 1. users tablosu
-    op.execute("ALTER TABLE users RENAME COLUMN tuci_balance TO teqlik_balance")
-
-    # 2. tuci_transactions → teqlik_transactions
-    op.execute("ALTER TABLE tuci_transactions RENAME TO teqlik_transactions")
-
-    # 3. gift_events
-    op.execute("ALTER TABLE gift_events RENAME COLUMN cost_tuci TO cost_teqlik")
-
-    # 4. mass_notification_campaigns
-    op.execute("ALTER TABLE mass_notification_campaigns RENAME COLUMN spent_tuci TO spent_teqlik")
-
-def downgrade():
-    op.execute("ALTER TABLE mass_notification_campaigns RENAME COLUMN spent_teqlik TO spent_tuci")
-    op.execute("ALTER TABLE gift_events RENAME COLUMN cost_teqlik TO cost_tuci")
-    op.execute("ALTER TABLE teqlik_transactions RENAME TO tuci_transactions")
-    op.execute("ALTER TABLE users RENAME COLUMN teqlik_balance TO tuci_balance")
-```
-
-**Etkilenen tablolar:**
-
-| Tablo | Eski kolon/ad | Yeni kolon/ad |
-|-------|--------------|--------------|
-| `users` | `tuci_balance` | `teqlik_balance` |
-| `tuci_transactions` | *(tablo adı)* | `teqlik_transactions` |
-| `gift_events` | `cost_tuci` | `cost_teqlik` |
-| `mass_notification_campaigns` | `spent_tuci` | `spent_teqlik` |
-
----
-
-### 12.2 — Python Model Dosyaları
-
-#### 12.2.1 Dosya yeniden adlandırma
-
-| Eski dosya | Yeni dosya |
-|-----------|-----------|
-| `backend/app/models/tuci_transaction.py` | `backend/app/models/teqlik_transaction.py` |
-| `backend/app/repositories/tuci_transaction_repository.py` | `backend/app/repositories/teqlik_transaction_repository.py` |
-| `backend/app/use_cases/wallet/commands/transfer_tuci.py` | `backend/app/use_cases/wallet/commands/transfer_teqlik.py` |
-
-#### 12.2.2 Sınıf ve fonksiyon yeniden adlandırma
-
-| Eski ad | Yeni ad | Dosya |
-|---------|---------|-------|
-| `TuciTransaction` | `TeqlikTransaction` | `models/teqlik_transaction.py` |
-| `__tablename__ = "tuci_transactions"` | `"teqlik_transactions"` | models |
-| `TuciTransactionRepository` | `TeqlikTransactionRepository` | repositories |
-| `TransferTuciCommand` | `TransferTeqlikCommand` | use_cases |
-| `TuciAirdropRequest` | `TeqlikAirdropRequest` | routers/admin_data.py |
-| `cost_tuci()` | `cost_teqlik()` | services/credit_service.py |
-| `"cost_tuci"` (dict key) | `"cost_teqlik"` | services/credit_service.py `_FEATURES` |
-
-#### 12.2.3 SQLAlchemy model kolonu
-
-```python
-# models/user.py
-# Eski:
-tuci_balance: Mapped[int] = mapped_column(BigInteger, default=0)
-# Yeni:
-teqlik_balance: Mapped[int] = mapped_column(BigInteger, default=0)
-```
-
-#### 12.2.4 Etkilenen Python dosyaları (tam liste)
-
-```
-backend/app/models/user.py
-backend/app/models/tuci_transaction.py         → teqlik_transaction.py
-backend/app/models/gift_event.py
-backend/app/models/mass_notification_campaign.py
-backend/app/repositories/tuci_transaction_repository.py  → teqlik_transaction_repository.py
-backend/app/use_cases/wallet/commands/transfer_tuci.py   → transfer_teqlik.py
-backend/app/services/credit_service.py
-backend/app/routers/admin_data.py
-backend/app/routers/ads.py
-backend/app/routers/analytics.py
-backend/app/routers/auth.py
-backend/app/routers/leads.py
-backend/app/routers/listings.py
-backend/app/routers/wallet.py
-backend/app/routers/users.py
-backend/app/schemas/user.py
-backend/app/schemas/wallet.py
-backend/app/dependencies/*.py   (tuci_balance bağımlılıkları varsa)
-```
-
----
-
-### 12.3 — API Endpoint Yeniden Adlandırma
-
-| Eski endpoint | Yeni endpoint | Dosya |
-|--------------|--------------|-------|
-| `GET /wallet/tuci/summary` | `GET /wallet/teqlik/summary` | `routers/wallet.py` |
-| `POST /wallet/tuci/airdrop` | `POST /wallet/teqlik/airdrop` | `routers/admin_data.py` |
-
-**Not:** Eski endpoint'ler geçici olarak `307 Temporary Redirect` ile yeni adrese yönlendirilebilir (Flutter güncellemesi deploy edilene kadar).
-
----
-
-### 12.4 — API JSON Response Alanları
-
-Flutter bu alanları okuyarak gösteriyor. Python'daki renaming yeterli değil — response serileştirmesini de güncellemek gerekiyor.
-
-| Eski JSON key | Yeni JSON key | Endpoint / schema |
-|--------------|--------------|------------------|
-| `tuci_balance` | `teqlik_balance` | `UserOut`, `AuthResponse`, `WalletSummary` |
-| `wallet_balance` | `teqlik_balance` | `auth.py` login response (listing_detail_screen okuyor) |
-| `cost_tuci` | `cost_teqlik` | `CreditCostResponse`, `FeatureUsageOut` |
-| `spent_tuci` | `spent_teqlik` | `WalletSummary`, `AdminStats` |
-| `tuci_cost` | `teqlik_cost` | yerel değişkenler → response field'a yansıyan |
-| `total_tuci_circulation` | `total_teqlik_circulation` | `admin_data.py` stats endpoint |
-| `today_tuci_spent` | `today_teqlik_spent` | `admin_data.py` stats endpoint |
-
-**Kritik:** Flutter `listing_detail_screen.dart:845` şu anda `ud['wallet_balance']` okuyor. Bu key yeniden adlandırılırsa Flutter da aynı anda güncellenmeli (atomik deploy).
-
----
-
-### 12.5 — Flutter Dart Dosyaları
-
-#### 12.5.1 Sınıf ve değişken yeniden adlandırma
-
-| Eski ad | Yeni ad | Dosya |
-|---------|---------|-------|
-| `tuciBalance` | `teqlikBalance` | `providers/profile_view_model.dart` |
-| `tuciHistory` | `teqlikHistory` | `providers/profile_view_model.dart` |
-| `tuciSpent` | `teqlikSpent` | `providers/ai_desc_provider.dart` |
-| `_TuciWalletCard` | `_TeqlikWalletCard` | `screens/profile_screen.dart` |
-| `_TuciWalletCardState` | `_TeqlikWalletCardState` | `screens/profile_screen.dart` |
-
-#### 12.5.2 JSON parse güncellemesi
-
-```dart
-// listing_detail_screen.dart:845 - Eski:
-tuciBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
-
-// Yeni (API key adı da teqlik_balance olacaksa):
-teqlikBalance = ((ud['teqlik_balance'] ?? 0) as num).toInt();
-```
-
-#### 12.5.3 Display string'leri
-
-Tüm `'TUCi'` string literalleri `'Teqlik'` ile değiştirilecek:
-
-```dart
-// Örnekler (tüm dosyalarda):
-'TUCi Cüzdanı'    → 'Teqlik Cüzdanı'
-'TUCi Harca'      → 'Teqlik Harca'
-'TUCi Kazan'      → 'Teqlik Kazan'
-'${amount} TUCi'  → '${amount} Teqlik'
-'50 TUCi'         → '50 Teqlik'
-```
-
-#### 12.5.4 Etkilenen Flutter dosyaları (tam liste)
-
-```
-mobile/lib/screens/profile_screen.dart
-mobile/lib/screens/listing_detail_screen.dart
-mobile/lib/screens/retargeting_screen.dart
-mobile/lib/screens/faq_screen.dart
-mobile/lib/screens/swipe_live_screen.dart
-mobile/lib/providers/profile_view_model.dart
-mobile/lib/providers/ai_desc_provider.dart
-mobile/lib/models/user.dart           (tuciBalance alanı eklendiyse)
-mobile/lib/widgets/wallet_widget.dart (varsa)
-```
-
----
-
-### 12.6 — i18n ARB Dosyaları
-
-**Dosyalar:**
-- `documents/language/app_tr.arb`
-- `documents/language/app_en.arb`
-- `documents/language/app_ar.arb`
-- `documents/language/app_ru.arb`
-
-#### 12.6.1 Display değerleri (tüm dillerde "TUCi" → "Teqlik")
-
-| ARB Key | Eski değer (TR) | Yeni değer (TR) |
-|---------|----------------|----------------|
-| `walletTitle` | `"TUCi Cüzdanım"` | `"Teqlik Cüzdanım"` |
-| `buyTuci` | `"TUCi Satın Al"` | `"Teqlik Satın Al"` |
-| `boostDialogPaidConfirm` | `"50 TUCi Öde ve Başlat"` | `"50 Teqlik Öde ve Başlat"` |
-| `blastConfirmCostPaidLabel` | `"TUCi Maliyeti"` | `"Teqlik Maliyeti"` |
-| `faqIconNameTuci` | `"TUCi"` | `"Teqlik"` |
-| `faqQBadgesTuci` | `"TUCi nedir?"` | `"Teqlik nedir?"` |
-| `faqABadgesTuci` | `"TUCi, teqlif'in..."` | `"Teqlik, teqlif'in..."` |
-| *(diğerleri)* | `*TUCi*` | `*Teqlik*` |
-
-#### 12.6.2 Key yeniden adlandırma (opsiyonel ama tutarlılık için önerilir)
-
-| Eski key | Yeni key |
-|---------|---------|
-| `tuciSpent` | `teqlikSpent` |
-| `faqIconNameTuci` | `faqIconNameTeqlik` |
-| `faqQBadgesTuci` | `faqQBadgesTeqlik` |
-| `faqABadgesTuci` | `faqABadgesTeqlik` |
-| `buyTuci` | `buyTeqlik` |
-
-**Not:** ARB key yeniden adlandırması, `t('tuciSpent')` çağrılarını da güncellemesi gerektirir. Flutter dosyalarında `t('tuciSpent')` referansları taranmalıdır.
-
----
-
-### 12.7 — Uygulama Sırası
-
-```
-1. Alembic migration yaz + test et (staging'de)
-2. Python dosyalarını yeniden adlandır
-3. Tüm import referanslarını güncelle
-4. API endpoint yönlendirmelerini ekle (geçici 307)
-5. Flutter dosyalarını güncelle (JSON key + class adları + string'ler)
-6. ARB dosyalarını güncelle
-7. Staging'de E2E test (cüzdan yükleme, harcama, geçmiş görüntüleme)
-8. Production deploy (Python + Flutter aynı anda)
-9. Eski endpoint yönlendirmelerini kaldır (1 sürüm sonra)
-```
-
-**Atomiklik notu:** Python (API) ve Flutter aynı anda deploy edilmeli. Eski Flutter yeni API'yi okursa `teqlik_balance` key'ini bulamaz → 0 gösterir. Deploy penceresi kısa tutulmalı veya API geçici olarak her iki key'i de döndürmeli:
-
-```python
-# Geçici geriye dönük uyumluluk (1 sürüm):
-return {
-    "teqlik_balance": user.teqlik_balance,
-    "tuci_balance": user.teqlik_balance,  # eski Flutter için
-}
-```
-
----
-
-### 12.8 — Doğrulama Kontrol Listesi
-
-```
-□ grep -r "tuci" backend/app/ --include="*.py" → 0 sonuç
-□ grep -r "TUCi\|tuci" mobile/lib/ --include="*.dart" → 0 sonuç  
-□ grep -r "TUCi\|tuci" documents/language/*.arb → 0 sonuç
-□ alembic history'de migration görünüyor
-□ SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='teqlik_balance' → 1 satır
-□ SELECT table_name FROM information_schema.tables WHERE table_name='teqlik_transactions' → 1 satır
-□ Flutter cüzdan ekranı "Teqlik" gösteriyor
-□ API /wallet/teqlik/summary 200 dönüyor
-□ Eski /wallet/tuci/summary 307 → /wallet/teqlik/summary yönlendiriyor
-```
-
----
-
-## Faz 15 — Kaynak Sınırları ve Node Kısıtları
-
-**Amaç:** Planın her fazının hangi node'u nasıl etkilediğini donanım sınırlarıyla eşleştirmek. Her Faz uygulanmadan önce bu bölüme bakılmalı.
-
----
-
-### 15.1 — Node Haritası
-
-| Node | Rol | CPU | RAM | Disk | Ağ |
-|------|-----|-----|-----|------|-----|
-| **node5** | CORE — API, DB, Cache, Analytics | 4× EPYC 7763 | 7.8 GB + 8 GB swap | 50 GB SSD | 1 Gbps unmetered |
-| **node3** | MONITOR + STAGING + AI PROXY (secondary) | 4× EPYC 7763 | ~4 GB + 4 GB swap | ~49 GB SSD | 5 TB/ay, throttle sonrası 10 Mbit/s |
-| **node1** | EDGE 1 — LiveKit, MinIO | 6× Intel Haswell 3.09 GHz | 11.4 GB + 2 GB swap | 98.3 GB NVMe | 2 Gbps **unmetered** |
-| **node4** | EDGE 2 — LiveKit, MinIO (node1 yedek) | 6× Intel Haswell | 11.4 GB + 8 GB swap | 98.3 GB NVMe | 2 Gbps **unmetered** |
-| **gateway** | EDGE PROXY — nginx L7 | 2× QEMU 2.29 GHz | 1.9 GB + 1 GB swap | 58.9 GB SSD | 1 Gbps, **24h ort. 100 Mbps throttle** |
-| **node2** | AI PROXY 1 (primary) + cf-failover | 1× Xeon E5-2670 | 1.4 GB + 2 GB swap | — | — |
-
-> Kaynak: `deploy/scale/V1.4/documents/05_final.md` — Debian 13 (trixie), KVM sanallaştırma, tüm node'larda `tucibeyin` kullanıcısı.
-
----
-
-### 15.2 — node5 RAM Bütçesi
-
-**Sorun:** Redis 4 GB + PG shared_buffers ~2 GB + ClickHouse = **6+ GB tüketilmiş** → FastAPI (4 worker) + ARQ (2 worker) + ClickHouse için ~1.5 GB kalıyor. Swap kullanımı aktif.
-
-**node5'te çalışan tüm servisler (05_final.md):**
-
-```
-Servis                    Tahmini      Not
-─────────────────────────────────────────────────────────────────
-Redis Core (maxmemory)    4.0 GB       10.10.0.5:6379, AOF+RDB
-PostgreSQL 16 + pgvector  ~1.5 GB      shared_buffers hedef
-ClickHouse                ~300–500 MB  127.0.0.1:8123, DB teqlif_prod_analytics
-FastAPI (4 worker)        ~400 MB      uvicorn + uvloop, 0.0.0.0:8000
-ARQ worker (default)      ~150 MB      CPUWeight=50
-ARQ worker-critical       ~150 MB      öncelikli kuyruk
-OS + sistem               ~400 MB
-─────────────────────────────────────────────────────────────────
-Toplam tahmini            ~6.9–7.1 GB  (marj ~0.7–0.9 GB)
-```
-
-**Hedef konfigürasyon:**
-
-```
-Servis                    Mevcut       Hedef
-─────────────────────────────────────────────────
-Redis maxmemory           4.0 GB       4.0 GB (sabit)
-PG shared_buffers         ~2.0 GB      1.5 GB  ← düşür
-PG max_connections        100 (default) 30     ← PgBouncer sonrası
-ClickHouse max_memory     —            512 MB  ← limit ekle (bkz. 15.5)
-FastAPI worker sayısı     4            4       (sabit — uvloop etkili)
-ARQ worker sayısı         2            2       (sabit)
-OS + diğer                ~0.5 GB      ~0.5 GB
-─────────────────────────────────────────────────
-Toplam hedef              ~7.1 GB      ~6.7 GB  (~1.1 GB marj)
-```
-
-**PostgreSQL `postgresql.conf` değişiklikleri:**
-
-```ini
-shared_buffers = 1536MB          # 2048MB'dan düşür
-effective_cache_size = 4GB       # shared_buffers + OS page cache
-work_mem = 4MB                   # connection başına, düşük tut
-maintenance_work_mem = 128MB     # VACUUM/INDEX için
-max_connections = 30             # PgBouncer'dan sonra direkt bağlantı az
-```
-
-**Etki:** PgBouncer aktif edilince (Faz 13.2) 120 bağlantı → 20-30'a düşer. Her PG backend ~5 MB → **~450-500 MB RAM kurtarılır.**
-
----
-
-### 15.3 — node5 Disk Bütçesi
-
-**Sorun:** 49 GB SSD → küçük.
-
-**Mevcut tahmini kullanım:**
-
-```
-Servis                    Tahmini      Risk
-──────────────────────────────────────────────────────
-PostgreSQL data           5–15 GB      📈 büyüyor
-Redis AOF dump            1–2 GB       sabit
-ClickHouse data           1–5 GB       📈 büyüyor (analytics events)
-Hikayeler/videolar        ? GB         📈 BOMBa — D13 acil (Faz 2)
-Backup (local, 2 gün)     2–4 GB       pg_dump + redis + clickhouse
-Loglar                    1–2 GB       journald rotation var
-OS + sistem               3–4 GB       sabit
-──────────────────────────────────────────────────────
-Toplam tahmini            ~13–32 GB
-Kalan (50 GB'dan)         ~18–37 GB    dikizle
-```
-
-> **Backup sistemi (05_final.md §8):** Yedek script 02:45 UTC'de çalışır; local 2 gün, remote (node3) 7 gün tutar. Disk eşiği: %85 uyarı, %95 dur. `journalctl -u teqlif-backup` ile izle.
-
-**Aksiyonlar:**
-
-1. **D13 — stories.video_path → MinIO (Faz 2):** Yerel videolar node5 diskini dolduruyor. Faz 2'nin en yüksek öncelikli öğesi.
-2. **ClickHouse data retention:** analytics_events tablolarında eski veriyi ClickHouse TTL ile sil (bkz. Faz 15.5).
-3. **Log rotasyonu denetimi:** `journalctl --disk-usage` ile mevcut log hacmini ölç.
-4. **PG WAL:** `wal_keep_size = 64MB` — replication yok, büyük WAL gereksiz.
-
----
-
-### 15.4 — node3 Kaynak Kısıtları
-
-**~4 GB RAM, 15+ servis** — en kalabalık node. Her yeni servis doğrudan swap'a yansır. Panel'e 90 günde bir manuel giriş zorunlu — yoksa RAM 1.8 GB'a düşer (balloon). **Sonraki deadline: 2026-12-10.**
-
-**RAM dağılımı (tahmini) — 05_final.md servis listesine göre:**
-
-```
-Servis                       Tahmini    Not
-──────────────────────────────────────────────────────────────
-Staging FastAPI (2 worker)   ~300 MB    port 8001
-Staging PostgreSQL           ~400 MB    127.0.0.1:5432
-Staging Redis                ~200 MB    127.0.0.1:6379
-Staging ARQ (2 worker)       ~200 MB    default + critical
-Staging ClickHouse           ~300 MB    127.0.0.1:8123 (teqlif_staging_analytics)
-AI Proxy (prod secondary)    ~100 MB    port 8080 — PRODUCTION trafiği alır
-LiveKit staging              ~200 MB    port 7880
-MinIO staging                ~150 MB    port 9010
-Prometheus                   ~300 MB    14 gün retention (7 scrape target)
-Loki                         ~200 MB    14 gün retention
-Grafana                      ~150 MB    port 3000
-Alertmanager                 ~50 MB     port 9093
-node_exporter + promtail     ~50 MB
-OS + diğer                   ~300 MB
-──────────────────────────────────────────────────────────────
-Toplam tahmini               ~2.9 GB    (swap: ~1.1 GB)
-```
-
-> **Kritik not:** AI Proxy (port 8080) production trafiği alır — bu servis düşerse node2 tek primary olur, Groq fallback devreye girer. Staging yük yüksekse AI proxy cevap süresi uzayabilir.
-
-**Tuning:**
-
-```ini
-# Prometheus — retention düşür (tüm sistemi izliyor, 14 gün yeterli; V1.5 önerisi: 7g)
-# mevcut: 30d → şimdilik 14d (Loki ile aynı)
---storage.tsdb.retention.time=14d
-
-# Loki — chunk boyutu küçült
-# /etc/loki/config.yml:
-chunk_target_size: 524288    # 1048576 → 512KB
-ingestion_rate_mb: 4
-
-# Staging ClickHouse — memory limit ekle
-# /etc/clickhouse-server/users.d/memory-limit.xml:
-# <max_memory_usage>256000000</max_memory_usage>  (256 MB staging için yeterli)
-
-# Staging FastAPI — 2 worker mevcut, 1'e düşürülebilir (düşük trafik)
-```
-
-**Bandwidth (5 TB/ay, 10 Mbit/s throttle):**
-
-- 5 TB/ay ≈ 1.67 GB/gün ≈ 19 Mbit/s ortalama
-- Prometheus scraping (node3 → tüm node'lar:9100) ve Loki log shipping (tüm node'lar → node3:3100) **WireGuard iç ağından** gider — dış bant genişliğini etkilemez
-- MinIO staging: büyük medya testleri node3 bant genişliğini yakabilir — staging testlerinde dikkat
-- Backup rsync (node5 → node3): 02:45 UTC — gece saati, throttle düşük; rsync delta transfer bant tasarrufu sağlar
-
----
-
-### 15.5 — ClickHouse Mevcut Durumu ve Yönetimi
-
-**Durum:** ClickHouse **zaten kurulu ve çalışıyor** — hem production'da hem staging'de.
-
-| Ortam | Node | Adres | DB |
-|-------|------|-------|----|
-| Production | node5 | `127.0.0.1:8123` | `teqlif_prod_analytics` |
-| Staging | node3 | `127.0.0.1:8123` | `teqlif_staging_analytics` |
-
-`default` DB **kullanılmaz** — tablolar bootstrap'ta elle doğru DB içinde oluşturulur.
-
-**Bilinen bug (05_final.md §16.4 — V1.5 adayı):** `init_clickhouse()` fonksiyonu `database` parametresi olmadan bağlanıyor → `default` DB'ye yazıyor. `get_clickhouse_client()` doğru DB'yi kullanıyor ama `init_clickhouse()` düzeltilmeli:
-
-```python
-# backend/app/database_clickhouse.py — düzeltilecek:
-def get_clickhouse_client():
-    return clickhouse_connect.get_client(
-        host=settings.clickhouse_host,
-        database=settings.clickhouse_db,  # ✅ doğru
-        ...
-    )
-
-# init_clickhouse() — aynı database parametresi eklenmeli
-async def init_clickhouse():
-    client = clickhouse_connect.get_client(
-        host=settings.clickhouse_host,
-        database=settings.clickhouse_db,  # ❌ eksik → ekle
-        ...
-    )
-```
-
-**Mevcut analytics veri akışı (zaten implement edilmiş):**
-
-```
-API router → Redis RPUSH ch_buf:<tablo>  [fire-and-forget, <1ms]
-                  ↓ (her 30s VEYA 5000 satır)
-           ClickHouse batch INSERT INTO <tablo>
-```
-
-Buffer key'leri: `ch_buf:user_events`, `ch_buf:search_events`, `ch_buf:direct_sale_events`  
-`feed_analytics` ve `swipe_live_events` → doğrudan batch INSERT (buffer bypass).
-
-> **Faz 9 (outbox) kapsamı:** Bu pattern analytics için zaten var. Faz 9'daki outbox, **finansal/kritik PostgreSQL event'leri** için (teqlik_transactions, auction bid confirmations) — analytics için değil.
-
-**node5 ClickHouse RAM yönetimi:**
-
-```xml
-<!-- /etc/clickhouse-server/users.d/memory-limit.xml (production) -->
-<clickhouse>
-  <profiles>
-    <default>
-      <max_memory_usage>536870912</max_memory_usage>  <!-- 512 MB -->
-      <max_memory_usage_for_all_queries>1073741824</max_memory_usage_for_all_queries>  <!-- 1 GB toplam -->
-    </default>
-  </profiles>
-</clickhouse>
-```
-
-**node5 ClickHouse disk yönetimi (TTL):**
-
-ClickHouse tabloları zaten `PARTITION BY toYYYYMM(timestamp)` ile tanımlı. TTL eklenebilir:
-
 ```sql
--- user_events, feed_analytics vb. için 90 gün TTL
-ALTER TABLE teqlif_prod_analytics.user_events
-MODIFY TTL timestamp + INTERVAL 90 DAY DELETE;
+SELECT l.*, u.username, u.rating_avg,
+       (SELECT COUNT(*) FROM favorites WHERE listing_id = l.id) AS fav_count
+FROM listings l
+JOIN users u ON u.id = l.user_id
+WHERE l.status = 'active'
+ORDER BY l.created_at DESC, l.id DESC
+LIMIT 20
 ```
 
-Bu sayede eski partition'lar otomatik silinir, disk büyümesi kontrol altına alınır.
+| Sorun | Endpoint | Fix |
+|-------|---------|-----|
+| Satıcı bilgisi N+1 | Feed, arama | JOIN users |
+| Favori durumu N+1 | Feed, detay | Toplu `WHERE listing_id IN (...)` |
+| Teklif sayısı N+1 | Feed | COUNT subquery |
+| Stream izleyici N+1 | Aktif yayın listesi | JOIN live_stream_viewers |
 
 ---
 
-### 15.6 — gateway Kısıtları
+### 4.3 — Keyset (Cursor) Pagination
 
-**1.9 GB RAM, 100 Mbps 24h ort. throttle.**
-
-**Kural: gateway'den veri geçmez, sadece yönlendirilir.**
-
-Halihazırda doğru yapılandırılmış olanlar (05_final.md §11):
-- `live1.teqlif.com` → DNS Only → node1 direkt (LiveKit prod)
-- `live2.teqlif.com` → DNS Only → node4 direkt (LiveKit prod yedek)
-- `minio1.teqlif.com` → DNS Only → node1 direkt (MinIO prod)
-- `minio2.teqlif.com` → DNS Only → node4 direkt (MinIO prod yedek)
-- `live-staging.teqlif.com` → DNS Only → node3 direkt
-- `minio-staging.teqlif.com` → DNS Only → node3 direkt
-
-`api.teqlif.com` ve `teqlif.com` → Cloudflare Proxied → gateway → node5 (bu yoldan JSON API ve WebSocket geçer).
-
-**Plan kapsamındaki dikkat noktaları:**
-
-1. **Faz 14.1 — API response gzip:** Listing feed response'u (20 ilan × JSON) ~15 KB → gzip ile ~3 KB. gateway Nginx'te `gzip on` aktif olmalı — CPU maliyeti minimumdur, bant genişliği tasarrufu yüksek.
-
-2. **Faz 6 — Flutter WebSocket:** LiveKit signaling gateway'den geçmiyor (DNS Only) — iyi. Chat WebSocket gateway'den geçiyor — her bağlantı memory'de tutulur. 1.9 GB RAM'de yüzlerce aktif WS bağlantısı sığar ama 10 binlerce sığmaz.
-
-3. **Faz 5 — ClickHouse HTTP arayüzü:** Asla gateway üzerinden expose edilmeyecek. Sadece WireGuard iç ağdan erişim.
-
-4. **Gateway'e yeni servis eklenmeyecek** — nginx dışında hiçbir uygulama çalışmamalı.
-
----
-
-### 15.7 — ML Pipeline Kaynak Sınırları (Faz 7)
-
-GPU yok, tüm node'lar CPU-only. ML inference node5'te çalışacak (4 core EPYC).
-
-**CPU bütçesi:**
-
-```python
-# backend/app/services/ml/*.py
-import torch
-torch.set_num_threads(1)  # ML inference için max 1 core
-torch.set_num_interop_threads(1)
-```
-
-**ARQ worker kısıtı:**
-
-```python
-# Embedding görevi — önce devre dışı (Faz 3'te)
-# Faz 7'de aktifleştirilince:
-# ARQ'da rate limit: dakikada max 10 embedding görevi
-# Off-peak scheduling: 02:00–06:00 arası batch embedding
-```
-
-**RAM kısıtı:**
-- FAISS index: model boyutuna göre değişir (küçük model = ~200 MB, büyük = 1+ GB)
-- node5'te ML için en fazla **500 MB RAM** ayrılmalı → model seçimi buna göre yapılmalı
-- ALS matrix factorization: scipy sparse matrix, veri boyutuna bağlı — batch işlem, RAM'de tutulmamalı
-
----
-
-### 15.8 — Plan Fazlarının Node Etki Matrisi
-
-Her Faz'ın hangi node'u nasıl etkilediğini gösteren özet:
-
-| Faz | Etkilenen Node | CPU | RAM | Disk | Ağ | Önlem |
-|-----|--------------|-----|-----|------|-----|-------|
-| Faz 0 (Float→Numeric) | node5, node3 | - | - | +küçük | - | Migration bakım penceresi |
-| Faz 1 (BigInt, index) | node5, node3 | ↑ geçici | - | +küçük | - | CONCURRENTLY yasak (bkz. memory) |
-| Faz 2 (MinIO) | node5 ↓, node1/node4 ↑ | - | - | **↓ önemli node5** | ↑ node1 iç | Staging'de test — minio1/minio2 DNS Only |
-| Faz 3 (Redis) | node5 | - | ↑ izle | - | - | maxmemory 4 GB, allkeys-lru policy |
-| Faz 5 (ClickHouse) | node5 (zaten kurulu!) | ↑ | ↑ izle | ↑ TTL ile kontrol | - | 512 MB memory limit + TTL ekle (15.5) |
-| Faz 7 (ML) | node5 | **↑ yüksek** | ↑ 500 MB | ↑ model dosyası | - | torch.set_num_threads(1), off-peak |
-| Faz 9 (outbox) | node5 | ↑ küçük | - | ↑ küçük | - | Analytics zaten Redis buffer; outbox = finansal PG event'ler |
-| Faz 13 (PgBouncer) | node5 | - | **↓ 450 MB kurtarır** | - | - | max_connections 30, pool_size 5/worker |
-| Faz 14 (cache) | node5 Redis DB0 | - | ↑ izle | - | - | allkeys-lru aktif, used_memory takip et |
-
----
-
-### 15.9 — İzleme Eşikleri
-
-Bu plan boyunca Prometheus'ta şu alertler aktif olmalı:
-
-```yaml
-# node5 için kritik eşikler
-node_memory_MemAvailable_bytes < 500MB   → CRITICAL (swap'ta)
-node_filesystem_free_bytes{node5} < 5GB → WARNING
-pg_stat_activity_count > 25             → WARNING (PgBouncer sonrası)
-redis_memory_used_bytes > 3.8GB         → WARNING (4GB limitine yakın)
-
-# node3 için
-node_memory_MemAvailable_bytes{node3} < 200MB  → WARNING
-node_filesystem_free_bytes{node3} < 3GB        → WARNING
-
-# gateway için
-node_network_transmit_bytes_total (rate) > 100Mbit/s sustained → WARNING
-```
-
-> **Mevcut alarm kuralları** (05_final.md §13): NodeDown 1dk/critical, HighMemoryUsage %85/5dk/warning, DiskSpaceLow %80/5dk/warning, HighSwapUsage %50/5dk/warning, HighCPULoad %90/10dk/warning. Bu plan tamamlanınca eşikler sıkılaştırılabilir: DiskSpaceLow %80 → %70, HighMemoryUsage %85 → %75 (özellikle node3 ve node5 için — V1.5 adayı).
-
----
-
-## Faz 13 — DB Mimarisi
-
-**Ön koşul:** Faz 0–6 tamamlanmış olmalı (yanlış tipe index koymak boşa gider).
-
-**Hedef:** Veri yapısına uygun index stratejisi, bağlantı havuzu ve uzun vadeli büyüme planı.
-
----
-
-### 13.1 — Eksik Index'ler
-
-**Mevcut durum:** `listings`, `gift_events`, `notifications`, `calls` için composite index'ler iyi tanımlı. Ancak birkaç kritik tablo eksik.
-
-#### 13.1.1 Auctions
-
-```python
-# models/auction.py — TableArgs'a eklenecek
-Index("ix_auctions_stream_status", "stream_id", "status"),
-Index("ix_auctions_stream_ended", "stream_id", "ended_at"),
-Index("ix_auctions_listing_status", "listing_id", "status"),
-```
-
-**Neden:** Auction expiry poller `WHERE status='active' AND ended_at < now()` sorgusunu çalıştırıyor. `ended_at` + `status` birlikte taranmalı.
-
-#### 13.1.2 Teqlik Transactions (eski: tuci_transactions)
-
-```python
-# models/teqlik_transaction.py — TableArgs'a eklenecek
-Index("ix_teqlik_tx_user_created", "user_id", "created_at"),
-Index("ix_teqlik_tx_type_created", "transaction_type", "created_at"),
-```
-
-**Neden:** Cüzdan geçmişi `WHERE user_id = ? ORDER BY created_at DESC LIMIT 20` ile çekiliyor. Sadece `user_id` index var, `created_at` sıralama için ek sort gerekiyor.
-
-#### 13.1.3 Listing Offers
-
-```python
-# models/listing_offer.py — TableArgs'a eklenecek
-Index("ix_listing_offers_listing_status", "listing_id", "status"),
-Index("ix_listing_offers_user_status", "user_id", "status"),
-```
-
-**Neden:** "Bu ilana gelen aktif teklifler" sorgusu `(listing_id, status='pending')` üzerinden gidiyor.
-
-#### 13.1.4 Follows
-
-```python
-# models/follow.py — TableArgs'a eklenecek
-Index("ix_follows_follower_followed", "follower_id", "followed_id"),
-```
-
-**Neden:** "A, B'yi takip ediyor mu?" kontrolü sık yapılıyor. Ayrı ayrı index'ler bu sorguya yetmiyor.
-
-#### 13.1.5 Purchases
-
-```python
-# models/purchase.py — TableArgs'a eklenecek
-Index("ix_purchases_buyer_created", "buyer_id", "created_at"),
-Index("ix_purchases_buyer_type", "buyer_id", "purchase_type"),
-```
-
-#### 13.1.6 Direct Messages (thread_id eklendikten sonra — Faz 1.2)
-
-```python
-# Faz 1.2'den sonra mevcut composite index'i değiştir:
-# Eski: Index("ix_direct_messages_conv_created", "sender_id", "receiver_id", "created_at")
-# Yeni (thread_id eklendikten sonra):
-Index("ix_direct_messages_thread_created", "thread_id", "created_at"),
-Index("ix_dm_receiver_unread", "receiver_id", "is_read"),
-```
-
-**Neden:** Şu anki `(sender_id, receiver_id, created_at)` index'i A→B konuşmasını yakalar ama B→A yakalamiyor. `thread_id` FK eklendikten sonra tek index yeterli.
-
-#### 13.1.7 Listings.image_urls (JSONB'ye geçtikten sonra — Faz 0)
-
-```python
-# models/listing.py — TableArgs'a eklenecek (Faz 0 tamamlandıktan sonra)
-Index('ix_listings_image_urls_gin', 'image_urls', postgresql_using='gin'),
-```
-
-**Neden:** `image_urls @> '["url"]'` operatörü GIN olmadan seq scan yapar.
-
-#### 13.1.8 Index Özet Tablosu
-
-| Tablo | Yeni Index | Tip | Öncelik |
-|-------|-----------|-----|---------|
-| `auctions` | `(stream_id, status)`, `(stream_id, ended_at)` | BTree | 🔴 Yüksek |
-| `teqlik_transactions` | `(user_id, created_at)` | BTree | 🔴 Yüksek |
-| `listing_offers` | `(listing_id, status)` | BTree | 🟡 Orta |
-| `follows` | `(follower_id, followed_id)` | BTree | 🟡 Orta |
-| `purchases` | `(buyer_id, created_at)` | BTree | 🟡 Orta |
-| `direct_messages` | `(thread_id, created_at)` | BTree | Faz 1.2 sonrası |
-| `listings.image_urls` | GIN | GIN | Faz 0 sonrası |
-
-**Not:** Index'ler `CREATE INDEX CONCURRENTLY` kullanılamaz (teqlif env.py transaction içinde çalışıyor — bkz. `feedback_alembic_concurrently.md`). Her index ayrı `op.execute()` + transaction dışı migration gerektirir. Bkz. Faz 13.1.9.
-
-#### 13.1.9 Index Migration Stratejisi
-
-asyncpg + Alembic'te CONCURRENTLY yasak olduğu için index'ler maintenance window'da sırayla eklenmeli:
-
-```python
-# Alembic migration — her index ayrı transaction
-def upgrade():
-    op.execute("CREATE INDEX ix_auctions_stream_status ON auctions (stream_id, status)")
-    op.execute("CREATE INDEX ix_auctions_stream_ended ON auctions (stream_id, ended_at)")
-    op.execute("CREATE INDEX ix_teqlik_tx_user_created ON teqlik_transactions (user_id, created_at)")
-    # ... devam
-```
-
----
-
-### 13.2 — PgBouncer Aktivasyonu (ACİL)
-
-**Mevcut durum:** `backend/app/config.py` zaten `use_pgbouncer: bool = False` ve `database.py` bunu destekliyor. Sadece aktifleştirilmesi gerekiyor.
-
-**Sorun:** 4 worker × (20 pool + 10 overflow) = **120 potansiyel bağlantı**. PostgreSQL default `max_connections = 100`. Yoğun trafikte limit aşılabilir.
-
-**Hedef yapı:**
-
-```
-FastAPI workers (4×)
-    ↓ SQLAlchemy pool_size=5, max_overflow=2 per worker = 28 bağlantı
-PgBouncer :5432 (transaction mode)
-    ↓ pool_size=20
-PostgreSQL :5433 (direkt erişim kapat)
-```
-
-**Yapılacaklar:**
-
-1. `backend/app/config.py`: `use_pgbouncer: bool = True`
-2. `DATABASE_URL` → PgBouncer port'una yönlendir (örn. 5432; PG → 5433'e taşı)
-3. SQLAlchemy pool boyutlarını düşür: `pool_size=5, max_overflow=2`
-4. PgBouncer `pool_mode = transaction` (prepared statement devre dışı — asyncpg zaten prepared statement kullanmaz)
-5. `pool_pre_ping = True` kalsın (PgBouncer bağlantı sağlığını handle eder ama ping zarar vermez)
-
-**PgBouncer `pgbouncer.ini` temel ayarları:**
-
-```ini
-[databases]
-teqlif = host=127.0.0.1 port=5433 dbname=teqlif
-
-[pgbouncer]
-pool_mode = transaction
-max_client_conn = 200
-default_pool_size = 20
-reserve_pool_size = 5
-reserve_pool_timeout = 3
-server_idle_timeout = 600
-```
-
----
-
-### 13.3 — PostgreSQL Partitioning Planı (Deferred)
-
-Şu anda partitioning gerektiren bir veri hacmi yok. Ancak büyüme planı için eşik değerleri belirlenmeli:
-
-| Tablo | Partitioning Türü | Eşik | Tahmini Süre |
-|-------|------------------|------|-------------|
-| `analytics_events` | Range (created_at, aylık) | 10M satır | 12+ ay |
-| `teqlik_transactions` | Range (created_at, aylık) | 5M satır | 18+ ay |
-| `direct_messages` | Range (created_at, aylık) | 20M satır | 12+ ay |
-
-**Not:** PostgreSQL native partitioning mevcut tabloları bölmez — yeni tablo + veri taşıma + rename gerektirir. Bu operasyon planlı maintenance gerektirir ve erken yapılmamalı.
-
-**ClickHouse** zaten `PARTITION BY toYYYYMM(timestamp)` ile partitioned — analytics trafiği buraya taşınınca PG partitioning ihtiyacı azalır.
-
----
-
-### 13.4 — Read Replica (Uzun Vadeli)
-
-Admin dashboard ve raporlama sorguları primary'yi etkiliyor. ClickHouse analytics layer tamamlandıktan sonra:
-
-- Ağır admin sorguları → ClickHouse
-- Geriye kalan read-heavy endpointler (listing search, user profile) → PG read replica
-
-Şu an için: PgBouncer + index optimizasyonu yeterli.
-
----
-
-## Faz 14 — Sorgu ve Cache Katmanı
-
-**Ön koşul:** Faz 13 tamamlanmış olmalı (doğru index olmadan cache stratejisi boşa gider).
-
-**Hedef:** Her ekranın yükleme süresini DB'den değil, Redis'ten besleyerek minimize etmek; N+1 sorgularını elemek; pagination'ı scale'e uygun hale getirmek.
-
----
-
-### 14.1 — Redis Cache Stratejisi (Endpoint Bazlı)
-
-**Mevcut cache'lenen endpointler:**
-
-| Cache Key Pattern | TTL | Endpoint |
-|------------------|-----|---------|
-| `interests:{user_id}` | 15dk | Feed affinity |
-| `subcat_interests:{user_id}` | 15dk | Feed subcategory |
-| `feed:hesitated:{user_id}` | 15dk | Feed personalization |
-| `cache:market_trends_global_{locale}` | 5dk | Analytics market trends |
-| `cache:pro_insights:{uid}:...` | 5dk | Analytics pro insights |
-| `cache:demand_radar:{days}:{category}` | 5dk | Analytics demand |
-| `seller:badge:{uid}` | 25sa | Seller badge |
-| `trust_score:{uid}` | ~15dk | Trust score |
-
-**Eksik — eklenecek endpointler:**
-
-| Cache Key Pattern | TTL | Invalidasyon | Endpoint |
-|------------------|-----|-------------|---------|
-| `listing:{id}` | 60s | Listing update/delete | `GET /listings/{id}` |
-| `user_profile:{username}` | 5dk | User update | `GET /users/{username}` |
-| `categories:all:{locale}` | 1sa | Admin kategori değişikliği | `GET /categories` |
-| `app_config:{key}` | 10dk | Admin config update | `GET /app-config` |
-| `streams:live` | 30s | Stream start/end webhook | `GET /streams` |
-| `listing_offers:{listing_id}` | 30s | Offer create/accept/reject | `GET /listings/{id}/offers` |
-
-**Cache invalidasyon kuralları:**
-
-```python
-# Listing güncelleme/silinme → cache temizle
-async def invalidate_listing_cache(listing_id: int):
-    redis = await get_redis()
-    await redis.delete(f"listing:{listing_id}")
-
-# User profil güncelleme → cache temizle  
-async def invalidate_user_cache(username: str):
-    redis = await get_redis()
-    await redis.delete(f"user_profile:{username}")
-```
-
-**TTL seçim kriterleri:**
-- **30s**: Gerçek zamanlı sayılabilir veri (stream listesi, aktif teklifler)
-- **60s**: Listing detay (hızlı satış olabilir)
-- **5dk**: Kullanıcı profili (nadiren değişir ama staleness kabul edilebilir)
-- **10dk+**: Konfigürasyon, kategoriler (çok nadir değişir)
-- **25sa+**: Worker tarafından hesaplanan rozet/skor
-
----
-
-### 14.2 — N+1 Sorgu Tespiti ve Çözümü
-
-#### 14.2.1 Feed: `_fetch_seller_meta` N+1
-
-**Mevcut durum:** `feed_queries.py` listing listesi döndükten sonra her listing için Python loop içinde `_fetch_seller_meta(user_id)` çağrıyor.
-
-**Sorun:** 20 ilanın feed'i = 20 ayrı SELECT.
-
-**Çözüm:**
-
-```python
-# Şu an (N+1):
-for row in listings:
-    seller = await _fetch_seller_meta(row["user_id"])
-
-# Hedef (1 sorgu):
-seller_ids = [row["user_id"] for row in listings]
-sellers = await session.execute(
-    select(User.id, User.username, User.profile_image_thumb_url, User.is_verified)
-    .where(User.id.in_(seller_ids))
-)
-seller_map = {s.id: s for s in sellers}
-```
-
-#### 14.2.2 Listing Detail: Birden Fazla Ayrı Sorgu
-
-**Mevcut durum:** Listing detay endpoint'i büyük olasılıkla ayrı sorgularla şunları çekiyor:
-- Listing
-- Seller user
-- Aktif auction (varsa)
-- Son 5 bid (varsa)
-- Aktif offers
-
-**Hedef:** Listing + seller tek `JOIN` ile; auction + bids tek sorgu; cache'lenmiş sonuç.
-
-#### 14.2.3 Stream: Participants N+1
-
-**Mevcut durum:** `stream.py` `host: Mapped["User"] = relationship("User", lazy="selectin")` → iyi (selectin). Ancak participant listesi ayrı sorgu olabilir.
-
-**Kontrol edilecek:** Stream detay endpoint'inde kaç sorgu çalıştığını `EXPLAIN` veya logging ile ölçmek.
-
-#### 14.2.4 Favorites: Her İlanda "Favorilendi Mi?" Kontrolü
-
-**Mevcut durum:** Feed listesi dönerken her ilan için ayrı `is_favorited` check yapılıyor olabilir.
-
-**Hedef:**
-```python
-# Tek sorguda toplu favorite check:
-fav_listing_ids = await session.execute(
-    select(ListingLike.listing_id)
-    .where(ListingLike.user_id == current_user.id)
-    .where(ListingLike.listing_id.in_(listing_ids))
-)
-fav_set = set(fav_listing_ids.scalars())
-```
-
----
-
-### 14.3 — Redis Key Namespace
-
-**Mevcut yapı (05_final.md §5):**
-
-```
-DB 0 — Uygulama (node5 Redis, 10.10.0.5:6379)
-  session:<token>        → Kullanıcı session verileri
-  i18n:pack:<lang>       → Çeviri paketleri
-  i18n:ver:<lang>        → Çeviri versiyon sayacı
-  ch_buf:<tablo>         → ClickHouse batch buffer (analytics)
-  interests:{uid}        → Feed affinity (15dk)
-  subcat_interests:{uid} → Feed subcategory (15dk)
-  seller:badge:{uid}     → Seller badge (25sa)
-  trust_score:{uid}      → Trust score (~15dk)
-  cache:*                → Analytics cache key'leri (5dk)
-  (pubsub kanalları)     → Gerçek zamanlı olaylar
-
-DB 1 — Operasyon (node2/node3 AI proxy ve edge-metrics bu DB'yi kullanır)
-  rate:<endpoint>        → AI Proxy rate limit sayaçları
-  edge_metrics:<nodeX>   → edge-metrics-agent (her 3s node1/node4 yazar)
-```
-
-**Kural:** Mevcut key'ler değiştirilmez — onlarca yerden referans ediliyorlar. Bu plan kapsamında eklenen yeni cache key'leri `cache:` prefix'iyle uyumlu tutulur:
-
-```
-# Yeni eklenecek key'ler (Faz 14.1):
-cache:listing:{id}              → Listing detay (60s, DB0)
-cache:user_profile:{username}   → Profil (5dk, DB0)
-cache:categories:{locale}       → Kategoriler (1sa, DB0)
-cache:app_config:{key}          → App config (10dk, DB0)
-cache:streams:live              → Aktif yayınlar (30s, DB0)
-cache:listing_offers:{id}       → Teklifler (30s, DB0)
-```
-
-**DB 0 Redis memory baskısı:** Mevcut key'ler + yeni cache'ler birlikte 4 GB maxmemory limitine yaklaşabilir. `redis-cli INFO memory` ile `used_memory_human` izlenmeli. `maxmemory-policy = allkeys-lru` aktif olmalı — dolunca LRU cache key'leri kendiliğinden silinir.
-
----
-
-### 14.4 — Pagination Stratejisi
-
-#### 14.4.1 Mevcut Durum
-
-Büyük olasılıkla `OFFSET`-based pagination kullanılıyor:
-
+**Şu An (OFFSET):**
 ```sql
 SELECT * FROM listings ORDER BY created_at DESC LIMIT 20 OFFSET 100
+-- OFFSET 100: 120 satır okur, 100'ünü atar → yavaşlar
 ```
 
-**Sorun:** `OFFSET 100` çalışmak için 120 satır okur, 100'ünü atar. Büyük tablolarda yavaşlar.
-
-#### 14.4.2 Keyset (Cursor) Pagination
-
-**Hedef:** `created_at` + `id` ile cursor-based pagination:
-
+**Hedef (Keyset):**
 ```sql
--- İlk sayfa:
-SELECT * FROM listings WHERE status='active'
-ORDER BY created_at DESC, id DESC LIMIT 20
-
 -- Sonraki sayfa (cursor: last_seen_at + last_seen_id):
-SELECT * FROM listings WHERE status='active'
+SELECT * FROM listings
+WHERE status = 'active'
   AND (created_at, id) < (:last_seen_at, :last_seen_id)
-ORDER BY created_at DESC, id DESC LIMIT 20
+ORDER BY created_at DESC, id DESC
+LIMIT 20
 ```
 
-**Uygulanacak endpoint'ler:**
-
-| Endpoint | Öncelik | Not |
-|---------|---------|-----|
-| Listing feed | 🔴 Yüksek | Büyük tablo, sık kullanım |
-| Wallet geçmişi (`GET /wallet/history`) | 🔴 Yüksek | Finansal tablo |
-| Mesaj geçmişi (`GET /messages`) | 🟡 Orta | thread_id eklendikten sonra |
-| Bildirimler | 🟡 Orta | `(user_id, created_at)` index var |
-
-**Flutter uyumu:** Cursor-based pagination Flutter'daki infinite scroll widget'larıyla doğrudan uyumludur. Cursor JSON base64 encode edilerek `next_cursor` field olarak döndürülür.
+| Endpoint | Öncelik |
+|---------|---------|
+| Listing feed | 🔴 Öncelikli |
+| Cüzdan geçmişi | 🔴 Öncelikli |
+| Mesaj geçmişi | 🟡 Thread id sonrası |
+| Bildirimler | 🟡 Orta |
 
 ---
 
-### 14.5 — JSONB Sorgu Optimizasyonu
+### 4.4 — JSONB Sorgu Optimizasyonu
 
-Faz 0'da `listings.image_urls` Text → JSONB'ye geçtikten sonra:
+`listings.image_urls` Text → JSONB geçişi sonrası:
+```sql
+-- GIN index ile: belirli URL içeren ilanları bul
+SELECT id FROM listings WHERE image_urls @> '["https://..."]'::jsonb
 
-```python
-# Eski (Python'da parse):
-listing = await get_listing(id)
-images = json.loads(listing.image_urls)  # Python'da
-
-# Yeni (DB'de doğrudan):
-result = await session.execute(
-    select(Listing.id, Listing.image_urls[0].label("first_image"))
-    .where(Listing.id == listing_id)
-)
+-- İlk görseli doğrudan al:
+SELECT image_urls->0 AS first_image FROM listings WHERE id = ?
 ```
+
+---
+
+## Bölüm 5 — Temizleme ve Garbage Collection
+
+### 5.1 — Mevcut ARQ Cron Takvimi
+
+#### Temizlik Görevleri
+
+| Görev | Zamanlama | Silinen Veri | Durum |
+|-------|-----------|-------------|-------|
+| `cleanup_stale_streams_task` | Her 2 dakika | `live_streams` stale (>3dk) | ✅ |
+| `cleanup_ghost_calls_task` | Her 15 dakika | `calls` ghost (calling>5dk, active>1s) | ✅ |
+| `cleanup_expired_stories_task` | Saatlik | `stories` + MinIO | ✅ |
+| `cleanup_hype_highlights_task` | Saatlik | `highlights` + local disk | ✅ |
+| `cleanup_old_stream_likes_task` | Günlük 01:00 | `stream_likes` >7 gün | ✅ |
+| `cleanup_hidden_messages_task` | Günlük 02:30 | `direct_messages` (hidden, >60 gün) | ✅ |
+| `cleanup_old_notifications_task` | Günlük 03:00 | `notifications` >30 gün | ✅ |
+| `deactivate_expired_listings_task` | Günlük 04:00 | `listings` aktif >30 gün → pasif | ✅ |
+| `delete_expired_inactive_listings_task` | Günlük 04:30 | `listings` pasif >60 gün → soft-delete + MinIO | ✅ |
+| `cleanup_old_analytics_task` | Haftalık Pzt 04:00 | `analytics_events` >90 gün + VACUUM | ✅ |
+| `cleanup_old_user_interactions_task` | Haftalık Sal 04:00 | `user_interactions` >90 gün + VACUUM | ✅ |
+| `cleanup_old_impressions_task` | Günlük 05:00 | `listing_impressions` >30 gün | ✅ |
+| `cleanup_old_media_messages_task` | Günlük 06:30 | `direct_messages` media >7 gün + MinIO | ✅ |
+
+#### Veri İşleme Görevleri
+
+| Görev | Zamanlama | Kategori |
+|-------|-----------|---------|
+| `flush_interactions_to_db` | Her 5 dakika | Redis → PG sync |
+| `sync_ad_campaigns_task` | Her 10 dakika | Reklam bütçe sync |
+| `compute_user_interests_task` | Her 15 dakika | Kişiselleştirme |
+| `compute_user_condition_preferences_task` | Her 15 dakika | Kişiselleştirme |
+| `invalidate_swipe_live_configs_task` | Her 15 dakika | Cache invalidate |
+| `sync_swipelive_interests_task` | Her 20 dakika | Kişiselleştirme |
+| `compute_trending_listings_task` | Her 30 dakika | Analytics |
+| `backfill_listing_embeddings_task` | Her 30 dakika | ML backfill |
+| `backfill_listing_quality_scores_task` | Saatlik :45 | ML backfill |
+| `populate_foryou_feed_task` | Saatlik | Feed cache |
+| `compute_trending_categories_task` | 6 saatte bir | Analytics |
+| `rebuild_faiss_index_task` | 2x/gün 00:00 ve 12:00 | ML |
+| `compute_seller_badges_task` | Günlük 01:30 | Compute |
+| `train_swipe_live_als_task` | Günlük 01:00 | ML eğitim |
+| `train_feed_als_task` | Günlük 01:30 | ML eğitim |
+| `calculate_user_budgets_task` | Günlük 02:00 | Compute |
+| `compute_trust_scores_task` | Günlük 02:15 | Compute |
+| `process_churn_and_airdrop` | Günlük 03:30 | Process |
+| `optimize_notification_timing_task` | Günlük 04:00 | Compute |
+| `nsfw_backfill_task` | Günlük 05:15 | ML backfill |
+| `backfill_phash_task` | Günlük 05:30 | ML backfill |
+| `hesitation_retarget_task` | Günlük 06:00 | Bildirim |
+| `train_bpr_task` | Pzt+Çar+Cmt 00:30 | ML eğitim |
+| `train_item2vec_task` | Haftalık Paz 02:00 | ML eğitim |
+| `train_kmeans_cold_start_task` | Çar+Paz 02:15 | ML eğitim |
+| `train_churn_model_task` | Haftalık Pzt 02:30 | ML eğitim |
+| `train_listing_quality_model_task` | Haftalık Paz 02:30 | ML eğitim |
+
+---
+
+### 5.2 — Eksik GC Görevleri (Onay Bekleniyor)
+
+| # | Yeni Görev | Tablo | Öneri | Zamanlama |
+|---|-----------|-------|-------|-----------|
+| GC1 | `cleanup_old_stream_viewers_task` | `live_stream_viewers` | >90 gün sil | Haftalık Çar 04:00 |
+| GC2 | `cleanup_old_calls_task` | `calls` (ended/missed) | >1 yıl sil | Haftalık Per 04:00 |
+| GC3 | `cleanup_old_listing_offers_task` | `listing_offers` (declined) | >60 gün sil | Haftalık Cum 04:00 |
+| GC4 | `cleanup_old_exchange_rates_task` | `exchange_rates` | >2 yıl sil | Aylık 1. gün 05:00 |
+| GC5 | `cleanup_old_streams_task` | `live_streams` (biten) | >1 yıl sil | Aylık 1. gün 06:00 |
+| GC6 | `cleanup_empty_message_threads_task` | `message_threads` | 0 mesaj + >30 gün | Haftalık Paz 05:00 |
+| GC7 | `cleanup_old_gift_events_task` | `gift_events` | >1 yıl sil | Aylık 1. gün 04:00 |
+| GC8 | `cleanup_inactive_search_alerts_task` | `search_alerts` | >180 gün inaktif sil | Haftalık Paz 06:00 |
+
+> GC1 kritik: `live_stream_viewers` yüksek yazma hacmi + cleanup yok → sınırsız büyüme.
+
+---
+
+### 5.3 — MinIO Lifecycle Policy
+
+Her bucket için `mc ilm add` ile S3 lifecycle kuralı:
+
+| Bucket | Öneri | Gerekçe |
+|--------|-------|---------|
+| `teqlif/listings/` | 365 gün | Güvenlik ağı — uygulama kayıp silme |
+| `teqlif/stories/` | 2 gün | Güvenlik ağı — expires_at cleanup kaçırılırsa |
+| `teqlif-dm/` | 14 gün | Güvenlik ağı — 7 günlük cron kaçırılırsa |
+| `teqlif/avatars/` | — (lifecycle değil, hesap silme akışı) | Kullanıcı silme akışına ekle |
+
+---
+
+## Bölüm 6 — Veri Anonimleştirme
+
+### 6.1 — Hesap Silme Akışı
+
+Kullanıcı hesabını sildiğinde ne olmalı:
+
+| Veri | Şu Anki Davranış | Öneri |
+|------|-----------------|-------|
+| `users` satırı | Yok (soft-delete mi?) | Soft-delete: `status = 'deleted'`, PII alanları null |
+| `users.email` | Saklanıyor | → `deleted_{id}@teqlif.com` |
+| `users.full_name` | Saklanıyor | → `Silinmiş Kullanıcı` |
+| `users.profile_image_url` | Saklanıyor | MinIO'dan sil |
+| `direct_messages` | CASCADE yok | İçeriği null yap, `sender_id` null kalır |
+| `analytics_events` | `user_id SET NULL` (FK var) | ✅ Zaten anonim kalır |
+| `user_interactions` | `user_id SET NULL` | ✅ Zaten anonim kalır |
+| `purchases` / `transactions` | `user_id FK` | Sakla — finansal kayıt |
+| MinIO avatars | — | Silme akışına ekle |
+
+### 6.2 — Analytics Anonimleştirme
+
+ClickHouse `user_events`, `feed_analytics`: `user_id = 0` kayıtları anonim kullanıcı.  
+Silinen kullanıcının event'leri zaten `user_id = 0` olarak kalır (FK yoktur ClickHouse'da).
+
+### 6.3 — KVKK Uyumu
+
+| Gereksinim | Durum |
+|-----------|-------|
+| Kullanıcı verisini silme talebi | ⚠️ Akış tanımlanmamış |
+| Veri dışa aktarma talebi | ⚠️ Endpoint yok |
+| Analytics opt-out | ⚠️ Yok |
+| IP adresi saklama (`analytics_events.ip_address`) | 🔴 Saklıyor — maskeleme veya silme gerekli |
+
+> `analytics_events.ip_address` KVKK kapsamında kişisel veri sayılır. Son oktet maskelenebilir: `192.168.1.x`
+
+---
+
+## Bölüm 7 — ML ve Tracking Verisi Optimizasyonu
+
+### 7.1 — ARQ Worker Frekans Optimizasyonu
+
+Onay bekleyen değişiklikler — kaynak tasarrufu:
+
+| # | Görev | Şu An | Öneri | Kaynak Tasarrufu | Gerekçe |
+|---|-------|-------|-------|-----------------|---------|
+| W1 | `compute_user_interests_task` | Her 15 dk (96x/gün) | **2x/gün (08:00, 20:00)** | ~94 ClickHouse sorgusu/gün | İlgi profili saatlerce değişmez |
+| W2 | `backfill_listing_embeddings_task` | Her 30 dk (gündüz dahil) | **3x/gün gece (02:00, 03:00, 04:00)** | CPU gündüz serbest kalır | sentence-transformers CPU-yoğun |
+| W3 | `compute_user_condition_preferences_task` | Her 15 dk (96x/gün) | **4x/gün** | ~92 Redis işlemi/gün | Condition tercihi çok yavaş değişir |
+| W4 | `populate_foryou_feed_task` | Saatlik (24x/gün) | **6x/gün** | ~18 hesaplama/gün | Interest verisi 2x/gün güncelleniyor |
+| W5 | `compute_trending_listings_task` | Her 30 dk (48x/gün) | **4x/gün** | ~44 ClickHouse sorgusu/gün | 30dk TTL zaten var, 6s yenileme yeterli |
+| W6 | `train_feed_als_task` | Günlük | **Haftalık** (ADR §3.3) | 6 gece CPU serbest | ADR zaten haftalık öneriyor |
+| W7 | `train_swipe_live_als_task` | Günlük | **Haftalık** (ADR §3.3) | 6 gece CPU serbest | ADR zaten haftalık öneriyor |
+
+**Sabit tutulanlar (değiştirme):**
+
+| Görev | Gerekçe |
+|-------|---------|
+| `flush_interactions_to_db` (5dk) | Redis buffer — gecikmede veri kaybı riski |
+| `sync_ad_campaigns_task` (10dk) | Reklam bütçe bütünlüğü |
+| `cleanup_stale_streams_task` (2dk) | Gerçek zamanlı LiveKit güvenlik ağı |
+| `invalidate_swipe_live_configs_task` (15dk) | SwipeLive real-time konfigürasyon |
+
+---
+
+### 7.2 — node5 Gece Yük Haritası (00:00–07:00)
+
+```
+00:00  rebuild_faiss_index_task       CPU: yüksek
+00:30  train_bpr_task (Pzt/Çar/Cmt)  CPU: çok yüksek
+01:00  cleanup_old_stream_likes
+01:00  train_swipe_live_als_task      CPU: yüksek
+01:30  compute_seller_badges
+01:30  train_feed_als_task            CPU: yüksek
+02:00  calculate_user_budgets
+02:00  train_item2vec_task (Paz)      CPU: yüksek
+02:15  compute_trust_scores
+02:15  train_kmeans_cold_start (Çar/Paz)
+02:30  cleanup_hidden_messages
+02:30  train_listing_quality_model (Paz)
+02:45  teqlif-backup (pg_dump+redis+CH)  IO: yüksek
+03:00  cleanup_old_notifications
+03:30  process_churn_and_airdrop
+04:00  deactivate_expired_listings
+04:00  cleanup_old_analytics (Pzt)    DB: çok yüksek (bulk DELETE)
+04:30  delete_expired_inactive_listings
+05:00  cleanup_old_impressions
+05:15  nsfw_backfill                  CPU: yüksek (NudeNet)
+05:30  backfill_phash
+06:00  hesitation_retarget
+06:00  teqlif-healthcheck.timer
+06:30  cleanup_old_media_messages
+```
+
+**Tespit:** W6+W7 onaylanırsa (ALS haftalık) → 01:00-01:30 arası 5 gece CPU yükü azalır.
+
+---
+
+### 7.3 — ClickHouse Analytics Akışı
+
+```
+Flutter / API → buffer_user_event() → Redis ch_buf:user_events
+                                           │
+                                      flush_loop() her 30s
+                                      veya 5000 satır
+                                           │
+                                      ClickHouse INSERT (batch)
+                                      teqlif_prod_analytics.user_events
+                                           │
+                                      MergeTree TTL 30 gün
+                                      (otomatik arka plan silme)
+```
+
+Tablo TTL'leri `database_clickhouse.py`'de tanımlı. D51b (init_clickhouse DB parametresi) düzeltilmeden tüm tablolar `default` DB'ye yazılır.
+
+---
+
+## Bölüm 8 — Medya Verisi
+
+### 8.1 — Mevcut Durum
+
+| Medya Tipi | Limit | İşleme | Depolama |
+|-----------|-------|--------|---------|
+| İlan fotoğrafı | 5 MB | Thumbnail 400×400 JPEG q85 | MinIO `teqlif/listings/` |
+| İlan videosu | 50 MB, 60 sn | ffmpeg remux + audio AAC 128k (video yeniden kodlanmıyor) | MinIO `teqlif/listings/` |
+| DM fotoğrafı | 5 MB | Thumbnail 400×400 JPEG q85 | MinIO `teqlif-dm/` |
+| DM videosu | 30 MB, 90 sn | ffmpeg remux + AAC (video yeniden kodlanmıyor) | MinIO `teqlif-dm/` |
+| DM ses | 2 MB, 10 dk | — (Opus 16kbps VBR) | MinIO `teqlif-dm/` |
+| Hikaye | ffmpeg sıkıştırma var | H.264 → re-encode (story_service) | MinIO `teqlif/stories/` |
+| Profil fotoğrafı | 5 MB | Thumbnail | MinIO `teqlif/avatars/` |
+
+---
+
+### 8.2 — Sıkıştırma İyileştirme Önerileri
+
+| # | Konu | Şu An | Öneri | Etki |
+|---|------|-------|-------|------|
+| M1 | İlan fotoğrafı formatı | JPEG (orijinal format saklanıyor) | WebP'ye dönüştür (quality=80) | ~%30-40 boyut azalması |
+| M2 | İlan fotoğrafı boyut sınırı | Kaynak boyut değiştirilmiyor | Max 1920px uzun kenar (sunucu tarafı) | Büyük dosyalar küçülür |
+| M3 | Video yeniden kodlama | `-c:v copy` (kopya) | CRF 28, max 1080p, aac 96k | İlan videosu ~%50 küçülür |
+| M4 | Thumbnail formatı | JPEG (ext'e göre) | Tümü WebP q70, max 400×400 | Thumbnail boyutu ~%40 azalır |
+| M5 | DM medya boyut sınırı | 5 MB / 30 MB | DM foto → 3 MB, DM video → 20 MB | Storage + bandwidth tasarrufu |
+| M6 | Profil fotoğrafı | JPEG q85 | WebP q75, max 800×800 | Profil yükü azalır |
+
+> M1-M4: client taraflı da yapılabilir (Flutter'da `image_picker` sıkıştırma) — sunucu tarafı daha güvenilir.
+
+---
+
+### 8.3 — Depolama Yönetimi
+
+**Silinme akışları:**
+
+| Tetikleyici | Silinen MinIO Nesnesi | Kod Yeri |
+|------------|----------------------|---------|
+| Listing soft-delete (ARQ) | `listings/{id}/*` | `listing_cleanup.delete_listing_files()` |
+| Story expires_at (ARQ saatlik) | `stories/{filename}` | `story_service.cleanup_expired_stories()` |
+| DM media >7 gün (ARQ) | `dm/{filename}` | `cleanup_old_media_messages_task` |
+| Avatar güncelleme | Eski avatar | `auth.py:1565` |
+| Listing güncelleme (eski fotoğraf) | Eski görseller | `update_listing.py:139` |
+| Hikaye kullanıcı silmesi | `stories/{filename}` | `story_service.delete_story()` |
+
+**Boşluk:** Kullanıcı hesabı silindiğinde avatar silinmiyor (GC planına ekle).  
+**Boşluk:** `listing_cleanup` listing owner user silindiğinde çağrılmıyor.
+
+---
+
+## Bölüm 9 — Mesajlaşma Verisi
+
+### 9.1 — DM Lifecycle
+
+```
+Mesaj gönderildi
+    │
+    ▼
+direct_messages (PostgreSQL)
+    │
+    ├─ content_type = text  → sonsuz (kullanıcı silmezse)
+    ├─ content_type = media → 7 gün → ARQ cleanup + MinIO sil
+    ├─ is_hidden = true     → 60 gün → ARQ cleanup (moderasyon)
+    └─ is_shadowbanned      → görünmez, silinmez
+```
+
+**Karar bekleniyor:** Text mesajları ne kadar tutulacak?
+
+| Seçenek | Gerekçe |
+|---------|---------|
+| Sonsuz | Kullanıcı kendi geçmişini görmek ister |
+| 1 yıl | Disk tasarrufu, kullanıcı bilgilendirilir |
+| Kullanıcı kontrolü | Kullanıcı kendi siler — uygulamada zaten var |
+
+---
+
+### 9.2 — Thread Yönetimi
+
+`message_threads` tablosu her konuşma için bir kayıt tutar. Mesajlar silinse de thread kalır.
+
+**Sorun:** Boş thread'ler (0 mesaj) birikmesi.  
+**Öneri (GC6):** 30 gün mesajsız thread'leri haftalık temizle.
+
+---
+
+### 9.3 — Mesaj İndeks Yapısı
+
+Büyük `direct_messages` tablosunda yavaş sorgular için:
 
 ```sql
--- Belirli URL içeren ilanları bul (GIN index kullanır):
-SELECT id FROM listings
-WHERE image_urls @> '["https://uploads.teqlif.com/x.jpg"]'::jsonb
+-- Şu an:
+SELECT * FROM direct_messages
+WHERE (sender_id = :uid OR receiver_id = :uid)
+ORDER BY created_at DESC LIMIT 50
+-- Sorun: OR ile index kullanamaz
+
+-- Öneri: thread_id FK ekle
+-- Her mesaj thread'e bağlı → thread bazlı sorgu mümkün
+SELECT * FROM direct_messages
+WHERE thread_id = :tid
+ORDER BY created_at DESC LIMIT 50
 ```
 
 ---
 
-### 14.6 — Uygulama Sırası
+## Bölüm 10 — Node Kaynak Bütçesi (V1.4)
 
-```
-1. PgBouncer aktif et (13.2) ← en acil, bağlantı limiti sorunu var
-2. Eksik index migration'larını yaz + staging'de test et (13.1)
-3. Listing detail + user profile cache ekle (14.1)
-4. Categories + AppConfig cache ekle (14.1)
-5. Feed N+1 → batch seller fetch (14.2)
-6. Favorites toplu check (14.2)
-7. Keyset pagination: listing feed + wallet (14.4)
-8. Redis key namespace geçişi (14.3) — aşamalı
-9. JSONB sorgu optimizasyonu (14.5) — Faz 0 sonrası
-10. EXPLAIN ANALYZE ile production'da ölçüm + ince ayar
-```
+### node5 — Production Core
 
----
+**Donanım:** 4 core EPYC 7282, 16 GB RAM, 500 GB SSD, 1 Gbps unmetered
 
-### 14.7 — Ölçüm ve Başarı Kriterleri
+| Servis | RAM Bütçesi | Disk Bütçesi |
+|--------|------------|-------------|
+| PostgreSQL | ~3 GB | ~50 GB (büyüme: +1 GB/ay) |
+| Redis | 4 GB (maxmemory) | — (AOF+RDB: ~500 MB) |
+| ClickHouse | ~2 GB | ~20 GB/yıl (TTL aktif) |
+| MinIO | ~500 MB | ~200 GB (media + lifecycle ile sınırlandır) |
+| FastAPI (4 worker) | ~2 GB | — |
+| ARQ workers (2) | ~1 GB | — |
+| ML modeller | ~2 GB | ~5 GB |
+| **Toplam** | **~14.5 GB / 16 GB** | **~275 GB / 500 GB** |
 
-```
-□ PgBouncer aktif → max DB bağlantısı < 30 (4 worker + admin + poller)
-□ Listing feed p95 < 200ms (cache hit)
-□ Listing detail p95 < 150ms (cache hit)
-□ Wallet geçmişi p95 < 100ms (keyset + index)
-□ EXPLAIN ANALYZE: feed sorgusu → Seq Scan yok (index scan)
-□ Redis hit rate > %80 (listing detail + feed)
-□ pg_stat_activity: waiting connections = 0 normal yükte
-```
+**Kritik:** RAM bütçesi %90 dolu. W1-W7 frekans azaltımı + PgBouncer aktivasyonu birlikte uygulanmalı.
 
----
+### node3 — Staging + AI Proxy + Monitoring
 
-## Faz 16 — Mimari Uyum, ARQ Takvimi ve Veri Yaşam Döngüsü
+**Donanım:** 4 core, ~4 GB RAM (Zap-Hosting, panel girişi 90 günde bir: 2026-12-10)
 
-**Amaç:** Bu planın tüm değişikliklerini teqlif'in mimari kararlarıyla (`teqlif_architectural_decisions.md`) ve clean architecture / clean code / MVVM prensipleriyle hizalamak. ARQ worker frekanslarını kaynak bütçesine göre optimize etmek.
-
----
-
-### 16.1 — Mimari Prensipler: Veri Katmanına Yansıması
-
-#### 16.1.1 Clean Architecture — Katman Kuralları
-
-```
-┌─────────────────────────────────────────────────┐
-│  Flutter (View / ViewModel)                      │
-│  MVVM: ViewModel = AsyncNotifier/Notifier        │
-│  View sadece render — BuildContext bilgisi yok   │
-└───────────────────────┬─────────────────────────┘
-                        │ DTO / response
-┌───────────────────────▼─────────────────────────┐
-│  API Katmanı (FastAPI Router)                    │
-│  Router → Use Case → Repository                  │
-│  Router domain'e bağımlı değil (§10 ADR)        │
-└───────────────────────┬─────────────────────────┘
-                        │ Pydantic schema
-┌───────────────────────▼─────────────────────────┐
-│  Use Case / Service                              │
-│  İş mantığı burada — Router'da değil            │
-└───────────────────────┬─────────────────────────┘
-                        │ SQLAlchemy model
-┌───────────────────────▼─────────────────────────┐
-│  Repository / ORM (SQLAlchemy 2.0 Mapped[])     │
-│  Veri erişimi — tipler burada tanımlanır         │
-└───────────────────────┬─────────────────────────┘
-                        │ PostgreSQL / Redis / ClickHouse
-┌───────────────────────▼─────────────────────────┐
-│  ARQ Worker (arka plan görevleri)                │
-│  Worker = use case coordinator — fat function değil │
-└─────────────────────────────────────────────────┘
-```
-
-**Veri planı değişikliklerinin her katmana yansıması:**
-
-| Değişiklik | Katman | Prensip |
-|-----------|--------|---------|
-| Float → Numeric (Faz 0) | Repository (ORM model) | Single Source of Truth — tip DB'de tanımlanır |
-| Pydantic float → Decimal (Faz 4) | API Schema | DTO tipi DB tipiyle uyumlu olmalı |
-| Flutter `tuciBalance` → `teqlikBalance` (Faz 12) | View / ViewModel | ViewModel DB'den gelen DTO'yu map eder |
-| Redis cache (Faz 14) | Repository/Service | Cache = infrastructure — use case bilmez |
-| ARQ frekans değişikliği (Faz 16) | Worker (koordinatör) | İş mantığı service'te, worker sadece tetikler |
-| ClickHouse TTL (Faz 15.5) | Persistence | Veri yaşam döngüsü persistence katmanında yönetilir |
-
-#### 16.1.2 Cache Taksonomisi (ADR §9)
-
-`teqlif_architectural_decisions.md` §9'dan: Cache'ler beş kategoriye ayrılmıştır. Bu plan kapsamındaki tüm cache değişiklikleri bu taksonomiye göre yapılmalı:
-
-| Kategori | Örnekler | Bu Plandaki Değişiklikler |
-|----------|---------|--------------------------|
-| **SCHEMA_VERSIONED** | `/api/catalog`, `/api/cities`, field-config | Faz 0 sonrası migration'a `bump_schema_version()` eklenmeli |
-| **ALGORITHMIC** | Feed, trending, user_interests, seller badges | Faz 16.3 frekans önerileri burayı etkiliyor |
-| **LIFECYCLE** | Auction state, stream state, call state | Faz 14.1 `listing_offers` cache → LIFECYCLE kategorisi |
-| **SECURITY_CRITICAL** | Session, refresh token, rate limit, ad budget | Asla müdahale edilmez — Faz 13/14 bu key'lere dokunmaz |
-| **EPHEMERAL** | Listing detay cache, user profile cache | Faz 14.1'de eklenenler buraya girer |
-
-**Kural:** Faz 0'daki her migration'ın `upgrade()` ve `downgrade()` sonuna `bump_schema_version()` çağrısı eklenmeli. Aksi halde `/api/catalog` ve `/api/field-config` eski tipi cache'den servis eder.
-
-#### 16.1.3 MVVM — Flutter Veri Akışı
-
-Bu plan kapsamındaki API response değişikliklerinin (tuci → teqlik, Float → Decimal, JSON key isimleri) Flutter MVVM katmanlarına yansıması:
-
-```
-API Response (JSON)
-    ↓
-Repository (api.dart) — HTTP → DTO parse
-    ↓
-ViewModel (AsyncNotifier) — DTO → UI state map
-    ↓
-View (Screen) — ref.watch(provider) → render
-
-Kural: JSON key değişikliği sadece repository'de güncellenir.
-       ViewModel ve View değişmez — sadece DTO field adı değişir.
-```
+| Servis | RAM Bütçesi |
+|--------|------------|
+| FastAPI + ARQ (staging) | ~800 MB |
+| PostgreSQL (staging) | ~600 MB |
+| AI Proxy (production trafiği) | ~400 MB |
+| Redis (staging) | ~300 MB |
+| Prometheus + Grafana | ~400 MB |
+| Loki + Promtail | ~300 MB |
+| ClickHouse (staging) | ~500 MB |
+| **Toplam** | **~3.3 GB / ~4 GB** |
 
 ---
 
-### 16.2 — Veri Yaşam Döngüsü (Retention Tablosu)
+## Bölüm 11 — Uygulama Öncelik Matrisi
 
-Sistemde verinin ne kadar süre tutulduğu, hangi mekanizma ile silindiği:
+### 11.1 — Kritik (Hemen)
 
-| Veri | Tablo | Retention | Silme Mekanizması | Silme Zamanı |
-|------|-------|-----------|------------------|-------------|
-| Bildirimler | `notifications` | **30 gün** | ARQ cron DELETE | Her gün 03:00 |
-| Analytics event'leri | `analytics_events` | **90 gün** | ARQ cron DELETE | Her Pazartesi 04:00 |
-| Kullanıcı etkileşimleri | `user_interactions` | **90 gün** | ARQ cron DELETE | Her Pazartesi 04:00 |
-| Listing impression'ları | `listing_impressions` | **30 gün** | ARQ cron DELETE | Her gün 05:00 |
-| Stream beğenileri | `stream_likes` | **7 gün** | ARQ cron DELETE | Her gün 01:00 |
-| Hikayeler | `stories` | **expires_at** | ARQ cron (hourly) | Her saat |
-| Hype highlight'lar | `highlights` | **expires_at** | ARQ cron (hourly) | Her saat |
-| Gizli mesajlar | `direct_messages` (hidden) | Gizlenince | ARQ cron DELETE | Her gün 02:30 |
-| Medya mesajları | `direct_messages` (media) | **7 gün** | ARQ cron DELETE | Her gün 06:30 |
-| Pasifleştirilen ilanlar | `listings` | **30 gün aktif, +60 gün pasif** | ARQ cron | 04:00 + 04:30 |
-| Hayalet yayınlar | `live_streams` | **3 dakika stale** | ARQ cron | Her 2 dakika |
-| Hayalet aramalar | `calls` | **1 saat active** | ARQ cron | Her 15 dakika |
-| Redis interaction queue | Redis buffer | **5 dakika** | flush_interactions_to_db | Her 5 dakika |
-| Loki log'ları | Loki (node3) | **14 gün** | Loki retention | Otomatik |
-| Prometheus metrikleri | TSDB (node3) | **14 gün** | Prometheus retention | Otomatik |
-| Backup (local) | node5 disk | **2 gün** | teqlif-backup.sh | Her gün 02:45 |
-| Backup (remote) | node3 disk | **7 gün** | teqlif-backup.sh | Her gün 02:45 |
-| ClickHouse `user_events` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
-| ClickHouse `feed_analytics` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
-| ClickHouse `search_events` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
-| ClickHouse `swipe_live_events` | ClickHouse (node5) | **30 gün** | MergeTree TTL (otomatik) | Arka planda |
-| ClickHouse `direct_sale_events` | ClickHouse (node5) | **180 gün** | MergeTree TTL (otomatik) | Arka planda |
+| # | İş | Bölüm | Etki |
+|---|---|-------|------|
+| P1 | PgBouncer aktivasyonu | 3.1 | 🔴 Bağlantı limiti aşılıyor |
+| P2 | D51b: init_clickhouse() DB parametresi | 3.4 | 🔴 Analytics yanlış DB'ye yazıyor |
+| P3 | D3: auction.status default="active" | 2.2 | 🔴 Yeni açık artırma tamamlanmış görünüyor |
+| P4 | GC1: live_stream_viewers cleanup | 5.2 | 🔴 Sınırsız büyüme |
+| P5 | MinIO lifecycle policy | 5.3 | 🔴 Güvenlik ağı yok |
 
-> **Not:** D52b (`ClickHouse TTL ekle`) geçersiz — TTL zaten `database_clickhouse.py` DDL'inde tanımlı. `init_clickhouse()` bug'ı (D51b) düzeltilmeden önce tablolar `default` DB'de açıldıysa o tablolarda TTL olmayabilir. D51b öncelikli.
+### 11.2 — Yüksek (1 sprint)
 
----
+| # | İş | Bölüm | Etki |
+|---|---|-------|------|
+| P6 | Float → Numeric (finansal alanlar) | 2.1 | 🔴 Yuvarlama hatası riski |
+| P7 | W1: compute_user_interests_task 15dk → 2x/gün | 7.1 | ~94 sorgu/gün tasarrufu |
+| P8 | W2: backfill_embeddings gündüz → gece | 7.1 | Gündüz CPU baskısı azalır |
+| P9 | D1: listings.image_urls Text → JSONB | 2.3 | Sorgu optimizasyonu |
+| P10 | Composite index'ler | 3.2 | Sorgu performansı |
+| P11 | GC3: listing_offers cleanup | 5.2 | Birikim önlenir |
+| P12 | GC4: exchange_rates cleanup | 5.2 | Günlük birikim önlenir |
 
-### 16.3 — ARQ Cron Takvimi (Tam Liste)
+### 11.3 — Orta (2. sprint)
 
-Tüm scheduled görevler, frekansları ve node5 kaynak baskısına göre değerlendirme:
+| # | İş | Bölüm | Etki |
+|---|---|-------|------|
+| P13 | tuci → teqlik rename | 2.4 | Sistem geneli |
+| P14 | Keyset pagination (feed + cüzdan) | 4.3 | Büyük tablolarda performans |
+| P15 | Endpoint cache stratejisi | 4.1 | p95 latency düşer |
+| P16 | GC2: calls cleanup | 5.2 | Birikim önlenir |
+| P17 | W3-W5 frekans azaltımları | 7.1 | CPU tasarrufu |
+| P18 | Feed N+1 fix | 4.2 | DB sorgu sayısı azalır |
+| P19 | KVKK: ip_address maskeleme | 6.3 | Uyumluluk |
 
-#### Kategori 1: Temizlik (Cleanup)
+### 11.4 — Düşük (3. sprint)
 
-| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değişiklik Önerisi |
-|-------|---------------|-----------------|-------------------|
-| `cleanup_stale_streams_task` | **Her 2 dakika** | Düşük | ✅ Sabit — LiveKit gerçek zamanlı |
-| `cleanup_ghost_calls_task` | Her 15 dakika | Düşük | ✅ Sabit |
-| `cleanup_expired_stories_task` | Her saat | Düşük | ✅ Sabit |
-| `cleanup_hype_highlights_task` | Her saat | Düşük | ✅ Sabit |
-| `cleanup_old_stream_likes_task` | Günlük 01:00 | Düşük | ✅ Sabit |
-| `cleanup_hidden_messages_task` | Günlük 02:30 | Düşük | ✅ Sabit |
-| `cleanup_old_notifications_task` | Günlük 03:00 | Orta | ✅ Sabit |
-| `cleanup_old_analytics_task` | Haftalık Pzt 04:00 | **Yüksek** (90 gün veri, bulk DELETE) | ✅ Sabit — haftalık doğru |
-| `cleanup_old_impressions_task` | Günlük 05:00 | Orta | ✅ Sabit |
-| `cleanup_old_media_messages_task` | Günlük 06:30 | Düşük | ✅ Sabit |
-
-#### Kategori 2: Kişiselleştirme (En Yüksek Frekans Grubu)
-
-| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
-|-------|---------------|-----------------|--------------|
-| `compute_user_interests_task` | **Her 15 dakika** | **Yüksek** — ClickHouse sorgu + PG write | 🔴 Azalt |
-| `compute_user_condition_preferences_task` | **Her 15 dakika** | Orta — Redis okuma + Redis yazma | 🟡 Azalt |
-| `sync_swipelive_interests_task` | Her 20 dakika | Orta | 🟡 Azalt |
-| `invalidate_swipe_live_configs_task` | Her 15 dakika | Düşük — sadece Redis DEL | ✅ Sabit |
-| `populate_foryou_feed_task` | Her saat | Orta | 🟡 Azalt |
-
-**`compute_user_interests_task` analizi:**
-- Görevi: ClickHouse'dan son 7 günlük `user_events` ve `user_interactions` okur, her kullanıcının `user_interests` skorunu PostgreSQL'e yazar
-- Neden 15 dakika yeterli değil: Kullanıcı ilgisi 15 dakikada değişmez; bugünkü davranış dünün verisini yansıtır
-- Neden 2x/gün yeterli: ALS/BPR zaten haftalık eğitiliyor; feed skoru `user_interests`'i kullanıyor ama 12 saatlik gecikme kabul edilebilir
-- **Kaynak tasarrufu:** 15dk → günde 2x = **96 çalışma → 2 çalışma** = %98 azalma
-
-#### Kategori 3: Hesaplama (Compute)
-
-| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
-|-------|---------------|-----------------|--------------|
-| `compute_trending_listings_task` | **Her 30 dakika** | Orta — ClickHouse sorgu | 🟡 Azalt |
-| `compute_trending_categories_task` | Her 6 saatte | Orta | ✅ Sabit |
-| `compute_seller_badges_task` | Günlük 01:30 | Orta | ✅ Sabit |
-| `calculate_user_budgets_task` | Günlük 02:00 | Orta | ✅ Sabit |
-| `compute_trust_scores_task` | Günlük 02:15 | Yüksek — çok sinyalli | ✅ Sabit |
-| `optimize_notification_timing_task` | Günlük 04:00 | Orta | ✅ Sabit |
-| `hesitation_retarget_task` | Günlük 06:00 | Düşük | ✅ Sabit |
-
-#### Kategori 4: Veri Senkronizasyonu
-
-| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
-|-------|---------------|-----------------|--------------|
-| `flush_interactions_to_db` | **Her 5 dakika** | Düşük | ✅ Sabit — Redis buffer kritik |
-| `sync_ad_campaigns_task` | **Her 10 dakika** | Düşük | ✅ Sabit — reklam bütçe doğruluğu |
-
-#### Kategori 5: ML Eğitimi (Haftalık/Günlük)
-
-ADR §3.3'ten frekanslar zaten belirlenmiş — değişiklik önerilmiyor:
-
-| Görev | Mevcut Frekans | Not |
-|-------|---------------|-----|
-| `train_swipe_live_als_task` | Günlük 01:00 | ADR: haftalık önermiş, ama günlük CPU-off-peak |
-| `train_feed_als_task` | Günlük 01:30 | ADR: haftalık — 🟡 incelenecek |
-| `train_bpr_task` | Pzt+Çar+Cmt 00:30 | ✅ ADR ile uyumlu |
-| `train_kmeans_cold_start_task` | Çar+Paz 02:15 | ✅ ADR ile uyumlu |
-| `train_item2vec_task` | Haftalık Paz 02:00 | ✅ ADR ile uyumlu |
-| `train_churn_model_task` | Haftalık Pzt 02:30 | ✅ Sabit |
-| `train_listing_quality_model_task` | Haftalık Paz 02:30 | ✅ Sabit |
-| `rebuild_faiss_index_task` | 2x/gün (00:00, 12:00) | 🟡 Azalt |
-
-#### Kategori 6: Backfill (Sürekli Çalışan)
-
-| Görev | Mevcut Frekans | CPU/RAM Baskısı | Değerlendirme |
-|-------|---------------|-----------------|--------------|
-| `backfill_listing_embeddings_task` | **Her 30 dakika** (100 batch) | **Yüksek** — sentence-transformers CPU | 🔴 Gece saatine al |
-| `backfill_listing_quality_scores_task` | **Her saat :45** | Orta | 🟡 Gündüz azalt |
-| `nsfw_backfill_task` | Günlük 05:15 (20 batch) | Yüksek — NudeNet CPU | ✅ Sabit — gece |
-| `backfill_phash_task` | Günlük 05:30 (50 batch) | Orta | ✅ Sabit — gece |
+| # | İş | Bölüm | Etki |
+|---|---|-------|------|
+| P20 | Medya WebP sıkıştırma (M1-M4) | 8.2 | Storage + bandwidth |
+| P21 | W6-W7: ALS haftalığa geçiş | 7.1 | Gece CPU tasarrufu |
+| P22 | Hesap silme akışı (anonimleştirme) | 6.1 | KVKK |
+| P23 | Mesaj thread cleanup (GC6) | 9.2 | Küçük tablo |
+| P24 | D4-D8: Diğer model hataları | 2.2 | Kalite |
+| P25 | GC5-GC8 diğer cleanup görevleri | 5.2 | Uzun vadeli |
 
 ---
 
-### 16.4 — Frekans Değişiklik Önerileri
-
-Onay bekleyen kararlar — uygulanmadan önce tartışılacak:
-
-#### 🔴 Kritik: compute_user_interests_task
-
-```
-Mevcut: cron(compute_user_interests_task, minute={0, 15, 30, 45})  # 96x/gün
-Öneri:  cron(compute_user_interests_task, hour={8, 20}, minute=0)  # 2x/gün
-```
-
-**Gerekçe:** Kullanıcı ilgi skoru birkaç saatlik etkileşim verisinden hesaplanıyor. 15 dakikada bir çalıştırmak, çıktının değişmediği 94 çalışmayı boşa harcıyor. Feed kalitesi ölçülebilir şekilde etkilenmez.
-
-**Risk:** Yeni kullanıcı kategoriye ilk ilgi gösterdiğinde feed güncellemesi 12 saate kadar gecikebilir. Kabul edilebilir tradeoff.
-
-#### 🔴 Kritik: backfill_listing_embeddings_task
-
-```
-Mevcut: cron(backfill_listing_embeddings_task, minute={0, 30})  # 48x/gün, gündüz dahil
-Öneri:  cron(backfill_listing_embeddings_task, hour={2, 3, 4}, minute=0)  # 3x/gün, sadece gece
-```
-
-**Gerekçe:** sentence-transformers CPU-heavy. Gündüz çalışması node5'te API latency'yi etkiliyor. Yeni ilan eklenince `generate_listing_embedding_task` zaten anında çalışıyor — backfill sadece eski/eksik ilanlar için.
-
-**Risk:** Yeni eklenen toplu ilanlar (örn. import) 24 saate kadar embedding almayabilir. Kabul edilebilir.
-
-#### 🟡 Orta: compute_user_condition_preferences_task
-
-```
-Mevcut: cron(compute_user_condition_preferences_task, minute={3, 18, 33, 48})  # 96x/gün
-Öneri:  cron(compute_user_condition_preferences_task, hour={0, 6, 12, 18}, minute=5)  # 4x/gün
-```
-
-**Gerekçe:** Condition preference (yeni/ikinci el tercihi) saatler içinde değişmez. Redis'ten okuyup Redis'e yazıyor — hafif ama gereksiz.
-
-#### 🟡 Orta: populate_foryou_feed_task
-
-```
-Mevcut: cron(populate_foryou_feed_task, minute=0)  # 24x/gün
-Öneri:  cron(populate_foryou_feed_task, hour={0, 4, 8, 12, 16, 20}, minute=5)  # 6x/gün
-```
-
-**Gerekçe:** For-you feed listesi Redis'te tutulur, 4 saatte bir yenilenmesi yeterli. Feed sorgusu zaten gerçek zamanlı personalization yapıyor — bu görev sadece initial pool'u hazırlıyor.
-
-#### 🟡 Orta: compute_trending_listings_task
-
-```
-Mevcut: cron(compute_trending_listings_task, minute={0, 30})  # 48x/gün
-Öneri:  cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=15)  # 4x/gün
-```
-
-**Gerekçe:** Trend listesi zaten 30 dakika TTL ile Redis'te tutuluyor. Her 30 dakikada yeniden hesaplamak yerine 6 saatlik döngü yeterli.
-
-#### 🟡 İnceleme: train_feed_als_task ve train_swipe_live_als_task
-
-```
-Mevcut: Günlük (01:00 + 01:30)
-ADR §3.3 önerisi: Haftalık
-```
-
-**Gerekçe:** ADR §3.3 ALS modellerini haftalık eğitim öngörüyor. Günlük çalıştırılması 4 core EPYC'i her gece meşgul ediyor. Veri henüz yeterince büyük değilse haftalık yeterli. Karar: kullanıcı sayısına göre değerlendirme.
-
-#### 🟢 Sabit Tutulanlar
-
-```
-flush_interactions_to_db     → 5 dakika (veri kaybı riski — değiştirme)
-sync_ad_campaigns_task        → 10 dakika (reklam bütçe bütünlüğü — değiştirme)
-cleanup_stale_streams_task    → 2 dakika (gerçek zamanlı LiveKit — değiştirme)
-rebuild_faiss_index_task      → 2x/gün (Faz 7 ML aktif değil — aktifleşince gözden geçir)
-```
-
----
-
-### 16.5 — Değişiklik Özet Tablosu (Karar Bekleniyor)
-
-| # | Görev | Mevcut | Öneri | Kaynak Tasarrufu |
-|---|-------|--------|-------|-----------------|
-| W1 | `compute_user_interests_task` | Her 15dk | **2x/gün** | ~94 ClickHouse sorgusu/gün |
-| W2 | `backfill_listing_embeddings_task` | Her 30dk | **3x/gün (gece 02-04)** | CPU gündüz boşalır |
-| W3 | `compute_user_condition_preferences_task` | Her 15dk | **4x/gün** | ~92 Redis işlemi/gün |
-| W4 | `populate_foryou_feed_task` | Her saat | **6x/gün** | ~18 hesaplama/gün |
-| W5 | `compute_trending_listings_task` | Her 30dk | **4x/gün** | ~44 ClickHouse sorgusu/gün |
-| W6 | `train_feed_als_task` | Günlük | **Haftalık** | 6 gece CPU serblest kalır |
-| W7 | `train_swipe_live_als_task` | Günlük | **Haftalık** | 6 gece CPU serbest kalır |
-
-> Her satır için onay bekleniyor. Onaylanan değişiklikler `worker.py` cron_jobs listesinde güncellenir.
-
----
-
-### 16.6 — node5 ARQ Gece Zaman Çizelgesi (Gece Yük Haritası)
-
-Şu andaki gece yük yoğunluğu (00:00–07:00):
-
-```
-00:00  rebuild_faiss_index_task       (CPU: yüksek, FAISS)
-00:30  train_bpr_task (Mon/Wed/Sat)   (CPU: çok yüksek, BPR eğitimi)
-01:00  cleanup_old_stream_likes_task  (DB: hafif)
-01:00  train_swipe_live_als_task      (CPU: yüksek, ALS)
-01:30  compute_seller_badges_task     (DB: orta)
-01:30  train_feed_als_task            (CPU: yüksek, ALS)
-02:00  calculate_user_budgets_task    (ClickHouse: orta)
-02:00  train_item2vec_task (Sun)      (CPU: yüksek)
-02:15  compute_trust_scores_task      (DB: yüksek, çok tablo)
-02:15  train_kmeans_cold_start_task (Wed/Sun) (CPU: orta)
-02:30  cleanup_hidden_messages_task   (DB: hafif)
-02:30  train_listing_quality_model (Sun) (CPU: orta)
-02:30  train_churn_model_task (Mon)   (CPU: yüksek)
-02:45  backup (pg_dump + redis + ch)  (IO: yüksek)
-03:00  cleanup_old_notifications_task (DB: orta)
-03:30  process_churn_and_airdrop      (DB: orta + bildirim)
-04:00  deactivate_expired_listings_task (DB: orta)
-04:00  cleanup_old_analytics_task (Mon) (DB: çok yüksek, 90 gün bulk DELETE)
-04:00  optimize_notification_timing_task (DB: orta)
-04:30  delete_expired_inactive_listings_task (DB: orta)
-05:00  cleanup_old_impressions_task   (DB: orta)
-05:15  nsfw_backfill_task             (CPU: yüksek, NudeNet)
-05:30  backfill_phash_task            (CPU: orta)
-06:00  hesitation_retarget_task       (DB + bildirim: hafif)
-06:30  cleanup_old_media_messages_task (DB: hafif)
-```
-
-**Tespit:** 00:00–05:30 arası neredeyse kesintisiz ağır CPU+DB yükü. BPR + ALS + item2vec aynı pencerede çakışıyor. node5'in 4 core'u bu pencerede swap'a girebilir.
-
-**W6+W7 önerisi onaylanırsa:** ALS eğitimleri haftalık olur → 5 gece boyunca 01:00–01:30 penceresi CPU tasarrufu sağlar.
-
----
-
-### 16.7 — Veri Planı Değişikliklerinde Mimari Kurallar
-
-Bu plandan herhangi bir değişiklik uygulanırken uyulacak kurallar (`teqlif_architectural_decisions.md`'den):
-
-1. **DB şeması değiştiğinde** (Faz 0-1-12): Migration'a `bump_schema_version()` ekle → `/api/catalog` ve field-config cache'i otomatik geçersiz olur.
-
-2. **Yeni cache key eklendiğinde** (Faz 14.1): Cache taksonomisine göre ata (ALGORITHMIC / EPHEMERAL / LIFECYCLE). SECURITY_CRITICAL key'lere asla dokunma.
-
-3. **ClickHouse şeması değiştiğinde** (Faz 5, D51b): `ALTER TABLE ... ADD COLUMN` — yeni tablo açma. Non-blocking, mevcut satırlar default alır (ADR §3.1).
-
-4. **Yeni ARQ görevi eklenirken:** Use case + repository pattern — fat worker function yazma. İş mantığı service katmanında, worker sadece koordinatör.
-
-5. **Flutter'da API response alanı değiştiğinde** (Faz 12): Değişiklik repository (api.dart) katmanında — ViewModel ve View değişmez. DTO map fonksiyonu güncellenir.
-
-6. **Commerce event eklenirken** (Faz 9 outbox): `StreamCommerceNotifier<S>` base class genişletilir (ADR §10). WS altyapısına dokunulmaz.
-
----
-
-### 16.8 — Tam Sistem Veri Yaşam Döngüsü Denetimi
-
-Sistemdeki her veri tipi: ne zaman oluşuyor, ne zaman işleniyor, ne zaman kaldırılıyor.
-
-#### 16.8.1 Temizleme Mekanizmaları Haritası
-
-**Katman 1: ARQ cron (PostgreSQL)**
-
-| Tablo | Tutulan Süre | Silme Koşulu | Cron Zamanı | Fiziksel Dosya? |
-|-------|-------------|-------------|------------|----------------|
-| `notifications` | 30 gün | `created_at < 30 gün` | Günlük 03:00 | — |
-| `analytics_events` | 90 gün | `created_at < 90 gün` | Haftalık Pzt 04:00 | — |
-| `user_interactions` | 90 gün | `created_at < 90 gün` | Haftalık Sal 04:00 | — |
-| `stream_likes` | 7 gün | `created_at < 7 gün` | Günlük 01:00 | — |
-| `listing_impressions` | 30 gün | `seen_at < 30 gün` | Günlük 05:00 | — |
-| `direct_messages` (hidden) | 60 gün | `is_hidden=true AND created_at < 60 gün` | Günlük 02:30 | — |
-| `direct_messages` (media) | 7 gün | `has_media=true AND created_at < 7 gün` | Günlük 06:30 | MinIO teqlif-dm |
-| `stories` | `expires_at` | `expires_at < now()` | Saatlik | MinIO stories/ |
-| `story_views` | (CASCADE) | Story silinince | Saatlik | — |
-| `story_likes` | (CASCADE) | Story silinince | Saatlik | — |
-| `listings` (aktif→pasif) | 30 gün aktif | Kullanıcı güncellemezse | Günlük 04:00 | — |
-| `listings` (pasif→silindi) | 60 gün pasif | `deactivated_at < 60 gün` | Günlük 04:30 | MinIO listings/ |
-| `live_streams` (stale) | 3 dakika | `started_at < 3dk` + canlı değil | Her 2 dakika | — |
-| `calls` (ghost calling) | 5 dakika | `status=calling AND created < 5dk` | Her 15 dakika | — |
-| `calls` (ghost active) | 1 saat | `status=active AND created < 1 saat` | Her 15 dakika | — |
-| `highlights` (disk) | 2 saat | local disk mtime | Saatlik | /static/highlights/ |
-
-**Katman 2: ClickHouse TTL (MergeTree otomatik)**
-
-| Tablo | Retention | TTL Kolonu |
-|-------|-----------|-----------|
-| `user_events` | **30 gün** | `timestamp` |
-| `feed_analytics` | **30 gün** | `timestamp` |
-| `search_events` | **30 gün** | `timestamp` |
-| `swipe_live_events` | **30 gün** | `timestamp` |
-| `direct_sale_events` | **180 gün** | `created_at` |
-
-ClickHouse TTL'leri MergeTree merge işleminde arka planda uygulanır — ayrı bir cron'a gerek yoktur.
-
-**Katman 3: Redis (otomatik expire)**
-
-| Key Paterni | TTL | Açıklama |
-|------------|-----|---------|
-| `session:{id}` | 30 gün | Kullanıcı oturumu |
-| `blacklist:{jti}` | Token süresine eşit | Revoke edilmiş token |
-| `notif:peak_hours:{uid}` | Recomputed | Bildirim en iyi saati |
-| `interests:{uid}` | invalidate_on_write | Kullanıcı ilgi skoru |
-| `ch_buf:{table}` | flush'a kadar | ClickHouse buffer |
-| `live:viewers:{sid}` | `_VIEWER_TTL` | Canlı izleyici sayısı |
-| `rate:*` | Window boyutu | Rate limit |
-
-**Katman 4: systemd timer**
-
-| Görev | Zamanlama | Ne Yapar |
-|-------|-----------|---------|
-| `teqlif-backup.timer` | Günlük 02:45 UTC | pg_dump + redis BGSAVE + CH backup |
-| `teqlif-healthcheck.timer` | Günlük 06:00 UTC | Sağlık raporu + Telegram |
-| Backup local retention | backup sonrası | 2 günden eski yedekler silinir |
-| Backup remote retention | backup sonrası | 7 günden eski yedekler silinir |
-
-**Katman 5: İzleme sistemi retention**
-
-| Sistem | Tutulan Süre | Yapılandırma |
-|--------|-------------|-------------|
-| Prometheus TSDB | **30 gün** | `--storage.tsdb.retention.time=30d` (node3) |
-| Loki log | **14 gün** | `retention_period: 336h` (node3 loki-config.yml) |
-| Loki compaction | Her 10 dakika | `compaction_interval: 10m` |
-
----
-
-#### 16.8.2 Temizleme Mekanizması OLMAYAN Tablolar
-
-Aşağıdaki tablolar büyümeye devam eder — kasıtlı (finansal kayıt) veya unutulmuş:
-
-**Kasıtlı — sonsuz saklanması beklenenler (audit/finansal):**
-
-| Tablo | Birikim Hızı | Gerekçe |
-|-------|-------------|---------|
-| `purchases` | Düşük | Satış geçmişi — yasal zorunluluk |
-| `tuci_transactions` | Orta | Para transferi kaydı |
-| `auctions` | Düşük | Açık artırma kaydı |
-| `bids` | Orta | Teklif geçmişi — açık artırma başına N kayıt |
-| `direct_sales` | Düşük | Doğrudan satış kaydı |
-| `direct_sale_orders` | Düşük | Sipariş kaydı |
-| `rating_history` | Düşük | Moderasyon için geçmiş |
-| `ratings` | Düşük | Kullanıcı oylama kaydı |
-| `reports` | Düşük | Moderasyon/yasal kayıt |
-| `referrals` | Düşük | Davet takibi |
-
-**Sosyal graf — kullanıcı aktifken anlamlı:**
-
-| Tablo | Birikim Hızı | Not |
-|-------|-------------|-----|
-| `follows` | Orta | Kullanıcı silinince CASCADE |
-| `favorites` | Orta | Listing silinince CASCADE |
-| `listing_likes` | Orta | Listing silinince CASCADE |
-| `user_blocks` | Düşük | Moderasyon — kasıtlı |
-| `search_alerts` | Düşük | Kullanıcı silmezse birikir |
-| `message_threads` | Orta | Mesajlar silinse de thread kalır |
-
-**Potansiyel sorunlu — birikim riski var:**
-
-| Tablo | Birikim Hızı | Sorun |
-|-------|-------------|-------|
-| `live_stream_viewers` | **Yüksek** | Her stream için her izleyici kayıt — cleanup YOK |
-| `calls` (ended/missed) | Orta | Biten aramalar sonsuza kalır — cleanup sadece ghost |
-| `call_participants` | Orta | Calls'a bağlı — cascade var mı? |
-| `listing_offers` | Orta | Reddedilen teklifler birikir |
-| `exchange_rates` | Düşük | Günlük yeni kayıt — eski oranlar temizlenmiyor |
-| `gift_events` | Orta | Tüm hediye event'leri tutuluyor |
-| `mass_notification_campaigns` | Düşük | Kampanya geçmişi birikir |
-| `user_interests` | Overwrite | Upsert ile güncelleniyor — birikmez ama obsolete row riski |
-
-**MinIO — silinen veri boşluğu:**
-
-| İçerik | Temizleme Var mı? | Not |
-|--------|-----------------|-----|
-| `listings/` images | ✅ Var (listing deleted) | `delete_listing_files()` çağrılıyor |
-| `stories/` videos | ✅ Var (expires_at) | `story_service.cleanup_expired_stories()` |
-| `dm/` media | ✅ Var (7 gün cron) | `cleanup_old_media_messages_task` |
-| `avatars/` | ⚠️ Kısmi | Avatar güncellenince eski siliniyor; hesap silinince? |
-| `highlights/` | ✅ Var (2 saat cron) | Lokal disk, saatlik temizlik |
-| Silinmiş listing için yetim dosyalar | ❓ Belirsiz | listing silinmeden önce `update_listing` çağrısı ile eski fotoğraf değiştirildiyse yetim kalabilir |
-
-> **MinIO lifecycle policy YOK** — sadece uygulama katmanı silme çağrılarına güveniliyor. Uygulama hatalarında dosyalar yetim kalır.
-
----
-
-#### 16.8.3 Önerilen Yeni Temizleme Görevleri
-
-Onay bekleyen kararlar:
-
-| # | Tablo | Öneri | Frekans | Gerekçe |
-|---|-------|-------|---------|---------|
-| GC1 | `live_stream_viewers` | Her stream bitimsinde veya 30 gün sonra temizle | Günlük 07:00 | Yüksek birikim — her canlı yayın için N kayıt, cleanup yok |
-| GC2 | `calls` (ended/missed) | 90 gün sonra sil | Haftalık Çar 04:00 | Finansal değeri yok, büyüyor |
-| GC3 | `call_participants` | Calls CASCADE kontrolü | calls ile birlikte | FK var mı doğrula |
-| GC4 | `listing_offers` (declined/expired) | 60 gün sonra sil | Günlük 07:00 | Reddedilen teklifler gereksiz birikir |
-| GC5 | `exchange_rates` | 90 günden eskisini sil | Haftalık Paz 05:00 | Günlük rate ekleniyor, eski değer anlamsız |
-| GC6 | `message_threads` (empty) | İçi boş thread'leri 30 gün sonra sil | Haftalık Paz 05:30 | Thread var, mesaj yok — ghost thread |
-| GC7 | `search_alerts` (expired) | 180 gün sonra sil veya kullanıcıya bildir | Haftalık Paz 06:00 | Pasif ilanlar için alert kalıyor |
-| GC8 | MinIO lifecycle policy | Tüm bucket'lara 365 gün lifecycle ekle | MinIO config | Uygulama silme çağrısı kaçırılırsa güvenlik ağı |
-
-> GC1 ve GC8 en kritik. `live_stream_viewers`, canlı yayın başarısıyla doğru orantılı büyüyor ve hiç temizlenmiyor.
+## Bölüm 12 — Onay Bekleyen Kararlar (Özet)
+
+> Bu kararlar alınmadan uygulama başlamaz.
+
+### 12.1 — Veri Retention Kararları
+
+| # | Soru | Seçenekler |
+|---|------|-----------|
+| R1 | `live_stream_viewers` ne kadar tutulsun? | □ 30 gün / □ 90 gün / □ stream bitimiyle sil |
+| R2 | `calls` (ended/missed) ne kadar tutulsun? | □ 90 gün / □ 1 yıl / □ sonsuz |
+| R3 | `live_streams` (biten) ne kadar tutulsun? | □ 6 ay / □ 1 yıl / □ sonsuz |
+| R4 | `bids` ne kadar tutulsun? | □ 1 yıl / □ sonsuz |
+| R5 | `gift_events` ne kadar tutulsun? | □ 1 yıl / □ sonsuz |
+| R6 | `listing_offers` (declined) ne kadar tutulsun? | □ 30 gün / □ 60 gün |
+| R7 | `direct_messages` (text) ne kadar tutulsun? | □ Sonsuz / □ 1 yıl / □ kullanıcı kontrolü |
+| R8 | Text mesajları silinince `message_threads` ne olsun? | □ Thread de silinsin / □ Thread kalsın |
+| R9 | ClickHouse `user_events` 30 gün yeterli mi? | □ Evet / □ 60 gün / □ 90 gün |
+| R10 | `exchange_rates` ne kadar tutulsun? | □ 1 yıl / □ 2 yıl |
+| R11 | Kullanıcı hesabı silinince DM'ler ne olsun? | □ Anonimleştir / □ Kullanıcıya at |
+| R12 | `auctions` sonsuz tutulsun mu? | □ Evet / □ 2 yıl |
+
+### 12.2 — Frekans Kararları
+
+| # | Görev | Şu An | Öneri | Karar |
+|---|-------|-------|-------|-------|
+| W1 | `compute_user_interests_task` | 15 dk | 2x/gün | □ Onayla / □ Reddet |
+| W2 | `backfill_listing_embeddings_task` | Her 30dk (gündüz) | Sadece gece | □ Onayla / □ Reddet |
+| W3 | `compute_user_condition_preferences_task` | 15 dk | 4x/gün | □ Onayla / □ Reddet |
+| W4 | `populate_foryou_feed_task` | Saatlik | 6x/gün | □ Onayla / □ Reddet |
+| W5 | `compute_trending_listings_task` | 30 dk | 4x/gün | □ Onayla / □ Reddet |
+| W6 | `train_feed_als_task` | Günlük | Haftalık | □ Onayla / □ Reddet |
+| W7 | `train_swipe_live_als_task` | Günlük | Haftalık | □ Onayla / □ Reddet |
+
+### 12.3 — Medya Kararları
+
+| # | Soru | Karar |
+|---|------|-------|
+| M1 | İlan fotoğrafları WebP'ye çevrilsin mi? | □ Evet / □ Hayır |
+| M2 | İlan videosu yeniden kodlansın mı (CRF28)? | □ Evet / □ Hayır |
+| M3 | DM medya boyut sınırları düşürülsün mü? | □ Evet / □ Hayır |
