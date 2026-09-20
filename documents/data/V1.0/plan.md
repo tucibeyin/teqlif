@@ -1384,6 +1384,23 @@ Bu yapılar endüstri standardında, dokunma:
   [D34] financial_events append-only tablo                             (Faz 8)
   [D35] KVKK veri silme zinciri                                        (Faz 9)
 
+🔴 DB Mimarisi:
+  [D51] PgBouncer aktivasyonu (use_pgbouncer=True)                     (Faz 13.2) ← ACİL
+  [D52] auctions composite index (stream_id, status, ended_at)         (Faz 13.1)
+  [D53] teqlik_transactions composite index (user_id, created_at)      (Faz 13.1)
+  [D54] listing_offers composite index (listing_id, status)            (Faz 13.1)
+  [D55] follows composite index (follower_id, followed_id)             (Faz 13.1)
+  [D56] listings.image_urls JSONB → GIN index ekle                     (Faz 13.1)
+  [D57] PostgreSQL partition plan (analytics_events, teqlik_tx, dm)    (Faz 13.3)
+
+🟡 Sorgu + Cache:
+  [D58] Listing detail Redis cache (60s, invalidate on update)         (Faz 14.1)
+  [D59] User profile Redis cache (5min, invalidate on update)          (Faz 14.1)
+  [D60] Categories/AppConfig Redis cache (uzun TTL — 1h/10min)        (Faz 14.1)
+  [D61] Feed: _fetch_seller_meta N+1 → SQL JOIN                        (Faz 14.2)
+  [D62] Redis key namespace düzenlemesi                                 (Faz 14.3)
+  [D63] Keyset pagination — listing feed + wallet history              (Faz 14.4)
+
 🔴 Para birimi yeniden adlandırma (tüm katmanlar):
   [D36] DB: users.tuci_balance → teqlik_balance                        (Faz 12)
   [D37] DB: tuci_transactions → teqlik_transactions                    (Faz 12)
@@ -1662,4 +1679,418 @@ return {
 □ Flutter cüzdan ekranı "Teqlik" gösteriyor
 □ API /wallet/teqlik/summary 200 dönüyor
 □ Eski /wallet/tuci/summary 307 → /wallet/teqlik/summary yönlendiriyor
+```
+
+---
+
+## Faz 13 — DB Mimarisi
+
+**Ön koşul:** Faz 0–6 tamamlanmış olmalı (yanlış tipe index koymak boşa gider).
+
+**Hedef:** Veri yapısına uygun index stratejisi, bağlantı havuzu ve uzun vadeli büyüme planı.
+
+---
+
+### 13.1 — Eksik Index'ler
+
+**Mevcut durum:** `listings`, `gift_events`, `notifications`, `calls` için composite index'ler iyi tanımlı. Ancak birkaç kritik tablo eksik.
+
+#### 13.1.1 Auctions
+
+```python
+# models/auction.py — TableArgs'a eklenecek
+Index("ix_auctions_stream_status", "stream_id", "status"),
+Index("ix_auctions_stream_ended", "stream_id", "ended_at"),
+Index("ix_auctions_listing_status", "listing_id", "status"),
+```
+
+**Neden:** Auction expiry poller `WHERE status='active' AND ended_at < now()` sorgusunu çalıştırıyor. `ended_at` + `status` birlikte taranmalı.
+
+#### 13.1.2 Teqlik Transactions (eski: tuci_transactions)
+
+```python
+# models/teqlik_transaction.py — TableArgs'a eklenecek
+Index("ix_teqlik_tx_user_created", "user_id", "created_at"),
+Index("ix_teqlik_tx_type_created", "transaction_type", "created_at"),
+```
+
+**Neden:** Cüzdan geçmişi `WHERE user_id = ? ORDER BY created_at DESC LIMIT 20` ile çekiliyor. Sadece `user_id` index var, `created_at` sıralama için ek sort gerekiyor.
+
+#### 13.1.3 Listing Offers
+
+```python
+# models/listing_offer.py — TableArgs'a eklenecek
+Index("ix_listing_offers_listing_status", "listing_id", "status"),
+Index("ix_listing_offers_user_status", "user_id", "status"),
+```
+
+**Neden:** "Bu ilana gelen aktif teklifler" sorgusu `(listing_id, status='pending')` üzerinden gidiyor.
+
+#### 13.1.4 Follows
+
+```python
+# models/follow.py — TableArgs'a eklenecek
+Index("ix_follows_follower_followed", "follower_id", "followed_id"),
+```
+
+**Neden:** "A, B'yi takip ediyor mu?" kontrolü sık yapılıyor. Ayrı ayrı index'ler bu sorguya yetmiyor.
+
+#### 13.1.5 Purchases
+
+```python
+# models/purchase.py — TableArgs'a eklenecek
+Index("ix_purchases_buyer_created", "buyer_id", "created_at"),
+Index("ix_purchases_buyer_type", "buyer_id", "purchase_type"),
+```
+
+#### 13.1.6 Direct Messages (thread_id eklendikten sonra — Faz 1.2)
+
+```python
+# Faz 1.2'den sonra mevcut composite index'i değiştir:
+# Eski: Index("ix_direct_messages_conv_created", "sender_id", "receiver_id", "created_at")
+# Yeni (thread_id eklendikten sonra):
+Index("ix_direct_messages_thread_created", "thread_id", "created_at"),
+Index("ix_dm_receiver_unread", "receiver_id", "is_read"),
+```
+
+**Neden:** Şu anki `(sender_id, receiver_id, created_at)` index'i A→B konuşmasını yakalar ama B→A yakalamiyor. `thread_id` FK eklendikten sonra tek index yeterli.
+
+#### 13.1.7 Listings.image_urls (JSONB'ye geçtikten sonra — Faz 0)
+
+```python
+# models/listing.py — TableArgs'a eklenecek (Faz 0 tamamlandıktan sonra)
+Index('ix_listings_image_urls_gin', 'image_urls', postgresql_using='gin'),
+```
+
+**Neden:** `image_urls @> '["url"]'` operatörü GIN olmadan seq scan yapar.
+
+#### 13.1.8 Index Özet Tablosu
+
+| Tablo | Yeni Index | Tip | Öncelik |
+|-------|-----------|-----|---------|
+| `auctions` | `(stream_id, status)`, `(stream_id, ended_at)` | BTree | 🔴 Yüksek |
+| `teqlik_transactions` | `(user_id, created_at)` | BTree | 🔴 Yüksek |
+| `listing_offers` | `(listing_id, status)` | BTree | 🟡 Orta |
+| `follows` | `(follower_id, followed_id)` | BTree | 🟡 Orta |
+| `purchases` | `(buyer_id, created_at)` | BTree | 🟡 Orta |
+| `direct_messages` | `(thread_id, created_at)` | BTree | Faz 1.2 sonrası |
+| `listings.image_urls` | GIN | GIN | Faz 0 sonrası |
+
+**Not:** Index'ler `CREATE INDEX CONCURRENTLY` kullanılamaz (teqlif env.py transaction içinde çalışıyor — bkz. `feedback_alembic_concurrently.md`). Her index ayrı `op.execute()` + transaction dışı migration gerektirir. Bkz. Faz 13.1.9.
+
+#### 13.1.9 Index Migration Stratejisi
+
+asyncpg + Alembic'te CONCURRENTLY yasak olduğu için index'ler maintenance window'da sırayla eklenmeli:
+
+```python
+# Alembic migration — her index ayrı transaction
+def upgrade():
+    op.execute("CREATE INDEX ix_auctions_stream_status ON auctions (stream_id, status)")
+    op.execute("CREATE INDEX ix_auctions_stream_ended ON auctions (stream_id, ended_at)")
+    op.execute("CREATE INDEX ix_teqlik_tx_user_created ON teqlik_transactions (user_id, created_at)")
+    # ... devam
+```
+
+---
+
+### 13.2 — PgBouncer Aktivasyonu (ACİL)
+
+**Mevcut durum:** `backend/app/config.py` zaten `use_pgbouncer: bool = False` ve `database.py` bunu destekliyor. Sadece aktifleştirilmesi gerekiyor.
+
+**Sorun:** 4 worker × (20 pool + 10 overflow) = **120 potansiyel bağlantı**. PostgreSQL default `max_connections = 100`. Yoğun trafikte limit aşılabilir.
+
+**Hedef yapı:**
+
+```
+FastAPI workers (4×)
+    ↓ SQLAlchemy pool_size=5, max_overflow=2 per worker = 28 bağlantı
+PgBouncer :5432 (transaction mode)
+    ↓ pool_size=20
+PostgreSQL :5433 (direkt erişim kapat)
+```
+
+**Yapılacaklar:**
+
+1. `backend/app/config.py`: `use_pgbouncer: bool = True`
+2. `DATABASE_URL` → PgBouncer port'una yönlendir (örn. 5432; PG → 5433'e taşı)
+3. SQLAlchemy pool boyutlarını düşür: `pool_size=5, max_overflow=2`
+4. PgBouncer `pool_mode = transaction` (prepared statement devre dışı — asyncpg zaten prepared statement kullanmaz)
+5. `pool_pre_ping = True` kalsın (PgBouncer bağlantı sağlığını handle eder ama ping zarar vermez)
+
+**PgBouncer `pgbouncer.ini` temel ayarları:**
+
+```ini
+[databases]
+teqlif = host=127.0.0.1 port=5433 dbname=teqlif
+
+[pgbouncer]
+pool_mode = transaction
+max_client_conn = 200
+default_pool_size = 20
+reserve_pool_size = 5
+reserve_pool_timeout = 3
+server_idle_timeout = 600
+```
+
+---
+
+### 13.3 — PostgreSQL Partitioning Planı (Deferred)
+
+Şu anda partitioning gerektiren bir veri hacmi yok. Ancak büyüme planı için eşik değerleri belirlenmeli:
+
+| Tablo | Partitioning Türü | Eşik | Tahmini Süre |
+|-------|------------------|------|-------------|
+| `analytics_events` | Range (created_at, aylık) | 10M satır | 12+ ay |
+| `teqlik_transactions` | Range (created_at, aylık) | 5M satır | 18+ ay |
+| `direct_messages` | Range (created_at, aylık) | 20M satır | 12+ ay |
+
+**Not:** PostgreSQL native partitioning mevcut tabloları bölmez — yeni tablo + veri taşıma + rename gerektirir. Bu operasyon planlı maintenance gerektirir ve erken yapılmamalı.
+
+**ClickHouse** zaten `PARTITION BY toYYYYMM(timestamp)` ile partitioned — analytics trafiği buraya taşınınca PG partitioning ihtiyacı azalır.
+
+---
+
+### 13.4 — Read Replica (Uzun Vadeli)
+
+Admin dashboard ve raporlama sorguları primary'yi etkiliyor. ClickHouse analytics layer tamamlandıktan sonra:
+
+- Ağır admin sorguları → ClickHouse
+- Geriye kalan read-heavy endpointler (listing search, user profile) → PG read replica
+
+Şu an için: PgBouncer + index optimizasyonu yeterli.
+
+---
+
+## Faz 14 — Sorgu ve Cache Katmanı
+
+**Ön koşul:** Faz 13 tamamlanmış olmalı (doğru index olmadan cache stratejisi boşa gider).
+
+**Hedef:** Her ekranın yükleme süresini DB'den değil, Redis'ten besleyerek minimize etmek; N+1 sorgularını elemek; pagination'ı scale'e uygun hale getirmek.
+
+---
+
+### 14.1 — Redis Cache Stratejisi (Endpoint Bazlı)
+
+**Mevcut cache'lenen endpointler:**
+
+| Cache Key Pattern | TTL | Endpoint |
+|------------------|-----|---------|
+| `interests:{user_id}` | 15dk | Feed affinity |
+| `subcat_interests:{user_id}` | 15dk | Feed subcategory |
+| `feed:hesitated:{user_id}` | 15dk | Feed personalization |
+| `cache:market_trends_global_{locale}` | 5dk | Analytics market trends |
+| `cache:pro_insights:{uid}:...` | 5dk | Analytics pro insights |
+| `cache:demand_radar:{days}:{category}` | 5dk | Analytics demand |
+| `seller:badge:{uid}` | 25sa | Seller badge |
+| `trust_score:{uid}` | ~15dk | Trust score |
+
+**Eksik — eklenecek endpointler:**
+
+| Cache Key Pattern | TTL | Invalidasyon | Endpoint |
+|------------------|-----|-------------|---------|
+| `listing:{id}` | 60s | Listing update/delete | `GET /listings/{id}` |
+| `user_profile:{username}` | 5dk | User update | `GET /users/{username}` |
+| `categories:all:{locale}` | 1sa | Admin kategori değişikliği | `GET /categories` |
+| `app_config:{key}` | 10dk | Admin config update | `GET /app-config` |
+| `streams:live` | 30s | Stream start/end webhook | `GET /streams` |
+| `listing_offers:{listing_id}` | 30s | Offer create/accept/reject | `GET /listings/{id}/offers` |
+
+**Cache invalidasyon kuralları:**
+
+```python
+# Listing güncelleme/silinme → cache temizle
+async def invalidate_listing_cache(listing_id: int):
+    redis = await get_redis()
+    await redis.delete(f"listing:{listing_id}")
+
+# User profil güncelleme → cache temizle  
+async def invalidate_user_cache(username: str):
+    redis = await get_redis()
+    await redis.delete(f"user_profile:{username}")
+```
+
+**TTL seçim kriterleri:**
+- **30s**: Gerçek zamanlı sayılabilir veri (stream listesi, aktif teklifler)
+- **60s**: Listing detay (hızlı satış olabilir)
+- **5dk**: Kullanıcı profili (nadiren değişir ama staleness kabul edilebilir)
+- **10dk+**: Konfigürasyon, kategoriler (çok nadir değişir)
+- **25sa+**: Worker tarafından hesaplanan rozet/skor
+
+---
+
+### 14.2 — N+1 Sorgu Tespiti ve Çözümü
+
+#### 14.2.1 Feed: `_fetch_seller_meta` N+1
+
+**Mevcut durum:** `feed_queries.py` listing listesi döndükten sonra her listing için Python loop içinde `_fetch_seller_meta(user_id)` çağrıyor.
+
+**Sorun:** 20 ilanın feed'i = 20 ayrı SELECT.
+
+**Çözüm:**
+
+```python
+# Şu an (N+1):
+for row in listings:
+    seller = await _fetch_seller_meta(row["user_id"])
+
+# Hedef (1 sorgu):
+seller_ids = [row["user_id"] for row in listings]
+sellers = await session.execute(
+    select(User.id, User.username, User.profile_image_thumb_url, User.is_verified)
+    .where(User.id.in_(seller_ids))
+)
+seller_map = {s.id: s for s in sellers}
+```
+
+#### 14.2.2 Listing Detail: Birden Fazla Ayrı Sorgu
+
+**Mevcut durum:** Listing detay endpoint'i büyük olasılıkla ayrı sorgularla şunları çekiyor:
+- Listing
+- Seller user
+- Aktif auction (varsa)
+- Son 5 bid (varsa)
+- Aktif offers
+
+**Hedef:** Listing + seller tek `JOIN` ile; auction + bids tek sorgu; cache'lenmiş sonuç.
+
+#### 14.2.3 Stream: Participants N+1
+
+**Mevcut durum:** `stream.py` `host: Mapped["User"] = relationship("User", lazy="selectin")` → iyi (selectin). Ancak participant listesi ayrı sorgu olabilir.
+
+**Kontrol edilecek:** Stream detay endpoint'inde kaç sorgu çalıştığını `EXPLAIN` veya logging ile ölçmek.
+
+#### 14.2.4 Favorites: Her İlanda "Favorilendi Mi?" Kontrolü
+
+**Mevcut durum:** Feed listesi dönerken her ilan için ayrı `is_favorited` check yapılıyor olabilir.
+
+**Hedef:**
+```python
+# Tek sorguda toplu favorite check:
+fav_listing_ids = await session.execute(
+    select(ListingLike.listing_id)
+    .where(ListingLike.user_id == current_user.id)
+    .where(ListingLike.listing_id.in_(listing_ids))
+)
+fav_set = set(fav_listing_ids.scalars())
+```
+
+---
+
+### 14.3 — Redis Key Namespace Düzenlemesi
+
+**Mevcut durum:** Key'ler tutarsız:
+- `interests:{uid}` (prefix yok)
+- `cache:market_trends_global_{locale}` (`cache:` prefix)
+- `seller:badge:{uid}` (`seller:` prefix)
+- `trust_score:{uid}` (prefix yok)
+
+**Hedef namespace:**
+
+```
+teqlif:{env}:{domain}:{identifier}
+
+Örnekler:
+  teqlif:prod:feed:interests:{uid}
+  teqlif:prod:listing:detail:{id}
+  teqlif:prod:user:profile:{username}
+  teqlif:prod:analytics:market_trends:{locale}
+  teqlif:prod:auth:refresh:{token}
+  teqlif:prod:stream:live_list
+```
+
+**Not:** Namespace değişikliği tüm Redis key okuma/yazma kodunu etkiler. Tek seferde değil, aşamalı geçiş yapılmalı. Eski key'ler TTL süresi dolunca kendiliğinden temizlenir.
+
+---
+
+### 14.4 — Pagination Stratejisi
+
+#### 14.4.1 Mevcut Durum
+
+Büyük olasılıkla `OFFSET`-based pagination kullanılıyor:
+
+```sql
+SELECT * FROM listings ORDER BY created_at DESC LIMIT 20 OFFSET 100
+```
+
+**Sorun:** `OFFSET 100` çalışmak için 120 satır okur, 100'ünü atar. Büyük tablolarda yavaşlar.
+
+#### 14.4.2 Keyset (Cursor) Pagination
+
+**Hedef:** `created_at` + `id` ile cursor-based pagination:
+
+```sql
+-- İlk sayfa:
+SELECT * FROM listings WHERE status='active'
+ORDER BY created_at DESC, id DESC LIMIT 20
+
+-- Sonraki sayfa (cursor: last_seen_at + last_seen_id):
+SELECT * FROM listings WHERE status='active'
+  AND (created_at, id) < (:last_seen_at, :last_seen_id)
+ORDER BY created_at DESC, id DESC LIMIT 20
+```
+
+**Uygulanacak endpoint'ler:**
+
+| Endpoint | Öncelik | Not |
+|---------|---------|-----|
+| Listing feed | 🔴 Yüksek | Büyük tablo, sık kullanım |
+| Wallet geçmişi (`GET /wallet/history`) | 🔴 Yüksek | Finansal tablo |
+| Mesaj geçmişi (`GET /messages`) | 🟡 Orta | thread_id eklendikten sonra |
+| Bildirimler | 🟡 Orta | `(user_id, created_at)` index var |
+
+**Flutter uyumu:** Cursor-based pagination Flutter'daki infinite scroll widget'larıyla doğrudan uyumludur. Cursor JSON base64 encode edilerek `next_cursor` field olarak döndürülür.
+
+---
+
+### 14.5 — JSONB Sorgu Optimizasyonu
+
+Faz 0'da `listings.image_urls` Text → JSONB'ye geçtikten sonra:
+
+```python
+# Eski (Python'da parse):
+listing = await get_listing(id)
+images = json.loads(listing.image_urls)  # Python'da
+
+# Yeni (DB'de doğrudan):
+result = await session.execute(
+    select(Listing.id, Listing.image_urls[0].label("first_image"))
+    .where(Listing.id == listing_id)
+)
+```
+
+```sql
+-- Belirli URL içeren ilanları bul (GIN index kullanır):
+SELECT id FROM listings
+WHERE image_urls @> '["https://uploads.teqlif.com/x.jpg"]'::jsonb
+```
+
+---
+
+### 14.6 — Uygulama Sırası
+
+```
+1. PgBouncer aktif et (13.2) ← en acil, bağlantı limiti sorunu var
+2. Eksik index migration'larını yaz + staging'de test et (13.1)
+3. Listing detail + user profile cache ekle (14.1)
+4. Categories + AppConfig cache ekle (14.1)
+5. Feed N+1 → batch seller fetch (14.2)
+6. Favorites toplu check (14.2)
+7. Keyset pagination: listing feed + wallet (14.4)
+8. Redis key namespace geçişi (14.3) — aşamalı
+9. JSONB sorgu optimizasyonu (14.5) — Faz 0 sonrası
+10. EXPLAIN ANALYZE ile production'da ölçüm + ince ayar
+```
+
+---
+
+### 14.7 — Ölçüm ve Başarı Kriterleri
+
+```
+□ PgBouncer aktif → max DB bağlantısı < 30 (4 worker + admin + poller)
+□ Listing feed p95 < 200ms (cache hit)
+□ Listing detail p95 < 150ms (cache hit)
+□ Wallet geçmişi p95 < 100ms (keyset + index)
+□ EXPLAIN ANALYZE: feed sorgusu → Seq Scan yok (index scan)
+□ Redis hit rate > %80 (listing detail + feed)
+□ pg_stat_activity: waiting connections = 0 normal yükte
 ```
