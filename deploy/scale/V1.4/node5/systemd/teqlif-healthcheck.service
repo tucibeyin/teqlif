@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=root
-ExecStart=/var/www/teqlif.com/backend/.venv/bin/python3 /var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-healthcheck.py
+ExecStart=/var/www/teqlif.com/venv/bin/python3 /var/www/teqlif.com/deploy/scale/V1.4/scripts/teqlif-healthcheck.py
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=teqlif-healthcheck

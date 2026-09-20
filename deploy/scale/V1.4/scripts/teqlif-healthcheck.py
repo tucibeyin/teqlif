@@ -1,4 +1,4 @@
-#!/var/www/teqlif.com/backend/.venv/bin/python
+#!/var/www/teqlif.com/venv/bin/python3
 # deploy/scale/V1.4/scripts/teqlif-healthcheck.py
 #
 # Teqlif günlük sistem sağlık raporu.
