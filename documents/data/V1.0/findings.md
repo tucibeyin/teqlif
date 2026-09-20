@@ -1,256 +1,388 @@
-# Veritabanı ve Mimari Optimizasyon Bulguları
+# Teqlif — Veri Yapısı Analizi ve Sadeleştirme Planı
 
-**Hedef:** CPU/RAM/disk dostu, sade, uzun ömürlü veri katmanı.  
-**Bağlam:** Sistem henüz kullanıcısız — DB sıfırdan kurulabilir. Şimdi yapılan her düzeltme ilerleyen dönemde downtime veya karmaşık migration gerektirmez.
-
+**Hedef:** Kullanıcısız sistem, sıfırdan başlama. CPU/RAM/disk dostu, bakımı kolay, tip güvenli veri katmanı.  
+**Kapsam:** PostgreSQL modelleri · API şemaları · Flutter modelleri · Genel mimari  
 Son güncelleme: 2026-09-20
 
 ---
 
-## 1. PostgreSQL
+## Genel Tablo
 
-### 1.1 [KRİTİK] direct_messages — int4 PK + Sonsuz Büyüme
-
-**Mevcut kod:** `message.py:16` — `id: Mapped[int]` → PostgreSQL `INTEGER` (int4), max **2,147,483,647**
-
-**Sorun:** `worker.py:408` — cleanup koşulu `is_hidden=TRUE AND created_at < 60 gün`. Normal mesajlar hiç silinmiyor. Tablo sonsuz büyür.
-
-Büyüme tahmini:
-- 100K kullanıcı × 5 mesaj/gün = 500K satır/gün → limit: ~11.7 yıl
-- Büyüme hızlanırsa (1M/gün) → ~5.9 yıl
-- `ALTER COLUMN id TYPE BIGINT` = tam tablo yeniden yazımı. 15MB'da ~1 saniye; 50M satırda ~20 dakika downtime.
-
-**Düzeltme (şimdi — sıfırdan başlarken):**
-
-```python
-# message.py
-from sqlalchemy import BigInteger
-id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
-sender_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), ...)
-receiver_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), ...)
-```
-
-**Ayrıca:** Normal mesajlar için retention policy eklenmeli:
-```python
-# worker.py — cleanup_hidden_messages_task'e ek kural:
-# deleted_for_sender=TRUE AND deleted_for_receiver=TRUE AND created_at < 365 gün → sil
-DELETE FROM direct_messages
-WHERE deleted_for_sender = TRUE
-  AND deleted_for_receiver = TRUE
-  AND created_at < NOW() - INTERVAL '365 days'
-```
-
-Bu eklenmezse int8'e geçmek bile yalnızca limite uzayan bir erteleme olur.
+| Katman | Mevcut Durum | Sorun |
+|--------|-------------|-------|
+| PostgreSQL | 45 tablo, `users` 47 kolon, `listings` 36 kolon | God Object tablolar |
+| API Şemaları | 45+ Pydantic sınıfı, kritik endpoint'lerde `response_model` yok | Duplicate, tipsiz |
+| Flutter Modelleri | 45+ sınıf, Freezed yok, tümü manuel `fromJson` | Hata riski, kod tekrarı |
+| DB PK'ları | `direct_messages`, `notifications` → int4 | Sınır riski |
+| DM büyümesi | Normal mesajlar hiç silinmiyor | Sonsuz büyüme |
 
 ---
 
-### 1.2 [KRİTİK] direct_messages — OR Sorgusu + Yanlış İndeks
+## 1. PostgreSQL — Model Sorunları
 
-**Mevcut kod:** `get_messages_query.py:63-74`
+### 1.1 [KRİTİK] `users` Tablosu: God Object (47 Kolon)
 
-```python
-or_(
-    and_(sender_id == uid, receiver_id == other_user_id),
-    and_(sender_id == other_user_id, receiver_id == uid, is_shadowbanned == False),
-)
+Tek tabloda birbirinden bağımsız 6 farklı sorumluluk var:
+
+| Sorumluluk | Kolonlar | Çözüm |
+|-----------|----------|-------|
+| Kimlik doğrulama | email, hashed_password, status, email_verified, phone, phone_verified | `users` çekirdeğinde kal |
+| Profil | full_name, username, bio, profile_image_url, profile_image_thumb_url | `users` çekirdeğinde kal |
+| Sosyal medya linkleri | website_url, instagram_url, kick_url, twitch_url, facebook_url, youtube_url, tiktok_url | **Ayrı tabloya taşı** |
+| Bildirim tercihleri | notification_prefs (JSON) | **Ayrı tabloya taşı** |
+| GDPR onayları | cross_border_consent_*, age_confirmed_at | **Ayrı tabloya taşı** |
+| ML/Öneri | preference_embedding (Vector384), max_budget | `users`'da kal (JOIN sık) |
+| Premium/Plan | is_premium, plan_type, premium_since, tuci_balance | `users`'da kal (sık erişim) |
+| Referral | referral_code, referral_code_expires_at, pending_referred_by | **Ayrı tabloya taşı** |
+| Onboarding | onboarding_completed, locale, locale_updated_at | `users`'da kal |
+
+**Hedef yapı:**
+
+```
+users                    (~18 kolon — sık erişilen her şey)
+  id, email, username, full_name, hashed_password,
+  status, email_verified, phone, phone_verified,
+  profile_image_url, profile_image_thumb_url,
+  is_premium, plan_type, tuci_balance,
+  preference_embedding, max_budget,
+  onboarding_completed, locale, created_at
+
+user_social_links        (opsiyonel, 1:1)
+  user_id (PK, FK), website_url, instagram_url, kick_url,
+  twitch_url, facebook_url, youtube_url, tiktok_url
+
+user_notification_prefs  (1:1, varsayılan row oluştur)
+  user_id (PK, FK), messages, follows, auction_won, ...
+  (JSON yerine kolon — tip güvenli, tek UPDATE ile değişir)
+
+user_consents            (1:1)
+  user_id (PK, FK), cross_border_given, cross_border_at,
+  cross_border_version, cross_border_ip, age_confirmed_at, ...
+
+referrals tablosu zaten var (referral verisi oraya taşınır)
 ```
 
-Mevcut indeks: `(sender_id, receiver_id, created_at)`. PostgreSQL bu OR sorgusunu **iki ayrı Index Scan → BitmapOr → Heap Fetch** ile çalıştırır.
+**Kazanç:** `users` tablosu ~18 kolona iner. Sosyal medya bölümü %95 NULL olan 7 kolon yerine sadece link varsa row içerir. `notification_prefs` JSON yerine tipli kolonlar olur.
 
-**`message_threads` zaten canonical pair tutuyor** (`user_a_id < user_b_id`, composite PK). Eksik olan: `direct_messages`'da `thread_id` kolonu yok.
+---
 
-**Düzeltme (sıfırdan — en temiz yol):**
+### 1.2 [ÖNEMLİ] `listings` Tablosu: 36 Kolon, ML Alanları Karışık
+
+Tabloda 4 farklı sorumluluk bir arada:
+
+| Sorumluluk | Kolonlar |
+|-----------|----------|
+| Çekirdek ilan | title, price, condition, category, subcategory, status, images_urls, ... |
+| ML/Moderasyon | nsfw_score, quality_score, embedding (Vector384), search_vector (TSVECTOR) |
+| Reklam bilgisi | (ad_campaign FK üzerinden — bu ayrı tabloda, doğru) |
+| Analitik | view_count, like_count (bunlar Redis'te de tutulabileceği için sorgulanabilir) |
+
+**Öneri:** ML alanları nadiren join ediliyor. Ayrı `listing_ml` tablosu (1:1, lazy-loadable) daha temiz. Ama `search_vector` ve `embedding` aktif sorgu yolunda olduğu için `listings`'de kalabilir.
+
+Daha öncelikli: `listings`'in kaç kolonu gerçekten API response'unda expose ediliyor? `GET /listings/{id}` ve `GET /listings` endpoint'lerinde **response_model yok** (bkz. 2.3). Önce bu düzeltilmeli.
+
+---
+
+### 1.3 [KRİTİK] `direct_messages`: int4 PK + Sonsuz Büyüme
+
+Detay `findings.md` önceki versiyonunda belgelendi. Özet:
+- `id: Mapped[int]` → int4, max 2.1B. Normal mesajlar hiç silinmiyor.
+- **Düzeltme:** BigInteger PK + retention policy (both sides deleted → 365 gün sonra sil)
+
+---
+
+### 1.4 [KRİTİK] `direct_messages`: OR Sorgusu → `thread_id` ile Çöz
+
+`get_messages_query.py:63` — OR sorgusu yerine `thread_id FK` ile tek equality index.
+- `message_threads`'e sequential `id BIGINT` ekle
+- `direct_messages`'a `thread_id BIGINT NOT NULL FK` ekle
+- Index: `(thread_id, id DESC)` → tüm pagination bu single index'i kullanır
+
+---
+
+### 1.5 [ORTA] `notifications` int4 PK
+
+30 günde siliniyor → bounded growth. Ama sıfırdan başlarken BigInteger maliyetsiz.
+
+---
+
+### 1.6 [BİLGİ] `analytics_events` + `user_interactions`: Çift Yazma Kasıtlı
+
+ClickHouse'dan 22 dakika gecikmeli PG'ye kopyalanıyor. Öneri motoru PG JOINs gerektiriyor. Değiştirme — ama 90 günlük cleanup doğrulanmış, bounded.
+
+---
+
+### 1.7 [BİLGİ] `notification_prefs` JSON → Kolon
+
+`users.notification_prefs` JSONB ile saklanıyor (14 alan). Tip güvenliği yok, kısmi güncelleme için whole-document rewrite gerekiyor.  
+Çözüm: `user_notification_prefs` ayrı tablo (1.1'deki bölünmeyle birlikte) — 14 bool/int kolon, her biri tekil UPDATE edilebilir.
+
+---
+
+## 2. API Şemaları — Tutarsızlık ve Eksikler
+
+### 2.1 [KRİTİK] Kritik Endpoint'lerde `response_model` Yok
 
 ```python
-# message_thread.py — sequential PK ekle
-id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-# Mevcut composite unique: (user_a_id, user_b_id) UNIQUE constraint olarak tut
+GET  /listings          # en çok çağrılan endpoint — response_model YOK
+GET  /listings/{id}     # — response_model YOK
+GET  /auth/me           # — response_model YOK (UserOut dönüyor ama tanımsız)
+GET  /auth/me/commerce/purchases  # — response_model YOK
+GET  /auth/me/commerce/sales      # — response_model YOK
+GET  /auth/init         # büyük init endpoint — response_model YOK
 ```
 
-```python
-# message.py — thread_id ekle
-thread_id: Mapped[int] = mapped_column(
-    BigInteger, ForeignKey("message_threads.id", ondelete="CASCADE"), nullable=False, index=True
-)
-```
+**Etki:** FastAPI dokümanı yanlış, Pydantic doğrulaması çalışmıyor, type-safety yok. Gelecekte veri sızdırma riski (internal field'lar client'a gidebilir).
+
+**Düzeltme:** Her endpoint'e açık `response_model=` ekle.
+
+---
+
+### 2.2 [ÖNEMLİ] 4 Farklı "Kısmi Kullanıcı" Şeması
+
+Aynı `users` tablosundan 4 ayrı şema:
 
 ```python
-# Alembic migration
-Index("ix_dm_thread_id", "thread_id", "id")  # pagination için (thread_id, id DESC)
+UserOut        # 26 alan — tam kullanıcı
+StoryAuthorOut # 5 alan  — id, username, full_name, 2x image
+BlockedUserOut # 4 alan  — id, username, full_name, 1x image
+StreamHostOut  # 3 alan  — id, username, full_name
 ```
 
+**Düzeltme:** Tek base şema:
+
 ```python
-# get_messages_query.py — OR kaldır
-base_where = [
-    DirectMessage.thread_id == thread_id,
-    ...
+class UserMiniOut(BaseModel):
+    id: int
+    username: str
+    full_name: str
+    profile_image_thumb_url: str | None = None
+
+# Diğerleri extend eder veya doğrudan UserMiniOut kullanır
+StoryAuthorOut = UserMiniOut   # + profile_image_url eklenirse
+StreamHostOut  = UserMiniOut   # aynen kullanılabilir
+BlockedUserOut = UserMiniOut   # aynen kullanılabilir
+```
+
+---
+
+### 2.3 [ÖNEMLİ] `DirectSaleSummaryOut`: Flat Birleşik Şema
+
+16 alanda 2 birbirini dışlayan alan grubu:
+
+```python
+# role == "seller" → şunlar dolu, buyer alanları None:
+total_revenue, total_quantity_sold, order_count, seller_username
+
+# role == "buyer" → şunlar dolu, seller alanları None:
+buyer_quantity, buyer_unit_price, buyer_total, buyer_order_status
+```
+
+**Düzeltme:** Discriminated union:
+
+```python
+class DirectSaleSummaryBase(BaseModel):
+    sale_id: int
+    item_name: str
+    status: str
+    # ... ortak alanlar
+
+class DirectSaleSummaryForSeller(DirectSaleSummaryBase):
+    role: Literal["seller"]
+    total_revenue: float | None
+    total_quantity_sold: int | None
+    order_count: int | None
+
+class DirectSaleSummaryForBuyer(DirectSaleSummaryBase):
+    role: Literal["buyer"]
+    buyer_quantity: int
+    buyer_unit_price: float
+    buyer_total: float
+    buyer_order_status: str
+
+DirectSaleSummaryOut = Annotated[
+    DirectSaleSummaryForSeller | DirectSaleSummaryForBuyer,
+    Field(discriminator="role")
 ]
 ```
 
-Sonuç: tek equality check → perfect B-tree index → O(log n) + sequential read.
+---
 
-**`get_conversations_query.py`'deki `func.least()/func.greatest()` sorusu:** Bu sorgu `message_threads` tablosunu zaten PK üzerinden çekiyor (`user_a_id, user_b_id`). `direct_messages` thread_id'ye geçince bu sorgu da düzelir çünkü son mesajı `thread_id` üzerinden çekebiliriz.
+### 2.4 [ORTA] `AuctionStateOut`: 9 Endpoint, 1 Şema
+
+Auction router'ında start/pause/resume/end/bid/accept/buy-it-now hepsi `AuctionStateOut` döndürüyor. Şema hem "başlamadı" hem "teklif var" hem "bitti" durumlarını Optional alanlarla kapsıyor.
+
+Bu tek şema birden fazla durumu yönettiği için alanların hangi durumda dolu olduğu belirsiz. Küçük ama ilerleyen dönemde hata kaynağı.
+
+**Ertelenebilir** — şu an çalışıyor, ama discriminated union'a taşımak temizler.
 
 ---
 
-### 1.3 [ORTA] notifications — int4 PK
+### 2.5 [ORTA] `UserOut`: 26 Alan, 7 Sosyal Medya URL
 
-**Mevcut kod:** `notification.py:14` — `id: Mapped[int]` → int4
+`UserOut`'un her response'da 7 sosyal URL alanı taşıması gerekiyor mu? Bu alanların büyük çoğunluğu `None`.
 
-**Gerçek risk:** `worker.py:280` — 30 günde siliniyor → bounded growth. Günde 1M notification üretilse bile 30 gün × 1M = 30M satır → int4 için sorun yok (**max 2.1B**).
+Öneri: `UserOut` sadeleştirilmiş (~15 alan) + ayrı `UserProfileOut` (sosyal linkler dahil, profil sayfası için).
 
-**Ama:** Temiz başlangıçta BigInteger'a geçmek maliyetsiz.
+---
+
+### 2.6 [ORTA] `ConversationOut` `is_request` Flag Anti-Pattern
 
 ```python
-# notification.py
-id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+# /conversations ve /requests aynı şemayı döndürüyor
+# is_request: bool=False alanı ile ayrılıyor
+class ConversationOut(BaseModel):
+    is_request: bool = False  # boolean flag ile iki farklı kavramı birleştirme
 ```
 
-**Karar:** Direct messages migrasyonuyla birlikte hepsini BigInteger'a çevir — ileride ayrı migration maliyeti ödemezsin.
+Daha açık: `ConversationOut` ve `MessageRequestOut` ayrı şemalar.
 
 ---
 
-### 1.4 [BİLGİ] PostgreSQL Analytics Tablolarının Neden Burada Olduğu
+### 2.7 [DÜŞÜK] `StoryItemOut`: İki Farklı Story Tipi, Tek Şema
 
-`analytics_events` ve `user_interactions` tabloları PostgreSQL'de hem ClickHouse ile overlap görünüyor hem de ayrı amaçları var:
-
-- `analytics_events` — ClickHouse `swipe_live_events`'ten 22 dakika gecikmeli PG'ye kopyalanıyor (`worker.py:658`). Öneri motoru (`update_feed_foryou_task`, her 15 dakika) PG likes/favorites/messages ile JOIN yapması gerektiği için ClickHouse'dan değil PG'den çekiyor.
-- `user_interactions` — Redis kuyruğundan bulk-insert edilen dwell time sinyalleri. Benzer şekilde PG'de kalıyor çünkü JOIN gerekiyor.
-
-**Her ikisi de 90 günde siliniyor → bounded.** Bu çift yazma kasıtlı bir mimari karar; öneri motoru cross-DB JOIN yapamaz.
-
-**Aksiyon gerekmez.** Ama tablolar temiz indekse sahip:
-- `analytics_events`: `ix_analytics_events_user_created (user_id, created_at)` ✓
-- `user_interactions`: `ix_user_interactions_user_item (user_id, item_id)` ✓
+`story_type='video'` için `video_url`, `thumbnail_url` dolu; `story_type='live_redirect'` için `stream_id` dolu, diğerleri None. Discriminated union daha temiz olur.
 
 ---
 
-### 1.5 [GELECEK] Tablo Bölümleme
+## 3. Flutter Modelleri — Bakım Riski
 
-`direct_messages` sonsuz büyüme riski nedeniyle ileride aylık partition gerektirecek. Ama 50M+ satırdan önce premature optimization.
+### 3.1 [KRİTİK] Freezed Yok — 45+ Sınıf Manuel `fromJson`
 
-**Tetikleyici:** 50M satır veya tek ay silinmesi 10 dakikayı geçmeye başlarsa.
+Tüm modeller elle yazılmış `factory X.fromJson(Map<String, dynamic> json)` ile ayrıştırılıyor. Sorunlar:
 
----
+- API'de alan adı veya tipi değiştiğinde runtime hata (compile-time değil)
+- `copyWith` metotları bazı modellerde hiç yok → state yönetimi zorlaşıyor
+- Kod tekrarı: 45+ `fromJson` → her model değişikliğinde elle güncelleme
 
-## 2. Redis
+**Düzeltme:** Freezed + json_serializable ekle. Tüm modelleri generate et.
 
-### 2.1 [ONAYLANDI] Redis Streams — Zaten Uygulandı
+```dart
+@freezed
+class StreamOut with _$StreamOut {
+  const factory StreamOut({
+    required int id,
+    required String roomName,
+    required String title,
+    required String category,
+    required int viewerCount,
+    required StreamHost host,
+    String? subcategory,
+    String? thumbnailUrl,
+  }) = _StreamOut;
 
-`ws_manager.py` zaten `redis.xadd` ile Stream kullanıyor. **Bu bulgu eskimiş.**
-
----
-
-### 2.2 [DÜŞÜK] Redis Pool Yapısı
-
-**Mevcut:** `redis_client.py` — 4 ayrı pool:
-
-| Pool | max_connections | Amaç |
-|------|----------------|-------|
-| `_redis` | 50 | Ana işlemler |
-| `_redis_stream` | 20 | XREAD BLOCK (socket_timeout=10s) |
-| `_redis_blpop` | 20 | BLPOP (socket_timeout=None) |
-| `_redis_binary` | 20 | decode_responses=False (numpy vektörler) |
-
-4 worker × 110 = **440 max bağlantı**. Redis default maxclients=10,000 → sunucu tarafında sorun yok.
-
-**Blocking pool'ların ayrılması doğru mimari** — XREAD/BLPOP main pool'u doldursa non-blocking işlemler bekler. Bu değiştirilmemeli.
-
-`_redis_binary` sadece `preference_embedding` Vector(384) cache için. `decode_responses` farkı nedeniyle main pool ile birleştirilemez. Olduğu gibi kalmalı.
-
-**Aksiyon gerekmez.**
-
----
-
-### 2.3 [BİLGİ] Redis Key Envanteri
-
-Mevcut key pattern'leri:
-
-| Pattern | Amaç | TTL |
-|---------|------|-----|
-| `session:{session_id}` | Auth session | — |
-| `refresh:{token}` | Refresh token | — |
-| `blacklist:{jti}` | Revoked JWT | — |
-| `presign:{user_id}:{key}` | S3 presigned URL cache | 6 gün |
-| `live:viewers:{stream_id}` | Anlık izleyici sayısı | — |
-| `live:viewer_set:{stream_id}` | İzleyici set | — |
-| `feed:session:{user_id}` | For-you feed cursor | — |
-| `bpr:rec:{uid}` | BPR öneri cache | — |
-| `msg:unread:request:{receiver_id}` | Okunmamış istek | — |
-| `ad_campaign_budget:{campaign_id}` | Reklam bütçe cache | — |
-| `condition_pref:{user_id}` | Durum filtre tercihi | — |
-| `ch_buf:{table}` | ClickHouse batch buffer | — |
-
-Kritik boşluk: `session:{session_id}` ve `refresh:{token}` için TTL var mı kontrol edilmeli. TTL yoksa Redis maxmemory dolduğunda eviction policy devreye girer.
-
----
-
-## 3. ClickHouse
-
-### 3.1 [ONAYLANDI] Redis Streams Pub/Sub → Zaten Değiştirildi
-
-Bkz. **2.1**. Eski bulgu — silinebilir.
-
-### 3.2 [GEREKLİ] Materialized Views — Reklam ve İzlenim Sorguları
-
-**Mevcut:** `ads.py:338,352,375` ve `listings.py:414` — her sorguda `SELECT ... FROM user_events WHERE ...` tam tablo taraması.
-
-`user_events` TTL 30 gün. Üst sınır: 100K kullanıcı × 50 event/gün × 30 = 150M satır. ClickHouse sütunlu okuma ile 150M satırda COUNT ~100-200ms tolere edilebilir.
-
-Ama **reklam dashboard büyüdükçe** (kampanya başına günlük/saatlik toplam gösterim/tıklama), her API isteğinde full scan kabul edilemez hale gelir.
-
-**Eklenecek:**
-
-```sql
--- AggregatingMergeTree ile günlük reklam istatistikleri
-CREATE MATERIALIZED VIEW mv_user_events_daily
-ENGINE = AggregatingMergeTree()
-PARTITION BY toYYYYMM(day)
-ORDER BY (item_type, item_id, event_type, day)
-AS
-SELECT
-    item_type,
-    item_id,
-    event_type,
-    toDate(timestamp) AS day,
-    countState() AS cnt
-FROM user_events
-GROUP BY item_type, item_id, event_type, day;
+  factory StreamOut.fromJson(Map<String, dynamic> json) =>
+      _$StreamOutFromJson(json);
+}
 ```
 
-MV bir kez oluşturulduktan sonra yeni yazılan veriyi otomatik toplar. Geçmiş veri için ayrıca `INSERT INTO mv_user_events_daily SELECT ...` backfill gerekir.
+---
 
-**Tetikleyici:** Reklam özelliği büyüdüğünde veya `user_events` 20M+ satır geçtiğinde.
+### 3.2 [ÖNEMLİ] Tiplanmamış Dinamik Alanlar
+
+```dart
+// ChatMessage
+Map<String, dynamic>? announcementPayload  // tip yok
+
+// IncomingCallTapSignal / IncomingCallAutoAcceptSignal
+Map<String, dynamic> data  // ham veri
+
+// ListingFilterState
+Map<String, dynamic> extraFields  // katalogdan gelen dinamik alanlar
+```
+
+`announcementPayload` için backend'deki announcement tiplerini listeleyip sealed class yap.  
+`IncomingCallTapSignal.data` için de tip güvenliği eklenebilir.  
+`ListingFilterState.extraFields` kasıtlı — katalog dinamik, bu kabul edilebilir.
 
 ---
 
-## 4. Veri Modeli Düzeltmeleri (Küçük ama Önemli)
+### 3.3 [ORTA] `ProInsightsData`: 11 Sınıf, 1 Ekran
 
-### 4.1 message_threads — Sequential PK Eksikliği
+`pro_insights_data.dart` sadece `pro_insights_screen.dart`'ta kullanılıyor ama 11 sınıf içeriyor. Dosya iyi organize edilmiş ama `ProInsightsData` üst modeli 7 nested obje içeriyor. Bu veri yapısı backend'den geliyor — backend'de de aynı komplekslık var.
 
-`message_threads` şu an composite PK `(user_a_id, user_b_id)`. 1.2'deki `thread_id` çözümü için sequential `id BIGINT` eklenmeli.
-
-Alternatif (daha hafif): `direct_messages`'a `conversation_id TEXT GENERATED ALWAYS AS (LEAST(sender_id,receiver_id)::text || '_' || GREATEST(sender_id,receiver_id)::text) STORED` eklenebilir. Ama `thread_id FK` daha temiz çünkü zaten `message_threads` var.
-
-### 4.2 listing_impressions — PK Yeterli
-
-Composite PK `(user_id, listing_id)` — sequential id yok, gerekmiyor. 30 günde siliniyor. Sorun yok.
-
-### 4.3 story_views — Cascade ile Temiz
-
-Story silinince `CASCADE` ile view'lar silinir. Sorun yok.
+Uzun vadede bu ekranın "Pro" paketini sadeleştirip almak istediği veriyi küçültmek düşünülebilir.
 
 ---
 
-## Öncelik Sırası
+### 3.4 [ORTA] `direct_sale.dart`: 6 Sınıf Tek Dosyada
 
-| # | Bulgu | Öncelik | Aksiyon |
-|---|-------|---------|---------|
-| 1 | 1.1 direct_messages int4 PK | **Hemen** | Model → BigInteger; retention policy ekle |
-| 2 | 1.2 OR sorgusu → thread_id | **Hemen** | message_threads'e id ekle; DM'e thread_id ekle; query güncelle |
-| 3 | 1.3 notifications int4 PK | **Hemen** | BigInteger (1.1 ile birlikte) |
-| 4 | 3.2 CH Materialized Views | Orta | Reklam büyüyünce / 20M+ satır |
-| 5 | 1.5 Partitioning | Gelecek | 50M+ satır |
-| — | 2.1 Redis Streams | **Eskimiş** | Zaten yapılmış |
-| — | 2.2 Redis Pool | İzleme | Aksiyon gerekmez |
-| — | 3.1 CH Dictionaries | Gereksiz | LowCardinality zaten var |
+`DirectSaleState`, `DirectSaleOrder`, `DirectSaleSummary`, `CommercePurchase`, `CommerceSale`, `ListingPriceSignal` → farklı amaçlar için ayrı dosyalar daha iyi.
+
+---
+
+### 3.5 [ORTA] `StreamTokenOut` vs `JoinTokenOut` Örtüşmesi
+
+Her ikisi de LiveKit bağlantı bilgisi içeriyor. Fark: `JoinTokenOut`'ta `title`, `host_username`, `host_livekit_identity` ek alanlar var. Ortak base class veya tek şema + optional alanlar daha temiz olur.
+
+---
+
+### 3.6 [BİLGİ] Çağrı Altyapısı Kompleks ama İyi Yapılandırılmış
+
+`lib/call/` altında 15 dosya: repository, hardware adapter, state machine, room adapter, routing. En karmaşık alt modül ama sorumluluklar iyi ayrılmış. Değiştirilmesi gerekmez.
+
+---
+
+## 4. Öncelik Sırası — Sıfırdan Başlarken
+
+### Hemen Yapılacaklar (DB sıfır, ucuz)
+
+| # | Eylem | Konum | Etki |
+|---|-------|-------|------|
+| 1 | `direct_messages` + `notifications` BigInteger PK | `models/message.py`, `models/notification.py` | Sınır riski ortadan kalkar |
+| 2 | `direct_messages`'a `thread_id` FK + index | `models/message.py` + migration | OR sorgusu kaldırılır |
+| 3 | `direct_messages` retention policy | `worker.py` | Sonsuz büyüme durur |
+| 4 | `users` tablosu bölünmesi | `models/user.py` + 3 yeni model | God Object çözülür |
+| 5 | `notification_prefs` JSON → ayrı tablo | `models/user_notification_prefs.py` | Tip güvenliği |
+| 6 | `response_model` tüm endpoint'lere | `routers/listings.py`, `auth.py` | Güvenlik + dokümantasyon |
+| 7 | `UserMiniOut` base schema | `schemas/user.py` | 4 duplicate şema azalır |
+| 8 | `DirectSaleSummaryOut` discriminated union | `schemas/direct_sale.py` | Tip belirsizliği gider |
+
+### Kısa Vadede (kod kalitesi)
+
+| # | Eylem | Konum | Etki |
+|---|-------|-------|------|
+| 9 | Freezed + json_serializable ekle | Flutter `models/` | 45+ manuel fromJson ortadan kalkar |
+| 10 | `ChatMessage.announcementPayload` tiplendir | `models/chat.dart` | Runtime hata azalır |
+| 11 | `UserOut` sadeleştir + `UserProfileOut` ekle | `schemas/user.py` | 7 boş sosyal URL kaldırılır |
+| 12 | `ConversationOut` / `MessageRequestOut` ayrı | `schemas/message.py` | is_request flag kaldırılır |
+
+### Orta Vadede (ölçek)
+
+| # | Eylem | Tetikleyici |
+|---|-------|-------------|
+| 13 | ClickHouse Materialized Views | user_events 20M+ satır |
+| 14 | `direct_messages` partitioning | 50M+ satır |
+| 15 | `AuctionStateOut` discriminated union | Auction logic karmaşıklaşırsa |
+
+### Eskimiş (yapılmış veya gereksiz)
+
+| Bulgu | Durum |
+|-------|-------|
+| Redis Streams (Pub/Sub yerine) | **Tamamlandı** — xadd kullanılıyor |
+| ClickHouse Dictionaries | **Gereksiz** — LowCardinality zaten var |
+| Redis Pool darboğazı | **İzleme** — 440 max conn, Redis 10K limit, sorun yok |
+
+---
+
+## 5. Karmaşıklık Özeti
+
+```
+Toplam tablo         : 45
+Toplam şema sınıfı   : 45+ Pydantic + 45+ Flutter
+Toplam ekran         : 49 (Flutter)
+Toplam Dart dosyası  : 259
+
+God Object tablolar  : users (47 kolon), listings (36 kolon)
+Tip güvensiz         : listings, auth major endpoint'leri (response_model yok)
+Duplicate şemalar    : 4x partial user, DirectSaleSummaryOut union
+Manuel fromJson      : 45+ Flutter sınıfı (Freezed yok)
+Sonsuz büyüme riski  : direct_messages (normal mesajlar silinmiyor)
+Sınır riski          : direct_messages.id, notifications.id → int4
+```
+
+En az eforla en fazla kazanç sağlayacak 3 hamle:
+
+1. **`users` tablosunu böl** → her şeyin kaynağındaki şişkinlik gider
+2. **`response_model` ekle** → tip güvenliği + API dokümantasyonu düzelir  
+3. **Freezed ekle** → Flutter'daki tüm manuel model bakımı ortadan kalkar
