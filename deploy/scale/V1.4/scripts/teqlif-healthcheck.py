@@ -185,8 +185,8 @@ def section_node5() -> str:
 async def section_nodes(client: httpx.AsyncClient) -> str:
     lines = ["🌐 <b>Diğer Node'lar</b>"]
     try:
-        # node_exporter up durumu — WireGuard IP:9100 üzerinden
-        results = await _prom(client, r'up{instance=~"10\.10\.0\.\d+:9100"}')
+        # node_exporter up durumu — job adları node-node3, node-gateway, vb.
+        results = await _prom(client, 'up{job=~"node-.*"}')
         up_map = {}
         for row in results:
             inst = row["metric"].get("instance", "")
