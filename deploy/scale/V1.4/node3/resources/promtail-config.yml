@@ -22,3 +22,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: ['__journal__systemd_unit']
         target_label: unit
+    pipeline_stages:
+      # LiveKit TURN port 5349: TLS 1.0/1.1 botları — uygulama hatası değil, gürültü
+      - drop:
+          expression: "livekit\\.pion\\.turn"
