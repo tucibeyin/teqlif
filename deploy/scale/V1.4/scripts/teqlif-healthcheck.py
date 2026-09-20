@@ -44,7 +44,7 @@ EDGE_MINIO   = [u.strip() for u in _env("EDGE_MINIO_URLS",   "http://10.10.0.1:9
 
 PROMETHEUS   = "http://10.10.0.4:9090"
 LOKI         = "http://10.10.0.4:3100"
-BACKUP_DIR   = "/var/backups/teqlif/node5"
+BACKUP_DIR   = "/var/backups/teqlif"
 ZAP_DEADLINE = datetime(2026, 12, 10, tzinfo=timezone.utc)
 
 IP_TO_NODE = {
