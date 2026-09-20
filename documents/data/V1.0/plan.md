@@ -1383,4 +1383,283 @@ Bu yapılar endüstri standardında, dokunma:
   [D33] 4 partial-user schema → UserMiniOut base                       (Faz 4.2)
   [D34] financial_events append-only tablo                             (Faz 8)
   [D35] KVKK veri silme zinciri                                        (Faz 9)
+
+🔴 Para birimi yeniden adlandırma (tüm katmanlar):
+  [D36] DB: users.tuci_balance → teqlik_balance                        (Faz 12)
+  [D37] DB: tuci_transactions → teqlik_transactions                    (Faz 12)
+  [D38] DB: gift_events.cost_tuci → cost_teqlik                        (Faz 12)
+  [D39] DB: mass_notification_campaigns.spent_tuci → spent_teqlik      (Faz 12)
+  [D40] Python: TuciTransaction model + dosya yeniden adlandır         (Faz 12)
+  [D41] Python: TuciTransactionRepository + dosya yeniden adlandır     (Faz 12)
+  [D42] Python: transfer_tuci.py + TransferTuciCommand yeniden adlandır (Faz 12)
+  [D43] Python: cost_tuci() + "cost_tuci" dict key → cost_teqlik       (Faz 12)
+  [D44] Python: tüm router'larda tuci_* değişkenleri → teqlik_*        (Faz 12)
+  [D45] Python: API endpoint /wallet/tuci/* → /wallet/teqlik/*         (Faz 12)
+  [D46] API JSON: tüm response field adları tuci → teqlik              (Faz 12)
+  [D47] Flutter: tüm tuciBalance / _TuciWalletCard vb. yeniden adlandır (Faz 12)
+  [D48] Flutter: tüm 'TUCi' string literalleri → 'Teqlik'              (Faz 12)
+  [D49] i18n ARB: tüm "TUCi" display string'leri → "Teqlik"            (Faz 12)
+  [D50] i18n ARB: tuciSpent key yeniden adlandır → teqlikSpent         (Faz 12)
+```
+
+---
+
+## Faz 12 — Para Birimi Yeniden Adlandırma: "tuci" → "teqlik"
+
+**Amaç:** Sistemdeki tüm katmanlardan "tuci" adını kaldırıp yerine "teqlik" koymak. Hiçbir yerde "tuci" verisi kalmayacak.
+
+**Kapsam:** 23 Python dosyası (224 referans) + 15 Flutter dosyası (87 referans) + 4 ARB dil dosyası.
+
+**Bağımlılık:** Bu faz bağımsızdır; diğer fazlarla çakışmaz. Ancak Alembic migration yazılmadan önce var olan `tuci_transaction` tablosunu kullanan tüm arka uç servislerinin migration'ı kesmemesi için tek adımda uygulanmalıdır (eski isim → yeni isim atomik).
+
+---
+
+### 12.1 — Veritabanı (Alembic Migration)
+
+**Dosya:** `backend/alembic/versions/<revision>_rename_tuci_to_teqlik.py`
+
+Her komut ayrı `op.execute()` olmalı (asyncpg multi-statement yasağı — bkz. `feedback_alembic_asyncpg.md`):
+
+```python
+def upgrade():
+    # 1. users tablosu
+    op.execute("ALTER TABLE users RENAME COLUMN tuci_balance TO teqlik_balance")
+
+    # 2. tuci_transactions → teqlik_transactions
+    op.execute("ALTER TABLE tuci_transactions RENAME TO teqlik_transactions")
+
+    # 3. gift_events
+    op.execute("ALTER TABLE gift_events RENAME COLUMN cost_tuci TO cost_teqlik")
+
+    # 4. mass_notification_campaigns
+    op.execute("ALTER TABLE mass_notification_campaigns RENAME COLUMN spent_tuci TO spent_teqlik")
+
+def downgrade():
+    op.execute("ALTER TABLE mass_notification_campaigns RENAME COLUMN spent_teqlik TO spent_tuci")
+    op.execute("ALTER TABLE gift_events RENAME COLUMN cost_teqlik TO cost_tuci")
+    op.execute("ALTER TABLE teqlik_transactions RENAME TO tuci_transactions")
+    op.execute("ALTER TABLE users RENAME COLUMN teqlik_balance TO tuci_balance")
+```
+
+**Etkilenen tablolar:**
+
+| Tablo | Eski kolon/ad | Yeni kolon/ad |
+|-------|--------------|--------------|
+| `users` | `tuci_balance` | `teqlik_balance` |
+| `tuci_transactions` | *(tablo adı)* | `teqlik_transactions` |
+| `gift_events` | `cost_tuci` | `cost_teqlik` |
+| `mass_notification_campaigns` | `spent_tuci` | `spent_teqlik` |
+
+---
+
+### 12.2 — Python Model Dosyaları
+
+#### 12.2.1 Dosya yeniden adlandırma
+
+| Eski dosya | Yeni dosya |
+|-----------|-----------|
+| `backend/app/models/tuci_transaction.py` | `backend/app/models/teqlik_transaction.py` |
+| `backend/app/repositories/tuci_transaction_repository.py` | `backend/app/repositories/teqlik_transaction_repository.py` |
+| `backend/app/use_cases/wallet/commands/transfer_tuci.py` | `backend/app/use_cases/wallet/commands/transfer_teqlik.py` |
+
+#### 12.2.2 Sınıf ve fonksiyon yeniden adlandırma
+
+| Eski ad | Yeni ad | Dosya |
+|---------|---------|-------|
+| `TuciTransaction` | `TeqlikTransaction` | `models/teqlik_transaction.py` |
+| `__tablename__ = "tuci_transactions"` | `"teqlik_transactions"` | models |
+| `TuciTransactionRepository` | `TeqlikTransactionRepository` | repositories |
+| `TransferTuciCommand` | `TransferTeqlikCommand` | use_cases |
+| `TuciAirdropRequest` | `TeqlikAirdropRequest` | routers/admin_data.py |
+| `cost_tuci()` | `cost_teqlik()` | services/credit_service.py |
+| `"cost_tuci"` (dict key) | `"cost_teqlik"` | services/credit_service.py `_FEATURES` |
+
+#### 12.2.3 SQLAlchemy model kolonu
+
+```python
+# models/user.py
+# Eski:
+tuci_balance: Mapped[int] = mapped_column(BigInteger, default=0)
+# Yeni:
+teqlik_balance: Mapped[int] = mapped_column(BigInteger, default=0)
+```
+
+#### 12.2.4 Etkilenen Python dosyaları (tam liste)
+
+```
+backend/app/models/user.py
+backend/app/models/tuci_transaction.py         → teqlik_transaction.py
+backend/app/models/gift_event.py
+backend/app/models/mass_notification_campaign.py
+backend/app/repositories/tuci_transaction_repository.py  → teqlik_transaction_repository.py
+backend/app/use_cases/wallet/commands/transfer_tuci.py   → transfer_teqlik.py
+backend/app/services/credit_service.py
+backend/app/routers/admin_data.py
+backend/app/routers/ads.py
+backend/app/routers/analytics.py
+backend/app/routers/auth.py
+backend/app/routers/leads.py
+backend/app/routers/listings.py
+backend/app/routers/wallet.py
+backend/app/routers/users.py
+backend/app/schemas/user.py
+backend/app/schemas/wallet.py
+backend/app/dependencies/*.py   (tuci_balance bağımlılıkları varsa)
+```
+
+---
+
+### 12.3 — API Endpoint Yeniden Adlandırma
+
+| Eski endpoint | Yeni endpoint | Dosya |
+|--------------|--------------|-------|
+| `GET /wallet/tuci/summary` | `GET /wallet/teqlik/summary` | `routers/wallet.py` |
+| `POST /wallet/tuci/airdrop` | `POST /wallet/teqlik/airdrop` | `routers/admin_data.py` |
+
+**Not:** Eski endpoint'ler geçici olarak `307 Temporary Redirect` ile yeni adrese yönlendirilebilir (Flutter güncellemesi deploy edilene kadar).
+
+---
+
+### 12.4 — API JSON Response Alanları
+
+Flutter bu alanları okuyarak gösteriyor. Python'daki renaming yeterli değil — response serileştirmesini de güncellemek gerekiyor.
+
+| Eski JSON key | Yeni JSON key | Endpoint / schema |
+|--------------|--------------|------------------|
+| `tuci_balance` | `teqlik_balance` | `UserOut`, `AuthResponse`, `WalletSummary` |
+| `wallet_balance` | `teqlik_balance` | `auth.py` login response (listing_detail_screen okuyor) |
+| `cost_tuci` | `cost_teqlik` | `CreditCostResponse`, `FeatureUsageOut` |
+| `spent_tuci` | `spent_teqlik` | `WalletSummary`, `AdminStats` |
+| `tuci_cost` | `teqlik_cost` | yerel değişkenler → response field'a yansıyan |
+| `total_tuci_circulation` | `total_teqlik_circulation` | `admin_data.py` stats endpoint |
+| `today_tuci_spent` | `today_teqlik_spent` | `admin_data.py` stats endpoint |
+
+**Kritik:** Flutter `listing_detail_screen.dart:845` şu anda `ud['wallet_balance']` okuyor. Bu key yeniden adlandırılırsa Flutter da aynı anda güncellenmeli (atomik deploy).
+
+---
+
+### 12.5 — Flutter Dart Dosyaları
+
+#### 12.5.1 Sınıf ve değişken yeniden adlandırma
+
+| Eski ad | Yeni ad | Dosya |
+|---------|---------|-------|
+| `tuciBalance` | `teqlikBalance` | `providers/profile_view_model.dart` |
+| `tuciHistory` | `teqlikHistory` | `providers/profile_view_model.dart` |
+| `tuciSpent` | `teqlikSpent` | `providers/ai_desc_provider.dart` |
+| `_TuciWalletCard` | `_TeqlikWalletCard` | `screens/profile_screen.dart` |
+| `_TuciWalletCardState` | `_TeqlikWalletCardState` | `screens/profile_screen.dart` |
+
+#### 12.5.2 JSON parse güncellemesi
+
+```dart
+// listing_detail_screen.dart:845 - Eski:
+tuciBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
+
+// Yeni (API key adı da teqlik_balance olacaksa):
+teqlikBalance = ((ud['teqlik_balance'] ?? 0) as num).toInt();
+```
+
+#### 12.5.3 Display string'leri
+
+Tüm `'TUCi'` string literalleri `'Teqlik'` ile değiştirilecek:
+
+```dart
+// Örnekler (tüm dosyalarda):
+'TUCi Cüzdanı'    → 'Teqlik Cüzdanı'
+'TUCi Harca'      → 'Teqlik Harca'
+'TUCi Kazan'      → 'Teqlik Kazan'
+'${amount} TUCi'  → '${amount} Teqlik'
+'50 TUCi'         → '50 Teqlik'
+```
+
+#### 12.5.4 Etkilenen Flutter dosyaları (tam liste)
+
+```
+mobile/lib/screens/profile_screen.dart
+mobile/lib/screens/listing_detail_screen.dart
+mobile/lib/screens/retargeting_screen.dart
+mobile/lib/screens/faq_screen.dart
+mobile/lib/screens/swipe_live_screen.dart
+mobile/lib/providers/profile_view_model.dart
+mobile/lib/providers/ai_desc_provider.dart
+mobile/lib/models/user.dart           (tuciBalance alanı eklendiyse)
+mobile/lib/widgets/wallet_widget.dart (varsa)
+```
+
+---
+
+### 12.6 — i18n ARB Dosyaları
+
+**Dosyalar:**
+- `documents/language/app_tr.arb`
+- `documents/language/app_en.arb`
+- `documents/language/app_ar.arb`
+- `documents/language/app_ru.arb`
+
+#### 12.6.1 Display değerleri (tüm dillerde "TUCi" → "Teqlik")
+
+| ARB Key | Eski değer (TR) | Yeni değer (TR) |
+|---------|----------------|----------------|
+| `walletTitle` | `"TUCi Cüzdanım"` | `"Teqlik Cüzdanım"` |
+| `buyTuci` | `"TUCi Satın Al"` | `"Teqlik Satın Al"` |
+| `boostDialogPaidConfirm` | `"50 TUCi Öde ve Başlat"` | `"50 Teqlik Öde ve Başlat"` |
+| `blastConfirmCostPaidLabel` | `"TUCi Maliyeti"` | `"Teqlik Maliyeti"` |
+| `faqIconNameTuci` | `"TUCi"` | `"Teqlik"` |
+| `faqQBadgesTuci` | `"TUCi nedir?"` | `"Teqlik nedir?"` |
+| `faqABadgesTuci` | `"TUCi, teqlif'in..."` | `"Teqlik, teqlif'in..."` |
+| *(diğerleri)* | `*TUCi*` | `*Teqlik*` |
+
+#### 12.6.2 Key yeniden adlandırma (opsiyonel ama tutarlılık için önerilir)
+
+| Eski key | Yeni key |
+|---------|---------|
+| `tuciSpent` | `teqlikSpent` |
+| `faqIconNameTuci` | `faqIconNameTeqlik` |
+| `faqQBadgesTuci` | `faqQBadgesTeqlik` |
+| `faqABadgesTuci` | `faqABadgesTeqlik` |
+| `buyTuci` | `buyTeqlik` |
+
+**Not:** ARB key yeniden adlandırması, `t('tuciSpent')` çağrılarını da güncellemesi gerektirir. Flutter dosyalarında `t('tuciSpent')` referansları taranmalıdır.
+
+---
+
+### 12.7 — Uygulama Sırası
+
+```
+1. Alembic migration yaz + test et (staging'de)
+2. Python dosyalarını yeniden adlandır
+3. Tüm import referanslarını güncelle
+4. API endpoint yönlendirmelerini ekle (geçici 307)
+5. Flutter dosyalarını güncelle (JSON key + class adları + string'ler)
+6. ARB dosyalarını güncelle
+7. Staging'de E2E test (cüzdan yükleme, harcama, geçmiş görüntüleme)
+8. Production deploy (Python + Flutter aynı anda)
+9. Eski endpoint yönlendirmelerini kaldır (1 sürüm sonra)
+```
+
+**Atomiklik notu:** Python (API) ve Flutter aynı anda deploy edilmeli. Eski Flutter yeni API'yi okursa `teqlik_balance` key'ini bulamaz → 0 gösterir. Deploy penceresi kısa tutulmalı veya API geçici olarak her iki key'i de döndürmeli:
+
+```python
+# Geçici geriye dönük uyumluluk (1 sürüm):
+return {
+    "teqlik_balance": user.teqlik_balance,
+    "tuci_balance": user.teqlik_balance,  # eski Flutter için
+}
+```
+
+---
+
+### 12.8 — Doğrulama Kontrol Listesi
+
+```
+□ grep -r "tuci" backend/app/ --include="*.py" → 0 sonuç
+□ grep -r "TUCi\|tuci" mobile/lib/ --include="*.dart" → 0 sonuç  
+□ grep -r "TUCi\|tuci" documents/language/*.arb → 0 sonuç
+□ alembic history'de migration görünüyor
+□ SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='teqlik_balance' → 1 satır
+□ SELECT table_name FROM information_schema.tables WHERE table_name='teqlik_transactions' → 1 satır
+□ Flutter cüzdan ekranı "Teqlik" gösteriyor
+□ API /wallet/teqlik/summary 200 dönüyor
+□ Eski /wallet/tuci/summary 307 → /wallet/teqlik/summary yönlendiriyor
 ```
