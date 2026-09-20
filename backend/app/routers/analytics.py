@@ -391,9 +391,8 @@ async def get_seller_report(
 
 @router.get("/ai-price-credits")
 async def ai_price_credits(current_user: User = Depends(get_current_user)):
-    """PRO kullanıcının bu ayki AI fiyat danışmanı kredi durumunu döndürür."""
-    if not current_user.is_premium:
-        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
+    """PRO kullanıcının bu ayki AI fiyat danışmanı kredi durumunu döndürür. [DURDURULDU]"""
+    return {"used": 0, "limit": 0, "remaining": 0, "is_premium": current_user.is_premium, "renewal_date": None, "feature_disabled": True}
     used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
     limit = credit_service.free_limit("ai_price", is_premium=True)
     remaining = max(0, limit - used)
@@ -489,10 +488,13 @@ async def price_estimate(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Multi-sinyal AI fiyat tahmini.
+    Multi-sinyal AI fiyat tahmini. [DURDURULDU — Faz 7 ML pipeline tamamlanana kadar devre dışı]
     Sinyal ağırlıkları: semantik embedding × kategori (x2) × şehir (x1.3) × güncellik × pHash (x1.5)
     IQR aykırı değer temizleme + ağırlıklı fiyat ortalaması + kategori bazlı güven seviyesi.
     """
+    from fastapi import HTTPException as _HTTPException
+    raise _HTTPException(status_code=503, detail={"code": "FEATURE_TEMPORARILY_DISABLED"})
+
     from datetime import datetime as _dt2, timezone as _tz2
 
     # ── Limit / bakiye kontrolü (Sadece bakiye yeterliliği test edilir) ──

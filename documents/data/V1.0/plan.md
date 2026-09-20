@@ -4,6 +4,8 @@
 **Bağlam:** Sistem henüz kullanıcıya açık değil — migration maliyeti sıfır, her düzeltme şimdi yapılır.  
 Son güncelleme: 2026-09-20
 
+> **Tamamlanan acil aksiyon:** `POST /analytics/price-estimate` ve `GET /ai-price-credits` durduruldu (`analytics.py`). Her çağrıda tetiklenen numpy/scipy KDE, ARQ embedding görevi ve 150 satır pgvector sorgusu artık çalışmıyor. Kod korundu — Faz 7 tamamlanınca açılacak.
+
 Her faz bağımsız uygulanabilir. Sıra önemlidir: üst katmanlar alttaki düzeltmelere bağımlıdır.
 
 ---
@@ -642,7 +644,232 @@ Faz 4: API şema temizliği
 Faz 5: ClickHouse MV + ORDER BY
   ↓
 Faz 6: Flutter Freezed + Decimal + AnnouncementPayload
+  ↓
+Faz 7: ML Feature Pipeline  [price-estimate şu an DURDURULDU]
+  ↓
+Faz 8: Finansal Audit Trail
+  ↓
+Faz 9: KVKK / Veri Silme Zinciri
+  ↓
+Faz 10: Veri Kalite Monitörü
+  ↓
+Faz 11: Outbox Pattern (opsiyonel)
 ```
+
+---
+
+---
+
+## Faz 7 — ML Feature Pipeline *(price-estimate şu an durduruldu)*
+
+### Durum
+
+`POST /analytics/price-estimate` → **503 FEATURE_TEMPORARILY_DISABLED** (analytics.py:496-498).  
+`GET /ai-price-credits` → **Sabit boş yanıt** döndürüyor.  
+Kod silinmedi — bu faz tamamlandığında erken return kaldırılır.
+
+### Neden Durduruldu
+
+Her `/price-estimate` çağrısında tetiklenen yük:
+- ARQ worker'a `generate_embedding_task` → model inference (CPU yoğun)
+- 150 satır `pgvector` `<=>` distance sorgusu
+- `numpy` + `scipy.stats.gaussian_kde` her request'te import + hesap
+- Redis'te embedding cache (7 gün TTL — büyüme kontrolsüz)
+
+### Yeniden Açılabilmesi İçin Gerekli Altyapı
+
+**7.1 Listing Embedding Pipeline (Zaten Kısmen Var)**
+
+`generate_listing_embedding_task` listing oluşturulunca çalışıyor (`listings.py:205`). Bu iyi.  
+Eksik: **toplu backfill** — mevcut listing'lerin `embedding` kolonu NULL.
+
+```python
+# worker.py — yeni scheduled task
+@cron(hour=2, minute=0)  # Her gece 02:00
+async def backfill_listing_embeddings(ctx):
+    """embedding IS NULL olan listing'ler için embedding üret (max 500/gece)."""
+```
+
+**7.2 User Preference Embedding — Güncelleme Stratejisi**
+
+Şu an cold start trigger (3/5/10/20 etkileşimde) mevcut ama:
+- `update_user_preference_embedding` task ne yapıyor? Hangi modelle vektör üretiyor?
+- Embedding vektörü kayıtlı mı yoksa sadece hesaplanıp kullanılıyor mu?
+
+Bu soruları cevaplamadan `price-estimate`'i açmak anlamsız — cold start sorununu çözmez.
+
+**7.3 Embedding Cache Kontrolü**
+
+```python
+# Cache key: f"cache:embedding:{md5(text)}"  — TTL: 7 gün
+# Sorun: farklı kullanıcılar aynı text → aynı cache, bu doğru
+# Sorun: cache boyutu büyüdükçe Redis memory artar
+# Çözüm: TTL'yi 24 saate indir (price-estimate açılınca)
+await redis.setex(emb_cache_key, 86400, emb_str)
+```
+
+**7.4 scipy/numpy — Lazy Import Koruma**
+
+```python
+# Her request'te import etmek yavaş. Endpoint açılınca module-level import:
+import numpy as np
+from scipy.stats import gaussian_kde
+# analytics.py başına taşı
+```
+
+**7.5 Price-Estimate Açılış Kontrolü**
+
+```python
+# Şu an kapalı (analytics.py:496):
+raise _HTTPException(status_code=503, detail={"code": "FEATURE_TEMPORARILY_DISABLED"})
+# Açmak için bu 2 satırı kaldır, docstring güncelle.
+```
+
+---
+
+## Faz 8 — Finansal Audit Trail
+
+### Problem
+
+`bids`, `purchases`, `direct_sale_orders` mutable satırlar. Bir satır güncellendiğinde önceki değer kaybolur.  
+Muhasebe, fraud detection ve KVKK için finansal işlemlerin **değişmez geçmişi** zorunlu.
+
+### Çözüm
+
+```sql
+CREATE TABLE financial_events (
+    id          BIGSERIAL PRIMARY KEY,
+    event_type  TEXT NOT NULL,        -- 'bid_placed', 'bid_cancelled', 'purchase_created',
+                                      --   'auction_ended', 'sale_ended', 'refund'
+    entity_type TEXT NOT NULL,        -- 'bid', 'purchase', 'direct_sale_order', 'auction'
+    entity_id   BIGINT NOT NULL,
+    amount      NUMERIC(10, 2) NOT NULL,
+    currency    TEXT NOT NULL DEFAULT 'TRY',
+    actor_id    BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    metadata    JSONB,                -- ek bağlam (karşı taraf, ödeme yöntemi, vb.)
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Sadece ekle, hiç güncelleme/silme yok
+-- Row-level security: sadece INSERT izni
+CREATE INDEX ix_fe_entity ON financial_events (entity_type, entity_id);
+CREATE INDEX ix_fe_actor   ON financial_events (actor_id, created_at);
+```
+
+### Tetikleyici Noktalar
+
+| Olay | Dosya | Eklenecek satır |
+|------|-------|-----------------|
+| Bid placed | `bid_commands.py` | `financial_events` INSERT |
+| Bid cancelled | `bid_commands.py` | `financial_events` INSERT |
+| Auction ended | `auction_commands.py` | `financial_events` INSERT |
+| Purchase created | `purchase_commands.py` | `financial_events` INSERT |
+| Direct sale order | `direct_sale_commands.py` | `financial_events` INSERT |
+
+---
+
+## Faz 9 — KVKK / Veri Silme Zinciri
+
+### Yasal Yükümlülük
+
+KVKK md.7: kişisel veri "ilgili kişinin talebiyle" silinmeli ya da anonimleştirilmeli.  
+Şu an `DELETE /auth/me` endpoint'i var mı? Varsa ne yapıyor?
+
+```bash
+grep -rn "delete_account\|account.*delete\|DELETE.*users" backend/app/routers/ --include="*.py"
+```
+
+### Silme Zinciri Tasarımı
+
+```
+Kullanıcı "Hesabı Sil" isteği
+  ↓
+users.status = "pending_deletion"
+users.deletion_requested_at = NOW()
+  ↓
+30 gün sonra scheduled worker:
+  ├── users: email/phone → "deleted_{id}@deleted.com", full_name → "Silinmiş Kullanıcı"
+  ├── direct_messages: content → "[silindi]", media_url → NULL  (satır kalır, thread korunur)
+  ├── listings: soft delete, görsel URL'leri MinIO'dan sil
+  ├── MinIO: profil görseli sil
+  ├── user_notification_prefs: sil
+  ├── user_social_links: sil
+  ├── analytics_events (ClickHouse): user_id → 0 (UPDATE — CH'da yavaş, batch ile)
+  └── user_interactions (ClickHouse): user_id → 0
+```
+
+### financial_events İstisnası
+
+Finansal kayıtlar (`financial_events`) KVKK kapsamında 10 yıl saklanmalı (Türk Ticaret Kanunu).  
+`actor_id` → `NULL` yapılır, `metadata` içindeki PII temizlenir. Satır silinmez.
+
+---
+
+## Faz 10 — Veri Kalite Monitörü
+
+### Günlük Bütünlük Kontrolleri
+
+```sql
+-- Scheduled worker, her gece 03:00
+
+-- 1. Tamamlanmış açık artırmaların final_price boş olmaması
+SELECT COUNT(*) FROM auctions
+WHERE status = 'ended' AND final_price IS NULL;
+
+-- 2. Satın alımların tekabül eden auctions ile uyumu
+SELECT COUNT(*) FROM purchases p
+LEFT JOIN auctions a ON a.id = p.auction_id
+WHERE p.auction_id IS NOT NULL AND a.id IS NULL;
+
+-- 3. Negative balance (teorik olarak imkansız ama kontrol et)
+SELECT COUNT(*) FROM users WHERE tuci_balance < 0;
+
+-- 4. Orphan DM media (MinIO'da var, DB'de yok — veya tersi)
+-- Bu daha karmaşık: storage_service audit ile
+```
+
+### ClickHouse Event Volume Alarmı
+
+```python
+# Prometheus metric: clickhouse_event_insert_rate
+# Alarm: son 1 saatte 0 event insert → ClickHouse bağlantısı kopmuş olabilir
+```
+
+---
+
+## Faz 11 — Outbox Pattern *(opsiyonel, ölçek büyüdüğünde)*
+
+### Problem
+
+Şu an `analytics_events` ve `user_interactions` ikili yazma (dual-write) ile ClickHouse'a gidiyor.  
+Network hatası → PostgreSQL write başarılı, ClickHouse write başarısız → sessiz veri kaybı.
+
+### Çözüm: Transactional Outbox
+
+```sql
+CREATE TABLE outbox_events (
+    id          BIGSERIAL PRIMARY KEY,
+    topic       TEXT NOT NULL,        -- 'analytics', 'user_interaction'
+    payload     JSONB NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    sent_at     TIMESTAMPTZ           -- NULL = henüz işlenmedi
+);
+```
+
+```python
+# Mevcut dual-write yerine:
+async with db.begin():
+    db.add(analytics_event)
+    db.add(OutboxEvent(topic="analytics", payload=event.dict()))
+    # ClickHouse write BURADA YOK — worker okuyacak
+
+# Worker (5 saniyede bir):
+pending = SELECT * FROM outbox_events WHERE sent_at IS NULL ORDER BY id LIMIT 1000
+# → ClickHouse batch insert
+# → UPDATE outbox_events SET sent_at = NOW() WHERE id = ANY(...)
+```
+
+Bu, Teqlif'in mevcut ölçeğinde zorunlu değil — ama ClickHouse veri tutarsızlığı gözlemlenirse uygulanır.
 
 ---
 
@@ -665,3 +892,8 @@ Faz 6: Flutter Freezed + Decimal + AnnouncementPayload
 | Redis TTL | Bazı key'lerde yok | Her key'e TTL | 3.1 |
 | CH aggregation | Full scan | Materialized View | 5.1 |
 | CH ORDER BY | timestamp first | Query pattern first | 5.2 |
+| ML pipeline | Yok (price-estimate durduruldu) | Feature store + batch embed | 7 |
+| Finansal audit | Yok (mutable tables) | Append-only event log | 8 |
+| Veri silme | Yok (soft delete sadece) | KVKK cascade + anonymize | 9 |
+| Veri kalite | Yok | Günlük integrity checks | 10 |
+| Dual-write güvenliği | Sessiz kayıp riski | Outbox pattern | 11 |
