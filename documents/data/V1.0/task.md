@@ -1217,24 +1217,141 @@ instagramUrl: json['instagram_url'] as String?,
 ### TASK-19 · P21 · 🟢 Medya Optimizasyonu (M1-M4)
 
 **Plan:** Faz 8.2  
-**Karar bekleniyor:** M1-M4 her biri ayrı onay gerektirir.
+**Strateji:** Client-side encode, server passthrough. Sıkıştırma yükü Flutter'da; backend aldığını saklar, geri verir.  
+**Referans cihaz:** iPhone 15 Pro (48 MP HEIC, 4K ProRes) — `flutter_image_compress` HEIC → WebP dönüşümü handle eder.
+
+> `MediaCompressor` + `flutter_image_compress` + `video_compress` **zaten kurulu** — yalnızca parametre ve tür değişikliği.
 
 **Kararlar:**
 
 | # | Değişiklik | Onay |
 |---|-----------|------|
-| M1 | İlan fotoğrafı: JPEG → WebP q80, max 1920px | [ ] |
-| M2 | İlan videosu: `-c:v copy` → CRF 28 (CPU yoğun) | [ ] |
-| M3 | DM medya limitleri: Foto 5→3 MB, Video 30→20 MB | [ ] |
-| M4 | Profil fotoğrafı: JPEG q85 → WebP q75, max 800px | [ ] |
+| M1 | İlan fotoğrafı: JPEG 1200px q80 → WebP 1920px q80; max **3 fotoğraf** (şu an 10) | ✅ |
+| M2 | İlan videosu: `HighestQuality` (1080p re-encode) → `MediumQuality` (720p H.264 scale) | ✅ |
+| M3 | DM medya limitleri: Foto 5→3 MB, Video 30→20 MB | ✅ |
+| M4 | Profil fotoğrafı: `dmPhoto` türü (1200px JPEG) → yeni `profilePhoto` türü (800px WebP q75) | ✅ |
 
-**Not:** M2 node5'te (7.8 GB RAM) upload sırasında yüksek CPU — önce staging'de yük testi yapılacak.
+---
 
 **Etkilenen dosyalar:**
-- `backend/app/services/media_processor.py`
-- `backend/app/utils/media_limits.py`
+- `mobile/lib/services/media_compressor.dart` — M1/M2/M4
+- `mobile/lib/core/media_constants.dart` — M3
+- `mobile/lib/screens/create_listing_screen.dart:98` — M1 (max 3 fotoğraf)
+- `mobile/lib/screens/profile_screen.dart:2471` — M4 (tür değişikliği)
+- `backend/app/constants/media_limits.py` — M3
 
-**Status:** [ ] BEKLEMEDE (M1-M4 kararları alındıktan sonra başla)
+---
+
+**M1 — İlan fotoğrafı (media_compressor.dart):**
+```dart
+// _compressPhoto metoduna format parametresi ekle:
+static Future<CompressedMedia> _compressPhoto(
+  String inputPath, int originalBytes, {
+  required int maxDim,
+  required int quality,
+  CompressFormat format = CompressFormat.jpeg,
+}) async {
+  final result = await FlutterImageCompress.compressWithFile(
+    inputPath,
+    minWidth: maxDim, minHeight: maxDim,
+    quality: quality,
+    format: format,
+    keepExif: false,
+  );
+  return CompressedMedia(
+    bytes: result!,
+    mimeType: format == CompressFormat.webp ? 'image/webp' : 'image/jpeg',
+    extension: format == CompressFormat.webp ? 'webp' : 'jpg',
+    originalBytes: originalBytes,
+    compressedBytes: result.length,
+  );
+}
+
+// listingPhoto case güncelle:
+case MediaCompressType.listingPhoto:
+  return _compressPhoto(inputPath, originalBytes,
+    maxDim: 1920, quality: 80, format: CompressFormat.webp);
+
+// M4 — profilePhoto yeni case:
+case MediaCompressType.profilePhoto:
+  return _compressPhoto(inputPath, originalBytes,
+    maxDim: 800, quality: 75, format: CompressFormat.webp);
+```
+
+**MediaCompressType enum'a ekle:**
+```dart
+enum MediaCompressType {
+  voice, dmVideo, dmPhoto, listingPhoto, listingVideo,
+  storyPhoto, storyVideo,
+  profilePhoto,  // ← yeni — M4
+}
+```
+
+**M2 — İlan videosu (media_compressor.dart):**
+```dart
+// listingVideo case:
+// ÖNCE: quality: VideoQuality.HighestQuality  (1080p re-encode, ağır)
+// SONRA: quality: VideoQuality.MediumQuality  (720p H.264, ~15-25s iPhone 15 Pro'da)
+case MediaCompressType.listingVideo:
+  return _compressVideo(inputPath, originalBytes,
+    quality: VideoQuality.MediumQuality,
+    onProgress: onProgress);
+```
+
+> iPhone 15 Pro: 1 dk 4K video → MediumQuality (720p H.264) → ~20-35 MB, A17 Pro'da ~15-25s.  
+> Server: `-c:v copy` korunur (zaten client sıkıştırdı).
+
+**M1 — Max 3 fotoğraf (create_listing_screen.dart:98):**
+```dart
+// ÖNCE: static const int _maxImages = 10;
+// SONRA:
+static const int _maxImages = 3;
+```
+
+**M3 — DM limitleri (media_constants.dart + media_limits.py):**
+```dart
+// media_constants.dart:
+static const int imageMaxBytes = 3 * 1024 * 1024;   // 5 MB → 3 MB
+static const int videoMaxBytes = 20 * 1024 * 1024;  // 30 MB → 20 MB
+```
+```python
+# media_limits.py:
+IMAGE_MAX_BYTES = 3 * 1024 * 1024   # 5 MB → 3 MB
+VIDEO_MAX_BYTES = 20 * 1024 * 1024  # 30 MB → 20 MB
+```
+
+**M4 — Profil fotoğrafı (profile_screen.dart:2471):**
+```dart
+// ÖNCE: MediaCompressType.dmPhoto  (1200px JPEG — yanlış tür kullanılıyordu)
+// SONRA:
+final compressed = await MediaCompressor.compress(
+  picked.path, MediaCompressType.profilePhoto);
+final upload = await ref.read(uploadServiceProvider).uploadBytes(
+  Uint8List.fromList(compressed.bytes), 'avatar.webp');
+```
+
+---
+
+**Tahmini depolama kazancı (iPhone 15 Pro referansı):**
+
+| Medya | Öncesi | Sonrası |
+|-------|--------|---------|
+| İlan fotoğrafı (48 MP HEIC ~15 MB) | ~5 MB JPEG 1200px | ~300 KB WebP 1920px |
+| İlan videosu (1 dk 4K ~350 MB) | ~30-50 MB 1080p | ~20-35 MB 720p |
+| Profil avatarı (2-5 MB) | ~1.2 MB JPEG 1200px | ~60 KB WebP 800px |
+
+---
+
+**Test:**
+- iPhone 15 Pro veya yüksek MP Android ile ilan oluştur: 3'ten fazla fotoğraf eklenemiyor
+- Fotoğraf upload → MinIO'da `.webp` uzantılı dosya var
+- 1 dk video compress süresi makul (< 30s)
+- Avatar güncelle → MinIO'da `avatar.webp` var
+- DM'de 3 MB'ı aşan fotoğraf → hata gösteriliyor
+
+**Node ops:** Yok (sadece Flutter + backend constants değişikliği)
+
+**Status:** [ ] BEKLEMEDE
 
 ---
 
