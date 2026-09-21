@@ -1,0 +1,17 @@
+[Unit]
+Description=PgBouncer connection pooler — node3 staging
+After=network.target postgresql.service
+Before=teqlif-staging.service
+
+[Service]
+User=postgres
+Group=postgres
+ExecStart=/usr/sbin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

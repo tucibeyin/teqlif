@@ -1,0 +1,9 @@
+# PgBouncer kullanıcı listesi — node3 staging
+#
+# Üretim adımı (node3'te çalıştır):
+#   python3 -c "import hashlib; pw='<STAGING_DB_PASSWORD>'; user='teqlif_staging'; print('\"' + user + '\" \"md5' + hashlib.md5((pw+user).encode()).hexdigest() + '\"')"
+#
+# Çıktıyı aşağıya yapıştır ve bu dosyayı /etc/pgbouncer/userlist.txt olarak kopyala.
+# GERÇEK ŞİFRE GEREKTİĞİNDEN BU DOSYA GIT'E GİRMEZ — sadece template.
+
+"teqlif_staging" "md5<HASH_BURAYA>"
