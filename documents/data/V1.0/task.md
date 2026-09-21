@@ -1055,6 +1055,7 @@ class ListingOut(BaseModel):  # feed kartı
     user: SellerMiniOut
 
     model_config = ConfigDict(from_attributes=True, json_encoders={Decimal: float})
+    # TASK-04 tamamlanınca BaseSchema'dan türet — json_encoders={Decimal: float} gereksiz kalır
 
 class ListingDetailOut(ListingOut):  # detay ekranı — ListingOut'u genişletir
     description: Optional[str] = None
@@ -2070,8 +2071,8 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
-| TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
 | TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
+| TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
 | TASK-18 · GC6/GC7 + D1 JSONB | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
@@ -2104,3 +2105,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | **S3 — `users` God Object** (`findings.md §S3`) — 47 kolon, 6 sorumluluk: kimlik + profil + sosyal + bildirim + GDPR + referral tek tabloda. `notification_prefs JSONB` tip güvensiz (14 alan JSON'da). | `users` tablosu WHERE koşulsuz SELECT'te ~47 kolon çeker; JOIN maliyeti yüksek | DB refactor sprint'i — `user_social_links` + `user_consents` ayrı tablolar; `notification_prefs` → `user_notification_prefs` tablo |
 | **S7 — Flutter Freezed** (`findings.md §S7`) — 45+ Flutter modeli tamamen manuel `fromJson`; API alan değişikliği = runtime crash. `flutter_freezed` + `json_serializable` ile üretilmiş koda geçiş. | Büyük efor (~45 sınıf); her ekranı test etmek gerekiyor | Flutter refactor sprint'i — Freezed generator kurulumu + model-by-model migration |
 | **S8 — ChatMessage tiplanmamış alanlar** (`findings.md §S8`) — `ChatMessage.announcementPayload: Map<String, dynamic>?` tip yok; yeni announcement tipi eklense crash. Sealed class'a çevrilmeli. | Chat panel etkilenecek — sealed + pattern matching | Flutter refactor sprint'i (S7 ile birlikte) |
+| **S13 — `UserOut` 26 alan, 7 sosyal URL** (`findings.md §S13`) — Her response'da 7 boş sosyal medya URL taşınıyor. Backend: `UserOut` (core) + `UserProfileOut` (sosyal linkler dahil) ayrımı. Flutter tarafı TASK-18e ile zaten planlandı. | `schemas/user.py` + etkilenen router'lar; TASK-yeni-G `UserMiniOut` tamamlandıktan sonra | Schema refactor sprint'i — S5/S6 sonrası |
+| **S15 — `StreamTokenOut` / `JoinTokenOut` örtüşmesi** (`findings.md §S15`) — İkisi de LiveKit bağlantı bilgisi, 5 ortak alan. Ortak `LiveKitTokenOut` base ile birleştirilebilir. | `schemas/stream.py` + ilgili endpoint'ler | Schema refactor sprint'i — az efor, bakım kolaylığı |
+| **S11 — `AuctionStateOut` aşırı kullanım** (`findings.md §S11`) — 9 farklı endpoint 1 şemayı paylaşıyor; her auction state'inde farklı alanlar dolu/boş. Discriminated union daha temiz olur. | Auction iş mantığı büyüyünce tetikle — koşullu | Auction refactor sprint'i — `AuctionCreatedOut`, `AuctionActiveOut`, `AuctionEndedOut` ayrımı |
+| **S12 — `StoryItemOut` iki tip, tek şema** (`findings.md §S12`) — `story_type='video'` → video alanları dolu; `'live_redirect'` → stream_id dolu. Discriminated union daha açık. | Story tipleri çoğalırsa tetikle — koşullu | Story refactor sprint'i |
