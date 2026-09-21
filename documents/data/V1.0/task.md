@@ -81,7 +81,8 @@
 1. `gift_event.py`: `ondelete="CASCADE"` → `ondelete="SET NULL"`
 2. `bid.py`: `stream_id` FK'ya `ondelete="SET NULL"` ekle
 3. `direct_sale.py`: `ondelete="CASCADE"` → `ondelete="SET NULL"`
-4. Alembic migration (her satır ayrı `op.execute()`):
+4. `auction.py`: `stream_id` FK'ya `ondelete="SET NULL"` ekle — **yeni bulgu:** tanımsız bırakılmış, GC5 live_stream silince FK violation fırlatır
+5. Alembic migration (her satır ayrı `op.execute()`):
    ```python
    op.execute("""
        ALTER TABLE gift_events
@@ -101,10 +102,16 @@
        ADD CONSTRAINT direct_sales_stream_id_fkey
            FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE SET NULL
    """)
+   op.execute("""
+       ALTER TABLE auctions
+       DROP CONSTRAINT IF EXISTS auctions_stream_id_fkey,
+       ADD CONSTRAINT auctions_stream_id_fkey
+           FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE SET NULL
+   """)
    ```
 
 **Test:**
-- Test live_stream sil → gift_events/bids/direct_sales stream_id NULL oldu, kayıtlar korundu
+- Test live_stream sil → gift_events/bids/direct_sales/auctions stream_id NULL oldu, kayıtlar korundu
 - direct_sale_orders da korundu (direct_sales var olmaya devam ettiği için)
 
 **Node ops:** Yok
@@ -554,20 +561,23 @@ Model dosyalarına da `Index(...)` tanımı eklenmeli:
 ### TASK-12 · P11/P12 · 🟢 GC3/GC4/GC5: listing_offers + exchange_rates + live_streams cleanup
 
 **Plan:** Faz 1.4  
-**Bağımlılık:** TASK yeni-A (D7: listing_offers.status eklendi) tamamlandıktan sonra GC3'te status filtresi çalışır.
+**Bağımlılık:**
+- GC3: **TASK-yeni-A tamamlanmadan çalıştırma** — status alanı olmadan aktif teklifler de silinir (`feed.py:292` LEFT JOIN ile teklif sayısı gösteriliyor)
+- GC5: **TASK-02 tamamlanmadan çalıştırma** — `auctions.stream_id` FK tanımsız; stream silinince FK violation fırlatır ve görev başarısız olur
 
 **Dosya:** `backend/app/worker.py`
 
 **Uygulama — 3 yeni görev:**
 ```python
 async def cleanup_old_listing_offers_task(ctx):
-    # R6 = 1 yıl — declined/expired veya eski aktif teklifler
-    # D7 tamamlandıktan sonra: status IN ('declined','expired') filtresi eklenebilir
-    # Şimdilik: tüm 1 yılı geçmiş teklifler temizlenir
+    # R6 = 1 yıl — TASK-yeni-A tamamlandıktan sonra çalıştır
+    # status IN ('declined','expired') filtresi şart — aktif teklifler korunmalı
+    # (feed.py:292 listing_offers LEFT JOIN ile teklif sayısı gösteriyor)
     async with get_db() as db:
         result = await db.execute(text(
             "DELETE FROM listing_offers "
-            "WHERE created_at < NOW() - INTERVAL '365 days'"
+            "WHERE status IN ('declined', 'expired') "
+            "AND created_at < NOW() - INTERVAL '365 days'"
         ))
         await db.commit()
         logger.info(f"[GC3] Deleted {result.rowcount} old listing offers")
@@ -874,9 +884,12 @@ masked = mask_ip(request.client.host)
 async def cleanup_empty_message_threads_task(ctx):
     async with get_db() as db:
         # message_threads tablosunda (user_a_id, user_b_id) PK var — thread_id kolonu yok
+        # status != 'pending' zorunlu — onay bekleyen DM isteklerini silmemek için
+        # (auth.py:406 login'de pending request'leri listeler; silinirse istek kaybolur)
         await db.execute(text(
             "DELETE FROM message_threads mt "
-            "WHERE NOT EXISTS ("
+            "WHERE mt.status != 'pending' "
+            "AND NOT EXISTS ("
             "  SELECT 1 FROM direct_messages dm "
             "  WHERE (dm.sender_id = mt.user_a_id AND dm.receiver_id = mt.user_b_id) "
             "     OR (dm.sender_id = mt.user_b_id AND dm.receiver_id = mt.user_a_id)"
@@ -1080,10 +1093,10 @@ instagramUrl: json['instagram_url'] as String?,
 **Plan:** Faz 2.5
 
 **Kapsam:**
-1. `mobile/lib/screens/teq_test_screen.dart` — Sil; `main.dart`'tan `/teq-test` route'unu kaldır
-2. `mobile/lib/services/analytics_service.dart` — `getFeedStats()` metodunu kaldır
+1. `mobile/lib/screens/teq_test_screen.dart` — Sil; `main.dart:17` import ve `main.dart:197` `/teq-test` route'unu kaldır (design system showcase ekranı, production özelliği yok)
+2. `mobile/lib/services/analytics_service.dart` — `getFeedStats()` metodunu kaldır (hiçbir yerde çağrılmıyor; backend `GET /analytics/my-feed-stats` endpoint'i aktif kalmaya devam eder)
 
-**Dikkat:** `teq_test_screen.dart` içeriğini önce oku — üretim debug verisi/credential içermiyor olduğundan emin ol.
+**Dikkat:** `teq_test_screen.dart` içeriği incelendi — sadece TeqButton, TeqCard vb. UI component'leri gösteriyor, credential/debug verisi yok.
 
 **Test:**
 - `dart analyze` 0 hata

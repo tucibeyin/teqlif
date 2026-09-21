@@ -77,16 +77,19 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 | **W3 condition_pref TTL=25dk, interval=6h** | TASK-09 | `condition_pref:{uid}` TTL 1500s → 21600s artırılmalı | task.md güncellendi |
 | **W5 trending TTL=30dk, interval=6h** | TASK-09 | `trending:listings:velocity` TTL 1800s → 21600s | task.md güncellendi |
 | **W6/W7 ALS TTL=25h, haftalık eğitim** | TASK-10 | `bpr:rec:{uid}` TTL 90000s → 604800s (7 gün) | task.md güncellendi |
-| **GC1 aktif izleyici silme riski** | TASK-03 | `left_at IS NOT NULL` filtresi eklenmeli | task.md güncellendi |
-| **TASK-13 keyset: `page`/`offset` kaldırılmamalı** | TASK-13 | Flutter offset-based kullanıyor; cursor additive eklenmeli | task.md güncellendi |
-| **TASK-13 Hive cache format değişimi** | TASK-13 | `homeCache` box format güncellenmeli + cacheVersion bump | task.md güncellendi |
+| **GC1 aktif izleyici silme riski** | TASK-03 | `left_at IS NOT NULL` filtresi eklenmeli | ✅ task.md güncellendi |
+| **GC5: `auctions.stream_id` FK tanımsız — FK violation** | TASK-02 | GC5 live_stream silince crash; `auctions` SET NULL ekle | ✅ TASK-02'ye eklendi |
+| **GC6 `pending` thread'leri siliyor** | TASK-18 GC6 | `status != 'pending'` filtresi zorunlu | ✅ sorgu düzeltildi |
+| **GC3 aktif teklif silinebilir** | TASK-12 GC3 | TASK-yeni-A öncesi çalıştırma; status filtresi eklendi | ✅ bağımlılık eklendi |
+| **TASK-13 keyset: `page`/`offset` kaldırılmamalı** | TASK-13 | Flutter offset-based kullanıyor; cursor additive eklenmeli | ✅ task.md güncellendi |
+| **TASK-13 Hive cache format değişimi** | TASK-13 | `homeCache` box format güncellenmeli + cacheVersion bump | ✅ task.md güncellendi |
 
 ### Güvenli (Kırılma Yok)
 
 | Task | Sebep |
 |------|-------|
 | TASK-01 | auction.status default değişimi sadece model/migration, API contract değişmez |
-| TASK-02 | FK SET NULL; direct_sales satırlar korunur |
+| TASK-02 | FK SET NULL; direct_sales + auctions satırlar korunur |
 | TASK-06 | ClickHouse TTL; analytics-only, prod query API değişmez |
 | TASK-07 | user_interactions interval; sadece cleanup SQL değişimi |
 | TASK-08 | MinIO lifecycle; uygulama kodu hiç etkilenmez |
