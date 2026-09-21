@@ -869,11 +869,16 @@ op.execute("ALTER TABLE listings DROP COLUMN location")
 - `/states` router yalnızca Türkiye illerini döndürüyor (ülke filtresi yok)
 - Flutter `StateService` ülke seçici içermiyor
 
-**Multi-country aktivasyon yapılacaklar (zaman gelince):**
-1. Migration: `ALTER TABLE states ADD CONSTRAINT fk_states_country FOREIGN KEY (country_code) REFERENCES countries(code)`
-2. States router'a `?country=TR` filtresi ekle
-3. Flutter `StateService.getStates()` → ülke parametresi al
-4. İlan oluşturma ekranına ülke seçici ekle (varsayılan: TR)
+**Pazar izolasyonu aktivasyon sırası (zaman gelince):**
+1. `users` tablosuna `country_code VARCHAR(2)` ekle — kullanıcının pazarı (TR/AZ/DE…)
+2. `listings` tablosuna `country_code VARCHAR(2)` ekle — ilanın pazarı; backfill ile mevcut ilanları TR'ye set et
+3. Feed/arama sorgularına `WHERE country_code = :user_market` filtresi ekle
+4. Migration: `ALTER TABLE states ADD CONSTRAINT fk_states_country FOREIGN KEY (country_code) REFERENCES countries(code)`
+5. States router'a `?country=TR` filtresi ekle
+6. Flutter `StateService.getStates()` → ülke parametresi al; ilan oluşturma ekranına ülke seçici ekle
+7. `exchange_rates` (usd_try, eur_try) üzerinden AZN/EUR fiyat gösterimi
+
+> `states.country_code` adres seçicinin alt yapısı. Pazar izolasyonunun kendisi `users.country_code` + `listings.country_code`'a bağlı.
 
 **Status:** ⏸️ BIRAKILDI — multi-country sprint'ine ertelendi
 
@@ -1088,6 +1093,6 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 
 | Yapı | Niyet | Aktivasyon Şartı |
 |------|-------|-----------------|
-| `countries` tablosu + `states.country_code` | Multi-country: ülke bazlı il/ilçe, ilan ve kullanıcı ülke kodu | Multi-country özellik sprint'i — states migration (FK) + StateService güncelleme + Flutter ülke seçici |
+| `countries` + `states.country_code` + **eksik**: `users.country_code`, `listings.country_code` | Pazar izolasyonu (TR/AZ/DE pazarları ayrı feed/arama) + adres seçici alt yapısı | Pazar sprint'i — önce users+listings'e country_code ekle → feed filtresi → sonra states FK + Flutter ülke seçici |
 | `referral.status = 'pending'` | İki adımlı referral: kayıt → pending; ilk alışveriş → completed + ödül tetikle | Referral iş mantığı sprint'i — `apply_referral` service refactor + ARQ görevi |
 | `ad_campaigns` DB + API | Satıcı boost/reklam — schema ve wallet entegrasyonu var | Flutter "reklam ver" ekranı sprint'i — `create_listing_screen` boost butonu + reklam oluşturma akışı |

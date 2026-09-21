@@ -280,10 +280,20 @@ W1 ↔ W4 birlikte karar ver.
 
 | Yapı | Niyet | Şu Anki Eksik | Bağımlılık |
 |------|-------|--------------|-----------|
-| `countries` tablosu | Multi-country desteği — ülke seçici UI, her ilanın/kullanıcının ülke kodu | `states → countries` FK yok; hiçbir router/endpoint yok; Flutter StateService ülke bilgisi almıyor | Flutter StateService güncelleme + states migration (FK ekle) + `/countries` endpoint |
-| `states.country_code` | `countries.code` FK'ya bağlanacak, ülke bazlı il filtrelemesi | Şu an plain VARCHAR, filtre olarak kullanılmıyor | `countries` aktivasyonu |
+| `countries` tablosu | Pazar izolasyonu (TR, AZ, DE…) + adres seçici ülke kökü | `states → countries` FK yok; hiçbir endpoint yok; Flutter ülke seçici yok | `/countries` endpoint + states FK migration + Flutter StateService güncelleme |
+| `states.country_code` | Adres seçicisinde ülkeye göre il filtrelemesi (`WHERE country_code='AZ'`) | Plain VARCHAR, şu an filtre olarak kullanılmıyor; tüm veriler TR | `countries` aktivasyonu + FK constraint ekle |
+| `listings.country_code` (eksik) | **Pazar izolasyonu** — feed/arama ülkeye göre izole edilecek (TR pazar, AZ pazar…) | Bu kolon **hiç yok** — eklenecek | `users.country_code` ile birlikte; feed sorgusuna `WHERE l.country_code = :market` ekle |
+| `users.country_code` (eksik) | Kullanıcının hangi pazarda olduğu | Bu kolon **hiç yok** — eklenecek | Kayıt akışına ülke seçimi + Flutter profil güncelleme |
+| `exchange_rates` | Pazar fiyatları için döviz dönüşümü | ✅ Tablo hazır, usd_try + eur_try var | Pazar izolasyonu aktif olunca AZN, EUR fiyat gösterimi |
 | `referral.status = 'pending'` | İki adımlı referral akışı: kayıt → `pending`; ilk başarılı işlem → `completed` + ödül | Tüm kayıtlar direkt `completed` oluşuyor; `pending` hiç set edilmiyor | Referral iş mantığı geliştirmesi |
 | `ad_campaigns` DB + API | Satıcı boost/reklam — schema, API ve wallet entegrasyonu tamam | Flutter'da "reklam ver" ekranı yok; `create_listing_screen`'den erişim yok | Flutter reklam oluşturma ekranı |
+
+> **Pazar izolasyonu aktivasyon sırası:**  
+> 1. `users.country_code` ekle (kayıt + profil)  
+> 2. `listings.country_code` ekle (ilan oluşturma + backfill)  
+> 3. Feed/arama sorgularına pazar filtresi ekle  
+> 4. `countries` + `states.country_code` FK bağla — ülkeye göre adres seçici  
+> 5. `exchange_rates` üzerinden çoklu para birimi gösterimi
 
 ---
 
