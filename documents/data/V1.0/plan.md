@@ -239,6 +239,44 @@ W1 ↔ W4 birlikte karar ver.
 
 ---
 
+### 2.5 — Dead Code ve Schema Temizliği
+
+> Kaynak: tüm model, router, use_case, service, worker.py + Flutter ekran/DTO incelemesi.
+
+**Backend — Ölü Tablo:**
+
+| Tablo | Durum | Aksiyon |
+|-------|-------|---------|
+| `countries` | Sadece `__init__.py` metadata import'u — hiçbir router/service kullanmıyor; `states.country_code` FK değil VARCHAR | DROP tablo + model sil |
+
+**Backend — Ölü / Bozuk Kolonlar:**
+
+| Tablo | Kolon | Durum | Aksiyon |
+|-------|-------|-------|---------|
+| `listings` | `updated_at` | ⚠️ Her zaman NULL — `onupdate` yok, write path yok | `onupdate=func.now()` + `update_listing.py` fix |
+| `direct_messages` | `flag_reason` | Hiçbir yerde set edilmiyor (`is_shadowbanned` kullanılıyor ama o değil) | DROP veya moderation write path ekle |
+| `call_participants` | `ringing_at` | Hiçbir yerde set edilmiyor (diğer timestamp'ler aktif) | DROP |
+| `states` | `country_code` | Seed verisi, hiçbir sorguda kullanılmıyor | DROP kolon |
+| `referrals` | `status` | Tüm kayıtlar `default="completed"`, pending mantığı yok | Kolon bırakılabilir ama semi-dead |
+
+**Backend — Dead ORM Class:**
+
+| Class | Durum | Aksiyon |
+|-------|-------|---------|
+| `Translation` (model/translation.py) | Tablo aktif ama raw SQL ile kullanılıyor — ORM class hiçbir business code'da import edilmiyor | `__init__.py`'den çıkar, dosyayı bırak (tablo var) |
+
+**Flutter — Dead / Eksik:**
+
+| Öğe | Durum | Aksiyon |
+|-----|-------|---------|
+| `teq_test_screen.dart` | `/teq-test` route'u kayıtlı ama hiçbir ekrandan açılmıyor | Sil |
+| `User` modeli sosyal URL kolonları | `website_url`, `instagram_url`, `kick_url` vb. raw `Map<String, dynamic>` üzerinden erişiliyor — `User.fromJson` kapsamında değil | User model'e typed field'lar ekle |
+| `AnalyticsService.getFeedStats()` | `GET /api/analytics/my-feed-stats` çağrısı — hiçbir ViewModel veya Screen kullanmıyor | Sil |
+| `nsfw_score` / `quality_score` / `image_phash` | Flutter'da hiç kullanılmıyor (backend aktif kullanıyor) | Flutter scope dışı, olduğu gibi bırak |
+| `cross_border_consent_*` detayları | Kayıtta gönderilir, geri okunmaz — backend kaydı yeterli | Flutter scope dışı, bırak |
+
+---
+
 ### 2.4 — Faz 2 Başarı Kriterleri
 
 ```
@@ -248,8 +286,12 @@ W1 ↔ W4 birlikte karar ver.
 □ D7: listing_offers.status alanı eklendi, GC3 çalışıyor
 □ D8: user_interests UNIQUE(user_id, category, subcategory) + upsert güncellendi
 □ listings.image_urls JSONB, GIN index var
-□ gift_events + bids FK SET NULL yapıldı
+□ gift_events + bids + direct_sales FK SET NULL yapıldı
 □ Pydantic schema Decimal tiplere güncellendi
+□ listings.updated_at: onupdate=func.now() + update_listing.py write path
+□ Dead kolonlar (flag_reason, ringing_at, states.country_code) kaldırıldı
+□ countries tablosu ve modeli temizlendi
+□ Flutter: User model sosyal URL alanları typed hale getirildi
 ```
 
 ---
@@ -736,6 +778,11 @@ Geçiş döneminde çift okuma → Flutter güncellendikten sonra eski kaldırı
 | P18 | KV1: ip_address maskeleme | 9.2 |
 | P19 | GC2: calls cleanup | 1.4 |
 | P20 | D1: listings.image_urls → JSONB | 2.2 |
+| P20b | listings.updated_at write path düzelt | 2.5 |
+| P20c | Dead kolon migration (flag_reason, ringing_at, states.country_code) | 2.5 |
+| P20d | countries tablosu temizliği | 2.5 |
+| P20e | Flutter User model sosyal URL typed alanlar | 2.5 |
+| P20f | Flutter dead code: teq_test_screen + getFeedStats() | 2.5 |
 
 ### Düşük — 3. Sprint
 

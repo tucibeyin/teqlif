@@ -795,6 +795,143 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 
 ---
 
+### TASK-18b · P20b · 🟡 listings.updated_at — Write Path Düzeltmesi
+
+**Plan:** Faz 2.5  
+**Sorun:** `listings.updated_at` her zaman NULL. `onupdate` yok, hiçbir update use case bu kolonu set etmiyor. API yanıtı `updated_at: null` dönüyor — yanıltıcı.
+
+**Etkilenen dosyalar:**
+- `backend/app/models/listing.py` — `onupdate=func.now()` ekle
+- `backend/app/use_cases/listings/commands/update_listing.py` — explicit set ekle
+- `backend/alembic/versions/` — Backfill migration
+
+**Uygulama:**
+1. Model:
+   ```python
+   updated_at: Mapped[Optional[datetime]] = mapped_column(
+       DateTime(timezone=True), nullable=True,
+       onupdate=func.now()
+   )
+   ```
+2. `update_listing.py`'de update sonrası `listing.updated_at = func.now()` veya ORM flush tetikler.
+3. Backfill migration:
+   ```python
+   op.execute("UPDATE listings SET updated_at = created_at WHERE updated_at IS NULL")
+   ```
+
+**Test:**
+- İlan güncelle → `updated_at` NULL değil, şu anki zaman
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-18c · P20c · 🟢 Dead Kolon Migration
+
+**Plan:** Faz 2.5  
+**Kapsam:** Kod incelemesinde hiç kullanılmadığı doğrulanan kolonlar.
+
+**Etkilenen dosyalar:**
+- `backend/app/models/message.py` — `flag_reason` kaldır
+- `backend/app/models/call.py` — `CallParticipant.ringing_at` kaldır
+- `backend/app/models/state.py` — `country_code` kaldır
+- `backend/alembic/versions/` — Migration
+
+**Uygulama:**
+```python
+op.execute("ALTER TABLE direct_messages DROP COLUMN flag_reason")
+op.execute("ALTER TABLE call_participants DROP COLUMN ringing_at")
+op.execute("ALTER TABLE states DROP COLUMN country_code")
+```
+
+> Dikkat: drop öncesi `SELECT COUNT(*) FROM direct_messages WHERE flag_reason IS NOT NULL` ile veri yok olduğunu doğrula.
+
+**Test:**
+- Staging'de migration çalıştır, uygulama hatası yok
+- DM gönder/al, çağrı başlat — çalışıyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-18d · P20d · 🟢 countries Tablosu Temizliği
+
+**Plan:** Faz 2.5  
+**Sorun:** `countries` tablosu hiçbir router/service/worker tarafından kullanılmıyor. `states.country_code` FK değil, plain VARCHAR.
+
+**Etkilenen dosyalar:**
+- `backend/app/models/country.py` — Sil
+- `backend/app/models/__init__.py` — Country import'unu kaldır
+- `backend/alembic/versions/` — Migration
+
+**Uygulama:**
+```python
+# Migration
+op.execute("DROP TABLE IF EXISTS countries")
+```
+Ardından `models/country.py` dosyasını sil.
+
+**Test:**
+- `alembic upgrade head` sonrası `\dt` ile tablo yok
+- Uygulama normal başlıyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-18e · P20e · 🟡 Flutter User Model — Sosyal URL Typed Alanlar
+
+**Plan:** Faz 2.5  
+**Sorun:** `website_url`, `instagram_url`, `kick_url`, `twitch_url`, `facebook_url`, `youtube_url`, `tiktok_url` — `User` model sınıfında tip güvensiz `Map<String, dynamic>` erişimi ile kullanılıyor. `User.fromJson` kapsamı dışında.
+
+**Etkilenen dosyalar:**
+- `mobile/lib/models/user.dart` — Yeni opsiyonel alanlar
+- `mobile/lib/screens/profile_screen.dart` — raw map erişimini typed alanlara taşı
+- `mobile/lib/screens/public_profile_screen.dart` — aynı
+
+**Uygulama:**
+```dart
+// User class'ına ekle
+final String? websiteUrl;
+final String? instagramUrl;
+final String? kickUrl;
+final String? twitchUrl;
+final String? facebookUrl;
+final String? youtubeUrl;
+final String? tiktokUrl;
+
+// fromJson:
+websiteUrl: json['website_url'] as String?,
+instagramUrl: json['instagram_url'] as String?,
+// ...
+```
+
+**Test (MVVM):**
+- Profil ekranında sosyal URL'ler doğru parse ediliyor
+- `dart analyze` 0 hata
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-18f · P20f · 🟢 Flutter Dead Code Temizliği
+
+**Plan:** Faz 2.5
+
+**Kapsam:**
+1. `mobile/lib/screens/teq_test_screen.dart` — Sil; `main.dart`'tan `/teq-test` route'unu kaldır
+2. `mobile/lib/services/analytics_service.dart` — `getFeedStats()` metodunu kaldır
+
+**Dikkat:** `teq_test_screen.dart` içeriğini önce oku — üretim debug verisi/credential içermiyor olduğundan emin ol.
+
+**Test:**
+- `dart analyze` 0 hata
+- Uygulama normal başlıyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-19 · P21 · 🟢 Medya Optimizasyonu (M1-M4)
 
 **Plan:** Faz 8.2  
@@ -932,6 +1069,11 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
 | TASK-18 · GC6/GC7 + D1 JSONB (sorgu fix) | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
+| TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [ ] |
+| TASK-18c · Dead kolon migration (flag_reason, ringing_at, country_code) | 🟢 P20c | Orta | 2.5 | [ ] |
+| TASK-18d · countries tablosu temizliği | 🟢 P20d | Orta | 2.5 | [ ] |
+| TASK-18e · Flutter User model sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
+| TASK-18f · Flutter dead code (teq_test + getFeedStats) | 🟢 P20f | Orta | 2.5 | [ ] |
 | TASK-19 · Medya M1-M4 | 🟢 P21 | Düşük | 8.2 | [ ] |
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
