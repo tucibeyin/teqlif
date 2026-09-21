@@ -65,7 +65,7 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 
 | Bulgu | Task | Etkilenen Dosya | Aksiyon |
 |-------|------|-----------------|---------|
-| **listing.location DROP Flutter'ı kırıyor** | TASK-18c | `edit_listing_screen.dart:99,381`, `listing_detail_screen.dart:1426`, `home_view_model.dart:195`, `swipe_live_screen.dart:1985` | Flutter + backend aynı commit — task.md'ye eklendi |
+| **listing.location DROP iptal — write path fix** | TASK-18c | Backend hiç kaydetmiyor; `create_listing.py` + `update_listing.py` write path düzeltilecek | Drop yok; write path ekleniyor |
 | **TASK-04 Float→Numeric: `_row_dict()` Decimal→str** | TASK-04 | `listing_utils.py:95,107`, `search_listings_query.py:125`, `listings.py:349`, `get_listing_offers.py:22` | Auction/DS güvenli (response_model var); listing/offer endpoint'leri float() wrap edilmeli |
 | **PgBouncer: `statement_cache_size=0` eksik** | TASK-05 | `backend/app/database.py` — NullPool var ama connect_args eksik | `connect_args={"statement_cache_size": 0}` eklenmeli |
 | **W4 Redis key mismatch — tamamen işlevsiz** | TASK-09 | `foryou_worker.py` — `feed:{uid}:foryou` yazıyor, API `feed:foryou:{uid}` okuyor | Key mismatch frekans değişikliğiyle birlikte düzeltilmeli |

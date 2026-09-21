@@ -898,53 +898,56 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 
 ---
 
-### TASK-18c · P20c · 🟢 Dead Kolon Migration
+### TASK-18c · P20c · 🟢 Dead Kolon Migration + listing.location Write Path Fix
 
 **Plan:** Faz 2.5  
-**Kapsam:** Kod incelemesinde hiç kullanılmadığı doğrulanan kolonlar.
+**Kapsam:** Kod incelemesinde hiç kullanılmadığı doğrulanan kolonlar + bozuk write path düzeltmesi.
 
-> `states.country_code` bu scope'tan **çıkarıldı** — multi-country entegrasyonunda kullanılacak (Faz 2.6).
+> `states.country_code` bu scope'tan **çıkarıldı** — multi-country entegrasyonunda kullanılacak (Faz 2.6).  
+> `listings.location` bu scope'tan **çıkarıldı** — kolon dead değil, write path bozuk; aşağıda düzeltiliyor.
 
-> ⚠️ **KIRILMA UYARISI — `listing.location` (Impact Analizi):** Bu kolon Flutter'da aktif olarak kullanılıyor. Migration'dan ÖNCE tüm Flutter + backend kod değişiklikleri aynı commit'te yapılmalı. Ayrı deploy edilirse production crash oluşur.
->
-> **Backend (aynı commit):**
-> - `backend/app/models/listing.py` — `location` attribute kaldır
-> - `backend/app/use_cases/listings/queries/listing_utils.py:107` — `"location": listing.location` satırı kaldır
-> - `backend/app/use_cases/listings/queries/search_listings_query.py:56` — `Listing.location.ilike(...)` where clause kaldır; `satır 54-56` bloğunu temizle
-> - `backend/app/routers/listings.py:67-68` — `location: Optional[str] = None` query param kaldır; `satır 99` `location=location` argümanı kaldır
-> - `backend/app/routers/listings.py:356` — similar endpoint `"location": item.location` kaldır
->
-> **Flutter (aynı commit — bu değişiklikler olmadan migration çalıştırılmamalı):**
-> - `mobile/lib/screens/edit_listing_screen.dart:99,381` — `location` okuma/yazma kaldır
-> - `mobile/lib/screens/listing_detail_screen.dart:1426,1437,2395,2400` — `location` gösterimi kaldır
-> - `mobile/lib/screens/viewmodels/home_view_model.dart:195` — `params['location']` feed filtresi kaldır
-> - `mobile/lib/screens/live/swipe_live_screen.dart:1985,2111-2118` — canlı yayın overlay'indeki location kaldır
+**Dead kolon migration (flag_reason + ringing_at):**
 
-**Etkilenen dosyalar:**
+Etkilenen dosyalar:
 - `backend/app/models/message.py` — `flag_reason` kaldır
 - `backend/app/models/call.py` — `CallParticipant.ringing_at` kaldır
-- `backend/app/models/listing.py` — `location` kaldır
-- `backend/app/use_cases/listings/queries/listing_utils.py`
-- `backend/app/use_cases/listings/queries/search_listings_query.py`
-- `backend/app/routers/listings.py`
-- Flutter: `edit_listing_screen.dart`, `listing_detail_screen.dart`, `home_view_model.dart`, `swipe_live_screen.dart`
 - `backend/alembic/versions/` — Migration
 
-**Uygulama:**
 ```python
 op.execute("ALTER TABLE direct_messages DROP COLUMN flag_reason")
 op.execute("ALTER TABLE call_participants DROP COLUMN ringing_at")
-op.execute("ALTER TABLE listings DROP COLUMN location")
 ```
 
-> Dikkat: drop öncesi `SELECT COUNT(*) FROM direct_messages WHERE flag_reason IS NOT NULL` ile veri yok olduğunu doğrula.  
-> `listings.location` için: `SELECT COUNT(*) FROM listings WHERE location IS NOT NULL` — NULL olmayan varsa önce elle incele.
+> Dikkat: drop öncesi `SELECT COUNT(*) FROM direct_messages WHERE flag_reason IS NOT NULL` ile veri yok olduğunu doğrula.
+
+---
+
+**listing.location Write Path Fix:**
+
+> **Sorun:** Flutter `location` alanını gönderiyor ve gösteriyor — ama backend `create_listing` ve `update_listing` use case'lerinde bu alanı hiç DB'ye yazmıyor. Kullanıcının girdiği konum sessizce kayboluyor.
+
+Etkilenen dosyalar:
+- `backend/app/use_cases/listings/commands/create_listing.py` — `location` parametresini al, modele yaz
+- `backend/app/use_cases/listings/commands/update_listing.py` — `location` güncellemesini ekle
+- `backend/app/routers/listings.py` — request body'de `location` alanının varlığını kontrol et
+
+```python
+# create_listing.py — listing oluşturulurken:
+listing = Listing(
+    ...
+    location=data.location,   # ← ekle
+)
+
+# update_listing.py — listing güncellenirken:
+if data.location is not None:
+    listing.location = data.location  # ← ekle
+```
 
 **Test:**
-- Staging'de migration çalıştır, uygulama hatası yok
-- DM gönder/al, çağrı başlat, ilan oluştur — çalışıyor
-- İlan detay API `location` alanı dönmüyor (backend kodu temizlendi)
-- Flutter: `dart analyze` 0 hata; edit_listing ve listing_detail ekranları açılıyor
+- Staging'de migration çalıştır (flag_reason + ringing_at drop), uygulama hatası yok
+- DM gönder/al, çağrı başlat — çalışıyor
+- Flutter'dan `location` dolu ilan oluştur → `SELECT location FROM listings WHERE id=...` → değer kaydedildi
+- İlan güncelle → location değişti
 
 **Status:** [ ] BEKLEMEDE
 
