@@ -79,31 +79,24 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 
 | # | Tablo/TTL | Şu An | Öneri | Endüstri | Etki | Karar |
 |---|-----------|-------|-------|---------|------|-------|
-| **R9** | `user_events` ClickHouse TTL | 30 gün | **90 gün** | Mixpanel 90g · Amplitude 12ay | BUG-1 + BUG-3 kapanır | □ |
-| **R9b** | `user_interactions` PG retention | 90 gün | **120 gün** | Netflix/Spotify CF: 3-6 ay | BUG-2 kapanır | □ |
-
-> **Disk uyarısı (node5 50 GB SSD):** R9 kararından önce mevcut boyutu ölç:
-> ```sql
-> SELECT table, sum(bytes_on_disk)/1024/1024 AS mb
-> FROM system.parts WHERE database='teqlif_prod_analytics' AND active=1
-> GROUP BY table ORDER BY mb DESC;
-> ```
+| **R9** | Tüm CH tabloları TTL | 30 gün | **■ 1 yıl (365 gün)** | GA4: 14ay · Amplitude: 12ay | BUG-1+BUG-3 kapanır, sezonsal analiz mümkün | ■ |
+| **R9b** | `user_interactions` PG retention | 90 gün | **■ 1 yıl (365 gün)** | Netflix/Spotify CF: 3-6 ay | BUG-2 kapanır, sezonsal öneri kalitesi | ■ |
 
 **Grup B — Canlı Yayın (Birlikte Karar Ver)**
 
 | # | Tablo | Şu An | Öneri | Bağımlılık | Karar |
 |---|-------|-------|-------|-----------|-------|
-| **R3** | `live_streams` (biten) | Sonsuz | **1 yıl** | R5 CASCADE fix yapılmadan uygulanmaz | □ |
-| **R1** | `live_stream_viewers` | ⚠️ Sonsuz | **90 gün** | R3 CASCADE zaten siler | □ |
-| **R5** | `gift_events` | Sonsuz | Sonsuz + FK SET NULL | TTK 82: finansal kayıt 10 yıl zorunlu | □ |
-| **R4** | `bids` | Sonsuz | **2 yıl** | `bids.stream_id` ondelete fix gerekli | □ |
+| **R3** | `live_streams` (biten) | Sonsuz | **■ 10 yıl** | R5 CASCADE fix yapılmadan uygulanmaz | ■ |
+| **R1** | `live_stream_viewers` | ⚠️ Sonsuz | **■ 10 yıl** | R3 ile tutarlı | ■ |
+| **R5** | `gift_events` | Sonsuz | **■ Sonsuz + FK SET NULL** | TTK 82: finansal kayıt 10 yıl zorunlu | ■ |
+| **R4** | `bids` | Sonsuz | **■ 10 yıl** | `bids.stream_id` ondelete fix gerekli | ■ |
 
 **Grup C — Mesajlaşma**
 
 | # | Tablo | Şu An | Öneri | Karar |
 |---|-------|-------|-------|-------|
-| **R7** | `direct_messages` (text) | Sonsuz | Sonsuz önerilir | □ |
-| R8 | `message_threads` | Sonsuz | R7=sonsuz ise sonsuz | □ |
+| **R7** | `direct_messages` (text) | Sonsuz | **■ Sonsuz** | Pazar yeri kanıt değeri; medya zaten 7g'de siliniyor | ■ |
+| R8 | `message_threads` | Sonsuz | **■ Sonsuz** | R7 ile tutarlı | ■ |
 
 **Grup D — Ticaret (Yasal Zorunluluk)**
 
@@ -112,16 +105,16 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 | `purchases` | ■ Sonsuz | TTK 82 + VUK 253: 10 yıl |
 | `tuci_transactions` | ■ Sonsuz | TTK 82 + VUK 253: 10 yıl |
 | `direct_sales` / `direct_sale_orders` | ■ Sonsuz | Ticaret kaydı |
-| `auctions` | □ Sonsuz? | TTK 82 kapsamı değerlendirilmeli |
+| `auctions` | ■ 10 yıl | TTK 82: açık artırma ticari işlem |
 
 **Grup E — Diğer**
 
 | # | Tablo | Şu An | Öneri | Endüstri | Karar |
 |---|-------|-------|-------|---------|-------|
-| R2 | `calls` (ended/missed) | Sonsuz | **1 yıl** | 5651 Kanunu: telekom 2 yıl; app çağrısı 1 yıl | □ |
-| R6 | `listing_offers` (declined/expired) | Sonsuz | **60 gün** | Marketplace: 30-90 gün | □ |
-| R10 | `market_index` (kur verileri) | Sonsuz | **2 yıl** | Vergi: 10 yıl; uygulama için 2 yıl yeterli | □ |
-| R11 | Hesap silme → DM | Sonsuz | Anonimleştir | GDPR/KVKK: sender_id=NULL, `[Silinmiş mesaj]` | □ |
+| R2 | `calls` (ended/missed) | Sonsuz | **■ 2 yıl** | 5651 Kanunu referans; anlaşmazlık kanıtı | ■ |
+| R6 | `listing_offers` (declined/expired) | Sonsuz | **■ 1 yıl** | Sezonsal fiyat analizi | ■ |
+| R10 | `market_index` (kur verileri) | Sonsuz | **■ 10 yıl** | Vergi incelemesi; günde 1 satır, maliyet sıfır | ■ |
+| R11 | Hesap silme → DM | Sonsuz | **■ Anonimleştir** | GDPR/KVKK: sender_id=NULL, `[Silinmiş kullanıcı]` | ■ |
 
 ---
 
@@ -175,13 +168,13 @@ W1 ↔ W4 birlikte karar ver.
 
 | # | Görev | Şu An | Öneri | Karar |
 |---|-------|-------|-------|-------|
-| **W1** | `compute_user_interests_task` | 15 dk'da bir (96x/gün) | 2x/gün (08:00, 20:00) | □ |
-| **W4** | `populate_foryou_feed_task` | Saatlik (24x/gün) | W1 ile 2-4x/gün | □ |
-| W2 | `backfill_listing_embeddings_task` | 30 dk'da bir (gece gündüz) | Yalnızca 02:00-04:00 | □ |
-| W3 | `compute_user_condition_preferences_task` | 15 dk'da bir | 4x/gün | □ |
-| W5 | `compute_trending_listings_task` | 30 dk'da bir | 4x/gün | □ |
-| **W6** | `train_feed_als_task` | Günlük 01:30 | Haftalık | □ |
-| **W7** | `train_swipe_live_als_task` | Günlük 01:00 | Haftalık | □ |
+| **W1** | `compute_user_interests_task` | 15 dk'da bir (96x/gün) | **■ 4x/gün** | ■ |
+| **W4** | `populate_foryou_feed_task` | Saatlik (24x/gün) | **■ 4x/gün** | ■ |
+| W2 | `backfill_listing_embeddings_task` | 30 dk'da bir (gece gündüz) | **■ Yalnızca gece 02:00-04:00** | ■ |
+| W3 | `compute_user_condition_preferences_task` | 15 dk'da bir | **■ 4x/gün** | ■ |
+| W5 | `compute_trending_listings_task` | 30 dk'da bir | **■ 4x/gün** | ■ |
+| **W6** | `train_feed_als_task` | Günlük 01:30 | **■ Haftalık (Paz 01:30)** | ■ |
+| **W7** | `train_swipe_live_als_task` | Günlük 01:00 | **■ Haftalık (Paz 01:00)** | ■ |
 
 ---
 
@@ -311,14 +304,14 @@ Adımlar:
 
 ### 4.1 — ClickHouse TTL Güncellemesi
 
-R9 = 90 gün onaylanırsa:
+R9 = **■ 1 yıl (365 gün)**:
 
 ```sql
-ALTER TABLE user_events MODIFY TTL timestamp + INTERVAL 90 DAY;
-ALTER TABLE feed_analytics MODIFY TTL timestamp + INTERVAL 90 DAY;
-ALTER TABLE search_events MODIFY TTL timestamp + INTERVAL 90 DAY;
-ALTER TABLE swipe_live_events MODIFY TTL timestamp + INTERVAL 90 DAY;
--- direct_sale_events: 180 gün → değişmez
+ALTER TABLE user_events MODIFY TTL timestamp + INTERVAL 365 DAY;
+ALTER TABLE feed_analytics MODIFY TTL timestamp + INTERVAL 365 DAY;
+ALTER TABLE search_events MODIFY TTL timestamp + INTERVAL 365 DAY;
+ALTER TABLE swipe_live_events MODIFY TTL timestamp + INTERVAL 365 DAY;
+ALTER TABLE direct_sale_events MODIFY TTL created_at + INTERVAL 365 DAY;
 ```
 
 `ALTER TABLE ... MODIFY TTL` non-blocking, mevcut veri korunur.
