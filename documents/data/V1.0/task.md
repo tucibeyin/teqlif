@@ -9,15 +9,21 @@
 ## Workflow (Her Task İçin)
 
 ```
-1. Uygula         — kodu yaz, migration/config değişikliklerini hazırla
-2. Review onayı   — kullanıcı kodu inceler, "onaylıyorum" der
-3. Test onayı     — kullanıcı staging/local'de test eder, "test geçti" der
-4. Commit + push  — git commit + git push
-5. Node ops       — VPS adımları varsa her adımı ayrı ver, çıktı bekle
-6. Task kapatma   — kullanıcı "task tamam" der
-7. İşaretle       — status güncelle: [x] TAMAMLANDI · commit: XXXXXXXX · tarih: YYYY-MM-DD
+1. Uygula          — kodu yaz, migration/config/deploy dosyalarını hazırla
+2. Push            — git commit + git push (main)
+3. Staging deploy  — node3'te git pull + VPS adımları; her adımı ayrı ver, çıktı bekle
+4. Staging test    — kullanıcı node3'te test eder, "test geçti" der
+5. how_to.md       — staging'de yapılan production adımları deploy/scale/V1.4/how_to.md'ye kaydet
+6. Task kapatma    — kullanıcı "task tamam" der
+7. İşaretle        — status güncelle: [x] TAMAMLANDI · commit: XXXXXXXX · tarih: YYYY-MM-DD
 8. Sonraki task
 ```
+
+**Staging → Production kuralı:**
+- Tüm değişiklikler önce **node3 (staging)** üzerinde uygulanır ve test edilir.
+- Staging onayından sonra aynı adımlar **node5 (production)** için `deploy/scale/V1.4/how_to.md`'ye kayıt olarak eklenir.
+- `how_to.md` her task için node5'te çalıştırılacak kesin adımları içerir — staging ile fark varsa (port, DB adı, servis adı vb.) açıkça belirtilir.
+- Production deployment `how_to.md` kılavuzu izlenerek yapılır; ad-hoc komut çalıştırılmaz.
 
 ---
 
