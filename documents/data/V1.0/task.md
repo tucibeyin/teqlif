@@ -916,9 +916,10 @@ Flutter (MVVM):
 
 ---
 
-### TASK-14 · P14 · 🟡 Endpoint Cache Stratejisi
+### TASK-14 · P16a · 🟡 Endpoint Cache Stratejisi
 
-**Plan:** Faz 5.3  
+**Plan:** Faz 5.3 — **TASK-13 (keyset), TASK-15 (N+1 fix) ve TASK-yeni-N (slim DTO) tamamlandıktan sonra başla**  
+**Bağımlılık notu:** Cache, altındaki sorgunun optimize edilmiş ve response shape'inin sabitlenmiş haline eklenmeli. Önce N+1 fix + slim DTO, sonra cache — aksi hâlde her optimizasyon cache invalidation gerektirir.  
 **Etkilenen dosyalar:**
 - `backend/app/routers/listings.py`, `users.py`, `catalog.py`, `app_config.py`
 - `backend/app/cache.py` (veya mevcut fastapi-cache decorator'ları)
@@ -937,7 +938,7 @@ Flutter (MVVM):
 
 ---
 
-### TASK-yeni-L · P14b · 🟡 Like Sayıları Redis Counter'a Taşı
+### TASK-yeni-L · P16b · 🟡 Like Sayıları Redis Counter'a Taşı
 
 **Plan:** Faz 5.3 — TASK-14 ile aynı sprint (feed cache bunları okuyacak)  
 **Kaynak:** Cache management endüstri standardı analizi
@@ -1164,7 +1165,7 @@ async def get_feed_page(
 
 ---
 
-### TASK-yeni-I · P15b · 🟡 Bid DB-Redis Stale State Sync
+### TASK-yeni-I · P16c · 🟡 Bid DB-Redis Stale State Sync
 
 **Plan:** Faz 3.4  
 **Kaynak:** Redis tutarlılık denetimi (R3)
@@ -1392,9 +1393,9 @@ async def get_listing(...): ...
 
 ---
 
-### TASK-yeni-K · P5i · 🔴 PgBouncer Transaction Mode Uyumluluk Denetimi
+### TASK-yeni-K · P1a · 🔴 PgBouncer Transaction Mode Uyumluluk Denetimi
 
-**Plan:** Faz 3.1 — **TASK-05 production'da aktif edilmeden önce tamamlanmalı**  
+**Plan:** Faz 3.1 — **TASK-05 (P1) öncesi tamamlanmalı — bloklayıcı**  
 **Bağımlılık:** TASK-05 bu task'a bağımlıdır.
 
 **Durum tespiti:** `database.py` zaten `use_pgbouncer=True` → `NullPool` branch'ine sahip. Eksik olan: `connect_args` (asyncpg prepared statement cache) ve uyumsuz SQL pattern denetimi.
@@ -2257,9 +2258,9 @@ op.execute("ALTER INDEX ix_tuci_transactions_user_created RENAME TO ix_teqlik_tr
 
 ---
 
-### TASK-yeni-N · P26 · 🟡 Ağ Katmanı Lightweight — Slim Feed DTO
+### TASK-yeni-N · P15c · 🟡 Ağ Katmanı Lightweight — Slim Feed DTO
 
-**Plan:** Faz 5.1 ile birlikte (TASK-15 ile aynı sprint).  
+**Plan:** Faz 5.1 — **TASK-15 ile aynı sprint** (aynı dosyalar: `listing_utils.py`, `get_swipe_feed.py`).  
 **Hedef:** Listing feed payload boyutunu %30-40 azalt; kart görünümünde gereksiz alanlar gönderilmesin.
 
 **Mevcut durum:**
@@ -2441,6 +2442,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | Task | Öncelik | Sprint | Faz | Status |
 |------|---------|--------|-----|--------|
 | **— KRİTİK SPRINT —** | | | | |
+| TASK-yeni-K · PgBouncer uyumluluk denetimi | 🔴 P1a | Kritik | 3.1 | [ ] |
 | TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [ ] |
 | TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [ ] |
 | TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
@@ -2448,7 +2450,6 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
 | TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [ ] |
 | TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [ ] |
-| TASK-yeni-K · PgBouncer uyumluluk denetimi | 🔴 P5i | Kritik | 3.1 | [ ] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
@@ -2464,11 +2465,11 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [ ] |
 | **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
-| TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
-| TASK-yeni-L · Like sayıları Redis counter | 🟡 P14b | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
-| TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P15b | Orta | 3.4 | [ ] |
-| TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
+| TASK-yeni-N · Slim feed DTO *(TASK-15 ile aynı sprint)* | 🟡 P15c | Orta | 5.1 | [ ] |
+| TASK-14 · Endpoint cache | 🟡 P16a | Orta | 5.3 | [ ] |
+| TASK-yeni-L · Like sayıları Redis counter | 🟡 P16b | Orta | 5.3 | [ ] |
+| TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P16c | Orta | 3.4 | [ ] |
 | TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
