@@ -118,6 +118,8 @@
 **Plan:** Faz 1.4 · R1=10 yıl  
 **Bağımlılık:** TASK-02 tamamlanmış olmalı.
 
+> ⚠️ **KIRILMA UYARISI (Impact Analizi):** `live_stream_viewers` tablosunda hem `joined_at` hem `left_at` kolonu var. `left_at IS NULL` = aktif izleyici. Sorgu `left_at IS NOT NULL` filtresi olmadan çalıştırılırsa aktif yayın izleyicileri silinebilir.
+
 **Etkilenen dosyalar:**
 - `backend/app/repositories/` veya `backend/app/services/` — Repository method
 - `backend/app/worker.py` — Yeni cron görev
@@ -126,15 +128,17 @@
 1. Repository'ye (veya doğrudan worker use-case'e) sorgu ekle:
    ```python
    # R1 = 10 yıl = 3650 gün
+   # left_at IS NOT NULL filtresi şart — aktif izleyicileri silmemek için
    DELETE FROM live_stream_viewers
-   WHERE joined_at < NOW() - INTERVAL '3650 days'
+   WHERE left_at IS NOT NULL
+     AND joined_at < NOW() - INTERVAL '3650 days'
    ```
 2. `worker.py`'de yeni cron görevi:
    ```python
    async def cleanup_old_stream_viewers_task(ctx):
        async with get_db() as db:
            result = await db.execute(
-               text("DELETE FROM live_stream_viewers WHERE joined_at < NOW() - INTERVAL '3650 days'")
+               text("DELETE FROM live_stream_viewers WHERE left_at IS NOT NULL AND joined_at < NOW() - INTERVAL '3650 days'")
            )
            await db.commit()
            logger.info(f"Deleted {result.rowcount} old stream viewer records")
@@ -207,10 +211,18 @@
 
 3. Pydantic schema'lar: `float` → `Decimal` (ilgili response ve request model'ler)
 
-4. `bump_schema_version()` migration sonunda çağrılmalı (ADR §9 kuralı — Faz 3 index migration ile birleştirilebilir)
+4. **Zorunlu serialization düzeltmesi:** FastAPI 0.115.0'da `jsonable_encoder` Decimal'i `str`'e çevirir. `response_model` tanımlı olmayan tüm listing endpoint'leri bozulur. Aşağıdaki dosyalarda Decimal kolonları için `float(value) if value is not None else None` wrap edilmeli:
+   - `backend/app/use_cases/listings/queries/listing_utils.py:95,107,113` — `price`, `buy_it_now_price`, `last_sold_price`
+   - `backend/app/use_cases/listings/queries/search_listings_query.py:125` — `price`
+   - `backend/app/routers/listings.py:349` — similar endpoint `price`
+   - `backend/app/use_cases/listings/queries/get_listing_offers.py:22` — `amount`
+   > Auction ve Direct Sale endpoint'leri `response_model=AuctionStateOut/DirectSaleStateOut` olduğu için Pydantic coerce yapar — güvenli.
+
+5. `bump_schema_version()` migration sonunda çağrılmalı (ADR §9 kuralı — Faz 3 index migration ile birleştirilebilir)
 
 **Test:**
 - Staging'de `alembic upgrade head` çalıştır
+- `GET /api/listings` → response'da `"price": 99.99` (number, string değil) doğrula
 - Yeni ilan oluştur: price float değeri ile POST → DB'de NUMERIC(12,2) olarak saklandığını kontrol et
 - Cüzdan görüntüle: tuci_balance/teqlik_balance Integer olduğu için etkilenmez
 
@@ -260,9 +272,20 @@
 
 4. `.env.production` DB_PORT değişiklik gerektirmez (PgBouncer 5432'yi karşılar, PostgreSQL 5433'e geçer)
 
+5. **Zorunlu asyncpg `statement_cache_size=0`:** PgBouncer transaction mode ile asyncpg prepared statement cache uyumsuz — `InvalidSQLStatementNameError` hatası alınır. `backend/app/database.py`'de engine oluşturulurken eklenmeli:
+   ```python
+   # PgBouncer transaction mode: prepared statement cache devre dışı bırakılmalı
+   engine = create_async_engine(
+       DATABASE_URL,
+       poolclass=NullPool,
+       connect_args={"statement_cache_size": 0},  # ← ZORUNLU
+   )
+   ```
+
 **Test:**
 - **Staging önce** — `pg_stat_activity` ile bağlantı sayısı max 30
 - `SELECT count(*) FROM pg_stat_activity WHERE datname='teqlif'` — 30'un altında
+- `EXPLAIN` gibi hazırlıklı sorgu içeren endpoint'ler hata vermiyor (`InvalidSQLStatementNameError` yok)
 - Transaction pool mode ile `SET search_path` çalışmıyor olabilir; test et
 
 **Node ops (staging → prod sırası):**
@@ -375,6 +398,11 @@ mc ilm ls teqlif/teqlif-dm/
 **Plan:** Faz 6.1 · W1=■ W3=■ W4=■ W5=■  
 **Dosya:** `backend/app/worker.py`
 
+> ⚠️ **3 Kritik Bug Bu Task'ta Düzeltilmeli (Impact Analizi):**
+> 1. **W4 Redis key mismatch** — `populate_foryou_feed_task` `feed:{uid}:foryou` (LIST) yazıyor, API `feed:foryou:{uid}` (String) okuyor → W4 çıktısı hiçbir yerde tüketilmiyor.
+> 2. **W3 TTL uyumsuzluğu** — `condition_pref:{uid}` TTL=1500s (25dk), 4x/gün = 6h aralık → 5.5 saatin condition scoring'i eksik.
+> 3. **W5 TTL uyumsuzluğu** — `trending:listings:velocity` TTL=1800s (30dk), 4x/gün = 6h aralık → trending 5.5 saat boş kalır.
+
 **Mevcut → Hedef:**
 | Görev | Mevcut | Hedef |
 |-------|--------|-------|
@@ -383,21 +411,45 @@ mc ilm ls teqlif/teqlif-dm/
 | `populate_foryou_feed_task` | Saatlik :00 | 4x/gün: 00:20, 06:20, 12:20, 18:20 |
 | `compute_trending_listings_task` | Her 30 dk | 4x/gün: 00:30, 06:30, 12:30, 18:30 |
 
-**Uygulama:** ARQ `cron()` tanımlarını güncelle. Her görevin mevcut `cron(...)` satırını bul:
+**Uygulama:** ARQ `cron()` tanımlarını güncelle + 3 bug düzelt:
 ```python
 # ÖNCE
 cron(compute_user_interests_task, minute={0, 15, 30, 45})
 
-# SONRA
+# SONRA — frekans değişikliği
 cron(compute_user_interests_task, hour={0, 6, 12, 18}, minute=0)
 cron(compute_user_condition_preferences_task, hour={0, 6, 12, 18}, minute=10)
 cron(populate_foryou_feed_task, hour={0, 6, 12, 18}, minute=20)
 cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30)
 ```
 
+**W4 key mismatch düzeltmesi** (`foryou_worker.py`):
+```python
+# populate_foryou_feed_task içinde:
+# ÖNCE (hatalı): await redis.rpush(f"feed:{uid}:foryou", ...)
+#                await redis.expire(f"feed:{uid}:foryou", _FORYOU_TTL)
+# SONRA (doğru): await redis.set(f"feed:foryou:{uid}", json.dumps(feed_ids), ex=_FORYOU_TTL)
+# Not: FeedQueries.get_foryou_feed() redis.get(f"feed:foryou:{user_id}") okuyor
+```
+
+**W3 TTL düzeltmesi** (`worker.py`'de `compute_user_condition_preferences_task`):
+```python
+# ÖNCE: await redis.set(f"condition_pref:{uid}", ..., ex=1500)  # 25 dk
+# SONRA: await redis.set(f"condition_pref:{uid}", ..., ex=21600)  # 6 saat
+```
+
+**W5 TTL düzeltmesi** (`worker.py`'de `compute_trending_listings_task`):
+```python
+# ÖNCE: await redis.set("trending:listings:velocity", ..., ex=1800)  # 30 dk
+# SONRA: await redis.set("trending:listings:velocity", ..., ex=21600)  # 6 saat
+```
+
 **Test:**
 - Bir sonraki 00:00'da: 4 görevin de çalıştığı log görünüyor
 - 6 saatte toplam 4 çalışma
+- `redis-cli GET feed:foryou:1` → değer var (W4 key mismatch düzeltildi)
+- `redis-cli TTL condition_pref:1` → ~21600 s
+- `redis-cli TTL trending:listings:velocity` → ~21600 s
 
 **Node ops:** `sudo teqlif-restart`
 
@@ -409,6 +461,8 @@ cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30)
 
 **Plan:** Faz 6.1 · W2=■ W6=■ W7=■  
 **Dosya:** `backend/app/worker.py`
+
+> ⚠️ **ALS/BPR TTL Kritik Uyumsuzluğu (Impact Analizi):** W6/W7 haftalık eğitime geçince ALS/BPR vektörlerinin TTL'i de uzatılmalı. Mevcut TTL=90000s (25 saat) — haftalık eğitimde 6 gün boyunca ALS cache'i boş kalır, feed kişiselleştirmesinin ~%20'si kaybolur. `bpr:rec:{uid}` için 7 gün TTL ayarlanmalı.
 
 **Mevcut → Hedef:**
 | Görev | Mevcut | Hedef |
@@ -429,9 +483,17 @@ cron(train_feed_als_task, weekday=6, hour=1, minute=30)    # Paz
 cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0)   # Paz
 ```
 
+**ALS/BPR TTL uzatması** (`bpr_service.py` veya worker içinde cache yazan yer):
+```python
+# ÖNCE: await redis.set(f"bpr:rec:{uid}", ..., ex=90000)   # 25 saat
+# SONRA: await redis.set(f"bpr:rec:{uid}", ..., ex=604800)  # 7 gün — haftalık eğitimle uyumlu
+# seller:badge, trust_score, influence_rank gibi diğer ML key'leri de haftalık eğitim varsa 7 güne çıkar
+```
+
 **Test:**
 - Gündüz `backfill_listing_embeddings_task` çalışmıyor (log kontrol)
 - 02:00 ve 03:00'de çalışıyor
+- Pazar sabahı train sonrası `redis-cli TTL bpr:rec:1` → ~604800 s
 
 **Node ops:** `sudo teqlif-restart`
 
@@ -552,10 +614,17 @@ cron(cleanup_old_streams_task, day=1, hour=6, minute=0)               # Ayın 1'
 
 **Plan:** Faz 5.2  
 **Etkilenen dosyalar:**
-- `backend/app/routers/listings.py` — Router: yeni query param `cursor`
+- `backend/app/routers/listings.py` — Router: yeni query param `cursor` (additive)
+- `backend/app/routers/feed.py` — `GET /feed`, `GET /feed/for-you`
+- `backend/app/routers/search.py` — search offset parametreleri
 - `backend/app/use_cases/listing_use_cases.py` (veya benzeri) — Use Case: keyset sorgu
 - `backend/app/repositories/listing_repository.py` — Repository: SQL değişikliği
-- `mobile/lib/` — Feed ViewModel + Pagination logic (MVVM)
+- `mobile/lib/` — Feed ViewModel + Pagination logic (MVVM) + Hive cache format
+
+> ⚠️ **Koordinasyon Zorunlu (Impact Analizi):**
+> 1. **`page`/`offset` parametreleri kaldırılmamalı** — Flutter tüm sayfalama için offset-based kullanıyor. `cursor` parametresi ADDITIVELY eklenmeli, eski parametreler deprecated period olmadan silinmemeli.
+> 2. **Hive `homeCache` box güncellenmeli** — Mevcut format `raw JSON + page offset` saklıyor. Keyset'e geçince Hive'daki eski format geçersiz kalır; `cacheVersion` bump ile eski cache temizlenmeli.
+> 3. **`GET /api/feed/recent` zaten cursor-benzeri** — `since_id` + `max_id` parametreleri var (feed.py:105-106); bu endpoint için additive değil, zaten uyumlu.
 
 **Uygulama özeti:**
 
@@ -566,16 +635,19 @@ WHERE status = 'active'
   AND (created_at, id) < (:cursor_at, :cursor_id)
 ORDER BY created_at DESC, id DESC
 LIMIT 20
+# Eski offset parametresini de koru (deprecated ama bozma)
 ```
 
 Flutter (MVVM):
 - ViewModel'de `_cursor` state tutulur
 - `fetchMore()` metodu cursor'ı günceller
 - View sadece `ref.watch(feedViewModel)` ile render eder
+- Hive cache: `cacheVersion` artır → eski offset-based cache otomatik temizlenir
 
 **Test:**
 - 3 sayfalık veri yükle: offset'te "kayıp/tekrar" yok
 - p95 < 200 ms
+- Eski `?page=2` isteği hâlâ çalışıyor (backward compat)
 
 **Status:** [ ] BEKLEMEDE
 
@@ -833,10 +905,29 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 
 > `states.country_code` bu scope'tan **çıkarıldı** — multi-country entegrasyonunda kullanılacak (Faz 2.6).
 
+> ⚠️ **KIRILMA UYARISI — `listing.location` (Impact Analizi):** Bu kolon Flutter'da aktif olarak kullanılıyor. Migration'dan ÖNCE tüm Flutter + backend kod değişiklikleri aynı commit'te yapılmalı. Ayrı deploy edilirse production crash oluşur.
+>
+> **Backend (aynı commit):**
+> - `backend/app/models/listing.py` — `location` attribute kaldır
+> - `backend/app/use_cases/listings/queries/listing_utils.py:107` — `"location": listing.location` satırı kaldır
+> - `backend/app/use_cases/listings/queries/search_listings_query.py:56` — `Listing.location.ilike(...)` where clause kaldır; `satır 54-56` bloğunu temizle
+> - `backend/app/routers/listings.py:67-68` — `location: Optional[str] = None` query param kaldır; `satır 99` `location=location` argümanı kaldır
+> - `backend/app/routers/listings.py:356` — similar endpoint `"location": item.location` kaldır
+>
+> **Flutter (aynı commit — bu değişiklikler olmadan migration çalıştırılmamalı):**
+> - `mobile/lib/screens/edit_listing_screen.dart:99,381` — `location` okuma/yazma kaldır
+> - `mobile/lib/screens/listing_detail_screen.dart:1426,1437,2395,2400` — `location` gösterimi kaldır
+> - `mobile/lib/screens/viewmodels/home_view_model.dart:195` — `params['location']` feed filtresi kaldır
+> - `mobile/lib/screens/live/swipe_live_screen.dart:1985,2111-2118` — canlı yayın overlay'indeki location kaldır
+
 **Etkilenen dosyalar:**
 - `backend/app/models/message.py` — `flag_reason` kaldır
 - `backend/app/models/call.py` — `CallParticipant.ringing_at` kaldır
-- `backend/app/models/listing.py` — `location` kaldır (province + district kullanılıyor; location hiç doldurulmuyor)
+- `backend/app/models/listing.py` — `location` kaldır
+- `backend/app/use_cases/listings/queries/listing_utils.py`
+- `backend/app/use_cases/listings/queries/search_listings_query.py`
+- `backend/app/routers/listings.py`
+- Flutter: `edit_listing_screen.dart`, `listing_detail_screen.dart`, `home_view_model.dart`, `swipe_live_screen.dart`
 - `backend/alembic/versions/` — Migration
 
 **Uygulama:**
@@ -852,7 +943,8 @@ op.execute("ALTER TABLE listings DROP COLUMN location")
 **Test:**
 - Staging'de migration çalıştır, uygulama hatası yok
 - DM gönder/al, çağrı başlat, ilan oluştur — çalışıyor
-- İlan detay API `location` alanı dönmüyor (frontend bunu kullanmıyordu)
+- İlan detay API `location` alanı dönmüyor (backend kodu temizlendi)
+- Flutter: `dart analyze` 0 hata; edit_listing ve listing_detail ekranları açılıyor
 
 **Status:** [ ] BEKLEMEDE
 

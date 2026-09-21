@@ -57,6 +57,57 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 
 ---
 
+## Impact Analizi Bulguları — 2026-09-21
+
+> 7 paralel agent tüm mobil uygulama + backend'i kapsamlı analiz etti. Aşağıdaki bulgular task.md'ye yansıtıldı.
+
+### Kritik (Üretimde Crash / Data Loss)
+
+| Bulgu | Task | Etkilenen Dosya | Aksiyon |
+|-------|------|-----------------|---------|
+| **listing.location DROP Flutter'ı kırıyor** | TASK-18c | `edit_listing_screen.dart:99,381`, `listing_detail_screen.dart:1426`, `home_view_model.dart:195`, `swipe_live_screen.dart:1985` | Flutter + backend aynı commit — task.md'ye eklendi |
+| **TASK-04 Float→Numeric: `_row_dict()` Decimal→str** | TASK-04 | `listing_utils.py:95,107`, `search_listings_query.py:125`, `listings.py:349`, `get_listing_offers.py:22` | Auction/DS güvenli (response_model var); listing/offer endpoint'leri float() wrap edilmeli |
+| **PgBouncer: `statement_cache_size=0` eksik** | TASK-05 | `backend/app/database.py` — NullPool var ama connect_args eksik | `connect_args={"statement_cache_size": 0}` eklenmeli |
+| **W4 Redis key mismatch — tamamen işlevsiz** | TASK-09 | `foryou_worker.py` — `feed:{uid}:foryou` yazıyor, API `feed:foryou:{uid}` okuyor | Key mismatch frekans değişikliğiyle birlikte düzeltilmeli |
+
+### Orta (Feed Kalitesi / Stale Data)
+
+| Bulgu | Task | Detay | Aksiyon |
+|-------|------|-------|---------|
+| **W3 condition_pref TTL=25dk, interval=6h** | TASK-09 | `condition_pref:{uid}` TTL 1500s → 21600s artırılmalı | task.md güncellendi |
+| **W5 trending TTL=30dk, interval=6h** | TASK-09 | `trending:listings:velocity` TTL 1800s → 21600s | task.md güncellendi |
+| **W6/W7 ALS TTL=25h, haftalık eğitim** | TASK-10 | `bpr:rec:{uid}` TTL 90000s → 604800s (7 gün) | task.md güncellendi |
+| **GC1 aktif izleyici silme riski** | TASK-03 | `left_at IS NOT NULL` filtresi eklenmeli | task.md güncellendi |
+| **TASK-13 keyset: `page`/`offset` kaldırılmamalı** | TASK-13 | Flutter offset-based kullanıyor; cursor additive eklenmeli | task.md güncellendi |
+| **TASK-13 Hive cache format değişimi** | TASK-13 | `homeCache` box format güncellenmeli + cacheVersion bump | task.md güncellendi |
+
+### Güvenli (Kırılma Yok)
+
+| Task | Sebep |
+|------|-------|
+| TASK-01 | auction.status default değişimi sadece model/migration, API contract değişmez |
+| TASK-02 | FK SET NULL; direct_sales satırlar korunur |
+| TASK-06 | ClickHouse TTL; analytics-only, prod query API değişmez |
+| TASK-07 | user_interactions interval; sadece cleanup SQL değişimi |
+| TASK-08 | MinIO lifecycle; uygulama kodu hiç etkilenmez |
+| TASK-11 | CREATE INDEX; read-only schema değişim |
+| TASK-12 | GC3/GC4/GC5 cleanup; additive cron görevler |
+| TASK-18 D1 JSONB | `_parse_image_urls()` zaten `isinstance(raw, list)` ve `isinstance(raw, str)` her ikisini handle ediyor |
+| TASK-18d | ⏸️ BIRAKILDI |
+| TASK-yeni-A | `listing_offers.status` additive; `extra='forbid'` yok, schema response_model olarak kullanılmıyor |
+| TASK-yeni-B | user_interests constraint; only upsert SQL etkileniyor |
+
+### Ek Bulgular (Yeni, Task Olmayan)
+
+| Bulgu | Etki | Öneri |
+|-------|------|-------|
+| **Hive cache logout'ta temizlenmiyor** | Farklı kullanıcılar aynı cihazda oturum açarsa eski veri görünebilir | Düşük öncelik; `logout()` metoduna Hive box clear ekle |
+| **Non-autoDispose Riverpod providers (feed/live)** | App lifetime boyunca stale state riski | Hive cache bug düzeltilirken ele alınabilir |
+| **interests:{uid} TTL yok** | Cron başarısız olursa key sonsuza kadar yaşar | `compute_user_interests_task`'a fallback TTL ekle (24h) |
+| **schema_version restart bağımlılığı** | Migration + restart atomik yapılmadığında 24 saate kadar stale schema cache | Deploy prosedürü: bump_schema_version() + teqlif-restart aynı anda |
+
+---
+
 ## Faz 1 — Veri Yaşam Döngüsü ve Zamanlama
 
 > Bu fazın kararları alınmadan diğer fazlar uygulanmaz.
