@@ -10,7 +10,11 @@ if settings.use_pgbouncer:
     engine = create_async_engine(
         settings.database_url,
         echo=False,
-        poolclass=NullPool
+        poolclass=NullPool,
+        connect_args={
+            "prepared_statement_cache_size": 0,
+            "statement_cache_size": 0,
+        },
     )
 else:
     engine = create_async_engine(

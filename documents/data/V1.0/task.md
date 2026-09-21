@@ -1464,7 +1464,16 @@ Eğer migration zaten çalışmışsa yalnızca `IF NOT EXISTS` yeterli — idem
 - PgBouncer admin console: `SHOW pools` → `cl_active` eş zamanlı request sayısını göstermeli
 - `psql -p 6432 -c "SHOW server_version"` → PgBouncer üzerinden bağlantı test
 
-**Status:** [ ] BEKLEMEDE
+**Denetim sonucu (2026-09-21):**
+- SET LOCAL / SET search_path: ✅ yok
+- LISTEN/NOTIFY: ✅ yok (Redis pub/sub kullanılıyor)
+- server_side_cursors: ✅ yok
+- TEMPORARY TABLE: ✅ yok
+- VACUUM AUTOCOMMIT (worker.py:319): ✅ uyumlu — `execution_options(isolation_level="AUTOCOMMIT")` asyncpg katmanında çalışıyor, PgBouncer'a SET komutu göndermiyor
+- `database.py` NullPool branch `connect_args` eksikliği: ✅ giderildi (`prepared_statement_cache_size=0`, `statement_cache_size=0`)
+- `init_extensions()`: PgBouncer transaction mode ile uyumlu — migration'a taşıma iyileştirme olarak backlog'a bırakıldı
+
+**Status:** [x] TAMAMLANDI
 
 ---
 
@@ -2442,7 +2451,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | Task | Öncelik | Sprint | Faz | Status |
 |------|---------|--------|-----|--------|
 | **— KRİTİK SPRINT —** | | | | |
-| TASK-yeni-K · PgBouncer uyumluluk denetimi | 🔴 P1a | Kritik | 3.1 | [ ] |
+| TASK-yeni-K · PgBouncer uyumluluk denetimi | 🔴 P1a | Kritik | 3.1 | [x] |
 | TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [ ] |
 | TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [ ] |
 | TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
