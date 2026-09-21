@@ -831,51 +831,51 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 **Plan:** Faz 2.5  
 **Kapsam:** Kod incelemesinde hiç kullanılmadığı doğrulanan kolonlar.
 
+> `states.country_code` bu scope'tan **çıkarıldı** — multi-country entegrasyonunda kullanılacak (Faz 2.6).
+
 **Etkilenen dosyalar:**
 - `backend/app/models/message.py` — `flag_reason` kaldır
 - `backend/app/models/call.py` — `CallParticipant.ringing_at` kaldır
-- `backend/app/models/state.py` — `country_code` kaldır
+- `backend/app/models/listing.py` — `location` kaldır (province + district kullanılıyor; location hiç doldurulmuyor)
 - `backend/alembic/versions/` — Migration
 
 **Uygulama:**
 ```python
 op.execute("ALTER TABLE direct_messages DROP COLUMN flag_reason")
 op.execute("ALTER TABLE call_participants DROP COLUMN ringing_at")
-op.execute("ALTER TABLE states DROP COLUMN country_code")
+op.execute("ALTER TABLE listings DROP COLUMN location")
 ```
 
-> Dikkat: drop öncesi `SELECT COUNT(*) FROM direct_messages WHERE flag_reason IS NOT NULL` ile veri yok olduğunu doğrula.
+> Dikkat: drop öncesi `SELECT COUNT(*) FROM direct_messages WHERE flag_reason IS NOT NULL` ile veri yok olduğunu doğrula.  
+> `listings.location` için: `SELECT COUNT(*) FROM listings WHERE location IS NOT NULL` — NULL olmayan varsa önce elle incele.
 
 **Test:**
 - Staging'de migration çalıştır, uygulama hatası yok
-- DM gönder/al, çağrı başlat — çalışıyor
+- DM gönder/al, çağrı başlat, ilan oluştur — çalışıyor
+- İlan detay API `location` alanı dönmüyor (frontend bunu kullanmıyordu)
 
 **Status:** [ ] BEKLEMEDE
 
 ---
 
-### TASK-18d · P20d · 🟢 countries Tablosu Temizliği
+### TASK-18d · ~~P20d~~ · ⏸️ countries Tablosu — BIRAKILDI
 
-**Plan:** Faz 2.5  
-**Sorun:** `countries` tablosu hiçbir router/service/worker tarafından kullanılmıyor. `states.country_code` FK değil, plain VARCHAR.
+**Plan:** Faz 2.6 (Gelecek Kullanım)  
+**Karar:** `countries` tablosu silinmeyecek. Çok ülke desteği (multi-country) eklendiğinde kullanılacak.
 
-**Etkilenen dosyalar:**
-- `backend/app/models/country.py` — Sil
-- `backend/app/models/__init__.py` — Country import'unu kaldır
-- `backend/alembic/versions/` — Migration
+**Mevcut durum:**
+- `countries(code, name)` — tablo var, seed data var
+- `states.country_code VARCHAR(2)` — var ama FK bağlantısı yok, sorgu filtresi yok
+- `/states` router yalnızca Türkiye illerini döndürüyor (ülke filtresi yok)
+- Flutter `StateService` ülke seçici içermiyor
 
-**Uygulama:**
-```python
-# Migration
-op.execute("DROP TABLE IF EXISTS countries")
-```
-Ardından `models/country.py` dosyasını sil.
+**Multi-country aktivasyon yapılacaklar (zaman gelince):**
+1. Migration: `ALTER TABLE states ADD CONSTRAINT fk_states_country FOREIGN KEY (country_code) REFERENCES countries(code)`
+2. States router'a `?country=TR` filtresi ekle
+3. Flutter `StateService.getStates()` → ülke parametresi al
+4. İlan oluşturma ekranına ülke seçici ekle (varsayılan: TR)
 
-**Test:**
-- `alembic upgrade head` sonrası `\dt` ile tablo yok
-- Uygulama normal başlıyor
-
-**Status:** [ ] BEKLEMEDE
+**Status:** ⏸️ BIRAKILDI — multi-country sprint'ine ertelendi
 
 ---
 
@@ -1070,8 +1070,8 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
 | TASK-18 · GC6/GC7 + D1 JSONB (sorgu fix) | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
 | TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [ ] |
-| TASK-18c · Dead kolon migration (flag_reason, ringing_at, country_code) | 🟢 P20c | Orta | 2.5 | [ ] |
-| TASK-18d · countries tablosu temizliği | 🟢 P20d | Orta | 2.5 | [ ] |
+| TASK-18c · Dead kolon migration (flag_reason, ringing_at, listing.location) | 🟢 P20c | Orta | 2.5 | [ ] |
+| TASK-18d · countries — BIRAKILDI (multi-country) | ⏸️ | — | 2.6 | ⏸️ |
 | TASK-18e · Flutter User model sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
 | TASK-18f · Flutter dead code (teq_test + getFeedStats) | 🟢 P20f | Orta | 2.5 | [ ] |
 | TASK-19 · Medya M1-M4 | 🟢 P21 | Düşük | 8.2 | [ ] |
@@ -1079,3 +1079,15 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
 | TASK-22 · KV2/KV3 opt-out | 🟢 P24 | Düşük | 9.2 | [ ] |
 | TASK-23 · tuci→teqlik rename | 🟢 P25 | Düşük | 10 | [ ] |
+
+---
+
+## Gelecek Sprint Backlog — Kasıtlı Ertelenenler
+
+> Aşağıdaki yapılar mevcut sprint'e dahil edilmedi. Silinmedi, ileride kullanılacak.
+
+| Yapı | Niyet | Aktivasyon Şartı |
+|------|-------|-----------------|
+| `countries` tablosu + `states.country_code` | Multi-country: ülke bazlı il/ilçe, ilan ve kullanıcı ülke kodu | Multi-country özellik sprint'i — states migration (FK) + StateService güncelleme + Flutter ülke seçici |
+| `referral.status = 'pending'` | İki adımlı referral: kayıt → pending; ilk alışveriş → completed + ödül tetikle | Referral iş mantığı sprint'i — `apply_referral` service refactor + ARQ görevi |
+| `ad_campaigns` DB + API | Satıcı boost/reklam — schema ve wallet entegrasyonu var | Flutter "reklam ver" ekranı sprint'i — `create_listing_screen` boost butonu + reklam oluşturma akışı |
