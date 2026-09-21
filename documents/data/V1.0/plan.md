@@ -810,43 +810,154 @@ ORDER BY created_at DESC LIMIT 50
 
 ---
 
-## Bölüm 12 — Onay Bekleyen Kararlar (Özet)
+## Bölüm 12 — Karar Tabloları
 
-> Bu kararlar alınmadan uygulama başlamaz.
+> Kararlar birbirini besler. Önce bağımlılık haritasını okuyun (12.0), sonra sırasıyla ilerleyin.
 
-### 12.1 — Veri Retention Kararları
+---
 
-| # | Soru | Seçenekler |
-|---|------|-----------|
-| R1 | `live_stream_viewers` ne kadar tutulsun? | □ 30 gün / □ 90 gün / □ stream bitimiyle sil |
-| R2 | `calls` (ended/missed) ne kadar tutulsun? | □ 90 gün / □ 1 yıl / □ sonsuz |
-| R3 | `live_streams` (biten) ne kadar tutulsun? | □ 6 ay / □ 1 yıl / □ sonsuz |
-| R4 | `bids` ne kadar tutulsun? | □ 1 yıl / □ sonsuz |
-| R5 | `gift_events` ne kadar tutulsun? | □ 1 yıl / □ sonsuz |
-| R6 | `listing_offers` (declined) ne kadar tutulsun? | □ 30 gün / □ 60 gün |
-| R7 | `direct_messages` (text) ne kadar tutulsun? | □ Sonsuz / □ 1 yıl / □ kullanıcı kontrolü |
-| R8 | Text mesajları silinince `message_threads` ne olsun? | □ Thread de silinsin / □ Thread kalsın |
-| R9 | ClickHouse `user_events` 30 gün yeterli mi? | □ Evet / □ 60 gün / □ 90 gün |
-| R10 | `exchange_rates` ne kadar tutulsun? | □ 1 yıl / □ 2 yıl |
-| R11 | Kullanıcı hesabı silinince DM'ler ne olsun? | □ Anonimleştir / □ Kullanıcıya at |
-| R12 | `auctions` sonsuz tutulsun mu? | □ Evet / □ 2 yıl |
+### 12.0 — Bağımlılık Haritası ve Mevcut Uyumsuzluklar
+
+#### 12.0.1 — Tespit Edilen Kritik Uyumsuzluklar (Mevcut Koddan)
+
+Retention kararlarından bağımsız, zaten var olan ve düzeltilmesi gereken sorunlar:
+
+| # | Sorun | Etkilenen Sistem | Mevcut Durum | Gerekli Düzeltme |
+|---|-------|-----------------|-------------|-----------------|
+| **BUG-1** | `compute_trust_scores_task` ClickHouse'dan **90 günlük** veri sorguluyor | `user_events` ClickHouse | TTL **30 gün** → sorgu sadece 30 günü görüyor | R9 ≥ 90 gün VEYA trust_scores sorgusunu 30 güne düşür |
+| **BUG-2** | `train_bpr_task` `user_interactions`'tan **120 günlük** veri sorguluyor | `user_interactions` PG | Retention **90 gün** → BPR son 30 günlük veriyi kaybediyor | user_interactions ≥ 120 gün VEYA BPR penceresini 90 güne düşür |
+| **BUG-3** | `train_churn_model` ClickHouse'dan **44 günlük** veri sorguluyor | `user_events` ClickHouse | TTL **30 gün** → churn modeli son 14 günlük veriyi kaybediyor | R9 ≥ 44 gün VEYA churn penceresini 30 güne düşür |
+
+> BUG-1, BUG-2, BUG-3 retention kararlarından önce çözülmeli. R9 ve user_interactions retention kararları bu bug'ları da kapatır.
+
+#### 12.0.2 — Retention Kararları Arasındaki Bağımlılıklar
+
+```
+R3 (live_streams silme)
+    │── CASCADE → gift_events silinir   ← R5 ile çakışır
+    │── CASCADE → direct_sales silinir  ← ticaret kaydı
+    │── NO ondelete → bids takılır      ← R4 ile ilgili
+    └── CASCADE → live_stream_viewers   ← R1 ile ilgili
+
+    Kural: R3 ≥ R5 olmalı (live_streams gift_events'ten önce silinemez)
+           VEYA gift_events.stream_id FK → SET NULL yapılmalı (mevcut CASCADE)
+
+R9 (ClickHouse TTL)
+    │── trust_scores: 90 gün pencere   ← BUG-1
+    │── churn model: 44 gün pencere    ← BUG-3
+    │── feed_als: 30 gün pencere       ← R9 = 30 gün, tam sınırda
+    │── seller_badges: 30 gün          ← R9 = 30 gün, tam sınırda
+    └── compute_user_interests: 30 gün ← R9 = 30 gün, tam sınırda
+
+    Kural: R9 ≥ max(tüm CH sorgu pencereleri) = 90 gün
+
+user_interactions retention
+    │── BPR: 120 gün pencere          ← BUG-2
+    │── item2vec: 90 gün pencere
+    └── compute_user_interests: 30 gün
+
+    Kural: user_interactions ≥ max(tüm PG sorgu pencereleri) = 120 gün
+
+W1 (compute_user_interests frekansı)
+    └── W4 (populate_foryou_feed) bağımlı
+        Kural: W4 ≤ W1 frekansı (interests güncellenmeden feed yenilemenin anlamı yok)
+               W1 = 2x/gün → W4 = 2x-4x/gün mantıklı, saatlik değil
+
+R7 (DM text retention)
+    └── R8 (message_threads) bağımlı
+        R7 = sonsuz → R8 sorun değil
+        R7 = 1 yıl → R8 için GC6 gerekli
+
+W6+W7 (ALS haftalık)
+    └── R9 bağımlı: ALS 30 günlük CH verisi kullanıyor
+        R9 = 30 gün → ALS haftalık eğitilse bile 30 günlük görünürlük yeterli ✅
+```
+
+#### 12.0.3 — Karar Sırası (Bağımlılık Zinciri)
+
+```
+1. R9 (ClickHouse TTL) → BUG-1, BUG-3 fix eder → seller_badges, trust_scores, churn düzelir
+2. user_interactions retention → BUG-2 fix eder → BPR düzelir
+3. R3 (live_streams) → R5 (gift_events) CASCADE bağımlı → birlikte karar ver
+4. W1 → W4 birlikte karar ver
+5. R7 → R8 birlikte karar ver
+6. Diğerleri bağımsız
+```
+
+---
+
+### 12.1 — Retention Kararları
+
+#### Grup A: ML Veri Kalitesi (Önce Bunlar — BUG-1/2/3 Bağlantılı)
+
+| # | Tablo | Şu An | Öneri | Endüstri Standardı | Bağımlılık | Karar |
+|---|-------|-------|-------|-------------------|-----------|-------|
+| **R9** | `user_events` ClickHouse TTL | **30 gün** | **90 gün** | Mixpanel: 90 gün; Amplitude: 12 ay; Google: 14 ay. Davranışsal analitik için 90 gün minimum | BUG-1 (trust 90g), BUG-3 (churn 44g) → R9 < 90g ise bu modeller bozuk | □ 90 gün / □ 60 gün |
+| **R9b** | `user_interactions` PG retention | **90 gün** | **120 gün** | Collaborative filtering için 3-6 ay öneri (Netflix, Spotify). BPR 120g pencere açık | BUG-2 → BPR 120g pencere sorguluyor ama sadece 90g görüyor | □ 120 gün / □ 180 gün |
+| R9c | `feed_analytics` ClickHouse TTL | **30 gün** | **90 gün** | R9 ile birlikte değiştir (aynı TTL politikası) | R9'a bağımlı | □ R9 ile aynı |
+| R9d | `swipe_live_events` ClickHouse TTL | **30 gün** | **90 gün** | R9 ile birlikte | R9'a bağımlı | □ R9 ile aynı |
+
+> **Disk etkisi (node5):** TTL 30→90 gün: ClickHouse ~20 GB/yıl → ~60 GB/yıl. Hâlâ node5 bütçesi içinde.
+
+#### Grup B: Canlı Yayın Verisi (Birlikte Karar Ver)
+
+| # | Tablo | Şu An | Öneri | Endüstri Standardı | Bağımlılık | Karar |
+|---|-------|-------|-------|-------------------|-----------|-------|
+| **R3** | `live_streams` (biten) | Sonsuz | **1 yıl** | YouTube/Twitch: yayın kaydı sonsuz, ama metadata küçük tablo; Pazar yeri: 1 yıl yeterli | R1, R5 bağımlı. R3 silinince R5 (gift_events) CASCADE silinir — **R3 ≤ R5** olmalı | □ 1 yıl / □ Sonsuz |
+| **R1** | `live_stream_viewers` | ⚠️ Sonsuz | **90 gün** | Twitch/YouTube viewer log'ları aggregate; bireysel kayıt 30-90 gün. Host analytics için 90 gün yeterli | R3 CASCADE → stream silinince viewer da silinir | □ 90 gün / □ Stream bitiminde |
+| **R5** | `gift_events` | Sonsuz | **Sonsuz** (veya R3 ile CASCADE) | Finansal transfer kaydı → en az 5 yıl (Türk ticaret hukuku). **Öneri: gift_events.stream_id FK'si CASCADE → SET NULL'a çevrilmeli** | R3 CASCADE şu an gift_events'i siliyor — finansal kayıt için tehlikeli | □ SET NULL + sonsuz / □ Sonsuz (R3 = sonsuz ise) |
+| **R4** | `bids` | Sonsuz | **2 yıl** | Açık artırma kayıtları: ticaret kanıtı. E-Bay/Amazon: 2 yıl erişilebilir. bids.stream_id FK ondelete YOK (restrict) | R3 silinince bids FK hatası verir — bids.stream_id → SET NULL yapılmalı | □ 2 yıl / □ Sonsuz |
+
+#### Grup C: Mesajlaşma (Birlikte Karar Ver)
+
+| # | Tablo | Şu An | Öneri | Endüstri Standardı | Bağımlılık | Karar |
+|---|-------|-------|-------|-------------------|-----------|-------|
+| **R7** | `direct_messages` (text) | Sonsuz | □ Karar bekleniyor | WhatsApp/Telegram: sonsuz (kullanıcı siler). iMessage: cihazda sonsuz, sunucuda geçici. Instagram DM: sonsuz. **Pazar yeri standardı: sonsuz** (alışveriş geçmişi önemli) | R8 bağımlı | □ Sonsuz / □ 2 yıl / □ Kullanıcı kontrolü |
+| R8 | `message_threads` | Sonsuz | R7'ye bağlı | — | R7 = sonsuz → R8 sorun değil; R7 = sınırlı → GC6 gerekli | □ R7 ile birlikte |
+
+#### Grup D: Ticaret Kayıtları
+
+| # | Tablo | Şu An | Endüstri / Yasal Standart | Karar |
+|---|-------|-------|--------------------------|-------|
+| R12 | `auctions` | Sonsuz | ✅ **Sonsuz önerilir** — Türk ticaret hukuku: 10 yıl saklama zorunluluğu (TTK 82) | □ Sonsuz ✓ |
+| — | `purchases` | Sonsuz | ✅ **Sonsuz / 10 yıl zorunlu** (TTK 82, VUK 253) | □ Sonsuz ✓ |
+| — | `tuci_transactions` | Sonsuz | ✅ **Sonsuz / 10 yıl zorunlu** | □ Sonsuz ✓ |
+| — | `direct_sales` | Sonsuz | ✅ **Sonsuz önerilir** | □ Sonsuz ✓ |
+
+#### Grup E: Diğer
+
+| # | Tablo | Şu An | Öneri | Endüstri Standardı | Karar |
+|---|-------|-------|-------|-------------------|-------|
+| R2 | `calls` (ended/missed) | Sonsuz | **1 yıl** | Telekomünikasyon CDR: 1-7 yıl zorunlu (TR: 2 yıl, 5651 Kanunu kapsamında). App çağrısı: 1 yıl yeterli | □ 1 yıl / □ 2 yıl |
+| R6 | `listing_offers` (declined) | Sonsuz | **60 gün** | Marketplace teklifleri: 30-90 gün. Müzakere geçmişi kısa süre değerli | □ 60 gün / □ 30 gün |
+| R10 | `exchange_rates` | Sonsuz | **2 yıl** | Finansal veri: 7-10 yıl (vergi amaçlı). Uygulama gösterimi için 2 yıl yeterli; uzun geçmiş ayrı arşivde | □ 2 yıl / □ 5 yıl |
+| R11 | Hesap silinince DM | Sonsuz | **Anonimleştir** | GDPR/KVKK: "unutulma hakkı" — kullanıcı verisi silinir ama alıcının görmesi için mesaj içeriği kalır. Standart: `sender_id = NULL`, içerik "Silinmiş kullanıcı" | □ Anonimleştir ✓ |
+
+---
 
 ### 12.2 — Frekans Kararları
 
-| # | Görev | Şu An | Öneri | Karar |
-|---|-------|-------|-------|-------|
-| W1 | `compute_user_interests_task` | 15 dk | 2x/gün | □ Onayla / □ Reddet |
-| W2 | `backfill_listing_embeddings_task` | Her 30dk (gündüz) | Sadece gece | □ Onayla / □ Reddet |
-| W3 | `compute_user_condition_preferences_task` | 15 dk | 4x/gün | □ Onayla / □ Reddet |
-| W4 | `populate_foryou_feed_task` | Saatlik | 6x/gün | □ Onayla / □ Reddet |
-| W5 | `compute_trending_listings_task` | 30 dk | 4x/gün | □ Onayla / □ Reddet |
-| W6 | `train_feed_als_task` | Günlük | Haftalık | □ Onayla / □ Reddet |
-| W7 | `train_swipe_live_als_task` | Günlük | Haftalık | □ Onayla / □ Reddet |
+#### Bağımlılık Notu
+
+W1 ↔ W4 birlikte karar verilmeli: feed interests verisi üzerine inşa ediliyor. W1 azaltılırsa W4'ü azaltmak mantıklı.
+
+| # | Görev | Şu An | Öneri | Bağımlılık | Sistem Etkisi | Karar |
+|---|-------|-------|-------|-----------|--------------|-------|
+| **W1** | `compute_user_interests_task` | Her 15 dk | **2x/gün (08:00, 20:00)** | → W4 azaltılmalı; R9 uzarsa etki artar | ~94 ClickHouse sorgusu/gün tasarrufu; ML kalitesi etkilenmez (ilgi profili günler içinde değişir) | □ 2x/gün / □ 4x/gün |
+| **W4** | `populate_foryou_feed_task` | Saatlik | W1'e bağlı: **2x–4x/gün** | W1'e bağımlı — W1 azaltılmadan W4 azaltılmamalı | 18-22 hesaplama/gün tasarrufu | □ W1 ile karar ver |
+| W2 | `backfill_listing_embeddings_task` | Her 30dk (gündüz) | **Sadece gece (02:00–04:00)** | Bağımsız. Yeni ilanlar `generate_embedding_task` ile anında işleniyor, backfill sadece eskiler için | sentence-transformers CPU gündüz serbest kalır | □ Onayla / □ Reddet |
+| W3 | `compute_user_condition_preferences_task` | Her 15 dk | **4x/gün** | Bağımsız | Condition tercihi saatte değişmez | □ 4x/gün / □ 2x/gün |
+| W5 | `compute_trending_listings_task` | Her 30 dk | **4x/gün** | Bağımsız | 30dk TTL zaten var; 6 saatlik yenileme trend için yeterli | □ 4x/gün / □ 6x/gün |
+| W6 | `train_feed_als_task` | Günlük | **Haftalık** | R9 bağımlı: ALS 30g CH verisi kullanıyor; TTL 90g'ye çıkarsa haftalık eğitim daha zengin | ADR §3.3 zaten haftalık öneriyor | □ Haftalık / □ Günlük |
+| W7 | `train_swipe_live_als_task` | Günlük | **Haftalık** | W6 ile aynı | ADR §3.3 zaten haftalık öneriyor | □ Haftalık / □ Günlük |
+
+---
 
 ### 12.3 — Medya Kararları
 
-| # | Soru | Karar |
-|---|------|-------|
-| M1 | İlan fotoğrafları WebP'ye çevrilsin mi? | □ Evet / □ Hayır |
-| M2 | İlan videosu yeniden kodlansın mı (CRF28)? | □ Evet / □ Hayır |
-| M3 | DM medya boyut sınırları düşürülsün mü? | □ Evet / □ Hayır |
+| # | Konu | Şu An | Öneri | Disk Etkisi | Kullanıcı Etkisi | Karar |
+|---|------|-------|-------|------------|-----------------|-------|
+| M1 | İlan fotoğrafı formatı | JPEG as-is (max 5 MB) | **WebP q80, max 1920px** | ~%35 küçük (~1.7 MB ort. → ~1.1 MB) | WebP Flutter'da tam destekleniyor; iOS/Android native | □ Evet / □ Hayır |
+| M2 | İlan videosu yeniden kodlama | `-c:v copy` (video dokunulmaz) | **CRF 28, 1080p, AAC 96k** | ~%50 küçük (50 MB → ~25 MB ort.) | Sunucu CPU +2-5 sn/video; kalite görsel olarak aynı | □ Evet / □ Hayır |
+| M3 | DM medya boyutları | Foto 5MB, Video 30MB | **Foto 3MB, Video 20MB** | ~%35 bandwidth düşer | Kullanıcı sıkıştırmayı client'ta yapıyor zaten | □ Evet / □ Hayır |
+| M4 | Profil fotoğrafı | JPEG q85 (5 MB) | **WebP q75, max 800px** | ~%40 küçük | Profil yükleme hızlanır | □ Evet / □ Hayır |
