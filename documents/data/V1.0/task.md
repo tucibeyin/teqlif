@@ -142,8 +142,9 @@
    ```
 2. `worker.py`'de yeni cron görevi:
    ```python
+   # worker.py'deki pattern: AsyncSessionLocal (get_db() context manager değil)
    async def cleanup_old_stream_viewers_task(ctx):
-       async with get_db() as db:
+       async with AsyncSessionLocal() as db:
            result = await db.execute(
                text("DELETE FROM live_stream_viewers WHERE left_at IS NOT NULL AND joined_at < NOW() - INTERVAL '3650 days'")
            )
@@ -212,8 +213,8 @@
    op.execute("ALTER TABLE listing_offers ALTER COLUMN amount TYPE NUMERIC(12,2) USING amount::NUMERIC(12,2)")
    op.execute("ALTER TABLE search_alerts ALTER COLUMN max_price TYPE NUMERIC(12,2) USING max_price::NUMERIC(12,2)")
    op.execute("ALTER TABLE users ALTER COLUMN max_budget TYPE NUMERIC(12,2) USING max_budget::NUMERIC(12,2)")
-   op.execute("ALTER TABLE market_index ALTER COLUMN usd_try TYPE NUMERIC(10,4) USING usd_try::NUMERIC(10,4)")
-   op.execute("ALTER TABLE market_index ALTER COLUMN eur_try TYPE NUMERIC(10,4) USING eur_try::NUMERIC(10,4)")
+   op.execute("ALTER TABLE exchange_rates ALTER COLUMN usd_try TYPE NUMERIC(10,4) USING usd_try::NUMERIC(10,4)")
+   op.execute("ALTER TABLE exchange_rates ALTER COLUMN eur_try TYPE NUMERIC(10,4) USING eur_try::NUMERIC(10,4)")
    ```
 
 3. Pydantic schema'lar: `float` → `Decimal` (ilgili response ve request model'ler)
@@ -225,7 +226,7 @@
    - `backend/app/use_cases/listings/queries/get_listing_offers.py:22` — `amount`
    > Auction ve Direct Sale endpoint'leri `response_model=AuctionStateOut/DirectSaleStateOut` olduğu için Pydantic coerce yapar — güvenli.
 
-5. `bump_schema_version()` migration sonunda çağrılmalı (ADR §9 kuralı — Faz 3 index migration ile birleştirilebilir)
+5. `bump_schema_version()` migration sonunda çağrılmalı — NOT: ADR §9 yalnızca `catalog`/`cities`/`field_config` tablolarını etkileyen migration'larda zorunlu kılıyor; TASK-04 bu tabloları etkilemiyor. Ancak `listings` API yanıtlarındaki type değişikliği API cache geçersizleştirme gerektirir. TASK-11 (composite index) migration'ına eklenmeli; TASK-11'de de `bump_schema_version()` unutulmamalı.
 
 **Test:**
 - Staging'de `alembic upgrade head` çalıştır
@@ -430,13 +431,17 @@ cron(populate_foryou_feed_task, hour={0, 6, 12, 18}, minute=20)
 cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30)
 ```
 
-**W4 key mismatch düzeltmesi** (`foryou_worker.py`):
+**W4 key mismatch düzeltmesi** (`foryou_worker.py` + `worker.py`):
 ```python
-# populate_foryou_feed_task içinde:
-# ÖNCE (hatalı): await redis.rpush(f"feed:{uid}:foryou", ...)
+# 1. foryou_worker.py — populate_foryou_feed_task içinde:
+# ÖNCE (hatalı): await redis.rpush(f"feed:{uid}:foryou", ...)  # foryou_worker.py:85
 #                await redis.expire(f"feed:{uid}:foryou", _FORYOU_TTL)
 # SONRA (doğru): await redis.set(f"feed:foryou:{uid}", json.dumps(feed_ids), ex=_FORYOU_TTL)
-# Not: FeedQueries.get_foryou_feed() redis.get(f"feed:foryou:{user_id}") okuyor
+# Not: FeedQueries.get_foryou_feed() redis.get(f"feed:foryou:{user_id}") okuyor (feed_queries.py:633)
+
+# 2. worker.py:994 — compute_user_interests_task invalidasyon satırı da güncellenmeli:
+# ÖNCE (eski hatalı key): invalidation_keys.append(f"feed:{uid}:foryou")
+# SONRA (doğru key):     invalidation_keys.append(f"feed:foryou:{uid}")
 ```
 
 **W3 TTL düzeltmesi** (`worker.py`'de `compute_user_condition_preferences_task`):
@@ -492,9 +497,11 @@ cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0)   # Paz
 
 **ALS/BPR TTL uzatması** (`bpr_service.py` veya worker içinde cache yazan yer):
 ```python
-# ÖNCE: await redis.set(f"bpr:rec:{uid}", ..., ex=90000)   # 25 saat
-# SONRA: await redis.set(f"bpr:rec:{uid}", ..., ex=604800)  # 7 gün — haftalık eğitimle uyumlu
-# seller:badge, trust_score, influence_rank gibi diğer ML key'leri de haftalık eğitim varsa 7 güne çıkar
+# NOT: bpr_service.py:40 _REDIS_TTL = 7 * 86400 = 604800 ZATEN DOĞRU — değişiklik yok
+# Doğrulama: bpr_service.py satır 40: `_REDIS_TTL = 7 * 86400  # = 604800 saniye = 7 gün`
+# ÖNCE (gerçek): _REDIS_TTL = 604800  # 7 gün (mevcut kod zaten doğru)
+# SONRA: değişiklik gerekmez — TTL zaten haftalık eğitimle uyumlu
+# seller:badge, trust_score, influence_rank gibi diğer ML key'leri haftalık eğitim varsa 7 güne çıkar (gerekiyorsa)
 ```
 
 **Test:**
@@ -567,13 +574,15 @@ Model dosyalarına da `Index(...)` tanımı eklenmeli:
 
 **Dosya:** `backend/app/worker.py`
 
+> **Import notu:** `get_db()` (`database.py:45`) bir async generator — context manager değil; `async with get_db() as db:` syntax'ı `AttributeError: __aenter__` fırlatır. Tüm worker task'ları `async with AsyncSessionLocal() as db:` kullanmalı (worker.py:210,255,278 pattern'i). `from app.database import AsyncSessionLocal` top-level import'a ekle.
+
 **Uygulama — 3 yeni görev:**
 ```python
 async def cleanup_old_listing_offers_task(ctx):
     # R6 = 1 yıl — TASK-yeni-A tamamlandıktan sonra çalıştır
     # status IN ('declined','expired') filtresi şart — aktif teklifler korunmalı
     # (feed.py:292 listing_offers LEFT JOIN ile teklif sayısı gösteriyor)
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         result = await db.execute(text(
             "DELETE FROM listing_offers "
             "WHERE status IN ('declined', 'expired') "
@@ -584,7 +593,7 @@ async def cleanup_old_listing_offers_task(ctx):
 
 async def cleanup_old_exchange_rates_task(ctx):
     # R10 = 10 yıl — TABLO ADI: exchange_rates (market_index değil!)
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         result = await db.execute(text(
             "DELETE FROM exchange_rates WHERE date < CURRENT_DATE - INTERVAL '3650 days'"
         ))
@@ -594,7 +603,7 @@ async def cleanup_old_exchange_rates_task(ctx):
 async def cleanup_old_streams_task(ctx):
     # R3 = 10 yıl — biten live_streams
     # BAĞIMLILIK: TASK-02 (FK SET NULL) tamamlanmış olmalı
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         result = await db.execute(text(
             "DELETE FROM live_streams WHERE status = 'ended' "
             "AND ended_at < NOW() - INTERVAL '3650 days'"
@@ -632,9 +641,10 @@ cron(cleanup_old_streams_task, day=1, hour=6, minute=0)               # Ayın 1'
 - `mobile/lib/` — Feed ViewModel + Pagination logic (MVVM) + Hive cache format
 
 > ⚠️ **Koordinasyon Zorunlu (Impact Analizi):**
-> 1. **`page`/`offset` parametreleri kaldırılmamalı** — Flutter tüm sayfalama için offset-based kullanıyor. `cursor` parametresi ADDITIVELY eklenmeli, eski parametreler deprecated period olmadan silinmemeli.
-> 2. **Hive `homeCache` box güncellenmeli** — Mevcut format `raw JSON + page offset` saklıyor. Keyset'e geçince Hive'daki eski format geçersiz kalır; `cacheVersion` bump ile eski cache temizlenmeli.
+> 1. **`page`/`offset` parametreleri kaldırılmamalı** — Flutter tüm sayfalama için offset-based kullanıyor (`home_view_model.dart:147,287`, `swipe_live_screen.dart:584`). `cursor` parametresi ADDITIVELY eklenmeli, eski parametreler deprecated period olmadan silinmemeli.
+> 2. **Hive `homeCache` box güncellenmeli** — Mevcut format `raw JSON + page offset` saklıyor (`home_view_model.dart:77,156,179,256`). `cacheVersion` mekanizması **hiç mevcut değil** — sıfırdan implement edilmeli. Keyset'e geçince eski cache çakışacak, `cacheBox.clear()` ile temizlenmeli.
 > 3. **`GET /api/feed/recent` zaten cursor-benzeri** — `since_id` + `max_id` parametreleri var (feed.py:105-106); bu endpoint için additive değil, zaten uyumlu.
+> 4. **Logout Hive clear eksikliği (yeni bulgu):** `StorageService.clear()` (`auth_service.dart:253`) sadece secure storage ve SharedPreferences'ı temizliyor — `api_cache` ve `homeCache` Hive box'larını temizlemiyor. Farklı kullanıcı giriş yapınca önceki kullanıcının feed verisi görünebilir. Bu task kapsamında `logout()` akışına `Hive.box('homeCache').clear()` ve `Hive.box('api_cache').clear()` eklenmeli.
 
 **Uygulama özeti:**
 
@@ -807,9 +817,10 @@ async def check_search_alerts_task(ctx: dict) -> None:
     Son 15 dakikada eklenen ilanları aktif search_alert'larla eşleştirir.
     Eşleşen alert sahibine push bildirim gönderir.
     """
-    from app.services.notification_service import push_notification
+    # Doğru import: worker.py'deki mevcut pattern (satır 2282, 2692 vb.)
+    from app.routers.notifications import push_notification
 
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         # Son 15 dakikada aktif olan yeni ilanlar
         since = datetime.now(timezone.utc) - timedelta(minutes=15)
         new_listings = await db.execute(
@@ -932,7 +943,7 @@ Etkilenen dosyalar:
 **Uygulama:**
 ```python
 async def cleanup_old_calls_task(ctx):
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         result = await db.execute(text(
             "DELETE FROM calls WHERE status IN ('ended','missed') "
             "AND ended_at < NOW() - INTERVAL '730 days'"
@@ -978,7 +989,7 @@ masked = mask_ip(request.client.host)
 **GC6/GC7 (worker.py):**
 ```python
 async def cleanup_empty_message_threads_task(ctx):
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         # message_threads tablosunda (user_a_id, user_b_id) PK var — thread_id kolonu yok
         # status != 'pending' zorunlu — onay bekleyen DM isteklerini silmemek için
         # (auth.py:406 login'de pending request'leri listeler; silinirse istek kaybolur)
@@ -995,7 +1006,7 @@ async def cleanup_empty_message_threads_task(ctx):
 
 async def cleanup_inactive_search_alerts_task(ctx):
     # search_alerts'ta updated_at YOKTUR — created_at kullanılmalı
-    async with get_db() as db:
+    async with AsyncSessionLocal() as db:
         await db.execute(text(
             "DELETE FROM search_alerts WHERE created_at < NOW() - INTERVAL '180 days'"
         ))
@@ -1251,8 +1262,9 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 ```
 
 **Flutter (MVVM):**
-- `ProfileViewModel.deleteAccount()` → `DELETE /users/me`
+- `ProfileViewModel.deleteAccount()` → backend endpoint'ini çağırır
 - View: onay dialog → ViewModel çağrısı → logout
+- ⚠️ **Endpoint çelişkisi:** Flutter `auth_service.dart:219` şu an `DELETE /auth/delete-account` çağırıyor; task.md `DELETE /users/me` öneriyor. Uygulama sırasında backend hangi path'i implement ederse Flutter'ı ona göre güncelle (veya mevcut `/auth/delete-account` path'ini koru — backend önce kontrol et).
 
 **Status:** [ ] BEKLEMEDE
 
@@ -1306,7 +1318,16 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 - `users.tuci_balance` → `users.teqlik_balance` (Alembic: RENAME COLUMN)
 - Python: model, repository, use_case, schema, worker.py
 - API JSON response: `tuci_balance` → `teqlik_balance`
-- Flutter: DTO, ViewModel, widget, i18n ARB (4 dil)
+- Flutter: **9+ dosya** etkilenecek (4 değil):
+  1. `providers/ai_desc_provider.dart` — `tuciSpent`/`tuci_spent`
+  2. `screens/retargeting_screen.dart` — `tuci_balance`, `spent_tuci`, `tuciBalance`, `tuciCost` (10+ satır)
+  3. `screens/profile_screen.dart` — `state.tuciBalance`
+  4. `screens/listing_detail_screen.dart` — `tuciBalance`, `tuci_balance` JSON key, `TUCi` string
+  5. `screens/viewmodels/profile_view_model.dart` — `tuciBalance`, `tuciHistory`
+  6. `screens/create_listing_screen.dart` — `next.tuciSpent`, `'tuciSpent'` i18n key
+  7. `utils/start_stream_helper.dart` — `TUCi` UI string
+  8. `screens/live_stream_analytics_screen.dart` — `TUCi` UI string
+  9. `screens/live_stream_history_screen.dart` — `TUCi` UI string
 
 **Geçiş stratejisi:**
 1. Backend: Eski alan adlarını Pydantic `alias` ile 1 sprint geç destekle
@@ -1364,3 +1385,5 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | **Pazar seçimi** (onaylı ürün yol haritası) — `countries`, `states.country_code`, `exchange_rates` hazır; `users.selected_market` + `listings.country_code` eksik | Kullanıcı pazar seçer (TR/AZ/DE…), feed+arama+fiyat değişir | Pazar sprint'i — 7 adım, plan.md Faz 2.6 |
 | `referral.status = 'pending'` | İki adımlı referral: kayıt → pending; ilk alışveriş → completed + ödül tetikle | Referral iş mantığı sprint'i — `apply_referral` service refactor + ARQ görevi |
 | `ad_campaigns` DB + API | Satıcı boost/reklam — schema ve wallet entegrasyonu var | Flutter "reklam ver" ekranı sprint'i — `create_listing_screen` boost butonu + reklam oluşturma akışı |
+| **ClickHouse `init_clickhouse()` DB bug** — `database_clickhouse.py` `init_clickhouse()` tabloları `database` parametresi belirtmeden oluşturuyor → `default` DB'ye yazıyor (05_final.md §14 "Önemli bug"). `settings.clickhouse_db` ile bağlanmalı. | Şimdilik tabloları bootstrap'ta elle oluşturmak gerekiyor (operasyonel yük) | ClickHouse sprint'i — `init_clickhouse()` refactor + `settings.clickhouse_db` parametresi |
+| **node4 bootstrap script** — `bootstrap_node4.sh` henüz yazılmamış (05_final.md §16 "Yüksek" öncelik). node1 ile aynı yapıda olacak. | node4 production edge node — script olmadan sıfırdan kurulamaz | Ops sprint'i — node1 bootstrap'ından türet |
