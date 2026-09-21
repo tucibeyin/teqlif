@@ -730,6 +730,53 @@ ORDER BY l.created_at DESC, l.id DESC LIMIT 20
 
 ---
 
+### TASK-yeni-C · P5e · 🟡 DM Raporlama — flag_reason Aktivasyonu
+
+**Plan:** Faz 2.2  
+**Sorun:** `direct_messages.flag_reason VARCHAR(255)` kolonu var ama hiçbir endpoint bu kolonu set etmiyor. Kullanıcılar mesajları raporlayamıyor; moderasyon sırası oluşturulamıyor.
+
+**Mevcut altyapı:** `backend/app/routers/reports.py` — ilan raporlama için mevcut. DM raporlama bu router'a endpoint olarak eklenir.
+
+**Etkilenen dosyalar:**
+- `backend/app/routers/messages.py` — `POST /{message_id}/flag` endpoint ekle
+- `backend/app/models/message.py` — `flag_reason` zaten var, değişiklik yok
+- `backend/alembic/versions/` — Migration yok (kolon zaten mevcut)
+- `mobile/lib/` — DM ekranında mesaj uzun basma menüsüne "Raporla" seçeneği (MVVM)
+
+**Backend uygulama:**
+```python
+# messages.py — yeni endpoint
+@router.post("/{message_id}/flag", status_code=204)
+async def flag_message(
+    message_id: int,
+    reason: str,   # "spam" | "harassment" | "inappropriate" | "scam" | "other"
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    msg = await db.get(DirectMessage, message_id)
+    if not msg:
+        raise AppException(status_code=404, code="NOT_FOUND")
+    # Sadece mesajı alan kişi raporlayabilir
+    if msg.receiver_id != current_user.id:
+        raise AppException(status_code=403, code="FORBIDDEN")
+    msg.flag_reason = reason
+    await db.commit()
+```
+
+**Flutter (MVVM):**
+- `DirectMessageViewModel.flagMessage(messageId, reason)` — `POST /messages/{id}/flag`
+- DM ekranında mesaj baloncusuna uzun basınca: "Raporla" seçeneği → reason seçici bottom sheet
+- `mobile/lib/services/message_service.dart` veya ViewModel'e method ekle
+
+**Test:**
+- Mesaj al → uzun bas → Raporla → reason seç → 204 döner
+- `SELECT flag_reason FROM direct_messages WHERE id=...` → reason kaydedildi
+- Başka kullanıcının mesajını raporlamaya çalış → 403
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-yeni-B · P5d · 🟡 D8: user_interests UNIQUE constraint düzelt
 
 **Plan:** Faz 2.2 D8 · ADR §3.2  
@@ -898,31 +945,16 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 
 ---
 
-### TASK-18c · P20c · 🟢 Dead Kolon Migration + listing.location Write Path Fix
+### TASK-18c · P20c · 🟢 listing.location Write Path Fix + ringing_at Aktivasyonu
 
 **Plan:** Faz 2.5  
-**Kapsam:** Kod incelemesinde hiç kullanılmadığı doğrulanan kolonlar + bozuk write path düzeltmesi.
 
 > `states.country_code` bu scope'tan **çıkarıldı** — multi-country entegrasyonunda kullanılacak (Faz 2.6).  
-> `listings.location` bu scope'tan **çıkarıldı** — kolon dead değil, write path bozuk; aşağıda düzeltiliyor.
-
-**Dead kolon migration (flag_reason + ringing_at):**
-
-Etkilenen dosyalar:
-- `backend/app/models/message.py` — `flag_reason` kaldır
-- `backend/app/models/call.py` — `CallParticipant.ringing_at` kaldır
-- `backend/alembic/versions/` — Migration
-
-```python
-op.execute("ALTER TABLE direct_messages DROP COLUMN flag_reason")
-op.execute("ALTER TABLE call_participants DROP COLUMN ringing_at")
-```
-
-> Dikkat: drop öncesi `SELECT COUNT(*) FROM direct_messages WHERE flag_reason IS NOT NULL` ile veri yok olduğunu doğrula.
+> `flag_reason` bu scope'tan **çıkarıldı** — DM raporlama özelliği olarak TASK-yeni-C'de implemente ediliyor.
 
 ---
 
-**listing.location Write Path Fix:**
+**1. listing.location Write Path Fix:**
 
 > **Sorun:** Flutter `location` alanını gönderiyor ve gösteriyor — ama backend `create_listing` ve `update_listing` use case'lerinde bu alanı hiç DB'ye yazmıyor. Kullanıcının girdiği konum sessizce kayboluyor.
 
@@ -943,11 +975,40 @@ if data.location is not None:
     listing.location = data.location  # ← ekle
 ```
 
+---
+
+**2. ringing_at Aktivasyonu:**
+
+> **Sorun:** `call_participants.ringing_at` kolonu var ama hiçbir yerde set edilmiyor. Grup çağrısında davet edilen katılımcının zil çalmaya başladığı anı kaydetmek için kullanılmalı.
+>
+> **Mimari not:** 1-1 aramada `ringing` durumu Redis presence'da (`set_presence(..., "ringing", ...)`) tutuluyor — DB'ye yazılmıyor. `CallParticipant` yalnızca **grup çağrısı davetlileri** için var. Bu yüzden `ringing_at`, `CallParticipant` oluşturulduğu anda (davet push'u gönderildiğinde) set edilmeli.
+
+Etkilenen dosya:
+- `backend/app/routers/calls.py:1294` — `CallParticipant(...)` oluşturulurken `ringing_at=now` ekle
+
+```python
+# calls.py satır 1291-1302:
+now = datetime.now(timezone.utc)
+cp = CallParticipant(
+    call_id=call_id,
+    user_id=invitee_id,
+    role="guest",
+    status="invited",
+    invited_by=current_user.id,
+    livekit_token=livekit_token,
+    invited_at=now,
+    ringing_at=now,   # ← ekle — davet = zil başlangıcı
+)
+```
+
+**Ne sağlar:** `ringing_at` ile `invited_at` farklı mı? Şu an aynı anda set ediliyor. İleride ACK tabanlı gerçek ring-start tespiti yapılırsa ayrışabilir. Şimdilik `invited_at` ile başlat yeterli.
+
+---
+
 **Test:**
-- Staging'de migration çalıştır (flag_reason + ringing_at drop), uygulama hatası yok
-- DM gönder/al, çağrı başlat — çalışıyor
 - Flutter'dan `location` dolu ilan oluştur → `SELECT location FROM listings WHERE id=...` → değer kaydedildi
 - İlan güncelle → location değişti
+- Grup çağrısına davet gönder → `SELECT ringing_at FROM call_participants WHERE ...` → timestamp var
 
 **Status:** [ ] BEKLEMEDE
 
@@ -1156,6 +1217,7 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [ ] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
+| TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
 | TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |
 | TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [ ] |
 | TASK-08 · MinIO lifecycle | 🟡 P8 | Yüksek | 1.5 | [ ] |
@@ -1170,7 +1232,7 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
 | TASK-18 · GC6/GC7 + D1 JSONB (sorgu fix) | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
 | TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [ ] |
-| TASK-18c · Dead kolon migration (flag_reason, ringing_at, listing.location) | 🟢 P20c | Orta | 2.5 | [ ] |
+| TASK-18c · listing.location write path + ringing_at aktivasyonu | 🟢 P20c | Orta | 2.5 | [ ] |
 | TASK-18d · countries — BIRAKILDI (multi-country) | ⏸️ | — | 2.6 | ⏸️ |
 | TASK-18e · Flutter User model sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
 | TASK-18f · Flutter dead code (teq_test + getFeedStats) | 🟢 P20f | Orta | 2.5 | [ ] |

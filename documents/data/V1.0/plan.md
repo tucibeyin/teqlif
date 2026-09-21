@@ -299,9 +299,9 @@ W1 ↔ W4 birlikte karar ver.
 | Tablo | Kolon | Durum | Aksiyon |
 |-------|-------|-------|---------|
 | `listings` | `updated_at` | ⚠️ Her zaman NULL — `onupdate` yok, write path yok | `onupdate=func.now()` + `update_listing.py` fix |
-| `listings` | `location` | ⚠️ Hiçbir write path yok — `province` + `district` gönderiliyor, `location` NULL kalıyor; API `"location": null` dönüyor | DROP veya backend'de `province + ", " + district` olarak doldur |
-| `direct_messages` | `flag_reason` | Hiçbir yerde set edilmiyor (`is_shadowbanned` kullanılıyor ama o değil) | DROP veya moderation write path ekle |
-| `call_participants` | `ringing_at` | Hiçbir yerde set edilmiyor (diğer timestamp'ler aktif) | DROP |
+| `listings` | `location` | ⚠️ Hiçbir write path yok — Flutter gönderiyor ama backend kaydetmiyor | ✅ KULLAN — `create_listing.py` + `update_listing.py` write path fix (TASK-18c) |
+| `direct_messages` | `flag_reason` | Hiçbir yerde set edilmiyor | ✅ KULLAN — DM raporlama özelliği: `POST /messages/{id}/flag` (TASK-yeni-C) |
+| `call_participants` | `ringing_at` | Hiçbir yerde set edilmiyor | ✅ KULLAN — `CallParticipant` oluşturulurken `ringing_at=now` set edilecek (TASK-18c) |
 | `states` | `country_code` | Şu an hiçbir sorguda filtre olarak kullanılmıyor | ✋ BIRAK — multi-country entegrasyonunda `countries.code` FK'ya bağlanacak |
 
 **Backend — Dead ORM Class:**
@@ -376,7 +376,9 @@ W1 ↔ W4 birlikte karar ver.
 □ gift_events + bids + direct_sales FK SET NULL yapıldı
 □ Pydantic schema Decimal tiplere güncellendi
 □ listings.updated_at: onupdate=func.now() + update_listing.py write path
-□ Dead kolonlar (flag_reason, ringing_at, listing.location) kaldırıldı
+□ listings.location write path fix (create + update use case)
+□ flag_reason: DM raporlama endpoint'i (POST /messages/{id}/flag)
+□ ringing_at: CallParticipant oluşturulurken set ediliyor
 □ Flutter: User model sosyal URL alanları typed hale getirildi
 □ countries + states.country_code: dokunulmadı (Faz 2.6 planına alındı)
 ```
@@ -866,7 +868,8 @@ Geçiş döneminde çift okuma → Flutter güncellendikten sonra eski kaldırı
 | P19 | GC2: calls cleanup | 1.4 |
 | P20 | D1: listings.image_urls → JSONB | 2.2 |
 | P20b | listings.updated_at write path düzelt | 2.5 |
-| P20c | Dead kolon migration (flag_reason, ringing_at, listing.location) | 2.5 |
+| P20c | listing.location write path + ringing_at aktivasyonu | 2.5 |
+| P5e | DM raporlama — flag_reason aktivasyonu (TASK-yeni-C) | 2.2 |
 | P20e | Flutter User model sosyal URL typed alanlar | 2.5 |
 | P20f | Flutter dead code: teq_test_screen + getFeedStats() | 2.5 |
 
