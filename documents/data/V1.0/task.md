@@ -167,85 +167,146 @@
 
 ---
 
-### TASK-04 · P4 · 🔴 Float → Integer finansal kolonlar
+### TASK-04 · P4 · 🔴 Float → Numeric(12,2) finansal kolonlar
 
 **Plan:** Faz 2.1  
-**Sorun:** Float, para hesaplamalarında yuvarlama hatası üretir.  
-**Karar:** Tüm fiyatlar tam sayı — her katmanda Integer (DB, Python, Flutter).  
-`exchange_rates.usd_try/eur_try` kur değerleri olduğu için Integer değil; `Numeric(10,4)` kalır.
+**Karar:** Endüstri standardı `Numeric(12,2)` — DB'de tam ondalıklı sakla, her katmanda `1.500,50 ₺` formatında sun.  
+`exchange_rates.usd_try/eur_try` kur değerleri zaten `Numeric(10,4)` kalır.
 
 **Etkilenen dosyalar:**
-- `backend/app/models/listing.py` — price, buy_it_now_price, last_sold_price, last_start_price
-- `backend/app/models/auction.py` — start_price, buy_it_now_price, final_price
-- `backend/app/models/bid.py` — amount
-- `backend/app/models/purchase.py` — price
-- `backend/app/models/listing_offer.py` — amount
-- `backend/app/models/search_alert.py` — max_price
-- `backend/app/models/user.py` — max_budget
-- `backend/app/models/market_index.py` — usd_try, eur_try (Numeric kalır)
-- `backend/app/schemas/` — İlgili Pydantic schema'lar (float → int)
+- `backend/app/models/` — listing, auction, bid, purchase, listing_offer, search_alert, user (price/amount alanları)
+- `backend/app/models/market_index.py` — usd_try, eur_try (Numeric(10,4) kalır)
+- `backend/app/schemas/` — Pydantic schema'lar: `float` → `Decimal`
 - `backend/alembic/versions/` — Yeni migration
-- `mobile/lib/models/` — Flutter model parse'ları (toDouble → toInt)
+- `mobile/lib/models/` — Flutter model parse'ları: `toDouble()` → `toDouble()` (Decimal→float, aynı kalır ama `as num?` cast güvenli)
+- `mobile/lib/utils/number_formatter.dart` — fiyat display formatı güncelle
+- `mobile/lib/widgets/direct_sale_panel.dart` — fiyat tipleri, input ayarları
+- `mobile/lib/widgets/auction_panel.dart` — cast güncellemesi
 
-**Uygulama:**
+---
 
-1. Model güncellemeleri:
-   ```python
-   # ÖNCE: Float
-   from sqlalchemy import Float
-   price: Mapped[float] = mapped_column(Float)
+**1. Model güncellemeleri:**
+```python
+# ÖNCE: Float
+from sqlalchemy import Float
+price: Mapped[float] = mapped_column(Float)
 
-   # SONRA: Integer
-   from sqlalchemy import Integer
-   price: Mapped[int] = mapped_column(Integer)
-
-   # exchange_rates — kur, Integer değil:
-   from sqlalchemy import Numeric
-   usd_try: Mapped[Decimal] = mapped_column(Numeric(10, 4))
-   ```
-
-2. Alembic migration — her ALTER ayrı `op.execute()`:
-   ```python
-   op.execute("ALTER TABLE listings ALTER COLUMN price TYPE INTEGER USING ROUND(price)::INTEGER")
-   op.execute("ALTER TABLE listings ALTER COLUMN buy_it_now_price TYPE INTEGER USING ROUND(buy_it_now_price)::INTEGER")
-   op.execute("ALTER TABLE listings ALTER COLUMN last_sold_price TYPE INTEGER USING ROUND(last_sold_price)::INTEGER")
-   op.execute("ALTER TABLE listings ALTER COLUMN last_start_price TYPE INTEGER USING ROUND(last_start_price)::INTEGER")
-   op.execute("ALTER TABLE auctions ALTER COLUMN start_price TYPE INTEGER USING ROUND(start_price)::INTEGER")
-   op.execute("ALTER TABLE auctions ALTER COLUMN buy_it_now_price TYPE INTEGER USING ROUND(buy_it_now_price)::INTEGER")
-   op.execute("ALTER TABLE auctions ALTER COLUMN final_price TYPE INTEGER USING ROUND(final_price)::INTEGER")
-   op.execute("ALTER TABLE bids ALTER COLUMN amount TYPE INTEGER USING ROUND(amount)::INTEGER")
-   op.execute("ALTER TABLE purchases ALTER COLUMN price TYPE INTEGER USING ROUND(price)::INTEGER")
-   op.execute("ALTER TABLE listing_offers ALTER COLUMN amount TYPE INTEGER USING ROUND(amount)::INTEGER")
-   op.execute("ALTER TABLE search_alerts ALTER COLUMN max_price TYPE INTEGER USING ROUND(max_price)::INTEGER")
-   op.execute("ALTER TABLE users ALTER COLUMN max_budget TYPE INTEGER USING ROUND(max_budget)::INTEGER")
-   op.execute("ALTER TABLE exchange_rates ALTER COLUMN usd_try TYPE NUMERIC(10,4) USING usd_try::NUMERIC(10,4)")
-   op.execute("ALTER TABLE exchange_rates ALTER COLUMN eur_try TYPE NUMERIC(10,4) USING eur_try::NUMERIC(10,4)")
-   ```
-   > `ROUND()` mevcut float verilerin ondalığını yuvarlayarak keser — sistem kullanıcıya açık olmadığı için kayıp yok.
-
-3. Pydantic schema'lar: `float` → `int`
-
-4. **Serialization notu:** Integer, FastAPI'de doğrudan JSON number olarak serialize edilir — Decimal/float wrap gerekmez. `listing_utils.py`, `search_listings_query.py` vb. dosyalarda ek wrap yapmaya gerek yok.
-
-5. `bump_schema_version()` — NOT: ADR §9 yalnızca `catalog`/`cities`/`field_config` tablolarını etkiliyor; TASK-04 bu tabloları etkilemiyor. TASK-11 (composite index) migration'ına ekle; TASK-11'de unutulmamalı.
-
-**Flutter güncellemeleri:**
-```dart
-// auction.dart, direct_sale.dart, listing_offer.dart — toDouble() → toInt()
-// ÖNCE: (j['price'] as num?)?.toDouble()
-// SONRA: (j['price'] as num?)?.toInt()
-
-// DirectSaleOrder — non-nullable alanlar (direct_sale.dart:121-122):
-// ÖNCE: (j['unit_price'] as num).toDouble()
-// SONRA: (j['unit_price'] as num).toInt()
+# SONRA: Numeric(12,2) — max 9.999.999.999,99 ₺
+from sqlalchemy import Numeric
+from decimal import Decimal
+price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
 ```
 
+**2. Alembic migration — her ALTER ayrı `op.execute()`:**
+```python
+op.execute("ALTER TABLE listings ALTER COLUMN price TYPE NUMERIC(12,2) USING price::NUMERIC(12,2)")
+op.execute("ALTER TABLE listings ALTER COLUMN buy_it_now_price TYPE NUMERIC(12,2) USING buy_it_now_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE listings ALTER COLUMN last_sold_price TYPE NUMERIC(12,2) USING last_sold_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE listings ALTER COLUMN last_start_price TYPE NUMERIC(12,2) USING last_start_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE auctions ALTER COLUMN start_price TYPE NUMERIC(12,2) USING start_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE auctions ALTER COLUMN buy_it_now_price TYPE NUMERIC(12,2) USING buy_it_now_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE auctions ALTER COLUMN final_price TYPE NUMERIC(12,2) USING final_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE bids ALTER COLUMN amount TYPE NUMERIC(12,2) USING amount::NUMERIC(12,2)")
+op.execute("ALTER TABLE purchases ALTER COLUMN price TYPE NUMERIC(12,2) USING price::NUMERIC(12,2)")
+op.execute("ALTER TABLE listing_offers ALTER COLUMN amount TYPE NUMERIC(12,2) USING amount::NUMERIC(12,2)")
+op.execute("ALTER TABLE search_alerts ALTER COLUMN max_price TYPE NUMERIC(12,2) USING max_price::NUMERIC(12,2)")
+op.execute("ALTER TABLE users ALTER COLUMN max_budget TYPE NUMERIC(12,2) USING max_budget::NUMERIC(12,2)")
+op.execute("ALTER TABLE exchange_rates ALTER COLUMN usd_try TYPE NUMERIC(10,4) USING usd_try::NUMERIC(10,4)")
+op.execute("ALTER TABLE exchange_rates ALTER COLUMN eur_try TYPE NUMERIC(10,4) USING eur_try::NUMERIC(10,4)")
+```
+
+**3. Pydantic schema'lar:** `float` → `Decimal`
+
+**4. Serialization — FastAPI Decimal→float:**
+FastAPI 0.115 `jsonable_encoder` Decimal'i `str`'e çevirir. Çözüm: tüm Pydantic schema base class'ına global encoder ekle:
+```python
+# backend/app/schemas/base.py (yeni veya mevcut base schema):
+from decimal import Decimal
+from pydantic import BaseModel, ConfigDict
+
+class BaseSchema(BaseModel):
+    model_config = ConfigDict(json_encoders={Decimal: float})
+```
+Tüm response schema'lar bu `BaseSchema`'dan türetilirse Decimal otomatik float serialize edilir.  
+`response_model` kullanılmayan raw dict dönen endpoint'lerde (listing_utils.py:95,107,113 vb.) ek olarak `float(value)` wrap korunabilir.
+
+**5. Python hesaplama kuralı — her zaman 2 haneye yuvarla:**
+```python
+from decimal import Decimal, ROUND_HALF_UP
+
+def to_price(value) -> Decimal:
+    """Float/int/str → 2 haneli Decimal. Tüm fiyat atamaları bu fonksiyondan geçmeli."""
+    return Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+# Kullanım:
+total_price = to_price(quantity * unit_price)  # 3 × 33.33 = 99.99
+```
+`direct_sale_commands.py` içindeki `float(sale.price)` çağrıları → `sale.price` (Decimal olarak doğrudan kullan) ya da `to_price(sale.price)`.
+
+**6. `bump_schema_version()`** — TASK-11 migration'ına ekle; TASK-11'de unutulmamalı.
+
+---
+
+**Flutter güncellemeleri:**
+
+**TeqNumberFormatter — display her zaman 2 hane kuruş:**
+```dart
+// number_formatter.dart satır 67-68 — ÖNCE (değişken ondalık):
+final isDecimal = numVal is double && numVal.remainder(1) != 0;
+final pattern = isDecimal ? '#,##0.##' : '#,##0';
+
+// SONRA — fiyat alanları her zaman 2 hane göster:
+// format() metoduna `forceDecimals` parametresi ekle:
+static String format(dynamic value, {
+  String? fieldKey,
+  String? locale,
+  String? unit,
+  bool forceDecimals = false,   // ← yeni parametre
+}) {
+  ...
+  final pattern = (forceDecimals || (numVal is double && numVal.remainder(1) != 0))
+      ? '#,##0.00'   // fiyat: her zaman 2 hane
+      : '#,##0';
+  ...
+}
+```
+Tüm fiyat çağrıları `forceDecimals: true` alır:
+```dart
+TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺', forceDecimals: true)
+// Sonuç: 100.00 → "100,00 ₺" | 1500.50 → "1.500,50 ₺"
+```
+
+**TeqNumericInputFormatter — fiyat alanlarında kuruş girişi:**
+```dart
+// direct_sale_panel.dart:1505, create_listing_screen içindeki fiyat input'ları:
+// ÖNCE: TeqNumericInputFormatter(fieldKey: 'price')          // allowDecimal: false
+// SONRA: TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)  // kuruş girilebilir
+```
+
+**Flutter model parse — `double` olarak oku (Decimal→JSON float→Dart double):**
+```dart
+// auction.dart, direct_sale.dart, listing_offer.dart — değişiklik yok, toDouble() zaten doğru
+// Backend Decimal → JSON float(e.g. 1500.50) → Dart (j['price'] as num?)?.toDouble() ✅
+// auction_panel.dart:143-145 cast güncelle:
+// ÖNCE: result['price'] as double?
+// SONRA: (result['price'] as num?)?.toDouble()   // num? → güvenli cast
+```
+
+**direct_sale_panel.dart hesaplama:**
+```dart
+// Satır 1090:
+// ÖNCE: final total = _qty * widget.state.price;  (double * double → double, ondalık kayabilir)
+// SONRA: double total = double.parse((_qty * widget.state.price).toStringAsFixed(2));
+```
+
+---
+
 **Test:**
-- Staging'de `alembic upgrade head` çalıştır
-- `GET /api/listings` → `"price": 100` (tam sayı, string değil)
-- Yeni ilan oluştur: 99.5 TL girilince → DB'de 100 (ROUND) veya frontend'de integer zorla
-- Frontend giriş: `TextInputType.number` + `int.parse()` — ondalık girilemesin
-- `exchange_rates.usd_try` → hâlâ ondalıklı (32.5 gibi)
+- Staging'de `alembic upgrade head` → `SELECT price FROM listings` → `1500.50` formatı
+- `GET /api/listings` → `"price": 1500.50` (number, string değil)
+- Ilan oluştur: `1.500,50` gir → DB'de `1500.50` ✅
+- Direct sale: 3 adet × 33,33 → toplam `100,00 ₺` (yuvarlama doğru)
+- Tüm fiyat ekranlarında `#.###,00` format görünüyor
 
 **Node ops:** Staging önce, sonra prod.
 
