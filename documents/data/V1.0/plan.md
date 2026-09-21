@@ -181,11 +181,11 @@ W1 ↔ W4 birlikte karar ver.
 ### 1.7 — Faz 1 Başarı Kriterleri
 
 ```
-□ Tüm R□ kararları onaylandı
-□ GC1-GC7 hangileri uygulanacak belirlendi
-□ MinIO lifecycle policy node1+node4'ta aktif
-□ W1-W7 kararları alındı
-□ R5 FK (CASCADE → SET NULL) planlandı
+■ Tüm R□ kararları onaylandı
+■ GC1-GC7 görev listesi ve zamanlaması belirlendi
+□ MinIO lifecycle policy node1+node4'ta aktif (uygulama bekleniyor)
+■ W1-W7 zamanlama kararları alındı
+■ R5 FK (CASCADE → SET NULL) planlandı (Faz 2.3)
 ```
 
 ---
@@ -292,8 +292,8 @@ Adımlar:
 
 ```
 □ PgBouncer aktif: pg_stat_activity max 30 bağlantı
-□ Composite index'ler CONCURRENTLY oluşturuldu
-□ EXPLAIN ANALYZE: feed sorgusu Seq Scan yok
+□ Composite index'ler oluşturuldu (non-concurrent, op.execute())
+□ EXPLAIN ANALYZE: index'li sorgular Seq Scan yok
 ```
 
 ---
@@ -704,10 +704,10 @@ Geçiş döneminde çift okuma → Flutter güncellendikten sonra eski kaldırı
 
 | # | İş | Faz |
 |---|---|-----|
-| P6 | ClickHouse disk ölç → R9 kararı | 1.2 / 4.1 |
-| P7 | R9b: user_interactions 90→120g kararı | 1.2 |
+| P6 | ClickHouse TTL: R9=365g → ALTER TABLE (node5) | 4.1 |
+| P7 | R9b: user_interactions retention 90→365g | 1.2 / 6.1 |
 | P8 | MinIO lifecycle policy (node1+node4) | 1.5 |
-| P9 | W1+W4: interests+feed frekans kararı | 1.6 |
+| P9 | W1/W3/W4/W5 ARQ frekans değişikliği | 1.6 |
 | P10 | Composite index'ler | 3.2 |
 | P11 | GC3: listing_offers cleanup | 1.4 |
 | P12 | GC4: market_index cleanup | 1.4 |
