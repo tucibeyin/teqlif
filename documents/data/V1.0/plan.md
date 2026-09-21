@@ -145,10 +145,10 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 | **GC1** | `cleanup_old_stream_viewers_task` | `live_stream_viewers` | `joined_at < R1` | Haftalık Çar 04:00 | 🔴 |
 | GC2 | `cleanup_old_calls_task` | `calls` ended/missed | `ended_at < R2` | Haftalık Per 04:00 | 🟡 |
 | GC3 | `cleanup_old_listing_offers_task` | `listing_offers` declined | `created_at < R6` | Haftalık Cum 04:00 | 🟡 |
-| GC4 | `cleanup_old_market_index_task` | `market_index` | `date < R10` | Aylık 1. gün 05:00 | 🟢 |
+| GC4 | `cleanup_old_exchange_rates_task` | `exchange_rates` ⚠️ (plan'da yanlış: `market_index`) | `date < R10` | Aylık 1. gün 05:00 | 🟢 |
 | GC5 | `cleanup_old_streams_task` | `live_streams` ended | `ended_at < R3` | Aylık 1. gün 06:00 | 🟡 |
 | GC6 | `cleanup_empty_message_threads_task` | `message_threads` | 0 mesaj + >30 gün | Haftalık Paz 05:00 | 🟢 |
-| GC7 | `cleanup_inactive_search_alerts_task` | `search_alerts` | `updated_at < 180 gün` | Haftalık Paz 06:00 | 🟢 |
+| GC7 | `cleanup_inactive_search_alerts_task` | `search_alerts` | `created_at < 180 gün` ⚠️ (`updated_at` alanı yok) | Haftalık Paz 06:00 | 🟢 |
 
 ---
 
@@ -218,19 +218,24 @@ W1 ↔ W4 birlikte karar ver.
 | # | Tablo | Hata | Düzeltme |
 |---|-------|------|---------|
 | **D3** | `auctions.status` | `default="completed"` | `default="active"` — 🔴 yeni açık artırma tamamlanmış görünüyor |
+| **D6** | `direct_sales.stream_id` | `ondelete="CASCADE"` | **SET NULL** — 🔴 live_stream silinince tüm direct_sales + orders siliniyor |
+| **D7** | `listing_offers` | `status` alanı yok | `status VARCHAR(20) DEFAULT 'active'` ekle — 🔴 GC3 cleanup'ı çalışmıyor |
+| **D8** | `user_interests` | `UNIQUE(user_id, category)` | `UNIQUE(user_id, category, subcategory)` — 🟡 subcategory kayıt eklenemiyor (ADR §3.2 bozuk) |
 | D1 | `listings.image_urls` | `Text` (JSON string) | `JSONB` + GIN index |
 | D2 | `listings.active_room_id` | FK tanımsız | `ForeignKey("live_streams.id", ondelete="SET NULL")` ekle |
 | D4 | `reports.created_at` | `DateTime(tz=False)` | `DateTime(timezone=True), server_default=func.now()` |
 | D5 | `app_configs.updated_at` | `DateTime(tz=False)` | `DateTime(timezone=True)` |
+| D9 | `exchange_rates` | Plan boyunca `market_index` yazılmış | Gerçek tablo adı `exchange_rates` — cleanup/migration SQL'lerinde düzelt |
 
 ---
 
-### 2.3 — FK Düzeltmeleri (Faz 1'den)
+### 2.3 — FK Düzeltmeleri (Faz 1'den + Kod İncelemesi)
 
 | Tablo | Kolon | Şu An | Düzeltme |
 |-------|-------|-------|---------|
 | `gift_events` | `stream_id` | `ondelete="CASCADE"` | **SET NULL** |
 | `bids` | `stream_id` | ondelete tanımsız | **SET NULL** |
+| **`direct_sales`** | `stream_id` | `ondelete="CASCADE"` | **SET NULL** — direct_sale_orders CASCADE ile siliniyor |
 
 ---
 
@@ -239,6 +244,9 @@ W1 ↔ W4 birlikte karar ver.
 ```
 □ Float → Numeric migration staging'de test edildi, prod'da uygulandı
 □ D3: yeni açık artırma status = "active" ile başlıyor
+□ D6: direct_sales.stream_id → SET NULL
+□ D7: listing_offers.status alanı eklendi, GC3 çalışıyor
+□ D8: user_interests UNIQUE(user_id, category, subcategory) + upsert güncellendi
 □ listings.image_urls JSONB, GIN index var
 □ gift_events + bids FK SET NULL yapıldı
 □ Pydantic schema Decimal tiplere güncellendi
@@ -276,15 +284,16 @@ Adımlar:
 
 `CREATE INDEX CONCURRENTLY` transaction içinde yasak → `op.execute()` ile ayrı migration.
 
-| Tablo | Index | Sorgu Amacı |
-|-------|-------|------------|
-| `tuci_transactions` | `(user_id, created_at DESC)` | Cüzdan geçmişi |
-| `purchases` | `(buyer_id, created_at DESC)` | Alım geçmişi |
-| `bids` | `(stream_id, created_at DESC)` | ✅ `ix_bids_stream_created` — zaten var |
-| `analytics_events` | `(user_id, created_at)` | ML sorgu hızı |
-| `user_interactions` | `(user_id, created_at)` | ML sorgu hızı |
-| `listing_offers` | `(listing_id, status)` | Teklif filtresi |
-| `follows` | `(follower_id, followed_id)` UNIQUE | Takip kontrolü |
+| Tablo | Index | Sorgu Amacı | Durum |
+|-------|-------|------------|-------|
+| `tuci_transactions` | `(user_id, created_at DESC)` | Cüzdan geçmişi | ⚠️ Eksik |
+| `purchases` | `(buyer_id, created_at DESC)` | Alım geçmişi | ⚠️ Eksik |
+| `bids` | `(stream_id, created_at DESC)` | Teklif sırası | ✅ `ix_bids_stream_created` zaten var |
+| `analytics_events` | `(user_id, created_at)` | ML sorgu hızı | ✅ `ix_analytics_events_user_created` zaten var |
+| `user_interactions` | `(user_id, created_at)` | ML sorgu hızı | ⚠️ Eksik — `(user_id, item_id)` var ama created_at composite yok |
+| `listings` | `(user_id, status)` | Satıcının aktif ilanları | ⚠️ Eksik — sadece `user_id` tek-kolon var |
+| `listing_offers` | `(listing_id, status)` | Teklif filtresi | ⚠️ Eksik — D7 tamamlandıktan sonra |
+| `follows` | `(follower_id, followed_id)` UNIQUE | Takip kontrolü | ✅ UniqueConstraint implicit index oluşturur |
 
 ---
 
@@ -698,7 +707,10 @@ Geçiş döneminde çift okuma → Flutter güncellendikten sonra eski kaldırı
 | P2 | D3: auction status default="active" | 2.2 |
 | P3 | GC1: live_stream_viewers cleanup | 1.4 |
 | P4 | Float → Numeric finansal kolonlar | 2.1 |
-| P5 | gift_events + bids FK → SET NULL | 2.3 |
+| P5 | gift_events + bids + **direct_sales** FK → SET NULL | 2.3 |
+| P5b | D6: direct_sales.stream_id CASCADE → SET NULL | 2.2 |
+| P5c | D7: listing_offers.status alanı ekle | 2.2 |
+| P5d | D8: user_interests UNIQUE constraint düzelt | 2.2 |
 
 ### Yüksek — 1. Sprint
 

@@ -63,20 +63,25 @@
 
 ---
 
-### TASK-02 · P5 · 🔴 FK Düzeltmesi: gift_events + bids → SET NULL
+### TASK-02 · P5 · 🔴 FK Düzeltmesi: gift_events + bids + direct_sales → SET NULL
 
 **Plan:** Faz 2.3  
-**Sorun:** `gift_events.stream_id ondelete="CASCADE"` — live_stream silinince finansal kayıt da siliniyor. `bids.stream_id` — ondelete tanımsız → FK violation.
+**Sorun:**
+- `gift_events.stream_id ondelete="CASCADE"` — live_stream silinince finansal hediye kaydı siliniyor
+- `bids.stream_id` — ondelete tanımsız → FK violation riski
+- `direct_sales.stream_id ondelete="CASCADE"` — **YENİ BULGU** live_stream silinince tüm direct_sales + direct_sale_orders (CASCADE zinciri) siliniyor
 
 **Etkilenen dosyalar:**
-- `backend/app/models/gift_event.py` — Model: CASCADE → SET NULL
-- `backend/app/models/bid.py` — Model: ondelete="SET NULL" ekle
+- `backend/app/models/gift_event.py` — CASCADE → SET NULL
+- `backend/app/models/bid.py` — ondelete="SET NULL" ekle
+- `backend/app/models/direct_sale.py` — CASCADE → SET NULL
 - `backend/alembic/versions/` — Yeni migration
 
 **Uygulama:**
 1. `gift_event.py`: `ondelete="CASCADE"` → `ondelete="SET NULL"`
 2. `bid.py`: `stream_id` FK'ya `ondelete="SET NULL"` ekle
-3. Alembic migration (her satır ayrı `op.execute()`):
+3. `direct_sale.py`: `ondelete="CASCADE"` → `ondelete="SET NULL"`
+4. Alembic migration (her satır ayrı `op.execute()`):
    ```python
    op.execute("""
        ALTER TABLE gift_events
@@ -90,11 +95,17 @@
        ADD CONSTRAINT bids_stream_id_fkey
            FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE SET NULL
    """)
+   op.execute("""
+       ALTER TABLE direct_sales
+       DROP CONSTRAINT direct_sales_stream_id_fkey,
+       ADD CONSTRAINT direct_sales_stream_id_fkey
+           FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE SET NULL
+   """)
    ```
 
 **Test:**
-- Test live_stream sil → gift_events.stream_id NULL oldu, kayıt korundu
-- Bids.stream_id da NULL oldu, bid kayıtları korundu
+- Test live_stream sil → gift_events/bids/direct_sales stream_id NULL oldu, kayıtlar korundu
+- direct_sale_orders da korundu (direct_sales var olmaya devam ettiği için)
 
 **Node ops:** Yok
 
@@ -435,23 +446,42 @@ cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0)   # Paz
 
 **Etkilenen dosyalar:**
 - `backend/alembic/versions/` — Yeni migration
+- Model `__table_args__` güncellemesi (yeni index tanımları)
+
+**Mevcut duruma göre gerçek eksik listesi:**
+```
+✅ analytics_events (user_id, created_at)    — ix_analytics_events_user_created MEVCUT, ekleme
+✅ bids (stream_id, created_at)              — ix_bids_stream_created MEVCUT, ekleme
+✅ follows (follower_id, followed_id)        — UniqueConstraint implicit index MEVCUT, ekleme
+
+⚠️ tuci_transactions (user_id, created_at)  — EKSIK (sadece user_id tek-kolon var)
+⚠️ purchases (buyer_id, created_at)         — EKSIK
+⚠️ user_interactions (user_id, created_at) — EKSIK (user_id+item_id var ama ML queries için created_at composite yok)
+⚠️ listings (user_id, status)               — EKSIK (satıcının aktif ilanları için)
+⚠️ listing_offers (listing_id, status)      — EKSIK (D7 sonrası, status alanı eklendikten sonra)
+```
 
 **Uygulama:**
 ```python
 # Alembic migration — her index ayrı op.execute()
 op.execute("CREATE INDEX ix_tuci_transactions_user_created ON tuci_transactions (user_id, created_at DESC)")
 op.execute("CREATE INDEX ix_purchases_buyer_created ON purchases (buyer_id, created_at DESC)")
-op.execute("CREATE INDEX ix_analytics_events_user_created ON analytics_events (user_id, created_at)")
 op.execute("CREATE INDEX ix_user_interactions_user_created ON user_interactions (user_id, created_at)")
-op.execute("CREATE INDEX ix_listing_offers_listing_status ON listing_offers (listing_id, status)")
-op.execute("CREATE UNIQUE INDEX ix_follows_follower_followed ON follows (follower_id, followed_id)")
+op.execute("CREATE INDEX ix_listings_user_status ON listings (user_id, status)")
+# listing_offers index: D7 (TASK yeni) tamamlandıktan SONRA ayrı migration ile:
+# op.execute("CREATE INDEX ix_listing_offers_listing_status ON listing_offers (listing_id, status)")
 ```
 
-> `bids.ix_bids_stream_created` zaten var — atlıyoruz.
+Model dosyalarına da `Index(...)` tanımı eklenmeli:
+- `tuci_transaction.py` → `__table_args__` ekle
+- `purchase.py` → `__table_args__` ekle
+- `analytics.py` → `ix_user_interactions_user_created` ekle
+- `listing.py` → `ix_listings_user_status` ekle
 
 **Test:**
 - `\d tuci_transactions` ile index listesi kontrol
 - `EXPLAIN SELECT * FROM tuci_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20` → Index Scan görünmeli
+- `EXPLAIN SELECT * FROM user_interactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 120` → Index Scan
 
 **Node ops:** Staging önce, prod sonra.
 
@@ -459,30 +489,35 @@ op.execute("CREATE UNIQUE INDEX ix_follows_follower_followed ON follows (followe
 
 ---
 
-### TASK-12 · P11/P12 · 🟢 GC3/GC4/GC5: listing_offers + market_index + live_streams cleanup
+### TASK-12 · P11/P12 · 🟢 GC3/GC4/GC5: listing_offers + exchange_rates + live_streams cleanup
 
-**Plan:** Faz 1.4
+**Plan:** Faz 1.4  
+**Bağımlılık:** TASK yeni-A (D7: listing_offers.status eklendi) tamamlandıktan sonra GC3'te status filtresi çalışır.
 
 **Dosya:** `backend/app/worker.py`
 
 **Uygulama — 3 yeni görev:**
 ```python
 async def cleanup_old_listing_offers_task(ctx):
-    # R6 = 1 yıl: declined/expired teklifler
+    # R6 = 1 yıl — declined/expired veya eski aktif teklifler
+    # D7 tamamlandıktan sonra: status IN ('declined','expired') filtresi eklenebilir
+    # Şimdilik: tüm 1 yılı geçmiş teklifler temizlenir
     async with get_db() as db:
         result = await db.execute(text(
-            "DELETE FROM listing_offers WHERE status IN ('declined','expired') "
-            "AND created_at < NOW() - INTERVAL '365 days'"
+            "DELETE FROM listing_offers "
+            "WHERE created_at < NOW() - INTERVAL '365 days'"
         ))
         await db.commit()
+        logger.info(f"[GC3] Deleted {result.rowcount} old listing offers")
 
-async def cleanup_old_market_index_task(ctx):
-    # R10 = 10 yıl
+async def cleanup_old_exchange_rates_task(ctx):
+    # R10 = 10 yıl — TABLO ADI: exchange_rates (market_index değil!)
     async with get_db() as db:
         result = await db.execute(text(
-            "DELETE FROM market_index WHERE date < CURRENT_DATE - INTERVAL '3650 days'"
+            "DELETE FROM exchange_rates WHERE date < CURRENT_DATE - INTERVAL '3650 days'"
         ))
         await db.commit()
+        logger.info(f"[GC4] Deleted {result.rowcount} old exchange rate records")
 
 async def cleanup_old_streams_task(ctx):
     # R3 = 10 yıl — biten live_streams
@@ -493,16 +528,17 @@ async def cleanup_old_streams_task(ctx):
             "AND ended_at < NOW() - INTERVAL '3650 days'"
         ))
         await db.commit()
+        logger.info(f"[GC5] Deleted {result.rowcount} old live streams")
 
 # Cron:
-cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0)   # Cuma 04:00
-cron(cleanup_old_market_index_task, day=1, hour=5, minute=0)         # Ayın 1'i 05:00
-cron(cleanup_old_streams_task, day=1, hour=6, minute=0)              # Ayın 1'i 06:00
+cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0)    # Cuma 04:00
+cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0)        # Ayın 1'i 05:00
+cron(cleanup_old_streams_task, day=1, hour=6, minute=0)               # Ayın 1'i 06:00
 ```
 
 **Test:**
 - Her görevi manuel tetikle, rowcount logunu kontrol et
-- Yeni cron tanımları worker restart sonrası aktif
+- `SELECT MIN(date) FROM exchange_rates` → 10 yıldan eski kayıt yok
 
 **Status:** [ ] BEKLEMEDE
 
@@ -588,6 +624,82 @@ ORDER BY l.created_at DESC, l.id DESC LIMIT 20
 
 ---
 
+### TASK-yeni-A · P5c · 🔴 D7: listing_offers — status alanı ekle
+
+**Plan:** Faz 2.2 D7  
+**Sorun:** `listing_offers` tablosunda `status` alanı yok. GC3 cleanup'ı `WHERE status IN ('declined','expired')` filtresini kullanamıyor. Ayrıca ilana gelen tekliflerin kabul/reddedilme durumu takip edilemiyor.
+
+**Etkilenen dosyalar:**
+- `backend/app/models/listing_offer.py` — status alanı ekle
+- `backend/alembic/versions/` — Migration
+- `backend/app/use_cases/listings/commands/create_offer.py` — default status
+- İlgili komutlar: accept_offer, decline_offer use case (varsa)
+
+**Uygulama:**
+1. Model güncelle:
+   ```python
+   from sqlalchemy import String
+   status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
+   updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=func.now())
+   ```
+2. Alembic migration:
+   ```python
+   op.execute("ALTER TABLE listing_offers ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'")
+   op.execute("ALTER TABLE listing_offers ADD COLUMN updated_at TIMESTAMPTZ")
+   ```
+3. GC3 cleanup sorgusunu güncelle (`WHERE status IN ('declined','expired') AND created_at < ...`)
+
+**Test:**
+- Yeni teklif → status="active"
+- Reddedilen teklif → status="declined"
+- GC3: sadece declined/expired/active-ve-eski teklifler temizleniyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-yeni-B · P5d · 🟡 D8: user_interests UNIQUE constraint düzelt
+
+**Plan:** Faz 2.2 D8 · ADR §3.2  
+**Sorun:** `UNIQUE(user_id, category)` subcategory-level kayıt eklenmesini engelliyor. `compute_user_interests_task`'ın upsert SQL'i de sadece `ON CONFLICT (user_id, category)` kullanıyor — subcategory desteği bozuk.
+
+**Etkilenen dosyalar:**
+- `backend/app/models/user_interest.py` — UniqueConstraint değiştir
+- `backend/app/worker.py` — upsert SQL güncelle (subcategory dahil)
+- `backend/alembic/versions/` — Migration
+
+**Uygulama:**
+1. Migration:
+   ```python
+   # Eski constraint'i düşür
+   op.execute("ALTER TABLE user_interests DROP CONSTRAINT uq_user_interest")
+   # Yeni: (user_id, category, subcategory) — subcategory NULL için NULLS NOT DISTINCT
+   op.execute("""
+       ALTER TABLE user_interests
+       ADD CONSTRAINT uq_user_interest
+       UNIQUE NULLS NOT DISTINCT (user_id, category, subcategory)
+   """)
+   ```
+   > `NULLS NOT DISTINCT` (PG 15+): NULL değerler eşit sayılır → `(uid, 'cat', NULL)` ile `(uid, 'cat', NULL)` çakışır ama `(uid, 'cat', NULL)` ile `(uid, 'cat', 'phones')` çakışmaz.
+   > PG 15 öncesi: partial index (`WHERE subcategory IS NULL`) + normal unique index (`WHERE subcategory IS NOT NULL`) kombinasyonu gerekir.
+
+2. Model güncelle:
+   ```python
+   UniqueConstraint("user_id", "category", "subcategory", name="uq_user_interest")
+   ```
+
+3. Worker.py upsert için subcategory parametresi opsiyonel olarak ekle (mevcut category-level upsert korunur, subcategory entryler için ayrı upsert).
+
+**Test:**
+- `(user_id=1, category='electronics', subcategory=NULL)` ve `(user_id=1, category='electronics', subcategory='phones')` aynı anda tabloda olabiliyor
+- Aynı kategori/subcategory çifti tekrar eklenince UPDATE yapıyor (insert değil)
+
+**Node ops:** `alembic upgrade head` — migration non-blocking
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-16 · P16 · 🟢 GC2: calls cleanup görevi
 
 **Plan:** Faz 1.4 · R2=2 yıl
@@ -642,17 +754,22 @@ masked = mask_ip(request.client.host)
 ```python
 async def cleanup_empty_message_threads_task(ctx):
     async with get_db() as db:
+        # message_threads tablosunda (user_a_id, user_b_id) PK var — thread_id kolonu yok
         await db.execute(text(
-            "DELETE FROM message_threads WHERE id NOT IN "
-            "(SELECT DISTINCT thread_id FROM direct_messages) "
-            "AND created_at < NOW() - INTERVAL '30 days'"
+            "DELETE FROM message_threads mt "
+            "WHERE NOT EXISTS ("
+            "  SELECT 1 FROM direct_messages dm "
+            "  WHERE (dm.sender_id = mt.user_a_id AND dm.receiver_id = mt.user_b_id) "
+            "     OR (dm.sender_id = mt.user_b_id AND dm.receiver_id = mt.user_a_id)"
+            ") AND mt.created_at < NOW() - INTERVAL '30 days'"
         ))
         await db.commit()
 
 async def cleanup_inactive_search_alerts_task(ctx):
+    # search_alerts'ta updated_at YOKTUR — created_at kullanılmalı
     async with get_db() as db:
         await db.execute(text(
-            "DELETE FROM search_alerts WHERE updated_at < NOW() - INTERVAL '180 days'"
+            "DELETE FROM search_alerts WHERE created_at < NOW() - INTERVAL '180 days'"
         ))
         await db.commit()
 
@@ -796,23 +913,25 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | Task | Öncelik | Sprint | Faz | Status |
 |------|---------|--------|-----|--------|
 | TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [ ] |
-| TASK-02 · FK SET NULL | 🔴 P5 | Kritik | 2.3 | [ ] |
+| TASK-02 · FK SET NULL (gift+bids+**direct_sales**) | 🔴 P5 | Kritik | 2.3 | [ ] |
 | TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
 | TASK-04 · Float→Numeric | 🔴 P4 | Kritik | 2.1 | [ ] |
 | TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [ ] |
+| TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
+| TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
 | TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |
 | TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [ ] |
 | TASK-08 · MinIO lifecycle | 🟡 P8 | Yüksek | 1.5 | [ ] |
 | TASK-09 · W1/W3/W4/W5 4x/gün | 🟡 P9 | Yüksek | 6.1 | [ ] |
 | TASK-10 · W2/W6/W7 frekans | 🟡 P9b | Yüksek | 6.1 | [ ] |
-| TASK-11 · Composite index'ler | 🟡 P10 | Yüksek | 3.2 | [ ] |
-| TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
+| TASK-11 · Composite index'ler (gerçek eksikler) | 🟡 P10 | Yüksek | 3.2 | [ ] |
+| TASK-12 · GC3/GC4/GC5 (exchange_rates fix) | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
-| TASK-18 · GC6/GC7 + D1 JSONB | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
+| TASK-18 · GC6/GC7 + D1 JSONB (sorgu fix) | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
 | TASK-19 · Medya M1-M4 | 🟢 P21 | Düşük | 8.2 | [ ] |
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
