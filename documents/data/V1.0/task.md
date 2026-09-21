@@ -301,6 +301,97 @@ TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺', forceDecimals: 
 
 ---
 
+---
+
+**Kapsamlı denetim bulguları (agent, 2026-09-21):**
+
+> Aşağıdaki tüm dosya:satır'lar yukarıdaki uygulama adımlarına karşılık gelir.
+
+**🔴 KRİTİK — DB modelleri Float (5 model)**
+
+| Model dosyası | Sütun | Fix |
+|---|---|---|
+| `backend/app/models/auction.py:16` | `start_price: Mapped[float] = mapped_column(Float)` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/auction.py:17` | `buy_it_now_price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/auction.py:18` | `final_price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/bid.py:19` | `amount: Mapped[float] = mapped_column(Float)` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/listing.py:29` | `price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/listing.py:44` | `buy_it_now_price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/listing.py:45` | `last_sold_price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/listing.py:46` | `last_start_price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/listing_offer.py:23` | `amount Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/purchase.py:16` | `price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/user.py:40` | `max_budget Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/search_alert.py:22` | `max_price Float` | `Numeric(12,2)`, `Mapped[Decimal]` |
+
+**🟡 DB modeli Numeric(10,2) → (12,2)**
+
+| Model dosyası | Sütun | Fix |
+|---|---|---|
+| `backend/app/models/direct_sale.py:18` | `price Numeric(10,2)` | `Numeric(12,2)`, `Mapped[Decimal]` |
+| `backend/app/models/direct_sale.py:46` | `unit_price Numeric(10,2)` | `Numeric(12,2)`, `Mapped[Decimal]` |
+
+**🟡 Pydantic schema — `float` → `Decimal` (BaseSchema yöntemi)**
+
+| Dosya | Satırlar |
+|---|---|
+| `backend/app/schemas/auction.py` | 8, 9, 43, 55, 66-68 — tüm fiyat alanları `float` |
+| `backend/app/schemas/direct_sale.py` | 9, 66, 86, 93-94, 99, 111-112 |
+| `backend/app/schemas/listing.py` | 8, 21 — `amount: float` |
+
+**🟡 Backend `float()` sarmalayıcılar — kaldırılacak**
+
+| Dosya | Satırlar | Fix |
+|---|---|---|
+| `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py` | 104, 121, 135, 151, 232, 239, 258, 317, 408 | `float(x)` → `x` (Decimal doğrudan) |
+| `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py` | 239 | `total_sold * float(sale.price)` → `(Decimal(str(sale.price)) * total_sold).quantize(Decimal("0.01"))` |
+| `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py` | 337 | `price=0.0` → `price=Decimal('0.00')` |
+| `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py` | 348 | `unit_price: float` → `unit_price: Decimal` |
+| `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py` | 632-633, 667-668 | `float(agg.unit_price)`, `float(agg.total_price)` → raw Decimal |
+| `backend/app/use_cases/direct_sales/direct_sale_scheduler.py` | 74, 97, 113 | `float(sale.price)` → `sale.price`; total_revenue → `quantize(Decimal("0.01"))` |
+| `backend/app/use_cases/direct_sales/direct_sale_redis.py` | 164 | `"price": float(data["price"])` → `"price": str(data["price"])` (Redis'e string) |
+| `backend/app/routers/auth.py` | 720, 729, 735 | `float(r.final_price)` vb. → Decimal doğrudan ya da `to_price()` |
+| `backend/app/routers/auth.py` | 797 | `func.sum(unit_price * quantity)` DB'de hesaplanıyor — OK |
+| `backend/app/use_cases/auctions/commands/auction_commands.py` | 104-106, 157, 169, 243 | Redis oku/yaz — Decimal uyumlu yapılacak |
+| `backend/app/use_cases/auctions/queries/auction_queries.py` | 55, 57, 61 | `float()` → Decimal |
+| `backend/app/use_cases/streams/queries/get_commerce_activity.py` | 33, 55 | `float(bid.amount)`, `float(order.unit_price)` → raw Decimal |
+
+**🟡 ClickHouse — `Decimal(10,2)` → `Decimal(12,2)`**
+
+| Dosya | Satır |
+|---|---|
+| `backend/app/database_clickhouse.py` | 159: `unit_price Nullable(Decimal(10,2))` → `Decimal(12,2)` |
+| `backend/app/database_clickhouse.py` | 160: `total_price Nullable(Decimal(10,2))` → `Decimal(12,2)` |
+| `backend/app/database_clickhouse.py` | 517-518 | ClickHouse'dan okurken `float()` cast → Decimal |
+
+**🔴 Flutter — `.toInt()` fiyat kesme (critical)**
+
+| Dosya | Satır | Sorun | Fix |
+|---|---|---|---|
+| `mobile/lib/screens/listing_detail_screen.dart` | 1833 | `(item['price'] as num).toInt()` → `99.99 → 99` | `TeqNumberFormatter.format(item['price'], fieldKey: 'price', unit: '₺', forceDecimals: true)` |
+| `mobile/lib/screens/live/seller_report_screen.dart` | 45-54 | `_fmtPrice` → `val.toInt().toString()` | `TeqNumberFormatter.format(val, forceDecimals: true)` ile değiştir |
+
+**🟡 Flutter — `allowDecimal: false` olan fiyat input'ları**
+
+| Dosya | Satır | Fix |
+|---|---|---|
+| `mobile/lib/screens/create_listing_screen.dart` | 1230 | `TeqNumericInputFormatter(fieldKey: 'price')` → `allowDecimal: true` ekle |
+| `mobile/lib/widgets/direct_sale_panel.dart` | 1505, 1531 | aynı |
+| `mobile/lib/screens/edit_listing_screen.dart` | 735 | aynı |
+| `mobile/lib/screens/listing_detail_screen.dart` | 1678 | aynı |
+
+**🟡 Flutter — `#,##0` (decimal göstermiyor)**
+
+| Dosya | Satır | Fix |
+|---|---|---|
+| `mobile/lib/utils/number_formatter.dart` | 67-68 | `forceDecimals: true` ile `#,##0.00` pattern'i aktif et (yukarıdaki koda eklendi) |
+| `mobile/lib/screens/pro_insights_screen.dart` | 391, 659, 741, 748 | `NumberFormat('#,##0', 'tr_TR')` → `TeqNumberFormatter.format(v, forceDecimals: true)` |
+| `mobile/lib/screens/live/swipe_live_screen.dart` | 1969-1973, 2104 | `#,##0` pattern → `forceDecimals: true` |
+
+> **Not:** `market_index.py` `usd_try/eur_try` (kur), `analytics.py` `duration_seconds`, ClickHouse `user_events.price_point` Float64 (analitik) — bunlar para birimi değil, olduğu gibi kalır.
+
+---
+
 **Test:**
 - Staging'de `alembic upgrade head` → `SELECT price FROM listings` → `1500.50` formatı
 - `GET /api/listings` → `"price": 1500.50` (number, string değil)
@@ -1528,6 +1619,94 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 
 ---
 
+---
+
+### TASK-yeni-N · P26 · 🟡 Ağ Katmanı Lightweight — Slim Feed DTO
+
+**Plan:** Faz 5.1 ile birlikte (Feed N+1 fix) veya bağımsız.  
+**Hedef:** Listing feed payload boyutunu %30-40 azalt; kart görünümünde gereksiz alanlar gönderilmesin.
+
+**Mevcut durum:**
+- GZip: **Zaten aktif** — nginx (`gzip_comp_level 6`) + FastAPI (`GZipMiddleware(minimum_size=1000)`) ✅
+- `listing_utils.py:_row_dict` → 30+ alan gönderiliyor (her feed ilanı için)
+- Home screen kart: yalnızca ~12 alan kullanıyor (`id, title, price, image_url, thumbnail_url, province, status, is_highlight, is_liked, likes_count, is_sponsored, campaign_id, is_trending`, `user.badge`, `user.is_premium`)
+- Search screen: `id, title, price, image_url, image_urls, subcategory, is_highlight, is_sponsored, active_room_id, video_url`, `user.*`
+- 20 ilanlik feed ≈ gereksiz +40% payload
+
+**Feed'de gönderilip kullanılmayan alanlar:**
+`description`, `extra_fields`, `brand`, `condition`, `category`, `district`, `location`, `updated_at`, `deactivated_at`, `expires_at`, `buy_it_now_price`, `impression_count`, `is_favorited`, `user.trust_score`, `user.influence_rank`, `user.full_name`, `user.profile_image_thumb_url`
+
+**Uygulama:**
+
+**1. `listing_utils.py` — `_card_dict` slim fonksiyon ekle:**
+```python
+def _card_dict(
+    listing: Listing,
+    user: User,
+    likes_count: int = 0,
+    is_liked: bool = False,
+    is_sponsored: bool = False,
+    campaign_id: Optional[int] = None,
+    seller_badge: Optional[str] = None,
+    is_trending: bool = False,
+    is_favorited: bool = False,
+) -> dict:
+    """Feed kartı için slim payload — detay ekranı _row_dict kullanır."""
+    return {
+        "id": listing.id,
+        "title": listing.title,
+        "price": listing.price,
+        "image_url": listing.image_url,
+        "thumbnail_url": listing.thumbnail_url,
+        "province": listing.province,
+        "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
+        "is_highlight": listing.is_highlight,
+        "likes_count": likes_count,
+        "is_liked": is_liked or is_favorited,
+        "is_favorited": is_favorited or is_liked,
+        "is_sponsored": is_sponsored,
+        "campaign_id": campaign_id,
+        "is_trending": is_trending,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "avatar_url": user.profile_image_url,
+            "is_premium": user.is_premium,
+            "is_verified": user.is_verified,
+            "badge": seller_badge,
+        },
+    }
+```
+
+**2. Feed endpoint'leri `_card_dict` kullansın:**
+- `backend/app/use_cases/listings/queries/get_swipe_feed.py` — `_row_dict` → `_card_dict`
+- `backend/app/use_cases/feed/queries/feed_queries.py` — `_row_dict` → `_card_dict`
+- `backend/app/use_cases/listings/queries/search_listings_query.py` — search sonuçları için değerlendir (bazı alanlar gerekli olabilir)
+- `backend/app/services/feed/listing_cache_service.py` — Redis cache'teki full payload sorununu değerlendir
+
+**3. `GET /listings/{id}` (detay) `_row_dict` kullanmaya devam eder** — değişiklik yok.
+
+**4. home_screen `seller_badge`/`seller_is_premium` mismatch:**
+- Home screen `widget.listing['seller_badge']` ve `widget.listing['seller_is_premium']` erişiyor
+- Backend `listing['user']['badge']` ve `listing['user']['is_premium']` gönderiyor
+- Home screen kart build fonksiyonunu kontrol et: muhtemelen `listing['user']` map'ten okuyor ama `widget.listing['seller_*']` top-level erişim de var
+- `_card_dict` içinde `user.badge` doğru yerde zaten — mismatch kaydedildi, Flutter tarafını gözlemle
+
+**5. Flutter `image_urls` kart görünümü:**
+- Home screen feed kartı `image_urls` listesine erişiyor ama yalnızca ilk kare gerekli
+- `_card_dict` `image_urls` göndermez; Flutter'da `image_url` (tek URL) ve `thumbnail_url` yeterli
+- Search screen `image_urls` kullanıyorsa ayrı `_search_dict` veya alan ekle
+
+**Test:**
+- `GET /api/feed` response body boyutunu ölç (curl + `wc -c`)
+- 20 ilanlik feed: slim DTO `_card_dict` ile ~30-40% küçülme beklentisi
+- Flutter kart görünümünde görsel kayıp yok
+- Detay ekranı `_row_dict` ile tüm alanları alıyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ## Özet Tablosu
 
 | Task | Öncelik | Sprint | Faz | Status |
@@ -1564,6 +1743,7 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
 | TASK-22 · KV2/KV3 opt-out | 🟢 P24 | Düşük | 9.2 | [ ] |
 | TASK-23 · tuci→teqlik rename | 🟢 P25 | Düşük | 10 | [ ] |
+| TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
 
 ---
 
