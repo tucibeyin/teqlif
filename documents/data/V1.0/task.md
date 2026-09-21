@@ -167,10 +167,12 @@
 
 ---
 
-### TASK-04 · P4 · 🔴 Float → Numeric finansal kolonlar
+### TASK-04 · P4 · 🔴 Float → Integer finansal kolonlar
 
 **Plan:** Faz 2.1  
-**Sorun:** Float, para hesaplamalarında yuvarlama hatası üretir.
+**Sorun:** Float, para hesaplamalarında yuvarlama hatası üretir.  
+**Karar:** Tüm fiyatlar tam sayı — her katmanda Integer (DB, Python, Flutter).  
+`exchange_rates.usd_try/eur_try` kur değerleri olduğu için Integer değil; `Numeric(10,4)` kalır.
 
 **Etkilenen dosyalar:**
 - `backend/app/models/listing.py` — price, buy_it_now_price, last_sold_price, last_start_price
@@ -180,9 +182,10 @@
 - `backend/app/models/listing_offer.py` — amount
 - `backend/app/models/search_alert.py` — max_price
 - `backend/app/models/user.py` — max_budget
-- `backend/app/models/market_index.py` — usd_try, eur_try
-- `backend/app/schemas/` — İlgili Pydantic schema'lar (float → Decimal)
+- `backend/app/models/market_index.py` — usd_try, eur_try (Numeric kalır)
+- `backend/app/schemas/` — İlgili Pydantic schema'lar (float → int)
 - `backend/alembic/versions/` — Yeni migration
+- `mobile/lib/models/` — Flutter model parse'ları (toDouble → toInt)
 
 **Uygulama:**
 
@@ -191,48 +194,58 @@
    # ÖNCE: Float
    from sqlalchemy import Float
    price: Mapped[float] = mapped_column(Float)
-   
-   # SONRA: Numeric
+
+   # SONRA: Integer
+   from sqlalchemy import Integer
+   price: Mapped[int] = mapped_column(Integer)
+
+   # exchange_rates — kur, Integer değil:
    from sqlalchemy import Numeric
-   from decimal import Decimal
-   price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
-   # market_index için: Numeric(10, 4)
+   usd_try: Mapped[Decimal] = mapped_column(Numeric(10, 4))
    ```
 
 2. Alembic migration — her ALTER ayrı `op.execute()`:
    ```python
-   op.execute("ALTER TABLE listings ALTER COLUMN price TYPE NUMERIC(12,2) USING price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE listings ALTER COLUMN buy_it_now_price TYPE NUMERIC(12,2) USING buy_it_now_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE listings ALTER COLUMN last_sold_price TYPE NUMERIC(12,2) USING last_sold_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE listings ALTER COLUMN last_start_price TYPE NUMERIC(12,2) USING last_start_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE auctions ALTER COLUMN start_price TYPE NUMERIC(12,2) USING start_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE auctions ALTER COLUMN buy_it_now_price TYPE NUMERIC(12,2) USING buy_it_now_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE auctions ALTER COLUMN final_price TYPE NUMERIC(12,2) USING final_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE bids ALTER COLUMN amount TYPE NUMERIC(12,2) USING amount::NUMERIC(12,2)")
-   op.execute("ALTER TABLE purchases ALTER COLUMN price TYPE NUMERIC(12,2) USING price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE listing_offers ALTER COLUMN amount TYPE NUMERIC(12,2) USING amount::NUMERIC(12,2)")
-   op.execute("ALTER TABLE search_alerts ALTER COLUMN max_price TYPE NUMERIC(12,2) USING max_price::NUMERIC(12,2)")
-   op.execute("ALTER TABLE users ALTER COLUMN max_budget TYPE NUMERIC(12,2) USING max_budget::NUMERIC(12,2)")
+   op.execute("ALTER TABLE listings ALTER COLUMN price TYPE INTEGER USING ROUND(price)::INTEGER")
+   op.execute("ALTER TABLE listings ALTER COLUMN buy_it_now_price TYPE INTEGER USING ROUND(buy_it_now_price)::INTEGER")
+   op.execute("ALTER TABLE listings ALTER COLUMN last_sold_price TYPE INTEGER USING ROUND(last_sold_price)::INTEGER")
+   op.execute("ALTER TABLE listings ALTER COLUMN last_start_price TYPE INTEGER USING ROUND(last_start_price)::INTEGER")
+   op.execute("ALTER TABLE auctions ALTER COLUMN start_price TYPE INTEGER USING ROUND(start_price)::INTEGER")
+   op.execute("ALTER TABLE auctions ALTER COLUMN buy_it_now_price TYPE INTEGER USING ROUND(buy_it_now_price)::INTEGER")
+   op.execute("ALTER TABLE auctions ALTER COLUMN final_price TYPE INTEGER USING ROUND(final_price)::INTEGER")
+   op.execute("ALTER TABLE bids ALTER COLUMN amount TYPE INTEGER USING ROUND(amount)::INTEGER")
+   op.execute("ALTER TABLE purchases ALTER COLUMN price TYPE INTEGER USING ROUND(price)::INTEGER")
+   op.execute("ALTER TABLE listing_offers ALTER COLUMN amount TYPE INTEGER USING ROUND(amount)::INTEGER")
+   op.execute("ALTER TABLE search_alerts ALTER COLUMN max_price TYPE INTEGER USING ROUND(max_price)::INTEGER")
+   op.execute("ALTER TABLE users ALTER COLUMN max_budget TYPE INTEGER USING ROUND(max_budget)::INTEGER")
    op.execute("ALTER TABLE exchange_rates ALTER COLUMN usd_try TYPE NUMERIC(10,4) USING usd_try::NUMERIC(10,4)")
    op.execute("ALTER TABLE exchange_rates ALTER COLUMN eur_try TYPE NUMERIC(10,4) USING eur_try::NUMERIC(10,4)")
    ```
+   > `ROUND()` mevcut float verilerin ondalığını yuvarlayarak keser — sistem kullanıcıya açık olmadığı için kayıp yok.
 
-3. Pydantic schema'lar: `float` → `Decimal` (ilgili response ve request model'ler)
+3. Pydantic schema'lar: `float` → `int`
 
-4. **Zorunlu serialization düzeltmesi:** FastAPI 0.115.0'da `jsonable_encoder` Decimal'i `str`'e çevirir. `response_model` tanımlı olmayan tüm listing endpoint'leri bozulur. Aşağıdaki dosyalarda Decimal kolonları için `float(value) if value is not None else None` wrap edilmeli:
-   - `backend/app/use_cases/listings/queries/listing_utils.py:95,107,113` — `price`, `buy_it_now_price`, `last_sold_price`
-   - `backend/app/use_cases/listings/queries/search_listings_query.py:125` — `price`
-   - `backend/app/routers/listings.py:349` — similar endpoint `price`
-   - `backend/app/use_cases/listings/queries/get_listing_offers.py:22` — `amount`
-   > Auction ve Direct Sale endpoint'leri `response_model=AuctionStateOut/DirectSaleStateOut` olduğu için Pydantic coerce yapar — güvenli.
+4. **Serialization notu:** Integer, FastAPI'de doğrudan JSON number olarak serialize edilir — Decimal/float wrap gerekmez. `listing_utils.py`, `search_listings_query.py` vb. dosyalarda ek wrap yapmaya gerek yok.
 
-5. `bump_schema_version()` migration sonunda çağrılmalı — NOT: ADR §9 yalnızca `catalog`/`cities`/`field_config` tablolarını etkileyen migration'larda zorunlu kılıyor; TASK-04 bu tabloları etkilemiyor. Ancak `listings` API yanıtlarındaki type değişikliği API cache geçersizleştirme gerektirir. TASK-11 (composite index) migration'ına eklenmeli; TASK-11'de de `bump_schema_version()` unutulmamalı.
+5. `bump_schema_version()` — NOT: ADR §9 yalnızca `catalog`/`cities`/`field_config` tablolarını etkiliyor; TASK-04 bu tabloları etkilemiyor. TASK-11 (composite index) migration'ına ekle; TASK-11'de unutulmamalı.
+
+**Flutter güncellemeleri:**
+```dart
+// auction.dart, direct_sale.dart, listing_offer.dart — toDouble() → toInt()
+// ÖNCE: (j['price'] as num?)?.toDouble()
+// SONRA: (j['price'] as num?)?.toInt()
+
+// DirectSaleOrder — non-nullable alanlar (direct_sale.dart:121-122):
+// ÖNCE: (j['unit_price'] as num).toDouble()
+// SONRA: (j['unit_price'] as num).toInt()
+```
 
 **Test:**
 - Staging'de `alembic upgrade head` çalıştır
-- `GET /api/listings` → response'da `"price": 99.99` (number, string değil) doğrula
-- Yeni ilan oluştur: price float değeri ile POST → DB'de NUMERIC(12,2) olarak saklandığını kontrol et
-- Cüzdan görüntüle: tuci_balance/teqlik_balance Integer olduğu için etkilenmez
+- `GET /api/listings` → `"price": 100` (tam sayı, string değil)
+- Yeni ilan oluştur: 99.5 TL girilince → DB'de 100 (ROUND) veya frontend'de integer zorla
+- Frontend giriş: `TextInputType.number` + `int.parse()` — ondalık girilemesin
+- `exchange_rates.usd_try` → hâlâ ondalıklı (32.5 gibi)
 
 **Node ops:** Staging önce, sonra prod.
 
