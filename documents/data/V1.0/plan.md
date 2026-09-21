@@ -255,8 +255,6 @@ W1 ↔ W4 birlikte karar ver.
 
 **Backend — Dead ORM Class:**
 
-**Backend — Dead ORM Class:**
-
 | Class | Durum | Aksiyon |
 |-------|-------|---------|
 | `Translation` (model/translation.py) | Tablo aktif ama raw SQL ile kullanılıyor — ORM class hiçbir business code'da import edilmiyor | `__init__.py`'den çıkar, dosyayı bırak (tablo var) |
