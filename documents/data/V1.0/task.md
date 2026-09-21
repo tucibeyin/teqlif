@@ -787,6 +787,102 @@ async def flag_message(
 
 ---
 
+### TASK-yeni-D · P5f · 🟡 Search Alert Trigger + Flutter Feed Stats
+
+**Plan:** Faz 2.2  
+**Sorun:**
+1. `search_alerts` tablosu ve CRUD endpoint'leri var, kullanıcılar alert oluşturabiliyor — ama yeni ilan eklenince bildirim gönderen mekanizma hiç implemente edilmemiş.
+2. `analytics_service.dart:getFeedStats()` tanımlı, backend `GET /analytics/my-feed-stats` aktif — ama Flutter'da hiçbir ekran bu metodu çağırmıyor.
+
+---
+
+**1. Search Alert ARQ Worker Task (Backend):**
+
+Etkilenen dosyalar:
+- `backend/app/worker.py` — yeni cron görev
+
+```python
+async def check_search_alerts_task(ctx: dict) -> None:
+    """
+    Son 15 dakikada eklenen ilanları aktif search_alert'larla eşleştirir.
+    Eşleşen alert sahibine push bildirim gönderir.
+    """
+    from app.services.notification_service import push_notification
+
+    async with get_db() as db:
+        # Son 15 dakikada aktif olan yeni ilanlar
+        since = datetime.now(timezone.utc) - timedelta(minutes=15)
+        new_listings = await db.execute(
+            select(Listing).where(
+                Listing.status == "active",
+                Listing.created_at >= since,
+            )
+        )
+        listings = new_listings.scalars().all()
+        if not listings:
+            return
+
+        # Tüm aktif alert'ları çek
+        alerts = (await db.execute(
+            select(SearchAlert).where(SearchAlert.status == SearchAlertStatus.ACTIVE)
+        )).scalars().all()
+
+        for listing in listings:
+            for alert in alerts:
+                if alert.user_id == listing.user_id:
+                    continue  # Kendi ilanı için bildirim gönderme
+                # Kategori eşleşmesi
+                if alert.category and alert.category != listing.category:
+                    continue
+                # Fiyat filtresi
+                if alert.max_price and listing.price and listing.price > alert.max_price:
+                    continue
+                # Metin eşleşmesi (title)
+                if alert.query and alert.query.lower() not in (listing.title or "").lower():
+                    continue
+                # Eşleşti — bildirim gönder
+                await push_notification(
+                    alert.user_id,
+                    {
+                        "type": "search_alert",
+                        "listing_id": listing.id,
+                        "listing_title": listing.title,
+                        "listing_price": float(listing.price) if listing.price else None,
+                        "alert_query": alert.query or alert.category,
+                    },
+                    pref_key="search_alert",
+                )
+
+# Cron: Her 15 dakikada bir
+cron(check_search_alerts_task, minute={0, 15, 30, 45})
+```
+
+> **Not:** Ölçek büyüdüğünde cursor tabanlı (son işlenen `listing_id` Redis'te) yaklaşıma geçilebilir. Şimdilik `created_at >= since` yeterli.
+
+---
+
+**2. Flutter Feed Stats Ekranı:**
+
+Etkilenen dosyalar:
+- `mobile/lib/services/analytics_service.dart` — `getFeedStats()` zaten tanımlı, implement et
+- `mobile/lib/screens/` — Pro satıcı profil veya ilan yönetim ekranında feed stats bölümü (MVVM)
+
+```dart
+// analytics_service.dart:getFeedStats() — backend: GET /api/analytics/my-feed-stats?days=7
+// Response: impression, click, skip, CTR, dwell_time — sadece premium kullanıcılar
+// Flutter: ViewModel.fetchFeedStats(days) → AsyncNotifier → feed stats widget
+```
+
+**Test:**
+- Yeni ilan ekle (category+query eşleşen alert sahibi var) → 15 dk içinde bildirim geldi
+- Kendi ilanın için bildirim gelmiyor
+- Premium kullanıcı feed stats ekranı açılıyor, 7/30/90 günlük veri görünüyor
+- Normal kullanıcı için premium engeli gösteriliyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-yeni-B · P5d · 🟡 D8: user_interests UNIQUE constraint düzelt
 
 **Plan:** Faz 2.2 D8 · ADR §3.2  
@@ -1094,7 +1190,8 @@ instagramUrl: json['instagram_url'] as String?,
 
 **Kapsam:**
 1. `mobile/lib/screens/teq_test_screen.dart` — Sil; `main.dart:17` import ve `main.dart:197` `/teq-test` route'unu kaldır (design system showcase ekranı, production özelliği yok)
-2. `mobile/lib/services/analytics_service.dart` — `getFeedStats()` metodunu kaldır (hiçbir yerde çağrılmıyor; backend `GET /analytics/my-feed-stats` endpoint'i aktif kalmaya devam eder)
+
+> `getFeedStats()` bu scope'tan **çıkarıldı** — Flutter'da implement edilecek (TASK-yeni-D ile birlikte veya ayrı sprint'te).
 
 **Dikkat:** `teq_test_screen.dart` içeriği incelendi — sadece TeqButton, TeqCard vb. UI component'leri gösteriyor, credential/debug verisi yok.
 
@@ -1231,6 +1328,7 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
+| TASK-yeni-D · Search alert trigger + Flutter feed stats | 🟡 P5f | Kritik | 2.2 | [ ] |
 | TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |
 | TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [ ] |
 | TASK-08 · MinIO lifecycle | 🟡 P8 | Yüksek | 1.5 | [ ] |
