@@ -230,20 +230,37 @@ class BaseSchema(BaseModel):
 Tüm response schema'lar bu `BaseSchema`'dan türetilirse Decimal otomatik float serialize edilir.  
 `response_model` kullanılmayan raw dict dönen endpoint'lerde (listing_utils.py:95,107,113 vb.) ek olarak `float(value)` wrap korunabilir.
 
-**5. Python hesaplama kuralı — her zaman 2 haneye yuvarla:**
+**5. `to_price()` yardımcı fonksiyonu — `backend/app/utils/price.py` (yeni dosya):**
 ```python
+# backend/app/utils/price.py
 from decimal import Decimal, ROUND_HALF_UP
 
 def to_price(value) -> Decimal:
-    """Float/int/str → 2 haneli Decimal. Tüm fiyat atamaları bu fonksiyondan geçmeli."""
     return Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-# Kullanım:
-total_price = to_price(quantity * unit_price)  # 3 × 33.33 = 99.99
 ```
-`direct_sale_commands.py` içindeki `float(sale.price)` çağrıları → `sale.price` (Decimal olarak doğrudan kullan) ya da `to_price(sale.price)`.
+Tüm finansal hesaplamalar bu fonksiyondan geçer:
+```python
+from app.utils.price import to_price
 
-**6. `bump_schema_version()`** — TASK-11 migration'ına ekle; TASK-11'de unutulmamalı.
+total = to_price(quantity * unit_price)   # 3 × 33.33 → 99.99
+```
+`direct_sale_commands.py` içindeki `float(sale.price)` çağrıları → `sale.price` ya da `to_price(sale.price)`.
+
+**6. FastAPI Decimal serileştirme — Pydantic v2 notu:**
+`ConfigDict(json_encoders={Decimal: float})` Pydantic v2'de çalışır ama soft-deprecated. Kararlı alternatif:
+```python
+from pydantic import field_serializer
+
+class AuctionOut(BaseSchema):
+    start_price: Decimal
+
+    @field_serializer('start_price', 'buy_it_now_price', 'final_price')
+    def serialize_price(self, v: Decimal | None) -> float | None:
+        return float(v) if v is not None else None
+```
+`BaseSchema` + `json_encoders` yaklaşımı kısa vadede yeterli; uzun vadede `field_serializer` yöntemi her schema'ya uygulanmalı.
+
+**7. `bump_schema_version()`** — TASK-11 migration'ına ekle; TASK-11'de unutulmamalı.
 
 ---
 
@@ -298,8 +315,6 @@ TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺', forceDecimals: 
 // ÖNCE: final total = _qty * widget.state.price;  (double * double → double, ondalık kayabilir)
 // SONRA: double total = double.parse((_qty * widget.state.price).toStringAsFixed(2));
 ```
-
----
 
 ---
 
@@ -709,7 +724,7 @@ op.execute("CREATE INDEX ix_tuci_transactions_user_created ON tuci_transactions 
 op.execute("CREATE INDEX ix_purchases_buyer_created ON purchases (buyer_id, created_at DESC)")
 op.execute("CREATE INDEX ix_user_interactions_user_created ON user_interactions (user_id, created_at)")
 op.execute("CREATE INDEX ix_listings_user_status ON listings (user_id, status)")
-# listing_offers index: D7 (TASK yeni) tamamlandıktan SONRA ayrı migration ile:
+# listing_offers index: TASK-yeni-A tamamlandıktan SONRA ayrı migration ile:
 # op.execute("CREATE INDEX ix_listing_offers_listing_status ON listing_offers (listing_id, status)")
 ```
 
@@ -718,6 +733,8 @@ Model dosyalarına da `Index(...)` tanımı eklenmeli:
 - `purchase.py` → `__table_args__` ekle
 - `analytics.py` → `ix_user_interactions_user_created` ekle
 - `listing.py` → `ix_listings_user_status` ekle
+
+> **TASK-23 bağımlılık notu:** TASK-23 (`tuci→teqlik` rename) tamamlanınca `tuci_transactions` tablosu ve bu index adı değişecek. TASK-23 migration'ında `RENAME INDEX ix_tuci_transactions_user_created TO ix_teqlik_transactions_user_created` eklenmeli.
 
 **Test:**
 - `\d tuci_transactions` ile index listesi kontrol
@@ -790,7 +807,7 @@ cron(cleanup_old_streams_task, day=1, hour=6, minute=0)               # Ayın 1'
 
 ---
 
-## Orta Öncelik Sprint — P13–P20
+## Orta Öncelik Sprint — P13–P15
 
 ---
 
@@ -863,21 +880,56 @@ Flutter (MVVM):
 
 **Plan:** Faz 5.1  
 **Etkilenen dosyalar:**
-- `backend/app/repositories/listing_repository.py`
+- `backend/app/use_cases/listings/queries/get_swipe_feed.py`
+- `backend/app/use_cases/feed/queries/feed_queries.py`
+- `backend/app/use_cases/listings/queries/search_listings_query.py`
 
-**Uygulama:**
-```sql
-SELECT l.*, u.username, u.rating_avg,
-       (SELECT COUNT(*) FROM favorites WHERE listing_id = l.id) AS fav_count
-FROM listings l
-JOIN users u ON u.id = l.user_id
-WHERE l.status = 'active'
-ORDER BY l.created_at DESC, l.id DESC LIMIT 20
+> **Mevcut sorun:** Feed çekiminde her ilan için ayrı `db.get(User, listing.user_id)` — N ilan = N+1 sorgu.  
+> `likes_count` Redis'ten batch alınıyor (doğru). Seller badge/trust/influence de Redis'ten batch — doğru.  
+> **Düzeltme gereken:** User JOIN'i DB'de tek sorguda yapılmalı.
+
+**Uygulama — Listing + User tek JOIN:**
+```python
+# listing_repository.py — paginated feed query
+from sqlalchemy import select
+from app.models.listing import Listing
+from app.models.user import User
+
+async def get_feed_page(
+    db: AsyncSession,
+    cursor_at: datetime | None,
+    cursor_id: int | None,
+    limit: int = 20,
+) -> list[tuple[Listing, User]]:
+    q = (
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(Listing.status == "active")
+    )
+    if cursor_at and cursor_id:
+        q = q.where(
+            (Listing.created_at < cursor_at) |
+            ((Listing.created_at == cursor_at) & (Listing.id < cursor_id))
+        )
+    q = q.order_by(Listing.created_at.desc(), Listing.id.desc()).limit(limit)
+    rows = await db.execute(q)
+    return rows.all()
 ```
+`(listing, user)` tuple'ları döner — `_card_dict(listing, user, ...)` çağrılarına doğrudan gider.
 
-**Test:** `EXPLAIN ANALYZE` — tek sorgu, N+1 yok
+> **Not:** `fav_count` için DB correlated subquery ekleme — bu Redis'ten (`likes_count`) geliyor, DB'de O(n) subquery açma. Sadece User JOIN tek sorguda yeterli.
+
+**Test:** `EXPLAIN ANALYZE` → listings + users için tek `Hash Join` / `Nested Loop`, ayrı kullanıcı sorgusu yok
+
+**Bağımlılık:** TASK-yeni-N ile aynı dosyaları etkiler — aynı sprint'te uygulanmalı.
 
 **Status:** [ ] BEKLEMEDE
+
+---
+
+## Kritik Sprint Ek Tasklar — P5c–P5f
+
+> Sonradan tespit edilen kritik öncelikli tasklar. P1–P5 grubuyla aynı sprint'te uygulanmalı.
 
 ---
 
@@ -928,24 +980,32 @@ ORDER BY l.created_at DESC, l.id DESC LIMIT 20
 - `backend/alembic/versions/` — Migration yok (kolon zaten mevcut)
 - `mobile/lib/` — DM ekranında mesaj uzun basma menüsüne "Raporla" seçeneği (MVVM)
 
-**Backend uygulama:**
+**Backend uygulama (Clean Architecture — Router → Use Case → Repository):**
 ```python
-# messages.py — yeni endpoint
+# backend/app/use_cases/messages/commands/flag_message.py — YENİ DOSYA
+class FlagMessageCommand:
+    def __init__(self, uow):
+        self.uow = uow
+
+    async def execute(self, message_id: int, reason: str, requester_id: int) -> None:
+        async with self.uow as uow:
+            msg = await uow.db.get(DirectMessage, message_id)
+            if not msg:
+                raise AppException(status_code=404, code="NOT_FOUND")
+            if msg.receiver_id != requester_id:
+                raise AppException(status_code=403, code="FORBIDDEN")
+            msg.flag_reason = reason
+            await uow.db.commit()
+
+# backend/app/routers/messages.py — Router yalnızca delegasyon yapar
 @router.post("/{message_id}/flag", status_code=204)
 async def flag_message(
     message_id: int,
     reason: str,   # "spam" | "harassment" | "inappropriate" | "scam" | "other"
-    db: AsyncSession = Depends(get_db),
+    uow=Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    msg = await db.get(DirectMessage, message_id)
-    if not msg:
-        raise AppException(status_code=404, code="NOT_FOUND")
-    # Sadece mesajı alan kişi raporlayabilir
-    if msg.receiver_id != current_user.id:
-        raise AppException(status_code=403, code="FORBIDDEN")
-    msg.flag_reason = reason
-    await db.commit()
+    await FlagMessageCommand(uow).execute(message_id, reason, current_user.id)
 ```
 
 **Flutter (MVVM):**
@@ -1023,11 +1083,12 @@ async def check_search_alerts_task(ctx: dict) -> None:
                         "type": "search_alert",
                         "listing_id": listing.id,
                         "listing_title": listing.title,
-                        "listing_price": float(listing.price) if listing.price else None,
+                        "listing_price": float(listing.price) if listing.price else None,  # Decimal→float JSON için
                         "alert_query": alert.query or alert.category,
                     },
                     pref_key="search_alert",
                 )
+                # Not: listing.price TASK-04 sonrası Decimal olacak; float() burada JSON serileştirme için gerekli
 
 # Cron: Her 15 dakikada bir
 cron(check_search_alerts_task, minute={0, 15, 30, 45})
@@ -1098,6 +1159,10 @@ Etkilenen dosyalar:
 **Node ops:** `alembic upgrade head` — migration non-blocking
 
 **Status:** [ ] BEKLEMEDE
+
+---
+
+## Orta Öncelik Sprint — P16–P20
 
 ---
 
@@ -1530,17 +1595,22 @@ final upload = await ref.read(uploadServiceProvider).uploadBytes(
 - `backend/app/repositories/user_repository.py` — Soft-delete + NULL set
 - `backend/app/services/storage_service.py` — MinIO avatar silme (node1/node4)
 
-**Anonimleştirme use case:**
+**Anonimleştirme use case (Clean Architecture):**
 ```python
-async def delete_account_use_case(user_id: UUID, db, minio):
-    # 1. PII null/anonymize
-    await user_repo.anonymize(user_id, db)
-    # 2. DM: sender_id=NULL
-    await dm_repo.anonymize_sender(user_id, db)
-    # 3. MinIO: avatar sil
-    await storage_service.delete_avatar(user_id, minio)
-    # 4. analytics_events: user_id=NULL (FK → SET NULL varsa otomatik)
-    # 5. purchases/transactions: KORUNUR (TTK 82)
+# backend/app/use_cases/users/commands/delete_account.py
+class DeleteAccountCommand:
+    def __init__(self, uow, storage_service):
+        self.uow = uow
+        self.storage = storage_service
+
+    async def execute(self, user_id: int) -> None:  # int — UUID değil, sistem int PK kullanıyor
+        async with self.uow as uow:
+            await uow.user_repo.anonymize(user_id)       # email/phone/full_name → NULL/placeholder
+            await uow.dm_repo.anonymize_sender(user_id)  # sender_id NULL
+            await uow.db.commit()
+        await self.storage.delete_avatar(user_id)        # MinIO — DB commit sonrası
+        # purchases/tuci_transactions: KORUNUR (TTK md.82 mali kayıt yükümlülüğü)
+        # analytics_events.user_id: FK SET NULL varsa otomatik, yoksa ayrı NULL set
 ```
 
 **Flutter (MVVM):**
@@ -1615,15 +1685,19 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 1. Backend: Eski alan adlarını Pydantic `alias` ile 1 sprint geç destekle
 2. Flutter güncellendikten sonra alias kaldır
 
-**Status:** [ ] BEKLEMEDE
+**Migration ek adımı:**
+```python
+# TASK-11'de oluşturulan index de güncellenmeli (TASK-11 bu tasktan önce uygulanmışsa):
+op.execute("ALTER INDEX ix_tuci_transactions_user_created RENAME TO ix_teqlik_transactions_user_created")
+```
 
----
+**Status:** [ ] BEKLEMEDE
 
 ---
 
 ### TASK-yeni-N · P26 · 🟡 Ağ Katmanı Lightweight — Slim Feed DTO
 
-**Plan:** Faz 5.1 ile birlikte (Feed N+1 fix) veya bağımsız.  
+**Plan:** Faz 5.1 ile birlikte (TASK-15 ile aynı sprint).  
 **Hedef:** Listing feed payload boyutunu %30-40 azalt; kart görünümünde gereksiz alanlar gönderilmesin.
 
 **Mevcut durum:**
@@ -1711,39 +1785,43 @@ def _card_dict(
 
 | Task | Öncelik | Sprint | Faz | Status |
 |------|---------|--------|-----|--------|
-| TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [ ] |
-| TASK-02 · FK SET NULL (gift+bids+**direct_sales**) | 🔴 P5 | Kritik | 2.3 | [ ] |
-| TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
-| TASK-04 · Float→Numeric | 🔴 P4 | Kritik | 2.1 | [ ] |
+| **— KRİTİK SPRINT —** | | | | |
 | TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [ ] |
+| TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [ ] |
+| TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
+| TASK-04 · Float→Numeric(12,2) | 🔴 P4 | Kritik | 2.1 | [ ] |
+| TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
 | TASK-yeni-D · Search alert trigger + Flutter feed stats | 🟡 P5f | Kritik | 2.2 | [ ] |
+| **— YÜKSEK ÖNCELIK —** | | | | |
 | TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |
 | TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [ ] |
 | TASK-08 · MinIO lifecycle | 🟡 P8 | Yüksek | 1.5 | [ ] |
 | TASK-09 · W1/W3/W4/W5 4x/gün | 🟡 P9 | Yüksek | 6.1 | [ ] |
 | TASK-10 · W2/W6/W7 frekans | 🟡 P9b | Yüksek | 6.1 | [ ] |
-| TASK-11 · Composite index'ler (gerçek eksikler) | 🟡 P10 | Yüksek | 3.2 | [ ] |
-| TASK-12 · GC3/GC4/GC5 (exchange_rates fix) | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
+| TASK-11 · Composite index'ler | 🟡 P10 | Yüksek | 3.2 | [ ] |
+| TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
+| **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
+| TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
-| TASK-18 · GC6/GC7 + D1 JSONB (sorgu fix) | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
+| TASK-18 · GC6/GC7 + D1 JSONB | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
 | TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [ ] |
-| TASK-18c · listing.location write path + ringing_at aktivasyonu | 🟢 P20c | Orta | 2.5 | [ ] |
-| TASK-18d · countries — BIRAKILDI (multi-country) | ⏸️ | — | 2.6 | ⏸️ |
-| TASK-18e · Flutter User model sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
-| TASK-18f · Flutter dead code (teq_test + getFeedStats) | 🟢 P20f | Orta | 2.5 | [ ] |
+| TASK-18c · listing.location + ringing_at | 🟢 P20c | Orta | 2.5 | [ ] |
+| TASK-18d · countries — BIRAKILDI | ⏸️ | — | 2.6 | ⏸️ |
+| TASK-18e · Flutter User sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
+| TASK-18f · Flutter dead code temizliği | 🟢 P20f | Orta | 2.5 | [ ] |
+| **— DÜŞÜK ÖNCELIK —** | | | | |
 | TASK-19 · Medya M1-M4 | 🟢 P21 | Düşük | 8.2 | [ ] |
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
 | TASK-22 · KV2/KV3 opt-out | 🟢 P24 | Düşük | 9.2 | [ ] |
 | TASK-23 · tuci→teqlik rename | 🟢 P25 | Düşük | 10 | [ ] |
-| TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
 
 ---
 
