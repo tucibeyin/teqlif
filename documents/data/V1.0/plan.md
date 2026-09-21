@@ -273,27 +273,45 @@ W1 ↔ W4 birlikte karar ver.
 
 ---
 
-### 2.6 — Gelecek Kullanım İçin Kasıtlı Bırakılan Yapılar
+### 2.6 — Pazar Seçimi (Market Isolation) — Onaylanmış Ürün Yol Haritası
 
-> Bu yapılar "dead" değil; belirli bir özellik eklendiğinde kullanılacak şekilde planlanmış.  
-> Silme işlemi uygulanmaz. Özellik geliştirme sprint'ine kadar dokunulmaz.
+> Kullanıcı uygulama içinden pazar seçebilecek (TR, AZ, DE…). Seçime göre feed, arama ve fiyat görünümü değişecek.  
+> Bu yapılar şu an "hazırlık aşaması" — aktif sprint değil, sprint gelince bağlantıları kurulacak.
 
-| Yapı | Niyet | Şu Anki Eksik | Bağımlılık |
-|------|-------|--------------|-----------|
-| `countries` tablosu | Pazar izolasyonu (TR, AZ, DE…) + adres seçici ülke kökü | `states → countries` FK yok; hiçbir endpoint yok; Flutter ülke seçici yok | `/countries` endpoint + states FK migration + Flutter StateService güncelleme |
-| `states.country_code` | Adres seçicisinde ülkeye göre il filtrelemesi (`WHERE country_code='AZ'`) | Plain VARCHAR, şu an filtre olarak kullanılmıyor; tüm veriler TR | `countries` aktivasyonu + FK constraint ekle |
-| `listings.country_code` (eksik) | **Pazar izolasyonu** — feed/arama ülkeye göre izole edilecek (TR pazar, AZ pazar…) | Bu kolon **hiç yok** — eklenecek | `users.country_code` ile birlikte; feed sorgusuna `WHERE l.country_code = :market` ekle |
-| `users.country_code` (eksik) | Kullanıcının hangi pazarda olduğu | Bu kolon **hiç yok** — eklenecek | Kayıt akışına ülke seçimi + Flutter profil güncelleme |
-| `exchange_rates` | Pazar fiyatları için döviz dönüşümü | ✅ Tablo hazır, usd_try + eur_try var | Pazar izolasyonu aktif olunca AZN, EUR fiyat gösterimi |
-| `referral.status = 'pending'` | İki adımlı referral akışı: kayıt → `pending`; ilk başarılı işlem → `completed` + ödül | Tüm kayıtlar direkt `completed` oluşuyor; `pending` hiç set edilmiyor | Referral iş mantığı geliştirmesi |
-| `ad_campaigns` DB + API | Satıcı boost/reklam — schema, API ve wallet entegrasyonu tamam | Flutter'da "reklam ver" ekranı yok; `create_listing_screen`'den erişim yok | Flutter reklam oluşturma ekranı |
+**Kullanıcı deneyimi:**
+- Onboarding veya profil ayarlarından pazar seçilir
+- Feed: sadece seçili pazardaki ilanlar görünür (`listings.country_code = user.selected_market`)
+- Arama: pazar filtresi uygulanır
+- Fiyat gösterimi: `exchange_rates` üzerinden yerel para birimi (AZN, EUR, TRY…)
+- Kullanıcı pazarı sonradan değiştirebilir (settings)
 
-> **Pazar izolasyonu aktivasyon sırası:**  
-> 1. `users.country_code` ekle (kayıt + profil)  
-> 2. `listings.country_code` ekle (ilan oluşturma + backfill)  
-> 3. Feed/arama sorgularına pazar filtresi ekle  
-> 4. `countries` + `states.country_code` FK bağla — ülkeye göre adres seçici  
-> 5. `exchange_rates` üzerinden çoklu para birimi gösterimi
+**Mevcut altyapı durumu:**
+
+| Yapı | Durum | Not |
+|------|-------|-----|
+| `countries(code, name)` | ✅ Tablo var | Seed data: Türkiye + eklenecekler |
+| `states.country_code` | ✅ Kolon var | FK bağlantısı yok, henüz filtre yok |
+| `exchange_rates(usd_try, eur_try)` | ✅ Aktif, günlük güncelleniyor | AZN/diğer kurlar eklenecek |
+| `users.country_code` | ⚠️ **Eksik** | Kullanıcının seçtiği pazar — eklenmesi gerekiyor |
+| `listings.country_code` | ⚠️ **Eksik** | İlanın pazarı — eklenmesi gerekiyor |
+| Feed/arama pazar filtresi | ⚠️ **Eksik** | Sorgulara `WHERE country_code = :market` |
+| Flutter pazar seçici UI | ⚠️ **Eksik** | Onboarding + profil ayarları ekranı |
+
+**Aktivasyon sırası (pazar sprint'inde):**
+1. `users` tablosuna `selected_market VARCHAR(2) DEFAULT 'TR'` ekle (migration + model)
+2. `listings` tablosuna `country_code VARCHAR(2) DEFAULT 'TR'` ekle; backfill mevcut ilanları TR
+3. Feed sorguları: `WHERE l.country_code = :user_market` filtresi
+4. Arama sorguları: aynı filtre
+5. `states.country_code` → `countries.code` FK bağla; `/states?country=TR` filtresi ekle
+6. Flutter: onboarding pazar seçici + profil ayarlarında değiştirme
+7. `exchange_rates`'e ek para birimleri (AZN, EUR) + Flutter fiyat formatı
+
+**Diğer kasıtlı bırakılan yapılar:**
+
+| Yapı | Niyet | Bağımlılık |
+|------|-------|-----------|
+| `referral.status = 'pending'` | İki adımlı referral: kayıt → `pending`; ilk başarılı işlem → `completed` + ödül | Referral iş mantığı sprint'i |
+| `ad_campaigns` DB + API | Satıcı boost/reklam — schema ve wallet entegrasyonu hazır | Flutter "reklam ver" ekranı sprint'i |
 
 ---
 

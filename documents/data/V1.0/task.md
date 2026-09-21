@@ -1093,6 +1093,6 @@ async def delete_account_use_case(user_id: UUID, db, minio):
 
 | Yapı | Niyet | Aktivasyon Şartı |
 |------|-------|-----------------|
-| `countries` + `states.country_code` + **eksik**: `users.country_code`, `listings.country_code` | Pazar izolasyonu (TR/AZ/DE pazarları ayrı feed/arama) + adres seçici alt yapısı | Pazar sprint'i — önce users+listings'e country_code ekle → feed filtresi → sonra states FK + Flutter ülke seçici |
+| **Pazar seçimi** (onaylı ürün yol haritası) — `countries`, `states.country_code`, `exchange_rates` hazır; `users.selected_market` + `listings.country_code` eksik | Kullanıcı pazar seçer (TR/AZ/DE…), feed+arama+fiyat değişir | Pazar sprint'i — 7 adım, plan.md Faz 2.6 |
 | `referral.status = 'pending'` | İki adımlı referral: kayıt → pending; ilk alışveriş → completed + ödül tetikle | Referral iş mantığı sprint'i — `apply_referral` service refactor + ARQ görevi |
 | `ad_campaigns` DB + API | Satıcı boost/reklam — schema ve wallet entegrasyonu var | Flutter "reklam ver" ekranı sprint'i — `create_listing_screen` boost butonu + reklam oluşturma akışı |
