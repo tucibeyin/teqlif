@@ -933,6 +933,174 @@ async def get_feed_page(
 
 ---
 
+### TASK-yeni-E · P5g · 🔴 S1/S9: BigInteger PK + DM Normal Mesaj Retention
+
+**Plan:** Faz 2.1 (Model katmanı — TASK-04 ile aynı sprint)  
+**Kaynak:** `findings.md §S1, §S9`
+
+**Sorun:**
+1. `direct_messages.id` `int4` (max 2,147,483,647) — 100K kullanıcı × 5 msg/gün = 500K/gün → ~11.7 yılda taşar. `ALTER COLUMN ... BIGINT` production'da tam tablo kilidi — **sıfırdan başlarken şimdi değiştir, sonra imkânsız.**
+2. `notifications.id` int4 — 30 günde siliniyor, bounded risk ama sıfırdan düzeltmek maliyetsiz.
+3. `worker.py` DM cleanup'ı yalnızca `is_hidden=TRUE` olanları siliyor — **normal mesajlar hiç silinmiyor.** 100K kullanıcı × 5 msg/gün = tablo sonsuz büyür.
+
+**Etkilenen dosyalar:**
+- `backend/app/models/message.py` — `id: Mapped[int]` → `Mapped[int64]` (SQLAlchemy `BigInteger`)
+- `backend/app/models/notification.py` — aynı
+- `backend/alembic/versions/` — Yeni migration
+- `backend/app/worker.py` — DM cleanup'a normal mesaj kuralı ekle
+
+**1. Model güncellemesi:**
+```python
+# models/message.py
+from sqlalchemy import BigInteger
+
+class DirectMessage(Base):
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+
+# models/notification.py — aynı değişiklik
+```
+
+**2. Alembic migration:**
+```python
+op.execute("ALTER TABLE direct_messages ALTER COLUMN id TYPE BIGINT")
+op.execute("ALTER TABLE notifications ALTER COLUMN id TYPE BIGINT")
+```
+
+**3. DM normal mesaj retention (worker.py):**
+```python
+async def cleanup_old_direct_messages_task(ctx):
+    async with AsyncSessionLocal() as db:
+        # Her iki taraf da silmişse 365 gün sonra sil
+        await db.execute(text(
+            "DELETE FROM direct_messages "
+            "WHERE is_deleted_by_sender = TRUE "
+            "AND is_deleted_by_receiver = TRUE "
+            "AND created_at < NOW() - INTERVAL '365 days'"
+        ))
+        # Hiç okunmamış ve 365+ gün eski mesajlar (inbox'ta terk edilmiş)
+        await db.execute(text(
+            "DELETE FROM direct_messages "
+            "WHERE is_read = FALSE "
+            "AND created_at < NOW() - INTERVAL '365 days'"
+        ))
+        await db.commit()
+
+cron(cleanup_old_direct_messages_task, weekday=1, hour=3, minute=0)  # Pazartesi 03:00
+```
+> **Not:** `is_deleted_by_sender`/`is_deleted_by_receiver` kolon adlarını `message.py`'de doğrula — model farklı adlandırılmışsa uyarla.
+
+**Test:**
+- `SELECT data_type FROM information_schema.columns WHERE table_name='direct_messages' AND column_name='id'` → `bigint`
+- Worker görevi çalıştır → normal mesajlar silinmiyor (365 günden kısa), eski silinmişler gidiyor
+
+**Node ops:** `alembic upgrade head` — staging önce.
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-yeni-F · P5h · 🔴 S4: Kritik Endpoint'lere `response_model=` Ekle
+
+**Plan:** Faz 2.1 (TASK-04 ile paralel — şema çalışması)  
+**Kaynak:** `findings.md §S4`
+
+**Sorun:** En sık çağrılan endpoint'lerde `response_model=` yok → Pydantic doğrulama çalışmıyor, internal field'lar client'a sızabilir (`hashed_password`, `is_shadowbanned`, `is_admin`, ML vektörleri).
+
+**Tipsiz endpoint'ler (6 adet):**
+```
+GET  /listings               ← en sık çağrılan; feed payload buradan geliyor
+GET  /listings/{id}          ← detay sayfası
+GET  /auth/me                ← her açılışta çağrılıyor
+GET  /auth/init              ← app init; ne döndüğü belirsiz
+GET  /auth/me/commerce/purchases
+GET  /auth/me/commerce/sales
+```
+
+**Etkilenen dosyalar:**
+- `backend/app/routers/listings.py`
+- `backend/app/routers/auth.py`
+- `backend/app/schemas/listing.py` — `ListingOut` + `ListingDetailOut` (yeni şemalar)
+
+**1. `ListingOut` (feed kartı için slim — TASK-yeni-N ile uyumlu):**
+```python
+# schemas/listing.py
+from decimal import Decimal
+from pydantic import BaseModel
+from typing import Optional
+
+class SellerMiniOut(BaseModel):
+    id: int
+    username: str
+    avatar_url: Optional[str] = None
+    is_premium: bool = False
+    is_verified: bool = False
+    badge: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+class ListingOut(BaseModel):  # feed kartı
+    id: int
+    title: str
+    price: Optional[Decimal] = None
+    image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    province: Optional[str] = None
+    status: str
+    is_highlight: bool = False
+    likes_count: int = 0
+    is_liked: bool = False
+    is_sponsored: bool = False
+    campaign_id: Optional[int] = None
+    is_trending: bool = False
+    user: SellerMiniOut
+
+    model_config = ConfigDict(from_attributes=True, json_encoders={Decimal: float})
+
+class ListingDetailOut(ListingOut):  # detay ekranı — ListingOut'u genişletir
+    description: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    brand: Optional[str] = None
+    condition: Optional[str] = None
+    extra_fields: Optional[dict] = None
+    image_urls: list[str] = []
+    video_url: Optional[str] = None
+    district: Optional[str] = None
+    location: Optional[str] = None
+    buy_it_now_price: Optional[Decimal] = None
+    impression_count: int = 0
+    is_favorited: bool = False
+    expires_at: Optional[str] = None
+```
+
+**2. Router'lara ekle:**
+```python
+# routers/listings.py
+@router.get("", response_model=list[ListingOut])
+async def get_listings(...): ...
+
+@router.get("/{listing_id}", response_model=ListingDetailOut)
+async def get_listing(...): ...
+```
+
+**3. `/auth/me` zaten `UserOut` var — sadece ekle:**
+```python
+@router.get("/me", response_model=UserOut)  # ← ekle, şema zaten mevcut
+```
+
+**4. `/auth/init` ve `/auth/me/commerce/*` — ne döndürdüğünü incele, mevcut dict yapısına uygun şema oluştur.**
+
+> **Önemi:** `response_model=` eklenmesi = Pydantic validation açılır + `hashed_password`/`is_shadowbanned`/`preference_embedding` alanları otomatik filtrelenir. Sıfır müşteri etkisi, maksimum güvenlik.
+
+**Test:**
+- `GET /listings` → JSON field listesi `ListingOut` alanlarıyla eşleşiyor
+- `hashed_password` hiçbir response'da görünmüyor
+- `GET /auth/me` → `UserOut` alanlarının dışında alan yok
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-yeni-A · P5c · 🔴 D7: listing_offers — status alanı ekle
 
 **Plan:** Faz 2.2 D7  
@@ -1781,6 +1949,99 @@ def _card_dict(
 
 ---
 
+### TASK-yeni-G · P27 · 🟡 S5/S6/S10: Pydantic Şema Konsolidasyonu
+
+**Plan:** Faz 2.1 (TASK-yeni-F ile birlikte — şema ailesi)  
+**Kaynak:** `findings.md §S5, §S6, §S10`
+
+**Sorun:**
+- **S5:** Aynı `users` tablosundan 4 ayrı şema: `UserOut (26 alan)`, `StoryAuthorOut (5)`, `BlockedUserOut (4)`, `StreamHostOut (3)` — ortak `UserMiniOut` base yok; alan ekleme → 4 dosya değiştirme.
+- **S6:** `DirectSaleSummaryOut` 16 alanda seller ve buyer rollerini karıştırıyor — rol bazlı alanlar her zaman opsiyonel. Client tarafında boş null-check sarmalı.
+- **S10:** `/conversations` ve `/requests` endpoint'leri aynı `ConversationOut` şemasını `is_request: bool` flag ile döndürüyor — discriminated union daha temiz.
+
+**Etkilenen dosyalar:**
+- `backend/app/schemas/user.py`
+- `backend/app/schemas/story.py`
+- `backend/app/schemas/stream.py` (StreamHostOut)
+- `backend/app/schemas/direct_sale.py`
+- `backend/app/schemas/message.py` (ConversationOut)
+
+**1. `UserMiniOut` base şema:**
+```python
+# schemas/user.py — yeni ekleme
+class UserMiniOut(BaseModel):
+    id: int
+    username: str
+    full_name: str
+    profile_image_url: Optional[str] = None
+    profile_image_thumb_url: Optional[str] = None
+    is_verified: bool = False
+    model_config = {"from_attributes": True}
+
+# Türetilmiş şemalar (mevcut şemalar aynen korunur, base değişir):
+class StoryAuthorOut(UserMiniOut):  # zaten aynı alanlar
+    pass
+
+class BlockedUserOut(UserMiniOut):  # subset — OK
+    pass
+
+class StreamHostOut(UserMiniOut):   # subset — OK
+    pass
+```
+
+**2. `DirectSaleSummaryOut` discriminated union:**
+```python
+from typing import Literal, Union
+from pydantic import BaseModel
+
+class DirectSaleSummaryBase(BaseModel):
+    sale_id: int
+    item_name: str
+    status: str
+    proof_image_url: Optional[str] = None
+    image_url: Optional[str] = None
+    end_reason: Optional[str] = None
+    ended_at: Optional[str] = None
+
+class SellerSummaryOut(DirectSaleSummaryBase):
+    role: Literal["seller"]
+    total_revenue: Optional[float] = None
+    total_quantity_sold: Optional[int] = None
+    order_count: Optional[int] = None
+    seller_username: str
+
+class BuyerSummaryOut(DirectSaleSummaryBase):
+    role: Literal["buyer"]
+    buyer_quantity: int
+    buyer_unit_price: float
+    buyer_total: float
+    buyer_order_status: str
+
+DirectSaleSummaryOut = Annotated[Union[SellerSummaryOut, BuyerSummaryOut], Field(discriminator="role")]
+```
+
+**3. `ConversationOut` / `MessageRequestOut` ayrımı:**
+```python
+class ConversationOut(BaseModel):
+    user_id: int; username: str; full_name: str
+    last_message: str; last_at: str; unread_count: int
+    last_message_type: str = "text"
+
+class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
+    pass
+# is_request: bool alanı kaldırılır; endpoint'ler farklı tip döndürür
+```
+
+**Test:**
+- `GET /messages/conversations` → `is_request: bool` alanı yok
+- `GET /direct-sales/{id}/summary` → role="seller" ise SellerSummaryOut, "buyer" ise BuyerSummaryOut
+- StoryAuthorOut alanları UserMiniOut'tan geliyor
+- `dart analyze` 0 hata (Flutter `User` model'ı etkilenmeyebilir — backend şema değişikliği)
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ## Özet Tablosu
 
 | Task | Öncelik | Sprint | Faz | Status |
@@ -1791,6 +2052,8 @@ def _card_dict(
 | TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
 | TASK-04 · Float→Numeric(12,2) | 🔴 P4 | Kritik | 2.1 | [ ] |
 | TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
+| TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [ ] |
+| TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [ ] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
@@ -1807,6 +2070,7 @@ def _card_dict(
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
+| TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
 | TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
@@ -1834,5 +2098,9 @@ def _card_dict(
 | **Pazar seçimi** (onaylı ürün yol haritası) — `countries`, `states.country_code`, `exchange_rates` hazır; `users.selected_market` + `listings.country_code` eksik | Kullanıcı pazar seçer (TR/AZ/DE…), feed+arama+fiyat değişir | Pazar sprint'i — 7 adım, plan.md Faz 2.6 |
 | `referral.status = 'pending'` | İki adımlı referral: kayıt → pending; ilk alışveriş → completed + ödül tetikle | Referral iş mantığı sprint'i — `apply_referral` service refactor + ARQ görevi |
 | `ad_campaigns` DB + API | Satıcı boost/reklam — schema ve wallet entegrasyonu var | Flutter "reklam ver" ekranı sprint'i — `create_listing_screen` boost butonu + reklam oluşturma akışı |
-| **ClickHouse `init_clickhouse()` DB bug** — `database_clickhouse.py` `init_clickhouse()` tabloları `database` parametresi belirtmeden oluşturuyor → `default` DB'ye yazıyor (05_final.md §14 "Önemli bug"). `settings.clickhouse_db` ile bağlanmalı. | Şimdilik tabloları bootstrap'ta elle oluşturmak gerekiyor (operasyonel yük) | ClickHouse sprint'i — `init_clickhouse()` refactor + `settings.clickhouse_db` parametresi |
-| **node4 bootstrap script** — `bootstrap_node4.sh` henüz yazılmamış (05_final.md §16 "Yüksek" öncelik). node1 ile aynı yapıda olacak. | node4 production edge node — script olmadan sıfırdan kurulamaz | Ops sprint'i — node1 bootstrap'ından türet |
+| **ClickHouse `init_clickhouse()` DB bug** — `database_clickhouse.py` `init_clickhouse()` tabloları `database` parametresi belirtmeden oluşturuyor → `default` DB'ye yazıyor (`findings.md §Gelecek`). `settings.clickhouse_db` ile bağlanmalı. | Şimdilik tabloları bootstrap'ta elle oluşturmak gerekiyor (operasyonel yük) | ClickHouse sprint'i — `init_clickhouse()` refactor + `settings.clickhouse_db` parametresi |
+| **node4 bootstrap script** — `bootstrap_node4.sh` henüz yazılmamış. node1 ile aynı yapıda olacak. | node4 production edge node — script olmadan sıfırdan kurulamaz | Ops sprint'i — node1 bootstrap'ından türet |
+| **S2 — DM OR sorgusu + thread_id** (`findings.md §S2`) — `direct_messages`'ta `thread_id` yok; `(sender_id=A AND receiver_id=B) OR (sender_id=B AND receiver_id=A)` çift Index Scan + BitmapOr. `message_threads`'e `id BIGINT` PK ekle, `direct_messages`'a `thread_id FK` ekle, sorguyu `thread_id = :id` equality'e taşı. | Büyük yapısal değişiklik — tüm message use case'leri etkilenecek | DM refactor sprint'i — `message_threads` + `direct_messages` model değişikliği, 4 adım |
+| **S3 — `users` God Object** (`findings.md §S3`) — 47 kolon, 6 sorumluluk: kimlik + profil + sosyal + bildirim + GDPR + referral tek tabloda. `notification_prefs JSONB` tip güvensiz (14 alan JSON'da). | `users` tablosu WHERE koşulsuz SELECT'te ~47 kolon çeker; JOIN maliyeti yüksek | DB refactor sprint'i — `user_social_links` + `user_consents` ayrı tablolar; `notification_prefs` → `user_notification_prefs` tablo |
+| **S7 — Flutter Freezed** (`findings.md §S7`) — 45+ Flutter modeli tamamen manuel `fromJson`; API alan değişikliği = runtime crash. `flutter_freezed` + `json_serializable` ile üretilmiş koda geçiş. | Büyük efor (~45 sınıf); her ekranı test etmek gerekiyor | Flutter refactor sprint'i — Freezed generator kurulumu + model-by-model migration |
+| **S8 — ChatMessage tiplanmamış alanlar** (`findings.md §S8`) — `ChatMessage.announcementPayload: Map<String, dynamic>?` tip yok; yeni announcement tipi eklense crash. Sealed class'a çevrilmeli. | Chat panel etkilenecek — sealed + pattern matching | Flutter refactor sprint'i (S7 ile birlikte) |
