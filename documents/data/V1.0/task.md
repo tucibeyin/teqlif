@@ -937,6 +937,182 @@ Flutter (MVVM):
 
 ---
 
+### TASK-yeni-L · P14b · 🟡 Like Sayıları Redis Counter'a Taşı
+
+**Plan:** Faz 5.3 — TASK-14 ile aynı sprint (feed cache bunları okuyacak)  
+**Kaynak:** Cache management endüstri standardı analizi
+
+**Sorun:** `like_service.py` her like toggle ve her feed çekiminde `SELECT COUNT(*)` çalıştırıyor.  
+- `batch_listing_likes()` (satır 201): `ListingLike UNION ALL Favorite` → distinct user count — her feed sayfasında N ilan için çalışır  
+- `batch_stream_likes()` (satır 280): `GROUP BY stream_id` — stream listeleme sorgularında tetiklenir  
+- `add_stream_like()` (satır 146): DB insert yeterli ama okuma hep DB'den  
+
+**Strateji:** Read-through cache — Redis önce, miss'te DB sorgu + cache populate. DB kayıtlar audit trail olarak korunur.
+
+**Etkilenen dosyalar:**
+- `backend/app/services/like_service.py`
+- `backend/app/use_cases/streams/stream_finalizer.py`
+
+---
+
+**1. Listing Engagement Cache**
+
+Key: `listing:engagement:{listing_id}` — `batch_listing_likes()` zaten ListingLike + Favorite birleşik sayıyor; Redis'te de tek key yeterli.
+
+`batch_listing_likes()` güncelleme:
+```python
+@staticmethod
+async def batch_listing_likes(
+    db: AsyncSession,
+    listing_ids: list[int],
+    current_user_id: Optional[int] = None,
+) -> tuple[dict[int, int], set[int]]:
+    if not listing_ids:
+        return {}, set()
+
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    _TTL = 7 * 24 * 3600  # 7 gün rolling TTL
+
+    # 1. Redis batch okuma
+    keys = [f"listing:engagement:{lid}" for lid in listing_ids]
+    cached = await redis.mget(*keys)
+    counts: dict[int, int] = {}
+    missing_ids: list[int] = []
+    for lid, val in zip(listing_ids, cached):
+        if val is not None:
+            counts[lid] = int(val)
+        else:
+            missing_ids.append(lid)
+
+    # 2. Cache miss → DB sorgu (mevcut UNION ALL logic)
+    if missing_ids:
+        q1 = select(ListingLike.listing_id, ListingLike.user_id).where(ListingLike.listing_id.in_(missing_ids))
+        q2 = select(Favorite.listing_id, Favorite.user_id).where(Favorite.listing_id.in_(missing_ids))
+        union_sub = union_all(q1, q2).subquery()
+        db_rows = await db.execute(
+            select(union_sub.c.listing_id, func.count(distinct(union_sub.c.user_id)).label("cnt"))
+            .group_by(union_sub.c.listing_id)
+        )
+        db_counts = {row.listing_id: row.cnt for row in db_rows}
+        for lid in missing_ids:
+            counts[lid] = db_counts.get(lid, 0)
+
+        # Redis'e yaz (pipeline — atomik olmak zorunda değil)
+        pipe = redis.pipeline(transaction=False)
+        for lid in missing_ids:
+            pipe.setex(f"listing:engagement:{lid}", _TTL, counts[lid])
+        await pipe.execute()
+
+    # 3. liked_set kullanıcıya özel — DB'den (değişmez)
+    liked_set: set[int] = set()
+    if current_user_id:
+        liked_rows = await db.execute(
+            select(ListingLike.listing_id).where(
+                ListingLike.listing_id.in_(listing_ids),
+                ListingLike.user_id == current_user_id,
+            )
+        )
+        fav_rows = await db.execute(
+            select(Favorite.listing_id).where(
+                Favorite.listing_id.in_(listing_ids),
+                Favorite.user_id == current_user_id,
+            )
+        )
+        liked_set = {row.listing_id for row in liked_rows}.union({row.listing_id for row in fav_rows})
+
+    return counts, liked_set
+```
+
+**Cache invalidation — `toggle_listing_like()` ve `toggle_favorite()` sonrası:**
+```python
+# toggle_listing_like() — await self.db.commit() sonrası (satır 73):
+from app.utils.redis_client import get_redis
+redis = await get_redis()
+await redis.delete(f"listing:engagement:{listing_id}")
+
+# Aynı invalidation toggle_favorite() için de (bulunduğu servis dosyasına ekle)
+```
+
+---
+
+**2. Stream Likes Redis Counter**
+
+Live stream aktifken `add_stream_like()` çok sık çağrılır (her kalp tıklaması). Sayacı Redis'te tut; stream bitince key zaten silinir, sonraki okumalar DB'ye düşer.
+
+`add_stream_like()` güncelleme — `await self.db.commit()` sonrasına ekle:
+```python
+# add_stream_like() satır ~169 sonrası (commit başarılıysa):
+try:
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    await redis.incr(f"stream:likes:{stream_id}")
+    await redis.expire(f"stream:likes:{stream_id}", 48 * 3600)
+except Exception:
+    pass  # Redis sayacı opsiyonel — DB kaydı zaten yapıldı
+```
+
+`batch_stream_likes()` güncelleme:
+```python
+@staticmethod
+async def batch_stream_likes(
+    db: AsyncSession,
+    stream_ids: list[int],
+) -> dict[int, int]:
+    if not stream_ids:
+        return {}
+
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+
+    keys = [f"stream:likes:{sid}" for sid in stream_ids]
+    cached = await redis.mget(*keys)
+    counts: dict[int, int] = {}
+    missing_ids: list[int] = []
+    for sid, val in zip(stream_ids, cached):
+        if val is not None:
+            counts[sid] = int(val)
+        else:
+            missing_ids.append(sid)
+
+    if missing_ids:
+        rows = await db.execute(
+            select(StreamLike.stream_id, func.count(StreamLike.id).label("cnt"))
+            .where(StreamLike.stream_id.in_(missing_ids))
+            .group_by(StreamLike.stream_id)
+        )
+        for row in rows:
+            counts[row.stream_id] = row.cnt
+
+    return counts
+```
+
+`stream_finalizer.py` güncelleme — Redis temizlemeden önce (satır ~56):
+```python
+# stream_finalizer.py — Faz 5 Redis temizliğine ekle:
+await redis.delete(
+    f"live:viewers:{stream.id}",
+    f"live:peak_viewers:{stream.id}",
+    f"live:viewer_set:{stream.id}",
+    f"live:room_to_stream:{stream.room_name}",
+    f"live:pip_viewer_set:{stream.id}",
+    f"live:host_reconnect:{stream.id}",
+    f"stream:stats:{stream.id}",
+    f"stream:likes:{stream.id}",   # ← yeni ekleme
+)
+```
+
+**Test:**
+- Listing beğen → `redis-cli GET listing:engagement:{id}` artmalı
+- İkinci kez aynı listeyi çek → Redis hit (DB sorgusu yok)
+- Listing güncelle (başka bir endpoint) → `listing:engagement:{id}` key silinmeli
+- Canlı yayında kalp gönder → `redis-cli GET stream:likes:{id}` artmalı
+- Yayın bitince → `stream:likes:{id}` key yok
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-15 · P15 · 🟡 Feed N+1 Düzeltmesi
 
 **Plan:** Faz 5.1  
@@ -1211,6 +1387,81 @@ async def get_listing(...): ...
 - `GET /listings` → JSON field listesi `ListingOut` alanlarıyla eşleşiyor
 - `hashed_password` hiçbir response'da görünmüyor
 - `GET /auth/me` → `UserOut` alanlarının dışında alan yok
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-yeni-K · P5i · 🔴 PgBouncer Transaction Mode Uyumluluk Denetimi
+
+**Plan:** Faz 3.1 — **TASK-05 production'da aktif edilmeden önce tamamlanmalı**  
+**Bağımlılık:** TASK-05 bu task'a bağımlıdır.
+
+**Durum tespiti:** `database.py` zaten `use_pgbouncer=True` → `NullPool` branch'ine sahip. Eksik olan: `connect_args` (asyncpg prepared statement cache) ve uyumsuz SQL pattern denetimi.
+
+**Etkilenen dosyalar:**
+- `backend/app/database.py`
+- Denetim sonucuna göre ilgili use case / model dosyaları
+
+**Adım 1 — Uyumsuz pattern denetimi (grep):**
+```bash
+# PgBouncer transaction mode'da çalışmayan veya sorunlu yapılar:
+grep -rn "SET LOCAL\|SET search_path\|LISTEN\|NOTIFY" backend/app --include="*.py"
+grep -rn "server_side_cursors\|stream_results" backend/app --include="*.py"
+grep -rn "autocommit" backend/app --include="*.py"
+grep -rn "CREATE TEMP\|TEMPORARY TABLE" backend/app --include="*.py"
+```
+
+Beklenen sonuç: tüm grepler boş döner (Redis pub/sub kullanıldığından LISTEN/NOTIFY yok, clean arch sayesinde raw SET komutu yok). Eşleşme varsa düzeltme:
+- `SET LOCAL` / `SET search_path` → uygulama katmanına taşı veya kaldır
+- `LISTEN/NOTIFY` → `ws_manager` üzerinden Redis pub/sub'a yönlendir
+- `TEMPORARY TABLE` → CTE ile yeniden yaz
+
+**Adım 2 — engine config güncelleme:**
+
+Mevcut `database.py:10-13`:
+```python
+if settings.use_pgbouncer:
+    engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        poolclass=NullPool
+    )
+```
+
+Değiştirilecek:
+```python
+if settings.use_pgbouncer:
+    engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        poolclass=NullPool,
+        connect_args={
+            "prepared_statement_cache_size": 0,  # transaction mode: asyncpg zorunlu
+            "statement_cache_size": 0,            # asyncpg alias
+        },
+    )
+```
+
+**Adım 3 — `init_extensions()` migration'a taşı:**
+
+`database.py:36-43` `init_extensions()` her startup'ta `CREATE EXTENSION IF NOT EXISTS vector` çalıştırıyor. PgBouncer aktifken bu çağrı PgBouncer üzerinden geçer — DDL için superuser gerektiğinden ve startup her restart'ta tekrar edebileceğinden migration'a taşımak daha temiz:
+
+```python
+# alembic/versions/0001_base_init.py (veya ayrı revision) içine:
+op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
+# database.py'den kaldır:
+# async def init_extensions() -> None: ...
+# Ve app/main.py'deki çağrısını kaldır: await init_extensions()
+```
+
+Eğer migration zaten çalışmışsa yalnızca `IF NOT EXISTS` yeterli — idempotent.
+
+**Test:**
+- `USE_PGBOUNCER=True` ile uygulama başlat → `/health` endpoint'i DB bağlantısını doğrulamalı
+- PgBouncer admin console: `SHOW pools` → `cl_active` eş zamanlı request sayısını göstermeli
+- `psql -p 6432 -c "SHOW server_version"` → PgBouncer üzerinden bağlantı test
 
 **Status:** [ ] BEKLEMEDE
 
@@ -2197,6 +2448,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
 | TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [ ] |
 | TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [ ] |
+| TASK-yeni-K · PgBouncer uyumluluk denetimi | 🔴 P5i | Kritik | 3.1 | [ ] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [ ] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [ ] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
@@ -2213,6 +2465,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
+| TASK-yeni-L · Like sayıları Redis counter | 🟡 P14b | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
 | TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P15b | Orta | 3.4 | [ ] |
 | TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
