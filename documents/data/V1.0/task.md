@@ -807,6 +807,67 @@ cron(cleanup_old_streams_task, day=1, hour=6, minute=0)               # Ayın 1'
 
 ---
 
+### TASK-yeni-H · P9c · 🟡 Auction Redis State Recovery
+
+**Plan:** Faz 3.3  
+**Kaynak:** Redis tutarlılık denetimi (R2)
+
+**Sorun:** `auction_commands.py:235` `end_auction()` Redis'ten state çekiyor. Redis restart veya 24h TTL sonrası state boşsa `system_end=True` sessizce çıkıyor, `system_end=False` ise `AUCTION_NOT_ACTIVE` fırlatıyor. Devam eden açık artırma sırasında Redis yeniden başlatılırsa artırma durumu tamamen kaybolur — DB'de `bids` kaydı var ama Redis'te state yok.
+
+**Etkilenen dosyalar:**
+- `backend/app/use_cases/auctions/commands/auction_commands.py`
+
+**Uygulama — state yoksa DB'den rebuild:**
+```python
+# end_auction() içinde (satır ~235), mevcut:
+#   data = await self.redis_repo.get_state(stream_id)
+#   if not data:
+#       if system_end: return
+#       raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+
+# Değiştirilecek:
+data = await self.redis_repo.get_state(stream_id)
+if not data:
+    data = await self._rebuild_auction_state_from_db(stream_id)
+    if not data:
+        if system_end:
+            return
+        raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+    await self.redis_repo.set_state(stream_id, data)
+
+# Yeni yardımcı metot — AuctionCommandService içinde:
+async def _rebuild_auction_state_from_db(self, stream_id: int) -> dict | None:
+    """Redis state kaybolmuşsa DB bids tablosundan en son teklifi rebuild eder."""
+    stream = await self.uow.session.scalar(
+        select(LiveStream).where(LiveStream.id == stream_id)
+    )
+    if not stream or not stream.is_live:
+        return None
+    result = await self.uow.session.execute(
+        select(Bid).where(Bid.stream_id == stream_id)
+        .order_by(Bid.created_at.desc()).limit(1)
+    )
+    last_bid = result.scalar_one_or_none()
+    return {
+        "status": "active",
+        "current_bid": str(last_bid.amount) if last_bid else "0",
+        "current_bidder_id": str(last_bid.bidder_id) if last_bid else "",
+        "current_bidder_name": last_bid.bidder_username if last_bid else "",
+        "bid_count": "?",
+        "item_name": "",
+    }
+```
+
+**Kapsam notu:** `place_bid()` aynı sorundan etkilenmez — Lua `_BID_SCRIPT` sıfır başlangıç durumunu kabul eder. Rebuild yalnızca `end_auction` akışına gerekli.
+
+**Test:**
+- Redis'te auction state yokken `end_auction(system_end=True)` → sessizce çıkmak yerine DB rebuild edip normal kapanış
+- `stream.is_live=False` iken rebuild → None, `AUCTION_NOT_ACTIVE` fırlatır
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ## Orta Öncelik Sprint — P13–P15
 
 ---
@@ -922,6 +983,59 @@ async def get_feed_page(
 **Test:** `EXPLAIN ANALYZE` → listings + users için tek `Hash Join` / `Nested Loop`, ayrı kullanıcı sorgusu yok
 
 **Bağımlılık:** TASK-yeni-N ile aynı dosyaları etkiler — aynı sprint'te uygulanmalı.
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
+### TASK-yeni-I · P15b · 🟡 Bid DB-Redis Stale State Sync
+
+**Plan:** Faz 3.4  
+**Kaynak:** Redis tutarlılık denetimi (R3)
+
+**Sorun:** `place_bid()` DB-first pattern: önce DB commit, sonra Lua `execute_bid()`. Lua başarısız olursa (`ok==0`) `CONCURRENT_BID_OUTBID` fırlatılıyor ve Redis güncellenmemiş kalıyor — yeni teklif DB'de kayıtlı ama Redis'teki `current_bid` stale. Sonraki teklif yanlış fiyat üzerinden validate edilir; host ve viewer ekranları kısa süre yanlış değer gösterir.
+
+**Mevcut davranış:** Stale state sonraki başarılı Lua çağrısında kendiliğinden düzelir ama `/auction/{stream_id}/state` endpoint'i bu arada yanlış değer döndürür.
+
+**Etkilenen dosyalar:**
+- `backend/app/use_cases/auctions/commands/auction_commands.py` (satır ~384-408)
+- `backend/app/repositories/auction_redis_repo.py` (yeni `update_bid_state()` helper)
+
+**Uygulama — Lua başarısız olursa Redis'i DB'den sync et:**
+```python
+# auction_commands.py — Lua başarısız bloğuna eklenir (raise öncesi):
+logger.warning("[TEKLİF] Race condition — Redis stale, DB'den sync | stream=%s", stream_id)
+try:
+    result = await self.uow.session.execute(
+        select(Bid).where(Bid.stream_id == stream_id)
+        .order_by(Bid.created_at.desc()).limit(1)
+    )
+    last_bid = result.scalar_one_or_none()
+    if last_bid:
+        await self.redis_repo.update_bid_state(
+            stream_id,
+            current_bid=str(last_bid.amount),
+            bidder_id=str(last_bid.bidder_id),
+            bidder_name=last_bid.bidder_username,
+        )
+except Exception as sync_exc:
+    logger.error("[TEKLİF] Redis sync başarısız | stream=%s | %s", stream_id, sync_exc)
+raise BadRequestException(code="CONCURRENT_BID_OUTBID")
+
+# auction_redis_repo.py — yeni helper:
+async def update_bid_state(self, stream_id: int, current_bid: str, bidder_id: str, bidder_name: str) -> None:
+    key = f"auction:{stream_id}"
+    redis = await get_redis()
+    await redis.hset(key, mapping={
+        "current_bid": current_bid,
+        "current_bidder_id": bidder_id,
+        "current_bidder_name": bidder_name,
+    })
+```
+
+**Test:**
+- Eş zamanlı iki teklif ile race condition simüle et → exception öncesi Redis `current_bid` DB değeriyle eşleşmeli
+- Sonraki teklif doğru fiyat üzerinden validate edilmeli
 
 **Status:** [ ] BEKLEMEDE
 
@@ -1613,6 +1727,34 @@ instagramUrl: json['instagram_url'] as String?,
 
 ---
 
+### TASK-yeni-J · P20g · 🟢 webhooks.py Dead Code + _VIEWER_TTL Düzeltmesi
+
+**Plan:** Faz 2.5 (TASK-18f ile aynı sprint — backend temizliği)  
+**Kaynak:** Redis tutarlılık denetimi (R1 — Option A: chat WS tek kaynak kararı)
+
+**Sorun:**
+1. `webhooks.py:217` `_on_viewer_joined()` ve `webhooks.py:243` `_on_viewer_left()` tanımlı ama dispatch (satır 59-64) hiç çağırmıyor. Viewer count yönetimi `chat_commands.py` `add_viewer()`/`remove_viewer()` üzerinden chat WS'tan yapılıyor — doğru tasarım, webhook'tan yönetim dead code.
+2. `webhooks.py:197` `_VIEWER_TTL = 48 * 3600` — yalnızca dead code fonksiyonlarca kullanılıyor.
+3. `webhooks.py:200-214` `_resolve_stream_and_host()` — yalnızca `_on_viewer_joined/left` tarafından çağrılıyor, dead code.
+4. `chat_commands.py:53` `_VIEWER_TTL = 12 * 3600` tanımlı ama `add_viewer()` hardcoded `48 * 3600` kullanıyor — sabit anlamsız ve yanlış değerde.
+
+**Etkilenen dosyalar:**
+- `backend/app/routers/webhooks.py`
+- `backend/app/use_cases/chat/commands/chat_commands.py`
+
+**Uygulama:**
+1. `webhooks.py`'dan sil: `_VIEWER_TTL`, `_resolve_stream_and_host`, `_on_viewer_joined`, `_on_viewer_left`
+2. `chat_commands.py:53`: `_VIEWER_TTL = 12 * 3600` → `_VIEWER_TTL = 48 * 3600`
+3. `chat_commands.py` `add_viewer()` içindeki `48 * 3600` hardcoded değeri → `_VIEWER_TTL`
+
+**Test:**
+- `grep -r "_on_viewer" backend/` → hiçbir referans kalmamalı
+- Chat WS viewer sayacı hâlâ artıp azalıyor
+
+**Status:** [ ] BEKLEMEDE
+
+---
+
 ### TASK-19 · P21 · 🟢 Medya Optimizasyonu (M1-M4)
 
 **Plan:** Faz 8.2  
@@ -2067,10 +2209,12 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-10 · W2/W6/W7 frekans | 🟡 P9b | Yüksek | 6.1 | [ ] |
 | TASK-11 · Composite index'ler | 🟡 P10 | Yüksek | 3.2 | [ ] |
 | TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
+| TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [ ] |
 | **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P14 | Orta | 5.3 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
+| TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P15b | Orta | 3.4 | [ ] |
 | TASK-yeni-N · Slim feed DTO | 🟡 P26 | Orta | 5.1 | [ ] |
 | TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
@@ -2081,6 +2225,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-18d · countries — BIRAKILDI | ⏸️ | — | 2.6 | ⏸️ |
 | TASK-18e · Flutter User sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
 | TASK-18f · Flutter dead code temizliği | 🟢 P20f | Orta | 2.5 | [ ] |
+| TASK-yeni-J · webhooks.py dead code + _VIEWER_TTL fix | 🟢 P20g | Orta | 2.5 | [ ] |
 | **— DÜŞÜK ÖNCELIK —** | | | | |
 | TASK-19 · Medya M1-M4 | 🟢 P21 | Düşük | 8.2 | [ ] |
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |
