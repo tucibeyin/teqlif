@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,8 +23,8 @@ class GiftEvent(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    stream_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("live_streams.id", ondelete="CASCADE"), nullable=False
+    stream_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("live_streams.id", ondelete="SET NULL"), nullable=True
     )
     sender_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False

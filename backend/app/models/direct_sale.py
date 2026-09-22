@@ -11,7 +11,7 @@ class DirectSale(Base):
     __tablename__ = "direct_sales"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    stream_id: Mapped[int] = mapped_column(ForeignKey("live_streams.id", ondelete="CASCADE"), nullable=False, index=True)
+    stream_id: Mapped[Optional[int]] = mapped_column(ForeignKey("live_streams.id", ondelete="SET NULL"), nullable=True, index=True)
     host_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id", ondelete="SET NULL"), nullable=True)
 
