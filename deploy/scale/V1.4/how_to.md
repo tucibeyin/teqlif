@@ -433,6 +433,27 @@ sudo teqlif-restart
 
 ---
 
+## TASK-yeni-B · user_interests UNIQUE constraint — subcategory dahil
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** f4ee05e9  
+**Staging testi:** `uq_user_interest UNIQUE NULLS NOT DISTINCT (user_id, category, subcategory)` ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzza_user_interests_unique`) otomatik çalışır:
+- `UNIQUE(user_id, category)` → `UNIQUE NULLS NOT DISTINCT (user_id, category, subcategory)` (PG 15+)
+- Worker upsert: `ON CONFLICT ON CONSTRAINT uq_user_interest`
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-A · listing_offers — status + updated_at + GC3
 
 **Staging tarihi:** 2026-09-22  
