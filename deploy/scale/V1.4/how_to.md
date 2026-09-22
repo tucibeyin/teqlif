@@ -219,3 +219,32 @@ psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listings" | grep price
 ```
 
 **[PROD FARKI]:** psql portu 5433 (PostgreSQL PgBouncer arkasında).
+
+---
+
+## TASK-02 · FK SET NULL — gift_events/bids/direct_sales/auctions → stream_id
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 52b108da  
+**Staging testi:** `gift_events.stream_id is_nullable=YES` ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzx_fk_set_null_stream_id`) otomatik çalışır:
+- gift_events.stream_id: CASCADE → SET NULL + nullable
+- bids.stream_id: tanımsız → SET NULL + nullable
+- direct_sales.stream_id: CASCADE → SET NULL + nullable
+- auctions.stream_id: tanımsız → SET NULL + nullable
+
+**Doğrulama:**
+```bash
+psql -h 127.0.0.1 -p 5432 -U teqlif -d teqlif -c "SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name='gift_events' AND column_name='stream_id'"
+# Beklenen: is_nullable=YES
+```
+
+**[PROD FARKI]:** Yok.

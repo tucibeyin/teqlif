@@ -122,7 +122,7 @@
 
 **Node ops:** Yok
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 52b108da · tarih: 2026-09-22
 
 ---
 
