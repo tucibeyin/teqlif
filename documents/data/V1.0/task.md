@@ -1576,7 +1576,7 @@ async def flag_message(
 - `SELECT flag_reason FROM direct_messages WHERE id=...` → reason kaydedildi
 - Başka kullanıcının mesajını raporlamaya çalış → 403
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 056f8147 · tarih: 2026-09-22
 
 ---
 
@@ -2477,7 +2477,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [x] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [x] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [x] |
-| TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |
+| TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [x] |
 | TASK-yeni-D · Search alert trigger + Flutter feed stats | 🟡 P5f | Kritik | 2.2 | [ ] |
 | **— YÜKSEK ÖNCELIK —** | | | | |
 | TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |

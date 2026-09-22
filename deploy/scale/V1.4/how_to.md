@@ -529,6 +529,29 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-yeni-C · DM Raporlama — flag_reason Aktivasyonu
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 056f8147  
+**Staging testi:** `POST /api/messages/1/flag?reason=spam` → `404 MESSAGE_NOT_FOUND` (endpoint aktif, mesaj yok) ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok (`flag_reason` kolonu zaten mevcut):
+- `flag_message.py`: `FlagMessageCommand` — receiver kontrolü, valid reason validation
+- `messages.py`: `POST /{message_id}/flag?reason=...` endpoint (204, 20/min rate limit)
+- `messages_screen.dart`: uzun basma → `_showMessageActions` (sil + raporla menüsü)
+- `notification_service.dart`: `flagMessage()` API metodu eklendi
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-14 · Endpoint Cache Stratejisi
 
 **Staging tarihi:** 2026-09-22  
