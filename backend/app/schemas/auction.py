@@ -1,13 +1,16 @@
+from decimal import Decimal
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
 
+from app.schemas.base import BaseSchema
+
 
 class AuctionStart(BaseModel):
     item_name: Optional[str] = None
-    start_price: float  # her zaman zorunlu
-    buy_it_now_price: Optional[float] = None  # opsiyonel
-    listing_id: Optional[int] = None  # seçilince başlık buradan gelir
+    start_price: float  # kullanıcı girişi — float kabul edilir
+    buy_it_now_price: Optional[float] = None
+    listing_id: Optional[int] = None
 
     @model_validator(mode="after")
     def check_source(self):
@@ -50,29 +53,28 @@ class BidIn(BaseModel):
         return v
 
 
-class BidOut(BaseModel):
+class BidOut(BaseSchema):
     bidder_username: str
-    amount: float
+    amount: Decimal
     created_at: datetime
 
-    class Config:
-        from_attributes = True
 
-
-class AuctionStateOut(BaseModel):
+class AuctionStateOut(BaseSchema):
     status: str
     winner_accepted: bool = False
     item_name: Optional[str] = None
-    start_price: Optional[float] = None
-    buy_it_now_price: Optional[float] = None
-    current_bid: Optional[float] = None
+    start_price: Optional[Decimal] = None
+    buy_it_now_price: Optional[Decimal] = None
+    current_bid: Optional[Decimal] = None
     current_bidder: Optional[str] = None
     bid_count: int = 0
     listing_id: Optional[int] = None
     bin_buyer_username: Optional[str] = None
 
+
 class EndAuctionIn(BaseModel):
     proof_image_url: Optional[str] = None
+
 
 class AcceptBidIn(BaseModel):
     proof_image_url: Optional[str] = None

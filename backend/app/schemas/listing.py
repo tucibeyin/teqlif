@@ -1,7 +1,10 @@
+from decimal import Decimal
 from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, field_validator
+
+from app.schemas.base import BaseSchema
 
 
 class ListingOfferCreate(BaseModel):
@@ -15,10 +18,10 @@ class ListingOfferCreate(BaseModel):
         return v
 
 
-class ListingOfferResponse(BaseModel):
+class ListingOfferResponse(BaseSchema):
     id: int
     listing_id: int
-    amount: float
+    amount: Decimal
     created_at: datetime
     user_id: int
     username: str

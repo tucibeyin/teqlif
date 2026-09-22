@@ -140,9 +140,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       final newState = await ref.read(auctionServiceProvider).startAuction(
         widget.streamId,
         itemName: result['item'] as String?,
-        startPrice: result['price'] as double?,
+        startPrice: (result['price'] as num?)?.toDouble(),
         listingId: result['listing_id'] as int?,
-        buyItNowPrice: result['bin_price'] as double?,
+        buyItNowPrice: (result['bin_price'] as num?)?.toDouble(),
       );
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {

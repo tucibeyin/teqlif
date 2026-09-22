@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import String, Float, DateTime, ForeignKey, Index, func
+from decimal import Decimal
+from sqlalchemy import String, Numeric, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -16,5 +17,5 @@ class Bid(Base):
     stream_id: Mapped[int] = mapped_column(ForeignKey("live_streams.id"), nullable=False, index=True)
     bidder_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     bidder_username: Mapped[str] = mapped_column(String(100), nullable=False)
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

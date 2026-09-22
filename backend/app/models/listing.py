@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
-from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index, func, text
+from decimal import Decimal
+from sqlalchemy import String, Float, Numeric, DateTime, ForeignKey, Boolean, Text, Index, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -26,7 +27,7 @@ class Listing(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     subcategory: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
@@ -41,9 +42,9 @@ class Listing(Base):
     image_urls: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of URLs
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     video_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    buy_it_now_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    last_sold_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)
-    last_start_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    buy_it_now_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    last_sold_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True, index=True)
+    last_start_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     status: Mapped[ListingStatus] = mapped_column(SQLEnum(ListingStatus, values_callable=lambda obj: [e.value for e in obj]), default=ListingStatus.ACTIVE, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/localization_service.dart';
+import '../../utils/number_formatter.dart';
 import 'viewmodels/seller_report_view_model.dart';
 
 class SellerReportScreen extends ConsumerStatefulWidget {
@@ -45,13 +46,7 @@ class _SellerReportScreenState extends ConsumerState<SellerReportScreen>
     if (raw == null) return '—';
     final val = (raw as num).toDouble();
     if (val <= 0) return '—';
-    final s = val.toInt().toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return '${buf.toString()} ₺';
+    return TeqNumberFormatter.format(val, fieldKey: 'price', unit: '₺', forceDecimals: true);
   }
 
   String _fmtDuration(int minutes, TranslationPack loc) {

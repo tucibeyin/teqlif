@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
-from sqlalchemy import String, Boolean, DateTime, Float, Integer, JSON, func
+from decimal import Decimal
+from sqlalchemy import String, Boolean, DateTime, Float, Numeric, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Enum as SQLEnum
@@ -37,7 +38,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     preference_embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
     # 90. yüzdelik fiyat tavanı — ClickHouse'daki son 7 gün etkileşim verisinden hesaplanır
-    max_budget: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    max_budget: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     plan_type: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
     premium_since: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)

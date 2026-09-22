@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from decimal import Decimal
 from sqlalchemy import String, Integer, Numeric, DateTime, ForeignKey, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,7 +16,7 @@ class DirectSale(Base):
     listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id", ondelete="SET NULL"), nullable=True)
 
     title: Mapped[str] = mapped_column(String(100), nullable=False)
-    price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     product_image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     proof_image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
@@ -43,6 +44,6 @@ class DirectSaleOrder(Base):
     buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id", ondelete="SET NULL"), nullable=True)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    unit_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="completed")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

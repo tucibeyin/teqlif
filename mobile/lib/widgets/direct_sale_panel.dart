@@ -344,7 +344,7 @@ class _ActivePanel extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '₺ ${TeqNumberFormatter.format(state.price, fieldKey: 'price')}',
+                        '₺ ${TeqNumberFormatter.format(state.price, fieldKey: 'price', forceDecimals: true)}',
                         style: const TextStyle(
                           color: kPrimary,
                           fontSize: 15,
@@ -554,7 +554,7 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
 
             // Fiyat
             Text(
-              '₺ ${TeqNumberFormatter.format(widget.initialState.price, fieldKey: 'price')}',
+              '₺ ${TeqNumberFormatter.format(widget.initialState.price, fieldKey: 'price', forceDecimals: true)}',
               style: const TextStyle(
                 color: kPrimary,
                 fontSize: 22,
@@ -1087,7 +1087,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     final viewerState = ref.watch(directSaleViewerProvider(widget.streamId));
     final liveStock = ref.watch(directSaleHostProvider(widget.streamId)).remainingStock;
     final maxQty = liveStock.clamp(1, 10);
-    final total = _qty * widget.state.price;
+    final total = double.parse((_qty * widget.state.price).toStringAsFixed(2));
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1134,7 +1134,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 ),
               ),
               Text(
-                '₺ ${TeqNumberFormatter.format(widget.state.price, fieldKey: 'price')}',
+                '₺ ${TeqNumberFormatter.format(widget.state.price, fieldKey: 'price', forceDecimals: true)}',
                 style: const TextStyle(
                   color: kPrimary,
                   fontWeight: FontWeight.w800,
@@ -1180,7 +1180,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 style: const TextStyle(color: Colors.white70),
               ),
               Text(
-                '₺ ${TeqNumberFormatter.format(total, fieldKey: 'price')}',
+                '₺ ${TeqNumberFormatter.format(total, fieldKey: 'price', forceDecimals: true)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -1470,7 +1470,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                                 ),
                                 if (item['price'] != null)
                                   Text(
-                                    '₺ ${TeqNumberFormatter.format(item['price'], fieldKey: 'price')}',
+                                    '₺ ${TeqNumberFormatter.format(item['price'], fieldKey: 'price', forceDecimals: true)}',
                                     style: const TextStyle(
                                       color: Color(0xFF4ADE80),
                                       fontSize: 12,
@@ -1502,7 +1502,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   _priceCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   prefixText: '₺ ',
-                  inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
+                  inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
                 ),
                 const SizedBox(height: 8),
                 _field(
@@ -1528,7 +1528,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                 _priceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 prefixText: '₺ ',
-                inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
+                inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
               ),
               const SizedBox(height: 8),
               _field(

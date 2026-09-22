@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../utils/number_formatter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
@@ -1968,9 +1969,8 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
 
   String _formatPrice(dynamic price) {
     if (price == null) return '—';
-    final n = double.tryParse(price.toString());
-    if (n == null) return price.toString();
-    return NumberFormat('#,##0', 'tr_TR').format(n);
+    final formatted = TeqNumberFormatter.format(price, fieldKey: 'price', forceDecimals: true);
+    return formatted.isEmpty ? '—' : formatted;
   }
 
   @override

@@ -45,6 +45,7 @@ class TeqNumberFormatter {
     String? fieldKey,
     String? locale,
     String? unit,
+    bool forceDecimals = false,
   }) {
     if (value == null || value.toString().trim().isEmpty) return '';
 
@@ -63,9 +64,9 @@ class TeqNumberFormatter {
       return unit != null && unit.isNotEmpty ? '$rawStr $unit' : rawStr;
     }
 
-    // 3. Formatlama
+    // 3. Formatlama — fiyat alanlarında her zaman 2 ondalık hane (forceDecimals: true)
     final isDecimal = numVal is double && numVal.remainder(1) != 0;
-    final pattern = isDecimal ? '#,##0.##' : '#,##0';
+    final pattern = (forceDecimals || isDecimal) ? '#,##0.00' : '#,##0';
     final targetLocale = locale ?? Intl.defaultLocale ?? 'tr_TR';
 
     try {

@@ -1,6 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Boolean, func
+from sqlalchemy import String, Integer, Numeric, DateTime, ForeignKey, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -13,9 +14,9 @@ class Auction(Base):
     stream_id: Mapped[int] = mapped_column(ForeignKey("live_streams.id"), nullable=False, index=True)
     listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id", ondelete="SET NULL"), nullable=True, index=True)
     item_name: Mapped[str] = mapped_column(String(300), nullable=False)
-    start_price: Mapped[float] = mapped_column(Float, nullable=False)
-    buy_it_now_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    final_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    start_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    buy_it_now_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    final_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     is_bought_it_now: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     winner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     winner_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

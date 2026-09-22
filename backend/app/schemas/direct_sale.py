@@ -1,6 +1,9 @@
+from decimal import Decimal
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, field_validator, model_validator
+
+from app.schemas.base import BaseSchema
 
 
 class DirectSaleStartIn(BaseModel):
@@ -59,11 +62,11 @@ class DirectSaleCancelIn(BaseModel):
     orders_voided: bool
 
 
-class DirectSaleStateOut(BaseModel):
+class DirectSaleStateOut(BaseSchema):
     status: str
     sale_id: int
     title: str
-    price: float
+    price: Decimal
     total_stock: int
     remaining_stock: int
     product_image_url: Optional[str] = None
@@ -72,8 +75,8 @@ class DirectSaleStateOut(BaseModel):
     listing_id: Optional[int] = None
 
 
-class DirectSaleSummaryOut(BaseModel):
-    role: str                            # "buyer" | "seller"
+class DirectSaleSummaryOut(BaseSchema):
+    role: str
     sale_id: int
     item_name: str
     proof_image_url: Optional[str] = None
@@ -82,36 +85,31 @@ class DirectSaleSummaryOut(BaseModel):
     end_reason: Optional[str] = None
     ended_at: Optional[datetime] = None
 
-    # Seller alanları (role == "seller")
-    total_revenue: Optional[float] = None
+    total_revenue: Optional[Decimal] = None
     total_quantity_sold: Optional[int] = None
     order_count: Optional[int] = None
     seller_username: Optional[str] = None
 
-    # Buyer alanları (role == "buyer")
     buyer_quantity: Optional[int] = None
-    buyer_unit_price: Optional[float] = None
-    buyer_total: Optional[float] = None
+    buyer_unit_price: Optional[Decimal] = None
+    buyer_total: Optional[Decimal] = None
     buyer_order_status: Optional[str] = None
 
 
-class DirectSaleSuggestionsOut(BaseModel):
+class DirectSaleSuggestionsOut(BaseSchema):
     suggested_price: Optional[float] = None
     avg_conversion_rate: Optional[float] = None
     avg_demand: Optional[float] = None
     recommended_stock: Optional[int] = None
     sample_count: int = 0
-    confidence: str = "low"          # "low" | "medium" | "high"
+    confidence: str = "low"
 
 
-class DirectSaleOrderOut(BaseModel):
+class DirectSaleOrderOut(BaseSchema):
     id: int
     buyer_username: str
     quantity: int
-    unit_price: float
-    total_price: float
+    unit_price: Decimal
+    total_price: Decimal
     status: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True

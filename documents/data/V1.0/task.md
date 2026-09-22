@@ -422,7 +422,7 @@ TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺', forceDecimals: 
 
 **Node ops:** Staging önce, sonra prod.
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · tarih: 2026-09-22
 
 ---
 

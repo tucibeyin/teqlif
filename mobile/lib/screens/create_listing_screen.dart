@@ -1227,7 +1227,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             key: const Key('create_listing_input_fiyat'),
             controller: _priceCtrl,
             keyboardType: TextInputType.number,
-            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
+            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
             labelText: loc.t('fieldPrice'),
             hintText: loc.t('fieldPriceHint'),
             prefixText: '₺ ',

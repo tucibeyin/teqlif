@@ -1675,7 +1675,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                             key: const Key('listing_detail_offer_input'),
                             controller: _offerCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price')],
+                            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
                             readOnly: !_isActive,
                             onChanged: (val) {
                               final parsed = _parseFormattedPrice(val);
@@ -1830,7 +1830,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   ),
                                   if (item['price'] != null)
                                     Text(
-                                      '${(item['price'] as num).toInt()} ₺',
+                                      TeqNumberFormatter.format(item['price'], fieldKey: 'price', unit: '₺', forceDecimals: true),
                                       style: const TextStyle(
                                         fontSize: 11,
                                         color: kPrimary,

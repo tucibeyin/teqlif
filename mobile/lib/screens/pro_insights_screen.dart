@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/pro_insights_data.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
+import '../utils/number_formatter.dart';
 import 'viewmodels/pro_insights_view_model.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
@@ -388,7 +389,7 @@ class _KpiGrid extends ConsumerWidget {
     );
   }
 
-  static String _fmt(double v) => NumberFormat('#,##0', 'tr_TR').format(v);
+  static String _fmt(double v) => TeqNumberFormatter.format(v, forceDecimals: true);
 }
 
 class _KpiCard extends ConsumerWidget {
@@ -656,7 +657,7 @@ class _HotLeadCard extends ConsumerWidget {
                       style: const TextStyle(fontSize: 9, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600)),
                 ),
               ] else if (price != null)
-                Text('${NumberFormat('#,##0', 'tr_TR').format(price)} ₺',
+                Text(TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺', forceDecimals: true),
                     style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
             ],
           ),
@@ -738,14 +739,14 @@ class _PriceIntelCard extends ConsumerWidget {
           const SizedBox(height: 8),
           _PriceRow(
             label: loc.t("priceYours"),
-            value: '${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺',
+            value: TeqNumberFormatter.format(yourPrice, fieldKey: 'price', unit: '₺', forceDecimals: true),
             valueColor: sigColor,
             bold: true,
           ),
           const SizedBox(height: 3),
           _PriceRow(
             label: loc.t("priceMarketAvg"),
-            value: '${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺',
+            value: TeqNumberFormatter.format(marketAvg, fieldKey: 'price', unit: '₺', forceDecimals: true),
           ),
           const SizedBox(height: 3),
           _PriceRow(

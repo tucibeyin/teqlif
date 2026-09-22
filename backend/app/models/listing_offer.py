@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Float, DateTime, ForeignKey, func, Index
+from decimal import Decimal
+from sqlalchemy import Numeric, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -20,7 +21,7 @@ class ListingOffer(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
