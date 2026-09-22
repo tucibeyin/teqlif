@@ -34,5 +34,11 @@ class DeleteListingCommand:
             
             # TODO: EventBus publish ListingDeletedEvent
 
+        try:
+            from app.core.read_cache import invalidate_cache
+            await invalidate_cache(f"listing:{listing_id}")
+        except Exception:
+            pass
+
         logger.info("[DeleteListingCommand] Başarılı | listing_id=%s", listing_id)
         return {"id": listing_id, "status": "deleted"}

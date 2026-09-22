@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.app_config import AppConfig
 from app.utils.auth import get_current_user
 from app.models.user import User
+from app.core.read_cache import cache_get, cache_set, invalidate_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/config", tags=["config"])
@@ -24,9 +25,10 @@ class VersionConfigRequest(BaseModel):
 
 @router.get("/version")
 async def get_version_config(db: AsyncSession = Depends(get_db)):
-    """
-    Mobil uygulama versiyon kurallarını döndürür.
-    """
+    cached = await cache_get("app_config", {})
+    if cached is not None:
+        return cached
+
     default_config = {
         "ios": {
             "min_version": "1.0.0",
@@ -60,7 +62,8 @@ async def get_version_config(db: AsyncSession = Depends(get_db)):
             
     except Exception as exc:
         logger.warning(f"AppConfig okuma hatası: {exc}")
-        
+
+    await cache_set("app_config", {}, default_config, ttl=600)
     return default_config
 
 @router.post("/version")

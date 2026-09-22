@@ -28,6 +28,7 @@ from app.use_cases.users.queries.get_blocked_users import GetBlockedUsersQuery
 from app.use_cases.users.queries.get_user_profile import GetUserProfileQuery
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.referral_service import apply_referral
+from app.core.read_cache import cache_get, cache_set, invalidate_cache
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -273,4 +274,10 @@ async def get_user_profile(
     current_user: Optional[User] = Depends(_optional_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    return await GetUserProfileQuery(uow).execute(username, current_user)
+    _cache_params = {"username": username}
+    cached = await cache_get("user_profile", _cache_params)
+    if cached is not None:
+        return cached
+    result = await GetUserProfileQuery(uow).execute(username, current_user)
+    await cache_set("user_profile", _cache_params, result, ttl=300)
+    return result

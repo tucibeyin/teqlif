@@ -517,6 +517,12 @@ async def update_me(
     else:
         await invalidate_user_session_cache(current_user.id)
 
+    try:
+        from app.core.read_cache import invalidate_cache
+        await invalidate_cache("user_profile")
+    except Exception:
+        pass
+
     return current_user
 
 

@@ -181,8 +181,15 @@ async def get_listing(
     current_user_id: Optional[int] = Depends(_optional_user_id),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
+    _cache_ns = f"listing:{listing_id}"
+    _cache_params = {"uid": current_user_id or 0}
+    cached = await cache_get(_cache_ns, _cache_params)
+    if cached is not None:
+        return cached
     ip_address = request.client.host if request.client else None
-    return await GetListingQuery(uow).execute(listing_id, current_user_id, ip_address=ip_address)
+    result = await GetListingQuery(uow).execute(listing_id, current_user_id, ip_address=ip_address)
+    await cache_set(_cache_ns, _cache_params, result, ttl=60)
+    return result
 
 
 @router.post("")

@@ -142,6 +142,12 @@ class UpdateListingCommand:
                 logger.warning("[UpdateListing] MinIO silme başarısız: key=%s | %s", key, exc)
 
         try:
+            from app.core.read_cache import invalidate_cache
+            await invalidate_cache(f"listing:{listing_id}")
+        except Exception:
+            pass
+
+        try:
             from app.services.feed.listing_cache_service import cache_listing, push_to_recent_feed_cache, remove_from_recent_feed_cache
             from app.models.enums import ListingStatus
             import asyncio
