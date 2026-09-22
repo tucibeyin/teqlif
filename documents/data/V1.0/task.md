@@ -551,7 +551,7 @@ Görevin içindeki INTERVAL değerini 90 → 365 gün olarak güncelle.
 
 **Node ops:** Yok (restart yeterli)
 
-**Status:** [x] TAMAMLANDI · commit: (bir sonraki) · tarih: 2026-09-22
+**Status:** [x] TAMAMLANDI · commit: 918130a6 · tarih: 2026-09-22
 
 ---
 

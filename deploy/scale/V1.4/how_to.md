@@ -248,3 +248,51 @@ psql -h 127.0.0.1 -p 5432 -U teqlif -d teqlif -c "SELECT column_name, is_nullabl
 ```
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-06 · ClickHouse TTL → 365 gün
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 8d654a89  
+**Staging testi:** tüm tablolar `toIntervalDay(365)` ✅  
+
+**node5 adımları — önce git pull, sonra ClickHouse ALTER:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+```
+
+```bash
+clickhouse-client --database teqlif_prod_analytics --query "ALTER TABLE user_events MODIFY TTL timestamp + INTERVAL 365 DAY"
+clickhouse-client --database teqlif_prod_analytics --query "ALTER TABLE feed_analytics MODIFY TTL timestamp + INTERVAL 365 DAY"
+clickhouse-client --database teqlif_prod_analytics --query "ALTER TABLE search_events MODIFY TTL timestamp + INTERVAL 365 DAY"
+clickhouse-client --database teqlif_prod_analytics --query "ALTER TABLE swipe_live_events MODIFY TTL timestamp + INTERVAL 365 DAY"
+clickhouse-client --database teqlif_prod_analytics --query "ALTER TABLE direct_sale_events MODIFY TTL created_at + INTERVAL 365 DAY"
+```
+
+**Doğrulama:**
+```bash
+for t in user_events feed_analytics search_events swipe_live_events direct_sale_events; do
+  echo -n "$t: "; clickhouse-client --database teqlif_prod_analytics --query "SHOW CREATE TABLE $t" | grep -o 'TTL.*'
+done
+```
+
+**[PROD FARKI]:** DB adı `teqlif_prod_analytics` (staging: `teqlif_staging_analytics`).
+
+---
+
+## TASK-07 · user_interactions retention 90 → 365 gün
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 918130a6  
+**Staging testi:** worker.py güncellendi, commit push edildi  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+**[PROD FARKI]:** Yok.
