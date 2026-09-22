@@ -430,3 +430,28 @@ sudo teqlif-restart
 `end_auction()` içine `_rebuild_auction_state_from_db()` eklendi: Redis state boşsa (TTL/crash) DB'deki `bids` kayıtlarından en son teklifi ve toplam bid_count'u yeniden oluşturur, ardından Redis'e yazar ve normal kapanış devam eder. Önceki tamamlanmış açık artırmaların teklifleri `ended_at` ile filtrelenir.
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-13 · Keyset Pagination — Feed + Listings + Logout Hive Clear
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** abbadb7e  
+**Staging testi:** servisler aktif, journal temiz ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Değişiklikler:
+- `GET /listings`: `cursor_at` + `cursor_id` keyset parametresi eklendi (additive); `page`/`offset` hâlâ çalışıyor
+- `GET /feed` ve `GET /feed/for-you`: `cursor` param eklendi (additive, ileriki kullanım için)
+- `GET /feed/recent`: zaten `max_id` cursor destekliyordu — değişiklik yok
+- Flutter `HomeState.lastMaxId`: loadMore artık `max_id` cursor kullanıyor (offset yerine)
+- Flutter `StorageService.clear()`: logout sırasında `homeCache` + `api_cache` Hive box'ları da temizleniyor
+- Flutter `homeCache` cacheVersion=2 kontrolü: versiyon uyumsuzluğunda cache otomatik temizleniyor
+
+**[PROD FARKI]:** Yok.

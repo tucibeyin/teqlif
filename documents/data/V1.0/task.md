@@ -918,7 +918,7 @@ Flutter (MVVM):
 - p95 < 200 ms
 - Eski `?page=2` isteği hâlâ çalışıyor (backward compat)
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: abbadb7e · tarih: 2026-09-22
 
 ---
 
@@ -2479,7 +2479,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
 | TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [x] |
 | **— ORTA ÖNCELIK —** | | | | |
-| TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
+| TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [x] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
 | TASK-yeni-N · Slim feed DTO *(TASK-15 ile aynı sprint)* | 🟡 P15c | Orta | 5.1 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P16a | Orta | 5.3 | [ ] |
