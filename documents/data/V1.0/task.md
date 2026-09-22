@@ -697,7 +697,7 @@ cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0)   # Paz
 
 **Node ops:** `sudo teqlif-restart`
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: ce92a44e · tarih: 2026-09-22
 
 ---
 

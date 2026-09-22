@@ -345,3 +345,25 @@ Değişiklikler:
 - W3 TTL: 1500s → 21600s; W5 TTL: 1800s → 21600s
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-10 · W2/W6/W7 ARQ Frekans Değişikliği
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** ce92a44e  
+**Staging testi:** servisler aktif ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Değişiklikler:
+- backfill_listing_embeddings_task: {0,30} → gece 02:00, 03:00 (W2)
+- train_swipe_live_als_task: günlük → Pazar 01:00 (W6)
+- train_feed_als_task: günlük → Pazar 01:30 (W7)
+
+**[PROD FARKI]:** Yok.
