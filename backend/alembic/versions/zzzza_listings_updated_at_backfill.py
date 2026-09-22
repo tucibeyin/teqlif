@@ -7,7 +7,7 @@ Create Date: 2026-09-22
 from alembic import op
 
 revision = "zzzza_listings_updated_at_backfi"
-down_revision = "zzzzz_listing_offers_status"
+down_revision = "zzzza_user_interests_unique"
 branch_labels = None
 depends_on = None
 
