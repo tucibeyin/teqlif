@@ -529,6 +529,24 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-18b · listings.updated_at Write Path Düzeltmesi
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 28c8e9d0  
+**Staging testi:** Migration çalıştı, NULL updated_at count = 0 ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && sudo teqlif-restart production
+```
+
+Migration otomatik çalışır (`alembic upgrade head`): `listings` tablosundaki NULL `updated_at` değerleri `created_at` ile doldurulur.
+
+**[PROD FARKI]:** Yok — migration ve model değişikliği her ortamda aynı.
+
+---
+
 ## TASK-18e · Flutter User Model — Sosyal URL Typed Alanlar
 
 **Staging tarihi:** 2026-09-22  

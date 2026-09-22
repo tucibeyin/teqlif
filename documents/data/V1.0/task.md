@@ -1849,7 +1849,7 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 **Test:**
 - İlan güncelle → `updated_at` NULL değil, şu anki zaman
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 28c8e9d0 · tarih: 2026-09-22
 
 ---
 
