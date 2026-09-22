@@ -296,3 +296,52 @@ sudo teqlif-restart
 ```
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-08 · MinIO Lifecycle Policy
+
+**Staging tarihi:** 2026-09-22  
+**Staging testi:** listings/365, stories/2, dm/14 ✅ (node3-staging)  
+
+**node1 adımları (Edge 1):**
+
+```bash
+mc alias ls  # alias adını doğrula (örn: node1-prod)
+mc ilm add --expiry-days 365 <alias>/teqlif/listings/
+mc ilm add --expiry-days 2   <alias>/teqlif/stories/
+mc ilm add --expiry-days 14  <alias>/teqlif-dm/
+```
+
+**Doğrulama:**
+```bash
+mc ilm ls <alias>/teqlif/listings/
+mc ilm ls <alias>/teqlif/stories/
+mc ilm ls <alias>/teqlif-dm/
+```
+
+**node4 adımları (Edge 2):** Aynı komutları node4 alias'ıyla tekrarla.
+
+**[PROD FARKI]:** Bucket adları `teqlif` ve `teqlif-dm` (staging: `teqlif-staging`, `teqlif-dm-staging`).
+
+---
+
+## TASK-09 · W1/W3/W4/W5 ARQ Frekans + 3 Bug Fix
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** f3f22bd9  
+**Staging testi:** worker.py + foryou_worker.py güncellendi  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Değişiklikler:
+- W1/W3/W4/W5 cron: 15dk/saatlik → günde 4x (00, 06, 12, 18)
+- W4 key fix: `feed:{uid}:foryou` LIST → `feed:foryou:{uid}` String
+- W3 TTL: 1500s → 21600s; W5 TTL: 1800s → 21600s
+
+**[PROD FARKI]:** Yok.

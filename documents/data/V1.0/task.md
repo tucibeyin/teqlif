@@ -651,7 +651,7 @@ cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30)
 
 **Node ops:** `sudo teqlif-restart`
 
-**Status:** [x] TAMAMLANDI · commit: (bir sonraki) · tarih: 2026-09-22
+**Status:** [x] TAMAMLANDI · commit: f3f22bd9 · tarih: 2026-09-22
 
 ---
 
