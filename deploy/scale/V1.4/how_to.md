@@ -487,6 +487,27 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-yeni-I · Bid DB-Redis Stale State Sync
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 54259752  
+**Staging testi:** Servis sağlıklı ✅ (race condition nadir, log'da gözlemlenmez)  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- `auction_redis_repo.py`: `update_bid_state()` helper eklendi
+- `auction_commands.py` `place_bid()`: `execute_bid()` ok==0 durumunda DB'den son teklif çekilip Redis senkronize ediliyor
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-B · user_interests UNIQUE constraint — subcategory dahil
 
 **Staging tarihi:** 2026-09-22  

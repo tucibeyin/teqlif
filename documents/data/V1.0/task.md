@@ -1173,6 +1173,8 @@ async def get_feed_page(
 
 ### TASK-yeni-I · P16c · 🟡 Bid DB-Redis Stale State Sync
 
+**[x] TAMAMLANDI · commit: 54259752 · tarih: 2026-09-22**
+
 **Plan:** Faz 3.4  
 **Kaynak:** Redis tutarlılık denetimi (R3)
 
@@ -2486,7 +2488,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-N · Slim feed DTO *(TASK-15 ile aynı sprint)* | 🟡 P15c | Orta | 5.1 | [ ] |
 | TASK-14 · Endpoint cache | 🟡 P16a | Orta | 5.3 | [ ] |
 | TASK-yeni-L · Like sayıları Redis counter | 🟡 P16b | Orta | 5.3 | [ ] |
-| TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P16c | Orta | 3.4 | [ ] |
+| TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P16c | Orta | 3.4 | [x] |
 | TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
 | TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
