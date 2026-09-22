@@ -526,7 +526,7 @@ Her tabloda `365 DAY` görünmeli.
 2. Her ALTER TABLE komutunu sırayla çalıştır, çıktısını paylaş
 3. `system.tables` sorgusu ile doğrula
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 8d654a89 · tarih: 2026-09-22
 
 ---
 
@@ -551,7 +551,7 @@ Görevin içindeki INTERVAL değerini 90 → 365 gün olarak güncelle.
 
 **Node ops:** Yok (restart yeterli)
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: (bir sonraki) · tarih: 2026-09-22
 
 ---
 

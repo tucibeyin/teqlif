@@ -338,7 +338,7 @@ async def cleanup_old_user_interactions_task(ctx: dict) -> None:
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
-                text("DELETE FROM user_interactions WHERE created_at < NOW() - INTERVAL '90 days'")
+                text("DELETE FROM user_interactions WHERE created_at < NOW() - INTERVAL '365 days'")
             )
             await db.commit()
             logger.info(
