@@ -1,5 +1,5 @@
-from typing import Optional
-from sqlalchemy import select, or_, func
+from typing import Optional, Tuple
+from sqlalchemy import select, or_, func, tuple_
 from datetime import datetime, timezone, timedelta
 from app.models.listing import Listing
 from app.models.user import User
@@ -31,6 +31,8 @@ class SearchListingsQuery:
         min_price: Optional[float] = None,
         max_price: Optional[float] = None,
         condition: Optional[str] = None,
+        cursor_at: Optional[datetime] = None,
+        cursor_id: Optional[int] = None,
     ) -> list:
         logger.info("[SearchListingsQuery] Başlatıldı | q=%s category=%s date_from=%s date_to=%s sort_by=%s", q, category, date_from, date_to, sort_by)
         
@@ -108,7 +110,13 @@ class SearchListingsQuery:
             else:
                 q_stmt = q_stmt.order_by(User.is_premium.desc(), Listing.created_at.desc())
 
-        q_stmt = q_stmt.limit(limit).offset(offset)
+        if cursor_at and cursor_id and sort_by in (None, "newest"):
+            q_stmt = q_stmt.where(
+                tuple_(Listing.created_at, Listing.id) < (cursor_at, cursor_id)
+            )
+            q_stmt = q_stmt.limit(limit)
+        else:
+            q_stmt = q_stmt.limit(limit).offset(offset)
             
         result = await db_session.execute(q_stmt)
         rows = result.all()

@@ -19,6 +19,7 @@ class HomeState {
   final bool isHesitatedLoading;
   final bool hasError;
   final ListingFilterState filter;
+  final int? lastMaxId;
 
   const HomeState({
     this.recentListings = const [],
@@ -30,6 +31,7 @@ class HomeState {
     this.isHesitatedLoading = false,
     this.hasError = false,
     this.filter = const ListingFilterState(),
+    this.lastMaxId,
   });
 
   bool get hasFilter => !filter.isEmpty;
@@ -45,6 +47,7 @@ class HomeState {
     bool? isHesitatedLoading,
     bool? hasError,
     ListingFilterState? filter,
+    int? lastMaxId,
   }) {
     return HomeState(
       recentListings: recentListings ?? this.recentListings,
@@ -56,6 +59,7 @@ class HomeState {
       isHesitatedLoading: isHesitatedLoading ?? this.isHesitatedLoading,
       hasError: hasError ?? this.hasError,
       filter: filter ?? this.filter,
+      lastMaxId: lastMaxId ?? this.lastMaxId,
     );
   }
 }
@@ -63,6 +67,8 @@ class HomeState {
 class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   static const _kCacheKeyFeed = 'home_feed_recent';
   static const _kCacheKeyHesitated = 'feed_hesitated';
+  static const _kCacheKeyVersion = 'home_cache_version';
+  static const _kCacheVersion = 2;
 
   @override
   FutureOr<HomeState> build() async {
@@ -75,11 +81,19 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   Future<void> _loadFromCache() async {
     try {
       final cacheBox = await Hive.openBox('homeCache');
+
+      final storedVersion = cacheBox.get(_kCacheKeyVersion) as int?;
+      if (storedVersion != _kCacheVersion) {
+        await cacheBox.clear();
+        await cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
+        return;
+      }
+
       final cachedFeed = cacheBox.get(_kCacheKeyFeed);
       final cachedHesitated = cacheBox.get(_kCacheKeyHesitated);
 
       final current = state.value ?? const HomeState();
-      
+
       List<dynamic> recent = current.recentListings;
       List<dynamic> hesitated = current.hesitatedListings;
       int totalP = current.totalPages;
@@ -150,16 +164,21 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
     if (resp.statusCode == 200) {
       final parsed = jsonDecode(resp.body);
-      final listings = parsed is List ? parsed : parsed['listings'] ?? [];
+      final listings = parsed is List ? parsed : (parsed['listings'] ?? []) as List<dynamic>;
       final totalP = parsed is List ? (listings.length < 20 ? 0 : 9999) : parsed['pagination']?['total_pages'] ?? 1;
+      final minId = listings.isNotEmpty
+          ? listings.map((e) => e['id'] as int).reduce((a, b) => a < b ? a : b)
+          : null;
 
       final cacheBox = await Hive.openBox('homeCache');
       cacheBox.put(_kCacheKeyFeed, resp.body);
+      cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
 
       state = AsyncValue.data(state.value!.copyWith(
         recentListings: listings,
         totalPages: totalP,
         currentPage: 0,
+        lastMaxId: minId,
         isLoading: false,
         hasError: false,
       ));
@@ -283,23 +302,31 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
       }
 
       final nextPage = current.currentPage + 1;
-      final resp = await http.get(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=$nextPage'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      final baseUrl = ref.read(apiClientProvider).config.baseUrl;
+      final uri = current.lastMaxId != null
+          ? Uri.parse('$baseUrl/feed/recent?max_id=${current.lastMaxId}')
+          : Uri.parse('$baseUrl/feed/recent?page=$nextPage');
+
+      final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
       if (resp.statusCode == 200) {
         final parsed = jsonDecode(resp.body);
-        final moreListings = parsed is List ? parsed : parsed['listings'] ?? [];
-        final newTotal = parsed is List ? (moreListings.length < 20 ? nextPage : 9999) : parsed['pagination']?['total_pages'] ?? current.totalPages;
+        final moreListings = (parsed is List ? parsed : (parsed['listings'] ?? [])) as List<dynamic>;
+        final newTotal = parsed is List
+            ? (moreListings.length < 20 ? nextPage : 9999)
+            : parsed['pagination']?['total_pages'] ?? current.totalPages;
 
         final existingIds = current.recentListings.map((e) => e['id']).toSet();
-        final uniqueMoreListings = moreListings.where((e) => !existingIds.contains(e['id'])).toList();
+        final uniqueMore = moreListings.where((e) => !existingIds.contains(e['id'])).toList();
+        final newMinId = uniqueMore.isNotEmpty
+            ? uniqueMore.map((e) => e['id'] as int).reduce((a, b) => a < b ? a : b)
+            : current.lastMaxId;
 
         state = AsyncValue.data(current.copyWith(
-          recentListings: [...current.recentListings, ...uniqueMoreListings],
+          recentListings: [...current.recentListings, ...uniqueMore],
           currentPage: nextPage,
           totalPages: newTotal,
+          lastMaxId: newMinId,
           isLoadingMore: false,
         ));
       } else {

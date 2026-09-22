@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -240,7 +241,17 @@ class StorageService {
     await Future.wait([
       _secureStorage.deleteAll(),
       SharedPreferences.getInstance().then((p) => p.clear()),
+      _clearHiveBoxes(),
     ]);
+  }
+
+  static Future<void> _clearHiveBoxes() async {
+    try {
+      final homeCache = await Hive.openBox('homeCache');
+      await homeCache.clear();
+      final apiCache = await Hive.openBox('api_cache');
+      await apiCache.clear();
+    } catch (_) {}
   }
 
 

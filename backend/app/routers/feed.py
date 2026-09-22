@@ -1,6 +1,6 @@
 import json
 import base64
-from typing import Literal
+from typing import Literal, Optional
 
 from app.core.logger import get_logger
 
@@ -30,6 +30,7 @@ router = APIRouter(prefix="/api/feed", tags=["feed"])
 async def get_feed(
     page: int = Query(default=0, ge=0, le=100),
     seed: str = Query(default="default", max_length=64),
+    cursor: Optional[int] = Query(default=None, description="Son görülen ilan ID'si (keyset pagination)"),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User | None = Depends(get_current_user_optional),
 ):
@@ -126,6 +127,7 @@ async def get_recent_mixed_feed(
 @router.get("/for-you")
 async def get_for_you_feed(
     page: int = Query(default=0, ge=0, le=25),
+    cursor: Optional[int] = Query(default=None, description="Son görülen ilan ID'si (keyset pagination)"),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):

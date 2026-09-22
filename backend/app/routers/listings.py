@@ -74,6 +74,8 @@ async def get_listings(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     condition: Optional[str] = None,
+    cursor_at: Optional[str] = None,
+    cursor_id: Optional[int] = None,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -91,6 +93,12 @@ async def get_listings(
             date_to=date_to,
         )
     else:
+        parsed_cursor_at = None
+        if cursor_at:
+            try:
+                parsed_cursor_at = datetime.fromisoformat(cursor_at.replace("Z", "+00:00"))
+            except ValueError:
+                pass
         return await SearchListingsQuery().execute(
             db_session=uow.session,
             user_id=user_id,
@@ -107,6 +115,8 @@ async def get_listings(
             min_price=min_price,
             max_price=max_price,
             condition=condition,
+            cursor_at=parsed_cursor_at,
+            cursor_id=cursor_id,
         )
 
 
