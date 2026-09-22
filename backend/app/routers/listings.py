@@ -31,7 +31,7 @@ from app.use_cases.listings.queries.get_listing_offers import GetListingOffersQu
 from app.use_cases.listings.queries.get_reactivation_cost import GetReactivationCostQuery
 from app.use_cases.listings.queries.listing_utils import _parse_image_urls
 from app.services.like_service import LikeService
-from app.schemas.listing import ListingOfferCreate
+from app.schemas.listing import ListingOfferCreate, ListingOut, ListingDetailOut
 from app.core.task_queue import get_pool
 from app.core.rate_limit import limiter
 from app.core.exceptions import (
@@ -58,7 +58,7 @@ async def _optional_user_id(
     return decode_token(credentials.credentials)
 
 
-@router.get("")
+@router.get("", response_model=list[ListingOut])
 async def get_listings(
     request: Request,
     user_id: Optional[int] = None,
@@ -174,7 +174,7 @@ async def get_my_listings(
     )
 
 
-@router.get("/{listing_id:int}")
+@router.get("/{listing_id:int}", response_model=ListingDetailOut)
 async def get_listing(
     request: Request,
     listing_id: int,

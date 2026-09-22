@@ -12,6 +12,7 @@ from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword, ConsentOut, ConsentUpdate
+from app.schemas.commerce import InitOut, CommerceItemOut, CommerceSaleOut
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, get_current_user_optional, set_auth_cookies, clear_auth_cookies, invalidate_user_session_cache
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
 from app.utils.i18n import _get_t, _msg, get_locale
@@ -338,7 +339,7 @@ async def me(current_user: User = Depends(get_current_user), db: AsyncSession = 
     return current_user
 
 
-@router.get("/init")
+@router.get("/init", response_model=InitOut)
 async def init_context(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -654,7 +655,7 @@ async def my_sales(
     ]
 
 
-@router.get("/me/commerce/purchases")
+@router.get("/me/commerce/purchases", response_model=list[CommerceItemOut])
 async def my_commerce_purchases(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -747,7 +748,7 @@ async def my_commerce_purchases(
     return items[:50]
 
 
-@router.get("/me/commerce/sales")
+@router.get("/me/commerce/sales", response_model=list[CommerceSaleOut])
 async def my_commerce_sales(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
