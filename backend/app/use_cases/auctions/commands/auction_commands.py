@@ -28,7 +28,7 @@ from app.core.logger import fire_and_forget
 
 from fastapi import WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.models.user import User
 from app.models.stream import LiveStream
@@ -143,6 +143,53 @@ class AuctionCommands:
             raise BadRequestException(code="LISTING_NOT_ACTIVE")
         return stream
 
+    # ── Redis state recovery ─────────────────────────────────────────────────
+    async def _rebuild_auction_state_from_db(self, stream_id: int) -> Optional[Dict[str, str]]:
+        """Redis state kaybolduğunda DB'deki bid kayıtlarından auction state'ini yeniden oluşturur."""
+        stream = (await self.uow.session.execute(
+            select(LiveStream).where(LiveStream.id == stream_id)
+        )).scalar_one_or_none()
+        if not stream or not stream.is_live:
+            return None
+
+        last_auction = (await self.uow.session.execute(
+            select(Auction)
+            .where(Auction.stream_id == stream_id, Auction.status == "completed")
+            .order_by(Auction.ended_at.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        bid_filter = [Bid.stream_id == stream_id]
+        if last_auction and last_auction.ended_at:
+            bid_filter.append(Bid.created_at > last_auction.ended_at)
+
+        bid_count = (await self.uow.session.execute(
+            select(func.count()).select_from(Bid).where(*bid_filter)
+        )).scalar() or 0
+
+        top_bid = None
+        if bid_count > 0:
+            top_bid = (await self.uow.session.execute(
+                select(Bid).where(*bid_filter).order_by(Bid.amount.desc()).limit(1)
+            )).scalar_one_or_none()
+
+        logger.warning(
+            "[AÇIK ARTIRMA] Redis state yok — DB'den yeniden oluşturuldu | stream_id=%s bid_count=%s",
+            stream_id, bid_count,
+        )
+        return {
+            "status": "active",
+            "item_name": "",
+            "start_price": str(float(top_bid.amount)) if top_bid else "0",
+            "buy_it_now_price": "",
+            "current_bid": str(float(top_bid.amount)) if top_bid else "0",
+            "current_bidder_id": str(top_bid.bidder_id) if top_bid else "",
+            "current_bidder_name": top_bid.bidder_username if top_bid else "",
+            "bid_count": str(bid_count),
+            "host_ip": "",
+            "listing_id": "",
+        }
+
     # ── Durum ────────────────────────────────────────────────────────────────
 
     # ── Başlat ───────────────────────────────────────────────────────────────
@@ -233,11 +280,14 @@ class AuctionCommands:
         self, stream_id: int, user: User, proof_image_url: Optional[str] = None, system_end: bool = False
     ):
         data = await self.redis_repo.get_state(stream_id)
-        
+
         if not data:
-            if system_end:
-                return  # Sistem çağırdıysa sessizce dön
-            raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+            data = await self._rebuild_auction_state_from_db(stream_id)
+            if not data:
+                if system_end:
+                    return
+                raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+            await self.redis_repo.set_state(stream_id, data)
 
         winner_id_str = data.get("current_bidder_id", "")
         final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))
