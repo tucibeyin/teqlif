@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS user_events
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (timestamp, item_id)
-TTL timestamp + INTERVAL 30 DAY
+TTL timestamp + INTERVAL 365 DAY
 SETTINGS index_granularity = 8192
 """
 
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS feed_analytics
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp)
-TTL timestamp + INTERVAL 30 DAY
+TTL timestamp + INTERVAL 365 DAY
 """
 
 _ALTER_FEED_ANALYTICS = [
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS search_events
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (category, timestamp)
-TTL timestamp + INTERVAL 30 DAY
+TTL timestamp + INTERVAL 365 DAY
 """
 
 _ALTER_SEARCH_EVENTS = [
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS swipe_live_events
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp)
-TTL timestamp + INTERVAL 30 DAY
+TTL timestamp + INTERVAL 365 DAY
 SETTINGS index_granularity = 8192
 """
 
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS direct_sale_events
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)
 ORDER BY (sale_id, created_at, event_type)
-TTL created_at + INTERVAL 180 DAY
+TTL created_at + INTERVAL 365 DAY
 SETTINGS index_granularity = 8192
 """
 
