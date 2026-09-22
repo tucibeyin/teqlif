@@ -3656,8 +3656,7 @@ class WorkerSettings:
         cron(cleanup_old_user_interactions_task, weekday=1, hour=4, minute=0),
         # Her Perşembe 04:00 — 10 yıldan eski tamamlanmış stream viewer kayıtlarını temizle
         cron(cleanup_old_stream_viewers_task, weekday=3, hour=4, minute=0),
-        # GC3: listing_offers — TASK-yeni-A (status kolonu) tamamlanınca aktifleştir:
-        # cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
+        cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
         cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0),
         cron(cleanup_old_streams_task, day=1, hour=6, minute=0),
     ]
