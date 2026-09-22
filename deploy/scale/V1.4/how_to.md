@@ -529,6 +529,28 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-yeni-D · Search Alert Trigger + Flutter Feed Stats
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 275826a1  
+**Staging testi:** `cron:check_search_alerts_task` worker başlangıç listesinde görüldü ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- `worker.py`: `check_search_alerts_task` — 15dk cron, yeni ilanları aktif alert'larla eşleştirip push bildirimi gönderir
+- `listing_analytics_view_model.dart`: `feedStatsProvider` (FutureProvider.family)
+- `listing_analytics_screen.dart`: `_FeedStatsCard` widget — premium kullanıcıya özel, 7/30/90 günlük seçici
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-C · DM Raporlama — flag_reason Aktivasyonu
 
 **Staging tarihi:** 2026-09-22  

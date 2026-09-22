@@ -1674,7 +1674,7 @@ Etkilenen dosyalar:
 - Premium kullanıcı feed stats ekranı açılıyor, 7/30/90 günlük veri görünüyor
 - Normal kullanıcı için premium engeli gösteriliyor
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 275826a1 · tarih: 2026-09-22
 
 ---
 
@@ -2478,7 +2478,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [x] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [x] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [x] |
-| TASK-yeni-D · Search alert trigger + Flutter feed stats | 🟡 P5f | Kritik | 2.2 | [ ] |
+| TASK-yeni-D · Search alert trigger + Flutter feed stats | 🟡 P5f | Kritik | 2.2 | [x] |
 | **— YÜKSEK ÖNCELIK —** | | | | |
 | TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |
 | TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [ ] |
