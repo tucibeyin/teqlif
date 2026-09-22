@@ -150,3 +150,72 @@ psql -h 127.0.0.1 -p 5433 -U tucibeyin -d teqlif -c "SELECT count(*) FROM pg_sta
 ```
 
 ---
+
+## TASK-01 · auction.status default="active"
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** bef76ddd  
+**Staging testi:** alembic upgrade head çalıştı, status default aktif  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzv_auction_status_default`) otomatik çalışır:
+- `auctions.status DEFAULT 'active'`
+- `winner_id IS NULL AND ended_at IS NULL` olan `status='completed'` kayıtlar → `'active'`
+
+**[PROD FARKI]:** Yok.
+
+---
+
+## TASK-03 · live_stream_viewers GC cron
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 6a427cb6  
+**Staging testi:** worker.py syntax OK, servis aktif  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+ARQ worker yeniden başlayınca `cleanup_old_stream_viewers_task` cron kaydı aktif olur (Çarşamba 04:00).
+
+**[PROD FARKI]:** Yok.
+
+---
+
+## TASK-04 · Float → Numeric(12,2) finansal kolonlar
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 3b99034d  
+**Staging testi:** `\d listings | grep price` → `numeric(12,2)` ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzw_float_to_numeric`) otomatik çalışır — 16 ALTER TABLE:
+- listings (price, buy_it_now_price, last_sold_price, last_start_price)
+- auctions (start_price, buy_it_now_price, final_price)
+- bids (amount), purchases (price), listing_offers (amount)
+- search_alerts (max_price), users (max_budget)
+- direct_sales (price), direct_sale_orders (unit_price)
+- exchange_rates (usd_try → Numeric(10,4), eur_try → Numeric(10,4))
+
+**Doğrulama:**
+```bash
+psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listings" | grep price
+# Beklenen: price | numeric(12,2)
+```
+
+**[PROD FARKI]:** psql portu 5433 (PostgreSQL PgBouncer arkasında).
