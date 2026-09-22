@@ -5,7 +5,7 @@ from app.models.listing import Listing
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.models.enums import ListingStatus
-from app.use_cases.listings.queries.listing_utils import _parse_image_urls
+from app.use_cases.listings.queries.listing_utils import _parse_image_urls, _card_dict
 from app.services.like_service import LikeService
 from app.core.logger import get_logger
 
@@ -126,24 +126,22 @@ class SearchListingsQuery:
 
         return [
             {
-                "id": listing.id,
-                "title": listing.title,
-                "description": listing.description,
-                "price": listing.price,
+                **_card_dict(
+                    listing, user,
+                    likes_count=counts.get(listing.id, 0),
+                    is_liked=listing.id in liked_set,
+                    is_favorited=listing.id in liked_set,
+                ),
+                # Search sonuçlarına özgü ek alanlar (feed kartında olmayan)
                 "category": listing.category,
-                "location": listing.location,
-                "image_url": listing.image_url,
+                "subcategory": listing.subcategory,
+                "description": listing.description,
                 "image_urls": _parse_image_urls(listing.image_urls),
-                "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
                 "created_at": listing.created_at.isoformat() if listing.created_at else None,
-                "likes_count": counts.get(listing.id, 0),
-                "is_liked": listing.id in liked_set,
-                "is_favorited": listing.id in liked_set,
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "is_premium": user.is_premium
-                }
+                "location": listing.location,
+                "is_highlight": listing.is_highlight,
+                "active_room_id": listing.active_room_id,
+                "video_url": listing.video_url,
             }
             for listing, user in rows
         ]

@@ -30,7 +30,7 @@ from app.models.enums import ListingStatus
 from app.database_clickhouse import get_clickhouse_client
 from app.models.listing import Listing
 from app.models.user import User
-from app.use_cases.listings.queries.listing_utils import _row_dict
+from app.use_cases.listings.queries.listing_utils import _card_dict
 from app.services.like_service import LikeService
 from app.utils.redis_client import get_redis
 
@@ -450,6 +450,6 @@ async def _hydrate(user_id: int, listing_ids: list[int], db: AsyncSession) -> li
         if lid not in rows:
             continue
         listing, user = rows[lid]
-        result.append(_row_dict(listing, user, counts.get(lid, 0), lid in liked_set))
+        result.append(_card_dict(listing, user, counts.get(lid, 0), lid in liked_set))
 
     return result
