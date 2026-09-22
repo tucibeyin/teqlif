@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import ListingStatus
 from app.utils.redis_client import get_redis
-from app.use_cases.listings.queries.listing_utils import _row_dict, _fetch_seller_meta
+from app.use_cases.listings.queries.listing_utils import _card_dict, _fetch_seller_meta
 from app.services.like_service import LikeService
 from app.services.ml.feed_als_ml import get_als_scores
 from app.models.listing import Listing
@@ -199,13 +199,10 @@ class FeedQueries:
             if lid not in rows:
                 continue
             listing, user = rows[lid]
-            result.append(_row_dict(
+            result.append(_card_dict(
                 listing, user, counts.get(lid, 0), lid in liked_set,
                 seller_badge=badge_map.get(user.id),
                 is_trending=listing.id in trending_lids,
-                impression_count=impression_map.get(lid, 0) if user.id == user_id else None,
-                seller_trust_score=trust_map.get(user.id),
-                seller_influence_rank=influence_map.get(user.id),
             ))
 
         # Görüldü olarak işaretle (arka planda, hata olursa sessizce geç)
@@ -683,13 +680,10 @@ class FeedQueries:
             if lid not in rows:
                 continue
             listing, user = rows[lid]
-            result.append(_row_dict(
+            result.append(_card_dict(
                 listing, user, counts.get(lid, 0), lid in liked_set,
                 seller_badge=badge_map_fy.get(user.id),
                 is_trending=listing.id in trending_lids_fy,
-                impression_count=impression_map.get(lid, 0) if user.id == user_id else None,
-                seller_trust_score=trust_map_fy.get(user.id),
-                seller_influence_rank=influence_map_fy.get(user.id),
             ))
 
         # Organik ilanları listing_impressions'a yaz (sponsored hariç)
@@ -1180,14 +1174,12 @@ class FeedQueries:
         badge_map_sp, trending_cats_sp, trending_lids_sp, trust_map_sp, influence_map_sp = await _fetch_seller_meta(sponsor_uids)
 
         return [
-            _row_dict(
+            _card_dict(
                 listing, user, 0, False,
                 is_sponsored=True,
                 campaign_id=campaign.id,
                 seller_badge=badge_map_sp.get(user.id),
                 is_trending=listing.id in trending_lids_sp,
-                seller_trust_score=trust_map_sp.get(user.id),
-                seller_influence_rank=influence_map_sp.get(user.id),
             )
             for campaign, listing, user in selected_rows[:n_slots]
         ]
@@ -1351,11 +1343,9 @@ class FeedQueries:
         badge_map_r, trending_cats_r, trending_lids_r, trust_map_r, influence_map_r = await _fetch_seller_meta(recent_uids)
 
         result = [
-            _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
-                      seller_badge=badge_map_r.get(user.id),
-                      is_trending=listing.id in trending_lids_r,
-                      seller_trust_score=trust_map_r.get(user.id),
-                      seller_influence_rank=influence_map_r.get(user.id))
+            _card_dict(listing, user, counts.get(lid, 0), lid in liked_set,
+                       seller_badge=badge_map_r.get(user.id),
+                       is_trending=listing.id in trending_lids_r)
             for lid in base_ids
             if lid in rows
             for listing, user in [rows[lid]]
@@ -1454,11 +1444,9 @@ class FeedQueries:
         badge_map_i, trending_cats_i, trending_lids_i, trust_map_i, influence_map_i = await _fetch_seller_meta(interest_uids)
 
         return [
-            _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
-                      seller_badge=badge_map_i.get(user.id),
-                      is_trending=listing.id in trending_lids_i,
-                      seller_trust_score=trust_map_i.get(user.id),
-                      seller_influence_rank=influence_map_i.get(user.id))
+            _card_dict(listing, user, counts.get(lid, 0), lid in liked_set,
+                       seller_badge=badge_map_i.get(user.id),
+                       is_trending=listing.id in trending_lids_i)
             for lid in ids
             if lid in rows
             for listing, user in [rows[lid]]

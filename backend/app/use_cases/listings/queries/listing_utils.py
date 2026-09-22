@@ -73,6 +73,44 @@ def _parse_image_urls(image_urls_raw) -> list:
         return []
 
 
+def _card_dict(
+    listing: Listing,
+    user: User,
+    likes_count: int = 0,
+    is_liked: bool = False,
+    is_sponsored: bool = False,
+    campaign_id: Optional[int] = None,
+    seller_badge: Optional[str] = None,
+    is_trending: bool = False,
+    is_favorited: bool = False,
+) -> dict:
+    """Feed kartı için slim payload — detay ekranı _row_dict kullanır."""
+    return {
+        "id": listing.id,
+        "title": listing.title,
+        "price": listing.price,
+        "image_url": listing.image_url,
+        "thumbnail_url": listing.thumbnail_url,
+        "province": listing.province,
+        "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
+        "is_highlight": listing.is_highlight,
+        "likes_count": likes_count,
+        "is_liked": is_liked or is_favorited,
+        "is_favorited": is_favorited or is_liked,
+        "is_sponsored": is_sponsored,
+        "campaign_id": campaign_id,
+        "is_trending": is_trending,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "avatar_url": user.profile_image_url,
+            "is_premium": user.is_premium,
+            "is_verified": user.is_verified,
+            "badge": seller_badge,
+        },
+    }
+
+
 def _row_dict(
 
     listing: Listing,
