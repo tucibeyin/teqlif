@@ -508,6 +508,27 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-15 + TASK-yeni-N · Feed N+1 Doğrulaması + Slim Feed DTO
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** bda4fa52  
+**Staging testi:** Feed keys `_card_dict` şemasıyla eşleşti ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- TASK-15: Tüm feed query'lerinde JOIN zaten mevcuttu, N+1 yok — doğrulandı.
+- TASK-yeni-N: `listing_utils.py`'ye `_card_dict()` eklendi; `feed_queries.py` 5 `_row_dict` → `_card_dict`. Feed payload ~30+ → 15 alana indirildi (`description`, `extra_fields`, `brand`, `trust_score` vb. kart görünümünde kaldırıldı).
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-B · user_interests UNIQUE constraint — subcategory dahil
 
 **Staging tarihi:** 2026-09-22  

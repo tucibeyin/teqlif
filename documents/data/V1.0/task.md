@@ -1122,6 +1122,8 @@ await redis.delete(
 
 ### TASK-15 · P15 · 🟡 Feed N+1 Düzeltmesi
 
+**[x] TAMAMLANDI · commit: bda4fa52 · tarih: 2026-09-22**
+
 **Plan:** Faz 5.1  
 **Etkilenen dosyalar:**
 - `backend/app/use_cases/listings/queries/get_swipe_feed.py`
@@ -2279,6 +2281,8 @@ op.execute("ALTER INDEX ix_tuci_transactions_user_created RENAME TO ix_teqlik_tr
 
 ### TASK-yeni-N · P15c · 🟡 Ağ Katmanı Lightweight — Slim Feed DTO
 
+**[x] TAMAMLANDI · commit: bda4fa52 · tarih: 2026-09-22**
+
 **Plan:** Faz 5.1 — **TASK-15 ile aynı sprint** (aynı dosyalar: `listing_utils.py`, `get_swipe_feed.py`).  
 **Hedef:** Listing feed payload boyutunu %30-40 azalt; kart görünümünde gereksiz alanlar gönderilmesin.
 
@@ -2484,8 +2488,8 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [x] |
 | **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [x] |
-| TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
-| TASK-yeni-N · Slim feed DTO *(TASK-15 ile aynı sprint)* | 🟡 P15c | Orta | 5.1 | [ ] |
+| TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [x] |
+| TASK-yeni-N · Slim feed DTO *(TASK-15 ile aynı sprint)* | 🟡 P15c | Orta | 5.1 | [x] |
 | TASK-14 · Endpoint cache | 🟡 P16a | Orta | 5.3 | [ ] |
 | TASK-yeni-L · Like sayıları Redis counter | 🟡 P16b | Orta | 5.3 | [ ] |
 | TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P16c | Orta | 3.4 | [x] |
