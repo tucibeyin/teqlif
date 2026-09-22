@@ -388,6 +388,40 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Eski Stream Viewer Kayıtlarını Temizle ─────────────────────────────
+
+async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
+    """
+    Her Perşembe 04:00'da çalışır; 10 yıldan eski tamamlanmış izleyici kayıtlarını siler.
+
+    left_at IS NOT NULL filtresi zorunlu — aktif izleyicileri silmemek için.
+    Retention: 10 yıl (3650 gün) — uzun tutulmasının nedeni fraud/analitik sorguları.
+    """
+    try:
+        from app.database import AsyncSessionLocal, engine
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                text(
+                    "DELETE FROM live_stream_viewers"
+                    " WHERE left_at IS NOT NULL"
+                    " AND joined_at < NOW() - INTERVAL '3650 days'"
+                )
+            )
+            await db.commit()
+            logger.info(
+                "[Worker] Stream viewer cleanup tamamlandı | silinen=%d", result.rowcount
+            )
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE live_stream_viewers"))
+            logger.info("[Worker] VACUUM ANALYZE live_stream_viewers tamamlandı")
+    except Exception as exc:
+        logger.error("[Worker] Stream viewer cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Gizlenmiş Mesajları Temizle ────────────────────────────────────────
 
 async def cleanup_hidden_messages_task(ctx: dict) -> None:
@@ -3551,6 +3585,8 @@ class WorkerSettings:
         cron(compute_influence_scores_task, weekday=6, hour=5, minute=30),
         # Her Salı 04:00 — 90 günden eski user_interactions temizle + VACUUM
         cron(cleanup_old_user_interactions_task, weekday=1, hour=4, minute=0),
+        # Her Perşembe 04:00 — 10 yıldan eski tamamlanmış stream viewer kayıtlarını temizle
+        cron(cleanup_old_stream_viewers_task, weekday=3, hour=4, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
