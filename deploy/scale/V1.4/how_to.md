@@ -529,6 +529,31 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-14 · Endpoint Cache Stratejisi
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 64b74338  
+**Staging testi:** `redis-cli KEYS "cqrs:*"` → `cqrs:app_config:99914b932bd3` ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- `GET /listings/{id}`: `cache_get/cache_set`, ns=`listing:{id}`, params=`{uid}`, TTL=60s
+- `GET /users/{username}`: `cache_get/cache_set`, ns=`user_profile`, TTL=300s
+- `GET /config/version`: `cache_get/cache_set`, ns=`app_config`, TTL=600s
+- `UpdateListingCommand`: commit sonrası `invalidate_cache(f"listing:{listing_id}")`
+- `DeleteListingCommand`: commit sonrası `invalidate_cache(f"listing:{listing_id}")`
+- `PATCH /auth/me`: commit sonrası `invalidate_cache("user_profile")`
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-L · Like Sayıları Redis Counter
 
 **Staging tarihi:** 2026-09-22  

@@ -940,7 +940,7 @@ Flutter (MVVM):
 | `GET /app-config` | 10 dk | SCHEMA_VERSIONED | bump_schema_version() |
 | `GET /listings/feed` | 30 sn | ALGORITHMIC | TTL expire |
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 64b74338 · tarih: 2026-09-22
 
 ---
 
@@ -2492,7 +2492,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [x] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [x] |
 | TASK-yeni-N · Slim feed DTO *(TASK-15 ile aynı sprint)* | 🟡 P15c | Orta | 5.1 | [x] |
-| TASK-14 · Endpoint cache | 🟡 P16a | Orta | 5.3 | [ ] |
+| TASK-14 · Endpoint cache | 🟡 P16a | Orta | 5.3 | [x] |
 | TASK-yeni-L · Like sayıları Redis counter | 🟡 P16b | Orta | 5.3 | [x] |
 | TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P16c | Orta | 3.4 | [x] |
 | TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
