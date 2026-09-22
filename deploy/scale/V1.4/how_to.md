@@ -433,6 +433,34 @@ sudo teqlif-restart
 
 ---
 
+## TASK-yeni-E · BigInteger PK + DM Retention
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 464de604  
+**Staging testi:** `direct_messages.id = bigint` ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzb_bigint_pk_dm_notifications`) otomatik çalışır:
+- `direct_messages.id` INT4 → BIGINT
+- `notifications.id` INT4 → BIGINT
+- DM cleanup genişletildi: `is_hidden+60gün` korundu + `is_read=FALSE+365gün` eklendi
+
+**Doğrulama:**
+```bash
+psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "SELECT data_type FROM information_schema.columns WHERE table_name='direct_messages' AND column_name='id'"
+# Beklenen: bigint
+```
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-B · user_interests UNIQUE constraint — subcategory dahil
 
 **Staging tarihi:** 2026-09-22  

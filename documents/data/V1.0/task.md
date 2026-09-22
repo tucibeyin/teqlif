@@ -1292,7 +1292,7 @@ cron(cleanup_old_direct_messages_task, weekday=1, hour=3, minute=0)  # Pazartesi
 
 **Node ops:** `alembic upgrade head` — staging önce.
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 464de604 · tarih: 2026-09-22
 
 ---
 
@@ -2463,7 +2463,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
 | TASK-04 · Float→Numeric(12,2) | 🔴 P4 | Kritik | 2.1 | [ ] |
 | TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
-| TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [ ] |
+| TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [x] |
 | TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [ ] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [x] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [x] |
