@@ -38,6 +38,7 @@ from app.use_cases.messages.commands.accept_message_request_command import Accep
 from app.use_cases.messages.commands.decline_message_request_command import DeclineMessageRequestCommand
 from app.use_cases.messages.commands.dismiss_message_request_command import DismissMessageRequestCommand
 from app.use_cases.messages.commands.mark_messages_read_command import MarkMessagesReadCommand
+from app.use_cases.messages.commands.flag_message import FlagMessageCommand
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -186,6 +187,18 @@ async def delete_message(
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     await DeleteMessageCommand(uow).execute(message_id, current_user.id, scope)
+
+
+@router.post("/{message_id}/flag", status_code=204)
+@limiter.limit("20/minute", key_func=get_user_id_or_ip)
+async def flag_message(
+    request: Request,
+    message_id: int,
+    reason: str = Query(..., pattern="^(spam|harassment|inappropriate|scam|other)$"),
+    current_user: User = Depends(get_current_user),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    await FlagMessageCommand(uow).execute(message_id, reason, current_user.id)
 
 
 @router.delete("/conversation/{other_user_id}", status_code=204)

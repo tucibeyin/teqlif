@@ -2203,6 +2203,115 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     }
   }
 
+  Future<void> _showMessageActions(int messageId, {required bool isSender, required String? createdAtStr}) async {
+    final loc = ref.read(localizationProvider);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 4),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(loc.tOr('msgDelete', 'Sil')),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+            if (!isSender)
+              ListTile(
+                leading: const Icon(Icons.flag_outlined, color: Colors.red),
+                title: Text(
+                  loc.tOr('msgReport', 'Raporla'),
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () => Navigator.pop(ctx, 'flag'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(loc.t('btnCancel')),
+              onTap: () => Navigator.pop(ctx, null),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    if (action == 'delete') {
+      await _deleteMessage(messageId, isSender: isSender, createdAtStr: createdAtStr);
+    } else if (action == 'flag') {
+      await _flagMessage(messageId);
+    }
+  }
+
+  Future<void> _flagMessage(int messageId) async {
+    final loc = ref.read(localizationProvider);
+    final reasons = ['spam', 'harassment', 'inappropriate', 'scam', 'other'];
+    final labels = {
+      'spam': loc.tOr('flagReasonSpam', 'Spam'),
+      'harassment': loc.tOr('flagReasonHarassment', 'Taciz'),
+      'inappropriate': loc.tOr('flagReasonInappropriate', 'Uygunsuz içerik'),
+      'scam': loc.tOr('flagReasonScam', 'Dolandırıcılık'),
+      'other': loc.tOr('flagReasonOther', 'Diğer'),
+    };
+
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                loc.tOr('flagMessageTitle', 'Mesajı Raporla'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            for (final r in reasons)
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: Text(labels[r]!),
+                onTap: () => Navigator.pop(ctx, r),
+              ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(loc.t('btnCancel')),
+              onTap: () => Navigator.pop(ctx, null),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (reason == null || !mounted) return;
+    final ok = await ref.read(notificationServiceProvider).flagMessage(messageId, reason);
+    if (!mounted) return;
+    if (ok) {
+      TeqSnackBar.show(message: loc.tOr('flagMessageSuccess', 'Mesaj raporlandı'));
+    } else {
+      TeqSnackBar.show(message: loc.tOr('flagMessageFailed', 'Raporlama başarısız'));
+    }
+  }
+
   Future<void> _deleteMessage(int messageId, {required bool isSender, required String? createdAtStr}) async {
     final loc = ref.read(localizationProvider);
 
@@ -2508,7 +2617,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                         : AlignmentDirectional.centerStart,
                                     child: GestureDetector(
                                       onLongPress: msgId > 0
-                                          ? () => _deleteMessage(
+                                          ? () => _showMessageActions(
                                                 msgId,
                                                 isSender: isMe,
                                                 createdAtStr: msg['created_at'] as String?,

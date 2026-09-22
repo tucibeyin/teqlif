@@ -139,6 +139,22 @@ class NotificationService {
     }
   }
 
+  /// Mesajı raporla — hata durumunda false döner.
+  Future<bool> flagMessage(int messageId, String reason) async {
+    try {
+      await _api.call(
+        () async => http.post(
+          Uri.parse('${_api.config.baseUrl}/messages/$messageId/flag?reason=$reason'),
+          headers: await _headers(),
+        ),
+      );
+      return true;
+    } catch (e) {
+      LoggerService.instance.warning('NotificationService', 'Mesaj raporlanamadı: $e');
+      return false;
+    }
+  }
+
   /// Konuşmayı sil — hata durumunda false döner.
   Future<bool> deleteConversation(int otherUserId) async {
     try {
