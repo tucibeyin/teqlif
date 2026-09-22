@@ -14,6 +14,13 @@ class User {
   final bool isPremium;
   final String? planType;
   final bool onboardingCompleted;
+  final String? websiteUrl;
+  final String? instagramUrl;
+  final String? kickUrl;
+  final String? twitchUrl;
+  final String? facebookUrl;
+  final String? youtubeUrl;
+  final String? tiktokUrl;
 
   User({
     required this.id,
@@ -31,6 +38,13 @@ class User {
     this.isPremium = false,
     this.planType,
     this.onboardingCompleted = false,
+    this.websiteUrl,
+    this.instagramUrl,
+    this.kickUrl,
+    this.twitchUrl,
+    this.facebookUrl,
+    this.youtubeUrl,
+    this.tiktokUrl,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -50,6 +64,13 @@ class User {
       isPremium: json['is_premium'] as bool? ?? false,
       planType: json['plan_type'] as String?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
+      websiteUrl: json['website_url'] as String?,
+      instagramUrl: json['instagram_url'] as String?,
+      kickUrl: json['kick_url'] as String?,
+      twitchUrl: json['twitch_url'] as String?,
+      facebookUrl: json['facebook_url'] as String?,
+      youtubeUrl: json['youtube_url'] as String?,
+      tiktokUrl: json['tiktok_url'] as String?,
     );
   }
 }

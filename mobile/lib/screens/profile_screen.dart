@@ -58,6 +58,7 @@ import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
 import '../models/enums.dart';
+import '../models/user.dart';
 import 'faq_screen.dart';
 import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -2306,49 +2307,30 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
   @override
   void initState() {
     super.initState();
+    final u = widget.user != null ? User.fromJson(widget.user!) : null;
     _nameCtrl = TextEditingController(text: widget.user?['full_name'] ?? '');
     _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
     _bioCtrl = TextEditingController(
       text: widget.user?['bio'] as String? ?? '',
     );
-    _linkCtrl = TextEditingController(
-      text: widget.user?['website_url'] as String? ?? '',
-    );
+    _linkCtrl = TextEditingController(text: u?.websiteUrl ?? '');
     _instagramCtrl = TextEditingController(
-      text: _stripPrefix(
-        widget.user?['instagram_url'] as String? ?? '',
-        'https://instagram.com/',
-      ),
+      text: _stripPrefix(u?.instagramUrl ?? '', 'https://instagram.com/'),
     );
     _kickCtrl = TextEditingController(
-      text: _stripPrefix(
-        widget.user?['kick_url'] as String? ?? '',
-        'https://kick.com/',
-      ),
+      text: _stripPrefix(u?.kickUrl ?? '', 'https://kick.com/'),
     );
     _twitchCtrl = TextEditingController(
-      text: _stripPrefix(
-        widget.user?['twitch_url'] as String? ?? '',
-        'https://twitch.tv/',
-      ),
+      text: _stripPrefix(u?.twitchUrl ?? '', 'https://twitch.tv/'),
     );
     _facebookCtrl = TextEditingController(
-      text: _stripPrefix(
-        widget.user?['facebook_url'] as String? ?? '',
-        'https://facebook.com/',
-      ),
+      text: _stripPrefix(u?.facebookUrl ?? '', 'https://facebook.com/'),
     );
     _youtubeCtrl = TextEditingController(
-      text: _stripPrefix(
-        widget.user?['youtube_url'] as String? ?? '',
-        'https://youtube.com/@',
-      ),
+      text: _stripPrefix(u?.youtubeUrl ?? '', 'https://youtube.com/@'),
     );
     _tiktokCtrl = TextEditingController(
-      text: _stripPrefix(
-        widget.user?['tiktok_url'] as String? ?? '',
-        'https://tiktok.com/@',
-      ),
+      text: _stripPrefix(u?.tiktokUrl ?? '', 'https://tiktok.com/@'),
     );
     _profileImageUrl = widget.user?['profile_image_url'] as String?;
     _usernameCtrl.addListener(_onUsernameChanged);
