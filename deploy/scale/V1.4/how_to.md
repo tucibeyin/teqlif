@@ -411,3 +411,22 @@ sudo teqlif-restart
 - GC3 (listing_offers): TASK-yeni-A tamamlanınca worker.py'de yorum kaldır
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-yeni-H · Auction Redis State Recovery
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 4b468af8  
+**Staging testi:** servisler aktif, journal temiz ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+`end_auction()` içine `_rebuild_auction_state_from_db()` eklendi: Redis state boşsa (TTL/crash) DB'deki `bids` kayıtlarından en son teklifi ve toplam bid_count'u yeniden oluşturur, ardından Redis'e yazar ve normal kapanış devam eder. Önceki tamamlanmış açık artırmaların teklifleri `ended_at` ile filtrelenir.
+
+**[PROD FARKI]:** Yok.

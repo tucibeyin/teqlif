@@ -870,7 +870,7 @@ async def _rebuild_auction_state_from_db(self, stream_id: int) -> dict | None:
 - Redis'te auction state yokken `end_auction(system_end=True)` → sessizce çıkmak yerine DB rebuild edip normal kapanış
 - `stream.is_live=False` iken rebuild → None, `AUCTION_NOT_ACTIVE` fırlatır
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 4b468af8 · tarih: 2026-09-22
 
 ---
 
@@ -2477,7 +2477,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-10 · W2/W6/W7 frekans | 🟡 P9b | Yüksek | 6.1 | [ ] |
 | TASK-11 · Composite index'ler | 🟡 P10 | Yüksek | 3.2 | [ ] |
 | TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
-| TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [ ] |
+| TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [x] |
 | **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [ ] |
 | TASK-15 · Feed N+1 fix | 🟡 P15 | Orta | 5.1 | [ ] |
