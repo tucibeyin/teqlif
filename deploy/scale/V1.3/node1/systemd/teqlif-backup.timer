@@ -1,9 +1,0 @@
-[Unit]
-Description=Teqlif Off-site Backup — her gece 03:00 UTC
-
-[Timer]
-OnCalendar=*-*-* 03:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
