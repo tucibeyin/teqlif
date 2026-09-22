@@ -433,6 +433,33 @@ sudo teqlif-restart
 
 ---
 
+## TASK-yeni-A · listing_offers — status + updated_at + GC3
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 160d942e  
+**Staging testi:** `\d listing_offers` → status NOT NULL DEFAULT 'active', updated_at ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzz_listing_offers_status`) otomatik çalışır:
+- `listing_offers.status VARCHAR(20) NOT NULL DEFAULT 'active'`
+- `listing_offers.updated_at TIMESTAMPTZ`
+- GC3 cron aktif: Cuma 04:00 — `declined`/`expired` ve 1 yıldan eski teklifler temizlenir
+
+**Doğrulama:**
+```bash
+psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listing_offers" | grep -E "status|updated_at"
+```
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-13 · Keyset Pagination — Feed + Listings + Logout Hive Clear
 
 **Staging tarihi:** 2026-09-22  
