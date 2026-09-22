@@ -491,6 +491,26 @@ async def cleanup_old_streams_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: GC2 — Eski Çağrıları Temizle ───────────────────────────────────────
+
+async def cleanup_old_calls_task(ctx: dict) -> None:
+    """Her Perşembe 04:00'da çalışır; 2 yıldan eski bitmiş/cevapsız çağrıları siler (GC2)."""
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text(
+                "DELETE FROM calls WHERE status IN ('ended', 'missed') "
+                "AND ended_at < NOW() - INTERVAL '730 days'"
+            ))
+            await db.commit()
+            logger.info("[GC2] calls cleanup tamamlandı | silinen=%d", result.rowcount)
+    except Exception as exc:
+        logger.error("[GC2] calls cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Gizlenmiş Mesajları Temizle ────────────────────────────────────────
 
 async def cleanup_hidden_messages_task(ctx: dict) -> None:
@@ -3719,6 +3739,7 @@ class WorkerSettings:
         # Her Perşembe 04:00 — 10 yıldan eski tamamlanmış stream viewer kayıtlarını temizle
         cron(cleanup_old_stream_viewers_task, weekday=3, hour=4, minute=0),
         cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
+        cron(cleanup_old_calls_task, weekday=4, hour=4, minute=0),
         cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0),
         cron(cleanup_old_streams_task, day=1, hour=6, minute=0),
         # Her 15 dakikada — yeni ilanları aktif search alert'larla eşleştir
