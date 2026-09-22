@@ -529,6 +529,31 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-yeni-L · Like Sayıları Redis Counter
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** ab1c9a96  
+**Staging testi:** `redis-cli GET listing:engagement:1` → `"0"` (nil değil) ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- `like_service.py` `batch_listing_likes()`: Redis read-through cache (`listing:engagement:{id}`, 7 gün TTL)
+- `toggle_listing_like()`: commit sonrası `listing:engagement:{id}` key invalidate
+- `add_stream_like()`: commit sonrası `stream:likes:{id}` INCR + 48 saat TTL
+- `batch_stream_likes()`: Redis read-through cache
+- `favorites.py` `add_favorite/remove_favorite`: commit sonrası invalidation
+- `stream_finalizer.py`: stream bitince `stream:likes:{id}` key silinir
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-B · user_interests UNIQUE constraint — subcategory dahil
 
 **Staging tarihi:** 2026-09-22  
