@@ -14,7 +14,6 @@ import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/teq_test_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/cache_service.dart';
 import 'services/storage_service.dart';
@@ -194,7 +193,6 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         routes: {
           '/login': (_) => const LoginScreen(),
           '/home': (_) => const MainScreen(),
-          '/teq-test': (_) => const TeqTestScreen(),
         },
       ),
     );
