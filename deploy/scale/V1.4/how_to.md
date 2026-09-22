@@ -529,6 +529,24 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-16 · GC2: calls cleanup cron görevi
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 976e87f9  
+**Staging testi:** `cron:cleanup_old_calls_task` worker listesinde görüldü ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && sudo teqlif-restart production
+```
+
+Migration yok — worker.py'ye cron eklendi.
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-18c · listing.location Write Path Fix + ringing_at Aktivasyonu
 
 **Staging tarihi:** 2026-09-22  

@@ -1741,7 +1741,7 @@ async def cleanup_old_calls_task(ctx):
 cron(cleanup_old_calls_task, weekday=4, hour=4, minute=0)  # Perşembe 04:00
 ```
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 976e87f9 · tarih: 2026-09-22
 
 ---
 
