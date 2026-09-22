@@ -1298,6 +1298,8 @@ cron(cleanup_old_direct_messages_task, weekday=1, hour=3, minute=0)  # Pazartesi
 
 ### TASK-yeni-F · P5h · 🔴 S4: Kritik Endpoint'lere `response_model=` Ekle
 
+**[x] TAMAMLANDI · commit: 9777e720 · tarih: 2026-09-22**
+
 **Plan:** Faz 2.1 (TASK-04 ile paralel — şema çalışması)  
 **Kaynak:** `findings.md §S4`
 
@@ -2464,7 +2466,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-04 · Float→Numeric(12,2) | 🔴 P4 | Kritik | 2.1 | [ ] |
 | TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
 | TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [x] |
-| TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [ ] |
+| TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [x] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [x] |
 | TASK-yeni-B · D8 user_interests constraint | 🟡 P5d | Kritik | 2.2 | [x] |
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [ ] |

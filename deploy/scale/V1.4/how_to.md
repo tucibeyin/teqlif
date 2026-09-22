@@ -461,6 +461,32 @@ psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "SELECT data_type FROM informat
 
 ---
 
+## TASK-yeni-F · response_model= on critical endpoints
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 9777e720  
+**Staging testi:** 5/5 endpoint şemaya uygun JSON döndü ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- `schemas/listing.py`: `SellerMiniOut`, `ListingOut`, `ListingDetailOut` eklendi
+- `schemas/commerce.py` (yeni): `InitOut`, `CommerceItemOut`, `CommerceSaleOut`
+- `GET /listings` → `list[ListingOut]`
+- `GET /listings/{id}` → `ListingDetailOut`
+- `GET /auth/init` → `InitOut`
+- `GET /auth/me/commerce/purchases` → `list[CommerceItemOut]`
+- `GET /auth/me/commerce/sales` → `list[CommerceSaleOut]`
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-B · user_interests UNIQUE constraint — subcategory dahil
 
 **Staging tarihi:** 2026-09-22  
