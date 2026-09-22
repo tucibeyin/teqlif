@@ -1299,6 +1299,7 @@ async def invite_to_call(
         invited_by=current_user.id,
         livekit_token=livekit_token,
         invited_at=now,
+        ringing_at=now,
     )
     db.add(cp)
     await db.commit()

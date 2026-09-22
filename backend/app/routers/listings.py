@@ -210,6 +210,7 @@ async def create_listing(
         condition=payload.get("condition"),
         province=payload.get("province"),
         district=payload.get("district"),
+        location=payload.get("location"),
         extra_fields=payload.get("extra_fields"),
         image_url=payload.get("image_url"),
         image_urls=payload.get("image_urls"),
@@ -248,6 +249,7 @@ async def update_listing(
         condition=payload.get("condition"),
         province=payload.get("province"),
         district=payload.get("district"),
+        location=payload.get("location"),
         extra_fields=payload.get("extra_fields"),
         **media_kwargs,
     )

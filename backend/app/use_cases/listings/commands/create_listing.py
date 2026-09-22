@@ -30,6 +30,7 @@ class CreateListingCommand:
         condition: Optional[str] = None,
         province: Optional[str] = None,
         district: Optional[str] = None,
+        location: Optional[str] = None,
         extra_fields: Optional[dict] = None,
         image_url: Optional[str] = None,
         image_urls: list = None,
@@ -78,7 +79,7 @@ class CreateListingCommand:
                 "condition": cond,
                 "province": _province,
                 "district": (district or "").strip() or None,
-                "location": _province,  # backward compat: feed/search sorgularında hâlâ okunuyor
+                "location": (location or "").strip() or _province,  # Flutter'dan gelen location öncelikli; yoksa province
                 "country_code": "TR",
                 "extra_fields": ef or None,
                 "brand": brand,

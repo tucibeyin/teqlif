@@ -53,6 +53,7 @@ class UpdateListingCommand:
         condition: Optional[str] = None,
         province: Optional[str] = None,
         district: Optional[str] = None,
+        location: Optional[str] = None,
         extra_fields: Optional[dict] = None,
         image_urls: Any = _UNSET,    # list[str] | None | _UNSET ("iletilmedi" anlamı)
         image_url: Any = _UNSET,     # str | None | _UNSET
@@ -98,6 +99,8 @@ class UpdateListingCommand:
             if province is not None:
                 listing.province = province.strip()
                 listing.location = province.strip()  # backward compat
+            if location is not None:
+                listing.location = location.strip()
             if district is not None:
                 listing.district = district.strip() or None
             if extra_fields is not None:
