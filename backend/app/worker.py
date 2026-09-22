@@ -3504,6 +3504,59 @@ async def notify_auction_losers_task(
         raise
 
 
+async def check_search_alerts_task(ctx: dict) -> None:
+    """Son 15 dakikada eklenen ilanları aktif search_alert'larla eşleştirir ve bildirim gönderir."""
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import select
+    from app.database import AsyncSessionLocal
+    from app.models.listing import Listing
+    from app.models.search_alert import SearchAlert
+    from app.models.enums import SearchAlertStatus
+    from app.routers.notifications import push_notification
+
+    async with AsyncSessionLocal() as db:
+        since = datetime.now(timezone.utc) - timedelta(minutes=15)
+        listings = (await db.execute(
+            select(Listing).where(
+                Listing.status == ListingStatus.ACTIVE,
+                Listing.created_at >= since,
+            )
+        )).scalars().all()
+        if not listings:
+            return
+
+        alerts = (await db.execute(
+            select(SearchAlert).where(SearchAlert.status == SearchAlertStatus.ACTIVE)
+        )).scalars().all()
+
+        sent = 0
+        for listing in listings:
+            for alert in alerts:
+                if alert.user_id == listing.user_id:
+                    continue
+                if alert.category and alert.category != listing.category:
+                    continue
+                if alert.max_price and listing.price and listing.price > alert.max_price:
+                    continue
+                if alert.query and alert.query.lower() not in (listing.title or "").lower():
+                    continue
+                await push_notification(
+                    alert.user_id,
+                    {
+                        "type": "search_alert",
+                        "listing_id": listing.id,
+                        "listing_title": listing.title,
+                        "listing_price": float(listing.price) if listing.price else None,
+                        "alert_query": alert.query or alert.category,
+                    },
+                    pref_key="search_alert",
+                )
+                sent += 1
+
+        if sent:
+            logger.info("[SearchAlert] %d bildirim gönderildi | ilan_sayısı=%d alert_sayısı=%d", sent, len(listings), len(alerts))
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -3668,6 +3721,8 @@ class WorkerSettings:
         cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
         cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0),
         cron(cleanup_old_streams_task, day=1, hour=6, minute=0),
+        # Her 15 dakikada — yeni ilanları aktif search alert'larla eşleştir
+        cron(check_search_alerts_task, minute={0, 15, 30, 45}),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

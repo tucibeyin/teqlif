@@ -121,6 +121,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
         children: [
+          if (widget.isPremium) const _FeedStatsCard(),
           TeqFilterBar(
             filter: state.filter,
             onChanged: (f) {
@@ -719,6 +720,114 @@ class _EmptyState extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FeedStatsCard extends ConsumerStatefulWidget {
+  const _FeedStatsCard();
+
+  @override
+  ConsumerState<_FeedStatsCard> createState() => _FeedStatsCardState();
+}
+
+class _FeedStatsCardState extends ConsumerState<_FeedStatsCard> {
+  int _days = 7;
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
+    final async = ref.watch(feedStatsProvider(_days));
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  loc.tOr('feedStatsTitle', 'Feed Performansı'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 7, label: Text('7G')),
+                    ButtonSegment(value: 30, label: Text('30G')),
+                    ButtonSegment(value: 90, label: Text('90G')),
+                  ],
+                  selected: {_days},
+                  onSelectionChanged: (s) => setState(() => _days = s.first),
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            async.when(
+              loading: () => const Center(child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )),
+              error: (e, _) => Text(
+                loc.tOr('proLoadFailed', 'Yüklenemedi'),
+                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
+              ),
+              data: (stats) {
+                if (stats == null) return const SizedBox.shrink();
+                final totals = stats['totals'] as Map<String, dynamic>? ?? {};
+                final imp = totals['impressions'] as int? ?? 0;
+                final clk = totals['clicks'] as int? ?? 0;
+                final skp = totals['skips'] as int? ?? 0;
+                final ctr = (totals['ctr'] as num?)?.toDouble() ?? 0.0;
+                return Row(
+                  children: [
+                    _StatChip(label: loc.tOr('feedStatImp', 'Gösterim'), value: imp.toString()),
+                    const SizedBox(width: 8),
+                    _StatChip(label: loc.tOr('feedStatClick', 'Tıklama'), value: clk.toString()),
+                    const SizedBox(width: 8),
+                    _StatChip(label: 'CTR', value: '${ctr.toStringAsFixed(1)}%'),
+                    const SizedBox(width: 8),
+                    _StatChip(label: loc.tOr('feedStatSkip', 'Geçildi'), value: skp.toString()),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
+          ],
+        ),
       ),
     );
   }

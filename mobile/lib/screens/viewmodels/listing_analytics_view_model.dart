@@ -179,3 +179,7 @@ class ListingAnalyticsViewModel extends AutoDisposeNotifier<ListingAnalyticsStat
 final listingAnalyticsProvider = NotifierProvider.autoDispose<ListingAnalyticsViewModel, ListingAnalyticsState>(
   () => ListingAnalyticsViewModel(),
 );
+
+final feedStatsProvider = FutureProvider.family.autoDispose<Map<String, dynamic>?, int>((ref, days) async {
+  return ref.read(analyticsServiceProvider).getFeedStats(days: days);
+});
