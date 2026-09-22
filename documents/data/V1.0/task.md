@@ -749,7 +749,7 @@ Model dosyalarına da `Index(...)` tanımı eklenmeli:
 
 **Node ops:** Staging önce, prod sonra.
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 3d9fec1a · tarih: 2026-09-22
 
 ---
 

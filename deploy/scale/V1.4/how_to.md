@@ -367,3 +367,26 @@ Değişiklikler:
 - train_feed_als_task: günlük → Pazar 01:30 (W7)
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-11 · Composite Index'ler
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 3d9fec1a  
+**Staging testi:** `ix_tuci_transactions_user_created` btree ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzy_composite_indexes`) otomatik çalışır:
+- `ix_tuci_transactions_user_created` (user_id, created_at DESC)
+- `ix_purchases_buyer_created` (buyer_id, created_at DESC)
+- `ix_user_interactions_user_created` (user_id, created_at)
+- `ix_listings_user_status` (user_id, status)
+
+**[PROD FARKI]:** Yok.
