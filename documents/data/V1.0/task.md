@@ -489,7 +489,7 @@ TeqNumberFormatter.format(price, fieldKey: 'price', unit: '₺', forceDecimals: 
 4. `sudo teqlif-restart` → log izle
 5. `SELECT count(*) FROM pg_stat_activity` çalıştır
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · tarih: 2026-09-22
 
 ---
 

@@ -32,7 +32,7 @@ Servis yeniden başlatılması TASK-05 sonrasına bırakılır (PgBouncer aktif 
 
 ## TASK-05 · PgBouncer Aktivasyonu
 
-**Staging tarihi:** (node3 testi bekleniyor)  
+**Staging tarihi:** 2026-09-22  
 **Commit:** 587f5da8  
 
 **node5 adımları:**
@@ -52,17 +52,18 @@ sudo apt update && sudo apt install -y pgbouncer
 ```
 
 **3. userlist.txt oluştur:**
+
+> **[PROD FARKI]** PostgreSQL 16 varsayılan `scram-sha-256` kullanır. SCRAM verifier'ı `pg_authid`'den al:
+
 ```bash
-python3 -c "
-import hashlib
-pw='<PROD_DB_PASSWORD>'
-user='teqlif'
-print('\"' + user + '\" \"md5' + hashlib.md5((pw+user).encode()).hexdigest() + '\"')
-"
+# Önce PostgreSQL'e bağlan (port 5433 — PgBouncer'dan önce)
+sudo -u postgres psql -p 5433 -t -A -c "SELECT rolpassword FROM pg_authid WHERE rolname='teqlif';"
+# Çıktı: SCRAM-SHA-256$4096:...$...:...
 ```
 ```bash
 sudo nano /etc/pgbouncer/userlist.txt
-# Çıktıyı tek satır olarak yapıştır
+# İçerik (tek satır):
+# "teqlif" "SCRAM-SHA-256$...<yukarıdaki çıktı>..."
 ```
 
 **4. pgbouncer.ini oluştur:**
@@ -80,7 +81,7 @@ teqlif = host=127.0.0.1 port=5433 dbname=teqlif
 [pgbouncer]
 listen_addr = 127.0.0.1
 listen_port = 5432
-auth_type = md5
+auth_type = scram-sha-256
 auth_file = /etc/pgbouncer/userlist.txt
 
 pool_mode = transaction
