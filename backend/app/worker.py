@@ -506,16 +506,25 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
         from app.database import AsyncSessionLocal, engine
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
+            r1 = await db.execute(
                 text("""
                     DELETE FROM direct_messages
                     WHERE is_hidden = TRUE
                       AND created_at < NOW() - INTERVAL '60 days'
                 """)
             )
+            r2 = await db.execute(
+                text("""
+                    DELETE FROM direct_messages
+                    WHERE is_read = FALSE
+                      AND is_hidden = FALSE
+                      AND created_at < NOW() - INTERVAL '365 days'
+                """)
+            )
             await db.commit()
             logger.info(
-                "[Worker] Gizli mesaj cleanup tamamlandı | silinen=%d", result.rowcount
+                "[Worker] DM cleanup tamamlandı | gizli=%d terk_edilmiş=%d",
+                r1.rowcount, r2.rowcount,
             )
         async with engine.connect() as conn:
             await conn.execution_options(isolation_level="AUTOCOMMIT")

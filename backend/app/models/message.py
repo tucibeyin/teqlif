@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, Text, Integer, SmallInteger, String, ForeignKey, func, false, Index
+from sqlalchemy import BigInteger, Boolean, DateTime, Text, Integer, SmallInteger, String, ForeignKey, func, false, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -15,7 +15,7 @@ class DirectMessage(Base):
         Index("ix_dm_content_type_created", "content_type", "created_at"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     sender_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     receiver_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     listing_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("listings.id", ondelete="SET NULL"), nullable=True, index=True)
