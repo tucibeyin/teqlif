@@ -8,7 +8,7 @@ from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
-_FORYOU_TTL = 3600        # 1 saat — saat başı cron ile yenilenir
+_FORYOU_TTL = 21600       # 6 saat — 4x/gün cron ile yenilenir
 _POOL_SIZE   = 500        # BPR + recent birleşiminden alınan max ilan
 _MAX_FEED    = 500        # Redis list max uzunluğu
 _MAX_PER_SUBCAT = 2       # Greedy diversity
@@ -17,10 +17,9 @@ _MAX_PER_SUBCAT = 2       # Greedy diversity
 async def populate_foryou_feed_task(ctx: dict) -> None:
     """
     Her aktif kullanıcının ilgi alanlarını ve BPR verilerini değerlendirip
-    'Sana Özel' Redis listesini (feed:{user_id}:foryou) baştan doldurur.
+    'Sana Özel' Redis string'ini (feed:foryou:{user_id}) baştan doldurur.
 
-    Saatte bir cron job ile çalışır. Her listenin TTL'i _FORYOU_TTL ile sınırlıdır;
-    cron tetiklenmese bile bayat veri gösterilmez.
+    Günde 4x cron job ile çalışır (00:20, 06:20, 12:20, 18:20).
     """
     try:
         redis = await get_redis()
@@ -82,13 +81,9 @@ async def populate_foryou_feed_task(ctx: dict) -> None:
                     subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
                 final_feed.append(lid)
 
-            foryou_key = f"feed:{uid}:foryou"
+            foryou_key = f"feed:foryou:{uid}"
             if final_feed:
-                pipe = redis.pipeline()
-                pipe.delete(foryou_key)
-                pipe.rpush(foryou_key, *final_feed)
-                pipe.expire(foryou_key, _FORYOU_TTL)
-                await pipe.execute()
+                await redis.set(foryou_key, json.dumps(final_feed), ex=_FORYOU_TTL)
             else:
                 await redis.delete(foryou_key)
 

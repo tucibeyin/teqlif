@@ -1025,7 +1025,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
             for uid in updated_users:
                 invalidation_keys.append(f"interests:{uid}")
                 # feed:recent ve foryou listelerini temizle (SCAN'siz)
-                invalidation_keys.append(f"feed:{uid}:foryou")
+                invalidation_keys.append(f"feed:foryou:{uid}")
                 invalidation_keys.append(f"feed:{uid}:personalized")
             if invalidation_keys:
                 await redis.delete(*invalidation_keys)
@@ -1188,7 +1188,7 @@ async def compute_user_condition_preferences_task(ctx: dict) -> None:
         redis = await get_redis()
         pipe = redis.pipeline()
         for uid, scores in user_map.items():
-            pipe.set(f"condition_pref:{uid}", json.dumps(scores), ex=1500)  # 25 dk TTL
+            pipe.set(f"condition_pref:{uid}", json.dumps(scores), ex=21600)  # 6 saat TTL
         await pipe.execute()
 
         logger.info(
@@ -1276,7 +1276,7 @@ async def compute_trending_listings_task(ctx: dict) -> None:
         pipe.delete("trending:listings:velocity")
         if trending_ids:
             pipe.sadd("trending:listings:velocity", *trending_ids)
-        pipe.expire("trending:listings:velocity", 1800)  # 30 dakika
+        pipe.expire("trending:listings:velocity", 21600)  # 6 saat
         await pipe.execute()
 
         logger.info(
@@ -3516,11 +3516,11 @@ class WorkerSettings:
         # Her Pazartesi 04:00 — eski analitik verilerini temizle
         cron(cleanup_old_analytics_task, weekday=0, hour=4, minute=0),
         # Her 15 dakikada kullanıcı ilgi skorlarını güncelle
-        cron(compute_user_interests_task, minute={0, 15, 30, 45}),
-        # Her saat başında For-You feed listesini yeniden oluştur
-        cron(populate_foryou_feed_task, minute=0),
-        # Her 15 dakikada kullanıcı condition tercihlerini hesapla (Redis: condition_pref:{uid})
-        cron(compute_user_condition_preferences_task, minute={3, 18, 33, 48}),
+        cron(compute_user_interests_task, hour={0, 6, 12, 18}, minute=0),
+        # Günde 4x For-You feed listesini yeniden oluştur (W4)
+        cron(populate_foryou_feed_task, hour={0, 6, 12, 18}, minute=20),
+        # Günde 4x kullanıcı condition tercihlerini hesapla (W3, Redis: condition_pref:{uid})
+        cron(compute_user_condition_preferences_task, hour={0, 6, 12, 18}, minute=10),
         # Her 15 dakikada SwipeLive config cache'lerini sıfırla (yeni event gelenlerin)
         cron(invalidate_swipe_live_configs_task, minute={5, 20, 35, 50}),
         # Her gün 05:00 — eski listing impressionlarını temizle
@@ -3544,7 +3544,7 @@ class WorkerSettings:
         # Her 6 saatte — trend kategorileri hesapla (Redis cache)
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
         # Her 30 dakikada — velocity tabanlı trend ilanları (Redis cache, TTL:30dk)
-        cron(compute_trending_listings_task, minute={0, 30}),
+        cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30),
         # Her gece 01:00 — SwipeLive ALS collaborative filtering modeli eğit (03:15'ten taşındı)
         cron(train_swipe_live_als_task, hour=1, minute=0),
         # Her gece 01:30 — İlan feed ALS collaborative filtering modeli eğit (03:45'ten taşındı)

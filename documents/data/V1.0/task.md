@@ -583,7 +583,7 @@ mc ilm ls teqlif/teqlif-dm/
 2. Lifecycle rule'ları ekle (yukarıdaki komutlar)
 3. node4'te tekrarla
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · tarih: 2026-09-22
 
 ---
 
@@ -651,7 +651,7 @@ cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30)
 
 **Node ops:** `sudo teqlif-restart`
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: (bir sonraki) · tarih: 2026-09-22
 
 ---
 
