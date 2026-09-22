@@ -50,7 +50,7 @@ _MAX_HISTORY = 50
 
 
 # ── Viewer count ─────────────────────────────────────────────────────────────
-_VIEWER_TTL = 12 * 3600  # 12 saat — yayın crash'lansa bile key otomatik silinir
+_VIEWER_TTL = 48 * 3600  # 48 saat — yayın crash'lansa bile key otomatik silinir
 
 
 
@@ -148,12 +148,12 @@ class ChatCommands:
             await redis.sadd(f"live:viewer_set:{stream_id}", username)
             key = f"live:viewers:{stream_id}"
             count = await redis.incr(key)
-            await redis.expire(key, 48 * 3600)
+            await redis.expire(key, _VIEWER_TTL)
             peak_key = f"live:peak_viewers:{stream_id}"
             peak_raw = await redis.get(peak_key)
             current_peak = int(peak_raw) if peak_raw else 0
             if count > current_peak:
-                await redis.setex(peak_key, 48 * 3600, count)
+                await redis.setex(peak_key, _VIEWER_TTL, count)
             await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
         except Exception as exc:
             logger.warning("[CHAT] add_viewer başarısız | stream_id=%s | %s", stream_id, exc)
@@ -168,7 +168,7 @@ class ChatCommands:
             if count < 0:
                 await redis.set(key, 0)
                 count = 0
-            await redis.expire(key, 48 * 3600)
+            await redis.expire(key, _VIEWER_TTL)
             await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
         except Exception as exc:
             logger.warning("[CHAT] remove_viewer başarısız | stream_id=%s | %s", stream_id, exc)
