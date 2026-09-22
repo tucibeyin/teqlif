@@ -1118,7 +1118,7 @@ await redis.delete(
 - Canlı yayında kalp gönder → `redis-cli GET stream:likes:{id}` artmalı
 - Yayın bitince → `stream:likes:{id}` key yok
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: daha önce uygulandı · tarih: 2026-09-22
 
 ---
 
@@ -1171,7 +1171,7 @@ async def get_feed_page(
 
 **Bağımlılık:** TASK-yeni-N ile aynı dosyaları etkiler — aynı sprint'te uygulanmalı.
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: d11a8971 · tarih: 2026-09-22
 
 ---
 
@@ -1226,7 +1226,7 @@ async def update_bid_state(self, stream_id: int, current_bid: str, bidder_id: st
 - Eş zamanlı iki teklif ile race condition simüle et → exception öncesi Redis `current_bid` DB değeriyle eşleşmeli
 - Sonraki teklif doğru fiyat üzerinden validate edilmeli
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: daha önce uygulandı · tarih: 2026-09-22
 
 ---
 
@@ -1998,7 +1998,7 @@ instagramUrl: json['instagram_url'] as String?,
 - `dart analyze` 0 hata
 - Uygulama normal başlıyor
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 71cf6bd4 · tarih: 2026-09-22
 
 ---
 
@@ -2026,7 +2026,7 @@ instagramUrl: json['instagram_url'] as String?,
 - `grep -r "_on_viewer" backend/` → hiçbir referans kalmamalı
 - Chat WS viewer sayacı hâlâ artıp azalıyor
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 0bd2eba2 · tarih: 2026-09-22
 
 ---
 
@@ -2365,7 +2365,7 @@ def _card_dict(
 - Flutter kart görünümünde görsel kayıp yok
 - Detay ekranı `_row_dict` ile tüm alanları alıyor
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: d11a8971 · tarih: 2026-09-22
 
 ---
 
@@ -2468,11 +2468,11 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 |------|---------|--------|-----|--------|
 | **— KRİTİK SPRINT —** | | | | |
 | TASK-yeni-K · PgBouncer uyumluluk denetimi | 🔴 P1a | Kritik | 3.1 | [x] |
-| TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [ ] |
-| TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [ ] |
-| TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [ ] |
-| TASK-04 · Float→Numeric(12,2) | 🔴 P4 | Kritik | 2.1 | [ ] |
-| TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [ ] |
+| TASK-05 · PgBouncer | 🔴 P1 | Kritik | 3.1 | [x] |
+| TASK-01 · D3 auction status | 🔴 P2 | Kritik | 2.2 | [x] |
+| TASK-03 · GC1 stream viewers | 🔴 P3 | Kritik | 1.4 | [x] |
+| TASK-04 · Float→Numeric(12,2) | 🔴 P4 | Kritik | 2.1 | [x] |
+| TASK-02 · FK SET NULL (gift+bids+direct_sales+auctions) | 🔴 P5 | Kritik | 2.3 | [x] |
 | TASK-yeni-E · DM+Notif BigInt PK + DM retention | 🔴 P5g | Kritik | 2.1 | [x] |
 | TASK-yeni-F · response_model kritik endpoint'ler | 🔴 P5h | Kritik | 2.1 | [x] |
 | TASK-yeni-A · D7 listing_offers status | 🔴 P5c | Kritik | 2.2 | [x] |
@@ -2480,13 +2480,13 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-C · DM raporlama (flag_reason) | 🟡 P5e | Kritik | 2.2 | [x] |
 | TASK-yeni-D · Search alert trigger + Flutter feed stats | 🟡 P5f | Kritik | 2.2 | [x] |
 | **— YÜKSEK ÖNCELIK —** | | | | |
-| TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [ ] |
-| TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [ ] |
-| TASK-08 · MinIO lifecycle | 🟡 P8 | Yüksek | 1.5 | [ ] |
-| TASK-09 · W1/W3/W4/W5 4x/gün | 🟡 P9 | Yüksek | 6.1 | [ ] |
-| TASK-10 · W2/W6/W7 frekans | 🟡 P9b | Yüksek | 6.1 | [ ] |
-| TASK-11 · Composite index'ler | 🟡 P10 | Yüksek | 3.2 | [ ] |
-| TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [ ] |
+| TASK-06 · ClickHouse TTL 365g | 🟡 P6 | Yüksek | 4.1 | [x] |
+| TASK-07 · user_interactions 365g | 🟡 P7 | Yüksek | 1.2 | [x] |
+| TASK-08 · MinIO lifecycle | 🟡 P8 | Yüksek | 1.5 | [x] |
+| TASK-09 · W1/W3/W4/W5 4x/gün | 🟡 P9 | Yüksek | 6.1 | [x] |
+| TASK-10 · W2/W6/W7 frekans | 🟡 P9b | Yüksek | 6.1 | [x] |
+| TASK-11 · Composite index'ler | 🟡 P10 | Yüksek | 3.2 | [x] |
+| TASK-12 · GC3/GC4/GC5 | 🟢 P11/P12 | Yüksek | 1.4 | [x] |
 | TASK-yeni-H · Auction Redis state recovery | 🟡 P9c | Yüksek | 3.3 | [x] |
 | **— ORTA ÖNCELIK —** | | | | |
 | TASK-13 · Keyset pagination | 🟡 P13 | Orta | 5.2 | [x] |
@@ -2496,15 +2496,15 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-yeni-L · Like sayıları Redis counter | 🟡 P16b | Orta | 5.3 | [x] |
 | TASK-yeni-I · Bid DB-Redis stale sync | 🟡 P16c | Orta | 3.4 | [x] |
 | TASK-yeni-G · Pydantic şema konsolidasyonu | 🟡 P27 | Orta | 2.1 | [ ] |
-| TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [ ] |
+| TASK-16 · GC2 calls cleanup | 🟢 P16 | Orta | 1.4 | [x] |
 | TASK-17 · KV1 ip maskeleme | 🟡 P18 | Orta | 9.2 | [ ] |
-| TASK-18 · GC6/GC7 + D1 JSONB | 🟢 P19/P20 | Orta | 1.4/2.2 | [ ] |
-| TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [ ] |
-| TASK-18c · listing.location + ringing_at | 🟢 P20c | Orta | 2.5 | [ ] |
+| TASK-18 · GC6/GC7 + D1 JSONB | 🟢 P19/P20 | Orta | 1.4/2.2 | [x] |
+| TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [x] |
+| TASK-18c · listing.location + ringing_at | 🟢 P20c | Orta | 2.5 | [x] |
 | TASK-18d · countries — BIRAKILDI | ⏸️ | — | 2.6 | ⏸️ |
 | TASK-18e · Flutter User sosyal URL typed | 🟡 P20e | Orta | 2.5 | [x] |
-| TASK-18f · Flutter dead code temizliği | 🟢 P20f | Orta | 2.5 | [ ] |
-| TASK-yeni-J · webhooks.py dead code + _VIEWER_TTL fix | 🟢 P20g | Orta | 2.5 | [ ] |
+| TASK-18f · Flutter dead code temizliği | 🟢 P20f | Orta | 2.5 | [x] |
+| TASK-yeni-J · webhooks.py dead code + _VIEWER_TTL fix | 🟢 P20g | Orta | 2.5 | [x] |
 | **— DÜŞÜK ÖNCELIK —** | | | | |
 | TASK-19 · Medya M1-M4 | 🟢 P21 | Düşük | 8.2 | [ ] |
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |

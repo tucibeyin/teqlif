@@ -511,8 +511,8 @@ Yalnızca kod değişikliği — migration yok:
 ## TASK-15 + TASK-yeni-N · Feed N+1 Doğrulaması + Slim Feed DTO
 
 **Staging tarihi:** 2026-09-22  
-**Commit:** bda4fa52  
-**Staging testi:** Feed keys `_card_dict` şemasıyla eşleşti ✅  
+**Commit:** d11a8971  
+**Staging testi:** search ve recommendation endpoint'lerinden dönen JSON alanları `_card_dict` şemasıyla eşleşti ✅  
 
 **node5 adımları:**
 
@@ -522,12 +522,35 @@ sudo teqlif-restart
 ```
 
 Yalnızca kod değişikliği — migration yok:
-- TASK-15: Tüm feed query'lerinde JOIN zaten mevcuttu, N+1 yok — doğrulandı.
-- TASK-yeni-N: `listing_utils.py`'ye `_card_dict()` eklendi; `feed_queries.py` 5 `_row_dict` → `_card_dict`. Feed payload ~30+ → 15 alana indirildi (`description`, `extra_fields`, `brand`, `trust_score` vb. kart görünümünde kaldırıldı).
+- `search_listings_query.py`: inline dict → `_card_dict` tabanlı yapı; search'e özgü alanlar (`category`, `subcategory`, `image_urls`, `video_url`, `active_room_id`) üstte eklendi
+- `recommendation_service._hydrate()`: `_row_dict` → `_card_dict` (similar listings slim payload)
+- `feed_queries.py`, `get_swipe_feed.py`: zaten `_card_dict` + JOIN kullanıyordu — N+1 yoktu, doğrulandı
 
 **[PROD FARKI]:** Yok.
 
 ---
+
+## TASK-yeni-J · webhooks.py Dead Code Temizliği + _VIEWER_TTL Düzeltmesi
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 0bd2eba2  
+**Staging testi:** `grep -r "_on_viewer" backend/` → sonuç yok ✅; chat WS viewer sayacı çalışıyor ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Yalnızca kod değişikliği — migration yok:
+- `webhooks.py`: `_VIEWER_TTL`, `_resolve_stream_and_host`, `_on_viewer_joined`, `_on_viewer_left` silindi (hiç dispatch edilmiyordu)
+- `chat_commands.py`: `_VIEWER_TTL = 12 * 3600` → `48 * 3600`; `add_viewer/remove_viewer` içindeki 3 hardcoded `48 * 3600` → `_VIEWER_TTL`
+
+**[PROD FARKI]:** Yok.
+
+---
+
 
 ## TASK-18 · GC6/GC7 worker tasks + D1 image_urls JSONB
 
