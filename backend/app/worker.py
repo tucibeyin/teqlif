@@ -3545,10 +3545,10 @@ class WorkerSettings:
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
         # Her 30 dakikada — velocity tabanlı trend ilanları (Redis cache, TTL:30dk)
         cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30),
-        # Her gece 01:00 — SwipeLive ALS collaborative filtering modeli eğit (03:15'ten taşındı)
-        cron(train_swipe_live_als_task, hour=1, minute=0),
-        # Her gece 01:30 — İlan feed ALS collaborative filtering modeli eğit (03:45'ten taşındı)
-        cron(train_feed_als_task, hour=1, minute=30),
+        # Haftalık Pazar 01:00 — SwipeLive ALS modeli eğit (W6)
+        cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0),
+        # Haftalık Pazar 01:30 — İlan feed ALS modeli eğit (W7)
+        cron(train_feed_als_task, weekday=6, hour=1, minute=30),
         # Her gece 04:00 — kullanıcı bazlı bildirim saat optimizasyonu
         cron(optimize_notification_timing_task, hour=4, minute=0),
         # APNs Feedback Service cron'u kaldırıldı — Apple legacy endpoint'i Kasım 2020'de kapattı
@@ -3560,8 +3560,8 @@ class WorkerSettings:
         cron(rebuild_faiss_index_task, hour={0, 12}, minute=0),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
-        # Her 30 dakikada — embedding'i olmayan ilanlar için backfill (100'er batch)
-        cron(backfill_listing_embeddings_task, minute={0, 30}),
+        # Gece 02:00 ve 03:00 — embedding'i olmayan ilanlar için backfill (W2)
+        cron(backfill_listing_embeddings_task, hour={2, 3}, minute=0),
         # Her saat :45'inde — quality_score'u olmayan ilanları rule-based skorla
         cron(backfill_listing_quality_scores_task, minute=45),
         # Her Pazar 02:30 — listing kalite modeli haftalık eğitim
