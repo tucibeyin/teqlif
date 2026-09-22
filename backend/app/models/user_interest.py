@@ -9,7 +9,7 @@ from app.database import Base
 class UserInterest(Base):
     __tablename__ = "user_interests"
     __table_args__ = (
-        UniqueConstraint("user_id", "category", name="uq_user_interest"),
+        UniqueConstraint("user_id", "category", "subcategory", name="uq_user_interest"),
         Index("ix_user_interests_user_score", "user_id", "score"),
         Index("ix_user_interests_category_subcategory", "user_id", "category", "subcategory"),
     )

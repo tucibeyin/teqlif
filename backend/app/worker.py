@@ -1068,7 +1068,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
             upsert_sql = text("""
                 INSERT INTO user_interests (user_id, category, score, raw_signals, updated_at)
                 VALUES (:uid, :cat, :score, :raw, NOW())
-                ON CONFLICT (user_id, category)
+                ON CONFLICT ON CONSTRAINT uq_user_interest
                 DO UPDATE SET score = EXCLUDED.score,
                               raw_signals = EXCLUDED.raw_signals,
                               updated_at = NOW()
