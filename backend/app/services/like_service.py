@@ -80,6 +80,14 @@ class LikeService:
             capture_exception(exc)
             raise DatabaseException(code="LIKE_FAILED")
 
+        # Cache invalidation — fresh count bir sonraki batch_listing_likes çağrısında yeniden doldurulur
+        try:
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            await redis.delete(f"listing:engagement:{listing_id}")
+        except Exception:
+            pass
+
         counts, _ = await self.batch_listing_likes(self.db, [listing_id])
         count = counts.get(listing_id, 0)
 
@@ -176,6 +184,14 @@ class LikeService:
             capture_exception(exc)
             raise DatabaseException(code="LIKE_SEND_FAILED")
 
+        try:
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            await redis.incr(f"stream:likes:{stream_id}")
+            await redis.expire(f"stream:likes:{stream_id}", 48 * 3600)
+        except Exception:
+            pass
+
         # WebSocket broadcast — non-critical (hata yayını engellemesin)
         try:
             from app.use_cases.chat.chat_utils import publish_chat
@@ -205,8 +221,10 @@ class LikeService:
         current_user_id: Optional[int] = None,
     ) -> tuple[dict[int, int], set[int]]:
         """
-        Verilen ilan ID listesi için tek sorguda tüm beğeni sayılarını ve
+        Verilen ilan ID listesi için tüm beğeni sayılarını ve
         giriş yapan kullanıcının beğenilerini döner.
+
+        Read-through cache: Redis'te varsa Redis'ten, yoksa DB'den alır ve Redis'e yazar.
 
         Returns:
             counts   : {listing_id: count}
@@ -216,16 +234,41 @@ class LikeService:
             return {}, set()
 
         from app.models.favorite import Favorite
-        q1 = select(ListingLike.listing_id, ListingLike.user_id).where(ListingLike.listing_id.in_(listing_ids))
-        q2 = select(Favorite.listing_id, Favorite.user_id).where(Favorite.listing_id.in_(listing_ids))
-        union_sub = union_all(q1, q2).subquery()
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        _TTL = 7 * 24 * 3600  # 7 gün rolling TTL
 
-        count_rows = await db.execute(
-            select(union_sub.c.listing_id, func.count(distinct(union_sub.c.user_id)).label("cnt"))
-            .group_by(union_sub.c.listing_id)
-        )
-        counts = {row.listing_id: row.cnt for row in count_rows}
+        # 1. Redis batch okuma
+        keys = [f"listing:engagement:{lid}" for lid in listing_ids]
+        cached = await redis.mget(*keys)
+        counts: dict[int, int] = {}
+        missing_ids: list[int] = []
+        for lid, val in zip(listing_ids, cached):
+            if val is not None:
+                counts[lid] = int(val)
+            else:
+                missing_ids.append(lid)
 
+        # 2. Cache miss → DB sorgu (UNION ALL: ListingLike + Favorite)
+        if missing_ids:
+            q1 = select(ListingLike.listing_id, ListingLike.user_id).where(ListingLike.listing_id.in_(missing_ids))
+            q2 = select(Favorite.listing_id, Favorite.user_id).where(Favorite.listing_id.in_(missing_ids))
+            union_sub = union_all(q1, q2).subquery()
+            db_rows = await db.execute(
+                select(union_sub.c.listing_id, func.count(distinct(union_sub.c.user_id)).label("cnt"))
+                .group_by(union_sub.c.listing_id)
+            )
+            db_counts = {row.listing_id: row.cnt for row in db_rows}
+            for lid in missing_ids:
+                counts[lid] = db_counts.get(lid, 0)
+
+            # Redis'e yaz (pipeline)
+            pipe = redis.pipeline(transaction=False)
+            for lid in missing_ids:
+                pipe.setex(f"listing:engagement:{lid}", _TTL, counts[lid])
+            await pipe.execute()
+
+        # 3. liked_set kullanıcıya özel — her zaman DB'den
         liked_set: set[int] = set()
         if current_user_id:
             liked_rows = await db.execute(
@@ -281,13 +324,30 @@ class LikeService:
         db: AsyncSession,
         stream_ids: list[int],
     ) -> dict[int, int]:
-        """Verilen yayın ID listesi için toplam beğeni sayılarını döner."""
+        """Verilen yayın ID listesi için toplam beğeni sayılarını döner (Redis read-through)."""
         if not stream_ids:
             return {}
 
-        rows = await db.execute(
-            select(StreamLike.stream_id, func.count(StreamLike.id).label("cnt"))
-            .where(StreamLike.stream_id.in_(stream_ids))
-            .group_by(StreamLike.stream_id)
-        )
-        return {row.stream_id: row.cnt for row in rows}
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+
+        keys = [f"stream:likes:{sid}" for sid in stream_ids]
+        cached = await redis.mget(*keys)
+        counts: dict[int, int] = {}
+        missing_ids: list[int] = []
+        for sid, val in zip(stream_ids, cached):
+            if val is not None:
+                counts[sid] = int(val)
+            else:
+                missing_ids.append(sid)
+
+        if missing_ids:
+            rows = await db.execute(
+                select(StreamLike.stream_id, func.count(StreamLike.id).label("cnt"))
+                .where(StreamLike.stream_id.in_(missing_ids))
+                .group_by(StreamLike.stream_id)
+            )
+            for row in rows:
+                counts[row.stream_id] = row.cnt
+
+        return counts

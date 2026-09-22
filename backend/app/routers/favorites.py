@@ -83,6 +83,11 @@ async def add_favorite(listing_id: int, current_user: User = Depends(get_current
     if not existing_like:
         db.add(ListingLike(user_id=current_user.id, listing_id=listing_id))
     await db.commit()
+    try:
+        from app.utils.redis_client import get_redis
+        await (await get_redis()).delete(f"listing:engagement:{listing_id}")
+    except Exception:
+        pass
     return {"ok": True, "is_favorited": True, "is_liked": True}
 
 
@@ -99,4 +104,9 @@ async def remove_favorite(listing_id: int, current_user: User = Depends(get_curr
     if like_obj:
         await db.delete(like_obj)
     await db.commit()
+    try:
+        from app.utils.redis_client import get_redis
+        await (await get_redis()).delete(f"listing:engagement:{listing_id}")
+    except Exception:
+        pass
     return {"ok": True, "is_favorited": False, "is_liked": False}

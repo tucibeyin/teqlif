@@ -61,6 +61,7 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
             f"live:pip_viewer_set:{stream.id}",
             f"live:host_reconnect:{stream.id}",
             f"stream:stats:{stream.id}",
+            f"stream:likes:{stream.id}",
         )
     except Exception:
         logger.error("finalize_stream: Redis temizliği başarısız | stream_id=%s", stream.id, exc_info=True)
