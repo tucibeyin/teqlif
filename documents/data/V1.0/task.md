@@ -1979,7 +1979,7 @@ instagramUrl: json['instagram_url'] as String?,
 - Profil ekranında sosyal URL'ler doğru parse ediliyor
 - `dart analyze` 0 hata
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 5815ede8 · tarih: 2026-09-22
 
 ---
 
@@ -2502,7 +2502,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-18b · listings.updated_at write path | 🟡 P20b | Orta | 2.5 | [ ] |
 | TASK-18c · listing.location + ringing_at | 🟢 P20c | Orta | 2.5 | [ ] |
 | TASK-18d · countries — BIRAKILDI | ⏸️ | — | 2.6 | ⏸️ |
-| TASK-18e · Flutter User sosyal URL typed | 🟡 P20e | Orta | 2.5 | [ ] |
+| TASK-18e · Flutter User sosyal URL typed | 🟡 P20e | Orta | 2.5 | [x] |
 | TASK-18f · Flutter dead code temizliği | 🟢 P20f | Orta | 2.5 | [ ] |
 | TASK-yeni-J · webhooks.py dead code + _VIEWER_TTL fix | 🟢 P20g | Orta | 2.5 | [ ] |
 | **— DÜŞÜK ÖNCELIK —** | | | | |

@@ -529,6 +529,26 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-18e · Flutter User Model — Sosyal URL Typed Alanlar
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 5815ede8  
+**Staging testi:** Flutter-only değişiklik — backend servisleri aktif ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+# Backend restart gerekmez — Flutter kodu değişti
+```
+
+- `user.dart`: 7 sosyal URL alanı eklendi + `fromJson` güncellendi
+- `profile_screen.dart`: `_EditProfileScreen.initState()` — `User.fromJson()` typed erişimi
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-yeni-D · Search Alert Trigger + Flutter Feed Stats
 
 **Staging tarihi:** 2026-09-22  
