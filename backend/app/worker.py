@@ -422,6 +422,75 @@ async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: GC3 — Eski Listing Offers Temizle ──────────────────────────────────
+
+async def cleanup_old_listing_offers_task(ctx: dict) -> None:
+    """
+    Her Cuma 04:00'da çalışır; 1 yıldan eski reddedilmiş/süresi dolmuş teklifleri siler.
+
+    BAĞIMLILIK: listing_offers.status kolonu (TASK-yeni-A) tamamlanmış olmalı.
+    status filtresi zorunlu — aktif teklifler korunmalı.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text(
+                "DELETE FROM listing_offers "
+                "WHERE status IN ('declined', 'expired') "
+                "AND created_at < NOW() - INTERVAL '365 days'"
+            ))
+            await db.commit()
+            logger.info("[GC3] listing_offers cleanup tamamlandı | silinen=%d", result.rowcount)
+    except Exception as exc:
+        logger.error("[GC3] listing_offers cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+# ── Task: GC4 — Eski Exchange Rates Temizle ───────────────────────────────────
+
+async def cleanup_old_exchange_rates_task(ctx: dict) -> None:
+    """Ayın 1'i 05:00'de çalışır; 10 yıldan eski kur kayıtlarını siler (R10)."""
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text(
+                "DELETE FROM exchange_rates WHERE date < CURRENT_DATE - INTERVAL '3650 days'"
+            ))
+            await db.commit()
+            logger.info("[GC4] exchange_rates cleanup tamamlandı | silinen=%d", result.rowcount)
+    except Exception as exc:
+        logger.error("[GC4] exchange_rates cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+# ── Task: GC5 — Eski Live Streams Temizle ────────────────────────────────────
+
+async def cleanup_old_streams_task(ctx: dict) -> None:
+    """
+    Ayın 1'i 06:00'da çalışır; 10 yıldan eski bitmiş yayınları siler (R3).
+
+    BAĞIMLILIK: TASK-02 (FK SET NULL) tamamlanmış olmalı.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text(
+                "DELETE FROM live_streams WHERE status = 'ended' "
+                "AND ended_at < NOW() - INTERVAL '3650 days'"
+            ))
+            await db.commit()
+            logger.info("[GC5] live_streams cleanup tamamlandı | silinen=%d", result.rowcount)
+    except Exception as exc:
+        logger.error("[GC5] live_streams cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Gizlenmiş Mesajları Temizle ────────────────────────────────────────
 
 async def cleanup_hidden_messages_task(ctx: dict) -> None:
@@ -3587,6 +3656,10 @@ class WorkerSettings:
         cron(cleanup_old_user_interactions_task, weekday=1, hour=4, minute=0),
         # Her Perşembe 04:00 — 10 yıldan eski tamamlanmış stream viewer kayıtlarını temizle
         cron(cleanup_old_stream_viewers_task, weekday=3, hour=4, minute=0),
+        # GC3: listing_offers — TASK-yeni-A (status kolonu) tamamlanınca aktifleştir:
+        # cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
+        cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0),
+        cron(cleanup_old_streams_task, day=1, hour=6, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
