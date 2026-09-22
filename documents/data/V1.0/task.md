@@ -1918,7 +1918,7 @@ cp = CallParticipant(
 - İlan güncelle → location değişti
 - Grup çağrısına davet gönder → `SELECT ringing_at FROM call_participants WHERE ...` → timestamp var
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 130477f0 · tarih: 2026-09-22
 
 ---
 

@@ -529,6 +529,24 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-18c · listing.location Write Path Fix + ringing_at Aktivasyonu
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 130477f0  
+**Staging testi:** Servisler aktif, kod deploy edildi ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && sudo teqlif-restart production
+```
+
+Migration yok — sadece backend logic değişikliği.
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-18b · listings.updated_at Write Path Düzeltmesi
 
 **Staging tarihi:** 2026-09-22  
