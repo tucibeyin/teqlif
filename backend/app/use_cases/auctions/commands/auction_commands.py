@@ -455,6 +455,22 @@ class AuctionCommands:
             )
             if msg == "not_active":
                 raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+            # Redis stale — DB'deki en güncel teklifi Redis'e yaz
+            logger.warning("[TEKLİF] Redis stale, DB'den sync | stream=%s", stream_id)
+            try:
+                last_bid = (await self.uow.session.execute(
+                    select(Bid).where(Bid.stream_id == stream_id)
+                    .order_by(Bid.created_at.desc()).limit(1)
+                )).scalar_one_or_none()
+                if last_bid:
+                    await self.redis_repo.update_bid_state(
+                        stream_id,
+                        current_bid=str(float(last_bid.amount)),
+                        bidder_id=str(last_bid.bidder_id),
+                        bidder_name=last_bid.bidder_username,
+                    )
+            except Exception as sync_exc:
+                logger.error("[TEKLİF] Redis sync başarısız | stream=%s | %s", stream_id, sync_exc)
             raise BadRequestException(code="CONCURRENT_BID_OUTBID")
 
         state = await GetAuctionStateQuery().execute(stream_id)

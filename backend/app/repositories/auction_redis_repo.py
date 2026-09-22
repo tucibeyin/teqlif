@@ -202,3 +202,11 @@ class AuctionRedisRepository:
     async def set_cooldown(self, stream_id: int, user_id: int, ttl: int = 60) -> None:
         redis = await get_redis()
         await redis.set(f"bin_cooldown:{stream_id}:{user_id}", "1", ex=ttl)
+
+    async def update_bid_state(self, stream_id: int, current_bid: str, bidder_id: str, bidder_name: str) -> None:
+        redis = await get_redis()
+        await redis.hset(auction_key(stream_id), mapping={
+            "current_bid": current_bid,
+            "current_bidder_id": bidder_id,
+            "current_bidder_name": bidder_name,
+        })
