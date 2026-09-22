@@ -1,4 +1,3 @@
-import json
 from typing import Optional
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
@@ -85,7 +84,7 @@ class CreateListingCommand:
                 "brand": brand,
                 "model_name": model_name,
                 "image_url": image_url,
-                "image_urls": json.dumps(image_urls or []),
+                "image_urls": image_urls or [],
                 "thumbnail_url": thumbnail_url,
                 "video_url": video_url,
             }

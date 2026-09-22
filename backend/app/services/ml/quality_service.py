@@ -68,11 +68,8 @@ def extract_features(listing) -> list[float]:
     title = listing.title or ""
     desc = listing.description or ""
 
-    try:
-        imgs = json.loads(listing.image_urls or "[]")
-        image_count = len(imgs)
-    except Exception:
-        image_count = 1 if listing.image_url else 0
+    imgs = listing.image_urls if isinstance(listing.image_urls, list) else []
+    image_count = len(imgs) or (1 if listing.image_url else 0)
 
     title_len = len(title)
     title_words = len(title.split())
@@ -116,11 +113,8 @@ def _rule_based_score(listing) -> float:
     title = listing.title or ""
     desc = listing.description or ""
 
-    try:
-        imgs = json.loads(listing.image_urls or "[]")
-        img_count = len(imgs)
-    except Exception:
-        img_count = 1 if listing.image_url else 0
+    imgs = listing.image_urls if isinstance(listing.image_urls, list) else []
+    img_count = len(imgs) or (1 if listing.image_url else 0)
 
     score = 0.0
 

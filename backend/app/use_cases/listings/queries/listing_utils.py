@@ -61,7 +61,7 @@ async def _fetch_seller_meta(
 
 
 def _parse_image_urls(image_urls_raw) -> list:
-    """image_urls DB'de JSON string olarak saklanır, list olarak döndürür."""
+    """image_urls DB'de JSONB (list) olarak saklanır; geriye dönük TEXT uyumluluğu için str de kabul eder."""
     if image_urls_raw is None:
         return []
     if isinstance(image_urls_raw, list):

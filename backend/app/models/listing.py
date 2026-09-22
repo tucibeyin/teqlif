@@ -40,7 +40,7 @@ class Listing(Base):
     location: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     extra_fields: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    image_urls: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of URLs
+    image_urls: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     video_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     buy_it_now_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)

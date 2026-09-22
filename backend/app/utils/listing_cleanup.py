@@ -29,7 +29,7 @@ _LISTING_NOTIF_TYPES = (
 async def delete_listing_files(
     listing_id: int,
     image_url: str | None,
-    image_urls_json: str | None,
+    image_urls_json: str | list | None,
     thumbnail_url: str | None,
     video_url: str | None,
 ) -> None:
@@ -40,12 +40,15 @@ async def delete_listing_files(
     if image_url:
         urls.append(image_url)
     if image_urls_json:
-        try:
-            for url in json.loads(image_urls_json):
-                if url:
-                    urls.append(url)
-        except (json.JSONDecodeError, TypeError, ValueError):
-            logger.warning("[LISTING CLEANUP] image_urls parse hatası | listing_id=%d", listing_id)
+        if isinstance(image_urls_json, list):
+            urls.extend(u for u in image_urls_json if u)
+        else:
+            try:
+                for url in json.loads(image_urls_json):
+                    if url:
+                        urls.append(url)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                logger.warning("[LISTING CLEANUP] image_urls parse hatası | listing_id=%d", listing_id)
     if thumbnail_url:
         urls.append(thumbnail_url)
     if video_url:
@@ -144,7 +147,7 @@ async def cleanup_listings_notifications_batch(listing_ids: list[int]) -> None:
 async def cleanup_listing_resources(
     listing_id: int,
     image_url: str | None,
-    image_urls_json: str | None,
+    image_urls_json: str | list | None,
     thumbnail_url: str | None,
     video_url: str | None,
 ) -> None:

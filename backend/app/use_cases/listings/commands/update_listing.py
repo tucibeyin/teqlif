@@ -120,7 +120,7 @@ class UpdateListingCommand:
                         key = url[len("/uploads/"):]
                         files_to_delete.append(key)
                         files_to_delete.append(_derive_thumb_key(key))
-                listing.image_urls = json.dumps(new_list) if new_list else None
+                listing.image_urls = new_list or None
                 # Kapak fotoğrafını güncelle (image_url ayrıca iletilmediyse)
                 if image_url is _UNSET:
                     listing.image_url = new_list[0] if new_list else None

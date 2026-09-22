@@ -511,6 +511,50 @@ async def cleanup_old_calls_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: GC6 — Mesajsız Boş Thread'leri Temizle ─────────────────────────────
+
+async def cleanup_empty_message_threads_task(ctx: dict) -> None:
+    """Her Pazar 05:00'da çalışır; 30 günden eski, mesajsız ve pending olmayan thread'leri siler (GC6)."""
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text(
+                "DELETE FROM message_threads mt "
+                "WHERE mt.status != 'pending' "
+                "AND NOT EXISTS ("
+                "  SELECT 1 FROM direct_messages dm "
+                "  WHERE (dm.sender_id = mt.user_a_id AND dm.receiver_id = mt.user_b_id) "
+                "     OR (dm.sender_id = mt.user_b_id AND dm.receiver_id = mt.user_a_id)"
+                ") AND mt.created_at < NOW() - INTERVAL '30 days'"
+            ))
+            await db.commit()
+            logger.info("[GC6] message_threads cleanup tamamlandı | silinen=%d", result.rowcount)
+    except Exception as exc:
+        logger.error("[GC6] message_threads cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+# ── Task: GC7 — Eski Search Alert'leri Temizle ────────────────────────────────
+
+async def cleanup_inactive_search_alerts_task(ctx: dict) -> None:
+    """Her Pazar 06:00'da çalışır; 180 günden eski arama alarmlarını siler (GC7)."""
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text(
+                "DELETE FROM search_alerts WHERE created_at < NOW() - INTERVAL '180 days'"
+            ))
+            await db.commit()
+            logger.info("[GC7] search_alerts cleanup tamamlandı | silinen=%d", result.rowcount)
+    except Exception as exc:
+        logger.error("[GC7] search_alerts cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Gizlenmiş Mesajları Temizle ────────────────────────────────────────
 
 async def cleanup_hidden_messages_task(ctx: dict) -> None:
@@ -3740,6 +3784,8 @@ class WorkerSettings:
         cron(cleanup_old_stream_viewers_task, weekday=3, hour=4, minute=0),
         cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
         cron(cleanup_old_calls_task, weekday=4, hour=4, minute=0),
+        cron(cleanup_empty_message_threads_task, weekday=6, hour=5, minute=0),
+        cron(cleanup_inactive_search_alerts_task, weekday=6, hour=6, minute=0),
         cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0),
         cron(cleanup_old_streams_task, day=1, hour=6, minute=0),
         # Her 15 dakikada — yeni ilanları aktif search alert'larla eşleştir

@@ -1,4 +1,3 @@
-import json
 from typing import Optional
 
 from sqlalchemy import select
@@ -36,7 +35,7 @@ def listing_dict(l: Listing, u: User) -> dict:
         "category": l.category,
         "location": l.location,
         "image_url": l.image_url,
-        "image_urls": json.loads(l.image_urls) if l.image_urls else [],
+        "image_urls": l.image_urls or [],
         "created_at": l.created_at.isoformat() if l.created_at else None,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
     }
@@ -66,7 +65,7 @@ def raw_row_to_listing_dict(row) -> dict:
         "category": row[3],
         "location": row[4],
         "image_url": row[5],
-        "image_urls": json.loads(row[6]) if row[6] else [],
+        "image_urls": row[6] or [],
         "created_at": row[7].isoformat() if row[7] else None,
         "user": {"id": row[8], "username": row[9], "full_name": row[10]},
     }

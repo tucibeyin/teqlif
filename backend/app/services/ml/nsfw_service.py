@@ -105,10 +105,13 @@ async def check_listing_nsfw(listing_id: int) -> None:
         if listing.image_url:
             urls.append(listing.image_url)
         if listing.image_urls:
-            try:
-                urls.extend(json.loads(listing.image_urls))
-            except Exception:
-                pass
+            if isinstance(listing.image_urls, list):
+                urls.extend(listing.image_urls)
+            else:
+                try:
+                    urls.extend(json.loads(listing.image_urls))
+                except Exception:
+                    pass
 
         if not urls:
             return

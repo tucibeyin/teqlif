@@ -1489,12 +1489,8 @@ async def video_roi(
         return {"video": {}, "photo": {}, "by_listing": []}
 
     def _first_image(r) -> str:
-        try:
-            import json as _json
-            imgs = _json.loads(r.image_urls) if r.image_urls else []
-            return imgs[0] if imgs else (r.image_url or "")
-        except Exception:
-            return r.image_url or ""
+        imgs = r.image_urls if isinstance(r.image_urls, list) else []
+        return imgs[0] if imgs else (r.image_url or "")
 
     listing_map = {str(r.id): {"title": r.title, "has_video": bool(r.video_url), "image_url": _first_image(r)} for r in listings}
     listing_ids = list(listing_map.keys())
@@ -1598,11 +1594,8 @@ async def gallery_stats(
     listing_ids = [r.id for r in listings]
     photo_count_map: dict[int, int] = {}
     for r in listings:
-        try:
-            urls = _json.loads(r.image_urls) if r.image_urls else []
-            photo_count_map[r.id] = max(1, len(urls))
-        except Exception:
-            photo_count_map[r.id] = 1
+        urls = r.image_urls if isinstance(r.image_urls, list) else []
+        photo_count_map[r.id] = max(1, len(urls))
 
     try:
         ch = await get_clickhouse_client()

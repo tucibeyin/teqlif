@@ -1,4 +1,3 @@
-import json
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -24,7 +23,7 @@ def _listing_dict(l: Listing, u: User, likes_count: int = 0, is_liked: bool = Fa
         "category": l.category,
         "location": l.location,
         "image_url": l.image_url,
-        "image_urls": json.loads(l.image_urls) if l.image_urls else [],
+        "image_urls": l.image_urls or [],
         "created_at": l.created_at.isoformat() if l.created_at else None,
         "status": l.status.value,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
