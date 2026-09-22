@@ -390,3 +390,24 @@ Alembic migration (`zzzzy_composite_indexes`) otomatik çalışır:
 - `ix_listings_user_status` (user_id, status)
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-12 · GC3/GC4/GC5 Cleanup Cron'ları
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** ababd522  
+**Staging testi:** servisler aktif, worker başladı ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+- GC4 (exchange_rates): ayın 1'i 05:00 — aktif
+- GC5 (live_streams): ayın 1'i 06:00 — aktif
+- GC3 (listing_offers): TASK-yeni-A tamamlanınca worker.py'de yorum kaldır
+
+**[PROD FARKI]:** Yok.

@@ -809,7 +809,7 @@ cron(cleanup_old_streams_task, day=1, hour=6, minute=0)               # Ayın 1'
 - Her görevi manuel tetikle, rowcount logunu kontrol et
 - `SELECT MIN(date) FROM exchange_rates` → 10 yıldan eski kayıt yok
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: ababd522 · tarih: 2026-09-22
 
 ---
 
