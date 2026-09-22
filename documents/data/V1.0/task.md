@@ -1814,7 +1814,7 @@ op.execute("CREATE INDEX ix_listings_image_urls_gin ON listings USING GIN (image
 - Pydantic schema: `image_urls: list[str]`
 - `bump_schema_version()` ekle
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 95ad2eb7 · tarih: 2026-09-22
 
 ---
 

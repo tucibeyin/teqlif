@@ -529,6 +529,24 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-18 · GC6/GC7 worker tasks + D1 image_urls JSONB
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 95ad2eb7  
+**Staging testi:** GC6/GC7 cron'lar kayıtlı; image_urls kolonu jsonb tipinde ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && sudo teqlif-restart production
+```
+
+Migration otomatik çalışır: `ALTER TABLE listings ALTER COLUMN image_urls TYPE JSONB` + GIN index oluşturulur + schema_version bump edilir.
+
+**[PROD FARKI]:** Production'da listings tablosu daha büyük olabilir — migration in-transaction çalışır, kısa süre tablo kilitlenir. Yoğun olmayan bir saatte restart edilmesi önerilir (örn. gece 04:00).
+
+---
+
 ## TASK-16 · GC2: calls cleanup cron görevi
 
 **Staging tarihi:** 2026-09-22  
