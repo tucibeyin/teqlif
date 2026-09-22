@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from typing import Optional, Any
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
@@ -132,6 +133,8 @@ class UpdateListingCommand:
                 listing.video_url = video_url  # None = kaldır, str = güncelle
                 if old_video and old_video != video_url and old_video.startswith("/uploads/"):
                     files_to_delete.append(old_video[len("/uploads/"):])
+
+            listing.updated_at = datetime.now(timezone.utc)
 
         # ── DB commit'ten sonra MinIO temizliği ────────────────────────────────
         for key in files_to_delete:

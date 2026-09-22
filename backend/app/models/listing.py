@@ -48,7 +48,7 @@ class Listing(Base):
     last_start_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     status: Mapped[ListingStatus] = mapped_column(SQLEnum(ListingStatus, values_callable=lambda obj: [e.value for e in obj]), default=ListingStatus.ACTIVE, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=func.now())
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)
     embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
 
