@@ -48,4 +48,5 @@ class UserInteraction(Base):
     __table_args__ = (
         Index("ix_user_interactions_user_item", "user_id", "item_id"),
         Index("ix_user_interactions_created", "created_at"),
+        Index("ix_user_interactions_user_created", "user_id", "created_at"),
     )

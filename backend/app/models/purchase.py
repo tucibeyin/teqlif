@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from decimal import Decimal
-from sqlalchemy import String, Numeric, DateTime, ForeignKey, func
+from sqlalchemy import String, Numeric, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -9,6 +9,9 @@ from app.database import Base
 
 class Purchase(Base):
     __tablename__ = "purchases"
+    __table_args__ = (
+        Index("ix_purchases_buyer_created", "buyer_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)

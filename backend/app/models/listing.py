@@ -18,6 +18,7 @@ class Listing(Base):
         Index('ix_listings_embedding_hnsw', 'embedding', postgresql_using='hnsw', postgresql_with={'m': 16, 'ef_construction': 64}, postgresql_ops={'embedding': 'vector_cosine_ops'}),
         Index('ix_listings_feed_organic', 'category', 'status', text('created_at DESC')),
         Index('ix_listings_feed_recent', 'status', text('created_at DESC')),
+        Index('ix_listings_user_status', 'user_id', 'status'),
         Index('ix_listings_subcategory', 'subcategory'),
         Index('ix_listings_province', 'province'),
         Index('ix_listings_extra_fields_gin', 'extra_fields', postgresql_using='gin'),
