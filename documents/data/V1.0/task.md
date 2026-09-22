@@ -65,7 +65,7 @@
 
 **Node ops:** Yok (deploy = git pull + alembic upgrade head + restart)
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · tarih: 2026-09-22
 
 ---
 

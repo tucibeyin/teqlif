@@ -20,7 +20,7 @@ class Auction(Base):
     winner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     winner_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     bid_count: Mapped[int] = mapped_column(Integer, default=0)
-    status: Mapped[str] = mapped_column(String(20), default="completed")
+    status: Mapped[str] = mapped_column(String(20), default="active")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     proof_image_url: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
