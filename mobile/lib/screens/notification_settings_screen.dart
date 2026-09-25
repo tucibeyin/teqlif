@@ -167,6 +167,28 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 onBlastNotifChanged: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
                 onUpgradeTap: () => _showUpgradeSheet(context, loc),
               ),
+              const SizedBox(height: 12),
+              // ── Gizlilik ────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  loc.t('lblPrivacySettings'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(context),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _NotifTile(
+                icon: Icons.bar_chart_outlined,
+                label: loc.t('analyticsOptOutTitle'),
+                subtitle: loc.t('analyticsOptOutDesc'),
+                value: state.analyticsOptOut,
+                onChanged: (v) => ref.read(notificationSettingsProvider.notifier).toggleAnalyticsOptOut(v),
+              ),
               const SizedBox(height: 24),
             ],
           );

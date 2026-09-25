@@ -13,6 +13,7 @@ class NotificationSettingsState {
   final TimeOfDay quietFrom;
   final TimeOfDay quietTo;
   final bool receiveBlastNotifications;
+  final bool analyticsOptOut;
 
   const NotificationSettingsState({
     this.prefs = const {
@@ -30,6 +31,7 @@ class NotificationSettingsState {
     this.quietFrom = const TimeOfDay(hour: 22, minute: 0),
     this.quietTo = const TimeOfDay(hour: 8, minute: 0),
     this.receiveBlastNotifications = true,
+    this.analyticsOptOut = false,
   });
 
   NotificationSettingsState copyWith({
@@ -39,6 +41,7 @@ class NotificationSettingsState {
     TimeOfDay? quietFrom,
     TimeOfDay? quietTo,
     bool? receiveBlastNotifications,
+    bool? analyticsOptOut,
   }) {
     return NotificationSettingsState(
       prefs: prefs ?? this.prefs,
@@ -47,6 +50,7 @@ class NotificationSettingsState {
       quietFrom: quietFrom ?? this.quietFrom,
       quietTo: quietTo ?? this.quietTo,
       receiveBlastNotifications: receiveBlastNotifications ?? this.receiveBlastNotifications,
+      analyticsOptOut: analyticsOptOut ?? this.analyticsOptOut,
     );
   }
 }
@@ -92,6 +96,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
         quietFrom: _parseTime(data['quiet_from'] as String? ?? '22:00'),
         quietTo: _parseTime(data['quiet_to'] as String? ?? '08:00'),
         receiveBlastNotifications: (data['receive_blast_notifications'] as bool?) ?? true,
+        analyticsOptOut: (data['analytics_opt_out'] as bool?) ?? false,
       );
     } else {
       throw Exception('Failed to load preferences');
@@ -105,6 +110,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
     'quiet_from': _formatTime(s.quietFrom),
     'quiet_to': _formatTime(s.quietTo),
     'receive_blast_notifications': s.receiveBlastNotifications,
+    'analytics_opt_out': s.analyticsOptOut,
   };
 
   Future<void> _patch(NotificationSettingsState newState) async {
@@ -178,9 +184,17 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
   Future<void> setQuietTime({required bool isFrom, required TimeOfDay time}) async {
     final current = state.value;
     if (current == null) return;
-    final newState = isFrom 
+    final newState = isFrom
         ? current.copyWith(quietFrom: time)
         : current.copyWith(quietTo: time);
+    state = AsyncValue.data(newState);
+    await _patch(newState);
+  }
+
+  Future<void> toggleAnalyticsOptOut(bool value) async {
+    final current = state.value;
+    if (current == null) return;
+    final newState = current.copyWith(analyticsOptOut: value);
     state = AsyncValue.data(newState);
     await _patch(newState);
   }

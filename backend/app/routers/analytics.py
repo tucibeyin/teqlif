@@ -42,6 +42,28 @@ class InteractionPayload(BaseModel):
     price_point: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
 
+async def _is_analytics_opted_out(user_id: int | None, db: AsyncSession | None = None) -> bool:
+    """Kullanıcı analytics opt-out'u etkinleştirdiyse True döner. Redis cache önce kontrol edilir."""
+    if not user_id:
+        return False
+    try:
+        redis = await get_redis()
+        cached = await redis.get(f"session:user:{user_id}")
+        if cached:
+            prefs = json.loads(cached).get("notification_prefs") or {}
+            return bool(prefs.get("analytics_opt_out", False))
+    except Exception:
+        pass
+    if db is None:
+        return False
+    try:
+        result = await db.execute(select(User.notification_prefs).where(User.id == user_id))
+        prefs = result.scalar_one_or_none() or {}
+        return bool(prefs.get("analytics_opt_out", False))
+    except Exception:
+        return False
+
+
 async def _save_event_async(data: AnalyticsEventCreate, user_id: int | None, ip_address: str | None, db: AsyncSession):
     try:
         event = AnalyticsEvent(
@@ -89,6 +111,9 @@ async def track_event(
     else:
         ip_address = mask_ip(request.client.host if request.client else None)
 
+    if await _is_analytics_opted_out(user_id, db):
+        return {"status": "opted_out"}
+
     # Save to database asynchronously in the background
     background_tasks.add_task(_save_event_async, data, user_id, ip_address, db)
 
@@ -113,6 +138,9 @@ async def track_interaction(
             user_id = decode_token(auth_header.split(" ")[1])
         except Exception:
             pass
+
+    if await _is_analytics_opted_out(user_id):
+        return {"status": "opted_out"}
 
     from datetime import datetime, timezone
     record = {
@@ -1442,7 +1470,7 @@ async def track_search(
         logger.warning("[track-search] ClickHouse buffer başarısız: %s", exc)
 
     # Kategori varsa analytics_events'e yaz → feed kişiselleştirme döngüsünü kapatır
-    if user_id and body.category:
+    if user_id and body.category and not await _is_analytics_opted_out(user_id, db):
         try:
             event = AnalyticsEvent(
                 user_id=user_id,
