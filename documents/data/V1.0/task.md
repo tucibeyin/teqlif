@@ -2167,7 +2167,7 @@ final upload = await ref.read(uploadServiceProvider).uploadBytes(
 
 **Node ops:** Yok (sadece Flutter + backend constants değişikliği)
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 05bccd97 · tarih: 2026-09-25
 
 ---
 

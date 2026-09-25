@@ -814,6 +814,31 @@ psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listing_offers" | grep -E "
 
 ---
 
+## TASK-19 · Medya Optimizasyonu M1-M4
+
+**Staging tarihi:** 2026-09-25  
+**Commit:** 05bccd97  
+**Staging testi:** IMAGE_MAX_BYTES: 3MB, VIDEO_MAX_BYTES: 20MB doğrulandı ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Değişiklikler:
+- M1: İlan fotoğrafı WebP 1920px q80 (JPEG 1200px'den); max 3 fotoğraf (10'dan)
+- M2: İlan videosu `MediumQuality` 720p (`HighestQuality` 1080p'den)
+- M3: DM foto limit 5→3MB, DM video 30→20MB (Flutter + backend `media_limits.py`)
+- M4: Profil avatarı `profilePhoto` 800px WebP q75 (`dmPhoto` 1200px JPEG'den)
+
+**Not:** Limitler compress sonrası değerler (raw dosya sınırı yok).
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-22 · KV3 — Analytics Opt-Out Toggle
 
 **Staging tarihi:** 2026-09-25  
