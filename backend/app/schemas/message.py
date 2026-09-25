@@ -29,7 +29,10 @@ class ConversationOut(BaseModel):
     last_message_type: str = "text"
     last_at: datetime
     unread_count: int
-    is_request: bool = False
+
+
+class MessageRequestOut(ConversationOut):
+    pass
 
 
 class SendMessageIn(BaseModel):

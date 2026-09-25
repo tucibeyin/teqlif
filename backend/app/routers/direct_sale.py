@@ -8,7 +8,7 @@ Her endpoint sadece:
 İş mantığı tamamen use_cases/direct_sales/commands/direct_sale_commands.py içindedir.
 """
 from fastapi import APIRouter, Depends, Request
-from typing import List
+from typing import List, Union
 
 from app.database import get_uow, get_db
 from app.core.uow import SqlAlchemyUnitOfWork
@@ -16,6 +16,7 @@ from app.models.user import User
 from app.schemas.direct_sale import (
     DirectSaleStartIn, DirectSaleCancelIn, DirectSalePurchaseIn,
     DirectSaleStateOut, DirectSaleSummaryOut, DirectSaleOrderOut,
+    SellerSummaryOut, BuyerSummaryOut,
 )
 from app.utils.auth import get_current_user
 from app.core.rate_limit import limiter, get_user_id_or_ip
@@ -105,7 +106,7 @@ async def purchase_sale(
 
 # ── Özet ve siparişler ────────────────────────────────────────────────────────
 
-@router.get("/{sale_id}/summary", response_model=DirectSaleSummaryOut)
+@router.get("/{sale_id}/summary", response_model=Union[SellerSummaryOut, BuyerSummaryOut])
 async def get_sale_summary(
     sale_id: int,
     db: AsyncSession = Depends(get_db),

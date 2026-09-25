@@ -1,18 +1,12 @@
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel
+from app.schemas.user import UserMiniOut
 
 
-class StoryAuthorOut(BaseModel):
+class StoryAuthorOut(UserMiniOut):
     """Hikayenin sahibine ait özet kullanıcı bilgisi."""
-
-    id: int
-    username: str
-    full_name: str
-    profile_image_url: Optional[str] = None
-    profile_image_thumb_url: Optional[str] = None
-
-    model_config = {"from_attributes": True}
+    pass
 
 
 class StoryItemOut(BaseModel):

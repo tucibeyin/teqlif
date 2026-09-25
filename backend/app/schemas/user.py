@@ -57,6 +57,18 @@ class UserLogin(BaseModel):
         return data
 
 
+class UserMiniOut(BaseModel):
+    """Paylaşılan kullanıcı özeti — StoryAuthorOut/BlockedUserOut/StreamHostOut base'i."""
+    id: int
+    username: str
+    full_name: str
+    profile_image_url: Optional[str] = None
+    profile_image_thumb_url: Optional[str] = None
+    is_verified: bool = False
+
+    model_config = {"from_attributes": True}
+
+
 class UserOut(BaseModel):
     id: int
     email: str

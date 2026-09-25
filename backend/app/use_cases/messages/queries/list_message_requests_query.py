@@ -3,7 +3,7 @@ from app.core.uow import AbstractUnitOfWork
 from app.models.message import DirectMessage
 from app.models.message_thread import MessageThread
 from app.models.user import User
-from app.schemas.message import ConversationOut
+from app.schemas.message import MessageRequestOut
 
 
 class ListMessageRequestsQuery:
@@ -63,7 +63,7 @@ class ListMessageRequestsQuery:
             unread = unread_result.scalar_one()
 
             conversations.append(
-                ConversationOut(
+                MessageRequestOut(
                     user_id=other_id,
                     username=other_user.username,
                     full_name=other_user.full_name,
@@ -71,7 +71,6 @@ class ListMessageRequestsQuery:
                     last_message_type=latest.content_type,
                     last_at=latest.created_at,
                     unread_count=unread,
-                    is_request=True,
                 )
             )
 

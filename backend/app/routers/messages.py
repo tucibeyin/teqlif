@@ -13,7 +13,7 @@ from app.database import get_db, AsyncSessionLocal, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.core.log_context import user_id_var
 from app.models.user import User
-from app.schemas.message import MessageOut, ConversationOut, SendMessageIn, MediaContentType
+from app.schemas.message import MessageOut, ConversationOut, MessageRequestOut, SendMessageIn, MediaContentType
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
 from app.core.exceptions import NotFoundException, ForbiddenException  # BadRequestException imported above
@@ -82,7 +82,7 @@ async def get_thread_status(
     return await GetThreadStatusQuery(uow).execute(current_user.id, other_user_id)
 
 
-@router.get("/requests", response_model=List[ConversationOut])
+@router.get("/requests", response_model=List[MessageRequestOut])
 async def list_message_requests(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),

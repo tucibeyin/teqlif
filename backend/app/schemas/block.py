@@ -1,14 +1,9 @@
-from datetime import datetime
 from pydantic import BaseModel
+from app.schemas.user import UserMiniOut
 
 
-class BlockedUserOut(BaseModel):
-    id: int
-    username: str
-    full_name: str
-    profile_image_url: str | None
-
-    model_config = {"from_attributes": True}
+class BlockedUserOut(UserMiniOut):
+    pass
 
 
 class BlockStatusOut(BaseModel):

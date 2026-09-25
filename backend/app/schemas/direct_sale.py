@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, field_validator, model_validator
+from typing import Annotated, Literal, Optional, Union
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.base import BaseSchema
 
@@ -75,8 +75,7 @@ class DirectSaleStateOut(BaseSchema):
     listing_id: Optional[int] = None
 
 
-class DirectSaleSummaryOut(BaseSchema):
-    role: str
+class _DirectSaleSummaryBase(BaseSchema):
     sale_id: int
     item_name: str
     proof_image_url: Optional[str] = None
@@ -85,15 +84,27 @@ class DirectSaleSummaryOut(BaseSchema):
     end_reason: Optional[str] = None
     ended_at: Optional[datetime] = None
 
+
+class SellerSummaryOut(_DirectSaleSummaryBase):
+    role: Literal["seller"] = "seller"
     total_revenue: Optional[Decimal] = None
     total_quantity_sold: Optional[int] = None
     order_count: Optional[int] = None
     seller_username: Optional[str] = None
 
+
+class BuyerSummaryOut(_DirectSaleSummaryBase):
+    role: Literal["buyer"] = "buyer"
     buyer_quantity: Optional[int] = None
     buyer_unit_price: Optional[Decimal] = None
     buyer_total: Optional[Decimal] = None
     buyer_order_status: Optional[str] = None
+
+
+DirectSaleSummaryOut = Annotated[
+    Union[SellerSummaryOut, BuyerSummaryOut],
+    Field(discriminator="role"),
+]
 
 
 class DirectSaleSuggestionsOut(BaseSchema):

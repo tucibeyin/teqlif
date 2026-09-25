@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, field_validator
+from app.schemas.user import UserMiniOut
 
 
 VALID_CATEGORIES = {
@@ -32,11 +33,8 @@ class StreamStart(BaseModel):
         return v
 
 
-class StreamHostOut(BaseModel):
-    id: int
-    username: str
-    full_name: str
-    model_config = {"from_attributes": True}
+class StreamHostOut(UserMiniOut):
+    pass
 
 
 class StreamOut(BaseModel):
