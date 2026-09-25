@@ -2204,7 +2204,7 @@ class DeleteAccountCommand:
 - View: onay dialog → ViewModel çağrısı → logout
 - ⚠️ **Endpoint çelişkisi:** Flutter `auth_service.dart:219` şu an `DELETE /auth/delete-account` çağırıyor; task.md `DELETE /users/me` öneriyor. Uygulama sırasında backend hangi path'i implement ederse Flutter'ı ona göre güncelle (veya mevcut `/auth/delete-account` path'ini koru — backend önce kontrol et).
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: — · tarih: 2026-09-25 (önceden implement edilmiş — auth.py DELETE /auth/delete-account + profile_screen.dart onay dialog)
 
 ---
 

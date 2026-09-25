@@ -57,7 +57,7 @@ class Listing(Base):
     quality_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)
     nsfw_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_highlight: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    active_room_id: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
+    active_room_id: Mapped[Optional[int]] = mapped_column(ForeignKey("live_streams.id", ondelete="SET NULL"), nullable=True, index=True)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Otomatik pasife alındığında set edilir; 60 gün sonra ilan silinir.
     deactivated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
