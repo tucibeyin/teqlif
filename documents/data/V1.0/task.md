@@ -2242,7 +2242,7 @@ class DeleteAccountCommand:
 - Analytics event kaydında kontrol: `if not user.analytics_opt_out`
 - Flutter: Ayarlar ekranında toggle (MVVM — `SettingsViewModel.toggleAnalyticsOptOut()`)
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: a38d0c29 · tarih: 2026-09-25
 
 ---
 

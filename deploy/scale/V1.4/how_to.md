@@ -814,6 +814,32 @@ psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listing_offers" | grep -E "
 
 ---
 
+## TASK-22 · KV3 — Analytics Opt-Out Toggle
+
+**Staging tarihi:** 2026-09-25  
+**Commit:** a38d0c29  
+**Staging testi:** `analytics_opt_out default: False` + NotificationPrefs key doğrulandı ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Değişiklikler:
+- `NotificationPrefs` şemasına `analytics_opt_out: bool = False` eklendi
+- `analytics.py`: `/track`, `/interaction`, `/track-search` endpointlerinde opt-out kontrolü (`_is_analytics_opted_out`)
+- Flutter: `NotificationSettingsState.analyticsOptOut` + `toggleAnalyticsOptOut()` metodu
+- UI: Bildirim ayarları ekranında "Gizlilik" bölümü ve toggle
+- ARB: `analyticsOptOutTitle`/`analyticsOptOutDesc` + `lblPrivacySettings` (tr/en/ru/ar)
+
+**Not:** Migration yok — `notification_prefs JSONB` içine yeni key, mevcut kayıtlar için `DEFAULT_NOTIF_PREFS` merge garantisi var.
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-21 · D2/D4/D5 Model Düzeltmeleri
 
 **Staging tarihi:** 2026-09-25  
