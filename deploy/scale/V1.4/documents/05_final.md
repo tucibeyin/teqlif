@@ -74,7 +74,7 @@ node5 Backend → node2 (primary, US IP)
 ```
 
 Gemini API yalnızca belirli coğrafi bölgelerden (ABD dahil) kabul eder. node2 (VPSHostingService ABD) ve node3 (Ashburn, VA) her ikisi de ABD IP'sidir.  
-node2 yalnızca 1 GB RAM — başarısız olursa node3 devralır.  
+node2 yalnızca 1.4 GB RAM — başarısız olursa node3 devralır.  
 Rate limit sayaçları: her iki proxy da node5 Core Redis'e bağlanır — tutarlılık sağlanır.
 
 ### node3'ün Çift Rolü
@@ -195,8 +195,8 @@ Mobil App
 | node5 API | node3:8080 | HTTP | AI çağrısı (secondary) |
 | node2 AI Proxy | node5:6379/1 | Redis | Rate limit sayacı |
 | node3 AI Proxy (prod) | node5:6379/1 | Redis | Rate limit sayacı |
-| node1 edge-metrics | node5:6379/0 | Redis | CPU/RAM/disk/net metrikleri |
-| node4 edge-metrics | node5:6379/0 | Redis | CPU/RAM/disk/net metrikleri |
+| node1 edge-metrics | node5:6379/1 | Redis | CPU/RAM/disk/net metrikleri |
+| node4 edge-metrics | node5:6379/1 | Redis | CPU/RAM/disk/net metrikleri |
 | promtail (tüm node'lar) | node3:3100 | HTTP | Log akışı → Loki |
 | Prometheus (node3) | tüm node'lar:9100 | HTTP scrape | Sistem metrikleri |
 
@@ -266,7 +266,7 @@ upstream teqlif_staging { server 10.10.0.4:8001; }  # node3
 | WebRTC SFU | **LiveKit** | 7880 (API), UDP 50000-60000 (medya), 7881 (Prometheus) | `/etc/livekit/livekit.yaml` |
 | Object Storage | **MinIO Standalone** | 9010 (S3 API), 9011 (Console) | `/var/lib/minio`, %80 disk kotası |
 | Edge cache | **Redis 7** | 127.0.0.1:6379 | ACL şifreli |
-| Yük metrikleri | **edge-metrics-agent** | — | Python daemon, her 3s node5 Redis DB0'a yazar |
+| Yük metrikleri | **edge-metrics-agent** | — | Python daemon, her 3s node5 Redis DB1'e yazar |
 | Log ajanı | **promtail** | 9080 | → node3:3100 |
 | Metrik | **node_exporter** | 9100 | |
 
@@ -286,7 +286,7 @@ node3 MinIO:   teqlif-staging       teqlif-dm-staging   (staging, ayrı)
 | Log ajanı | **promtail** | 9080 | → node3:3100 |
 | Metrik | **node_exporter** | 9100 | |
 
-1 worker: RAM 1 GB sınırı nedeniyle — daha fazlası OOM riski taşır.
+1 worker: RAM 1.4 GB sınırı nedeniyle — daha fazlası OOM riski taşır.
 
 ### node3 (Monitor & Staging — Çift Rol)
 
@@ -307,7 +307,7 @@ node3 MinIO:   teqlif-staging       teqlif-dm-staging   (staging, ayrı)
 | Bileşen | Teknoloji | Port | Notlar |
 |---------|-----------|------|--------|
 | Metrik toplama | **Prometheus** | 9090 | 7 scrape hedefi (6 node + kendisi) |
-| Log toplama | **Loki** | 3100 | 14 gün retention; tüm node'lar buraya gönderir |
+| Log toplama | **Loki** | 3100 | 7 gün retention; tüm node'lar buraya gönderir |
 | Dashboard | **Grafana** | 3000 | |
 | Alarm yönetimi | **Alertmanager** | 9093 | Telegram webhook |
 | Log ajanı | **promtail** | 9080 | Kendi loglarını `localhost:3100`'e gönderir |
@@ -768,7 +768,7 @@ Katman 8: fail2ban (SSH brute force)
 | Kullanıcı → REST API | Cloudflare Turnstile (CAPTCHA) + JWT Bearer |
 | LiveKit webhook → API | LiveKit imzalı webhook token |
 | node5 → AI Proxy | `Authorization: Bearer AI_PROXY_INTERNAL_TOKEN` |
-| edge-metrics → Redis Core | Redis ACL şifre + DB 0 |
+| edge-metrics → Redis Core | Redis ACL şifre + DB 1 |
 | Prometheus → node_exporter | Açık (WireGuard korumasında) |
 
 ### Credential Kuralları
@@ -840,7 +840,7 @@ Group wait: 30s | Repeat interval: 4h
 | node4 | → 10.10.0.4:3100 | `node: node4` |
 | node5 | → 10.10.0.4:3100 | `node: node5` |
 
-Retention: 14 gün (336h), TSDB v13
+Retention: 7 gün (168h), TSDB v13
 
 ---
 

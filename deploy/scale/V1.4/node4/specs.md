@@ -20,6 +20,7 @@ Distro     : Debian GNU/Linux 13 (trixie)
 Kernel     : 6.12.100+deb13-cloud-amd64
 VM Type    : KVM
 IPv4/IPv6  : ✔ Online / ✔ Online
+IPv4       : 51.75.74.124
 
 IPv6 Network Information:
 ---------------------------------

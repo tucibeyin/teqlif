@@ -1,5 +1,5 @@
 # /etc/loki/config.yml — node3
-# Scale V1.3: Loki gateway'den node3'e taşındı; retention 14 güne çıkarıldı
+# Scale V1.3: Loki gateway'den node3'e taşındı; V1.4: retention 7 güne düşürüldü (disk tasarrufu)
 
 auth_enabled: false
 
@@ -38,7 +38,7 @@ schema_config:
         period: 24h
 
 limits_config:
-  retention_period: 336h
+  retention_period: 168h
 
 compactor:
   working_directory: /var/lib/loki/compactor
