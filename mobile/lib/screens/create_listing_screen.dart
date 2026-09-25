@@ -1338,7 +1338,7 @@ class _CreditBadge extends ConsumerWidget {
         FaIcon(FontAwesomeIcons.crown, size: 10, color: color),
         const SizedBox(width: 3),
         Text(
-          hasCredits ? '${remaining ?? '…'} $suffix' : '5 TEQlik',
+          hasCredits ? '${remaining ?? '…'} $suffix' : '5 teqliq',
           style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w700,

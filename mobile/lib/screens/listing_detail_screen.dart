@@ -832,7 +832,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         remaining = (d['remaining'] as num).toInt();
         limit = (d['limit'] as num).toInt();
         isPro = d['is_pro'] == true;
-        // TEQlik bakiyesini de çek
+        // teqliq bakiyesini de çek
         final tokenInner = await StorageService.getToken();
         final ur = await http.get(
           Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/me'),
@@ -1043,7 +1043,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 _BoostRow(
                   icon: Icons.account_balance_wallet_outlined,
                   label: loc.t("boostDialogPaidBalance"),
-                  value: '$teqlikBalance TEQlik',
+                  value: '$teqlikBalance teqliq',
                   valueColor: teqlikBalance >= 50
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFDC2626),
@@ -3069,7 +3069,7 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
                         ),
                       ),
                       Text(
-                        '$teqlikCost TEQlik',
+                        '$teqlikCost teqliq',
                         style: TextStyle(
                           color: hasEnoughBalance
                               ? const Color(0xFF2DD4BF)

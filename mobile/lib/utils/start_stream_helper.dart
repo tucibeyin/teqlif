@@ -442,7 +442,7 @@ Future<bool?> _showBlastConfirmDialog(
                     : _InfoRow(
                         icon: Icons.account_balance_wallet_outlined,
                         label: loc.t('blastConfirmCostPaidLabel'),
-                        value: '$audienceCost TEQlik',
+                        value: '$audienceCost teqliq',
                         color: const Color(0xFFB8860B),
                         bold: true,
                       ),

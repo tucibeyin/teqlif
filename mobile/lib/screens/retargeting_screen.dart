@@ -233,7 +233,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
             {'label': '👆 ${loc.t("reportClickOpen")}', 'value': '$clicks  (%$clickRate)'},
           ]),
           const SizedBox(height: 16),
-          _buildROICard(loc.t("reportROI"), '$spent TEQlik', '$costPerClick TEQlik / ${loc.t("adReportMetricClicks")}'),
+          _buildROICard(loc.t("reportROI"), '$spent teqliq', '$costPerClick teqliq / ${loc.t("adReportMetricClicks")}'),
           if (campaigns != null && campaigns.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Gönderim Geçmişi',
@@ -291,7 +291,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
               if (freeCredits > 0 && spentTuci > 0)
                 Text('  •  ', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
               if (spentTuci > 0)
-                Text('$spentTuci TEQlik ${loc.t("reportTotalSpent")}',
+                Text('$spentTuci teqliq ${loc.t("reportTotalSpent")}',
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
             ]),
           ],
@@ -792,7 +792,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                                     ),
                                   ),
                                   TextSpan(
-                                    text: 'TEQlik',
+                                    text: 'teqliq',
                                     style: TextStyle(
                                       fontSize: 14, fontWeight: FontWeight.w700,
                                       color: AppColors.textSecondary(context),

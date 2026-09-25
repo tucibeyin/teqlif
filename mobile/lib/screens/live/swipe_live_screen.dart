@@ -1717,7 +1717,7 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${NumberFormat('#,##0', 'tr_TR').format(cost)} TEQlik',
+                              '${NumberFormat('#,##0', 'tr_TR').format(cost)} teqliq',
                               style: const TextStyle(
                                 color: Color(0xFFA78BFA),
                                 fontSize: 11,
