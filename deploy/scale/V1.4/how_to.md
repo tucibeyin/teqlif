@@ -814,6 +814,45 @@ psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listing_offers" | grep -E "
 
 ---
 
+## TASK-21 · D2/D4/D5 Model Düzeltmeleri
+
+**Staging tarihi:** 2026-09-25  
+**Commit:** 59e9fc1c  
+**Staging testi:** FK constraint, created_at/updated_at TIMESTAMPTZ doğrulandı ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Alembic migration (`zzzzd_d2_d4_d5_model_fixes`) otomatik çalışır:
+- `listings.active_room_id`: FK `live_streams.id ON DELETE SET NULL` eklendi
+- `reports.created_at`: `TIMESTAMP WITH TIME ZONE + DEFAULT now()` yapıldı
+- `app_configs.updated_at`: `TIMESTAMP WITH TIME ZONE` yapıldı
+
+**Doğrulama:**
+```bash
+source /var/www/teqlif.com/venv/bin/activate && python3 -c "
+import asyncio, re, asyncpg
+async def check():
+    url = open('/var/www/teqlif.com/backend/.env.production').read()
+    dsn = re.search(r'DATABASE_URL=(.+)', url).group(1).strip().replace('postgresql+asyncpg://', 'postgresql://')
+    conn = await asyncpg.connect(dsn)
+    r1 = await conn.fetchrow(\"SELECT data_type FROM information_schema.columns WHERE table_name='reports' AND column_name='created_at'\")
+    print('reports.created_at:', r1['data_type'])
+    r2 = await conn.fetchrow(\"SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='listings' AND constraint_name='fk_listings_active_room_id'\")
+    print('listings FK:', r2['constraint_name'] if r2 else 'NOT FOUND')
+    await conn.close()
+asyncio.run(check())
+"
+```
+
+**[PROD FARKI]:** `.env.production` kullan.
+
+---
+
 ## TASK-13 · Keyset Pagination — Feed + Listings + Logout Hive Clear
 
 **Staging tarihi:** 2026-09-22  

@@ -2224,7 +2224,7 @@ class DeleteAccountCommand:
 - `backend/app/models/app_config.py`
 - `backend/alembic/versions/` — Migration
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 59e9fc1c · tarih: 2026-09-25
 
 ---
 
