@@ -2,7 +2,7 @@
 
 > **Sürüm:** V1.4  
 > **Durum:** Production-Ready  
-> **Güncelleme:** 2026-09-19  
+> **Güncelleme:** 2026-09-25  
 > **Kaynak dizin:** `deploy/scale/V1.4/`
 
 ---
@@ -96,12 +96,12 @@ Monitoring stack kaynak tüketimi modest (~500 MB RAM). Staging trafik yükü d�
 
 | Node | Rol | Sağlayıcı | Konum | CPU | RAM | Disk | Ağ | WireGuard IP | Public IP |
 |------|-----|-----------|-------|-----|-----|------|----|-------------|-----------|
-| **gateway** | EDGE PROXY | Netcup | Nürnberg, DE | 2 vCore QEMU 2.29GHz | 1.9 GB + 1 GB Swap | 58.9 GB SSD | 1 Gbps *(24h ort. 100Mbps throttle!)* | 10.10.0.2 | Netcup IP |
+| **gateway** | EDGE PROXY | Netcup | Nürnberg, DE | 2 vCore QEMU 2.29GHz | 1.9 GB + 1 GB Swap | 58.9 GB SSD | 1 Gbps port *(24h ortalaması 100Mbps geçerse geçici 100 Mbps throttle!, 24h'de bir kontrol )* | 10.10.0.2 | Netcup IP |
 | **node1** | EDGE 1 | OVHcloud | Limburg, DE | 6 Core Intel Haswell 3.09GHz | 11.4 GB + 2 GB Swap | 98.3 GB NVMe | 2 Gbps unmetered | 10.10.0.1 | OVH IP |
-| **node2** | AI PROXY 1 | VPSHostingService | ABD | 1 Core | 1.4 GB + 2 GB Swap | — | — | 10.10.0.3 | US IP |
-| **node3** | MONITOR & STAGING | Zap-Hosting | Ashburn, VA, ABD | 4 Core AMD EPYC | ~4 GB + 4 GB Swap | — | 5 TB/ay *(10 Mbit sonrası throttle)* | 10.10.0.4 | **5.249.165.10** |
-| **node4** | EDGE 2 | OVHcloud | Limburg, DE | 6 Core Intel Haswell | 11.4 GB + 8 GB Swap | 98.3 GB NVMe | 2 Gbps unmetered | 10.10.0.6 | OVH IP |
-| **node5** | CORE | Zap-Hosting | — | 4 Core AMD EPYC | 7.8 GB + 8 GB Swap | 50 GB SSD | 1 Gbps unmetered | 10.10.0.5 | Zap IP |
+| **node2** | AI PROXY 1 | VPSHostingService | ABD | 1 Core | 1.4 GB + 2 GB Swap | 15 GB SSD | 1 Gbps port unmetered | 10.10.0.3 | US IP |
+| **node3** | MONITOR & STAGING | Zap-Hosting | Ashburn, VA, ABD | 4 Core AMD EPYC | 4 GB + 4 GB Swap | 50 GB SSD | 33 TB for 1 Gbps/ay *(bu değer aşılırsa 10 Mbps unlimited bandwith )* | 10.10.0.4 | **5.249.165.10** |
+| **node4** | EDGE 2 | OVHcloud | Limburg, DE | 6 Core Intel Haswell 3.09GHz | 11.4 GB + 2 GB Swap | 98.3 GB NVMe | 2 Gbps unmetered | 10.10.0.6 | OVH IP |
+| **node5** | CORE | Zap-Hosting | FFM / Eygelshoven, GER | 4 Core AMD EPYC | 7.8 GB + 8 GB Swap | 50 GB SSD | 33 TB for 1 Gbps/ay *(bu değer aşılırsa 10 Mbps unlimited bandwith )* | 10.10.0.5 | Zap IP |
 
 **OS:** Tüm node'lar Debian GNU/Linux 13 (trixie) — Kernel 6.12.x  
 **Sanallaştırma:** KVM — node3 nested VM desteklemiyor  
@@ -320,13 +320,16 @@ node3 MinIO:   teqlif-staging       teqlif-dm-staging   (staging, ayrı)
 | Production API | **FastAPI** (uvicorn, 4 worker, uvloop) | 8000 (bind: 0.0.0.0) | `--proxy-headers`, trusted: 10.10.0.2 |
 | Worker | **ARQ** | — | `teqlif-worker` (CPUWeight=50) |
 | Worker-critical | **ARQ** | — | `teqlif-worker-critical` (öncelikli) |
-| Veritabanı | **PostgreSQL 16 + pgvector** | 127.0.0.1:5432 | DB: `teqlif`, pool: max 20/overflow 10 |
+| Bağlantı Havuzu | **PgBouncer 1.24.1** | 127.0.0.1:5432 | transaction mode, pool_size=30, max_client_conn=200 |
+| Veritabanı | **PostgreSQL 16 + pgvector** | 127.0.0.1:5433 | DB: `teqlif` |
 | Core Cache | **Redis 7** | 10.10.0.5:6379 | 4 GB maxmemory, AOF+RDB hybrid, ACL şifreli |
 | Analytics | **ClickHouse** | 127.0.0.1:8123 | DB: `teqlif_prod_analytics` |
 
 **node5 Startup Sırası:**
 ```
-teqlif.service
+pgbouncer.service  (bağımsız — teqlif-restart tarafından restart edilmez)
+
+teqlif.service  (After=pgbouncer.service)
   ExecStartPre: alembic upgrade head     (DB migration — her seferinde çalışır)
   ExecStartPre: python sync_main.py      (ARB dosyaları → Redis/DB çeviri sync)
   ExecStart:    uvicorn main:app ...     (API server başlar)
@@ -469,7 +472,8 @@ APNS .p8 key                                                 (node5'te güvenli 
                      │      NODE5 — CORE        │
                      │      10.10.0.5           │
                      │  FastAPI :8000 (4w)      │
-                     │  PostgreSQL :5432        │
+                     │  PgBouncer :5432         │
+                     │  PostgreSQL :5433        │
                      │  ClickHouse :8123        │
                      │  Redis Core :6379 ◄──────┼── node2/node3 AI Proxy (rate limit)
                      │  ARQ Workers             │   node1/node4 edge-metrics
@@ -548,6 +552,8 @@ Bootstrap'ta bir kez kopyalanır. `teqlif-restart` bunlara **dokunmaz**. Manuel 
 | `/etc/promtail-config.yml` | tüm node'lar | `V1.4/<node>/resources/promtail-config.yml` |
 | `/etc/nginx/sites-available/teqlif.com.conf` | gateway | `V1.4/gateway/resources/teqlif.com.conf` |
 | `/etc/redis/redis.conf` | node1/3/4/5 | bootstrap'ta `requirepass` eklenir |
+| `/etc/pgbouncer/pgbouncer.ini` | node5 | TASK-05'te elle oluşturulur — `listen_port=5432`, `server_port=5433` |
+| `/etc/pgbouncer/userlist.txt` | node5 | SCRAM-SHA-256 hash — `pg_authid`'den alınır, elle oluşturulur |
 
 ### teqlif-restart Davranışı
 
@@ -561,7 +567,9 @@ Config kopyalanmaz. .env ezilmez. Yalnızca servisler restart edilir.
 ### Systemd Servis Bağımlılıkları (node5)
 
 ```
-teqlif.service
+pgbouncer.service  (bağımsız — teqlif-restart tarafından restart edilmez)
+
+teqlif.service  (After=pgbouncer.service)
   ExecStartPre: alembic upgrade head
   ExecStartPre: python sync_main.py
   Wants: teqlif-worker.service, teqlif-worker-critical.service
@@ -570,7 +578,7 @@ teqlif-worker.service        → BindsTo + PartOf teqlif.service
 teqlif-worker-critical.service → BindsTo + PartOf teqlif.service
 ```
 
-`sudo systemctl restart teqlif` komutu 3 servisi birlikte restart eder.  
+`sudo systemctl restart teqlif` komutu 3 servisi birlikte restart eder. PgBouncer ayrı yönetilir (`sudo systemctl restart pgbouncer`).  
 (node3 staging'de aynı pattern: `teqlif-staging.service`, `teqlif-worker-staging.service`, `teqlif-worker-critical-staging.service`)
 
 ### Backup Sistemi (node5 → node3)
@@ -585,7 +593,7 @@ Script node bağımsız çalışır: `teqlif` servisi aktifse prod node, `teqlif
 
 | Servis | Yöntem | Dosya adı |
 |--------|--------|-----------|
-| PostgreSQL | `pg_dump --format=custom` (Unix socket, peer auth) | `teqlif_pg_{db}_{ISO8601Z}.pgdump` |
+| PostgreSQL | `pg_dump --format=custom -p 5433` (Unix socket, peer auth) | `teqlif_pg_{db}_{ISO8601Z}.pgdump` |
 | Redis | `BGSAVE` + `gzip` | `teqlif_redis_{ISO8601Z}.rdb.gz` |
 | ClickHouse | `BACKUP DATABASE` + `tar.zst` | `teqlif_ch_{db}_{ISO8601Z}.tar.zst` |
 
@@ -641,6 +649,7 @@ Bootstrap: apt kurulum → UFW → WireGuard (key üretir, public key'i ekrana y
 |--------|:-------:|:-----:|:-----:|:-----:|:-----:|:-----:|
 | **nginx (L7 Proxy)** | ✓ | — | — | — | — | — |
 | **FastAPI Production** | — | — | — | — | — | ✓ :8000 |
+| **PgBouncer** | — | — | — | — | — | ✓ :5432 |
 | **FastAPI Staging** | — | — | — | ✓ :8001 | — | — |
 | **ARQ Worker (prod)** | — | — | — | — | — | ✓ ×2 |
 | **ARQ Worker (staging)** | — | — | — | ✓ ×2 | — | — |
@@ -684,7 +693,9 @@ Bootstrap: apt kurulum → UFW → WireGuard (key üretir, public key'i ekrana y
 | 8000 | FastAPI prod | 0.0.0.0 (wg0 üzerinden) | gateway nginx |
 | 8001 | FastAPI staging | 10.10.0.4 | gateway nginx |
 | 8080 | AI Proxy | node2:10.10.0.3, node3:10.10.0.4 | node5 backend |
-| 5432 | PostgreSQL | 127.0.0.1 | Yalnızca lokal (API/worker) |
+| 5432 | PgBouncer | 127.0.0.1 (node5) | node5 API/worker → havuz (PostgreSQL 5433'e bağlar) |
+| 5432 | PostgreSQL (staging) | 127.0.0.1 (node3) | Yalnızca lokal staging API/worker |
+| 5433 | PostgreSQL (prod) | 127.0.0.1 (node5) | Yalnızca PgBouncer üzerinden — dışa kapalı |
 | 6379 | Redis Core | 10.10.0.5 | node5 API, node2/3 AI proxy, edge-metrics |
 | 6379 | Redis Edge | 127.0.0.1 (node1, node4) | Yalnızca lokal LiveKit/cache |
 | 6379 | Redis Staging | 127.0.0.1 (node3) | Yalnızca staging |
@@ -846,9 +857,9 @@ Retention: 14 gün (336h), TSDB v13
 
 **Önemli bug:** Backend `init_clickhouse()` fonksiyonu tabloları `database` parametresi belirtmeden bağlanır → `default` DB'ye yazar. Çözüm: tablolar bootstrap'ta doğru DB içinde elle oluşturulur. `get_clickhouse_client()` ise `settings.clickhouse_db` kullanır — doğru DB'ye okur/yazar.
 
-### node3 Zap-Hosting Panel Zorunluluğu
+### node3 ve node5 Zap-Hosting Panel Zorunluluğu
 
-Panel'e **90 günde bir manuel giriş zorunlu.** Giriş yapılmazsa VM RAM'i 1.8 GB'a düşürülür (balloon).  
+Panel'e **90 günde bir manuel giriş zorunlu.** Giriş yapılmazsa 30 gün içerisinde VPS kapatılır, yani 90 günde bir web interface'den maneul giriş zorunlu..  
 Son giriş: 2026-09-11 → **Sonraki deadline: 2026-12-10**
 
 ### gateway Bant Genişliği Limiti
@@ -979,4 +990,4 @@ sudo bash bootstrap_<node>.sh
 | 6 | **Prometheus FastAPI scrape** | `prometheus.yml`'e `node5:8000/metrics` hedefi eklenmeli. `prometheus-fastapi-instrumentator` kurulu ama Prometheus bunu scrape etmiyor — API latency/request metrikleri toplanmıyor. | Orta |
 | 7 | **Alarm eşiği sıkılaştırması** | `prometheus-rules.yml`: `DiskSpaceLow` %80 → %70, `HighMemoryUsage` %85 → %75. Mevcut eşikler node3 (3.8 GiB) gibi kısıtlı node'lar için geç uyarı veriyor. | Orta |
 
-*Son güncelleme: 2026-09-19 · deploy/scale/V1.4/documents/05_final.md*
+*Son güncelleme: 2026-09-25 · deploy/scale/V1.4/documents/05_final.md*
