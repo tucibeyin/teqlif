@@ -1,5 +1,5 @@
-IMAGE_MAX_BYTES         = 5 * 1024 * 1024     # 5 MB
-VIDEO_MAX_BYTES         = 30 * 1024 * 1024    # 30 MB  (DM video — CRF28 720p 90 sn)
+IMAGE_MAX_BYTES         = 3 * 1024 * 1024     # 3 MB
+VIDEO_MAX_BYTES         = 20 * 1024 * 1024    # 20 MB  (DM video)
 LISTING_VIDEO_MAX_BYTES = 50 * 1024 * 1024    # 50 MB  (İlan video — client CRF23 1080p sıkıştırır)
 VOICE_MAX_BYTES         = 2 * 1024 * 1024     # 2 MB   (Opus 16kbps VBR 10 dk)
 FILE_MAX_BYTES          = 50 * 1024 * 1024    # 50 MB

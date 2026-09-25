@@ -1,6 +1,6 @@
 abstract final class MediaConstants {
-  static const int imageMaxBytes        = 5 * 1024 * 1024;   // 5 MB
-  static const int videoMaxBytes        = 30 * 1024 * 1024;  // 30 MB (DM video CRF28 720p)
+  static const int imageMaxBytes        = 3 * 1024 * 1024;   // 3 MB
+  static const int videoMaxBytes        = 20 * 1024 * 1024;  // 20 MB (DM video)
   static const int listingVideoMaxBytes = 50 * 1024 * 1024;  // 50 MB (İlan video — client sıkıştırır)
   static const int voiceMaxBytes        = 2 * 1024 * 1024;   // 2 MB  (Opus 16kbps 10 dk)
   static const int fileMaxBytes         = 50 * 1024 * 1024;  // 50 MB

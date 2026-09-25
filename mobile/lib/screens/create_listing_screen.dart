@@ -95,7 +95,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   bool _submitting = false;
 
-  static const int _maxImages = 10;
+  static const int _maxImages = 3;
   static const int _maxVideoDurationSecs = MediaConstants.listingVideoMaxSecs;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────

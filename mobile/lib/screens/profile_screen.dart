@@ -2450,8 +2450,8 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       _uploadingAvatar = true;
     });
     try {
-      final compressed = await MediaCompressor.compress(picked.path, MediaCompressType.dmPhoto);
-      final upload = await ref.read(uploadServiceProvider).uploadBytes(Uint8List.fromList(compressed.bytes), 'avatar.jpg');
+      final compressed = await MediaCompressor.compress(picked.path, MediaCompressType.profilePhoto);
+      final upload = await ref.read(uploadServiceProvider).uploadBytes(Uint8List.fromList(compressed.bytes), 'avatar.webp');
 
       final patchBody = <String, dynamic>{'profile_image_url': upload.url};
       if (upload.thumbUrl != null) {

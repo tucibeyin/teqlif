@@ -11,6 +11,7 @@ enum MediaCompressType {
   listingVideo,
   storyPhoto,
   storyVideo,
+  profilePhoto,
 }
 
 class CompressedMedia {
@@ -70,8 +71,15 @@ class MediaCompressor {
         );
 
       case MediaCompressType.dmPhoto:
-      case MediaCompressType.listingPhoto:
         return _compressPhoto(inputPath, originalBytes, maxDim: 1200, quality: 80);
+
+      case MediaCompressType.listingPhoto:
+        return _compressPhoto(inputPath, originalBytes,
+            maxDim: 1920, quality: 80, format: CompressFormat.webp);
+
+      case MediaCompressType.profilePhoto:
+        return _compressPhoto(inputPath, originalBytes,
+            maxDim: 800, quality: 75, format: CompressFormat.webp);
 
       case MediaCompressType.storyPhoto:
         return _compressPhoto(inputPath, originalBytes, maxDim: 1920, quality: 85);
@@ -87,7 +95,7 @@ class MediaCompressor {
       case MediaCompressType.listingVideo:
         return _compressVideo(
           inputPath, originalBytes,
-          quality: VideoQuality.HighestQuality,
+          quality: VideoQuality.MediumQuality,
           onProgress: onProgress,
         );
     }
@@ -98,19 +106,21 @@ class MediaCompressor {
     int originalBytes, {
     required int maxDim,
     required int quality,
+    CompressFormat format = CompressFormat.jpeg,
   }) async {
     final result = await FlutterImageCompress.compressWithFile(
       inputPath,
       minWidth: maxDim,
       minHeight: maxDim,
       quality: quality,
+      format: format,
       keepExif: false,
     );
     if (result == null) throw const MediaCompressException('Image compression failed');
     return CompressedMedia(
       bytes: result,
-      mimeType: 'image/jpeg',
-      extension: 'jpg',
+      mimeType: format == CompressFormat.webp ? 'image/webp' : 'image/jpeg',
+      extension: format == CompressFormat.webp ? 'webp' : 'jpg',
       originalBytes: originalBytes,
       compressedBytes: result.length,
     );
