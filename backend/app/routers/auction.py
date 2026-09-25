@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from typing import Optional
 import asyncio
 
+from app.core.ip_utils import mask_ip
 from app.database import get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
@@ -65,7 +66,7 @@ async def start_auction(
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    host_ip = request.client.host if request.client else None
+    host_ip = mask_ip(request.client.host if request.client else None)
     return await AuctionCommands(uow).start(stream_id, data, current_user, host_ip=host_ip)
 
 
@@ -108,7 +109,7 @@ async def place_bid(
     current_user: User = Depends(get_current_user),
     _idem=Depends(idempotency_key("bid", ttl=30)),
 ):
-    bidder_ip = request.client.host if request.client else None
+    bidder_ip = mask_ip(request.client.host if request.client else None)
     result = await AuctionCommands(uow).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
     asyncio.create_task(buffer_user_event(
         event_type="bid_placed",

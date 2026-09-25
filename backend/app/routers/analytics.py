@@ -81,12 +81,13 @@ async def track_event(
         except Exception:
             pass
 
-    # Extract IP address safely
+    # Extract and mask IP address (KVKK: son oktet sıfırlanır)
+    from app.core.ip_utils import mask_ip
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        ip_address = forwarded.split(",")[0].strip()
+        ip_address = mask_ip(forwarded.split(",")[0].strip())
     else:
-        ip_address = request.client.host if request.client else None
+        ip_address = mask_ip(request.client.host if request.client else None)
 
     # Save to database asynchronously in the background
     background_tasks.add_task(_save_event_async, data, user_id, ip_address, db)
