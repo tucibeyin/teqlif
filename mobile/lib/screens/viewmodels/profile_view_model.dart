@@ -14,8 +14,8 @@ class ProfileUiState {
   final bool loading;
   final bool listingsError;
   final bool purchasesLoading;
-  final int? tuciBalance;
-  final List<dynamic> tuciHistory;
+  final int? teqlikBalance;
+  final List<dynamic> teqlikHistory;
   final ListingFilterState filter;
 
   final bool showPrivacyBanner;
@@ -26,8 +26,8 @@ class ProfileUiState {
     this.loading = true,
     this.listingsError = false,
     this.purchasesLoading = false,
-    this.tuciBalance,
-    this.tuciHistory = const [],
+    this.teqlikBalance,
+    this.teqlikHistory = const [],
     this.filter = const ListingFilterState(),
     this.showPrivacyBanner = false,
   });
@@ -38,8 +38,8 @@ class ProfileUiState {
     bool? loading,
     bool? listingsError,
     bool? purchasesLoading,
-    int? tuciBalance,
-    List<dynamic>? tuciHistory,
+    int? teqlikBalance,
+    List<dynamic>? teqlikHistory,
     ListingFilterState? filter,
     bool? showPrivacyBanner,
   }) {
@@ -49,8 +49,8 @@ class ProfileUiState {
       loading: loading ?? this.loading,
       listingsError: listingsError ?? this.listingsError,
       purchasesLoading: purchasesLoading ?? this.purchasesLoading,
-      tuciBalance: tuciBalance ?? this.tuciBalance,
-      tuciHistory: tuciHistory ?? this.tuciHistory,
+      teqlikBalance: teqlikBalance ?? this.teqlikBalance,
+      teqlikHistory: teqlikHistory ?? this.teqlikHistory,
       filter: filter ?? this.filter,
       showPrivacyBanner: showPrivacyBanner ?? this.showPrivacyBanner,
     );
@@ -146,8 +146,8 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
     _walletSub = WalletService.getBalanceStream(bypassCache: bypassCache).listen((wallet) {
       if (state.hasValue) {
         state = AsyncValue.data(state.value!.copyWith(
-          tuciBalance: wallet['balance'] as int?,
-          tuciHistory: wallet['transactions'] as List? ?? [],
+          teqlikBalance: wallet['balance'] as int?,
+          teqlikHistory: wallet['transactions'] as List? ?? [],
         ));
       }
     });

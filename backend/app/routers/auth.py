@@ -367,7 +367,7 @@ async def init_context(
 
     return {
         "user": UserOut.model_validate(current_user),
-        "wallet_balance": current_user.tuci_balance,
+        "wallet_balance": current_user.teqlik_balance,
         "notifications_unread": notif_result.scalar_one(),
         "messages_unread": msg_result.scalar_one(),
     }

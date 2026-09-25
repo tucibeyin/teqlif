@@ -13,8 +13,8 @@
   "COOLDOWN": "Tekrar göndermek için {readable_time} beklemeniz gerekiyor.",
   "CODE_ALREADY_SENT": "Doğrulama kodu zaten gönderildi. Yeni kod için {readable_time} beklemeniz gerekiyor.",
   "LISTING_NOT_ACTIVE": "İlan şu an aktif değil.",
-  "INSUFFICIENT_FUNDS": "Bu işlem için yeterli TUCi bakiyeniz yok.",
-  "INSUFFICIENT_FUNDS_hint": "TUCi Cüzdan sayfasından bakiye yükleyebilirsiniz.",
+  "INSUFFICIENT_FUNDS": "Bu işlem için yeterli TEQlik bakiyeniz yok.",
+  "INSUFFICIENT_FUNDS_hint": "TEQlik Cüzdan sayfasından bakiye yükleyebilirsiniz.",
   "VALIDATION_ERROR": "Geçersiz istek verisi.",
   "INTERNAL_SERVER_ERROR": "Sunucuda beklenmeyen bir hata oluştu.",
 
@@ -79,8 +79,8 @@
   "BUY_NOW_REJECTED_COOLDOWN": "Hemen Al talebiniz reddedildiği için kısa bir süre yeni istek gönderemezsiniz.",
   "NO_PENDING_BUY_NOW": "Bekleyen Hemen Al talebi yok.",
 
-  "MONTHLY_LIMIT_INSUFFICIENT_FUNDS": "Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.",
-  "INSUFFICIENT_FUNDS_BOOST": "Bu ay ücretsiz boost hakkınız doldu ve yeterli TUCi bakiyeniz yok.",
+  "MONTHLY_LIMIT_INSUFFICIENT_FUNDS": "Aylık ücretsiz kullanım hakkınız doldu ve yeterli TEQlik bakiyeniz yok.",
+  "INSUFFICIENT_FUNDS_BOOST": "Bu ay ücretsiz boost hakkınız doldu ve yeterli TEQlik bakiyeniz yok.",
   "INSUFFICIENT_BALANCE": "Yetersiz bakiye.",
 
   "AI_SERVICE_TIMEOUT": "Yapay zeka servisi yanıt vermedi. Lütfen tekrar deneyin.",

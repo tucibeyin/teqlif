@@ -57,7 +57,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         from app.repositories.category_repository import CategoryRepository
         from app.repositories.auction_repository import AuctionRepository
         from app.repositories.bid_repository import BidRepository
-        from app.repositories.tuci_transaction_repository import TuciTransactionRepository
+        from app.repositories.tuci_transaction_repository import TeqlikTransactionRepository
         from app.repositories.user_repository import UserRepository
         from app.repositories.follow_repository import FollowRepository
         from app.repositories.block_repository import BlockRepository
@@ -71,7 +71,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.categories = CategoryRepository(self.session)
         self.auctions = AuctionRepository(self.session)
         self.bids = BidRepository(self.session)
-        self.transactions = TuciTransactionRepository(self.session)
+        self.transactions = TeqlikTransactionRepository(self.session)
         self.users = UserRepository(self.session)
         self.follows = FollowRepository(self.session)
         self.blocks = BlockRepository(self.session)

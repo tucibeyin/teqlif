@@ -13,8 +13,8 @@
   "COOLDOWN": "Please wait {readable_time} before trying again.",
   "CODE_ALREADY_SENT": "A verification code was already sent. Please wait {readable_time} before requesting a new one.",
   "LISTING_NOT_ACTIVE": "This listing is currently inactive.",
-  "INSUFFICIENT_FUNDS": "You don't have enough TUCi balance for this action.",
-  "INSUFFICIENT_FUNDS_hint": "You can top up your balance from the TUCi Wallet page.",
+  "INSUFFICIENT_FUNDS": "You don't have enough TEQlik balance for this action.",
+  "INSUFFICIENT_FUNDS_hint": "You can top up your balance from the TEQlik Wallet page.",
   "VALIDATION_ERROR": "Invalid request data.",
   "INTERNAL_SERVER_ERROR": "An unexpected server error occurred.",
 
@@ -79,8 +79,8 @@
   "BUY_NOW_REJECTED_COOLDOWN": "Your Buy Now request was rejected. Please wait before sending a new request.",
   "NO_PENDING_BUY_NOW": "There is no pending Buy Now request.",
 
-  "MONTHLY_LIMIT_INSUFFICIENT_FUNDS": "Your monthly free quota is used up and you don't have enough TUCi balance.",
-  "INSUFFICIENT_FUNDS_BOOST": "Your free boost quota for this month is used up and you don't have enough TUCi balance.",
+  "MONTHLY_LIMIT_INSUFFICIENT_FUNDS": "Your monthly free quota is used up and you don't have enough TEQlik balance.",
+  "INSUFFICIENT_FUNDS_BOOST": "Your free boost quota for this month is used up and you don't have enough TEQlik balance.",
   "INSUFFICIENT_BALANCE": "Insufficient balance.",
 
   "AI_SERVICE_TIMEOUT": "The AI service did not respond. Please try again.",

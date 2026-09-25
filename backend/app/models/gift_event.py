@@ -10,7 +10,7 @@ class GiftEvent(Base):
     """
     Canlı yayında gönderilen her hediyenin tam kaydı.
 
-    TuciTransaction.reference_id → GiftEvent.id (reference_type="gift_event")
+    TeqlikTransaction.reference_id → GiftEvent.id (reference_type="gift_event")
     hem sender hem receiver transaction'ı aynı GiftEvent'e işaret eder.
     Redis: gift:log:{stream_id} listesine de LPUSH yapılır (TTL 24h).
     """

@@ -211,7 +211,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     final target = data['total_target'] as int? ?? 0;
     final sent = data['total_sent'] as int? ?? 0;
     final clicks = data['total_clicks'] as int? ?? 0;
-    final spent = data['total_spent_tuci'] as int? ?? 0;
+    final spent = data['total_spent_teqlik'] as int? ?? 0;
     final costPerClick = clicks > 0 ? (spent / clicks).round() : 0;
     final clickRate = sent > 0 ? ((clicks / sent) * 100).toStringAsFixed(1) : '0.0';
     final campaigns = (data['campaigns'] as List?)?.cast<Map<String, dynamic>>();
@@ -233,7 +233,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
             {'label': '👆 ${loc.t("reportClickOpen")}', 'value': '$clicks  (%$clickRate)'},
           ]),
           const SizedBox(height: 16),
-          _buildROICard(loc.t("reportROI"), '$spent TUCi', '$costPerClick TUCi / ${loc.t("adReportMetricClicks")}'),
+          _buildROICard(loc.t("reportROI"), '$spent TEQlik', '$costPerClick TEQlik / ${loc.t("adReportMetricClicks")}'),
           if (campaigns != null && campaigns.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Gönderim Geçmişi',
@@ -251,7 +251,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     final targetCount = campaign['target_count'] as int? ?? 0;
     final sentCount   = campaign['sent_count']   as int? ?? 0;
     final clickCount  = campaign['click_count']  as int? ?? 0;
-    final spentTuci   = campaign['spent_tuci']   as int? ?? 0;
+    final spentTuci   = campaign['spent_teqlik']   as int? ?? 0;
     final freeCredits = campaign['spent_free_credits'] as int? ?? 0;
     final sentAt = DateTime.tryParse(campaign['sent_at'] as String? ?? '')?.toLocal();
     final clickRate = sentCount > 0 ? ((clickCount / sentCount) * 100).toStringAsFixed(1) : '0.0';
@@ -291,7 +291,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
               if (freeCredits > 0 && spentTuci > 0)
                 Text('  •  ', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
               if (spentTuci > 0)
-                Text('$spentTuci TUCi ${loc.t("reportTotalSpent")}',
+                Text('$spentTuci TEQlik ${loc.t("reportTotalSpent")}',
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
             ]),
           ],
@@ -324,15 +324,15 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     final reachable      = audience['reachable_audience']     as int? ?? 0;
     final creditsLeft    = audience['blast_credits_remaining'] as int? ?? 0;
     final perBlastCap    = audience['per_blast_cap']          as int? ?? 10;
-    final tuciBalance    = audience['tuci_balance']            as int? ?? 0;
+    final teqlikBalance    = audience['teqlik_balance']            as int? ?? 0;
     if (reachable == 0) return;
 
     final actualCount = reachable < perBlastCap ? reachable : perBlastCap;
     final freeUsed    = creditsLeft < actualCount ? creditsLeft : actualCount;
     final paidCount   = actualCount - freeUsed;
-    final tuciCost    = paidCount * 10;
+    final teqlikCost    = paidCount * 10;
 
-    if (tuciCost > 0 && tuciBalance < tuciCost) {
+    if (teqlikCost > 0 && teqlikBalance < teqlikCost) {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -341,7 +341,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
           title: Text(loc.t("retargetingDialogTitle"),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context))),
           content: Text(
-            loc.t("retargetingDialogBodyInsufficient", {"cost": tuciCost.toString(), "balance": tuciBalance.toString()}),
+            loc.t("retargetingDialogBodyInsufficient", {"cost": teqlikCost.toString(), "balance": teqlikBalance.toString()}),
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context), height: 1.5),
           ),
           actions: [
@@ -364,9 +364,9 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     if (freeUsed > 0 && paidCount == 0) {
       dialogBody = loc.t("retargetingDialogBodyFree", {"count": actualCount.toString(), "credits": freeUsed.toString()});
     } else if (freeUsed > 0 && paidCount > 0) {
-      dialogBody = loc.t("retargetingDialogBodyKarma", {"count": actualCount.toString(), "free": freeUsed.toString(), "cost": tuciCost.toString()});
+      dialogBody = loc.t("retargetingDialogBodyKarma", {"count": actualCount.toString(), "free": freeUsed.toString(), "cost": teqlikCost.toString()});
     } else {
-      dialogBody = loc.t("retargetingDialogBodyPaid", {"count": actualCount.toString(), "cost": tuciCost.toString()});
+      dialogBody = loc.t("retargetingDialogBodyPaid", {"count": actualCount.toString(), "cost": teqlikCost.toString()});
     }
 
     final confirmed = await showDialog<bool>(
@@ -402,7 +402,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final result = await viewModel.sendBlast(actualCount, tuciCost);
+    final result = await viewModel.sendBlast(actualCount, teqlikCost);
     if (!mounted) return;
 
     if (result != null && result['error'] == null) {
@@ -792,7 +792,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                                     ),
                                   ),
                                   TextSpan(
-                                    text: 'TUCi',
+                                    text: 'TEQlik',
                                     style: TextStyle(
                                       fontSize: 14, fontWeight: FontWeight.w700,
                                       color: AppColors.textSecondary(context),

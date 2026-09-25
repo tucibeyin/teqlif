@@ -14,7 +14,7 @@ from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.enums import ListingStatus
 from app.models.listing import Listing
 from app.models.mass_notification import MassNotificationCampaign
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.user import User
 from app.utils.auth import get_current_user, get_current_user_optional, bearer_scheme, decode_token
 from app.use_cases.listings.commands.create_listing import CreateListingCommand
@@ -514,7 +514,7 @@ async def audience_estimate(
         "audience_size":           reachable,
         "blast_credits_remaining": credits_remaining,
         "per_blast_cap":           cap,
-        "tuci_balance":            current_user.tuci_balance,
+        "teqlik_balance":            current_user.teqlik_balance,
         "estimated_cost":          estimated_cost,
     }
 
@@ -609,7 +609,7 @@ async def listing_price_signal(
 ):
     """
     İlanlı DS / Auction start için fiyat sinyali.
-    Teqlif'in organik satış verisinden beslenir — TUCi harcanmaz.
+    Teqlif'in organik satış verisinden beslenir — TEQlik harcanmaz.
     Yeterli veri yoksa boş döner (öneri gösterilmez).
     """
     listing = await db.scalar(
@@ -708,19 +708,19 @@ async def generate_description(
 ):
     """
     AI ilan açıklaması üretir — node2 (Groq + Gemini) primary, lokal Groq fallback.
-    PRO: ayda 6 ücretsiz, sonrası 5 TUCi. Standart: her seferinde 5 TUCi.
+    PRO: ayda 6 ücretsiz, sonrası 5 TEQlik. Standart: her seferinde 5 TEQlik.
     """
     logger.info("[API] /generate-description user_id=%s title=%r", current_user.id, body.title[:60])
 
-    # ── TUCi / PRO kredi ön kontrolü ──────────────────────────────────────────
+    # ── TEQlik / PRO kredi ön kontrolü ──────────────────────────────────────────
     _ai_desc_cost  = credit_service.cost_tuci("ai_desc")
     _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
     if current_user.is_premium:
         ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
-        if ai_used >= _ai_desc_limit and current_user.tuci_balance < _ai_desc_cost:
+        if ai_used >= _ai_desc_limit and current_user.teqlik_balance < _ai_desc_cost:
             raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
     else:
-        if current_user.tuci_balance < _ai_desc_cost:
+        if current_user.teqlik_balance < _ai_desc_cost:
             raise InsufficientFundsException()
 
     # ── AI üretimi — node2'ye ilet, yoksa lokal fallback ─────────────────────
@@ -744,18 +744,18 @@ async def generate_description(
             ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
             if ai_used_new > _ai_desc_limit:
                 await db.execute(
-                    sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                    sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
                     {"cost": _ai_desc_cost, "uid": current_user.id},
                 )
-                db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+                db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
                 await db.commit()
                 tuci_spent = _ai_desc_cost
         else:
             await db.execute(
-                sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
                 {"cost": _ai_desc_cost, "uid": current_user.id},
             )
-            db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+            db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
             await db.commit()
             tuci_spent = _ai_desc_cost
     except Exception as exc:
@@ -816,7 +816,7 @@ async def send_mass_notification(
     paid_count   = actual_count - free_used
     tuci_cost    = paid_count * credit_service.cost_tuci("blast")
 
-    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
+    if tuci_cost > 0 and current_user.teqlik_balance < tuci_cost:
         raise InsufficientFundsException()
 
     # Hedef kitleyi oluştur: doğrudan görüntüleyenler + kategori ilgisi olanlar
@@ -878,10 +878,10 @@ async def send_mass_notification(
 
     if tuci_cost > 0:
         await db.execute(
-            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
             {"cost": tuci_cost, "uid": current_user.id},
         )
-        db.add(TuciTransaction(
+        db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-tuci_cost,
             transaction_type="spend_blast",
@@ -895,7 +895,7 @@ async def send_mass_notification(
         await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
 
     logging.getLogger(__name__).info(
-        "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TUCi",
+        "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",
         current_user.id, listing_id, sent, free_used, paid_count, tuci_cost,
     )
 

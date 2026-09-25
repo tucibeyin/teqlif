@@ -578,10 +578,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
     ref.listen<AiDescState>(aiDescProvider, (prev, next) async {
       if (next.status == AiDescStatus.done && prev?.status == AiDescStatus.loading) {
-        if (next.tuciSpent > 0) {
+        if (next.teqlikSpent > 0) {
           _loadAiDescCredits();
           TeqSnackBar.show(
-            message: loc.t('tuciSpent', {'count': next.tuciSpent.toString()}),
+            message: loc.t('teqlikSpent', {'count': next.teqlikSpent.toString()}),
             type: TeqSnackBarType.success,
           );
         } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
@@ -1338,7 +1338,7 @@ class _CreditBadge extends ConsumerWidget {
         FaIcon(FontAwesomeIcons.crown, size: 10, color: color),
         const SizedBox(width: 3),
         Text(
-          hasCredits ? '${remaining ?? '…'} $suffix' : '5 TUCi',
+          hasCredits ? '${remaining ?? '…'} $suffix' : '5 TEQlik',
           style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w700,

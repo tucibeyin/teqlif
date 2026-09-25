@@ -15,7 +15,7 @@ from app.models.auction import Auction
 from app.models.listing import Listing
 from app.models.purchase import Purchase
 from app.models.stream import LiveStream
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEventCreate
 from app.utils.auth import decode_token, get_current_user
@@ -453,8 +453,8 @@ async def reactivation_credits(
             "is_premium": False,
             "renewal_date": None,
             "cost": reactivation_cost,
-            "balance": current_user.tuci_balance,
-            "can_afford": current_user.tuci_balance >= reactivation_cost,
+            "balance": current_user.teqlik_balance,
+            "can_afford": current_user.teqlik_balance >= reactivation_cost,
             "within_window_count": 0,
         }
     used      = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
@@ -462,7 +462,7 @@ async def reactivation_credits(
     remaining = max(0, limit - used)
     is_free   = remaining > 0
     cost      = 0 if is_free else reactivation_cost
-    can_afford = is_free or current_user.tuci_balance >= reactivation_cost
+    can_afford = is_free or current_user.teqlik_balance >= reactivation_cost
     renewal_date: str | None = None
     if current_user.premium_since:
         renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
@@ -488,7 +488,7 @@ async def reactivation_credits(
         "is_premium": True,
         "renewal_date": renewal_date,
         "cost": cost,
-        "balance": current_user.tuci_balance,
+        "balance": current_user.teqlik_balance,
         "can_afford": can_afford,
         "within_window_count": within_window_count,
     }
@@ -532,10 +532,10 @@ async def price_estimate(
     _ai_price_limit = credit_service.free_limit("ai_price", is_premium=True)
     if current_user.is_premium:
         ai_used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
-        if ai_used >= _ai_price_limit and current_user.tuci_balance < _ai_price_cost:
+        if ai_used >= _ai_price_limit and current_user.teqlik_balance < _ai_price_cost:
             raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
     else:
-        if current_user.tuci_balance < _ai_price_cost:
+        if current_user.teqlik_balance < _ai_price_cost:
             raise InsufficientFundsException()
 
     from app.services.ml.ml_service import generate_embedding
@@ -812,7 +812,7 @@ async def price_estimate(
     else:
         advice += _t.get("aiAdviceMarketClose", "").replace("{price}", close_fmt)
 
-    # ── TUCi düş + sayaç güncelle (Atomik) ────────────────────────────────────
+    # ── TEQlik düş + sayaç güncelle (Atomik) ────────────────────────────────────
     tuci_spent = 0
     ref_id   = body.exclude_listing_id if body.exclude_listing_id else None
     ref_type = "listing" if body.exclude_listing_id else None
@@ -820,10 +820,10 @@ async def price_estimate(
         ai_used_new = await credit_service.increment("ai_price", current_user.id, current_user.premium_since)
         if ai_used_new > _ai_price_limit:
             await db.execute(
-                sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
                 {"cost": _ai_price_cost, "uid": current_user.id},
             )
-            db.add(TuciTransaction(
+            db.add(TeqlikTransaction(
                 user_id=current_user.id,
                 amount=-_ai_price_cost,
                 transaction_type="spend_ai_price",
@@ -834,10 +834,10 @@ async def price_estimate(
             tuci_spent = _ai_price_cost
     else:
         await db.execute(
-            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
             {"cost": _ai_price_cost, "uid": current_user.id},
         )
-        db.add(TuciTransaction(
+        db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-_ai_price_cost,
             transaction_type="spend_ai",

@@ -181,7 +181,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     });
   }
   
-  Future<Map<String, dynamic>?> sendBlast(int actualCount, int tuciCost) async {
+  Future<Map<String, dynamic>?> sendBlast(int actualCount, int teqlikCost) async {
     final listing = state.selectedListing;
     if (listing == null) return null;
     
@@ -189,7 +189,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     final result = await ref.read(analyticsServiceProvider).sendRetargeting(
       listingId: listing['id'] as int,
       estimatedAudience: actualCount,
-      estimatedCost: tuciCost,
+      estimatedCost: teqlikCost,
       recipientCount: actualCount,
     );
     

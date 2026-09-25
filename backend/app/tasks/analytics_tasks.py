@@ -227,7 +227,7 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
         await db.execute(
             text("""
                 UPDATE users
-                SET tuci_balance = tuci_balance + :amount
+                SET teqlik_balance = teqlik_balance + :amount
                 WHERE id = ANY(:uids) AND status = 'active'
             """),
             {"amount": _AIRDROP_AMOUNT, "uids": uid_list},

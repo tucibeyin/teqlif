@@ -249,7 +249,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
                             Expanded(
                               child: _buildSummaryCard(
                                 loc.t("analyticsRevenue"),
-                                '${NumberFormat('#,##0', 'tr_TR').format(totalRev)} TUCi',
+                                '${NumberFormat('#,##0', 'tr_TR').format(totalRev)} TEQlik',
                                 Icons.monetization_on,
                                 const Color(0xFF22C55E),
                                 context,
@@ -370,7 +370,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
                                               CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              '${NumberFormat('#,##0', 'tr_TR').format(rev)} TUCi',
+                                              '${NumberFormat('#,##0', 'tr_TR').format(rev)} TEQlik',
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.w800,
                                                 color: Color(0xFF22C55E),

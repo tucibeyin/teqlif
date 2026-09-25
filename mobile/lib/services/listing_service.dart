@@ -192,7 +192,7 @@ class ListingService {
   }
 
   /// İlanlı DS / Auction start için fiyat sinyali.
-  /// Teqlif'in organik satış verisinden beslenir — TUCi harcanmaz.
+  /// Teqlif'in organik satış verisinden beslenir — TEQlik harcanmaz.
   /// Veri yoksa null döner.
   Future<Map<String, dynamic>?> getPriceSignal(int listingId) async {
     try {

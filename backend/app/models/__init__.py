@@ -27,7 +27,7 @@ from .translation import Translation
 from .state import State
 from .district import District
 from .category_field import CategoryField, FieldOption
-from .tuci_transaction import TuciTransaction
+from .tuci_transaction import TeqlikTransaction, TuciTransaction
 from .gift_event import GiftEvent
 from .referral import Referral
 from .search_alert import SearchAlert

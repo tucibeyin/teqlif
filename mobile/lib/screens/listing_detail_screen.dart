@@ -758,7 +758,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
     final creditsLeft = est['blast_credits_remaining'] as int? ?? 0;
     final perBlastCap = est['per_blast_cap'] as int? ?? maxAudience;
-    final tuciBalance = est['tuci_balance'] as int? ?? 0;
+    final teqlikBalance = est['teqlik_balance'] as int? ?? 0;
     notifier.setSending(false);
 
     // Onay penceresi (Akıllı Modal)
@@ -768,7 +768,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         maxAudience: maxAudience,
         creditsLeft: creditsLeft,
         perBlastCap: perBlastCap,
-        tuciBalance: tuciBalance,
+        teqlikBalance: teqlikBalance,
       ),
     );
 
@@ -817,7 +817,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     int remaining = 0;
     int limit = 0;
     bool isPro = false;
-    int tuciBalance = 0;
+    int teqlikBalance = 0;
 
     // Check loading state while fetching data — spinner shown by AsyncElevatedButton
 
@@ -832,7 +832,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         remaining = (d['remaining'] as num).toInt();
         limit = (d['limit'] as num).toInt();
         isPro = d['is_pro'] == true;
-        // TUCi bakiyesini de çek
+        // TEQlik bakiyesini de çek
         final tokenInner = await StorageService.getToken();
         final ur = await http.get(
           Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/me'),
@@ -842,7 +842,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         );
         if (ur.statusCode == 200) {
           final ud = jsonDecode(ur.body) as Map<String, dynamic>;
-          tuciBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
+          teqlikBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
         }
       }
     } catch (_) {}
@@ -1043,8 +1043,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 _BoostRow(
                   icon: Icons.account_balance_wallet_outlined,
                   label: loc.t("boostDialogPaidBalance"),
-                  value: '$tuciBalance TUCi',
-                  valueColor: tuciBalance >= 50
+                  value: '$teqlikBalance TEQlik',
+                  valueColor: teqlikBalance >= 50
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFDC2626),
                 ),
@@ -1058,7 +1058,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 isExpanded: false,
               ),
               TeqButton(
-                onPressed: tuciBalance >= 50
+                onPressed: teqlikBalance >= 50
                     ? () => Navigator.pop(dlgCtx, true)
                     : null,
                 text: loc.t("boostDialogPaidConfirm"),
@@ -2869,13 +2869,13 @@ class _MassNotificationDialog extends ConsumerStatefulWidget {
   final int maxAudience;
   final int creditsLeft;
   final int perBlastCap;
-  final int tuciBalance;
+  final int teqlikBalance;
 
   const _MassNotificationDialog({
     required this.maxAudience,
     required this.creditsLeft,
     required this.perBlastCap,
-    required this.tuciBalance,
+    required this.teqlikBalance,
   });
 
   @override
@@ -2940,8 +2940,8 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
         ? widget.creditsLeft
         : actualCount;
     final paidCount = actualCount - freeUsed;
-    final tuciCost = paidCount * 10;
-    final bool hasEnoughBalance = widget.tuciBalance >= tuciCost;
+    final teqlikCost = paidCount * 10;
+    final bool hasEnoughBalance = widget.teqlikBalance >= teqlikCost;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
@@ -3069,7 +3069,7 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
                         ),
                       ),
                       Text(
-                        '$tuciCost TUCi',
+                        '$teqlikCost TEQlik',
                         style: TextStyle(
                           color: hasEnoughBalance
                               ? const Color(0xFF2DD4BF)
@@ -3108,7 +3108,7 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
           onPressed: hasEnoughBalance && actualCount > 0
               ? () => Navigator.pop(context, {
                   'count': actualCount,
-                  'cost': tuciCost,
+                  'cost': teqlikCost,
                 })
               : null,
           text: loc.t("btnSend"),

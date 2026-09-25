@@ -178,7 +178,7 @@
     }
   },
   "giftErrorGeneric": "حدث خطأ.",
-  "giftInsufficientBalance": "رصيد غير كاف. شراء TUCi لإرسال هدية.",
+  "giftInsufficientBalance": "رصيد غير كاف. شراء TEQlik لإرسال هدية.",
   "giftLoadBalanceButton": "شحن الرصيد",
   "purchaseLoadError": "حدث خطأ أثناء تحميل مشترياتك. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.",
   "purchaseEmptyState": "ليس لديك أي مشتريات حتى الآن.",
@@ -720,7 +720,7 @@
   "tooltipDelete": "حذف",
   "settingsProTools": "📈 أدوات Pro",
   "settingsProActive": "نشط",
-  "walletTitle": "محفظة TUCi الخاصة بي",
+  "walletTitle": "محفظة TEQlik الخاصة بي",
   "walletBalance": "الرصيد الحالي",
   "walletRecentTxns": "آخر المعاملات",
   "walletSpendingSummary": "ملخص الإنفاق",
@@ -769,9 +769,9 @@
   "walletDetailGoGiftSender": "ملف المُرسِل",
   "walletDetailGoGiftReceiver": "ملف المُستقبِل",
   "walletDetailGoGiftStream": "الذهاب إلى تحليلات البث",
-  "walletComingSoonLabel": "شراء TUCi قريباً!",
-  "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.",
-  "walletBuyBtn": "شراء TUCi قريباً",
+  "walletComingSoonLabel": "شراء TEQlik قريباً!",
+  "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TEQlik كرصيد بداية.",
+  "walletBuyBtn": "شراء TEQlik قريباً",
   "reportLoading": "جارٍ إعداد تحليل البث...",
   "reportLoadFailed": "تعذّر تحميل التقرير.",
   "reportRetry": "حاول مجدداً",
@@ -885,9 +885,9 @@
     }
   },
   "blastConfirmCostFreeLabel": "التكلفة",
-  "blastConfirmCostPaidLabel": "تكلفة TUCi",
+  "blastConfirmCostPaidLabel": "تكلفة TEQlik",
   "blastSubtitleFree": "إشعار عند بدء البث • مجاني",
-  "blastSubtitlePaid": "إشعار عند بدء البث • {cost} TUCi",
+  "blastSubtitlePaid": "إشعار عند بدء البث • {cost} TEQlik",
   "@blastSubtitlePaid": {
     "placeholders": {
       "cost": {
@@ -916,7 +916,7 @@
       }
     }
   },
-  "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} TUCi)",
+  "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} TEQlik)",
   "@blastBtnPaid": {
     "placeholders": {
       "count": {
@@ -935,7 +935,7 @@
       }
     }
   },
-  "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} TUCi",
+  "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} TEQlik",
   "@blastConfirmBodyPaid": {
     "placeholders": {
       "count": {
@@ -1295,13 +1295,13 @@
       }
     }
   },
-  "profileInviteShareText": "انضم إلى Teqlif! عنوان المزادات الحية والتسوق المستعمل 🎁\n\nأدخل رمز الدعوة هذا عند التسجيل واكسب مكافأة TUCi فوراً:\n\n🔑 الرمز: {code}\n⏳ تنتهي الصلاحية في: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
+  "profileInviteShareText": "انضم إلى Teqlif! عنوان المزادات الحية والتسوق المستعمل 🎁\n\nأدخل رمز الدعوة هذا عند التسجيل واكسب مكافأة TEQlik فوراً:\n\n🔑 الرمز: {code}\n⏳ تنتهي الصلاحية في: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
   "boostDialogTitle": "تمييز الإعلان",
   "boostDialogPlanLabel": "خطة الحملة:",
   "boostDialogTotalBudget": "إجمالي الميزانية",
-  "boostDialogTotalBudgetValue": "50 TUCi",
+  "boostDialogTotalBudgetValue": "50 TEQlik",
   "boostDialogCpc": "التكلفة لكل نقرة",
-  "boostDialogCpcValue": "1 TUCi",
+  "boostDialogCpcValue": "1 TEQlik",
   "boostDialogEstClicks": "النقرات المتوقعة",
   "boostDialogEstClicksValue": "~50 نقرة",
   "boostDialogFeedHint": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
@@ -1328,15 +1328,15 @@
   },
   "boostDialogPaidDesc": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
   "boostDialogPaidCost": "التكلفة",
-  "boostDialogPaidCostValue": "50 TUCi",
+  "boostDialogPaidCostValue": "50 TEQlik",
   "boostDialogPaidBalance": "رصيدك الحالي",
-  "boostDialogPaidConfirm": "ادفع 50 TUCi وابدأ",
+  "boostDialogPaidConfirm": "ادفع 50 TEQlik وابدأ",
   "boostSuccessFree": "🔥 تم تمييز إعلانك مجاناً!",
-  "boostSuccessPaid": "🔥 تم تمييز إعلانك! (تم خصم 50 TUCi)",
+  "boostSuccessPaid": "🔥 تم تمييز إعلانك! (تم خصم 50 TEQlik)",
   "boostSuccess": "🔥 تم تمييز إعلانك!",
   "boostErrorDefault": "تعذّر بدء الحملة.",
   "boostErrorConnection": "خطأ في الاتصال. يرجى المحاولة مجدداً.",
-  "boostErrorInsufficientTuci": "رصيد TUCi غير كافٍ. يلزم 50 TUCi للتمييز المدفوع.",
+  "boostErrorInsufficientTuci": "رصيد TEQlik غير كافٍ. يلزم 50 TEQlik للتمييز المدفوع.",
   "boostBtnStart": "تمييز الإعلان",
   "boostBtnReport": "عرض أداء الإعلان",
   "adReportTitle": "تقرير الإعلان",
@@ -1490,7 +1490,7 @@
       }
     }
   },
-  "retargetingDialogBodyPaid": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. سيُخصم {cost} TUCi من محفظتك.",
+  "retargetingDialogBodyPaid": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. سيُخصم {cost} TEQlik من محفظتك.",
   "@retargetingDialogBodyPaid": {
     "placeholders": {
       "count": {
@@ -1501,7 +1501,7 @@
       }
     }
   },
-  "retargetingDialogBodyKarma": "سيتم إرسال إشعار إلى {count} شخص.\n\nسيُستخدم {free} رصيد + سيُدفع {cost} TUCi.",
+  "retargetingDialogBodyKarma": "سيتم إرسال إشعار إلى {count} شخص.\n\nسيُستخدم {free} رصيد + سيُدفع {cost} TEQlik.",
   "@retargetingDialogBodyKarma": {
     "placeholders": {
       "count": {
@@ -1515,7 +1515,7 @@
       }
     }
   },
-  "retargetingDialogBodyInsufficient": "رصيد TUCi غير كافٍ.\nالمطلوب: {cost} TUCi | المتاح: {balance} TUCi",
+  "retargetingDialogBodyInsufficient": "رصيد TEQlik غير كافٍ.\nالمطلوب: {cost} TEQlik | المتاح: {balance} TEQlik",
   "@retargetingDialogBodyInsufficient": {
     "placeholders": {
       "cost": {
@@ -1543,7 +1543,7 @@
       }
     }
   },
-  "retargetingPaidSubtitle": "{count} شخص × 10 TUCi",
+  "retargetingPaidSubtitle": "{count} شخص × 10 TEQlik",
   "@retargetingPaidSubtitle": {
     "placeholders": {
       "count": {
@@ -1569,7 +1569,7 @@
       }
     }
   },
-  "retargetingCostBadge": "سيُنفق {cost} TUCi",
+  "retargetingCostBadge": "سيُنفق {cost} TEQlik",
   "@retargetingCostBadge": {
     "placeholders": {
       "cost": {
@@ -1578,7 +1578,7 @@
     }
   },
   "retargetingFootnote": "سيتلقى المستخدمون إشعارًا \"هل لا تزال مهتمًا؟\". يُرسل فقط لغير المشترين.",
-  "retargetingInfoText": "يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi لكل شخص.",
+  "retargetingInfoText": "يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TEQlik لكل شخص.",
   "retargetingLast30Days": "آخر 30 يومًا",
   "retargetingViewerLabel": "شاهد",
   "retargetingBoughtLabel": "اشترى",
@@ -1646,8 +1646,8 @@
   },
   "profilePhotoUploadError": "تعذّر تحميل الصورة. حاول مرة أخرى.",
   "profileInviteCodeError": "تعذّر استرداد رمز الدعوة، حاول مرة أخرى.",
-  "profileInviteTitle": "ادعُ أصدقاءك، اكسب TUCi!",
-  "profileInviteSubtitle": "+50 TUCi لكل دعوة، صديقك يحصل على +10 TUCi",
+  "profileInviteTitle": "ادعُ أصدقاءك، اكسب TEQlik!",
+  "profileInviteSubtitle": "+50 TEQlik لكل دعوة، صديقك يحصل على +10 TEQlik",
   "@profileInviteShareText": {
     "placeholders": {
       "code": {
@@ -1694,8 +1694,8 @@
   "favoritesEmpty": "لا توجد مفضلات بعد",
   "createNeedTitle": "يرجى إدخال عنوان الإعلان أولاً.",
   "aiPriceError": "تعذّر الحصول على تقدير السعر. حاول مرة أخرى.",
-  "tuciSpent": "تم إنفاق {count} TUCi.",
-  "@tuciSpent": {
+  "teqlikSpent": "تم إنفاق {count} TEQlik.",
+  "@teqlikSpent": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -1744,7 +1744,7 @@
   },
   "listingDeactivateTitle": "إيقاف الإعلان",
   "listingDeactivateWarning": "إذا قمت بإلغاء التنشيط، سيتم حذف الترويج النشط.",
-  "listingDeactivateCostHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف {cost} TUCi من رصيدك.",
+  "listingDeactivateCostHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف {cost} TEQlik من رصيدك.",
   "@listingDeactivateCostHint": {
     "placeholders": {
       "cost": {
@@ -1763,7 +1763,7 @@
       }
     }
   },
-  "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} TUCi.",
+  "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} TEQlik.",
   "@listingReactivatePaidPro": {
     "placeholders": {
       "cost": {
@@ -1771,7 +1771,7 @@
       }
     }
   },
-  "listingReactivatePaidNormal": "سيُخصم {cost} TUCi. رصيدك: {balance} TUCi.",
+  "listingReactivatePaidNormal": "سيُخصم {cost} TEQlik. رصيدك: {balance} TEQlik.",
   "@listingReactivatePaidNormal": {
     "placeholders": {
       "cost": {
@@ -1783,7 +1783,7 @@
     }
   },
   "listingReactivateProUpsell": "اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.",
-  "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TUCi للمتابعة.",
+  "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TEQlik للمتابعة.",
   "listingReactivateConfirm": "تفعيل",
   "proReactivationSection": "أرصدة إعادة تفعيل الإعلان",
   "suggestedStreamers": "المذيعون المقترحون",
@@ -1818,7 +1818,7 @@
   "faqAExploreListings": "صفحة الإعلانات هي موجز عمودي للإعلانات المضافة حديثاً والتي تم اختيارها خصيصاً لاهتماماتك بواسطة الذكاء الاصطناعي. أما الاستكشاف فهي مركز البحث الرئيسي حيث يمكنك اكتشاف بائعين مشهورين.",
   "faqQExploreLiveMessages": "ما هي قوائم \"البث المباشر\" و \"الرسائل\"؟",
   "faqAExploreLiveMessages": "البث المباشر: يأخذك إلى موجز SwipeLive حيث يعرض البائعون المنتجات مباشرة. الرسائل: يمكنك الدردشة مباشرة مع البائعين والتفاوض على الأسعار بأمان.",
-  "faqCatBadges": "الشارات والعلامات ورصيد TUCi ([ICON_TUCI])",
+  "faqCatBadges": "الشارات والعلامات ورصيد TEQlik ([ICON_TUCI])",
   "faqQBadgesVerified": "ما هي العلامة الزرقاء ([ICON_VERIFIED]) (حساب موثق ([ICON_VERIFIED]))؟",
   "faqABadgesVerified": "تشير العلامة الزرقاء ([ICON_VERIFIED]) إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.",
   "faqQBadgesPro": "ماذا تعني شارة \"👑 (التاج)\"؟",
@@ -1826,9 +1826,9 @@
   "faqQBadgesTrusted": "ماذا تعني شارات بائع \"✅ موثوق\" و \"⭐ نشط\"؟",
   "faqABadgesTrusted": "بائع موثوق: تُمنح للبائعين ذوي الخبرة الذين أثبتوا هويتهم وبنوا الثقة. بائع نشط: يمثل البائعين الذين يستخدمون المنصة بشكل متكرر ويردون بسرعة.",
   "faqQBadgesSponsored": "إلى ماذا تشير علامات \"ممولة\" و \"شائعة\" و \"مباشر\"؟",
-  "faqABadgesSponsored": "ممولة: إعلان مروج باستخدام رصيد TUCi ([ICON_TUCI]). شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.",
-  "faqQBadgesTuci": "ما هو TUCi ([ICON_TUCI]) وأين يتم استخدامه؟",
-  "faqABadgesTuci": "TUCi ([ICON_TUCI]) هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.",
+  "faqABadgesSponsored": "ممولة: إعلان مروج باستخدام رصيد TEQlik ([ICON_TUCI]). شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.",
+  "faqQBadgesTuci": "ما هو TEQlik ([ICON_TUCI]) وأين يتم استخدامه؟",
+  "faqABadgesTuci": "TEQlik ([ICON_TUCI]) هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.",
   "faqCatLive": "البث المباشر (SwipeLive) والمزادات",
   "faqQLiveHost": "ماذا يمكنني أن أفعل في شاشة المذيع (المضيف)؟",
   "faqALiveHost": "يمكنك إدارة الدردشة، بدء مزاد لمنتجك، رؤية العطاءات الواردة فوراً، وقبول أعلى عطاء لتأكيد البيع في ثوانٍ.",
@@ -1851,7 +1851,7 @@
   "faqCatIcons": "مسرد أيقونات النظام",
   "faqIconVerified": "حساب موثق ([ICON_VERIFIED]): يظهر أن المستخدم قد تحقق من هويته أو هاتفه.",
   "faqIconPro": "teqlif PRO ([ICON_PRO]): يشير إلى عضو محترف يتم الترويج له بواسطة المنصة.",
-  "faqIconTuci": "TUCi ([ICON_TUCI]): العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.",
+  "faqIconTuci": "TEQlik ([ICON_TUCI]): العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.",
   "faqIconBlast": "Blast ([ICON_BLAST]): يرسل إشعارًا فوريًا لقائمتك/بثك.",
   "faqIconAutoBid": "المزايدة التلقائية ([ICON_AUTOBID]): النظام يزايد نيابة عنك حتى الحد الأقصى.",
   "faqIconSales": "رؤى المبيعات: يظهر حجم المبيعات والربحية الخاصة بك.",
@@ -1869,7 +1869,7 @@
   "proToolStreamAnalyticsDesc": "قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل.",
   "faqIconNameVerified": "حساب موثق ([ICON_VERIFIED])",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
-  "faqIconNameTuci": "TUCi ([ICON_TUCI])",
+  "faqIconNameTuci": "TEQlik ([ICON_TUCI])",
   "faqIconNameBlast": "Blast ([ICON_BLAST])",
   "faqIconNameAutoBid": "المزايدة التلقائية ([ICON_AUTOBID])",
   "faqIconNameSales": "رؤى المبيعات",
@@ -1970,7 +1970,7 @@
   "audienceNotificationWillGoTo": "سيتم إرسال الإشعار إلى:",
   "audienceMonthlyFreeRights": "الحقوق المجانية الشهرية:",
   "audienceTotalCost": "التكلفة الإجمالية:",
-  "audienceInsufficientTuci": "⚠️ رصيد TUCi غير كافٍ، يرجى إعادة الشحن.",
+  "audienceInsufficientTuci": "⚠️ رصيد TEQlik غير كافٍ، يرجى إعادة الشحن.",
   "hostInvitedToStage": "تمت دعوته إلى المسرح",
   "hostModeration": "إشراف",
   "hostMute": "كتم",
@@ -2146,7 +2146,7 @@
   "errStoryLoadFailed": "فشل تحميل القصة",
   "errThumbnailLoadFailed": "فشل تحميل الصورة المصغرة",
   "btnAddListing": "إضافة إعلان",
-  "lblTuciWallet": "محفظة TUCi",
+  "lblTuciWallet": "محفظة TEQlik",
   "btnGoPro": "احصل على Pro",
   "lblProNotificationSettings": "إعدادات إشعارات Pro",
   "lblStatusOff": "إيقاف",
@@ -2235,7 +2235,7 @@
   "apiErrReferralExpired": "لقد انتهت صلاحية رمز الدعوة هذا (انتهت فترة الصلاحية البالغة 3 أيام).",
   "apiMsgReferralSavedVerify": "تم حفظ رمز الدعوة! يرجى إكمال التحقق من البريد الإلكتروني والهاتف للمطالبة بمكافأتك.",
   "notifReferralTitle": "مكافأة الدعوة!",
-  "notifReferralBody": "استخدم صديقك ({username}) الرمز الخاص بك وأكمل التحقق! ربحت {bonus} TUCi.",
+  "notifReferralBody": "استخدم صديقك ({username}) الرمز الخاص بك وأكمل التحقق! ربحت {bonus} TEQlik.",
   "@notifReferralBody": {
     "placeholders": {
       "username": {
@@ -2246,7 +2246,7 @@
       }
     }
   },
-  "apiMsgReferralSuccess": "اكتملت التحققات! دعاك {referrer_username}. تمت إضافة {your_bonus} TUCi إلى حسابك.",
+  "apiMsgReferralSuccess": "اكتملت التحققات! دعاك {referrer_username}. تمت إضافة {your_bonus} TEQlik إلى حسابك.",
   "@apiMsgReferralSuccess": {
     "placeholders": {
       "referrer_username": {
@@ -2496,7 +2496,7 @@
     }
   },
   "notifChurnAirdropSeller": "إعلاناتك تنتظرك! 🛍️",
-  "notifChurnBodySeller": "أضفنا {amount} TUCi إلى حسابك. أنشئ إعلاناً جديداً وتواصل مع المشترين!",
+  "notifChurnBodySeller": "أضفنا {amount} TEQlik إلى حسابك. أنشئ إعلاناً جديداً وتواصل مع المشترين!",
   "@notifChurnBodySeller": {
     "placeholders": {
       "amount": {
@@ -2505,7 +2505,7 @@
     }
   },
   "notifChurnAirdropBuyer": "اشتقنا إليك! 🎁",
-  "notifChurnBodyBuyer": "أضفنا {amount} TUCi إلى حسابك، تصفّح البثوث المباشرة وأنفقها!",
+  "notifChurnBodyBuyer": "أضفنا {amount} TEQlik إلى حسابك، تصفّح البثوث المباشرة وأنفقها!",
   "@notifChurnBodyBuyer": {
     "placeholders": {
       "amount": {
@@ -2603,7 +2603,7 @@
       }
     }
   },
-  "listingBlastCost": "التكلفة: {cost} TUCi",
+  "listingBlastCost": "التكلفة: {cost} TEQlik",
   "@listingBlastCost": {
     "placeholders": {
       "cost": {
@@ -3098,7 +3098,7 @@
   "uploadErrorServerBusy": "الخادم مشغول حالياً، يرجى المحاولة مرة أخرى لاحقاً.",
   "uploadErrorAuthExpired": "انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى.",
   "uploadErrorGeneric": "تعذر تحميل الوسائط، يرجى المحاولة مرة أخرى.",
-  "apiErrorInsufficientFundsPro": "لقد وصلت إلى حد الذكاء الاصطناعي المجاني لهذا الشهر. تحتاج إلى {cost} TUCi على الأقل في حسابك للمتابعة.",
+  "apiErrorInsufficientFundsPro": "لقد وصلت إلى حد الذكاء الاصطناعي المجاني لهذا الشهر. تحتاج إلى {cost} TEQlik على الأقل في حسابك للمتابعة.",
   "@apiErrorInsufficientFundsPro": {
     "placeholders": {
       "cost": {
@@ -3106,7 +3106,7 @@
       }
     }
   },
-  "apiErrorInsufficientFundsStd": "رصيد TUCi غير كافٍ. تحتاج إلى {cost} TUCi على الأقل في حسابك لهذا الإجراء.",
+  "apiErrorInsufficientFundsStd": "رصيد TEQlik غير كافٍ. تحتاج إلى {cost} TEQlik على الأقل في حسابك لهذا الإجراء.",
   "@apiErrorInsufficientFundsStd": {
     "placeholders": {
       "cost": {

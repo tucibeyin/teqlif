@@ -12,7 +12,7 @@ from app.models.enums import ListingStatus
 from app.models.listing_impression import ListingImpression
 from app.models.enums import StreamStatus
 from app.models.ad_campaign import AdCampaign
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.user import User
 from app.services import credit_service
 
@@ -59,7 +59,7 @@ class ToggleListingCommand:
                         is_free = used < credit_service.free_limit("reactivation", is_premium=True)
 
                     if not is_free:
-                        if current_user.tuci_balance < reactivation_cost:
+                        if current_user.teqlik_balance < reactivation_cost:
                             raise InsufficientFundsException(code="insufficient_balance")
 
                 listing.status = ListingStatus.ACTIVE
@@ -71,10 +71,10 @@ class ToggleListingCommand:
 
             if reactivating and not is_free:
                 await self.uow.session.execute(
-                    text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                    text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
                     {"cost": reactivation_cost, "uid": current_user.id},
                 )
-                self.uow.session.add(TuciTransaction(
+                self.uow.session.add(TeqlikTransaction(
                     user_id=current_user.id,
                     amount=-reactivation_cost,
                     transaction_type="spend_reactivation",

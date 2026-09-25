@@ -38,14 +38,14 @@ class GetReactivationCostQuery:
 
         is_free = within_window or (remaining > 0)
         cost = 0 if is_free else reactivation_cost
-        can_afford = is_free or current_user.tuci_balance >= reactivation_cost
+        can_afford = is_free or current_user.teqlik_balance >= reactivation_cost
 
         return {
             "is_premium": current_user.is_premium,
             "free_remaining": remaining,
             "free_limit": free_limit,
             "cost": cost,
-            "balance": current_user.tuci_balance,
+            "balance": current_user.teqlik_balance,
             "can_afford": can_afford,
             "renewal_date": renewal_date,
             "within_window": within_window,

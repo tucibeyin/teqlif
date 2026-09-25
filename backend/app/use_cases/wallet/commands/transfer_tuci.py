@@ -1,7 +1,7 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, ForbiddenException, InsufficientFundsException, NotFoundException
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 
 logger = get_logger(__name__)
 
@@ -25,7 +25,7 @@ class TransferTuciCommand:
             sender = await self.uow.users.get(id=sender_id)
             if sender is None:
                 raise NotFoundException(code="SENDER_NOT_FOUND")
-            if sender.tuci_balance < amount:
+            if sender.teqlik_balance < amount:
                 raise InsufficientFundsException()
 
             # 2. İşlemleri UoW ile kaydet

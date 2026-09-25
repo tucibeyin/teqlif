@@ -42,7 +42,7 @@ class User(Base):
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     plan_type: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
     premium_since: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
-    tuci_balance: Mapped[int] = mapped_column(Integer, default=100, nullable=False, server_default="100")
+    teqlik_balance: Mapped[int] = mapped_column(Integer, default=100, nullable=False, server_default="100")
     bio: Mapped[str | None] = mapped_column(String(150), nullable=True)
     website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     instagram_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

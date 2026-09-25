@@ -12,7 +12,7 @@ from sqlalchemy import select, text as sql_text
 
 from app.models.user import User
 from app.models.referral import Referral
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.core.logger import get_logger
 
@@ -121,10 +121,10 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
 
     # Referrer +50 TUCi
     await db.execute(
-        sql_text("UPDATE users SET tuci_balance = tuci_balance + :amt WHERE id = :uid"),
+        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
         {"amt": REFERRER_BONUS, "uid": referrer.id},
     )
-    db.add(TuciTransaction(
+    db.add(TeqlikTransaction(
         user_id=referrer.id,
         amount=REFERRER_BONUS,
         transaction_type="referral_bonus",
@@ -132,10 +132,10 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
 
     # Referred +10 TUCi
     await db.execute(
-        sql_text("UPDATE users SET tuci_balance = tuci_balance + :amt WHERE id = :uid"),
+        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
         {"amt": REFERRED_BONUS, "uid": current_user.id},
     )
-    db.add(TuciTransaction(
+    db.add(TeqlikTransaction(
         user_id=current_user.id,
         amount=REFERRED_BONUS,
         transaction_type="welcome_bonus",
@@ -187,6 +187,6 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         "referrer_username": referrer.username,
         "referrer_bonus": REFERRER_BONUS,
         "your_bonus": REFERRED_BONUS,
-        "new_balance": current_user.tuci_balance,
+        "new_balance": current_user.teqlik_balance,
         "message": t.get("apiMsgReferralSuccess", "").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
     }

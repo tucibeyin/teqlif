@@ -13,8 +13,8 @@
   "COOLDOWN": "يرجى الانتظار {readable_time} قبل المحاولة مجدداً.",
   "CODE_ALREADY_SENT": "تم إرسال رمز التحقق بالفعل. يرجى الانتظار {readable_time} قبل طلب رمز جديد.",
   "LISTING_NOT_ACTIVE": "هذا الإعلان غير نشط حالياً.",
-  "INSUFFICIENT_FUNDS": "رصيد TUCi لديك غير كافٍ لهذا الإجراء.",
-  "INSUFFICIENT_FUNDS_hint": "يمكنك شحن رصيدك من صفحة محفظة TUCi.",
+  "INSUFFICIENT_FUNDS": "رصيد TEQlik لديك غير كافٍ لهذا الإجراء.",
+  "INSUFFICIENT_FUNDS_hint": "يمكنك شحن رصيدك من صفحة محفظة TEQlik.",
   "VALIDATION_ERROR": "بيانات الطلب غير صالحة.",
   "INTERNAL_SERVER_ERROR": "حدث خطأ غير متوقع في الخادم.",
 
@@ -79,8 +79,8 @@
   "BUY_NOW_REJECTED_COOLDOWN": "تم رفض طلب الشراء الفوري. يرجى الانتظار قبل إرسال طلب جديد.",
   "NO_PENDING_BUY_NOW": "لا يوجد طلب شراء فوري معلق.",
 
-  "MONTHLY_LIMIT_INSUFFICIENT_FUNDS": "لقد استنفدت حصتك الشهرية المجانية وليس لديك رصيد TUCi كافٍ.",
-  "INSUFFICIENT_FUNDS_BOOST": "لقد استنفدت حصة التعزيز المجانية لهذا الشهر وليس لديك رصيد TUCi كافٍ.",
+  "MONTHLY_LIMIT_INSUFFICIENT_FUNDS": "لقد استنفدت حصتك الشهرية المجانية وليس لديك رصيد TEQlik كافٍ.",
+  "INSUFFICIENT_FUNDS_BOOST": "لقد استنفدت حصة التعزيز المجانية لهذا الشهر وليس لديك رصيد TEQlik كافٍ.",
   "INSUFFICIENT_BALANCE": "رصيد غير كافٍ.",
 
   "AI_SERVICE_TIMEOUT": "لم يستجب خدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.",

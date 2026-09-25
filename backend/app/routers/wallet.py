@@ -10,7 +10,7 @@ from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.listing import Listing
 from app.models.stream import LiveStream
 from app.models.gift_event import GiftEvent
@@ -54,7 +54,7 @@ class GiftRequest(BaseModel):
     cost: int = Field(gt=0, le=1000)
 
 
-def _txn_dict(t: TuciTransaction) -> dict:
+def _txn_dict(t: TeqlikTransaction) -> dict:
     return {
         "id": t.id,
         "amount": t.amount,
@@ -85,14 +85,14 @@ async def get_balance(
 ):
     limit = max(1, min(limit, 100))
     result = await db.execute(
-        select(TuciTransaction)
-        .where(TuciTransaction.user_id == current_user.id)
-        .order_by(desc(TuciTransaction.created_at))
+        select(TeqlikTransaction)
+        .where(TeqlikTransaction.user_id == current_user.id)
+        .order_by(desc(TeqlikTransaction.created_at))
         .limit(limit)
     )
     txns = result.scalars().all()
     return {
-        "balance": current_user.tuci_balance,
+        "balance": current_user.teqlik_balance,
         "transactions": [_txn_dict(t) for t in txns],
     }
 
@@ -119,9 +119,9 @@ async def get_transaction_detail(
     db: AsyncSession = Depends(get_db),
 ):
     txn = await db.scalar(
-        select(TuciTransaction).where(
-            TuciTransaction.id == txn_id,
-            TuciTransaction.user_id == current_user.id,
+        select(TeqlikTransaction).where(
+            TeqlikTransaction.id == txn_id,
+            TeqlikTransaction.user_id == current_user.id,
         )
     )
     if txn is None:
@@ -206,24 +206,24 @@ async def send_gift(
     host_share = int(body.cost * commission_rate)
 
     # 1) Atomik bakiye düşüşü — tek SQL ile kontrol + güncelleme.
-    # WHERE tuci_balance >= cost koşulu olmazsa iki eş zamanlı istek session
+    # WHERE teqlik_balance >= cost koşulu olmazsa iki eş zamanlı istek session
     # cache'deki aynı bakiyeyi okuyup ikisi de geçer ve bakiye eksi olur.
     deduct = await db.execute(
         sql_text(
-            "UPDATE users SET tuci_balance = tuci_balance - :cost "
-            "WHERE id = :uid AND tuci_balance >= :cost "
-            "RETURNING tuci_balance"
+            "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+            "WHERE id = :uid AND teqlik_balance >= :cost "
+            "RETURNING teqlik_balance"
         ),
         {"cost": body.cost, "uid": current_user.id},
     )
     if deduct.fetchone() is None:
-        logger.warning("TUCi transaction failed: insufficient balance", extra={
+        logger.warning("TEQlik transaction failed: insufficient balance", extra={
             "user_id": current_user.id, "required": body.cost,
         })
         raise InsufficientFundsException()
 
     await db.execute(
-        sql_text("UPDATE users SET tuci_balance = tuci_balance + :share WHERE id = :uid"),
+        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :share WHERE id = :uid"),
         {"share": host_share, "uid": receiver.id},
     )
 
@@ -239,19 +239,19 @@ async def send_gift(
     db.add(gift_ev)
     await db.flush()  # gift_ev.id'yi al
 
-    # 3) Her iki TuciTransaction aynı GiftEvent'e işaret eder
-    db.add(TuciTransaction(
+    # 3) Her iki TeqlikTransaction aynı GiftEvent'e işaret eder
+    db.add(TeqlikTransaction(
         user_id=current_user.id, amount=-body.cost,
         transaction_type="send_gift",
         reference_id=gift_ev.id, reference_type="gift_event",
     ))
-    db.add(TuciTransaction(
+    db.add(TeqlikTransaction(
         user_id=receiver.id, amount=host_share,
         transaction_type="receive_gift",
         reference_id=gift_ev.id, reference_type="gift_event",
     ))
 
-    logger.info("TUCi transaction: send_gift", extra={
+    logger.info("TEQlik transaction: send_gift", extra={
         "sender_id": current_user.id,
         "receiver_id": receiver.id,
         "amount": body.cost,
@@ -288,4 +288,4 @@ async def send_gift(
         logger.warning("[WALLET] Gift log Redis yazılamadı | stream_id=%s | %s", body.stream_id, _redis_exc)
 
     await db.refresh(current_user)
-    return {"ok": True, "new_balance": current_user.tuci_balance}
+    return {"ok": True, "new_balance": current_user.teqlik_balance}

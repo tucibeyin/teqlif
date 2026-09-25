@@ -21,7 +21,7 @@ from app.models.enums import ListingStatus
 from app.database import get_db, AsyncSessionLocal
 from app.models.listing import Listing
 from app.models.user import User
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ async def audience_size(
         "audience_capped":        audience_capped,
         "per_blast_cap":          cap,
         "credits_remaining":      credits_remaining,
-        "tuci_balance":           current_user.tuci_balance,
+        "teqlik_balance":           current_user.teqlik_balance,
     }
 
 
@@ -137,7 +137,7 @@ async def blast_credits(
         "remaining":     max(0, limit - used),
         "is_premium":    current_user.is_premium,
         "per_blast_cap": cap,
-        "tuci_balance":  current_user.tuci_balance,
+        "teqlik_balance":  current_user.teqlik_balance,
         "renewal_date":  renewal_date,
     }
 
@@ -163,7 +163,7 @@ async def send_blast(
     """
     Hedef kitleye push bildirimi gönderir.
 
-    Karma model: free_used kredi ücretsiz, kalan paid_count × 10 TUCi.
+    Karma model: free_used kredi ücretsiz, kalan paid_count × 10 TEQlik.
     1. Kredi + per_blast_cap → actual alıcı sayısı belirlenir.
     2. ClickHouse → son 7 günde aktif user_id listesi (takipçiler hariç).
     3. PostgreSQL → FCM tokenları al.
@@ -268,9 +268,9 @@ async def send_blast(
     paid_count = actual_count - free_used
     tuci_cost  = paid_count * credit_service.cost_tuci("blast")
 
-    # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
-    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
-        return {"error": f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi"}
+    # ── TEQlik bakiye kontrolü ─────────────────────────────────────────────────
+    if tuci_cost > 0 and current_user.teqlik_balance < tuci_cost:
+        return {"error": f"Yetersiz TEQlik bakiyesi. Mevcut: {current_user.teqlik_balance} TEQlik, Gerekli: {tuci_cost} TEQlik"}
 
     # ── Kampanya Kaydı Oluştur ────────────────────────────────────────────────
     from app.models.mass_notification import MassNotificationCampaign
@@ -288,13 +288,13 @@ async def send_blast(
     db.add(campaign)
     await db.flush() # get campaign.id
 
-    # ── TUCi düş ──────────────────────────────────────────────────────────────
+    # ── TEQlik düş ──────────────────────────────────────────────────────────────
     if tuci_cost > 0:
         await db.execute(
-            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
             {"cost": tuci_cost, "uid": current_user.id},
         )
-        db.add(TuciTransaction(
+        db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-tuci_cost,
             transaction_type="spend_blast",
@@ -454,7 +454,7 @@ async def retargeting_audience(
             "blast_credits_remaining": credits_remaining,
             "blast_credits_limit": credit_service.free_limit("blast", is_premium=True),
             "per_blast_cap": cap,
-            "tuci_balance": current_user.tuci_balance,
+            "teqlik_balance": current_user.teqlik_balance,
         }
 
     except Exception as exc:
@@ -470,7 +470,7 @@ async def retargeting_audience(
             "blast_credits_remaining": 0,
             "blast_credits_limit": credit_service.free_limit("blast", is_premium=True),
             "per_blast_cap": credit_service.per_op_cap("blast", is_premium=True),
-            "tuci_balance": current_user.tuci_balance,
+            "teqlik_balance": current_user.teqlik_balance,
         }
 
 
@@ -489,7 +489,7 @@ async def send_retargeting(
 ):
     """
     PRO: İlanı görüntüleyen ama satın almayan kullanıcılara kişiselleştirilmiş bildirim gönderir.
-    1 TUCi per kişi (blast kredi sayımına dahil edilmez — ayrı bir işlem).
+    1 TEQlik per kişi (blast kredi sayımına dahil edilmez — ayrı bir işlem).
     """
     if not current_user.is_premium:
         raise ForbiddenException(code="PRO_REQUIRED")
@@ -500,7 +500,7 @@ async def send_retargeting(
     if not listing:
         raise NotFoundException()
 
-    # Karma model: kredi ücretsiz, kalan × 10 TUCi
+    # Karma model: kredi ücretsiz, kalan × 10 TEQlik
     cap   = credit_service.per_op_cap("blast", is_premium=True)
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, credit_service.free_limit("blast", is_premium=True) - used)
@@ -515,7 +515,7 @@ async def send_retargeting(
     paid_count   = actual_count - free_used
     tuci_cost    = paid_count * credit_service.cost_tuci("blast")
 
-    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
+    if tuci_cost > 0 and current_user.teqlik_balance < tuci_cost:
         raise InsufficientFundsException()
 
     # ClickHouse'dan viewer user_id'lerini çek
@@ -579,13 +579,13 @@ async def send_retargeting(
         await asyncio.gather(*[_send_one(t) for t in chunk])
         sent += len(chunk)
 
-    # TUCi düş + kredi say
+    # TEQlik düş + kredi say
     if tuci_cost > 0:
         await db.execute(
-            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
             {"cost": tuci_cost, "uid": current_user.id},
         )
-        db.add(TuciTransaction(
+        db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-tuci_cost,
             transaction_type="spend_retargeting",
@@ -597,7 +597,7 @@ async def send_retargeting(
     if free_used > 0:
         await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
 
-    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%d | paid=%d | cost=%d TUCi",
+    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",
                 current_user.id, sent, free_used, paid_count, tuci_cost)
 
     return {

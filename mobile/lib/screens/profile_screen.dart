@@ -275,8 +275,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => WalletScreen(
-                    initialBalance: state.tuciBalance,
-                    initialHistory: state.tuciHistory,
+                    initialBalance: state.teqlikBalance,
+                    initialHistory: state.teqlikHistory,
                   ),
                 ),
               );
@@ -292,9 +292,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // Settings ikonu ile aynı toplam yükseklikte kalsın
                   SizedBox(
                     height: 11,
-                    child: state.tuciBalance != null
+                    child: state.teqlikBalance != null
                         ? Text(
-                            '${state.tuciBalance} T',
+                            '${state.teqlikBalance} T',
                             style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
@@ -3582,7 +3582,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   );
 }
 
-// ── TUCi Cüzdan Kartı ───────────────────────────────────────────────────────
+// ── TEQlik Cüzdan Kartı ───────────────────────────────────────────────────────
 
 class _TuciWalletCard extends ConsumerStatefulWidget {
   final int? balance;
@@ -3686,7 +3686,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
                           ),
                         )
                       : Text(
-                          '${widget.balance} TUCi',
+                          '${widget.balance} TEQlik',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -3790,7 +3790,7 @@ class _TuciWalletSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '$balance TUCi',
+                  '$balance TEQlik',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -3845,7 +3845,7 @@ class _TuciWalletSheet extends ConsumerWidget {
                       child: Text(label, style: const TextStyle(fontSize: 13)),
                     ),
                     Text(
-                      '${isPositive ? '+' : ''}$amount TUCi',
+                      '${isPositive ? '+' : ''}$amount TEQlik',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -4137,7 +4137,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _balance != null ? '$_balance TUCi' : '—',
+                    _balance != null ? '$_balance TEQlik' : '—',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 38,
@@ -4280,7 +4280,7 @@ class _SummaryRow extends ConsumerWidget {
             ),
           ),
           Text(
-            '$amount TUCi',
+            '$amount TEQlik',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -4347,7 +4347,7 @@ class _TxnRow extends ConsumerWidget {
             ),
           ),
           Text(
-            '${isPositive ? '+' : ''}$amount TUCi',
+            '${isPositive ? '+' : ''}$amount TEQlik',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
@@ -4536,7 +4536,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                           ),
                         ),
                         Text(
-                          '${widget.isPositive ? '+' : ''}${widget.amount} TUCi',
+                          '${widget.isPositive ? '+' : ''}${widget.amount} TEQlik',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -4691,7 +4691,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                         (giftEvent['host_share'] as int) > 0)
                       _DetailRow(
                         label: loc.t('walletDetailGiftHostShare'),
-                        value: '${giftEvent['host_share']} TUCi',
+                        value: '${giftEvent['host_share']} TEQlik',
                       ),
                     const SizedBox(height: 12),
                     if ((giftEvent['stream'] as Map?)?['id'] != null)

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.listing import Listing
 from app.models.report import Report
-from app.models.tuci_transaction import TuciTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.ad_campaign import AdCampaign
 from app.schemas.user import UserOut
 from app.utils.auth import get_current_user, hash_password
@@ -75,14 +75,14 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
         select(func.count(Report.id))
     )).scalar() or 0
 
-    total_tuci = (await db.execute(select(func.coalesce(func.sum(User.tuci_balance), 0)))).scalar() or 0
+    total_tuci = (await db.execute(select(func.coalesce(func.sum(User.teqlik_balance), 0)))).scalar() or 0
 
     today_tuci_spent = (await db.execute(
-        select(func.coalesce(func.sum(TuciTransaction.amount), 0))
+        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
         .where(
-            TuciTransaction.amount < 0,
-            TuciTransaction.created_at >= today,
-            TuciTransaction.created_at < tomorrow,
+            TeqlikTransaction.amount < 0,
+            TeqlikTransaction.created_at >= today,
+            TeqlikTransaction.created_at < tomorrow,
         )
     )).scalar() or 0
 
@@ -167,7 +167,7 @@ async def get_recent_users(
                 "plan_type": u.plan_type,
                 "is_shadowbanned": u.is_shadowbanned,
                 "deleted_at": None,
-                "tuci_balance": u.tuci_balance,
+                "teqlik_balance": u.teqlik_balance,
                 "fcm_token": bool(u.fcm_token),
                 "created_at": u.created_at,
                 "listing_count": listing_counts.get(u.id, 0),
@@ -483,7 +483,7 @@ async def purge_user(
     return {"message": f"User @{old_username} permanently purged."}
 
 # ==========================================
-# 5. TUCi EKONOMİSİ
+# 5. TEQlik EKONOMİSİ
 # ==========================================
 class TuciAirdropRequest(BaseModel):
     username: str = Field(min_length=1, max_length=50)
@@ -493,32 +493,32 @@ class TuciAirdropRequest(BaseModel):
 @router.get("/tuci/summary")
 async def get_tuci_summary(limit: int = 100, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     total_circulation = (await db.execute(
-        select(func.coalesce(func.sum(User.tuci_balance), 0))
+        select(func.coalesce(func.sum(User.teqlik_balance), 0))
     )).scalar() or 0
 
     total_spent = abs((await db.execute(
-        select(func.coalesce(func.sum(TuciTransaction.amount), 0))
-        .where(TuciTransaction.amount < 0)
+        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
+        .where(TeqlikTransaction.amount < 0)
     )).scalar() or 0)
 
     total_earned = (await db.execute(
-        select(func.coalesce(func.sum(TuciTransaction.amount), 0))
-        .where(TuciTransaction.amount > 0)
+        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
+        .where(TeqlikTransaction.amount > 0)
     )).scalar() or 0
 
     # Top 10 balance
     top_res = await db.execute(
-        select(User.id, User.username, User.tuci_balance)
-        .order_by(desc(User.tuci_balance))
+        select(User.id, User.username, User.teqlik_balance)
+        .order_by(desc(User.teqlik_balance))
         .limit(10)
     )
     top_holders = [{"user_id": r[0], "username": r[1], "balance": r[2]} for r in top_res.all()]
 
     # Recent transactions
     tx_res = await db.execute(
-        select(TuciTransaction, User.username)
-        .join(User, User.id == TuciTransaction.user_id)
-        .order_by(desc(TuciTransaction.created_at))
+        select(TeqlikTransaction, User.username)
+        .join(User, User.id == TeqlikTransaction.user_id)
+        .order_by(desc(TeqlikTransaction.created_at))
         .limit(limit)
     )
     transactions = [
@@ -549,14 +549,14 @@ async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depend
         raise NotFoundException(code="USER_NOT_FOUND")
     # Atomic UPDATE — race condition'a karşı güvenli
     await db.execute(
-        text("UPDATE users SET tuci_balance = tuci_balance + :amount WHERE id = :uid"),
+        text("UPDATE users SET teqlik_balance = teqlik_balance + :amount WHERE id = :uid"),
         {"amount": data.amount, "uid": user.id},
     )
-    db.add(TuciTransaction(user_id=user.id, amount=data.amount, transaction_type="airdrop"))
+    db.add(TeqlikTransaction(user_id=user.id, amount=data.amount, transaction_type="airdrop"))
     await db.commit()
     await db.refresh(user)
-    logger.info("[ADMIN] TUCi airdrop | user=%s | amount=%s | new_balance=%s | admin=%s", user.username, data.amount, user.tuci_balance, admin.email)
-    return {"message": f"Airdropped {data.amount} TUCi to @{user.username}.", "new_balance": user.tuci_balance, "username": user.username}
+    logger.info("[ADMIN] TEQlik airdrop | user=%s | amount=%s | new_balance=%s | admin=%s", user.username, data.amount, user.teqlik_balance, admin.email)
+    return {"message": f"Airdropped {data.amount} TEQlik to @{user.username}.", "new_balance": user.teqlik_balance, "username": user.username}
 
 
 # ==========================================
