@@ -551,6 +551,24 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-17 · KV1: ip_address Maskeleme (KVKK)
+
+**Staging tarihi:** 2026-09-25  
+**Commit:** a6a3dce7  
+**Staging testi:** analytics_events.ip_address = '127.0.0.0' (son oktet sıfır) ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && sudo teqlif-restart production
+```
+
+Migration yok — analytics.py ve auction.py logic değişikliği.
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-18f · Flutter Dead Code Temizliği
 
 **Staging tarihi:** 2026-09-22  

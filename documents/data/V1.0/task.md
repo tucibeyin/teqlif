@@ -1766,7 +1766,7 @@ masked = mask_ip(request.client.host)
 **Test:**
 - Yeni analytics event kaydı → ip_address son okteti 0
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: a6a3dce7 · tarih: 2026-09-25
 
 ---
 
