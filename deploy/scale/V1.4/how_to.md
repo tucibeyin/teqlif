@@ -551,6 +551,15 @@ Yalnızca kod değişikliği — migration yok:
 
 ---
 
+## TASK-18f · Flutter Dead Code Temizliği
+
+**Staging tarihi:** 2026-09-22  
+**Commit:** 71cf6bd4  
+**Staging testi:** Flutter-only değişiklik — dart analyze 0 hata ✅  
+
+**node5 adımları:** Flutter-only, deployment gerekmez.
+
+---
 
 ## TASK-18 · GC6/GC7 worker tasks + D1 image_urls JSONB
 
