@@ -948,3 +948,36 @@ Değişiklikler:
 - Flutter `homeCache` cacheVersion=2 kontrolü: versiyon uyumsuzluğunda cache otomatik temizleniyor
 
 **[PROD FARKI]:** Yok.
+
+---
+
+## TASK-23 — tuci → teqlik Yeniden Adlandırma
+
+**Staging tarihi:** 2026-09-25  
+**Commit:** 32bd5f39  
+**Staging testi:** `teqlik_balance` kolonu ✅ · `teqlik_transactions` tablosu ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Migration otomatik çalışır (`alembic upgrade head`):
+- `tuci_transactions` → `teqlik_transactions`
+- `users.tuci_balance` → `users.teqlik_balance`
+- `ix_tuci_transactions_user_created` → `ix_teqlik_transactions_user_created`
+
+Doğrulama:
+```bash
+sudo -u postgres psql teqlif -c "SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='teqlik_balance'; SELECT table_name FROM information_schema.tables WHERE table_name='teqlik_transactions';"
+```
+
+Değişiklikler:
+- DB: tablo + kolon + index yeniden adlandırıldı (Alembic migration)
+- Backend: `TeqlikTransaction`, `teqlik_balance` — `TuciTransaction`/`TuciTransactionRepository` alias'ları geçiş için korundu
+- i18n JSON + ARB (tr/en/ru/ar): `TUCi` → `TEQlik`, `tuciSpent` → `teqlikSpent`
+- Flutter (13 dosya): tüm `tuci*` referansları `teqlik*` ile değiştirildi
+
+**[PROD FARKI]:** Yok.

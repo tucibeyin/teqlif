@@ -2277,7 +2277,7 @@ class DeleteAccountCommand:
 op.execute("ALTER INDEX ix_tuci_transactions_user_created RENAME TO ix_teqlik_transactions_user_created")
 ```
 
-**Status:** [ ] BEKLEMEDE
+**[x] TAMAMLANDI · commit: 32bd5f39 · tarih: 2026-09-25**
 
 ---
 
@@ -2510,7 +2510,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
 | TASK-22 · KV2/KV3 opt-out | 🟢 P24 | Düşük | 9.2 | [ ] |
-| TASK-23 · tuci→teqlik rename | 🟢 P25 | Düşük | 10 | [ ] |
+| TASK-23 · tuci→teqlik rename | 🟢 P25 | Düşük | 10 | [x] |
 
 ---
 
