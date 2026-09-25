@@ -2458,7 +2458,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 - StoryAuthorOut alanları UserMiniOut'tan geliyor
 - `dart analyze` 0 hata (Flutter `User` model'ı etkilenmeyebilir — backend şema değişikliği)
 
-**Status:** [ ] BEKLEMEDE
+**Status:** [x] TAMAMLANDI · commit: 8a24027f · tarih: 2026-09-25
 
 ---
 

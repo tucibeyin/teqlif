@@ -814,6 +814,28 @@ psql -h 127.0.0.1 -p 5433 -U teqlif -d teqlif -c "\d listing_offers" | grep -E "
 
 ---
 
+## TASK-yeni-G · Pydantic Şema Konsolidasyonu (S5/S6/S10)
+
+**Staging tarihi:** 2026-09-25  
+**Commit:** 8a24027f  
+**Staging testi:** Tüm import'lar OK; UserMiniOut inheritance doğrulandı; `is_request` ConversationOut'ta yok ✅  
+
+**node5 adımları:**
+
+```bash
+cd /var/www/teqlif.com && git pull origin main
+sudo teqlif-restart
+```
+
+Değişiklikler:
+- S5: `UserMiniOut` base class eklendi (`schemas/user.py`); `StoryAuthorOut`/`BlockedUserOut`/`StreamHostOut` türetildi
+- S6: `DirectSaleSummaryOut` → discriminated union (`SellerSummaryOut`/`BuyerSummaryOut`); `role` Literal
+- S10: `ConversationOut`'tan `is_request` kaldırıldı; `MessageRequestOut` ayrı tip; `/requests` endpoint güncelllendi
+
+**[PROD FARKI]:** Yok.
+
+---
+
 ## TASK-19 · Medya Optimizasyonu M1-M4
 
 **Staging tarihi:** 2026-09-25  
