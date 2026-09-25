@@ -10,7 +10,7 @@ class ListMessageRequestsQuery:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, uid: int) -> list[ConversationOut]:
+    async def execute(self, uid: int) -> list[MessageRequestOut]:
         threads_result = await self.uow.session.execute(
             select(MessageThread).where(
                 or_(MessageThread.user_a_id == uid, MessageThread.user_b_id == uid),
