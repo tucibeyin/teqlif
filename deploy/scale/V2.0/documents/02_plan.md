@@ -178,7 +178,7 @@ Faz 0  (Kod — lokalde)
 
 #### 0.2.1 Redis Altyapısı
 
-- [ ] `config.py`: `orch_redis_url: str`, `guardian_redis_url: str` ekle
+- [ ] `config.py`: `orch_redis_url: str`, `guardian_redis_url: str` ekle  ← GUARDIAN_REDIS_URL tüm .env template'lerine eklendi (§0.5)
 - [ ] `redis_client.py`: `get_orch_redis()`, `get_guardian_redis()` fonksiyonları
 - [ ] `backend/app/services/orch_client.py` oluştur — 3 kademeli fallback:
   ```
@@ -279,7 +279,7 @@ ALLOWED_COMMANDS = {
 
 - [ ] `deploy/scale/V2.0/node.conf.examples/` dizini oluştur — her rol için örnek şablon
 - [ ] `.env.production` template'lerinden `NODE_CAPABILITIES`, `NODE_ROLE`, `INTERFACE_SPEED_MBPS` kaldır → bunlar artık `node.conf`'tan okunuyor
-- [ ] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur (tüm node'larda aynı unit dosyası)
+- [x] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur (tüm node'larda aynı unit dosyası) ← §5.2'ye eklendi
 
 ### 0.3 Storage Service + LiveKit Reconnect Fix
 
@@ -356,6 +356,7 @@ deploy/scale/V2.0/
 DATABASE_URL=postgresql+asyncpg://<user>:<pass>@10.10.0.10:6432/teqlif
 REDIS_URL=redis://:<pass>@10.10.0.11:6379/0
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 USE_PGBOUNCER=True
 MEDIA_HOST=https://media.teqlif.com
 UPLOADS_HOST=https://uploads.teqlif.com
@@ -385,6 +386,7 @@ AI_PROXY_INTERNAL_TOKEN=<placeholder> # node2 ile aynı değer
 **node7 + node8 `.env` içeriği (özdeş — sadece EDGE_NODE_ID farklı):**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=node7                  # node8 için: node8
 DATA_DISK_PATH=/mnt/data
 MINIO_VOLUMES=/mnt/data/minio
@@ -399,6 +401,7 @@ NODE_CAPABILITIES=["storage"]
 **node1 + node4 `.env` içeriği:**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=node1                  # node4 için: node4
 LIVEKIT_API_KEY=<placeholder>
 LIVEKIT_API_SECRET=<placeholder>
@@ -411,6 +414,7 @@ NODE_CAPABILITIES=["stream"]
 **node2 `.env` içeriği:**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=node2
 AI_PROXY_INTERNAL_TOKEN=<placeholder>
 DATA_DISK_PATH=/
@@ -422,6 +426,7 @@ NODE_CAPABILITIES=["ai_proxy"]
 **gateway1 `.env` içeriği:**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=gateway1
 DATA_DISK_PATH=/
 INTERFACE_SPEED_MBPS=1000
@@ -432,6 +437,7 @@ NODE_CAPABILITIES=["gateway"]
 **gateway2 `.env` içeriği (`INTERFACE_SPEED_MBPS` farklı — 4000, gerçek bant 4–7 Gbps; muhafazakar alt sınır; 1000 kullanılırsa net_out_percent=%700+ olur ve routing bozulur):**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=gateway2
 DATA_DISK_PATH=/
 INTERFACE_SPEED_MBPS=4000
@@ -442,6 +448,7 @@ NODE_CAPABILITIES=["gateway"]
 **node9 `.env` içeriği:**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=node9
 DATA_DISK_PATH=/data
 INTERFACE_SPEED_MBPS=480
@@ -751,7 +758,7 @@ class ComponentDownPlaybook:
 
 > **Not — `teqlif-orchestrator.service` geçişi:** V2.0'da `teqlif-orchestrator.service` → `teqlif-guardian.service` olarak yeniden adlandırılır. Keepalived `notify_master/backup` scriptleri güncellenir: `systemctl start/stop teqlif-guardian` çağırır. Lider koordinasyon guardian içi election mekanizmasıyla yönetilir — Keepalived MASTER olmak artık zorunluluk değil, yüksek öncelikli yol.
 
-- [ ] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur
+- [x] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur ← §5.2'ye eklendi
 - [ ] Keepalived `notify_master/backup` scriptleri güncelle: `teqlif-orchestrator` → `teqlif-guardian`
 
 ### 0.7 Ops Komutları
@@ -2589,50 +2596,34 @@ WantedBy=multi-user.target
 
 **`/etc/systemd/system/teqlif-worker-critical.service`:** Aynı yapı, `CriticalWorkerSettings`; `StartLimitIntervalSec=300 StartLimitBurst=10` dahil.
 
-**`/etc/systemd/system/teqlif-orchestrator.service`:**
+**`/etc/systemd/system/teqlif-guardian.service`** (V2.0 — `teqlif-orchestrator` + `teqlif-metrics`'in yerini alır; tüm node'larda aynı unit):
 ```ini
 [Unit]
-Description=Teqlif Orchestrator
-After=redis-orch.service
+Description=Teqlif Guardian Agent
+After=network.target
 StartLimitIntervalSec=300
-StartLimitBurst=10
+StartLimitBurst=5
 
 [Service]
 User=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 EnvironmentFile=/etc/teqlif/.env.production
-ExecStart=/var/www/teqlif.com/.venv/bin/python3 -m app.orchestrator.main
-Restart=always
-RestartSec=5
-StandardOutput=append:/var/log/teqlif/orchestrator/orch.log
-StandardError=append:/var/log/teqlif/orchestrator/orch-error.log
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**`/etc/systemd/system/teqlif-metrics.service`:**
-```ini
-[Unit]
-Description=Teqlif Edge Metrics Agent
-After=network.target
-
-[Service]
-User=tucibeyin
-EnvironmentFile=/etc/teqlif/.env.production
 ExecStart=/var/www/teqlif.com/.venv/bin/python3 \
-  /var/www/teqlif.com/backend/scripts/edge_metrics_agent.py
+  /var/www/teqlif.com/backend/scripts/guardian_agent.py
 Restart=always
 RestartSec=5
+StandardOutput=append:/var/log/teqlif/orchestrator/guardian.log
+StandardError=append:/var/log/teqlif/orchestrator/guardian-error.log
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+> **V1.4 geçiş notu:** `teqlif-orchestrator.service` (app.orchestrator.main) + `teqlif-metrics.service` (edge_metrics_agent.py) → V2.0'da `teqlif-guardian.service` (guardian_agent.py) olarak birleştirildi. Aynı unit tüm node'larda çalışır; lider seçimi agent içi election mekanizmasıyla yönetilir.
 
 ```bash
 systemctl daemon-reload
-systemctl enable --now teqlif teqlif-worker teqlif-worker-critical \
-  teqlif-orchestrator teqlif-metrics
+systemctl enable --now teqlif teqlif-worker teqlif-worker-critical teqlif-guardian
 ```
 
 ### 5.3.1 teqlif-ai-proxy — node5 (Son Çare Fallback)
@@ -2741,7 +2732,7 @@ redis-cli -h 127.0.0.1 -p 6379 -a <pass> info replication | grep role
 # → role:master
 
 # PgBouncer + uygulama (notify_master step 5-6):
-systemctl is-active pgbouncer teqlif teqlif-worker teqlif-worker-critical teqlif-orchestrator
+systemctl is-active pgbouncer teqlif teqlif-worker teqlif-worker-critical teqlif-guardian
 # → hepsi active
 
 # Health check:
@@ -2797,8 +2788,8 @@ psql -h 127.0.0.1 -U postgres -c \
 **ADIM 4 — node6'da servisleri durdur ve keepalived'ı kapat:**
 ```bash
 # node6'da:
-systemctl stop teqlif teqlif-worker teqlif-worker-critical \
-  teqlif-orchestrator pgbouncer 2>/dev/null || true
+systemctl stop teqlif teqlif-worker teqlif-worker-critical pgbouncer 2>/dev/null || true
+# teqlif-guardian durdurulmuyor — agent her node'da her zaman çalışır
 # keepalived durdur → notify_backup tetiklenir:
 #   WG routing VIP'leri node5'e yönlendirir, Redis replicaof eklenir
 # node5 artık tek VRRP instance → otomatik MASTER olur → wg_vip_node5.sh MASTER tetiklenir
@@ -2874,8 +2865,7 @@ ssh tucibeyin@${STALE_NODE_IP} "wg show wg0 | grep -A3 '${NODE6_PUBKEY}'"
 
 ```bash
 # node5
-systemctl status teqlif teqlif-worker teqlif-worker-critical \
-  teqlif-orchestrator teqlif-metrics
+systemctl status teqlif teqlif-worker teqlif-worker-critical teqlif-guardian
 curl -s http://127.0.0.1:8000/health | jq .
 ```
 
@@ -3171,19 +3161,23 @@ server {
 }
 ```
 
-### 6.7 edge_metrics_agent — node7 + node8
+### 6.7 teqlif-guardian — node7 + node8
 
 ```bash
 # Monorepo klon (tüm node'larda aynı):
 git clone <repo_url> /var/www/teqlif.com
 cd /var/www/teqlif.com
-# Storage node — yalnızca metrics agent için minimal venv:
+# Storage node — guardian agent için minimal venv (httpx HTTP health check + pyyaml node.conf):
 python3 -m venv .venv
-.venv/bin/pip install psutil redis
+.venv/bin/pip install psutil redis httpx pyyaml
 chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 ```
 
-**`/etc/systemd/system/teqlif-metrics.service`:** node5 ile aynı yapı; `EnvironmentFile=/etc/teqlif/.env.production`, `EDGE_NODE_ID` doğru set edilmeli. `.env.production` Faz 6.3'te oluşturuldu.
+**`/etc/systemd/system/teqlif-guardian.service`:** §5.2'deki ile aynı unit — tüm node'larda özdeş. `EnvironmentFile=/etc/teqlif/.env.production`, `.env.production` Faz 6.3'te oluşturuldu.
+
+```bash
+systemctl enable --now teqlif-guardian
+```
 
 ### 6.8 Cloudflare DNS — Storage
 
@@ -3604,15 +3598,15 @@ journalctl -u promtail -n 20
 - [ ] `api.teqlif.com` → A → gateway1 public IP (Proxied)
 - [ ] `api.teqlif.com` → A → gateway2 public IP (Proxied) ← Yeni
 
-### 7.5 edge_metrics_agent — gateway1 + gateway2
+### 7.5 teqlif-guardian — gateway1 + gateway2
 
 ```bash
 # Monorepo klon (tüm node'larda aynı):
 git clone <repo_url> /var/www/teqlif.com
 cd /var/www/teqlif.com
-# Gateway node — yalnızca metrics agent için minimal venv:
+# Gateway node — guardian agent için minimal venv (httpx HTTP health check + pyyaml node.conf):
 python3 -m venv .venv
-.venv/bin/pip install psutil redis
+.venv/bin/pip install psutil redis httpx pyyaml
 chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 
 cp /var/www/teqlif.com/deploy/scale/V2.0/gateway1/resources/.env.production.template \
@@ -3621,10 +3615,10 @@ chmod 600 /etc/teqlif/.env.production
 chown tucibeyin:tucibeyin /etc/teqlif/.env.production
 ```
 
-**`/etc/systemd/system/teqlif-metrics.service`:** (node5'teki ile aynı yapı; sadece ORCH_REDIS_URL .env'den okunur)
+**`/etc/systemd/system/teqlif-guardian.service`:** §5.2'deki ile aynı unit — tüm node'larda özdeş.
 
 ```bash
-systemctl enable --now teqlif-metrics
+systemctl enable --now teqlif-guardian
 
 # Doğrula:
 redis-cli -h 10.10.0.11 -p 6380 -a <pass> hgetall edge:metrics:gateway1
@@ -3652,7 +3646,7 @@ dig api.teqlif.com +short             # iki IP dönmeli
 git clone <repo_url> /var/www/teqlif.com
 cd /var/www/teqlif.com
 python3 -m venv .venv
-.venv/bin/pip install psutil redis   # minimal — sadece teqlif-metrics
+.venv/bin/pip install psutil redis httpx pyyaml   # guardian agent için
 chown -R tucibeyin:tucibeyin /var/www/teqlif.com
 
 # node1 için:
@@ -3729,7 +3723,7 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-systemctl enable --now livekit teqlif-metrics
+systemctl enable --now livekit teqlif-guardian
 ```
 
 **Cloudflare DNS:**
@@ -3774,16 +3768,17 @@ MemorySwapMax=400M
 WantedBy=multi-user.target
 ```
 
-### 8.3 edge_metrics_agent — node2
+### 8.3 teqlif-guardian — node2
 
 ```bash
 # node2'de monorepo zaten 8.2'de klonlandı (/var/www/teqlif.com).
-# teqlif-metrics.service için ek paket gerekmez — full requirements.txt psutil+redis içerir.
+# full requirements.txt psutil+redis+httpx+pyyaml içerir — ek paket gerekmez.
 ```
 
 **`/etc/teqlif/.env.production` (node2 ek alanları — Faz 0.5'ten template'e eklendi):**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=node2
 NODE_ROLE=ai_proxy
 NODE_CAPABILITIES=["ai_proxy"]
@@ -3792,7 +3787,7 @@ DATA_DISK_PATH=/
 ```
 
 ```bash
-systemctl enable --now teqlif-ai-proxy teqlif-metrics
+systemctl enable --now teqlif-ai-proxy teqlif-guardian
 ```
 
 ### 8.4 Faz 8 Doğrulama
@@ -3885,11 +3880,11 @@ redis-cli -h 10.10.0.11 -p 6380 -a <pass> hget edge:metrics:node8 disk_free_gb
 redis-cli -h 10.10.0.11 -p 6380 -a <pass> hgetall edge:metrics:node7
 ```
 
-### 9.2 Orchestrator Aktif mi + AI Proxy Routing Doğrulama
+### 9.2 Guardian Aktif mi + AI Proxy Routing Doğrulama
 
 ```bash
-# Orchestrator node5'te çalışıyor mu? (Keepalived MASTER → servis başlamış olmalı)
-systemctl is-active teqlif-orchestrator  # → active
+# Guardian agent tüm node'larda çalışıyor mu?
+systemctl is-active teqlif-guardian  # → active
 
 # AI proxy: node2 sağlıklıysa key yoktur (uygulama config default'u kullanır) veya node2 URL'si:
 redis-cli -h 10.10.0.11 -p 6380 -a <pass> get ai_proxy:active_url
@@ -3942,7 +3937,7 @@ redis-cli -h 10.10.0.11 -p 6380 -a <pass> get orch:best:storage_nodes
 
 ```bash
 # node2 teqlif-ai-proxy durdur (node2 tamamen down gibi davranır):
-ssh tucibeyin@10.10.0.3 "sudo systemctl stop teqlif-ai-proxy teqlif-metrics"
+ssh tucibeyin@10.10.0.3 "sudo systemctl stop teqlif-ai-proxy teqlif-guardian"
 
 # Orchestrator edge:metrics:node2 TTL'si dolar → ~6s içinde node3'e geçiş:
 sleep 10
@@ -3953,7 +3948,7 @@ redis-cli -h 10.10.0.11 -p 6380 -a <pass> get ai_proxy:active_url
 curl -s http://127.0.0.1:8000/api/test/ai-call  # → 200, AI yanıtı
 
 # node2'yi geri getir ve failback doğrula (otomatik):
-ssh tucibeyin@10.10.0.3 "sudo systemctl start teqlif-ai-proxy teqlif-metrics"
+ssh tucibeyin@10.10.0.3 "sudo systemctl start teqlif-ai-proxy teqlif-guardian"
 sleep 10
 redis-cli -h 10.10.0.11 -p 6380 -a <pass> get ai_proxy:active_url
 # → http://10.10.0.3:8001  (node2 — otomatik failback)
@@ -4198,10 +4193,10 @@ curl -s "http://10.10.0.13:8123/?query=SELECT+1" --user teqlif:<pass>
 # → 1
 ```
 
-### 10.1 edge_metrics_agent — node9
+### 10.1 teqlif-guardian — node9
 
 ```bash
-# Monorepo klonla — full venv (node9 teqlif-metrics + ClickHouse ikisi de bu venv'i kullanır)
+# Monorepo klonla — full venv (node9 guardian agent + ClickHouse ikisi de bu venv'i kullanır)
 git clone <repo_url> /var/www/teqlif.com
 cd /var/www/teqlif.com
 python3 -m venv .venv
@@ -4217,6 +4212,7 @@ chown tucibeyin:tucibeyin /etc/teqlif/.env.production
 **`/etc/teqlif/.env.production` (node9 ek alanları — Faz 0.5'ten template'e eklendi):**
 ```env
 ORCH_REDIS_URL=redis://:<pass>@10.10.0.11:6380/0
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 EDGE_NODE_ID=node9
 NODE_ROLE=monitor
 NODE_CAPABILITIES=["monitor","backup","clickhouse"]
@@ -4235,7 +4231,7 @@ TELEGRAM_CHAT_ID_OPS=<telegram_chat_id_ops>
 ```
 
 ```bash
-systemctl enable --now teqlif-metrics
+systemctl enable --now teqlif-guardian
 redis-cli -h 10.10.0.11 -p 6380 -a <pass> hgetall edge:metrics:node9  # → Hash alanları
 ```
 
@@ -5361,6 +5357,7 @@ chmod 600 /etc/teqlif/.env.staging
 DATABASE_URL=postgresql+asyncpg://teqlif:<staging_pg_pass>@127.0.0.1:5432/teqlif_staging
 REDIS_URL=redis://:<staging_redis_pass>@127.0.0.1:6379/1
 ORCH_REDIS_URL=redis://:<staging_redis_pass>@127.0.0.1:6379/2
+GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
 USE_PGBOUNCER=False
 MINIO_ENDPOINT=http://10.10.0.8:9000
 MINIO_ENDPOINT_DM=http://10.10.0.8:9000
@@ -5503,10 +5500,10 @@ systemctl is-active teqlif-staging teqlif-worker-staging redis-staging postgresq
 
 - [ ] CF DNS: `teqlif.com` + `api.teqlif.com` → iki A record aktif (gateway1 + gateway2)
 - [ ] CF DNS: `uploads.teqlif.com` + `media.teqlif.com` → iki A record (node7 + node8)
-- [ ] node5: teqlif + teqlif-worker + teqlif-worker-critical + teqlif-orchestrator → active
+- [ ] node5: teqlif + teqlif-worker + teqlif-worker-critical + teqlif-guardian → active
 - [ ] `orch:best:storage_nodes = ["node7","node8"]` doğrula
-- [ ] node6: keepalived active; teqlif/worker disabled; teqlif-metrics active
-- [ ] node7 + node8: minio + teqlif-metrics → active
+- [ ] node6: keepalived active; teqlif/worker disabled; teqlif-guardian active
+- [ ] node7 + node8: minio + teqlif-guardian → active
 - [ ] Monitoring: tüm node'lar Prometheus'ta görünüyor (`curl -s http://10.10.0.13:9090/api/v1/targets | python3 -m json.tool`)
 - [ ] Loki: tüm node'lardan log akıyor (`curl -s "http://10.10.0.13:3100/loki/api/v1/labels"` — node label'ları görünmeli)
 - [ ] Alertmanager: test alert gönder (`curl -s -X POST http://127.0.0.1:9093/api/v1/alerts -d '[{"labels":{"alertname":"Test"}}]'`)
@@ -5727,4 +5724,4 @@ redis-cli -h 10.10.0.11 -p 6380 -a <pass> \
 
 ---
 
-*V2.0 uygulama planı — 02_plan.md · 2026-09-29 (rev33 — Config audit düzeltmeleri: redis-guardian.conf `save "3600 1"` → `save 3600 1` (Redis geçersiz syntax — startup hatası); Prometheus scrape_configs'e node3 (10.10.0.4) eklendi (11 target: 10→11); §4.3 redis-server.service `systemctl disable --now redis-server` eklendi (port 6379 çakışması engeli); `wg_vip_failover.sh` pg_ctl promote'a `pg_is_in_recovery()` guard eklendi (node5 scriptiyle tutarlılık) | rev32 — Ağ topolojisi + güvenlik audit: §3.5 UFW node2+node9 default deny/allow eklendi; §3.5 UFW node3 (Staging) yeni blok eklendi; §2.2 node5 wg0.conf kısayoluna node9 peer eklendi (explicit); §10.0.3 node9 wg0.conf MTU=1420 eklendi; §2.4 ping loop notuna node9 Faz 10 açıklaması eklendi; §7.3 "10 node"→"11 node" + IP listesine node9=10.10.0.13 eklendi; §7.3 Promtail notu "node3'te"→"node9'da" düzeltildi; §4.5 SSH key hedef listesine node9 eklendi; §4.6 pg_hba.conf WAL-replication uyarısı eklendi; §10.6.1 node6 pg_hba.conf güncelleme adımı + failover SSH key eklendi | rev31 — node9 tamamlama: §0.5 node9 .env template eklendi; §1.4 node9 node.conf örneği + guardian_priority=5 eklendi; §4.8 kurulum sırası notu; Faz 10'a §10.0 Ön Kurulum (OS+/data dirs+WireGuard+node.conf+ClickHouse) eklendi; Faz 13 tam bölümü eklendi (WG mesh, ClickHouse prod veri akışı, Prometheus 11 target, Loki 11 node, backup doğrulama, Alertmanager test, Grafana, Guardian entegrasyon, 15 maddelik kontrol listesi); Özet tablo Faz 12/13 sırası düzeltildi | rev30 — node9 entegrasyonu: node9 (10.10.0.13, OVH KS-1-B) eklendi; node3 rol: Monitor+Staging→Staging; ClickHouse node5→node9; Faz 10 Monitoring+Backup+ClickHouse node3→node9; Prometheus scrape+alert node9; Loki listen_address+push_url node9; pg_hba.conf node3→node9; wal_backup_node3→wal_backup_node9; clickhouse_backup.sh lokal (rsync+SSH kaldırıldı); Faz bağımlılık haritası Faz 13 eklendi; failover for loop+ALL_WG_IPS node9; node9 WG peer template; §2.5 sudoers node9; §3.5 Monitor node9; guardian-redis REPLICAOF NO ONE fix (rev29 önceden); LiveKit reconnect fix (rev29); orch_client 3-level fallback (rev29); atomic write guardian_state.json (rev29); UDP election V2.0 simple priority notu (rev29) | rev18 — Tutarlılık + config audit: node5/6 .env metrics alanları eklendi; gateway2 INTERFACE_SPEED_MBPS=4000 ayrı blok; Faz 6.10 fallback test nginx portuna çevrildi; §10.5 duplicate Telegram bildirimi kaldırıldı | rev19 — Dizin izin audit: /var/log/teqlif 750→755; ClickHouse backup dir 755+usermod; /etc/livekit mkdir; /etc/ssl/teqlif node7/8 mkdir; promtail SupplementaryGroups override+__path__ glob; redis_backup BGSAVE+rsync→redis-cli --rdb; backup logrotate node3+node5 | rev20 — Node cross-erişim audit: §2.5 tüm non-core node'larda wg sudoers eklendi; failover step7 sudo bash→wg-quick save; node5 clickhouse-backup sudoers+script sudo rm -rf; postgres_exporter Environment→EnvironmentFile+DATA_SOURCE_NAME env template; Faz 11.4 /etc/ssl/teqlif mkdir eklendi | rev21 — Failover strateji audit: node5 keepalived nopreempt+notify_master/backup eklendi; wg_vip_node5.sh tanımlandı; node6 keepalived.conf vrrp_script blokları eklendi; §5.6 test sadeleştirildi; §5.6.1 failback 6-adım prosedüre dönüştürüldü (keepalived disable→sync→node6 stop→node5 MASTER); §10.6.2 WAL gap uyarısı+pg_basebackup zorunluluğu | rev22 — Dizin yapısı audit: header rol-bazlı ayrıştırıldı (gateway/core/stream/storage/monitoring); /var/log/teqlif 750→755 header düzeltildi; /etc/keepalived/secrets/ chmod 700 eklendi (node5+node6); .env.production chown tucibeyin:tucibeyin 6 node'da eksikti eklendi (node6/node7/gateway1-2/node1/4/node2/node3) | rev23 — Cross-node kesinti kurtarma: §5.6.2 failover WG routing reconciliation prosedürü eklendi; clickhouse_backup.sh STATUS check+cleanup trap eklendi (node5 stale backup birikimi önlendi); pg_basebackup/pg_dump/redis_backup atomik write pattern eklendi (temp→rename) | rev24 — Failsafe audit: nginx Restart=always drop-in (gateway1/2+node7/8); PgBouncer Restart=always drop-in (node5); teqlif/worker/orchestrator StartLimitIntervalSec=300+Burst=10 eklendi; node_exporter --collector.systemd eklendi; Prometheus ServiceFailed+MonitorDiskHigh alert eklendi; DR tablosuna bilinen SPOF'lar+crash-loop recovery eklendi | rev25 — AI Proxy HA: node2→node3→node5 öncelik zinciri; §5.3.1 node5 teqlif-ai-proxy disabled (son çare); §8.5 node3 teqlif-ai-proxy always-on (ilk yedek); §9.2 ai_proxy:active_url doğrulama eklendi; §9.5 AI proxy failover simülasyonu eklendi; DR tablosunda node2 SPOF kaldırıldı → node2+node3 eş zamanlı satırı eklendi; wg_vip_failover.sh MASTER: redis-cli REPLICAOF NO ONE eksikliği düzeltildi (config değişikliği yetmez, live promote şart); failover.env CORE_REDIS_PASS eklendi | rev26 — leader.py kaldırıldı (clean architecture: mechanism duplication — Keepalived zaten lider seçimi yapıyor; Redis lock aynı garantiyi tekrar etmemeli); §0.6'ya tasarım kararı notu eklendi; wg_vip_failover.sh'den orchestrator:leader DEL kaldırıldı; §9.2 doğrulama orchestrator:leader→systemctl is-active ile güncellendi | rev27 — Guardian mimarisi: §0.2 edge_metrics_agent→guardian_agent (local agent+heartbeat+election+command executor); §0.6 orchestrator→Guardian koordinatör (topology-driven, component:env bazlı service state: HEALTHY/DEGRADED/DOWN, job state machine+checkpoint+resume, playbook sistemi, local state cache guardian_state.json, dağıtık lider seçimi Redis NX+UDP peer fallback); §1.4 node.conf YAML full self-description şeması (guardian_priority, network, hardware, components[]); §4.4.1 guardian-redis port 6382 (appendonly yes — job checkpoint kalıcı); tüm node UFW'ye UDP 9901 guardian heartbeat kuralı eklendi; teqlif-orchestrator.service → teqlif-guardian.service geçiş notu | rev28 — traffic_eligible + traffic_type alanları: node.conf her componente eklendi (default: false — insan onayı olmadan routing yapılmaz); routing eligibility kuralı §0.6'ya eklendi (4 şart: eligible+env+systemd+health); internal_mesh/gateway_proxied/direct_internet tipleri; component asla hybrid değildir notu; §0.6 routing modülüne is_routing_eligible() kuralı eklendi)*
+*V2.0 uygulama planı — 02_plan.md · 2026-09-29 (rev35 — Kapsamlı .env + servis audit: GUARDIAN_REDIS_URL tüm 9 .env template'ine eklendi (10.10.0.11:6382 VIP üzerinden; guardian-redis replication direkt IP kullanır ama agent bağlantısı VIP'ten gidebilir); teqlif-guardian.service unit tanımı §5.2'ye eklendi (teqlif-orchestrator+teqlif-metrics'in V2.0 birleşimi, tüm node'larda aynı unit); node5/gateway/stream/storage/node2/node9/staging enable komutları teqlif-metrics→teqlif-guardian; minimal-venv node'larda pip install'a httpx+pyyaml eklendi (guardian_agent.py HTTP health check + node.conf yaml parsing); §7.5/§6.7/§8.3/§10.1 bölüm başlıkları edge_metrics_agent→teqlif-guardian; doğrulama komutları ve checklist teqlif-orchestrator/metrics→guardian; Faz 0 TODO'lardan guardian service ve env ekleme işaretlendi | rev34 — .env audit: node3 staging MINIO_ENDPOINT 10.10.0.7→10.10.0.8 (node6 Core IP, MinIO node7'de); MINIO_ENDPOINT_DM eklendi; node5+node6 template INTERFACE_SPEED_MBPS node6 yorum eklendi | rev33 — Config audit düzeltmeleri: redis-guardian.conf `save "3600 1"` → `save 3600 1` (Redis geçersiz syntax — startup hatası); Prometheus scrape_configs'e node3 (10.10.0.4) eklendi (11 target: 10→11); §4.3 redis-server.service `systemctl disable --now redis-server` eklendi (port 6379 çakışması engeli); `wg_vip_failover.sh` pg_ctl promote'a `pg_is_in_recovery()` guard eklendi (node5 scriptiyle tutarlılık) | rev32 — Ağ topolojisi + güvenlik audit: §3.5 UFW node2+node9 default deny/allow eklendi; §3.5 UFW node3 (Staging) yeni blok eklendi; §2.2 node5 wg0.conf kısayoluna node9 peer eklendi (explicit); §10.0.3 node9 wg0.conf MTU=1420 eklendi; §2.4 ping loop notuna node9 Faz 10 açıklaması eklendi; §7.3 "10 node"→"11 node" + IP listesine node9=10.10.0.13 eklendi; §7.3 Promtail notu "node3'te"→"node9'da" düzeltildi; §4.5 SSH key hedef listesine node9 eklendi; §4.6 pg_hba.conf WAL-replication uyarısı eklendi; §10.6.1 node6 pg_hba.conf güncelleme adımı + failover SSH key eklendi | rev31 — node9 tamamlama: §0.5 node9 .env template eklendi; §1.4 node9 node.conf örneği + guardian_priority=5 eklendi; §4.8 kurulum sırası notu; Faz 10'a §10.0 Ön Kurulum (OS+/data dirs+WireGuard+node.conf+ClickHouse) eklendi; Faz 13 tam bölümü eklendi (WG mesh, ClickHouse prod veri akışı, Prometheus 11 target, Loki 11 node, backup doğrulama, Alertmanager test, Grafana, Guardian entegrasyon, 15 maddelik kontrol listesi); Özet tablo Faz 12/13 sırası düzeltildi | rev30 — node9 entegrasyonu: node9 (10.10.0.13, OVH KS-1-B) eklendi; node3 rol: Monitor+Staging→Staging; ClickHouse node5→node9; Faz 10 Monitoring+Backup+ClickHouse node3→node9; Prometheus scrape+alert node9; Loki listen_address+push_url node9; pg_hba.conf node3→node9; wal_backup_node3→wal_backup_node9; clickhouse_backup.sh lokal (rsync+SSH kaldırıldı); Faz bağımlılık haritası Faz 13 eklendi; failover for loop+ALL_WG_IPS node9; node9 WG peer template; §2.5 sudoers node9; §3.5 Monitor node9; guardian-redis REPLICAOF NO ONE fix (rev29 önceden); LiveKit reconnect fix (rev29); orch_client 3-level fallback (rev29); atomic write guardian_state.json (rev29); UDP election V2.0 simple priority notu (rev29) | rev18 — Tutarlılık + config audit: node5/6 .env metrics alanları eklendi; gateway2 INTERFACE_SPEED_MBPS=4000 ayrı blok; Faz 6.10 fallback test nginx portuna çevrildi; §10.5 duplicate Telegram bildirimi kaldırıldı | rev19 — Dizin izin audit: /var/log/teqlif 750→755; ClickHouse backup dir 755+usermod; /etc/livekit mkdir; /etc/ssl/teqlif node7/8 mkdir; promtail SupplementaryGroups override+__path__ glob; redis_backup BGSAVE+rsync→redis-cli --rdb; backup logrotate node3+node5 | rev20 — Node cross-erişim audit: §2.5 tüm non-core node'larda wg sudoers eklendi; failover step7 sudo bash→wg-quick save; node5 clickhouse-backup sudoers+script sudo rm -rf; postgres_exporter Environment→EnvironmentFile+DATA_SOURCE_NAME env template; Faz 11.4 /etc/ssl/teqlif mkdir eklendi | rev21 — Failover strateji audit: node5 keepalived nopreempt+notify_master/backup eklendi; wg_vip_node5.sh tanımlandı; node6 keepalived.conf vrrp_script blokları eklendi; §5.6 test sadeleştirildi; §5.6.1 failback 6-adım prosedüre dönüştürüldü (keepalived disable→sync→node6 stop→node5 MASTER); §10.6.2 WAL gap uyarısı+pg_basebackup zorunluluğu | rev22 — Dizin yapısı audit: header rol-bazlı ayrıştırıldı (gateway/core/stream/storage/monitoring); /var/log/teqlif 750→755 header düzeltildi; /etc/keepalived/secrets/ chmod 700 eklendi (node5+node6); .env.production chown tucibeyin:tucibeyin 6 node'da eksikti eklendi (node6/node7/gateway1-2/node1/4/node2/node3) | rev23 — Cross-node kesinti kurtarma: §5.6.2 failover WG routing reconciliation prosedürü eklendi; clickhouse_backup.sh STATUS check+cleanup trap eklendi (node5 stale backup birikimi önlendi); pg_basebackup/pg_dump/redis_backup atomik write pattern eklendi (temp→rename) | rev24 — Failsafe audit: nginx Restart=always drop-in (gateway1/2+node7/8); PgBouncer Restart=always drop-in (node5); teqlif/worker/orchestrator StartLimitIntervalSec=300+Burst=10 eklendi; node_exporter --collector.systemd eklendi; Prometheus ServiceFailed+MonitorDiskHigh alert eklendi; DR tablosuna bilinen SPOF'lar+crash-loop recovery eklendi | rev25 — AI Proxy HA: node2→node3→node5 öncelik zinciri; §5.3.1 node5 teqlif-ai-proxy disabled (son çare); §8.5 node3 teqlif-ai-proxy always-on (ilk yedek); §9.2 ai_proxy:active_url doğrulama eklendi; §9.5 AI proxy failover simülasyonu eklendi; DR tablosunda node2 SPOF kaldırıldı → node2+node3 eş zamanlı satırı eklendi; wg_vip_failover.sh MASTER: redis-cli REPLICAOF NO ONE eksikliği düzeltildi (config değişikliği yetmez, live promote şart); failover.env CORE_REDIS_PASS eklendi | rev26 — leader.py kaldırıldı (clean architecture: mechanism duplication — Keepalived zaten lider seçimi yapıyor; Redis lock aynı garantiyi tekrar etmemeli); §0.6'ya tasarım kararı notu eklendi; wg_vip_failover.sh'den orchestrator:leader DEL kaldırıldı; §9.2 doğrulama orchestrator:leader→systemctl is-active ile güncellendi | rev27 — Guardian mimarisi: §0.2 edge_metrics_agent→guardian_agent (local agent+heartbeat+election+command executor); §0.6 orchestrator→Guardian koordinatör (topology-driven, component:env bazlı service state: HEALTHY/DEGRADED/DOWN, job state machine+checkpoint+resume, playbook sistemi, local state cache guardian_state.json, dağıtık lider seçimi Redis NX+UDP peer fallback); §1.4 node.conf YAML full self-description şeması (guardian_priority, network, hardware, components[]); §4.4.1 guardian-redis port 6382 (appendonly yes — job checkpoint kalıcı); tüm node UFW'ye UDP 9901 guardian heartbeat kuralı eklendi; teqlif-orchestrator.service → teqlif-guardian.service geçiş notu | rev28 — traffic_eligible + traffic_type alanları: node.conf her componente eklendi (default: false — insan onayı olmadan routing yapılmaz); routing eligibility kuralı §0.6'ya eklendi (4 şart: eligible+env+systemd+health); internal_mesh/gateway_proxied/direct_internet tipleri; component asla hybrid değildir notu; §0.6 routing modülüne is_routing_eligible() kuralı eklendi)*
