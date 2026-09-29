@@ -5968,6 +5968,29 @@ systemctl daemon-reload
 systemctl enable --now teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging teqlif-guardian
 ```
 
+**AI Proxy (node3'te her zaman çalışır — staging'de trafik 127.0.0.1:8001'e gider):**
+```bash
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/systemd/teqlif-ai-proxy.service \
+   /etc/systemd/system/teqlif-ai-proxy.service
+systemctl daemon-reload
+systemctl enable --now teqlif-ai-proxy
+```
+
+**Gizli dosyalar — node3'e kopyala** (SFTP veya güvenli kanaldan):
+```bash
+# Firebase service account (FCM push bildirimleri — prod ve staging aynı proje)
+cp ~/firebase-service-account.json /etc/teqlif/firebase-service-account.json
+chmod 600 /etc/teqlif/firebase-service-account.json
+chown tucibeyin:tucibeyin /etc/teqlif/firebase-service-account.json
+
+# APNS VoIP key (iOS push — APNS_USE_SANDBOX=True staging'de sandbox APNs'ye gider)
+cp ~/AuthKey_<apns_key_id>.p8 /etc/teqlif/AuthKey_<apns_key_id>.p8
+chmod 600 /etc/teqlif/AuthKey_<apns_key_id>.p8
+chown tucibeyin:tucibeyin /etc/teqlif/AuthKey_<apns_key_id>.p8
+```
+
+> **Not:** `firebase-service-account.json` ve `AuthKey_*.p8` repoya GİRMEZ — gizlilik sınırı. Lokal kasadan SFTP ile kopyalanır.
+
 ### 11.6 Nginx (staging erişimi — node3)
 
 ```bash
@@ -6005,12 +6028,16 @@ psql -h 127.0.0.1 -U teqlif -d teqlif_staging -c '\dt'  # → alembic tabloları
 redis-cli -h 127.0.0.1 -p 6379 -a <staging_redis_pass> ping  # → PONG
 curl -s http://127.0.0.1:9000/minio/health/live  # → 200 (MinIO lokal)
 curl -s http://127.0.0.1:7880  # → LiveKit API yanıt
+curl -s http://127.0.0.1:8001/health  # → 200 (AI proxy lokal)
 systemctl is-active teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging \
   redis-staging postgresql minio-staging livekit-staging teqlif-ai-proxy teqlif-guardian
+# Gizli dosyalar var mı?
+ls -la /etc/teqlif/firebase-service-account.json /etc/teqlif/AuthKey_*.p8
 ```
 
 - [ ] `alembic upgrade head` (staging DB — lokal 127.0.0.1)
 - [ ] Servisler: `teqlif-staging`, `teqlif-worker-staging`, `teqlif-worker-critical-staging`, `redis-staging`, `postgresql`, `minio-staging`, `livekit-staging`, `teqlif-ai-proxy`, `teqlif-guardian`
+- [ ] `firebase-service-account.json` + `AuthKey_*.p8` `/etc/teqlif/` altında mevcut
 - [ ] MinIO bucket'ları: `mc ls local/teqlif-staging` + `mc ls local/teqlif-dm-staging`
 - [ ] Presigned upload test: `uploads-staging.teqlif.com` → PUT 200
 
