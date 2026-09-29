@@ -4883,7 +4883,7 @@ scrape_configs:
         - '10.10.0.8:9200'   # node8 (Storage)
         - '10.10.0.9:9200'   # node1 (Stream)
         - '10.10.0.12:9200'  # node4 (Stream)
-        - '10.10.0.13:9200'  # node9 (Monitor/ClickHouse)
+        - '10.10.0.13:9200'  # node9 (Sistem Full Backup/Monitor/ClickHouse)
 ```
 
 **`/etc/prometheus/alert_rules.yml`:**
@@ -5191,7 +5191,7 @@ curl -s http://127.0.0.1:9093/#/alerts  # → Alertmanager UI (WG üzerinden)
 | Veri | Yöntem | RPO | Öncelik |
 |------|--------|-----|---------|
 | PostgreSQL | pg_receivewal (sürekli) + pg_basebackup (haftalık) + pg_dump (günlük) | Dakika | Kritik |
-| MinIO nesneleri | Bucket versioning (node7+8) + off-site rclone (günlük) | 24 saat | Yüksek |
+| MinIO nesneleri | Dual-Write (node7+8) + cold archive node9 (günlük `mc mirror`) + off-site B2 (günlük rclone) | 24 saat | Yüksek |
 | Redis Core | RDB günlük rsync (node5→node9) | 24 saat | Orta |
 | ClickHouse | Günlük BACKUP komutu + off-site | 24 saat | Orta |
 | WireGuard private key | Manuel → password manager | Tek seferlik | Kritik |
@@ -5548,7 +5548,77 @@ cp /var/www/teqlif.com/deploy/scale/V2.0/node9/systemd/teqlif-clickhouse-backup.
 systemctl enable --now teqlif-clickhouse-backup.timer
 ```
 
-#### 10.6.8 Off-site Yedekleme (rclone)
+#### 10.6.8 MinIO Cold Archive (node9)
+
+node7 ve node8 MinIO verilerini `mc mirror` ile node9'a çeker. Her iki bucket — `teqlif` (genel medya) ve `teqlif-dm` (DM medyası) — ayrı ayrı arşivlenir. `mc` HTTP ile MinIO API'ye bağlanır; SSH veya dosya sistemi erişimi gerekmez.
+
+**mc kurulumu (node9'da — Faz 10.6.1 sonrası):**
+```bash
+MC_VER="RELEASE.2024-11-17T19-35-25Z"
+curl -fsSL "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.${MC_VER}" \
+  -o /usr/local/bin/mc
+chmod 755 /usr/local/bin/mc
+
+# MinIO alias — node7 (primary), node8 (fallback)
+# Kimlik bilgileri .env.production'dan gelir
+mc alias set node7minio "http://10.10.0.8:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
+mc alias set node8minio "http://10.10.0.12:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
+```
+
+**`/opt/teqlif/scripts/minio_backup.sh`:**
+```bash
+#!/bin/bash
+set -euo pipefail
+BACKUP_BASE="/data/backups/minio"
+LOGFILE="/var/log/teqlif/minio_backup.log"
+exec >> "${LOGFILE}" 2>&1
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: start"
+
+# .env.production'dan kimlik bilgilerini yükle
+source /etc/teqlif/.env.production
+
+# mc alias'larını bu oturumda tanımla (script root olarak çalışmayabilir)
+mc alias set node7minio "http://10.10.0.8:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}" --quiet
+mc alias set node8minio "http://10.10.0.12:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}" --quiet
+
+mirror_bucket() {
+  local alias="$1" bucket="$2"
+  local dest="${BACKUP_BASE}/${bucket}"
+  mkdir -p "${dest}"
+  mc mirror --overwrite --remove --quiet "${alias}/${bucket}" "${dest}" \
+    && echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} OK — $(du -sh ${dest} | cut -f1)"
+}
+
+# node7 primary — her iki bucket
+if mc admin info node7minio --quiet &>/dev/null; then
+  mirror_bucket node7minio teqlif
+  mirror_bucket node7minio teqlif-dm
+else
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: node7 erişilemiyor, node8 fallback"
+  mirror_bucket node8minio teqlif
+  mirror_bucket node8minio teqlif-dm
+fi
+
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: tamamlandı"
+```
+
+```bash
+chmod 750 /opt/teqlif/scripts/minio_backup.sh
+```
+
+**`/etc/systemd/system/teqlif-minio-backup.service`** + **`.timer`:**
+```bash
+cp /var/www/teqlif.com/deploy/scale/V2.0/node9/systemd/teqlif-minio-backup.service \
+   /etc/systemd/system/teqlif-minio-backup.service
+cp /var/www/teqlif.com/deploy/scale/V2.0/node9/systemd/teqlif-minio-backup.timer \
+   /etc/systemd/system/teqlif-minio-backup.timer
+```
+
+```bash
+systemctl enable --now teqlif-minio-backup.timer
+```
+
+#### 10.6.9 Off-site Yedekleme (rclone)
 
 **rclone remote kurulumu (node3'te — sağlayıcı seçimi serbesttir):**
 
@@ -5595,6 +5665,10 @@ rclone sync /data/clickhouse/backups/ "${REMOTE}/clickhouse/" \
   --max-age 7d --log-level INFO
 find /data/clickhouse/backups/ -maxdepth 1 -name "ch_backup_*" -mtime +1 -exec rm -rf {} +
 
+# MinIO cold archive (node9 lokal mirror — §10.6.8'de teqlif + teqlif-dm node7'den çekilir)
+rclone sync /data/backups/minio/ "${REMOTE}/minio/" \
+  --transfers 4 --checkers 8 --log-level INFO
+
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: OK"
 ```
 
@@ -5614,47 +5688,22 @@ cp /var/www/teqlif.com/deploy/scale/V2.0/node9/systemd/teqlif-offsite-sync.timer
 systemctl enable --now teqlif-offsite-sync.timer
 ```
 
-**MinIO off-site (node5'te — rclone ile):**
-```bash
-# rclone MinIO remote (node5'te):
-rclone config create minio_local s3 \
-  provider Minio \
-  endpoint "http://127.0.0.1:9000" \
-  access_key_id "<MINIO_ROOT_USER>" \
-  secret_access_key "<MINIO_ROOT_PASSWORD>"
+> **MinIO off-site:** `mc mirror` → node9 lokal (§10.6.8) → `offsite_sync.sh` → B2 akışıyla yapılır. node5'te ayrı cron gerekmez.
 
-# Haftalık sync (node5'te cron — Pazar 05:00 UTC):
-echo "0 5 * * 0 tucibeyin rclone sync minio_local:teqlif b2backup:teqlif-minio-backup --log-file=/var/log/teqlif/minio_offsite.log" \
-  >> /etc/cron.d/teqlif-minio-offsite
-
-# node5'te logrotate (Faz 1.10 **/*.log şablonu top-level dosyayı kapsamaz):
-cat >> /etc/logrotate.d/teqlif << 'EOF'
-/var/log/teqlif/minio_offsite.log {
-    weekly
-    rotate 8
-    compress
-    delaycompress
-    missingok
-    notifempty
-    copytruncate
-}
-EOF
-```
-
-#### 10.6.9 Zamanlayıcı Özeti (node9)
+#### 10.6.10 Zamanlayıcı Özeti (node9)
 
 | Saat (UTC) | Timer | İş |
 |-----------|-------|-----|
 | Sürekli | MinIO Site Replication | node7↔node8 anlık çift yönlü replikasyon (timer değil, MinIO yerleşik, bkz. Faz 6.9) |
+| Sürekli | teqlif-pg-receivewal | Sürekli WAL stream (servis, zamanlayıcı değil) |
+| 02:00 | teqlif-minio-backup | MinIO cold archive: teqlif + teqlif-dm → node9 lokal (`mc mirror` from node7) |
 | 03:00 | teqlif-pg-dump | PostgreSQL mantıksal yedek |
 | 03:30 | teqlif-redis-backup | Redis RDB rsync |
 | 04:00 | teqlif-clickhouse-backup | ClickHouse günlük backup |
-| 04:30 | teqlif-offsite-sync | Tüm backup'ları off-site'a gönder |
-| Her an | teqlif-pg-receivewal | Sürekli WAL stream (servis, zamanlayıcı değil) |
+| 04:30 | teqlif-offsite-sync | PG + Redis + ClickHouse + MinIO → B2 off-site |
 | Pazar 01:00 | teqlif-pg-basebackup | Haftalık fiziksel backup |
-| Pazar 05:00 | minio_offsite (cron, node5) | MinIO off-site sync |
 
-#### 10.6.10 WireGuard Private Key Kurtarma (Manuel — Tek Seferlik)
+#### 10.6.11 WireGuard Private Key Kurtarma (Manuel — Tek Seferlik)
 
 Her node kurulduktan **hemen sonra**:
 ```bash
@@ -5671,7 +5720,7 @@ chmod 600 /etc/wireguard/private.key
 # 9 node'da o node'a ait peer kaydını yeni public key ile güncelle (Faz 2 wg set adımları)
 ```
 
-#### 10.6.11 Disaster Recovery Tablosu
+#### 10.6.12 Disaster Recovery Tablosu
 
 | Senaryo | RTO | Prosedür |
 |---------|-----|---------|

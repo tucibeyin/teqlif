@@ -35,4 +35,10 @@ rclone sync /data/clickhouse-backups/ "${B2_BUCKET}/clickhouse/" \
     --log-level INFO
 find /data/clickhouse-backups/ -maxdepth 1 -name "teqlif_*" -mtime +1 -exec rm -rf {} +
 
+# MinIO cold archive (teqlif + teqlif-dm — mc mirror tarafından /data/backups/minio/ altına yazılır)
+rclone sync /data/backups/minio/ "${B2_BUCKET}/minio/" \
+    --transfers 4 \
+    --checkers 8 \
+    --log-level INFO
+
 logger "offsite_sync: completed all backup categories to ${B2_BUCKET}"
