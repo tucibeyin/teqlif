@@ -94,7 +94,7 @@ async def _on_call_room_finished(room_name: str) -> None:
             # NX lock: if end_call API already set this key, skip — avoids 182ms duplicate delivery.
             from app.utils.redis_client import get_redis as _get_redis
             _redis = await _get_redis()
-            if not await _redis.set(f"call_ended_sent:{call_id}", "webhook", ex=60, nx=True):
+            if not await _redis.set(f"call_ended_sent:{call_id}", "webhook", ex=300, nx=True):
                 logger.info("[CALL_PROCESS][END] Webhook: call_ended already sent by API, skipping | call_id=%s", call_id)
                 return
 
