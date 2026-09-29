@@ -3,16 +3,16 @@ groups:
     rules:
       - alert: NodeDown
         # gateway (2,9) ve storage (8,12) node'ları hariç — bunların kendi özel alert'leri var
-        expr: up{job="node", instance!~"10\\.10\\.0\\.(2|9|8|12):9100"} == 0
+        expr: up{job="teqlif_guardian", instance!~"10\\.10\\.0\\.(2|9|8|12):9200"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
           summary: "Node {{ $labels.instance }} unreachable"
-          description: "Node exporter on {{ $labels.instance }} has been down for 2+ minutes."
+          description: "Guardian agent on {{ $labels.instance }} has been down for 2+ minutes."
 
       - alert: StorageNodeDown
-        expr: up{job="node", instance=~"10\\.10\\.0\\.(8|12):9100"} == 0
+        expr: up{job="teqlif_guardian", instance=~"10\\.10\\.0\\.(8|12):9200"} == 0
         for: 1m
         labels:
           severity: critical
@@ -21,7 +21,7 @@ groups:
           description: "MinIO storage node {{ $labels.instance }} is down."
 
       - alert: GatewayDown
-        expr: up{job="node", instance=~"10\\.10\\.0\\.(2|9):9100"} == 0
+        expr: up{job="teqlif_guardian", instance=~"10\\.10\\.0\\.(2|9):9200"} == 0
         for: 1m
         labels:
           severity: critical
@@ -30,7 +30,7 @@ groups:
           description: "Gateway node {{ $labels.instance }} is unreachable."
 
       - alert: Node5HighCPU
-        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle", instance="10.10.0.5:9100"}[5m])) * 100) > 85
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle", instance="10.10.0.5:9200"}[5m])) * 100) > 85
         for: 5m
         labels:
           severity: warning
@@ -39,7 +39,7 @@ groups:
           description: "node5 CPU usage has been above 85% for 5 minutes."
 
       - alert: StorageDiskHigh
-        expr: (node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(8|12):9100", mountpoint="/mnt/data"} - node_filesystem_free_bytes{instance=~"10\\.10\\.0\\.(8|12):9100", mountpoint="/mnt/data"}) / node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(8|12):9100", mountpoint="/mnt/data"} * 100 > 85
+        expr: (node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(8|12):9200", mountpoint="/mnt/data"} - node_filesystem_free_bytes{instance=~"10\\.10\\.0\\.(8|12):9200", mountpoint="/mnt/data"}) / node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(8|12):9200", mountpoint="/mnt/data"} * 100 > 85
         for: 5m
         labels:
           severity: warning
@@ -48,7 +48,7 @@ groups:
           description: "Storage disk /mnt/data on {{ $labels.instance }} is over 85% full."
 
       - alert: MonitorDiskHigh
-        expr: (node_filesystem_size_bytes{instance="10.10.0.13:9100", mountpoint="/data"} - node_filesystem_free_bytes{instance="10.10.0.13:9100", mountpoint="/data"}) / node_filesystem_size_bytes{instance="10.10.0.13:9100", mountpoint="/data"} * 100 > 80
+        expr: (node_filesystem_size_bytes{instance="10.10.0.13:9200", mountpoint="/data"} - node_filesystem_free_bytes{instance="10.10.0.13:9200", mountpoint="/data"}) / node_filesystem_size_bytes{instance="10.10.0.13:9200", mountpoint="/data"} * 100 > 80
         for: 10m
         labels:
           severity: warning

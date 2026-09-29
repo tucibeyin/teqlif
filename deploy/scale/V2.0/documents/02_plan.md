@@ -218,7 +218,7 @@ Her node kurulumunda şunlar zorunlu:
 | Servis | Amaç |
 |--------|------|
 | WireGuard (wg0) | Mesh tüneli — tüm iç iletişim buradan |
-| node_exporter :9100 | Prometheus metrik toplama (`--collector.systemd`) |
+| teqlif-guardian.service :9200 `/metrics` | Prometheus metrik toplama — node-exporter yerine guardian içinde (node_exporter kurulmaz) |
 | promtail | Log → node9 Loki :3100 push |
 | teqlif-guardian.service | Guardian agent — metrik, sağlık, heartbeat, election, komut executor |
 | fail2ban | SSH brute-force koruması |
@@ -4046,27 +4046,9 @@ mkdir -p /etc/ssl/teqlif
 chmod 600 /etc/ssl/teqlif/cf-origin.key
 ```
 
-### 7.3 node_exporter + Promtail
+### 7.3 Guardian Metrics + Promtail
 
-`node_exporter` ve `promtail` **tüm 11 node'da** kurulur. Bu adım ilgili node'un faz kurulumu sırasında yapılır; gateway'ler için burada gösterilmektedir.
-
-#### node_exporter
-
-```bash
-# Tüm node'larda (her birinin WG IP'sine göre):
-NODE_EXPORTER_VER="1.8.2"
-curl -fsSL "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VER}/node_exporter-${NODE_EXPORTER_VER}.linux-amd64.tar.gz" \
-  | tar -xz -C /usr/local/bin --strip-components=1 \
-    node_exporter-${NODE_EXPORTER_VER}.linux-amd64/node_exporter
-
-# WireGuard IP'ye kilitli systemd unit — her node için hazır dosyayı kopyala:
-cp /var/www/teqlif.com/deploy/scale/V2.0/<NODE>/systemd/node-exporter.service \
-   /etc/systemd/system/node-exporter.service
-# <NODE>: gateway1, gateway2, node1..node9 — WG IP'ler dosyaya önceden işlenmiştir
-
-systemctl daemon-reload
-systemctl enable --now node-exporter
-```
+> **Not:** `node_exporter` kurulmaz. `teqlif-guardian.service`, port **:9200**'de `prometheus_client` ile `/metrics` endpoint'i sunar; `node_cpu_seconds_total`, `node_filesystem_*`, `node_memory_*`, `node_systemd_unit_state` gibi node-exporter uyumlu metrik isimleri kullanır. Böylece ayrı bir binary gerekmez. Implement: `backend/scripts/guardian_agent.py` (bkz. §0.2.2).
 
 #### Promtail
 
@@ -4887,20 +4869,21 @@ rule_files:
   - /etc/prometheus/alert_rules.yml
 
 scrape_configs:
-  - job_name: 'node_exporter'
+  # node-exporter YOK — guardian_agent.py :9200/metrics endpoint'i node-exporter uyumlu metrikler sunar
+  - job_name: 'teqlif_guardian'
     static_configs:
       - targets:
-        - '10.10.0.1:9100'   # gateway1
-        - '10.10.0.2:9100'   # gateway2
-        - '10.10.0.3:9100'   # node2 (AI Proxy)
-        - '10.10.0.4:9100'   # node3 (Staging)
-        - '10.10.0.5:9100'   # node5 (Core)
-        - '10.10.0.6:9100'   # node6 (Core)
-        - '10.10.0.7:9100'   # node7 (Storage)
-        - '10.10.0.8:9100'   # node8 (Storage)
-        - '10.10.0.9:9100'   # node1 (Stream)
-        - '10.10.0.12:9100'  # node4 (Stream)
-        - '10.10.0.13:9100'  # node9 (Monitor/ClickHouse)
+        - '10.10.0.1:9200'   # gateway1
+        - '10.10.0.2:9200'   # gateway2
+        - '10.10.0.3:9200'   # node2 (AI Proxy)
+        - '10.10.0.4:9200'   # node3 (Staging)
+        - '10.10.0.5:9200'   # node5 (Core)
+        - '10.10.0.6:9200'   # node6 (Core)
+        - '10.10.0.7:9200'   # node7 (Storage)
+        - '10.10.0.8:9200'   # node8 (Storage)
+        - '10.10.0.9:9200'   # node1 (Stream)
+        - '10.10.0.12:9200'  # node4 (Stream)
+        - '10.10.0.13:9200'  # node9 (Monitor/ClickHouse)
 ```
 
 **`/etc/prometheus/alert_rules.yml`:**
@@ -4909,25 +4892,25 @@ groups:
   - name: teqlif_infra
     rules:
       - alert: NodeDown
-        expr: up{job="node_exporter", instance!~"10\\.10\\.0\\.(1|2|7|8):9100"} == 0
+        # Gateway (2,9) ve storage (8,12) node'ları hariç — bunların kendi özel alert'leri var (GatewayDown/StorageNodeDown).
+        expr: up{job="teqlif_guardian", instance!~"10\\.10\\.0\\.(2|9|8|12):9200"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          description: "Guardian agent {{ $labels.instance }} has been down for 2+ minutes."
+
+      - alert: StorageNodeDown
+        expr: up{job="teqlif_guardian", instance=~"10\\.10\\.0\\.(8|12):9200"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          description: "{{ $labels.instance }} erişilemiyor."
-        # Gateway (2,9) ve storage (8,12) node'ları hariç — bunların kendi özel alert'leri var (GatewayDown/StorageNodeDown).
-
-      - alert: StorageNodeDown
-        expr: up{job="node_exporter", instance=~"10\\.10\\.0\\.(7|8):9100"} == 0
-        for: 30s
-        labels:
-          severity: critical
-          channel: ops
-        annotations:
-          description: "Storage node {{ $labels.instance }} down — dual-write etkilenebilir."
+          summary: "Storage node {{ $labels.instance }} unreachable"
+          description: "MinIO storage node {{ $labels.instance }} is down."
 
       - alert: Node5HighCPU
-        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle",instance="10.10.0.5:9100"}[5m])) * 100) > 85
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle",instance="10.10.0.5:9200"}[5m])) * 100) > 85
         for: 5m
         labels:
           severity: warning
@@ -4936,7 +4919,7 @@ groups:
           description: "node5 CPU {{ $value | printf \"%.1f\" }}% > 85%"
 
       - alert: StorageDiskHigh
-        expr: (node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(7|8):9100",mountpoint="/mnt/data"} - node_filesystem_free_bytes{instance=~"10\\.10\\.0\\.(7|8):9100",mountpoint="/mnt/data"}) / node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(7|8):9100",mountpoint="/mnt/data"} * 100 > 85
+        expr: (node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(7|8):9200",mountpoint="/mnt/data"} - node_filesystem_free_bytes{instance=~"10\\.10\\.0\\.(7|8):9200",mountpoint="/mnt/data"}) / node_filesystem_size_bytes{instance=~"10\\.10\\.0\\.(7|8):9200",mountpoint="/mnt/data"} * 100 > 85
         for: 10m
         labels:
           severity: warning
@@ -4945,7 +4928,7 @@ groups:
           description: "Storage {{ $labels.instance }} disk doluluk: {{ $value | printf \"%.1f\" }}%"
 
       - alert: GatewayDown
-        expr: up{job="node_exporter", instance=~"10\\.10\\.0\\.(1|2):9100"} == 0
+        expr: up{job="teqlif_guardian", instance=~"10\\.10\\.0\\.(1|2):9200"} == 0
         for: 30s
         labels:
           severity: critical
@@ -4955,7 +4938,7 @@ groups:
 
       # node9 disk: backup + WAL + Loki + ClickHouse verileri /data'yı doldurabilir
       - alert: MonitorDiskHigh
-        expr: (node_filesystem_size_bytes{instance="10.10.0.13:9100",mountpoint="/data"} - node_filesystem_free_bytes{instance="10.10.0.13:9100",mountpoint="/data"}) / node_filesystem_size_bytes{instance="10.10.0.13:9100",mountpoint="/data"} * 100 > 80
+        expr: (node_filesystem_size_bytes{instance="10.10.0.13:9200",mountpoint="/data"} - node_filesystem_free_bytes{instance="10.10.0.13:9200",mountpoint="/data"}) / node_filesystem_size_bytes{instance="10.10.0.13:9200",mountpoint="/data"} * 100 > 80
         for: 10m
         labels:
           severity: warning
@@ -4964,7 +4947,7 @@ groups:
           description: "node9 (monitor/backup) disk doluluk: {{ $value | printf \"%.1f\" }}% — backup ve WAL temizlenmeli."
 
       # Servis crash loop koruması: "failed" state Prometheus'ta up=0 göstermez,
-      # node_systemd_unit_state ile izlenir (node_exporter --collector.systemd gerekir)
+      # node_systemd_unit_state ile izlenir (guardian_agent.py prometheus_client ile sunar)
       - alert: ServiceFailed
         expr: node_systemd_unit_state{name=~"teqlif.*\\.service",state="failed"} == 1
         for: 1m
