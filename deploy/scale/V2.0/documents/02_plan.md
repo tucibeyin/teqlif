@@ -5813,20 +5813,15 @@ psql -h 127.0.0.1 -U teqlif -d teqlif_staging -c '\conninfo'  # → bağlantı d
 ```bash
 apt-get install -y redis-server
 
-cat > /etc/redis/redis-staging.conf <<'EOF'
-bind 127.0.0.1
-port 6379
-requirepass <staging_redis_pass>
-maxmemory 256mb
-maxmemory-policy volatile-lru
-appendonly no
-save 900 1
-save 300 10
-EOF
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/resources/redis/redis-staging.conf \
+   /etc/redis/redis-staging.conf
+# <staging_redis_pass> placeholder'ını doldur
+sed -i "s/<staging_redis_pass>/${STAGING_REDIS_PASS}/" /etc/redis/redis-staging.conf
 
 cp /var/www/teqlif.com/deploy/scale/V2.0/node3/systemd/redis-staging.service \
    /etc/systemd/system/redis-staging.service
 
+systemctl daemon-reload
 systemctl enable --now redis-staging
 redis-cli -h 127.0.0.1 -p 6379 -a <staging_redis_pass> ping  # → PONG
 ```
@@ -5986,35 +5981,20 @@ chmod 700 /etc/ssl/teqlif
 chmod 600 /etc/ssl/teqlif/cf-origin.key
 ```
 
-**`/etc/nginx/sites-available/staging`:**
-```nginx
-server {
-    listen 80;
-    server_name staging.teqlif.com;
-    location / { return 301 https://$host$request_uri; }
-}
-
-server {
-    listen 443 ssl;
-    server_name staging.teqlif.com;
-
-    ssl_certificate     /etc/ssl/teqlif/cf-origin.crt;
-    ssl_certificate_key /etc/ssl/teqlif/cf-origin.key;
-
-    location / {
-        proxy_pass http://127.0.0.1:8002;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
+**Nginx config** (`node3/resources/nginx/sites-available/staging` — 3 vhost: staging API, media-staging okuma, uploads-staging yazma):
 
 ```bash
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/resources/nginx/sites-available/staging \
+   /etc/nginx/sites-available/staging
 ln -s /etc/nginx/sites-available/staging /etc/nginx/sites-enabled/
 nginx -t && systemctl enable --now nginx
+```
+
+> **Not:** nginx config §11.3 (MinIO) adımında da güncellenir — `cp ... && systemctl reload nginx`. §11.6 kurulum adımı; §11.3 güncelleme adımı.
+
+**UFW — MinIO iç erişim:**
+```bash
+ufw deny 9000/tcp  # MinIO doğrudan erişim engelle — yalnızca nginx :443 üzerinden
 ```
 
 ### 11.7 Faz 11 Doğrulama
