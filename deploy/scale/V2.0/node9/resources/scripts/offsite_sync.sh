@@ -28,10 +28,11 @@ rclone sync "${LOCAL_BASE}/redis/" "${B2_BUCKET}/redis/" \
     --checkers 4 \
     --log-level INFO
 
-# Sync ClickHouse backups
+# Sync ClickHouse backups (7 gün off-site; rclone başarılıysa lokal 1 günden eskiyi sil)
 rclone sync /data/clickhouse-backups/ "${B2_BUCKET}/clickhouse/" \
     --transfers 2 \
     --checkers 4 \
     --log-level INFO
+find /data/clickhouse-backups/ -maxdepth 1 -name "teqlif_*" -mtime +1 -exec rm -rf {} +
 
 logger "offsite_sync: completed all backup categories to ${B2_BUCKET}"
