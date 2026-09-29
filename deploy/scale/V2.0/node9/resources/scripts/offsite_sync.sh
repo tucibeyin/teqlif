@@ -16,8 +16,8 @@ rclone sync "${LOCAL_BASE}/pg_basebackup/" "${B2_BUCKET}/pg_basebackup/" \
     --checkers 4 \
     --log-level INFO
 
-# Sync WAL archive
-rclone sync "${LOCAL_BASE}/wal/" "${B2_BUCKET}/wal/" \
+# Sync WAL archive — pg_receivewal /opt/teqlif/backups/postgres/wal/ altına yazar
+rclone sync /opt/teqlif/backups/postgres/wal/ "${B2_BUCKET}/wal/" \
     --transfers 8 \
     --checkers 16 \
     --log-level INFO
@@ -28,12 +28,11 @@ rclone sync "${LOCAL_BASE}/redis/" "${B2_BUCKET}/redis/" \
     --checkers 4 \
     --log-level INFO
 
-# Sync ClickHouse backups (7 gün off-site; rclone başarılıysa lokal 1 günden eskiyi sil)
+# Sync ClickHouse backups (lokal 7 gün — clickhouse_backup.sh RETENTION_DAYS=7 yönetir)
 rclone sync /data/clickhouse-backups/ "${B2_BUCKET}/clickhouse/" \
     --transfers 2 \
     --checkers 4 \
     --log-level INFO
-find /data/clickhouse-backups/ -maxdepth 1 -name "teqlif_*" -mtime +1 -exec rm -rf {} +
 
 # MinIO cold archive (teqlif + teqlif-dm — mc mirror tarafından /data/backups/minio/ altına yazılır)
 rclone sync /data/backups/minio/ "${B2_BUCKET}/minio/" \

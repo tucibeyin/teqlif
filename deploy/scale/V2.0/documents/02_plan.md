@@ -5644,26 +5644,25 @@ LOGFILE="/var/log/teqlif/offsite_sync.log"
 exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: start"
 
-# PostgreSQL dump'ları (günlük — 7 gün)
-rclone sync /opt/teqlif/backups/postgres/dump/ "${REMOTE}/postgres/dump/" \
-  --max-age 7d --log-level INFO
-
-# pg_basebackup (haftalık — 2 kopya)
-rclone sync /opt/teqlif/backups/postgres/basebackup/ "${REMOTE}/postgres/basebackup/" \
+# PostgreSQL dump'ları (günlük — 7 gün; lokal temizleme pg_dump.sh RETENTION_DAYS=7 yönetir)
+rclone sync /data/backups/pg_dump/ "${REMOTE}/postgres/dump/" \
   --log-level INFO
 
-# WAL segmentleri (son 48 saat — PITR için yeterli off-site pencere)
+# pg_basebackup (haftalık — lokal temizleme pg_basebackup.sh RETENTION_DAYS=7 yönetir)
+rclone sync /data/backups/pg_basebackup/ "${REMOTE}/postgres/basebackup/" \
+  --log-level INFO
+
+# WAL segmentleri — pg_receivewal /opt/teqlif/backups/postgres/wal/ altına yazar
 rclone sync /opt/teqlif/backups/postgres/wal/ "${REMOTE}/postgres/wal/" \
-  --max-age 48h --log-level INFO
+  --log-level INFO
 
-# Redis RDB (günlük — 7 gün)
-rclone sync /opt/teqlif/backups/redis/ "${REMOTE}/redis/" \
-  --max-age 7d --log-level INFO
+# Redis RDB (günlük — 7 gün; lokal temizleme redis_backup.sh RETENTION_DAYS=7 yönetir)
+rclone sync /data/backups/redis/ "${REMOTE}/redis/" \
+  --log-level INFO
 
-# ClickHouse (7 gün off-site; rclone başarılıysa lokal 1 günden eski kopyaları sil)
-rclone sync /data/clickhouse/backups/ "${REMOTE}/clickhouse/" \
-  --max-age 7d --log-level INFO
-find /data/clickhouse/backups/ -maxdepth 1 -name "ch_backup_*" -mtime +1 -exec rm -rf {} +
+# ClickHouse (günlük — 7 gün; lokal temizleme clickhouse_backup.sh RETENTION_DAYS=7 yönetir)
+rclone sync /data/clickhouse-backups/ "${REMOTE}/clickhouse/" \
+  --transfers 2 --checkers 4 --log-level INFO
 
 # MinIO cold archive (node9 lokal mirror — §10.6.8'de teqlif + teqlif-dm node7'den çekilir)
 rclone sync /data/backups/minio/ "${REMOTE}/minio/" \

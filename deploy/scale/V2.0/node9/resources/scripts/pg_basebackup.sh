@@ -26,13 +26,6 @@ pg_basebackup \
 
 mv "${DEST_TMP}" "${DEST}"
 
-if [ -d "${BACKUP_DIR}/previous_basebackup" ]; then
-    rm -rf "${BACKUP_DIR}/previous_basebackup"
-fi
-if ls "${BACKUP_DIR}"/basebackup_* 2>/dev/null | grep -v "${DEST}" | head -1 | read PREV; then
-    mv "${PREV}" "${BACKUP_DIR}/previous_basebackup" 2>/dev/null || true
-fi
-
-find "${BACKUP_DIR}" -maxdepth 1 -name "previous_basebackup_*" -mtime +${RETENTION_DAYS} -exec rm -rf {} +
+find "${BACKUP_DIR}" -maxdepth 1 -name "basebackup_*" -mtime +${RETENTION_DAYS} -exec rm -rf {} +
 
 logger "pg_basebackup: completed to ${DEST}"
