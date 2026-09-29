@@ -1,0 +1,22 @@
+[Unit]
+Description=PostgreSQL WAL Receiver (PITR backup)
+After=network.target
+Wants=network.target
+
+[Service]
+User=tucibeyin
+EnvironmentFile=/etc/teqlif/.env.production
+Environment=PGPASSWORD=${REPLICATOR_PASSWORD}
+ExecStart=/usr/lib/postgresql/17/bin/pg_receivewal \
+  --host=10.10.0.10 \
+  --port=5432 \
+  --username=replicator \
+  --slot=wal_backup_node9 \
+  --directory=/opt/teqlif/backups/postgres/wal \
+  --compress=9 \
+  --synchronous
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

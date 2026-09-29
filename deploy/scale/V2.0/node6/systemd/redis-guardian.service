@@ -1,0 +1,21 @@
+[Unit]
+Description=Teqlif Redis Guardian (port 6382)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/redis-server /etc/redis/redis-guardian.conf
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=0
+Restart=always
+RestartSec=5
+User=redis
+Group=redis
+RuntimeDirectory=redis-guardian
+RuntimeDirectoryMode=2755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

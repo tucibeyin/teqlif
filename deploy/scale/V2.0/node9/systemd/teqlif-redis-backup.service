@@ -1,0 +1,14 @@
+[Unit]
+Description=Teqlif Redis RDB Backup
+After=network.target
+
+[Service]
+User=tucibeyin
+EnvironmentFile=/etc/teqlif/.env.production
+ExecStart=/opt/teqlif/scripts/redis_backup.sh
+Type=oneshot
+StandardOutput=append:/var/log/teqlif/redis_backup.log
+StandardError=append:/var/log/teqlif/redis_backup.log
+
+[Install]
+WantedBy=multi-user.target

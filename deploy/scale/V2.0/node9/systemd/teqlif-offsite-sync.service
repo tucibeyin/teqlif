@@ -1,0 +1,13 @@
+[Unit]
+Description=Teqlif Off-site Backup Sync
+After=network.target
+
+[Service]
+User=tucibeyin
+ExecStart=/opt/teqlif/scripts/offsite_sync.sh
+Type=oneshot
+StandardOutput=append:/var/log/teqlif/offsite_sync.log
+StandardError=append:/var/log/teqlif/offsite_sync.log
+
+[Install]
+WantedBy=multi-user.target

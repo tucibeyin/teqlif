@@ -1,0 +1,21 @@
+[Unit]
+Description=Teqlif AI Proxy (Fallback — node3)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+User=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/etc/teqlif/.env.production
+ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn app.ai_proxy.main:app \
+  --host 10.10.0.4 \
+  --port 8001 \
+  --workers 1
+Restart=always
+RestartSec=5
+MemoryMax=900M
+MemorySwapMax=300M
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Teqlif Staging
+After=network.target postgresql.service redis-staging.service
+
+[Service]
+User=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/etc/teqlif/.env.staging
+ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn app.main:app \
+  --host 127.0.0.1 \
+  --port 8002 \
+  --workers 1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

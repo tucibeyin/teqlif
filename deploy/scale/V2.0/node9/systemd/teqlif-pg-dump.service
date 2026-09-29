@@ -1,0 +1,13 @@
+[Unit]
+Description=Teqlif PostgreSQL Logical Backup
+
+[Service]
+User=tucibeyin
+EnvironmentFile=/etc/teqlif/.env.production
+ExecStart=/opt/teqlif/scripts/pg_dump.sh
+Type=oneshot
+StandardOutput=append:/var/log/teqlif/pg_dump.log
+StandardError=append:/var/log/teqlif/pg_dump.log
+
+[Install]
+WantedBy=multi-user.target

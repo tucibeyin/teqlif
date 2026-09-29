@@ -1,0 +1,20 @@
+[Unit]
+Description=Teqlif PostgreSQL Physical Backup
+After=network.target
+
+[Service]
+User=tucibeyin
+EnvironmentFile=/etc/teqlif/.env.production
+ExecStart=/opt/teqlif/scripts/pg_basebackup.sh
+Type=oneshot
+StandardOutput=append:/var/log/teqlif/pg_basebackup.log
+StandardError=append:/var/log/teqlif/pg_basebackup.log
+ExecStopPost=/bin/bash -c 'if [ "$$SERVICE_RESULT" != "success" ]; then \
+  source /etc/teqlif/.env.production; \
+  curl -s -X POST "https://api.telegram.org/bot$${TELEGRAM_BOT_TOKEN}/sendMessage" \
+    -d "chat_id=$${TELEGRAM_CHAT_ID}" \
+    -d "text=*BACKUP HATASI: pg_basebackup başarısız* (node9)" \
+    -d "parse_mode=Markdown" > /dev/null 2>&1; fi'
+
+[Install]
+WantedBy=multi-user.target

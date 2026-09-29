@@ -1,0 +1,21 @@
+[Unit]
+Description=Teqlif Redis Core (port 6379)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/redis-server /etc/redis/redis-core.conf
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=0
+Restart=always
+RestartSec=5
+User=redis
+Group=redis
+RuntimeDirectory=redis-core
+RuntimeDirectoryMode=2755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
