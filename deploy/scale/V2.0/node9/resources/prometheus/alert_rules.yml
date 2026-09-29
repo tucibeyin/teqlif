@@ -1,0 +1,83 @@
+groups:
+  - name: infrastructure
+    rules:
+      - alert: NodeDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node {{ $labels.instance }} unreachable"
+          description: "Node exporter on {{ $labels.instance }} has been down for 2+ minutes."
+
+      - alert: StorageNodeDown
+        expr: up{job="node", instance=~"10.10.0.(8|12).*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Storage node {{ $labels.instance }} unreachable"
+          description: "MinIO storage node {{ $labels.instance }} is down."
+
+      - alert: Node5HighCPU
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle", instance="10.10.0.5:9100"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "node5 CPU > 85%"
+          description: "node5 CPU usage has been above 85% for 5 minutes."
+
+      - alert: StorageDiskHigh
+        expr: (node_filesystem_size_bytes{mountpoint="/mnt/data"} - node_filesystem_free_bytes{mountpoint="/mnt/data"}) / node_filesystem_size_bytes{mountpoint="/mnt/data"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Storage disk > 85% on {{ $labels.instance }}"
+          description: "Storage disk /mnt/data on {{ $labels.instance }} is over 85% full."
+
+      - alert: GatewayDown
+        expr: up{job="node", instance=~"10.10.0.(2|9).*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Gateway {{ $labels.instance }} down"
+          description: "Gateway node {{ $labels.instance }} is unreachable."
+
+      - alert: MonitorDiskHigh
+        expr: (node_filesystem_size_bytes{instance="127.0.0.1:9100", mountpoint="/data"} - node_filesystem_free_bytes{instance="127.0.0.1:9100", mountpoint="/data"}) / node_filesystem_size_bytes{instance="127.0.0.1:9100", mountpoint="/data"} > 0.80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "node9 /data disk > 80%"
+          description: "node9 monitoring data disk is over 80% full."
+
+      - alert: ServiceFailed
+        expr: node_systemd_unit_state{state="failed"} == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Systemd unit {{ $labels.name }} failed on {{ $labels.instance }}"
+          description: "A systemd service entered failed state."
+
+      - alert: PostgreSQLReplicaLag
+        expr: pg_replication_lag > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replica lag > 30s"
+          description: "Streaming replication lag is {{ $value }}s."
+
+      - alert: PostgreSQLStandbyMissing
+        expr: pg_stat_replication_count < 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No PostgreSQL standby connected"
+          description: "No streaming replication standby has been connected for 5 minutes."

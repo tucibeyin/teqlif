@@ -1,0 +1,32 @@
+<clickhouse>
+    <users>
+        <default>
+            <password_sha256_hex><default_password_sha256></password_sha256_hex>
+            <networks>
+                <ip>127.0.0.1</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+        </default>
+
+        <teqlif>
+            <password_sha256_hex><teqlif_password_sha256></password_sha256_hex>
+            <networks>
+                <ip>10.10.0.0/24</ip>
+                <ip>127.0.0.1</ip>
+            </networks>
+            <profile>teqlif</profile>
+            <quota>default</quota>
+        </teqlif>
+    </users>
+
+    <profiles>
+        <default>
+            <max_memory_usage>8589934592</max_memory_usage>
+        </default>
+        <teqlif>
+            <max_memory_usage>8589934592</max_memory_usage>
+            <max_memory_usage_for_all_queries>12884901888</max_memory_usage_for_all_queries>
+        </teqlif>
+    </profiles>
+</clickhouse>
