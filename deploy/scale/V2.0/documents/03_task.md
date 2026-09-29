@@ -601,7 +601,7 @@
 
 ### 8.5 — AI Proxy Fallback — node3 (İlk Yedek)
 
-- [ ] node3: `teqlif-ai-proxy.service` enable + start (Warm Standby — her zaman çalışır, `--host 127.0.0.1`)
+- [ ] node3: `teqlif-ai-proxy.service` enable + start (Warm Standby — her zaman çalışır, `--host 0.0.0.0` — lokal staging ve prod mesh `10.10.0.4:8001` erişimini birlikte karşılar)
 - [ ] Orchestrator node2 down → `ai_proxy:active_url` → `http://10.10.0.4:8001` (node3) otomatik güncellemeli
 
 ---
@@ -745,7 +745,7 @@
 - [ ] APNS: `AuthKey_*.p8` → `/etc/teqlif/` (güvenli kanaldan kopyala — repoya GİRMEZ)
 - [ ] `teqlif-staging.service` → enable + start
 - [ ] `teqlif-worker-staging.service` + `teqlif-worker-critical-staging.service` → enable + start
-- [ ] `teqlif-ai-proxy.service` (staging, `--host 127.0.0.1`) → enable + start
+- [ ] `teqlif-ai-proxy.service` (staging + prod fallback, `--host 0.0.0.0`) → enable + start
 - [ ] `teqlif-guardian.service.d/staging-env.conf` drop-in → `.env.staging` kullan
 - [ ] `teqlif-guardian.service` → enable + start
 - [ ] Alembic: `cd backend && .venv/bin/python -m alembic upgrade head`
