@@ -10,8 +10,10 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
-    use_pgbouncer: bool = False
+    use_pgbouncer: bool = True
     redis_url: str = "redis://localhost:6379"
+    orch_redis_url: str = ""
+    guardian_redis_url: str = ""
     secret_key: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
@@ -27,7 +29,8 @@ class Settings(BaseSettings):
 
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
-    
+    ai_proxy_url: str = "http://10.10.0.3:8001"
+
     @field_validator("edge_livekit_urls", "edge_minio_urls", mode="before")
     def parse_comma_separated_list(cls, v):
         if isinstance(v, str):
@@ -37,7 +40,7 @@ class Settings(BaseSettings):
     firebase_service_account: str = ""  # path to service account JSON
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""
-    site_url: str = "https://www.teqlif.com"
+    site_url: str = ""
     admin_email: str = ""
     admin_password_hash: str = ""
     captcha_enabled: bool = False
@@ -59,11 +62,16 @@ class Settings(BaseSettings):
     minio_dm_bucket: str = "teqlif-dm"   # private bucket for DM media (presigned access)
     minio_secure: bool = False
     minio_region: str = "us-east-1"      # S3 API uyumluluğu ve ağ keşfini atlamak için
+    minio_endpoint: str = "http://10.10.0.8:9000"
+    minio_endpoint_dm: str = "http://10.10.0.8:9000"
+    media_host: str = ""
+    uploads_host: str = ""
+    upload_presign_ttl: int = 900
 
     # ClickHouse analytics
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 8123
-    clickhouse_db: str = "default"
+    clickhouse_db: str = "teqlif_prod_analytics"
 
     # APNS VoIP Push Ayarları
     # Token-based auth (.p8) — süresi dolmaz, tercih edilen yöntem.
