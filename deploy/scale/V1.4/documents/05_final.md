@@ -990,4 +990,323 @@ sudo bash bootstrap_<node>.sh
 | 6 | **Prometheus FastAPI scrape** | `prometheus.yml`'e `node5:8000/metrics` hedefi eklenmeli. `prometheus-fastapi-instrumentator` kurulu ama Prometheus bunu scrape etmiyor — API latency/request metrikleri toplanmıyor. | Orta |
 | 7 | **Alarm eşiği sıkılaştırması** | `prometheus-rules.yml`: `DiskSpaceLow` %80 → %70, `HighMemoryUsage` %85 → %75. Mevcut eşikler node3 (3.8 GiB) gibi kısıtlı node'lar için geç uyarı veriyor. | Orta |
 
-*Son güncelleme: 2026-09-25 · deploy/scale/V1.4/documents/05_final.md*
+---
+
+## 17. TTL, Veri Yaşam Döngüsü ve Zamanlama Haritası
+
+Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve olası race condition'ları tek yerden belgeler.
+
+---
+
+### 17.1 Auth & Session TTL'leri
+
+| Anahtar (Redis) | Süre | Tanım Yeri | Açıklama |
+|----------------|------|-----------|---------|
+| `refresh:{token}` | **30 gün** (2592000s) | `utils/auth.py:17` | Refresh token — her login/refresh'te yenilenir |
+| `session:user:{uid}` | **15 dk** (900s) | `utils/auth.py:83` | Kullanıcı profil önbelleği — her auth isteğinde yenilenir |
+| JWT Access Token | **30 dk** | `config.py:17` | JWT payload içi exp; Redis'te saklanmaz |
+| `verify:{email}` | **10 dk** (600s) | `routers/auth.py:30` | E-posta doğrulama kodu |
+| `reset_pwd:{email}` | **10 dk** (600s) | `routers/auth.py:30` | Şifre sıfırlama kodu |
+| `chpwd:{uid}` | **10 dk** (600s) | `routers/auth.py:30` | Şifre değiştirme kodu |
+| `phone_verify_req:{uid}` | **10 dk** (600s) | `routers/auth.py:30` | Telefon doğrulama istek kilidı |
+| `phone_verify_token:{uid}` | **30 dk** (1800s) | `routers/auth.py:34` | Telefon doğrulama token'ı |
+
+> **Not:** `security/tokens.py:12` Access Token süresini 15 dk olarak tanımlar (`ACCESS_TOKEN_EXPIRE_MINUTES = 15`). `config.py` 30 dk döner. İki dosya çelişiyor; hangisinin aktif olduğu `config.py`'nin `access_token_expire_minutes` field'ına bağlı.
+
+---
+
+### 17.2 Güvenlik & Rate Limit TTL'leri
+
+| Anahtar (Redis) | Süre | Tanım Yeri | Açıklama |
+|----------------|------|-----------|---------|
+| `ip_rate:{ip}` | **60s** pencere | `core/defender.py:48` | IP başına sabit pencere sayacı (max 300 istek/dk) |
+| `ipblk:{ip}` | **10 dk** (600s) | `core/defender.py:49` | Limit aşıldığında IP bloğu |
+| `ws_session:{...}` | **2 saat** (7200s) | `core/defender.py:54` | WS zombie bağlantı güvenlik ağı (her bağlantıda yenilenir) |
+| `act_lock:{uid}:{action}` | **2s** (varsayılan) | `core/action_guard.py:84` | İdempotent işlem kilidi (listing_create, bid vb.) |
+| `idem:{...}` | **30s** (varsayılan) | `core/idempotency.py:32` | HTTP idempotency key |
+| `sanitizer_ban:{ip}` | **15 dk** (900s) | `security/sanitizer.py:15` | XSS/injection denemesi IP banlama |
+| `client_log_rl:{ip}` | **60s** pencere | `routers/client_log.py:27` | Client log endpoint rate limit penceresi |
+
+---
+
+### 17.3 Uygulama İçi TTL'ler
+
+| Anahtar / Model | Süre | Tanım Yeri | Açıklama |
+|----------------|------|-----------|---------|
+| Story (`expires_at`) | **24 saat** | `services/story_service.py:336` | Oluşturulduğunda `now() + 24h`; `cleanup_expired_stories_task` siler |
+| LiveKit token | **24 saat** | `use_cases/streams/stream_utils.py:66` | Oda katılım token'ı |
+| `auction:state:{stream_id}` | **24 saat** (86400s) | `repositories/auction_redis_repo.py:133` | Müzayede durumu |
+| `auction:bidders:{stream_id}` | **24 saat** | `repositories/auction_redis_repo.py:160` | Teklif verenler kümesi |
+| `bin_cooldown:{stream_id}:{uid}` | **60s** | `repositories/auction_redis_repo.py:202` | Aynı müzayedeye tekrar teklif bekleme süresi |
+| `auction_outbox:{stream_id}` | **24 saat** | `core/auction_outbox.py:40` | Müzayede outbox mesajları |
+| `commerce_outbox:{...}` | **24 saat** | `core/commerce_outbox.py:24` | Satış outbox mesajları |
+| `chat_pin:{thread_id}` | **24 saat** | `routers/chat.py:45` | Sabitlenmiş mesaj önbelleği |
+| `gift:log:{stream_id}` | **24 saat** | `routers/wallet.py` (LPUSH+expire) | Son 200 hediye logu (liste) |
+| `live:host_reconnect:{stream_id}` | **10 dk** (600s) | `routers/webhooks.py:191` | Host yeniden bağlanma penceresi |
+| `call_ended_sent:{call_id}` | **5 dk** (300s) API / **60s** webhook | `routers/calls.py:972`, `webhooks.py:97` | Çift call-ended event dedup ⚠️ |
+| `ws_dm_online:{uid}` | **90s** | `core/ws_manager.py:284` | DM WebSocket çevrimiçi durum |
+| `ws_call_events:{uid}` | **90s** | `core/ws_manager.py:232` | Arama event yeniden teslimat penceresi |
+| `hype:{stream_id}` | Kalıcı (no TTL) | `core/hype_manager.py` | Canlı yayın hype puanı — `cleanup_hype_highlights_task` temizler |
+| `stream_pos:{listener}` | **24 saat** | `core/stream_listener.py:166` | Redis Stream okuma pozisyonu |
+| `dlq:{listener}:{id}` | **7 gün** | `core/stream_listener.py:61` | Dead letter queue (işlenemeyen event) |
+| `call_presence:{uid}` | **10 dk** (600s) | `services/call_presence.py:18` | Arama varlık durumu |
+| `ad_freq:{uid}:{campaign}` | **24 saat** | `routers/ads.py:261` | Reklam gösterim frekansı sayacı |
+| `hes_event:{uid}:{listing}` | **14 gün** | `routers/analytics.py:190` | Tereddüt sinyali (retargeting) |
+| `fraud_shill:{...}` | **24 saat** | `services/fraud_detection_service.py:34` | Shill bidding sayacı |
+| `security_log:{ip}` | **24 saat** | `security/logging.py:95` | Güvenlik olayı log sayacı |
+
+---
+
+### 17.4 Cache TTL'leri
+
+| Anahtar / Namespace | Süre | Tanım Yeri | Açıklama |
+|--------------------|------|-----------|---------|
+| `listing_cache:{id}` | **7 gün** | `services/feed/listing_cache_service.py:12` | İlan detayı önbelleği |
+| `foryou:{uid}` | **6 saat** | `services/feed/foryou_worker.py:11` | ForYou feed; 4x/gün cron ile yenilenir |
+| `relationship:{uid}` | **1 saat** (3600s) | `services/relationship_service.py:34` | Takip/engel ilişki önbelleği |
+| `affinity:{uid}` | **15 dk** (900s) | `services/recommendation_service.py:39` | Kullanıcı ilgi yakınlığı |
+| `whale:{uid}:{stream_id}` | **1 saat** | `routers/chat.py:59` | Büyük harcama uyarı önbelleği |
+| `i18n_cache:{lang}:{...}` | **1 saat** (3600s) | `routers/i18n.py:15` | i18n router önbelleği |
+| `analytics_resp:{...}` | **5 dk** (300s) | `routers/analytics.py:1004` | Analytics endpoint önbelleği |
+| `catalog_schema:{...}` | **24 saat** | `routers/catalog.py:106` | Statik katalog şeması |
+| `static_states:{...}` | **24 saat** | `routers/states.py:14` | Statik enum/state değerleri |
+| `feed_vec:{uid}` | **30 dk** (1800s) | `routers/feed.py:193` | Kullanıcı feed vektörü |
+| `feed_hist:{uid}` | **14 gün** | `routers/feed.py:84` | Feed gösterim geçmişi |
+| `campaign:{id}` | **48 saat** | `services/ad_service.py:30` | Reklam kampanya verisi |
+| `read_cache:{ns}:{...}` | **30s** (varsayılan) | `core/read_cache.py:55` | Genel CQRS okuma önbelleği |
+
+---
+
+### 17.5 ML Model TTL'leri (Redis)
+
+| Anahtar | Süre | Tanım Yeri | Açıklama |
+|---------|------|-----------|---------|
+| `als_model:swipe_live` | **25 saat** (90000s) | `services/ml/swipe_live_ml.py:22` | SwipeLive ALS modeli — haftalık eğitimden önce bayatlamasın |
+| `als_model:feed` | **25 saat** (90000s) | `services/ml/feed_als_ml.py:35` | Feed ALS modeli |
+| `item2vec_sim:{id}` | **7 gün** | `services/ml/item2vec_service.py:34` | Item benzerlik vektörleri |
+| `bpr_model:{...}` | **7 gün** | `services/ml/bpr_service.py:40` | BPR öneri modeli |
+| `thompson:{...}` | **30 gün** | `services/ml/thompson_sampling.py:30` | Thompson sampling istatistikleri |
+| `influence:{uid}` | **7 gün** | `services/influence_service.py:16` | Kullanıcı etki skoru |
+| `like_counter:{...}` | **7 gün** rolling | `services/like_service.py:239` | Beğeni sayacı (her beğenide yenilenir) |
+| `llm_registry` | **24 saat** | `services/ml/llm_service.py:38` | LLM model kayıt defteri |
+
+---
+
+### 17.6 ClickHouse Veri Yaşam Döngüsü
+
+| Tablo | Yaşam Süresi | TTL Sütunu | Tanım Yeri |
+|-------|-------------|-----------|-----------|
+| `user_events` | **1 yıl** (365 gün) | `timestamp` | `database_clickhouse.py:62` |
+| `search_events` | **1 yıl** | `timestamp` | `database_clickhouse.py:88` |
+| `feed_analytics` | **1 yıl** | `timestamp` | `database_clickhouse.py:113` |
+| `swipe_live_events` | **1 yıl** | `timestamp` | `database_clickhouse.py:142` |
+| `direct_sale_events` | **1 yıl** | `created_at` | `database_clickhouse.py:171` |
+
+**Flush döngüsü:**
+
+```
+FastAPI lifespan → asyncio.create_task(_flush_loop)
+  Her 30s → flush_all_buffers()
+    Her tablo için:
+      pipeline(transaction=True):   ← MULTI/EXEC — atomik
+        LRANGE ch_buf:{tablo} 0 4999
+        LTRIM  ch_buf:{tablo} 5000 -1
+      → ClickHouse batch INSERT
+```
+
+`ARQ flush_interactions_to_db`: her 5 dakikada bir, interaction tablosunu ayrı flush eder (ch_buf değil, kendi Redis anahtarı).
+
+---
+
+### 17.7 edge-metrics-agent Zamanlama
+
+| Parametre | Değer | Kaynak |
+|-----------|-------|--------|
+| Yazma aralığı | **3s** (EDGE_METRICS_INTERVAL_SEC) | `scripts/edge_metrics_agent.py:27` |
+| Redis TTL | **6s** (interval × 2) | `scripts/edge_metrics_agent.py:86` |
+| CPU ölçüm süresi | **1s** (psutil.cpu_percent interval=1) | `scripts/edge_metrics_agent.py:57` |
+| Efektif sleep | **2s** (interval - 1) | `scripts/edge_metrics_agent.py:92` |
+
+TTL mantığı: Agent 3s'de bir yazar, TTL 6s — agent ölürse 6s içinde Redis key'i düşer, orchestrator o node'u otomatik listeden çıkarır.
+
+---
+
+### 17.8 ARQ Cron İşleri Zamanlaması (UTC)
+
+#### Yüksek Frekanslı (dakika bazlı)
+
+| Görev | Zamanlama | Sıklık | Açıklama |
+|-------|-----------|--------|---------|
+| `cleanup_stale_streams_task` | Her çift dakika (0,2,4,...,58) | **30x/saat** | Canlı yayın zombie kontrolü |
+| `cleanup_ghost_calls_task` | :00, :15, :30, :45 | **4x/saat** | Yanıtsız arama temizleme |
+| `flush_interactions_to_db` | Her 5 dk (:00,:05,...,:55) | **12x/saat** | İnteraksiyon DB yazımı |
+| `sync_ad_campaigns_task` | Her 10 dk (:00,:10,...,:50) | **6x/saat** | Reklam kampanya senkronizasyonu |
+| `invalidate_swipe_live_configs_task` | :05, :20, :35, :50 | **4x/saat** | SwipeLive config geçersizleştirme |
+| `sync_swipelive_interests_task` | :00, :20, :40 | **3x/saat** | SwipeLive ilgi güncelleme |
+| `backfill_listing_quality_scores_task` | Her saat :45 | **24x/gün** | İlan kalite skoru backfill |
+| `cleanup_expired_stories_task` | Her saat :00 | **24x/gün** | Süresi dolmuş story silme |
+| `cleanup_hype_highlights_task` | Her saat :00 | **24x/gün** | Hype highlight temizleme |
+
+#### 4x Günlük
+
+| Görev | Saatler (UTC) | Açıklama |
+|-------|--------------|---------|
+| `compute_user_interests_task` | 00:00, 06:00, 12:00, 18:00 | Kullanıcı ilgi hesaplama |
+| `compute_trending_categories_task` | 00:00, 06:00, 12:00, 18:00 | Trend kategoriler |
+| `compute_user_condition_preferences_task` | 00:10, 06:10, 12:10, 18:10 | Ürün kondisyon tercihleri |
+| `populate_foryou_feed_task` | 00:20, 06:20, 12:20, 18:20 | ForYou feed yenileme (6h TTL ile örtüşür) |
+| `compute_trending_listings_task` | 00:30, 06:30, 12:30, 18:30 | Trend ilanlar |
+
+#### 2x Günlük
+
+| Görev | Saatler (UTC) | Açıklama |
+|-------|--------------|---------|
+| `rebuild_faiss_index_task` | 00:00, 12:00 | FAISS vektör indeksi yeniden inşa |
+
+#### Günlük
+
+| Görev | Saat (UTC) | Açıklama |
+|-------|-----------|---------|
+| `cleanup_old_stream_likes_task` | 01:00 | Eski yayın beğenisi temizleme |
+| `compute_seller_badges_task` | 01:30 | Satıcı rozeti hesaplama |
+| `calculate_user_budgets_task` | 02:00 | Kullanıcı bütçe güncellemesi |
+| `backfill_listing_embeddings_task` | 02:00, 03:00 | İlan embedding backfill (2x) |
+| `compute_trust_scores_task` | 02:15 | Güven skoru hesaplama |
+| `cleanup_hidden_messages_task` | 02:30 | Gizli mesaj temizleme |
+| `cleanup_old_notifications_task` | 03:00 | Eski bildirim temizleme |
+| `process_churn_and_airdrop` | 03:30 | Churn tespiti + airdrop gönderimi |
+| `deactivate_expired_listings_task` | 04:00 | Süresi dolan ilanları pasife al |
+| `optimize_notification_timing_task` | 04:00 | Bildirim zamanlama optimizasyonu |
+| `delete_expired_inactive_listings_task` | 04:30 | Pasif&süresi dolmuş ilanları sil (60 gün) |
+| `cleanup_old_impressions_task` | 05:00 | Eski gösterim logu temizleme |
+| `nsfw_backfill_task` | 05:15 | NSFW içerik tarama backfill |
+| `backfill_phash_task` | 05:30 | Perceptual hash backfill |
+| `hesitation_retarget_task` | 06:00 | Tereddüt eden kullanıcı retargeting |
+| `cleanup_old_media_messages_task` | 06:30 | Eski medya mesajı temizleme |
+
+#### Haftalık
+
+| Görev | Gün + Saat (UTC) | Açıklama |
+|-------|-----------------|---------|
+| `cleanup_old_analytics_task` | Pzt 04:00 | ClickHouse eski veri temizleme |
+| `train_churn_model_task` | Pzt 02:30 | Churn ML modeli eğitimi |
+| `train_bpr_task` | Pzt, Çrş, Cum 00:30 | BPR öneri modeli eğitimi (3x/hafta) |
+| `train_kmeans_cold_start_task` | Çrş, Paz 02:15 | K-Means cold start eğitimi (2x/hafta) |
+| `train_item2vec_task` | Paz 02:00 | Item2Vec eğitimi |
+| `train_swipe_live_als_task` | Paz 01:00 | SwipeLive ALS eğitimi |
+| `train_feed_als_task` | Paz 01:30 | Feed ALS eğitimi |
+| `train_listing_quality_model_task` | Paz 02:30 | İlan kalite modeli eğitimi |
+
+#### Systemd Timer'lar (node5)
+
+| Timer | Zaman (UTC) | Açıklama |
+|-------|-----------|---------|
+| `teqlif-backup.timer` | **02:45** | pg_dump + Redis BGSAVE + ClickHouse backup → node3 rsync |
+| `teqlif-healthcheck.timer` | **06:00** | Sistem sağlık testi |
+
+---
+
+### 17.9 PostgreSQL Veri Yaşam Döngüsü
+
+| Tablo / Kural | Süre | Tetikleyici |
+|---------------|------|------------|
+| Story | **24 saat** | `cleanup_expired_stories_task` (her saat :00) |
+| İlan aktif kalma | **30 gün** (`_FREE_LISTING_DAYS`) | `deactivate_expired_listings_task` (04:00) |
+| Pasif ilan silme | **30+60 = 90 gün** (`_INACTIVE_DELETE_DAYS`) | `delete_expired_inactive_listings_task` (04:30) |
+| Highlight listing | `expires_at < NOW()` | `cleanup_hype_highlights_task` (her saat :00) |
+| Mesaj şifreleme tutma | **2 yıl** (730 gün) | `security/encryption.py:51` — yasal gereklilik |
+| Medya mesaj tutma | **90 gün** | `security/encryption.py:52` |
+| Session log tutma | **30 gün** | `security/encryption.py:54` |
+| Güvenlik log tutma | **1 yıl** | `security/encryption.py:53` |
+
+---
+
+### 17.10 Race Condition Analizi
+
+#### ✅ Çözülmüş: ClickHouse Flush Çift Yazma
+
+**Senaryo:** 4 FastAPI worker aynı anda `_flush_loop` çalıştırır.
+
+```python
+# database_clickhouse.py:423
+async with redis.pipeline(transaction=True) as pipe:
+    await pipe.lrange(buf_key, 0, MAX_BATCH - 1)
+    await pipe.ltrim(buf_key, MAX_BATCH, -1)
+    results = await pipe.execute()  # MULTI/EXEC — atomik
+```
+
+`pipeline(transaction=True)` = Redis MULTI/EXEC. LRANGE + LTRIM atomik çalışır. Birden fazla worker aynı satırları okuyamaz. **Race condition yok.**
+
+---
+
+#### ⚠️ Aktif Risk: `call_ended_sent` TTL Tutarsızlığı
+
+**Senaryo:** Arama bitişini hem API endpoint hem webhook tetikleyebilir. Her ikisi de aynı Redis key'ini `NX` ile set eder:
+
+```python
+# routers/calls.py:972  (API)
+await redis.set(f"call_ended_sent:{call_id}", "api",     ex=300, nx=True)
+
+# routers/webhooks.py:97  (LiveKit webhook)
+await redis.set(f"call_ended_sent:{call_id}", "webhook", ex=60,  nx=True)
+```
+
+Webhook **60s**, API **300s** TTL koyuyor. Webhook önce tetiklenirse key 60s içinde düşer; API endpoint 61–300s arasında tekrar `call_ended` gönderebilir. **Çift bildirim riski.**
+
+**Düzeltme:** İkisi de aynı `ex=300` kullanmalı.
+
+---
+
+#### ⚠️ Düşük Risk: `cleanup_stale_streams` ile Yeni Yayın Çakışması
+
+`cleanup_stale_streams_task` her 2 dakikada çalışır. `PENDING_STALE_MINUTES = 5` — 5 dakikadan eski pending stream'leri temizler. Ancak yeni bir yayın `pending` durumuna geçer geçmez ilk 2 dakikada cleanup çalışırsa temizlenmez (5 dk eşiği korur). **Pratik risk yok.**
+
+---
+
+#### ⚠️ Düşük Risk: Gece 00:00 UTC Yük Zirvesi
+
+Her gece 00:00'da aynı anda 4 ARQ cron job tetiklenir:
+
+```
+00:00 → compute_user_interests_task
+00:00 → compute_trending_categories_task
+00:00 → rebuild_faiss_index_task
+00:00 → flush_interactions_to_db (her 5 dk)
+00:20 → populate_foryou_feed_task
+00:30 → compute_trending_listings_task
+```
+
+Tümü ARQ kuyruğuna düşer, 2 worker (`teqlif-worker` + `teqlif-worker-critical`) sırayla işler. FAISS yeniden inşa memory-intensive — node5 7.8 GB RAM. Başlangıç aşamasında trafik düşük olduğundan sorun değil; kullanıcı tabanı büyüdükçe gece saati dağıtımı gözden geçirilmeli.
+
+---
+
+#### ✅ Tasarım Gereği: `flush_interactions_to_db` (ARQ) vs `_flush_loop` (asyncio) Ayrımı
+
+- `_flush_loop`: her 30s, `ch_buf:*` anahtarları → ClickHouse (analytics event buffer)
+- `flush_interactions_to_db`: her 5 dk, ayrı interaction anahtarı → PostgreSQL
+
+İkisi farklı veri, farklı hedef. Çakışma yok.
+
+---
+
+### 17.11 Özet: Kritik Zamanlama Penceresi
+
+```
+Her saniye   : Hype decay (-5 puan/5s), WS heartbeat
+Her 2 dakika : cleanup_stale_streams
+Her 3 saniye : edge-metrics-agent → Redis TTL 6s
+Her 5 dakika : flush_interactions_to_db
+Her 10 dakika: sync_ad_campaigns
+Her 15 dakika: cleanup_ghost_calls, invalidate_swipe_live
+Her 30 saniye: ClickHouse flush_loop (4 FastAPI worker × 1 asyncio task each)
+Her saat     : story cleanup, hype cleanup, ForYou TTL (6h/4 = 1.5h overlap)
+Her 6 saat   : ForYou feed yenileme (TTL ile örtüşür — sorunsuz)
+02:45 UTC    : Yedekleme (PostgreSQL + Redis + ClickHouse)
+04:00 UTC    : İlan deactivate + notify optimizasyonu
+00:00 UTC    : ML hesaplama zirvesi (FAISS + ALS + trending + interests)
+Pazar 01:00  : Haftalık model eğitimleri (ALS, Item2Vec, BPR)
+```
+
+---
+
+*Son güncelleme: 2026-09-26 · deploy/scale/V1.4/documents/05_final.md*
