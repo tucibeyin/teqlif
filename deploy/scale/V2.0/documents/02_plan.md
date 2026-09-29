@@ -35,6 +35,197 @@
 
 ---
 
+## Mimari Referans — Topoloji Özeti
+
+> **Nasıl kullanılır:** Bu bölüm deployment guide değil, çalışma anındaki topolojinin **tek referans noktası**dır. Bir şeyin nerede ve hangi modda çalıştığını bulmak için buraya bak; kurulum detayı için ilgili Faz bölümüne git.
+
+---
+
+### Node ve WireGuard Mesh
+
+| Node | WG IP | DC / Sağlayıcı | Ortam | Rol | Bant |
+|------|-------|----------------|-------|-----|------|
+| gateway1 | 10.10.0.2 | Netcup NUE | Prod | Edge Proxy #1 — nginx, API girişi | ~1 Gbps |
+| gateway2 | 10.10.0.9 | DELUXHOST AMS | Prod | Edge Proxy #2 — nginx, API girişi | ~4–7 Gbps |
+| node1 | 10.10.0.1 | OVH FRA | Prod | Stream #1 — LiveKit SFU | ~1.9 Gbps |
+| node2 | 10.10.0.3 | RackNerd BUF | Prod | AI Proxy Primary | ~300 Mbps |
+| node3 | 10.10.0.4 | ZAP VA | **Hybrid** | Staging (tam stack) + AI Proxy Warm | ~400 Mbps |
+| node4 | 10.10.0.6 | OVH FRA | Prod | Stream #2 — LiveKit SFU | ~1.9 Gbps |
+| node5 | 10.10.0.5 | ZAP MUN | Prod | Core Primary — FastAPI, PG, Redis | ~1 Gbps |
+| node6 | 10.10.0.7 | DELUXHOST AMS | Prod | Core Standby — failover hedefi | ~2–4 Gbps |
+| node7 | 10.10.0.8 | DELUXHOST NL | Prod | Storage #1 — MinIO, teqlif + teqlif-dm | ~1.1 Gbps |
+| node8 | 10.10.0.12 | DELUXHOST NL | Prod | Storage #2 — MinIO, teqlif + teqlif-dm | ~1.1 Gbps |
+| node9 | 10.10.0.13 | OVH LIM KS-1-B | Prod | Monitor + Backup + ClickHouse | ~480 Mbps |
+
+**Tüm 11 node her node'la doğrudan WG tüneli kurar (full mesh, MTU=1420, port=51820).**
+
+**Sanal IP'ler (Keepalived, wg0 üzerinde — node5↔node6 arasında failover):**
+
+| VIP | IP | Kapsadığı Servisler | Normal Sahibi |
+|-----|-----|---------------------|---------------|
+| PG VIP | 10.10.0.10 | PostgreSQL :5432, PgBouncer hedef IP | node5 |
+| Redis VIP | 10.10.0.11 | redis-core :6379, redis-orch :6380 | node5 |
+
+---
+
+### Trafik Akışı (Prod)
+
+```
+İnternet
+  │
+  ├─ HTTPS api.teqlif.com  ──→ Cloudflare Proxy ──→ gateway1 / gateway2 (Round Robin)
+  │   (JSON sinyali — auth,     yalnızca küçük JSON      │
+  │    metadata, WebSocket)      paketleri geçer          └─ nginx → 10.10.0.10:8000 (VIP)
+  │                                                                    → node5 (normal)
+  │                                                                    → node6 (failover)
+  │
+  ├─ HTTPS media.teqlif.com ─→ Cloudflare Cache ──→ node7 / node8   ← Media OKUMA (GET)
+  │                              veya Bypass         nginx + MinIO
+  │
+  ├─ HTTPS uploads.teqlif.com → DNS Only (bypass CF) ──→ node7 / node8  ← Media YAZMA (PUT)
+  │   (presigned PUT — photo,                            MinIO presigned URL doğrular
+  │    video, DM media)          ← Gateway'den GEÇMEZ; bandwidth kısıtı
+  │
+  ├─ WSS live1.teqlif.com  ───→ DNS Only (bypass Cloudflare) ──→ node1 :7880 / TURN :3478
+  │   WSS live2.teqlif.com                                    ──→ node4 :7880 / TURN :3478
+  │   (WebRTC UDP 50000-60000)   ← Gateway'den GEÇMEZ; bandwidth kısıtı
+  │
+  └─ HTTPS staging.teqlif.com ─→ Cloudflare Proxy ──→ gateway1 / gateway2
+                                                           │
+                                                           └─ nginx → 10.10.0.4:8000 (node3, WireGuard)
+```
+
+**Gateway felsefesi:** Gateway = yalnızca sinyal kanalı. Küçük JSON (auth, metadata, WebSocket sinyal) taşır; byte akışı (media, video, stream) ilgili node'a doğrudan gider. AI proxy trafiği iç mesh üzerinden akar: `uygulama (node5) → ai_proxy:active_url → node2/node3/node5`. Bkz. §0.3.3.
+
+---
+
+### Uygulama Servisleri — Node × Durum Matrisi
+
+> **Durum:** ● Aktif (enabled, always-on) · ○ Standby (installed + disabled, failover'da başlar) · ◐ Warm (active, ikincil öncelik) · △ Cold (disabled, orchestrator başlatır) · ≡ Replica · — Yok
+
+#### Core Uygulama (FastAPI)
+
+| Servis | node5 | node6 | node3 | Notlar |
+|--------|-------|-------|-------|--------|
+| teqlif.service (prod API :8000) | **●** | ○ | — | node6 failover'da: `systemctl start teqlif` |
+| teqlif-worker.service (prod) | **●** | ○ | — | ARQ background jobs |
+| teqlif-worker-critical.service (prod) | **●** | ○ | — | Öncelikli job kuyruğu |
+| teqlif.service (staging API :8000) | — | — | **●** | `.env.staging`, local PG/Redis |
+| teqlif-worker.service (staging) | — | — | **●** | Staging bağımsız stack |
+| teqlif-worker-critical.service (staging) | — | — | **●** | |
+
+#### AI Proxy
+
+| Servis | node2 | node3 | node5 | Failover Sırası | Notlar |
+|--------|-------|-------|-------|-----------------|--------|
+| teqlif-ai-proxy.service :8001 | **●** | **◐** | △ | 1 → 2 → 3 | Orchestrator `ai_proxy:active_url` key'i yönetir |
+| Mod | Primary | Warm Standby | Cold Last Resort | ~6s otomatik | node5 MemoryMax=600M |
+
+#### Streaming (LiveKit)
+
+| Servis | node1 | node4 | Mod | Notlar |
+|--------|-------|-------|-----|--------|
+| livekit-server.service :7880 | **●** | **●** | Aktif-Aktif (bağımsız) | Orchestrator `stream_score` ile yönlendirir |
+| live1.teqlif.com | DNS→node1 | — | DNS Only | WebRTC için Cloudflare bypass |
+| live2.teqlif.com | — | DNS→node4 | DNS Only | |
+| Aktif session failover | YOK | YOK | — | Session kesilir; reconnect surviving node'a gider |
+
+#### Gateway (nginx)
+
+| Servis | gateway1 | gateway2 | Mod | Notlar |
+|--------|----------|----------|-----|--------|
+| nginx :80/:443 | **●** | **●** | Aktif-Aktif | Cloudflare her ikisine yük dengeler |
+| Media/stream proxy | — | — | — | Gateway'den GEÇMİLYOR; bandwidth kısıtı |
+
+---
+
+### Veri Katmanı
+
+#### PostgreSQL + PgBouncer (Aktif-Pasif)
+
+| Bileşen | node5 | node6 | Erişim IP | Mod |
+|---------|-------|-------|-----------|-----|
+| PostgreSQL :5432 | **Primary** | ≡ Streaming Replica | 10.10.0.10 (VIP) | Keepalived failover; manüel failback |
+| PgBouncer :6432 | **●** | ○ (failover'da enable+start) | 10.10.0.10:6432 | Transaction pooling |
+| node3 PostgreSQL :5432 | — | — | 127.0.0.1 | Staging lokal, izole |
+| Failover süresi | — | — | ~30s | Keepalived otomatik |
+| Failback | — | — | Manüel | `nopreempt` — otomatik preempt yok |
+
+#### Redis (3 Instance — Aktif-Pasif)
+
+| Instance | Port | node5 | node6 | VIP | Amaç |
+|----------|------|-------|-------|-----|------|
+| redis-core | 6379 | **Primary** | ≡ Replica (via VIP) | 10.10.0.11:6379 | Session cache, uygulama cache |
+| redis-orch | 6380 | **Primary** | ≡ Replica (via VIP) | 10.10.0.11:6380 | Orchestrator state, edge metrics |
+| redis-guardian | 6382 | **Primary** | ≡ Replica (direkt IP 10.10.0.5) | — VIP YOK — | Guardian topology, job state, election |
+| node3 Redis | 6379 | — | — | 127.0.0.1 | Staging lokal, izole |
+
+#### MinIO — Nesne Depolama (Dual-Write)
+
+| Bileşen | node7 (10.10.0.8) | node8 (10.10.0.12) | Mod |
+|---------|-------------------|--------------------|-----|
+| MinIO server :9000 | **●** Aktif | **●** Aktif | Her ikisi her zaman çalışır |
+| Bucket: teqlif | **●** | **●** | Dual-Write: uygulama her ikisine paralel yazar |
+| Bucket: teqlif-dm | **●** | **●** | Dual-Write; DM medyası ayrı bucket |
+| Bucket versioning | **●** | **●** | 90 gün; silinmiş nesne kurtarma |
+| Senkronizasyon | Kaynak | Hedef (ve tersi) | Gecelik `mc mirror` çift yönlü (02:00 UTC) |
+| nginx proxy :443 | **●** + 1GB SSD cache | **●** + 1GB SSD cache | CF→media.teqlif.com→node7; fallback node8 |
+| Erişim URL'leri | `media.teqlif.com` (okuma — CF Proxied + CDN cache) | `uploads.teqlif.com` (yazma + DM — DNS Only, CF bypass) | Okuma: CF edge'de cache'lenir (HDD yükü azalır); Yazma: presigned imza CF proxy'den geçemez |
+
+> **teqlif-dm:** DM medyası için ayrı bucket — aynı MinIO instance'ları üzerinde. Ayrı node veya process değil.
+
+---
+
+### HA Mod Özeti
+
+| Katman | Mod | RTO | Otomatik mi? |
+|--------|-----|-----|--------------|
+| **Gateway** | Aktif-Aktif (CF load balance) | Sıfır (CF yönlendirmesi anlık) | ✓ |
+| **FastAPI / Worker** | Aktif-Pasif (node5→node6) | ~30s | ✓ Keepalived + failover script |
+| **PostgreSQL** | Aktif-Pasif (streaming replication) | ~30s | ✓ (failback manüel) |
+| **Redis core/orch** | Aktif-Pasif (VIP üzerinden) | ~30s | ✓ Keepalived |
+| **Redis guardian** | Aktif-Pasif (direkt IP) | ~30s | ✓ Failover script |
+| **AI Proxy** | 3 kademeli cascade | ~6s / ~6s | ✓ Orchestrator TTL |
+| **LiveKit Stream** | Aktif-Aktif (bağımsız node'lar) | Anlık (yeni stream) | ✓ Yeni session; aktif session failover YOK |
+| **MinIO** | Dual-Write + nightly mirror | 0 (yazma hataları raporlanır) | ✓ (okuma fallback nginx) |
+| **node5 kalıcı arıza** | node6 permanent primary; yeni standby | ~2 saat | ✗ Manüel |
+| **node1 + node4 eş zamanlı** | Stream tamamen kesilir | Dakikalar | ✗ Bilinen SPOF |
+
+---
+
+### Monitoring ve Backup (node9)
+
+| Servis | Port | Mod |
+|--------|------|-----|
+| Prometheus | :9090 | Aktif, 11 node scrape (15s), 30 gün TSDB |
+| Grafana | :3000 | Aktif, sadece WG erişimi |
+| Loki | :3100 | Aktif, 7 gün log, tüm node promtail push eder |
+| Alertmanager | :9093 | Aktif → Telegram `#alerts` / `#ops` |
+| ClickHouse | :8123 | Aktif, prod analytics (prod trafik → node9:8123) |
+| pg_receivewal | — | Sürekli WAL stream (node5 VIP:5432 → /opt/teqlif/backups/postgres/wal) |
+| pg_basebackup | — | Haftalık timer (Pazar 01:00 UTC) |
+| pg_dump | — | Günlük timer (03:00 UTC) |
+| redis_backup | — | Günlük timer (03:30 UTC) |
+| clickhouse_backup | — | Günlük timer (04:00 UTC) |
+| offsite_sync | — | Günlük rclone → B2/Hetzner (04:30 UTC) |
+
+---
+
+### Tüm 11 Node'da Çalışan Servisler
+
+Her node kurulumunda şunlar zorunlu:
+
+| Servis | Amaç |
+|--------|------|
+| WireGuard (wg0) | Mesh tüneli — tüm iç iletişim buradan |
+| node_exporter :9100 | Prometheus metrik toplama (`--collector.systemd`) |
+| promtail | Log → node9 Loki :3100 push |
+| teqlif-guardian.service | Guardian agent — metrik, sağlık, heartbeat, election, komut executor |
+| fail2ban | SSH brute-force koruması |
+| logrotate (teqlif) | `/var/log/teqlif/**` haftalık rotate, 8 hafta, compress |
+
+---
+
 ## Dizin Yapısı ve Yetkiler
 
 Her node'da uygulanacak standart dizin yapısı. Rol gerektirmedikçe oluşturulmaz.
@@ -178,7 +369,7 @@ Faz 0  (Kod — lokalde)
 
 #### 0.2.1 Redis Altyapısı
 
-- [ ] `config.py`: `orch_redis_url: str`, `guardian_redis_url: str` ekle  ← GUARDIAN_REDIS_URL tüm .env template'lerine eklendi (§0.5)
+- [ ] `config.py`: `orch_redis_url: str`, `guardian_redis_url: str` ekle
 - [ ] `redis_client.py`: `get_orch_redis()`, `get_guardian_redis()` fonksiyonları
 - [ ] `backend/app/services/orch_client.py` oluştur — 3 kademeli fallback:
   ```
@@ -212,7 +403,9 @@ node.conf oku (YAML) → node_id, env, guardian_priority, components, network, h
   │
   ├── Component health kontrol (node.conf components listesinden):
   │     health_check.type == "http" → httpx GET, timeout=2s → ok/failed/timeout
-  │     health_check.type == "cmd"  → subprocess, timeout=3s → ok/failed
+  │     health_check.type == "cmd"  → subprocess(shell=True, env=os.environ), timeout=3s → ok/failed
+  │     # cmd shell=True + os.environ zorunlu: cmd'de $CORE_REDIS_PASS gibi env var referansları
+  │     # EnvironmentFile'dan yüklenen değerlerle expand edilmeli — shell=False ile literal kalır
   │     rol özel telemetri:
   │       stream    → livekit_active_rooms, livekit_participants (LiveKit API)
   │                   stream_score = net_out_percent*0.4 + cpu*0.3 + ram*0.3
@@ -252,13 +445,35 @@ Lider seçimi (2 adımlı — V2.0):
     → başarılı: lider ol, koordinatörü başlat
     → başarısız: lideri takip et, TTL izle
 
-  Adım 2 — Guardian Redis yoksa (yavaş yol — basit priority):
+  Redis kopmasında graceful backoff (Keepalived race condition önlemi):
+    redis_unavailable_since = None
+    Redis'e bağlanılamadığında: redis_unavailable_since = now()  (ilk kopma anı; tekrar bağlanınca sıfırla)
+    Adım 2'ye geçiş koşulu: Redis HÂLÂ ulaşılamıyor VE (now() - redis_unavailable_since) > 20s
+    # 20s ≥ Keepalived failover süresi (tipik ~3-5s, kötü senaryo ~15s)
+    # Bu pencere içinde Redis geri gelirse (Keepalived tamamlanır) → Adım 2 hiç başlamaz
+    # Election thrashing riski: guardian:leader TTL=15s dolarken UDP election başlarsa,
+    #   Redis geri gelince iki eş zamanlı election oluşabilir → 20s backoff bunu önler
+
+  Adım 2 — Guardian Redis yoksa VE 20s geçtiyse (yavaş yol — basit priority):
     son 10s içinde heartbeat gelen peer'ları bul
-    kendi priority > tüm reachable peer'ların priority → lider ol (standalone)
+    kendi priority > tüm reachable peer'ların priority → UDP lider ol (standalone)
     değilse → beklemeye devam et (split-brain riskinden kaçın)
 
+    UDP modunda lider seçildiğinde — salt pasif davranış (V2.0 sınırı):
+      ÖNEMLİ: Redis down olduğu için Command Executor (guardian:cmd:{node_id}) çalışamaz.
+      UDP lider şunu YAPAR:
+        - Telegram #alerts CRITICAL: "guardian-redis erişilemez; UDP fallback lider seçildi.
+          Komut kanalı kapalı. Otomatik iyileştirme devre dışı. Manuel müdahale gerekebilir."
+      UDP lider şunu YAPMAZ:
+        - coordinator_loop başlatmaz (Redis gerektiren tüm operasyonlar başarısız olur)
+        - routing değiştirmez, playbook yürütmez, CF DNS güncellemez
+        - guardian_state.json broadcast yapmaz (guardian:topology okunamaz)
+      Redis geri geldiğinde: redis_unavailable_since = None → Adım 1'e geç → yeni Redis tabanlı election
+
   Adım 3 — Lider keepalive:
-    Lider seçildi → SET guardian:leader EX 15 NX yenile (her 10s)
+    Lider seçildi → EXPIRE guardian:leader 15  (her 10s)
+    # NOT: SET ... NX KULLANMA — NX yalnızca key yokken set eder;
+    #      lider key'i zaten tuttuğu için NX başarısız olur → TTL yenilenomez → 15s'de expire
     Lider düştü (heartbeat kesildi + Redis TTL doldu) → yeniden seçim
 ```
 
@@ -275,11 +490,14 @@ ALLOWED_COMMANDS = {
     "report_now":      lambda: force_metrics_push(),
 }
 # Sonuç: guardian:events XADD {"type":"cmd_result","node":...,"status":"ok/failed"}
+# NOT: systemctl() helper → subprocess(["sudo", "systemctl", action, unit], ...)
+#      teqlif-guardian User=tucibeyin (non-root) — direkt systemctl çağrısı Permission Denied verir.
+#      §2.6 sudoers kuralı olmadan Local Healer hiçbir zaman çalışmaz.
 ```
 
 - [ ] `deploy/scale/V2.0/node.conf.examples/` dizini oluştur — her rol için örnek şablon
 - [ ] `.env.production` template'lerinden `NODE_CAPABILITIES`, `NODE_ROLE`, `INTERFACE_SPEED_MBPS` kaldır → bunlar artık `node.conf`'tan okunuyor
-- [x] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur (tüm node'larda aynı unit dosyası) ← §5.2'ye eklendi
+- [x] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur (tüm node'larda aynı unit dosyası)
 
 ### 0.3 Storage Service + LiveKit Reconnect Fix
 
@@ -326,12 +544,111 @@ async def reconnect_stream(stream_id, ...):
 - [ ] `delete_object()`: `storage_node_id` DB kolonunu okur, sadece o node'dan siler
 - [ ] DB: `storage_node_id` kolonu için Alembic migration
 
+#### 0.3.3 Upload Mimarisi — Presigned PUT (Gateway Bypass)
+
+**Felsefe:** Gateway yalnızca JSON sinyal taşır. Dosya byte'ları doğrudan storage node'larına gider.
+
+| Trafik türü | V1.x (mevcut) | V2.0 hedefi |
+|-------------|---------------|-------------|
+| LiveKit stream (WebRTC) | DNS Only → node1/node4 | ✓ Zaten direkt |
+| Media okuma (GET) | DNS Only → node7/node8 | **CF Proxied → CF CDN edge cache → node7/node8** |
+| Media yükleme — fotoğraf | gateway → node5 → MinIO | **Presigned PUT → node7/node8 direkt** |
+| Media yükleme — video | gateway → node5 → MinIO | **Presigned PUT → node7/node8 direkt** |
+| MediaDM yükleme | gateway → node5 → MinIO | **Presigned PUT → node7/node8 direkt** |
+
+**Yeni Upload Akışı — 3 Adım:**
+
+```
+[Adım 1 — Auth + Presign]  ~500B JSON  → gateway'den geçer (küçük sinyal)
+  Mobile  →  POST /api/upload/presign
+             {file_type: "image/jpeg"|"video/mp4", context: "story"|"message"|"profile", size_bytes: N}
+  node5:
+    - JWT doğrula, kullanıcı ban/kota kontrol
+    - Boyut ve tür doğrula (max_upload_size, allowed_content_types)
+    - DB: pending_uploads kaydı oluştur (upload_id, user_id, key, context, status=pending, expires_at=+15m)
+    - storage_service.presign_put(key, expires=900, content_type) → MinIO presigned PUT URL üret
+    - URL'i dahili endpoint'ten (MINIO_ENDPOINT) dış endpoint'e rewrite et (UPLOADS_HOST)
+  Yanıt: {upload_id, put_url: "https://uploads.teqlif.com/teqlif/{key}", key, expires_in: 900}
+
+[Adım 2 — Direkt Upload]  tüm byte'lar → GATEWAY YOK
+  Mobile  →  PUT https://uploads.teqlif.com/teqlif/{key}
+             Headers: Content-Type: image/jpeg, Content-Length: <size>
+  node7/node8:  MinIO presigned URL imzasını doğrular → S3'e yazar
+                Nginx dual-write: node7 primary, node8 fallback (zaten mevcut §6.4/§6.6)
+
+[Adım 3 — Tamamlama + Post-İşleme]  ~200B JSON  → gateway'den geçer (küçük sinyal)
+  Mobile  →  POST /api/upload/complete  {upload_id, key}
+  node5:
+    - DB: status=pending → processing
+    - ARQ job kuyruğa: process_media_upload(upload_id, key, context)
+  Yanıt: {media_url: "https://media.teqlif.com/teqlif/{key}", status: "processing"}
+
+[ARQ Background — node5]  MinIO ↔ node5 dahili; internet trafiği yok
+  process_media_upload(upload_id, key, context):
+    - MinIO'dan key indir (WireGuard: node7 → node5, dahili)
+    - context=video → FFmpeg thumbnail → MinIO'ya yükle (thumbnail_{key})
+    - context=image → Pillow resize/optimize → MinIO'ya yükle
+    - DB: status=ready, thumbnail_url güncelle, media_url güncelle
+    - Redis WS event: upload_complete → istemciye bildir
+    - Hata: status=failed → istemciye push notification
+```
+
+**Presigned PUT — `storage_service.py` eklentisi:**
+
+```python
+async def presign_put(self, key: str, expires: int = 900,
+                      content_type: str = "application/octet-stream") -> str:
+    """MinIO presigned PUT URL üretir; iç endpoint'i dış UPLOADS_HOST ile rewrite eder."""
+    client = self._get_primary_client()
+    raw_url = client.presigned_put_object(
+        bucket_name=settings.minio_bucket,
+        object_name=key,
+        expires=timedelta(seconds=expires),
+    )
+    # MinIO URL'i dahili IP (MINIO_ENDPOINT) içerir — mobile erişemez.
+    # uploads_host ile rewrite et: https://uploads.teqlif.com/...
+    return raw_url.replace(settings.minio_endpoint, settings.uploads_host)
+
+async def presign_put_dm(self, key: str, expires: int = 900) -> str:
+    """DM private bucket için presigned PUT (teqlif-dm)."""
+    client = self._get_primary_client()
+    raw_url = client.presigned_put_object(
+        bucket_name=settings.minio_dm_bucket,
+        object_name=key,
+        expires=timedelta(seconds=expires),
+    )
+    return raw_url.replace(settings.minio_endpoint, settings.uploads_host)
+```
+
+**DM Media Upload (Private Bucket):**
+
+DM bucket `teqlif-dm` private'tır — presigned PUT URL geçici yazma izni verir (900s), okuma her zaman presigned GET ile yapılır (zaten mevcut `_presign_if_dm()`).
+
+```
+[Adım 1] POST /api/messages/media/presign  → {put_url, upload_id}
+[Adım 2] PUT  https://uploads.teqlif.com/teqlif-dm/{key}  (direkt)
+[Adım 3] POST /api/messages/media/complete {upload_id} → mesaj kaydet, WS push
+```
+
+**Değiştirilecek Dosyalar (Faz 0 checklist):**
+
+- [ ] `storage_service.py`: `presign_put()` + `presign_put_dm()` + URL rewrite
+- [ ] yeni `routers/upload.py` endpoint'leri: `POST /api/upload/presign`, `POST /api/upload/complete`
+  (mevcut `UploadFile` kullanan endpoint'ler kaldırılır)
+- [ ] `routers/stories.py`: `UploadFile` → presign/complete pattern
+- [ ] `routers/messages.py`: media send → presign + `media/presign` + `media/complete`
+- [ ] `routers/streams.py`: stream thumbnail upload → presign/complete
+- [ ] `worker.py`: `process_media_upload` ARQ task ekle (FFmpeg + Pillow + WS notify)
+- [ ] Alembic migration: `pending_uploads` tablosu
+  (`upload_id UUID PK`, `user_id FK`, `key TEXT`, `context TEXT`, `status TEXT`, `expires_at TIMESTAMP`)
+- [ ] `config.py`: `upload_presign_ttl: int = 900` ekle
+- [ ] Mobile: tüm upload flow'larını 3-adım pattern'e güncelle
+
 ### 0.4 Config Temizliği
 
 - [ ] `config.py`: `site_url` hardcoded default kaldır
 - [ ] `config.py`: `use_pgbouncer: bool = True` ekle
 - [ ] `config.py`: `media_host`, `uploads_host`, `minio_bucket`, `minio_dm_bucket` ekle — default yok, boot'ta validate edilir
-- [ ] `config.py`: `orch_redis_url` ekle
 - [ ] `config.py`: `ai_proxy_url: str` ekle — default `http://10.10.0.3:8001` (node2); uygulama her AI çağrısı öncesi orch redis'ten `ai_proxy:active_url` okur; key yoksa bu default kullanılır. Statik env değil — orchestrator failover'da bu key'i günceller.
 
 ### 0.5 Node Template Dosyaları
@@ -516,12 +833,11 @@ Kural 5 — Header anomalisi (Managed Challenge):
  http.request.headers["x-forwarded-for"][0] matches "^[0-9,. ]{50,}")
 ```
 
-**Cache Rules — 3 Page Rule (Rules → Page Rules):**
-- [ ] `media.teqlif.com/*` → Cache Level: **Cache Everything** + Edge TTL: 1 month
+**Cache Rules — 4 Page Rule (Rules → Page Rules):**
+- [ ] `media.teqlif.com/*` → Cache Level: **Cache Everything** + Edge TTL: 1 month ← MinIO public media; CF edge'de cache'lenir, HDD okuma yükü azalır
+- [ ] `uploads.teqlif.com/*` → Cache Level: **Bypass** ← Presigned URL S3 imzası CF proxy'den geçerse bozulur; DM yanıtları kullanıcıya özel (DNS Only olsa da Bypass kural eklenir — ileride Proxied'a geçilirse koruma)
 - [ ] `api.teqlif.com/api/*` → Cache Level: **Bypass** (API yanıtları cache'lenmemeli)
 - [ ] `*.teqlif.com/*.min.js` → Cache Level: **Cache Everything** + Browser TTL: 1 year
-
-**Önemli Not:** CF free'de Rate Limiting ayrı bir ücretli ürün. Uygulama seviyesi rate limiting tamamen nginx `limit_req` + `limit_conn` üzerinde — bu nedenle nginx real_ip konfigürasyonu kritik (CF-Connecting-IP okunmalı).
 
 ---
 
@@ -672,6 +988,13 @@ guardian/
 # guardian/main.py — sadece lider seçilmişse çalışır
 
 async def coordinator_loop():
+    # UDP fallback modunda koordinatör çalışmaz — Redis gerektiren hiçbir işlem yapılamaz
+    if election.mode == "udp":
+        await alerting.critical(
+            "guardian-redis erişilemez — UDP fallback lider; koordinatör pasif. Manuel müdahale gerekebilir."
+        )
+        return  # bir sonraki election tick'inde yeniden değerlendirilir
+
     while True:
         # 1. Topology refresh — stale node'ları çıkar
         await topology.refresh()                    # guardian:topology:* TTL kontrol
@@ -728,6 +1051,8 @@ def is_routing_eligible(component: dict, target_env: str) -> bool:
 
 Bu kural şunu engeller: node3'te developer staging için LiveKit başlattı → Guardian production routing'ine dahil etmez. Ya da node9 kuruldu ama `traffic_eligible` yazılmadı → Guardian izler ama trafik göndermez.
 
+**Desired state kalıcılığı:** Guardian `traffic_eligible` alanını ASLA otomatik değiştirmez — bu yalnızca insan onayı gerektirir. Guardian'ın routing kararları (hangi node'a trafik yönlensin) `orch:routing:*` key'lerine yazılır; bu key'ler orch-redis'te tutulur (Keepalived HA, VIP 10.10.0.11:6379). Node reboot sonrasında guardian agent `traffic_eligible: true` olan node.conf'unu Redis'e yeniden push eder — eligibility değişmez. orch-redis routing key'leri bağımsız persist eder. Bu nedenle node.conf'un disk'te manuel güncellenmesi gereksinimi yoktur.
+
 #### Playbook — Component Bazlı, Env-Aware
 
 ```python
@@ -756,10 +1081,7 @@ class ComponentDownPlaybook:
             await ctx.alert(f"unknown component down: {key}", severity="warn")
 ```
 
-> **Not — `teqlif-orchestrator.service` geçişi:** V2.0'da `teqlif-orchestrator.service` → `teqlif-guardian.service` olarak yeniden adlandırılır. Keepalived `notify_master/backup` scriptleri güncellenir: `systemctl start/stop teqlif-guardian` çağırır. Lider koordinasyon guardian içi election mekanizmasıyla yönetilir — Keepalived MASTER olmak artık zorunluluk değil, yüksek öncelikli yol.
-
-- [x] `deploy/scale/V2.0/systemd/teqlif-guardian.service` şablonu oluştur ← §5.2'ye eklendi
-- [ ] Keepalived `notify_master/backup` scriptleri güncelle: `teqlif-orchestrator` → `teqlif-guardian`
+- [ ] Keepalived `notify_master/backup` scriptleri güncelle: `teqlif-orchestrator` → `teqlif-guardian` (guardian tüm node'larda her zaman çalışır; scriptler guardian'ı durdurmaz/başlatmaz — yalnızca teqlif, teqlif-worker, pgbouncer, PG, Redis yönetir)
 
 ### 0.7 Ops Komutları
 
@@ -944,7 +1266,7 @@ components:
     systemd_unit: redis-core.service
     health_check:
       type: cmd
-      cmd: "redis-cli -p 6379 ping"
+      cmd: "redis-cli -p 6379 -a $CORE_REDIS_PASS --no-auth-warning ping"
     role: cache_primary
     traffic_eligible: true
     traffic_type: internal_mesh
@@ -955,7 +1277,7 @@ components:
     systemd_unit: redis-orch.service
     health_check:
       type: cmd
-      cmd: "redis-cli -p 6380 ping"
+      cmd: "redis-cli -p 6380 -a $ORCH_REDIS_PASS --no-auth-warning ping"
     role: orch_primary
     traffic_eligible: true
     traffic_type: internal_mesh
@@ -966,7 +1288,7 @@ components:
     systemd_unit: redis-guardian.service
     health_check:
       type: cmd
-      cmd: "redis-cli -p 6382 ping"
+      cmd: "redis-cli -p 6382 -a $GUARDIAN_REDIS_PASS --no-auth-warning ping"
     role: guardian_primary
     traffic_eligible: true
     traffic_type: internal_mesh
@@ -1465,6 +1787,36 @@ visudo -c -f /etc/sudoers.d/wg-vip
 
 > **NOT:** Faz 4.5'te node6 için oluşturulan `/etc/sudoers.d/wg-vip` bu dosyanın aynısıdır — orada zaten bulunduğundan node6 için bu adım atlanır.
 
+### 2.6 Guardian Sudoers — Servis Yönetimi (Tüm Node'lar)
+
+`teqlif-guardian.service` `User=tucibeyin` olarak çalışır. Local Healer ve Command Executor, `systemctl restart/start/stop/reset-failed` çağırır. `tucibeyin` non-root olduğundan sudo yetkisi olmadan bu çağrılar `Permission Denied` verir — Local Healer hiçbir zaman çalışmaz.
+
+**Tüm 11 node'da** (gateway1, gateway2, node1–node9) uygulama:
+
+```bash
+cat > /etc/sudoers.d/guardian-systemctl << 'EOF'
+# guardian_agent.py Local Healer + Command Executor için
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl start teqlif*
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop teqlif*
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart teqlif*
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload teqlif*
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl reset-failed teqlif*
+EOF
+chmod 440 /etc/sudoers.d/guardian-systemctl
+visudo -c -f /etc/sudoers.d/guardian-systemctl
+```
+
+**Per-node ek kurallar** — her rolün kendi Faz bölümünde eklenir:
+
+| Node Rolü | Ek Servisler | Bölüm |
+|-----------|-------------|-------|
+| node5 / node6 (Core) | `pgbouncer`, `redis-core`, `redis-orch`, `redis-guardian` | §4.5 / §5.2 |
+| node1 / node4 (Stream) | `livekit` | §7.2 / §12.2 |
+| node7 / node8 (Storage) | `minio`, `nginx` | §6.4 / §6.6 |
+| node9 (Monitor) | `prometheus`, `loki`, `alertmanager`, `grafana` | §10.1 |
+
+> **guardian_agent.py implementasyon notu:** `systemctl()` helper mutlaka `subprocess(["sudo", "systemctl", action, unit], ...)` çağırmalı — `systemctl` direkt çağrısı `User=tucibeyin` altında `Interactive authentication required` hatası verir.
+
 ---
 
 ## Faz 3 — Rol Bazlı OS Tuning (Tüm Node'lar)
@@ -1512,8 +1864,6 @@ ufw --force enable
 # Doğrulama — CF IP dışından doğrudan istek engellenmiş olmalı:
 ufw status numbered | grep -E "80|443"
 ```
-
-**Not:** gateway1 + gateway2 Cloudflare proxy arkasında. Cloudflare'in gerçek IP'lerinizi keşfetmesini engellemenin tek yolu bu kısıtlamadır. CF IP aralıkları nadiren değişir ama `https://www.cloudflare.com/ips-v4/` adresi yılda bir kontrol edilmeli.
 
 ### 3.2 Core (node5, node6)
 
@@ -1773,10 +2123,8 @@ jit = off                    # PG17 OLTP: kısa tekrar sorgularda JIT compile ov
 
 **`/etc/postgresql/17/main/pg_hba.conf` — eklecek satırlar:**
 ```
-# PgBouncer — lokal (node5 normal çalışma)
+# PgBouncer — lokal (node5 normal çalışma; node6 promote sonrası da lokal bağlanır)
 host  teqlif  teqlif     127.0.0.1/32     scram-sha-256
-# PgBouncer — node6 IP (failover sonrası node6 PgBouncer → node6 PG)
-host  teqlif  teqlif     10.10.0.7/32     scram-sha-256
 # node9 — pg_dump (Faz 10.5 backup script)
 host  teqlif  teqlif     10.10.0.13/32    scram-sha-256
 # node6 streaming replication
@@ -1784,8 +2132,6 @@ host  replication  replicator  10.10.0.7/32  scram-sha-256
 # node9 — pg_receivewal (sürekli WAL arşivleme) + pg_basebackup (haftalık fiziksel yedek)
 host  replication  replicator  10.10.0.13/32 scram-sha-256
 ```
-
-**Not:** `10.10.0.7/32` girişi olmadan node6 promote olduktan sonra kendi PgBouncer'ı `host=127.0.0.1 → listen_addresses=10.10.0.7` bağlantısında `pg_hba.conf` reddeder ve uygulama DB bağlantısı kuramaz.
 
 **Kullanıcı ve DB:**
 ```sql
@@ -1821,7 +2167,7 @@ listen_port = 6432
 auth_type = scram-sha-256
 auth_file = /etc/pgbouncer/userlist.txt
 pool_mode = transaction
-max_client_conn = 200
+max_client_conn = 2000   # PgBouncer'ın asıl amacı: binlerce client'ı az PG bağlantısına sığdırmak
 default_pool_size = 25
 min_pool_size = 5
 reserve_pool_size = 5
@@ -1856,10 +2202,10 @@ chmod 750 /var/lib/redis-core
 ```
 port 6379
 bind 0.0.0.0                 # Keepalived VIP 10.10.0.11 üzerinden erişim zorunlu; UFW WireGuard dışını blokluyor
-requirepass <password>
+requirepass <core_redis_pass>
 dir /var/lib/redis-core       # RDB + AOF dizini — backup script bu yolu kullanır
 maxmemory 2gb
-maxmemory-policy allkeys-lru
+maxmemory-policy volatile-lru   # ARQ kuyruğu (TTL yok) silenmemeli; yalnızca TTL'li önbellek keyler silinir
 appendonly yes
 appendfsync everysec
 auto-aof-rewrite-percentage 100
@@ -1876,10 +2222,34 @@ logfile /var/log/redis/redis-core.log
 ```
 
 ```bash
-# Ayrı systemd unit:
-cp /lib/systemd/system/redis-server.service \
-   /etc/systemd/system/redis-core.service
-# ExecStart → redis-server /etc/redis/redis-core.conf
+# redis-server.service'i KOPYALAMAK YASAK:
+# Kopyalanan dosya PIDFile=/run/redis/redis-server.pid ve RuntimeDirectory=redis içerir.
+# Üç Redis instance aynı PIDFile'ı paylaşırsa systemd PID takibini kaybeder.
+# Çözüm: her instance için bağımsız service dosyası.
+cat > /etc/systemd/system/redis-core.service << 'EOF'
+[Unit]
+Description=Teqlif Redis Core (port 6379)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/redis-server /etc/redis/redis-core.conf
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=0
+Restart=always
+RestartSec=5
+User=redis
+Group=redis
+RuntimeDirectory=redis-core
+RuntimeDirectoryMode=2755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
 systemctl enable --now redis-core
 ```
 
@@ -1889,7 +2259,8 @@ systemctl enable --now redis-core
 ```
 port 6380
 bind 0.0.0.0                 # Keepalived VIP 10.10.0.11 üzerinden erişim zorunlu; UFW WireGuard dışını blokluyor
-requirepass <password>
+requirepass <orch_redis_pass>
+dir /var/lib/redis-orch       # diğer instance'lardan izole çalışma dizini
 maxmemory 256mb
 maxmemory-policy allkeys-lru
 appendonly no
@@ -1903,7 +2274,30 @@ logfile /var/log/redis/redis-orch.log
 ```
 
 ```bash
-# Ayrı systemd unit: redis-orch.service
+cat > /etc/systemd/system/redis-orch.service << 'EOF'
+[Unit]
+Description=Teqlif Redis Orch (port 6380)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/redis-server /etc/redis/redis-orch.conf
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=0
+Restart=always
+RestartSec=5
+User=redis
+Group=redis
+RuntimeDirectory=redis-orch
+RuntimeDirectoryMode=2755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
 systemctl enable --now redis-orch
 ```
 
@@ -1916,6 +2310,7 @@ Guardian'ın özel veri kanalı. **Sadece `teqlif-guardian.service` okur ve yaza
 port 6382
 bind 0.0.0.0
 requirepass <guardian_redis_pass>       # .env.production'da GUARDIAN_REDIS_URL
+dir /var/lib/redis-guardian             # appendonly AOF + RDB snapshot buraya yazılır; /var/lib/redis ile karışmasın
 maxmemory 128mb
 maxmemory-policy allkeys-lru
 appendonly yes                          # Guardian state kalıcı olmalı — job checkpoint'ler kaybolmamalı
@@ -1928,7 +2323,34 @@ logfile /var/log/redis/redis-guardian.log
 ```
 
 ```bash
-# Ayrı systemd unit — redis-orch ve redis-core ile aynı yapıda
+mkdir -p /var/lib/redis-orch /var/lib/redis-guardian
+chown redis:redis /var/lib/redis-orch /var/lib/redis-guardian
+chmod 750 /var/lib/redis-orch /var/lib/redis-guardian
+
+cat > /etc/systemd/system/redis-guardian.service << 'EOF'
+[Unit]
+Description=Teqlif Redis Guardian (port 6382)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/redis-server /etc/redis/redis-guardian.conf
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=0
+Restart=always
+RestartSec=5
+User=redis
+Group=redis
+RuntimeDirectory=redis-guardian
+RuntimeDirectoryMode=2755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
 systemctl enable --now redis-guardian
 redis-cli -p 6382 -a <guardian_redis_pass> ping  # → PONG
 ```
@@ -1955,7 +2377,7 @@ vrrp_script chk_postgres {
 }
 
 vrrp_script chk_redis {
-    script "/usr/bin/redis-cli -p 6379 -a <password> ping"
+    script "/usr/bin/redis-cli -p 6379 -a <core_redis_pass> --no-auth-warning ping"
     interval 2
     weight -20
 }
@@ -2024,6 +2446,7 @@ vrrp_instance VI_Redis {
 **`/etc/keepalived/scripts/wg_vip_node5.sh` — node5'te:**
 ```bash
 # node5'te kurulur; failback (node6→node5 VIP dönüşü) sırasında tetiklenir.
+# MASTER bloğu WG routing güncellemez — node6'nın notify_backup'ı failback'te routing'i zaten günceller.
 mkdir -p /etc/keepalived/scripts
 cat > /etc/keepalived/scripts/wg_vip_node5.sh << 'SCRIPT'
 #!/bin/bash
@@ -2077,8 +2500,6 @@ chown root:root /etc/keepalived/secrets/failover.env
 systemctl enable --now keepalived
 ```
 
-> **Not:** `wg_vip_node5.sh MASTER` WireGuard routing güncellemesi YAPMAZ — failback manüel akışında node6'nın `notify_backup`'ı WG routing'i zaten günceller (bkz. §4.5 node6 script). node5'in script'i yalnızca PostgreSQL promote + PgBouncer + servis başlatma sorumluluğunu üstlenir.
-
 **`/etc/keepalived/keepalived.conf` — node6:** `state BACKUP`, `priority 100`; unicast_src_ip/peer ters; vrrp_script tanımları ve sync group notify callback'leri var:
 
 ```
@@ -2089,7 +2510,7 @@ vrrp_script chk_postgres {
 }
 
 vrrp_script chk_redis {
-    script "/usr/bin/redis-cli -p 6379 -a <password> ping"
+    script "/usr/bin/redis-cli -p 6379 -a <core_redis_pass> --no-auth-warning ping"
     interval 2
     weight -20
 }
@@ -2167,6 +2588,15 @@ fi
 # NODE6_PUBKEY="<node6_pubkey>"
 
 if [ "$STATE" = "MASTER" ]; then
+    # Split-brain guard: node5 WireGuard üzerinden hâlâ erişilebiliyorsa bu muhtemelen
+    # yanlış bir MASTER geçişidir (WG link problemi, node5 yaşıyor). Abort et.
+    if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
+           -i /home/tucibeyin/.ssh/id_ed25519_failover \
+           tucibeyin@10.10.0.5 "exit 0" 2>/dev/null; then
+        logger "wg_vip_failover: MASTER geçişi iptal — node5 (10.10.0.5) hâlâ erişilebilir (split-brain riski). Manuel müdahale gerekiyor."
+        exit 1
+    fi
+
     NEW_PRIMARY_PUBKEY="${NODE6_PUBKEY}"
     NEW_PRIMARY_IPS="10.10.0.7/32,10.10.0.10/32,10.10.0.11/32"
     NEW_STANDBY_PUBKEY="${NODE5_PUBKEY}"
@@ -2178,7 +2608,7 @@ else
     NEW_STANDBY_IPS="10.10.0.7/32"
 fi
 
-# 1. Tüm non-core node'larda live WG routing güncelle
+# 1. Tüm non-core node'larda live WG routing güncelle (paralel — senkron SSH 5s×N gecikme yaratır)
 ALL_WG_IPS="10.10.0.2 10.10.0.9 10.10.0.1 10.10.0.3 10.10.0.4 10.10.0.6 10.10.0.8 10.10.0.12 10.10.0.13"
 
 for WG_IP in ${ALL_WG_IPS}; do
@@ -2187,8 +2617,9 @@ for WG_IP in ${ALL_WG_IPS}; do
         tucibeyin@${WG_IP} \
         "sudo wg set wg0 peer ${NEW_PRIMARY_PUBKEY} allowed-ips ${NEW_PRIMARY_IPS} && \
          sudo wg set wg0 peer ${NEW_STANDBY_PUBKEY} allowed-ips ${NEW_STANDBY_IPS}" \
-        2>/dev/null || true   # down node atlanır; WG routing diğerleri için güncellenir
+        2>/dev/null || true &  # paralel: down node 5s beklemez, diğerleri engellenmez
 done
+wait  # tüm arka plan SSH'ların bitmesini bekle
 
 # 2. Yerel (node6) WG routing güncelle
 sudo wg set wg0 peer "${NEW_PRIMARY_PUBKEY}" allowed-ips "${NEW_PRIMARY_IPS}"
@@ -2225,20 +2656,22 @@ if [ "$STATE" = "MASTER" ]; then
        WHERE NOT EXISTS (SELECT 1 FROM pg_replication_slots WHERE slot_name='wal_backup_node9');" \
       2>/dev/null || true
 
-    # 5. PgBouncer başlat (standby'da disabled'dı)
+    # 5. PgBouncer başlat ve enable et (standby'da disabled'dı — reboot kalıcılığı için enable şart)
+    systemctl enable pgbouncer
     systemctl start pgbouncer
 
     # 6. Uygulama servislerini başlat (teqlif-guardian agent her zaman çalışır — sadece app servisleri başlar)
     systemctl start teqlif teqlif-worker teqlif-worker-critical teqlif-guardian
 
-    # 7. Uzak node'larda WireGuard config'i diske yaz (reboot sonrası da kalıcı olsun)
+    # 7. Uzak node'larda WireGuard config'i diske yaz (reboot sonrası da kalıcı olsun — paralel)
     for WG_IP in ${ALL_WG_IPS}; do
         ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
             -i /home/tucibeyin/.ssh/id_ed25519_failover \
             tucibeyin@${WG_IP} \
             "sudo wg-quick save wg0" \
-            2>/dev/null || true
+            2>/dev/null || true &
     done
+    wait
     # Yerel node6'da da diske yaz:
     wg-quick save wg0
 
@@ -2250,10 +2683,26 @@ if [ "$STATE" = "MASTER" ]; then
         -d "parse_mode=Markdown" > /dev/null 2>&1 || true
 
 else
-    # 3b. Failback: node5 VIP'i tekrar aldığında node6 replica olmalı
-    # Servisleri durdur — node5 primary'ya geri döndü
+    # 1. WireGuard VIP routing güncelle: VIP'ler node5'e geri dön (paralel)
+    for WG_IP in ${ALL_WG_IPS}; do
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            -i /home/tucibeyin/.ssh/id_ed25519_failover \
+            tucibeyin@${WG_IP} \
+            "sudo wg set wg0 peer ${NEW_PRIMARY_PUBKEY} allowed-ips ${NEW_PRIMARY_IPS} && \
+             sudo wg set wg0 peer ${NEW_STANDBY_PUBKEY} allowed-ips ${NEW_STANDBY_IPS}" \
+            2>/dev/null || true &
+    done
+    wait
+
+    # 2. Yerel (node6) WG routing güncelle
+    sudo wg set wg0 peer "${NEW_PRIMARY_PUBKEY}" allowed-ips "${NEW_PRIMARY_IPS}"
+    sudo wg set wg0 peer "${NEW_STANDBY_PUBKEY}" allowed-ips "${NEW_STANDBY_IPS}"
+
+    # 3. Failback: node5 VIP'i tekrar aldığında node6 replica olmalı
+    # Servisleri durdur ve pgbouncer'ı disable et — reboot'ta standby'da yeniden başlamasın
     # teqlif-guardian durdurulmuyor — agent her node'da her zaman çalışır
     systemctl stop teqlif teqlif-worker teqlif-worker-critical pgbouncer 2>/dev/null || true
+    systemctl disable pgbouncer
 
     grep -q '^replicaof' /etc/redis/redis-core.conf || \
         echo "replicaof 10.10.0.11 6379" >> /etc/redis/redis-core.conf
@@ -2265,6 +2714,17 @@ else
     # Failback: node5 geri döndüğünde guardian-redis node5:6382'ye bağlanır
     # Redis'i yeniden başlat ki yeni primary'ya (node5 VIP/IP) bağlansın
     systemctl restart redis-core redis-orch redis-guardian
+
+    # 4. Uzak node'larda WireGuard config'i diske yaz (paralel)
+    for WG_IP in ${ALL_WG_IPS}; do
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            -i /home/tucibeyin/.ssh/id_ed25519_failover \
+            tucibeyin@${WG_IP} \
+            "sudo wg-quick save wg0" \
+            2>/dev/null || true &
+    done
+    wait
+    wg-quick save wg0
 fi
 
 logger "wg_vip_failover: STATE=${STATE} completed"
@@ -2314,8 +2774,6 @@ visudo -c -f /etc/sudoers.d/wg-vip
 systemctl enable --now keepalived
 ```
 
-**Not:** `wg set` live config'i günceller ama `/etc/wireguard/wg0.conf` değişmez. Yukarıdaki adım 7 `wg-quick save wg0` ile kalıcı hale getirir. Remote node'larda bu komutun çalışması için §2.5'teki sudoers kuralı gereklidir.
-
 ### 4.6 PostgreSQL Streaming Replication — node6
 
 ```bash
@@ -2330,6 +2788,16 @@ su - postgres -c "pg_basebackup \
 # pg_basebackup node5'in postgresql.conf'unu kopyalar.
 # listen_addresses = '*' — node5'ten kopyalandı; node6 için de geçerli. Değiştirme gerekmez.
 grep listen_addresses /var/lib/postgresql/17/main/postgresql.conf  # → * olmalı
+
+# node6 disk override — node5 NVMe ayarları (random_page_cost=1.1, effective_io_concurrency=200)
+# pg_basebackup ile kopyalanır ama node6 diski ~5× daha yavaş (2.5K vs 11.6K IOPS).
+# Planner bu ayarlarla "disk çok hızlı" sanıp index scan seçer → failover sonrası DB kilitlenir.
+cat >> /var/lib/postgresql/17/main/postgresql.conf << 'EOF'
+
+# --- node6 disk override (pg_basebackup sonrası — node5 NVMe ayarlarını ezip geçer) ---
+random_page_cost = 4.0          # node5: 1.1 (NVMe) → node6 Deluxhost ~2.5K IOPS; varsayılan 4.0 doğru
+effective_io_concurrency = 8    # node5: 200 (NVMe paralel I/O) → node6 için uygun değer
+EOF
 
 systemctl start postgresql
 ```
@@ -2353,12 +2821,12 @@ psql -h 127.0.0.1 -U postgres -c "SELECT * FROM pg_stat_replication;"
 # VIP üzerinden replication (10.10.0.11) — node5→node6 geçişinde replication hedefi değişmez
 cat >> /etc/redis/redis-core.conf << 'EOF'
 replicaof 10.10.0.11 6379
-masterauth <password>
+masterauth <core_redis_pass>
 EOF
 
 cat >> /etc/redis/redis-orch.conf << 'EOF'
 replicaof 10.10.0.11 6380
-masterauth <password>
+masterauth <orch_redis_pass>
 EOF
 
 # Guardian Redis — node5 direkt IP üzerinden replika (VIP'te değil)
@@ -2371,8 +2839,8 @@ EOF
 systemctl restart redis-core redis-orch redis-guardian
 
 # Doğrula:
-redis-cli -h 127.0.0.1 -p 6379 -a <password> info replication | grep role  # → role:slave
-redis-cli -h 127.0.0.1 -p 6380 -a <password> info replication | grep role  # → role:slave
+redis-cli -h 127.0.0.1 -p 6379 -a <core_redis_pass> info replication | grep role  # → role:slave
+redis-cli -h 127.0.0.1 -p 6380 -a <orch_redis_pass> info replication | grep role  # → role:slave
 redis-cli -h 127.0.0.1 -p 6382 -a <guardian_redis_pass> info replication | grep role  # → role:slave
 ```
 
@@ -2525,8 +2993,6 @@ python3 scripts/sync_translations.py
 python3 scripts/sync_category_fields.py
 ```
 
-**Not:** Bu adım repo klonundan (5.1) sonra ve servislerin başlatılmasından (5.3) önce gelir. PostgreSQL (Faz 4) hazır olmalı. Günlük operations teqlif restart sonrası alembic aynı şekilde çalıştırılmalı.
-
 ### 5.2 .env.production — node5
 
 Template'den oluştur, gerçek değerleri doldur:
@@ -2564,6 +3030,7 @@ ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn app.main:app \
 Restart=always
 RestartSec=5
 LimitNOFILE=65535
+MemoryMax=1500M      # 4 uvicorn worker × ~150 MB plan → yük altında 400 MB/worker olabilir; leak → kill+restart, PG/Redis korunur
 StandardOutput=append:/var/log/teqlif/api/uvicorn.log
 StandardError=append:/var/log/teqlif/api/uvicorn-error.log
 
@@ -2587,6 +3054,7 @@ ExecStart=/var/www/teqlif.com/.venv/bin/python3 -m arq app.worker.WorkerSettings
 Restart=always
 RestartSec=10
 LimitNOFILE=65535
+MemoryMax=1000M      # ARQ worker: plan ~300 MB; analytics batch write burst + geçici objeler için 3× pad
 StandardOutput=append:/var/log/teqlif/worker/arq.log
 StandardError=append:/var/log/teqlif/worker/arq-error.log
 
@@ -2594,7 +3062,7 @@ StandardError=append:/var/log/teqlif/worker/arq-error.log
 WantedBy=multi-user.target
 ```
 
-**`/etc/systemd/system/teqlif-worker-critical.service`:** Aynı yapı, `CriticalWorkerSettings`; `StartLimitIntervalSec=300 StartLimitBurst=10` dahil.
+**`/etc/systemd/system/teqlif-worker-critical.service`:** Aynı yapı, `CriticalWorkerSettings`; `StartLimitIntervalSec=300 StartLimitBurst=10` dahil; **`MemoryMax=800M`** (regular worker'dan daha kısıtlı — critical job'lar küçük ve hızlı olmalı).
 
 **`/etc/systemd/system/teqlif-guardian.service`** (V2.0 — `teqlif-orchestrator` + `teqlif-metrics`'in yerini alır; tüm node'larda aynı unit):
 ```ini
@@ -2612,14 +3080,13 @@ ExecStart=/var/www/teqlif.com/.venv/bin/python3 \
   /var/www/teqlif.com/backend/scripts/guardian_agent.py
 Restart=always
 RestartSec=5
+MemoryMax=300M       # Guardian: health check + heartbeat + Redis — çok hafif; 300M'ı aşıyorsa leak var demektir
 StandardOutput=append:/var/log/teqlif/orchestrator/guardian.log
 StandardError=append:/var/log/teqlif/orchestrator/guardian-error.log
 
 [Install]
 WantedBy=multi-user.target
 ```
-
-> **V1.4 geçiş notu:** `teqlif-orchestrator.service` (app.orchestrator.main) + `teqlif-metrics.service` (edge_metrics_agent.py) → V2.0'da `teqlif-guardian.service` (guardian_agent.py) olarak birleştirildi. Aynı unit tüm node'larda çalışır; lider seçimi agent içi election mekanizmasıyla yönetilir.
 
 ```bash
 systemctl daemon-reload
@@ -2859,8 +3326,6 @@ ssh -i /home/tucibeyin/.ssh/id_ed25519_failover tucibeyin@${STALE_NODE_IP} "
 ssh tucibeyin@${STALE_NODE_IP} "wg show wg0 | grep -A3 '${NODE6_PUBKEY}'"
 ```
 
-> **Not:** Düzeltme idempotenttir — aynı komut birden fazla çalıştırılabilir, sonuç değişmez. `wg set` live, `wg-quick save` kalıcı hale getirir.
-
 ### 5.7 Faz 5 Doğrulama
 
 ```bash
@@ -2967,29 +3432,9 @@ mc ilm add --expiry-days 120 local/teqlif    # listing media 120 gün
 mc ilm add --expiry-days 60  local/teqlif-dm # DM media 60 gün
 ```
 
-**Versioning ve ILM — node5'te mc ile (her iki node'a, minio7/minio8 alias'ları Faz 6.9'da tanımlanır):**
-```bash
-# Node7 — versioning etkinleştir:
-mc version enable minio7/teqlif
-mc version enable minio7/teqlif-dm
-# Node8 — versioning etkinleştir:
-mc version enable minio8/teqlif
-mc version enable minio8/teqlif-dm
-
-# Eski sürümler 90 günde silinsin (disk tasarrufu):
-mc ilm rule add --noncurrent-expire-days 90 minio7/teqlif
-mc ilm rule add --noncurrent-expire-days 90 minio7/teqlif-dm
-mc ilm rule add --noncurrent-expire-days 90 minio8/teqlif
-mc ilm rule add --noncurrent-expire-days 90 minio8/teqlif-dm
-
-# Doğrula:
-mc version info minio7/teqlif   # → Versioning: enabled
-mc version info minio8/teqlif   # → Versioning: enabled
-```
-
-**Not:** Bu adım Faz 6.9 mc alias kurulumundan (minio7/minio8 alias'ları) sonra çalıştırılır.
-
 ### 6.4 node7 — nginx (S3 Proxy)
+
+`media.teqlif.com` (CF Proxied, GET/HEAD, iki katmanlı cache) ve `uploads.teqlif.com` (DNS Only, yazma/presigned GET, cache yok — presigned imza query param içerdiğinden cache güvenlik açığı oluşturur) ayrı `server {}` bloklarında tanımlanır.
 
 ```bash
 apt-get install -y nginx
@@ -3020,17 +3465,102 @@ proxy_cache_path /var/cache/nginx/storage
 ```
 
 **`/etc/nginx/conf.d/minio.conf`:**
-```nginx
-# Bağlantı limiti zone — uploads.teqlif.com DNS Only, doğrudan istemci erişimi
-limit_conn_zone $binary_remote_addr zone=storage_conn:10m;
-limit_req_zone  $binary_remote_addr zone=storage_req:10m rate=30r/s;
 
+İki ayrı domain → iki ayrı server block:
+- `media.teqlif.com` — CF **Proxied** (CDN cache): public media GET; CF real_ip; SSD cache; `Cache-Control: public, immutable`
+- `uploads.teqlif.com` — **DNS Only** (CF bypass): presigned PUT + DM presigned GET; doğrudan istemci; SSD cache yok; `Cache-Control: no-store`
+
+```nginx
+# ── media.teqlif.com — CF Proxied: rate limit gerçek kullanıcı IP'sine ────────
+# CF origin hit sayısı düşük (edge cache %90+ karşılar) → yüksek burst toleransı
+limit_req_zone  $binary_remote_addr zone=media_req:10m rate=100r/s;
+
+# ── uploads.teqlif.com — DNS Only: doğrudan flood riski ────────────────────────
+limit_conn_zone $binary_remote_addr zone=upload_conn:10m;
+limit_req_zone  $binary_remote_addr zone=upload_req:10m rate=10r/s;
+
+# ── media.teqlif.com HTTP → HTTPS ───────────────────────────────────────────────
+server {
+    listen 80;
+    server_name media.teqlif.com;
+    return 301 https://$host$request_uri;
+}
+
+# ── media.teqlif.com HTTPS (CF Proxied, public media CDN) ───────────────────────
+server {
+    listen 443 ssl;
+    server_name media.teqlif.com;
+
+    ssl_certificate     /etc/ssl/teqlif/cf-origin.crt;
+    ssl_certificate_key /etc/ssl/teqlif/cf-origin.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    server_tokens       off;
+
+    # CF Proxied: istemci IP CF-Connecting-IP header'ında gelir
+    # set_real_ip_from → $remote_addr = gerçek kullanıcı IP'si → limit_req doğru çalışır
+    set_real_ip_from 173.245.48.0/20;
+    set_real_ip_from 103.21.244.0/22;
+    set_real_ip_from 103.22.200.0/22;
+    set_real_ip_from 103.31.4.0/22;
+    set_real_ip_from 141.101.64.0/18;
+    set_real_ip_from 108.162.192.0/18;
+    set_real_ip_from 190.93.240.0/20;
+    set_real_ip_from 188.114.96.0/20;
+    set_real_ip_from 197.234.240.0/22;
+    set_real_ip_from 198.41.128.0/17;
+    set_real_ip_from 162.158.0.0/15;
+    set_real_ip_from 104.16.0.0/13;
+    set_real_ip_from 104.24.0.0/14;
+    set_real_ip_from 172.64.0.0/13;
+    set_real_ip_from 131.0.72.0/22;
+    real_ip_header    CF-Connecting-IP;
+    real_ip_recursive on;
+
+    # GET/HEAD dışını reddet — bu endpoint yalnızca media okuma
+    if ($request_method !~ ^(GET|HEAD)$) {
+        return 405;
+    }
+
+    limit_req zone=media_req burst=200 nodelay;
+
+    # İki katmanlı cache: CF edge (1 ay, Cache Everything page rule) →
+    #   CF miss → nginx SSD (7 gün) → MinIO HDD
+    # Her iki katman da HDD okuma yükünü azaltır
+    proxy_cache         storage_cache;
+    proxy_cache_valid   200 7d;
+    proxy_cache_methods GET HEAD;
+    proxy_cache_use_stale error timeout updating;
+    proxy_cache_lock    on;
+    proxy_cache_background_update on;
+    add_header X-Cache-Status $upstream_cache_status;
+    # 1 yıl immutable: MinIO object key içerik değişince değişir, URL asla güncellenmez
+    add_header Cache-Control "public, max-age=31536000, immutable";
+
+    location / {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        error_page 404 502 503 504 = @media_fallback_node8;
+    }
+
+    location @media_fallback_node8 {
+        proxy_pass http://10.10.0.12:9000;  # node8 WireGuard IP
+        proxy_set_header Host $host;
+        proxy_cache_bypass 1;
+        proxy_no_cache 1;
+    }
+}
+
+# ── uploads.teqlif.com HTTP → HTTPS ─────────────────────────────────────────────
 server {
     listen 80;
     server_name uploads.teqlif.com;
     return 301 https://$host$request_uri;
 }
 
+# ── uploads.teqlif.com HTTPS (DNS Only, presigned PUT + DM GET) ─────────────────
 server {
     listen 443 ssl;
     server_name uploads.teqlif.com;
@@ -3040,47 +3570,36 @@ server {
     ssl_protocols       TLSv1.2 TLSv1.3;
     server_tokens       off;
 
-    client_max_body_size 100m;
-    proxy_read_timeout 300s;
-    proxy_buffering off;
+    client_max_body_size 100m;   # presigned PUT: büyük video dosyaları
+    proxy_read_timeout   300s;
+    # proxy_buffering off KULLANMA: buffering kapalıyken proxy_cache çalışmaz (nginx dökümantasyonu).
+    # Bu blokta cache zaten kapalı; not bilgi amaçlıdır.
 
-    # Bağlantı + istek limiti (DNS Only — doğrudan flood riski)
-    limit_conn storage_conn 20;
-    limit_req  zone=storage_req burst=60 nodelay;
+    # DNS Only: doğrudan istemci bağlantısı — flood riski gerçek
+    limit_conn upload_conn 10;
+    limit_req  zone=upload_req burst=20 nodelay;
 
-    # GET isteklerini SSD'ye cache'le — HDD yükünü azaltır
-    proxy_cache storage_cache;
-    proxy_cache_valid 200 30d;
-    proxy_cache_methods GET HEAD;
-    proxy_cache_use_stale error timeout updating;
-    proxy_cache_lock on;
-    proxy_cache_background_update on;
-    # proxy_cache_methods GET HEAD: PUT/POST/DELETE zaten cache'lenmez — bypass satırı gereksiz
-    # (proxy_cache_bypass $request_method HATALI: "GET" her zaman truthy → cache hiç çalışmaz)
-    add_header X-Cache-Status $upstream_cache_status;
-    add_header Cache-Control "public, max-age=2592000, immutable";
+    # Presigned URL'ler kullanıcıya özel + zaten DNS Only (CF cache yok)
+    # Cache-Control: no-store → tarayıcı da cache'lemesin (DM gizliliği)
+    proxy_cache off;
+    add_header Cache-Control "no-store";
 
-    # node7 önce dener; dosya yoksa (404) VEYA MinIO down ise (502/503) node8'e düşer:
+    # node7 önce dener; 404/502/503/504 → node8'e düşer
     location / {
         proxy_pass http://127.0.0.1:9000;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        error_page 404 502 503 504 = @fallback_node8;
+        error_page 404 502 503 504 = @upload_fallback_node8;
     }
 
-    location @fallback_node8 {
+    location @upload_fallback_node8 {
         proxy_pass http://10.10.0.12:9000;  # node8 WireGuard IP
         proxy_set_header Host $host;
-        # fallback yanıtlarını cache'leme (eksik nesne olabilir)
-        proxy_cache_bypass 1;
-        proxy_no_cache 1;
     }
 }
 ```
-
-**Not:** `proxy_cache_methods GET HEAD` — yalnızca GET/HEAD yanıtları cache'lenir; PUT/POST/DELETE nginx tarafından hiç cache'lenmez. `immutable` direktifi: aynı URL hiçbir zaman değişmez (MinIO object key değişmez, içerik değişince key değişir).
 
 **Cloudflare Origin Certificate:**
 ```bash
@@ -3104,11 +3623,78 @@ node7 ile birebir aynı config; `.env.production`'da yalnızca `EDGE_NODE_ID=nod
 
 node7 ile aynı kurulum adımları (`apt-get install -y nginx`, cache dizini, nginx.conf proxy_cache_path bloğu).
 
-**`/etc/nginx/conf.d/minio.conf`:** node7 ile aynı; yalnızca `proxy_pass` fallback hedefi `node7 → node8` yerine `node8 → node7`:
+**`/etc/nginx/conf.d/minio.conf`:** node7 ile aynı yapı; fallback hedefleri ters (`node8 → node7`):
 
 ```nginx
-limit_conn_zone $binary_remote_addr zone=storage_conn:10m;
-limit_req_zone  $binary_remote_addr zone=storage_req:10m rate=30r/s;
+limit_req_zone  $binary_remote_addr zone=media_req:10m rate=100r/s;
+limit_conn_zone $binary_remote_addr zone=upload_conn:10m;
+limit_req_zone  $binary_remote_addr zone=upload_req:10m rate=10r/s;
+
+server {
+    listen 80;
+    server_name media.teqlif.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name media.teqlif.com;
+
+    ssl_certificate     /etc/ssl/teqlif/cf-origin.crt;
+    ssl_certificate_key /etc/ssl/teqlif/cf-origin.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    server_tokens       off;
+
+    set_real_ip_from 173.245.48.0/20;
+    set_real_ip_from 103.21.244.0/22;
+    set_real_ip_from 103.22.200.0/22;
+    set_real_ip_from 103.31.4.0/22;
+    set_real_ip_from 141.101.64.0/18;
+    set_real_ip_from 108.162.192.0/18;
+    set_real_ip_from 190.93.240.0/20;
+    set_real_ip_from 188.114.96.0/20;
+    set_real_ip_from 197.234.240.0/22;
+    set_real_ip_from 198.41.128.0/17;
+    set_real_ip_from 162.158.0.0/15;
+    set_real_ip_from 104.16.0.0/13;
+    set_real_ip_from 104.24.0.0/14;
+    set_real_ip_from 172.64.0.0/13;
+    set_real_ip_from 131.0.72.0/22;
+    real_ip_header    CF-Connecting-IP;
+    real_ip_recursive on;
+
+    if ($request_method !~ ^(GET|HEAD)$) {
+        return 405;
+    }
+
+    limit_req zone=media_req burst=200 nodelay;
+
+    proxy_cache         storage_cache;
+    proxy_cache_valid   200 7d;
+    proxy_cache_methods GET HEAD;
+    proxy_cache_use_stale error timeout updating;
+    proxy_cache_lock    on;
+    proxy_cache_background_update on;
+    add_header X-Cache-Status $upstream_cache_status;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+
+    # node8 önce dener; fallback node7:
+    location / {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        error_page 404 502 503 504 = @media_fallback_node7;
+    }
+
+    location @media_fallback_node7 {
+        proxy_pass http://10.10.0.8:9000;   # node7 WireGuard IP
+        proxy_set_header Host $host;
+        proxy_cache_bypass 1;
+        proxy_no_cache 1;
+    }
+}
 
 server {
     listen 80;
@@ -3126,37 +3712,27 @@ server {
     server_tokens       off;
 
     client_max_body_size 100m;
-    proxy_read_timeout 300s;
-    proxy_buffering off;
+    proxy_read_timeout   300s;
 
-    limit_conn storage_conn 20;
-    limit_req  zone=storage_req burst=60 nodelay;
+    limit_conn upload_conn 10;
+    limit_req  zone=upload_req burst=20 nodelay;
 
-    proxy_cache storage_cache;
-    proxy_cache_valid 200 30d;
-    proxy_cache_methods GET HEAD;
-    proxy_cache_use_stale error timeout updating;
-    proxy_cache_lock on;
-    proxy_cache_background_update on;
-    # proxy_cache_methods GET HEAD: PUT/POST/DELETE zaten cache'lenmez — bypass satırı gereksiz
-    add_header X-Cache-Status $upstream_cache_status;
-    add_header Cache-Control "public, max-age=2592000, immutable";
+    proxy_cache off;
+    add_header Cache-Control "no-store";
 
-    # node8 önce dener; dosya yoksa (404) VEYA MinIO down ise (502/503) node7'ye düşer:
+    # node8 önce dener; fallback node7:
     location / {
         proxy_pass http://127.0.0.1:9000;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        error_page 404 502 503 504 = @fallback_node7;
+        error_page 404 502 503 504 = @upload_fallback_node7;
     }
 
-    location @fallback_node7 {
+    location @upload_fallback_node7 {
         proxy_pass http://10.10.0.8:9000;   # node7 WireGuard IP
         proxy_set_header Host $host;
-        proxy_cache_bypass 1;
-        proxy_no_cache 1;
     }
 }
 ```
@@ -3182,9 +3758,9 @@ systemctl enable --now teqlif-guardian
 ### 6.8 Cloudflare DNS — Storage
 
 - [ ] `uploads.teqlif.com` → A → node7 public IP (DNS Only)
-- [ ] `uploads.teqlif.com` → A → node8 public IP (DNS Only) ← Yeni
+- [ ] `uploads.teqlif.com` → A → node8 public IP (DNS Only)
 - [ ] `media.teqlif.com`   → A → node7 public IP (Proxied)
-- [ ] `media.teqlif.com`   → A → node8 public IP (Proxied) ← Yeni
+- [ ] `media.teqlif.com`   → A → node8 public IP (Proxied)
 
 ### 6.9 Storage Senkronizasyon Servisi (node7 ↔ node8)
 
@@ -3206,6 +3782,26 @@ mc alias set minio8 http://10.10.0.12:9000 <minio_user> <minio_pass>
 # Test:
 mc admin info minio7
 mc admin info minio8
+```
+
+**Bucket versioning ve ILM — her iki node'a:**
+```bash
+# Node7 — versioning etkinleştir:
+mc version enable minio7/teqlif
+mc version enable minio7/teqlif-dm
+# Node8 — versioning etkinleştir:
+mc version enable minio8/teqlif
+mc version enable minio8/teqlif-dm
+
+# Eski sürümler 90 günde silinsin (disk tasarrufu):
+mc ilm rule add --noncurrent-expire-days 90 minio7/teqlif
+mc ilm rule add --noncurrent-expire-days 90 minio7/teqlif-dm
+mc ilm rule add --noncurrent-expire-days 90 minio8/teqlif
+mc ilm rule add --noncurrent-expire-days 90 minio8/teqlif-dm
+
+# Doğrula:
+mc version info minio7/teqlif   # → Versioning: enabled
+mc version info minio8/teqlif   # → Versioning: enabled
 ```
 
 **`/var/www/teqlif.com/backend/scripts/storage_sync.sh`:**
@@ -3395,10 +3991,12 @@ http {
     limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
 
     # WebSocket upgrade map — Connection header'ı doğru set eder;
-    # global "upgrade" ayarı upstream keepalive'ı kırar:
+    # global "upgrade" ayarı upstream keepalive'ı kırar.
+    # ÖNEMLI: '' için "close" DEĞİL "" (boş) kullanılmalı —
+    # "close" göndermek upstream keepalive'ı kırar; boş → header silinir → keepalive çalışır:
     map $http_upgrade $connection_upgrade {
         default upgrade;
-        ''      close;
+        ''      '';
     }
 
     include /etc/nginx/conf.d/*.conf;
@@ -3449,6 +4047,10 @@ server {
     # CGNAT: mobil operatörlerde birden fazla kullanıcı aynı IP'yi paylaşır; 50 dar kalır
     limit_conn conn_limit 100;
 
+    # Geçiş değeri — presigned upload (§0.3.3) tam geçiş sonrası 5m'ye indirilir (Faz 12)
+    # Şu an: eski UploadFile endpoint'leri henüz kaldırılmadıysa 413 vermemek için 50m
+    client_max_body_size 50m;
+
     # WS: /api/messages/ws — daha spesifik eşleşme /api/'dan önce gelir
     # ws_service.dart: wss://api.teqlif.com/api/messages/ws — /ws/ path'i HİÇBİR ZAMAN eşleşmez
     location /api/messages/ws {
@@ -3471,6 +4073,43 @@ server {
 server {
     listen 80;
     server_name api.teqlif.com teqlif.com www.teqlif.com;
+    return 301 https://$host$request_uri;
+}
+
+# Staging — node3'e WireGuard üzerinden yönlendir
+upstream teqlif_staging {
+    server 10.10.0.4:8000;
+    keepalive 8;
+}
+
+server {
+    listen 443 ssl;
+    server_name staging.teqlif.com;
+
+    ssl_certificate     /etc/ssl/teqlif/cf-origin.crt;
+    ssl_certificate_key /etc/ssl/teqlif/cf-origin.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade    $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $http_cf_connecting_ip;
+    proxy_set_header X-Forwarded-For   $http_cf_connecting_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout    300s;
+
+    # Staging — tüm trafik node3'e
+    location / {
+        proxy_pass http://teqlif_staging;
+    }
+}
+
+server {
+    listen 80;
+    server_name staging.teqlif.com;
     return 301 https://$host$request_uri;
 }
 ```
@@ -3594,9 +4233,9 @@ journalctl -u promtail -n 20
 ### 7.4 Cloudflare DNS — Gateway
 
 - [ ] `teqlif.com`     → A → gateway1 public IP (Proxied)
-- [ ] `teqlif.com`     → A → gateway2 public IP (Proxied) ← Yeni
+- [ ] `teqlif.com`     → A → gateway2 public IP (Proxied)
 - [ ] `api.teqlif.com` → A → gateway1 public IP (Proxied)
-- [ ] `api.teqlif.com` → A → gateway2 public IP (Proxied) ← Yeni
+- [ ] `api.teqlif.com` → A → gateway2 public IP (Proxied)
 
 ### 7.5 teqlif-guardian — gateway1 + gateway2
 
@@ -3687,6 +4326,8 @@ turn:
   domain: live1.teqlif.com  # node4 için: live2.teqlif.com
   tls_port: 5349
   udp_port: 3478
+  relay_range_start: 50000  # UFW'de açık aralıkla eşleşmeli: 50000:60000/udp
+  relay_range_end: 60000
   # external_tls: true KULLANMA — önünde TLS proxy olmadan port 5349 plain TCP dinler ve çalışmaz.
   # CF Origin Cert *.teqlif.com kapsıyor; LiveKit bu cert'i doğrudan kullanır:
   cert_file: /etc/ssl/teqlif/cf-origin.crt
@@ -4293,12 +4934,13 @@ groups:
   - name: teqlif_infra
     rules:
       - alert: NodeDown
-        expr: up{job="node_exporter"} == 0
+        expr: up{job="node_exporter", instance!~"10\\.10\\.0\\.(2|9|8|12):9100"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           description: "{{ $labels.instance }} erişilemiyor."
+        # Gateway (2,9) ve storage (8,12) node'ları hariç — bunların kendi özel alert'leri var (GatewayDown/StorageNodeDown).
 
       - alert: StorageNodeDown
         expr: up{job="node_exporter", instance=~"10\\.10\\.0\\.(8|12):9100"} == 0
@@ -4574,11 +5216,12 @@ receivers:
           {{ end }}
 
 inhibit_rules:
-  - source_match:
-      severity: critical
-    target_match:
-      severity: warning
-    equal: [alertname, instance]
+  - source_matchers:
+      - alertname = NodeDown
+    target_matchers:
+      - severity = warning
+    equal:
+      - instance
 ```
 
 ```bash
@@ -4909,7 +5552,7 @@ tar -xzf /opt/teqlif/backups/postgres/basebackup/current/base.tar.gz
 
 # 2. PITR recovery config:
 cat > /var/lib/postgresql/17/main/postgresql.conf << 'EOF'
-restore_command = 'cp /opt/teqlif/backups/postgres/wal/%f %p'
+restore_command = 'gunzip -c /opt/teqlif/backups/postgres/wal/%f.gz > %p'
 recovery_target_time = '2026-10-20 14:35:00+00'
 recovery_target_action = 'promote'
 EOF
@@ -5036,7 +5679,7 @@ fi
 
 trap - EXIT
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clickhouse_backup: OK — $(du -sh ${BACKUP_DIR}/ch_backup_${DATE} | cut -f1)"
-find "${BACKUP_DIR}" -maxdepth 1 -name "ch_backup_*" -mtime +7 -exec rm -rf {} +
+find "${BACKUP_DIR}" -maxdepth 1 -name "ch_backup_*" -mtime +2 -exec rm -rf {} +
 ```
 
 ```bash
@@ -5121,9 +5764,10 @@ rclone sync /opt/teqlif/backups/postgres/wal/ "${REMOTE}/postgres/wal/" \
 rclone sync /opt/teqlif/backups/redis/ "${REMOTE}/redis/" \
   --max-age 7d --log-level INFO
 
-# ClickHouse (günlük — 7 gün)
-rclone sync /opt/teqlif/backups/clickhouse/ "${REMOTE}/clickhouse/" \
+# ClickHouse (7 gün off-site; rclone başarılıysa lokal 1 günden eski kopyaları sil)
+rclone sync /data/clickhouse/backups/ "${REMOTE}/clickhouse/" \
   --max-age 7d --log-level INFO
+find /data/clickhouse/backups/ -maxdepth 1 -name "ch_backup_*" -mtime +1 -exec rm -rf {} +
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: OK"
 ```
@@ -5194,7 +5838,7 @@ cat >> /etc/logrotate.d/teqlif << 'EOF'
 EOF
 ```
 
-#### 10.6.9 Zamanlayıcı Özeti (node3)
+#### 10.6.9 Zamanlayıcı Özeti (node9)
 
 | Saat (UTC) | Timer | İş |
 |-----------|-------|-----|
@@ -5507,6 +6151,14 @@ systemctl is-active teqlif-staging teqlif-worker-staging redis-staging postgresq
 - [ ] Monitoring: tüm node'lar Prometheus'ta görünüyor (`curl -s http://10.10.0.13:9090/api/v1/targets | python3 -m json.tool`)
 - [ ] Loki: tüm node'lardan log akıyor (`curl -s "http://10.10.0.13:3100/loki/api/v1/labels"` — node label'ları görünmeli)
 - [ ] Alertmanager: test alert gönder (`curl -s -X POST http://127.0.0.1:9093/api/v1/alerts -d '[{"labels":{"alertname":"Test"}}]'`)
+- [ ] Presigned upload doğrula: `POST /api/upload/presign` → put_url `uploads.teqlif.com` içeriyor; `PUT` direkt node7/node8'e gidiyor (gateway log'unda media byte'ı görünmemeli)
+- [ ] Tüm `UploadFile` endpoint'leri kaldırıldı — gateway log'unda Content-Length > 100KB olan POST yok
+- [ ] Presigned upload tam geçiş onaylandı: gateway nginx `client_max_body_size 50m` → `5m` indir
+  ```bash
+  # gateway1 + gateway2'de:
+  sed -i 's/client_max_body_size 50m;/client_max_body_size 5m;/' /etc/nginx/sites-available/teqlif.conf
+  nginx -t && systemctl reload nginx
+  ```
 - [ ] Dual-write: bir medya yükle → her iki storage node'da mc ls ile doğrula
 - [ ] MinIO versioning aktif: `mc version info minio7/teqlif` + `minio8/teqlif` → `Versioning: enabled`
 - [ ] pg_receivewal aktif: `systemctl is-active teqlif-pg-receivewal` + WAL dosyaları birikmeye başladı
@@ -5724,4 +6376,4 @@ redis-cli -h 10.10.0.11 -p 6380 -a <pass> \
 
 ---
 
-*V2.0 uygulama planı — 02_plan.md · 2026-09-29 (rev35 — Kapsamlı .env + servis audit: GUARDIAN_REDIS_URL tüm 9 .env template'ine eklendi (10.10.0.11:6382 VIP üzerinden; guardian-redis replication direkt IP kullanır ama agent bağlantısı VIP'ten gidebilir); teqlif-guardian.service unit tanımı §5.2'ye eklendi (teqlif-orchestrator+teqlif-metrics'in V2.0 birleşimi, tüm node'larda aynı unit); node5/gateway/stream/storage/node2/node9/staging enable komutları teqlif-metrics→teqlif-guardian; minimal-venv node'larda pip install'a httpx+pyyaml eklendi (guardian_agent.py HTTP health check + node.conf yaml parsing); §7.5/§6.7/§8.3/§10.1 bölüm başlıkları edge_metrics_agent→teqlif-guardian; doğrulama komutları ve checklist teqlif-orchestrator/metrics→guardian; Faz 0 TODO'lardan guardian service ve env ekleme işaretlendi | rev34 — .env audit: node3 staging MINIO_ENDPOINT 10.10.0.7→10.10.0.8 (node6 Core IP, MinIO node7'de); MINIO_ENDPOINT_DM eklendi; node5+node6 template INTERFACE_SPEED_MBPS node6 yorum eklendi | rev33 — Config audit düzeltmeleri: redis-guardian.conf `save "3600 1"` → `save 3600 1` (Redis geçersiz syntax — startup hatası); Prometheus scrape_configs'e node3 (10.10.0.4) eklendi (11 target: 10→11); §4.3 redis-server.service `systemctl disable --now redis-server` eklendi (port 6379 çakışması engeli); `wg_vip_failover.sh` pg_ctl promote'a `pg_is_in_recovery()` guard eklendi (node5 scriptiyle tutarlılık) | rev32 — Ağ topolojisi + güvenlik audit: §3.5 UFW node2+node9 default deny/allow eklendi; §3.5 UFW node3 (Staging) yeni blok eklendi; §2.2 node5 wg0.conf kısayoluna node9 peer eklendi (explicit); §10.0.3 node9 wg0.conf MTU=1420 eklendi; §2.4 ping loop notuna node9 Faz 10 açıklaması eklendi; §7.3 "10 node"→"11 node" + IP listesine node9=10.10.0.13 eklendi; §7.3 Promtail notu "node3'te"→"node9'da" düzeltildi; §4.5 SSH key hedef listesine node9 eklendi; §4.6 pg_hba.conf WAL-replication uyarısı eklendi; §10.6.1 node6 pg_hba.conf güncelleme adımı + failover SSH key eklendi | rev31 — node9 tamamlama: §0.5 node9 .env template eklendi; §1.4 node9 node.conf örneği + guardian_priority=5 eklendi; §4.8 kurulum sırası notu; Faz 10'a §10.0 Ön Kurulum (OS+/data dirs+WireGuard+node.conf+ClickHouse) eklendi; Faz 13 tam bölümü eklendi (WG mesh, ClickHouse prod veri akışı, Prometheus 11 target, Loki 11 node, backup doğrulama, Alertmanager test, Grafana, Guardian entegrasyon, 15 maddelik kontrol listesi); Özet tablo Faz 12/13 sırası düzeltildi | rev30 — node9 entegrasyonu: node9 (10.10.0.13, OVH KS-1-B) eklendi; node3 rol: Monitor+Staging→Staging; ClickHouse node5→node9; Faz 10 Monitoring+Backup+ClickHouse node3→node9; Prometheus scrape+alert node9; Loki listen_address+push_url node9; pg_hba.conf node3→node9; wal_backup_node3→wal_backup_node9; clickhouse_backup.sh lokal (rsync+SSH kaldırıldı); Faz bağımlılık haritası Faz 13 eklendi; failover for loop+ALL_WG_IPS node9; node9 WG peer template; §2.5 sudoers node9; §3.5 Monitor node9; guardian-redis REPLICAOF NO ONE fix (rev29 önceden); LiveKit reconnect fix (rev29); orch_client 3-level fallback (rev29); atomic write guardian_state.json (rev29); UDP election V2.0 simple priority notu (rev29) | rev18 — Tutarlılık + config audit: node5/6 .env metrics alanları eklendi; gateway2 INTERFACE_SPEED_MBPS=4000 ayrı blok; Faz 6.10 fallback test nginx portuna çevrildi; §10.5 duplicate Telegram bildirimi kaldırıldı | rev19 — Dizin izin audit: /var/log/teqlif 750→755; ClickHouse backup dir 755+usermod; /etc/livekit mkdir; /etc/ssl/teqlif node7/8 mkdir; promtail SupplementaryGroups override+__path__ glob; redis_backup BGSAVE+rsync→redis-cli --rdb; backup logrotate node3+node5 | rev20 — Node cross-erişim audit: §2.5 tüm non-core node'larda wg sudoers eklendi; failover step7 sudo bash→wg-quick save; node5 clickhouse-backup sudoers+script sudo rm -rf; postgres_exporter Environment→EnvironmentFile+DATA_SOURCE_NAME env template; Faz 11.4 /etc/ssl/teqlif mkdir eklendi | rev21 — Failover strateji audit: node5 keepalived nopreempt+notify_master/backup eklendi; wg_vip_node5.sh tanımlandı; node6 keepalived.conf vrrp_script blokları eklendi; §5.6 test sadeleştirildi; §5.6.1 failback 6-adım prosedüre dönüştürüldü (keepalived disable→sync→node6 stop→node5 MASTER); §10.6.2 WAL gap uyarısı+pg_basebackup zorunluluğu | rev22 — Dizin yapısı audit: header rol-bazlı ayrıştırıldı (gateway/core/stream/storage/monitoring); /var/log/teqlif 750→755 header düzeltildi; /etc/keepalived/secrets/ chmod 700 eklendi (node5+node6); .env.production chown tucibeyin:tucibeyin 6 node'da eksikti eklendi (node6/node7/gateway1-2/node1/4/node2/node3) | rev23 — Cross-node kesinti kurtarma: §5.6.2 failover WG routing reconciliation prosedürü eklendi; clickhouse_backup.sh STATUS check+cleanup trap eklendi (node5 stale backup birikimi önlendi); pg_basebackup/pg_dump/redis_backup atomik write pattern eklendi (temp→rename) | rev24 — Failsafe audit: nginx Restart=always drop-in (gateway1/2+node7/8); PgBouncer Restart=always drop-in (node5); teqlif/worker/orchestrator StartLimitIntervalSec=300+Burst=10 eklendi; node_exporter --collector.systemd eklendi; Prometheus ServiceFailed+MonitorDiskHigh alert eklendi; DR tablosuna bilinen SPOF'lar+crash-loop recovery eklendi | rev25 — AI Proxy HA: node2→node3→node5 öncelik zinciri; §5.3.1 node5 teqlif-ai-proxy disabled (son çare); §8.5 node3 teqlif-ai-proxy always-on (ilk yedek); §9.2 ai_proxy:active_url doğrulama eklendi; §9.5 AI proxy failover simülasyonu eklendi; DR tablosunda node2 SPOF kaldırıldı → node2+node3 eş zamanlı satırı eklendi; wg_vip_failover.sh MASTER: redis-cli REPLICAOF NO ONE eksikliği düzeltildi (config değişikliği yetmez, live promote şart); failover.env CORE_REDIS_PASS eklendi | rev26 — leader.py kaldırıldı (clean architecture: mechanism duplication — Keepalived zaten lider seçimi yapıyor; Redis lock aynı garantiyi tekrar etmemeli); §0.6'ya tasarım kararı notu eklendi; wg_vip_failover.sh'den orchestrator:leader DEL kaldırıldı; §9.2 doğrulama orchestrator:leader→systemctl is-active ile güncellendi | rev27 — Guardian mimarisi: §0.2 edge_metrics_agent→guardian_agent (local agent+heartbeat+election+command executor); §0.6 orchestrator→Guardian koordinatör (topology-driven, component:env bazlı service state: HEALTHY/DEGRADED/DOWN, job state machine+checkpoint+resume, playbook sistemi, local state cache guardian_state.json, dağıtık lider seçimi Redis NX+UDP peer fallback); §1.4 node.conf YAML full self-description şeması (guardian_priority, network, hardware, components[]); §4.4.1 guardian-redis port 6382 (appendonly yes — job checkpoint kalıcı); tüm node UFW'ye UDP 9901 guardian heartbeat kuralı eklendi; teqlif-orchestrator.service → teqlif-guardian.service geçiş notu | rev28 — traffic_eligible + traffic_type alanları: node.conf her componente eklendi (default: false — insan onayı olmadan routing yapılmaz); routing eligibility kuralı §0.6'ya eklendi (4 şart: eligible+env+systemd+health); internal_mesh/gateway_proxied/direct_internet tipleri; component asla hybrid değildir notu; §0.6 routing modülüne is_routing_eligible() kuralı eklendi)*
+*V2.0 uygulama planı — 02_plan.md · 2026-09-29 (rev54 — Plan yapısal temizlik: tüm bağımsız "Not:" blokları kaldırıldı (12 adet), içerikler ya ilgili adıma entegre edildi ya da revision history'de mevcut olduğu için çıkarıldı; §6.3'teki mc versioning+ILM bloğu §6.9'a taşındı (mc alias minio7/minio8 alias'larından sonra çalışması gerekiyor, önceden bağımsız "Not:" ile belirtiliyordu); §6.4'e iki server block tasarım açıklaması intro olarak eklendi; wg_vip_node5.sh MASTER script'e WG routing sorumluluğu yorum eklendi — artık her Faz adım adım okunabilir, "not neydi todo neydi" yorumu gereksiz | rev53 — Guardian SRE audit: (1) Nokta 1 GERÇEK BUG: election.py'a Redis backoff eklendi — `redis_unavailable_since` takibi + 20s geçmeden Adım 2'ye (UDP) geçme yasağı; gerekçe: Keepalived tipik ~3-5s'de redis-guardian promote eder; ama kötü senaryoda 15s TTL dolmadan önce UDP election başlarsa ve Redis geri gelirse iki eş zamanlı election oluşur (election thrashing); 20s buffer bu durumu önler; (2) Nokta 2 GERÇEK GAP: UDP fallback lider davranışı belgelendi — salt pasif: Telegram CRITICAL alert at, coordinator_loop başlatma (Redis gerektiren işlemler çalışamaz), routing/playbook/CF DNS yok; coordinator_loop'a election.mode=="udp" guard eklendi; V2.1'e kadar sınır; (3) Nokta 3 FALSE POSITIVE: "GUARDIAN ASLA OTOMATİK DEĞİŞTİRMEZ" kuralı — traffic_eligible insan onayı, Guardian sadece orch:routing:* key'leri değiştirir; node reboot → node.conf değişmez → eligibility korunur; orch-redis routing key'leri bağımsız persist eder; Routing Eligibility bölümüne desired state kalıcılığı açıklaması eklendi; (4) Bağımsız bug: Keepalived notify script notu yanıltıcıydı — "systemctl start/stop teqlif-guardian çağırır" → guardian tüm node'larda her zaman çalışır, notify script onu durdurmaz/başlatmaz; not düzeltildi (wg_vip_failover.sh BACKUP bloğu zaten doğruydu) | rev52 — Cloudflare caching tutarlılığı: node7+node8 nginx minio.conf tek server block'tan iki ayrı server block'a bölündü — `media.teqlif.com` (CF Proxied: set_real_ip_from CF IP ranges, GET/HEAD only, proxy_cache storage_cache 7d, Cache-Control: public max-age=31536000 immutable, 100r/s burst=200) + `uploads.teqlif.com` (DNS Only: limit_conn 10, 10r/s burst=20, proxy_cache off, Cache-Control: no-store); §0.3.3 tablosunda "Media okuma (GET)" satırı DNS Only→CF Proxied CDN edge cache olarak düzeltildi; §6.8 CF DNS tablosu zaten doğruydu; Cloudflare Page Rules 3→4: uploads.teqlif.com/* Bypass eklendi (presigned S3 imzası CF proxy'den geçince bozulur; ileride Proxied'a geçilirse koruma); MinIO tablosu "Her ikisi Cloudflare arkasında" → okuma CF Proxied + CDN cache, yazma DNS Only CF bypass olarak düzeltildi; İki katmanlı cache: CF edge (1 ay Cache Everything) → nginx SSD (7 gün) → MinIO HDD — her iki katman da HDD okuma yükünü azaltır; uploads.teqlif.com presigned GET (DM) no-store ile tarayıcı cache'ini de engeller | rev51 — Upload mimarisi gateway bypass olarak belgelendi: §0.3.3 yeni bölüm eklendi — felsefe (gateway = yalnızca JSON sinyal; byte akışı ilgili node'a direkt) + 3-adım presigned PUT akışı (presign→PUT node7/8 direkt→complete+ARQ) + storage_service.py presign_put/presign_put_dm implementasyon şablonu + DM private bucket akışı + değiştirilecek dosyalar checklist; trafik akışı diyagramı güncellendi (uploads.teqlif.com DNS Only satırı eklendi, gateway bypass notu); §0.4 config'e upload_presign_ttl: int = 900 eklendi; gateway nginx client_max_body_size 50m'ye geçiş notu eklendi (presigned upload tam geçiş sonrası Faz 12'de 5m'ye indirilecek); Faz 12 doğrulamasına presigned upload testi + gateway log kontrolü + client_max_body_size 50m→5m adımı eklendi | rev50 — node6 PostgreSQL disk override: pg_basebackup node5'in postgresql.conf'unu kopyalar; node5 NVMe ayarları `random_page_cost=1.1` ve `effective_io_concurrency=200` node6'ya taşınırdı; node6 Deluxhost diski ~2.5K IOPS (node5 11.6K IOPS'un 5×'i yavaş) — planner "disk çok hızlı" sanıp tüm sorguları index scan'e iter, failover sonrası DB kilitlenir; §4.6 pg_basebackup adımına `cat >> postgresql.conf` override bloğu eklendi: `random_page_cost=4.0` (PostgreSQL varsayılanı — spinning/yavaş disk) + `effective_io_concurrency=8` | rev49 — node5 Python servislerine MemoryMax eklendi: teqlif.service=1500M (4 uvicorn worker yük altında 400MB/worker olabilir; leak → cgroup kill → Restart=always, PG/Redis korunur), teqlif-worker.service=1000M (ARQ ~300MB plan; analytics batch burst için 3× pad), teqlif-worker-critical.service=800M (critical job küçük/hızlı olmalı), teqlif-guardian.service=300M (sadece health check+heartbeat; 300M aşılıyorsa leak kesin); AI proxy zaten 600M'dı — tüm Python servisler artık cgroup ile sınırlı; node5 en kötü eşzamanlı senaryo 1500+1000+800+300=3600M ama her service kendi sınırına ulaşınca kill+restart → gerçek eşzamanlı hit imkânsız; Redis 2.4GB + PG shared_buffers 2GB = sabit 4.4GB → leak hiçbir zaman veritabanlarına ulaşamaz | rev48 — 3 hata giderildi: (1) redis-core.conf `maxmemory-policy allkeys-lru` → `volatile-lru` — ARQ kuyruğu redis-core (6379) üzerinde çalışır; `allkeys-lru` TTL'siz ARQ job hash'lerini bellek dolduğunda sessizce siler (job kaybolur, hata yok); `volatile-lru` yalnızca TTL'li cache key'leri siler — ARQ key'leri (TTL yok) asla evict edilmez; (2) Gateway nginx `api.teqlif.com` server bloğuna `client_max_body_size 50m;` eklendi — nginx varsayılanı 1MB; profil fotoğrafı ve form ekleri için 413 Payload Too Large hatası dönerdi; storage node nginx'te zaten 100m vardı ama gateway seviyesinde kısıtlama vardı; (3) ClickHouse backup disk taşması: clickhouse_backup.sh `-mtime +7` → `-mtime +2` (lokal 2 gün); offsite_sync.sh'e rclone başarısından sonra `find ... -mtime +1 -exec rm -rf` eklendi — node9 3.5TB /data disk günlük büyüyen ClickHouse verisini 7 tam backup + WAL ile taşırabilirdi; off-site B2'de --max-age 7d korundu (uzun dönem B2'de, kısa dönem lokal) | rev47 — wg_vip_failover.sh 3 iyileştirme: (1) Split-brain guard eklendi — MASTER bloğunun başına `ssh node5 exit` probe; erişilebiliyorsa failover abort (node5 yaşıyor, WG link sorunu); bu 2-node Keepalived VRRP'nin temel split-brain riskini azaltır (Patroni/etcd olmadan en basit fencing); (2) Tüm 4 SSH döngüsü senkron→paralel: `& / wait` pattern — 9 node × ConnectTimeout=5s yerine tek bekleme; 2 unreachable node için ~10s gecikme ortadan kalkar; (3) PgBouncer max_client_conn 200→2000 — 200 gereksiz kısıtlayıcı; PgBouncer'ın amacı binlerce client'ı az PG bağlantısına sığdırmak; actual PG bağlantı sınırı default_pool_size=25 (değişmedi). Bug 1 eleştirisi (MASTER bloğunda wg-quick save yok) FALSE POSITIVE — step 7 satır 2535'te zaten vardı | rev46 — 3 hata giderildi: (1) Staging ağ çelişkisi — diagram `node3 :8000 doğrudan` → `gateway → WG → node3:8000`; gateway nginx'e `staging.teqlif.com` upstream+server bloğu eklendi (node3 UFW zaten wg0-only, değişmedi); (2) pg_hba.conf `10.10.0.7/32 teqlif` gereksiz girişi kaldırıldı — PgBouncer `host=127.0.0.1` bağlandığı için PostgreSQL bağlantıyı 127.0.0.1'den görür, 10.10.0.7'den değil; node6 yalnızca replication rolüyle 10.10.0.7/32'den bağlanır; yanlış açıklayan not düzeltildi; (3) Keepalived chk_redis script node5+node6 — `redis-cli -a <pass> ping` → `redis-cli -a <pass> --no-auth-warning ping` (rev43'te guardian node.conf'ta düzeltildi ama Keepalived tarafı atlanmıştı; 2s aralıkta çalışan script STDERR uyarısıyla journald'ı doldururdu) | rev45 — Guardian systemctl sudo yetkisi eksikliği giderildi: §2.6 yeni bölüm eklendi — tüm 11 node'da /etc/sudoers.d/guardian-systemctl (teqlif* için start/stop/restart/reload/reset-failed NOPASSWD) + per-node ek servisler tablosu (pgbouncer/redis/livekit/minio/nginx/prometheus); §0.2.2 ALLOWED_COMMANDS'a implementasyon notu eklendi (systemctl() helper → subprocess(["sudo","systemctl",...]) — direkt çağrı User=tucibeyin altında Permission Denied, Local Healer hiç çalışmazdı) | rev44 — Mimari Referans bölümü eklendi (plan başına §0 öncesi): node özeti + WG mesh IP tablosu, trafik akış diyagramı (gateway/media/stream/staging), uygulama servisleri node×durum matrisi (FastAPI/AI/LiveKit/gateway), veri katmanı HA tabloları (PG+PgBouncer aktif-pasif, Redis 3 instance + guardian direkt-IP açıklaması, MinIO dual-write), HA mod özeti + RTO tablosu, monitoring/backup servisleri, tüm 11 node ortak servisler; redis-guardian'ın VIP değil direkt IP üzerinden replika olmasının nedeni açıklandı | rev43 — Guardian audit: node.conf Redis health check cmd'lerine `-a $VAR --no-auth-warning` eklendi (redis-core/orch/guardian üçü de requirepass — şifresiz redis-cli daima NOAUTH döndürür, guardian tüm Redis'leri sürekli "failed" görürdü); guardian_agent.py cmd health check subprocess(shell=True, env=os.environ) zorunluluğu notu eklendi (shell=False ile $VAR expand olmaz — literal kalır); election keepalive `SET guardian:leader EX 15 NX` → `EXPIRE guardian:leader 15` (NX flag yalnızca key yokken set eder — lider key'i zaten tutar, NX başarısız olur, TTL yenilenemez, 15s'de expire → sürekli yeniden seçim; EXPIRE ile yalnızca mevcut key'in TTL'si uzatılır) | rev42 — Monitoring audit: NodeDown alert expr'e `instance!~"10\\.10\\.0\\.(2|9|8|12):9100"` filtresi eklendi — gateway ve storage node'ları GatewayDown/StorageNodeDown özel alert'leri kapsar; filtre olmasaydı her gateway/storage failure iki ayrı critical Telegram bildirimi gönderirdi; Alertmanager inhibit_rule düzeltildi: `equal: [alertname, instance]` → `source_matchers: NodeDown / target_matchers: warning / equal: [instance]` — eski kural alertname'ler farklı olduğu için hiçbir zaman tetiklenmiyordu (NodeDown critical ≠ Node5HighCPU warning alertname çifti oluşmaz); yeni kural NodeDown tetiklendiğinde aynı instance'ın warning alertlerini suppress eder | rev41 — Backup audit: PITR restore_command `cp` → `gunzip -c %f.gz > %p` (pg_receivewal --compress=9 ile WAL'lar .gz olarak saklanır; PostgreSQL %f'e uzantısız isim geçirir — cp dosyayı bulamazdı, PITR tamamen başarısız olurdu); offsite_sync.sh ClickHouse path `/opt/teqlif/backups/clickhouse/`→`/data/clickhouse/backups/` (clickhouse_backup.sh /data/clickhouse/backups/'e yazıyor — path uyumsuzluğu yüzünden ClickHouse yedekleri hiçbir zaman off-site'a gönderilmiyordu); §10.6.9 başlığı "node3"→"node9" (tüm zamanlayıcılar node9'a kurulur) | rev40 — Backup audit: PITR restore_command `cp` → `gunzip -c %f.gz > %p` (pg_receivewal --compress=9 ile WAL'lar .gz olarak saklanır; PostgreSQL %f'e uzantısız isim geçirir — cp dosyayı bulamazdı, PITR tamamen başarısız olurdu); offsite_sync.sh ClickHouse path `/opt/teqlif/backups/clickhouse/`→`/data/clickhouse/backups/` (clickhouse_backup.sh /data/clickhouse/backups/'e yazıyor — path uyumsuzluğu yüzünden ClickHouse yedekleri hiçbir zaman off-site'a gönderilmiyordu); §10.6.9 başlığı "node3"→"node9" (tüm zamanlayıcılar node9'a kurulur) | rev40 — nginx audit: gateway WebSocket map `'' close`→`'' ''` (boş string) — close göndermek upstream keepalive 32'yi tamamen etkisiz bırakıyordu; her HTTP request yeni TCP bağlantısı açıyordu; storage node7+8 minio.conf `proxy_buffering off` kaldırıldı (nginx dökümantasyonu: buffering kapalıyken proxy_cache çalışmaz — 1GB SSD cache hiç kullanılmıyordu) | rev39 — UFW+LiveKit audit: LiveKit livekit.yaml'a `turn.relay_range_start: 50000` + `relay_range_end: 60000` eklendi — TURN relay portları UFW'deki 50000:60000/udp aralığıyla eşleşmeli; eksik olduğunda relay portları OS ephemeral aralığına (32768+) düşer ve UFW'de açık olmayan portlara isabet eder; tüm diğer UFW kuralları doğru: gateway CF IP kısıtlaması, core WG-only, stream LiveKit portları, storage 80/443, node2/3/9 WG-only | rev38 — Redis service unit audit: cp redis-server.service yaklaşımı kaldırıldı — kopyalanan dosyada PIDFile=/run/redis/redis-server.pid ve RuntimeDirectory=redis tüm üç instance için çakışıyordu (son başlayan servis diğerlerinin PID kaydını eziyordu); her instance için bağımsız cat > ... << EOF ile tam service dosyası yazıldı (RuntimeDirectory=redis-core/redis-orch/redis-guardian, PIDFile yok, StartLimitIntervalSec=300+Burst=5); redis-guardian.conf ve redis-orch.conf'a dir direktifi eklendi (guardian: /var/lib/redis-guardian, appendonly yes verisi /var/lib/redis ile karışmasın; orch: /var/lib/redis-orch); mkdir+chown+chmod redis-orch+guardian dizinleri için eklendi | rev37 — PostgreSQL/PgBouncer/Redis audit: wg_vip_failover.sh MASTER'a `systemctl enable pgbouncer` eklendi (node5'te zaten var — reboot kalıcılığı); BACKUP'a `systemctl disable pgbouncer` eklendi (standby'da yeniden başlamasın); redis-core.conf `requirepass <password>`→`<core_redis_pass>`; redis-orch.conf `requirepass <password>`→`<orch_redis_pass>`; §4.7 `masterauth <password>`→`<core_redis_pass>`/`<orch_redis_pass>`; doğrulama komutları aynı şekilde güncellendi | rev36 — Keepalived/VRRP audit: wg_vip_failover.sh BACKUP branch'e eksik WG routing güncellemesi eklendi (SSH loop tüm non-core node'lara + yerel node6 wg set + wg-quick save — failback sırasında VIP'ler WG routing seviyesinde de node5'e dönmeli); chk_redis script placeholder `<password>`→`<core_redis_pass>` (node5+node6 her ikisinde) | rev35 — Kapsamlı .env + servis audit: GUARDIAN_REDIS_URL tüm 9 .env template'ine eklendi (10.10.0.11:6382 VIP üzerinden; guardian-redis replication direkt IP kullanır ama agent bağlantısı VIP'ten gidebilir); teqlif-guardian.service unit tanımı §5.2'ye eklendi (teqlif-orchestrator+teqlif-metrics'in V2.0 birleşimi, tüm node'larda aynı unit); node5/gateway/stream/storage/node2/node9/staging enable komutları teqlif-metrics→teqlif-guardian; minimal-venv node'larda pip install'a httpx+pyyaml eklendi (guardian_agent.py HTTP health check + node.conf yaml parsing); §7.5/§6.7/§8.3/§10.1 bölüm başlıkları edge_metrics_agent→teqlif-guardian; doğrulama komutları ve checklist teqlif-orchestrator/metrics→guardian; Faz 0 TODO'lardan guardian service ve env ekleme işaretlendi | rev34 — .env audit: node3 staging MINIO_ENDPOINT 10.10.0.7→10.10.0.8 (node6 Core IP, MinIO node7'de); MINIO_ENDPOINT_DM eklendi; node5+node6 template INTERFACE_SPEED_MBPS node6 yorum eklendi | rev33 — Config audit düzeltmeleri: redis-guardian.conf `save "3600 1"` → `save 3600 1` (Redis geçersiz syntax — startup hatası); Prometheus scrape_configs'e node3 (10.10.0.4) eklendi (11 target: 10→11); §4.3 redis-server.service `systemctl disable --now redis-server` eklendi (port 6379 çakışması engeli); `wg_vip_failover.sh` pg_ctl promote'a `pg_is_in_recovery()` guard eklendi (node5 scriptiyle tutarlılık) | rev32 — Ağ topolojisi + güvenlik audit: §3.5 UFW node2+node9 default deny/allow eklendi; §3.5 UFW node3 (Staging) yeni blok eklendi; §2.2 node5 wg0.conf kısayoluna node9 peer eklendi (explicit); §10.0.3 node9 wg0.conf MTU=1420 eklendi; §2.4 ping loop notuna node9 Faz 10 açıklaması eklendi; §7.3 "10 node"→"11 node" + IP listesine node9=10.10.0.13 eklendi; §7.3 Promtail notu "node3'te"→"node9'da" düzeltildi; §4.5 SSH key hedef listesine node9 eklendi; §4.6 pg_hba.conf WAL-replication uyarısı eklendi; §10.6.1 node6 pg_hba.conf güncelleme adımı + failover SSH key eklendi | rev31 — node9 tamamlama: §0.5 node9 .env template eklendi; §1.4 node9 node.conf örneği + guardian_priority=5 eklendi; §4.8 kurulum sırası notu; Faz 10'a §10.0 Ön Kurulum (OS+/data dirs+WireGuard+node.conf+ClickHouse) eklendi; Faz 13 tam bölümü eklendi (WG mesh, ClickHouse prod veri akışı, Prometheus 11 target, Loki 11 node, backup doğrulama, Alertmanager test, Grafana, Guardian entegrasyon, 15 maddelik kontrol listesi); Özet tablo Faz 12/13 sırası düzeltildi | rev30 — node9 entegrasyonu: node9 (10.10.0.13, OVH KS-1-B) eklendi; node3 rol: Monitor+Staging→Staging; ClickHouse node5→node9; Faz 10 Monitoring+Backup+ClickHouse node3→node9; Prometheus scrape+alert node9; Loki listen_address+push_url node9; pg_hba.conf node3→node9; wal_backup_node3→wal_backup_node9; clickhouse_backup.sh lokal (rsync+SSH kaldırıldı); Faz bağımlılık haritası Faz 13 eklendi; failover for loop+ALL_WG_IPS node9; node9 WG peer template; §2.5 sudoers node9; §3.5 Monitor node9; guardian-redis REPLICAOF NO ONE fix (rev29 önceden); LiveKit reconnect fix (rev29); orch_client 3-level fallback (rev29); atomic write guardian_state.json (rev29); UDP election V2.0 simple priority notu (rev29) | rev18 — Tutarlılık + config audit: node5/6 .env metrics alanları eklendi; gateway2 INTERFACE_SPEED_MBPS=4000 ayrı blok; Faz 6.10 fallback test nginx portuna çevrildi; §10.5 duplicate Telegram bildirimi kaldırıldı | rev19 — Dizin izin audit: /var/log/teqlif 750→755; ClickHouse backup dir 755+usermod; /etc/livekit mkdir; /etc/ssl/teqlif node7/8 mkdir; promtail SupplementaryGroups override+__path__ glob; redis_backup BGSAVE+rsync→redis-cli --rdb; backup logrotate node3+node5 | rev20 — Node cross-erişim audit: §2.5 tüm non-core node'larda wg sudoers eklendi; failover step7 sudo bash→wg-quick save; node5 clickhouse-backup sudoers+script sudo rm -rf; postgres_exporter Environment→EnvironmentFile+DATA_SOURCE_NAME env template; Faz 11.4 /etc/ssl/teqlif mkdir eklendi | rev21 — Failover strateji audit: node5 keepalived nopreempt+notify_master/backup eklendi; wg_vip_node5.sh tanımlandı; node6 keepalived.conf vrrp_script blokları eklendi; §5.6 test sadeleştirildi; §5.6.1 failback 6-adım prosedüre dönüştürüldü (keepalived disable→sync→node6 stop→node5 MASTER); §10.6.2 WAL gap uyarısı+pg_basebackup zorunluluğu | rev22 — Dizin yapısı audit: header rol-bazlı ayrıştırıldı (gateway/core/stream/storage/monitoring); /var/log/teqlif 750→755 header düzeltildi; /etc/keepalived/secrets/ chmod 700 eklendi (node5+node6); .env.production chown tucibeyin:tucibeyin 6 node'da eksikti eklendi (node6/node7/gateway1-2/node1/4/node2/node3) | rev23 — Cross-node kesinti kurtarma: §5.6.2 failover WG routing reconciliation prosedürü eklendi; clickhouse_backup.sh STATUS check+cleanup trap eklendi (node5 stale backup birikimi önlendi); pg_basebackup/pg_dump/redis_backup atomik write pattern eklendi (temp→rename) | rev24 — Failsafe audit: nginx Restart=always drop-in (gateway1/2+node7/8); PgBouncer Restart=always drop-in (node5); teqlif/worker/orchestrator StartLimitIntervalSec=300+Burst=10 eklendi; node_exporter --collector.systemd eklendi; Prometheus ServiceFailed+MonitorDiskHigh alert eklendi; DR tablosuna bilinen SPOF'lar+crash-loop recovery eklendi | rev25 — AI Proxy HA: node2→node3→node5 öncelik zinciri; §5.3.1 node5 teqlif-ai-proxy disabled (son çare); §8.5 node3 teqlif-ai-proxy always-on (ilk yedek); §9.2 ai_proxy:active_url doğrulama eklendi; §9.5 AI proxy failover simülasyonu eklendi; DR tablosunda node2 SPOF kaldırıldı → node2+node3 eş zamanlı satırı eklendi; wg_vip_failover.sh MASTER: redis-cli REPLICAOF NO ONE eksikliği düzeltildi (config değişikliği yetmez, live promote şart); failover.env CORE_REDIS_PASS eklendi | rev26 — leader.py kaldırıldı (clean architecture: mechanism duplication — Keepalived zaten lider seçimi yapıyor; Redis lock aynı garantiyi tekrar etmemeli); §0.6'ya tasarım kararı notu eklendi; wg_vip_failover.sh'den orchestrator:leader DEL kaldırıldı; §9.2 doğrulama orchestrator:leader→systemctl is-active ile güncellendi | rev27 — Guardian mimarisi: §0.2 edge_metrics_agent→guardian_agent (local agent+heartbeat+election+command executor); §0.6 orchestrator→Guardian koordinatör (topology-driven, component:env bazlı service state: HEALTHY/DEGRADED/DOWN, job state machine+checkpoint+resume, playbook sistemi, local state cache guardian_state.json, dağıtık lider seçimi Redis NX+UDP peer fallback); §1.4 node.conf YAML full self-description şeması (guardian_priority, network, hardware, components[]); §4.4.1 guardian-redis port 6382 (appendonly yes — job checkpoint kalıcı); tüm node UFW'ye UDP 9901 guardian heartbeat kuralı eklendi; teqlif-orchestrator.service → teqlif-guardian.service geçiş notu | rev28 — traffic_eligible + traffic_type alanları: node.conf her componente eklendi (default: false — insan onayı olmadan routing yapılmaz); routing eligibility kuralı §0.6'ya eklendi (4 şart: eligible+env+systemd+health); internal_mesh/gateway_proxied/direct_internet tipleri; component asla hybrid değildir notu; §0.6 routing modülüne is_routing_eligible() kuralı eklendi)*
