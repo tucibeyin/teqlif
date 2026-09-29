@@ -381,6 +381,10 @@ chmod 600 ~/teqlif-secrets.env
 | `staging_secret_key` | `openssl rand -hex 32` | node3 (staging JWT — prod'dan farklı) |
 | `staging_pg_pass` | `openssl rand -hex 32` | node3 (lokal staging PG) |
 | `staging_redis_pass` | `openssl rand -hex 32` | node3 (lokal staging Redis) |
+| `minio_staging_root_user` | `openssl rand -hex 16` | node3 (lokal MinIO staging — prod'dan izole) |
+| `minio_staging_root_password` | `openssl rand -hex 32` | node3 (lokal MinIO staging) |
+| `livekit_staging_api_key` | `openssl rand -hex 16` | node3 (lokal LiveKit staging — prod'dan izole) |
+| `livekit_staging_api_secret` | `openssl rand -hex 32` | node3 (lokal LiveKit staging) |
 | `minio_root_user` | `openssl rand -hex 16` | node7, node8, node5, node6 |
 | `minio_root_password` | `openssl rand -hex 32` | node7, node8, node5, node6 |
 | `ai_proxy_internal_token` | `openssl rand -hex 32` | node2, node3, node5, node6 |
@@ -854,52 +858,53 @@ GEMINI_API_KEY=<gemini_api_key>
 DATA_DISK_PATH=/
 ```
 
-**node3 `.env.staging` içeriği** (`.env.staging.template` → `/etc/teqlif/.env.staging`; guardian bu dosyayı okur — bkz. §11.3 drop-in):
+**node3 `.env.staging` içeriği** (`.env.staging.template` → `/etc/teqlif/.env.staging`; guardian drop-in bkz. §11.5):
 ```env
-# === Veritabanı & Cache (lokal — node5/6'ya bağımlılık yok) ===
+# === Veritabanı & Cache (lokal — node3 izole) ===
 DATABASE_URL=postgresql+asyncpg://teqlif:<staging_pg_pass>@127.0.0.1:5432/teqlif_staging
 REDIS_URL=redis://:<staging_redis_pass>@127.0.0.1:6379/0
 ORCH_REDIS_URL=redis://:<staging_redis_pass>@127.0.0.1:6379/2
-GUARDIAN_REDIS_URL=redis://:<guardian_redis_pass>@10.10.0.11:6382/0
+GUARDIAN_REDIS_URL=redis://:<staging_redis_pass>@127.0.0.1:6379/3
 USE_PGBOUNCER=False
 
-# === MinIO (prod storage — ayrı staging bucket'ları) ===
+# === MinIO (lokal — node3 izole) ===
 MEDIA_HOST=https://media-staging.teqlif.com
 UPLOADS_HOST=https://uploads-staging.teqlif.com
 MINIO_BUCKET=teqlif-staging
 MINIO_DM_BUCKET=teqlif-dm-staging
-MINIO_ENDPOINT=http://10.10.0.8:9000
-MINIO_ENDPOINT_DM=http://10.10.0.8:9000
-MINIO_ACCESS_KEY=<minio_root_user>
-MINIO_SECRET_KEY=<minio_root_password>
+MINIO_ENDPOINT=http://127.0.0.1:9000
+MINIO_ENDPOINT_DM=http://127.0.0.1:9000
+MINIO_ACCESS_KEY=<minio_staging_root_user>
+MINIO_SECRET_KEY=<minio_staging_root_password>
+MINIO_ROOT_USER=<minio_staging_root_user>
+MINIO_ROOT_PASSWORD=<minio_staging_root_password>
+MINIO_VOLUMES=/var/lib/minio-staging
 MINIO_SECURE=False
 MINIO_REGION=us-east-1
 
-# === ClickHouse ===
-CLICKHOUSE_HOST=10.10.0.13
-CLICKHOUSE_PORT=8123
-CLICKHOUSE_DB=teqlif_stag_analytics
-CLICKHOUSE_USER=teqlif
-CLICKHOUSE_PASSWORD=<teqlif_ch_password>
+# === ClickHouse (devre dışı — 3.8GB RAM) ===
+CLICKHOUSE_ENABLED=False
+CLICKHOUSE_HOST=
 
 # === Guardian / Orchestrator ===
 EDGE_NODE_ID=node3
 DATA_DISK_PATH=/
 
-# === AI Proxy ===
-AI_PROXY_URL=http://127.0.0.1:8001      # lokal AI proxy (staging); orch redis'ten override edilmez
+# === AI Proxy (lokal) ===
+AI_PROXY_URL=http://127.0.0.1:8001
 AI_PROXY_INTERNAL_TOKEN=<ai_proxy_internal_token>
 GROQ_API_KEY=<groq_api_key>
 GEMINI_API_KEY=<gemini_api_key>
 
 # === JWT / Auth ===
-SECRET_KEY=<staging_secret_key>          # prod'dan farklı — aynı olmamalı
+SECRET_KEY=<staging_secret_key>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=43200
 
-# === LiveKit ===
-LIVEKIT_API_KEY=<livekit_api_key>
-LIVEKIT_API_SECRET=<livekit_api_secret>
+# === LiveKit (lokal — node3 izole) ===
+LIVEKIT_URL=http://127.0.0.1:7880
+LIVEKIT_API_KEY=<livekit_staging_api_key>
+LIVEKIT_API_SECRET=<livekit_staging_api_secret>
 
 # === Firebase (FCM Push) ===
 FIREBASE_SERVICE_ACCOUNT=/etc/teqlif/firebase-service-account.json
@@ -5780,7 +5785,7 @@ rclone lsd b2backup:                         # → bucket listesi görünmeli
 
 **Önkoşul:** Faz 10 tamamlandı.
 
-**Tasarım:** node3 standalone staging node'u — tüm bağımlılıklar lokal. Monorepo, venv ve servis tanımları diğer node'larla aynı yapıda; sadece `/etc/teqlif/.env.staging` farklı. node5/node6'ya bağımlılık yok.
+**Tasarım:** node3 tam izole staging node'u — tüm bağımlılıklar lokal. PostgreSQL, Redis, MinIO, LiveKit dahil tüm servisler node3 üzerinde çalışır; prod node5/6/7/8'e bağımlılık yok. ClickHouse analytics devre dışı (3.8GB RAM, non-critical). HTTPS trafiği yine de gateway üzerinden akar; iç stack lokal.
 
 ### 11.1 PostgreSQL — node3 lokal
 
@@ -5826,7 +5831,80 @@ systemctl enable --now redis-staging
 redis-cli -h 127.0.0.1 -p 6379 -a <staging_redis_pass> ping  # → PONG
 ```
 
-### 11.3 Staging App
+### 11.3 MinIO — node3 lokal (staging)
+
+node3'ün kendi MinIO instance'ı: `teqlif-staging` ve `teqlif-dm-staging` bucket'ları lokal. Prod node7/node8'e bağımlılık yok.
+
+```bash
+MINIO_RELEASE="RELEASE.2024-11-07T00-52-20Z"
+curl -fsSL "https://github.com/minio/minio/releases/download/${MINIO_RELEASE}/minio.linux-amd64.${MINIO_RELEASE}" \
+  -o /usr/local/bin/minio
+chmod 755 /usr/local/bin/minio
+
+mkdir -p /var/lib/minio-staging /var/log/teqlif/minio
+chown tucibeyin:tucibeyin /var/lib/minio-staging /var/log/teqlif/minio
+
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/systemd/minio-staging.service \
+   /etc/systemd/system/minio-staging.service
+systemctl daemon-reload
+systemctl enable --now minio-staging
+```
+
+**Staging bucket'larını oluştur** (mc, binary node9'da olduğu gibi indir):
+```bash
+MC_RELEASE="RELEASE.2024-11-07T00-52-20Z"
+curl -fsSL "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.${MC_RELEASE}" \
+  -o /usr/local/bin/mc && chmod 755 /usr/local/bin/mc
+
+source /etc/teqlif/.env.staging
+mc alias set local "http://127.0.0.1:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
+mc mb local/teqlif-staging
+mc mb local/teqlif-dm-staging
+mc anonymous set download local/teqlif-staging   # public okuma (media)
+# teqlif-dm-staging private kalır — presigned GET ile erişilir
+```
+
+**`/etc/nginx/sites-available/staging`** güncellemesi (media-staging + uploads-staging vhost eklendi):
+```bash
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/resources/nginx/sites-available/staging \
+   /etc/nginx/sites-available/staging
+nginx -t && systemctl reload nginx
+```
+
+> **DNS (Cloudflare):** `media-staging.teqlif.com` → node3 public IP (Proxied); `uploads-staging.teqlif.com` → node3 public IP (**DNS Only** — presigned PUT imzası CF proxy'den geçemez).
+
+### 11.4 LiveKit — node3 lokal (staging)
+
+node3'ün kendi LiveKit instance'ı: prod node1/node4'e bağımlılık yok.
+
+```bash
+LIVEKIT_VER="v1.7.2"
+curl -fsSL "https://github.com/livekit/livekit/releases/download/${LIVEKIT_VER}/livekit_linux_amd64.tar.gz" \
+  | tar -xz -C /usr/local/bin livekit-server
+
+mkdir -p /etc/livekit
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/resources/livekit/livekit.yaml \
+   /etc/livekit/livekit-staging.yaml
+# <placeholder> değerlerini doldur: staging_redis_pass, livekit_staging_api_key/secret
+
+cp /var/www/teqlif.com/deploy/scale/V2.0/node3/systemd/livekit-staging.service \
+   /etc/systemd/system/livekit-staging.service
+systemctl daemon-reload
+systemctl enable --now livekit-staging
+```
+
+**UFW — LiveKit portları:**
+```bash
+ufw allow 7880/tcp   # LiveKit API (iç mesh — sadece WireGuard üzerinden erişilir)
+ufw allow 7881/tcp   # RTC TCP
+ufw allow 7882/udp   # RTC UDP
+ufw allow 3478/udp   # TURN UDP
+ufw allow 5349/tcp   # TURN TLS
+```
+
+> **DNS (Cloudflare):** `live-staging.teqlif.com` → node3 public IP (**DNS Only** — TURN TLS direkt bağlantı gerektirir).
+
+### 11.5 Staging App
 
 node3 ayrı bir sunucu (ZAP VA) — kendi monorepo'su ve venv'i gerekir.
 
@@ -5895,7 +5973,7 @@ systemctl daemon-reload
 systemctl enable --now teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging teqlif-guardian
 ```
 
-### 11.4 Nginx (staging erişimi — node3)
+### 11.6 Nginx (staging erişimi — node3)
 
 ```bash
 apt-get install -y nginx
@@ -5939,25 +6017,30 @@ ln -s /etc/nginx/sites-available/staging /etc/nginx/sites-enabled/
 nginx -t && systemctl enable --now nginx
 ```
 
-### 11.5 Faz 11 Doğrulama
+### 11.7 Faz 11 Doğrulama
 
 ```bash
 curl -s https://staging.teqlif.com/health  # → 200
 psql -h 127.0.0.1 -U teqlif -d teqlif_staging -c '\dt'  # → alembic tabloları
 redis-cli -h 127.0.0.1 -p 6379 -a <staging_redis_pass> ping  # → PONG
-systemctl is-active teqlif-staging teqlif-worker-staging redis-staging postgresql teqlif-guardian
+curl -s http://127.0.0.1:9000/minio/health/live  # → 200 (MinIO lokal)
+curl -s http://127.0.0.1:7880  # → LiveKit API yanıt
+systemctl is-active teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging \
+  redis-staging postgresql minio-staging livekit-staging teqlif-ai-proxy teqlif-guardian
 ```
 
 - [ ] `alembic upgrade head` (staging DB — lokal 127.0.0.1)
-- [ ] Servisler: `teqlif-staging`, `teqlif-worker-staging`, `redis-staging`, `postgresql`, `teqlif-guardian`
-- [ ] MinIO staging bucket erişimi: `mc ls minio7/teqlif-staging`
+- [ ] Servisler: `teqlif-staging`, `teqlif-worker-staging`, `teqlif-worker-critical-staging`, `redis-staging`, `postgresql`, `minio-staging`, `livekit-staging`, `teqlif-ai-proxy`, `teqlif-guardian`
+- [ ] MinIO bucket'ları: `mc ls local/teqlif-staging` + `mc ls local/teqlif-dm-staging`
+- [ ] Presigned upload test: `uploads-staging.teqlif.com` → PUT 200
 
 **Cloudflare DNS:**
-- [ ] `uploads-staging.teqlif.com` → node3 public IP (DNS Only)
+- [ ] `uploads-staging.teqlif.com` → node3 public IP (**DNS Only**)
 - [ ] `media-staging.teqlif.com`   → node3 public IP (Proxied)
-- [ ] `staging.teqlif.com`         → node3 public IP (Proxied)
+- [ ] `live-staging.teqlif.com`    → node3 public IP (**DNS Only**)
+- [ ] `staging.teqlif.com`         → node3 public IP (Proxied, gateway üzerinden)
 
-### 11.6 Entegrasyon Testleri
+### 11.8 Entegrasyon Testleri
 
 - [ ] Kullanıcı akışı: kayıt → ilan oluştur → medya yükle → teklif ver → mesajlaş
 - [ ] DM medya: upload → `cache_key` alanı mevcut → mobile cache doğru çalışıyor

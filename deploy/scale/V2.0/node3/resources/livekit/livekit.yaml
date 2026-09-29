@@ -1,0 +1,31 @@
+port: 7880
+bind_addresses:
+  - ""
+
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+  ice_lite: false
+
+turn:
+  enabled: true
+  domain: live-staging.teqlif.com
+  tls_port: 5349
+  udp_port: 3478
+  relay_range_start: 50000
+  relay_range_end: 60000
+  cert_file: /etc/ssl/teqlif/cf-origin.crt
+  key_file:  /etc/ssl/teqlif/cf-origin.key
+
+redis:
+  address: 127.0.0.1:6379
+  db: 1
+  password: <staging_redis_pass>
+
+keys:
+  <livekit_staging_api_key>: <livekit_staging_api_secret>
+
+logging:
+  level: info
+  json: true
