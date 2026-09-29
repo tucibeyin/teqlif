@@ -9,7 +9,7 @@ User=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 EnvironmentFile=/etc/teqlif/.env.staging
 ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn app.ai_proxy.main:app \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port 8001 \
   --workers 1
 Restart=always

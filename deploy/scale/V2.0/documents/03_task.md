@@ -61,7 +61,7 @@
     - Orch-redis'e yaz: `HSET edge:metrics:{node_id}` EXPIRE 6, `HSET edge:health:{node_id}` EXPIRE 6, `HSET edge:telemetry:{node_id}` EXPIRE 10
     - `guardian_state.json` okuma → lokal routing önbelleği
     - Local healer: health=="failed" + restart count > threshold → `systemctl reset-failed + start`, `guardian:events`'e yaz
-  - **B) Heartbeat + Election (her 5s UDP port 9901):**
+  - **B) Heartbeat + Election (her 5s UDP 9901):**
     - UDP broadcast → tüm WG peer'larına heartbeat gönder
     - Peer tablosunu tut
     - Adım 1: `SET guardian:leader EX 15 NX` → başarılı ise lider, başarısız ise takip et; `EXPIRE guardian:leader 15` (TTL yenile)
@@ -695,7 +695,7 @@
 - [ ] **10.6.4 pg_dump:** günlük timer → `pg_dump -h 10.10.0.10 -U teqlif teqlif | gzip`; eski dumplar temizle
 - [ ] **10.6.6 Redis RDB:** haftalık timer → `redis-cli --rdb /tmp/...`; atomic temp→rename
 - [ ] **10.6.7 ClickHouse yedek:** günlük timer → `clickhouse-backup create`; 2 günden eski localler sil
-- [ ] **10.6.8 MinIO soğuk arşiv:** aylık timer → `mc mirror node7/teqlif node9-archive/teqlif`
+- [ ] **10.6.8 MinIO soğuk arşiv:** günlük timer (02:00 UTC) → `minio_backup.sh`; node7 primary (node8 fallback); `teqlif` + `teqlif-dm` bucket'ları → `/data/backups/minio/` lokal arşive `mc mirror --overwrite --remove`
 - [ ] **10.6.9 Off-site rclone:** günlük timer → `rclone sync /data/teqlif_backups b2backup:teqlif-backups`; B2 retention 7d
 - [ ] **10.6.11 WG private key kurtarma:** tüm 11 node private key'ini şifreli biçimde password manager'a kaydet
 
