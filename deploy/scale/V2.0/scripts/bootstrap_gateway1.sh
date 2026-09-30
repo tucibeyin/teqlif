@@ -11,6 +11,7 @@ NODE_ID="gateway1"
 WG_IP="10.10.0.2"
 REPO_DIR="${REPO_DIR:-/var/www/teqlif.com}"
 NODE_DIR="${REPO_DIR}/deploy/scale/V2.0/${NODE_ID}"
+SECRETS_FILE="${SECRETS_FILE:-}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 main() {
@@ -54,6 +55,10 @@ main() {
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
     setup_guardian "${NODE_DIR}"
 
+    # Secrets uygula (SECRETS_FILE env var verilmişse)
+    if [ -n "${SECRETS_FILE:-}" ]; then
+        apply_secrets "${SECRETS_FILE}" /etc/teqlif /etc/wireguard
+    fi
     print_summary "${NODE_ID}" "${WG_IP}" \
         "wg0.conf içindeki peer <PublicKey> placeholder'larını doldur" \
         "CF Origin Certificate'i /etc/ssl/teqlif/cf-origin.{crt,key} konumuna kopyala" \

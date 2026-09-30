@@ -12,18 +12,27 @@ Her node için tek adımlı OS kurulum scripti. Script tamamlandığında:
 ```bash
 # VPS'e root olarak SSH ile giriş yap, ardından:
 
-# Seçenek A — Repo zaten klonlu ise:
-bash /var/www/teqlif.com/deploy/scale/V2.0/scripts/bootstrap_<node>.sh
+# 1. secrets.env dosyasını kopyala (lokal makineden):
+scp deploy/scale/V2.0/secrets.env root@<node-ip>:/tmp/teqlif-secrets.env
+
+# 2. Bootstrap çalıştır (Seçenek A — Repo zaten klonlu ise):
+SECRETS_FILE=/tmp/teqlif-secrets.env \
+  bash /var/www/teqlif.com/deploy/scale/V2.0/scripts/bootstrap_<node>.sh
 
 # Seçenek B — GitHub token ile ilk kurulum:
 export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
 export SSH_PUBKEY="ssh-ed25519 AAAA... tucibeyin"
+export SECRETS_FILE="/tmp/teqlif-secrets.env"
 bash bootstrap_<node>.sh
 
 # Seçenek C — Deploy key ile ilk kurulum:
 export DEPLOY_KEY_PATH="/root/.ssh/deploy_key"
 export SSH_PUBKEY="ssh-ed25519 AAAA... tucibeyin"
+export SECRETS_FILE="/tmp/teqlif-secrets.env"
 bash bootstrap_<node>.sh
+
+# NOT: SECRETS_FILE verilmezse bootstrap çalışır ama placeholder'lar doldurulmaz.
+# Bu durumda servisler elle .env düzenlenmeden başlatılamaz.
 ```
 
 ## Node Haritası

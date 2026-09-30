@@ -475,6 +475,69 @@ ufw_enable() {
     log_ok "UFW aktif"
 }
 
+# ── Secrets uygula ────────────────────────────────────────────────────────────
+# Kullanım: apply_secrets <secrets_file> <node_config_dir...>
+# secrets_file: key=value satırları; # yorum ve boş satırlar atlanır
+# node_config_dir: placeholder'ların <key> biçiminde bulunduğu dizinler
+# Bittikten sonra secrets dosyası shred ile güvenli silinir.
+apply_secrets() {
+    local secrets_file="${1:?Secrets dosyası belirtilmeli}"
+    shift
+    local config_dirs=("$@")
+
+    [ -f "${secrets_file}" ] || { log_err "Secrets dosyası bulunamadı: ${secrets_file}"; return 1; }
+
+    log_step "Secrets uygulanıyor"
+
+    local applied=0
+    local skipped=0
+
+    while IFS='=' read -r key value || [ -n "${key}" ]; do
+        # Yorum ve boş satırları atla
+        [[ "${key}" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${key// }" ]] && continue
+        [[ -z "${value}" ]] && { log_warn "Boş değer, atlandı: ${key}"; ((skipped++)); continue; }
+
+        # key ve value temizle (baş/son boşluklar)
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
+        value="${value#"${value%%[![:space:]]*}"}"
+        value="${value%"${value##*[![:space:]]}"}"
+
+        # Tüm config dizinlerindeki dosyalarda placeholder <key> → value
+        local found=0
+        for dir in "${config_dirs[@]}"; do
+            [ -d "${dir}" ] || continue
+            while IFS= read -r -d '' file; do
+                if grep -qF "<${key}>" "${file}" 2>/dev/null; then
+                    # sed: / karakteri değerde bulunabilir → farklı delimiter kullan
+                    sed -i "s|<${key}>|${value}|g" "${file}"
+                    found=1
+                fi
+            done < <(find "${dir}" -type f -print0)
+        done
+
+        if [ "${found}" -eq 1 ]; then
+            log_ok "  ${key}"
+            ((applied++))
+        else
+            log_info "  ${key} — dosyada placeholder bulunamadı, atlandı"
+            ((skipped++))
+        fi
+    done < "${secrets_file}"
+
+    log_ok "Secrets uygulandı: ${applied} başarılı, ${skipped} atlandı"
+
+    # Güvenli sil (shred yoksa rm)
+    if command -v shred &>/dev/null; then
+        shred -u "${secrets_file}"
+        log_ok "Secrets dosyası güvenli silindi (shred): ${secrets_file}"
+    else
+        rm -f "${secrets_file}"
+        log_warn "Secrets dosyası silindi (shred yok, rm kullanıldı): ${secrets_file}"
+    fi
+}
+
 # ── Özet yazdır ───────────────────────────────────────────────────────────────
 print_summary() {
     local node_id="${1}"

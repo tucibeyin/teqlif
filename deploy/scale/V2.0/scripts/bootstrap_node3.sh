@@ -10,6 +10,7 @@ NODE_ID="node3"
 WG_IP="10.10.0.4"
 REPO_DIR="${REPO_DIR:-/var/www/teqlif.com}"
 NODE_DIR="${REPO_DIR}/deploy/scale/V2.0/${NODE_ID}"
+SECRETS_FILE="${SECRETS_FILE:-}"
 MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2024-11-07T00-52-20Z}"
 MC_RELEASE="${MC_RELEASE:-RELEASE.2024-11-07T00-52-20Z}"
 LIVEKIT_VER="${LIVEKIT_VER:-v1.7.2}"
@@ -55,6 +56,10 @@ main() {
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
     setup_guardian "${NODE_DIR}"
 
+    # Secrets uygula (SECRETS_FILE env var verilmişse)
+    if [ -n "${SECRETS_FILE:-}" ]; then
+        apply_secrets "${SECRETS_FILE}" /etc/teqlif /etc/wireguard /etc/redis /etc/livekit
+    fi
     print_summary "${NODE_ID}" "${WG_IP}" \
         "/etc/teqlif/.env.staging içindeki <placeholder>'ları doldur" \
         "wg0.conf peer <PublicKey> placeholder'larını doldur" \
