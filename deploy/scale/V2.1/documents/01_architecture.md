@@ -36,7 +36,7 @@
 
 ### 2.2 Sanal Ağ (WireGuard Mesh)
 
-- **Protokol:** WireGuard UDP, port 51820
+- **Protokol:** WireGuard UDP, port 51820 (istisna: node5 port **443** — Zap-Hosting DDoS filtresi OVH kaynaklı UDP 51821'i engelliyor; UDP 443/QUIC geçiyor)
 - **Subnet:** 10.10.0.0/24
 - **Topoloji:** Full mesh — her node diğer tüm node'lara P2P tünel
 - **Şifreleme:** ChaCha20-Poly1305 (WireGuard yerleşik)
@@ -63,6 +63,7 @@ node1 ←───────────────────────�
 | Redis core (node1) | 127.0.0.1 + 10.10.0.1 | 6379 | WG mesh (tüm node'lar) |
 | MinIO (node1) | 0.0.0.0 | 9000/9001 | nginx + WG |
 | LiveKit (node3/4) | 0.0.0.0 | 7880/7881/443 | İnternet + WG |
+| LiveKit staging (node5) | 127.0.0.1 | 7890 | nginx proxy → live-staging.teqlif.com |
 | AI Proxy (node5/6) | 0.0.0.0 | 8001 | WG mesh |
 | ClickHouse (node2) | 127.0.0.1 + 10.10.0.2 | 8123/9000 | WG mesh |
 | Prometheus (node2) | 10.10.0.2 | 9090 | WG mesh |
@@ -77,11 +78,19 @@ node1 ←───────────────────────�
 ### 3.1 API Katmanı
 
 ```
-Mobil/Web İstemci
+Mobil/Web İstemci (Production)
   │
   ├── REST API  → POST/GET/PATCH https://api.teqlif.com/v1/...
   ├── WebSocket → wss://api.teqlif.com/ws/...
-  └── Media     → https://uploads.teqlif.com/...
+  ├── Media     → https://uploads.teqlif.com/...
+  └── LiveKit   → wss://stream.teqlif.com (node3/4 round-robin)
+
+Mobil/Web İstemci (Staging — node5)
+  │
+  ├── REST API  → https://api-staging.teqlif.com/v1/...
+  ├── WebSocket → wss://api-staging.teqlif.com/ws/...
+  ├── Media     → https://staging.uploads.teqlif.com/...
+  └── LiveKit   → wss://live-staging.teqlif.com (node5:7890)
 ```
 
 - **Auth:** JWT (HS256, `secret_key` node1'de)
@@ -104,6 +113,7 @@ Mobil/Web İstemci
 | Promtail (tüm) | Loki (node2) | HTTP Push | Log iletimi |
 | Prometheus (node2) | /metrics (tüm) | HTTP Scrape | Metrik toplama |
 | pg_receivewal (node2) | PG (node1) | Replication protocol | WAL stream |
+| Metrics Agent (tüm node'lar) | Redis core (node1) | TCP 6379 WG | Servis sağlığı + kaynak metrik yazma + Telegram alert |
 
 ### 3.3 Harici Servis Entegrasyonları
 
@@ -119,6 +129,7 @@ Mobil/Web İstemci
 | Cloudflare Turnstile | CAPTCHA | Site/Secret Key |
 | Sentry | Hata izleme | DSN |
 | Backblaze B2 | Ofsite backup | rclone config |
+| Telegram Bot API | AlertManager (Metrics Agent) | Bot Token + Chat ID |
 
 ### 3.4 AI Proxy Failover Zinciri
 
@@ -130,7 +141,25 @@ FastAPI (node1)
   └── Fallback → node5:8001 (Münster EU, Groq + Gemini limitli)
 ```
 
-### 3.5 Backup Veri Akışı
+### 3.5 Dağıtık Metrics Agent + AlertManager
+
+Her node'da `teqlif-metrics-agent.service` olarak çalışır (`backend/scripts/edge_metrics_agent.py`).
+
+**Görevleri:**
+- Yerel servislerin sağlık kontrolü (HTTP ping + systemd unit durumu)
+- CPU / RAM / Disk kaynak metrikleri
+- Tüm metrikleri Redis core'a (node1 `10.10.0.1:6379`) yazar → EdgeOrchestrator buradan okur
+
+**AlertManager (gömülü):**
+- Servis durumu değişiminde (DOWN / kurtarıldı) Telegram bildirimi
+- Kaynak eşik aşımında Telegram uyarısı: CPU >%90, RAM >%90, Disk >%85
+- İlk döngüde baseline alır — restart sonrası false positive yok
+- Servis alertleri: 5 dk cooldown; kaynak alertleri: 30 dk cooldown
+- Config: `.env.metrics-agent` → `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+
+**Not:** node2'deki Prometheus Alertmanager (port 9093) ayrı bir bileşendir — Prometheus kural tabanlı alertler için. Metrics Agent AlertManager ise servis/kaynak bazlı anlık bildirim içindir.
+
+### 3.6 Backup Veri Akışı
 
 ```
 node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/pg_wal/
@@ -263,17 +292,28 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 | CPU | 4 vCPU AMD EPYC 7763 | KVM |
 | RAM | 7.8GB | DDR4 |
 | Disk | 49GB SSD | - |
-| AI Proxy | uvicorn + FastAPI | - |
-| Staging stack | PG + Redis + MinIO + LiveKit | lokal, izole |
+| nginx | Staging ingress | latest stable |
+| Staging stack | PG (5433) + Redis (6390) + MinIO (9100) + LiveKit (7890) | lokal, izole |
+| AI Proxy | uvicorn + FastAPI | port 8001 |
 
 **Kritik OS ayarları:**
 - `vm.swappiness=20` (7.8GB kısıtlı)
 - THP = `never`
 
+**Staging nginx blokları:**
+- `staging.teqlif.com` → FastAPI staging :8000 (Cloudflare Proxy)
+- `api-staging.teqlif.com` → FastAPI staging :8000 (Cloudflare Proxy)
+- `staging.uploads.teqlif.com` → MinIO staging :9100 (DNS Only, Let's Encrypt)
+- `live-staging.teqlif.com` → LiveKit staging :7890 (DNS Only, Let's Encrypt)
+
+**WireGuard:** ListenPort = **443** (Zap-Hosting DDoS filtresi UDP 51821'i engelliyor)
+
 **UFW:**
 ```
 22/tcp     SSH
-51820/udp  WireGuard
+80/tcp     HTTP (nginx → HTTPS redirect, certbot webroot)
+443/tcp    HTTPS nginx (staging stack)
+443/udp    WireGuard (Zap-Hosting DDoS bypass — UDP 443/QUIC)
 8001/tcp   AI Proxy  (WG only: 10.10.0.0/24)
 ```
 
@@ -346,9 +386,11 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  LAYER 1 — İnternet / Cloudflare Edge                        │
-│  teqlif.com, api.teqlif.com → Cloudflare Proxy              │
-│  uploads.teqlif.com, stream.teqlif.com → DNS Only (direkt)  │
+│  LAYER 1 — İnternet / Cloudflare Edge                                      │
+│  teqlif.com, api.teqlif.com → Cloudflare Proxy (prod)                      │
+│  staging.teqlif.com, api-staging.teqlif.com → Cloudflare Proxy (staging)   │
+│  uploads.teqlif.com, stream.teqlif.com → DNS Only (prod, direkt)           │
+│  staging.uploads.teqlif.com, live-staging.teqlif.com → DNS Only (staging)  │
 └──────────────────────┬──────────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
@@ -499,7 +541,7 @@ Script otomatik:
 | node1 | 22/tcp, 51820/udp, 80/tcp, 443/tcp, WG-only: 5432/6432/6379/9000/8000 |
 | node2 | 22/tcp, 51820/udp, WG-only: 9090/3000/3100/9093/8123 |
 | node3/4 | 22/tcp, 51820/udp, 443/tcp+udp, WG-only: 7880/7881, 50000-60000/udp |
-| node5 | 22/tcp, 51820/udp, WG-only: 8001 |
+| node5 | 22/tcp, 80/tcp, 443/tcp (nginx), 443/udp (WireGuard), WG-only: 8001 |
 | node6 | 22/tcp, 51820/udp, WG-only: 8001 |
 
 ### 8.2 Güvenlik Katmanları
