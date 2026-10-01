@@ -350,7 +350,6 @@ install_grafana_repo() {
         log_info "Grafana repo zaten mevcut"; return
     fi
     log_step "Grafana apt repo"
-    apt-get install -y -qq apt-transport-https software-properties-common
     curl -fsSL https://apt.grafana.com/gpg.key \
         | gpg --dearmor | tee /usr/share/keyrings/grafana.gpg > /dev/null
     echo "deb [signed-by=/usr/share/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
