@@ -49,7 +49,6 @@ main() {
     setup_loki         "${NODE_DIR}"
     install_alertmanager
     setup_alertmanager "${NODE_DIR}"
-    install_rclone
     setup_backup_services "${NODE_DIR}"
     install_promtail
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
@@ -68,8 +67,7 @@ main() {
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
         "systemctl start prometheus loki prometheus-alertmanager grafana-server" \
-        "Backup timer'larını etkinleştir: systemctl enable --now teqlif-*.timer" \
-        "rclone config → b2backup remote ekle"
+        "Backup timer'larını etkinleştir: systemctl enable --now teqlif-*.timer"
 }
 
 setup_backup_directories() {
@@ -188,13 +186,6 @@ setup_alertmanager() {
     cp "${node_dir}/resources/alertmanager/alertmanager.yml" /etc/prometheus/alertmanager.yml
     systemctl enable prometheus-alertmanager
     log_ok "prometheus-alertmanager enable edildi"
-}
-
-install_rclone() {
-    log_step "rclone"
-    apt-get install -y -qq unzip
-    curl -fsSL https://rclone.org/install.sh | bash
-    log_ok "rclone kuruldu"
 }
 
 setup_backup_services() {
