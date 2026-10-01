@@ -35,7 +35,7 @@ done
 log "git pull — $REPO"
 cd "$REPO"
 BEFORE=$(git rev-parse HEAD)
-git pull --ff-only 2>&1 || err "git pull başarısız — önce merge conflict'i çöz"
+su -s /bin/bash tucibeyin -c "cd $REPO && git pull --ff-only" 2>&1 || err "git pull başarısız — önce merge conflict'i çöz"
 AFTER=$(git rev-parse HEAD)
 
 if [ "$BEFORE" = "$AFTER" ]; then
