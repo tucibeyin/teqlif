@@ -3,14 +3,15 @@
 Edge Metrics Agent — V2.1
 
 Her node'da çalışır; donanım + servis metriklerini Core Redis'e yazar.
-EdgeOrchestrator Redis'ten okuyarak routing kararları verir ve AlertManager
-anormallik tespit ettiğinde Telegram bildirim gönderir.
+EdgeOrchestrator Redis'ten okuyarak routing kararları verir.
+AlertManager servis/kaynak anormalliklerini tespit edince Telegram bildirim gönderir.
 
 Gerekli ortam değişkenleri:
   CORE_REDIS_URL, EDGE_NODE_ID, EDGE_NODE_TYPE, NODE_SERVICES
   (Opsiyonel) EDGE_LIVEKIT_URL, EDGE_MINIO_URL, EDGE_AI_PROXY_URL,
                LIVEKIT_API_KEY, LIVEKIT_API_SECRET, EDGE_NODE_REGION,
-               DISK_PATH, EDGE_METRICS_INTERVAL_SEC
+               DISK_PATH, EDGE_METRICS_INTERVAL_SEC,
+               TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 """
 
 import json
@@ -46,6 +47,103 @@ def _require(key: str) -> str:
         logger.error(f"Required env var missing: {key}")
         raise SystemExit(1)
     return v
+
+
+# ── AlertManager ──────────────────────────────────────────────────────────
+
+class AlertManager:
+    """
+    Servis sağlık değişikliklerini ve kaynak eşiklerini izler.
+    Durum geçişlerinde Telegram bildirimi gönderir.
+    """
+
+    _SVC_COOLDOWN_SEC      = 300   # Aynı servis için tekrar uyarı aralığı (5 dk)
+    _RESOURCE_COOLDOWN_SEC = 1800  # Kaynak uyarısı tekrar aralığı (30 dk)
+    _CPU_THRESHOLD         = 90.0
+    _RAM_THRESHOLD         = 90.0
+    _DISK_THRESHOLD        = 85.0
+
+    def __init__(self, node_id: str, token: str, chat_id: str) -> None:
+        self._node_id        = node_id
+        self._token          = token
+        self._chat_id        = chat_id
+        self._enabled        = bool(token and chat_id)
+        self._prev_health:  dict[str, bool]  = {}
+        self._last_alert_ts: dict[str, float] = {}
+        self._initialized    = False  # İlk döngüde baseline al, alert gönderme
+
+        if not self._enabled:
+            logger.info("AlertManager: TELEGRAM_BOT_TOKEN veya TELEGRAM_CHAT_ID yok — alert devre dışı")
+
+    # ── Internal ──────────────────────────────────────────────────────────
+
+    def _send(self, text: str) -> None:
+        if not self._enabled:
+            return
+        try:
+            requests.post(
+                f"https://api.telegram.org/bot{self._token}/sendMessage",
+                json={"chat_id": self._chat_id, "text": text, "parse_mode": "HTML"},
+                timeout=5,
+            )
+        except Exception as exc:
+            logger.warning(f"AlertManager: Telegram gönderimi başarısız: {exc}")
+
+    def _alert(self, key: str, text: str, cooldown: float) -> None:
+        """Cooldown kontrolüyle alert gönderir."""
+        now = time.time()
+        if now - self._last_alert_ts.get(key, 0) < cooldown:
+            return
+        logger.warning(f"ALERT: {text.replace('<b>', '').replace('</b>', '').replace('<code>', '').replace('</code>', '')}")
+        self._send(text)
+        self._last_alert_ts[key] = now
+
+    # ── Servis health ──────────────────────────────────────────────────────
+
+    def check_services(self, svc_results: dict[str, Any]) -> None:
+        """Servis sonuçlarını önceki döngüyle karşılaştırır, geçişlerde alert atar."""
+        for svc, result in svc_results.items():
+            healthy = result.get("healthy", False)
+            prev    = self._prev_health.get(svc)
+
+            if not self._initialized or prev is None:
+                # İlk döngü: sadece baseline yaz
+                self._prev_health[svc] = healthy
+                continue
+
+            if healthy == prev:
+                continue  # Durum değişmedi
+
+            error = result.get("error", "")
+            if not healthy:
+                msg = f"🔴 <b>{self._node_id}</b> | <code>{svc}</code> — DOWN"
+                if error:
+                    msg += f"\n<code>{error[:200]}</code>"
+            else:
+                msg = f"✅ <b>{self._node_id}</b> | <code>{svc}</code> — kurtarıldı"
+
+            self._alert(f"svc:{svc}", msg, self._SVC_COOLDOWN_SEC)
+            self._prev_health[svc] = healthy
+
+        self._initialized = True
+
+    # ── Kaynak eşikleri ────────────────────────────────────────────────────
+
+    def check_resources(self, cpu: float, ram_pct: float, disk_pct: float) -> None:
+        """CPU / RAM / Disk eşik aşımlarında alert atar."""
+        checks = [
+            ("cpu",  cpu,      self._CPU_THRESHOLD,  f"CPU %{cpu:.0f}"),
+            ("ram",  ram_pct,  self._RAM_THRESHOLD,  f"RAM %{ram_pct:.0f}"),
+            ("disk", disk_pct, self._DISK_THRESHOLD, f"Disk %{disk_pct:.0f}"),
+        ]
+        for key, value, threshold, label in checks:
+            if value < threshold:
+                continue
+            msg = (
+                f"⚠️ <b>{self._node_id}</b> | {label} "
+                f"(eşik: %{threshold:.0f})"
+            )
+            self._alert(f"resource:{key}", msg, self._RESOURCE_COOLDOWN_SEC)
 
 
 # ── Service health checks ─────────────────────────────────────────────────
@@ -247,6 +345,12 @@ def main() -> None:
         "clickhouse_port":    _env("CLICKHOUSE_PORT", "8123"),
     }
 
+    alerter = AlertManager(
+        node_id    = node_id,
+        token      = _env("TELEGRAM_BOT_TOKEN"),
+        chat_id    = _env("TELEGRAM_CHAT_ID"),
+    )
+
     logger.info(f"Node={node_id}  Type={node_type}  Services={services}  Interval={interval}s")
 
     r = redis_lib.Redis.from_url(core_redis_url, decode_responses=True)
@@ -327,6 +431,9 @@ def main() -> None:
                 f"{node_id}  CPU={cpu:.1f}%  RAM={mem.percent:.1f}%  "
                 f"DISK={disk_pct:.1f}%  RX={rx_mbps}Mbps  TX={tx_mbps}Mbps"
             )
+
+            alerter.check_services(svc_results)
+            alerter.check_resources(cpu, mem.percent, disk_pct)
 
         except Exception as e:
             logger.error(f"Metrics loop error: {e}", exc_info=True)
