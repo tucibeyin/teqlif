@@ -479,9 +479,9 @@ apply_secrets() {
 
         if [ "${found}" -eq 1 ]; then
             log_ok "  ${key}"
-            ((applied++))
+            applied=$((applied + 1))
         else
-            ((skipped++))
+            skipped=$((skipped + 1))
         fi
     done < "${secrets_file}"
 
