@@ -25,6 +25,8 @@ main() {
     install_base_packages
     install_pgdg_repo
     setup_user "${SSH_PUBKEY:-}"
+    setup_motd "node1" "Core API + DB + Redis + MinIO" "OVH Gravelines FR" "193.70.46.74" "10.10.0.1"
+    setup_github_deploy_key
     setup_teqlif_directories
     setup_ntp
     setup_autoupdates

@@ -23,6 +23,8 @@ main() {
     install_base_packages
     install_pgdg_repo
     setup_user "${SSH_PUBKEY:-}"
+    setup_motd "node5" "Staging + AI Secondary" "ZAP Münster DE" "45.146.252.165" "10.10.0.5"
+    setup_github_deploy_key
     setup_teqlif_directories
     setup_ntp
     setup_autoupdates

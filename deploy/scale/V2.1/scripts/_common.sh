@@ -41,7 +41,7 @@ install_base_packages() {
     apt-get update -qq
     apt-get upgrade -y -qq
     apt-get install -y -qq \
-        curl wget git \
+        curl wget git btop \
         ufw fail2ban \
         wireguard wireguard-tools \
         chrony \
@@ -247,20 +247,89 @@ clone_repo() {
         sudo -u tucibeyin git -C "${repo_dir}" pull --ff-only 2>/dev/null || true
         return 0
     fi
+    mkdir -p "${repo_dir}"
+    chown tucibeyin:tucibeyin "${repo_dir}"
+    local deploy_key="${DEPLOY_KEY_PATH:-/home/tucibeyin/.ssh/github_key}"
     if [ -n "${GITHUB_TOKEN:-}" ]; then
-        git clone "https://${GITHUB_TOKEN}@github.com/tucibeyin/teqlif.git" "${repo_dir}"
-    elif [ -n "${DEPLOY_KEY_PATH:-}" ]; then
-        GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY_PATH} -o StrictHostKeyChecking=no" \
+        sudo -u tucibeyin git clone \
+            "https://${GITHUB_TOKEN}@github.com/tucibeyin/teqlif.git" "${repo_dir}"
+    elif [ -f "${deploy_key}" ]; then
+        sudo -u tucibeyin \
+            GIT_SSH_COMMAND="ssh -i ${deploy_key} -o StrictHostKeyChecking=accept-new" \
             git clone git@github.com:tucibeyin/teqlif.git "${repo_dir}"
     else
-        log_err "Repo bulunamadı ve GITHUB_TOKEN/DEPLOY_KEY_PATH tanımlı değil."
-        log_warn "Lütfen şunu çalıştırın:"
-        log_warn "  git clone git@github.com:tucibeyin/teqlif.git ${repo_dir}"
-        log_warn "Ardından bu scripti tekrar çalıştırın."
+        log_err "Deploy key bulunamadı: ${deploy_key}"
+        log_err "Önce setup_github_deploy_key çalıştırılmalı."
         return 1
     fi
     chown -R tucibeyin:tucibeyin "${repo_dir}"
     log_ok "Repo klonlandı: ${repo_dir}"
+}
+
+# ── GitHub deploy key ────────────────────────────────────────────────────────
+setup_github_deploy_key() {
+    log_step "GitHub deploy key"
+    local key_path="/home/tucibeyin/.ssh/github_key"
+    local ssh_config="/home/tucibeyin/.ssh/config"
+
+    sudo -u tucibeyin mkdir -p /home/tucibeyin/.ssh
+    chmod 700 /home/tucibeyin/.ssh
+
+    if [ ! -f "${key_path}" ]; then
+        sudo -u tucibeyin ssh-keygen -t ed25519 -C "tucibeyin@gmail.com" \
+            -f "${key_path}" -N ""
+        log_ok "Deploy key oluşturuldu: ${key_path}"
+    else
+        log_info "Deploy key mevcut: ${key_path}"
+    fi
+
+    if ! grep -q "github.com" "${ssh_config}" 2>/dev/null; then
+        sudo -u tucibeyin tee -a "${ssh_config}" > /dev/null <<'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/github_key
+    StrictHostKeyChecking accept-new
+EOF
+        chmod 600 "${ssh_config}"
+        chown tucibeyin:tucibeyin "${ssh_config}"
+    fi
+
+    sudo -u tucibeyin git config --global user.name  "tucibeyin"
+    sudo -u tucibeyin git config --global user.email "tucibeyin@gmail.com"
+
+    echo ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}  GitHub Deploy Key — repo'ya ekle:${NC}"
+    echo -e "${CYAN}  Repo → Settings → Deploy Keys → Add deploy key → Allow write access${NC}"
+    echo ""
+    cat "${key_path}.pub"
+    echo ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    read -r -p "  Key GitHub'a eklendi. Devam etmek için Enter'a bas..." _
+    echo ""
+}
+
+# ── MOTD ─────────────────────────────────────────────────────────────────────
+setup_motd() {
+    local hostname="${1}"
+    local role="${2}"
+    local provider="${3}"
+    local public_ip="${4}"
+    local wg_ip="${5}"
+    log_step "MOTD"
+    tee /etc/motd > /dev/null <<EOF
+
+=========================================
+  ${hostname}  —  ${role}
+  Provider : ${provider}
+  Public IP: ${public_ip}
+  WG IP    : ${wg_ip}
+=========================================
+
+EOF
+    log_ok "MOTD ayarlandı"
 }
 
 # ── WireGuard anahtar üretimi ─────────────────────────────────────────────────
