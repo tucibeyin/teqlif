@@ -60,6 +60,7 @@ import app.models.like  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
+from app.routers import admin_nodes
 from app.routers import feed
 from app.routers import ads
 from app.routers import client_log, config
@@ -142,13 +143,17 @@ async def lifespan(app: FastAPI):
     # AI registry — node1 Groq-only (EU IP), node2 up ise Groq+Gemini iletir
     from app.services.ml.llm_service import start_registry_loop
     await start_registry_loop()
+    # Cluster izleme + Telegram alertleri
+    from app.services.alert_manager import alert_manager
+    alert_task = asyncio.create_task(alert_manager.run_forever())
     yield
     task.cancel()
     chat_task.cancel()
     mod_task.cancel()
     dm_task.cancel()
     ds_scheduler_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, return_exceptions=True)
+    alert_task.cancel()
+    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, alert_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()
@@ -233,6 +238,7 @@ app.include_router(ratings.router)
 app.include_router(upload.router)
 app.include_router(admin_auth.router)
 app.include_router(admin_data.router)
+app.include_router(admin_nodes.router)
 app.include_router(moderation.router)
 app.include_router(analytics.router)
 app.include_router(stories.router)

@@ -1,86 +1,146 @@
-from enum import Enum
+"""
+Edge Orchestrator V2.1 — cluster-aware routing engine.
+
+Redis'teki canlı node metriklerini okur, servis tipine göre en uygun
+node'u composite scoring ile seçer. Agent TTL ile ölmüşse Redis'ten
+otomatik düşer, buraya yansır.
+"""
+
 import json
 import logging
-from typing import Optional, Dict, Any
+from enum import Enum
+from typing import Any, Dict, List
 
-from app.utils.redis_client import get_redis
 from app.config import settings
+from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
+_MAX_MEDIA_PARTICIPANTS = 500  # medya score normalizasyon kapasitesi
+
+
 class ServiceType(Enum):
-    MEDIA = "media"      # Yüksek CPU, düşük latency (VoIP, Canlı Yayın)
-    STORAGE = "storage"  # Yüksek Disk kapasitesi (MinIO Yükleme)
-    # İleride eklenebilecek: AI_MODEL, BATCH_PROCESS vb.
+    MEDIA   = "media"
+    STORAGE = "storage"
+    AI      = "ai"
 
 
 class EdgeOrchestrator:
-    """
-    Teqlif V1.4 - Generic Edge Allocator (Strateji Deseni)
-    Hangi Edge sunucusunun hangi işlem için en uygun olduğunu belirler.
-    Tamamen servis tiplerine (ServiceType) göre soyutlanmıştır.
-    
-    Bu sınıf (Resource Decision Engine); medya, ses veya dosya fark etmeksizin
-    sadece donanım metriklerine bakarak kaynak tahsisi yapar.
-    """
 
-    async def get_edge_metrics(self) -> list[dict]:
-        """Tüm Edge sunucularının metriklerini Redis'ten okur (Service Discovery)."""
+    async def get_all_metrics(self) -> List[Dict[str, Any]]:
+        """Tüm aktif node'ların canlı metriklerini döner (TTL ile ölü ajanlar otomatik çıkar)."""
         redis = await get_redis()
-        keys = await redis.keys("edge:metrics:*")
-        
-        metrics_list = []
+        keys  = await redis.keys("edge:metrics:*")
         if not keys:
-            return metrics_list
-            
-        raw_values = await redis.mget(*keys)
-        for val in raw_values:
+            return []
+        raw = await redis.mget(*keys)
+        result = []
+        for val in raw:
             if val:
                 try:
-                    metrics_list.append(json.loads(val))
+                    result.append(json.loads(val))
                 except Exception as e:
-                    logger.error(f"[Orchestrator] JSON parse hatası: {e}")
-        return metrics_list
+                    logger.error(f"JSON parse error: {e}")
+        return result
 
-    async def allocate_node(self, service_type: ServiceType) -> Optional[Dict[str, Any]]:
-        """
-        Gelen servis tipine göre (Strateji Deseni) en iyi Edge node'unu seçer.
-        """
-        metrics = await self.get_edge_metrics()
-        
-        if not metrics:
-            logger.warning(f"[Orchestrator] Hiçbir Edge metriği bulunamadı! {service_type.value} için Fallback uygulanıyor.")
-            return self._get_fallback_node()
-            
-        best_node = None
-        
+    async def allocate_node(self, service_type: ServiceType) -> Dict[str, Any]:
+        """Servis tipine göre en uygun node'u seçer; metrik yoksa config fallback."""
+        all_m = await self.get_all_metrics()
+        if not all_m:
+            logger.warning(f"Metrik yok — {service_type.value} için config fallback")
+            return self._fallback(service_type)
+
         if service_type == ServiceType.MEDIA:
-            # MEDIA Stratejisi: En düşük CPU kullanımı olan Node seçilir
-            best_node = min(metrics, key=lambda x: x.get('cpu_percent', 100.0))
-            
-        elif service_type == ServiceType.STORAGE:
-            # STORAGE Stratejisi: Disk kotası en az dolu olan Node seçilir
-            best_node = min(metrics, key=lambda x: x.get('disk_percent', 100.0))
-            
-            # Quota kontrolü
-            if best_node.get('disk_percent', 0) > settings.minio_storage_quota_percent:
-                logger.warning(f"[Orchestrator] Seçilen Storage Node ({best_node.get('node_id')}) belirlenen kotayı ({settings.minio_storage_quota_percent}%) aşıyor!")
+            return self._pick_media(all_m)
+        if service_type == ServiceType.STORAGE:
+            return self._pick_storage(all_m)
+        if service_type == ServiceType.AI:
+            return self._pick_ai(all_m)
+        return self._fallback(service_type)
 
-        if best_node:
-            logger.info(f"[Orchestrator] {service_type.value.upper()} servisi için Node seçildi: {best_node.get('node_id')}")
-            return best_node
-            
-        return self._get_fallback_node()
+    # ── Node seçiciler ────────────────────────────────────────────────────
 
-    def _get_fallback_node(self) -> Dict[str, Any]:
-        """Eğer Ajanlar çökmüşse veya Redis'te metrik yoksa Config'deki ilk statik adresleri döner."""
-        livekit_url = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
-        minio_url = settings.edge_minio_urls[0] if settings.edge_minio_urls else ""
-        return {
-            "node_id": "fallback_node",
-            "livekit_url": livekit_url,
-            "minio_url": minio_url
+    def _pick_media(self, metrics: List[Dict]) -> Dict:
+        candidates = [
+            m for m in metrics
+            if "media" in m.get("node_type", [])
+            and m.get("services", {}).get("livekit", {}).get("healthy", False)
+            and m.get("livekit_url")
+        ]
+        if not candidates:
+            logger.warning("Sağlıklı media node yok — fallback")
+            return self._fallback(ServiceType.MEDIA)
+
+        def score(m: Dict) -> float:
+            p     = m.get("services", {}).get("livekit", {}).get("participants", 0)
+            p_pct = min(p / _MAX_MEDIA_PARTICIPANTS * 100, 100)
+            return m.get("cpu_percent", 50.0) * 0.3 + p_pct * 0.7
+
+        best = min(candidates, key=score)
+        logger.info(
+            f"Media node seçildi: {best['node_id']} "
+            f"(score={score(best):.1f}, "
+            f"cpu={best.get('cpu_percent')}%, "
+            f"participants={best.get('services', {}).get('livekit', {}).get('participants', 0)})"
+        )
+        return best
+
+    def _pick_storage(self, metrics: List[Dict]) -> Dict:
+        candidates = [
+            m for m in metrics
+            if "storage" in m.get("node_type", [])
+            and m.get("services", {}).get("minio", {}).get("healthy", False)
+            and m.get("minio_url")
+        ]
+        if not candidates:
+            return self._fallback(ServiceType.STORAGE)
+
+        best = min(candidates, key=lambda m: m.get("disk_percent", 100.0))
+        if best.get("disk_percent", 0) > settings.minio_storage_quota_percent:
+            logger.warning(
+                f"Storage {best['node_id']} disk={best.get('disk_percent')}% "
+                f"(kota={settings.minio_storage_quota_percent}%)"
+            )
+        logger.info(f"Storage node seçildi: {best['node_id']} ({best.get('disk_percent')}% disk)")
+        return best
+
+    def _pick_ai(self, metrics: List[Dict]) -> Dict:
+        candidates = [
+            m for m in metrics
+            if "ai" in m.get("node_type", [])
+            and m.get("services", {}).get("ai_proxy", {}).get("healthy", False)
+            and m.get("ai_proxy_url")
+        ]
+        if not candidates:
+            return self._fallback(ServiceType.AI)
+
+        # CPU + RAM toplamı en düşük node
+        best = min(
+            candidates,
+            key=lambda m: m.get("cpu_percent", 50.0) + m.get("ram_percent", 50.0),
+        )
+        logger.info(
+            f"AI node seçildi: {best['node_id']} "
+            f"(cpu={best.get('cpu_percent')}%, ram={best.get('ram_percent')}%)"
+        )
+        return best
+
+    # ── Fallback ──────────────────────────────────────────────────────────
+
+    def _fallback(self, service_type: ServiceType) -> Dict[str, Any]:
+        node: Dict[str, Any] = {
+            "node_id":     "fallback",
+            "livekit_url":  "",
+            "minio_url":    "",
+            "ai_proxy_url": "",
         }
+        if service_type == ServiceType.MEDIA:
+            node["livekit_url"] = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
+        elif service_type == ServiceType.STORAGE:
+            node["minio_url"] = settings.edge_minio_urls[0] if settings.edge_minio_urls else ""
+        elif service_type == ServiceType.AI:
+            node["ai_proxy_url"] = settings.ai_proxy_url
+        return node
 
-# Uygulama genelinde kullanılacak Singleton instance
+
 orchestrator = EdgeOrchestrator()

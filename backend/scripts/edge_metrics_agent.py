@@ -1,100 +1,339 @@
-import os
+#!/usr/bin/env python3
+"""
+Edge Metrics Agent — V2.1
+
+Her node'da çalışır; donanım + servis metriklerini Core Redis'e yazar.
+EdgeOrchestrator Redis'ten okuyarak routing kararları verir ve AlertManager
+anormallik tespit ettiğinde Telegram bildirim gönderir.
+
+Gerekli ortam değişkenleri:
+  CORE_REDIS_URL, EDGE_NODE_ID, EDGE_NODE_TYPE, NODE_SERVICES
+  (Opsiyonel) EDGE_LIVEKIT_URL, EDGE_MINIO_URL, EDGE_AI_PROXY_URL,
+               LIVEKIT_API_KEY, LIVEKIT_API_SECRET, EDGE_NODE_REGION,
+               DISK_PATH, EDGE_METRICS_INTERVAL_SEC
+"""
+
 import json
-import time
 import logging
+import os
+import socket
+import subprocess
+import time
+from datetime import datetime, timezone
+from typing import Any, Optional
+
 import psutil
-import redis
+import redis as redis_lib
+import requests
+from jose import jwt
 
-# Logging yapılandırması
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-logger = logging.getLogger("EdgeMetricsAgent")
+logger = logging.getLogger("EdgeMetrics")
 
-def get_env_or_die(key: str) -> str:
-    val = os.getenv(key)
-    if not val:
-        logger.error(f"Missing required environment variable: {key}")
-        exit(1)
-    return val
 
-def main():
-    logger.info("Starting Edge Metrics Agent...")
-    
-    core_redis_url = get_env_or_die("CORE_REDIS_URL")
-    node_id = get_env_or_die("EDGE_NODE_ID")
-    interval = int(os.getenv("EDGE_METRICS_INTERVAL_SEC", "3"))
-    
-    # Standalone MinIO mount noktası (varsayılan: /)
-    minio_path = os.getenv("MINIO_VOLUMES", "/")
-    if minio_path.startswith('"') and minio_path.endswith('"'):
-        minio_path = minio_path[1:-1]
-    
-    logger.info(f"Node ID: {node_id}")
-    logger.info(f"Core Redis: {core_redis_url}")
-    logger.info(f"Interval: {interval}s")
-    
-    # Redis bağlantısı
-    r = redis.Redis.from_url(core_redis_url, decode_responses=True)
-    
+# ── Env helpers ───────────────────────────────────────────────────────────
+
+def _env(key: str, default: str = "") -> str:
+    return os.getenv(key, default)
+
+
+def _require(key: str) -> str:
+    v = os.getenv(key)
+    if not v:
+        logger.error(f"Required env var missing: {key}")
+        raise SystemExit(1)
+    return v
+
+
+# ── Service health checks ─────────────────────────────────────────────────
+
+def _livekit_jwt(api_key: str, api_secret: str) -> str:
+    return jwt.encode(
+        {
+            "iss": api_key,
+            "sub": api_key,
+            "exp": int(time.time()) + 60,
+            "nbf": 0,
+            "video": {"roomList": True, "roomAdmin": True},
+        },
+        api_secret,
+        algorithm="HS256",
+    )
+
+
+def svc_livekit(cfg: dict) -> dict:
+    try:
+        token = _livekit_jwt(cfg["livekit_api_key"], cfg["livekit_api_secret"])
+        resp = requests.post(
+            "http://localhost:7880/twirp/livekit.RoomService/ListRooms",
+            json={},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            timeout=3,
+        )
+        if resp.status_code == 200:
+            rooms = resp.json().get("rooms", [])
+            participants = sum(r.get("numParticipants", 0) for r in rooms)
+            return {"healthy": True, "rooms": len(rooms), "participants": participants}
+        return {"healthy": False, "error": f"HTTP {resp.status_code}"}
+    except Exception as e:
+        return {"healthy": False, "error": str(e)[:120]}
+
+
+def svc_minio(cfg: dict) -> dict:
+    port = int(cfg.get("minio_port", 9000))
+    try:
+        r = requests.get(f"http://localhost:{port}/minio/health/live", timeout=2)
+        return {"healthy": r.status_code == 200}
+    except Exception as e:
+        return {"healthy": False, "error": str(e)[:120]}
+
+
+def svc_redis(cfg: dict) -> dict:
+    url = cfg.get("redis_url", "redis://127.0.0.1:6379/0")
+    try:
+        r = redis_lib.Redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
+        r.ping()
+        mem_info    = r.info("memory")
+        client_info = r.info("clients")
+        return {
+            "healthy":   True,
+            "memory_mb": round(mem_info.get("used_memory", 0) / 1024 / 1024, 1),
+            "clients":   client_info.get("connected_clients", 0),
+        }
+    except Exception as e:
+        return {"healthy": False, "error": str(e)[:120]}
+
+
+def svc_postgres(cfg: dict) -> dict:
+    host = cfg.get("postgres_host", "127.0.0.1")
+    port = int(cfg.get("postgres_port", 5432))
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return {"healthy": True}
+    except Exception as e:
+        return {"healthy": False, "error": str(e)[:120]}
+
+
+def svc_clickhouse(cfg: dict) -> dict:
+    host = cfg.get("clickhouse_host", "127.0.0.1")
+    port = int(cfg.get("clickhouse_port", 8123))
+    try:
+        r = requests.get(f"http://{host}:{port}/ping", timeout=2)
+        return {"healthy": r.text.strip() == "Ok."}
+    except Exception as e:
+        return {"healthy": False, "error": str(e)[:120]}
+
+
+def svc_ai_proxy(cfg: dict) -> dict:
+    port = int(cfg.get("ai_proxy_port", 8001))
+    try:
+        r = requests.get(f"http://localhost:{port}/health", timeout=3)
+        return {"healthy": r.status_code < 500}
+    except Exception as e:
+        return {"healthy": False, "error": str(e)[:120]}
+
+
+# ── Backup checks (node2 only) ────────────────────────────────────────────
+
+def _systemd_active(service: str) -> bool:
+    try:
+        r = subprocess.run(
+            ["systemctl", "is-active", service],
+            capture_output=True, text=True, timeout=3,
+        )
+        return r.stdout.strip() == "active"
+    except Exception:
+        return False
+
+
+def _last_inactive_minutes(service: str) -> Optional[int]:
+    """Servisin en son inaktif olduğu zamandan bu yana geçen dakika sayısı."""
+    try:
+        r = subprocess.run(
+            ["systemctl", "show", service, "--property=InactiveEnterTimestamp"],
+            capture_output=True, text=True, timeout=3,
+        )
+        ts = r.stdout.strip().split("=", 1)[-1].strip()
+        if not ts or ts in ("n/a", ""):
+            return None
+        dt = datetime.strptime(ts, "%a %Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+        return int((datetime.now(timezone.utc) - dt).total_seconds() / 60)
+    except Exception:
+        return None
+
+
+def svc_pg_backup(cfg: dict) -> dict:
+    wal_active   = _systemd_active("teqlif-pg-receivewal.service")
+    last_dump    = _last_inactive_minutes("teqlif-pg-dump.service")
+    last_offsite = _last_inactive_minutes("teqlif-offsite-sync.service")
+    return {
+        "healthy":              wal_active,
+        "wal_streaming":        wal_active,
+        "last_dump_min_ago":    last_dump,
+        "last_offsite_min_ago": last_offsite,
+    }
+
+
+def svc_minio_backup(cfg: dict) -> dict:
+    last = _last_inactive_minutes("teqlif-minio-backup.service")
+    return {"healthy": True, "last_run_min_ago": last}
+
+
+def svc_redis_backup(cfg: dict) -> dict:
+    last = _last_inactive_minutes("teqlif-redis-backup.service")
+    return {"healthy": True, "last_run_min_ago": last}
+
+
+CHECKERS: dict[str, Any] = {
+    "livekit":        svc_livekit,
+    "minio":          svc_minio,
+    "redis":          svc_redis,
+    "postgres":       svc_postgres,
+    "clickhouse":     svc_clickhouse,
+    "ai_proxy":       svc_ai_proxy,
+    "pg_backup":      svc_pg_backup,
+    "minio_backup":   svc_minio_backup,
+    "redis_backup":   svc_redis_backup,
+}
+
+
+# ── Real-time network rate ────────────────────────────────────────────────
+
+class NetRate:
+    def __init__(self) -> None:
+        snap = psutil.net_io_counters()
+        self._rx, self._tx, self._ts = snap.bytes_recv, snap.bytes_sent, time.monotonic()
+
+    def mbps(self) -> tuple[float, float]:
+        snap = psutil.net_io_counters()
+        now  = time.monotonic()
+        dt   = max(now - self._ts, 0.001)
+        rx   = max((snap.bytes_recv - self._rx) * 8 / 1e6 / dt, 0.0)
+        tx   = max((snap.bytes_sent - self._tx) * 8 / 1e6 / dt, 0.0)
+        self._rx, self._tx, self._ts = snap.bytes_recv, snap.bytes_sent, now
+        return round(rx, 2), round(tx, 2)
+
+
+# ── Main ──────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    logger.info("Edge Metrics Agent starting…")
+
+    core_redis_url = _require("CORE_REDIS_URL")
+    node_id        = _require("EDGE_NODE_ID")
+    node_type      = [t.strip() for t in _env("EDGE_NODE_TYPE").split(",") if t.strip()]
+    services       = [s.strip() for s in _env("NODE_SERVICES").split(",")  if s.strip()]
+    interval       = int(_env("EDGE_METRICS_INTERVAL_SEC", "5"))
+    disk_path      = _env("DISK_PATH", "/")
+
+    livekit_url  = _env("EDGE_LIVEKIT_URL")
+    minio_url    = _env("EDGE_MINIO_URL")
+    ai_proxy_url = _env("EDGE_AI_PROXY_URL")
+    region       = _env("EDGE_NODE_REGION")
+
+    svc_cfg = {
+        "livekit_api_key":    _env("LIVEKIT_API_KEY"),
+        "livekit_api_secret": _env("LIVEKIT_API_SECRET"),
+        "redis_url":          _env("REDIS_URL", "redis://127.0.0.1:6379/0"),
+        "postgres_host":      "127.0.0.1",
+        "postgres_port":      "5432",
+        "clickhouse_host":    _env("CLICKHOUSE_HOST", "127.0.0.1"),
+        "clickhouse_port":    _env("CLICKHOUSE_PORT", "8123"),
+    }
+
+    logger.info(f"Node={node_id}  Type={node_type}  Services={services}  Interval={interval}s")
+
+    r = redis_lib.Redis.from_url(core_redis_url, decode_responses=True)
     try:
         r.ping()
-        logger.info("Successfully connected to Core Redis.")
+        logger.info("Core Redis: connected.")
     except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}")
-        exit(1)
+        logger.error(f"Core Redis connect failed: {e}")
+        raise SystemExit(1)
 
     redis_key = f"edge:metrics:{node_id}"
-    
-    # Optional URLs if we want to announce ourselves
-    livekit_url = os.getenv("EDGE_LIVEKIT_URL", "")
-    minio_url = os.getenv("EDGE_MINIO_URL", "")
+    ttl       = interval * 4  # ajan ölürse 4 döngü sonra expire
+    net       = NetRate()
 
     while True:
+        loop_start = time.monotonic()
         try:
-            # CPU (1 saniyelik bloklama ile ortalama alır)
-            cpu = psutil.cpu_percent(interval=1)
-            
-            # RAM
-            mem = psutil.virtual_memory()
-            ram_percent = mem.percent
-            
-            # Disk (Quota & Storage için kritik)
+            cpu  = psutil.cpu_percent(interval=1)
+            mem  = psutil.virtual_memory()
+            load = psutil.getloadavg()
+            boot = psutil.boot_time()
+
             try:
-                disk = psutil.disk_usage(minio_path)
-                disk_percent = disk.percent
+                disk = psutil.disk_usage(disk_path)
+                disk_pct   = disk.percent
+                disk_used  = round(disk.used  / 1e9, 2)
+                disk_total = round(disk.total / 1e9, 2)
             except Exception:
-                disk_percent = 0.0
+                disk_pct = disk_used = disk_total = 0.0
 
-            # Ağ trafiği (Mevcut I/O durumu - opsiyonel delta hesaplanabilir)
-            net_io = psutil.net_io_counters()
+            rx_mbps, tx_mbps = net.mbps()
 
-            metrics = {
-                "node_id": node_id,
+            svc_results: dict[str, Any] = {}
+            for svc in services:
+                fn = CHECKERS.get(svc)
+                if fn:
+                    try:
+                        svc_results[svc] = fn(svc_cfg)
+                    except Exception as e:
+                        svc_results[svc] = {"healthy": False, "error": str(e)[:120]}
+
+            metrics: dict[str, Any] = {
+                # Kimlik
+                "node_id":     node_id,
+                "node_type":   node_type,
+                "region":      region,
+                "hostname":    socket.gethostname(),
+                "uptime_sec":  int(time.time() - boot),
+                # CPU
+                "cpu_percent":  round(cpu, 1),
+                "cpu_count":    psutil.cpu_count(),
+                "load_avg_1m":  round(load[0], 2),
+                "load_avg_5m":  round(load[1], 2),
+                "load_avg_15m": round(load[2], 2),
+                # RAM
+                "ram_total_gb": round(mem.total / 1e9, 2),
+                "ram_used_gb":  round(mem.used  / 1e9, 2),
+                "ram_percent":  mem.percent,
+                # Disk
+                "disk_total_gb": disk_total,
+                "disk_used_gb":  disk_used,
+                "disk_percent":  round(disk_pct, 1),
+                # Ağ (anlık Mbps)
+                "net_rx_mbps": rx_mbps,
+                "net_tx_mbps": tx_mbps,
+                # Servisler
+                "services": svc_results,
+                # Routing URL'leri
+                "livekit_url":  livekit_url,
+                "minio_url":    minio_url,
+                "ai_proxy_url": ai_proxy_url,
+                # Zaman damgası
                 "timestamp": int(time.time()),
-                "cpu_percent": cpu,
-                "ram_percent": ram_percent,
-                "disk_percent": disk_percent,
-                "net_bytes_sent": net_io.bytes_sent,
-                "net_bytes_recv": net_io.bytes_recv,
-                "livekit_url": livekit_url,
-                "minio_url": minio_url
             }
 
-            # TTL = interval * 2 (Eğer ajan ölürse 6 saniye sonra orkestratör bu node'u listeden düşürür)
-            ttl = interval * 2
             r.set(redis_key, json.dumps(metrics), ex=ttl)
-            
-            logger.debug(f"Pushed metrics to {redis_key}: CPU={cpu}% DISK={disk_percent}%")
-            
-            # 1 saniyesi psutil.cpu_percent() içinde geçtiği için (interval-1) kadar bekliyoruz.
-            sleep_time = max(0, interval - 1)
-            time.sleep(sleep_time)
+            logger.debug(
+                f"{node_id}  CPU={cpu:.1f}%  RAM={mem.percent:.1f}%  "
+                f"DISK={disk_pct:.1f}%  RX={rx_mbps}Mbps  TX={tx_mbps}Mbps"
+            )
 
         except Exception as e:
-            logger.error(f"Error in metrics loop: {e}")
-            time.sleep(interval)
+            logger.error(f"Metrics loop error: {e}", exc_info=True)
+
+        elapsed = time.monotonic() - loop_start
+        time.sleep(max(0.1, interval - elapsed))
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,19 @@
+[Unit]
+Description=teqlif Edge Metrics Agent (node1 — Core/Storage)
+After=network.target wg-quick@wg0.service teqlif-redis-core.service
+Wants=teqlif-redis-core.service
+
+[Service]
+Type=simple
+User=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/project/teqlif/config/.env.production
+ExecStart=/var/www/teqlif.com/.venv/bin/python scripts/edge_metrics_agent.py
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
