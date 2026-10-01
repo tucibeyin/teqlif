@@ -180,24 +180,41 @@ class TeqNumericInputFormatter extends TextInputFormatter {
         selection: TextSelection.collapsed(offset: formatted.length),
       );
     } else {
-      final cleaned = textToFormat.replaceAll(RegExp(r'[^0-9.,]'), '');
-      if (cleaned.isEmpty) return newValue.copyWith(text: '');
-
-      if (cleaned.endsWith('.') || cleaned.endsWith(',')) {
-        return TextEditingValue(
-          text: cleaned,
-          selection: TextSelection.collapsed(offset: cleaned.length),
-        );
-      }
-
-      final parts = cleaned.split(RegExp(r'[.,]'));
-      final intPart = int.tryParse(parts[0]) ?? 0;
       final targetLocale = locale ?? Intl.defaultLocale ?? 'tr_TR';
-      final formatter = NumberFormat('#,##0', targetLocale);
-      String formatted = formatter.format(intPart);
-      if (parts.length > 1) {
-        formatted += '.${parts[1]}';
+      // Locale'in ondalık ayracını belirle: tr_TR → ',' | en_US → '.'
+      final decChar = NumberFormat('#,##0.0', targetLocale)
+          .format(0.1)
+          .replaceAll(RegExp(r'[0-9]'), '');
+      final decSep = decChar.isNotEmpty ? decChar[decChar.length - 1] : '.';
+
+      // Binlik ayracı silerek sadece rakam + ondalık sep bırak
+      final raw = textToFormat.replaceAll(RegExp('[^0-9${RegExp.escape(decSep)}]'), '');
+      if (raw.isEmpty) return newValue.copyWith(text: '');
+
+      final decIdx = raw.indexOf(decSep);
+      String intDigits, decPart;
+      if (decIdx >= 0) {
+        intDigits = raw.substring(0, decIdx);
+        // Birden fazla ondalık sep varsa sonrakileri yoksay
+        decPart = raw.substring(decIdx + 1).replaceAll(decSep, '');
+      } else {
+        intDigits = raw;
+        decPart = '';
       }
+
+      if (intDigits.isEmpty && decIdx == 0) intDigits = '0';
+      if (intDigits.isEmpty) return newValue.copyWith(text: '');
+
+      final intVal = int.tryParse(intDigits) ?? 0;
+      final formatter = NumberFormat('#,##0', targetLocale);
+      String formatted = formatter.format(intVal);
+
+      if (decIdx >= 0 && decPart.isEmpty) {
+        formatted += decSep; // Kullanıcı ondalık ayracını yeni yazdı
+      } else if (decPart.isNotEmpty) {
+        formatted += '$decSep$decPart';
+      }
+
       return TextEditingValue(
         text: formatted,
         selection: TextSelection.collapsed(offset: formatted.length),
