@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Offsite Sync (B2)
+After=teqlif-pg-dump.service teqlif-minio-backup.service
+
+[Service]
+Type=oneshot
+User=tucibeyin
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh
+StandardOutput=journal
+StandardError=journal

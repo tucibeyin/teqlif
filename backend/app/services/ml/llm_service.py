@@ -1,12 +1,11 @@
 """
-Scale V1.2 — Özerk registry, non-streaming, dual-provider (Groq + Gemini).
+Özerk LLM registry — non-streaming, dual-provider (Groq + Gemini).
 
-Her node kendi registry'sini tutar:
+Her AI proxy node'u (node5, node6) kendi registry'sini tutar:
   - Startup'ta Groq model listesi çekilir, Gemini 1-token probe ile test edilir
   - 24 saatte bir yenilenir (fire_and_forget loop)
   - 429 → retry-after süresince model Redis'te exhausted olarak işaretlenir
   - llm:last_success → bir sonraki istekte önce son başarılı model denenir
-  - node1 ve node2 aynı Redis'i (WireGuard üzerinden) paylaşır → cross-node kota paylaşımı
   - Redis yoksa graceful degradation: stateless fallback
 
 generate_listing_description() → (description: str, provider: str)
@@ -207,9 +206,8 @@ def _postprocess(raw: str, price: Optional[float]) -> str:
 
 
 # ── Redis shared state ────────────────────────────────────────────────────────
-# node1 ve node2 aynı Groq API key'ini paylaşır; cross-node exhaustion+last_success
-# node1 Redis'e yerel bağlanır; node2 WireGuard üzerinden bağlanır (redis://10.10.0.1:6379)
-# InMemoryCircuitBreaker: node1 down olduğunda Redis çağrıları timeout beklemez —
+# node5 ve node6 ayrı registry tutar (farklı Gemini erişim bölgesi, paylaşılan Groq key).
+# InMemoryCircuitBreaker: Redis çağrıları timeout beklemez —
 # 3 ardışık hatadan sonra devre açılır, 30s boyunca fallback döner, sonra half-open.
 
 _redis_breaker = InMemoryCircuitBreaker(name="llm_redis", failure_threshold=3, recovery_timeout=30.0)

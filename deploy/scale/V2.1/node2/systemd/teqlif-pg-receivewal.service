@@ -1,0 +1,17 @@
+[Unit]
+Description=teqlif PostgreSQL WAL Stream (node1 → node2)
+After=network.target wg-quick@wg0.service
+Wants=wg-quick@wg0.service
+
+[Service]
+Type=simple
+User=tucibeyin
+EnvironmentFile=/project/teqlif/config/.env.backup
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/pg_receivewal.sh
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

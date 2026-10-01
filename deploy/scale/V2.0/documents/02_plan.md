@@ -1752,6 +1752,15 @@ logrotate -d /etc/logrotate.d/teqlif
 
 `copytruncate` kullanılır — `Restart=` tetiklemeden log dosyasını döndürür; `append:` ile açık log handle'ları kırılmaz.
 
+### 1.10.1 Systemd Journald Kısıtı (Her Node)
+
+Systemd logları varsayılan olarak diskin %10'unu kaplayabilir. 120 GB SSD'li veya 50 GB VPS disklerde bu tehlikelidir. Tüm loglar zaten Node 9'daki Loki'ye aktığı için lokal logları sınırlandırın:
+
+```bash
+sed -i 's/#SystemMaxUse=/SystemMaxUse=300M/' /etc/systemd/journald.conf
+systemctl restart systemd-journald
+```
+
 ### 1.11 Audit Logging (auditd)
 
 ```bash
@@ -2712,7 +2721,14 @@ fi
 # NODE6_PUBKEY="<node6_pubkey>"
 
 if [ "$STATE" = "MASTER" ]; then
-    # Split-brain guard: node5 WireGuard üzerinden hâlâ erişilebiliyorsa bu muhtemelen
+    # Split-brain guard (Quorum Witness): node9'a (Monitor) ping at. 
+    # Eğer başarısız olursa node6'nın kendi interneti/ağı kopmuş demektir.
+    if ! ping -c 2 -W 2 10.10.0.13 > /dev/null; then
+        logger "wg_vip_failover: MASTER geçişi iptal — node9 (10.10.0.13) ulaşılamıyor (Ağ izolasyonu / Quorum kaybı). node6 izole durumda!"
+        exit 1
+    fi
+
+    # İkinci guard: node5 WireGuard üzerinden hâlâ erişilebiliyorsa bu muhtemelen
     # yanlış bir MASTER geçişidir (WG link problemi, node5 yaşıyor). Abort et.
     if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
            -i /home/tucibeyin/.ssh/id_ed25519_failover \

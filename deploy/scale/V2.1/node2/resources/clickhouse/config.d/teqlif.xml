@@ -1,0 +1,21 @@
+<clickhouse>
+    <listen_host>127.0.0.1</listen_host>
+    <listen_host>10.10.0.2</listen_host>
+
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <log_queries>1</log_queries>
+    <max_connections>128</max_connections>
+
+    <logger>
+        <level>warning</level>
+        <log>/var/log/clickhouse-server/clickhouse-server.log</log>
+        <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
+        <size>1000M</size>
+        <count>7</count>
+    </logger>
+</clickhouse>

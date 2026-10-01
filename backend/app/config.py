@@ -12,8 +12,6 @@ class Settings(BaseSettings):
     db_pool_recycle: int = 1800
     use_pgbouncer: bool = True
     redis_url: str = "redis://localhost:6379"
-    orch_redis_url: str = ""
-    guardian_redis_url: str = ""
     secret_key: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
@@ -29,7 +27,8 @@ class Settings(BaseSettings):
 
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
-    ai_proxy_url: str = "http://10.10.0.3:8001"
+    ai_proxy_url: str = ""           # node6 primary (Virginia US, Gemini kısıtsız)
+    ai_proxy_fallback_url: str = ""  # node5 secondary (EU, Groq + Gemini limitli)
 
     @field_validator("edge_livekit_urls", "edge_minio_urls", mode="before")
     def parse_comma_separated_list(cls, v):
@@ -50,9 +49,7 @@ class Settings(BaseSettings):
     web_app_enabled: bool = False  # Staging için index.html sunulmasını kontrol eder
     groq_api_key: str = ""
     gemini_api_key: str = ""
-    node2_ai_proxy_url: str = ""        # ör. "http://10.10.0.3:8080" — boşsa node2 atlanır
-    node3_ai_proxy_url: str = ""        # ör. "http://10.10.0.4:8080" — boşsa node3 atlanır
-    ai_proxy_internal_token: str = ""   # Shared bearer token — node1, node2, node3 aynı değeri kullanır
+    ai_proxy_internal_token: str = ""   # Shared bearer token — node1, node5, node6 aynı değeri kullanır
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     

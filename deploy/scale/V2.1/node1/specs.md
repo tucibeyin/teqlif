@@ -76,3 +76,50 @@ Multi Core      |
 Full Test       | https://browser.geekbench.com/v6/cpu/19279963
 
 YABS completed in 12 min 13 sec
+
+Smart Log for NVME device:nvme0n1 namespace-id:ffffffff
+critical_warning			: 0
+temperature				: 38 °C (311 K)
+available_spare				: 100%
+available_spare_threshold		: 10%
+percentage_used				: 9%
+endurance group critical warning summary: 0
+Data Units Read				: 70810925 (36.26 TB)
+Data Units Written			: 52204224 (26.73 TB)
+host_read_commands			: 455052962
+host_write_commands			: 2308544624
+controller_busy_time			: 5655
+power_cycles				: 61
+power_on_hours				: 39603
+unsafe_shutdowns			: 55
+media_errors				: 0
+num_err_log_entries			: 0
+Warning Temperature Time		: 0
+Critical Composite Temperature Time	: 0
+Thermal Management T1 Trans Count	: 0
+Thermal Management T2 Trans Count	: 0
+Thermal Management T1 Total Time	: 0
+Thermal Management T2 Total Time	: 0
+Smart Log for NVME device:nvme1n1 namespace-id:ffffffff
+critical_warning			: 0
+temperature				: 37 °C (310 K)
+available_spare				: 100%
+available_spare_threshold		: 10%
+percentage_used				: 37%
+endurance group critical warning summary: 0
+Data Units Read				: 106989159 (54.78 TB)
+Data Units Written			: 432211994 (221.29 TB)
+host_read_commands			: 499651210
+host_write_commands			: 2900182143
+controller_busy_time			: 7364
+power_cycles				: 69
+power_on_hours				: 48522
+unsafe_shutdowns			: 66
+media_errors				: 0
+num_err_log_entries			: 0
+Warning Temperature Time		: 0
+Critical Composite Temperature Time	: 0
+Thermal Management T1 Trans Count	: 0
+Thermal Management T2 Trans Count	: 0
+Thermal Management T1 Total Time	: 0
+Thermal Management T2 Total Time	: 0

@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Redis Backup — günlük 02:00 UTC
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+AccuracySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

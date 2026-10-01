@@ -42,19 +42,27 @@ Her node'dan: `ping 10.10.0.1`
 ### §2.1 PostgreSQL 17
 - PGDG repo ekle
 - `postgresql.conf`: shared_buffers=8GB, work_mem=64MB, max_connections=200, huge_pages=on
-- `pg_hba.conf`: lokal + WG subnet erişimi
-- DB + kullanıcı oluştur: `createdb teqlif`, `createuser teqlif`
+- `pg_hba.conf`: aşağıdaki satırları ekle:
+  ```
+  host  teqlif      teqlif       127.0.0.1/32        scram-sha-256
+  host  teqlif      teqlif       10.10.0.0/24        scram-sha-256
+  host  replication teqlif_repl  10.10.0.2/32        scram-sha-256
+  ```
+- DB + kullanıcı oluştur:
+  ```sql
+  CREATE ROLE teqlif WITH LOGIN PASSWORD '<teqlif_db_password>';
+  CREATE DATABASE teqlif OWNER teqlif;
+  CREATE ROLE teqlif_repl WITH REPLICATION LOGIN PASSWORD '<teqlif_repl_password>';
+  ```
 - alembic upgrade head
 
 ### §2.2 PgBouncer
 - `pgbouncer.ini`: pool_mode=transaction, max_client_conn=1000, default_pool_size=50
 - `userlist.txt`: SCRAM hash (finalize scriptinden)
 
-### §2.3 Redis × 3
-- redis-core :6379 (uygulama)
-- redis-orch :6380 (orchestrator)
-- redis-guardian :6382 (guardian)
-- Her birinde: `requirepass`, `maxmemory`, `maxmemory-policy allkeys-lru`
+### §2.3 Redis
+- redis-core :6379 — uygulama cache, ARQ queue, LiveKit node koordinasyonu (db=1)
+- `requirepass`, `maxmemory 2gb`, `maxmemory-policy allkeys-lru`
 - `bind 127.0.0.1 10.10.0.1` (lokal + WG)
 
 ### §2.4 MinIO

@@ -1,0 +1,16 @@
+[Unit]
+Description=teqlif LiveKit Server (node4)
+After=network.target wg-quick@wg0.service
+
+[Service]
+Type=simple
+User=tucibeyin
+ExecStart=/usr/local/bin/livekit-server --config /project/teqlif/config/livekit.yaml
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

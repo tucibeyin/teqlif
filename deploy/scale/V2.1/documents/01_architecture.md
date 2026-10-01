@@ -1,222 +1,537 @@
-# teqlif V2.1 — Mimari
+# teqlif V2.1 — Mimari Dokümanı
 
-## Node Envanteri
+---
 
-| Node | IP (WG) | Public IP | Tip | Lokasyon | Rol |
-|------|---------|-----------|-----|----------|-----|
-| node1 | 10.10.0.1 | 193.70.46.74 | Bare metal | OVH Gravelines FR | Core — PG, Redis, App |
+## 1. Node Envanteri
+
+| Node | WG IP | Public IP | Tip | Sağlayıcı / Lokasyon | Rol |
+|------|-------|-----------|-----|----------------------|-----|
+| node1 | 10.10.0.1 | 193.70.46.74 | Bare metal | OVH Gravelines FR | Core — PG, Redis, MinIO, App |
 | node2 | 10.10.0.2 | 135.125.223.43 | Bare metal | OVH Saarbrücken DE | Backup + Monitoring + ClickHouse |
 | node3 | 10.10.0.3 | 51.75.74.124 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #1 |
 | node4 | 10.10.0.4 | 135.125.175.223 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #2 |
 | node5 | 10.10.0.5 | 45.146.252.165 | KVM VPS | ZAP Münster DE | Staging + AI Secondary |
 | node6 | 10.10.0.6 | 5.249.165.10 | KVM VPS | ZAP Virginia US | AI Primary (Gemini) |
-| streaming-N | 10.10.0.2X | - | - | - | LiveKit Streaming #N (plug-and-play) |
-
-WireGuard subnet: `10.10.0.0/24`
-Streaming node pool: `10.10.0.20–10.10.0.99`
+| streaming-N | 10.10.0.20+ | - | KVM VPS | herhangi | LiveKit Streaming #N (plug-and-play) |
 
 ---
 
-## Trafik Akışı
+## 2. Communication Architecture
+
+### 2.1 Fiziksel Bağlantı
 
 ```
-Kullanıcı
+İnternet
   │
-  ├── API (JSON/REST/WS) ──→ Cloudflare Proxy ──→ node1 (nginx → FastAPI)
+  ├── Cloudflare CDN/Proxy
+  │     └── api.teqlif.com → node1:443 (API trafiği)
   │
-  ├── Media (foto/video/ses/döküman) ──→ uploads.teqlif.com (direkt node1 MinIO)
+  ├── Cloudflare DNS Only (direkt)
+  │     ├── uploads.teqlif.com → node1:443 (MinIO media)
+  │     └── stream.teqlif.com  → node3/4:443 (LiveKit WebRTC)
   │
-  ├── Stream (WebRTC) ──→ stream.teqlif.com (direkt node3/node4/streaming-N)
+  └── Direkt (dahili)
+        └── WireGuard mesh 10.10.0.0/24
+```
+
+### 2.2 Sanal Ağ (WireGuard Mesh)
+
+- **Protokol:** WireGuard UDP, port 51820
+- **Subnet:** 10.10.0.0/24
+- **Topoloji:** Full mesh — her node diğer tüm node'lara P2P tünel
+- **Şifreleme:** ChaCha20-Poly1305 (WireGuard yerleşik)
+- **Streaming pool:** 10.10.0.20–10.10.0.99 (plug-and-play)
+
+```
+node1 ←──────────────────────────────────── node2
+  │ ↖                                          ↑
+  │   ╲                                        │
+  │    node3 ────────────────────────────────→ │
+  │    node4 ────────────────────────────────→ │
+  │    node5 ────────────────────────────────→ │
+  │    node6 ────────────────────────────────→ │
+  └──→ streaming-N (10.10.0.20+) ───────────→ │
+```
+
+### 2.3 Servis Erişim Noktaları
+
+| Servis | Dinlediği arayüz | Port | Erişim |
+|--------|-----------------|------|--------|
+| FastAPI (node1) | 127.0.0.1 | 8000 | nginx üzerinden |
+| PostgreSQL (node1) | 127.0.0.1 + 10.10.0.1 | 5432 | WG mesh (node2 backup) |
+| PgBouncer (node1) | 127.0.0.1 + 10.10.0.1 | 6432 | WG mesh |
+| Redis core (node1) | 127.0.0.1 + 10.10.0.1 | 6379 | WG mesh (tüm node'lar) |
+| MinIO (node1) | 0.0.0.0 | 9000/9001 | nginx + WG |
+| LiveKit (node3/4) | 0.0.0.0 | 7880/7881/443 | İnternet + WG |
+| AI Proxy (node5/6) | 0.0.0.0 | 8001 | WG mesh |
+| ClickHouse (node2) | 127.0.0.1 + 10.10.0.2 | 8123/9000 | WG mesh |
+| Prometheus (node2) | 10.10.0.2 | 9090 | WG mesh |
+| Grafana (node2) | 10.10.0.2 | 3000 | WG mesh |
+| Loki (node2) | 10.10.0.2 | 3100 | WG mesh (Promtail) |
+| Alertmanager (node2) | 10.10.0.2 | 9093 | WG mesh |
+
+---
+
+## 3. Integration Architecture
+
+### 3.1 API Katmanı
+
+```
+Mobil/Web İstemci
   │
-  └── AI istekleri ──→ node6 (primary, Gemini) → node5 (fallback, EU)
+  ├── REST API  → POST/GET/PATCH https://api.teqlif.com/v1/...
+  ├── WebSocket → wss://api.teqlif.com/ws/...
+  └── Media     → https://uploads.teqlif.com/...
+```
+
+- **Auth:** JWT (HS256, `secret_key` node1'de)
+- **Rate limit:** nginx (Cloudflare WAF + nginx limit_req)
+- **SSL termination:** nginx (Cloudflare origin cert)
+
+### 3.2 Servisler Arası İletişim
+
+| Kaynak | Hedef | Protokol | Amaç |
+|--------|-------|----------|------|
+| FastAPI | PostgreSQL | asyncpg (TCP) | ORM sorguları |
+| FastAPI | Redis core | aioredis (TCP) | Cache, session, ARQ queue |
+| FastAPI | MinIO | S3 API (HTTP) | Presigned URL üretimi |
+| FastAPI | AI Proxy | HTTP | AI özellik çağrıları |
+| FastAPI | LiveKit | LiveKit SDK | Room token üretimi |
+| ARQ Worker | Redis core | aioredis | Job queue |
+| ARQ Worker | ClickHouse | clickhouse-driver | Event log yazma |
+| LiveKit (node3/4) | Redis core (node1) | TCP 6379 | Node koordinasyonu |
+| AI Proxy (node5/6) | Groq/Gemini API | HTTPS | LLM çağrıları |
+| Promtail (tüm) | Loki (node2) | HTTP Push | Log iletimi |
+| Prometheus (node2) | /metrics (tüm) | HTTP Scrape | Metrik toplama |
+| pg_receivewal (node2) | PG (node1) | Replication protocol | WAL stream |
+
+### 3.3 Harici Servis Entegrasyonları
+
+| Servis | Amaç | Kimlik doğrulama |
+|--------|------|-----------------|
+| Cloudflare | CDN, DDoS, DNS | API Token |
+| LiveKit Cloud | WebRTC SFU | API Key/Secret |
+| Groq API | LLM (AI proxy) | API Key |
+| Google Gemini | LLM (AI proxy, US) | API Key |
+| Brevo | E-posta gönderimi | API Key |
+| Apple APNS | iOS push bildirimi | AuthKey .p8 |
+| Google OAuth | Sosyal giriş | Client ID/Secret |
+| Cloudflare Turnstile | CAPTCHA | Site/Secret Key |
+| Sentry | Hata izleme | DSN |
+| Backblaze B2 | Ofsite backup | rclone config |
+
+### 3.4 AI Proxy Failover Zinciri
+
+```
+FastAPI (node1)
+  │
+  ├── Primary  → node6:8001 (Virginia, Gemini kısıtsız)
+  │     │ başarısız olursa
+  └── Fallback → node5:8001 (Münster EU, Groq + Gemini limitli)
+```
+
+### 3.5 Backup Veri Akışı
+
+```
+node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/pg_wal/
+node1 PostgreSQL ──pg_dump─────→ node2 /var/backups/pg_dump/ (günlük 01:00)
+node1 Redis      ──RDB copy────→ node2 /var/backups/redis/ (günlük 02:00)
+node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük 03:00)
+node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 ```
 
 ---
 
-## node1 — Core (Bare Metal NVMe)
+## 4. Technology Architecture
 
-**Donanım:** Intel Xeon E-2236 12c/24t, 32GB ECC, 2×512GB NVMe RAID-1
+### 4.1 node1 — Core
 
-**Servisler:**
-- PostgreSQL 17 (primary, lokal — tek node HA yok, node2 WAL arşivi alır)
-- PgBouncer (bağlantı havuzu)
-- Redis × 3 (core :6379, orch :6380, guardian :6382)
-- MinIO (object storage — teqlif + teqlif-dm bucket)
-- FastAPI (teqlif app)
-- ARQ workers (teqlif-worker, teqlif-worker-critical)
-- nginx (reverse proxy + SSL termination)
-- Promtail → node2 Loki
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 13 Trixie | 6.12 kernel |
+| CPU | Intel Xeon E-2236 | 6c/12t, 3.4/4.8GHz |
+| RAM | 32GB ECC DDR4 | 2666MHz |
+| Disk | 2×512GB NVMe RAID-1 | ~940MB/s 4k |
+| Web server | nginx | latest stable |
+| App server | uvicorn (ASGI) | 0.x |
+| Framework | FastAPI | 0.x |
+| Runtime | Python | 3.12 |
+| ORM | SQLAlchemy (async) | 2.x |
+| DB | PostgreSQL | 17 |
+| Connection pool | PgBouncer | latest |
+| Cache/Queue | Redis | 7.x |
+| Object storage | MinIO | RELEASE.2024-11-07... |
+| Task queue | ARQ | latest |
+| Process manager | systemd | - |
 
-**OS Optimizasyonları (NVMe bare metal):**
-- `io_scheduler=none` (NVMe donanım kuyruğu kullanır, OS scheduler gereksiz)
-- `vm.swappiness=10` (RAM tercih et)
-- `vm.dirty_ratio=15, vm.dirty_background_ratio=5` (NVMe hızlı flush)
-- THP (Transparent Huge Pages) = `never` (PostgreSQL THP'den nefret eder)
-- `kernel.pid_max=4194304`
-- `fs.file-max=2097152`
-- `net.core.somaxconn=65535`
-- `net.ipv4.tcp_max_syn_backlog=65535`
-- CPU governor = `performance` (bare metal erişimi var)
-- PostgreSQL huge pages: `vm.nr_hugepages` hesaplanarak set edilir
-- `ulimit -n 65535` (tüm servisler için)
+**Disk layout:**
+```
+/ (md3, ext4, RAID-1)  — 467GB — OS + tüm servis binary + veri
+```
 
----
-
-## node2 — Backup + Monitoring + ClickHouse (Bare Metal HDD)
-
-**Donanım:** Intel Xeon D-2123IT 8c/16t, 32GB ECC, 2×4TB HDD RAID-1
-
-**Servisler:**
-- ClickHouse (analitik DB — event log, metrics)
-- Prometheus (tüm node'ları scrape eder)
-- Grafana (dashboard)
-- Loki (log aggregation — tüm node'lardan Promtail alır)
-- Alertmanager (Telegram bildirimleri)
-- pg_receivewal (node1'den WAL stream)
-- pg_dump (günlük snapshot)
-- pg_basebackup (haftalık full backup)
-- Redis backup (günlük RDB snapshot node1'den)
-- MinIO backup (günlük mc mirror node1'den → /data/backups/minio/)
-- rclone (ofsite — Backblaze B2)
-- Promtail (kendi logları)
-
-**OS Optimizasyonları (HDD bare metal):**
-- `io_scheduler=mq-deadline` (HDD için sıralı yazım önceliği)
-- `blockdev --setra 8192` (readahead artır — sıralı okuma ağır iş)
+**Kritik OS ayarları:**
+- `io_scheduler=none` (NVMe)
 - `vm.swappiness=10`
-- `vm.dirty_ratio=40, vm.dirty_background_ratio=10` (HDD yavaş, daha uzun buffer)
+- `vm.dirty_ratio=15`
+- `kernel.pid_max=4194304`
 - THP = `never`
-- ClickHouse: `ulimit -n 262144, ulimit -c unlimited`
-- `/data` mount: `noatime,nodiratime` (gereksiz inode güncelleme yok)
+- `net.core.somaxconn=65535`
+- CPU governor = `performance`
 
 ---
 
-## node3, node4 — LiveKit Streaming (KVM VPS)
+### 4.2 node2 — Backup + Monitoring + ClickHouse
 
-**Donanım:** 6 vCPU, 11.4GB RAM, 98GB SSD, OVH Frankfurt DE
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 13 Trixie | 6.12 kernel |
+| CPU | Intel Xeon D-2123IT | 4c/8t, 2.2/3.0GHz |
+| RAM | 32GB ECC DDR4 | 2400MHz |
+| Disk | 2×4TB HDD RAID-1 | ~70MB/s seq |
+| Analitik DB | ClickHouse | 24.x |
+| Metrics | Prometheus | 2.x |
+| Dashboard | Grafana | 11.x |
+| Log agg. | Loki | 3.x |
+| Alerting | Alertmanager | 0.x |
+| Log shipper | Promtail | 3.x |
+| Backup PG | pg_receivewal + pg_dump | PG17 tools |
+| Backup MinIO | mc (MinIO client) | latest |
+| Backup Redis | redis-cli + rdb | - |
+| Ofsite | rclone | latest |
 
-**Servisler:**
-- LiveKit Server
-- nginx (TURN/STUN proxy, UDP 443 yönlendirme)
-- Promtail → node2 Loki
+**Disk layout:**
+```
+/ (md3, ext4, RAID-1)  — 3.6TB — OS + tüm servis veri
+  ├── /var/lib/clickhouse/
+  ├── /var/lib/prometheus/
+  ├── /var/lib/grafana/
+  ├── /var/lib/loki/
+  └── /var/backups/
+       ├── pg_wal/
+       ├── pg_dump/
+       ├── redis/
+       └── minio/
+```
 
-**LiveKit koordinasyonu:** node1'deki Redis üzerinden (WireGuard mesh)
+**Kritik OS ayarları:**
+- `io_scheduler=mq-deadline` (HDD sıralı yazım)
+- `blockdev --setra 8192` (readahead)
+- `vm.dirty_ratio=40`
+- THP = `never`
+- Mount: `noatime,nodiratime`
 
-**OS Optimizasyonları (KVM, WebRTC/UDP yoğun):**
-- `net.core.rmem_max=26214400` (UDP receive buffer — medya akışı)
+---
+
+### 4.3 node3, node4 — LiveKit Streaming
+
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 13 Trixie | 6.12 kernel |
+| CPU | 6 vCPU (KVM) | Intel Haswell |
+| RAM | 11.4GB | DDR4 |
+| Disk | 98GB SSD | ~1GB/s |
+| SFU | LiveKit Server | v1.7.2 |
+| TURN proxy | nginx | UDP 443 |
+| Redis client | → node1:6379 | koordinasyon |
+
+**Kritik OS ayarları (UDP-yoğun):**
+- `net.core.rmem_max=26214400`
 - `net.core.wmem_max=26214400`
-- `net.core.rmem_default=1048576`
-- `net.core.wmem_default=1048576`
-- `net.ipv4.udp_rmem_min=8192`
-- `net.ipv4.ip_local_port_range=10000 65535` (LiveKit port aralığı genişlet)
-- `net.netfilter.nf_conntrack_max=262144` (eş zamanlı bağlantı)
-- `net.core.netdev_max_backlog=5000`
-- `vm.swappiness=5` (stream node RAM baskısı tolere etmez)
+- `net.ipv4.ip_local_port_range=10000 65535`
+- `net.netfilter.nf_conntrack_max=262144`
+- `vm.swappiness=5`
 - THP = `never`
 
 **UFW:**
-- 22/tcp (SSH — WG üzerinden)
-- 51820/udp (WireGuard)
-- 443/tcp+udp (TURN/STUN)
-- 7880/tcp (LiveKit API — sadece WG mesh)
-- 7881/tcp (LiveKit RTC — sadece WG mesh)
-- 50000-60000/udp (WebRTC medya portları)
+```
+22/tcp     SSH
+51820/udp  WireGuard
+443/tcp    TURN/TLS
+443/udp    TURN/DTLS
+7880/tcp   LiveKit API    (WG only: 10.10.0.0/24)
+7881/tcp   LiveKit RTC    (WG only)
+50000:60000/udp  WebRTC media
+```
 
 ---
 
-## node5 — Staging + AI Secondary (KVM VPS, EU)
+### 4.4 node5 — Staging + AI Secondary
 
-**Donanım:** 4 vCPU, 7.8GB RAM, 49GB SSD, ZAP Münster DE
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 13 Trixie | 6.12 kernel |
+| CPU | 4 vCPU AMD EPYC 7763 | KVM |
+| RAM | 7.8GB | DDR4 |
+| Disk | 49GB SSD | - |
+| AI Proxy | uvicorn + FastAPI | - |
+| Staging stack | PG + Redis + MinIO + LiveKit | lokal, izole |
 
-**Servisler:**
-- Staging stack (tam izole): PG, Redis, MinIO, FastAPI, Workers, LiveKit staging
-- AI Proxy (secondary — EU içinde, Groq + Gemini fallback)
-- Promtail → node2 Loki
-
-**Not:** AI Primary (node6) erişilemez olursa trafik buraya düşer. EU veri sınırı korunur.
-
-**OS Optimizasyonları:**
-- Staging için standart uygulama tuning
-- `vm.swappiness=20` (4GB swap var, 7.8GB RAM kısıtlı)
+**Kritik OS ayarları:**
+- `vm.swappiness=20` (7.8GB kısıtlı)
 - THP = `never`
-- `fs.file-max=524288`
+
+**UFW:**
+```
+22/tcp     SSH
+51820/udp  WireGuard
+8001/tcp   AI Proxy  (WG only: 10.10.0.0/24)
+```
 
 ---
 
-## node6 — AI Primary (KVM VPS, US)
+### 4.5 node6 — AI Primary
 
-**Donanım:** 4 vCPU, 3.8GB RAM, 49GB SSD, ZAP Virginia US
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 13 Trixie | 6.12 kernel |
+| CPU | 4 vCPU AMD EPYC 7763 | KVM |
+| RAM | 3.8GB | DDR4 |
+| Disk | 49GB SSD | - |
+| AI Proxy | uvicorn + FastAPI | - |
+| LLM | Gemini (kısıtsız, US) + Groq | harici API |
 
-**Servisler:**
-- AI Proxy (primary — Gemini API erişimi için ABD lokasyonu)
-- Promtail → node2 Loki
-
-**Not:** Sadece AI proxy çalışır. Kullanıcı datası bu node'a girmez. Gemini EU kısıtlaması nedeniyle ABD'de.
-
-**OS Optimizasyonları:**
-- Minimal — sadece AI proxy
+**Kritik OS ayarları:**
 - `vm.swappiness=20`
 - THP = `never`
 
+**UFW:**
+```
+22/tcp     SSH
+51820/udp  WireGuard
+8001/tcp   AI Proxy  (WG only: 10.10.0.0/24)
+```
+
 ---
 
-## Plug-and-Play Streaming Node Mimarisi
+## 5. Dependency Architecture
 
-Kapasite dolunca yeni bir streaming node eklemek için tek adım:
+### 5.1 Backend (Python) — Temel Bağımlılıklar
 
+| Kütüphane | Amaç |
+|-----------|------|
+| FastAPI | ASGI web framework |
+| SQLAlchemy (async) | ORM |
+| asyncpg | PostgreSQL async driver |
+| aioredis | Redis async client |
+| ARQ | Async task queue |
+| Pydantic v2 | Data validation |
+| python-jose | JWT |
+| passlib + bcrypt | Şifre hash |
+| httpx | Async HTTP client |
+| boto3 / aiobotocore | MinIO S3 client |
+| livekit-server-sdk | LiveKit room token |
+| clickhouse-driver | ClickHouse client |
+| sentry-sdk | Hata izleme |
+| alembic | DB migration |
+
+### 5.2 3. Taraf Servis Bağımlılıkları
+
+| Servis | Bağımlı node'lar | Kritiklik |
+|--------|-----------------|-----------|
+| Cloudflare | Tüm (DNS/CDN) | Kritik |
+| LiveKit Cloud | node3/4 | Kritik (stream) |
+| Groq API | node5/6 | Yüksek (AI) |
+| Google Gemini | node6 | Yüksek (AI primary) |
+| Brevo | node1 | Orta (e-posta) |
+| Apple APNS | node1 | Orta (iOS push) |
+| Google OAuth | node1 | Orta (sosyal giriş) |
+| Sentry | node1/5 | Düşük (izleme) |
+| Backblaze B2 | node2 | Düşük (ofsite backup) |
+
+---
+
+## 6. Topology Architecture
+
+### 6.1 Ağ Katmanları
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 1 — İnternet / Cloudflare Edge                        │
+│  teqlif.com, api.teqlif.com → Cloudflare Proxy              │
+│  uploads.teqlif.com, stream.teqlif.com → DNS Only (direkt)  │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│  LAYER 2 — Edge / Ingress (node1 nginx)                      │
+│  SSL termination, rate limit, routing                        │
+│  → /api/* → FastAPI :8000                                    │
+│  → /uploads/* → MinIO :9000                                  │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│  LAYER 3 — Application (node1)                               │
+│  FastAPI + ARQ Workers                                       │
+│  → PostgreSQL (PgBouncer :6432)                              │
+│  → Redis :6379                                               │
+│  → MinIO :9000                                               │
+│  → AI Proxy (node6 → node5 fallback)                        │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ WireGuard
+        ┌──────────────┼──────────────────────┐
+        │              │                      │
+┌───────▼──────┐ ┌─────▼───────┐ ┌──────────▼──────┐
+│ LAYER 4a     │ │ LAYER 4b    │ │ LAYER 4c         │
+│ Streaming    │ │ AI Proxy    │ │ Monitoring       │
+│ node3, node4 │ │ node6, node5│ │ node2            │
+│ LiveKit SFU  │ │ Gemini/Groq │ │ Prometheus/Loki  │
+└──────────────┘ └─────────────┘ └─────────────────┘
+```
+
+### 6.2 Veri Akışı Topolojisi
+
+```
+Kullanıcı Cihazı
+  │
+  ├─[API]──→ Cloudflare ──→ node1:443
+  │                              │
+  │                         [nginx]
+  │                              │
+  │                         [FastAPI]──→ PG/Redis/MinIO (lokal)
+  │                              │
+  │                              └──→ AI Proxy (node6/5, WG)
+  │
+  ├─[Media]─→ node1:443 (uploads.teqlif.com, DNS only)
+  │
+  └─[Stream]─→ node3 veya node4:443 (stream.teqlif.com, round-robin DNS)
+                    │
+                    └──→ Redis node1:6379 (WG mesh, koordinasyon)
+```
+
+---
+
+## 7. Configuration Architecture
+
+### 7.0 Multi-Project İzolasyon Modeli
+
+node1 ve node2 çok projeli bare metal. Her proje kendi sandbox'ında çalışır:
+
+```
+/project/
+├── teqlif/              ← bu proje
+│   ├── config/          ← .env.*, redis.conf, livekit.yaml, promtail.yml
+│   ├── data/            ← Redis RDB, MinIO object storage
+│   │   ├── redis/core/
+│   │   └── minio/data/
+│   ├── logs/            ← uygulama logları
+│   └── backups/         ← node2: pg_dump, pg_wal, redis, minio
+│
+└── other-project/       ← gelecekteki proje (aynı yapı)
+    ├── config/
+    ├── data/
+    ├── logs/
+    └── backups/
+
+/var/www/teqlif.com/     ← monorepo (tüm node'larda)
+```
+
+**Bileşen bazlı izolasyon stratejisi:**
+
+| Bileşen | Strateji | Teqlif | Diğer proje |
+|---------|----------|--------|-------------|
+| Redis | Ayrı instance / port | 6379, `/project/teqlif/data/redis/` | 6383+, `/project/other/data/redis/` |
+| MinIO | Ayrı instance / port | 9000, `/project/teqlif/data/minio/` | 9010+, `/project/other/data/minio/` |
+| PostgreSQL | Ayrı DB + kullanıcı | DB: `teqlif`, user: `teqlif` | DB: `other`, user: `other` |
+| ClickHouse | Ayrı DB + kullanıcı | `teqlif_analytics` | `other_analytics` |
+| Prometheus | Paylaşımlı + `project` label | `external_labels: {project: teqlif}` | `{project: other}` |
+| Loki | Paylaşımlı + tenant ID | `tenant_id: teqlif` (promtail) | `tenant_id: other` |
+| Grafana | Organization per project | Org: teqlif | Org: other |
+| systemd | Paylaşımlı + isimlendirme | `teqlif-*` | `other-*` |
+| WireGuard | Paylaşımlı (altyapı) | — | — |
+
+### 7.1 Config Katmanları
+
+```
+secrets.env (lokal makine, git'e girmez)
+  │
+  ├── bootstrap_nodeX.sh çalıştırılırken SECRETS_FILE ile verilir
+  │     └── apply_secrets() → tüm <placeholder>'ları doldurur
+  │
+  ├── /project/teqlif/config/.env.production  (node1, 600 perm)
+  ├── /project/teqlif/config/.env.staging     (node5, 600 perm)
+  ├── /project/teqlif/config/redis/redis-core.conf
+  ├── /etc/wireguard/wg0.conf                 (sistem seviyesi, 600 perm)
+  └── /etc/systemd/system/teqlif-*.service    (sistem seviyesi, zorunlu)
+```
+
+### 7.2 Secrets Kategorileri
+
+| Kategori | Örnekler | Kaynak |
+|----------|---------|--------|
+| Otomatik üretilen | DB/Redis/MinIO şifreleri, JWT key, keepalived pass | `openssl rand` |
+| Harici panel | LiveKit, Brevo, APNS, Google, Groq, Gemini, Sentry | İlgili servis paneli |
+| WireGuard pubkey'ler | nodeX_pubkey | Bootstrap sonrası `cat /etc/wireguard/pubkey` |
+
+### 7.3 Config Dağıtım Akışı
+
+```
+1. secrets.env doldur (lokal)
+2. scp secrets.env root@<node>:/tmp/teqlif-secrets.env
+3. SECRETS_FILE=/tmp/teqlif-secrets.env bash bootstrap_nodeX.sh
+4. Bootstrap: apply_secrets() → placeholder'ları doldur → shred secrets
+5. Bootstrap sonrası: pubkey topla → secrets.env Bölüm 3'ü tamamla
+6. wg_mesh_apply.sh → tüm node'lara pubkey dağıt → WG başlat
+```
+
+### 7.4 Plug-and-Play Streaming Config
+
+Yeni streaming node eklemek için tek komut:
 ```bash
-# Lokal makineden:
-STREAMING_IP=10.10.0.20 \
-NEW_NODE_HOST=<new-server-ip> \
-bash deploy/scale/V2.1/scripts/add_streaming_node.sh
+STREAMING_WG_IP=10.10.0.20 \
+NEW_NODE_HOST=<ip> \
+SECRETS_FILE=./secrets.env \
+bash scripts/add_streaming_node.sh
 ```
 
-Script otomatik olarak:
-1. Yeni node'da `bootstrap_streaming.sh` çalıştırır
-2. WireGuard key çifti üretilir, pubkey alınır
-3. Yeni node'un pubkey'i tüm mevcut node'lara dağıtılır
-4. Tüm mevcut node'ların pubkey'leri yeni node'a yazılır
-5. WireGuard mesh güncellenir, LiveKit otomatik devreye girer
-
-**LiveKit auto-discovery:** Tüm streaming node'lar aynı Redis'e (node1:10.10.0.1:6379) bağlanır. LiveKit kendi içinde node'ları keşfeder, load balancing otomatik.
+Script otomatik:
+1. bootstrap_streaming.sh çalıştırır
+2. WG pubkey toplar
+3. Tüm node'lara yeni peer ekler (`wg set wg0 peer ...`)
+4. LiveKit Redis koordinasyonu ile otomatik devreye girer
 
 ---
 
-## WireGuard Mesh Topolojisi
+## 8. Network Security
 
-```
-node1 (10.10.0.1) ←──────────────────────────────→ node2
-     │                                               │
-     ├──→ node3 (10.10.0.3)                         │
-     ├──→ node4 (10.10.0.4)                         │
-     ├──→ node5 (10.10.0.5)                         │
-     ├──→ node6 (10.10.0.6)                         │
-     └──→ streaming-N (10.10.0.20+)                 │
-                                                     │
-node2 ←──────────────── tüm node'lar ───────────────┘
-(Prometheus scrape, Loki log, backup)
-```
+### 8.1 UFW Kuralları — Her Node
 
-Full mesh — her node diğer tüm node'lara direkt erişir.
+| Node | İzin verilen portlar |
+|------|---------------------|
+| node1 | 22/tcp, 51820/udp, 80/tcp, 443/tcp, WG-only: 5432/6432/6379/9000/8000 |
+| node2 | 22/tcp, 51820/udp, WG-only: 9090/3000/3100/9093/8123 |
+| node3/4 | 22/tcp, 51820/udp, 443/tcp+udp, WG-only: 7880/7881, 50000-60000/udp |
+| node5 | 22/tcp, 51820/udp, WG-only: 8001 |
+| node6 | 22/tcp, 51820/udp, WG-only: 8001 |
 
----
+### 8.2 Güvenlik Katmanları
 
-## Veri Kalıcılığı ve Yedekleme
-
-| Veri | Birincil | Yedek | Ofsite |
-|------|----------|-------|--------|
-| PostgreSQL | node1 | node2 WAL stream + pg_dump | B2 rclone |
-| Redis | node1 | node2 RDB snapshot | - |
-| MinIO (media) | node1 | node2 mc mirror | B2 rclone |
-| ClickHouse | node2 | - | B2 rclone |
-| Loki logs | node2 | - | - |
+1. **Cloudflare WAF** — DDoS, bot koruması (API trafiği)
+2. **nginx rate limiting** — IP başına istek sınırı
+3. **UFW** — port bazlı erişim kontrolü
+4. **WireGuard** — iç servis trafiği şifreli
+5. **SSH** — sadece key-based, root girişi kapalı, şifre sadece yerel ağdan
+6. **Fail2ban** — brute force koruması
+7. **Veri sınırı** — kullanıcı datası sadece EU node'larında (node1-5)
 
 ---
 
-## Güvenlik Sınırları
+## 9. Yüksek Erişilebilirlik ve Failover
 
-- Kullanıcı datası **sadece EU node'larında** (node1–5)
-- node6 (US): yalnızca AI proxy, sıfır kullanıcı datası
-- WireGuard: tüm iç servis trafiği şifreli mesh üzerinden
-- Cloudflare: API trafiği DDoS koruması altında
-- UFW: her node'da minimal port açık
+### 9.1 Mevcut Durum (V2.1)
+
+| Bileşen | HA Durumu | Açıklama |
+|---------|-----------|----------|
+| PostgreSQL | **Tek node** (node1) | node2 WAL stream ile kurtarma mümkün, otomatik failover yok |
+| Redis | **Tek node** (node1) | Reboot'ta RDB'den başlar |
+| MinIO | **Tek node** (node1) | node2 mirror ile kurtarma mümkün |
+| LiveKit | **Çift node** (node3+4) | DNS round-robin, birisi düşerse diğeri devam eder |
+| AI Proxy | **Çift node** (node5+6) | node6 → node5 failover, kod içinde |
+| App server | **Tek node** (node1) | Cloudflare cache ile kısa süreli ayakta kalır |
+
+### 9.2 RTO / RPO
+
+| Senaryo | RTO | RPO |
+|---------|-----|-----|
+| node1 reboot | ~2 dk | 0 (WAL anlık) |
+| node1 disk hatası | ~30 dk (node2'den restore) | Son WAL segmenti |
+| node3 veya node4 çöküşü | 0 (DNS TTL sonrası) | 0 |
+| node6 çöküşü | ~5 sn (app retry) | 0 |

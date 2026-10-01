@@ -1,0 +1,17 @@
+[Unit]
+Description=teqlif Redis Core (:6379)
+After=network.target
+PartOf=teqlif.service
+
+[Service]
+Type=simple
+User=tucibeyin
+ExecStart=/usr/bin/redis-server /project/teqlif/config/redis/redis-core.conf
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+RuntimeDirectory=teqlif-redis-core
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

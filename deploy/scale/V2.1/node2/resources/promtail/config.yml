@@ -1,0 +1,28 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://127.0.0.1:3100/loki/api/v1/push
+    tenant_id: teqlif
+
+scrape_configs:
+  - job_name: journal
+    journal:
+      labels:
+        job: systemd-journal
+        node: node2
+    relabel_configs:
+      - source_labels: [__journal__systemd_unit]
+        target_label: unit
+
+  - job_name: clickhouse
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: clickhouse
+          node: node2
+          __path__: /var/log/clickhouse-server/*.log

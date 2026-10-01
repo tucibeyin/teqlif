@@ -24,7 +24,8 @@
 13. [Monitoring & Observability](#13-monitoring--observability)
 14. [Kritik Yapılandırma Notları](#14-kritik-yapılandırma-notları)
 15. [Operasyon Rehberi](#15-operasyon-rehberi)
-
+16. [TTL, Veri Yaşam Döngüsü ve Zamanlama Haritası](#16-ttl-veri-yaşam-döngüsü-ve-zamanlama-haritası)
+17. [V2.0 Aday Konular](#17-v20-aday-konular)
 ---
 
 ## 1. Genel Bakış ve Mimari Mantık
@@ -976,29 +977,13 @@ sudo bash bootstrap_<node>.sh
 
 ---
 
----
-
-## 16. V1.5 Aday Konular
-
-| # | Konu | Açıklama | Öncelik |
-|---|------|----------|---------|
-| 1 | **OG deep link önizlemeleri** | `teqlif.com/ilan/{id}`, `/profil/{username}`, `/yayin/{stream_id}` paylaşıldığında sosyal medya bot'ları OG meta tag görmüyor (nginx statik dosya sunuyor, FastAPI'ya gitmiyor). Çözüm: nginx `teqlif.com` bloğuna SSR veya statik OG proxy eklenmeli. | Orta |
-| 2 | **node4 MinIO + LiveKit bootstrap scripti** | node4 için `bootstrap_node4.sh` henüz yazılmamış; node1 ile aynı yapıda olacak. | Yüksek |
-| 3 | **gateway HTTPS (SSL) doğrudan sunumu** | Şu an CF Full modda gateway :80 dinliyor. CF olmadan doğrudan gateway IP'ye gidilince plain HTTP. Certbot + nginx SSL, CF olmadan da güvenli. | Düşük |
-| 4 | **ClickHouse init_clickhouse() database parametresi** | `init_clickhouse()` database parametresi olmadan bağlanıyor; tablolar bootstrap'ta elle oluşturuluyor. `init_clickhouse()` `settings.clickhouse_db` ile bağlanmalı ve tabloları kendi oluşturmalı. | Orta |
-| 5 | **edge_metrics TTL artışı** | `edge-metrics-agent`: TTL `interval×2` (6s) → `interval×4` (12s). Prometheus scrape interval 15s — mevcut TTL race condition'a açık; edge metriği dolmadan süresi dolabilir. | Düşük |
-| 6 | **Prometheus FastAPI scrape** | `prometheus.yml`'e `node5:8000/metrics` hedefi eklenmeli. `prometheus-fastapi-instrumentator` kurulu ama Prometheus bunu scrape etmiyor — API latency/request metrikleri toplanmıyor. | Orta |
-| 7 | **Alarm eşiği sıkılaştırması** | `prometheus-rules.yml`: `DiskSpaceLow` %80 → %70, `HighMemoryUsage` %85 → %75. Mevcut eşikler node3 (3.8 GiB) gibi kısıtlı node'lar için geç uyarı veriyor. | Orta |
-
----
-
-## 17. TTL, Veri Yaşam Döngüsü ve Zamanlama Haritası
+## 16. TTL, Veri Yaşam Döngüsü ve Zamanlama Haritası
 
 Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve olası race condition'ları tek yerden belgeler.
 
 ---
 
-### 17.1 Auth & Session TTL'leri
+### 16.1 Auth & Session TTL'leri
 
 | Anahtar (Redis) | Süre | Tanım Yeri | Açıklama |
 |----------------|------|-----------|---------|
@@ -1015,7 +1000,7 @@ Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve ol
 
 ---
 
-### 17.2 Güvenlik & Rate Limit TTL'leri
+### 16.2 Güvenlik & Rate Limit TTL'leri
 
 | Anahtar (Redis) | Süre | Tanım Yeri | Açıklama |
 |----------------|------|-----------|---------|
@@ -1029,7 +1014,7 @@ Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve ol
 
 ---
 
-### 17.3 Uygulama İçi TTL'ler
+### 16.3 Uygulama İçi TTL'ler
 
 | Anahtar / Model | Süre | Tanım Yeri | Açıklama |
 |----------------|------|-----------|---------|
@@ -1057,7 +1042,7 @@ Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve ol
 
 ---
 
-### 17.4 Cache TTL'leri
+### 16.4 Cache TTL'leri
 
 | Anahtar / Namespace | Süre | Tanım Yeri | Açıklama |
 |--------------------|------|-----------|---------|
@@ -1077,7 +1062,7 @@ Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve ol
 
 ---
 
-### 17.5 ML Model TTL'leri (Redis)
+### 16.5 ML Model TTL'leri (Redis)
 
 | Anahtar | Süre | Tanım Yeri | Açıklama |
 |---------|------|-----------|---------|
@@ -1092,7 +1077,7 @@ Bu bölüm sistemdeki tüm TTL değerlerini, zamanlanmış iş sürelerini ve ol
 
 ---
 
-### 17.6 ClickHouse Veri Yaşam Döngüsü
+### 16.6 ClickHouse Veri Yaşam Döngüsü
 
 | Tablo | Yaşam Süresi | TTL Sütunu | Tanım Yeri |
 |-------|-------------|-----------|-----------|
@@ -1118,7 +1103,7 @@ FastAPI lifespan → asyncio.create_task(_flush_loop)
 
 ---
 
-### 17.7 edge-metrics-agent Zamanlama
+### 16.7 edge-metrics-agent Zamanlama
 
 | Parametre | Değer | Kaynak |
 |-----------|-------|--------|
@@ -1131,7 +1116,7 @@ TTL mantığı: Agent 3s'de bir yazar, TTL 6s — agent ölürse 6s içinde Redi
 
 ---
 
-### 17.8 ARQ Cron İşleri Zamanlaması (UTC)
+### 16.8 ARQ Cron İşleri Zamanlaması (UTC)
 
 #### Yüksek Frekanslı (dakika bazlı)
 
@@ -1206,7 +1191,7 @@ TTL mantığı: Agent 3s'de bir yazar, TTL 6s — agent ölürse 6s içinde Redi
 
 ---
 
-### 17.9 PostgreSQL Veri Yaşam Döngüsü
+### 16.9 PostgreSQL Veri Yaşam Döngüsü
 
 | Tablo / Kural | Süre | Tetikleyici |
 |---------------|------|------------|
@@ -1221,7 +1206,7 @@ TTL mantığı: Agent 3s'de bir yazar, TTL 6s — agent ölürse 6s içinde Redi
 
 ---
 
-### 17.10 Race Condition Analizi
+### 16.10 Race Condition Analizi
 
 #### ✅ Çözülmüş: ClickHouse Flush Çift Yazma
 
@@ -1289,7 +1274,7 @@ Tümü ARQ kuyruğuna düşer, 2 worker (`teqlif-worker` + `teqlif-worker-critic
 
 ---
 
-### 17.11 Özet: Kritik Zamanlama Penceresi
+### 16.11 Özet: Kritik Zamanlama Penceresi
 
 ```
 Her saniye   : Hype decay (-5 puan/5s), WS heartbeat
@@ -1306,6 +1291,22 @@ Her 6 saat   : ForYou feed yenileme (TTL ile örtüşür — sorunsuz)
 00:00 UTC    : ML hesaplama zirvesi (FAISS + ALS + trending + interests)
 Pazar 01:00  : Haftalık model eğitimleri (ALS, Item2Vec, BPR)
 ```
+
+---
+
+---
+
+## 17. V2.0 Aday Konular
+
+| # | Konu | Açıklama | Öncelik |
+|---|------|----------|---------|
+| 1 | **OG deep link önizlemeleri** | `teqlif.com/ilan/{id}`, `/profil/{username}`, `/yayin/{stream_id}` paylaşıldığında sosyal medya bot'ları OG meta tag görmüyor (nginx statik dosya sunuyor, FastAPI'ya gitmiyor). Çözüm: nginx `teqlif.com` bloğuna SSR veya statik OG proxy eklenmeli. | Orta |
+| 2 | **node4 MinIO + LiveKit bootstrap scripti** | node4 için `bootstrap_node4.sh` henüz yazılmamış; node1 ile aynı yapıda olacak. | Yüksek |
+| 3 | **gateway HTTPS (SSL) doğrudan sunumu** | Şu an CF Full modda gateway :80 dinliyor. CF olmadan doğrudan gateway IP'ye gidilince plain HTTP. Certbot + nginx SSL, CF olmadan da güvenli. | Düşük |
+| 4 | **ClickHouse init_clickhouse() database parametresi** | `init_clickhouse()` database parametresi olmadan bağlanıyor; tablolar bootstrap'ta elle oluşturuluyor. `init_clickhouse()` `settings.clickhouse_db` ile bağlanmalı ve tabloları kendi oluşturmalı. | Orta |
+| 5 | **edge_metrics TTL artışı** | `edge-metrics-agent`: TTL `interval×2` (6s) → `interval×4` (12s). Prometheus scrape interval 15s — mevcut TTL race condition'a açık; edge metriği dolmadan süresi dolabilir. | Düşük |
+| 6 | **Prometheus FastAPI scrape** | `prometheus.yml`'e `node5:8000/metrics` hedefi eklenmeli. `prometheus-fastapi-instrumentator` kurulu ama Prometheus bunu scrape etmiyor — API latency/request metrikleri toplanmıyor. | Orta |
+| 7 | **Alarm eşiği sıkılaştırması** | `prometheus-rules.yml`: `DiskSpaceLow` %80 → %70, `HighMemoryUsage` %85 → %75. Mevcut eşikler node3 (3.8 GiB) gibi kısıtlı node'lar için geç uyarı veriyor. | Orta |
 
 ---
 

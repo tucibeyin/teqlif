@@ -1,0 +1,19 @@
+[Unit]
+Description=teqlif ARQ Worker Staging
+After=teqlif-staging.service
+BindsTo=teqlif-staging.service
+
+[Service]
+Type=simple
+User=tucibeyin
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/project/teqlif/config/.env.staging
+ExecStart=/var/www/teqlif.com/.venv/bin/python -m arq app.worker.WorkerSettings
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
