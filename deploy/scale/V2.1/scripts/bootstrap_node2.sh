@@ -58,7 +58,7 @@ main() {
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
             /project/teqlif/config /etc/wireguard /etc/clickhouse-server \
-            /etc/prometheus /etc/alertmanager
+            /etc/prometheus
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -67,7 +67,7 @@ main() {
         "node1'de replication user ve slot oluştur (plan §3.2)" \
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
-        "systemctl start prometheus loki alertmanager grafana-server" \
+        "systemctl start prometheus loki prometheus-alertmanager grafana-server" \
         "Backup timer'larını etkinleştir: systemctl enable --now teqlif-*.timer" \
         "rclone config → b2backup remote ekle"
 }
@@ -185,10 +185,9 @@ install_alertmanager() {
 setup_alertmanager() {
     local node_dir="${1}"
     log_step "Alertmanager config"
-    mkdir -p /etc/alertmanager
-    cp "${node_dir}/resources/alertmanager/alertmanager.yml" /etc/alertmanager/alertmanager.yml
-    systemctl enable alertmanager
-    log_ok "Alertmanager enable edildi (secrets doldurulunca: systemctl start alertmanager)"
+    cp "${node_dir}/resources/alertmanager/alertmanager.yml" /etc/prometheus/alertmanager.yml
+    systemctl enable prometheus-alertmanager
+    log_ok "prometheus-alertmanager enable edildi"
 }
 
 install_rclone() {
