@@ -1,8 +1,8 @@
 [Unit]
 Description=teqlif FastAPI Application
 After=network.target postgresql.service teqlif-redis-core.service teqlif-minio.service
-Requires=teqlif-redis-core.service teqlif-redis-orch.service teqlif-redis-guardian.service
-Wants=teqlif-redis-core.service teqlif-redis-orch.service teqlif-redis-guardian.service teqlif-minio.service
+Requires=teqlif-redis-core.service
+Wants=teqlif-redis-core.service teqlif-minio.service
 
 [Service]
 Type=simple
@@ -11,7 +11,7 @@ Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 EnvironmentFile=/project/teqlif/config/.env.production
 ExecStartPre=/var/www/teqlif.com/.venv/bin/alembic upgrade head
-ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn app.main:app \
+ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn main:app \
     --host 127.0.0.1 \
     --port 8000 \
     --workers 4 \

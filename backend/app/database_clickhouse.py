@@ -194,6 +194,8 @@ async def get_clickhouse_client() -> AsyncClient | None:
             _client = await clickhouse_connect.get_async_client(
                 host=_settings.clickhouse_host,
                 port=_settings.clickhouse_port,
+                username=_settings.clickhouse_user,
+                password=_settings.clickhouse_password,
                 database=_settings.clickhouse_db,
                 connect_timeout=5,
                 send_receive_timeout=30,
@@ -213,10 +215,12 @@ async def init_clickhouse() -> None:
     global _client
     try:
         from app.config import settings as _settings
-        # DB yoksa oluştur (default DB üzerinden)
+        # DB yoksa oluştur
         _bootstrap = await clickhouse_connect.get_async_client(
             host=_settings.clickhouse_host,
             port=_settings.clickhouse_port,
+            username=_settings.clickhouse_user,
+            password=_settings.clickhouse_password,
             connect_timeout=5,
             send_receive_timeout=30,
         )
@@ -228,6 +232,8 @@ async def init_clickhouse() -> None:
         _client = await clickhouse_connect.get_async_client(
             host=_settings.clickhouse_host,
             port=_settings.clickhouse_port,
+            username=_settings.clickhouse_user,
+            password=_settings.clickhouse_password,
             database=_settings.clickhouse_db,
             connect_timeout=5,
             send_receive_timeout=30,

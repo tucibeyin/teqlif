@@ -8,7 +8,6 @@
     <path>/var/lib/clickhouse/</path>
     <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
     <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
-    <log_queries>1</log_queries>
     <max_connections>128</max_connections>
 
     <logger>

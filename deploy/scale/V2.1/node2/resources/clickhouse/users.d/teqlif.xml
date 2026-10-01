@@ -1,6 +1,6 @@
 <clickhouse>
     <users>
-        <default>
+        <default replace="true">
             <password_sha256_hex><default_password_sha256></password_sha256_hex>
             <networks>
                 <ip>127.0.0.1</ip>
@@ -9,24 +9,23 @@
             <quota>default</quota>
         </default>
 
-        <teqlif>
-            <password_sha256_hex><teqlif_password_sha256></password_sha256_hex>
-            <networks>
-                <ip>10.10.0.0/24</ip>
-                <ip>127.0.0.1</ip>
-            </networks>
-            <profile>teqlif</profile>
-            <quota>default</quota>
-        </teqlif>
     </users>
+    <!-- teqlif user is created via SQL (not XML) after bootstrap:
+         CREATE USER teqlif IDENTIFIED WITH sha256_password BY '<teqlif_ch_password>'
+           HOST IP '10.10.0.0/24', IP '127.0.0.1';
+         GRANT SELECT,INSERT,CREATE TABLE,DROP TABLE,ALTER TABLE,
+               CREATE VIEW,DROP VIEW,TRUNCATE,SHOW ON teqlif_analytics.* TO teqlif;
+    -->
 
     <profiles>
         <default>
             <max_memory_usage>4294967296</max_memory_usage>
+            <log_queries>1</log_queries>
         </default>
         <teqlif>
             <max_memory_usage>6442450944</max_memory_usage>
             <max_memory_usage_for_all_queries>8589934592</max_memory_usage_for_all_queries>
+            <log_queries>1</log_queries>
         </teqlif>
     </profiles>
 </clickhouse>

@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 8123
     clickhouse_db: str = "teqlif_prod_analytics"
+    clickhouse_user: str = "default"
+    clickhouse_password: str = ""
 
     # APNS VoIP Push Ayarları
     # Token-based auth (.p8) — süresi dolmaz, tercih edilen yöntem.
