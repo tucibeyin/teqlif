@@ -22,12 +22,17 @@
 | # | Bölüm |
 |---|---|
 | 1 | [Giriş ve Hedefler](#1-giriş-ve-hedefler) |
-| 2 | [Sistem Bağlamı ve Kapsam](#2-sistem-bağlamı-ve-kapsam) |
-| 3 | [Dağıtım Görünümü (V2.1 Topoloji)](#3-dağıtım-görünümü-v21-topoloji) |
-| 4 | [Node Envanteri](#4-node-envanteri) |
-| 5 | [Çalışma Zamanı Görünümü](#5-çalışma-zamanı-görünümü) |
-| 6 | [Ağ ve Güvenlik](#6-ağ-ve-güvenlik) |
-| 7 | [Yüksek Erişilebilirlik ve Failover](#7-yüksek-erişilebilirlik-ve-failover) |
+| 2 | [Kısıtlar](#2-kısıtlar) |
+| 3 | [Sistem Bağlamı ve Kapsam](#3-sistem-bağlamı-ve-kapsam) |
+| 4 | [Çözüm Stratejisi](#4-çözüm-stratejisi) |
+| 5 | [Yapı Taşları Görünümü](#5-yapı-taşları-görünümü) |
+| 6 | [Çalışma Zamanı Görünümü](#6-çalışma-zamanı-görünümü) |
+| 7 | [Dağıtım Görünümü (V2.1)](#7-dağıtım-görünümü-v21) |
+| 8 | [Kesişen Kavramlar](#8-kesişen-kavramlar) |
+| 9 | [Mimari Kararlar](#9-mimari-kararlar) |
+| 10 | [Kalite Gereksinimleri](#10-kalite-gereksinimleri) |
+| 11 | [Riskler ve Teknik Borç](#11-riskler-ve-teknik-borç) |
+| 12 | [Sözlük](#12-sözlük) |
 
 ---
 
@@ -35,22 +40,30 @@
 
 teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarzı canlı yayınları, gerçek zamanlı açık artırmaları, birebir görüntülü aramaları, hikâyeleri, doğrudan satışları ve sanal para birimi (Tuci) ile bir sanal ekonomiyi tek bir mobil uygulamada birleştirir.
 
-### Temel Özellikler
-
 | Özellik | Açıklama |
 |---|---|
-| **Canlı Yayın Açık Artırması** | Satıcı kamerası açıkken izleyiciler gerçek zamanlı teklif verir; her teklif tüm izleyicilere WebSocket ile yayınlanır |
-| **SwipeLive** | TikTok-benzeri dikey kaydırma arayüzü ile canlı akışlar arasında geçiş; ML sıralaması |
-| **Birebir Görüntülü Arama** | WebRTC tabanlı VoIP (LiveKit SFU); iOS CallKit / Android ConnectionService entegrasyonu |
-| **Tuci Ekonomisi** | Platform içi sanal para; hediye, bahşiş, teklif ve premium içerik için kullanılır |
-| **AI Açıklama Üretimi** | İlan başlığından otomatik açıklama; Groq/Gemini API üzerinden ABD IP'li proxy zinciri |
-| **OTA Yerelleştirme** | tr / en / ar / ru — çeviriler Redis üzerinden canlı güncellenir, uygulama güncellemesi gerekmez |
+| **Canlı Yayın Açık Artırması** | İzleyiciler gerçek zamanlı teklif verir; teklifler WebSocket ile yayınlanır. |
+| **SwipeLive** | TikTok-benzeri dikey kaydırma arayüzü ile canlı akışlar arasında ML sıralamalı geçiş. |
+| **Birebir Görüntülü Arama** | WebRTC tabanlı VoIP (LiveKit SFU); iOS CallKit / Android ConnectionService. |
+| **Tuci Ekonomisi** | Platform içi sanal para; hediye, bahşiş ve açık artırma işlemleri. |
+| **AI Açıklama Üretimi** | İlan başlığından otomatik açıklama; Groq/Gemini API üzerinden ABD/EU proxy zinciri. |
 
 ---
 
-## 2. Sistem Bağlamı ve Kapsam
+## 2. Kısıtlar
 
-teqlif platformunun dış sistemlerle ilişkisi:
+| Kısıt | Gerekçe |
+|---|---|
+| **Python 3.12+ / FastAPI** | Mevcut codebase ve güçlü async-native ekosistem. |
+| **Altı Node Sabit Altyapı** | V2.1, Kubernetes karmaşası yerine 6 bağımsız node ve WireGuard mesh kullanır. Startup için maliyet ve stabilite optimizasyonudur. |
+| **Zap-Hosting UDP Filtresi** | Node5 ve Node6 üzerindeki kurumsal filtreler nedeniyle WireGuard, varsayılan portu yerine 443 portu (HTTPS/QUIC maskesi) üzerinden çalışmak zorundadır. |
+| **AI API Bölge Kısıtlamaları** | Gemini vb. LLM sağlayıcılarının AB/TR dışı kısıtlamalarını aşmak için ABD lokasyonlu (Node6) proxy kullanılmalıdır. |
+
+---
+
+## 3. Sistem Bağlamı ve Kapsam
+
+teqlif platformunun V2.1 yapısında dış sistemlerle ilişkisi:
 
 ```mermaid
 flowchart TB
@@ -86,11 +99,66 @@ flowchart TB
 
 ---
 
-## 3. Dağıtım Görünümü (V2.1 Topoloji)
+## 4. Çözüm Stratejisi
 
-### 3.1 Altı Node WireGuard Mesh
+| Karar Alanı | Seçilen Yaklaşım | Gerekçe |
+|---|---|---|
+| Backend mimarisi | **FastAPI monolith + CQRS iç yapı** | Modülerlik + async-native çalışma prensibi. |
+| Canlı Yayın (WebRTC) | **Dual LiveKit Node (DNS Round Robin)** | V2.1'de yayın yükünü iki bağımsız node'a (Node3 ve Node4) bölerek yatay ölçekleme sağlandı. Gerekirse Node7, Node8 hızlıca eklenebilir. |
+| Veritabanı Eşzamanlılığı | **PostgreSQL row-lock + Unit of Work** | Açık artırma tekliflerinde tutarlılığı ve ACID garantisini sağlamak. |
+| Arka plan işler | **ARQ (Genel + Kritik kuyruklar)** | Python-native async; priority isolation; Redis destekli. |
+| AI metin üretimi | **ABD/EU IP proxy zinciri** | Coğrafi kısıtları aşmak için istekler Node6'ya (ABD) gider; hata anında Node5'e (EU) devredilir. |
 
-V2.1 mimarisi, gateway sunucusunu ortadan kaldırarak doğrudan Cloudflare üzerinden Node1'e trafiği yönlendirir ve 6 sunuculuk, her birinin belirli bir rolü olduğu, tam Mesh (WireGuard) bir topoloji kullanır.
+---
+
+## 5. Yapı Taşları Görünümü
+
+Sistem temel olarak dört izole katmandan oluşur:
+1. **Core Katmanı (Node1):** İş mantığını çalıştıran API, birincil veri tabanı (PostgreSQL), önbellek (Redis) ve medya deposu (MinIO) burada bulunur. 
+2. **Medya / Akış Katmanı (Node3, Node4):** UDP ağırlıklı WebRTC paketlerini yönlendiren sunuculardır.
+3. **Servis / Proxy Katmanı (Node5, Node6):** Yapay zeka sağlayıcılarına giden trafiği maskeler ve Staging ortamını barındırır.
+4. **Gözlem ve Yedekleme Katmanı (Node2):** Ana veritabanının anlık kopyasını (WAL) tutar ve sistem metriklerini (Grafana, Loki) toplar.
+
+---
+
+## 6. Çalışma Zamanı Görünümü
+
+### AI Proxy Fallback Zinciri (V2.1)
+
+Sistem hatalara (timeout, rate-limit) karşı dayanıklı tasarlanmıştır.
+
+```mermaid
+sequenceDiagram
+    actor User as 📱 Satıcı
+    participant API as node1 FastAPI
+    participant N6 as node6 AI Proxy (Primary - US)
+    participant N5 as node5 AI Proxy (Fallback - EU)
+    participant GEM as Google Gemini
+    participant GROQ as Groq API
+
+    User->>API: POST /api/listings/generate-description
+    API->>N6: POST /generate (timeout: 45s, WG üzerinden)
+    alt node6 başarılı
+        N6->>GEM: generateContent
+        GEM-->>N6: generated text
+        N6-->>API: 200 {text, provider:"gemini"}
+        API-->>User: açıklama teslim edildi
+    else node6 zaman aşımı / down
+        API->>N5: POST /generate (timeout: 30s, WG üzerinden)
+        N5->>GROQ: chat.completions
+        GROQ-->>N5: generated text
+        N5-->>API: 200 {text, provider:"groq"}
+        API-->>User: açıklama teslim edildi
+    end
+```
+
+---
+
+## 7. Dağıtım Görünümü (V2.1)
+
+### 7.1 Altı Node WireGuard Mesh ve Rol Dağılımları
+
+V2.1 mimarisi; tüm node'ları birbiriyle (`10.10.0.0/24`) uçtan uca şifreleyen bir Mesh topolojisi kullanır.
 
 ```mermaid
 flowchart TB
@@ -126,17 +194,9 @@ flowchart TB
     N6 -.-|"Fallback"| N5
     N3 <-->|"WireGuard (Koordinasyon)"| N1
     N4 <-->|"WireGuard (Koordinasyon)"| N1
-    
-    N1 -->|"Promtail Logs"| N2
-    N3 -->|"Promtail Logs"| N2
-    N4 -->|"Promtail Logs"| N2
-    N5 -->|"Promtail Logs"| N2
-    N6 -->|"Promtail Logs"| N2
 ```
 
----
-
-## 4. Node Envanteri
+### 7.2 Node Envanteri
 
 | Node | WG IP | Public IP | Rol | Sağlayıcı / Lokasyon | Donanım |
 |------|-------|-----------|-----|----------------------|---------|
@@ -149,63 +209,55 @@ flowchart TB
 
 ---
 
-## 5. Çalışma Zamanı Görünümü
+## 8. Kesişen Kavramlar
 
-### 5.1 AI Proxy Fallback Zinciri (V2.1)
-
-```mermaid
-sequenceDiagram
-    actor User as 📱 Satıcı
-    participant API as node1 FastAPI
-    participant N6 as node6 AI Proxy (Primary - US)
-    participant N5 as node5 AI Proxy (Fallback - EU)
-    participant GEM as Google Gemini
-    participant GROQ as Groq API
-
-    User->>API: POST /api/listings/generate-description
-    API->>N6: POST /generate (timeout: 45s, WG üzerinden)
-    alt node6 başarılı
-        N6->>GEM: generateContent
-        GEM-->>N6: generated text
-        N6-->>API: 200 {text, provider:"gemini"}
-        API-->>User: açıklama teslim edildi
-    else node6 zaman aşımı / down
-        API->>N5: POST /generate (timeout: 30s, WG üzerinden)
-        N5->>GROQ: chat.completions
-        GROQ-->>N5: generated text
-        N5-->>API: 200 {text, provider:"groq"}
-        API-->>User: açıklama teslim edildi
-    end
-```
-
-### 5.2 LiveKit Yayın Ölçeklemesi
-
-Kullanıcılar canlı yayın sunucularına DNS round-robin ile bağlanırlar (node3 ve node4). Bu, WebRTC yükünü birden fazla sunucuya dağıtır. Sisteme dilediği zaman 15 dakika içinde yeni bir streaming node (`node7`, `node8`) eklenebilir.
+- **Dış Güvenlik:** Tüm API trafiği Cloudflare CDN ve WAF'ından geçer. Bot koruması (Turnstile) burada yönetilir.
+- **İç İzolasyon:** Veritabanı ve önbelleğe (PostgreSQL: 5432, Redis: 6379) internet üzerinden ulaşılamaz; bağlantılar yalnızca `10.10.0.0/24` WireGuard ağıyla yapılır.
+- **Gözlemlenebilirlik (Observability):** Node1, Node3, Node4 ve Node5 üzerinden `promtail` aracılığıyla toplanan loglar, Node2'deki Loki'ye yönlendirilir ve Grafana ile görselleştirilir.
 
 ---
 
-## 6. Ağ ve Güvenlik
+## 9. Mimari Kararlar
 
-- **Cloudflare Edge:** Tüm API trafiği Cloudflare CDN ve WAF'ından geçer. Bot koruması (Turnstile) burada yönetilir.
-- **WireGuard İzolasyonu:** Node'lar arasındaki veri tabanı, redis ve iç servis iletişimleri (örneğin node1 -> node2 WAL gönderimi) tamamen şifreli WireGuard ağı (`10.10.0.0/24`) üzerinden gerçekleşir. Dışarıya veritabanı portu (5432) veya Redis (6379) kesinlikle açık değildir.
-- **Zap-Hosting UDP Filtresi:** Node5 (Staging) üzerindeki ZAP Hosting DDoS kalkanı varsayılan WireGuard UDP paketlerini düşürdüğünden, Node5 üzerinde WireGuard 443 portundan HTTPS kılıfında geçirilir.
-- **Güvenlik Katmanları:** UFW Firewall, Fail2Ban, Sadece Key-Based SSH erişimi.
+| # | Karar (ADR) | Gerekçe |
+|---|---|---|
+| ADR-01 | **Gateway'in Kaldırılması (V2.1)** | Doğrudan Cloudflare -> Node1 yönlendirmesi yapılarak latency ve gereksiz tekil hata noktası (SPOF) ortadan kaldırıldı. |
+| ADR-02 | **Canlı Yayın Sunucularının Ayrılması** | Node3 ve Node4 yalnızca LiveKit SFU çalıştırır. WebRTC trafiği ana sunucudan tamamen izole edilerek Core API I/O sınırlarından korundu. |
+| ADR-03 | **Analitik ve Backup'ın İzole Edilmesi** | Node2 (4TB HDD) sadece ClickHouse analitiği ve WAL backup'larını tutarak IOPS darboğazlarını önler. |
+| ADR-04 | **WireGuard'ın Port 443 Kullanması** | Zap-Hosting (node5/6) DDoS koruması UDP/51820'yi kestiğinden, trafik UDP/443 (QUIC kılıfı) üzerinden geçirildi. |
 
 ---
 
-## 7. Yüksek Erişilebilirlik ve Failover
+## 10. Kalite Gereksinimleri
 
-| Bileşen | HA Durumu | Felaket Senaryosu (Disaster Recovery) |
-|---------|-----------|----------------------------------------|
-| **PostgreSQL (node1)** | Tek node | WAL stream ile `node2`'ye (4TB HDD) anlık yedekleniyor. Node1 çökerse, Node2 üzerindeki verilerle 0 veri kaybı (RPO: 0) ve tahmini 30dk içinde (RTO) yeni bir master ayağa kaldırılır. |
-| **Redis (node1)** | Tek node | Reboot durumunda RDB yedeğinden başlar. |
-| **LiveKit (node3, node4)** | Çift node | Sunuculardan biri düşerse DNS round-robin ile diğer node'dan yayınlar devam eder. İzleyici kesintisi yaşamaz. |
-| **AI Proxy (node5, node6)** | Çift node | node6 (US) yanıt vermezse veya rate-limit yerse, FastAPI otomatik olarak node5'e (EU) geçer. |
+| Hedef | V2.1 Karşılığı |
+|---|---|
+| **Yüksek Erişilebilirlik (HA)** | LiveKit streaming DNS Round-Robin ile yedeklidir. AI proxy'ler zincirleme failover kullanır. |
+| **Sıfır Veri Kaybı (RPO: 0)** | Node1'deki PostgreSQL verileri, `pg_receivewal` kullanılarak anlık olarak Node2'deki 4TB disklere yazılır. |
+| **Düşük Gecikme (Latency)** | Cloudflare edge proxy'si doğrudan Core API'ye bağlandığı için aradaki gateway atlaması sıfırlandı. Ağ içi iletişim WireGuard çekirdek modülü üzerinden geçer. |
+
+---
+
+## 11. Riskler ve Teknik Borç
+
+| Risk / Borç | Etki | Azaltma (V2.1 Çözümü) |
+|---|---|---|
+| **Node1 SPOF (Tek Nokta Hatası)** | Node1 donanımsal olarak çökerse Core API ve DB durur. | Node2 üzerinde anlık WAL yedeği bulunur. RTO (Kurtarma Süresi) node2 üzerinde manuel başlatma ile ~30dk'ya indirilmiştir. |
+| **Bütçe Odaklı Sunucularda Performans** | ZAP Hosting VPS'lerinde *noisy-neighbor* (gürültülü komşu) sorunu yaşanabilir. | V2.1'de bu sunucular (Node5, Node6) yalnızca asenkron AI Proxy ve test ortamı (Staging) için izole edildi. |
+
+---
+
+## 12. Sözlük
+
+| Terim | Açıklama |
+|---|---|
+| **WAL Streaming** | PostgreSQL anlık log aktarımı. Node1'den Node2'ye kesintisiz veri kurtarma noktası (restore point) sağlar. |
+| **LiveKit SFU** | Seçici Yönlendirme Ünitesi (Selective Forwarding Unit); Node3 ve Node4'te çalışan açık kaynaklı WebRTC medya motoru. |
+| **CQRS** | Komut ve Sorgu Sorumluluklarının Ayrılması (Command Query Responsibility Segregation). |
+| **WireGuard Mesh** | 6 sunucunun internete kapalı olarak kendi aralarında `10.10.0.X` IP blokları ile doğrudan ve şifreli haberleştiği topoloji. |
 
 ---
 
 <div align="center">
-
-*Bu belge, projeye ait V2.1 güncel mimarisini yansıtmaktadır.*
-
+*Bu belge, projeye ait V2.1 güncel mimarisini ARC42 standartlarında yansıtmaktadır.*
 </div>
