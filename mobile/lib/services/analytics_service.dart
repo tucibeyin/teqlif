@@ -12,9 +12,9 @@ import '../models/pro_insights_data.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
-class AiInsufficientteqliqException implements Exception {
+class AiInsufficientTuciException implements Exception {
   final String detail;
-  const AiInsufficientteqliqException(this.detail);
+  const AiInsufficientTuciException(this.detail);
 }
 
 class AnalyticsService {
@@ -144,7 +144,7 @@ class AnalyticsService {
   }
 
   /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
-  /// Throws [AiInsufficientteqliqException] on HTTP 402 (INSUFFICIENT_FUNDS).
+  /// Throws [AiInsufficientTuciException] on HTTP 402 (INSUFFICIENT_FUNDS).
   /// Returns null on other errors.
   Future<Map<String, dynamic>?> getPriceEstimate({
     required String title,
@@ -180,7 +180,7 @@ class AnalyticsService {
       );
     } on AppException catch (e) {
       if (e.code == 'INSUFFICIENT_FUNDS') {
-        throw AiInsufficientteqliqException(e.message);
+        throw AiInsufficientTuciException(e.message);
       }
       debugPrint('[AnalyticsService] getPriceEstimate hata: ${e.message}');
     }

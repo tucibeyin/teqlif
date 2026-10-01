@@ -86,7 +86,7 @@
                 if (isPremium && remaining > 0) {
                     msg += 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için 1 adet PRO ücretsiz hakkınız kullanılacaktır.';
                 } else {
-                    msg += `Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için ${cost} teqliq bakiyenizden düşülecektir.`;
+                    msg += `Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için ${cost} TUCi bakiyenizden düşülecektir.`;
                 }
                 const ok = confirm(`${msg}\n\nAnladım, pasife almak istiyor musunuz?`);
                 if (!ok) return;
@@ -95,7 +95,7 @@
             // Pasif → Aktif
             if (!withinWindow) {
                 if (!canAfford) {
-                    alert(`Yetersiz bakiye. Devam etmek için teqliq yükleyin.\nBakiyeniz: ${balance} teqliq`);
+                    alert(`Yetersiz bakiye. Devam etmek için TUCi yükleyin.\nBakiyeniz: ${balance} TUCi`);
                     return;
                 }
 
@@ -103,9 +103,9 @@
                 if (isPremium && remaining > 0) {
                     msg = `${remaining} ücretsiz hakkınız var. 1 hak kullanılacak.`;
                 } else if (isPremium) {
-                    msg = `Bu ayki hakkınız doldu. ${cost} teqliq ödenecek.`;
+                    msg = `Bu ayki hakkınız doldu. ${cost} TUCi ödenecek.`;
                 } else {
-                    msg = `${cost} teqliq ödenecek. Bakiyeniz: ${balance} teqliq.\nPRO'ya geçerek ayda 5 ücretsiz hak kazanın.`;
+                    msg = `${cost} TUCi ödenecek. Bakiyeniz: ${balance} TUCi.\nPRO'ya geçerek ayda 5 ücretsiz hak kazanın.`;
                 }
                 const ok = confirm(`İlanı Tekrar Yayınla\n\n${msg}`);
                 if (!ok) return;
@@ -117,7 +117,7 @@
             await load();
         } catch (e) {
             if (e.status === 402) {
-                alert('Yetersiz bakiye. Devam etmek için teqliq yükleyin.');
+                alert('Yetersiz bakiye. Devam etmek için TUCi yükleyin.');
             }
         }
     }

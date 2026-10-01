@@ -37,8 +37,8 @@ def compute_karma(credits_remaining: int, actual_count: int) -> dict:
     """leads.py send_blast / send_retargeting ile birebir aynı formül."""
     free_used  = min(credits_remaining, actual_count)
     paid_count = actual_count - free_used
-    teqliq_cost  = paid_count * COST_PER_PERSON
-    return dict(free_used=free_used, paid_count=paid_count, teqliq_cost=teqliq_cost)
+    tuci_cost  = paid_count * COST_PER_PERSON
+    return dict(free_used=free_used, paid_count=paid_count, tuci_cost=tuci_cost)
 
 
 def check(label, condition, detail=""):
@@ -52,8 +52,8 @@ def assert_karma(name, credits_remaining, actual_count,
     r = compute_karma(credits_remaining, actual_count)
     ok = (r["free_used"] == exp_free and
           r["paid_count"] == exp_paid and
-          r["teqliq_cost"]  == exp_cost)
-    detail = (f"free={r['free_used']} paid={r['paid_count']} cost={r['teqliq_cost']}"
+          r["tuci_cost"]  == exp_cost)
+    detail = (f"free={r['free_used']} paid={r['paid_count']} cost={r['tuci_cost']}"
               f"  (beklenen free={exp_free} paid={exp_paid} cost={exp_cost})")
     check(name, ok, detail)
     return ok
@@ -160,7 +160,7 @@ async def main():
                 await db.execute(sql_text("""
                     INSERT INTO users
                         (email, username, full_name, hashed_password,
-                         is_active, email_verified, teqliq_balance, fcm_token)
+                         is_active, email_verified, tuci_balance, fcm_token)
                     VALUES (:email, :uname, 'Test User', 'x', true, false, 200, :token)
                 """), {"email": email, "uname": f"u_{h[:8]}", "token": f"fcm_{h[:12]}"})
             await db.flush()
@@ -231,10 +231,10 @@ async def main():
     sep("5 · Yetersiz Bakiye Mantığı")
 
     for cost, balance, exp_insuf, label in [
-        (50, 100, False, "50 teqliq lazım, 100 var → yeterli"),
-        (50,  50, False, "50 teqliq lazım, 50 var  → tam yeterli"),
-        (50,  49, True,  "50 teqliq lazım, 49 var  → yetersiz"),
-        ( 0,   0, False, "0 teqliq lazım           → sorun yok"),
+        (50, 100, False, "50 TUCi lazım, 100 var → yeterli"),
+        (50,  50, False, "50 TUCi lazım, 50 var  → tam yeterli"),
+        (50,  49, True,  "50 TUCi lazım, 49 var  → yetersiz"),
+        ( 0,   0, False, "0 TUCi lazım           → sorun yok"),
     ]:
         is_insuf = cost > 0 and balance < cost
         all_ok &= check(label, is_insuf == exp_insuf,

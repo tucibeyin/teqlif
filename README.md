@@ -38,7 +38,7 @@
 
 ## 1. Giriş ve Hedefler
 
-teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarzı canlı yayınları, gerçek zamanlı açık artırmaları, birebir görüntülü aramaları, hikâyeleri, doğrudan satışları ve sanal para birimi (teqliq) ile bir sanal ekonomiyi tek bir mobil uygulamada birleştirir.
+teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarzı canlı yayınları, gerçek zamanlı açık artırmaları, birebir görüntülü aramaları, hikâyeleri, doğrudan satışları ve sanal para birimi (Tuci) ile bir sanal ekonomiyi tek bir mobil uygulamada birleştirir.
 
 ### Temel Özellikler
 
@@ -47,7 +47,7 @@ teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarz�
 | **Canlı Yayın Açık Artırması** | Satıcı kamerası açıkken izleyiciler gerçek zamanlı teklif verir; her teklif tüm izleyicilere WebSocket ile yayınlanır |
 | **SwipeLive** | TikTok-benzeri dikey kaydırma arayüzü ile canlı akışlar arasında geçiş; ML sıralaması |
 | **Birebir Görüntülü Arama** | WebRTC tabanlı VoIP (LiveKit SFU); iOS CallKit / Android ConnectionService entegrasyonu |
-| **teqliq Ekonomisi** | Platform içi sanal para; hediye, bahşiş, teklif ve premium içerik için kullanılır |
+| **Tuci Ekonomisi** | Platform içi sanal para; hediye, bahşiş, teklif ve premium içerik için kullanılır |
 | **AI Açıklama Üretimi** | İlan başlığından otomatik açıklama; Groq/Gemini API üzerinden ABD IP'li proxy zinciri |
 | **OTA Yerelleştirme** | tr / en / ar / ru — çeviriler Redis üzerinden canlı güncellenir, uygulama güncellemesi gerekmez |
 
@@ -403,7 +403,7 @@ flowchart TB
 
 | Terim | Açıklama |
 |---|---|
-| **teqliq** | teqlif platformunun yerel sanal para birimidir. Kullanıcılar bakiye yükleyip yayıncıya hediye atar veya teklif verir. |
+| **Tuci** | teqlif platformunun yerel sanal para birimidir. Kullanıcılar bakiye yükleyip yayıncıya hediye atar veya teklif verir. |
 | **SwipeLive** | Flutter tarafında uygulanan, TikTok benzeri yukarı kaydırmalı kesintisiz video/canlı yayın deneyimi arayüzü. |
 | **WAL Streaming** | PostgreSQL anlık Write-Ahead Log aktarımı. Node1'den Node2'ye kesintisiz veri kurtarma noktası (restore point) sağlar. |
 | **LiveKit SFU** | Seçici Yönlendirme Ünitesi (Selective Forwarding Unit); Node3 ve Node4'te çalışan açık kaynaklı WebRTC medya motoru. |

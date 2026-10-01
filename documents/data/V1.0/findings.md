@@ -68,7 +68,7 @@ Son güncelleme: 2026-09-20
 | search_alerts | 7 | 2 | — | — | 1 | 1 | 1 Enum | 1 |
 | referrals | 5 | 1 | — | — | — | 1 | — | 2 |
 | reports | 5 | 1 | 2 | — | — | 1 | — | 2 |
-| teqliq_transactions | 7 | 2 | 2 | — | — | 1 | — | 1 |
+| tuci_transactions | 7 | 2 | 2 | — | — | 1 | — | 1 |
 | market_index | — | — | — | — | — | — | — | — |
 | categories | 6 | 2 | 1 | 1 | — | — | 1 Enum | 0 |
 | subcategories | 4 | 2 | 1 | 1 | — | — | — | 1 |
@@ -94,7 +94,7 @@ Profil (5):
   username, full_name, bio, profile_image_url, profile_image_thumb_url
 
 Premium/Plan (4):
-  is_premium, plan_type, premium_since, teqliq_balance
+  is_premium, plan_type, premium_since, tuci_balance
 
 ML/Öneri (2):
   preference_embedding (Vector384), max_budget
@@ -161,7 +161,7 @@ users (merkez)
   ← stories.user_id
   ← user_interests.user_id
   ← referrals.*
-  ← teqliq_transactions.user_id
+  ← tuci_transactions.user_id
   ← user_blocks.blocker_id / blocked_id
   ← ratings.rater_id / rated_user_id
   ← listing_impressions.user_id

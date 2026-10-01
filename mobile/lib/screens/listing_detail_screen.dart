@@ -758,7 +758,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
     final creditsLeft = est['blast_credits_remaining'] as int? ?? 0;
     final perBlastCap = est['per_blast_cap'] as int? ?? maxAudience;
-    final teqliqBalance = est['teqliq_balance'] as int? ?? 0;
+    final teqlikBalance = est['teqlik_balance'] as int? ?? 0;
     notifier.setSending(false);
 
     // Onay penceresi (Akıllı Modal)
@@ -768,7 +768,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         maxAudience: maxAudience,
         creditsLeft: creditsLeft,
         perBlastCap: perBlastCap,
-        teqliqBalance: teqliqBalance,
+        teqlikBalance: teqlikBalance,
       ),
     );
 
@@ -817,7 +817,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     int remaining = 0;
     int limit = 0;
     bool isPro = false;
-    int teqliqBalance = 0;
+    int teqlikBalance = 0;
 
     // Check loading state while fetching data — spinner shown by AsyncElevatedButton
 
@@ -842,7 +842,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         );
         if (ur.statusCode == 200) {
           final ud = jsonDecode(ur.body) as Map<String, dynamic>;
-          teqliqBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
+          teqlikBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
         }
       }
     } catch (_) {}
@@ -1043,8 +1043,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 _BoostRow(
                   icon: Icons.account_balance_wallet_outlined,
                   label: loc.t("boostDialogPaidBalance"),
-                  value: '$teqliqBalance teqliq',
-                  valueColor: teqliqBalance >= 50
+                  value: '$teqlikBalance teqliq',
+                  valueColor: teqlikBalance >= 50
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFDC2626),
                 ),
@@ -1058,7 +1058,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 isExpanded: false,
               ),
               TeqButton(
-                onPressed: teqliqBalance >= 50
+                onPressed: teqlikBalance >= 50
                     ? () => Navigator.pop(dlgCtx, true)
                     : null,
                 text: loc.t("boostDialogPaidConfirm"),
@@ -2869,13 +2869,13 @@ class _MassNotificationDialog extends ConsumerStatefulWidget {
   final int maxAudience;
   final int creditsLeft;
   final int perBlastCap;
-  final int teqliqBalance;
+  final int teqlikBalance;
 
   const _MassNotificationDialog({
     required this.maxAudience,
     required this.creditsLeft,
     required this.perBlastCap,
-    required this.teqliqBalance,
+    required this.teqlikBalance,
   });
 
   @override
@@ -2940,8 +2940,8 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
         ? widget.creditsLeft
         : actualCount;
     final paidCount = actualCount - freeUsed;
-    final teqliqCost = paidCount * 10;
-    final bool hasEnoughBalance = widget.teqliqBalance >= teqliqCost;
+    final teqlikCost = paidCount * 10;
+    final bool hasEnoughBalance = widget.teqlikBalance >= teqlikCost;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
@@ -3069,7 +3069,7 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
                         ),
                       ),
                       Text(
-                        '$teqliqCost teqliq',
+                        '$teqlikCost teqliq',
                         style: TextStyle(
                           color: hasEnoughBalance
                               ? const Color(0xFF2DD4BF)
@@ -3086,7 +3086,7 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                  loc.t("audienceInsufficientteqliq"),
+                  loc.t("audienceInsufficientTuci"),
                   style: const TextStyle(
                     color: Color(0xFFEF4444),
                     fontSize: 12,
@@ -3108,7 +3108,7 @@ class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog
           onPressed: hasEnoughBalance && actualCount > 0
               ? () => Navigator.pop(context, {
                   'count': actualCount,
-                  'cost': teqliqCost,
+                  'cost': teqlikCost,
                 })
               : null,
           text: loc.t("btnSend"),

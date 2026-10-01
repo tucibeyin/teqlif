@@ -280,7 +280,7 @@
             <h2>⚡ Teqlif Admin</h2>
             <div class="nav-item active" id="navDashboard">📊 Dashboard</div>
             <div class="nav-item" id="navUsers">👥 Kullanıcılar</div>
-            <div class="nav-item" id="navteqliq">💰 teqliq Ekonomisi</div>
+            <div class="nav-item" id="navTuci">💰 TUCi Ekonomisi</div>
             <div class="nav-item" id="navCampaigns">📢 Reklam Kampanyaları</div>
             <div class="nav-item" id="navStreams">🔴 Aktif Yayınlar</div>
             <div class="nav-item" id="navStreamHistory">📺 Yayın Geçmişi</div>
@@ -310,8 +310,8 @@
                     <div class="kpi-card"><div class="kpi-label">Aktif İlan</div><div class="kpi-value blue" id="kpiListings">—</div></div>
                     <div class="kpi-card"><div class="kpi-label">Aktif Yayın</div><div class="kpi-value red" id="kpiStreams">—</div></div>
                     <div class="kpi-card"><div class="kpi-label">Toplam Şikayet</div><div class="kpi-value amber" id="kpiReports">—</div></div>
-                    <div class="kpi-card"><div class="kpi-label">teqliq Dolaşımda</div><div class="kpi-value amber" id="kpiteqliq">—</div></div>
-                    <div class="kpi-card"><div class="kpi-label">Bugün Harcanan teqliq</div><div class="kpi-value red" id="kpiteqliqSpent">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TUCi Dolaşımda</div><div class="kpi-value amber" id="kpiTuci">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Bugün Harcanan TUCi</div><div class="kpi-value red" id="kpiTuciSpent">—</div></div>
                 </div>
                 <div style="background:var(--admin-bg);border:1px solid var(--admin-border);border-radius:0.75rem;padding:1.2rem;flex-shrink:0;">
                     <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:0.5rem;">Son 7 Gün Kayıt</div>
@@ -337,7 +337,7 @@
                                 <th>ID</th>
                                 <th>Kullanıcı</th>
                                 <th>Durum</th>
-                                <th>teqliq</th>
+                                <th>TUCi</th>
                                 <th>İlan / Yayın</th>
                                 <th>FCM</th>
                                 <th>Tarih</th>
@@ -350,31 +350,31 @@
                 <div id="users-pagination" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;flex-shrink:0;"></div>
             </div>
 
-            <!-- teqliq EKONOMİSİ -->
-            <div id="panel-teqliq" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+            <!-- TUCi EKONOMİSİ -->
+            <div id="panel-tuci" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
                 <div class="header-bar">
-                    <h1>teqliq Ekonomisi</h1>
+                    <h1>TUCi Ekonomisi</h1>
                     <div class="header-actions">
                         <button id="btnAirdropModal" style="width:auto;background:var(--admin-warn);">🎁 Airdrop</button>
-                        <input type="text" id="search-teqliq" class="search-box" placeholder="Kullanıcı, işlem tipi...">
-                        <button id="btnLoadteqliq" style="width:auto;background:#3b82f6;">🔄</button>
+                        <input type="text" id="search-tuci" class="search-box" placeholder="Kullanıcı, işlem tipi...">
+                        <button id="btnLoadTuci" style="width:auto;background:#3b82f6;">🔄</button>
                     </div>
                 </div>
                 <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-shrink:0;">
-                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Dolaşımdaki teqliq</div><div class="kpi-value amber" id="teqliqCirculation">—</div></div>
-                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Kazanılan</div><div class="kpi-value green" id="teqliqEarned">—</div></div>
-                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Harcanan</div><div class="kpi-value red" id="teqliqSpent">—</div></div>
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Dolaşımdaki TUCi</div><div class="kpi-value amber" id="tuciCirculation">—</div></div>
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Kazanılan</div><div class="kpi-value green" id="tuciEarned">—</div></div>
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Harcanan</div><div class="kpi-value red" id="tuciSpent">—</div></div>
                 </div>
                 <div style="margin-bottom:1rem;flex-shrink:0;">
                     <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:0.5rem;">🏆 Top 10 Bakiye</div>
-                    <div id="teqliqTopHolders" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
+                    <div id="tuciTopHolders" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
                 </div>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr><th>Tarih</th><th>Kullanıcı</th><th>Miktar</th><th>Tip</th></tr>
                         </thead>
-                        <tbody id="teqliq-table-body"></tbody>
+                        <tbody id="tuci-table-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -692,9 +692,9 @@
     <div id="airdrop-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close" id="btnCloseAirdropModal">&times;</button>
-            <h2 style="margin-top:0;color:var(--admin-warn);">🎁 teqliq Airdrop</h2>
+            <h2 style="margin-top:0;color:var(--admin-warn);">🎁 TUCi Airdrop</h2>
             <label>Kullanıcı Adı *</label><input type="text" id="airdrop-username" placeholder="@kullaniciadi" autocomplete="off">
-            <label>Miktar (teqliq) *</label><input type="number" id="airdrop-amount" placeholder="Örn: 100" min="1">
+            <label>Miktar (TUCi) *</label><input type="number" id="airdrop-amount" placeholder="Örn: 100" min="1">
             <button id="btnSubmitAirdrop" style="background:var(--admin-warn);">🎁 Airdrop Et</button>
         </div>
     </div>

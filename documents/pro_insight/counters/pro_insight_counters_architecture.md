@@ -39,14 +39,14 @@
        └──────────┴──────────┴───────────┴───────────┘
                              │
               credit_service.py (Redis sayaçları)
-                    + teqliqTransaction (PG)
+                    + TuciTransaction (PG)
 ```
 
 **Kredi veri akışı:**
 ```
 API isteği → limit/bakiye kontrolü → iş mantığı çalışır
 → credit_service.increment() → Redis INCR
-→ (ücretliyse) teqliqTransaction PG'ye yazılır
+→ (ücretliyse) TuciTransaction PG'ye yazılır
 → Pro Hub polling → /blast-credits + /boost-credits + /ai-price-credits + /ai-desc-credits + /reactivation-credits
 ```
 
@@ -77,7 +77,7 @@ Limit: credit_service.free_limit("blast") → PRO=6, standart=3/ay
 Kitle: ClickHouse user_events → aktif user_id listesi (son 30 gün)
        + PG users → FCM token filtresi
 Push: Firebase, 50'lik chunk'lar, asyncio.gather
-DB: MassNotificationCampaign + (ücretliyse) teqliqTransaction
+DB: MassNotificationCampaign + (ücretliyse) TuciTransaction
 Sayaç: credit_service.increment("blast", ..., count=free_used)
 ```
 
@@ -90,7 +90,7 @@ Kitle: _build_listing_audience() →
   2. PG user_interests: kategori ilgisi olanlar
   Birleşim → FCM token filtresi → LIMIT cap
 Push: Firebase, 50'lik chunk'lar, asyncio.gather
-DB: MassNotificationCampaign + (ücretliyse) teqliqTransaction(type="spend_mass_notification")
+DB: MassNotificationCampaign + (ücretliyse) TuciTransaction(type="spend_mass_notification")
 Sayaç: credit_service.increment("blast", ..., count=free_used)
 ```
 
@@ -109,7 +109,7 @@ WHERE item_id = {listing_id} AND item_type = 'listing'
 ### 2.4 Tespit Edilen Sorunlar
 
 **F-BLAST-01 (Yüksek) — Tek sayaç, iki tetikleyici, farklı transaction type:**
-- Retargeting blast → teqliqTransaction'a `transaction_type` belirsiz
+- Retargeting blast → TuciTransaction'a `transaction_type` belirsiz
 - İlan bildirimi → `"spend_mass_notification"`
 - İkisi aynı Redis sayacını (`blast_credits`) kullanmasına rağmen transaction history'de ayırt edilemiyor. Raporlama ve denetim kör.
 
@@ -142,7 +142,7 @@ POST /api/ads/campaigns
 → free_limit kontrolü: PRO=3, standart=0
 → aylık kullanım: credit_service.get_used("boost", ...)
 → ücretsiz hak varsa is_free=True → AdCampaign kaydı
-→ ücretliyse: teqliq_balance kontrolü → teqliqTransaction("spend_boost")
+→ ücretliyse: tuci_balance kontrolü → TuciTransaction("spend_boost")
 → credit_service.increment("boost", ...)
 → load_active_campaigns_to_redis() → anlık Redis yükleme
 ```
@@ -194,7 +194,7 @@ API yanıtı gelene kadar kullanıcı 5/ay kazandığını sanıyor, gerçekte 3
 ```
 POST /api/analytics/price-estimate
  1. Limit kontrolü: PRO=6/ay, standart=0
-    → aşılmış + teqliq yetersizse 402
+    → aşılmış + TUCi yetersizse 402
  2. title+desc+category → MD5 hash → Redis embedding cache
     → miss: ARQ worker'a generate_embedding_task
     → max 15 sn bekle
@@ -207,7 +207,7 @@ POST /api/analytics/price-estimate
  7. KDE: scipy.stats.gaussian_kde → bimodal tespiti
  8. Güven seviyesi: low/medium/high
  9. credit_service.increment("ai_price", ...)
-    → ücretliyse teqliqTransaction("spend_ai")
+    → ücretliyse TuciTransaction("spend_ai")
 ```
 
 ### 4.3 ML Bileşenleri
@@ -227,9 +227,9 @@ POST /api/analytics/price-estimate
 - Kullanıcı Pro Hub'da kredi doluncaya kadar sayacı 20 bazında okuyor.
 - `item.data` gelince güncelleniyor ama ağ yokken 20 gösterir → beklenti yönetimi bozuk.
 
-**F-AIPRICE-02 (Yüksek) — `teqliqTransaction` type ayrımı yok:**
+**F-AIPRICE-02 (Yüksek) — `TuciTransaction` type ayrımı yok:**
 - `ai_price` ve `ai_desc` her ikisi de `"spend_ai"` type ile yazılıyor.
-- Kullanıcı teqliq geçmişinde hangi özelliği kullandığını göremez.
+- Kullanıcı TUCi geçmişinde hangi özelliği kullandığını göremez.
 
 **F-AIPRICE-03 (Orta) — ARQ worker bekleme timeout: 15 sn:**
 - Embedding henüz generate edilmemişse (yeni ilan başlığı) kullanıcı 15 sn'ye kadar bekleyebilir.
@@ -258,7 +258,7 @@ POST /api/analytics/price-estimate
 ```
 POST /api/listings/generate-description
  1. Limit kontrolü: PRO=6/ay, standart=0
-    → aşılmış + teqliq yetersizse 402
+    → aşılmış + TUCi yetersizse 402
  2. event_generator() async generator başlar
  3. generate_listing_description_stream():
     Primary:  Groq API (llama-3.3-70b-versatile)
@@ -270,8 +270,8 @@ POST /api/listings/generate-description
     Padding: 8192 karakter boşluk header (buffering trick)
  5. Stream tamamen bitti → ardından:
     credit_service.increment("ai_desc", ...)
-    → ücretliyse teqliqTransaction("spend_ai")
-    → SSE: {done:true, teqliq_spent:N}
+    → ücretliyse TuciTransaction("spend_ai")
+    → SSE: {done:true, tuci_spent:N}
 ```
 
 ### 5.3 LLM Katmanı
@@ -288,8 +288,8 @@ POST /api/listings/generate-description
 - Kullanıcı ücretsiz metni aldı ama kredi düşmedi → kota aşımı.
 - Tersine: `increment()` başarılı ama `done` eventi ulaşmadan client bağlantıyı keserse Flutter "kullanım sayıldı mı?" bilemez.
 
-**F-AIDESC-02 (Yüksek) — `teqliqTransaction` type = `"spend_ai"` (ai_price ile çakışıyor):**
-- Kullanıcı teqliq harcamasını kaynak özelliğe göre ayırt edemiyor.
+**F-AIDESC-02 (Yüksek) — `TuciTransaction` type = `"spend_ai"` (ai_price ile çakışıyor):**
+- Kullanıcı TUCi harcamasını kaynak özelliğe göre ayırt edemiyor.
 
 **F-AIDESC-03 (Orta) — Groq kota dolunca Gemini'ye geçiş sessiz:**
 - LLM fallback mantığı son kullanıcıya yansıtılmıyor.
@@ -324,7 +324,7 @@ GET /api/listings/{id}/reactivation-cost
   → GetReactivationCostQuery (use_cases/listings/queries/get_reactivation_cost.py:13)
     → 30 gün penceresi: listing.created_at >= now() - 30d → ücretsiz
     → PRO: credit_service.get_remaining("reactivation") → kalan kredi var mı?
-    → Maliyet: 10 teqliq (standart veya limit bitmiş PRO)
+    → Maliyet: 10 TUCi (standart veya limit bitmiş PRO)
     → Döner: {within_window, free_remaining, cost, can_afford}
 
 PATCH /api/listings/{id}/toggle
@@ -332,7 +332,7 @@ PATCH /api/listings/{id}/toggle
     → Reaktivasyon tespiti (pasif → aktif geçiş)
     → 30 gün penceresi → ücretsiz (sayaç tüketilmez)
     → PRO ücretsiz kredi varsa: credit_service.increment("reactivation")
-    → Ücretliyse: teqliqTransaction("spend_reactivation") + teqliq_balance düşümü
+    → Ücretliyse: TuciTransaction("spend_reactivation") + tuci_balance düşümü
     → listing.status = ACTIVE
     → Pencere dışıysa: listing.created_at = now()  ← feed'e "yeni ilan" olarak geri döner
     → AdCampaign + ListingImpression kayıtları temizlenir
@@ -367,7 +367,7 @@ PATCH /api/listings/{id}/toggle
 
 ### 7.1 credit_service.py — Gerçek Limit Tablosu
 
-| Özellik | Redis Key Prefix | Standart | PRO | teqliq | Dönem |
+| Özellik | Redis Key Prefix | Standart | PRO | TUCi | Dönem |
 |---------|-----------------|----------|-----|------|-------|
 | blast | `blast_credits` | 3/ay | 6/ay | 10/kişi | premium_since bazlı |
 | boost | `boost_credits` | 0 | 3/ay | 50 | premium_since bazlı |
@@ -405,7 +405,7 @@ def billing_period_start(premium_since: datetime) -> date:
 
 **Sorun:** Standart kullanıcı (`premium_since=None`) için key: `{prefix}:{user_id}:None` — tüm standart kullanıcılar aynı dönem sınırı altında değil. Blast için standart=3 hakkı var ama dönem takibi `None` key ile yapıldığından **TTL hiç ayarlanmıyor** (kod incelenmeli).
 
-### 7.4 teqliqTransaction type tutarsızlıkları
+### 7.4 TuciTransaction type tutarsızlıkları
 
 | Özellik | transaction_type | Sorun |
 |---------|-----------------|-------|
@@ -498,7 +498,7 @@ Diğer 4 özellik: iş mantığı (limit kontrolü, kitle seçimi, push gönderm
 | F-REACT-02 | reactivation | Pro Hub fallback 5, gerçek limit 3 | Kritik |
 | F-REACT-03 | reactivation | 30 gün penceresi ve aylık limit etkileşimi şeffaf değil | Orta |
 | F-CROSS-01 | hepsi | 3 özellikte Pro Hub fallback limitleri gerçekle uyuşmuyor | Kritik |
-| F-CROSS-02 | hepsi | ai_price + ai_desc aynı teqliqTransaction type → raporlama kör | Yüksek |
+| F-CROSS-02 | hepsi | ai_price + ai_desc aynı TuciTransaction type → raporlama kör | Yüksek |
 | F-CROSS-03 | blast+react | Reaktivasyon → Blast hedef kitlesi → Funnel event döngüsü | Orta |
 | F-ARCH-01 | hepsi | 4/5 özellikte iş mantığı router'da (CA ihlali) | Yüksek |
 
@@ -506,13 +506,13 @@ Diğer 4 özellik: iş mantığı (limit kontrolü, kitle seçimi, push gönderm
 
 1. **Pro Hub fallback değerlerini credit_service.py ile senkronize et** — boost:3, ai_price:6, reactivation:3
 2. **F-AIDESC-01** — ai_desc'te krediyi stream BAŞLAMADAN düş (ya da idempotent token mekanizması kur)
-3. **F-AIPRICE-02 / F-AIDESC-02** — teqliqTransaction type'ı `"spend_ai_price"` ve `"spend_ai_desc"` olarak ayır
+3. **F-AIPRICE-02 / F-AIDESC-02** — TuciTransaction type'ı `"spend_ai_price"` ve `"spend_ai_desc"` olarak ayır
 
 ### Önerilen İyileştirme Sırası
 
 ```
 1. Kritik (hemen): Pro Hub fallback fix → credit_service enum'u tek kaynak
-2. Yüksek (kısa vadeli): teqliqTransaction type ayrımı + SSE kredi mekanizması
+2. Yüksek (kısa vadeli): TuciTransaction type ayrımı + SSE kredi mekanizması
 3. Orta (sprint): blast cooldown + reaktivasyon Insights etkisi belgelenmesi
 4. Uzun vadeli: 4 özellik için use case katmanı (reaktivasyon örnek alınarak)
 ```

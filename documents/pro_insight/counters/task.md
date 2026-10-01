@@ -10,10 +10,10 @@
 | ID | Başlık | Kaynak | Öncelik | Durum | Tarih |
 |----|--------|--------|---------|-------|-------|
 | T-CNT-01 | Pro Hub fallback limitleri düzelt (boost:3, ai_price:6, react:3) | F-CROSS-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
-| T-CNT-02 | teqliqTransaction type ayrıştır: spend_ai_price / spend_ai_desc | F-AIPRICE-02, F-AIDESC-02 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-02 | TuciTransaction type ayrıştır: spend_ai_price / spend_ai_desc | F-AIPRICE-02, F-AIDESC-02 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-03 | SSE krediyi ilk chunk'ta say (bağlantı kopma koruması) | F-AIDESC-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-04 | Lead blast'a 24 saatlik cooldown ekle | F-BLAST-02 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
-| T-CNT-05 | listings.py blast teqliqTransaction type düzelt (spend_lead_gen → spend_blast) | F-BLAST-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-05 | listings.py blast TuciTransaction type düzelt (spend_lead_gen → spend_blast) | F-BLAST-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-06 | Reaktivasyon → created_at sıfırlanmasını Insights sorgularında ele al | F-REACT-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-07 | boost: is_boosted hot_leads API + Flutter badge | F-BOOST-02 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-08 | ai_price embed başarısız → kredi tüketme, hata döndür | F-AIPRICE-04 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
@@ -37,7 +37,7 @@
 
 ---
 
-### T-CNT-02 — teqliqTransaction Type Ayrıştırma ✅ Tamamlandı
+### T-CNT-02 — TuciTransaction Type Ayrıştırma ✅ Tamamlandı
 
 **analytics.py** — ai_price işlemleri:
 - `"spend_ai"` → `"spend_ai_price"`
@@ -45,7 +45,7 @@
 **listings.py** — ai_desc işlemleri:
 - `"spend_ai"` → `"spend_ai_desc"` (2 yer)
 
-Kullanıcı teqliq geçmişinde artık hangi özelliği kullandığını görebilir.
+Kullanıcı TUCi geçmişinde artık hangi özelliği kullandığını görebilir.
 
 ---
 
@@ -69,12 +69,12 @@ Kullanıcı teqliq geçmişinde artık hangi özelliği kullandığını görebi
 
 ## Bekleyen Tasklar
 
-### T-CNT-05 — Blast teqliqTransaction Type ✅ Tamamlandı
+### T-CNT-05 — Blast TuciTransaction Type ✅ Tamamlandı
 
 - `leads.py` → `"spend_lead_gen"` → `"spend_blast"`
 - `listings.py` → `"spend_mass_notification"` → `"spend_blast"`
 
-Her iki blast yolu artık teqliq geçmişinde aynı type ile görünüyor.
+Her iki blast yolu artık TUCi geçmişinde aynı type ile görünüyor.
 
 ---
 

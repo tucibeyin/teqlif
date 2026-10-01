@@ -716,7 +716,7 @@ cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0)   # Paz
 ✅ bids (stream_id, created_at)              — ix_bids_stream_created MEVCUT, ekleme
 ✅ follows (follower_id, followed_id)        — UniqueConstraint implicit index MEVCUT, ekleme
 
-⚠️ teqliq_transactions (user_id, created_at)  — EKSIK (sadece user_id tek-kolon var)
+⚠️ tuci_transactions (user_id, created_at)  — EKSIK (sadece user_id tek-kolon var)
 ⚠️ purchases (buyer_id, created_at)         — EKSIK
 ⚠️ user_interactions (user_id, created_at) — EKSIK (user_id+item_id var ama ML queries için created_at composite yok)
 ⚠️ listings (user_id, status)               — EKSIK (satıcının aktif ilanları için)
@@ -726,7 +726,7 @@ cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0)   # Paz
 **Uygulama:**
 ```python
 # Alembic migration — her index ayrı op.execute()
-op.execute("CREATE INDEX ix_teqliq_transactions_user_created ON teqliq_transactions (user_id, created_at DESC)")
+op.execute("CREATE INDEX ix_tuci_transactions_user_created ON tuci_transactions (user_id, created_at DESC)")
 op.execute("CREATE INDEX ix_purchases_buyer_created ON purchases (buyer_id, created_at DESC)")
 op.execute("CREATE INDEX ix_user_interactions_user_created ON user_interactions (user_id, created_at)")
 op.execute("CREATE INDEX ix_listings_user_status ON listings (user_id, status)")
@@ -735,16 +735,16 @@ op.execute("CREATE INDEX ix_listings_user_status ON listings (user_id, status)")
 ```
 
 Model dosyalarına da `Index(...)` tanımı eklenmeli:
-- `teqliq_transaction.py` → `__table_args__` ekle
+- `tuci_transaction.py` → `__table_args__` ekle
 - `purchase.py` → `__table_args__` ekle
 - `analytics.py` → `ix_user_interactions_user_created` ekle
 - `listing.py` → `ix_listings_user_status` ekle
 
-> **TASK-23 bağımlılık notu:** TASK-23 (`teqliq→teqliq` rename) tamamlanınca `teqliq_transactions` tablosu ve bu index adı değişecek. TASK-23 migration'ında `RENAME INDEX ix_teqliq_transactions_user_created TO ix_teqliq_transactions_user_created` eklenmeli.
+> **TASK-23 bağımlılık notu:** TASK-23 (`tuci→teqlik` rename) tamamlanınca `tuci_transactions` tablosu ve bu index adı değişecek. TASK-23 migration'ında `RENAME INDEX ix_tuci_transactions_user_created TO ix_teqlik_transactions_user_created` eklenmeli.
 
 **Test:**
-- `\d teqliq_transactions` ile index listesi kontrol
-- `EXPLAIN SELECT * FROM teqliq_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20` → Index Scan görünmeli
+- `\d tuci_transactions` ile index listesi kontrol
+- `EXPLAIN SELECT * FROM tuci_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20` → Index Scan görünmeli
 - `EXPLAIN SELECT * FROM user_interactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 120` → Index Scan
 
 **Node ops:** Staging önce, prod sonra.
@@ -2195,7 +2195,7 @@ class DeleteAccountCommand:
             await uow.dm_repo.anonymize_sender(user_id)  # sender_id NULL
             await uow.db.commit()
         await self.storage.delete_avatar(user_id)        # MinIO — DB commit sonrası
-        # purchases/teqliq_transactions: KORUNUR (TTK md.82 mali kayıt yükümlülüğü)
+        # purchases/tuci_transactions: KORUNUR (TTK md.82 mali kayıt yükümlülüğü)
         # analytics_events.user_id: FK SET NULL varsa otomatik, yoksa ayrı NULL set
 ```
 
@@ -2246,26 +2246,26 @@ class DeleteAccountCommand:
 
 ---
 
-### TASK-23 · P25 · 🟢 teqliq → teqliq Yeniden Adlandırma
+### TASK-23 · P25 · 🟢 tuci → teqlik Yeniden Adlandırma
 
 **Plan:** Faz 10  
 **Bağımlılık:** Tüm önceki tasklar tamamlanmış olmalı.
 
 **Kapsam:**
-- `teqliq_transactions` → `teqliq_transactions` (Alembic migration: RENAME TABLE)
-- `users.teqliq_balance` → `users.teqliq_balance` (Alembic: RENAME COLUMN)
+- `tuci_transactions` → `teqlik_transactions` (Alembic migration: RENAME TABLE)
+- `users.tuci_balance` → `users.teqlik_balance` (Alembic: RENAME COLUMN)
 - Python: model, repository, use_case, schema, worker.py
-- API JSON response: `teqliq_balance` → `teqliq_balance`
+- API JSON response: `tuci_balance` → `teqlik_balance`
 - Flutter: **9+ dosya** etkilenecek (4 değil):
-  1. `providers/ai_desc_provider.dart` — `teqliqSpent`/`teqliq_spent`
-  2. `screens/retargeting_screen.dart` — `teqliq_balance`, `spent_teqliq`, `teqliqBalance`, `teqliqCost` (10+ satır)
-  3. `screens/profile_screen.dart` — `state.teqliqBalance`
-  4. `screens/listing_detail_screen.dart` — `teqliqBalance`, `teqliq_balance` JSON key, `teqliq` string
-  5. `screens/viewmodels/profile_view_model.dart` — `teqliqBalance`, `teqliqHistory`
-  6. `screens/create_listing_screen.dart` — `next.teqliqSpent`, `'teqliqSpent'` i18n key
-  7. `utils/start_stream_helper.dart` — `teqliq` UI string
-  8. `screens/live_stream_analytics_screen.dart` — `teqliq` UI string
-  9. `screens/live_stream_history_screen.dart` — `teqliq` UI string
+  1. `providers/ai_desc_provider.dart` — `tuciSpent`/`tuci_spent`
+  2. `screens/retargeting_screen.dart` — `tuci_balance`, `spent_tuci`, `tuciBalance`, `tuciCost` (10+ satır)
+  3. `screens/profile_screen.dart` — `state.tuciBalance`
+  4. `screens/listing_detail_screen.dart` — `tuciBalance`, `tuci_balance` JSON key, `TUCi` string
+  5. `screens/viewmodels/profile_view_model.dart` — `tuciBalance`, `tuciHistory`
+  6. `screens/create_listing_screen.dart` — `next.tuciSpent`, `'tuciSpent'` i18n key
+  7. `utils/start_stream_helper.dart` — `TUCi` UI string
+  8. `screens/live_stream_analytics_screen.dart` — `TUCi` UI string
+  9. `screens/live_stream_history_screen.dart` — `TUCi` UI string
 
 **Geçiş stratejisi:**
 1. Backend: Eski alan adlarını Pydantic `alias` ile 1 sprint geç destekle
@@ -2274,7 +2274,7 @@ class DeleteAccountCommand:
 **Migration ek adımı:**
 ```python
 # TASK-11'de oluşturulan index de güncellenmeli (TASK-11 bu tasktan önce uygulanmışsa):
-op.execute("ALTER INDEX ix_teqliq_transactions_user_created RENAME TO ix_teqliq_transactions_user_created")
+op.execute("ALTER INDEX ix_tuci_transactions_user_created RENAME TO ix_teqlik_transactions_user_created")
 ```
 
 **[x] TAMAMLANDI · commit: 32bd5f39 · tarih: 2026-09-25**
@@ -2510,7 +2510,7 @@ class MessageRequestOut(ConversationOut):  # istek kuyruk flag yerine ayrı tür
 | TASK-20 · Hesap silme KVKK | 🟢 P22 | Düşük | 9.1 | [ ] |
 | TASK-21 · D2/D4/D5 model fix | 🟢 P23 | Düşük | 2.2 | [ ] |
 | TASK-22 · KV2/KV3 opt-out | 🟢 P24 | Düşük | 9.2 | [ ] |
-| TASK-23 · teqliq→teqliq rename | 🟢 P25 | Düşük | 10 | [x] |
+| TASK-23 · tuci→teqlik rename | 🟢 P25 | Düşük | 10 | [x] |
 
 ---
 

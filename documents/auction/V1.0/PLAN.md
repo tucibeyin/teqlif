@@ -218,7 +218,7 @@ Bu, gerçek shill yapanları cezalandırır ama yanlışlıkla mute edilenlere z
 - Stream yönetimi (aktif stream'leri bitir)
 - İlan yönetimi
 - Raporlar
-- teqliq airdrop
+- TUCi airdrop
 - Push notification
 
 ### 5.2 Eksik: Fraud/Shill Mute Yönetimi

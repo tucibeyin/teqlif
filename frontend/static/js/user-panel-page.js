@@ -22,7 +22,7 @@ async function loadWallet() {
             return;
         }
         const data = await res.json();
-        document.getElementById('balance-display').textContent = data.balance + ' teqliq';
+        document.getElementById('balance-display').textContent = data.balance + ' TUCi';
         renderHistory(data.transactions || []);
     } catch (e) {
         console.error('Cüzdan yüklenemedi', e);
@@ -59,7 +59,7 @@ function renderHistory(txns) {
                 <div class="txn-label">${label}</div>
                 <div class="txn-date">${date}</div>
             </div>
-            <div class="txn-amount ${cls}">${sign}${t.amount} teqliq</div>
+            <div class="txn-amount ${cls}">${sign}${t.amount} TUCi</div>
         </div>`;
     }).join('');
 }
@@ -80,8 +80,8 @@ async function doTopup() {
             showToast(data.detail || 'Bir hata oluştu.', '#dc2626');
             return;
         }
-        document.getElementById('balance-display').textContent = data.balance + ' teqliq';
-        showToast(`✅ ${selectedAmount} teqliq başarıyla yüklendi!`, '#059669');
+        document.getElementById('balance-display').textContent = data.balance + ' TUCi';
+        showToast(`✅ ${selectedAmount} TUCi başarıyla yüklendi!`, '#059669');
         await loadWallet();
     } catch (e) {
         showToast('Bağlantı hatası.', '#dc2626');

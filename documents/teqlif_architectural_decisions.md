@@ -94,7 +94,7 @@ final localizationProvider =
 
 ```dart
 loc.t('fieldCategory')                              // basit key
-loc.t('teqliqSpent', {'count': n.toString()})         // parametre interpolasyonu
+loc.t('tuciSpent', {'count': n.toString()})         // parametre interpolasyonu
 loc.tOr('opt_bmw', 'BMW')                           // key yoksa fallback
 ```
 

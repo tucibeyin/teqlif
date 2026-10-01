@@ -16,14 +16,14 @@ def test_user_wallet_routers_cqrs():
         token = create_access_token(test_user_id)
         headers = {"Authorization": f"Bearer {token}"}
     
-        # 1. POST /api/wallet/transfer (Transfer teqliq)
+        # 1. POST /api/wallet/transfer (Transfer Tuci)
         print("[*] POST /api/wallet/transfer isteği atılıyor...")
         # Not: Gerçek DB de user bulunamayabilir, mock test olduğu için 400 veya 404 dönmesi bile command'ın çalıştığını gösterir
         response = client.post("/api/wallet/transfer", json={"recipient_id": 2, "amount": 10}, headers=headers)
         print(f"[*] Sunucu Yanıt Kodu: {response.status_code}")
         
         if response.status_code in [200, 201, 400, 404]:
-            print("✅ Başarılı: TransferteqliqCommand router üzerinden çalıştı.")
+            print("✅ Başarılı: TransferTuciCommand router üzerinden çalıştı.")
         else:
             print(f"⚠️ Hata veya beklenmeyen yanıt: {response.text[:100]}")
     

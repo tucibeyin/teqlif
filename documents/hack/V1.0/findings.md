@@ -228,10 +228,10 @@ Auth header yoksa `payload.user_id` body'den alınıyor ve kayıt ediliyor. Sald
 **Dosya:** `backend/app/routers/wallet.py:96–108`
 
 ```python
-async def transfer_teqliq(data: dict, ...):
+async def transfer_tuci(data: dict, ...):
     recipient_id = data.get("recipient_id")  # type yok, None olabilir
     amount = data.get("amount")              # type yok, "abc" olabilir
-    # TransferteqliqCommand'da bakiye kontrolü yok: "# Şimdilik bakiye yeterli varsayalım"
+    # TransferTuciCommand'da bakiye kontrolü yok: "# Şimdilik bakiye yeterli varsayalım"
 ```
 
 `{"recipient_id": null, "amount": -999}` göndermek unhandled exception veya negatif transfer üretebilir.
@@ -242,7 +242,7 @@ class TransferRequest(BaseModel):
     recipient_id: UUID
     amount: Decimal = Field(gt=0, le=10000)
 
-async def transfer_teqliq(data: TransferRequest, ...):
+async def transfer_tuci(data: TransferRequest, ...):
 ```
 Ve worker.py'deki bakiye kontrolü TODO'su giderilmeli.
 

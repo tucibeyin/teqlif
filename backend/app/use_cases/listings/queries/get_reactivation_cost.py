@@ -21,7 +21,7 @@ class GetReactivationCostQuery:
 
         within_window = created_at > (datetime.now(timezone.utc) - timedelta(days=30))
 
-        reactivation_cost = credit_service.cost_teqliq("reactivation")
+        reactivation_cost = credit_service.cost_tuci("reactivation")
 
         if current_user.is_premium:
             used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
@@ -38,14 +38,14 @@ class GetReactivationCostQuery:
 
         is_free = within_window or (remaining > 0)
         cost = 0 if is_free else reactivation_cost
-        can_afford = is_free or current_user.teqliq_balance >= reactivation_cost
+        can_afford = is_free or current_user.teqlik_balance >= reactivation_cost
 
         return {
             "is_premium": current_user.is_premium,
             "free_remaining": remaining,
             "free_limit": free_limit,
             "cost": cost,
-            "balance": current_user.teqliq_balance,
+            "balance": current_user.teqlik_balance,
             "can_afford": can_afford,
             "renewal_date": renewal_date,
             "within_window": within_window,

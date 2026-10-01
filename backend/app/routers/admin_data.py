@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.listing import Listing
 from app.models.report import Report
-from app.models.teqliq_transaction import teqliqTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.ad_campaign import AdCampaign
 from app.schemas.user import UserOut
 from app.utils.auth import get_current_user, hash_password
@@ -75,14 +75,14 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
         select(func.count(Report.id))
     )).scalar() or 0
 
-    total_teqliq = (await db.execute(select(func.coalesce(func.sum(User.teqliq_balance), 0)))).scalar() or 0
+    total_tuci = (await db.execute(select(func.coalesce(func.sum(User.teqlik_balance), 0)))).scalar() or 0
 
-    today_teqliq_spent = (await db.execute(
-        select(func.coalesce(func.sum(teqliqTransaction.amount), 0))
+    today_tuci_spent = (await db.execute(
+        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
         .where(
-            teqliqTransaction.amount < 0,
-            teqliqTransaction.created_at >= today,
-            teqliqTransaction.created_at < tomorrow,
+            TeqlikTransaction.amount < 0,
+            TeqlikTransaction.created_at >= today,
+            TeqlikTransaction.created_at < tomorrow,
         )
     )).scalar() or 0
 
@@ -104,8 +104,8 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
         "active_listings": active_listings,
         "active_streams": active_streams,
         "pending_reports": pending_reports,
-        "total_teqliq_circulation": total_teqliq,
-        "today_teqliq_spent": abs(today_teqliq_spent),
+        "total_tuci_circulation": total_tuci,
+        "today_tuci_spent": abs(today_tuci_spent),
         "user_growth_7d": growth,
     }
 
@@ -167,7 +167,7 @@ async def get_recent_users(
                 "plan_type": u.plan_type,
                 "is_shadowbanned": u.is_shadowbanned,
                 "deleted_at": None,
-                "teqliq_balance": u.teqliq_balance,
+                "teqlik_balance": u.teqlik_balance,
                 "fcm_token": bool(u.fcm_token),
                 "created_at": u.created_at,
                 "listing_count": listing_counts.get(u.id, 0),
@@ -483,42 +483,42 @@ async def purge_user(
     return {"message": f"User @{old_username} permanently purged."}
 
 # ==========================================
-# 5. teqliq EKONOMİSİ
+# 5. TEQlik EKONOMİSİ
 # ==========================================
-class teqliqAirdropRequest(BaseModel):
+class TuciAirdropRequest(BaseModel):
     username: str = Field(min_length=1, max_length=50)
     amount: int = Field(gt=0)
     note: str = ""
 
-@router.get("/teqliq/summary")
-async def get_teqliq_summary(limit: int = 100, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+@router.get("/tuci/summary")
+async def get_tuci_summary(limit: int = 100, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     total_circulation = (await db.execute(
-        select(func.coalesce(func.sum(User.teqliq_balance), 0))
+        select(func.coalesce(func.sum(User.teqlik_balance), 0))
     )).scalar() or 0
 
     total_spent = abs((await db.execute(
-        select(func.coalesce(func.sum(teqliqTransaction.amount), 0))
-        .where(teqliqTransaction.amount < 0)
+        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
+        .where(TeqlikTransaction.amount < 0)
     )).scalar() or 0)
 
     total_earned = (await db.execute(
-        select(func.coalesce(func.sum(teqliqTransaction.amount), 0))
-        .where(teqliqTransaction.amount > 0)
+        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
+        .where(TeqlikTransaction.amount > 0)
     )).scalar() or 0
 
     # Top 10 balance
     top_res = await db.execute(
-        select(User.id, User.username, User.teqliq_balance)
-        .order_by(desc(User.teqliq_balance))
+        select(User.id, User.username, User.teqlik_balance)
+        .order_by(desc(User.teqlik_balance))
         .limit(10)
     )
     top_holders = [{"user_id": r[0], "username": r[1], "balance": r[2]} for r in top_res.all()]
 
     # Recent transactions
     tx_res = await db.execute(
-        select(teqliqTransaction, User.username)
-        .join(User, User.id == teqliqTransaction.user_id)
-        .order_by(desc(teqliqTransaction.created_at))
+        select(TeqlikTransaction, User.username)
+        .join(User, User.id == TeqlikTransaction.user_id)
+        .order_by(desc(TeqlikTransaction.created_at))
         .limit(limit)
     )
     transactions = [
@@ -541,22 +541,22 @@ async def get_teqliq_summary(limit: int = 100, db: AsyncSession = Depends(get_db
         "transactions": transactions,
     }
 
-@router.post("/teqliq/airdrop")
-async def admin_teqliq_airdrop(data: teqliqAirdropRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+@router.post("/tuci/airdrop")
+async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     result = await db.execute(select(User).where(User.username == data.username))
     user = result.scalar_one_or_none()
     if not user:
         raise NotFoundException(code="USER_NOT_FOUND")
     # Atomic UPDATE — race condition'a karşı güvenli
     await db.execute(
-        text("UPDATE users SET teqliq_balance = teqliq_balance + :amount WHERE id = :uid"),
+        text("UPDATE users SET teqlik_balance = teqlik_balance + :amount WHERE id = :uid"),
         {"amount": data.amount, "uid": user.id},
     )
-    db.add(teqliqTransaction(user_id=user.id, amount=data.amount, transaction_type="airdrop"))
+    db.add(TeqlikTransaction(user_id=user.id, amount=data.amount, transaction_type="airdrop"))
     await db.commit()
     await db.refresh(user)
-    logger.info("[ADMIN] teqliq airdrop | user=%s | amount=%s | new_balance=%s | admin=%s", user.username, data.amount, user.teqliq_balance, admin.email)
-    return {"message": f"Airdropped {data.amount} teqliq to @{user.username}.", "new_balance": user.teqliq_balance, "username": user.username}
+    logger.info("[ADMIN] TEQlik airdrop | user=%s | amount=%s | new_balance=%s | admin=%s", user.username, data.amount, user.teqlik_balance, admin.email)
+    return {"message": f"Airdropped {data.amount} TEQlik to @{user.username}.", "new_balance": user.teqlik_balance, "username": user.username}
 
 
 # ==========================================

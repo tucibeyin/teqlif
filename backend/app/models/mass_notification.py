@@ -33,7 +33,7 @@ class MassNotificationCampaign(Base):
     click_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Maliyet Bilgileri
-    spent_teqliq: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    spent_tuci: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     spent_free_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(

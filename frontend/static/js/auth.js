@@ -205,7 +205,7 @@ function updateNav() {
 
         const walletA = document.createElement('a');
         walletA.href = '/user_panel.html';
-        walletA.title = 'teqliq Cüzdanım';
+        walletA.title = 'TUCi Cüzdanım';
         walletA.style.cssText = 'display:inline-flex;align-items:center;gap:0.35rem;padding:0.35rem 0.85rem;font-size:0.85rem;font-weight:700;color:#92400e;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:20px;text-decoration:none;transition:background .15s,box-shadow .15s;white-space:nowrap;';
         walletA.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4"/><path d="M20 12h-5a2 2 0 0 0 0 4h5"/></svg><span id="navWalletLabel">Cüzdan</span>';
         walletA.addEventListener('mouseenter', () => { walletA.style.background = '#fef3c7'; walletA.style.boxShadow = '0 2px 8px rgba(251,191,36,.35)'; });

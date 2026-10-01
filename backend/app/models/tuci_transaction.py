@@ -6,10 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
-class teqliqTransaction(Base):
-    __tablename__ = "teqliq_transactions"
+class TeqlikTransaction(Base):
+    __tablename__ = "teqlik_transactions"
     __table_args__ = (
-        Index("ix_teqliq_transactions_user_created", "user_id", "created_at"),
+        Index("ix_teqlik_transactions_user_created", "user_id", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -21,4 +21,4 @@ class teqliqTransaction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-teqliqTransaction = teqliqTransaction  # backward-compat alias
+TuciTransaction = TeqlikTransaction  # backward-compat alias

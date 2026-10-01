@@ -73,7 +73,7 @@ async def test_mass_notification():
         print(f"✅ Bildirim Başarıyla İşlendi!")
         print(f"📌 Kampanya ID: {campaign_id}")
         print(f"📲 Kesin Gönderilen Cihaz: {sent}")
-        print(f"💰 Kesilen teqliq: {spent}\n")
+        print(f"💰 Kesilen TUCi: {spent}\n")
 
         if not campaign_id:
             print("⚠️ Backend güncellenmemiş, campaign_id dönmüyor. Tıklama testi atlanacak.")

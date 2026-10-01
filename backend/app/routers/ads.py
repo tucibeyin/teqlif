@@ -23,7 +23,7 @@ from app.core.exceptions import ForbiddenException, InsufficientFundsException, 
 from app.services import credit_service
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
-from app.models.teqliq_transaction import teqliqTransaction
+from app.models.tuci_transaction import TeqlikTransaction
 from app.models.user import User
 from app.utils.auth import bearer_scheme, decode_token, get_current_user
 from app.utils.redis_client import get_redis
@@ -52,7 +52,7 @@ async def create_campaign(
     Satıcı kendi ilanı için reklam kampanyası başlatır.
 
     - Pro kullanıcılar ayda 3 boost hakkına sahiptir (ücretsiz).
-    - Aylık hak biterse teqliq bakiyesinden 50 teqliq düşürülerek boost yapılır.
+    - Aylık hak biterse TEQlik bakiyesinden 50 TEQlik düşürülerek boost yapılır.
     - Ücretsiz hesaplar boost yapamaz.
     - İlanın sahibi olduğu doğrulanır.
     - AdCampaign kaydı oluşturulur (status='active').
@@ -67,9 +67,9 @@ async def create_campaign(
     # Aylık ücretsiz hak kaldı mı?
     is_free = boost_used < boost_limit
 
-    # Ücretli modda: teqliq bakiyesi yeterli mi?
+    # Ücretli modda: TEQlik bakiyesi yeterli mi?
     if not is_free:
-        if current_user.teqliq_balance < credit_service.cost_teqliq("boost"):
+        if current_user.teqlik_balance < credit_service.cost_tuci("boost"):
             raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
@@ -103,24 +103,24 @@ async def create_campaign(
     )
     db.add(campaign)
 
-    # teqliq düşme: yalnızca ücretli modda
-    teqliq_cost = 0
+    # TEQlik düşme: yalnızca ücretli modda
+    tuci_cost = 0
     if not is_free:
-        teqliq_cost = credit_service.cost_teqliq("boost")
+        tuci_cost = credit_service.cost_tuci("boost")
         await db.execute(
-            sql_text("UPDATE users SET teqliq_balance = GREATEST(0, teqliq_balance - :cost) WHERE id = :uid"),
-            {"cost": teqliq_cost, "uid": current_user.id},
+            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+            {"cost": tuci_cost, "uid": current_user.id},
         )
-        db.add(teqliqTransaction(
+        db.add(TeqlikTransaction(
             user_id=current_user.id,
-            amount=-teqliq_cost,
+            amount=-tuci_cost,
             transaction_type="spend_boost_paid",
             reference_id=body.listing_id,
             reference_type="listing",
         ))
     else:
         # PRO ücretsiz boost hakkı kullanıldı — işlem geçmişine kaydet
-        db.add(teqliqTransaction(
+        db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=0,
             transaction_type="spend_boost",
@@ -143,8 +143,8 @@ async def create_campaign(
         logger.warning("[Ads] Redis yükleme atlandı: %s", exc)
 
     logger.info(
-        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d is_free=%s teqliq_cost=%d",
-        campaign.id, body.listing_id, current_user.id, is_free, teqliq_cost,
+        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d is_free=%s tuci_cost=%d",
+        campaign.id, body.listing_id, current_user.id, is_free, tuci_cost,
     )
     return {
         "id": campaign.id,
@@ -153,7 +153,7 @@ async def create_campaign(
         "total_budget": campaign.total_budget,
         "cpc_bid": campaign.cpc_bid,
         "is_free": is_free,
-        "teqliq_cost": teqliq_cost,
+        "tuci_cost": tuci_cost,
     }
 
 

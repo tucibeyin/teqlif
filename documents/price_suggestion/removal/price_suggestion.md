@@ -17,7 +17,7 @@ Yapay Zeka Fiyat Danışmanı, kullanıcının ilan oluştururken veya düzenler
 | Kullanıcı tipi | Kota | Ücret |
 |---|---|---|
 | Pro | 6 sorgu / ay (ücretsiz) | — |
-| Standart | Sınırsız | 5 TL / sorgu (teqliq wallet) |
+| Standart | Sınırsız | 5 TL / sorgu (TUCi wallet) |
 
 ### Kredi takibi
 

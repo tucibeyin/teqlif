@@ -23,7 +23,7 @@ def upgrade() -> None:
         sa.Column('target_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('sent_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('click_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('spent_teqliq', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('spent_tuci', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('spent_free_credits', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.ForeignKeyConstraint(['listing_id'], ['listings.id'], ondelete='SET NULL'),

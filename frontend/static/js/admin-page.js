@@ -53,7 +53,7 @@ function showPanel(panel) {
     if (activePanel) { activePanel.classList.remove('hidden'); activePanel.style.display = 'flex'; }
 
     const navMap = {
-        dashboard: 'navDashboard', users: 'navUsers', teqliq: 'navteqliq',
+        dashboard: 'navDashboard', users: 'navUsers', tuci: 'navTuci',
         campaigns: 'navCampaigns', streams: 'navStreams',
         'stream-history': 'navStreamHistory', listings: 'navListings',
         reports: 'navReports', push: 'navPush', analytics: 'navAnalytics',
@@ -64,7 +64,7 @@ function showPanel(panel) {
 
     if (panel === 'dashboard') loadDashboard();
     if (panel === 'users') loadUsers();
-    if (panel === 'teqliq') loadteqliq();
+    if (panel === 'tuci') loadTuci();
     if (panel === 'campaigns') loadCampaigns();
     if (panel === 'streams') loadStreams();
     if (panel === 'stream-history') loadStreamHistory();
@@ -98,8 +98,8 @@ async function loadDashboard() {
     document.getElementById('kpiListings').textContent = d.active_listings.toLocaleString('tr-TR');
     document.getElementById('kpiStreams').textContent = d.active_streams.toLocaleString('tr-TR');
     document.getElementById('kpiReports').textContent = d.pending_reports.toLocaleString('tr-TR');
-    document.getElementById('kpiteqliq').textContent = d.total_teqliq_circulation.toLocaleString('tr-TR') + ' T';
-    document.getElementById('kpiteqliqSpent').textContent = d.today_teqliq_spent.toLocaleString('tr-TR') + ' T';
+    document.getElementById('kpiTuci').textContent = d.total_tuci_circulation.toLocaleString('tr-TR') + ' T';
+    document.getElementById('kpiTuciSpent').textContent = d.today_tuci_spent.toLocaleString('tr-TR') + ' T';
 
     // Growth bar chart
     const growth = d.user_growth_7d || [];
@@ -151,7 +151,7 @@ async function loadUsers(page) {
                 <br><small style="color:#64748b;">${u.email}</small>
             </td>
             <td style="white-space:nowrap;">${statusPills.join(' ')}</td>
-            <td><span style="color:#fbbf24;font-weight:700;">${u.teqliq_balance} T</span></td>
+            <td><span style="color:#fbbf24;font-weight:700;">${u.tuci_balance} T</span></td>
             <td><span style="color:#94a3b8;">${u.listing_count} ilan · ${u.stream_count} yayın</span></td>
             <td>${u.fcm_token ? '🟢' : '⚫'}</td>
             <td style="font-size:0.8rem;color:#64748b;">${new Date(u.created_at).toLocaleDateString('tr-TR')}</td>
@@ -269,17 +269,17 @@ async function purgeUser(id, username) {
     else { const err = await res.json(); alert("Silinemedi: " + (err.detail || "Hata.")); }
 }
 
-// ── teqliq EKONOMİSİ ───────────────────────────────────────────────────────────
-async function loadteqliq() {
-    const res = await adminFetch('/api/admin-data/teqliq/summary?limit=100');
+// ── TUCi EKONOMİSİ ───────────────────────────────────────────────────────────
+async function loadTuci() {
+    const res = await adminFetch('/api/admin-data/tuci/summary?limit=100');
     if (!res) return;
     const d = await res.json();
 
-    document.getElementById('teqliqCirculation').textContent = d.total_circulation.toLocaleString('tr-TR') + ' T';
-    document.getElementById('teqliqEarned').textContent = d.total_earned.toLocaleString('tr-TR') + ' T';
-    document.getElementById('teqliqSpent').textContent = d.total_spent.toLocaleString('tr-TR') + ' T';
+    document.getElementById('tuciCirculation').textContent = d.total_circulation.toLocaleString('tr-TR') + ' T';
+    document.getElementById('tuciEarned').textContent = d.total_earned.toLocaleString('tr-TR') + ' T';
+    document.getElementById('tuciSpent').textContent = d.total_spent.toLocaleString('tr-TR') + ' T';
 
-    document.getElementById('teqliqTopHolders').innerHTML = (d.top_holders || []).map((h, i) => `
+    document.getElementById('tuciTopHolders').innerHTML = (d.top_holders || []).map((h, i) => `
         <div style="background:var(--admin-bg);border:1px solid var(--admin-border);border-radius:0.5rem;padding:0.4rem 0.75rem;font-size:0.8rem;">
             <span style="color:#64748b;">${i+1}.</span>
             <a href="/profil/${h.username}" target="_blank" class="admin-link">@${h.username}</a>
@@ -290,7 +290,7 @@ async function loadteqliq() {
         airdrop: '🎁 Airdrop', spend_lead_gen: '🎯 Duyuru', spend_ai: '🤖 AI',
         web_topup: '💳 Topup', spend_ad_campaign: '📢 Sponsorluk',
     };
-    document.getElementById('teqliq-table-body').innerHTML = (d.transactions || []).map(tx => {
+    document.getElementById('tuci-table-body').innerHTML = (d.transactions || []).map(tx => {
         const plus = tx.amount > 0;
         return `<tr>
             <td style="font-size:0.8rem;color:#64748b;">${new Date(tx.created_at).toLocaleString('tr-TR')}</td>
@@ -299,7 +299,7 @@ async function loadteqliq() {
             <td><span class="status-pill" style="background:var(--admin-bg);border:1px solid var(--admin-border);color:#94a3b8;">${TYPE_LABELS[tx.transaction_type] || tx.transaction_type}</span></td>
         </tr>`;
     }).join('');
-    document.getElementById("search-teqliq").value = "";
+    document.getElementById("search-tuci").value = "";
 }
 
 function openAirdropModal() {
@@ -319,12 +319,12 @@ async function submitAirdrop() {
     btn.disabled = true;
     btn.textContent = '⏳ Yükleniyor…';
     try {
-        const res = await fetch('/api/admin-data/teqliq/airdrop', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ username, amount }) });
+        const res = await fetch('/api/admin-data/tuci/airdrop', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ username, amount }) });
         const d = await res.json();
         if (res.ok) {
-            alert(`✅ ${d.message}\nYeni bakiye: ${d.new_balance} teqliq`);
+            alert(`✅ ${d.message}\nYeni bakiye: ${d.new_balance} TUCi`);
             closeAirdropModal();
-            loadteqliq();
+            loadTuci();
         } else {
             alert("Hata: " + (d.detail || "Airdrop başarısız."));
         }
@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Nav
     document.getElementById('navDashboard')?.addEventListener('click', () => showPanel('dashboard'));
     document.getElementById('navUsers')?.addEventListener('click', () => showPanel('users'));
-    document.getElementById('navteqliq')?.addEventListener('click', () => showPanel('teqliq'));
+    document.getElementById('navTuci')?.addEventListener('click', () => showPanel('tuci'));
     document.getElementById('navCampaigns')?.addEventListener('click', () => showPanel('campaigns'));
     document.getElementById('navStreams')?.addEventListener('click', () => showPanel('streams'));
     document.getElementById('navStreamHistory')?.addEventListener('click', () => showPanel('stream-history'));
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Reload buttons
     document.getElementById('btnLoadDashboard')?.addEventListener('click', loadDashboard);
     document.getElementById('btnLoadUsers')?.addEventListener('click', () => { _usersPage = 1; loadUsers(); });
-    document.getElementById('btnLoadteqliq')?.addEventListener('click', loadteqliq);
+    document.getElementById('btnLoadTuci')?.addEventListener('click', loadTuci);
     document.getElementById('btnLoadCampaigns')?.addEventListener('click', loadCampaigns);
     document.getElementById('btnLoadStreams')?.addEventListener('click', loadStreams);
     document.getElementById('btnLoadStreamHistory')?.addEventListener('click', loadStreamHistory);
@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
         clearTimeout(_usersSearchTimer);
         _usersSearchTimer = setTimeout(() => { _usersSearch = e.target.value.trim(); loadUsers(1); }, 350);
     });
-    document.getElementById('search-teqliq')?.addEventListener('keyup', () => filterTable('search-teqliq', 'teqliq-table-body'));
+    document.getElementById('search-tuci')?.addEventListener('keyup', () => filterTable('search-tuci', 'tuci-table-body'));
     document.getElementById('search-campaigns')?.addEventListener('keyup', () => filterTable('search-campaigns', 'campaign-table-body'));
     document.getElementById('search-streams')?.addEventListener('keyup', () => filterTable('search-streams', 'stream-table-body'));
     document.getElementById('search-stream-history')?.addEventListener('keyup', () => filterTable('search-stream-history', 'stream-history-table-body'));

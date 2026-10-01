@@ -53,7 +53,7 @@ listings.subcategory / brand / model_name / condition  ──► sinyal ağırl�
 
 | Bağlam | Embedding kaynağı | Maliyet |
 |---|---|---|
-| İlan Ver (yeni ilan) | ARQ worker üretir, Redis'e cache | teqliq |
+| İlan Ver (yeni ilan) | ARQ worker üretir, Redis'e cache | TUCi |
 | DS/Auction Start (listing seçildi) | `listings.embedding` doğrudan okunur | Ücretsiz |
 
 Listing oluşturulduğunda embedding zaten var → DS/Auction start'ta yeniden üretilmez.
@@ -69,7 +69,7 @@ Listing oluşturulduğunda embedding zaten var → DS/Auction start'ta yeniden �
 - Mevcut: `listings.last_sold_price` (sadece auction)
 - Hedef: `listings.last_sold_price` (auction + DS — her ikisi günceller)
 - Çıktı değişmez: `suggested_start_price`, `estimated_close_price`, güven bantları
-- Maliyet: teqliq (değişmez)
+- Maliyet: TUCi (değişmez)
 
 ### 2. DS Start — Yeni Hafif Endpoint
 
@@ -128,7 +128,7 @@ DS satışı tamamlanır (purchase_completed, tüm stok bitince veya host bitiri
 
 ## Neyin Değişmediği
 
-- İlan Ver AI algoritması (pgvector + KDE + IQR + teqliq) korunur
+- İlan Ver AI algoritması (pgvector + KDE + IQR + TUCi) korunur
 - Competitor radar korunur
 - Listing oluşturma embedding üretimi değişmez
 - ClickHouse `direct_sale_events` tablosu değişmez (analytics için kullanılmaya devam eder)

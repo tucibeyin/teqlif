@@ -1931,7 +1931,7 @@
                         }),
                     });
                     if (res.status === 402) {
-                        if (msgEl) msgEl.textContent = 'Bakiye yetersiz, teqliq yükleyin!';
+                        if (msgEl) msgEl.textContent = 'Bakiye yetersiz, TUCi yükleyin!';
                     } else if (!res.ok) {
                         const errBody = await res.json().catch(() => ({}));
                         if (msgEl) msgEl.textContent = errBody.detail || 'Bir hata oluştu.';
@@ -1986,16 +1986,16 @@
             const reachable      = _blastData.non_follower_audience ?? _blastData.audience_size ?? 0;
             const perBlastCap    = _blastData.per_blast_cap        ?? 5;
             const creditsLeft    = _blastData.credits_remaining    ?? 0;
-            const teqliqBalance    = _blastData.teqliq_balance         ?? 0;
+            const tuciBalance    = _blastData.tuci_balance         ?? 0;
             const actualCount    = Math.min(reachable, perBlastCap);
             const freeUsed       = Math.min(creditsLeft, actualCount);
             const paidCount      = actualCount - freeUsed;
-            const teqliqCost       = paidCount * 10;
+            const tuciCost       = paidCount * 10;
             if (!actualCount) return;
 
             // Senaryo 4: Yetersiz bakiye
-            if (teqliqCost > 0 && teqliqBalance < teqliqCost) {
-                alert(`Yetersiz teqliq bakiyesi.\nGerekli: ${teqliqCost} teqliq | Mevcut: ${teqliqBalance} teqliq`);
+            if (tuciCost > 0 && tuciBalance < tuciCost) {
+                alert(`Yetersiz TUCi bakiyesi.\nGerekli: ${tuciCost} TUCi | Mevcut: ${tuciBalance} TUCi`);
                 return;
             }
 
@@ -2004,9 +2004,9 @@
             if (freeUsed > 0 && paidCount === 0) {
                 confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\n${freeUsed} blast krediniz kullanılacak. Ücretsiz!\n\nOnaylıyor musunuz?`;
             } else if (freeUsed > 0 && paidCount > 0) {
-                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\n${freeUsed} kredi + ${teqliqCost} teqliq ödenecek. (Karma)\n\nOnaylıyor musunuz?`;
+                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\n${freeUsed} kredi + ${tuciCost} TUCi ödenecek. (Karma)\n\nOnaylıyor musunuz?`;
             } else {
-                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\nToplam ücret: ${teqliqCost} teqliq\n\nOnaylıyor musunuz?`;
+                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\nToplam ücret: ${tuciCost} TUCi\n\nOnaylıyor musunuz?`;
             }
             if (!confirm(confirmMsg)) return;
 
@@ -2018,7 +2018,7 @@
                     body: JSON.stringify({
                         title:          title || 'Canlı Yayın',
                         category:       category || '',
-                        estimated_cost: teqliqCost,
+                        estimated_cost: tuciCost,
                         recipient_count: actualCount,
                     }),
                 });
