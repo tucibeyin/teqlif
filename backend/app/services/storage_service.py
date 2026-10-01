@@ -67,7 +67,10 @@ async def _get_client_from_public_url(public_url: str) -> Minio:
 
 
 def _build_public_url(node_id: str, bucket: str, key: str) -> str:
-    """live1.teqlif.com -> http://minio1.teqlif.com:9010/{bucket}/{key}"""
+    """live1.teqlif.com → http://minio1.teqlif.com:9010/{bucket}/{key}
+    Staging override: MINIO_PUBLIC_BASE=https://staging.uploads.teqlif.com"""
+    if settings.minio_public_base:
+        return f"{settings.minio_public_base.rstrip('/')}/{bucket}/{key}"
     domain = node_id.replace("live", "minio")
     return f"http://{domain}:9010/{bucket}/{key}"
 
