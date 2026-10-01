@@ -13,8 +13,8 @@ turn:
   udp_port: 3478
   relay_range_start: 50000
   relay_range_end: 60000
-  cert_file: /etc/letsencrypt/live/stream3.teqlif.com/fullchain.pem
-  key_file:  /etc/letsencrypt/live/stream3.teqlif.com/privkey.pem
+  cert_file: /project/teqlif/config/ssl/stream3.teqlif.com-fullchain.pem
+  key_file:  /project/teqlif/config/ssl/stream3.teqlif.com-privkey.pem
 
 # Tüm streaming node'ları aynı Redis'e bağlanır — otomatik koordinasyon
 redis:
