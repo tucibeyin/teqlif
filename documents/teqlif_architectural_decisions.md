@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ağustos 2026 — Commerce WS Altyapısı ADR eklendi
+**Son güncelleme:** Ekim 2026 — Development Workflow eklendi
 
 ---
 
@@ -19,6 +19,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 7. [Ekran Migration Checklist](#7-ekran-migration-checklist)
 8. [Kategori `is_listable` Flag](#8-kategori-is_listable-flag)
 9. [Cache Taksonomisi ve Schema-Versioned İnvalidasyon](#9-cache-taksonomisi-ve-schema-versioned-i̇nvalidasyon)
+13. [Bir İş Nasıl Yapılır (Development Workflow)](#13-bir-i̇ş-nasıl-yapılır-development-workflow)
 
 ---
 
@@ -1060,4 +1061,103 @@ Client CRF23 1080p sıkıştırdığı için backend sadece remux + faststart ya
 | `VIDEO_MAX_BYTES` | 30 MB |
 | `LISTING_VIDEO_MAX_SECS` | 60 sn |
 | `LISTING_VIDEO_MAX_BYTES` | 50 MB |
+
+---
+
+## 12. DNS ve Cloudflare Yapılandırması (V2.1)
+
+### Trafik Akışı
+
+V2.1'de gateway kaldırıldı. Her domain doğrudan hedef node'a işaret eder.
+
+```
+Kullanıcı → Cloudflare Edge → node1 (prod) veya node5 (staging)
+```
+
+### Cloudflare DNS Kayıtları
+
+| Subdomain | Tip | IP / Hedef | CF Proxy | Node |
+|-----------|-----|-----------|----------|------|
+| `teqlif.com` | A | 193.70.46.74 | Proxied | node1 |
+| `www.teqlif.com` | CNAME | teqlif.com | Proxied | node1 |
+| `api.teqlif.com` | A | 193.70.46.74 | Proxied | node1 |
+| `uploads.teqlif.com` | A | 193.70.46.74 | DNS only | node1 (MinIO) |
+| `staging.teqlif.com` | A | 45.146.252.165 | Proxied | node5 |
+| `api-staging.teqlif.com` | A | 45.146.252.165 | Proxied | node5 |
+| `staging.uploads.teqlif.com` | A | 45.146.252.165 | DNS only | node5 (MinIO staging) |
+| `live-staging.teqlif.com` | A | 45.146.252.165 | DNS only | node5 (LiveKit) |
+| `live1.teqlif.com` | A | 135.125.175.223 | DNS only | node4 (LiveKit) |
+| `live2.teqlif.com` | A | 51.75.74.124 | DNS only | node3 (LiveKit) |
+| `stream3.teqlif.com` | A | 51.75.74.124 | DNS only | node3 (TURN/STUN) |
+| `stream4.teqlif.com` | A | 135.125.175.223 | DNS only | node4 (TURN/STUN) |
+| `brevo1._domainkey` | CNAME | b1.teqlif-com.dkim.brevo.com | DNS only | — (e-posta DKIM) |
+| `brevo2._domainkey` | CNAME | b2.teqlif-com.dkim.brevo.com | DNS only | — (e-posta DKIM) |
+
+### Proxy Kararı
+
+- **Proxied:** Web (HTTP/HTTPS) trafiği — Cloudflare WAF, DDoS koruması ve SSL termination sağlar. Origin HTTP alır (port 80).
+- **DNS only:** LiveKit, MinIO ve TURN/STUN — UDP/WebRTC/WebSocket trafiği doğrudan IP'ye gider; Cloudflare proxy bu protokollerle uyumlu değil.
+
+### nginx Yapılandırması (V2.1)
+
+**node1** (`deploy/scale/V2.1/node1/resources/nginx/`):
+- `cloudflare-real-ip.conf` — CF edge IP bloklarından gerçek istemci IP'sini çeker
+- `teqlif.com.conf` — `teqlif.com`, `www.teqlif.com`, `api.teqlif.com` → `127.0.0.1:8000` (prod FastAPI)
+
+**node5** (`deploy/scale/V2.1/node5/resources/nginx/`):
+- `cloudflare-real-ip.conf` — aynı CF IP blokları
+- `staging.teqlif.com.conf` — `staging.teqlif.com`, `api-staging.teqlif.com` → `10.10.0.5:8000` (staging FastAPI, WireGuard IP)
+
+### Kural
+
+- `api.teqlif.com/` → `302 https://teqlif.com` (API root web'e yönlenir)
+- `api-staging.teqlif.com/` → `302 https://staging.teqlif.com`
+- `uploads.*` subdomain'leri nginx'e gelmez — MinIO presigned URL pattern ile direkt erişilir
+- Her nginx server block `include /etc/nginx/cloudflare-real-ip.conf;` içermeli — aksi hâlde `$remote_addr` CF edge IP olur
+
+---
+
+## 13. Bir İş Nasıl Yapılır (Development Workflow)
+
+**Temel ilkeler:** Clean architecture, clean code, bu dosyadaki kararlara uyum.  
+Her değişiklik öncesinde `teqlif_architectural_decisions.md` okunur.
+
+### Adımlar
+
+1. **Local geliştirme** — Mac'te kod yazılır
+2. **`git push`** — Mac'ten GitHub'a push edilir
+3. **`git pull` (node'da)** — İlgili node'da `git pull` çalıştırılır (git kullanıcısı zaten tanımlı, `sudo` gerekmez)
+4. **Config ayarı** — Gerekirse node'da `.env` veya sistem konfigürasyonu düzenlenir (`ssh nodex` ile direkt)
+5. **Canlı log izleme** — `sudo journalctl -u <servis> -f` ile loglar izlenir; hata varsa adım 1'e dön
+6. **Test onayı** — Kullanıcıdan onay alınır
+7. **Dokümantasyon** — Yapılan değişiklik bu dosyaya veya ilgili `documents/` dosyasına commit numarasıyla kaydedilir
+8. **Node izleme** — Bir süre node hataları gözlemlenir; hata varsa adım 1'e dön
+9. **Cleanup** — Geçici dosyalar, test verileri temizlenir; iş tamamlandı
+
+### Servis restart
+
+```bash
+sudo teqlif-restart          # node'u otomatik algılar, git pull + pip sync + restart
+sudo teqlif-restart --livekit  # node3/node4: LiveKit'i de yeniden başlatır
+```
+
+`teqlif-restart` sırası: git pull (tucibeyin kullanıcısıyla) → requirements değişmişse pip install → alembic upgrade head (ExecStartPre) → sync_main.py (ExecStartPre) → servis restart → son loglar.
+
+### Staging vs Prod
+
+| | Prod (node1) | Staging (node5) |
+|---|---|---|
+| Servis | `teqlif.service` | `teqlif-staging.service` |
+| URL | `https://api.teqlif.com` | `https://api-staging.teqlif.com` |
+| DB | `teqlif` | `teqlif_staging` |
+| MinIO bucket | `teqlif` | `teqlif-staging` |
+| Uploads | `https://uploads.teqlif.com` | `https://staging.uploads.teqlif.com` |
+| Flutter define | `dart_defines/release.json` | `dart_defines/staging.json` |
+
+### Kurallar
+
+- `git pull` asla `sudo` ile çalıştırılmaz — tucibeyin kullanıcısının SSH key'i var, root'un yok
+- Her restart'ta `sync_main.py` otomatik çalışır (kategori, lokasyon, çeviri sync)
+- Staging DB'yi sıfırlamak için: `TRUNCATE TABLE users CASCADE;` (ilişkili tüm tablolar temizlenir)
+- Staging admin yapmak için: `UPDATE users SET is_admin = true WHERE email = '...';`
 
