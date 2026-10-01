@@ -19,7 +19,7 @@ WG_IP="${STREAMING_WG_IP}"
 REPO_DIR="${REPO_DIR:-/var/www/teqlif.com}"
 # Template olarak node3 config'ini kullan
 TEMPLATE_NODE_DIR="${REPO_DIR}/deploy/scale/V2.1/node3"
-LIVEKIT_VER="${LIVEKIT_VER:-v1.7.2}"
+LIVEKIT_VER="${LIVEKIT_VER:-v1.13.7}"
 
 main() {
     check_root
@@ -107,7 +107,7 @@ ufw_streaming() {
 
 install_livekit() {
     log_step "LiveKit Server (${LIVEKIT_VER})"
-    curl -fsSL "https://github.com/livekit/livekit/releases/download/${LIVEKIT_VER}/livekit_linux_amd64.tar.gz" \
+    curl -fsSL "https://github.com/livekit/livekit/releases/download/${LIVEKIT_VER}/livekit_${LIVEKIT_VER#v}_linux_amd64.tar.gz" \
         | tar xz -C /tmp/
     mv /tmp/livekit-server /usr/local/bin/livekit-server
     chmod +x /usr/local/bin/livekit-server

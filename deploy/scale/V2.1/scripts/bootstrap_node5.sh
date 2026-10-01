@@ -13,7 +13,7 @@ NODE_DIR="${REPO_DIR}/deploy/scale/V2.1/${NODE_ID}"
 SECRETS_FILE="${SECRETS_FILE:-}"
 PG_VERSION="17"
 MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2025-09-07T16-13-09Z}"
-LIVEKIT_VER="${LIVEKIT_VER:-v1.7.2}"
+LIVEKIT_VER="${LIVEKIT_VER:-v1.13.7}"
 
 main() {
     check_root
@@ -169,7 +169,7 @@ EOF
 
 install_livekit_staging() {
     log_step "LiveKit (staging, port 7890)"
-    curl -fsSL "https://github.com/livekit/livekit/releases/download/${LIVEKIT_VER}/livekit_linux_amd64.tar.gz" \
+    curl -fsSL "https://github.com/livekit/livekit/releases/download/${LIVEKIT_VER}/livekit_${LIVEKIT_VER#v}_linux_amd64.tar.gz" \
         | tar xz -C /tmp/
     mv /tmp/livekit-server /usr/local/bin/livekit-server
     chmod +x /usr/local/bin/livekit-server
