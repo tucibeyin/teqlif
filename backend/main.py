@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response, ORJSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.config import settings
@@ -163,7 +163,7 @@ async def lifespan(app: FastAPI):
     await close_clickhouse()
 
 
-app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan, default_response_class=ORJSONResponse)
+app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Prometheus metrics — sadece localhost / iç ağ erişimine izin verilir

@@ -60,4 +60,8 @@ def setup_logging() -> logging.Logger:
     worker_logger.addHandler(_make_json_handler(os.path.join(LOGS_DIR, f"{log_node}-worker.log"), logging.INFO))
     worker_logger.propagate = False
 
+    # uvicorn access logları nginx tarafından zaten yazılıyor — journald'a tekrar basma
+    logging.getLogger("uvicorn.access").propagate = False
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
     return logging.getLogger("teqlif")
