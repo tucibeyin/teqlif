@@ -185,6 +185,7 @@ install_alertmanager() {
 setup_alertmanager() {
     local node_dir="${1}"
     log_step "Alertmanager config"
+    mkdir -p /etc/alertmanager
     cp "${node_dir}/resources/alertmanager/alertmanager.yml" /etc/alertmanager/alertmanager.yml
     systemctl enable alertmanager
     log_ok "Alertmanager enable edildi (secrets doldurulunca: systemctl start alertmanager)"
