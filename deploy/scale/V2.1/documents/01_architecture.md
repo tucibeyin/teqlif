@@ -563,7 +563,7 @@ Script otomatik:
 | Bileşen | HA Durumu | Açıklama |
 |---------|-----------|----------|
 | PostgreSQL | **Tek node** (node1) | node2 WAL stream ile kurtarma mümkün, otomatik failover yok |
-| Redis | **Tek node** (node1) | Reboot'ta RDB'den başlar |
+| Redis | **Aktif/Standby** (node1+2) | HAProxy + async replica; otomatik failover (bkz. §9.3) |
 | MinIO | **Tek node** (node1) | node2 mirror ile kurtarma mümkün |
 | LiveKit | **Çift node** (node3+4) | DNS round-robin, birisi düşerse diğeri devam eder |
 | AI Proxy | **Çift node** (node5+6) | node6 → node5 failover, kod içinde |
@@ -575,5 +575,33 @@ Script otomatik:
 |---------|-----|-----|
 | node1 reboot | ~2 dk | 0 (WAL anlık) |
 | node1 disk hatası | ~30 dk (node2'den restore) | Son WAL segmenti |
+| node1 Redis çöküşü | ~30 sn (3 başarısız check × 10 sn) | Son write (async replica gecikmesi) |
 | node3 veya node4 çöküşü | 0 (DNS TTL sonrası) | 0 |
 | node6 çöküşü | ~5 sn (app retry) | 0 |
+
+### 9.3 Redis HA Mimarisi
+
+```
+node3/4: LiveKit  ──────────┐
+node1:   FastAPI/ARQ ───────┤
+                             ↓
+                   127.0.0.1:6379 (HAProxy)
+                   ┌────────────────────────┐
+                   │  balance first         │
+                   │  → node1:6379 (active) │
+                   │  → node2:6379 (backup) │
+                   └────────────────────────┘
+                             │
+               ┌─────────────┴─────────────┐
+               ↓                           ↓
+      node1: Redis core            node2: Redis replica
+      (10.10.0.1:6379)   ─async→  (10.10.0.2:6379)
+      4GB maxmemory                replicaof node1
+      AOF+RDB hybrid               save "" (no persistence)
+```
+
+**Bileşenler:**
+- **HAProxy** (node3/4 + node1): `127.0.0.1:6379`'u dinler, `balance first` ile node1'i tercih eder; node1 3 kontrolde başarısız olursa node2'ye geçer
+- **Redis replica** (node2): `/etc/redis/redis-replica.conf`, `teqlif-redis-replica.service` ile yönetilir
+- **Auto-promote** (node2): `redis-failover.timer` her 10 saniyede çalışır; Redis + ICMP 3 kez başarısız olursa `REPLICAOF NO ONE` → master'a terfi + Telegram bildirimi
+- **Geri dönüş**: node1 kurtarıldıktan sonra manuel `REPLICAOF 10.10.0.1 6379` ile yeniden replica yapılır
