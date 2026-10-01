@@ -1,2 +1,0 @@
-tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/wg set wg0 peer * allowed-ips *
-tucibeyin ALL=(ALL) NOPASSWD: /usr/sbin/wg-quick save wg0

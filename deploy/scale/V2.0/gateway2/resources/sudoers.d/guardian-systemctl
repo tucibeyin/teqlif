@@ -1,5 +1,0 @@
-tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl start teqlif*
-tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop teqlif*
-tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart teqlif*
-tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload teqlif*
-tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/systemctl reset-failed teqlif*

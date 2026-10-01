@@ -200,9 +200,11 @@ app.add_middleware(LogContextMiddleware)
 
 _CORS_ORIGINS = [
     "https://teqlif.com",
-    "https://admin.teqlif.com",
     "https://www.teqlif.com",
+    "https://admin.teqlif.com",
 ]
+if settings.web_app_enabled:
+    _CORS_ORIGINS += ["https://staging.teqlif.com"]
 if settings.debug:
     _CORS_ORIGINS += ["http://localhost:3000", "http://localhost:8080"]
 

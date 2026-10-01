@@ -1,6 +1,0 @@
--w /etc/teqlif/          -p wa -k teqlif_secrets
--w /etc/wireguard/       -p wa -k wireguard_config
--w /home/tucibeyin/.ssh/ -p wa -k ssh_keys
--w /etc/sudoers          -p wa -k sudoers_change
--w /bin/sudo             -p x  -k sudo_exec
--a always,exit -F arch=b64 -S execve -F uid=0 -k root_commands
