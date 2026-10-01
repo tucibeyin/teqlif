@@ -11,11 +11,12 @@ Group=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 EnvironmentFile=/project/teqlif/config/.env.production
 ExecStartPre=/var/www/teqlif.com/.venv/bin/alembic upgrade head
+ExecStartPre=/var/www/teqlif.com/.venv/bin/python scripts/sync_main.py
 ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn main:app \
     --host 127.0.0.1 \
     --port 8000 \
     --workers 4 \
-    --log-level info \
+    --log-level warning \
     --access-log \
     --use-colors
 Restart=always
