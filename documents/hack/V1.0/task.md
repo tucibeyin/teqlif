@@ -322,7 +322,7 @@ isim değişikliği VPS'i etkilemiyor. `git pull` yeterli.
 **Bulgu:** M3 | **Önem:** 🟡 MEDIUM
 
 **Sorun:**
-`transfer_tuci` fonksiyonu `dict` alıyor — tip yoklama yok, negatif/None amount mümkün.
+`transfer_teqliq` fonksiyonu `dict` alıyor — tip yoklama yok, negatif/None amount mümkün.
 Use case'de bakiye kontrolü `# Şimdilik bakiye yeterli varsayalım` TODO'su.
 
 **Adımlar:**
@@ -338,14 +338,14 @@ Use case'de bakiye kontrolü `# Şimdilik bakiye yeterli varsayalım` TODO'su.
 
    Endpoint imzasını güncelle:
    ```python
-   async def transfer_tuci(data: TransferRequest, current_user = Depends(get_current_user), ...):
+   async def transfer_teqliq(data: TransferRequest, current_user = Depends(get_current_user), ...):
    ```
 
 2. **`backend/app/use_cases/wallet/` — Bakiye kontrolü uygula**
 
-   `TransferTuciCommand.execute()` içindeki TODO'yu gider:
+   `TransferteqliqCommand.execute()` içindeki TODO'yu gider:
    ```python
-   if sender.tuci_balance < data.amount:
+   if sender.teqliq_balance < data.amount:
        raise InsufficientFundsException()  # AppException subclass
    ```
 

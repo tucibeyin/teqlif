@@ -13,13 +13,13 @@ class AiDescState {
   final AiDescStatus status;
   final String text;
   final String provider;
-  final int teqlikSpent;
+  final int teqliqSpent;
 
   const AiDescState({
     this.status = AiDescStatus.idle,
     this.text = '',
     this.provider = '',
-    this.teqlikSpent = 0,
+    this.teqliqSpent = 0,
   });
 }
 
@@ -58,9 +58,9 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
 
       final text = data['description'] as String? ?? '';
       final provider = data['provider'] as String? ?? '';
-      final teqlikSpent = (data['teqlik_spent'] as num?)?.toInt() ?? 0;
+      final teqliqSpent = (data['teqliq_spent'] as num?)?.toInt() ?? 0;
 
-      if (teqlikSpent > 0) {
+      if (teqliqSpent > 0) {
         CacheService.clearData('user_wallet_data');
       }
 
@@ -68,7 +68,7 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
         status: AiDescStatus.done,
         text: text,
         provider: provider,
-        teqlikSpent: teqlikSpent,
+        teqliqSpent: teqliqSpent,
       );
     } catch (e) {
       state = const AiDescState(status: AiDescStatus.error);

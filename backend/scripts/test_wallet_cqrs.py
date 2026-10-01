@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.uow import SqlAlchemyUnitOfWork
-from app.use_cases.wallet.commands.transfer_tuci import TransferTuciCommand
+from app.use_cases.wallet.commands.transfer_teqliq import TransferteqliqCommand
 from app.core.exceptions import BadRequestException
 
 class MockTransaction:
@@ -36,12 +36,12 @@ async def test_wallet_cqrs():
     print("\n[TEST] Sprint 3: Wallet & Transactions CQRS Testi Başlıyor...")
 
     uow = MockUoW()
-    transfer_cmd = TransferTuciCommand(uow)
+    transfer_cmd = TransferteqliqCommand(uow)
 
     # Senaryo 1: Başarılı Transfer
     result = await transfer_cmd.execute(sender_id=1, receiver_id=2, amount=100)
     if result["status"] == "success":
-        print("✅ Senaryo 1: Başarılı Tuci transferi ve UoW Commit test edildi.")
+        print("✅ Senaryo 1: Başarılı teqliq transferi ve UoW Commit test edildi.")
     else:
         print("❌ Senaryo 1 Başarısız")
 

@@ -66,7 +66,7 @@ class FaqScreen extends ConsumerWidget {
             question: loc.t('faqQBadgesSponsored'),
             answer: loc.t('faqABadgesSponsored'),
           ),
-          _FaqItem(question: loc.t('faqQBadgesTuci'), answer: loc.t('faqABadgesTuci')),
+          _FaqItem(question: loc.t('faqQBadgesteqliq'), answer: loc.t('faqABadgesteqliq')),
         ],
       ),
       _FaqCategory(
@@ -103,8 +103,8 @@ class FaqScreen extends ConsumerWidget {
             icon: const FaIcon(FontAwesomeIcons.crown, size: 20),
           ),
           _FaqItem(
-            question: loc.t('faqIconNameTuci'),
-            answer: loc.t('faqIconTuci'),
+            question: loc.t('faqIconNameteqliq'),
+            answer: loc.t('faqIconteqliq'),
             icon: const Icon(Icons.monetization_on),
           ),
           _FaqItem(
@@ -279,7 +279,7 @@ Widget _buildAnswerWithIcons(
   final Map<String, Widget Function(Color)> tokenIconMap = {
     'VERIFIED': (c) => FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: c),
     'PRO': (c) => FaIcon(FontAwesomeIcons.crown, size: 16, color: c),
-    'TUCI': (c) => Icon(Icons.monetization_on, size: 16, color: c),
+    'teqliq': (c) => Icon(Icons.monetization_on, size: 16, color: c),
     'BLAST': (c) => Icon(Icons.rocket_launch, size: 16, color: c),
     'HOTDEMAND': (c) =>
         Icon(Icons.local_fire_department_outlined, size: 16, color: c),
@@ -289,7 +289,7 @@ Widget _buildAnswerWithIcons(
   final Map<String, Color> tokenColorMap = {
     'VERIFIED': Colors.blue,
     'PRO': Colors.amber,
-    'TUCI': Colors.orange,
+    'teqliq': Colors.orange,
     'BLAST': Colors.redAccent,
     'HOTDEMAND': Colors.red,
     'AUTOBID': Colors.deepPurple,

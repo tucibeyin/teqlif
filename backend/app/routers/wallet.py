@@ -10,7 +10,7 @@ from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqliq_transaction import teqliqTransaction
 from app.models.listing import Listing
 from app.models.stream import LiveStream
 from app.models.gift_event import GiftEvent
@@ -54,7 +54,7 @@ class GiftRequest(BaseModel):
     cost: int = Field(gt=0, le=1000)
 
 
-def _txn_dict(t: TeqlikTransaction) -> dict:
+def _txn_dict(t: teqliqTransaction) -> dict:
     return {
         "id": t.id,
         "amount": t.amount,
@@ -85,27 +85,27 @@ async def get_balance(
 ):
     limit = max(1, min(limit, 100))
     result = await db.execute(
-        select(TeqlikTransaction)
-        .where(TeqlikTransaction.user_id == current_user.id)
-        .order_by(desc(TeqlikTransaction.created_at))
+        select(teqliqTransaction)
+        .where(teqliqTransaction.user_id == current_user.id)
+        .order_by(desc(teqliqTransaction.created_at))
         .limit(limit)
     )
     txns = result.scalars().all()
     return {
-        "balance": current_user.teqlik_balance,
+        "balance": current_user.teqliq_balance,
         "transactions": [_txn_dict(t) for t in txns],
     }
 
 
 @router.post("/transfer")
-async def transfer_tuci(
+async def transfer_teqliq(
     data: TransferRequest,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    from app.use_cases.wallet.commands.transfer_tuci import TransferTuciCommand
+    from app.use_cases.wallet.commands.transfer_teqliq import TransferteqliqCommand
 
-    return await TransferTuciCommand(uow).execute(
+    return await TransferteqliqCommand(uow).execute(
         sender_id=current_user.id,
         receiver_id=data.recipient_id,
         amount=data.amount
@@ -119,9 +119,9 @@ async def get_transaction_detail(
     db: AsyncSession = Depends(get_db),
 ):
     txn = await db.scalar(
-        select(TeqlikTransaction).where(
-            TeqlikTransaction.id == txn_id,
-            TeqlikTransaction.user_id == current_user.id,
+        select(teqliqTransaction).where(
+            teqliqTransaction.id == txn_id,
+            teqliqTransaction.user_id == current_user.id,
         )
     )
     if txn is None:
@@ -166,7 +166,7 @@ async def get_transaction_detail(
             detail["gift_event"] = {
                 "id": gift_ev.id,
                 "gift_name": gift_ev.gift_name,
-                "cost_tuci": gift_ev.cost_tuci,
+                "cost_teqliq": gift_ev.cost_teqliq,
                 "host_share": gift_ev.host_share,
                 "sent_at": gift_ev.sent_at.isoformat(),
                 "sender": {
@@ -206,24 +206,24 @@ async def send_gift(
     host_share = int(body.cost * commission_rate)
 
     # 1) Atomik bakiye düşüşü — tek SQL ile kontrol + güncelleme.
-    # WHERE teqlik_balance >= cost koşulu olmazsa iki eş zamanlı istek session
+    # WHERE teqliq_balance >= cost koşulu olmazsa iki eş zamanlı istek session
     # cache'deki aynı bakiyeyi okuyup ikisi de geçer ve bakiye eksi olur.
     deduct = await db.execute(
         sql_text(
-            "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
-            "WHERE id = :uid AND teqlik_balance >= :cost "
-            "RETURNING teqlik_balance"
+            "UPDATE users SET teqliq_balance = teqliq_balance - :cost "
+            "WHERE id = :uid AND teqliq_balance >= :cost "
+            "RETURNING teqliq_balance"
         ),
         {"cost": body.cost, "uid": current_user.id},
     )
     if deduct.fetchone() is None:
-        logger.warning("TEQlik transaction failed: insufficient balance", extra={
+        logger.warning("teqliq transaction failed: insufficient balance", extra={
             "user_id": current_user.id, "required": body.cost,
         })
         raise InsufficientFundsException()
 
     await db.execute(
-        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :share WHERE id = :uid"),
+        sql_text("UPDATE users SET teqliq_balance = teqliq_balance + :share WHERE id = :uid"),
         {"share": host_share, "uid": receiver.id},
     )
 
@@ -233,25 +233,25 @@ async def send_gift(
         sender_id=current_user.id,
         receiver_id=receiver.id,
         gift_name=body.gift_name,
-        cost_tuci=body.cost,
+        cost_teqliq=body.cost,
         host_share=host_share,
     )
     db.add(gift_ev)
     await db.flush()  # gift_ev.id'yi al
 
-    # 3) Her iki TeqlikTransaction aynı GiftEvent'e işaret eder
-    db.add(TeqlikTransaction(
+    # 3) Her iki teqliqTransaction aynı GiftEvent'e işaret eder
+    db.add(teqliqTransaction(
         user_id=current_user.id, amount=-body.cost,
         transaction_type="send_gift",
         reference_id=gift_ev.id, reference_type="gift_event",
     ))
-    db.add(TeqlikTransaction(
+    db.add(teqliqTransaction(
         user_id=receiver.id, amount=host_share,
         transaction_type="receive_gift",
         reference_id=gift_ev.id, reference_type="gift_event",
     ))
 
-    logger.info("TEQlik transaction: send_gift", extra={
+    logger.info("teqliq transaction: send_gift", extra={
         "sender_id": current_user.id,
         "receiver_id": receiver.id,
         "amount": body.cost,
@@ -275,7 +275,7 @@ async def send_gift(
         payload = json.dumps({
             "gift_event_id": gift_ev.id,
             "gift_name": body.gift_name,
-            "cost_tuci": body.cost,
+            "cost_teqliq": body.cost,
             "host_share": host_share,
             "sender": current_user.username,
             "receiver": receiver.username,
@@ -288,4 +288,4 @@ async def send_gift(
         logger.warning("[WALLET] Gift log Redis yazılamadı | stream_id=%s | %s", body.stream_id, _redis_exc)
 
     await db.refresh(current_user)
-    return {"ok": True, "new_balance": current_user.teqlik_balance}
+    return {"ok": True, "new_balance": current_user.teqliq_balance}

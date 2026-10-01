@@ -7,7 +7,7 @@ VPS'de çalıştır:
 
   python scripts/list_listings.py              # tüm aktif ilanlar
   python scripts/list_listings.py --all        # silinmiş/pasif dahil
-  python scripts/list_listings.py --user tuci  # username'e göre filtrele
+  python scripts/list_listings.py --user teqliq  # username'e göre filtrele
   python scripts/list_listings.py --id 42      # tek ilan detayı
 """
 import asyncio, sys, os, argparse

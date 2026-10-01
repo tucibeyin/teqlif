@@ -26,7 +26,7 @@ from app.models.message_thread import MessageThread
 from app.models.message import DirectMessage
 from app.models.rating import Rating
 from app.models.user_interest import UserInterest
-from app.models.tuci_transaction import TuciTransaction
+from app.models.teqliq_transaction import teqliqTransaction
 from app.models.story import Story, StoryView
 from app.models.search_alert import SearchAlert
 from app.models.referral import Referral
@@ -154,7 +154,7 @@ async def cleanup():
         await session.execute(delete(Referral).where(
             Referral.referrer_id.in_(user_ids) | Referral.referred_id.in_(user_ids)
         ))
-        await session.execute(delete(TuciTransaction).where(TuciTransaction.user_id.in_(user_ids)))
+        await session.execute(delete(teqliqTransaction).where(teqliqTransaction.user_id.in_(user_ids)))
         await session.execute(delete(SearchAlert).where(SearchAlert.user_id.in_(user_ids)))
         await session.execute(delete(Notification).where(Notification.user_id.in_(user_ids)))
         await session.execute(delete(Rating).where(

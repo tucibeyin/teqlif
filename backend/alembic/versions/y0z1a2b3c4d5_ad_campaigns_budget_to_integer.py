@@ -1,4 +1,4 @@
-"""ad_campaigns budget columns: Float -> Integer (TUCi)
+"""ad_campaigns budget columns: Float -> Integer (teqliq)
 
 Revision ID: y0z1a2b3c4d5
 Revises: x9y0z1a2b3c4

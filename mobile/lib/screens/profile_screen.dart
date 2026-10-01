@@ -275,8 +275,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => WalletScreen(
-                    initialBalance: state.teqlikBalance,
-                    initialHistory: state.teqlikHistory,
+                    initialBalance: state.teqliqBalance,
+                    initialHistory: state.teqliqHistory,
                   ),
                 ),
               );
@@ -292,9 +292,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // Settings ikonu ile aynı toplam yükseklikte kalsın
                   SizedBox(
                     height: 11,
-                    child: state.teqlikBalance != null
+                    child: state.teqliqBalance != null
                         ? Text(
-                            '${state.teqlikBalance} T',
+                            '${state.teqliqBalance} T',
                             style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
@@ -3584,22 +3584,22 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
 
 // ── teqliq Cüzdan Kartı ───────────────────────────────────────────────────────
 
-class _TuciWalletCard extends ConsumerStatefulWidget {
+class _teqliqWalletCard extends ConsumerStatefulWidget {
   final int? balance;
   final List<dynamic> history;
   final Future<void> Function() onRefresh;
 
-  const _TuciWalletCard({
+  const _teqliqWalletCard({
     required this.balance,
     required this.history,
     required this.onRefresh,
   });
 
   @override
-  ConsumerState<_TuciWalletCard> createState() => _TuciWalletCardState();
+  ConsumerState<_teqliqWalletCard> createState() => _teqliqWalletCardState();
 }
 
-class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
+class _teqliqWalletCardState extends ConsumerState<_teqliqWalletCard> {
   bool _refreshing = false;
 
   void _openSheet() {
@@ -3607,7 +3607,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _TuciWalletSheet(
+      builder: (_) => _teqliqWalletSheet(
         balance: widget.balance ?? 0,
         history: widget.history,
       ),
@@ -3668,7 +3668,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    ref.read(localizationProvider).t('lblTuciWallet'),
+                    ref.read(localizationProvider).t('lblteqliqWallet'),
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -3731,11 +3731,11 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
   }
 }
 
-class _TuciWalletSheet extends ConsumerWidget {
+class _teqliqWalletSheet extends ConsumerWidget {
   final int balance;
   final List<dynamic> history;
 
-  const _TuciWalletSheet({required this.balance, required this.history});
+  const _teqliqWalletSheet({required this.balance, required this.history});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

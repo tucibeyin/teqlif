@@ -578,10 +578,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
     ref.listen<AiDescState>(aiDescProvider, (prev, next) async {
       if (next.status == AiDescStatus.done && prev?.status == AiDescStatus.loading) {
-        if (next.teqlikSpent > 0) {
+        if (next.teqliqSpent > 0) {
           _loadAiDescCredits();
           TeqSnackBar.show(
-            message: loc.t('teqlikSpent', {'count': next.teqlikSpent.toString()}),
+            message: loc.t('teqliqSpent', {'count': next.teqliqSpent.toString()}),
             type: TeqSnackBarType.success,
           );
         } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {

@@ -1,5 +1,5 @@
 """
-TuciTransaction reference_id / reference_type backfill scripti.
+teqliqTransaction reference_id / reference_type backfill scripti.
 
 Hangi türler backfill edilir:
   spend_boost_paid  → ad_campaigns  (seller_id + created_at ±10s)
@@ -57,9 +57,9 @@ import app.models.user
 import app.models.listing
 import app.models.ad_campaign
 import app.models.mass_notification
-import app.models.tuci_transaction
+import app.models.teqliq_transaction
 
-from app.models.tuci_transaction import TuciTransaction
+from app.models.teqliq_transaction import teqliqTransaction
 from app.models.ad_campaign import AdCampaign
 from app.models.mass_notification import MassNotificationCampaign
 
@@ -82,10 +82,10 @@ async def backfill_boost(session: AsyncSession, dry_run: bool) -> dict:
     stats = {"found": 0, "updated": 0, "ambiguous": 0, "no_match": 0}
 
     result = await session.execute(
-        select(TuciTransaction).where(
-            TuciTransaction.transaction_type == "spend_boost_paid",
-            TuciTransaction.reference_id.is_(None),
-        ).order_by(TuciTransaction.created_at)
+        select(teqliqTransaction).where(
+            teqliqTransaction.transaction_type == "spend_boost_paid",
+            teqliqTransaction.reference_id.is_(None),
+        ).order_by(teqliqTransaction.created_at)
     )
     txns = result.scalars().all()
     stats["found"] = len(txns)
@@ -116,8 +116,8 @@ async def backfill_boost(session: AsyncSession, dry_run: bool) -> dict:
             )
             if not dry_run:
                 await session.execute(
-                    sa_update(TuciTransaction)
-                    .where(TuciTransaction.id == txn.id)
+                    sa_update(teqliqTransaction)
+                    .where(teqliqTransaction.id == txn.id)
                     .values(reference_id=camp.listing_id, reference_type="listing")
                 )
             stats["updated"] += 1
@@ -134,10 +134,10 @@ async def backfill_mass_notifications(session: AsyncSession, dry_run: bool) -> d
     stats = {"found": 0, "updated": 0, "ambiguous": 0, "no_match": 0}
 
     result = await session.execute(
-        select(TuciTransaction).where(
-            TuciTransaction.transaction_type.in_(["spend_lead_gen", "spend_retargeting"]),
-            TuciTransaction.reference_id.is_(None),
-        ).order_by(TuciTransaction.created_at)
+        select(teqliqTransaction).where(
+            teqliqTransaction.transaction_type.in_(["spend_lead_gen", "spend_retargeting"]),
+            teqliqTransaction.reference_id.is_(None),
+        ).order_by(teqliqTransaction.created_at)
     )
     txns = result.scalars().all()
     stats["found"] = len(txns)
@@ -180,8 +180,8 @@ async def backfill_mass_notifications(session: AsyncSession, dry_run: bool) -> d
             )
             if not dry_run:
                 await session.execute(
-                    sa_update(TuciTransaction)
-                    .where(TuciTransaction.id == txn.id)
+                    sa_update(teqliqTransaction)
+                    .where(teqliqTransaction.id == txn.id)
                     .values(reference_id=ref_id, reference_type=ref_type)
                 )
             stats["updated"] += 1
@@ -201,7 +201,7 @@ async def main(dry_run: bool):
 
     mode = "DRY-RUN" if dry_run else "CANLI"
     log.info(f"══════════════════════════════════════════")
-    log.info(f"  TuciTransaction reference backfill — {mode}")
+    log.info(f"  teqliqTransaction reference backfill — {mode}")
     log.info(f"  Zaman penceresi: ±{WINDOW_SECONDS}s")
     log.info(f"══════════════════════════════════════════")
 
@@ -224,7 +224,7 @@ async def main(dry_run: bool):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TuciTransaction reference backfill")
+    parser = argparse.ArgumentParser(description="teqliqTransaction reference backfill")
     parser.add_argument(
         "--dry-run",
         action="store_true",

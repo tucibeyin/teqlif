@@ -101,7 +101,7 @@ async def set_dates(listing_id: int, is_active: bool, created_days_ago: float, d
 
 async def run_exhaustive(client, token, user_id, listing_id):
     # Pro yap, bol kredi ver, bakiyeyi sıfırla ki credit usage test edilsin
-    await db_exec("UPDATE users SET is_premium = true, tuci_balance = 0 WHERE id = :id", {"id": user_id})
+    await db_exec("UPDATE users SET is_premium = true, teqliq_balance = 0 WHERE id = :id", {"id": user_id})
 
     # TEST 1: Yeni İlan, pasife alma ve aktife alma (1. GÜN)
     head("TEST 1: 1 Günlük İlanı Kapatıp Açma (Pencere İçi)")

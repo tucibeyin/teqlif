@@ -42,7 +42,7 @@ from app.models.message_thread import MessageThread
 from app.models.message import DirectMessage
 from app.models.rating import Rating
 from app.models.user_interest import UserInterest
-from app.models.tuci_transaction import TuciTransaction
+from app.models.teqliq_transaction import teqliqTransaction
 from app.models.story import Story, StoryView
 from app.models.search_alert import SearchAlert
 from app.models.referral import Referral
@@ -560,7 +560,7 @@ async def seed_data() -> None:
                 bio="Geliştirici test hesabı",
                 profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
                 is_premium=True,
-                tuci_balance=500,
+                teqliq_balance=500,
             )
             new_users.append(custom_user)
             users.append(custom_user)
@@ -577,7 +577,7 @@ async def seed_data() -> None:
                 bio=fake.sentence()[:150] if random.random() > 0.5 else None,
                 profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
                 is_premium=random.random() < 0.25,
-                tuci_balance=random.randint(0, 1000),
+                teqliq_balance=random.randint(0, 1000),
             )
             new_users.append(user)
             users.append(user)
@@ -1052,9 +1052,9 @@ async def seed_data() -> None:
         session.add_all(ratings)
         await session.flush()
 
-        # ── 15. TUCI TRANSACTIONS ────────────────────────────────────────────────
-        print("💰 15/20: Tuci coin işlemleri oluşturuluyor...")
-        transactions: list[TuciTransaction] = []
+        # ── 15. teqliq TRANSACTIONS ────────────────────────────────────────────────
+        print("💰 15/20: teqliq coin işlemleri oluşturuluyor...")
+        transactions: list[teqliqTransaction] = []
         tx_types = [
             ("purchase_reward", 50), ("bid_placed", -10), ("listing_created", 20),
             ("referral_bonus", 100), ("stream_gift_received", 30), ("daily_login", 5),
@@ -1065,7 +1065,7 @@ async def seed_data() -> None:
             for _ in range(random.randint(3, 8)):
                 tx_type, amount = random.choice(tx_types)
                 ref_id = random.choice(user_listing_ids) if user_listing_ids and random.random() > 0.5 else None
-                transactions.append(TuciTransaction(
+                transactions.append(teqliqTransaction(
                     user_id=user.id,
                     amount=amount,
                     transaction_type=tx_type,
@@ -1171,7 +1171,7 @@ async def seed_data() -> None:
             ("stories", stories), ("story_views", story_views),
             ("story_likes", story_likes_list), ("message_threads", threads),
             ("direct_messages", messages), ("notifications", notifications),
-            ("ratings", ratings), ("tuci_transactions", transactions),
+            ("ratings", ratings), ("teqliq_transactions", transactions),
             ("search_alerts", search_alerts), ("referrals", referrals),
         ]:
             print(f"     {name}: {len(obj)}")

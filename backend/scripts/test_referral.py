@@ -12,7 +12,7 @@ os.chdir(backend_dir)
 from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.referral import Referral
-from app.models.tuci_transaction import TuciTransaction
+from app.models.teqliq_transaction import teqliqTransaction
 from sqlalchemy import select, delete
 from app.services.referral_service import apply_referral, REFERRER_BONUS, REFERRED_BONUS
 
@@ -34,7 +34,7 @@ async def run_test():
                 phone_verified=True,
                 referral_code=referrer_username.upper()[:10],
                 referral_code_expires_at=datetime.now(timezone.utc) + timedelta(days=3),
-                tuci_balance=100
+                teqliq_balance=100
             )
             
             referred = User(
@@ -44,7 +44,7 @@ async def run_test():
                 hashed_password="fake",
                 email_verified=False,
                 phone_verified=False,
-                tuci_balance=100
+                teqliq_balance=100
             )
             
             db.add(referrer)
@@ -78,7 +78,7 @@ async def run_test():
             await db.refresh(referred)
             await db.refresh(referrer)
             assert referred.pending_referred_by is not None, "Sadece e-posta onayıyla ödül dağıtıldı (HATA)!"
-            assert referred.tuci_balance == 100, "Sadece e-posta onayıyla bakiye arttı (HATA)!"
+            assert referred.teqliq_balance == 100, "Sadece e-posta onayıyla bakiye arttı (HATA)!"
             print("    BAŞARILI: Sadece e-posta onayı yetmedi, ödül dağıtılmadı ve kod beklemede kaldı.")
             
             # 4. Telefon Onayı Simülasyonu (Tam Onay)
@@ -98,8 +98,8 @@ async def run_test():
             await db.refresh(referrer)
             
             assert referred.pending_referred_by is None, "pending_referred_by temizlenmedi!"
-            assert referrer.tuci_balance == 100 + REFERRER_BONUS, f"Davet eden ödülünü alamadı! (Bakiye: {referrer.tuci_balance})"
-            assert referred.tuci_balance == 100 + REFERRED_BONUS, f"Yeni kullanıcı ödülünü alamadı! (Bakiye: {referred.tuci_balance})"
+            assert referrer.teqliq_balance == 100 + REFERRER_BONUS, f"Davet eden ödülünü alamadı! (Bakiye: {referrer.teqliq_balance})"
+            assert referred.teqliq_balance == 100 + REFERRED_BONUS, f"Yeni kullanıcı ödülünü alamadı! (Bakiye: {referred.teqliq_balance})"
             
             print("    BAŞARILI: Bekleyen kod temizlendi, ödüller kusursuz şekilde hesaplara yattı!")
             print("--- Test Başarıyla Tamamlandı ---")
@@ -112,11 +112,11 @@ async def run_test():
             # Temizlik
             print("[5] Test verileri veritabanından temizleniyor...")
             if 'referred' in locals() and getattr(referred, 'id', None):
-                await db.execute(delete(TuciTransaction).where(TuciTransaction.user_id == referred.id))
+                await db.execute(delete(teqliqTransaction).where(teqliqTransaction.user_id == referred.id))
                 await db.execute(delete(Referral).where(Referral.referred_id == referred.id))
                 await db.execute(delete(User).where(User.id == referred.id))
             if 'referrer' in locals() and getattr(referrer, 'id', None):
-                await db.execute(delete(TuciTransaction).where(TuciTransaction.user_id == referrer.id))
+                await db.execute(delete(teqliqTransaction).where(teqliqTransaction.user_id == referrer.id))
                 await db.execute(delete(User).where(User.id == referrer.id))
             await db.commit()
 

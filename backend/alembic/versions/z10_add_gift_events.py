@@ -5,8 +5,8 @@ Revises: z9_add_txn_reference
 Create Date: 2026-07-11
 
 Event-driven hediye mimarisi:
-- gift_events tablosu: sender, receiver, gift_name, cost_tuci, host_share, stream_id
-- TuciTransaction.reference_type = "gift_event" → GiftEvent.id
+- gift_events tablosu: sender, receiver, gift_name, cost_teqliq, host_share, stream_id
+- teqliqTransaction.reference_type = "gift_event" → GiftEvent.id
 - Redis gift:log:{stream_id} listesi uygulama tarafında yönetilir (migration gerekmez)
 """
 
@@ -28,7 +28,7 @@ def upgrade() -> None:
             sender_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             gift_name  VARCHAR(50) NOT NULL,
-            cost_tuci  INTEGER NOT NULL,
+            cost_teqliq  INTEGER NOT NULL,
             host_share INTEGER NOT NULL,
             sent_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
         )

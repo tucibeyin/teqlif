@@ -35,9 +35,9 @@ async def run_test(name, token, payload, expected_status=200):
             print(f"[BAŞARILI] {name} (HTTP {resp.status_code})")
             if resp.status_code == 200:
                 data = resp.json()
-                print(f"  Hızlı Satış Fiyatı: {data.get('fast_sell_price')} TUCi")
-                print(f"  Piyasa Fiyatı: {data.get('market_sell_price')} TUCi")
-                print(f"  Bekleyen Satış Fiyatı: {data.get('slow_sell_price')} TUCi")
+                print(f"  Hızlı Satış Fiyatı: {data.get('fast_sell_price')} teqliq")
+                print(f"  Piyasa Fiyatı: {data.get('market_sell_price')} teqliq")
+                print(f"  Bekleyen Satış Fiyatı: {data.get('slow_sell_price')} teqliq")
                 print(f"  Güven Skoru: {data.get('confidence')}")
                 print(f"  Bulunan Benzer İlan: {data.get('found_similar')}")
                 if data.get('alert'):

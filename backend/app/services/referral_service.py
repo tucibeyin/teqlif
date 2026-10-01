@@ -4,7 +4,7 @@ Referral (Davet) Motoru — iş mantığı katmanı.
 Sorumluluklar:
   - Benzersiz referral_code üretimi
   - Davet kodu uygulaması (apply_referral)
-  - TUCi ödül transferi (referrer +50, referred +10)
+  - teqliq ödül transferi (referrer +50, referred +10)
 """
 import random
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from sqlalchemy import select, text as sql_text
 
 from app.models.user import User
 from app.models.referral import Referral
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqliq_transaction import teqliqTransaction
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.core.logger import get_logger
 
@@ -119,23 +119,23 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     )
     db.add(referral)
 
-    # Referrer +50 TUCi
+    # Referrer +50 teqliq
     await db.execute(
-        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+        sql_text("UPDATE users SET teqliq_balance = teqliq_balance + :amt WHERE id = :uid"),
         {"amt": REFERRER_BONUS, "uid": referrer.id},
     )
-    db.add(TeqlikTransaction(
+    db.add(teqliqTransaction(
         user_id=referrer.id,
         amount=REFERRER_BONUS,
         transaction_type="referral_bonus",
     ))
 
-    # Referred +10 TUCi
+    # Referred +10 teqliq
     await db.execute(
-        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+        sql_text("UPDATE users SET teqliq_balance = teqliq_balance + :amt WHERE id = :uid"),
         {"amt": REFERRED_BONUS, "uid": current_user.id},
     )
-    db.add(TeqlikTransaction(
+    db.add(teqliqTransaction(
         user_id=current_user.id,
         amount=REFERRED_BONUS,
         transaction_type="welcome_bonus",
@@ -145,7 +145,7 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     await db.refresh(current_user)
 
     logger.info(
-        "[REFERRAL] referrer=%s referred=%s | referrer+%d referred+%d TUCi",
+        "[REFERRAL] referrer=%s referred=%s | referrer+%d referred+%d teqliq",
         referrer.id, current_user.id, REFERRER_BONUS, REFERRED_BONUS,
     )
 
@@ -187,6 +187,6 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         "referrer_username": referrer.username,
         "referrer_bonus": REFERRER_BONUS,
         "your_bonus": REFERRED_BONUS,
-        "new_balance": current_user.teqlik_balance,
+        "new_balance": current_user.teqliq_balance,
         "message": t.get("apiMsgReferralSuccess", "").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
     }

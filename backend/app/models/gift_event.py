@@ -10,7 +10,7 @@ class GiftEvent(Base):
     """
     Canlı yayında gönderilen her hediyenin tam kaydı.
 
-    TeqlikTransaction.reference_id → GiftEvent.id (reference_type="gift_event")
+    teqliqTransaction.reference_id → GiftEvent.id (reference_type="gift_event")
     hem sender hem receiver transaction'ı aynı GiftEvent'e işaret eder.
     Redis: gift:log:{stream_id} listesine de LPUSH yapılır (TTL 24h).
     """
@@ -33,7 +33,7 @@ class GiftEvent(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     gift_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    cost_tuci: Mapped[int] = mapped_column(Integer, nullable=False)
+    cost_teqliq: Mapped[int] = mapped_column(Integer, nullable=False)
     host_share: Mapped[int] = mapped_column(Integer, nullable=False)
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

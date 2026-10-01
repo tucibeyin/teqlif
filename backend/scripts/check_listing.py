@@ -15,11 +15,11 @@ AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=F
 
 async def check(password: str):
     async with AsyncSessionLocal() as s:
-        user = (await s.execute(text("SELECT id, is_premium, tuci_balance FROM users WHERE email = :e"), {"e": TEST_EMAIL})).mappings().first()
+        user = (await s.execute(text("SELECT id, is_premium, teqliq_balance FROM users WHERE email = :e"), {"e": TEST_EMAIL})).mappings().first()
         listing = (await s.execute(text("SELECT id, is_active, created_at FROM listings WHERE title = 'Teqlif Deneme 2' AND is_deleted=false LIMIT 1"))).mappings().first()
         
     print(f"\n--- KULLANICI DURUMU ---")
-    print(f"ID: {user['id']} | PRO mu?: {user['is_premium']} | TUCi: {user['tuci_balance']}")
+    print(f"ID: {user['id']} | PRO mu?: {user['is_premium']} | teqliq: {user['teqliq_balance']}")
     
     if not listing:
         print("İlan bulunamadı!")
@@ -46,7 +46,7 @@ async def check(password: str):
         data = cost_resp.json()
         print(f"is_premium: {data.get('is_premium')}")
         print(f"free_remaining: {data.get('free_remaining')} / {data.get('free_limit')}")
-        print(f"cost: {data.get('cost')} TUCi")
+        print(f"cost: {data.get('cost')} teqliq")
         print(f"can_afford: {data.get('can_afford')}")
         print(f"within_window: {data.get('within_window')}")
         

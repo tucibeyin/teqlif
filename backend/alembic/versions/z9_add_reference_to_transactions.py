@@ -1,4 +1,4 @@
-"""add reference_id and reference_type to tuci_transactions
+"""add reference_id and reference_type to teqliq_transactions
 
 Revision ID: z9_add_txn_reference
 Revises: z8_merge_pgtrgm_social
@@ -16,10 +16,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("tuci_transactions", sa.Column("reference_id", sa.Integer(), nullable=True))
-    op.add_column("tuci_transactions", sa.Column("reference_type", sa.String(20), nullable=True))
+    op.add_column("teqliq_transactions", sa.Column("reference_id", sa.Integer(), nullable=True))
+    op.add_column("teqliq_transactions", sa.Column("reference_type", sa.String(20), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("tuci_transactions", "reference_type")
-    op.drop_column("tuci_transactions", "reference_id")
+    op.drop_column("teqliq_transactions", "reference_type")
+    op.drop_column("teqliq_transactions", "reference_id")

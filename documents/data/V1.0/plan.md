@@ -37,7 +37,7 @@ Faz 1 (Retention kararları)
   │
   └──► Faz 9 (Güvenlik/KVKK) → hesap silme, IP maskeleme
        │
-       └──► Faz 10 (tuci→teqlik) — en son
+       └──► Faz 10 (teqliq→teqliq) — en son
 ```
 
 ### Kritik Retention-Kod Uyumsuzlukları
@@ -157,7 +157,7 @@ R3 (live_streams temizliği) uygulanmadan önce bu FK **SET NULL'a** çevrilmeli
 | Tablo | Karar | Yasal Dayanak |
 |-------|-------|--------------|
 | `purchases` | ■ Sonsuz | TTK 82 + VUK 253: 10 yıl |
-| `tuci_transactions` | ■ Sonsuz | TTK 82 + VUK 253: 10 yıl |
+| `teqliq_transactions` | ■ Sonsuz | TTK 82 + VUK 253: 10 yıl |
 | `direct_sales` / `direct_sale_orders` | ■ Sonsuz | Ticaret kaydı |
 | `auctions` | ■ 10 yıl | TTK 82: açık artırma ticari işlem |
 
@@ -261,7 +261,7 @@ W1 ↔ W4 birlikte karar ver.
 | `users` | `max_budget` | `Float` | `Numeric(12, 2)` |
 | `market_index` | `usd_try`, `eur_try` | `Float` | `Numeric(10, 4)` |
 | `direct_sales` | `price` | `Numeric(10, 2)` | ✅ Doğru |
-| `tuci_transactions` | `amount` | `Integer` | ✅ Doğru (teqlik tamsayı) |
+| `teqliq_transactions` | `amount` | `Integer` | ✅ Doğru (teqliq tamsayı) |
 
 **Alembic kısıtı:** Her kolon ayrı `op.execute()` — asyncpg multi-statement kabul etmez.
 
@@ -420,7 +420,7 @@ Adımlar:
 
 | Tablo | Index | Sorgu Amacı | Durum |
 |-------|-------|------------|-------|
-| `tuci_transactions` | `(user_id, created_at DESC)` | Cüzdan geçmişi | ⚠️ Eksik |
+| `teqliq_transactions` | `(user_id, created_at DESC)` | Cüzdan geçmişi | ⚠️ Eksik |
 | `purchases` | `(buyer_id, created_at DESC)` | Alım geçmişi | ⚠️ Eksik |
 | `bids` | `(stream_id, created_at DESC)` | Teklif sırası | ✅ `ix_bids_stream_created` zaten var |
 | `analytics_events` | `(user_id, created_at)` | ML sorgu hızı | ✅ `ix_analytics_events_user_created` zaten var |
@@ -771,15 +771,15 @@ W6+W7 haftalığa geçerse: Sal-Cmt 01:00-01:30 CPU serbest kalır.
 
 ---
 
-## Faz 10 — tuci → teqlik Yeniden Adlandırma
+## Faz 10 — teqliq → teqliq Yeniden Adlandırma
 
 > Bağımlılık: Tüm önceki fazlar tamamlanmış. Pure rename, veri yapısı değişikliği yok.
 
 | Katman | Değişiklik |
 |--------|-----------|
-| PostgreSQL | `tuci_transactions` → `teqlik_transactions`, `tuci_balance` → `teqlik_balance` |
+| PostgreSQL | `teqliq_transactions` → `teqliq_transactions`, `teqliq_balance` → `teqliq_balance` |
 | Python | Model, repository, use_case, schema |
-| API JSON | `tuci_balance` → `teqlik_balance` |
+| API JSON | `teqliq_balance` → `teqliq_balance` |
 | Flutter | ViewModel, DTO, widget, i18n ARB |
 
 Geçiş döneminde çift okuma → Flutter güncellendikten sonra eski kaldırılır.
@@ -884,4 +884,4 @@ Geçiş döneminde çift okuma → Flutter güncellendikten sonra eski kaldırı
 | P22 | W6+W7: ALS haftalığa geçiş | 6.1 |
 | P23 | Hesap silme akışı (KVKK) | 9.1 |
 | P24 | GC5-GC7 diğer cleanup | 1.4 |
-| P25 | tuci → teqlik rename | 10 |
+| P25 | teqliq → teqliq rename | 10 |

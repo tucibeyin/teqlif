@@ -5,8 +5,8 @@ Kullanım: python test_reactivation.py
 
 Test senaryoları:
   1. PRO kullanıcı → ücretsiz kredi kullanımı
-  2. PRO kullanıcı → kredileri tükendikten sonra TUCi ödeme
-  3. Normal kullanıcı → TUCi ödeme
+  2. PRO kullanıcı → kredileri tükendikten sonra teqliq ödeme
+  3. Normal kullanıcı → teqliq ödeme
   4. Normal kullanıcı → yetersiz bakiye (402)
   5. Aktif→Pasif: kampanya silinmesi, ilan sıfırlanması
 """
@@ -112,9 +112,9 @@ async def get_impressions(listing_id: int) -> int:
     return row["cnt"] if row else 0
 
 
-async def set_tuci(user_id: int, balance: int):
+async def set_teqliq(user_id: int, balance: int):
     await db_exec(
-        "UPDATE users SET tuci_balance = :b WHERE id = :id",
+        "UPDATE users SET teqliq_balance = :b WHERE id = :id",
         {"b": balance, "id": user_id},
     )
 
@@ -287,10 +287,10 @@ async def test_1_pro_free_credit(client, token, listing_id, user_id):
 
 
 async def test_2_pro_paid(client, token, listing_id, user_id):
-    head("Senaryo 2: PRO kullanıcı → krediler tükenmiş, TUCi ödeme")
+    head("Senaryo 2: PRO kullanıcı → krediler tükenmiş, teqliq ödeme")
 
     await set_premium(user_id, True)
-    await set_tuci(user_id, 50)
+    await set_teqliq(user_id, 50)
 
     # premium_since'i DB'den çek → anniversary key'i doğru hesapla
     row = await db_fetchone("SELECT premium_since FROM users WHERE id = :id", {"id": user_id})
@@ -307,25 +307,25 @@ async def test_2_pro_paid(client, token, listing_id, user_id):
     assert credits["free_remaining"] == 0, \
         f"free_remaining=0 beklendi, {credits['free_remaining']} geldi"
     assert credits["cost"] == 10, f"cost=10 beklendi, {credits['cost']} geldi"
-    assert credits["can_afford"] is True, "50 TUCi ile afford edebilmeli"
+    assert credits["can_afford"] is True, "50 teqliq ile afford edebilmeli"
     ok("Kredi tükendi, bakiye yeterli")
 
-    balance_before = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
+    balance_before = (await db_fetchone("SELECT teqliq_balance FROM users WHERE id = :id", {"id": user_id}))["teqliq_balance"]
     r = await toggle(client, token, listing_id)
     assert r["status"] == 200, f"Toggle başarısız: {r}"
     ok("Toggle başarılı")
 
-    balance_after = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
+    balance_after = (await db_fetchone("SELECT teqliq_balance FROM users WHERE id = :id", {"id": user_id}))["teqliq_balance"]
     assert balance_after == balance_before - 10, \
-        f"10 TUCi düşmedi: {balance_before} → {balance_after}"
-    ok(f"10 TUCi düşüldü: {balance_before} → {balance_after}")
+        f"10 teqliq düşmedi: {balance_before} → {balance_after}"
+    ok(f"10 teqliq düşüldü: {balance_before} → {balance_after}")
 
 
 async def test_3_normal_paid(client, token, listing_id, user_id):
-    head("Senaryo 3: Normal kullanıcı → TUCi ödeme (Süresi Dolmuş İlan)")
+    head("Senaryo 3: Normal kullanıcı → teqliq ödeme (Süresi Dolmuş İlan)")
 
     await set_premium(user_id, False)
-    await set_tuci(user_id, 50)
+    await set_teqliq(user_id, 50)
     await ensure_listing_passive_expired(client, token, listing_id)
 
     credits = await reactivation_credits_api(client, token)
@@ -336,21 +336,21 @@ async def test_3_normal_paid(client, token, listing_id, user_id):
     assert credits["can_afford"] is True
     ok("Normal kullanıcı kredi yok, bakiye yeterli")
 
-    balance_before = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
+    balance_before = (await db_fetchone("SELECT teqliq_balance FROM users WHERE id = :id", {"id": user_id}))["teqliq_balance"]
     r = await toggle(client, token, listing_id)
     assert r["status"] == 200, f"Toggle başarısız: {r}"
     ok("Toggle başarılı")
 
-    balance_after = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
+    balance_after = (await db_fetchone("SELECT teqliq_balance FROM users WHERE id = :id", {"id": user_id}))["teqliq_balance"]
     assert balance_after == balance_before - 10
-    ok(f"10 TUCi düşüldü: {balance_before} → {balance_after}")
+    ok(f"10 teqliq düşüldü: {balance_before} → {balance_after}")
 
 
 async def test_4_insufficient_balance(client, token, listing_id, user_id):
     head("Senaryo 4: Normal kullanıcı → yetersiz bakiye (402)")
 
     await set_premium(user_id, False)
-    await set_tuci(user_id, 5)  # 10 TUCi'den az
+    await set_teqliq(user_id, 5)  # 10 teqliq'den az
     await ensure_listing_passive_expired(client, token, listing_id)
 
     credits = await reactivation_credits_api(client, token)
@@ -366,8 +366,8 @@ async def test_4_insufficient_balance(client, token, listing_id, user_id):
     ok("402 döndü, insufficient_balance ✔")
 
     # Bakiye değişmedi mi?
-    balance_after = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
-    assert balance_after == 5, f"Bakiye değişmemeli, {balance_after} TUCi"
+    balance_after = (await db_fetchone("SELECT teqliq_balance FROM users WHERE id = :id", {"id": user_id}))["teqliq_balance"]
+    assert balance_after == 5, f"Bakiye değişmemeli, {balance_after} teqliq"
     ok("Bakiye değişmedi ✔")
 
 
@@ -375,7 +375,7 @@ async def test_5_deactivation_cleanup(client, token, listing_id, user_id):
     head("Senaryo 5: Aktif→Pasif — kampanya ve impression temizliği")
 
     await set_premium(user_id, True)
-    await set_tuci(user_id, 100)
+    await set_teqliq(user_id, 100)
     await clear_reactivation_credits(user_id)
     await ensure_listing_active(client, token, listing_id)
 
@@ -411,7 +411,7 @@ async def test_6_within_30_days_window(client, token, listing_id, user_id):
     head("Senaryo 6: 30 Günlük Ücretsiz Pencere İçinde Aç-Kapa (Yeni Feature)")
 
     await set_premium(user_id, False)
-    await set_tuci(user_id, 0)  # Bakiye yok, normal kullanıcı
+    await set_teqliq(user_id, 0)  # Bakiye yok, normal kullanıcı
     await ensure_listing_passive_within_window(client, token, listing_id)
 
     # API Kontrolü
@@ -481,7 +481,7 @@ async def main():
 
         # Orijinal state'i kaydet (testten sonra restore et)
         orig_state = await db_fetchone(
-            "SELECT tuci_balance, is_premium FROM users WHERE id = :id", {"id": user_id}
+            "SELECT teqliq_balance, is_premium FROM users WHERE id = :id", {"id": user_id}
         )
         orig_listing = await get_listing_state(listing_id)
 
@@ -512,8 +512,8 @@ async def main():
         # Orijinal state'i geri yükle
         head("Test Sonrası Temizlik")
         await db_exec(
-            "UPDATE users SET tuci_balance = :b, is_premium = :p WHERE id = :id",
-            {"b": orig_state["tuci_balance"], "p": orig_state["is_premium"], "id": user_id},
+            "UPDATE users SET teqliq_balance = :b, is_premium = :p WHERE id = :id",
+            {"b": orig_state["teqliq_balance"], "p": orig_state["is_premium"], "id": user_id},
         )
         await db_exec(
             "UPDATE listings SET is_active = :a, created_at = :c WHERE id = :id",

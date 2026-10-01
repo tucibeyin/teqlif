@@ -1,4 +1,4 @@
-"""add tuci wallet — tuci_balance on users + tuci_transactions table
+"""add teqliq wallet — teqliq_balance on users + teqliq_transactions table
 
 Revision ID: x9y0z1a2b3c4
 Revises: w8x9y0z1a2b3
@@ -16,20 +16,20 @@ depends_on = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # tuci_balance kolonu yoksa ekle
+    # teqliq_balance kolonu yoksa ekle
     has_col = conn.execute(sa.text(
         "SELECT 1 FROM information_schema.columns "
-        "WHERE table_name='users' AND column_name='tuci_balance'"
+        "WHERE table_name='users' AND column_name='teqliq_balance'"
     )).fetchone()
     if not has_col:
         op.add_column(
             "users",
-            sa.Column("tuci_balance", sa.Integer(), nullable=False, server_default="100"),
+            sa.Column("teqliq_balance", sa.Integer(), nullable=False, server_default="100"),
         )
 
-    # tuci_transactions tablosu yoksa oluştur
+    # teqliq_transactions tablosu yoksa oluştur
     conn.execute(sa.text("""
-        CREATE TABLE IF NOT EXISTS tuci_transactions (
+        CREATE TABLE IF NOT EXISTS teqliq_transactions (
             id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES users(id),
             amount INTEGER NOT NULL,
@@ -38,12 +38,12 @@ def upgrade() -> None:
         )
     """))
     conn.execute(sa.text(
-        "CREATE INDEX IF NOT EXISTS ix_tuci_transactions_user_id "
-        "ON tuci_transactions (user_id)"
+        "CREATE INDEX IF NOT EXISTS ix_teqliq_transactions_user_id "
+        "ON teqliq_transactions (user_id)"
     ))
 
 
 def downgrade() -> None:
-    op.drop_index("ix_tuci_transactions_user_id", table_name="tuci_transactions")
-    op.drop_table("tuci_transactions")
-    op.drop_column("users", "tuci_balance")
+    op.drop_index("ix_teqliq_transactions_user_id", table_name="teqliq_transactions")
+    op.drop_table("teqliq_transactions")
+    op.drop_column("users", "teqliq_balance")
