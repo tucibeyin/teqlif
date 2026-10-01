@@ -68,6 +68,8 @@ main() {
         "Staging PG user + db: createuser teqlif && createdb teqlif_staging" \
         "alembic upgrade head (staging env ile)" \
         "MinIO staging bucket oluştur: teqlif-staging, teqlif-dm-staging" \
+        "certbot certonly --nginx -d staging.uploads.teqlif.com (LE cert)" \
+        "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
         "systemctl start teqlif-staging teqlif-worker-staging teqlif-ai-proxy"
 }
 
@@ -227,34 +229,149 @@ setup_ai_proxy_service() {
 install_nginx_staging() {
     log_step "nginx (staging ingress)"
     apt-get install -y -qq nginx
+
+    cat > /etc/nginx/nginx.conf <<'EOF'
+user www-data;
+worker_processes auto;
+worker_rlimit_nofile 65535;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    server_tokens off;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    set_real_ip_from 103.21.244.0/22;
+    set_real_ip_from 103.22.200.0/22;
+    set_real_ip_from 103.31.4.0/22;
+    set_real_ip_from 104.16.0.0/13;
+    set_real_ip_from 104.24.0.0/14;
+    set_real_ip_from 108.162.192.0/18;
+    set_real_ip_from 131.0.72.0/22;
+    set_real_ip_from 141.101.64.0/18;
+    set_real_ip_from 162.158.0.0/15;
+    set_real_ip_from 172.64.0.0/13;
+    set_real_ip_from 173.245.48.0/20;
+    set_real_ip_from 188.114.96.0/20;
+    set_real_ip_from 190.93.240.0/20;
+    set_real_ip_from 197.234.240.0/22;
+    set_real_ip_from 198.41.128.0/17;
+    real_ip_header CF-Connecting-IP;
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    limit_req_zone $binary_remote_addr zone=staging_limit:10m rate=10r/s;
+    limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+    log_format main '$remote_addr - $remote_user [$time_local] '
+                    '"$request" $status $body_bytes_sent '
+                    '"$http_referer" "$http_user_agent" '
+                    'rt=$request_time';
+
+    access_log /var/log/nginx/access.log main;
+    error_log  /var/log/nginx/error.log warn;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/xml;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+EOF
+
     cat > /etc/nginx/conf.d/teqlif-staging.conf <<'EOF'
+# staging.teqlif.com + api-staging.teqlif.com — Cloudflare Proxied
 server {
     listen 443 ssl;
-    server_name staging.teqlif.com;
+    server_name staging.teqlif.com api-staging.teqlif.com;
+
     ssl_certificate     /etc/ssl/teqlif/cf-origin.crt;
     ssl_certificate_key /etc/ssl/teqlif/cf-origin.key;
     ssl_protocols       TLSv1.2 TLSv1.3;
-    client_max_body_size 5m;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
     proxy_http_version 1.1;
     proxy_set_header Upgrade    $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $http_cf_connecting_ip;
-    proxy_set_header X-Forwarded-For $http_cf_connecting_ip;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $http_cf_connecting_ip;
+    proxy_set_header X-Forwarded-For   $http_cf_connecting_ip;
     proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 5s;
+    proxy_read_timeout    300s;
+
+    client_max_body_size 5m;
+    limit_conn conn_limit 50;
+
+    location /api/messages/ws {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_read_timeout 3600s;
+    }
+
     location / {
+        limit_req zone=staging_limit burst=30 nodelay;
         proxy_pass http://127.0.0.1:8000;
     }
 }
+
+# staging.uploads.teqlif.com — DNS Only, Let's Encrypt, MinIO staging
+server {
+    listen 443 ssl;
+    server_name staging.uploads.teqlif.com;
+
+    ssl_certificate     /etc/letsencrypt/live/staging.uploads.teqlif.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.uploads.teqlif.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    client_max_body_size 0;
+    proxy_buffering off;
+    proxy_request_buffering off;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 10s;
+    proxy_read_timeout    600s;
+    proxy_send_timeout    600s;
+
+    location / {
+        proxy_pass http://127.0.0.1:9100;
+    }
+}
+
+# HTTP → HTTPS redirect
 server {
     listen 80;
-    server_name staging.teqlif.com;
+    server_name staging.teqlif.com api-staging.teqlif.com staging.uploads.teqlif.com;
     return 301 https://$host$request_uri;
 }
 EOF
+
     mkdir -p /etc/ssl/teqlif
     touch /etc/ssl/teqlif/cf-origin.crt /etc/ssl/teqlif/cf-origin.key
     chmod 600 /etc/ssl/teqlif/cf-origin.key
+    nginx -t 2>/dev/null || log_warn "nginx config test başarısız (SSL cert eksik, devam ediliyor)"
     systemctl enable nginx
     log_ok "nginx (staging) enable edildi"
 }
