@@ -1,6 +1,6 @@
 # Auction V1.1 - Görev Listesi (Task.md)
 
-Bu dosya, `plan.md` ve `findings.md` belgelerindeki kararların Clean Architecture, MVVM ve V1.3 topolojisine sadık kalınarak adım adım uygulanmasını takip eder.
+Bu dosya, `plan.md` ve `findings.md` belgelerindeki kararların Clean Architecture, MVVM ve V2.1 topolojisine sadık kalınarak adım adım uygulanmasını takip eder.
 
 > **Kurallar:**
 > 1. Her task adımı teqlif mimarisine qlif_archtectural_desicions.md, clean code, clean architecture ve MVVM prensiplerine ve teqlif mimarisine, deploy/resources ve deploy/scale/V.13'e uygun implemte edilmelidir.
@@ -13,7 +13,7 @@ Bu dosya, `plan.md` ve `findings.md` belgelerindeki kararların Clean Architectu
 ---
 
 ## `[x]` Adım 1: Nginx Gateway (Cloudflare Real IP) Düzeltmesi (Completed: b82fa6ac, 2026-09-14 13:06)
-- `deploy/scale/V1.3/gateway/nginx/teqlif.conf` dosyasına Cloudflare IPv4 ve IPv6 bloklarının `set_real_ip_from` ile eklenmesi.
+- `deploy/scale/V2.1/node1/nginx/teqlif.conf` dosyasına Cloudflare IPv4 ve IPv6 bloklarının `set_real_ip_from` ile eklenmesi.
 - `real_ip_header CF-Connecting-IP;` kuralının aktif edilmesi.
 - VPS Adımı: Nginx sunucusuna (Node 2/Gateway) çıkılıp `nginx -t` ve `systemctl reload nginx` yapılması.
 

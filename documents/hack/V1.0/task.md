@@ -447,7 +447,7 @@ Auth yoksa `payload.user_id` body'den alınıyor — başkasının profili manip
 
 **Adımlar:**
 
-1. **`deploy/scale/V1.3/node1/systemd/minio.service`**
+1. **`deploy/scale/V2.1/node1/systemd/minio.service`**
 
    ```ini
    # Eski:
@@ -457,7 +457,7 @@ Auth yoksa `payload.user_id` body'den alınıyor — başkasının profili manip
    --address 10.10.0.1:9010 --console-address 127.0.0.1:9011
    ```
 
-2. **`deploy/scale/V1.3/node3/systemd/minio.service`**
+2. **`deploy/scale/V2.1/node2/systemd/minio.service`**
 
    ```ini
    # Yeni (node3 local only):
@@ -471,17 +471,17 @@ Auth yoksa `payload.user_id` body'den alınıyor — başkasının profili manip
    sudo systemctl restart minio
    ```
 
-**`[Deploy]`** `deploy/scale/V1.3/node1/systemd/minio.service`,
-`deploy/scale/V1.3/node3/systemd/minio.service` → commit + push
+**`[Deploy]`** `deploy/scale/V2.1/node1/systemd/minio.service`,
+`deploy/scale/V2.1/node2/systemd/minio.service` → commit + push
 
 **`[Node]`** Her iki node'da (güncellenen dosyayı sisteme kopyala ve restart et):
 ```bash
 # node1:
-sudo cp /var/www/teqlif/deploy/scale/V1.3/node1/systemd/minio.service /etc/systemd/system/
+sudo cp /var/www/teqlif/deploy/scale/V2.1/node1/systemd/minio.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl restart minio
 
 # node3:
-sudo cp /var/www/teqlif/deploy/scale/V1.3/node3/systemd/minio.service /etc/systemd/system/
+sudo cp /var/www/teqlif/deploy/scale/V2.1/node2/systemd/minio.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl restart minio
 ```
 
@@ -501,7 +501,7 @@ sudo systemctl daemon-reload && sudo systemctl restart minio
 **Bulgu:** M6 | **Önem:** 🟡 MEDIUM
 
 **Sorun:**
-`deploy/scale/V1.3/gateway/nginx/teqlif.conf`'ta CSP header yok — stored XSS için
+`deploy/scale/V2.1/node1/nginx/teqlif.conf`'ta CSP header yok — stored XSS için
 execution context sınırlanmıyor.
 
 **Adımlar:**
@@ -529,7 +529,7 @@ execution context sınırlanmıyor.
 
 3. **Browser'da `curl -I https://teqlif.com` → `content-security-policy` header'ı doğrula**
 
-**`[Deploy]`** `deploy/scale/V1.3/gateway/nginx/teqlif.conf` → commit + push
+**`[Deploy]`** `deploy/scale/V2.1/node1/nginx/teqlif.conf` → commit + push
 
 **`[Node]`** gateway'de:
 ```bash
@@ -553,7 +553,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 **Adımlar:**
 
-1. **`deploy/scale/V1.3/node3/systemd/alertmanager.service` — Template render adımını kaldır**
+1. **`deploy/scale/V2.1/node2/systemd/alertmanager.service` — Template render adımını kaldır**
 
    ```ini
    # Kaldır:
@@ -581,14 +581,14 @@ sudo nginx -t && sudo systemctl reload nginx
    `/etc/environment`'ta zaten `TEQLIF_ENV_FILE` var; alertmanager token'ları da
    aynı mekanizmaya eklenir (bootstrap ile).
 
-**`[Deploy]`** `deploy/scale/V1.3/node3/systemd/alertmanager.service` — `ExecStartPre` satırı
+**`[Deploy]`** `deploy/scale/V2.1/node2/systemd/alertmanager.service` — `ExecStartPre` satırı
 kaldırılır, `ExecStart`'a `--config.expand-env` eklenir, `EnvironmentFile=/etc/environment`
 eklenir → commit + push
 
 **`[Node]`** node3'te:
 ```bash
 git pull
-sudo cp /var/www/teqlif/deploy/scale/V1.3/node3/systemd/alertmanager.service /etc/systemd/system/
+sudo cp /var/www/teqlif/deploy/scale/V2.1/node2/systemd/alertmanager.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl restart alertmanager
 ```
 `/etc/alertmanager/alertmanager.yml.template` dosyasında token placeholder'ları
@@ -607,7 +607,7 @@ sudo systemctl daemon-reload && sudo systemctl restart alertmanager
 
 **Adımlar:**
 
-1. **`deploy/scale/V1.3/gateway/nginx/teqlif.conf:45–46` — Stapling aktifleştir**
+1. **`deploy/scale/V2.1/node1/nginx/teqlif.conf:45–46` — Stapling aktifleştir**
 
    ```nginx
    # Eski:
@@ -631,7 +631,7 @@ sudo systemctl daemon-reload && sudo systemctl restart alertmanager
    openssl s_client -connect teqlif.com:443 -status | grep -A 10 "OCSP Response"
    ```
 
-**`[Deploy]`** `deploy/scale/V1.3/gateway/nginx/teqlif.conf` → TASK-M6 ile aynı dosya,
+**`[Deploy]`** `deploy/scale/V2.1/node1/nginx/teqlif.conf` → TASK-M6 ile aynı dosya,
 aynı committe yapılabilir → push
 
 **`[Node]`** gateway'de TASK-M6 ile aynı reload:
@@ -656,7 +656,7 @@ tüm dosyalarına erişebilir.
 
 **Adımlar:**
 
-1. **`deploy/scale/V1.3/node1/systemd/` ve `deploy/scale/V1.3/node3/systemd/` altındaki
+1. **`deploy/scale/V2.1/node1/systemd/` ve `deploy/scale/V2.1/node2/systemd/` altındaki
    tüm `.service` dosyalarına ekle:**
 
    ```ini
@@ -679,15 +679,15 @@ tüm dosyalarına erişebilir.
 2. **Her servis için restart sonrası `sudo systemd-analyze security <service>` çalıştır**
    — 4.0 üstü hedef.
 
-**`[Deploy]`** `deploy/scale/V1.3/node1/systemd/*.service` ve
-`deploy/scale/V1.3/node3/systemd/*.service` — tüm service dosyalarına direktifler eklenir
+**`[Deploy]`** `deploy/scale/V2.1/node1/systemd/*.service` ve
+`deploy/scale/V2.1/node2/systemd/*.service` — tüm service dosyalarına direktifler eklenir
 → commit + push
 
 **`[Node]`** Her node'da (servis başına):
 ```bash
 git pull
 # Değişen her .service dosyası için:
-sudo cp /var/www/teqlif/deploy/scale/V1.3/<node>/systemd/<service>.service /etc/systemd/system/
+sudo cp /var/www/teqlif/deploy/scale/V2.1/<node>/systemd/<service>.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl restart <service>
 ```

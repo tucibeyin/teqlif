@@ -260,7 +260,7 @@ Ve worker.py'deki bakiye kontrolü TODO'su giderilmeli.
 
 ### M5 — MinIO Console Tüm Interface'lere Bind
 
-**Dosya:** `deploy/scale/V1.3/node1/systemd/minio.service` ve node3 eşdeğeri
+**Dosya:** `deploy/scale/V2.1/node1/systemd/minio.service` ve node3 eşdeğeri
 
 ```ini
 ExecStart=... --address :9010 --console-address :9011
@@ -281,7 +281,7 @@ MinIO admin console `:9011`'de tüm interface'lere bind. UFW default DENY ise d�
 
 ### M6 — nginx'te Content-Security-Policy Eksik
 
-**Dosya:** `deploy/scale/V1.3/gateway/nginx/teqlif.conf`
+**Dosya:** `deploy/scale/V2.1/node1/nginx/teqlif.conf`
 
 X-Frame-Options, HSTS, X-Content-Type-Options var. CSP yok.
 
@@ -297,7 +297,7 @@ Not: Flutter Web / React Native Web uygulamanın inline script ihtiyaçlarına g
 
 ### M7 — alertmanager ExecStartPre Root Olarak Çalışıyor
 
-**Dosya:** `deploy/scale/V1.3/node3/systemd/alertmanager.service`
+**Dosya:** `deploy/scale/V2.1/node2/systemd/alertmanager.service`
 
 ```ini
 ExecStartPre=+/bin/bash -c 'envsubst < .../alertmanager.yml.template > /etc/alertmanager/alertmanager.yml'
@@ -311,7 +311,7 @@ ExecStartPre=+/bin/bash -c 'envsubst < .../alertmanager.yml.template > /etc/aler
 
 ### M8 — OCSP Stapling Kapalı
 
-**Dosya:** `deploy/scale/V1.3/gateway/nginx/teqlif.conf`
+**Dosya:** `deploy/scale/V2.1/node1/nginx/teqlif.conf`
 
 ```nginx
 ssl_stapling off;
@@ -356,7 +356,7 @@ Kimlik doğrulaması olmadan `tag`, `message`, `error`, `details` alanlarına ne
 
 ### L3 — systemd Hardening Direktifleri Yok
 
-**Dosya:** Tüm `deploy/scale/V1.3/*/systemd/*.service` dosyaları
+**Dosya:** Tüm `deploy/scale/V2.1/*/systemd/*.service` dosyaları
 
 Hiçbir service'te şunlar yok:
 - `NoNewPrivileges=yes`

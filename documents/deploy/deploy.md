@@ -95,7 +95,7 @@ sudo ufw --force enable
 sudo ufw status verbose
 ```
 
-> **Scale V1.0 notu:** WireGuard etkinleştirildiğinde `sudo ufw allow 51820/udp` ekle ve gateway IP'sini (10.10.0.2) hariç tut: `sudo ufw allow from 10.10.0.2 to any`.
+> **Scale V2.1 notu:** WireGuard etkinleştirildiğinde `sudo ufw allow 51820/udp` ekle ve ağ içi IP'leri hariç tut: `sudo ufw allow from 10.10.0.0/24 to any`.
 
 ### 1.5 Fail2ban
 
@@ -758,7 +758,7 @@ sudo systemctl enable --now prometheus
 
 > Grafana node1'dan kaldırıldı (`apt remove --purge grafana`). UFW port 3000 kapalı.  
 > Prometheus + Loki verilere doğrudan `localhost:9090` / `localhost:3100` ile erişilebilir.  
-> Scale V1.0'da gateway'de isteğe bağlı olarak kurulabilir.
+
 
 ### 6.5 node_exporter
 

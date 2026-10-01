@@ -1,7 +1,7 @@
 # Stream Mimarisi — Bulgular ve Yol Haritası V1.1
 
 **Tarih:** 2026-09-13  
-**Topoloji referansı:** `deploy/scale/V1.3/final.md`
+**Topoloji referansı:** `deploy/scale/V2.1/final.md`
 
 ---
 
@@ -49,7 +49,7 @@ Yeni bir LiveKit node kurulsa bile bu kodu değiştirmedikçe hiçbir viewer ora
 
 **2. livekit.yaml hard limit: `max_participants: 500`**
 
-`deploy/scale/V1.3/node1/livekit.yaml`:
+`deploy/scale/V2.1/node1/livekit.yaml`:
 ```yaml
 room:
   max_participants: 500
@@ -84,7 +84,7 @@ Tüm viewer'lar tek odaya giriyor. Yük dengeleme, threshold tespiti, otomatik m
 
 ### 1.2 max_participants Artırımı
 
-`deploy/scale/V1.3/node1/livekit.yaml`:
+`deploy/scale/V2.1/node1/livekit.yaml`:
 ```yaml
 room:
   max_participants: 750  # 500'den artır — node1 donanım kapasitesine yakın

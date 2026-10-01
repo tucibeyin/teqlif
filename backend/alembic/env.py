@@ -51,7 +51,7 @@ target_metadata = Base.metadata
 
 
 def _collect_db_urls() -> list[str]:
-    """TEQLIF_ENV_FILE'dan okunan DB URL'ini döner. Staging V1.3'ten itibaren node3'te ayrı çalışır."""
+    """TEQLIF_ENV_FILE'dan okunan DB URL'ini döner. Staging V2.1'de node5'te ayrı çalışır."""
     return [settings.database_url]
 
 

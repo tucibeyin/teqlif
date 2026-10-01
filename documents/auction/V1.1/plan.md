@@ -7,7 +7,7 @@ Sorun: Mobil operatörlerin (CGNAT) veya Cloudflare'in tüm IP'leri aynı göste
 
 **Aksiyonlar:**
 *   **Gateway (Nginx) Düzeltmesi:**
-    *   Dosya: `deploy/scale/V1.3/gateway/nginx/teqlif.conf`
+    *   Dosya: `deploy/scale/V2.1/node1/nginx/teqlif.conf`
     *   Tüm resmi Cloudflare IPv4 ve IPv6 aralıkları `set_real_ip_from` direktifi ile Nginx konfigürasyonuna eklenecek.
     *   `real_ip_header CF-Connecting-IP;` aktif edilecek. Bu sayede Nginx `$remote_addr` değişkenine Cloudflare'in değil, **gerçek kullanıcının** IP'sini yerleştirecek ve Backend `request.client.host` üzerinden doğru IP'yi okumaya başlayacak.
 *   **Fraud Skor Güncellemesi:**
