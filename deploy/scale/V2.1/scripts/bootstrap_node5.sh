@@ -12,7 +12,7 @@ REPO_DIR="${REPO_DIR:-/var/www/teqlif.com}"
 NODE_DIR="${REPO_DIR}/deploy/scale/V2.1/${NODE_ID}"
 SECRETS_FILE="${SECRETS_FILE:-}"
 PG_VERSION="17"
-MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2024-11-07T00-52-20Z}"
+MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2025-09-07T16-13-09Z}"
 LIVEKIT_VER="${LIVEKIT_VER:-v1.7.2}"
 
 main() {
@@ -134,10 +134,11 @@ EOF
 
 install_minio_staging() {
     log_step "MinIO (staging, port 9100)"
-    curl -fsSL "https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}" \
-        -o /usr/local/bin/minio
+    local base="https://github.com/minio/minio/releases/download/${MINIO_RELEASE}"
+    curl -fsSL "${base}/minio.linux-amd64.${MINIO_RELEASE}" -o /usr/local/bin/minio
     chmod +x /usr/local/bin/minio
-    curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+    local mc_rel="RELEASE.2025-08-13T08-35-41Z"
+    curl -fsSL "https://github.com/minio/mc/releases/download/${mc_rel}/mc.linux-amd64.${mc_rel}" -o /usr/local/bin/mc
     chmod +x /usr/local/bin/mc
     mkdir -p /project/teqlif/data/minio/data
     chown -R tucibeyin:tucibeyin /project/teqlif/data/minio

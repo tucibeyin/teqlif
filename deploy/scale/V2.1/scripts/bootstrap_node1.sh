@@ -15,7 +15,7 @@ NODE_DIR="${REPO_DIR}/deploy/scale/V2.1/${NODE_ID}"
 SECRETS_FILE="${SECRETS_FILE:-}"
 PG_VERSION="17"
 LIVEKIT_VER="${LIVEKIT_VER:-v1.7.2}"
-MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2024-11-07T00-52-20Z}"
+MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2025-09-07T16-13-09Z}"
 
 main() {
     check_root
@@ -141,11 +141,12 @@ setup_redis_instances() {
 
 install_minio() {
     log_step "MinIO (${MINIO_RELEASE})"
-    local url="https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}"
-    curl -fsSL "${url}" -o /usr/local/bin/minio
+    local base="https://github.com/minio/minio/releases/download/${MINIO_RELEASE}"
+    curl -fsSL "${base}/minio.linux-amd64.${MINIO_RELEASE}" -o /usr/local/bin/minio
     chmod +x /usr/local/bin/minio
     # mc (MinIO client)
-    curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+    local mc_rel="RELEASE.2025-08-13T08-35-41Z"
+    curl -fsSL "https://github.com/minio/mc/releases/download/${mc_rel}/mc.linux-amd64.${mc_rel}" -o /usr/local/bin/mc
     chmod +x /usr/local/bin/mc
     log_ok "MinIO + mc kuruldu"
 }
