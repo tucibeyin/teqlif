@@ -16,6 +16,7 @@ deploy/scale/resources/**/.env.*
 
 # Firebase servis hesabı anahtarı (asla commit edilmemeli!)
 firebase-key.json
+firebase-service-account.json
 *-service-account.json
 *serviceAccount*.json
 api-key.json
