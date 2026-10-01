@@ -20,8 +20,6 @@ main() {
 
     install_base_packages
     setup_user "${SSH_PUBKEY:-}"
-    setup_motd "node3" "LiveKit Streaming #1" "OVH Frankfurt DE" "51.75.74.124" "10.10.0.3"
-    setup_github_deploy_key
     setup_teqlif_directories
     setup_ntp
     setup_autoupdates

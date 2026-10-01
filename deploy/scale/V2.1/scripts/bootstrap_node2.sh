@@ -21,8 +21,6 @@ main() {
     install_base_packages
     install_pgdg_repo
     setup_user "${SSH_PUBKEY:-}"
-    setup_motd "node2" "Backup + Monitoring + ClickHouse" "OVH Saarbrücken DE" "135.125.223.43" "10.10.0.2"
-    setup_github_deploy_key
     setup_teqlif_directories
     setup_backup_directories
     setup_ntp
