@@ -19,7 +19,7 @@ Disk       : 98.3 GiB
 Distro     : Debian GNU/Linux 13 (trixie)
 Kernel     : 6.12.100+deb13-cloud-amd64
 VM Type    : KVM
-IPv4/IPv6  : ✔ Online / ✔ Online
+IPv4/IPv6  : ✔ Online ( 135.125.175.223 ) / ✔ Online
 
 IPv6 Network Information:
 ---------------------------------

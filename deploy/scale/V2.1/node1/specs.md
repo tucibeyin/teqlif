@@ -19,7 +19,8 @@ Disk       : 467.8 GiB
 Distro     : Debian GNU/Linux 13 (trixie)
 Kernel     : 6.12.111+deb13-amd64
 VM Type    : NONE
-IPv4/IPv6  : ✔ Online / ✔ Online
+IPv4/IPv6  : ✔ Online ( 193.70.46.74 ) / ✔ Online
+
 
 IPv6 Network Information:
 ---------------------------------
