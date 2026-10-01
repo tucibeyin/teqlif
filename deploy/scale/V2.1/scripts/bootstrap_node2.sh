@@ -192,6 +192,7 @@ setup_alertmanager() {
 
 install_rclone() {
     log_step "rclone"
+    apt-get install -y -qq unzip
     curl -fsSL https://rclone.org/install.sh | bash
     log_ok "rclone kuruldu"
 }
