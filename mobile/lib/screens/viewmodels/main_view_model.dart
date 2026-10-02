@@ -229,6 +229,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       case 'stream_started':
       case 'outbid':
       case 'smart_auction_alert':
+      case 'new_bid':
         if (StreamService.isHosting) break;
         final sid = streamId();
         if (sid != null) _navigate(MainNavigationEvent.toLiveStream, sid);
@@ -238,6 +239,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       case 'auction_won':
       case 'search_alert':
       case 'budget_match':
+      case 'price_drop_alert':
       case 'churn_airdrop_buyer':
       case 'churn_airdrop_seller':
         final lid = listingId();
