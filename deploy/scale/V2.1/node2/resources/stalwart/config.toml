@@ -127,18 +127,25 @@ rate = [{rate = "20/1m", key = "remote-ip"}]
 # Yeni domain eklenince: openssl genrsa -out /project/mail/config/dkim/<domain>.mail.pem 2048
 # ve aşağıya yeni [signature] + [auth.dkim.sign] satırı eklenir.
 
-[signature."teqlif-com"]
-algorithm       = "rsa-sha256"
-domain          = "teqlif.com"
-selector        = "mail"
-private-key     = "%{file:/project/mail/config/dkim/teqlif.com.mail.pem}%"
-headers         = ["From", "To", "Date", "Subject", "Message-ID"]
-canonicalization = "relaxed/relaxed"
-expire          = "7d"
+# Signature ID Stalwart naming convention: rsa-<domain>
+# Yeni domain ekleme:
+#   1. openssl genrsa -out /project/mail/config/dkim/<domain>.pem 2048
+#   2. Aşağıya yeni [signature."rsa-<domain>"] bloğu ekle
+#   3. DNS TXT: mail._domainkey.<domain> → v=DKIM1; k=rsa; p=<pubkey>
 
-# auth.dkim.sign web admin UI üzerinden yapılandırılıyor.
-# Stalwart v0.11.8'de config.toml'dan bu ayarın eklenmesi RocksDB
-# anahtar sıralaması nedeniyle parse hatasına yol açıyor.
+[signature."rsa-teqlif.com"]
+algorithm        = "rsa-sha256"
+domain           = "teqlif.com"
+selector         = "mail"
+private-key      = "%{file:/project/mail/config/dkim/teqlif.com.pem}%"
+headers          = ["From", "To", "Date", "Subject", "Message-ID"]
+canonicalization = "relaxed/relaxed"
+expire           = "7d"
+
+# Stalwart'ın standart expression formatı — tek string, if/then/else değil.
+# Her domain için rsa-<domain> adında signature varsa otomatik imzalanır.
+[auth.dkim]
+sign = "['rsa-' + sender_domain]"
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
