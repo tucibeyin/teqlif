@@ -18,6 +18,7 @@ from app.models.message import DirectMessage
 from app.schemas.direct_sale import (
     DirectSaleStartIn, DirectSalePurchaseIn, DirectSaleCancelIn,
     DirectSaleStateOut, DirectSaleOrderOut, DirectSaleSummaryOut,
+    SellerSummaryOut, BuyerSummaryOut,
 )
 from app.core.exceptions import (
     NotFoundException, ForbiddenException,
@@ -585,8 +586,7 @@ async def get_sale_summary(sale_id: int, user: User,
             )
         )
         agg = row.one()
-        return DirectSaleSummaryOut(
-            role="seller",
+        return SellerSummaryOut(
             sale_id=sale_id,
             item_name=sale.title,
             proof_image_url=sale.proof_image_url,
@@ -618,8 +618,7 @@ async def get_sale_summary(sale_id: int, user: User,
         # Satıcı username'i al
         seller = await session.scalar(select(User).where(User.id == sale.host_id))
 
-        return DirectSaleSummaryOut(
-            role="buyer",
+        return BuyerSummaryOut(
             sale_id=sale_id,
             item_name=sale.title,
             proof_image_url=sale.proof_image_url,
