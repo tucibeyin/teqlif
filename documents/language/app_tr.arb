@@ -2691,6 +2691,8 @@
     }
   },
   "quickAuctionStarted": "Açık artırma başlatıldı",
+  "quickSaleSheetTitle": "Hızlı Direkt Satış",
+  "quickSaleStarted": "Satış başlatıldı",
   "phoneVerifyInvalidPhone": "Geçerli bir telefon numarası girin",
   "phoneVerifyError": "Bir hata oluştu",
   "phoneVerifyConnectionError": "Sunucuya bağlanılamadı",

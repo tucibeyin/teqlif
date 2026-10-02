@@ -2694,6 +2694,8 @@
     }
   },
   "quickAuctionStarted": "بدأ المزاد",
+  "quickSaleSheetTitle": "بيع مباشر سريع",
+  "quickSaleStarted": "بدأ البيع",
   "phoneVerifyInvalidPhone": "أدخل رقم هاتف صالح",
   "phoneVerifyError": "حدث خطأ",
   "phoneVerifyConnectionError": "تعذّر الاتصال بالخادم",

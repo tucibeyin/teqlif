@@ -12,6 +12,9 @@ import '../services/direct_sale_service.dart';
 import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
 import '../services/listing_service.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'fullscreen_image_viewer.dart';
 import 'proof_capture_sheet.dart';
 import 'swipe_paginated_list.dart';
@@ -26,6 +29,7 @@ class DirectSalePanel extends ConsumerStatefulWidget {
   final bool isHost;
   final Future<String?> Function()? captureProofImage;
   final VoidCallback? onSaleEnded;
+  final VoidCallback? onExit;
   final VoidCallback? onWin;
   final void Function(String buyer, double price, int qty, String? title)?
       onPurchaseAdded;
@@ -37,6 +41,7 @@ class DirectSalePanel extends ConsumerStatefulWidget {
     required this.isHost,
     this.captureProofImage,
     this.onSaleEnded,
+    this.onExit,
     this.onWin,
     this.onPurchaseAdded,
   });
@@ -47,6 +52,7 @@ class DirectSalePanel extends ConsumerStatefulWidget {
 
 class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
   bool _impressionFired = false;
+  int _quickCount = 0;
 
   @override
   void initState() {
@@ -146,11 +152,10 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
     }
 
     if (dsState.isIdle && widget.isHost) {
-      return _StartFormTrigger(
-        streamId: widget.streamId,
-        hostUserId: null,
-        captureProofImage: widget.captureProofImage,
-        onCancelled: widget.onSaleEnded,
+      return _IdleHostPanel(
+        onExit: widget.onExit,
+        onStartQuick: () => _openQuickSheet(context, loc),
+        onStartFull: () => _openStartDialog(context),
       );
     }
 
@@ -175,6 +180,43 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
     return const SizedBox.shrink();
   }
 
+  Future<void> _openQuickSheet(BuildContext context, TranslationPack loc) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _QuickSaleSheet(
+        streamId: widget.streamId,
+        captureProofImage: widget.captureProofImage,
+        initialQuickCount: _quickCount,
+        loc: loc,
+      ),
+    );
+    if (!mounted) return;
+    // Satış başarıyla başladıysa sonraki quick satış için sayacı artır.
+    final ds = ref.read(directSaleHostProvider(widget.streamId));
+    if (!ds.isIdle) setState(() => _quickCount++);
+  }
+
+  Future<void> _openStartDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _StartDialog(
+        streamId: widget.streamId,
+        hostUserId: null,
+        captureProofImage: widget.captureProofImage,
+      ),
+    );
+    if (!mounted) return;
+    // Dialog iptal edildi ve satış başlamadıysa commerce panele geri dön.
+    final dsState = ref.read(directSaleHostProvider(widget.streamId));
+    if (dsState.isIdle) widget.onExit?.call();
+  }
+
   void _showBuySheet(BuildContext context, DirectSaleState state) {
     ref.read(analyticsServiceProvider).logInteraction(
       itemId: state.saleId,
@@ -197,55 +239,26 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
   }
 }
 
-// ── Start Form ────────────────────────────────────────────────────────────────
+// ── Idle Host Panel ───────────────────────────────────────────────────────────
+// Auction panelindeki idle düzeniyle birebir örtüşür:
+// [✕ Çıkış]  [⚡ Hızlı]  [▶ Başla]
 
-class _StartFormTrigger extends ConsumerStatefulWidget {
-  final int streamId;
-  final int? hostUserId;
-  final Future<String?> Function()? captureProofImage;
-  final VoidCallback? onCancelled;
+class _IdleHostPanel extends ConsumerWidget {
+  final VoidCallback? onExit;
+  final VoidCallback onStartQuick;
+  final VoidCallback onStartFull;
 
-  const _StartFormTrigger({
-    required this.streamId,
-    required this.hostUserId,
-    required this.captureProofImage,
-    this.onCancelled,
+  const _IdleHostPanel({
+    required this.onStartQuick,
+    required this.onStartFull,
+    this.onExit,
   });
 
   @override
-  ConsumerState<_StartFormTrigger> createState() => _StartFormTriggerState();
-}
-
-class _StartFormTriggerState extends ConsumerState<_StartFormTrigger> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _openForm();
-    });
-  }
-
-  Future<void> _openForm() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _StartDialog(
-        streamId: widget.streamId,
-        hostUserId: widget.hostUserId,
-        captureProofImage: widget.captureProofImage,
-      ),
-    );
-    // Dialog iptal edildi ve satış başlamadıysa commerce panele geri dön.
-    if (!mounted) return;
-    final dsState = ref.read(directSaleHostProvider(widget.streamId));
-    if (dsState.isIdle) widget.onCancelled?.call();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
@@ -253,15 +266,239 @@ class _StartFormTriggerState extends ConsumerState<_StartFormTrigger> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white54),
+          // ✕ Ana panele dön
+          _pillIconBtn(
+            icon: Icons.close_rounded,
+            onTap: onExit,
           ),
           const SizedBox(width: 8),
-          Text(
-            loc.t('directSaleFormTitle'),
-            style: const TextStyle(color: Colors.white54, fontSize: 13),
+          // ⚡ Hızlı — sadece fiyat + stok + proof
+          _pillIconBtn(
+            icon: Icons.bolt_rounded,
+            label: loc.t('quickAuctionBtn'),
+            onTap: onStartQuick,
+          ),
+          const SizedBox(width: 8),
+          // ▶ Başla — tam form
+          _pillBtn(
+            label: loc.t('directSaleStartBtn'),
+            onTap: onStartFull,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pillIconBtn({
+    required IconData icon,
+    String? label,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: label != null
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+            : const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: label != null
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: Colors.white, size: 15),
+                  const SizedBox(width: 4),
+                  Text(label,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                ],
+              )
+            : Icon(icon, color: Colors.white70, size: 18),
+      ),
+    );
+  }
+
+  Widget _pillBtn({required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D9488),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+
+}
+
+// ── Quick Sale Sheet ──────────────────────────────────────────────────────────
+// Sadece fiyat + stok girişi → proof → startSale()
+
+class _QuickSaleSheet extends ConsumerStatefulWidget {
+  final int streamId;
+  final Future<String?> Function()? captureProofImage;
+  final int initialQuickCount;
+  final TranslationPack loc;
+
+  const _QuickSaleSheet({
+    required this.streamId,
+    required this.captureProofImage,
+    required this.initialQuickCount,
+    required this.loc,
+  });
+
+  @override
+  ConsumerState<_QuickSaleSheet> createState() => _QuickSaleSheetState();
+}
+
+class _QuickSaleSheetState extends ConsumerState<_QuickSaleSheet> {
+  final _priceCtrl = TextEditingController();
+  final _stockCtrl = TextEditingController(text: '1');
+  bool _loading = false;
+  String? _error;
+  int _quickCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _quickCount = widget.initialQuickCount;
+  }
+
+  @override
+  void dispose() {
+    _priceCtrl.dispose();
+    _stockCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final loc = widget.loc;
+    final price = TeqNumberFormatter.parse(_priceCtrl.text.trim())?.toDouble();
+    final stock = int.tryParse(_stockCtrl.text.trim());
+    if (price == null || price <= 0 || stock == null || stock < 1) {
+      setState(() => _error = loc.t('directSaleFormValidationError'));
+      return;
+    }
+
+    String? proofUrl;
+    if (widget.captureProofImage != null) {
+      proofUrl = await showProofCaptureSheet(
+        context,
+        captureProofImage: widget.captureProofImage!,
+        loc: loc,
+      );
+      if (proofUrl == null) return;
+      if (proofUrl.isEmpty) proofUrl = null;
+    }
+
+    setState(() { _loading = true; _error = null; });
+    final nextCount = _quickCount + 1;
+    final title = loc.t('quickAuctionItem', {'count': nextCount.toString()});
+
+    try {
+      await ref
+          .read(directSaleHostProvider(widget.streamId).notifier)
+          .startSale(
+            widget.streamId,
+            title: title,
+            price: price,
+            stock: stock,
+            proofImageUrl: proofUrl,
+            loc: loc,
+          );
+      if (!mounted) return;
+      Navigator.pop(context);
+      TeqSnackBar.show(
+        message: loc.t('quickSaleStarted'),
+        type: TeqSnackBarType.success,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = loc.t('directSaleFormValidationError'); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = widget.loc;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 20,
+        right: 20,
+        top: 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(Icons.bolt_rounded, color: Color(0xFF0D9488), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                loc.t('quickSaleSheetTitle'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Fiyat
+          TeqTextField(
+            controller: _priceCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            labelText: loc.t('directSaleFormPrice'),
+            prefixIcon: Icon(Icons.sell_outlined,
+                size: 18, color: Colors.white38),
+            onChanged: (_) { if (_error != null) setState(() => _error = null); },
+          ),
+          const SizedBox(height: 12),
+          // Stok
+          TeqTextField(
+            controller: _stockCtrl,
+            keyboardType: TextInputType.number,
+            labelText: loc.t('directSaleFormStock'),
+            prefixIcon: Icon(Icons.inventory_2_outlined,
+                size: 18, color: Colors.white38),
+            onChanged: (_) { if (_error != null) setState(() => _error = null); },
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!,
+                style: const TextStyle(color: Color(0xFFEF4444), fontSize: 13)),
+          ],
+          const SizedBox(height: 20),
+          TeqButton(
+            text: loc.t('directSaleStartBtn'),
+            onPressed: _loading ? null : _submit,
+            isLoading: _loading,
+            isExpanded: true,
           ),
         ],
       ),

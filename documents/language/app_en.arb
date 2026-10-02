@@ -2727,6 +2727,8 @@
     }
   },
   "quickAuctionStarted": "Auction started",
+  "quickSaleSheetTitle": "Quick Direct Sale",
+  "quickSaleStarted": "Sale started",
   "phoneVerifyInvalidPhone": "Enter a valid phone number",
   "phoneVerifyError": "An error occurred",
   "phoneVerifyConnectionError": "Could not connect to server",

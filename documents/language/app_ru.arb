@@ -2694,6 +2694,8 @@
     }
   },
   "quickAuctionStarted": "Аукцион начат",
+  "quickSaleSheetTitle": "Быстрая прямая продажа",
+  "quickSaleStarted": "Продажа началась",
   "phoneVerifyInvalidPhone": "Введите действительный номер телефона",
   "phoneVerifyError": "Произошла ошибка",
   "phoneVerifyConnectionError": "Не удалось подключиться к серверу",

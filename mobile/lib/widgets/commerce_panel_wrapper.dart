@@ -117,6 +117,7 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
           isHost: _isHostLike,
           captureProofImage: widget.captureProofImage,
           onSaleEnded: () => setState(() => _forceDirectSale = false),
+          onExit: () => setState(() => _forceDirectSale = false),
           onWin: widget.onDirectSaleWin,
           onPurchaseAdded: widget.onPurchaseAdded,
         ),

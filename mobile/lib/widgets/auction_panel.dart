@@ -1328,38 +1328,19 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     if (_binLoading) return;
 
     final loc = ref.read(localizationProvider);
-    debugPrint('[DEBUG_PROOF] _buyItNowAccept started');
     String? proofUrl;
     if (widget.captureProofImage != null) {
-      debugPrint(
-        '[DEBUG_PROOF] Calling showProofCaptureSheet from _buyItNowAccept',
-      );
       proofUrl = await showProofCaptureSheet(
         context,
         captureProofImage: widget.captureProofImage!,
         loc: loc,
       );
-      debugPrint('[DEBUG_PROOF] showProofCaptureSheet returned: $proofUrl');
-      // If proofUrl is null, user cancelled (isDismissible:false — shouldn't happen).
-      if (proofUrl == null) {
-        debugPrint('[DEBUG_PROOF] User cancelled proof capture for Buy It Now');
-        return;
-      }
-      if (proofUrl.isEmpty) {
-        debugPrint('[DEBUG_PROOF] User skipped proof capture for Buy It Now');
-        proofUrl = null; // Skipped
-      }
-    } else {
-      debugPrint(
-        '[DEBUG_PROOF] widget.captureProofImage is null in _buyItNowAccept',
-      );
+      if (proofUrl == null) return;
+      if (proofUrl.isEmpty) proofUrl = null;
     }
 
     setState(() => _binLoading = true);
     try {
-      debugPrint(
-        '[DEBUG_PROOF] Calling AuctionService.acceptBuyItNow with proofImageUrl: $proofUrl',
-      );
       await ref.read(auctionServiceProvider).acceptBuyItNow(
         widget.streamId,
         proofImageUrl: proofUrl,
