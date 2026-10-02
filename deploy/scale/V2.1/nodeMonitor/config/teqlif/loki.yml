@@ -36,3 +36,4 @@ compactor:
   working_directory: /opt/monitor/teqlif/loki/data/compactor
   retention_enabled: true
   retention_delete_delay: 2h
+  delete_request_store: filesystem
