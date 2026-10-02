@@ -25,7 +25,7 @@ async def force_close_stream(db: AsyncSession, room_name: str) -> None:
     try:
         from app.core.uow import SqlAlchemyUnitOfWork
         auction_svc = AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db))
-        await auction_svc.end_auction(stream_id, force_system=True)
+        await auction_svc.end_auction(stream_id, user=None, system_end=True)
     except Exception:
         logger.error("force_close_stream: Auction kapatılamadı | stream_id=%s", stream_id, exc_info=True)
 

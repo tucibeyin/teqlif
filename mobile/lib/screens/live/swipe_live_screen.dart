@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show ImageFilter;
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../utils/number_formatter.dart';
@@ -1202,32 +1203,19 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
     if (widget.session.room == null && widget.session.error == null) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_LOADING] Showing FullScreenLoading for stream: ${widget.stream.id}');
-      return const Center(child: CircularProgressIndicator(color: Colors.white));
+      return _buildStreamLoadingScreen(context, hasThumbnail);
     }
 
     debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_ACTIVE] Showing LIVE ROOM for stream: ${widget.stream.id}');
     return Stack(
       children: [
-        // ── Arka plan: video veya thumbnail ──────────────────────────────
-        if (widget.session.hostVideoTrack != null)
-          Positioned.fill(
-            child: VideoTrackRenderer(
-              widget.session.hostVideoTrack!,
-              fit: VideoViewFit.contain,
-              mirrorMode: VideoViewMirrorMode.mirror,
-            ),
-          )
-        else if (hasThumbnail)
-          Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl: ref.read(apiClientProvider).imgUrl(widget.stream.thumbnailUrl),
-              fit: BoxFit.cover,
-              placeholder: (_, _) => _darkBg(),
-              errorWidget: (_, _, _) => _darkBg(),
-            ),
-          )
-        else
-          Positioned.fill(child: _darkBg()),
+        // ── Arka plan: video veya thumbnail (fade geçişli) ───────────────
+        Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 700),
+            child: _buildLiveBackground(hasThumbnail),
+          ),
+        ),
 
         // ── Yükleniyor ───────────────────────────────────────────────────
         if (widget.session.isConnecting)
@@ -1536,6 +1524,225 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           ),
         ),
       ],
+    );
+  }
+
+  // ── Canlı yayın premium bekleme ekranı ───────────────────────────────────────
+  Widget _buildStreamLoadingScreen(BuildContext context, bool hasThumbnail) {
+    final stream = widget.stream;
+    final loc = ref.read(localizationProvider);
+    final initial = stream.host.username.isNotEmpty
+        ? stream.host.username[0].toUpperCase()
+        : '?';
+    final locale = Localizations.localeOf(context).languageCode;
+    final categoryLabel = CategoryService.labelFor(stream.category, locale: locale);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // ── Arka plan: bulanık thumbnail veya koyu gradient ─────────────
+        if (hasThumbnail)
+          Positioned.fill(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl!),
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => _darkBg(),
+                  errorWidget: (_, _, _) => _darkBg(),
+                ),
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                    child: const ColoredBox(color: Colors.black38),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Positioned.fill(child: _darkBg()),
+
+        // ── Alt gradient: okunabilirlik katmanı ─────────────────────────
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.45),
+                  Colors.black.withValues(alpha: 0.80),
+                ],
+                stops: const [0.0, 0.4, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // ── İçerik ──────────────────────────────────────────────────────
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Host avatar
+                Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kPrimary.withValues(alpha: 0.15),
+                    border: Border.all(color: kPrimary.withValues(alpha: 0.5), width: 2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Host kullanıcı adı
+                Text(
+                  '@${stream.host.username}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Yayın başlığı
+                Text(
+                  stream.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Kategori + izleyici sayısı
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (categoryLabel.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Text(
+                          categoryLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (_viewerCount > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.remove_red_eye_outlined,
+                              color: Colors.white60, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$_viewerCount',
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // LIVE rozeti (OTA lokalizasyon)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    loc.t('liveBadgeLabel'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Bağlantı göstergesi
+                const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white54,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Canlı yayın arka planı (fade geçişi için ayrı metod) ─────────────────────
+  Widget _buildLiveBackground(bool hasThumbnail) {
+    if (widget.session.hostVideoTrack != null) {
+      return SizedBox.expand(
+        key: const ValueKey('live_video'),
+        child: VideoTrackRenderer(
+          widget.session.hostVideoTrack!,
+          fit: VideoViewFit.contain,
+          mirrorMode: VideoViewMirrorMode.mirror,
+        ),
+      );
+    }
+    if (hasThumbnail) {
+      return CachedNetworkImage(
+        key: const ValueKey('live_thumb'),
+        imageUrl: ref.read(apiClientProvider).imgUrl(widget.stream.thumbnailUrl!),
+        fit: BoxFit.cover,
+        placeholder: (_, _) => _darkBg(),
+        errorWidget: (_, _, _) => _darkBg(),
+      );
+    }
+    return KeyedSubtree(
+      key: const ValueKey('live_dark'),
+      child: _darkBg(),
     );
   }
 
@@ -1967,6 +2174,40 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     });
   }
 
+  Widget _buildListingBackground(
+      Map<String, dynamic> listing, String thumbUrl) {
+    if (_initialized && _ctrl != null) {
+      debugPrint(
+          '[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_READY] Showing VIDEO PLAYER for listing: ${listing['id']}');
+      return FittedBox(
+        key: ValueKey('video_${listing['id']}'),
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: _ctrl!.value.size.width,
+          height: _ctrl!.value.size.height,
+          child: VideoPlayer(_ctrl!),
+        ),
+      );
+    }
+    if (thumbUrl.isNotEmpty) {
+      debugPrint(
+          '[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
+      return CachedNetworkImage(
+        key: ValueKey('thumb_${listing['id']}'),
+        imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
+        fit: BoxFit.cover,
+        placeholder: (_, _) => const ColoredBox(color: Colors.black),
+        errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
+      );
+    }
+    debugPrint(
+        '[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_LOADING] Showing BLACK SCREEN for listing: ${listing['id']}');
+    return ColoredBox(
+      key: ValueKey('dark_${listing['id']}'),
+      color: Colors.black,
+    );
+  }
+
   String _formatPrice(dynamic price) {
     if (price == null) return '—';
     final formatted = TeqNumberFormatter.format(price, fieldKey: 'price', forceDecimals: true);
@@ -1994,38 +2235,16 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Video veya thumbnail ──────────────────────────────────────────
-          if (_initialized && _ctrl != null) ...[
-            Builder(builder: (_) {
-              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_READY] Showing VIDEO PLAYER for listing: ${listing['id']}');
-              return FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _ctrl!.value.size.width,
-                  height: _ctrl!.value.size.height,
-                  child: VideoPlayer(_ctrl!),
-                ),
-              );
-            })
-          ] else if (thumbUrl.isNotEmpty) ...[
-            Builder(builder: (_) {
-              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
-              return CachedNetworkImage(
-                imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
-                fit: BoxFit.cover,
-                placeholder: (_, _) => const ColoredBox(color: Colors.black),
-                errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
-              );
-            })
-          ] else ...[
-            Builder(builder: (_) {
-              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_LOADING] Showing BLACK SCREEN for listing: ${listing['id']}');
-              return const ColoredBox(color: Colors.black);
-            })
-          ],
+          // ── Video veya thumbnail (fade geçişli) ──────────────────────────
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 500),
+              child: _buildListingBackground(listing, thumbUrl),
+            ),
+          ),
 
-          // ── Yüklenme göstergesi ───────────────────────────────────────────
-          if (!_initialized)
+          // ── Yüklenme göstergesi: sadece thumbnail yokken ─────────────────
+          if (!_initialized && thumbUrl.isEmpty)
             const Center(child: CircularProgressIndicator(color: kPrimary)),
 
           // ── İLAN rozeti (sol üst) ─────────────────────────────────────────

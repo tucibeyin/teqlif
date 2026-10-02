@@ -47,7 +47,7 @@ class EdgeOrchestrator:
         """Servis tipine göre en uygun node'u seçer; metrik yoksa config fallback."""
         all_m = await self.get_all_metrics()
         if not all_m:
-            logger.warning(f"Metrik yok — {service_type.value} için config fallback")
+            logger.debug("Metrik yok — %s için config fallback", service_type.value)
             return self._fallback(service_type)
 
         if service_type == ServiceType.MEDIA:
