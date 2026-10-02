@@ -114,10 +114,10 @@ backend = "db"
 # ── Rate limiting ──────────────────────────────────────────────────────────────
 
 [auth.rate-limit]
-authentication = "100/1m"
+authentication = "10/1m"
 
 [session.throttle]
-rate = [{rate = "200/1m", key = "remote-ip"}]
+rate = [{rate = "20/1m", key = "remote-ip"}]
 
 # ── DKIM imzalama ──────────────────────────────────────────────────────────────
 # Özel anahtar: /project/mail/config/dkim/<domain>.<selector>.pem
