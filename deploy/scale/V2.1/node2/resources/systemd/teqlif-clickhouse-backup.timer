@@ -1,0 +1,9 @@
+[Unit]
+Description=teqlif ClickHouse Backup — günlük 01:30 UTC
+
+[Timer]
+OnCalendar=*-*-* 01:30:00
+Persistent=true
+
+[Install]
+WantedBy=multi-user.target
