@@ -1161,3 +1161,72 @@ sudo teqlif-restart --livekit  # node3/node4: LiveKit'i de yeniden başlatır
 - Staging DB'yi sıfırlamak için: `TRUNCATE TABLE users CASCADE;` (ilişkili tüm tablolar temizlenir)
 - Staging admin yapmak için: `UPDATE users SET is_admin = true WHERE email = '...';`
 
+---
+
+## 14. Mail Server (Stalwart)
+
+### Problem
+
+Birden fazla domain için (`teqlif.com` vb.) kişisel/kurumsal mail adresleri (`info@`, `support@` vb.) gerekiyor. Ücretli servis kullanılmak istenmiyor; gizlilik ve tam kontrol öncelikli.
+
+### Karar
+
+**Stalwart Mail Server** node2'de self-host edildi.
+
+**Modoboa ve diğer alternatiflere göre avantajları:**
+- Tek Rust binary — Postfix + Dovecot + Django + MySQL gibi hareketli parça yok
+- `stalwart-cli` ile tam CLI yönetimi, web UI zorunlu değil
+- Dahili spam filtresi, ACME, rate limiting — ayrıca servis kurulmuyor
+- node2 HDD RAID üzerinde çalışır, mail için yeterli I/O
+- 50–100 MB RAM kullanımı (Modoboa ~500 MB)
+
+### Mimari Özeti
+
+```
+Stalwart (node2:135.125.223.43)
+  ├── SMTP    :25   (MTA-to-MTA)
+  ├── Sub     :587  (istemci, STARTTLS)
+  ├── Sub     :465  (istemci, TLS)
+  ├── IMAP    :993  (istemci okuma, TLS)
+  └── Admin   :8080 (WireGuard 10.10.0.2 only)
+
+Depolama: RocksDB + filesystem blobs
+TLS: Let's Encrypt ACME (tls-alpn-01)
+```
+
+### Yönetim Komutları
+
+```bash
+export STALWART_URL=http://10.10.0.2:8080
+export STALWART_CREDENTIALS="admin:<SIFRE>"
+
+stalwart-cli domain create yenidomain.com
+stalwart-cli dkim generate rsa yenidomain.com mail
+stalwart-cli account create info@yenidomain.com --name "Info"
+stalwart-cli alias create destek@yenidomain.com info@yenidomain.com
+stalwart-cli account list
+```
+
+### Config Yönetimi
+
+- Şablon: `deploy/scale/V2.1/node2/resources/stalwart/config.toml` (repoda)
+- Çalışan config: `/project/teqlif/config/stalwart/config.toml` (sunucuda)
+- Secrets: `/project/teqlif/config/.env.mail` (sunucuda, repoya girmez)
+- DKIM anahtarları: `/project/teqlif/config/stalwart/dkim/` (repoya girmez)
+
+### Güvenlik Kuralları
+
+- Admin HTTP portu (8080) dışarıya asla açılmaz — sadece WireGuard
+- DKIM anahtarları ve `.env.mail` repoya commit edilmez
+- Her yeni domain için SPF + DKIM + DMARC DNS kayıtları zorunlu
+- OVH panelinden PTR kaydı `mail.teqlif.com`'a işaret etmeli
+- IP reputation monitoring: `mxtoolbox.com/blacklists` ile periyodik kontrol
+
+### Kurulum
+
+```bash
+sudo bash /var/www/teqlif.com/deploy/scale/V2.1/node2/resources/stalwart/setup.sh
+```
+
+Detaylı kurulum adımları: `deploy/scale/V2.1/documents/01_architecture.md §10`
+

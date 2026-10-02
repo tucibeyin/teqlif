@@ -7,7 +7,7 @@
 | Node | WG IP | Public IP | Tip | Sağlayıcı / Lokasyon | Rol |
 |------|-------|-----------|-----|----------------------|-----|
 | node1 | 10.10.0.1 | 193.70.46.74 | Bare metal | OVH Gravelines FR | Core — PG, Redis, MinIO, App |
-| node2 | 10.10.0.2 | 135.125.223.43 | Bare metal | OVH Saarbrücken DE | Backup + Monitoring + ClickHouse |
+| node2 | 10.10.0.2 | 135.125.223.43 | Bare metal | OVH Saarbrücken DE | Backup + Monitoring + ClickHouse + Mail |
 | node3 | 10.10.0.3 | 51.75.74.124 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #1 |
 | node4 | 10.10.0.4 | 135.125.175.223 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #2 |
 | node5 | 10.10.0.5 | 45.146.252.165 | KVM VPS | ZAP Münster DE | Staging + AI Secondary |
@@ -605,3 +605,97 @@ node1:   FastAPI/ARQ ───────┤
 - **Redis replica** (node2): `/etc/redis/redis-replica.conf`, `teqlif-redis-replica.service` ile yönetilir
 - **Auto-promote** (node2): `redis-failover.timer` her 10 saniyede çalışır; Redis + ICMP 3 kez başarısız olursa `REPLICAOF NO ONE` → master'a terfi + Telegram bildirimi
 - **Geri dönüş**: node1 kurtarıldıktan sonra manuel `REPLICAOF 10.10.0.1 6379` ile yeniden replica yapılır
+
+---
+
+## 10. Mail Server
+
+### 10.1 Genel Bakış
+
+| Özellik | Değer |
+|---------|-------|
+| Yazılım | Stalwart Mail Server (Rust, tek binary) |
+| Node | node2 (135.125.223.43) |
+| FQDN | mail.teqlif.com |
+| Protokoller | SMTP (25), Submission (587/465), IMAP (993) |
+| Yönetim | `stalwart-cli` — CLI, web UI isteğe bağlı |
+| Admin HTTP | `10.10.0.2:8080` (WireGuard only) |
+| TLS | Let's Encrypt ACME (tls-alpn-01, port 443) |
+| Depolama | RocksDB (index/meta) + filesystem (blobs) |
+| Backup | `teqlif-mail-backup.timer` — 02:30 UTC, 7 gün |
+
+### 10.2 Mimari
+
+```
+İnternet (MTA)
+     │  port 25
+     ▼
+node2: stalwart-mail
+  ├── SMTP  :25   → gelen mail
+  ├── Sub   :587  → istemci gönderme (STARTTLS)
+  ├── Sub   :465  → istemci gönderme (TLS)
+  ├── IMAP  :993  → istemci okuma (TLS)
+  └── Admin :8080 → sadece 10.10.0.2 (WireGuard)
+
+Depolama:
+  /project/teqlif/data/mail/db/     ← RocksDB (index + meta)
+  /project/teqlif/data/mail/blobs/  ← Mail gövdeleri
+
+Config:
+  /project/teqlif/config/stalwart/config.toml
+  /project/teqlif/config/stalwart/dkim/       ← DKIM özel anahtarları
+  /project/teqlif/config/stalwart/acme/       ← Let's Encrypt cache
+  /project/teqlif/config/.env.mail            ← Secrets (repoya girmez)
+```
+
+### 10.3 Güvenlik Katmanları
+
+| Katman | Mekanizma |
+|--------|-----------|
+| Ağ | UFW: sadece 25/443/465/587/993 açık |
+| Brute force | Fail2ban (SMTP + IMAP) — 5 denemede 1 saat ban |
+| Kimlik doğrulama | SMTP AUTH zorunlu (open relay yok) |
+| Şifreleme (transit) | TLS 1.2+ zorunlu, STARTTLS enforce |
+| MTA bütünlüğü | SPF + DKIM + DMARC (her domain için) |
+| Gelen spam | Stalwart dahili spam filtresi + greylisting |
+| Admin erişimi | WireGuard (10.10.0.0/24) ile kısıtlı |
+| IP kara liste | Spamhaus DNSBL dahili entegrasyon |
+
+### 10.4 Multi-Domain Yönetimi
+
+Tüm yönetim `stalwart-cli` ile yapılır:
+
+```bash
+export STALWART_URL=http://10.10.0.2:8080
+export STALWART_CREDENTIALS="admin:<SIFRE>"
+
+# Domain ekle
+stalwart-cli domain create yenidomain.com
+
+# DKIM üret ve DNS'e ekle
+stalwart-cli dkim generate rsa yenidomain.com mail
+
+# Hesap aç
+stalwart-cli account create info@yenidomain.com --name "Info"
+
+# Alias
+stalwart-cli alias create destek@yenidomain.com info@yenidomain.com
+```
+
+### 10.5 Gerekli DNS Kayıtları (Her Domain için)
+
+```
+A     mail.teqlif.com     →  135.125.223.43      (DNS Only)
+MX    teqlif.com          →  mail.teqlif.com  10  (DNS Only)
+TXT   teqlif.com          →  "v=spf1 mx -all"
+TXT   mail._domainkey...  →  "v=DKIM1; k=rsa; p=..."  (stalwart-cli dkim list)
+TXT   _dmarc.teqlif.com   →  "v=DMARC1; p=reject; rua=mailto:dmarc@teqlif.com"
+PTR   135.125.223.43      →  mail.teqlif.com     (OVH panelinden)
+```
+
+### 10.6 Backup Takvimi
+
+| Timer | Saat | İçerik |
+|-------|------|--------|
+| `teqlif-mail-backup.timer` | 02:30 UTC | RocksDB + blobs + DKIM anahtarları, 7 gün |
+

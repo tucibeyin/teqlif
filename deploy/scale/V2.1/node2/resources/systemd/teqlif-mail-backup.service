@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Mail Backup
+After=stalwart-mail.service
+
+[Service]
+Type=oneshot
+User=tucibeyin
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/mail_backup.sh
+StandardOutput=journal
+StandardError=journal

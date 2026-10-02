@@ -1,0 +1,142 @@
+# Stalwart Mail Server — config şablonu
+# Sunucuda: /project/teqlif/config/stalwart/config.toml
+# Secrets:  /project/teqlif/config/.env.mail  (EnvironmentFile)
+# Değişken: %{env:VAR}% syntax
+#
+# Kurulum sonrası domain/hesap yönetimi:
+#   stalwart-cli --url http://10.10.0.2:8080 --credentials "admin:<SIFRE>" <komut>
+
+# ── Sunucu kimliği ─────────────────────────────────────────────────────────────
+
+[server]
+hostname = "%{env:MAIL_HOSTNAME}%"
+
+# ── Dinleyiciler ───────────────────────────────────────────────────────────────
+
+# MTA-to-MTA (gelen mail, port 25)
+[server.listener.smtp]
+bind = ["0.0.0.0:25"]
+protocol = "smtp"
+
+# Client-to-server gönderme: STARTTLS (port 587)
+[server.listener.submission]
+bind = ["0.0.0.0:587"]
+protocol = "smtp"
+
+# Client-to-server gönderme: implicit TLS (port 465)
+[server.listener.submissions]
+bind = ["0.0.0.0:465"]
+protocol = "smtp"
+tls.implicit = true
+
+# IMAP: implicit TLS (port 993)
+[server.listener.imaps]
+bind = ["0.0.0.0:993"]
+protocol = "imap"
+tls.implicit = true
+
+# ACME TLS-ALPN-01 challenge (port 443, Let's Encrypt sertifika yenileme)
+[server.listener.acme-tls]
+bind = ["0.0.0.0:443"]
+protocol = "acme-tls01"
+tls.implicit = true
+
+# Admin HTTP: sadece WireGuard üzerinden (10.10.0.2)
+[server.listener.management]
+bind = ["10.10.0.2:8080"]
+protocol = "http"
+
+# ── TLS / ACME ─────────────────────────────────────────────────────────────────
+
+[acme."letsencrypt"]
+directory = "https://acme-v02.api.letsencrypt.org/directory"
+challenge  = "tls-alpn-01"
+contact    = ["%{env:MAIL_ACME_CONTACT}%"]
+cache-path = "/project/teqlif/config/stalwart/acme"
+
+[certificate."default"]
+cert   = "acme"
+acme   = "letsencrypt"
+domains = ["%{env:MAIL_HOSTNAME}%"]
+
+# ── Depolama ───────────────────────────────────────────────────────────────────
+# RocksDB: mail indeksleri, meta veriler (harici bağımlılık yok)
+# fs:      mail gövdeleri (blob)
+
+[store."db"]
+type        = "rocksdb"
+path        = "/project/teqlif/data/mail/db"
+compression = "lz4"
+
+[store."blobs"]
+type = "fs"
+path = "/project/teqlif/data/mail/blobs"
+
+[storage]
+data   = "db"
+fts    = "db"
+blob   = "blobs"
+lookup = "db"
+
+# ── Dizin (kullanıcılar, domainler, alias'lar) ─────────────────────────────────
+# "internal" → veriler RocksDB'de tutulur, stalwart-cli ile yönetilir
+
+[directory."internal"]
+type  = "internal"
+store = "db"
+
+[storage.directory]
+data = "internal"
+
+# ── Admin hesabı ───────────────────────────────────────────────────────────────
+
+[authentication.fallback-admin]
+user   = "admin"
+secret = "%{env:STALWART_ADMIN_SECRET}%"
+
+# ── Spam filtresi ──────────────────────────────────────────────────────────────
+
+[spam-filter]
+enable = true
+
+[spam-filter.add-headers]
+spam = true
+ham  = false
+
+# ── Greylisting ────────────────────────────────────────────────────────────────
+# Bilinmeyen IP'leri 5 dakika geciktirir; bot'lar tekrar denemez
+
+[session.rcpt.greylist]
+enable  = true
+period  = "5m"
+backend = "db"
+
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+
+[auth.rate-limit]
+authentication = "10/1m"
+
+[session.throttle]
+# IP başına dakikada max 20 bağlantı girişimi
+rate = [{rate = "20/1m", key = "remote-ip"}]
+
+# ── DKIM imzalama ──────────────────────────────────────────────────────────────
+# Anahtarlar stalwart-cli ile eklenir, buraya yazılmaz.
+# Kurulum sonrası:
+#   stalwart-cli dkim import rsa /project/teqlif/config/stalwart/dkim/<domain>.pem <domain> mail
+
+# ── Kuyruk / yönlendirme ───────────────────────────────────────────────────────
+
+[queue.outbound]
+next-hop = [
+    {if = "is_local_domain('rcpt_domain')", then = "local"},
+    {else = "relay"},
+]
+
+# ── Logging ────────────────────────────────────────────────────────────────────
+# journald üzerinden — /project/teqlif/logs/ dizinine ayrıca yazılmaz
+
+[tracer."stdout"]
+type   = "stdout"
+level  = "info"
+enable = true
