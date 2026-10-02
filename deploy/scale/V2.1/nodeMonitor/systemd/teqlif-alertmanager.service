@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=tucibeyin
 ExecStart=/usr/local/bin/alertmanager \
-  --config.file=/var/www/teqlif.com/deploy/scale/V2.1/nodeMonitor/config/teqlif/alertmanager.yml \
+  --config.file=/project/teqlif/config/alertmanager.yml \
   --storage.path=/opt/monitor/teqlif/alertmanager/data \
   --web.listen-address=127.0.0.1:9093
 Restart=always
