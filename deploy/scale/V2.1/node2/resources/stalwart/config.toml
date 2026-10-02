@@ -136,8 +136,10 @@ headers         = ["From", "To", "Date", "Subject", "Message-ID"]
 canonicalization = "relaxed/relaxed"
 expire          = "7d"
 
-[auth.dkim]
-sign = [{if = "sender_domain == 'teqlif.com'", then = "['teqlif-com']", else = "[]"}]
+[[auth.dkim.sign]]
+if   = "sender_domain == 'teqlif.com'"
+then = "['teqlif-com']"
+else = "[]"
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
