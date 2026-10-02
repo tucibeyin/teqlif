@@ -136,10 +136,10 @@ headers         = ["From", "To", "Date", "Subject", "Message-ID"]
 canonicalization = "relaxed/relaxed"
 expire          = "7d"
 
-[[auth.dkim.sign]]
-if   = "sender_domain == 'teqlif.com'"
-then = "['teqlif-com']"
-else = "[]"
+# Tüm giden mailler teqlif-com imzasıyla imzalanır.
+# Yeni domain eklenince bu listeye signature ID'si eklenir.
+[auth.dkim]
+sign = ["teqlif-com"]
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
