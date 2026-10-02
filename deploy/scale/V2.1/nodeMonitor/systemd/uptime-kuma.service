@@ -1,0 +1,15 @@
+[Unit]
+Description=Uptime Kuma
+After=network.target
+
+[Service]
+User=tucibeyin
+WorkingDirectory=/opt/monitor/shared/uptime-kuma
+ExecStart=/usr/bin/node server/server.js --port=3001 --host=10.10.0.99
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=DATA_DIR=/opt/monitor/shared/uptime-kuma/data
+
+[Install]
+WantedBy=multi-user.target
