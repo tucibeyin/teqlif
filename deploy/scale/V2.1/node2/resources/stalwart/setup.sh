@@ -99,10 +99,11 @@ systemctl daemon-reload
 echo "[OK] systemd unit yüklendi"
 
 # ── 8. UFW ────────────────────────────────────────────────────────────────────
-for PORT in 25 443 465 587 993; do
+for PORT in 25 443 465 993; do
     ufw allow "${PORT}/tcp" comment "stalwart-mail" >/dev/null
 done
-echo "[OK] UFW kuralları eklendi: 25, 443, 465, 587, 993"
+# NOT: 587 (STARTTLS) açılmıyor — iOS STARTTLS portuna SSL bağlantısı deneyince scan-ban tetikler
+echo "[OK] UFW kuralları eklendi: 25, 443, 465, 993"
 
 # ── 9. Fail2ban ───────────────────────────────────────────────────────────────
 mkdir -p /etc/fail2ban/jail.d /etc/fail2ban/filter.d
