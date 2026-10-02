@@ -5,11 +5,17 @@ After=network.target
 [Service]
 User=tucibeyin
 WorkingDirectory=/opt/monitor/shared/uptime-kuma
+EnvironmentFile=/project/shared/config/uptime-kuma.env
 ExecStart=/usr/bin/node server/server.js --port=3001 --host=10.10.0.99
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=DATA_DIR=/opt/monitor/shared/uptime-kuma/data
+Environment=DATABASE=mariadb
+Environment=DB_HOSTNAME=127.0.0.1
+Environment=DB_PORT=3306
+Environment=DB_USERNAME=uptime_kuma
+Environment=DB_NAME=uptime_kuma
 
 [Install]
 WantedBy=multi-user.target
