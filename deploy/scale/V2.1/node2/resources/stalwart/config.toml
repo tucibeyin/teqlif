@@ -123,10 +123,21 @@ authentication = "10/1m"
 rate = [{rate = "20/1m", key = "remote-ip"}]
 
 # ── DKIM imzalama ──────────────────────────────────────────────────────────────
-# Anahtarlar stalwart-cli ile eklenir, buraya yazılmaz.
-# Kurulum sonrası:
-#   stalwart-cli dkim generate rsa <domain> mail
-#   → TXT kaydını DNS'e ekle
+# Özel anahtar: /project/mail/config/dkim/<domain>.<selector>.pem
+# Yeni domain eklenince: openssl genrsa -out /project/mail/config/dkim/<domain>.mail.pem 2048
+# ve aşağıya yeni [signature] + [auth.dkim.sign] satırı eklenir.
+
+[signature."teqlif-com"]
+algorithm       = "rsa-sha256"
+domain          = "teqlif.com"
+selector        = "mail"
+private-key     = "%{file:/project/mail/config/dkim/teqlif.com.mail.pem}%"
+headers         = ["From", "To", "Date", "Subject", "Message-ID"]
+canonicalization = "relaxed/relaxed"
+expire          = "7d"
+
+[auth.dkim]
+sign = [{if = "sender_domain == 'teqlif.com'", then = "['teqlif-com']", else = "[]"}]
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
