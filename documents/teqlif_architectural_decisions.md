@@ -1090,8 +1090,6 @@ Kullanıcı → Cloudflare Edge → node1 (prod) veya node5 (staging)
 | `live2.teqlif.com` | A | 51.75.74.124 | DNS only | node3 (LiveKit) |
 | `stream3.teqlif.com` | A | 51.75.74.124 | DNS only | node3 (TURN/STUN) |
 | `stream4.teqlif.com` | A | 135.125.175.223 | DNS only | node4 (TURN/STUN) |
-| `brevo1._domainkey` | CNAME | b1.teqlif-com.dkim.brevo.com | DNS only | KALDIRILACAK — Brevo phase-out (Aşama 2 tamamlandı) |
-| `brevo2._domainkey` | CNAME | b2.teqlif-com.dkim.brevo.com | DNS only | KALDIRILACAK — Brevo phase-out (Aşama 2 tamamlandı) |
 
 ### Proxy Kararı
 
