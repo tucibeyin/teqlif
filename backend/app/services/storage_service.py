@@ -193,10 +193,46 @@ async def delete_object_dm(url_or_key: str) -> None:
         logger.error("[STORAGE_DM] Silme hatası: %s", exc)
 
 
+def _get_presign_client() -> Minio:
+    """Presigned URL için public endpoint client'ı döndürür.
+
+    MINIO_PUBLIC_BASE yapılandırıldığında (staging gibi) presigned URL'ler
+    o domain üzerinden imzalanır; böylece mobil client erişebilir.
+    """
+    if settings.minio_public_base:
+        parsed = urllib.parse.urlparse(settings.minio_public_base)
+        endpoint = parsed.netloc  # "staging.uploads.teqlif.com"
+        secure = parsed.scheme == "https"
+        cache_key = f"__presign__{endpoint}"
+        if cache_key not in _clients_pool:
+            _clients_pool[cache_key] = Minio(
+                endpoint,
+                access_key=settings.minio_access_key,
+                secret_key=settings.minio_secret_key,
+                secure=secure,
+                region=settings.minio_region,
+            )
+        return _clients_pool[cache_key]
+    if settings.edge_minio_urls:
+        return _get_client_for_internal_url(settings.edge_minio_urls[0])
+    raise ValueError("No MinIO endpoint configured for presigning")
+
+
 async def presign_get(url_or_key: str, expires: timedelta = timedelta(days=7)) -> str:
-    """Private DM bucket için presigned GET URL üretir (Media Routing ile)."""
-    client = await _get_client_from_public_url(url_or_key)
-    key = dm_url_to_key(url_or_key)
+    """Private DM bucket için presigned GET URL üretir.
+
+    url_or_key: tam URL (https://…/bucket/key) veya ham key (messages/img/x.jpg).
+    Tam URL geçilirse key çıkarılır; ham key ise doğrudan kullanılır.
+    """
+    parsed = urllib.parse.urlparse(url_or_key)
+    if parsed.scheme:
+        # Tam URL — key'i çıkar ve node'a özgü internal client kullan
+        key = dm_url_to_key(url_or_key)
+        client = await _get_client_from_public_url(url_or_key)
+    else:
+        # Ham key — public endpoint ile imzala (mobil erişebilir URL üretir)
+        key = url_or_key
+        client = _get_presign_client()
     return await asyncio.to_thread(
         client.presigned_get_object,
         settings.minio_dm_bucket,
