@@ -16,9 +16,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     upload_dir: str = "/var/www/teqlif.com/uploads"
-    brevo_api_key: str = ""
+    brevo_api_key: str = ""          # AŞAMA 2 sonrası kaldırılacak
     brevo_sender_email: str = "noreply@teqlif.com"
     brevo_sender_name: str = "teqlif"
+    mail_noreply_teqlif_password: str = ""   # noreply@teqlif.com SMTP şifresi
     # --- V1.4 EDGE MİMARİSİ (Dinamik Medya & Yayın) ---
     edge_livekit_urls: str | list[str] = []
     edge_minio_urls: str | list[str] = []

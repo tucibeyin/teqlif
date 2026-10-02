@@ -1,11 +1,33 @@
-import httpx
+import aiosmtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # Geriye dönük uyumluluk: _get_t artık app.utils.i18n'de yaşıyor.
 # Eski import'lar (from app.utils.email import _get_t) çalışmaya devam eder.
 from app.utils.i18n import _get_t  # noqa: F401
 
-
 from app.config import settings
+
+_SMTP_FROM_ADDR = "noreply@teqlif.com"
+_SMTP_HOST      = "mail.teqlif.com"
+_SMTP_PORT      = 465
+
+
+async def _send_smtp(to_email: str, to_name: str, subject: str, html: str) -> None:
+    msg = MIMEMultipart("alternative")
+    msg["From"]    = f"{settings.brevo_sender_name} <{_SMTP_FROM_ADDR}>"
+    msg["To"]      = f"{to_name} <{to_email}>"
+    msg["Subject"] = subject
+    msg.attach(MIMEText(html, "html", "utf-8"))
+    await aiosmtplib.send(
+        msg,
+        hostname=_SMTP_HOST,
+        port=_SMTP_PORT,
+        use_tls=True,
+        username=_SMTP_FROM_ADDR,
+        password=settings.mail_noreply_teqlif_password,
+        timeout=15,
+    )
 
 
 async def send_welcome_email(email: str, full_name: str, has_phone: bool = False, lang: str = "tr") -> None:
@@ -153,20 +175,7 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
 </body>
 </html>"""
 
-    payload = {
-        "sender": {"name": settings.brevo_sender_name, "email": settings.brevo_sender_email},
-        "to": [{"email": email, "name": full_name}],
-        "subject": t.get("emailWelcomeSub", "").format(first_name=first_name),
-        "htmlContent": html,
-    }
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.brevo.com/v3/smtp/email",
-            json=payload,
-            headers={"api-key": settings.brevo_api_key, "Content-Type": "application/json"},
-            timeout=10.0,
-        )
-        response.raise_for_status()
+    await _send_smtp(email, full_name, t.get("emailWelcomeSub", "").format(first_name=first_name), html)
 
 
 async def send_phone_verification_email(
@@ -178,14 +187,7 @@ async def send_phone_verification_email(
     lang: str = "tr",
 ) -> None:
     t = _get_t(lang)
-    payload = {
-        "sender": {
-            "name": settings.brevo_sender_name,
-            "email": settings.brevo_sender_email,
-        },
-        "to": [{"email": email, "name": full_name}],
-        "subject": t.get('emailPhoneVerifySub', ''),
-        "htmlContent": f"""
+    html = f"""
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;border-radius:16px;padding:32px">
   <h2 style="color:#0d9488;margin-top:0">{t.get('emailPhoneVerifyTitle', '')}</h2>
   <p>{t.get('emailHello', '')} <strong>{full_name}</strong>,</p>
@@ -201,19 +203,8 @@ async def send_phone_verification_email(
   <p style="color:#64748b;font-size:12px">{t.get('emailLinkValid30m', '')}</p>
   <p style="color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #1e293b;padding-top:16px">{t.get('emailSupport', '')} <a href="mailto:destek@teqlif.com" style="color:#06b6d4;text-decoration:none">destek@teqlif.com</a></p>
 </div>
-""",
-    }
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.brevo.com/v3/smtp/email",
-            json=payload,
-            headers={
-                "api-key": settings.brevo_api_key,
-                "Content-Type": "application/json",
-            },
-            timeout=10.0,
-        )
-        response.raise_for_status()
+"""
+    await _send_smtp(email, full_name, t.get('emailPhoneVerifySub', ''), html)
 
 
 async def send_verification_code(email: str, full_name: str, code: str, *, has_phone: bool = False, lang: str = "tr") -> None:
@@ -224,68 +215,30 @@ async def send_verification_code(email: str, full_name: str, code: str, *, has_p
         f"{t.get('emailPhoneNote', '')}</p>"
     ) if has_phone else ""
 
-    payload = {
-        "sender": {
-            "name": settings.brevo_sender_name,
-            "email": settings.brevo_sender_email,
-        },
-        "to": [{"email": email, "name": full_name}],
-        "subject": t.get('emailVerifySub', ''),
-        "htmlContent": (
-            f"<p>{t.get('emailHello', '')} <strong>{full_name}</strong>,</p>"
-            f"<p>{t.get('emailVerifyBody', '')}</p>"
-            f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
-            f"<p>{t.get('emailCodeValid10m', '')}</p>"
-            f"{phone_note}"
-            f"<p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
-            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{t.get('emailSupport', '')} <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a></p>"
-        ),
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.brevo.com/v3/smtp/email",
-            json=payload,
-            headers={
-                "api-key": settings.brevo_api_key,
-                "Content-Type": "application/json",
-            },
-            timeout=10.0,
-        )
-        response.raise_for_status()
+    html = (
+        f"<p>{t.get('emailHello', '')} <strong>{full_name}</strong>,</p>"
+        f"<p>{t.get('emailVerifyBody', '')}</p>"
+        f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
+        f"<p>{t.get('emailCodeValid10m', '')}</p>"
+        f"{phone_note}"
+        f"<p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
+        f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{t.get('emailSupport', '')} <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a></p>"
+    )
+    await _send_smtp(email, full_name, t.get('emailVerifySub', ''), html)
 
 
 async def send_reset_password_email(email: str, full_name: str, code: str, lang: str = "tr") -> None:
     t = _get_t(lang)
     dir_attr = " dir='rtl'" if lang == "ar" else ""
     
-    payload = {
-        "sender": {
-            "name": settings.brevo_sender_name,
-            "email": settings.brevo_sender_email,
-        },
-        "to": [{"email": email, "name": full_name}],
-        "subject": t.get("emailWelcomeSub", ""),
-        "htmlContent": (
-            f"<div{dir_attr}>"
-            f"<p>{t.get("emailResetGreeting", "").format(full_name=full_name)}</p>"
-            f"<p>{t.get("emailResetBody", "")}</p>"
-            f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
-            f"<p>{t.get("emailCodeValid10m", "")}</p>"
-            f"<p>{t.get("emailIgnoreIfNotYou", "")}</p>"
-            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{t.get("emailResetFooter", "")}</p>"
-            f"</div>"
-        ),
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.brevo.com/v3/smtp/email",
-            json=payload,
-            headers={
-                "api-key": settings.brevo_api_key,
-                "Content-Type": "application/json",
-            },
-            timeout=10.0,
-        )
-        response.raise_for_status()
+    html = (
+        f"<div{dir_attr}>"
+        f"<p>{t.get('emailResetGreeting', '').format(full_name=full_name)}</p>"
+        f"<p>{t.get('emailResetBody', '')}</p>"
+        f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
+        f"<p>{t.get('emailCodeValid10m', '')}</p>"
+        f"<p>{t.get('emailIgnoreIfNotYou', '')}</p>"
+        f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{t.get('emailResetFooter', '')}</p>"
+        f"</div>"
+    )
+    await _send_smtp(email, full_name, t.get("emailResetSub", t.get("emailVerifySub", "")), html)
