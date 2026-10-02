@@ -45,5 +45,5 @@ scrape_configs:
 
   - job_name: 'nodeMonitor'
     static_configs:
-      - targets: ['127.0.0.1:9100']
+      - targets: ['10.10.0.99:9100']
         labels: { node: nodeMonitor, role: monitor }
