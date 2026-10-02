@@ -222,17 +222,11 @@ async def presign_get(url_or_key: str, expires: timedelta = timedelta(days=7)) -
     """Private DM bucket için presigned GET URL üretir.
 
     url_or_key: tam URL (https://…/bucket/key) veya ham key (messages/img/x.jpg).
-    Tam URL geçilirse key çıkarılır; ham key ise doğrudan kullanılır.
+    Presigned URL her zaman public endpoint üzerinden imzalanır (mobil erişebilir).
     """
     parsed = urllib.parse.urlparse(url_or_key)
-    if parsed.scheme:
-        # Tam URL — key'i çıkar ve node'a özgü internal client kullan
-        key = dm_url_to_key(url_or_key)
-        client = await _get_client_from_public_url(url_or_key)
-    else:
-        # Ham key — public endpoint ile imzala (mobil erişebilir URL üretir)
-        key = url_or_key
-        client = _get_presign_client()
+    key = dm_url_to_key(url_or_key) if parsed.scheme else url_or_key
+    client = _get_presign_client()
     return await asyncio.to_thread(
         client.presigned_get_object,
         settings.minio_dm_bucket,
