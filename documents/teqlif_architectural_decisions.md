@@ -1301,4 +1301,5 @@ Bağlantı kurulmadan önce `BackdropFilter + ImageFilter.blur` ile bulanık thu
 - Tüm OTA string'ler `loc.t(key)` ile çekilir; hardcode `'LIVE'` gibi sabit string yasaktır
 - Renk sabitleri `withValues(alpha:)` kullanır (`withOpacity` Flutter 3.27+'da deprecated)
 - `AnimatedSwitcher` içindeki widget'lar farklı `ValueKey` taşımalı; aksi halde Flutter aynı widget tipi olduğunda geçiş animasyonu tetiklemez
+- Kategori label için **`CategoryService.localizedLabelFor(loc, key)`** kullanılır — `labelFor(key, locale:)` API cache'e bağımlıdır, cache dolmamışsa ham key döner ve OTA uyumsuz olur
 

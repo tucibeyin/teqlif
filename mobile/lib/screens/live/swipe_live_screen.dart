@@ -1534,8 +1534,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     final initial = stream.host.username.isNotEmpty
         ? stream.host.username[0].toUpperCase()
         : '?';
-    final locale = Localizations.localeOf(context).languageCode;
-    final categoryLabel = CategoryService.labelFor(stream.category, locale: locale);
+    final categoryLabel = CategoryService.localizedLabelFor(loc, stream.category);
 
     return Stack(
       fit: StackFit.expand,
