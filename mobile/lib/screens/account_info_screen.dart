@@ -33,8 +33,19 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.read(accountInfoProvider.notifier).reload();
+    if (state == AppLifecycleState.resumed) _silentReload();
+  }
+
+  // Lifecycle resume'da eski veri ekranda kalır; hata olursa snackbar, hata ekranı değil.
+  Future<void> _silentReload() async {
+    try {
+      await ref.read(accountInfoProvider.notifier).reload(silent: true);
+    } catch (_) {
+      if (!mounted) return;
+      TeqSnackBar.show(
+        message: ref.read(localizationProvider).t('errorGenericRetry'),
+        type: TeqSnackBarType.warning,
+      );
     }
   }
 

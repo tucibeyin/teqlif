@@ -27,8 +27,11 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
     });
   }
 
-  Future<void> reload() async {
-    state = const AsyncValue.loading();
+  Future<void> reload({bool silent = false}) async {
+    // silent=true → eski veri ekranda kalır, hata olursa rethrow (caller toast gösterir)
+    // silent=false (ilk yükleme gibi) → loading + hata ekranı
+    final prev = state;
+    if (!silent) state = const AsyncValue.loading();
     try {
       final u = await ref.read(authServiceProvider).me();
       state = AsyncValue.data(AccountInfoState(user: {
@@ -40,7 +43,12 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
         'phone_verified': u.phoneVerified,
       }));
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (silent && prev is AsyncData) {
+        state = prev; // eski veriyi koru, ekranı değiştirme
+      } else {
+        state = AsyncValue.error(e, st);
+      }
+      rethrow;
     }
   }
 }
