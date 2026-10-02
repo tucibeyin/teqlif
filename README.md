@@ -105,7 +105,7 @@ flowchart TB
         GEM["🤖 Google Gemini\nLLM — AI açıklama"]
         FCM["🔥 Firebase FCM\nAndroid push"]
         APNS["🍎 Apple APNs\niOS VoIP push"]
-        BREVO["📧 Brevo\nTransactional email"]
+        STALWART["📧 Stalwart Mail\nnoreply@teqlif.com"]
         SENTRY["🚨 Sentry\nHata izleme"]
         GOOGLE["🔑 Google OAuth\nSosyal giriş"]
         TCMB["🏦 TCMB\nDöviz kuru"]
@@ -120,7 +120,7 @@ flowchart TB
     AI -->|"API Çağrısı"| GEM
     CORE -->|"Push"| FCM
     CORE -->|"VoIP push"| APNS
-    CORE -->|"Email"| BREVO
+    CORE -->|"SMTP (465)"| STALWART
     CORE -->|"Hatalar"| SENTRY
     CORE -->|"OAuth"| GOOGLE
     CORE -->|"Kur verisi"| TCMB

@@ -15,7 +15,7 @@ _SMTP_PORT      = 465
 
 async def _send_smtp(to_email: str, to_name: str, subject: str, html: str) -> None:
     msg = MIMEMultipart("alternative")
-    msg["From"]    = f"{settings.brevo_sender_name} <{_SMTP_FROM_ADDR}>"
+    msg["From"]    = f"{settings.mail_sender_name} <{_SMTP_FROM_ADDR}>"
     msg["To"]      = f"{to_name} <{to_email}>"
     msg["Subject"] = subject
     msg.attach(MIMEText(html, "html", "utf-8"))
