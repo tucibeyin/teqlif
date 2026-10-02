@@ -139,7 +139,6 @@ expire          = "7d"
 [[auth.dkim.sign]]
 if   = "sender_domain == 'teqlif.com'"
 then = "['teqlif-com']"
-else = "[]"
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
