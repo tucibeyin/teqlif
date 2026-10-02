@@ -1,9 +1,16 @@
 # Stalwart Mail Server — config şablonu
-# Sunucuda: /project/teqlif/config/stalwart/config.toml
-# Secrets:  /project/teqlif/config/.env.mail  (EnvironmentFile)
+# Sunucuda: /project/mail/config/config.toml
+# Secrets:  /project/mail/config/.env.mail  (EnvironmentFile)
 # Değişken: %{env:VAR}% syntax
 #
-# Kurulum sonrası domain/hesap yönetimi:
+# Tüm projelerden bağımsız izole ortam:
+#   Veri:    /project/mail/data/
+#   Config:  /project/mail/config/
+#   Backup:  /project/mail/backups/
+#   Kullanıcı: stalwart (sistem, teqlif kullanıcısından bağımsız)
+#   Redis: yok — RocksDB tüm depolama ihtiyaçlarını karşılar
+#
+# Yönetim:
 #   stalwart-cli --url http://10.10.0.2:8080 --credentials "admin:<SIFRE>" <komut>
 
 # ── Sunucu kimliği ─────────────────────────────────────────────────────────────
@@ -49,28 +56,29 @@ protocol = "http"
 # ── TLS / ACME ─────────────────────────────────────────────────────────────────
 
 [acme."letsencrypt"]
-directory = "https://acme-v02.api.letsencrypt.org/directory"
+directory  = "https://acme-v02.api.letsencrypt.org/directory"
 challenge  = "tls-alpn-01"
 contact    = ["%{env:MAIL_ACME_CONTACT}%"]
-cache-path = "/project/teqlif/config/stalwart/acme"
+cache-path = "/project/mail/config/acme"
 
 [certificate."default"]
-cert   = "acme"
-acme   = "letsencrypt"
+cert    = "acme"
+acme    = "letsencrypt"
 domains = ["%{env:MAIL_HOSTNAME}%"]
 
 # ── Depolama ───────────────────────────────────────────────────────────────────
-# RocksDB: mail indeksleri, meta veriler (harici bağımlılık yok)
+# RocksDB: tüm depolama (index, meta, rate-limit, greylisting)
 # fs:      mail gövdeleri (blob)
+# Redis bağımlılığı yok — projelere göre izole
 
 [store."db"]
 type        = "rocksdb"
-path        = "/project/teqlif/data/mail/db"
+path        = "/project/mail/data/db"
 compression = "lz4"
 
 [store."blobs"]
 type = "fs"
-path = "/project/teqlif/data/mail/blobs"
+path = "/project/mail/data/blobs"
 
 [storage]
 data   = "db"
@@ -123,7 +131,8 @@ rate = [{rate = "20/1m", key = "remote-ip"}]
 # ── DKIM imzalama ──────────────────────────────────────────────────────────────
 # Anahtarlar stalwart-cli ile eklenir, buraya yazılmaz.
 # Kurulum sonrası:
-#   stalwart-cli dkim import rsa /project/teqlif/config/stalwart/dkim/<domain>.pem <domain> mail
+#   stalwart-cli dkim generate rsa <domain> mail
+#   → TXT kaydını DNS'e ekle
 
 # ── Kuyruk / yönlendirme ───────────────────────────────────────────────────────
 
@@ -134,7 +143,7 @@ next-hop = [
 ]
 
 # ── Logging ────────────────────────────────────────────────────────────────────
-# journald üzerinden — /project/teqlif/logs/ dizinine ayrıca yazılmaz
+# journald üzerinden (SyslogIdentifier=stalwart-mail)
 
 [tracer."stdout"]
 type   = "stdout"

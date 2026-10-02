@@ -9,8 +9,8 @@ Type=simple
 User=stalwart
 Group=stalwart
 
-EnvironmentFile=/project/teqlif/config/.env.mail
-ExecStart=/usr/local/bin/stalwart-mail --config /project/teqlif/config/stalwart/config.toml
+EnvironmentFile=/project/mail/config/.env.mail
+ExecStart=/usr/local/bin/stalwart-mail --config /project/mail/config/config.toml
 
 # Port 25/443/465/587/993 bağlama yetkisi (root gerektirmez)
 AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -20,7 +20,7 @@ CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/project/teqlif/data/mail /project/teqlif/config/stalwart
+ReadWritePaths=/project/mail/data /project/mail/config
 ProtectHome=true
 
 Restart=on-failure
