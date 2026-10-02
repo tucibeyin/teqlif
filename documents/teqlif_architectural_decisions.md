@@ -1156,6 +1156,7 @@ sudo teqlif-restart --livekit  # node3/node4: LiveKit'i de yeniden başlatır
 
 - `git pull` asla `sudo` ile çalıştırılmaz — tucibeyin kullanıcısının SSH key'i var, root'un yok
 - Her restart'ta `sync_main.py` otomatik çalışır (kategori, lokasyon, çeviri sync)
+- **Servis restart için her zaman `sudo teqlif-restart` kullanılır** — direkt `systemctl restart` asla kullanılmaz; script requirements.txt farkına göre pip sync yapar, direkt restart bunu atlar
 - Staging DB'yi sıfırlamak için: `TRUNCATE TABLE users CASCADE;` (ilişkili tüm tablolar temizlenir)
 - Staging admin yapmak için: `UPDATE users SET is_admin = true WHERE email = '...';`
 
@@ -1227,4 +1228,77 @@ sudo bash /var/www/teqlif.com/deploy/scale/V2.1/node2/resources/stalwart/setup.s
 ```
 
 Detaylı kurulum adımları: `deploy/scale/V2.1/documents/01_architecture.md §10`
+
+---
+
+## 15. Webmail (Snappymail)
+
+### Problem
+
+Stalwart Mail Server'ın webadmin arayüzü 443'te çalışıyor; `webmail.teqlif.com` aynı porta yönlendirilirse Stalwart webadmin'i açılır.
+
+### Karar
+
+Snappymail v2.38.2 — PHP-FPM + nginx port 80 üzerinden Cloudflare Flexible SSL ile sunulur.
+
+### Trafik Akışı
+
+```
+Kullanıcı → Cloudflare (Proxied, HTTPS)
+  → [Configuration Rule: SSL=Flexible]
+  → [Origin Rule: port=80]
+  → node2: nginx :80 → PHP-FPM → Snappymail
+  → Snappymail → Stalwart IMAP :993 (127.0.0.1 via /etc/hosts)
+```
+
+### Cloudflare Kuralları (manuel)
+
+| Kural | Tip | Koşul | Değer |
+|-------|-----|-------|-------|
+| webmail-ssl | Configuration Rule | Hostname = webmail.teqlif.com | SSL: Flexible |
+| webmail-port | Origin Rule | Hostname = webmail.teqlif.com | Dest. Port: 80 |
+
+### Kritik: Domain Config `type` Alanı
+
+Snappymail `ConnectionSecurityType`: `SSL=1`, `STARTTLS=2`. Port 993 (IMAPS) ve 465 (SMTPS) implicit TLS olduğundan **`type=1`** kullanılır. `type=2` (STARTTLS) bu portlarda TLS el sıkışması başlamadan plaintext bekler — 60s timeout ile sonuçlanır.
+
+### Hairpin NAT Önlemi
+
+`/etc/hosts` üzerinde `127.0.0.1 mail.teqlif.com` tanımlanır; Snappymail→Stalwart bağlantısı public IP'ye çıkmadan loopback üzerinden gider. PHP-FPM'nin DNS cache'ini temizlemek için `hosts` değişikliğinin ardından `systemctl restart php8.4-fpm` gerekir.
+
+### Kurulum
+
+```bash
+sudo bash /var/www/teqlif.com/deploy/scale/V2.1/node2/resources/webmail/setup.sh
+```
+
+### Kural
+
+- Snappymail domain config dosyası: `/var/www/webmail/data/_data_/_default_/domains/teqlif.com.json`
+- `type` değeri **asla 2 (STARTTLS) yapılmaz**; 993/465 için her zaman `1` (SSL)
+- `/etc/hosts` değişikliğinden sonra mutlaka `systemctl restart php8.4-fpm`
+
+---
+
+## 16. SwipeLive UX — Geçiş Animasyonları
+
+### Problem
+
+- Canlı yayına geçişte sadece spinner gösteriliyordu; içerik hakkında bilgi yoktu.
+- İlan sayfalarında video yüklenene kadar beyaz flash / ani geçiş oluşuyordu.
+
+### Karar
+
+**Canlı yayın bekleme ekranı (`_buildStreamLoadingScreen`):**
+Bağlantı kurulmadan önce `BackdropFilter + ImageFilter.blur` ile bulanık thumbnail arka plan; üstünde host avatar, `@username`, yayın başlığı, kategori rozeti (CategoryService), izleyici sayısı, `liveBadgeLabel` (OTA lokalize) ve ince spinner.
+
+**Fade geçişleri (`AnimatedSwitcher`):**
+- Canlı yayın arka planı (`_buildLiveBackground`): `ValueKey` ile keyed widget, 700ms fade — thumbnail → video akışı geçişi
+- İlan video/thumbnail (`_buildListingBackground`): 500ms fade — thumbnail varken spinner gizlenir, video hazır olunca fade ile geçer
+
+### Kurallar
+
+- Tüm OTA string'ler `loc.t(key)` ile çekilir; hardcode `'LIVE'` gibi sabit string yasaktır
+- Renk sabitleri `withValues(alpha:)` kullanır (`withOpacity` Flutter 3.27+'da deprecated)
+- `AnimatedSwitcher` içindeki widget'lar farklı `ValueKey` taşımalı; aksi halde Flutter aynı widget tipi olduğunda geçiş animasyonu tetiklemez
 
