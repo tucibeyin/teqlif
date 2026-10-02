@@ -267,12 +267,12 @@ def _last_inactive_minutes(service: str) -> Optional[int]:
 
 
 def svc_pg_backup(cfg: dict) -> dict:
-    wal_active   = _systemd_active("teqlif-pg-receivewal.service")
     last_dump    = _last_inactive_minutes("teqlif-pg-dump.service")
     last_offsite = _last_inactive_minutes("teqlif-offsite-sync.service")
+    # healthy = dump ran within last 25 hours (WAL streaming removed, pg_dump only)
+    healthy = last_dump is not None and last_dump < 25 * 60
     return {
-        "healthy":              wal_active,
-        "wal_streaming":        wal_active,
+        "healthy":              healthy,
         "last_dump_min_ago":    last_dump,
         "last_offsite_min_ago": last_offsite,
     }
