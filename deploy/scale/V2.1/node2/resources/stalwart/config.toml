@@ -136,10 +136,9 @@ headers         = ["From", "To", "Date", "Subject", "Message-ID"]
 canonicalization = "relaxed/relaxed"
 expire          = "7d"
 
-# Tüm giden mailler teqlif-com imzasıyla imzalanır.
-# Yeni domain eklenince bu listeye signature ID'si eklenir.
-[auth.dkim]
-sign = ["teqlif-com"]
+# auth.dkim.sign web admin UI üzerinden yapılandırılıyor.
+# Stalwart v0.11.8'de config.toml'dan bu ayarın eklenmesi RocksDB
+# anahtar sıralaması nedeniyle parse hatasına yol açıyor.
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
