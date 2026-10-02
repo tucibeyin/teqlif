@@ -17,7 +17,7 @@ mirror_bucket() {
     local bucket="$1"
     local dest="${BACKUP_DIR}/${bucket}"
     install -d "${dest}"
-    mc mirror --overwrite --remove --quiet "node1minio/${bucket}" "${dest}"
+    mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} OK ($(du -sh ${dest} | cut -f1))"
 }
 
