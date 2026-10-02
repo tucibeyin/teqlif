@@ -25,12 +25,9 @@ hostname = "%{env:MAIL_HOSTNAME}%"
 bind = ["0.0.0.0:25"]
 protocol = "smtp"
 
-# Client-to-server gönderme: STARTTLS (port 587)
-[server.listener.submission]
-bind = ["0.0.0.0:587"]
-protocol = "smtp"
-
 # Client-to-server gönderme: implicit TLS (port 465)
+# NOT: port 587 (STARTTLS) kapalı — iOS STARTTLS portuna SSL bağlantısı deneyince
+# scan-ban tetikleniyor. Port 465 implicit TLS tüm clientlar için yeterli.
 [server.listener.submissions]
 bind = ["0.0.0.0:465"]
 protocol = "smtp"
