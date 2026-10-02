@@ -7,11 +7,12 @@
 | Node | WG IP | Public IP | Tip | Sağlayıcı / Lokasyon | Rol |
 |------|-------|-----------|-----|----------------------|-----|
 | node1 | 10.10.0.1 | 193.70.46.74 | Bare metal | OVH Gravelines FR | Core — PG, Redis, MinIO, App |
-| node2 | 10.10.0.2 | 135.125.223.43 | Bare metal | OVH Saarbrücken DE | Backup + Monitoring + ClickHouse + Mail |
+| node2 | 10.10.0.2 | 135.125.223.43 | Bare metal | OVH Saarbrücken DE | Backup + ClickHouse + Mail |
 | node3 | 10.10.0.3 | 51.75.74.124 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #1 |
 | node4 | 10.10.0.4 | 135.125.175.223 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #2 |
 | node5 | 10.10.0.5 | 45.146.252.165 | KVM VPS | ZAP Münster DE | Staging + AI Secondary |
 | node6 | 10.10.0.6 | 5.249.165.10 | KVM VPS | ZAP Virginia US | AI Primary (Gemini) |
+| nodeMonitor | 10.10.0.99 | 94.16.105.135 | KVM VPS | Netcup Karlsruhe DE | Merkezi İzleme (Prometheus + Loki + Grafana + Uptime Kuma) |
 | streaming-N | 10.10.0.20+ | - | KVM VPS | herhangi | LiveKit Streaming #N (plug-and-play) |
 
 ---
@@ -40,7 +41,8 @@
 - **Subnet:** 10.10.0.0/24
 - **Topoloji:** Full mesh — her node diğer tüm node'lara P2P tünel
 - **Şifreleme:** ChaCha20-Poly1305 (WireGuard yerleşik)
-- **Streaming pool:** 10.10.0.20–10.10.0.99 (plug-and-play)
+- **Sabit node'lar:** 10.10.0.1–10.10.0.6 (node1–6), 10.10.0.99 (nodeMonitor)
+- **Streaming pool:** 10.10.0.20–10.10.0.50 (plug-and-play)
 
 ```
 node1 ←──────────────────────────────────── node2
@@ -66,10 +68,12 @@ node1 ←───────────────────────�
 | LiveKit staging (node5) | 127.0.0.1 | 7890 | nginx proxy → live-staging.teqlif.com |
 | AI Proxy (node5/6) | 0.0.0.0 | 8001 | WG mesh |
 | ClickHouse (node2) | 127.0.0.1 + 10.10.0.2 | 8123/9000 | WG mesh |
-| Prometheus (node2) | 10.10.0.2 | 9090 | WG mesh |
-| Grafana (node2) | 10.10.0.2 | 3000 | WG mesh |
-| Loki (node2) | 10.10.0.2 | 3100 | WG mesh (Promtail) |
-| Alertmanager (node2) | 10.10.0.2 | 9093 | WG mesh |
+| Prometheus (nodeMonitor) | 10.10.0.99 | 9090 | WG mesh |
+| Grafana (nodeMonitor) | 10.10.0.99 | 3000 | WG mesh |
+| Loki (nodeMonitor) | 10.10.0.99 | 3100 | WG mesh (Promtail) |
+| Alertmanager (nodeMonitor) | 127.0.0.1 | 9093 | nodeMonitor dahili |
+| Uptime Kuma (nodeMonitor) | 10.10.0.99 | 3001 | WG mesh |
+| node-exporter (tüm node'lar) | WG arayüzü | 9100 | WG mesh (Prometheus scrape) |
 
 ---
 
@@ -110,8 +114,9 @@ Mobil/Web İstemci (Staging — node5)
 | ARQ Worker | ClickHouse | clickhouse-driver | Event log yazma |
 | LiveKit (node3/4) | Redis core (node1) | TCP 6379 | Node koordinasyonu |
 | AI Proxy (node5/6) | Groq/Gemini API | HTTPS | LLM çağrıları |
-| Promtail (tüm) | Loki (node2) | HTTP Push | Log iletimi |
-| Prometheus (node2) | /metrics (tüm) | HTTP Scrape | Metrik toplama |
+| Promtail (tüm node'lar) | Loki (nodeMonitor 10.10.0.99:3100) | HTTP Push | Log iletimi |
+| Prometheus (nodeMonitor) | node-exporter :9100 (tüm node'lar) | HTTP Scrape | Metrik toplama |
+| Uptime Kuma (nodeMonitor) | HTTP/TCP (tüm uç noktalar) | HTTP/TCP Probe | Uptime & health |
 | pg_receivewal (node2) | PG (node1) | Replication protocol | WAL stream |
 | Metrics Agent (tüm node'lar) | Redis core (node1) | TCP 6379 WG | Servis sağlığı + kaynak metrik yazma + Telegram alert |
 
@@ -157,7 +162,7 @@ Her node'da `teqlif-metrics-agent.service` olarak çalışır (`backend/scripts/
 - Servis alertleri: 5 dk cooldown; kaynak alertleri: 30 dk cooldown
 - Config: `.env.metrics-agent` → `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
-**Not:** node2'deki Prometheus Alertmanager (port 9093) ayrı bir bileşendir — Prometheus kural tabanlı alertler için. Metrics Agent AlertManager ise servis/kaynak bazlı anlık bildirim içindir.
+**Not:** nodeMonitor'deki Prometheus Alertmanager (port 9093, 127.0.0.1'de çalışır) ayrı bir bileşendir — Prometheus kural tabanlı alertler için. Metrics Agent AlertManager ise servis/kaynak bazlı anlık bildirim içindir.
 
 ### 3.6 Backup Veri Akışı
 
@@ -209,7 +214,7 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 
 ---
 
-### 4.2 node2 — Backup + Monitoring + ClickHouse
+### 4.2 node2 — Backup + ClickHouse + Mail
 
 | Katman | Teknoloji | Versiyon |
 |--------|-----------|---------|
@@ -218,11 +223,8 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 | RAM | 32GB ECC DDR4 | 2400MHz |
 | Disk | 2×4TB HDD RAID-1 | ~70MB/s seq |
 | Analitik DB | ClickHouse | 24.x |
-| Metrics | Prometheus | 2.x |
-| Dashboard | Grafana | 11.x |
-| Log agg. | Loki | 3.x |
-| Alerting | Alertmanager | 0.x |
 | Log shipper | Promtail | 3.x |
+| Mail server | Stalwart | latest |
 | Backup PG | pg_receivewal + pg_dump | PG17 tools |
 | Backup MinIO | mc (MinIO client) | latest |
 | Backup Redis | redis-cli + rdb | - |
@@ -232,9 +234,7 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 ```
 / (md3, ext4, RAID-1)  — 3.6TB — OS + tüm servis veri
   ├── /var/lib/clickhouse/
-  ├── /var/lib/prometheus/
-  ├── /var/lib/grafana/
-  ├── /var/lib/loki/
+  ├── /project/teqlif/data/mail/
   └── /var/backups/
        ├── pg_wal/
        ├── pg_dump/
@@ -343,6 +343,110 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 
 ---
 
+### 4.6 nodeMonitor — Merkezi İzleme
+
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 12 Bookworm | - |
+| CPU | 2 vCPU | Netcup KVM |
+| RAM | 2GB | DDR4 |
+| Disk | 60GB SSD | - |
+| Public IP | 94.16.105.135 | Netcup Karlsruhe DE |
+| WireGuard IP | 10.10.0.99 | - |
+| Metrics | Prometheus | 2.x |
+| Dashboard | Grafana | 11.x |
+| Log agg. | Loki | 3.x |
+| Alerting | Alertmanager | 0.x |
+| Uptime | Uptime Kuma | latest |
+| Uptime DB | MariaDB | latest |
+| Log shipper | Promtail | 3.x |
+
+**Monitoring Stack Mimarisi:**
+
+```
+WireGuard mesh (10.10.0.0/24)
+  │
+  ├── Prometheus :9090  ← scrape node-exporter :9100 (tüm 7 node)
+  │     └── Alertmanager 127.0.0.1:9093 (Telegram alerts)
+  │
+  ├── Loki :3100         ← Promtail push (tüm node'lardan)
+  │
+  ├── Grafana :3000      ← Prometheus + Loki datasource
+  │     └── Provisioning: /var/www/teqlif.com/deploy/scale/V2.1/nodeMonitor/config/shared/grafana-provisioning/
+  │
+  └── Uptime Kuma :3001  ← HTTP/TCP probe (13 monitor)
+        └── MariaDB 127.0.0.1:3306
+```
+
+**Disk layout:**
+```
+/opt/monitor/
+  ├── shared/
+  │   ├── grafana/data/       ← Grafana data + plugins + logs
+  │   ├── loki/data/          ← Loki TSDB chunks
+  │   ├── prometheus/data/    ← Prometheus TSDB
+  │   └── uptime-kuma/        ← Uptime Kuma app + data
+  └── teqlif/
+      └── alertmanager/data/  ← Alertmanager state
+
+/project/
+  ├── shared/config/
+  │   ├── grafana.ini                 ← Grafana config (WG bind, provisioning path)
+  │   └── uptime-kuma.env             ← MariaDB credentials (600 perm)
+  └── teqlif/config/
+      ├── prometheus.yml              ← Scrape targets (7 node)
+      ├── loki.yml                    ← Loki config (retention 30d)
+      ├── alertmanager.yml            ← Telegram credentials
+      └── alert_rules.yml             ← Prometheus alerting rules
+```
+
+**node-exporter (tüm node'larda):**
+- Binary: `/usr/local/bin/node_exporter` v1.8.2
+- Servis: `deploy/scale/V2.1/common/systemd/node-exporter.service`
+- Dinlediği adres: WireGuard IP:9100 (dinamik tespit: `ip -4 addr show wg0`)
+- UFW: `allow proto tcp from 10.10.0.0/24 to any port 9100`
+
+**Uptime Kuma Monitörler (13 adet):**
+
+| Grup | Monitor | Tip |
+|------|---------|-----|
+| Production API | api.teqlif.com/health | HTTP |
+| Production API | api.teqlif.com WebSocket | TCP |
+| Storage | uploads.teqlif.com/minio/health/live | HTTP |
+| Streaming | node3 nginx :443 | TCP |
+| Streaming | node4 nginx :443 | TCP |
+| Staging | api-staging.teqlif.com/health | HTTP |
+| AI Proxy | node6 AI Proxy :8001 | TCP |
+| AI Proxy | node5 AI Proxy :8001 | TCP |
+| Mail | mail.teqlif.com SMTP :25 | TCP |
+| Mail | mail.teqlif.com IMAP :993 | TCP |
+| Internal | node1 nginx :80 | TCP |
+| Internal | node5 nginx :80 | TCP |
+| Internal | nodeMonitor Prometheus :9090 | TCP |
+
+**Grafana override.conf** (nodeMonitor'de, `/etc/systemd/system/grafana-server.service.d/override.conf`):
+- `User=tucibeyin`, `Group=tucibeyin`
+- `CONF_FILE=/project/shared/config/grafana.ini`
+- `cfg:default.paths.bundled_plugins=/usr/share/grafana/plugins-bundled` (Prometheus plugin için zorunlu)
+- `/etc/grafana/` dizini `o+rX` izni gerektirir (grafana user'a ait)
+
+**Güvenlik:**
+- SSH 2FA: key + şifre (Google Authenticator)
+- UFW: sadece 22/tcp + 51820/udp açık; tüm monitoring portları WG-only
+- Alertmanager `127.0.0.1:9093` — dışarıya kapalı
+
+**Kritik OS ayarları:**
+- `vm.swappiness=20` (2GB kısıtlı)
+- THP = `never`
+
+**UFW:**
+```
+22/tcp     SSH (2FA)
+51820/udp  WireGuard
+```
+
+---
+
 ## 5. Dependency Architecture
 
 ### 5.1 Backend (Python) — Temel Bağımlılıklar
@@ -409,14 +513,17 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 │  → AI Proxy (node6 → node5 fallback)                        │
 └──────────────────────┬──────────────────────────────────────┘
                        │ WireGuard
-        ┌──────────────┼──────────────────────┐
-        │              │                      │
-┌───────▼──────┐ ┌─────▼───────┐ ┌──────────▼──────┐
-│ LAYER 4a     │ │ LAYER 4b    │ │ LAYER 4c         │
-│ Streaming    │ │ AI Proxy    │ │ Monitoring       │
-│ node3, node4 │ │ node6, node5│ │ node2            │
-│ LiveKit SFU  │ │ Gemini/Groq │ │ Prometheus/Loki  │
-└──────────────┘ └─────────────┘ └─────────────────┘
+        ┌──────────────┼──────────────────────┬──────────────────┐
+        │              │                      │                  │
+┌───────▼──────┐ ┌─────▼───────┐ ┌──────────▼──────┐ ┌────────▼────────┐
+│ LAYER 4a     │ │ LAYER 4b    │ │ LAYER 4c         │ │ LAYER 4d        │
+│ Streaming    │ │ AI Proxy    │ │ Backup + Mail    │ │ Monitoring      │
+│ node3, node4 │ │ node6, node5│ │ node2            │ │ nodeMonitor     │
+│ LiveKit SFU  │ │ Gemini/Groq │ │ ClickHouse +     │ │ Prometheus/Loki │
+│              │ │             │ │ Stalwart + PG/   │ │ Grafana +       │
+│              │ │             │ │ Redis/MinIO      │ │ Uptime Kuma     │
+│              │ │             │ │ Backup           │ │ Alertmanager    │
+└──────────────┘ └─────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
 ### 6.2 Veri Akışı Topolojisi
@@ -538,11 +645,12 @@ Script otomatik:
 
 | Node | İzin verilen portlar |
 |------|---------------------|
-| node1 | 22/tcp, 51820/udp, 80/tcp, 443/tcp, WG-only: 5432/6432/6379/9000/8000 |
-| node2 | 22/tcp, 51820/udp, WG-only: 9090/3000/3100/9093/8123 |
-| node3/4 | 22/tcp, 51820/udp, 443/tcp+udp, WG-only: 7880/7881, 50000-60000/udp |
-| node5 | 22/tcp, 80/tcp, 443/tcp (nginx), 443/udp (WireGuard), WG-only: 8001 |
-| node6 | 22/tcp, 51820/udp, WG-only: 8001 |
+| node1 | 22/tcp, 51820/udp, 80/tcp, 443/tcp, WG-only: 5432/6432/6379/9000/8000/9100 |
+| node2 | 22/tcp, 51820/udp, 25/tcp, 443/tcp+udp, 465/tcp, 587/tcp, 993/tcp, WG-only: 8123/9100 |
+| node3/4 | 22/tcp, 51820/udp, 443/tcp+udp, WG-only: 7880/7881/9100, 50000-60000/udp |
+| node5 | 22/tcp, 80/tcp, 443/tcp (nginx), 443/udp (WireGuard), WG-only: 8001/9100 |
+| node6 | 22/tcp, 51820/udp, WG-only: 8001/9100 |
+| nodeMonitor | 22/tcp, 51820/udp — monitoring portları sadece WG-only (3000/3001/3100/9090) |
 
 ### 8.2 Güvenlik Katmanları
 

@@ -1303,3 +1303,128 @@ Bağlantı kurulmadan önce `BackdropFilter + ImageFilter.blur` ile bulanık thu
 - `AnimatedSwitcher` içindeki widget'lar farklı `ValueKey` taşımalı; aksi halde Flutter aynı widget tipi olduğunda geçiş animasyonu tetiklemez
 - Kategori label için **`CategoryService.localizedLabelFor(loc, key)`** kullanılır — `labelFor(key, locale:)` API cache'e bağımlıdır, cache dolmamışsa ham key döner ve OTA uyumsuz olur
 
+---
+
+## 17. nodeMonitor — Merkezi İzleme Altyapısı
+
+### Problem
+
+- node2 HDD RAID-1 (~70 MB/s, ~440 IOPS) Prometheus TSDB için kritik yavaştı; write amplification sorunu.
+- Monitoring stack node2'de çalışıyorken node2 donanımsal bir sorun yaşarsa hem backup hem izleme aynı anda devre dışı kalıyordu.
+- node2 OVH kaynaklı; tek sağlayıcı bağımlılığı azaltmak gerekiyordu.
+
+### Karar
+
+**Ayrı, bağımsız bir VPS** (nodeMonitor — Netcup Karlsruhe DE) üzerinde tüm monitoring stack çalıştırılır:
+- Farklı sağlayıcı → provider-level failure izolasyonu
+- SSD disk → Prometheus TSDB için yeterli IOPS
+- Küçük, ucuz VPS (2GB RAM, 60GB SSD) — monitoring workload için yeterli
+
+### nodeMonitor Teknik Özellikleri
+
+| Özellik | Değer |
+|---------|-------|
+| WireGuard IP | 10.10.0.99 |
+| Public IP | 94.16.105.135 |
+| Sağlayıcı | Netcup Karlsruhe DE |
+| RAM | 2GB |
+| Disk | 60GB SSD |
+| OS | Debian 12 Bookworm |
+| SSH | 2FA (key + Google Authenticator) |
+
+### Stack Bileşenleri
+
+| Bileşen | Port | Veri Dizini | Config |
+|---------|------|-------------|--------|
+| Prometheus 2.x | 10.10.0.99:9090 | `/opt/monitor/teqlif/prometheus/data/` | `deploy/.../nodeMonitor/config/teqlif/prometheus.yml` |
+| Loki 3.x | 10.10.0.99:3100 | `/opt/monitor/teqlif/loki/data/` | `deploy/.../nodeMonitor/config/teqlif/loki.yml` |
+| Alertmanager 0.x | 127.0.0.1:9093 | `/opt/monitor/teqlif/alertmanager/data/` | `/project/teqlif/config/alertmanager.yml` (Telegram token — repoya girmez) |
+| Grafana 11.x | 10.10.0.99:3000 | `/opt/monitor/shared/grafana/data/` | `/project/shared/config/grafana.ini` |
+| Uptime Kuma | 10.10.0.99:3001 | `/opt/monitor/shared/uptime-kuma/data/` | `/project/shared/config/uptime-kuma.env` |
+| MariaDB | 127.0.0.1:3306 | sistem default | Uptime Kuma backend DB |
+
+### node-exporter (Tüm Node'larda)
+
+Her node'da `teqlif-node-exporter.service` (`deploy/scale/V2.1/common/systemd/node-exporter.service`) çalışır:
+
+```ini
+ExecStart=/bin/bash -c 'exec /usr/local/bin/node_exporter \
+  --web.listen-address=$(ip -4 addr show wg0 | grep -oP "(?<=inet )[\d.]+" | head -1):9100'
+```
+
+- WireGuard IP'yi **dinamik** tespit eder — aynı servis dosyası tüm node'larda çalışır
+- `wg-quick@wg0.service` gerektir — WG hazır olmadan başlamaz
+- UFW: `allow proto tcp from 10.10.0.0/24 to any port 9100` (tüm node'lar)
+- node1/node2: `Anywhere on wg0 ALLOW 10.10.0.0/24` stili kural yeterliydi; node3–6 için port 9100'ü explicit açmak gerekti
+
+### Grafana Kritik Notlar
+
+**override.conf zorunlu alanlar:**
+```ini
+EnvironmentFile=/etc/default/grafana-server        # GF_* env'leri için
+cfg:default.paths.bundled_plugins=/usr/share/grafana/plugins-bundled  # Prometheus plugin kaydı
+```
+
+`bundled_plugins` path verilmezse Prometheus datasource `Plugin not registered` hatası verir.
+
+**`/etc/grafana/` izin sorunu:** Grafana `grafana` user'ına ait kurulur, `User=tucibeyin` ile çalışınca:
+```bash
+chmod o+rx /etc/grafana
+chmod -R o+rX /etc/grafana/
+```
+
+**Grafana provisioning:** Datasource'lar repodaki YAML'dan otomatik yüklenir:
+- `deploy/scale/V2.1/nodeMonitor/config/shared/grafana-provisioning/datasources/datasources.yml`
+- `grafana.ini` → `provisioning =` bu dizine işaret eder
+
+### Loki Kritik Not
+
+`retention_enabled: true` ise `compactor.delete_request_store: filesystem` **zorunlu** — yoksa Loki başlamaz.
+
+### Alertmanager Konfigürasyonu
+
+`/project/teqlif/config/alertmanager.yml` repoya girmez (Telegram Bot Token içerir). Template:
+`deploy/scale/V2.1/nodeMonitor/config/teqlif/alertmanager.yml.template`
+
+### Uptime Kuma — MariaDB Backend
+
+SQLite yerine MariaDB seçildi (gelecekteki multi-project expansion için).
+
+```
+DATABASE=mariadb
+DB_HOSTNAME=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=uptime_kuma
+DB_NAME=uptime_kuma
+DB_PASSWORD=<secret>  → /project/shared/config/uptime-kuma.env
+```
+
+**13 Monitör:**
+
+| Grup | Monitor | Tip |
+|------|---------|-----|
+| Production API | api.teqlif.com/health | HTTP |
+| Production API | api.teqlif.com WebSocket | TCP |
+| Storage | uploads.teqlif.com/minio/health/live | HTTP |
+| Streaming | node3 nginx :443 | TCP |
+| Streaming | node4 nginx :443 | TCP |
+| Staging | api-staging.teqlif.com/health | HTTP |
+| AI Proxy | node6 AI Proxy :8001 | TCP |
+| AI Proxy | node5 AI Proxy :8001 | TCP |
+| Mail | mail.teqlif.com SMTP :25 | TCP |
+| Mail | mail.teqlif.com IMAP :993 | TCP |
+| Internal | node1 nginx :80 | TCP |
+| Internal | node5 nginx :80 | TCP |
+| Internal | nodeMonitor Prometheus :9090 | TCP |
+
+**Not:** node1/node5'te nginx 80→443 redirect yaptığından ve HTTPS sertifikası public IP'ye değil domain'e ait olduğundan, bu node'lar için HTTP yerine TCP Port check kullanılır.
+
+### Kurallar
+
+- Alertmanager config (`alertmanager.yml`) asla repoya commit edilmez — Telegram credentials içerir
+- `uptime-kuma.env` ve `grafana.ini` içindeki `admin_password` placeholder kaldığında repoya girmesi sorun olmaz; production değerleri `/project/shared/config/` altında 600 perm ile saklanır
+- Monitoring portları (3000, 3001, 3100, 9090, 9093) dışarıya **asla** açılmaz — WireGuard erişim yeterli
+- Grafana Node Exporter Full dashboard'u **template variable'ları** (job, instance) ilk açılışta manuel seçilmeli; Grafana 11 URL state'i sonraki açılışlarda korur
+- Yeni node eklendiğinde: `prometheus.yml`'a scrape target ekle, node'a `node-exporter.service` kur, `ufw allow port 9100` ver
+
+
