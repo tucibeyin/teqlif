@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus — teqlif
+After=network.target
+
+[Service]
+User=tucibeyin
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/var/www/teqlif.com/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml \
+  --storage.tsdb.path=/opt/monitor/teqlif/prometheus/data \
+  --storage.tsdb.retention.time=30d \
+  --web.listen-address=10.10.0.99:9090 \
+  --web.enable-lifecycle
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

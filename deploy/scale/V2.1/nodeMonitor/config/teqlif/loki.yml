@@ -1,0 +1,38 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  http_listen_address: 10.10.0.99
+
+common:
+  instance_addr: 10.10.0.99
+  path_prefix: /opt/monitor/teqlif/loki
+  storage:
+    filesystem:
+      chunks_directory: /opt/monitor/teqlif/loki/data/chunks
+      rules_directory: /opt/monitor/teqlif/loki/data/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 30d
+  ingestion_rate_mb: 10
+  ingestion_burst_size_mb: 20
+
+compactor:
+  working_directory: /opt/monitor/teqlif/loki/data/compactor
+  retention_enabled: true
+  retention_delete_delay: 2h

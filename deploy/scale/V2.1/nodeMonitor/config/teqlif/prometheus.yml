@@ -1,0 +1,49 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: teqlif
+
+rule_files:
+  - /var/www/teqlif.com/deploy/scale/V2.1/nodeMonitor/config/teqlif/alert_rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:9093']
+
+scrape_configs:
+  - job_name: 'node1'
+    static_configs:
+      - targets: ['10.10.0.1:9100']
+        labels: { node: node1, role: core }
+
+  - job_name: 'node2'
+    static_configs:
+      - targets: ['10.10.0.2:9100']
+        labels: { node: node2, role: backup }
+
+  - job_name: 'node3'
+    static_configs:
+      - targets: ['10.10.0.3:9100']
+        labels: { node: node3, role: livekit }
+
+  - job_name: 'node4'
+    static_configs:
+      - targets: ['10.10.0.4:9100']
+        labels: { node: node4, role: livekit }
+
+  - job_name: 'node5'
+    static_configs:
+      - targets: ['10.10.0.5:9100']
+        labels: { node: node5, role: staging }
+
+  - job_name: 'node6'
+    static_configs:
+      - targets: ['10.10.0.6:9100']
+        labels: { node: node6, role: ai }
+
+  - job_name: 'nodeMonitor'
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+        labels: { node: nodeMonitor, role: monitor }
