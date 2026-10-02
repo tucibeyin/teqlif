@@ -167,6 +167,8 @@ async def push_notification(
                 extra_data["stream_id"] = str(notif["stream_id"])
             if notif.get("listing_id") is not None:
                 extra_data["listing_id"] = str(notif["listing_id"])
+            if notif.get("sale_id") is not None:
+                extra_data["sale_id"] = str(notif["sale_id"])
 
             image_url: str | None = notif.get("sender_image_url")
             if image_url and not image_url.startswith("http"):

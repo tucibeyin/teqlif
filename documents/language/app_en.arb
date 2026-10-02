@@ -2512,6 +2512,7 @@
       }
     }
   },
+  "notifRetargetTitle": "A Listing For You",
   "notifChurnAirdropSeller": "Your listings are waiting for you! 🛍️",
   "notifChurnBodySeller": "We've added {amount} teqliq to your account. Create a new listing and connect with buyers!",
   "@notifChurnBodySeller": {

@@ -2512,6 +2512,7 @@
       }
     }
   },
+  "notifRetargetTitle": "Seni Bekleyen İlan",
   "notifChurnAirdropSeller": "İlanlarınız sizi bekliyor! 🛍️",
   "notifChurnBodySeller": "Hesabına {amount} teqliq hediye yükledik. Yeni ilan aç, alıcılarla buluş!",
   "@notifChurnBodySeller": {

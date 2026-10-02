@@ -558,15 +558,17 @@ async def send_retargeting(
     listing_url = f"/listing/{body.listing_id}"
 
     from app.services.firebase_service import send_push, InvalidFCMTokenError
+    from app.utils.i18n import _get_t
+    _t = _get_t(current_user.locale or "tr")
 
     async def _send_one(token: str) -> None:
         try:
             await send_push(
                 token=token,
-                title="notifRetargetTitle",
+                title=_t("notifRetargetTitle"),
                 body=listing.title,
-                data={"type": "new_listing", "listing_id": str(body.listing_id)},
-                extra_data={"url": listing_url},
+                notif_type="new_listing",
+                extra_data={"listing_id": str(body.listing_id), "url": listing_url},
             )
         except InvalidFCMTokenError:
             pass

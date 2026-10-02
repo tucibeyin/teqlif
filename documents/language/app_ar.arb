@@ -2495,6 +2495,7 @@
       }
     }
   },
+  "notifRetargetTitle": "إعلان ينتظرك",
   "notifChurnAirdropSeller": "إعلاناتك تنتظرك! 🛍️",
   "notifChurnBodySeller": "أضفنا {amount} teqliq إلى حسابك. أنشئ إعلاناً جديداً وتواصل مع المشترين!",
   "@notifChurnBodySeller": {

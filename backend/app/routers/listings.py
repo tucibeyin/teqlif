@@ -844,15 +844,17 @@ async def send_mass_notification(
         return {"sent": 0, "spent": 0, "code": "NO_RECIPIENTS"}
 
     from app.services.firebase_service import send_push, InvalidFCMTokenError
+    from app.utils.i18n import _get_t
+    _t = _get_t(current_user.locale or "tr")
 
     async def _send_one(token: str) -> None:
         try:
             await send_push(
                 token=token,
-                title="notifRetargetTitle",
+                title=_t("notifRetargetTitle"),
                 body=listing.title,
-                data={"type": "new_listing", "listing_id": str(listing_id)},
-                extra_data={"url": f"/listing/{listing_id}"},
+                notif_type="new_listing",
+                extra_data={"listing_id": str(listing_id), "url": f"/listing/{listing_id}"},
             )
         except InvalidFCMTokenError:
             pass
