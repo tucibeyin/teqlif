@@ -15,7 +15,7 @@ cycle_interval: 60
 gossip_timeout: 5
 
 # Bu node'da çalışan servisler (alertlere göre belirlendi)
-monitor_services: ["redis", "livekit", "gossip-agent"]
+monitor_services: ["livekit", "gossip-agent"]
 
 peers:
   - {id: nodeMonitor, priority: 1, wg_ip: "10.10.0.99"}
