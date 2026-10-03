@@ -7,7 +7,7 @@ Create Date: 2026-10-03
 from alembic import op
 
 revision = "zzzzza_tuci_column_renames"
-down_revision = "zzzzz_listing_offers_status"
+down_revision = "zzzze_tuci_to_teqlik_rename"
 branch_labels = None
 depends_on = None
 
