@@ -12,6 +12,7 @@
 | node4 | 10.10.0.4 | 135.125.175.223 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #2 |
 | node5 | 10.10.0.5 | 45.146.252.165 | KVM VPS | ZAP Münster DE | Staging + AI Secondary |
 | node6 | 10.10.0.6 | 5.249.165.10 | KVM VPS | ZAP Virginia US | AI Primary (Gemini) |
+| node7 | 10.10.0.7 | — | KVM VPS | Netcup Nuremberg DE | **Hazırlanıyor** (rol TBD) |
 | nodeMonitor | 10.10.0.99 | 94.16.105.135 | KVM VPS | Netcup Karlsruhe DE | Merkezi İzleme (Prometheus + Loki + Grafana + Uptime Kuma) |
 | streaming-N | 10.10.0.20+ | - | KVM VPS | herhangi | LiveKit Streaming #N (plug-and-play) |
 
@@ -29,7 +30,8 @@
   │
   ├── Cloudflare DNS Only (direkt)
   │     ├── uploads.teqlif.com → node1:443 (MinIO media)
-  │     └── stream.teqlif.com  → node3/4:443 (LiveKit WebRTC)
+  │     ├── live1.teqlif.com   → node3:443 (LiveKit WebRTC)
+  │     └── live2.teqlif.com   → node4:443 (LiveKit WebRTC)
   │
   └── Direkt (dahili)
         └── WireGuard mesh 10.10.0.0/24
@@ -41,7 +43,7 @@
 - **Subnet:** 10.10.0.0/24
 - **Topoloji:** Full mesh — her node diğer tüm node'lara P2P tünel
 - **Şifreleme:** ChaCha20-Poly1305 (WireGuard yerleşik)
-- **Sabit node'lar:** 10.10.0.1–10.10.0.6 (node1–6), 10.10.0.99 (nodeMonitor)
+- **Sabit node'lar:** 10.10.0.1–10.10.0.7 (node1–7), 10.10.0.99 (nodeMonitor)
 - **Streaming pool:** 10.10.0.20–10.10.0.50 (plug-and-play)
 
 ```
@@ -87,7 +89,7 @@ Mobil/Web İstemci (Production)
   ├── REST API  → POST/GET/PATCH https://api.teqlif.com/v1/...
   ├── WebSocket → wss://api.teqlif.com/ws/...
   ├── Media     → https://uploads.teqlif.com/...
-  └── LiveKit   → wss://stream.teqlif.com (node3/4 round-robin)
+  └── LiveKit   → wss://live1.teqlif.com (node3) / wss://live2.teqlif.com (node4)
 
 Mobil/Web İstemci (Staging — node5)
   │
@@ -128,8 +130,9 @@ Mobil/Web İstemci (Staging — node5)
 | LiveKit Cloud | WebRTC SFU | API Key/Secret |
 | Groq API | LLM (AI proxy) | API Key |
 | Google Gemini | LLM (AI proxy, US) | API Key |
-| Brevo | E-posta gönderimi | API Key |
+| Stalwart SMTP | E-posta gönderimi (aiosmtplib → mail.teqlif.com:465) | SMTP Credentials |
 | Apple APNS | iOS push bildirimi | AuthKey .p8 |
+| Firebase FCM | Android push bildirimi | Service Account JSON |
 | Google OAuth | Sosyal giriş | Client ID/Secret |
 | Cloudflare Turnstile | CAPTCHA | Site/Secret Key |
 | Sentry | Hata izleme | DSN |
@@ -219,7 +222,7 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük
 | OS | Debian 13 Trixie | 6.12 kernel |
 | CPU | Intel Xeon D-2123IT | 4c/8t, 2.2/3.0GHz |
 | RAM | 32GB ECC DDR4 | 2400MHz |
-| Disk | 2×4TB HDD RAID-1 | ~70MB/s seq |
+| Disk | 2×4TB HDD RAID-1 | ~70MB/s seq, ~440 IOPS (4k random) |
 | Analitik DB | ClickHouse | 24.x |
 | Log shipper | Promtail | 3.x |
 | Mail server | Stalwart | latest |
@@ -257,6 +260,7 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük
 | RAM | 11.4GB | DDR4 |
 | Disk | 98GB SSD | ~1GB/s |
 | SFU | LiveKit Server | v1.7.2 |
+| Flutter SDK | livekit_client | v2.5.4 (pubspec: ^2.3.0) |
 | TURN proxy | nginx | UDP 443 |
 | Redis client | → node1:6379 | koordinasyon |
 
@@ -340,7 +344,29 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük
 
 ---
 
-### 4.6 nodeMonitor — Merkezi İzleme
+### 4.6 node7 — Hazırlanıyor
+
+| Katman | Teknoloji | Versiyon |
+|--------|-----------|---------|
+| OS | Debian 13 Trixie | - |
+| CPU | 2 vCPU QEMU | 2294 MHz (KVM) |
+| RAM | 1.9 GiB | DDR4 |
+| Swap | 2 GiB | - |
+| Disk | 59 GB SSD | ~940 MB/s seq, ~1 GB/s 4k |
+| Ağ | ~1 Gbps | Netcup Nuremberg DE |
+| Public IP | — (henüz atanmadı) | - |
+| WG IP | 10.10.0.7 | (rezerve) |
+
+**Durum:** Sunucu temin edildi, YABS benchmark alındı (2026-09-16), rol henüz belirlenmedi.
+
+**Rol seçenekleri:**
+- LiveKit Streaming #3 (1.9 GB RAM sınırlı, hafif yükte çalışabilir)
+- AI Proxy #3 / Avrupa AI yedek (CPU/RAM AI proxy için yeterli)
+- Ek staging node veya spesifik servis izolasyonu
+
+---
+
+### 4.7 nodeMonitor — Merkezi İzleme
 
 | Katman | Teknoloji | Versiyon |
 |--------|-----------|---------|
@@ -363,7 +389,7 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük
 ```
 WireGuard mesh (10.10.0.0/24)
   │
-  ├── Prometheus :9090  ← scrape node-exporter :9100 (tüm 7 node)
+  ├── Prometheus :9090  ← scrape node-exporter :9100 (tüm node'lar: node1–7 + nodeMonitor)
   │     └── Alertmanager 127.0.0.1:9093 (Telegram alerts)
   │
   ├── Loki :3100         ← Promtail push (tüm node'lardan)
@@ -473,8 +499,9 @@ WireGuard mesh (10.10.0.0/24)
 | LiveKit Cloud | node3/4 | Kritik (stream) |
 | Groq API | node5/6 | Yüksek (AI) |
 | Google Gemini | node6 | Yüksek (AI primary) |
-| Brevo | node1 | Orta (e-posta) |
+| Stalwart SMTP (node2) | node1 (aiosmtplib) | Orta (e-posta) |
 | Apple APNS | node1 | Orta (iOS push) |
+| Firebase FCM | node1 | Orta (Android push) |
 | Google OAuth | node1 | Orta (sosyal giriş) |
 | Sentry | node1/5 | Düşük (izleme) |
 
@@ -489,7 +516,7 @@ WireGuard mesh (10.10.0.0/24)
 │  LAYER 1 — İnternet / Cloudflare Edge                                      │
 │  teqlif.com, api.teqlif.com → Cloudflare Proxy (prod)                      │
 │  staging.teqlif.com, api-staging.teqlif.com → Cloudflare Proxy (staging)   │
-│  uploads.teqlif.com, stream.teqlif.com → DNS Only (prod, direkt)           │
+│  uploads.teqlif.com, live1/live2.teqlif.com → DNS Only (prod, direkt)      │
 │  staging.uploads.teqlif.com, live-staging.teqlif.com → DNS Only (staging)  │
 └──────────────────────┬──────────────────────────────────────┘
                        │
@@ -537,7 +564,7 @@ Kullanıcı Cihazı
   │
   ├─[Media]─→ node1:443 (uploads.teqlif.com, DNS only)
   │
-  └─[Stream]─→ node3 veya node4:443 (stream.teqlif.com, round-robin DNS)
+  └─[Stream]─→ node3:443 (live1.teqlif.com) / node4:443 (live2.teqlif.com)
                     │
                     └──→ Redis node1:6379 (WG mesh, koordinasyon)
 ```
@@ -602,8 +629,9 @@ secrets.env (lokal makine, git'e girmez)
 
 | Kategori | Örnekler | Kaynak |
 |----------|---------|--------|
-| Otomatik üretilen | DB/Redis/MinIO şifreleri, JWT key, keepalived pass | `openssl rand` |
-| Harici panel | LiveKit, Brevo, APNS, Google, Groq, Gemini, Sentry | İlgili servis paneli |
+| Otomatik üretilen | DB/Redis/MinIO şifreleri, JWT key | `openssl rand` |
+| Harici panel | LiveKit, APNS, FCM, Google, Groq, Gemini, Sentry | İlgili servis paneli |
+| SMTP | Stalwart kullanıcı adı/şifre (mail.teqlif.com:465) | node2 Stalwart admin |
 | WireGuard pubkey'ler | nodeX_pubkey | Bootstrap sonrası `cat /etc/wireguard/pubkey` |
 
 ### 7.3 Config Dağıtım Akışı
@@ -666,7 +694,7 @@ Script otomatik:
 
 | Bileşen | HA Durumu | Açıklama |
 |---------|-----------|----------|
-| PostgreSQL | **Tek node** (node1) | node2 WAL stream ile kurtarma mümkün, otomatik failover yok |
+| PostgreSQL | **Tek node** (node1) | node2 WAL stream ile kurtarma mümkün, otomatik failover yok. **Not:** node2 HDD (~440 IOPS) — failover hedefi olarak node1 NVMe (~5000 IOPS) performansına ulaşamaz |
 | Redis | **Aktif/Standby** (node1+2) | HAProxy + async replica; otomatik failover (bkz. §9.3) |
 | MinIO | **Tek node** (node1) | node2 mirror ile kurtarma mümkün |
 | LiveKit | **Çift node** (node3+4) | DNS round-robin, birisi düşerse diğeri devam eder |
@@ -709,6 +737,90 @@ node1:   FastAPI/ARQ ───────┤
 - **Redis replica** (node2): `/etc/redis/redis-replica.conf`, `teqlif-redis-replica.service` ile yönetilir
 - **Auto-promote** (node2): `redis-failover.timer` her 10 saniyede çalışır; Redis + ICMP 3 kez başarısız olursa `REPLICAOF NO ONE` → master'a terfi + Telegram bildirimi
 - **Geri dönüş**: node1 kurtarıldıktan sonra manuel `REPLICAOF 10.10.0.1 6379` ile yeniden replica yapılır
+
+---
+
+### 9.4 PostgreSQL Manuel Failover Prosedürü
+
+> **Uyarı:** node2 HDD (~440 IOPS) ile node1 NVMe (~5000 IOPS) arasında ciddi performans farkı var. node2'ye failover, yoğun yazım altında yavaşlama yaratır. Patroni otomasyonu henüz devreye alınmadı (node2 SSD almadan anlamlı değil).
+
+**Senaryo: node1 tamamen erişilemez, node2'de pg_receivewal güncel**
+
+```bash
+# 1. node2'de WAL stream durumunu doğrula
+ssh node2
+ls -lth /var/backups/pg_wal/ | head -5
+# Son segment < 5 dk önce olmalı
+
+# 2. pg_receivewal servisini durdur
+sudo teqlif-restart  # veya sadece pg servisini
+# NOT: pg_receivewal önce durmalı, aksi halde pg_wal dizini açık kalır
+
+# 3. WAL'ı PostgreSQL data dizinine uygula (recovery moduna geç)
+sudo -u postgres pg_ctl stop -D /var/lib/postgresql/17/main   # varsa
+# Data dizini boşsa pg_basebackup ile kurul (aşağıya bak)
+
+# 4. Son pg_dump yedeğinden geri yükle (WAL mevcut değilse)
+ls /var/backups/pg_dump/ | tail -3
+sudo -u postgres psql -h 127.0.0.1 -c "CREATE DATABASE teqlif;" postgres
+sudo -u postgres pg_restore -h 127.0.0.1 -d teqlif /var/backups/pg_dump/<en_son>.dump
+
+# 5. DNS/nginx'te bağlantı noktasını node2'ye yönlendir
+# node1'deki /project/teqlif/config/.env.production içinde DATABASE_URL güncelle
+# (node1 erişilemezse node2'den servis kaldır: teqlif-app.service başlat)
+
+# 6. node1 kurtarıldıktan sonra geri dönüş
+# node2'den pg_dump al → node1'e restore → pg_receivewal yeniden başlat
+sudo teqlif-restart   # node1'de
+```
+
+**RTO tahmini:** ~30–60 dk (pg_dump boyutuna bağlı) | **RPO:** Son WAL segmenti (genellikle < 1 dk)
+
+---
+
+### 9.5 Operasyonel Runbook
+
+#### node1 Tamamen Çevrimdışı
+
+1. **Telegram uyarısını al** (Metrics Agent veya Uptime Kuma)
+2. OVH panelinden node1 konsol erişimi dene
+3. Soft reboot: `sudo reboot` (SSH erişimi varsa)
+4. Hard reboot: OVH Manager → Server → Reboot
+5. ~2 dk sonra `sudo teqlif-restart` otomatik çalışır (ExecStartPre → alembic + sync_main → uvicorn)
+6. Eğer disk hatası: RAID durumunu kontrol et: `cat /proc/mdstat`
+
+#### Redis node1 Çökmesi
+
+1. HAProxy otomatik node2'ye geçer (~30 sn, 3×10 sn check)
+2. node2 `redis-failover.timer` → `REPLICAOF NO ONE` → master terfi
+3. Telegram bildirimi gelir
+4. node1 kurtarıldıktan sonra: `redis-cli -h 10.10.0.2 REPLICAOF 10.10.0.1 6379`
+
+#### LiveKit node3 veya node4 Çökmesi
+
+1. DNS TTL süresi (genellikle 60 sn) sonrası trafik sağlam node'a yönelir
+2. Aktif stream'ler kesilir → istemci otomatik yeniden bağlanma dener (30 sn timeout)
+3. Çöken node'u OVH'dan yeniden başlat: `sudo teqlif-restart`
+
+#### node1 Redis → WAL Gecikmesi
+
+```bash
+# node2'de WAL gecikmesini kontrol et
+sudo -u postgres psql -h 127.0.0.1 -c "SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag;" teqlif
+# > 5 dk ise pg_receivewal servisini yeniden başlat
+ssh node1
+sudo systemctl status teqlif-pg-receivewal.service
+```
+
+#### MinIO Erişim Sorunu (node1)
+
+```bash
+# MinIO sağlığını kontrol et
+curl -sf http://127.0.0.1:9000/minio/health/live && echo "OK"
+# Servis durumu
+sudo systemctl status teqlif-minio.service
+sudo teqlif-restart
+```
 
 ---
 
