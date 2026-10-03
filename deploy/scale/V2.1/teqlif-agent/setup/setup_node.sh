@@ -24,6 +24,7 @@ fi
 # ── 2. Dizinler ───────────────────────────────────────────────────────────────
 mkdir -p "$AGENT_DIR" "$DATA_DIR" "$LOG_DIR" "$CFG_DIR" "$REC_DIR/raw" "$REC_DIR/encoded"
 chown "$AGENT_USER:$AGENT_USER" "$DATA_DIR" "$LOG_DIR" "$REC_DIR/raw" "$REC_DIR/encoded"
+chown root:"$AGENT_USER" "$CFG_DIR"
 chmod 750 "$CFG_DIR"
 
 # ── 3. Python venv ────────────────────────────────────────────────────────────
