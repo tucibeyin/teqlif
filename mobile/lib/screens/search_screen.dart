@@ -511,7 +511,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
           ),
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 168,
+              height: 148,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -576,7 +576,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 168,
+                height: 148,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -996,8 +996,8 @@ class _StreamCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 140,
-        margin: const EdgeInsetsDirectional.only(end: 10),
+        width: 118,
+        margin: const EdgeInsetsDirectional.only(end: 8),
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.circular(12),
@@ -1052,7 +1052,7 @@ class _StreamCard extends ConsumerWidget {
               right: 0,
               bottom: 0,
               child: Container(
-                padding: const EdgeInsetsDirectional.fromSTEB(8, 20, 8, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(6, 16, 6, 6),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -1067,15 +1067,15 @@ class _StreamCard extends ConsumerWidget {
                       stream.title,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '@${stream.host.username}',
-                      style: const TextStyle(color: kPrimary, fontSize: 10),
+                      style: const TextStyle(color: kPrimary, fontSize: 9),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

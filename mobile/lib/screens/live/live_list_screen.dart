@@ -374,9 +374,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                crossAxisCount: 3,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
                 childAspectRatio: 0.78,
               ),
               delegate: SliverChildBuilderDelegate(
@@ -419,9 +419,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 4),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                crossAxisCount: 3,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
                 childAspectRatio: 0.78,
               ),
               delegate: SliverChildBuilderDelegate(
@@ -793,103 +793,100 @@ class _StreamGridTile extends ConsumerWidget {
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Square thumbnail area
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Background
-                    if (hasThumbnail)
-                      CachedNetworkImage(
-                        imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl),
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) => const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        errorWidget: (_, _, _) => _gradientBox(),
-                      )
-                    else
-                      _gradientBox(),
-                    // CANLI badge
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          loc.t("liveBadgeLabel"),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
+              // Thumbnail
+              if (hasThumbnail)
+                CachedNetworkImage(
+                  imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl),
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  errorWidget: (_, _, _) => _gradientBox(),
+                )
+              else
+                _gradientBox(),
+              // CANLI badge
+              Positioned(
+                top: 6,
+                left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    loc.t("liveBadgeLabel"),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
                     ),
-                    // Viewer badge
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '👁 ${stream.viewerCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              // Info section
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(8, 7, 8, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stream.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12.5,
-                        color: AppColors.textPrimary(context),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              // Viewer count badge
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '👁 ${stream.viewerCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '@${stream.host.username}',
-                      style: const TextStyle(
-                        color: kPrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              // Bottom overlay — title + username
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsetsDirectional.fromSTEB(6, 18, 6, 6),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black87],
                     ),
-                  ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stream.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '@${stream.host.username}',
+                        style: const TextStyle(
+                          color: kPrimary,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
