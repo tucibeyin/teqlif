@@ -14,6 +14,8 @@ redis_url:      redis://10.10.0.1:6379/0
 cycle_interval: 60
 gossip_timeout: 5
 
+monitor_services: ["gossip-agent"]
+
 peers:
   - {id: node2,  priority: 2, wg_ip: "10.10.0.2"}
   - {id: node1,  priority: 3, wg_ip: "10.10.0.1"}

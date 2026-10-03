@@ -1,6 +1,7 @@
 """teqlif-agent — Gossip HTTP sunucusu ve senkronizasyon istemcisi."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone, timedelta
@@ -31,7 +32,7 @@ class GossipServer:
         self._cfg = cfg
         self._db  = db
 
-    async def serve(self) -> None:
+    async def serve(self, stop: asyncio.Event) -> None:
         app = web.Application(middlewares=[_auth_middleware(self._cfg.gossip_token)])
         app.router.add_get("/ping",  self._handle_ping)
         app.router.add_get("/delta", self._handle_delta)
@@ -40,9 +41,8 @@ class GossipServer:
         site = web.TCPSite(runner, self._cfg.wg_ip, self._cfg.gossip_port)
         await site.start()
         logger.info("Gossip sunucu: %s:%d", self._cfg.wg_ip, self._cfg.gossip_port)
-        # Sonsuza kadar çalışır — agent.py TaskGroup tarafından yönetilir
-        import asyncio
-        await asyncio.Event().wait()
+        await stop.wait()
+        await runner.cleanup()
 
     async def _handle_ping(self, request: web.Request) -> web.Response:
         return web.json_response({"node_id": self._cfg.node_id, "ok": True})

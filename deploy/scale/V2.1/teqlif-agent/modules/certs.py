@@ -28,15 +28,14 @@ _I18N_LANGS      = ["tr", "en", "ar", "ru"]
 _I18N_MAX_AGE_H  = 25        # pack bu saatten eskiyse uyar
 _REDIS_MEM_WARN  = 3.8       # GB — maxmemory=4GB, %95
 
-# Her node'unkinden farklı portlar — config'e taşınabilir
-_PORT_MAP = {
-    "teqlif-app":    [("127.0.0.1", 8000)],
-    "ai-proxy":      [("127.0.0.1", 8001)],
-    "redis":         [("127.0.0.1", 6379)],
-    "postgresql":    [("127.0.0.1", 5432)],
-    "minio":         [("127.0.0.1", 9000)],
-    "livekit":       [("0.0.0.0",   7880)],
-    "gossip-agent":  [("127.0.0.1", 19100)],
+# Sabit servis → port eşlemesi (gossip-agent WireGuard IP'sini dinamik alır)
+_STATIC_PORT_MAP = {
+    "teqlif-app": [("127.0.0.1", 8000)],
+    "ai-proxy":   [("127.0.0.1", 8001)],
+    "redis":      [("127.0.0.1", 6379)],
+    "postgresql": [("127.0.0.1", 5432)],
+    "minio":      [("127.0.0.1", 9000)],
+    "livekit":    [("127.0.0.1", 7880)],
 }
 
 _DOMAINS = [
@@ -93,8 +92,18 @@ class CertWatcher:
 
     # ── Port Kontrolü ─────────────────────────────────────────────────────────
 
+    def _port_map(self) -> dict[str, list[tuple[str, int]]]:
+        """Bu node için geçerli servis→adres haritasını döner."""
+        base = dict(_STATIC_PORT_MAP)
+        # gossip-agent kendi WireGuard IP'sinde dinliyor
+        base["gossip-agent"] = [(self._cfg.wg_ip, self._cfg.gossip_port)]
+        allowed = self._cfg.monitor_services
+        if allowed:
+            base = {k: v for k, v in base.items() if k in allowed}
+        return base
+
     async def _check_ports(self) -> None:
-        for svc, addrs in _PORT_MAP.items():
+        for svc, addrs in self._port_map().items():
             for host, port in addrs:
                 try:
                     conn = asyncio.open_connection(host, port)

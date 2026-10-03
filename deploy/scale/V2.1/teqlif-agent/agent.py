@@ -86,8 +86,8 @@ async def main() -> None:
         logger.info("teqlif-agent durduruldu.")
 
     async with asyncio.TaskGroup() as tg:
-        tg.create_task(g_srv.serve(), name="gossip-server")
-        tg.create_task(run_cycles(),  name="main-cycle")
+        tg.create_task(g_srv.serve(stop), name="gossip-server")
+        tg.create_task(run_cycles(),      name="main-cycle")
 
 
 if __name__ == "__main__":

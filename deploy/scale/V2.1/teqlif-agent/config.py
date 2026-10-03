@@ -38,6 +38,9 @@ class AgentConfig:
     cycle_interval: int   # saniye — ana döngü aralığı
     gossip_timeout: int   # saniye — peer HTTP timeout
 
+    # Port izleme: bu node'da hangi servisler çalışıyor (boş = hepsini kontrol et)
+    monitor_services: list[str] = field(default_factory=list)
+
     @property
     def all_nodes(self) -> list[PeerConfig]:
         """Kendi dahil tüm node'lar."""
@@ -76,6 +79,7 @@ def load_config(path: str | None = None) -> AgentConfig:
         telegram_bot_token = raw.get("telegram_bot_token", ""),
         telegram_chat_id   = raw.get("telegram_chat_id", ""),
         redis_url    = raw.get("redis_url", "redis://127.0.0.1:6379/0"),
-        cycle_interval = raw.get("cycle_interval", 60),
-        gossip_timeout = raw.get("gossip_timeout", 5),
+        cycle_interval  = raw.get("cycle_interval", 60),
+        gossip_timeout  = raw.get("gossip_timeout", 5),
+        monitor_services = raw.get("monitor_services", []),
     )
