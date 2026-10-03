@@ -21,7 +21,7 @@ from app.models.enums import ListingStatus
 from app.database import get_db, AsyncSessionLocal
 from app.models.listing import Listing
 from app.models.user import User
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ async def audience_size(
     actual_cap      = min(reachable, cap)
     free_used       = min(credits_remaining, actual_cap)
     paid_count      = actual_cap - free_used
-    estimated_cost  = paid_count * credit_service.cost_tuci("blast")
+    estimated_cost  = paid_count * credit_service.cost_teqlik("blast")
 
     return {
         "audience_size":          reachable,
@@ -191,7 +191,7 @@ async def send_blast(
     # estimated_cost >= 0 → kullanıcının onayladığı fatura tavanı; bu kadarı geçme.
     desired = body.recipient_count if body.recipient_count else cap
     if body.estimated_cost is not None:
-        max_paid_authorized = body.estimated_cost // credit_service.cost_tuci("blast")
+        max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik("blast")
         actual_count_max = min(desired, credits_remaining + max_paid_authorized, cap)
     else:
         actual_count_max = min(desired, cap)
@@ -266,11 +266,11 @@ async def send_blast(
     # ── Kesin Maliyet Hesabı (Sadece Bulunan FCM Sayısına Göre) ─────────────
     free_used  = min(credits_remaining, actual_count)
     paid_count = actual_count - free_used
-    tuci_cost  = paid_count * credit_service.cost_tuci("blast")
+    teqlik_cost  = paid_count * credit_service.cost_teqlik("blast")
 
     # ── TEQlik bakiye kontrolü ─────────────────────────────────────────────────
-    if tuci_cost > 0 and current_user.teqlik_balance < tuci_cost:
-        return {"error": f"Yetersiz TEQlik bakiyesi. Mevcut: {current_user.teqlik_balance} TEQlik, Gerekli: {tuci_cost} TEQlik"}
+    if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
+        return {"error": f"Yetersiz TEQlik bakiyesi. Mevcut: {current_user.teqlik_balance} TEQlik, Gerekli: {teqlik_cost} TEQlik"}
 
     # ── Kampanya Kaydı Oluştur ────────────────────────────────────────────────
     from app.models.mass_notification import MassNotificationCampaign
@@ -282,21 +282,21 @@ async def send_blast(
         target_count=actual_count,
         sent_count=0, # Asıl gönderimde güncellenir
         click_count=0,
-        spent_tuci=tuci_cost,
+        spent_teqlik=teqlik_cost,
         spent_free_credits=free_used,
     )
     db.add(campaign)
     await db.flush() # get campaign.id
 
     # ── TEQlik düş ──────────────────────────────────────────────────────────────
-    if tuci_cost > 0:
+    if teqlik_cost > 0:
         await db.execute(
             sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
-            {"cost": tuci_cost, "uid": current_user.id},
+            {"cost": teqlik_cost, "uid": current_user.id},
         )
         db.add(TeqlikTransaction(
             user_id=current_user.id,
-            amount=-tuci_cost,
+            amount=-teqlik_cost,
             transaction_type="spend_blast",
             reference_id=body.listing_id,
             reference_type="listing",
@@ -370,7 +370,7 @@ async def send_blast(
     return {
         "campaign_id": campaign.id,
         "sent": actual_count,
-        "spent": tuci_cost,
+        "spent": teqlik_cost,
         "sent_count": actual_count,
     }
 
@@ -441,7 +441,7 @@ async def retargeting_audience(
         actual_cap   = min(reachable_with_token, cap)
         free_used    = min(credits_remaining, actual_cap)
         paid_count   = actual_cap - free_used
-        estimated_cost = paid_count * credit_service.cost_tuci("blast")
+        estimated_cost = paid_count * credit_service.cost_teqlik("blast")
 
         return {
             "listing_id": listing_id,
@@ -450,7 +450,7 @@ async def retargeting_audience(
             "already_bought": already_bought,
             "reachable_audience": reachable_with_token,
             "non_follower_audience": reachable_with_token,
-            "estimated_cost_tuci": estimated_cost,
+            "estimated_cost_teqlik": estimated_cost,
             "blast_credits_remaining": credits_remaining,
             "blast_credits_limit": credit_service.free_limit("blast", is_premium=True),
             "per_blast_cap": cap,
@@ -466,7 +466,7 @@ async def retargeting_audience(
             "already_bought": 0,
             "reachable_audience": 0,
             "non_follower_audience": 0,
-            "estimated_cost_tuci": 0,
+            "estimated_cost_teqlik": 0,
             "blast_credits_remaining": 0,
             "blast_credits_limit": credit_service.free_limit("blast", is_premium=True),
             "per_blast_cap": credit_service.per_op_cap("blast", is_premium=True),
@@ -507,15 +507,15 @@ async def send_retargeting(
 
     desired = body.recipient_count if body.recipient_count else cap
     if body.estimated_cost is not None:
-        max_paid_authorized = body.estimated_cost // credit_service.cost_tuci("blast")
+        max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik("blast")
         actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
     else:
         actual_count = min(desired, cap)
     free_used    = min(credits_remaining, actual_count)
     paid_count   = actual_count - free_used
-    tuci_cost    = paid_count * credit_service.cost_tuci("blast")
+    teqlik_cost    = paid_count * credit_service.cost_teqlik("blast")
 
-    if tuci_cost > 0 and current_user.teqlik_balance < tuci_cost:
+    if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
         raise InsufficientFundsException()
 
     # ClickHouse'dan viewer user_id'lerini çek
@@ -582,14 +582,14 @@ async def send_retargeting(
         sent += len(chunk)
 
     # TEQlik düş + kredi say
-    if tuci_cost > 0:
+    if teqlik_cost > 0:
         await db.execute(
             sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
-            {"cost": tuci_cost, "uid": current_user.id},
+            {"cost": teqlik_cost, "uid": current_user.id},
         )
         db.add(TeqlikTransaction(
             user_id=current_user.id,
-            amount=-tuci_cost,
+            amount=-teqlik_cost,
             transaction_type="spend_retargeting",
             reference_id=body.listing_id,
             reference_type="listing",
@@ -600,11 +600,11 @@ async def send_retargeting(
         await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
 
     logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",
-                current_user.id, sent, free_used, paid_count, tuci_cost)
+                current_user.id, sent, free_used, paid_count, teqlik_cost)
 
     return {
         "sent": sent,
-        "spent": tuci_cost,
+        "spent": teqlik_cost,
         "sent": sent,
     }
 
@@ -629,7 +629,7 @@ async def get_mass_notification_report(
         func.sum(MassNotificationCampaign.target_count).label('total_target'),
         func.sum(MassNotificationCampaign.sent_count).label('total_sent'),
         func.sum(MassNotificationCampaign.click_count).label('total_clicks'),
-        func.sum(MassNotificationCampaign.spent_tuci).label('total_spent_tuci'),
+        func.sum(MassNotificationCampaign.spent_teqlik).label("total_spent_teqlik"),
         func.sum(MassNotificationCampaign.spent_free_credits).label('total_free_credits'),
     ).where(*base)
 
@@ -639,7 +639,7 @@ async def get_mass_notification_report(
         "total_target": int(row.total_target or 0),
         "total_sent": int(row.total_sent or 0),
         "total_clicks": int(row.total_clicks or 0),
-        "total_spent_tuci": int(row.total_spent_tuci or 0),
+        "total_spent_teqlik": int(row.total_spent_teqlik or 0),
         "total_free_credits": int(row.total_free_credits or 0),
     }
 
@@ -650,7 +650,7 @@ async def get_mass_notification_report(
                 MassNotificationCampaign.target_count,
                 MassNotificationCampaign.sent_count,
                 MassNotificationCampaign.click_count,
-                MassNotificationCampaign.spent_tuci,
+                MassNotificationCampaign.spent_teqlik,
                 MassNotificationCampaign.spent_free_credits,
                 MassNotificationCampaign.created_at,
             )
@@ -665,7 +665,7 @@ async def get_mass_notification_report(
                 "target_count": r.target_count,
                 "sent_count": r.sent_count,
                 "click_count": r.click_count,
-                "spent_tuci": r.spent_tuci,
+                "spent_teqlik": r.spent_teqlik,
                 "spent_free_credits": r.spent_free_credits,
                 "sent_at": r.created_at.isoformat(),
             }

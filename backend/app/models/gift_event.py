@@ -33,7 +33,7 @@ class GiftEvent(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     gift_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    cost_tuci: Mapped[int] = mapped_column(Integer, nullable=False)
+    cost_teqlik: Mapped[int] = mapped_column(Integer, nullable=False)
     host_share: Mapped[int] = mapped_column(Integer, nullable=False)
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

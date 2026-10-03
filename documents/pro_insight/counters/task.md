@@ -45,7 +45,7 @@
 **listings.py** — ai_desc işlemleri:
 - `"spend_ai"` → `"spend_ai_desc"` (2 yer)
 
-Kullanıcı teqliq geçmişinde artık hangi özelliği kullandığını görebilir.
+Kullanıcı teqlik geçmişinde artık hangi özelliği kullandığını görebilir.
 
 ---
 
@@ -74,7 +74,7 @@ Kullanıcı teqliq geçmişinde artık hangi özelliği kullandığını görebi
 - `leads.py` → `"spend_lead_gen"` → `"spend_blast"`
 - `listings.py` → `"spend_mass_notification"` → `"spend_blast"`
 
-Her iki blast yolu artık teqliq geçmişinde aynı type ile görünüyor.
+Her iki blast yolu artık teqlik geçmişinde aynı type ile görünüyor.
 
 ---
 

@@ -1,24 +1,24 @@
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, ForbiddenException, InsufficientFundsException, NotFoundException
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction  # noqa: F401
 
 logger = get_logger(__name__)
 
-class TransferTuciCommand:
-    """CQRS Command: Kullanıcılar arası Tuci (bakiye) transferi yapar."""
+class TransferTeqlikCommand:
+    """CQRS Command: Kullanıcılar arası teqlik (bakiye) transferi yapar."""
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
     async def execute(self, sender_id: int, receiver_id: int, amount: int) -> dict:
-        logger.info("[TransferTuciCommand] Başlatıldı | sender=%s receiver=%s amount=%s", sender_id, receiver_id, amount)
+        logger.info("[TransferTeqlikCommand] Başlatıldı | sender=%s receiver=%s amount=%s", sender_id, receiver_id, amount)
 
         if amount <= 0:
-            logger.warning("[TransferTuciCommand] Geçersiz miktar | amount=%s", amount)
+            logger.warning("[TransferTeqlikCommand] Geçersiz miktar | amount=%s", amount)
             raise BadRequestException(code="TRANSFER_AMOUNT_POSITIVE")
 
         if sender_id == receiver_id:
-            logger.warning("[TransferTuciCommand] Kendine transfer hatası | sender=%s", sender_id)
+            logger.warning("[TransferTeqlikCommand] Kendine transfer hatası | sender=%s", sender_id)
             raise ForbiddenException(code="SELF_TRANSFER_FORBIDDEN")
 
         async with self.uow:
@@ -28,14 +28,11 @@ class TransferTuciCommand:
             if sender.teqlik_balance < amount:
                 raise InsufficientFundsException()
 
-            # 2. İşlemleri UoW ile kaydet
             t1_data = {"user_id": sender_id, "amount": -amount, "transaction_type": "transfer_out", "reference_id": receiver_id}
             t2_data = {"user_id": receiver_id, "amount": amount, "transaction_type": "transfer_in", "reference_id": sender_id}
-            
-            await self.uow.transactions.create(obj_in=t1_data) # Stub implementation
-            await self.uow.transactions.create(obj_in=t2_data) # Stub implementation
-            
-            # TODO: TuciTransferredEvent fırlat (Notifier için) — commit'ten sonra event_bus.publish()
 
-        logger.info("[TransferTuciCommand] Başarılı | sender=%s receiver=%s amount=%s", sender_id, receiver_id, amount)
+            await self.uow.transactions.create(obj_in=t1_data)
+            await self.uow.transactions.create(obj_in=t2_data)
+
+        logger.info("[TransferTeqlikCommand] Başarılı | sender=%s receiver=%s amount=%s", sender_id, receiver_id, amount)
         return {"status": "success", "amount": amount}

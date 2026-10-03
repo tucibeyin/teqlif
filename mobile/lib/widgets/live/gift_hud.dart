@@ -110,7 +110,7 @@ class _GiftHudState extends ConsumerState<GiftHud> with SingleTickerProviderStat
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${_displayName(loc)}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} teqliq',
+                          '${_displayName(loc)}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} teqlik',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,

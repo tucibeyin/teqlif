@@ -15,7 +15,7 @@ from app.models.auction import Auction
 from app.models.listing import Listing
 from app.models.purchase import Purchase
 from app.models.stream import LiveStream
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEventCreate
 from app.utils.auth import decode_token, get_current_user
@@ -443,7 +443,7 @@ async def reactivation_credits(
     db: AsyncSession = Depends(get_db),
 ):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
-    reactivation_cost = credit_service.cost_tuci("reactivation")
+    reactivation_cost = credit_service.cost_teqlik("reactivation")
     if not current_user.is_premium:
         return {
             "used": 0,
@@ -528,7 +528,7 @@ async def price_estimate(
 
     # ── Limit / bakiye kontrolü (Sadece bakiye yeterliliği test edilir) ──
     # Not: Limit düşümü işlemin sonunda atomik olarak yapılacak.
-    _ai_price_cost  = credit_service.cost_tuci("ai_price")
+    _ai_price_cost  = credit_service.cost_teqlik("ai_price")
     _ai_price_limit = credit_service.free_limit("ai_price", is_premium=True)
     if current_user.is_premium:
         ai_used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
@@ -637,7 +637,7 @@ async def price_estimate(
             "Platforma eklendikçe tahminler daha isabetli hale gelecek. "
             "Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz."
         ),
-        "tuci_spent": 0,
+        "teqlik_spent": 0,
     }
 
     if not rows:
@@ -813,7 +813,7 @@ async def price_estimate(
         advice += _t.get("aiAdviceMarketClose", "").replace("{price}", close_fmt)
 
     # ── TEQlik düş + sayaç güncelle (Atomik) ────────────────────────────────────
-    tuci_spent = 0
+    teqlik_spent = 0
     ref_id   = body.exclude_listing_id if body.exclude_listing_id else None
     ref_type = "listing" if body.exclude_listing_id else None
     if current_user.is_premium:
@@ -831,7 +831,7 @@ async def price_estimate(
                 reference_type=ref_type,
             ))
             await db.commit()
-            tuci_spent = _ai_price_cost
+            teqlik_spent = _ai_price_cost
     else:
         await db.execute(
             sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
@@ -845,7 +845,7 @@ async def price_estimate(
             reference_type=ref_type,
         ))
         await db.commit()
-        tuci_spent = _ai_price_cost
+        teqlik_spent = _ai_price_cost
 
     return {
         "found_similar": cnt,
@@ -860,7 +860,7 @@ async def price_estimate(
         "category_match_count": cat_matched,
         "advice": advice,
         "alert": alert_msg,
-        "tuci_spent": tuci_spent,
+        "teqlik_spent": teqlik_spent,
     }
 
 

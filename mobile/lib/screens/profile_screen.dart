@@ -3582,24 +3582,24 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   );
 }
 
-// ── teqliq Cüzdan Kartı ───────────────────────────────────────────────────────
+// ── teqlik Cüzdan Kartı ───────────────────────────────────────────────────────
 
-class _TuciWalletCard extends ConsumerStatefulWidget {
+class _TeqlikWalletCard extends ConsumerStatefulWidget {
   final int? balance;
   final List<dynamic> history;
   final Future<void> Function() onRefresh;
 
-  const _TuciWalletCard({
+  const _TeqlikWalletCard({
     required this.balance,
     required this.history,
     required this.onRefresh,
   });
 
   @override
-  ConsumerState<_TuciWalletCard> createState() => _TuciWalletCardState();
+  ConsumerState<_TeqlikWalletCard> createState() => _TeqlikWalletCardState();
 }
 
-class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
+class _TeqlikWalletCardState extends ConsumerState<_TeqlikWalletCard> {
   bool _refreshing = false;
 
   void _openSheet() {
@@ -3607,7 +3607,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _TuciWalletSheet(
+      builder: (_) => _TeqlikWalletSheet(
         balance: widget.balance ?? 0,
         history: widget.history,
       ),
@@ -3668,7 +3668,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    ref.read(localizationProvider).t('lblTuciWallet'),
+                    ref.read(localizationProvider).t('lblTeqlikWallet'),
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -3686,7 +3686,7 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
                           ),
                         )
                       : Text(
-                          '${widget.balance} teqliq',
+                          '${widget.balance} teqlik',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -3731,11 +3731,11 @@ class _TuciWalletCardState extends ConsumerState<_TuciWalletCard> {
   }
 }
 
-class _TuciWalletSheet extends ConsumerWidget {
+class _TeqlikWalletSheet extends ConsumerWidget {
   final int balance;
   final List<dynamic> history;
 
-  const _TuciWalletSheet({required this.balance, required this.history});
+  const _TeqlikWalletSheet({required this.balance, required this.history});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -3790,7 +3790,7 @@ class _TuciWalletSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '$balance teqliq',
+                  '$balance teqlik',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -3845,7 +3845,7 @@ class _TuciWalletSheet extends ConsumerWidget {
                       child: Text(label, style: const TextStyle(fontSize: 13)),
                     ),
                     Text(
-                      '${isPositive ? '+' : ''}$amount teqliq',
+                      '${isPositive ? '+' : ''}$amount teqlik',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -4137,7 +4137,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _balance != null ? '$_balance teqliq' : '—',
+                    _balance != null ? '$_balance teqlik' : '—',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 38,
@@ -4280,7 +4280,7 @@ class _SummaryRow extends ConsumerWidget {
             ),
           ),
           Text(
-            '$amount teqliq',
+            '$amount teqlik',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -4347,7 +4347,7 @@ class _TxnRow extends ConsumerWidget {
             ),
           ),
           Text(
-            '${isPositive ? '+' : ''}$amount teqliq',
+            '${isPositive ? '+' : ''}$amount teqlik',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
@@ -4536,7 +4536,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                           ),
                         ),
                         Text(
-                          '${widget.isPositive ? '+' : ''}${widget.amount} teqliq',
+                          '${widget.isPositive ? '+' : ''}${widget.amount} teqlik',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -4691,7 +4691,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                         (giftEvent['host_share'] as int) > 0)
                       _DetailRow(
                         label: loc.t('walletDetailGiftHostShare'),
-                        value: '${giftEvent['host_share']} teqliq',
+                        value: '${giftEvent['host_share']} teqlik',
                       ),
                     const SizedBox(height: 12),
                     if ((giftEvent['stream'] as Map?)?['id'] != null)

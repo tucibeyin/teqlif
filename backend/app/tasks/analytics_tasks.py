@@ -7,8 +7,8 @@ Mantık:
   1. ClickHouse feed_analytics'ten riskli kullanıcı ID'lerini çek (iki kriter, OR):
        a) Son 5 gündür hiç impression veya click üretmemiş (ama 5-30 gün önce aktifti)
        b) Son 3 günün toplam dwell_time'ı 3-6 gün öncesine göre %70'ten fazla düşmüş
-  2. PostgreSQL tuci_transactions'tan son 30 günde 'churn_airdrop' almış olanları filtrele
-  3. Kalan hak kazananların bakiyesine +10 TUCi ekle, transaction logu yaz
+  2. PostgreSQL teqlik_transactions'tan son 30 günde 'churn_airdrop' almış olanları filtrele
+  3. Kalan hak kazananların bakiyesine +10 teqlik ekle, transaction logu yaz
   4. FCM push bildirimi gönder
 """
 
@@ -189,7 +189,7 @@ async def _filter_already_received(user_ids: set[int]) -> set[int]:
         result = await db.execute(
             text("""
                 SELECT DISTINCT user_id
-                FROM tuci_transactions
+                FROM teqlik_transactions
                 WHERE user_id = ANY(:uids)
                   AND transaction_type = :ttype
                   AND created_at >= NOW() - INTERVAL '30 days'
@@ -211,7 +211,7 @@ async def _filter_already_received(user_ids: set[int]) -> set[int]:
 
 async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
     """
-    Hak kazanan kullanıcılara TUCi yükle ve transaction logu yaz.
+    Hak kazanan kullanıcılara teqlik yükle ve transaction logu yaz.
     Döner: [{"user_id": int, "fcm_token": str|None}, ...]
     """
     if not user_ids:
@@ -236,7 +236,7 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
         # Transaction loglarını toplu ekle
         await db.execute(
             text("""
-                INSERT INTO tuci_transactions (user_id, amount, transaction_type, created_at)
+                INSERT INTO teqlik_transactions (user_id, amount, transaction_type, created_at)
                 SELECT u, :amount, :ttype, NOW()
                 FROM unnest(CAST(:uids AS int[])) AS u
             """),
@@ -256,7 +256,7 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
 
         await db.commit()
 
-    logger.info("[ChurnAirdrop] %d kullanıcıya %d TUCi yüklendi.", len(recipients), _AIRDROP_AMOUNT)
+    logger.info("[ChurnAirdrop] %d kullanıcıya %d teqlik yüklendi.", len(recipients), _AIRDROP_AMOUNT)
     return recipients
 
 
@@ -301,7 +301,7 @@ async def process_churn_and_airdrop(ctx: dict) -> None:
     """
     ARQ cron görevi — her gün 03:30'da çalışır.
     ClickHouse analizinden riskli alıcıları ve inaktif satıcıları tespit eder,
-    son 30 günde airdrop almamışlara 10 TUCi yükler ve role özel bildirim gönderir.
+    son 30 günde airdrop almamışlara 10 teqlik yükler ve role özel bildirim gönderir.
     """
     logger.info("[ChurnAirdrop] Görev başlatıldı.")
     try:

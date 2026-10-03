@@ -10,7 +10,7 @@ from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.listing import Listing
 from app.models.stream import LiveStream
 from app.models.gift_event import GiftEvent
@@ -98,14 +98,14 @@ async def get_balance(
 
 
 @router.post("/transfer")
-async def transfer_tuci(
+async def transfer_teqlik(
     data: TransferRequest,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    from app.use_cases.wallet.commands.transfer_tuci import TransferTuciCommand
+    from app.use_cases.wallet.commands.transfer_teqlik import TransferTeqlikCommand
 
-    return await TransferTuciCommand(uow).execute(
+    return await TransferTeqlikCommand(uow).execute(
         sender_id=current_user.id,
         receiver_id=data.recipient_id,
         amount=data.amount
@@ -166,7 +166,7 @@ async def get_transaction_detail(
             detail["gift_event"] = {
                 "id": gift_ev.id,
                 "gift_name": gift_ev.gift_name,
-                "cost_tuci": gift_ev.cost_tuci,
+                "cost_teqlik": gift_ev.cost_teqlik,
                 "host_share": gift_ev.host_share,
                 "sent_at": gift_ev.sent_at.isoformat(),
                 "sender": {
@@ -233,7 +233,7 @@ async def send_gift(
         sender_id=current_user.id,
         receiver_id=receiver.id,
         gift_name=body.gift_name,
-        cost_tuci=body.cost,
+        cost_teqlik=body.cost,
         host_share=host_share,
     )
     db.add(gift_ev)
@@ -275,7 +275,7 @@ async def send_gift(
         payload = json.dumps({
             "gift_event_id": gift_ev.id,
             "gift_name": body.gift_name,
-            "cost_tuci": body.cost,
+            "cost_teqlik": body.cost,
             "host_share": host_share,
             "sender": current_user.username,
             "receiver": receiver.username,

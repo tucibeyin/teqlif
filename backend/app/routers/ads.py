@@ -23,7 +23,7 @@ from app.core.exceptions import ForbiddenException, InsufficientFundsException, 
 from app.services import credit_service
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
 from app.utils.auth import bearer_scheme, decode_token, get_current_user
 from app.utils.redis_client import get_redis
@@ -69,7 +69,7 @@ async def create_campaign(
 
     # Ücretli modda: TEQlik bakiyesi yeterli mi?
     if not is_free:
-        if current_user.teqlik_balance < credit_service.cost_tuci("boost"):
+        if current_user.teqlik_balance < credit_service.cost_teqlik("boost"):
             raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
@@ -104,16 +104,16 @@ async def create_campaign(
     db.add(campaign)
 
     # TEQlik düşme: yalnızca ücretli modda
-    tuci_cost = 0
+    teqlik_cost = 0
     if not is_free:
-        tuci_cost = credit_service.cost_tuci("boost")
+        teqlik_cost = credit_service.cost_teqlik("boost")
         await db.execute(
             sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
-            {"cost": tuci_cost, "uid": current_user.id},
+            {"cost": teqlik_cost, "uid": current_user.id},
         )
         db.add(TeqlikTransaction(
             user_id=current_user.id,
-            amount=-tuci_cost,
+            amount=-teqlik_cost,
             transaction_type="spend_boost_paid",
             reference_id=body.listing_id,
             reference_type="listing",
@@ -143,8 +143,8 @@ async def create_campaign(
         logger.warning("[Ads] Redis yükleme atlandı: %s", exc)
 
     logger.info(
-        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d is_free=%s tuci_cost=%d",
-        campaign.id, body.listing_id, current_user.id, is_free, tuci_cost,
+        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d is_free=%s teqlik_cost=%d",
+        campaign.id, body.listing_id, current_user.id, is_free, teqlik_cost,
     )
     return {
         "id": campaign.id,
@@ -153,7 +153,7 @@ async def create_campaign(
         "total_budget": campaign.total_budget,
         "cpc_bid": campaign.cpc_bid,
         "is_free": is_free,
-        "tuci_cost": tuci_cost,
+        "teqlik_cost": teqlik_cost,
     }
 
 

@@ -12,7 +12,7 @@ from app.models.enums import ListingStatus
 from app.models.listing_impression import ListingImpression
 from app.models.enums import StreamStatus
 from app.models.ad_campaign import AdCampaign
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
 from app.services import credit_service
 
@@ -42,7 +42,7 @@ class ToggleListingCommand:
             reactivating = listing.status != ListingStatus.ACTIVE
             is_free = False
             is_free_due_to_window = False
-            reactivation_cost = credit_service.cost_tuci("reactivation")
+            reactivation_cost = credit_service.cost_teqlik("reactivation")
 
             if reactivating:
                 created_at = listing.created_at

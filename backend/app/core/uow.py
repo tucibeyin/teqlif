@@ -57,7 +57,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         from app.repositories.category_repository import CategoryRepository
         from app.repositories.auction_repository import AuctionRepository
         from app.repositories.bid_repository import BidRepository
-        from app.repositories.tuci_transaction_repository import TeqlikTransactionRepository
+        from app.repositories.teqlik_transaction_repository import TeqlikTransactionRepository
         from app.repositories.user_repository import UserRepository
         from app.repositories.follow_repository import FollowRepository
         from app.repositories.block_repository import BlockRepository

@@ -9,7 +9,7 @@ from app.database import Base
 
 class AdCampaign(Base):
     """
-    Reklam kampanyası. Bütçe ve tıklama maliyeti TUCi (tam sayı) cinsinden.
+    Reklam kampanyası. Bütçe ve tıklama maliyeti teqlik (tam sayı) cinsinden.
 
     status değerleri:
       active    — yayında, tıklama kabul ediyor

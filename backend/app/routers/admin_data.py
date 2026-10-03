@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.listing import Listing
 from app.models.report import Report
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.ad_campaign import AdCampaign
 from app.schemas.user import UserOut
 from app.utils.auth import get_current_user, hash_password
@@ -75,9 +75,9 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
         select(func.count(Report.id))
     )).scalar() or 0
 
-    total_tuci = (await db.execute(select(func.coalesce(func.sum(User.teqlik_balance), 0)))).scalar() or 0
+    total_teqlik = (await db.execute(select(func.coalesce(func.sum(User.teqlik_balance), 0)))).scalar() or 0
 
-    today_tuci_spent = (await db.execute(
+    today_teqlik_spent = (await db.execute(
         select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
         .where(
             TeqlikTransaction.amount < 0,
@@ -104,8 +104,8 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
         "active_listings": active_listings,
         "active_streams": active_streams,
         "pending_reports": pending_reports,
-        "total_tuci_circulation": total_tuci,
-        "today_tuci_spent": abs(today_tuci_spent),
+        "total_teqlik_circulation": total_teqlik,
+        "today_teqlik_spent": abs(today_teqlik_spent),
         "user_growth_7d": growth,
     }
 
@@ -485,13 +485,13 @@ async def purge_user(
 # ==========================================
 # 5. TEQlik EKONOMİSİ
 # ==========================================
-class TuciAirdropRequest(BaseModel):
+class TeqlikAirdropRequest(BaseModel):
     username: str = Field(min_length=1, max_length=50)
     amount: int = Field(gt=0)
     note: str = ""
 
-@router.get("/tuci/summary")
-async def get_tuci_summary(limit: int = 100, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+@router.get("/teqlik/summary")
+async def get_teqlik_summary(limit: int = 100, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     total_circulation = (await db.execute(
         select(func.coalesce(func.sum(User.teqlik_balance), 0))
     )).scalar() or 0
@@ -541,8 +541,8 @@ async def get_tuci_summary(limit: int = 100, db: AsyncSession = Depends(get_db),
         "transactions": transactions,
     }
 
-@router.post("/tuci/airdrop")
-async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+@router.post("/teqlik/airdrop")
+async def admin_teqlik_airdrop(data: TeqlikAirdropRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     result = await db.execute(select(User).where(User.username == data.username))
     user = result.scalar_one_or_none()
     if not user:

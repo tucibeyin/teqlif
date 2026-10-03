@@ -146,7 +146,7 @@ class ListingNotActiveException(AppException):
 
 
 class InsufficientFundsException(AppException):
-    """402 — Yetersiz TUCi bakiyesi.
+    """402 — Yetersiz teqlik bakiyesi.
     Hint metni I18nService üzerinden INSUFFICIENT_FUNDS_hint kodu ile gelir.
     """
 

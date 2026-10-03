@@ -233,7 +233,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
             {'label': '👆 ${loc.t("reportClickOpen")}', 'value': '$clicks  (%$clickRate)'},
           ]),
           const SizedBox(height: 16),
-          _buildROICard(loc.t("reportROI"), '$spent teqliq', '$costPerClick teqliq / ${loc.t("adReportMetricClicks")}'),
+          _buildROICard(loc.t("reportROI"), '$spent teqlik', '$costPerClick teqlik / ${loc.t("adReportMetricClicks")}'),
           if (campaigns != null && campaigns.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Gönderim Geçmişi',
@@ -251,7 +251,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     final targetCount = campaign['target_count'] as int? ?? 0;
     final sentCount   = campaign['sent_count']   as int? ?? 0;
     final clickCount  = campaign['click_count']  as int? ?? 0;
-    final spentTuci   = campaign['spent_teqlik']   as int? ?? 0;
+    final spentTeqlik   = campaign['spent_teqlik']   as int? ?? 0;
     final freeCredits = campaign['spent_free_credits'] as int? ?? 0;
     final sentAt = DateTime.tryParse(campaign['sent_at'] as String? ?? '')?.toLocal();
     final clickRate = sentCount > 0 ? ((clickCount / sentCount) * 100).toStringAsFixed(1) : '0.0';
@@ -282,16 +282,16 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
             Expanded(child: _statChip('📩', '$sentCount', loc.t("reportSuccessfullyDelivered"))),
             Expanded(child: _statChip('👆', '$clickCount (%$clickRate)', loc.t("reportClickOpen"))),
           ]),
-          if (spentTuci > 0 || freeCredits > 0) ...[
+          if (spentTeqlik > 0 || freeCredits > 0) ...[
             const SizedBox(height: 8),
             Row(children: [
               if (freeCredits > 0)
                 Text('$freeCredits ${loc.t("reportFreeCreditsUsed")}',
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
-              if (freeCredits > 0 && spentTuci > 0)
+              if (freeCredits > 0 && spentTeqlik > 0)
                 Text('  •  ', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
-              if (spentTuci > 0)
-                Text('$spentTuci teqliq ${loc.t("reportTotalSpent")}',
+              if (spentTeqlik > 0)
+                Text('$spentTeqlik teqlik ${loc.t("reportTotalSpent")}',
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11)),
             ]),
           ],
@@ -635,7 +635,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
     final totalViewers  = audience['total_viewers_30d']      as int? ?? 0;
     final alreadyBought = audience['already_bought']          as int? ?? 0;
     final reachable     = audience['reachable_audience']      as int? ?? 0;
-    final cost          = audience['estimated_cost_tuci']     as int? ?? 0;
+    final cost          = audience['estimated_cost_teqlik']     as int? ?? 0;
     final creditsLeft   = audience['blast_credits_remaining'] as int? ?? 0;
     final perBlastCap   = audience['per_blast_cap']           as int? ?? 10;
     final actualCount   = reachable < perBlastCap ? reachable : perBlastCap;
@@ -792,7 +792,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                                     ),
                                   ),
                                   TextSpan(
-                                    text: 'teqliq',
+                                    text: 'teqlik',
                                     style: TextStyle(
                                       fontSize: 14, fontWeight: FontWeight.w700,
                                       color: AppColors.textSecondary(context),

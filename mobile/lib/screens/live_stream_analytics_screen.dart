@@ -111,7 +111,7 @@ class LiveStreamAnalyticsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${NumberFormat('#,##0', 'tr_TR').format(revenue)} teqliq',
+                        '${NumberFormat('#,##0', 'tr_TR').format(revenue)} teqlik',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,
@@ -337,7 +337,7 @@ class LiveStreamAnalyticsScreen extends ConsumerWidget {
                   : 'Unsold',
             ),
             trailing: Text(
-              '${NumberFormat('#,##0', 'tr_TR').format(((item['final_price'] ?? item['start_price']) as num).toDouble())} teqliq',
+              '${NumberFormat('#,##0', 'tr_TR').format(((item['final_price'] ?? item['start_price']) as num).toDouble())} teqlik',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: sold ? Colors.green : AppColors.textSecondary(context),

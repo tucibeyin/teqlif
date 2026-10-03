@@ -15,7 +15,7 @@ FeatureName = Literal["blast", "boost", "ai_price", "ai_desc", "reactivation"]
 # ── Özellik Tablosu ────────────────────────────────────────────────────────────
 # free_standard    : Normal kullanıcının aylık ücretsiz hakkı
 # free_pro         : Pro kullanıcının aylık ücretsiz hakkı
-# cost_tuci        : Ücretli kullanım başına TUCi maliyeti
+# cost_teqlik        : Ücretli kullanım başına teqlik maliyeti
 # per_op_cap_*     : Tek işlemde maks kişi sayısı (yalnızca blast için)
 
 _FEATURES: dict[str, dict] = {
@@ -23,7 +23,7 @@ _FEATURES: dict[str, dict] = {
         "key_prefix":          "blast_credits",
         "free_standard":       3,
         "free_pro":            6,
-        "cost_tuci":           10,
+        "cost_teqlik":           10,
         "per_op_cap_standard": 5,
         "per_op_cap_pro":      10,
     },
@@ -31,25 +31,25 @@ _FEATURES: dict[str, dict] = {
         "key_prefix":    "boost_credits",
         "free_standard": 0,
         "free_pro":      3,
-        "cost_tuci":     50,
+        "cost_teqlik":     50,
     },
     "ai_price": {
         "key_prefix":    "ai_price_credits",
         "free_standard": 0,
         "free_pro":      6,
-        "cost_tuci":     5,
+        "cost_teqlik":     5,
     },
     "ai_desc": {
         "key_prefix":    "ai_desc_credits",
         "free_standard": 0,
         "free_pro":      6,
-        "cost_tuci":     5,
+        "cost_teqlik":     5,
     },
     "reactivation": {
         "key_prefix":    "reactivation_credits",
         "free_standard": 0,
         "free_pro":      3,
-        "cost_tuci":     10,
+        "cost_teqlik":     10,
     },
 }
 
@@ -60,9 +60,9 @@ def free_limit(feature: FeatureName, is_premium: bool) -> int:
     return cfg["free_pro"] if is_premium else cfg["free_standard"]
 
 
-def cost_tuci(feature: FeatureName) -> int:
-    """Ücretli kullanım başına TUCi maliyeti."""
-    return _FEATURES[feature]["cost_tuci"]
+def cost_teqlik(feature: FeatureName) -> int:
+    """Ücretli kullanım başına teqlik maliyeti."""
+    return _FEATURES[feature]["cost_teqlik"]
 
 
 def per_op_cap(feature: FeatureName, is_premium: bool) -> int | None:

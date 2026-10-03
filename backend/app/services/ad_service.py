@@ -2,8 +2,8 @@
 Ad Service — yerel reklam ağı bütçe yönetimi.
 
 Redis, PostgreSQL arasındaki köprüdür:
-  - ad_campaign_budget:{id}  → kalan bütçe (TUCi, integer string)
-  - ad_campaign_cpc:{id}     → tıklama maliyeti (TUCi, integer string)
+  - ad_campaign_budget:{id}  → kalan bütçe (teqlik, integer string)
+  - ad_campaign_cpc:{id}     → tıklama maliyeti (teqlik, integer string)
 
 Race-condition önleme:
   Bütçe düşme işlemi bir Lua script'i ile atomik olarak yapılır.
@@ -29,7 +29,7 @@ _BUDGET_KEY = "ad_campaign_budget:{}"
 _CPC_KEY = "ad_campaign_cpc:{}"
 _CAMPAIGN_TTL = 48 * 3600  # 48 saat — kampanya silinse bile key otomatik temizlenir
 
-# Lua script: atomik check-and-decrement (TUCi, integer).
+# Lua script: atomik check-and-decrement (teqlik, integer).
 # Döndürdüğü değer:
 #   nil    → key yok (kampanya Redis'te kayıtlı değil)
 #   yeni int string → düşme başarılı (negatife geçmiş olabilir — caller kontrol eder)
@@ -103,7 +103,7 @@ async def _reload_campaign_to_redis(campaign_id: int) -> Optional[int]:
     pipe.sadd("ad_campaigns:active", str(campaign_id))
     pipe.expire("ad_campaigns:active", _CAMPAIGN_TTL)
     await pipe.execute()
-    logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%d TUCi", campaign_id, remaining)
+    logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%d teqlik", campaign_id, remaining)
     return campaign.cpc_bid
 
 

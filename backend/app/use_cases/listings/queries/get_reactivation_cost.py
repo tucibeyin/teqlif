@@ -21,7 +21,7 @@ class GetReactivationCostQuery:
 
         within_window = created_at > (datetime.now(timezone.utc) - timedelta(days=30))
 
-        reactivation_cost = credit_service.cost_tuci("reactivation")
+        reactivation_cost = credit_service.cost_teqlik("reactivation")
 
         if current_user.is_premium:
             used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)

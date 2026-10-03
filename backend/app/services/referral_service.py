@@ -4,7 +4,7 @@ Referral (Davet) Motoru — iş mantığı katmanı.
 Sorumluluklar:
   - Benzersiz referral_code üretimi
   - Davet kodu uygulaması (apply_referral)
-  - TUCi ödül transferi (referrer +50, referred +10)
+  - teqlik ödül transferi (referrer +50, referred +10)
 """
 import random
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from sqlalchemy import select, text as sql_text
 
 from app.models.user import User
 from app.models.referral import Referral
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.core.logger import get_logger
 
@@ -119,7 +119,7 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     )
     db.add(referral)
 
-    # Referrer +50 TUCi
+    # Referrer +50 teqlik
     await db.execute(
         sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
         {"amt": REFERRER_BONUS, "uid": referrer.id},
@@ -130,7 +130,7 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         transaction_type="referral_bonus",
     ))
 
-    # Referred +10 TUCi
+    # Referred +10 teqlik
     await db.execute(
         sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
         {"amt": REFERRED_BONUS, "uid": current_user.id},
@@ -145,7 +145,7 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     await db.refresh(current_user)
 
     logger.info(
-        "[REFERRAL] referrer=%s referred=%s | referrer+%d referred+%d TUCi",
+        "[REFERRAL] referrer=%s referred=%s | referrer+%d referred+%d teqlik",
         referrer.id, current_user.id, REFERRER_BONUS, REFERRED_BONUS,
     )
 

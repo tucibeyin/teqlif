@@ -14,7 +14,7 @@ from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.enums import ListingStatus
 from app.models.listing import Listing
 from app.models.mass_notification import MassNotificationCampaign
-from app.models.tuci_transaction import TeqlikTransaction
+from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
 from app.utils.auth import get_current_user, get_current_user_optional, bearer_scheme, decode_token
 from app.use_cases.listings.commands.create_listing import CreateListingCommand
@@ -508,7 +508,7 @@ async def audience_estimate(
     actual_cap     = min(reachable, cap)
     free_used      = min(credits_remaining, actual_cap)
     paid_count     = actual_cap - free_used
-    estimated_cost = paid_count * credit_service.cost_tuci("blast")
+    estimated_cost = paid_count * credit_service.cost_teqlik("blast")
 
     return {
         "audience_size":           reachable,
@@ -713,7 +713,7 @@ async def generate_description(
     logger.info("[API] /generate-description user_id=%s title=%r", current_user.id, body.title[:60])
 
     # ── TEQlik / PRO kredi ön kontrolü ──────────────────────────────────────────
-    _ai_desc_cost  = credit_service.cost_tuci("ai_desc")
+    _ai_desc_cost  = credit_service.cost_teqlik("ai_desc")
     _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
     if current_user.is_premium:
         ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
@@ -738,7 +738,7 @@ async def generate_description(
     description, provider = await generate_via_proxy(params)
 
     # ── Kredi düş (başarılı yanıt sonrası) ───────────────────────────────────
-    tuci_spent = 0
+    teqlik_spent = 0
     try:
         if current_user.is_premium:
             ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
@@ -749,7 +749,7 @@ async def generate_description(
                 )
                 db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
                 await db.commit()
-                tuci_spent = _ai_desc_cost
+                teqlik_spent = _ai_desc_cost
         else:
             await db.execute(
                 sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
@@ -757,12 +757,12 @@ async def generate_description(
             )
             db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
             await db.commit()
-            tuci_spent = _ai_desc_cost
+            teqlik_spent = _ai_desc_cost
     except Exception as exc:
         logger.error("[AI Desc] Kredi sayma başarısız: %s", exc)
 
-    logger.info("[API] /generate-description done | provider=%s tuci_spent=%d", provider, tuci_spent)
-    return {"description": description, "provider": provider, "tuci_spent": tuci_spent}
+    logger.info("[API] /generate-description done | provider=%s teqlik_spent=%d", provider, teqlik_spent)
+    return {"description": description, "provider": provider, "teqlik_spent": teqlik_spent}
 
 
 # ── Send Mass Notification ────────────────────────────────────────────────────
@@ -810,13 +810,13 @@ async def send_mass_notification(
     credits_remaining = max(0, limit - used)
 
     desired = body.recipient_count or cap
-    max_paid_authorized = body.estimated_cost // credit_service.cost_tuci("blast")
+    max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik("blast")
     actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
     free_used    = min(credits_remaining, actual_count)
     paid_count   = actual_count - free_used
-    tuci_cost    = paid_count * credit_service.cost_tuci("blast")
+    teqlik_cost    = paid_count * credit_service.cost_teqlik("blast")
 
-    if tuci_cost > 0 and current_user.teqlik_balance < tuci_cost:
+    if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
         raise InsufficientFundsException()
 
     # Hedef kitleyi oluştur: doğrudan görüntüleyenler + kategori ilgisi olanlar
@@ -873,19 +873,19 @@ async def send_mass_notification(
         listing_id=listing_id,
         target_count=len(fcm_tokens),
         sent_count=sent,
-        spent_tuci=tuci_cost,
+        spent_teqlik=teqlik_cost,
         spent_free_credits=free_used,
     )
     db.add(campaign)
 
-    if tuci_cost > 0:
+    if teqlik_cost > 0:
         await db.execute(
             sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
-            {"cost": tuci_cost, "uid": current_user.id},
+            {"cost": teqlik_cost, "uid": current_user.id},
         )
         db.add(TeqlikTransaction(
             user_id=current_user.id,
-            amount=-tuci_cost,
+            amount=-teqlik_cost,
             transaction_type="spend_blast",
             reference_id=listing_id,
             reference_type="listing",
@@ -898,7 +898,7 @@ async def send_mass_notification(
 
     logging.getLogger(__name__).info(
         "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",
-        current_user.id, listing_id, sent, free_used, paid_count, tuci_cost,
+        current_user.id, listing_id, sent, free_used, paid_count, teqlik_cost,
     )
 
-    return {"sent": sent, "spent": tuci_cost}
+    return {"sent": sent, "spent": teqlik_cost}

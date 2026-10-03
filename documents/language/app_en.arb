@@ -189,7 +189,7 @@
     }
   },
   "giftErrorGeneric": "An error occurred.",
-  "giftInsufficientBalance": "Insufficient balance. Purchase teqliq to send a gift.",
+  "giftInsufficientBalance": "Insufficient balance. Purchase teqlik to send a gift.",
   "giftLoadBalanceButton": "Load Balance",
   "purchaseLoadError": "An error occurred while loading your purchases. Please check your internet connection and try again.",
   "purchaseEmptyState": "You don't have any purchases yet.",
@@ -717,7 +717,7 @@
   "tooltipDelete": "Delete",
   "settingsProTools": "📈 Pro Tools",
   "settingsProActive": "ACTIVE",
-  "walletTitle": "My teqliq Wallet",
+  "walletTitle": "My teqlik Wallet",
   "walletBalance": "Current Balance",
   "walletRecentTxns": "Recent Transactions",
   "walletSpendingSummary": "Spending Summary",
@@ -766,9 +766,9 @@
   "walletDetailGoGiftSender": "Sender Profile",
   "walletDetailGoGiftReceiver": "Recipient Profile",
   "walletDetailGoGiftStream": "Go to Stream Analytics",
-  "walletComingSoonLabel": "teqliq Purchase Coming Soon!",
-  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 teqliq balance.",
-  "walletBuyBtn": "teqliq Purchase Coming Soon",
+  "walletComingSoonLabel": "teqlik Purchase Coming Soon!",
+  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 teqlik balance.",
+  "walletBuyBtn": "teqlik Purchase Coming Soon",
   "reportLoading": "Preparing stream analysis…",
   "reportLoadFailed": "Could not load report.",
   "reportRetry": "Try Again",
@@ -882,9 +882,9 @@
     }
   },
   "blastConfirmCostFreeLabel": "Cost",
-  "blastConfirmCostPaidLabel": "teqliq Cost",
+  "blastConfirmCostPaidLabel": "teqlik Cost",
   "blastSubtitleFree": "Push notification when stream starts • Free",
-  "blastSubtitlePaid": "Push notification when stream starts • {cost} teqliq",
+  "blastSubtitlePaid": "Push notification when stream starts • {cost} teqlik",
   "@blastSubtitlePaid": {
     "placeholders": {
       "cost": {
@@ -913,7 +913,7 @@
       }
     }
   },
-  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} teqliq)",
+  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} teqlik)",
   "@blastBtnPaid": {
     "placeholders": {
       "count": {
@@ -932,7 +932,7 @@
       }
     }
   },
-  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} teqliq",
+  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} teqlik",
   "@blastConfirmBodyPaid": {
     "placeholders": {
       "count": {
@@ -1295,9 +1295,9 @@
   "boostDialogTitle": "Promote Listing",
   "boostDialogPlanLabel": "Campaign plan:",
   "boostDialogTotalBudget": "Total Budget",
-  "boostDialogTotalBudgetValue": "50 teqliq",
+  "boostDialogTotalBudgetValue": "50 teqlik",
   "boostDialogCpc": "Cost per Click",
-  "boostDialogCpcValue": "1 teqliq",
+  "boostDialogCpcValue": "1 teqlik",
   "boostDialogEstClicks": "Estimated Clicks",
   "boostDialogEstClicksValue": "~50 clicks",
   "boostDialogFeedHint": "Your listing will be featured in the \"For You\" feed.",
@@ -1324,15 +1324,15 @@
   },
   "boostDialogPaidDesc": "Your listing will still be featured in the \"For You\" feed.",
   "boostDialogPaidCost": "Cost",
-  "boostDialogPaidCostValue": "50 teqliq",
+  "boostDialogPaidCostValue": "50 teqlik",
   "boostDialogPaidBalance": "Your Current Balance",
-  "boostDialogPaidConfirm": "Pay 50 teqliq & Start",
+  "boostDialogPaidConfirm": "Pay 50 teqlik & Start",
   "boostSuccessFree": "🔥 Your listing is now featured for free!",
-  "boostSuccessPaid": "🔥 Your listing is now featured! (50 teqliq spent)",
+  "boostSuccessPaid": "🔥 Your listing is now featured! (50 teqlik spent)",
   "boostSuccess": "🔥 Your listing is now featured!",
   "boostErrorDefault": "Could not start campaign.",
   "boostErrorConnection": "Connection error. Please try again.",
-  "boostErrorInsufficientTuci": "Insufficient teqliq balance. 50 teqliq is required for a paid boost.",
+  "boostErrorInsufficientTeqlik": "Insufficient teqlik balance. 50 teqlik is required for a paid boost.",
   "boostBtnStart": "Promote Listing",
   "boostBtnReport": "View Ad Performance",
   "adReportTitle": "AD REPORT",
@@ -1486,7 +1486,7 @@
       }
     }
   },
-  "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} teqliq will be deducted from your wallet.",
+  "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} teqlik will be deducted from your wallet.",
   "@retargetingDialogBodyPaid": {
     "placeholders": {
       "count": {
@@ -1497,7 +1497,7 @@
       }
     }
   },
-  "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} teqliq will be charged.",
+  "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} teqlik will be charged.",
   "@retargetingDialogBodyKarma": {
     "placeholders": {
       "count": {
@@ -1511,7 +1511,7 @@
       }
     }
   },
-  "retargetingDialogBodyInsufficient": "Insufficient teqliq balance.\nRequired: {cost} teqliq | Available: {balance} teqliq",
+  "retargetingDialogBodyInsufficient": "Insufficient teqlik balance.\nRequired: {cost} teqlik | Available: {balance} teqlik",
   "@retargetingDialogBodyInsufficient": {
     "placeholders": {
       "cost": {
@@ -1539,7 +1539,7 @@
       }
     }
   },
-  "retargetingPaidSubtitle": "{count} people × 10 teqliq",
+  "retargetingPaidSubtitle": "{count} people × 10 teqlik",
   "@retargetingPaidSubtitle": {
     "placeholders": {
       "count": {
@@ -1565,7 +1565,7 @@
       }
     }
   },
-  "retargetingCostBadge": "{cost} teqliq will be spent",
+  "retargetingCostBadge": "{cost} teqlik will be spent",
   "@retargetingCostBadge": {
     "placeholders": {
       "cost": {
@@ -1574,7 +1574,7 @@
     }
   },
   "retargetingFootnote": "Users will receive a \"Still interested?\" notification. Only sent to non-buyers.",
-  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 teqliq per person.",
+  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 teqlik per person.",
   "retargetingLast30Days": "Last 30 days",
   "retargetingViewerLabel": "viewed",
   "retargetingBoughtLabel": "purchased",
@@ -1642,9 +1642,9 @@
   },
   "profilePhotoUploadError": "Photo could not be uploaded. Try again.",
   "profileInviteCodeError": "Invite code could not be retrieved, try again.",
-  "profileInviteTitle": "Invite Friends, Earn teqliq!",
-  "profileInviteSubtitle": "+50 teqliq per invite, your friend gets +10 teqliq",
-  "profileInviteShareText": "Join Teqlif! The home of live auctions and second-hand shopping 🎁\n\nEnter this invite code when signing up and instantly earn bonus teqliq:\n\n🔑 Code: {code}\n⏳ Expires in: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
+  "profileInviteTitle": "Invite Friends, Earn teqlik!",
+  "profileInviteSubtitle": "+50 teqlik per invite, your friend gets +10 teqlik",
+  "profileInviteShareText": "Join Teqlif! The home of live auctions and second-hand shopping 🎁\n\nEnter this invite code when signing up and instantly earn bonus teqlik:\n\n🔑 Code: {code}\n⏳ Expires in: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
   "@profileInviteShareText": {
     "placeholders": {
       "code": {
@@ -1691,7 +1691,7 @@
   "favoritesEmpty": "No favorites yet",
   "createNeedTitle": "Please enter the listing title first.",
   "aiPriceError": "Could not get price estimate. Please try again.",
-  "teqlikSpent": "{count} teqliq spent.",
+  "teqlikSpent": "{count} teqlik spent.",
   "@teqlikSpent": {
     "placeholders": {
       "count": {
@@ -1741,7 +1741,7 @@
   },
   "listingDeactivateTitle": "Deactivate Listing",
   "listingDeactivateWarning": "If you deactivate, active showcase/promotions will be removed.",
-  "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} teqliq from your balance.",
+  "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} teqlik from your balance.",
   "@listingDeactivateCostHint": {
     "placeholders": {
       "cost": {
@@ -1760,7 +1760,7 @@
       }
     }
   },
-  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} teqliq will be charged.",
+  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} teqlik will be charged.",
   "@listingReactivatePaidPro": {
     "placeholders": {
       "cost": {
@@ -1768,7 +1768,7 @@
       }
     }
   },
-  "listingReactivatePaidNormal": "{cost} teqliq will be charged. Balance: {balance} teqliq.",
+  "listingReactivatePaidNormal": "{cost} teqlik will be charged. Balance: {balance} teqlik.",
   "@listingReactivatePaidNormal": {
     "placeholders": {
       "cost": {
@@ -1780,7 +1780,7 @@
     }
   },
   "listingReactivateProUpsell": "Go PRO to get 5 free reactivations per month.",
-  "listingReactivateInsufficientBalance": "Insufficient balance. Top up teqliq to continue.",
+  "listingReactivateInsufficientBalance": "Insufficient balance. Top up teqlik to continue.",
   "listingReactivateConfirm": "Activate",
   "proReactivationSection": "Listing Reactivation Credits",
   "suggestedStreamers": "Suggested Broadcasters",
@@ -1815,7 +1815,7 @@
   "faqAExploreListings": "The Listings page is a vertical feed of newly added listings selected specifically for your interests by AI. The Explore page is the main search hub where you can make detailed category searches and discover popular sellers.",
   "faqQExploreLiveMessages": "What are the \"Live\" and \"Messages\" menus for?",
   "faqAExploreLiveMessages": "Live: Takes you to the SwipeLive feed where sellers showcase products live. Messages: You can chat directly with sellers and safely negotiate prices (bids).",
-  "faqCatBadges": "Badges, Tags and teqliq ([ICON_TUCI]) Credits",
+  "faqCatBadges": "Badges, Tags and teqlik ([ICON_TEQLIK]) Credits",
   "faqQBadgesVerified": "What is the Blue Tick ([ICON_VERIFIED]) (Verified Account ([ICON_VERIFIED]))?",
   "faqABadgesVerified": "The blue tick indicates that the seller has successfully verified their email and phone number, proving they are a reliable real person.",
   "faqQBadgesPro": "What does the \"👑 (Crown)\" badge mean?",
@@ -1823,9 +1823,9 @@
   "faqQBadgesTrusted": "What do \"✅ Trusted\" and \"⭐ Active\" Seller badges mean?",
   "faqABadgesTrusted": "✅ Trusted Seller: Given to experienced sellers who have verified identity info and built trust. ⭐ Active Seller: Represents dynamic sellers who use the platform frequently and respond quickly.",
   "faqQBadgesSponsored": "What do \"Sponsored\", \"Trending\" and \"LIVE\" tags indicate?",
-  "faqABadgesSponsored": "Sponsored: Promoted listing using teqliq ([ICON_TUCI]) credits. Trending (Fire): The listing is highly viewed or favorited recently. LIVE (Blinking): The seller is currently streaming live for that product.",
-  "faqQBadgesTuci": "What is teqliq ([ICON_TUCI]) and where is it used?",
-  "faqABadgesTuci": "teqliq ([ICON_TUCI]) is our virtual credit currency. It's used to promote listings, send gifts in live streams, get AI price analysis, and reach buyers directly via the Lead Gen feature.",
+  "faqABadgesSponsored": "Sponsored: Promoted listing using teqlik ([ICON_TEQLIK]) credits. Trending (Fire): The listing is highly viewed or favorited recently. LIVE (Blinking): The seller is currently streaming live for that product.",
+  "faqQBadgesTeqlik": "What is teqlik ([ICON_TEQLIK]) and where is it used?",
+  "faqABadgesTeqlik": "teqlik ([ICON_TEQLIK]) is our virtual credit currency. It's used to promote listings, send gifts in live streams, get AI price analysis, and reach buyers directly via the Lead Gen feature.",
   "faqCatLive": "Live Streams (SwipeLive) and Auctions",
   "faqQLiveHost": "What can I do on the Host (Streamer) screen?",
   "faqALiveHost": "You can manage the chat, start an Auction for your product, view incoming Bids instantly, and accept the highest bid to confirm the sale in seconds.",
@@ -1848,7 +1848,7 @@
   "faqCatIcons": "System Icons Glossary",
   "faqIconVerified": "Verified Account ([ICON_VERIFIED]): Shows the user has verified identity or phone.",
   "faqIconPro": "teqlif PRO ([ICON_PRO]): Indicates a PRO member promoted by the platform.",
-  "faqIconTuci": "teqliq ([ICON_TUCI]): The virtual currency used for in-app spending.",
+  "faqIconTeqlik": "teqlik ([ICON_TEQLIK]): The virtual currency used for in-app spending.",
   "faqIconBlast": "Mass Audience Notification ([ICON_BLAST]): Sends your listing/stream as an instant push notification to potential buyers.",
   "faqIconAutoBid": "Auto-Bid ([ICON_AUTOBID]): The system bids on your behalf up to your limit.",
   "faqIconSales": "Sales Insights: Shows your sales volume and profitability.",
@@ -1866,7 +1866,7 @@
   "proToolStreamAnalyticsDesc": "Analyze your live stream viewership and gift data in detail.",
   "faqIconNameVerified": "Verified Account ([ICON_VERIFIED])",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
-  "faqIconNameTuci": "teqliq ([ICON_TUCI])",
+  "faqIconNameTeqlik": "teqlik ([ICON_TEQLIK])",
   "faqIconNameBlast": "Mass Audience Notification ([ICON_BLAST])",
   "faqIconNameAutoBid": "Auto-Bid ([ICON_AUTOBID])",
   "faqIconNameSales": "Sales Insights",
@@ -1886,7 +1886,7 @@
       }
     }
   },
-  "listingBlastCost": "Cost: {cost} teqliq",
+  "listingBlastCost": "Cost: {cost} teqlik",
   "@listingBlastCost": {
     "placeholders": {
       "cost": {
@@ -1988,7 +1988,7 @@
   "audienceNotificationWillGoTo": "Notification will go to:",
   "audienceMonthlyFreeRights": "Monthly Free Rights:",
   "audienceTotalCost": "Total Cost:",
-  "audienceInsufficientTuci": "⚠️ Insufficient teqliq balance, please top up.",
+  "audienceInsufficientTeqlik": "⚠️ Insufficient teqlik balance, please top up.",
   "hostInvitedToStage": "was invited to the stage",
   "hostModeration": "Moderation",
   "hostMute": "Mute",
@@ -2164,7 +2164,7 @@
   "errStoryLoadFailed": "Failed to load story",
   "errThumbnailLoadFailed": "Failed to load thumbnail",
   "btnAddListing": "Add Listing",
-  "lblTuciWallet": "teqliq Wallet",
+  "lblTeqlikWallet": "teqlik Wallet",
   "btnGoPro": "Get Pro",
   "lblProNotificationSettings": "Pro Notification Settings",
   "lblStatusOff": "Off",
@@ -2253,7 +2253,7 @@
   "apiErrReferralExpired": "This invite code has expired (3-day validity has ended).",
   "apiMsgReferralSavedVerify": "Invite code saved! Please complete your Email and Phone verification to claim your reward.",
   "notifReferralTitle": "Invite Reward!",
-  "notifReferralBody": "Your friend ({username}) has used your code and completed verification! You earned {bonus} teqliq.",
+  "notifReferralBody": "Your friend ({username}) has used your code and completed verification! You earned {bonus} teqlik.",
   "@notifReferralBody": {
     "placeholders": {
       "username": {
@@ -2264,7 +2264,7 @@
       }
     }
   },
-  "apiMsgReferralSuccess": "Verifications completed! {referrer_username} invited you. {your_bonus} teqliq has been added to your account.",
+  "apiMsgReferralSuccess": "Verifications completed! {referrer_username} invited you. {your_bonus} teqlik has been added to your account.",
   "@apiMsgReferralSuccess": {
     "placeholders": {
       "referrer_username": {
@@ -2515,7 +2515,7 @@
   },
   "notifRetargetTitle": "A Listing For You",
   "notifChurnAirdropSeller": "Your listings are waiting for you! 🛍️",
-  "notifChurnBodySeller": "We've added {amount} teqliq to your account. Create a new listing and connect with buyers!",
+  "notifChurnBodySeller": "We've added {amount} teqlik to your account. Create a new listing and connect with buyers!",
   "@notifChurnBodySeller": {
     "placeholders": {
       "amount": {
@@ -2524,7 +2524,7 @@
     }
   },
   "notifChurnAirdropBuyer": "We've missed you! 🎁",
-  "notifChurnBodyBuyer": "We've added {amount} teqliq to your account. Browse live streams and spend it!",
+  "notifChurnBodyBuyer": "We've added {amount} teqlik to your account. Browse live streams and spend it!",
   "@notifChurnBodyBuyer": {
     "placeholders": {
       "amount": {
@@ -3135,7 +3135,7 @@
   "uploadErrorServerBusy": "Server is currently busy, please try again later.",
   "uploadErrorAuthExpired": "Your session has expired, please log in again.",
   "uploadErrorGeneric": "Media could not be uploaded, please try again.",
-  "apiErrorInsufficientFundsPro": "You have reached your free AI limit for this month. You need at least {cost} teqliq in your account to continue.",
+  "apiErrorInsufficientFundsPro": "You have reached your free AI limit for this month. You need at least {cost} teqlik in your account to continue.",
   "@apiErrorInsufficientFundsPro": {
     "placeholders": {
       "cost": {
@@ -3143,7 +3143,7 @@
       }
     }
   },
-  "apiErrorInsufficientFundsStd": "Insufficient teqliq balance. You need at least {cost} teqliq in your account for this action.",
+  "apiErrorInsufficientFundsStd": "Insufficient teqlik balance. You need at least {cost} teqlik in your account for this action.",
   "@apiErrorInsufficientFundsStd": {
     "placeholders": {
       "cost": {
