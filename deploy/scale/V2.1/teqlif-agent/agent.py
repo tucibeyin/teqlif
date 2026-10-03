@@ -50,6 +50,7 @@ async def main() -> None:
         HealthMonitor(cfg, db),
         JobWatchdog(cfg, db),
         TTLJanitor(cfg, db),
+        ScheduledCleaner(cfg, db),
         SelfHealer(cfg, db),
         CertWatcher(cfg, db),
     ]
