@@ -44,17 +44,61 @@ teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarz�
 
 ### 1.2 Temel Özellikler
 
+#### Ticaret & Pazar Yeri
 | Özellik | Açıklama |
 |---|---|
-| **Canlı Yayın Açık Artırması** | Satıcı kamerası açıkken izleyiciler gerçek zamanlı teklif verir; her teklif tüm izleyicilere WebSocket ile yayınlanır |
-| **SwipeLive** | TikTok-benzeri dikey kaydırma arayüzü; ML tabanlı sıralama (Thompson Sampling + FAISS) |
-| **Birebir Görüntülü Arama** | WebRTC tabanlı P2P aramaları (LiveKit SFU); iOS CallKit / Android ConnectionService entegrasyonu |
-| **Doğrudan Satış** | Canlı yayın sırasında veya dışında sabit fiyatlı ürün listeleme ve satın alma |
-| **Hikayeler** | 24 saat geçerli fotoğraf/video içerik yayınlama |
-| **teqlik Ekonomisi** | Platform içi sanal para; hediye, bahşiş, teklif ve premium içerik için kullanılır |
-| **AI Açıklama Üretimi** | İlan başlığından otomatik açıklama; Groq/Gemini API üzerinden coğrafi kısıt aşmalı proxy zinciri |
-| **OTA Yerelleştirme** | tr / en / ar / ru — çeviriler Redis üzerinden canlı güncellenir, uygulama güncellemesi gerekmez |
-| **Arama ve Keşfet** | İlan, kullanıcı, yayın arama; kişiselleştirilmiş öneri akışı |
+| **Canlı Yayın Açık Artırması** | Satıcı kamerası açıkken izleyiciler gerçek zamanlı teklif verir; her teklif tüm izleyicilere WebSocket ile yayınlanır. Hemen Al, Duraklat/Devam, kazanan kabulü akışları tam destekli |
+| **Doğrudan Satış (Direct Sale)** | Canlı yayın sırasında veya dışında sabit fiyatlı ürün listeleme; başlat/durdur/devam/bitir durum makinesi |
+| **İlan Yönetimi** | Görsel, video, extra alanlar; FAISS tabanlı embedding; kalite skoru; pHash kopya tespiti; NSFW tarama |
+| **Fiyat Teklifi (Listing Offer)** | Listelenen ilanlar için alıcı–satıcı müzakere akışı |
+| **Presigned Upload (V2.0+)** | İstemci doğrudan MinIO'ya S3 presigned URL ile yükler; API binary almaz |
+
+#### Canlı Yayın & Sosyal
+| Özellik | Açıklama |
+|---|---|
+| **SwipeLive** | TikTok-benzeri dikey kaydırma arayüzü; ML tabanlı sıralama (Thompson Sampling + ALS + FAISS + BPR) |
+| **Co-host** | Yayıncıya ikinci host davet etme; davet/kabul/çıkarma/ayrılma akışı |
+| **Moderasyon** | Yayın içi sustur/kaldır/at/mod yap/mod'u kaldır; moderatör listesi |
+| **Hype Meter** | Kalp akışından beslenen canlı hype göstergesi; balina uyarıları |
+| **Hikayeler** | 24 saatlik fotoğraf/video; beğeni, görüntüleme, izleyici listesi |
+| **Birebir Görüntülü Arama** | WebRTC (LiveKit SFU); iOS CallKit + Android ConnectionService; VoIP push; arama geçmişi |
+
+#### Keşif & Kişiselleştirme
+| Özellik | Açıklama |
+|---|---|
+| **Kişiselleştirilmiş Besleme** | ClickHouse + PostgreSQL sinyalleri; ALS model; "Senin İçin" önbelleği; 6 saatte bir güncelleme |
+| **Arama** | İlan, kullanıcı, keşfet karma; tam metin + embedding benzerliği |
+| **Arama Alarmları** | Kategori/fiyat/konum/anahtar kelime bazlı bildirim alarmı; 15 dk kontrol döngüsü |
+| **Takip Sistemi** | Özel/açık hesap; takip istekleri; takipçi/takip edilenler listeleri |
+| **Önerilen Satıcılar** | Badge skoru bazlı satıcı önerileri |
+
+#### AI & Analitik
+| Özellik | Açıklama |
+|---|---|
+| **AI Açıklama Üretimi** | İlan başlığından otomatik açıklama; Groq/Gemini API; node6 (US) → node5 (EU) → lokal fallback zinciri |
+| **AI Fiyat Tahmini** | ClickHouse + pgvector bazlı piyasa verisi; PRO kredi sistemi |
+| **PRO İçgörüler** | Satıcı performans göstergeleri, piyasa zekası, rakip radar, talep trendleri |
+| **Churn Tahmin & Airdrop** | GradientBoosting churn modeli; risk yüksek kullanıcılara otomatik teqlik hediyesi |
+
+#### Ekonomi & Reklam
+| Özellik | Açıklama |
+|---|---|
+| **teqlik Ekonomisi** | Platform içi sanal para; kayıt bonusu 100 teqlik; hediye, teklif, reklam, AI için kullanılır |
+| **Hediye Sistemi** | Canlı yayında teqlik ile hediye; PRO host %95, standart %70 komisyon |
+| **Reklam Kampanyaları** | Sponsorlu ilan; tıklama/gösterim takibi (ClickHouse); kampanya raporu |
+| **Toplu Bildirim (Blast)** | Hedef kitleye toplu push bildirimi; kitle tahmini; teqlik ile ücretlendirilir |
+| **Yeniden Hedefleme** | Tereddütlü alıcılara otomatik retargeting bildirimleri |
+| **Sıcak Talep (Lead Gen)** | Alıcı → satıcıya doğrudan sıcak talep bildirimi |
+
+#### Platform Servisleri
+| Özellik | Açıklama |
+|---|---|
+| **OTA Yerelleştirme** | tr / en / ar / ru — ARB → Redis; uygulama güncellemesi gerekmez |
+| **Davet Sistemi** | Referral kodu; davet eden + davet edilen teqlik bonusu |
+| **Puanlama** | Alıcı↔satıcı 1–5 puan; puan yanıtı; geçmiş; badge etkisi |
+| **Bildirim Tercihleri** | Takip/teklif/mesaj/yayın vb. per-type açma/kapama; sessiz saatler |
+| **Mesajlaşma** | DM; medya mesajı; mesaj isteği akışı; okunmamış sayacı |
+| **İçerik Moderasyonu** | Şikayet (ilan/kullanıcı); NSFW otomatik tarama; shadowban |
 
 ### 1.3 Paydaşlar
 
@@ -249,8 +293,8 @@ FastAPI monolitik uygulaması Clean Architecture kurallarına göre katmanlandı
 
 ```mermaid
 flowchart TB
-    subgraph PRES["Sunum Katmanı (app/routers)"]
-        ROUTERS["~35 Domain Router\nauction · listing · stream\nchat · wallet · calls\nads · analytics · admin · story"]
+    subgraph PRES["Sunum Katmanı (app/routers) — 36 router"]
+        ROUTERS["Domain Router'ları\nauth · listings · auction · wallet\nstreams · chat · calls · stories\nmessages · notifications · feed\nads · analytics · search · follows\nratings · favorites · users · upload\nmoderation · direct_sale · onboarding\ncatalog · config · i18n · states\nfield_config · search_alerts · leads\nreports · webhooks · client_log\nadmin_auth · admin_data · admin_nodes"]
         SEC["Güvenlik Ara Katmanı\nJWT · CAPTCHA · AntiBotMiddleware"]
     end
 
@@ -261,8 +305,8 @@ flowchart TB
     end
 
     subgraph DOM["Domain Servisleri (app/services)"]
-        ML["ML Pipeline\nFAISS · Thompson Sampling"]
-        SVC["Domain Servisleri\nfeed · auth · wallet\nnotification · recommendation\nlocalization"]
+        ML["ML Pipeline\nFAISS · ALS · BPR · Item2Vec\nThompson Sampling · KMeans\nQuality · NSFW · Churn · NER"]
+        SVC["Domain Servisleri\nfeed · auth · wallet · notification\nrecommendation · localization\ninfluence · fraud_detection\nalert_manager · edge_orchestrator"]
     end
 
     subgraph INFRA["Altyapı Katmanı"]
@@ -307,6 +351,90 @@ flowchart TB
 
 **Kural:** ViewModel BuildContext ve UI sınıflarına bağımlı olamaz. Navigasyon kararları View katmanında alınır; ViewModel sadece state yönetir.
 
+### 5.4 API Yüzeyi (Router Özeti)
+
+| Router | Prefix | Endpoint Sayısı | Notlar |
+|---|---|---|---|
+| `auth` | `/api/auth` | 29 | JWT, refresh cookie, OAuth, cihaz token, KVKK |
+| `listings` | `/api/listings` | 21 | CRUD, AI açıklama, kitle bildirimi, fiyat sinyali |
+| `auction` | `/api/auction` | 12 + 1 WS | Teklif, Hemen Al, kabul/red, state makinesi |
+| `streams` | `/api/streams` | 17 | Yayın CRUD, co-host, kalp, ticaret aktivitesi |
+| `direct_sale` | `/api/direct-sales` | 7 | Yayın içi/dışı sabit fiyat satış |
+| `wallet` | `/api/wallet` | 5 | Bakiye, transfer, hediye, işlem geçmişi |
+| `chat` | `/api/chat` | 1 WS | Yayın sohbet odası |
+| `calls` | `/api/calls` | 7 | LiveKit arama, VoIP push, ACK |
+| `messages` | `/api/messages` | 13 | DM, medya mesajı, mesaj isteği akışı |
+| `notifications` | `/api/notifications` | 4 + 1 WS | Bildirim + gerçek zamanlı WS |
+| `feed` | `/api/feed` | 9 | Ana/kişisel/ForYou beslemeler, sinyal kaydı |
+| `search` | `/api/search` | 4 | Kullanıcı, ilan, keşfet, tam arama |
+| `search_alerts` | `/api/search-alerts` | 3 | Arama alarmları CRUD |
+| `stories` | `/api/stories` | 8 | Hikaye yükle/sil/beğen/izle |
+| `follows` | `/api/follows` | 6 | Takip et/bırak, istekler, listeler |
+| `users` | `/api/users` | 7 | Profil, engel, referral, önerilen satıcılar |
+| `ratings` | `/api/ratings` | 8 | Puan ver, yanıt, özet, okundu işareti |
+| `favorites` | `/api/favorites` | 4 | Favori ilan CRUD |
+| `ads` | `/api/ads` | 6 | Kampanya, tıklama/gösterim, sponsorlu ilanlar |
+| `analytics` | `/api/analytics` | 8 | Event, satış raporu, AI fiyat, PRO içgörüler |
+| `leads` | `/api/leads` | — | Sıcak talep bildirimi |
+| `moderation` | `/api/moderation` | 7 | Yayın içi sustur/at/mod yap |
+| `reports` | `/api/reports` | — | İlan/kullanıcı şikayetleri |
+| `upload` | `/api/upload` | 2 | Görsel, video (thumbnail otomatik) |
+| `catalog` | `/api/catalog` | 2 | Kategori şeması sürümü |
+| `config` | `/api/config` | 2 | Sürüm zorunluluk / mağaza URL |
+| `onboarding` | `/api/onboarding` | 1 | Kategori tercihi; feed cache temizle |
+| `i18n` | `/api/i18n` | — | Çeviri paketi |
+| `states` | `/api/states` | — | İl/ilçe listesi |
+| `admin_*` | `/api/admin/*` | — | Yönetim paneli (veri, node, auth) |
+
+### 5.5 Mobil Uygulama Ekranları
+
+| Kategori | Ekran | İşlevi |
+|---|---|---|
+| **Auth** | `splash_screen` | Token kontrolü, yönlendirme |
+| | `login_screen` | E-posta/kullanıcı adı + şifre |
+| | `register_screen` | Yeni kayıt |
+| | `verify_screen` | E-posta kod doğrulama |
+| | `forgot/reset_password_screen` | Şifre sıfırlama akışı |
+| | `category_onboarding_screen` | Kayıt sonrası kategori tercihi |
+| | `force_update_screen` | Zorunlu uygulama güncellemesi |
+| **Ana Nav** | `main_screen` | Bottom bar navigasyon |
+| | `home_screen` | Ana besleme |
+| | `search_screen` | Arama + keşfet (MVVM ViewModel) |
+| | `profile_screen` | Kendi profili + teqlik cüzdanı |
+| | `public_profile_screen` | Başkasının profili |
+| **İlan** | `create_listing_screen` | İlan oluştur |
+| | `edit_listing_screen` | İlan düzenle |
+| | `listing_detail_screen` | İlan detayı |
+| | `listing_analytics_screen` | Performans analitikleri |
+| **Canlı Yayın** | `host_stream_screen` | Yayıncı kontrol paneli |
+| | `live_list_screen` | Aktif yayınlar listesi |
+| | `swipe_live_screen` | TikTok-tarzı kaydırma |
+| | `seller_report_screen` | Yayın satış özeti |
+| | `live_stream_analytics_screen` | Yayın analitikleri |
+| | `live_stream_history_screen` | Geçmiş yayınlar |
+| | `pro_stream_analytics_screen` | PRO yayın analitikleri |
+| **Ticaret** | `direct_sale_detail_screen` | Direkt satış detayı |
+| | `purchases/sales_screen` | Alım/satım listesi |
+| | `purchase/sale_detail_screen` | İşlem detayı |
+| **Mesaj & Arama** | `messages_screen` | Konuşma listesi |
+| | `call_screen` | Aktif görüntülü/sesli arama |
+| | `incoming_call_screen` | Gelen arama |
+| | `call_history_screen` | Arama geçmişi |
+| **Hikaye** | `story_viewer_screen` | Hikaye izleme (swipe) |
+| **PRO & AI** | `pro_hub_screen` | PRO özellikler merkezi |
+| | `pro_insights_screen` | Satıcı içgörüleri |
+| | `market_intelligence_screen` | Piyasa zekası |
+| | `competitor_radar_screen` | Rakip radar |
+| | `demand_trends_screen` | Talep trendleri |
+| | `retargeting_screen` | Yeniden hedefleme yönetimi |
+| **Sosyal** | `follow_list/requests_screen` | Takip listesi, bekleyenler |
+| | `blocked_users_screen` | Engellenenler |
+| | `my_ratings_screen` | Puanlarım |
+| **Ayarlar** | `notification_settings_screen` | Bildirim tercihleri |
+| | `account_info_screen` | Hesap bilgileri |
+| | `faq_screen` | SSS (token bazlı ikon render) |
+| | `ad_report_screen` | Reklam raporu |
+
 ---
 
 ## 6. Çalışma Zamanı Görünümü
@@ -323,17 +451,19 @@ sequenceDiagram
     participant WS as WebSocket Manager
     participant Viewers as 📱 İzleyiciler (N)
 
-    Bidder->>API: POST /api/auctions/{id}/bid
-    API->>LIM: Redis INCR — 1 teklif / 3s / user
+    Bidder->>API: POST /api/auction/{id}/bid
+    API->>LIM: Redis INCR — 10 teklif/dakika/user
     alt Hız limiti aşıldı
         LIM-->>Bidder: 429 Too Many Requests
     else Limit OK
+        API->>API: Fraud servis kontrolü
         API->>PG: BEGIN tx — SELECT ... FOR UPDATE
-        PG-->>API: current_price, end_time, status
-        API->>API: İş kuralı doğrulaması
-        API->>PG: INSERT bid — UPDATE auction.current_price
+        PG-->>API: current_price, status, current_bidder
+        API->>API: İş kuralı doğrulaması (amount > current)
+        API->>PG: INSERT bid — UPDATE auction current_price
         API->>PG: COMMIT
         API->>RD: PUBLISH auction_broadcast:{id}
+        API->>API: Outbid bildirimi ARQ'ya at
         API-->>Bidder: 200 OK
         RD-->>WS: mesaj alındı
         WS->>WS: tek JSON serialize (orjson)
@@ -341,7 +471,30 @@ sequenceDiagram
     end
 ```
 
-### 6.2 Canlı Yayın Başlatma ve Bağlantı Kesme Akışı
+### 6.2 Açık Artırma Durum Makinesi
+
+```
+                 start()
+[idle] ─────────────────────► [active]
+                                  │
+              pause()             │         resume()
+                  ┌───────────────┤ ◄────────────────┐
+                  ▼               │                   │
+             [paused] ────────────┘                   │
+                  │                                   │
+                  │ end() / accept_bid()              │
+                  ▼                                   │
+             [completed]                              │
+                                                      │
+[active] ──── request_buy_it_now() ──► [buy_it_now_pending]
+                                              │
+                      accept_buy_it_now() ────┤──── reject_buy_it_now()
+                                              ▼         │
+                                         [completed]    ▼
+                                                   (active/paused'a dön)
+```
+
+### 6.3 Canlı Yayın Başlatma ve Bağlantı Kesme Akışı
 
 ```mermaid
 sequenceDiagram
@@ -350,7 +503,7 @@ sequenceDiagram
     participant LK as LiveKit (node3 veya node4)
     participant RD as Redis
 
-    Host->>API: POST /api/streams/start
+    Host->>API: POST /api/streams/
     API->>LK: Oda oluştur + host token üret
     LK-->>API: roomName, token
     API->>RD: SET active_streams:{id} (metadata)
@@ -358,6 +511,7 @@ sequenceDiagram
 
     Host->>LK: SDK connect (wss://live1.teqlif.com)
     LK-->>Host: RoomConnectedEvent
+    Host->>API: POST /api/streams/{id}/confirm-live
     Host->>LK: Camera + Mic track yayınla
 
     Note over LK: BWE düşüşü veya sunucu tarafı oda silme
@@ -372,7 +526,7 @@ sequenceDiagram
     Host->>API: POST /api/streams/{id}/end
 ```
 
-### 6.3 AI Proxy Fallback Zinciri
+### 6.4 AI Proxy Fallback Zinciri
 
 ```mermaid
 sequenceDiagram
@@ -399,7 +553,7 @@ sequenceDiagram
     end
 ```
 
-### 6.4 Medya Yükleme Akışı (Presigned Upload — V2.0+)
+### 6.5 Medya Yükleme Akışı (Presigned Upload — V2.0+)
 
 ```mermaid
 sequenceDiagram
@@ -415,13 +569,14 @@ sequenceDiagram
     Client->>MN: PUT {upload_url} — binary direkt yükleme
     MN-->>Client: 200 OK (etag)
 
-    Client->>API: POST /api/listings veya /api/streams/thumbnail\n  {object_key: "..."}
-    API->>API: object_key'i kaydet (binary almadı)
+    Client->>API: POST /api/listings veya /api/streams/thumbnail
+    Note right of Client: {object_key: "..."} — binary yok
+    API->>API: object_key'i kaydet
 ```
 
 **Not:** API hiçbir zaman binary data almaz. Tüm medya istemci → MinIO direkt akışıyla gider.
 
-### 6.5 OTA Yerelleştirme Akışı
+### 6.6 OTA Yerelleştirme Akışı
 
 ```mermaid
 sequenceDiagram
@@ -449,7 +604,7 @@ sequenceDiagram
 
 **Kural:** SQL'e doğrudan çeviri yazılmaz. ARB → push → `sync_main.py` zinciri zorunludur.
 
-### 6.6 Redis HA Failover Akışı
+### 6.7 Redis HA Failover Akışı
 
 ```mermaid
 sequenceDiagram
@@ -471,7 +626,7 @@ sequenceDiagram
     TIMER->>RD1: ICMP + Redis PING (3 kez başarısız)
     TIMER->>RD2: REPLICAOF NO ONE
     RD2->>RD2: master'a terfi
-    TIMER->>TG: "Redis node1 DOWN — node2 master"
+    TIMER->>TG: "🔴 node1 — Redis çöktü"
 
     Note over RD1: node1 kurtarıldı
     Note over DEV: Manuel geri dönüş
@@ -590,7 +745,7 @@ node2 Mail       ──rsync────────→ node2 /var/backups/mail/
 | L5 — Veri | MinIO bucket policy + presigned TTL | Medyaya süresiz URL yok; her URL 5 dk geçerli |
 | L6 — Sunucu | UFW + SSH key-only | Her node minimum port açık; root login kapalı |
 
-**Gizli veri yönetimi:** `.env`, WireGuard private key, `alertmanager.yml` Git'e girmez. `/project/teqlif/config/` altında 600 perm ile saklanır. Bootstrap sırasında `secrets.env` → `apply_secrets()` → `shred` akışı izlenir.
+**Gizli veri yönetimi:** `.env`, WireGuard private key, `alertmanager.yml` Git'e girmez. `/project/teqlif/config/` altında 600 perm ile saklanır.
 
 ### 8.2 Gözlemlenebilirlik (Observability)
 
@@ -607,10 +762,15 @@ Tüm node'lar
   │
   └── Metrics Agent (teqlif-metrics-agent.service)
         ├── Lokal servis sağlık kontrolü (HTTP + systemd)
-        ├── CPU/RAM/Disk metrikleri
+        ├── CPU/RAM/Disk metrikleri (eşik: CPU>85%, RAM>88%, Disk>82%)
         ├── Hepsini Redis node1'e yazar → EdgeOrchestrator okur
-        └── Telegram alert (servis DOWN / kaynak eşik aşımı)
+        └── Telegram alert: 🔴 servis DOWN / ✅ kurtardı / ⚠️ yedek eski
 ```
+
+**Alert mesaj formatı:**
+- `🔴 node1 — PostgreSQL çöktü` / `✅ node1 — PostgreSQL kurtardı`
+- `🔴 node1 — CPU %91 (limit %85)` / `✅ node1 — CPU normale döndü (%72)`
+- `⚠️ node1 — PostgreSQL yedeği eski (26 saat 30 dk)`
 
 **Uptime Kuma (nodeMonitor):** 13 monitor — API health, WebSocket, MinIO, LiveKit node3/4, Staging, AI Proxy node5/6, Mail (SMTP+IMAP), nodeMonitor Prometheus.
 
@@ -642,6 +802,90 @@ Tüm node'lar
 - DB'de `scheduled_at` alanı eklenir
 - ARQ poller bu alanı sorgular
 - Sistem yeniden başlatıldığında hiçbir geçiş kaybolmaz
+
+### 8.6 ML / AI Pipeline
+
+| Model | Algoritma | Amaç | Yenileme |
+|---|---|---|---|
+| **Listing Embedding** | MiniLM-L6-v2 (384 boyut) | İlan metin benzerliği; FAISS ANN arama | İlan oluşturulunca (ARQ) |
+| **User Preference Embedding** | MiniLM-L6-v2 (384 boyut) | Kullanıcı ilgi profili; kazanılan açık artırma sonrası güncellenir | Satın alma event'i |
+| **Feed ALS** | Alternating Least Squares | Ana besleme kişiselleştirme; matris çarpanlama | Pazar 01:30 |
+| **SwipeLive ALS** | ALS (özelleştirilmiş) | SwipeLive sıralama | Pazar 01:00 |
+| **BPR** | Bayesian Personalized Ranking | Implisit geri bildirimden sıralama | Pzt/Çar/Cum 00:30 |
+| **Item2Vec** | Word2Vec analogu | Birlikte görüntülenen/alınan ilan benzerlikleri | Pazar 02:00 |
+| **KMeans Cold Start** | K-Means kümeleme | Yeni kullanıcılara başlangıç önerileri | Çar+Paz 02:15 |
+| **Thompson Sampling** | Beta dağılımı bandit | Keşfet/istismar dengesi (SwipeLive) | Gerçek zamanlı |
+| **Quality Model** | RandomForest (sklearn) | İlan kalite skoru (0–1); başlık/görsel/açıklama kalitesi | Pazar 02:30 |
+| **NSFW** | Görsel sınıflayıcı | İlan görseli müstehcen tespiti; otomatik moderasyon | İlan oluşturulunca |
+| **pHash** | Perceptual hashing | Kopya ilan tespiti | İlan oluşturulunca |
+| **Churn** | GradientBoosting | Aktiflik kaybı tahmini; airdrop tetikleme | Pazartesi 02:30 |
+| **NER** | Türkçe varlık çıkarımı | İlan başlığı/açıklamasından marka/model | İlan oluşturulunca |
+| **FAISS Index** | IVFFlat (384 boyut) | ANN embedding arama | Günde 2x (00:00, 12:00) |
+| **User Interest** | Sinyal toplama | Kategori ilgi skoru (analytics+like+favori+mesaj) | 4x günlük |
+| **Influence Score** | Graf tabanlı | Kullanıcı etki puanı (takip/etkileşim ağı) | Pazar 05:30 |
+| **Trust Score** | Kural bazlı + ML | Kullanıcı güven puanı; badge etkisi | 02:15 |
+
+**AI Açıklama Zinciri:** `generate_listing_description()` → node6 Gemini (US, kısıtsız) → node6 Groq → node5 Groq → node5 Gemini → lokal MiniLM fallback. Kategori bazlı prompt şablonları (`llm_templates.py`).
+
+### 8.7 teqlik Ekonomisi
+
+**Başlangıç bakiye:** Yeni kullanıcı 100 teqlik alır.
+
+| İşlem Tipi | Akış | Açıklama |
+|---|---|---|
+| `airdrop` | Platform → Kullanıcı | Churn riski yüksek kullanıcılara otomatik hediye |
+| `welcome_bonus` | Platform → Davet edilen | Referral kodu kullanan kullanıcıya |
+| `referral_bonus` | Platform → Davet eden | Davet edilen kayıt tamamlayınca |
+| `web_topup` | TL → teqlik | Web üzerinden satın alma |
+| `send_gift` | Kullanıcı → Sistem | Canlı yayında hediye gönderildi |
+| `receive_gift` | Sistem → Host | Standart %70 / PRO %95 komisyon |
+| `spend_ai` | Kullanıcı → Sistem | AI fiyat tahmini (PRO aylık ücretsiz limit) |
+| `spend_ai_desc` | Kullanıcı → Sistem | AI ilan açıklaması |
+| `spend_ad_campaign` | Kullanıcı → Sistem | Sponsorlu ilan kampanyası |
+| `spend_lead_gen` | Kullanıcı → Sistem | Sıcak talep bildirimi |
+| `spend_blast` | Kullanıcı → Sistem | Toplu kitle bildirimi |
+| `spend_retargeting` | Kullanıcı → Sistem | Yeniden hedefleme bildirimi |
+| `spend_boost` | Kullanıcı → Sistem | Ücretsiz öne çıkarma (PRO kredi) |
+| `spend_boost_paid` | Kullanıcı → Sistem | Ücretli öne çıkarma |
+| `spend_reactivation` | Kullanıcı → Sistem | Pasif ilanı yeniden aktife alma |
+
+**Atomik işlem güvencesi:** `UPDATE users SET teqlik_balance = teqlik_balance - :cost WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance` — race condition koruması tek SQL'de.
+
+**PRO kredi sistemi:** PRO kullanıcılara AI fiyatlama, açıklama, öne çıkarma vb. için aylık ücretsiz kullanım hakkı. Limit aşılınca teqlik ücretlendirilir (`credit_service.py`).
+
+### 8.8 Arka Plan Görevleri (ARQ)
+
+**İki kuyruk:** `default` (genel) ve `critical` (ödeme/para işlemleri).
+
+**Anlık tetiklenen görevler:**
+- `generate_listing_embedding_task` — yeni ilan embedding'i
+- `send_stream_started_notifications` — takipçilere multicast push
+- `send_smart_auction_alerts` — açık artırma bitiminde izleyici uyarısı
+- `notify_outbid_task` / `notify_auction_losers_task` — teklif kaybı bildirimleri
+- `send_budget_match_notifications_task` — bütçe eşleşen kullanıcıya bildirim
+- `nsfw_check_task` / `compute_listing_phash_task` — içerik tarama
+- `delayed_close_stream_task` — host bağlantısı kopunca gecikmeli kapatma
+- `delayed_call_timeout_task` / `invite_timeout_task` — arama/co-host zaman aşımı
+
+**Günlük cron görevleri (seçmeler):**
+| Saat | Görev |
+|---|---|
+| 00:00/12:00 | FAISS index yeniden oluştur |
+| 00:00/06:00/12:00/18:00 | Kullanıcı ilgi skorları hesapla |
+| 01:00 | PostgreSQL dump (node2'ye) |
+| 01:30 | Satıcı badge skorları |
+| 02:00 | Kullanıcı bütçe tavanları (ClickHouse) |
+| 02:15 | Güven skorları |
+| 02:30 | Churn modeli eğit (Pazartesi) |
+| 03:00 | 30 günden eski bildirimleri temizle |
+| 03:30 | Churn & airdrop işleme |
+| 04:00 | Süresi dolan ilanları pasife al |
+| 06:00 | Tereddütlü alıcılara retargeting |
+| Her 5 dk | Redis interaction kuyruğunu PG+ClickHouse'a yaz |
+| Her 10 dk | Reklam kampanyası durumları senkron |
+| Her 15 dk | Arama alarmlarını kontrol et |
+| Saatlik | Süresi dolan hikayeler temizle |
+| Haftalık | ALS/BPR/Item2Vec/KMeans modelleri eğit |
 
 ---
 
@@ -704,10 +948,10 @@ flowchart TB
 |---|---|---|---|
 | S1 | node3 (LiveKit) çöktü | DNS TTL sonrası yeni bağlantılar node4'e; aktif yayınlar kesilir, istemci yeniden bağlanır | RTO: DNS TTL (60 sn) / RPO: 0 |
 | S2 | node1 disk arızası | node2 WAL stream ile son noktadan restore; pg_dump yedek var | RTO: ~30–60 dk / RPO: < 1 dk |
-| S3 | Teklif patlaması (500 eş zamanlı) | Redis rate limiter + PG `SELECT FOR UPDATE` — sadece ilk geçerli teklif işlenir; yarış koşulu yok | - |
+| S3 | Teklif patlaması (500 eş zamanlı) | Redis rate limiter + PG `SELECT FOR UPDATE` — sadece ilk geçerli teklif işlenir; yarış koşulu yok | — |
 | S4 | Gemini (US) rate limit / çöküş | node6 timeout → node5 Groq fallback; kullanıcı fark etmez | RTO: ~5 sn |
 | S5 | node1 Redis çöküşü | HAProxy 3×10 sn check → node2'ye geçiş; auto-promote timer → Telegram bildirim | RTO: ~30 sn / RPO: async replica lag |
-| S6 | Yayıncı BWE kongestion (bant genişliği düşüşü) | LiveKit `roomDeleted` → `_onRoomTerminatedByServer()` — dialog yok, direkt SellerReport | Kullanıcı fark eder |
+| S6 | Yayıncı BWE kongestion | LiveKit `roomDeleted` → `_onRoomTerminatedByServer()` — dialog yok, direkt SellerReport | Kullanıcı fark eder |
 | S7 | Redis OTA cache bozulması | Manuel `DEL pack:{lang} version:{lang}` → `sync_main.py` yeniden çalıştırılır | ~1 dk |
 
 ---
@@ -730,8 +974,8 @@ flowchart TB
 
 | Terim | Açıklama |
 |---|---|
-| **teqlik** | teqlif'in yerel sanal para birimi. Kullanıcılar TL yükler, teqlik satın alır; yayıncıya hediye / teklif olarak kullanır. |
-| **SwipeLive** | TikTok-benzeri dikey kaydırmalı akış arayüzü. PageView + AutomaticKeepAliveClientMixin ile LiveKit bağlantıları evict olmadan ayakta kalır. |
+| **teqlik** | teqlif'in yerel sanal para birimi. Kullanıcılar TL yükler, teqlik satın alır; yayıncıya hediye, teklif, AI, reklam için kullanır. Başlangıç bonusu 100 teqlik. |
+| **SwipeLive** | TikTok-benzeri dikey kaydırmalı akış arayüzü. PageView + AutomaticKeepAliveClientMixin ile LiveKit bağlantıları evict olmadan ayakta kalır. ALS + Thompson Sampling ile sıralanır. |
 | **WAL Streaming** | PostgreSQL Write-Ahead Log anlık aktarımı. node1 → node2 pg_receivewal. RPO < 1 dk sağlar. |
 | **LiveKit SFU** | Selective Forwarding Unit. node3 (live1) ve node4 (live2) üzerinde v1.7.2. Flutter SDK v2.5.4. |
 | **CQRS** | Command Query Responsibility Segregation. Codebase'de `use_cases/commands/` (yaz) ve `use_cases/queries/` (oku) ayrımı. |
@@ -746,9 +990,22 @@ flowchart TB
 | **teqlif-restart** | Tüm node'larda tek yeniden başlatma komutu. `sudo teqlif-restart`. Sıralı durdur → git pull → alembic → sync_main → başlat. |
 | **Unit of Work** | FastAPI'daki transaction yönetim deseni. Birden fazla repository işlemini tek `async with session.begin()` içine alır. |
 | **Outbox Pattern** | Güvenilir event yayımlama. DB commit + event kaydı atomik; ARQ worker outbox'tan okuyarak dağıtır. |
-| **Thompson Sampling** | SwipeLive'da ML sıralama algoritması. Exploration/exploitation dengesi. FAISS ile embedding benzerliği kombinasyonu. |
+| **Thompson Sampling** | SwipeLive'da ML sıralama algoritması. Beta dağılımı bandit; keşfet/istismar dengesi. |
 | **MVVM** | Model-View-ViewModel. Flutter'da ViewModel Riverpod `AsyncNotifier`; BuildContext yok; View `ref.watch` ile dinler. |
 | **Stalwart** | node2'de çalışan Rust tabanlı mail server. `mail.teqlif.com`. SMTP 25/465/587 + IMAP 993. API'den aiosmtplib ile bağlanır. |
+| **Co-host** | Yayıncının davet ettiği ikinci sunum partneri. Kamerası yayında görünür; moderatör yetkisi; davet/kabul/çıkarma akışı. |
+| **Hype Meter** | Yayın sohbetinde kalp gönderimlerinden beslenen anlık heyecan göstergesi. Sönümleme döngüsü WebSocket ile yayınlanır. |
+| **Direct Sale** | Canlı yayın sırasında açık artırma dışında sabit fiyatlı satış. Başlat/durdur/devam/bitir durum makinesi. |
+| **Lead Gen (Sıcak Talep)** | Alıcı, satıcıya doğrudan ilgi bildirimi gönderir; satıcı hedef kitleye push atar. teqlik ile ücretlendirilir. |
+| **Blast (Toplu Bildirim)** | Satıcı ilanına ilgi göstermiş hedef kitleye toplu push bildirimi. Kitle tahmini endpointi mevcuttur. |
+| **Retargeting** | Tereddütlü alıcılara (görüntüleyip almayan) 06:00'da otomatik bildirim. teqlik ile ücretlendirilir. |
+| **PRO** | Premium hesap tipi. Aylık ücretsiz AI fiyatlama, açıklama, öne çıkarma kredisi + yayın analitiği + rakip radar. |
+| **pHash** | Perceptual Hash. İlan görselinin algısal parmak izi; kopya ilan tespiti için kullanılır. |
+| **BPR** | Bayesian Personalized Ranking. Implisit kullanıcı geri bildiriminden (görüntüleme/beğeni/satın alma) kişiselleştirilmiş sıralama. |
+| **ALS** | Alternating Least Squares. Matris çarpanlama tabanlı işbirlikçi filtreleme; Feed ve SwipeLive için ayrı modeller. |
+| **FAISS** | Facebook AI Similarity Search. 384 boyutlu embedding'lerde yaklaşık en yakın komşu araması (IVFFlat). |
+| **EdgeOrchestrator** | Çoklu ML node orkestrasyon servisi. node1 API'sinin ML iş yüklerini node5/6'ya dağıtmasını koordine eder. |
+| **AlertManager** | node1 lifespan'ında çalışan arka plan servisi. 60 sn döngüyle cluster metriklerini denetler; eşik aşımında Telegram bildirimi gönderir; iyileşmede "kurtardı" bildirir. |
 
 ---
 
