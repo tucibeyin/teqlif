@@ -66,7 +66,7 @@ class FaqScreen extends ConsumerWidget {
             question: loc.t('faqQBadgesSponsored'),
             answer: loc.t('faqABadgesSponsored'),
           ),
-          _FaqItem(question: loc.t('faqQBadgesTeqliq'), answer: loc.t('faqABadgesTeqliq')),
+          _FaqItem(question: loc.t('faqQBadgesTeqlik'), answer: loc.t('faqABadgesTeqlik')),
         ],
       ),
       _FaqCategory(
@@ -103,8 +103,8 @@ class FaqScreen extends ConsumerWidget {
             icon: const FaIcon(FontAwesomeIcons.crown, size: 20),
           ),
           _FaqItem(
-            question: loc.t('faqIconNameTeqliq'),
-            answer: loc.t('faqIconTeqliq'),
+            question: loc.t('faqIconNameTeqlik'),
+            answer: loc.t('faqIconTeqlik'),
             icon: const Icon(Icons.monetization_on),
           ),
           _FaqItem(
