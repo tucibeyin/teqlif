@@ -1923,6 +1923,7 @@
   "hostCameraDisabledBackground": "Uygulama arka planda — kameranız kapatıldı",
   "streamConfirmFailed": "Yayın başlatılamadı, lütfen tekrar deneyin",
   "streamEndedByHost": "Yayıncı yayını sonlandırdı",
+  "streamDisconnectedByServer": "Yayın bağlantısı kesildi",
   "streamNotificationAutoSent": "Yayın başladığında bildirim otomatik gönderilir.",
   "proToolStreamHistoryTitle": "Geçmiş Yayınlarım",
   "proToolStreamHistoryEmpty": "Henüz tamamlanmış bir yayınınız yok.",

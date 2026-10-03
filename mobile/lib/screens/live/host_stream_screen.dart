@@ -80,6 +80,8 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Timer? _reconnectTimer;
   static const int _maxReconnectAttempts = 3;
 
+  ConnectionQuality? _connectionQuality;
+
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
@@ -114,6 +116,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     WidgetsBinding.instance.addObserver(this);
     StreamService.isHosting = true;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     WakelockPlus.enable();
     _connect();
     if (widget.streamToken.category != 'chat') {
@@ -485,6 +488,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     _activityScrollCtrl.dispose();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     _listener?.dispose();
     // _endStream() çağrıldıysa _room zaten null — double disconnect olmaz.
     // Kullanıcı geri tuşuyla çıktıysa (_endStream() atlandıysa) burada temizlenir.
@@ -519,10 +523,13 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     try {
       final room = Room(
         roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
           defaultVideoPublishOptions: VideoPublishOptions(
-            simulcast: false,
+            simulcast: true,
+            backupVideoCodec: BackupVideoCodec(codec: 'vp9'),
             videoEncoding: VideoEncoding(
-              maxBitrate: 1500000, // 1.5 Mbps — 720p@30fps tavanı
+              maxBitrate: 3500000, // 3.5 Mbps — 1080p@30fps tavanı
               maxFramerate: 30,
             ),
           ),
@@ -555,12 +562,20 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         }
       });
 
+      _listener!.on<ParticipantConnectionQualityUpdatedEvent>((event) {
+        if (!mounted) return;
+        if (event.participant is LocalParticipant) {
+          setState(() => _connectionQuality = event.connectionQuality);
+        }
+      });
+
       _listener!.on<RoomDisconnectedEvent>((event) {
         if (!mounted) return;
         final reason = event.reason;
-        if (reason == DisconnectReason.clientInitiated ||
-            reason == DisconnectReason.roomDeleted) {
-          _endStream();
+        // clientInitiated: _endStream() zaten listener'ı dispose eder, buraya gelmemeli.
+        if (reason == DisconnectReason.clientInitiated) return;
+        if (reason == DisconnectReason.roomDeleted) {
+          _onRoomTerminatedByServer();
           return;
         }
         _scheduleReconnect();
@@ -576,10 +591,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         await room.localParticipant?.setCameraEnabled(
           true,
           cameraCaptureOptions: const CameraCaptureOptions(
-            params: VideoParametersPresets.h720_169,
+            params: VideoParametersPresets.h1080_169,
           ),
         );
-        await room.localParticipant?.setMicrophoneEnabled(true);
+        await room.localParticipant?.setMicrophoneEnabled(
+          true,
+          audioCaptureOptions: const AudioCaptureOptions(
+            noiseSuppression: true,
+            echoCancellation: true,
+            autoGainControl: true,
+          ),
+        );
       } catch (e) {
         // TrackCreateException: simülatörde kamera/mikrofon donanımı yok — beklenen, Sentry'e gönderme
         if (e is! TrackCreateException) {
@@ -859,6 +881,36 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       _scheduleReconnect();
     } catch (_) {
       _scheduleReconnect();
+    }
+  }
+
+  Future<void> _onRoomTerminatedByServer() async {
+    _listener?.dispose();
+    _listener = null;
+    try {
+      await ref.read(hostStreamViewModelProvider).endStream(widget.streamToken.streamId);
+    } catch (_) {}
+    try {
+      await _room?.localParticipant?.setCameraEnabled(false);
+      await _room?.localParticipant?.setMicrophoneEnabled(false);
+    } catch (_) {}
+    await _room?.disconnect();
+    _room = null;
+    _localVideoTrack = null;
+    if (mounted) {
+      TeqToast.warning(
+        ref.read(localizationProvider).tOr('streamDisconnectedByServer', 'Yayın bağlantısı kesildi'),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SellerReportScreen(
+            streamId: widget.streamToken.streamId,
+            streamTitle: widget.title,
+          ),
+        ),
+        (route) => route.isFirst,
+      );
     }
   }
 
@@ -1154,6 +1206,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                   title: widget.title,
                   micEnabled: _micEnabled,
                   cameraEnabled: _cameraEnabled,
+                  connectionQuality: _connectionQuality,
                   onViewersTap: _showViewers,
                   onToggleMic: _toggleMic,
                   onToggleCamera: _toggleCamera,

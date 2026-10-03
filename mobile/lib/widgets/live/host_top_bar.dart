@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart';
 import '../../services/localization_service.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
@@ -13,6 +14,7 @@ class HostTopBar extends ConsumerWidget {
   final String title;
   final bool micEnabled;
   final bool cameraEnabled;
+  final ConnectionQuality? connectionQuality;
   final VoidCallback onViewersTap;
   final VoidCallback onToggleMic;
   final VoidCallback onToggleCamera;
@@ -26,6 +28,7 @@ class HostTopBar extends ConsumerWidget {
     required this.title,
     required this.micEnabled,
     required this.cameraEnabled,
+    this.connectionQuality,
     required this.onViewersTap,
     required this.onToggleMic,
     required this.onToggleCamera,
@@ -75,6 +78,13 @@ class HostTopBar extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 6),
+
+              // Bağlantı kalitesi göstergesi
+              if (connectionQuality != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _SignalIcon(quality: connectionQuality!),
+                ),
 
               // İzleyici sayısı (tıklanabilir)
               GestureDetector(
@@ -297,6 +307,25 @@ class _MarqueeTextState extends State<_MarqueeText>
         );
       },
     );
+  }
+}
+
+// ── Bağlantı kalitesi ikonu ───────────────────────────────────────────────────
+
+class _SignalIcon extends StatelessWidget {
+  final ConnectionQuality quality;
+  const _SignalIcon({required this.quality});
+
+  @override
+  Widget build(BuildContext context) {
+    final (IconData icon, Color color) = switch (quality) {
+      ConnectionQuality.excellent => (Icons.signal_wifi_4_bar, Colors.greenAccent),
+      ConnectionQuality.good      => (Icons.network_wifi_3_bar, Colors.lightGreenAccent),
+      ConnectionQuality.poor      => (Icons.signal_wifi_bad, Colors.orangeAccent),
+      _                           => (Icons.signal_wifi_off, Colors.redAccent),
+    };
+    return Icon(icon, color: color, size: 16,
+        shadows: const [Shadow(blurRadius: 4, color: Colors.black54)]);
   }
 }
 

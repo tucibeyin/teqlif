@@ -129,21 +129,29 @@ class SearchState {
 
 class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
   StreamSubscription<List<StreamOut>>? _streamsSub;
+  Timer? _streamsTimer;
   int _searchToken = 0;
+  String? _myUsername;
 
   static const int _kPersonalizedChunkSize = 12;
+  static const Duration _kStreamsPollInterval = Duration(seconds: 30);
 
   @override
   FutureOr<SearchState> build() async {
     ref.onDispose(() {
       _streamsSub?.cancel();
+      _streamsTimer?.cancel();
     });
     
     final token = await StorageService.getToken();
     final loggedIn = token != null;
-    
+    if (loggedIn) {
+      final userInfo = await StorageService.getUserInfo();
+      _myUsername = userInfo?['username'] as String?;
+    }
+
     Future.microtask(() => _loadExplore());
-    
+
     return SearchState(isLoggedIn: loggedIn, exploreLoading: true);
   }
 
@@ -267,15 +275,30 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     }
   }
 
+  List<StreamOut> _filterMyStream(List<StreamOut> streams) {
+    if (_myUsername == null || _myUsername!.isEmpty) return streams;
+    return streams.where((s) => s.host.username != _myUsername).toList();
+  }
+
   void _loadExploreStreams(bool bypassCache, void Function() onData) {
     _streamsSub?.cancel();
     _streamsSub = ref.read(streamServiceProvider).getActiveStreamsStream(bypassCache: bypassCache).listen((streams) {
       final current = state.value;
       if (current != null) {
-        state = AsyncValue.data(current.copyWith(exploreStreams: streams.take(4).toList()));
+        state = AsyncValue.data(current.copyWith(exploreStreams: _filterMyStream(streams).take(4).toList()));
       }
       onData();
     }, onError: (_) => onData());
+
+    _streamsTimer?.cancel();
+    _streamsTimer = Timer.periodic(_kStreamsPollInterval, (_) {
+      ref.read(streamServiceProvider).getActiveStreams().then((streams) {
+        final current = state.value;
+        if (current != null) {
+          state = AsyncValue.data(current.copyWith(exploreStreams: _filterMyStream(streams).take(4).toList()));
+        }
+      }).catchError((_) {});
+    });
   }
 
   Future<void> _loadSuggestedSellers() async {

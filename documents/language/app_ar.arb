@@ -1908,6 +1908,7 @@
   "hostCameraDisabledBackground": "التطبيق في الخلفية — تم إيقاف الكاميرا",
   "streamConfirmFailed": "فشل بدء البث، يرجى المحاولة مرة أخرى",
   "streamEndedByHost": "أنهى المضيف البث",
+  "streamDisconnectedByServer": "انقطع اتصال البث",
   "streamNotificationAutoSent": "سيتم إرسال الإشعار تلقائيًا عند بدء البث.",
   "proToolStreamHistoryTitle": "البثوث السابقة",
   "proToolStreamHistoryEmpty": "ليس لديك بثوث مكتملة بعد.",

@@ -1923,6 +1923,7 @@
   "hostCameraDisabledBackground": "App is in background — your camera has been turned off",
   "streamConfirmFailed": "Failed to start stream, please try again",
   "streamEndedByHost": "The host has ended the stream",
+  "streamDisconnectedByServer": "Stream connection lost",
   "streamNotificationAutoSent": "Notification will be sent automatically when stream starts.",
   "proToolStreamHistoryTitle": "Past Streams",
   "proToolStreamHistoryEmpty": "You have no completed streams yet.",
