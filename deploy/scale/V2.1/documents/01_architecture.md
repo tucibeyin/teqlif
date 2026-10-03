@@ -133,7 +133,6 @@ Mobil/Web İstemci (Staging — node5)
 | Google OAuth | Sosyal giriş | Client ID/Secret |
 | Cloudflare Turnstile | CAPTCHA | Site/Secret Key |
 | Sentry | Hata izleme | DSN |
-| Backblaze B2 | Ofsite backup | rclone config |
 | Telegram Bot API | AlertManager (Metrics Agent) | Bot Token + Chat ID |
 
 ### 3.4 AI Proxy Failover Zinciri
@@ -171,7 +170,6 @@ node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/
 node1 PostgreSQL ──pg_dump─────→ node2 /var/backups/pg_dump/ (günlük 01:00)
 node1 Redis      ──RDB copy────→ node2 /var/backups/redis/ (günlük 02:00)
 node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük 03:00)
-node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 ```
 
 ---
@@ -228,7 +226,6 @@ node2 tümü       ──rclone sync─→ Backblaze B2 (günlük 04:00)
 | Backup PG | pg_receivewal + pg_dump | PG17 tools |
 | Backup MinIO | mc (MinIO client) | latest |
 | Backup Redis | redis-cli + rdb | - |
-| Ofsite | rclone | latest |
 
 **Disk layout:**
 ```
@@ -480,7 +477,6 @@ WireGuard mesh (10.10.0.0/24)
 | Apple APNS | node1 | Orta (iOS push) |
 | Google OAuth | node1 | Orta (sosyal giriş) |
 | Sentry | node1/5 | Düşük (izleme) |
-| Backblaze B2 | node2 | Düşük (ofsite backup) |
 
 ---
 
