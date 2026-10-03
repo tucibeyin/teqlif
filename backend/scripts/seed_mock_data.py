@@ -498,16 +498,17 @@ async def seed_clickhouse(
         vcount = random.randint(10, 200)
         t1     = utc(auction.started_at or random_date(60))
         t2     = utc(auction.ended_at   or random_date(60))
+        sid = auction.stream_id or 0
         dse_rows.append([
-            "sale_started", auction.id, auction.stream_id, 0,
-            auction.winner_id, None, auction.listing_id, cat,
-            None, None, None, None, None, vcount, None, None, t1,
+            "sale_started", auction.id, sid, 0,
+            auction.winner_id, 0, auction.listing_id, cat,
+            0, None, None, 0, 0, vcount, "", False, t1,
         ])
         dse_rows.append([
-            "purchase_completed", auction.id, auction.stream_id, 0,
-            auction.winner_id, None, auction.listing_id, cat,
+            "purchase_completed", auction.id, sid, 0,
+            auction.winner_id, 0, auction.listing_id, cat,
             1, auction.final_price, auction.final_price,
-            None, None, vcount, "auction_ended", None, t2,
+            0, 0, vcount, "auction_ended", False, t2,
         ])
 
     if dse_rows:
