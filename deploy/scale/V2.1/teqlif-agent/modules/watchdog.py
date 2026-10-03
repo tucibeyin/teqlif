@@ -6,13 +6,18 @@ Beklenen interval'den %50 fazla süre geçmişse Telegram uyarısı.
 ARQ worker'lar, görev tamamlandığında:
   Redis → HSET teqlif:agent:job_ok <job_name> <iso_timestamp>
 Agent bu key'i okur, gossip DB'ye yazar, watchdog değerlendirir.
+
+Batch job interval'ları deploy/scale/V2.1/schedule.yaml'dan okunur.
+Sürekli görevler (flush_interactions, vb.) burada sabit kalır.
 """
 from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
 import aiohttp
+import yaml
 
 from config import AgentConfig
 from db import AgentDB
@@ -20,44 +25,42 @@ import telegram as tg
 
 logger = logging.getLogger("teqlif-agent.watchdog")
 
-# job_name → beklenen interval (dakika)
-# Bu değerler worker.py cron tanımlarıyla örtüşmeli
-_JOB_REGISTRY: dict[str, int] = {
-    # Temizlik görevleri
-    "cleanup_expired_stories_task":         60,
-    "cleanup_old_notifications_task":       24 * 60,
-    "cleanup_old_stream_likes_task":        24 * 60,
-    "cleanup_ghost_calls_task":             15,
-    "cleanup_hype_highlights_task":         60,
-    "cleanup_stale_streams_task":           2,
-    "cleanup_old_media_messages_task":      7 * 24 * 60,
-    "cleanup_hidden_messages_task":         24 * 60,
-    "cleanup_old_impressions_task":         24 * 60,
-    "deactivate_expired_listings_task":     24 * 60,
-    "delete_expired_inactive_listings_task": 24 * 60,
-    # ML / analitik
-    "compute_user_interests_task":          6 * 60,
-    "populate_foryou_feed_task":            6 * 60,
-    "rebuild_faiss_index_task":             12 * 60,
-    "flush_interactions_to_db":             5,
-    "sync_ad_campaigns_task":               10,
-    "compute_seller_badges_task":           24 * 60,
-    "compute_trust_scores_task":            24 * 60,
-    "compute_trending_listings_task":       6 * 60,
-    "check_search_alerts_task":             15,
-    "hesitation_retarget_task":             24 * 60,
-    "process_churn_and_airdrop":            24 * 60,
-    "calculate_user_budgets_task":          24 * 60,
-    # Haftalık (7 günde bir — 10080 dk toleranslı)
-    "train_feed_als_task":                  7 * 24 * 60,
-    "train_swipe_live_als_task":            7 * 24 * 60,
-    "train_item2vec_task":                  7 * 24 * 60,
-    "train_kmeans_cold_start_task":         4 * 24 * 60,
-    "train_bpr_task":                       3 * 24 * 60,
-    "train_listing_quality_model_task":     7 * 24 * 60,
-    "train_churn_model_task":               7 * 24 * 60,
-    "compute_influence_scores_task":        7 * 24 * 60,
+# deploy/scale/V2.1/teqlif-agent/modules/watchdog.py
+# parents[2] = deploy/scale/V2.1/
+_SCHEDULE_PATH = Path(__file__).parents[2] / "schedule.yaml"
+
+
+def _load_batch_registry() -> dict[str, int]:
+    """schedule.yaml batch bölümünden {job_name: watchdog_m} okur."""
+    try:
+        with open(_SCHEDULE_PATH) as f:
+            cfg = yaml.safe_load(f)
+        return {
+            entry["name"]: int(entry["watchdog_m"])
+            for entry in cfg.get("batch", [])
+            if "watchdog_m" in entry
+        }
+    except Exception as exc:
+        logger.warning("schedule.yaml okunamadı, varsayılan registry kullanılıyor: %s", exc)
+        return {}
+
+
+# Sürekli görevler — schedule.yaml dışında, burada sabit
+_CONTINUOUS_REGISTRY: dict[str, int] = {
+    "cleanup_expired_stories_task":    60,
+    "cleanup_hype_highlights_task":    60,
+    "cleanup_ghost_calls_task":        15,
+    "flush_interactions_to_db":        5,
+    "sync_ad_campaigns_task":          10,
+    "invalidate_swipe_live_configs_task": 15,
+    "sync_swipelive_interests_task":   20,
+    "check_search_alerts_task":        15,
+    "backfill_listing_quality_scores_task": 60,
+    "cleanup_stale_streams_task":      2,
 }
+
+# Birleşik registry: sürekli (sabit) + batch (schedule.yaml'dan)
+_JOB_REGISTRY: dict[str, int] = {**_CONTINUOUS_REGISTRY, **_load_batch_registry()}
 
 _COOLDOWN_SEC = 2 * 60 * 60   # aynı job için 2 saatte bir uyarı
 

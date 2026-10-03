@@ -5,10 +5,11 @@ from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.enums import UserStatus
 from app.utils.redis_client import get_redis
+from app.schedule_loader import get_ttl
 
 logger = logging.getLogger(__name__)
 
-_FORYOU_TTL = 21600       # 6 saat — 4x/gün cron ile yenilenir
+_FORYOU_TTL = get_ttl("foryou_feed_seconds", default=86400)  # schedule.yaml ttl.foryou_feed_seconds
 _POOL_SIZE   = 500        # BPR + recent birleşiminden alınan max ilan
 _MAX_FEED    = 500        # Redis list max uzunluğu
 _MAX_PER_SUBCAT = 2       # Greedy diversity

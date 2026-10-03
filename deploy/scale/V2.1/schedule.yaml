@@ -1,0 +1,263 @@
+# deploy/scale/V2.1/schedule.yaml
+#
+# Tüm ARQ batch job'larının merkezi zamanlama konfigürasyonu.
+# worker.py ve teqlif-agent watchdog bu dosyayı okur.
+# Değişiklik sonrası: sudo teqlif-restart
+#
+# KURAL: Her 5 dakikada veya daha sık çalışan sürekli görevler (flush_interactions,
+# cleanup_stale_streams, cleanup_ghost_calls, vb.) worker.py'de sabit kalır.
+# Bu dosya yalnızca belirli saate bağlı batch görevleri kapsar.
+#
+# Alanlar:
+#   name        : ARQ task fonksiyon adı (job_ok sinyalindeki key ile örtüşmeli)
+#   hour        : UTC saat (int veya list)
+#   minute      : dakika (int)
+#   weekday     : 0=Pzt 1=Sal 2=Çar 3=Per 4=Cum 5,Cmt 6=Paz (int veya list)
+#   day         : ayın günü (int) — aylık işler için
+#   watchdog_m  : watchdog beklenen interval (dakika); aşılırsa Telegram uyarısı
+
+batch:
+
+  # ── 03:00 — Temizlik penceresi açılır ──────────────────────────────────────
+
+  - name: cleanup_old_notifications_task
+    hour: 3
+    minute: 0
+    watchdog_m: 1440          # günlük
+
+  - name: cleanup_old_stream_likes_task
+    hour: 3
+    minute: 0
+    watchdog_m: 1440
+
+  # ── 03:20 — Hafif hesaplama ─────────────────────────────────────────────────
+
+  - name: compute_seller_badges_task
+    hour: 3
+    minute: 20
+    watchdog_m: 1440
+
+  - name: calculate_user_budgets_task
+    hour: 3
+    minute: 20
+    watchdog_m: 1440
+
+  - name: compute_trust_scores_task
+    hour: 3
+    minute: 20
+    watchdog_m: 1440
+
+  # ── 03:40 — Kullanıcı ilgi + trend (CH okuma) ───────────────────────────────
+
+  - name: compute_user_interests_task
+    hour: 3
+    minute: 40
+    watchdog_m: 1440
+
+  - name: compute_trending_categories_task
+    hour: 3
+    minute: 40
+    watchdog_m: 1440
+
+  # ── 03:50 ───────────────────────────────────────────────────────────────────
+
+  - name: compute_user_condition_preferences_task
+    hour: 3
+    minute: 50
+    watchdog_m: 1440
+
+  # ── 03:55 — ForYou 1. çalışma (sabah) ──────────────────────────────────────
+  # 2. çalışma 15:55 UTC = 18:55 TR = akşam prime time hazırlığı
+  - name: populate_foryou_feed_task
+    hour: [3, 15]
+    minute: 55
+    watchdog_m: 720           # 2× günlük, max boşluk ~12 saat
+
+  # ── 04:00 — Trend ilanlar + churn ───────────────────────────────────────────
+
+  - name: compute_trending_listings_task
+    hour: 4
+    minute: 0
+    watchdog_m: 1440
+
+  - name: process_churn_and_airdrop
+    hour: 4
+    minute: 0
+    watchdog_m: 1440
+
+  # ── 04:10-04:30 — Listeleme yönetimi + FAISS ────────────────────────────────
+
+  - name: optimize_notification_timing_task
+    hour: 4
+    minute: 10
+    watchdog_m: 1440
+
+  - name: deactivate_expired_listings_task
+    hour: 4
+    minute: 15
+    watchdog_m: 1440
+
+  - name: delete_expired_inactive_listings_task
+    hour: 4
+    minute: 20
+    watchdog_m: 1440
+
+  - name: cleanup_old_impressions_task
+    hour: 4
+    minute: 30
+    watchdog_m: 1440
+
+  - name: rebuild_faiss_index_task
+    hour: 4
+    minute: 30
+    watchdog_m: 1440          # günlük (önceki 12× saatteydi)
+
+  # ── 05:00 — CPU yoğun başlar, node2 backup biter ────────────────────────────
+
+  - name: nsfw_backfill_task
+    hour: 5
+    minute: 0
+    watchdog_m: 1440
+
+  - name: backfill_phash_task
+    hour: 5
+    minute: 0
+    watchdog_m: 1440
+
+  - name: backfill_listing_embeddings_task
+    hour: 5
+    minute: 0
+    watchdog_m: 1440
+
+  - name: hesitation_retarget_task
+    hour: 5
+    minute: 0
+    watchdog_m: 1440
+
+  # ── 05:10 ───────────────────────────────────────────────────────────────────
+
+  - name: cleanup_old_media_messages_task
+    hour: 5
+    minute: 10
+    watchdog_m: 1440
+
+  - name: cleanup_hidden_messages_task
+    hour: 5
+    minute: 10
+    watchdog_m: 1440
+
+  # ── Haftalık temizlik — 05:00, her günün kendi gününde ──────────────────────
+  # weekday: 0=Pzt 1=Sal 2=Çar 3=Per 4=Cum 5=Cmt 6=Paz
+
+  - name: cleanup_old_analytics_task
+    weekday: 0                # Pazartesi — CH delete (train_churn bu işi bekler)
+    hour: 5
+    minute: 0
+    watchdog_m: 10080         # 7 gün
+
+  - name: cleanup_old_user_interactions_task
+    weekday: 1                # Salı
+    hour: 5
+    minute: 0
+    watchdog_m: 10080
+
+  - name: cleanup_old_stream_viewers_task
+    weekday: 3                # Perşembe
+    hour: 5
+    minute: 0
+    watchdog_m: 10080
+
+  - name: cleanup_old_calls_task
+    weekday: 4                # Cuma
+    hour: 5
+    minute: 0
+    watchdog_m: 10080
+
+  - name: cleanup_old_listing_offers_task
+    weekday: 5                # Cumartesi
+    hour: 5
+    minute: 0
+    watchdog_m: 10080
+
+  - name: cleanup_empty_message_threads_task
+    weekday: 6                # Pazar
+    hour: 5
+    minute: 0
+    watchdog_m: 10080
+
+  - name: cleanup_inactive_search_alerts_task
+    weekday: 6                # Pazar
+    hour: 5
+    minute: 15
+    watchdog_m: 10080
+
+  # ── ML Eğitim — 05:15+ ──────────────────────────────────────────────────────
+  # Bu blok 06:30 UTC = 09:30 TR'de biter — sabah commute başlamadan önce.
+
+  - name: train_bpr_task
+    weekday: [0, 2, 4]        # Pazartesi, Çarşamba, Cuma
+    hour: 5
+    minute: 15
+    watchdog_m: 4320          # 3 gün (Cum→Pzt maks boşluk)
+
+  - name: train_swipe_live_als_task
+    weekday: 6                # Pazar
+    hour: 5
+    minute: 15
+    watchdog_m: 10080
+
+  - name: train_item2vec_task
+    weekday: 6                # Pazar
+    hour: 5
+    minute: 30
+    watchdog_m: 10080
+
+  - name: train_kmeans_cold_start_task
+    weekday: [2, 6]           # Çarşamba, Pazar
+    hour: 5
+    minute: 45
+    watchdog_m: 4320
+
+  - name: train_churn_model_task
+    weekday: 0                # Pazartesi — cleanup_old_analytics (CH delete) sonrası
+    hour: 5
+    minute: 45
+    watchdog_m: 10080
+
+  - name: train_feed_als_task
+    weekday: 6                # Pazar
+    hour: 6
+    minute: 0
+    watchdog_m: 10080
+
+  - name: train_listing_quality_model_task
+    weekday: 6                # Pazar
+    hour: 6
+    minute: 30
+    watchdog_m: 10080
+
+  - name: compute_influence_scores_task
+    weekday: 6                # Pazar
+    hour: 6
+    minute: 30
+    watchdog_m: 10080
+
+  # ── Aylık (ayın 1'i) ────────────────────────────────────────────────────────
+
+  - name: cleanup_old_exchange_rates_task
+    day: 1
+    hour: 5
+    minute: 0
+    watchdog_m: 43200         # 30 gün
+
+  - name: cleanup_old_streams_task
+    day: 1
+    hour: 5
+    minute: 10
+    watchdog_m: 43200
+
+# ── TTL değerleri ───────────────────────────────────────────────────────────────
+# Değişiklik sonrası sudo teqlif-restart gereklidir.
+ttl:
+  foryou_feed_seconds: 86400        # 24 saat — 2× günlük cron, maks boşluk ~12 saat
+  recording_retention_days: 15      # node2 kayıt saklama süresi

@@ -17,6 +17,7 @@ import json
 
 from arq import cron
 from arq.connections import RedisSettings
+from app.schedule_loader import build_cron_jobs
 
 from app.models.enums import ListingStatus
 from app.config import settings
@@ -3661,6 +3662,51 @@ async def check_search_alerts_task(ctx: dict) -> None:
 
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
+# schedule.yaml'daki batch job isimleri → fonksiyon eşlemesi
+# Sürekli görevler (flush_interactions, cleanup_stale_streams, vb.) buraya girmez
+_SCHEDULE_FUNCTIONS = {
+    "cleanup_old_notifications_task":        cleanup_old_notifications_task,
+    "cleanup_old_stream_likes_task":         cleanup_old_stream_likes_task,
+    "compute_seller_badges_task":            compute_seller_badges_task,
+    "calculate_user_budgets_task":           calculate_user_budgets_task,
+    "compute_trust_scores_task":             compute_trust_scores_task,
+    "compute_user_interests_task":           compute_user_interests_task,
+    "compute_trending_categories_task":      compute_trending_categories_task,
+    "compute_user_condition_preferences_task": compute_user_condition_preferences_task,
+    "populate_foryou_feed_task":             populate_foryou_feed_task,
+    "compute_trending_listings_task":        compute_trending_listings_task,
+    "process_churn_and_airdrop":             process_churn_and_airdrop,
+    "optimize_notification_timing_task":     optimize_notification_timing_task,
+    "deactivate_expired_listings_task":      deactivate_expired_listings_task,
+    "delete_expired_inactive_listings_task": delete_expired_inactive_listings_task,
+    "cleanup_old_impressions_task":          cleanup_old_impressions_task,
+    "rebuild_faiss_index_task":              rebuild_faiss_index_task,
+    "nsfw_backfill_task":                    nsfw_backfill_task,
+    "backfill_phash_task":                   backfill_phash_task,
+    "backfill_listing_embeddings_task":      backfill_listing_embeddings_task,
+    "hesitation_retarget_task":              hesitation_retarget_task,
+    "cleanup_old_media_messages_task":       cleanup_old_media_messages_task,
+    "cleanup_hidden_messages_task":          cleanup_hidden_messages_task,
+    "cleanup_old_analytics_task":            cleanup_old_analytics_task,
+    "cleanup_old_user_interactions_task":    cleanup_old_user_interactions_task,
+    "cleanup_old_stream_viewers_task":       cleanup_old_stream_viewers_task,
+    "cleanup_old_calls_task":               cleanup_old_calls_task,
+    "cleanup_old_listing_offers_task":       cleanup_old_listing_offers_task,
+    "cleanup_empty_message_threads_task":    cleanup_empty_message_threads_task,
+    "cleanup_inactive_search_alerts_task":   cleanup_inactive_search_alerts_task,
+    "train_bpr_task":                        train_bpr_task,
+    "train_swipe_live_als_task":             train_swipe_live_als_task,
+    "train_item2vec_task":                   train_item2vec_task,
+    "train_kmeans_cold_start_task":          train_kmeans_cold_start_task,
+    "train_churn_model_task":               train_churn_model_task,
+    "train_feed_als_task":                   train_feed_als_task,
+    "train_listing_quality_model_task":      train_listing_quality_model_task,
+    "compute_influence_scores_task":         compute_influence_scores_task,
+    "cleanup_old_exchange_rates_task":       cleanup_old_exchange_rates_task,
+    "cleanup_old_streams_task":             cleanup_old_streams_task,
+}
+
+
 class WorkerSettings:
     """
     `arq app.worker.WorkerSettings` komutuyla başlatılır.
@@ -3736,98 +3782,27 @@ class WorkerSettings:
     ]
 
     cron_jobs = [
-        # Her saat başında süresi dolan hikayeleri temizle
+        # ── Sürekli görevler (schedule.yaml dışında, sabit) ──────────────────
+        # Her saat başında
         cron(cleanup_expired_stories_task, minute=0),
-        # Her gün 01:00 — eski stream kalplerini temizle
-        cron(cleanup_old_stream_likes_task, hour=1, minute=0),
-        # Her gün 02:00 — ClickHouse'dan kullanıcı bütçe tavanlarını hesapla
-        cron(calculate_user_budgets_task, hour=2, minute=0),
-        # Her gün 02:30 — gizlenmiş mesajları temizle
-        cron(cleanup_hidden_messages_task, hour=2, minute=30),
-        # Her gün 03:00 — eski bildirimleri temizle
-        cron(cleanup_old_notifications_task, hour=3, minute=0),
-        # Her Pazartesi 04:00 — eski analitik verilerini temizle
-        cron(cleanup_old_analytics_task, weekday=0, hour=4, minute=0),
-        # Her 15 dakikada kullanıcı ilgi skorlarını güncelle
-        cron(compute_user_interests_task, hour={0, 6, 12, 18}, minute=0),
-        # Günde 4x For-You feed listesini yeniden oluştur (W4)
-        cron(populate_foryou_feed_task, hour={0, 6, 12, 18}, minute=20),
-        # Günde 4x kullanıcı condition tercihlerini hesapla (W3, Redis: condition_pref:{uid})
-        cron(compute_user_condition_preferences_task, hour={0, 6, 12, 18}, minute=10),
-        # Her 15 dakikada SwipeLive config cache'lerini sıfırla (yeni event gelenlerin)
-        cron(invalidate_swipe_live_configs_task, minute={5, 20, 35, 50}),
-        # Her gün 05:00 — eski listing impressionlarını temizle
-        cron(cleanup_old_impressions_task, hour=5, minute=0),
-        # Her 15 dakikada askıda kalan hayalet aramaları (ghost calls) temizle
-        cron(cleanup_ghost_calls_task, minute={0, 15, 30, 45}),
-        # Her 5 dakikada Redis interaction kuyruğunu DB'ye yaz
-        cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
-        # Her 10 dakikada PostgreSQL → Redis kampanya bütçe senkronizasyonu
-        cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
-        # Her gün 03:30 — churn tespiti ve airdrop
-        cron(process_churn_and_airdrop, hour=3, minute=30),
-        # Her saat başında — süresi dolmuş highlight dosya + DB temizliği
         cron(cleanup_hype_highlights_task, minute=0),
-        # Her gün 04:00 — 30 günlük ilanları pasife al
-        cron(deactivate_expired_listings_task, hour=4, minute=0),
-        # Her gün 04:30 — 60+ gün pasif kalan ilanları sil
-        cron(delete_expired_inactive_listings_task, hour=4, minute=30),
-        # Her gün 01:30 — satıcı rozetlerini hesapla (Redis cache)
-        cron(compute_seller_badges_task, hour=1, minute=30),
-        # Her 6 saatte — trend kategorileri hesapla (Redis cache)
-        cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
-        # Her 30 dakikada — velocity tabanlı trend ilanları (Redis cache, TTL:30dk)
-        cron(compute_trending_listings_task, hour={0, 6, 12, 18}, minute=30),
-        # Haftalık Pazar 01:00 — SwipeLive ALS modeli eğit (W6)
-        cron(train_swipe_live_als_task, weekday=6, hour=1, minute=0),
-        # Haftalık Pazar 01:30 — İlan feed ALS modeli eğit (W7)
-        cron(train_feed_als_task, weekday=6, hour=1, minute=30),
-        # Her gece 04:00 — kullanıcı bazlı bildirim saat optimizasyonu
-        cron(optimize_notification_timing_task, hour=4, minute=0),
-        # APNs Feedback Service cron'u kaldırıldı — Apple legacy endpoint'i Kasım 2020'de kapattı
-        # Her gece 05:15 — NSFW backfill (20 ilan/çalıştırma)
-        cron(nsfw_backfill_task, hour=5, minute=15),
-        # Her gece 05:30 — pHash backfill (50 ilan/çalıştırma)
-        cron(backfill_phash_task, hour=5, minute=30),
-        # Günde 2x 00:00 + 12:00 — FAISS index yeniden kur (ML penceresinden önce)
-        cron(rebuild_faiss_index_task, hour={0, 12}, minute=0),
-        # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
-        cron(sync_swipelive_interests_task, minute={0, 20, 40}),
-        # Gece 02:00 ve 03:00 — embedding'i olmayan ilanlar için backfill (W2)
-        cron(backfill_listing_embeddings_task, hour={2, 3}, minute=0),
-        # Her saat :45'inde — quality_score'u olmayan ilanları rule-based skorla
+        # Her saat :45
         cron(backfill_listing_quality_scores_task, minute=45),
-        # Her Pazar 02:30 — listing kalite modeli haftalık eğitim
-        cron(train_listing_quality_model_task, weekday=6, hour=2, minute=30),
-        # Her Pazar 02:00 — Item2Vec oturum tabanlı collaborative model (04:00'dan taşındı)
-        cron(train_item2vec_task, weekday=6, hour=2, minute=0),
-        # Çarşamba + Pazar 02:15 — K-Means cold start clustering (05:00'dan taşındı)
-        cron(train_kmeans_cold_start_task, weekday={2, 6}, hour=2, minute=15),
-        # Pazartesi + Çarşamba + Cumartesi 00:30 — BPR collaborative filtering (03:00'dan taşındı)
-        cron(train_bpr_task, weekday={0, 2, 5}, hour=0, minute=30),
-        # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
-        cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
-        # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi
-        cron(cleanup_old_media_messages_task, hour=6, minute=30),
-        cron(hesitation_retarget_task, hour=6, minute=0),
-        # Her gün 02:15 — çok sinyalli kullanıcı güven skoru (Redis cache)
-        cron(compute_trust_scores_task, hour=2, minute=15),
-        # Her Pazartesi 02:30 — GradientBoosting churn modeli eğitimi (05:00'dan taşındı)
-        cron(train_churn_model_task, weekday=0, hour=2, minute=30),
-        # Her Pazar 05:30 — NetworkX PageRank influence scoring
-        cron(compute_influence_scores_task, weekday=6, hour=5, minute=30),
-        # Her Salı 04:00 — 90 günden eski user_interactions temizle + VACUUM
-        cron(cleanup_old_user_interactions_task, weekday=1, hour=4, minute=0),
-        # Her Perşembe 04:00 — 10 yıldan eski tamamlanmış stream viewer kayıtlarını temizle
-        cron(cleanup_old_stream_viewers_task, weekday=3, hour=4, minute=0),
-        cron(cleanup_old_listing_offers_task, weekday=5, hour=4, minute=0),
-        cron(cleanup_old_calls_task, weekday=4, hour=4, minute=0),
-        cron(cleanup_empty_message_threads_task, weekday=6, hour=5, minute=0),
-        cron(cleanup_inactive_search_alerts_task, weekday=6, hour=6, minute=0),
-        cron(cleanup_old_exchange_rates_task, day=1, hour=5, minute=0),
-        cron(cleanup_old_streams_task, day=1, hour=6, minute=0),
-        # Her 15 dakikada — yeni ilanları aktif search alert'larla eşleştir
+        # Her 15 dakikada
+        cron(cleanup_ghost_calls_task, minute={0, 15, 30, 45}),
+        cron(invalidate_swipe_live_configs_task, minute={5, 20, 35, 50}),
         cron(check_search_alerts_task, minute={0, 15, 30, 45}),
+        # Her 20 dakikada
+        cron(sync_swipelive_interests_task, minute={0, 20, 40}),
+        # Her 10 dakikada
+        cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
+        # Her 5 dakikada
+        cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
+        # Her 2 dakikada
+        cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
+
+        # ── Batch görevler — schedule.yaml'dan okunur ─────────────────────────
+        *build_cron_jobs(_SCHEDULE_FUNCTIONS),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
