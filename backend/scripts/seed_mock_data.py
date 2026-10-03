@@ -46,6 +46,7 @@ from app.models.tuci_transaction import TuciTransaction
 from app.models.story import Story, StoryView
 from app.models.search_alert import SearchAlert
 from app.models.referral import Referral
+from app.models.ad_campaign import AdCampaign
 
 fake = Faker("tr_TR")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -560,7 +561,8 @@ async def seed_data() -> None:
                 bio="Geliştirici test hesabı",
                 profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
                 is_premium=True,
-                tuci_balance=500,
+                plan_type="monthly",
+                teqlik_balance=500,
             )
             new_users.append(custom_user)
             users.append(custom_user)
@@ -577,7 +579,8 @@ async def seed_data() -> None:
                 bio=fake.sentence()[:150] if random.random() > 0.5 else None,
                 profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
                 is_premium=random.random() < 0.25,
-                tuci_balance=random.randint(0, 1000),
+                plan_type="monthly" if random.random() < 0.25 else None,
+                teqlik_balance=random.randint(0, 1000),
             )
             new_users.append(user)
             users.append(user)
@@ -630,6 +633,7 @@ async def seed_data() -> None:
                     country_code="TR",
                     image_url=imgs[0],
                     image_urls=json.dumps(imgs),
+                    thumbnail_url=imgs[0],
                     extra_fields=extra if extra else None,
                     status=status,
                     created_at=random_date(),
@@ -1122,6 +1126,35 @@ async def seed_data() -> None:
         session.add_all(referrals)
         await session.flush()
 
+        # ── 17b. AD CAMPAIGNS (Pro Araçlar) ──────────────────────────────────────
+        print("📢 17b/20: Reklam kampanyaları oluşturuluyor (Pro Araçlar)...")
+        ad_campaigns: list[AdCampaign] = []
+        pro_users_for_ads = [u for u in users if u.is_premium]
+
+        for user in pro_users_for_ads:
+            user_active_listings = [l for l in listings if l.user_id == user.id and l.status == ListingStatus.ACTIVE]
+            if not user_active_listings:
+                continue
+            for listing in random.sample(user_active_listings, min(3, len(user_active_listings))):
+                total_budget = random.randint(100, 2000)
+                spent = random.randint(0, total_budget)
+                status = "completed" if spent >= total_budget else random.choice(["active", "active", "paused"])
+                start = random_date(60)
+                ad_campaigns.append(AdCampaign(
+                    listing_id=listing.id,
+                    seller_id=user.id,
+                    total_budget=total_budget,
+                    spent_budget=spent,
+                    cpc_bid=random.randint(5, 50),
+                    status=status,
+                    start_date=start.date(),
+                    end_date=(start + timedelta(days=random.randint(7, 30))).date(),
+                    created_at=start,
+                ))
+
+        session.add_all(ad_campaigns)
+        await session.flush()
+
         # ── 18. ANALYTICS ────────────────────────────────────────────────────────
         print("📊 18/20: PostgreSQL analitik verileri oluşturuluyor...")
         analytics_events: list[AnalyticsEvent] = []
@@ -1173,6 +1206,7 @@ async def seed_data() -> None:
             ("direct_messages", messages), ("notifications", notifications),
             ("ratings", ratings), ("tuci_transactions", transactions),
             ("search_alerts", search_alerts), ("referrals", referrals),
+            ("ad_campaigns", ad_campaigns),
         ]:
             print(f"     {name}: {len(obj)}")
 
