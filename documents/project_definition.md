@@ -79,7 +79,7 @@ Oyunlaştırma ve FOMO Üretimi: "ani ölüm" (sudden death) açık artırmalar�
 
 **Platform Altyapısı**
 
-- Platform içi Tuci kredi sistemi: yapay zeka araçları, ilan öne çıkarma, blast kampanyaları ve canlı yayın hediye işlemleri
+- Platform içi teqliq kredi sistemi: yapay zeka araçları, ilan öne çıkarma, blast kampanyaları ve canlı yayın hediye işlemleri
 - Satın alma ve satış yönetimi; sipariş detay ve geçmiş
 - Bildirim merkezi: gerçek zamanlı bildirimler
 - OTA (Over-The-Air) yerelleştirme: Türkçe, İngilizce, Rusça, Arapça
@@ -96,7 +96,7 @@ Oyunlaştırma ve FOMO Üretimi: "ani ölüm" (sudden death) açık artırmalar�
 - **Davranışsal analitik:** ClickHouse tabanlı yüksek hacimli kullanıcı etkileşim ve reklam olay işleme
 - **Öneri motoru:** ClickHouse üzerinde kullanıcı ilgi alanı hesaplama ve sinyal işleme
 - **OTA yerelleştirme:** Uygulama güncellemesi gerektirmeden çok dilli içerik dağıtımı ve önbellekleme
-- **Tuci kredi altyapısı:** Yapay zeka araçları, öne çıkarma, blast kampanyaları ve canlı yayın hediye işlemleri için platform içi kredi sistemi; ilerleyen aşamada gerçek para ile Tuci yükleme ve ödeme entegrasyonu planlanmaktadır
+- **teqliq kredi altyapısı:** Yapay zeka araçları, öne çıkarma, blast kampanyaları ve canlı yayın hediye işlemleri için platform içi kredi sistemi; ilerleyen aşamada gerçek para ile teqliq yükleme ve ödeme entegrasyonu planlanmaktadır
 
 ---
 
@@ -163,10 +163,10 @@ teqlif, kullanıcı verilerini Virginia, ABD'deki (US-EAST-VA) bulut altyapısı
 ## 9. GELİR MODELİ
 
 - İşlem başına komisyon: açık artırma, direkt satış ve ilan satışlarından
-- Tuci kredisi satışı: ilan öne çıkarma, blast bildirimi kampanyaları ve yapay zeka araç kullanımı
-- Canlı yayın hediye ekonomisi: izleyicilerin yayıncıya Tuci ile hediye göndermesi
+- teqliq kredisi satışı: ilan öne çıkarma, blast bildirimi kampanyaları ve yapay zeka araç kullanımı
+- Canlı yayın hediye ekonomisi: izleyicilerin yayıncıya teqliq ile hediye göndermesi
 - Sponsorlu ilan gelirleri: tıklama ve görüntüleme bazlı reklam kampanyaları
-- Planlanan: gerçek para ile Tuci yükleme, platform içi ödeme entegrasyonu ve Pro araçlar için abonelik modeli
+- Planlanan: gerçek para ile teqliq yükleme, platform içi ödeme entegrasyonu ve Pro araçlar için abonelik modeli
 
 ---
 
@@ -213,6 +213,6 @@ Platform bu iddiayı somut bir mimariyle desteklemektedir:
 - SwipeLive ile kişiselleştirilmiş karma içerik akışı ve FOMO mekanizmasıyla dönüşüm oranını (Conversion Rate) artırır
 - Retargeting, Hot Lead tespiti, Rakip Radar ve Fiyat Zekası gibi kurumsal araçları hesap sınıflaması olmaksızın tüm satıcılara açar
 - KVKK uyumlu veri işleme mimarisiyle yasal riski minimize eder; kullanıcı onay kaydı denetlenebilir düzeyde tutulur
-- Tuci kredi sistemi ve komisyon geliriyle çok katmanlı bir gelir yapısı oluşturur; ilerleyen aşamada platform içi ödeme altyapısı ve abonelik modeli planlanmaktadır
+- teqliq kredi sistemi ve komisyon geliriyle çok katmanlı bir gelir yapısı oluşturur; ilerleyen aşamada platform içi ödeme altyapısı ve abonelik modeli planlanmaktadır
 
 Sonuç olarak teqlif; ölçeklenebilir, denetlenebilir, yasal uyumlu ve çok gelir akışlı bir "Livestream Commerce" platformu olarak konumlanmaktadır.

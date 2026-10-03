@@ -194,7 +194,7 @@ API yanıtı gelene kadar kullanıcı 5/ay kazandığını sanıyor, gerçekte 3
 ```
 POST /api/analytics/price-estimate
  1. Limit kontrolü: PRO=6/ay, standart=0
-    → aşılmış + TUCi yetersizse 402
+    → aşılmış + teqliq yetersizse 402
  2. title+desc+category → MD5 hash → Redis embedding cache
     → miss: ARQ worker'a generate_embedding_task
     → max 15 sn bekle
@@ -229,7 +229,7 @@ POST /api/analytics/price-estimate
 
 **F-AIPRICE-02 (Yüksek) — `TuciTransaction` type ayrımı yok:**
 - `ai_price` ve `ai_desc` her ikisi de `"spend_ai"` type ile yazılıyor.
-- Kullanıcı TUCi geçmişinde hangi özelliği kullandığını göremez.
+- Kullanıcı teqliq geçmişinde hangi özelliği kullandığını göremez.
 
 **F-AIPRICE-03 (Orta) — ARQ worker bekleme timeout: 15 sn:**
 - Embedding henüz generate edilmemişse (yeni ilan başlığı) kullanıcı 15 sn'ye kadar bekleyebilir.
@@ -258,7 +258,7 @@ POST /api/analytics/price-estimate
 ```
 POST /api/listings/generate-description
  1. Limit kontrolü: PRO=6/ay, standart=0
-    → aşılmış + TUCi yetersizse 402
+    → aşılmış + teqliq yetersizse 402
  2. event_generator() async generator başlar
  3. generate_listing_description_stream():
     Primary:  Groq API (llama-3.3-70b-versatile)
@@ -289,7 +289,7 @@ POST /api/listings/generate-description
 - Tersine: `increment()` başarılı ama `done` eventi ulaşmadan client bağlantıyı keserse Flutter "kullanım sayıldı mı?" bilemez.
 
 **F-AIDESC-02 (Yüksek) — `TuciTransaction` type = `"spend_ai"` (ai_price ile çakışıyor):**
-- Kullanıcı TUCi harcamasını kaynak özelliğe göre ayırt edemiyor.
+- Kullanıcı teqliq harcamasını kaynak özelliğe göre ayırt edemiyor.
 
 **F-AIDESC-03 (Orta) — Groq kota dolunca Gemini'ye geçiş sessiz:**
 - LLM fallback mantığı son kullanıcıya yansıtılmıyor.
@@ -324,7 +324,7 @@ GET /api/listings/{id}/reactivation-cost
   → GetReactivationCostQuery (use_cases/listings/queries/get_reactivation_cost.py:13)
     → 30 gün penceresi: listing.created_at >= now() - 30d → ücretsiz
     → PRO: credit_service.get_remaining("reactivation") → kalan kredi var mı?
-    → Maliyet: 10 TUCi (standart veya limit bitmiş PRO)
+    → Maliyet: 10 teqliq (standart veya limit bitmiş PRO)
     → Döner: {within_window, free_remaining, cost, can_afford}
 
 PATCH /api/listings/{id}/toggle
@@ -367,7 +367,7 @@ PATCH /api/listings/{id}/toggle
 
 ### 7.1 credit_service.py — Gerçek Limit Tablosu
 
-| Özellik | Redis Key Prefix | Standart | PRO | TUCi | Dönem |
+| Özellik | Redis Key Prefix | Standart | PRO | teqliq | Dönem |
 |---------|-----------------|----------|-----|------|-------|
 | blast | `blast_credits` | 3/ay | 6/ay | 10/kişi | premium_since bazlı |
 | boost | `boost_credits` | 0 | 3/ay | 50 | premium_since bazlı |

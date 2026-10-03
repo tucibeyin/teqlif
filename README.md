@@ -40,7 +40,7 @@
 
 ### 1.1 Sistem Nedir?
 
-teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarzı canlı yayınları, gerçek zamanlı açık artırmaları, birebir görüntülü aramaları, hikayeleri, doğrudan satışları ve sanal para birimi (Tuci) ile bir sanal ekonomiyi tek bir mobil uygulamada birleştirir.
+teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarzı canlı yayınları, gerçek zamanlı açık artırmaları, birebir görüntülü aramaları, hikayeleri, doğrudan satışları ve sanal para birimi (teqliq) ile bir sanal ekonomiyi tek bir mobil uygulamada birleştirir.
 
 ### 1.2 Temel Özellikler
 
@@ -51,7 +51,7 @@ teqlif, Türkiye pazarına yönelik bir C2C e-ticaret platformudur. TikTok tarz�
 | **Birebir Görüntülü Arama** | WebRTC tabanlı P2P aramaları (LiveKit SFU); iOS CallKit / Android ConnectionService entegrasyonu |
 | **Doğrudan Satış** | Canlı yayın sırasında veya dışında sabit fiyatlı ürün listeleme ve satın alma |
 | **Hikayeler** | 24 saat geçerli fotoğraf/video içerik yayınlama |
-| **Tuci Ekonomisi** | Platform içi sanal para; hediye, bahşiş, teklif ve premium içerik için kullanılır |
+| **teqliq Ekonomisi** | Platform içi sanal para; hediye, bahşiş, teklif ve premium içerik için kullanılır |
 | **AI Açıklama Üretimi** | İlan başlığından otomatik açıklama; Groq/Gemini API üzerinden coğrafi kısıt aşmalı proxy zinciri |
 | **OTA Yerelleştirme** | tr / en / ar / ru — çeviriler Redis üzerinden canlı güncellenir, uygulama güncellemesi gerekmez |
 | **Arama ve Keşfet** | İlan, kullanıcı, yayın arama; kişiselleştirilmiş öneri akışı |
@@ -730,7 +730,7 @@ flowchart TB
 
 | Terim | Açıklama |
 |---|---|
-| **Tuci** | teqlif'in yerel sanal para birimi. Kullanıcılar TL yükler, Tuci satın alır; yayıncıya hediye / teklif olarak kullanır. |
+| **teqliq** | teqlif'in yerel sanal para birimi. Kullanıcılar TL yükler, teqliq satın alır; yayıncıya hediye / teklif olarak kullanır. |
 | **SwipeLive** | TikTok-benzeri dikey kaydırmalı akış arayüzü. PageView + AutomaticKeepAliveClientMixin ile LiveKit bağlantıları evict olmadan ayakta kalır. |
 | **WAL Streaming** | PostgreSQL Write-Ahead Log anlık aktarımı. node1 → node2 pg_receivewal. RPO < 1 dk sağlar. |
 | **LiveKit SFU** | Selective Forwarding Unit. node3 (live1) ve node4 (live2) üzerinde v1.7.2. Flutter SDK v2.5.4. |

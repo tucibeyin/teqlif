@@ -2263,9 +2263,9 @@ class DeleteAccountCommand:
   4. `screens/listing_detail_screen.dart` — `tuciBalance`, `tuci_balance` JSON key, `TUCi` string
   5. `screens/viewmodels/profile_view_model.dart` — `tuciBalance`, `tuciHistory`
   6. `screens/create_listing_screen.dart` — `next.tuciSpent`, `'tuciSpent'` i18n key
-  7. `utils/start_stream_helper.dart` — `TUCi` UI string
-  8. `screens/live_stream_analytics_screen.dart` — `TUCi` UI string
-  9. `screens/live_stream_history_screen.dart` — `TUCi` UI string
+  7. `utils/start_stream_helper.dart` — `teqliq` UI string
+  8. `screens/live_stream_analytics_screen.dart` — `teqliq` UI string
+  9. `screens/live_stream_history_screen.dart` — `teqliq` UI string
 
 **Geçiş stratejisi:**
 1. Backend: Eski alan adlarını Pydantic `alias` ile 1 sprint geç destekle
