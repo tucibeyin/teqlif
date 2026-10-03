@@ -143,17 +143,13 @@ async def lifespan(app: FastAPI):
     # AI registry — node1 Groq-only (EU IP), node2 up ise Groq+Gemini iletir
     from app.services.ml.llm_service import start_registry_loop
     await start_registry_loop()
-    # Cluster izleme + Telegram alertleri
-    from app.services.alert_manager import alert_manager
-    alert_task = asyncio.create_task(alert_manager.run_forever())
     yield
     task.cancel()
     chat_task.cancel()
     mod_task.cancel()
     dm_task.cancel()
     ds_scheduler_task.cancel()
-    alert_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, alert_task, return_exceptions=True)
+    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()
