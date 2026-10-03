@@ -3,6 +3,7 @@ Alert Manager — V2.1
 
 Tüm node metriklerini periyodik olarak denetler; eşik aşılırsa veya
 servis düşerse Telegram üzerinden bildirim gönderir.
+Servis ya da metrik düzeldiğinde "kurtardı" bildirimi de gönderir.
 
 FastAPI lifespan'ında tek bir asyncio arka plan görevi olarak çalışır
 (yalnızca node1 / Core API üzerinde).
@@ -11,8 +12,6 @@ FastAPI lifespan'ında tek bir asyncio arka plan görevi olarak çalışır
 import asyncio
 import logging
 
-import httpx
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -20,22 +19,58 @@ logger = logging.getLogger(__name__)
 # ── Eşik değerleri ────────────────────────────────────────────────────────
 
 _HW_THRESHOLDS: dict[str, float] = {
-    "cpu_percent":  85.0,   # %
-    "ram_percent":  88.0,   # %
-    "disk_percent": 82.0,   # %
-    "net_rx_mbps":  900.0,  # Mbps (gateway throttle riski)
+    "cpu_percent":  85.0,
+    "ram_percent":  88.0,
+    "disk_percent": 82.0,
+    "net_rx_mbps":  900.0,
     "net_tx_mbps":  900.0,
 }
 
-# Backup job'ları bu dakikadan uzun süre önce çalıştıysa uyarı ver
 _BACKUP_STALENESS: dict[str, tuple[str, int]] = {
     "pg_backup":    ("last_dump_min_ago",  25 * 60),
     "minio_backup": ("last_run_min_ago",   25 * 60),
     "redis_backup": ("last_run_min_ago",   25 * 60),
 }
 
+# ── İnsan okunabilir etiketler ────────────────────────────────────────────
+
+_METRIC_LABELS: dict[str, tuple[str, str]] = {
+    # metric_key: (görünen ad, birim)
+    "cpu_percent":  ("CPU",      "%"),
+    "ram_percent":  ("RAM",      "%"),
+    "disk_percent": ("Disk",     "%"),
+    "net_rx_mbps":  ("Ağ giriş", "Mbps"),
+    "net_tx_mbps":  ("Ağ çıkış", "Mbps"),
+}
+
+_SVC_LABELS: dict[str, str] = {
+    "postgresql":  "PostgreSQL",
+    "redis":       "Redis",
+    "minio":       "MinIO",
+    "livekit":     "LiveKit",
+    "clickhouse":  "ClickHouse",
+    "haproxy":     "HAProxy",
+    "alertmanager": "Alertmanager",
+}
+
+_BACKUP_LABELS: dict[str, str] = {
+    "pg_backup":    "PostgreSQL yedeği",
+    "minio_backup": "MinIO yedeği",
+    "redis_backup": "Redis yedeği",
+}
+
 POLL_INTERVAL_SEC  = 60
-ALERT_COOLDOWN_SEC = 30 * 60  # aynı alarm 30 dakika tekrar tetiklenmez
+ALERT_COOLDOWN_SEC = 30 * 60
+_FIRING_TTL_SEC    = 4 * 60 * 60  # 4 saatte otomatik temizlenir
+
+
+def _fmt_duration(mins: int) -> str:
+    h, m = divmod(mins, 60)
+    if h == 0:
+        return f"{m} dk"
+    if m == 0:
+        return f"{h} saat"
+    return f"{h} saat {m} dk"
 
 
 class AlertManager:
@@ -62,55 +97,78 @@ class AlertManager:
 
             # Donanım eşikleri
             for metric, threshold in _HW_THRESHOLDS.items():
-                val = node.get(metric)
+                val   = node.get(metric)
+                label, unit = _METRIC_LABELS.get(metric, (metric, ""))
+                key   = f"hw:{metric}"
+
                 if isinstance(val, (int, float)) and val > threshold:
-                    await self._fire(
-                        redis, nid, f"hw:{metric}",
-                        f"*{nid}* `{metric}` = {val:.1f} (eşik: {threshold})",
-                    )
+                    if unit == "%":
+                        msg = f"🔴 <b>{nid}</b> — {label} %{val:.0f} (limit %{threshold:.0f})"
+                    else:
+                        msg = f"🔴 <b>{nid}</b> — {label} {val:.0f} {unit} (limit {threshold:.0f})"
+                    await self._fire(redis, nid, key, msg)
+                elif isinstance(val, (int, float)):
+                    suffix = f" (%{val:.0f})" if unit == "%" else f" ({val:.0f} {unit})"
+                    await self._recover(redis, nid, key,
+                                        f"✅ <b>{nid}</b> — {label} normale döndü{suffix}")
 
             # Servis sağlığı
             for svc, data in node.get("services", {}).items():
-                if isinstance(data, dict) and not data.get("healthy", True):
-                    err = data.get("error", "")
-                    msg = f"*{nid}* servis `{svc}` DOWN" + (f": _{err}_" if err else "")
-                    await self._fire(redis, nid, f"svc:{svc}", msg)
+                if not isinstance(data, dict):
+                    continue
+                key       = f"svc:{svc}"
+                svc_label = _SVC_LABELS.get(svc, svc)
+                healthy   = data.get("healthy", True)
 
-            # Backup eskimesi
+                if not healthy:
+                    err = data.get("error", "")
+                    msg = f"🔴 <b>{nid}</b> — {svc_label} çöktü"
+                    if err:
+                        msg += f"\n<code>{err[:120]}</code>"
+                    await self._fire(redis, nid, key, msg)
+                else:
+                    await self._recover(redis, nid, key,
+                                        f"✅ <b>{nid}</b> — {svc_label} kurtardı")
+
+            # Yedek eskimesi
             svcs = node.get("services", {})
             for svc_name, (field, max_min) in _BACKUP_STALENESS.items():
-                data = svcs.get(svc_name, {})
-                mins = data.get(field)
+                data  = svcs.get(svc_name, {})
+                mins  = data.get(field)
+                key   = f"stale:{svc_name}"
+                label = _BACKUP_LABELS.get(svc_name, svc_name)
+
                 if isinstance(mins, int) and mins > max_min:
-                    h, m = divmod(mins, 60)
                     await self._fire(
-                        redis, nid, f"stale:{svc_name}",
-                        f"*{nid}* `{svc_name}` son çalışma: {h}s {m}d önce",
+                        redis, nid, key,
+                        f"⚠️ <b>{nid}</b> — {label} eski ({_fmt_duration(mins)})",
                     )
+                elif isinstance(mins, int):
+                    await self._recover(redis, nid, key,
+                                        f"✅ <b>{nid}</b> — {label} tamamlandı")
 
     async def _fire(self, redis, node_id: str, key: str, message: str) -> None:
         cooldown_key = f"alert:cd:{node_id}:{key}"
+        firing_key   = f"alert:firing:{node_id}:{key}"
         if await redis.exists(cooldown_key):
             return
         await redis.set(cooldown_key, "1", ex=ALERT_COOLDOWN_SEC)
-        await self._telegram(f"🚨 {message}")
+        await redis.set(firing_key,   "1", ex=_FIRING_TTL_SEC)
+        await self._telegram(message)
         logger.warning(f"Alert gönderildi: [{node_id}] {key}")
 
-    async def _telegram(self, text: str) -> None:
-        if not settings.telegram_bot_token or not settings.telegram_chat_id:
+    async def _recover(self, redis, node_id: str, key: str, message: str) -> None:
+        firing_key = f"alert:firing:{node_id}:{key}"
+        if not await redis.exists(firing_key):
             return
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                await client.post(
-                    f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
-                    json={
-                        "chat_id":    settings.telegram_chat_id,
-                        "text":       text,
-                        "parse_mode": "Markdown",
-                    },
-                )
-        except Exception as e:
-            logger.error(f"Telegram gönderim hatası: {e}")
+        await redis.delete(firing_key)
+        await redis.delete(f"alert:cd:{node_id}:{key}")
+        await self._telegram(message)
+        logger.info(f"Recovery gönderildi: [{node_id}] {key}")
+
+    async def _telegram(self, text: str) -> None:
+        from app.utils.telegram import send_telegram_message
+        await send_telegram_message(text)
 
 
 alert_manager = AlertManager()
