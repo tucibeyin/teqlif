@@ -48,7 +48,7 @@ _SCHEDULE: list[tuple[int, int, str, str, str]] = [
      "created_at < NOW() - INTERVAL '90 days'",
      "Calls 90d"),
 
-    (1, 10,  "stream_viewers",
+    (1, 10,  "live_stream_viewers",
      "created_at < NOW() - INTERVAL '90 days'",
      "Stream viewers 90d"),
 
