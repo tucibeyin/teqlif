@@ -59,6 +59,18 @@ _EMBED_EXTRA_KEYS = (
 )
 
 
+async def _agent_ok(ctx: dict, job_name: str) -> None:
+    """teqlif-agent watchdog'a 'job çalıştı' sinyali gönderir."""
+    try:
+        from datetime import datetime, timezone
+        await ctx["redis"].hset(
+            "teqlif:agent:job_ok", job_name,
+            datetime.now(timezone.utc).isoformat()
+        )
+    except Exception:
+        pass  # watchdog opsiyonel — worker'ı durdurmamalı
+
+
 def _listing_embed_text(listing) -> str:
     """Tutarlı embedding metni — tüm üretim noktaları bu fonksiyonu kullanır."""
     parts = [listing.title or ""]
@@ -255,6 +267,7 @@ async def cleanup_expired_stories_task(ctx: dict) -> None:
         async with AsyncSessionLocal() as db:
             deleted = await StoryService.cleanup_expired_stories(db)
             logger.info("[Worker] Story cleanup tamamlandı | silinen=%d", deleted)
+        await _agent_ok(ctx, "cleanup_expired_stories_task")
     except Exception as exc:
         logger.error(
             "[Worker] Story cleanup başarısız | %s", str(exc), exc_info=True
@@ -287,6 +300,7 @@ async def cleanup_old_notifications_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE notifications"))
             logger.info("[Worker] VACUUM ANALYZE notifications tamamlandı")
+        await _agent_ok(ctx, "cleanup_old_notifications_task")
     except Exception as exc:
         logger.error("[Worker] Bildirim cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -319,6 +333,7 @@ async def cleanup_old_analytics_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE analytics_events"))
             logger.info("[Worker] VACUUM ANALYZE analytics_events tamamlandı")
+        await _agent_ok(ctx, "cleanup_old_analytics_task")
     except Exception as exc:
         logger.error("[Worker] Analytics cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -348,6 +363,7 @@ async def cleanup_old_user_interactions_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE user_interactions"))
             logger.info("[Worker] VACUUM ANALYZE user_interactions tamamlandı")
+        await _agent_ok(ctx, "cleanup_old_user_interactions_task")
     except Exception as exc:
         logger.error("[Worker] user_interactions cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -382,6 +398,7 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE stream_likes"))
             logger.info("[Worker] VACUUM ANALYZE stream_likes tamamlandı")
+        await _agent_ok(ctx, "cleanup_old_stream_likes_task")
     except Exception as exc:
         logger.error("[Worker] Stream likes cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -416,6 +433,7 @@ async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE live_stream_viewers"))
             logger.info("[Worker] VACUUM ANALYZE live_stream_viewers tamamlandı")
+        await _agent_ok(ctx, "cleanup_old_stream_viewers_task")
     except Exception as exc:
         logger.error("[Worker] Stream viewer cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -594,6 +612,7 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE direct_messages"))
             logger.info("[Worker] VACUUM ANALYZE direct_messages tamamlandı")
+        await _agent_ok(ctx, "cleanup_hidden_messages_task")
     except Exception as exc:
         logger.error("[Worker] Gizli mesaj cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -638,6 +657,7 @@ async def cleanup_old_media_messages_task(ctx: dict) -> None:
 
             await db.commit()
             logger.info("[Worker] Medya mesaj cleanup tamamlandı | silinen=%d", deleted_count)
+        await _agent_ok(ctx, "cleanup_old_media_messages_task")
     except Exception as exc:
         logger.error("[Worker] Medya mesaj cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -818,6 +838,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         except Exception as _ts_exc:
             logger.debug("[Worker] Thompson Sampling güncelleme atlandı: %s", _ts_exc)
 
+        await _agent_ok(ctx, "flush_interactions_to_db")
     except Exception as exc:
         logger.error(
             "[Worker] flush_interactions_to_db başarısız | %s", str(exc), exc_info=True
@@ -1176,6 +1197,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
                 "[Worker] compute_user_interests tamamlandı | kullanıcı=%d | kayıt=%d",
                 len(updated_users), len(rows)
             )
+            await _agent_ok(ctx, "compute_user_interests_task")
 
     except Exception as exc:
         logger.error(
@@ -1424,6 +1446,7 @@ async def compute_trending_listings_task(ctx: dict) -> None:
         logger.info(
             "[Worker] compute_trending_listings: %d trending ilan bulundu", len(trending_ids)
         )
+        await _agent_ok(ctx, "compute_trending_listings_task")
     except Exception as exc:
         logger.warning("[Worker] compute_trending_listings başarısız: %s", exc)
 
@@ -1662,6 +1685,7 @@ async def train_kmeans_cold_start_task(ctx: dict) -> None:
             n = await train_kmeans(db)
 
         logger.info("[Worker] train_kmeans_cold_start tamamlandı | ilan=%d", n)
+        await _agent_ok(ctx, "train_kmeans_cold_start_task")
     except Exception as exc:
         logger.error("[Worker] train_kmeans_cold_start başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -1682,6 +1706,7 @@ async def train_bpr_task(ctx: dict) -> None:
             cached = await train_bpr(db)
 
         logger.info("[Worker] train_bpr tamamlandı | önbelleklenen_kullanıcı=%d", cached)
+        await _agent_ok(ctx, "train_bpr_task")
     except Exception as exc:
         logger.error("[Worker] train_bpr başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -1702,6 +1727,7 @@ async def train_item2vec_task(ctx: dict) -> None:
             n = await train_item2vec(db)
 
         logger.info("[Worker] train_item2vec tamamlandı | oturum=%d", n)
+        await _agent_ok(ctx, "train_item2vec_task")
     except Exception as exc:
         logger.error("[Worker] train_item2vec başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -1828,6 +1854,7 @@ async def train_listing_quality_model_task(ctx: dict) -> None:
             "[Worker] train_listing_quality_model tamamlandı | eğitim=%d yeniden_skorlanan=%d",
             n, total,
         )
+        await _agent_ok(ctx, "train_listing_quality_model_task")
     except Exception as exc:
         logger.error("[Worker] train_listing_quality_model başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -1959,6 +1986,7 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(text("VACUUM ANALYZE listing_impressions"))
             logger.info("[Worker] VACUUM ANALYZE listing_impressions tamamlandı")
+        await _agent_ok(ctx, "cleanup_old_impressions_task")
     except Exception as exc:
         logger.error("[Worker] Impression cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -2033,6 +2061,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                     )
                     await _close_stream(db, stream.room_name)
 
+        await _agent_ok(ctx, "cleanup_stale_streams_task")
     except Exception as exc:
         logger.error("[Worker] cleanup_stale_streams başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -2384,7 +2413,7 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                         logger.warning("Ghost call LK room delete failed | room=%s | %s", room_name, lk_err)
 
         logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task DONE")
-
+        await _agent_ok(ctx, "cleanup_ghost_calls_task")
     except Exception as exc:
         logger.error("[CALL_PROCESS][END] cleanup_ghost_calls_task ERROR | %s", exc, exc_info=True)
         from sentry_sdk import capture_exception
@@ -2664,6 +2693,7 @@ async def compute_seller_badges_task(ctx: dict) -> None:
             badge_count += 1
         await pipe.execute()
         logger.info("[Worker] compute_seller_badges_task tamamlandı | rozet=%d", badge_count)
+        await _agent_ok(ctx, "compute_seller_badges_task")
     except Exception as exc:
         logger.error("[Worker] compute_seller_badges_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
@@ -2906,6 +2936,7 @@ async def calculate_user_budgets_task(ctx: dict) -> None:
         from app.services.analytics_processor import calculate_user_budgets
         updated = await calculate_user_budgets()
         logger.info("[Worker] calculate_user_budgets_task tamamlandı | güncellenen=%d", updated)
+        await _agent_ok(ctx, "calculate_user_budgets_task")
     except Exception as exc:
         logger.error("[Worker] calculate_user_budgets_task başarısız | %s", str(exc), exc_info=True)
         # ClickHouse erişilemezse sessizce geçilebilir (kritik değil)
@@ -2922,6 +2953,7 @@ async def sync_ad_campaigns_task(ctx: dict) -> None:
         from app.services.ad_service import load_active_campaigns_to_redis
         count = await load_active_campaigns_to_redis()
         logger.info("[Worker] sync_ad_campaigns_task tamamlandı | kampanya=%d", count)
+        await _agent_ok(ctx, "sync_ad_campaigns_task")
     except Exception as exc:
         logger.error("[Worker] sync_ad_campaigns_task başarısız | %s", str(exc), exc_info=True)
 
@@ -2936,6 +2968,7 @@ async def train_swipe_live_als_task(ctx: dict) -> None:
         from app.services.ml.swipe_live_ml import train_swipe_live_als
         await train_swipe_live_als()
         logger.info("[Worker] train_swipe_live_als_task tamamlandı")
+        await _agent_ok(ctx, "train_swipe_live_als_task")
     except Exception as exc:
         logger.error("[Worker] train_swipe_live_als_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
@@ -2953,6 +2986,7 @@ async def train_feed_als_task(ctx: dict) -> None:
         from app.services.ml.feed_als_ml import train_feed_als
         await train_feed_als()
         logger.info("[Worker] train_feed_als_task tamamlandı")
+        await _agent_ok(ctx, "train_feed_als_task")
     except Exception as exc:
         logger.error("[Worker] train_feed_als_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
@@ -3076,6 +3110,7 @@ async def rebuild_faiss_index_task(ctx: dict) -> None:
     try:
         from app.services.ml.faiss_service import rebuild_index
         await rebuild_index()
+        await _agent_ok(ctx, "rebuild_faiss_index_task")
     except Exception as exc:
         logger.error("[Worker] rebuild_faiss_index_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
@@ -3251,7 +3286,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
                     logger.warning("[HesitationRetarget] Push gönderilemedi uid=%d lid=%d: %s", uid, lid, exc)
 
         logger.info("[HesitationRetarget] Tamamlandı | gönderilen=%d", sent)
-
+        await _agent_ok(ctx, "hesitation_retarget_task")
     except Exception as exc:
         logger.error("[HesitationRetarget] Görev başarısız: %s", exc, exc_info=True)
         capture_exception(exc)
@@ -3397,7 +3432,7 @@ async def compute_trust_scores_task(ctx: dict) -> None:
 
         await pipe.execute()
         logger.info("[TrustScore] Tamamlandı | kullanıcı=%d", len(all_uids))
-
+        await _agent_ok(ctx, "compute_trust_scores_task")
     except Exception as exc:
         logger.error("[TrustScore] compute_trust_scores_task başarısız: %s", exc, exc_info=True)
         capture_exception(exc)
@@ -3419,6 +3454,7 @@ async def train_churn_model_task(ctx: dict) -> None:
             logger.info("[ChurnML] Model başarıyla eğitildi")
         else:
             logger.info("[ChurnML] Yetersiz veri, model eğitilmedi")
+        await _agent_ok(ctx, "train_churn_model_task")
     except ImportError:
         logger.warning("[ChurnML] scikit-learn yüklü değil, atlanıyor")
     except Exception as exc:
@@ -3438,6 +3474,7 @@ async def compute_influence_scores_task(ctx: dict) -> None:
         from app.services.influence_service import compute_influence_scores
         count = await compute_influence_scores()
         logger.info("[Influence] PageRank tamamlandı | kullanıcı=%d", count)
+        await _agent_ok(ctx, "compute_influence_scores_task")
     except ImportError:
         logger.warning("[Influence] networkx yüklü değil, atlanıyor")
     except Exception as exc:
@@ -3619,6 +3656,7 @@ async def check_search_alerts_task(ctx: dict) -> None:
 
         if sent:
             logger.info("[SearchAlert] %d bildirim gönderildi | ilan_sayısı=%d alert_sayısı=%d", sent, len(listings), len(alerts))
+        await _agent_ok(ctx, "check_search_alerts_task")
 
 
 # ── Worker Ayarları ──────────────────────────────────────────────────────────

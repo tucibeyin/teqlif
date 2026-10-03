@@ -88,6 +88,8 @@ async def populate_foryou_feed_task(ctx: dict) -> None:
                 await redis.delete(foryou_key)
 
         logger.info("[ForYouWorker] Sana Özel feed'leri %d kullanıcı için yenilendi.", len(users))
+        from app.worker import _agent_ok
+        await _agent_ok(ctx, "populate_foryou_feed_task")
     except Exception as e:
         logger.error("[ForYouWorker] Hata: %s", e, exc_info=True)
         raise

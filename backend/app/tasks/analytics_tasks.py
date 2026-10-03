@@ -330,6 +330,8 @@ async def process_churn_and_airdrop(ctx: dict) -> None:
             "[ChurnAirdrop] Görev tamamlandı | alıcı_airdrop=%d | satıcı_airdrop=%d",
             len(buyer_recipients), len(seller_recipients),
         )
+        from app.worker import _agent_ok
+        await _agent_ok(ctx, "process_churn_and_airdrop")
     except Exception as exc:
         logger.error("[ChurnAirdrop] Görev başarısız: %s", exc, exc_info=True)
         capture_exception(exc)
@@ -394,3 +396,5 @@ async def cleanup_hype_highlights_task(ctx: dict) -> None:
         "[HighlightGC] Tamamlandı | silinen_dosya=%d silinen_kayıt=%d",
         deleted_files, deleted_rows,
     )
+    from app.worker import _agent_ok
+    await _agent_ok(ctx, "cleanup_hype_highlights_task")

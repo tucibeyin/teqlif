@@ -76,7 +76,8 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
 
         # Bildirimleri gönder
         await _notify_deactivated(user_ids, user_listing_map)
-
+        from app.worker import _agent_ok
+        await _agent_ok(ctx, "deactivate_expired_listings_task")
     except Exception as exc:
         logger.error("[ListingTasks] deactivate_expired_listings_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
@@ -143,7 +144,8 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
         )
 
         await _notify_deleted(user_ids, user_listing_map)
-
+        from app.worker import _agent_ok
+        await _agent_ok(ctx, "delete_expired_inactive_listings_task")
     except Exception as exc:
         logger.error("[ListingTasks] delete_expired_inactive_listings_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
