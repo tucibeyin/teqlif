@@ -9,7 +9,11 @@ from typing import Any
 import yaml
 
 # cluster.yaml her cycle'da yeniden okunur — modül seviyesinde cache'lenmez.
-_CLUSTER_YAML_PATH = Path(__file__).parent.parent / "cluster.yaml"
+_CLUSTER_YAML_PATH = (
+    Path(__file__).parent / "cluster.yaml"          # prod: /opt/teqlif-agent/cluster.yaml
+    if (Path(__file__).parent / "cluster.yaml").exists()
+    else Path(__file__).parent.parent / "cluster.yaml"  # dev: deploy/scale/V2.1/cluster.yaml
+)
 
 
 def load_cluster_config() -> dict[str, Any]:
