@@ -1,0 +1,56 @@
+"""Stream kayıt yaşam döngüsü ARQ görevleri.
+
+expire_recordings_task  : available → expired  (expires_at geçince)
+archive_recordings_task : expired   → archived (MinIO lifecycle süresi + güvenli bekleme)
+"""
+from __future__ import annotations
+
+from app.core.logger import get_logger, capture_exception
+
+logger = get_logger(__name__)
+
+
+async def expire_recordings_task(ctx: dict) -> None:
+    """expires_at geçmiş 'available' kayıtları 'expired' yapar."""
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(text("""
+                UPDATE stream_recordings
+                SET status = 'expired', updated_at = NOW()
+                WHERE status = 'available'
+                  AND expires_at < NOW()
+            """))
+            await session.commit()
+            count = result.rowcount
+        if count:
+            logger.info("expire_recordings_task: %d kayıt expired", count)
+    except Exception as exc:
+        capture_exception(exc)
+        logger.error("expire_recordings_task hata: %s", exc)
+        raise
+
+
+async def archive_recordings_task(ctx: dict) -> None:
+    """MinIO lifecycle süresini (4 gün) aşmış 'expired' kayıtları 'archived' yapar.
+    Bu, MinIO'nun dosyayı sildiğini ve node2'nin backup'ı aldığını kabul eder.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(text("""
+                UPDATE stream_recordings
+                SET status = 'archived', archived_at = NOW(), updated_at = NOW()
+                WHERE status = 'expired'
+                  AND transferred_at < NOW() - INTERVAL '4 days'
+            """))
+            await session.commit()
+            count = result.rowcount
+        if count:
+            logger.info("archive_recordings_task: %d kayıt archived", count)
+    except Exception as exc:
+        capture_exception(exc)
+        logger.error("archive_recordings_task hata: %s", exc)
+        raise

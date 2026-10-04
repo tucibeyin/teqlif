@@ -73,8 +73,8 @@ _SCHEDULE: list[tuple[int, int, str, str, str]] = [
      "İlan gösterimleri 90d"),
 
     (3,  0,  "stream_recordings",
-     "recorded_at < NOW() - INTERVAL '30 days' AND status = 'archived'",
-     "Yayın kayıtları 30d"),
+     "archived_at < NOW() - INTERVAL '15 days' AND status = 'archived'",
+     "Yayın kayıtları 15d"),
 ]
 
 _LARGE_BATCH = 5_000   # bu sayıyı geçen temizliklerde Telegram bildirir

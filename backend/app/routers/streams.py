@@ -237,7 +237,8 @@ async def start_stream(
         category=data.category,
         subcategory=data.subcategory,
         listing_id=getattr(data, "listing_id", None),
-        thumbnail_url=getattr(data, "thumbnail_url", None)
+        thumbnail_url=getattr(data, "thumbnail_url", None),
+        recording_enabled=data.recording_enabled,
     )
 
 
@@ -300,6 +301,70 @@ async def end_stream(
     current_user: User = Depends(get_current_user),
 ):
     return await EndStreamCommand(uow).execute(stream_id, current_user)
+
+
+@router.get("/{stream_id}/recording")
+async def get_stream_recording(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Canlı yayın kaydı için presigned URL döner. Sadece host erişebilir, 24 saat geçerli."""
+    from datetime import datetime, timezone, timedelta
+    from fastapi import HTTPException
+    from sqlalchemy import text
+
+    stream = await db.get(LiveStream, stream_id)
+    if not stream:
+        raise HTTPException(status_code=404, detail={"error": {"code": "STREAM_NOT_FOUND"}})
+    if stream.host_id != current_user.id:
+        raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
+    if not stream.recording_enabled:
+        raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_ENABLED"}})
+
+    row = (await db.execute(text("""
+        SELECT id, status, minio_key, available_at, expires_at
+        FROM stream_recordings
+        WHERE stream_id = :stream_id
+          AND status IN ('available', 'expired', 'archived')
+        ORDER BY created_at DESC
+        LIMIT 1
+    """), {"stream_id": stream_id})).mappings().first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_FOUND"}})
+
+    if row["status"] != "available":
+        raise HTTPException(status_code=410, detail={"error": {"code": "RECORDING_EXPIRED"}})
+
+    if row["expires_at"] and row["expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail={"error": {"code": "RECORDING_EXPIRED"}})
+
+    if not row["minio_key"]:
+        raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_AVAILABLE"}})
+
+    try:
+        from app.services.storage_service import _get_client_for_internal_url
+        from app.config import settings
+        client = _get_client_for_internal_url(settings.minio_endpoint)
+        loop = __import__("asyncio").get_event_loop()
+        presigned_url = await loop.run_in_executor(
+            None,
+            lambda: client.presigned_get_object(
+                settings.minio_bucket,
+                row["minio_key"],
+                expires=timedelta(hours=1),
+            ),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"error": {"code": "PRESIGN_FAILED"}}) from exc
+
+    return {
+        "recording_id": row["id"],
+        "url": presigned_url,
+        "available_at": row["available_at"],
+        "expires_at": row["expires_at"],
+    }
 
 
 @router.get("/{stream_id}/viewers")

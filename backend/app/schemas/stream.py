@@ -13,6 +13,7 @@ class StreamStart(BaseModel):
     title: str
     category: str
     subcategory: Optional[str] = None
+    recording_enabled: bool = False
 
     @field_validator("title")
     @classmethod

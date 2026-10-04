@@ -3,11 +3,9 @@
 Lider bu modülü çalıştırır. Her TTL politikası için:
   - Süresi dolmuş kayıtları tespit eder
   - Sıradaki eylemi belirler ve cleanup_log'a yazar
-  - Gerçek silme/transfer işlemleri için setup/cleanup_actions.sh devreye girer
-    (insan onaylı veya cron ile tetiklenen ayrı script)
 
-Stream kayıt yaşam döngüsü:
-  raw → encode_pending → encoded → transfer_pending → archived → delete_pending → deleted
+Stream kayıt yaşam döngüsü (DB status sütunu):
+  recording → encoding → encoded → transferring → available → expired → archived → deleted
 """
 from __future__ import annotations
 
@@ -34,11 +32,11 @@ _DEFAULT_POLICIES = [
         },
     },
     {
-        "name":        "stream_recordings_30d",
-        "description": "30 günden eski arşivlenmiş yayın kayıtları",
+        "name":        "stream_recordings_15d",
+        "description": "15 günden eski arşivlenmiş yayın kayıtları",
         "config": {
-            "table": "stream_recordings", "expires_col": "recorded_at",
-            "max_age_days": 30, "status_col": "status", "ready_status": "archived",
+            "table": "stream_recordings", "expires_col": "archived_at",
+            "max_age_days": 15, "status_col": "status", "ready_status": "archived",
         },
     },
     {
@@ -95,15 +93,15 @@ _DEFAULT_POLICIES = [
     },
     {
         "name":        "stream_recording_encode_queue",
-        "description": "Encode bekleyen ham yayın kayıtları",
+        "description": "Encode bekleyen yayın kayıtları (stream bitti, encode başlamamış)",
         "config": {
             "table": "stream_recordings", "action_type": "trigger_encode",
-            "status_col": "status", "ready_status": "raw",
+            "status_col": "status", "ready_status": "encoding",
         },
     },
     {
         "name":        "stream_recording_transfer_queue",
-        "description": "Node2'ye transfer bekleyen encode edilmiş kayıtlar",
+        "description": "node1 MinIO'ya transfer bekleyen encode edilmiş kayıtlar",
         "config": {
             "table": "stream_recordings", "action_type": "trigger_transfer",
             "status_col": "status", "ready_status": "encoded",
@@ -184,34 +182,38 @@ class TTLJanitor:
             logger.debug("TTL count başarısız | %s | %s", policy["name"], exc)
 
     async def _trigger_encode(self) -> None:
-        """Aktif yayın yoksa encode trigger yayınlar. ARQ worker yakalar."""
+        """status='encoding' olan kayıtlar için encode sinyali yayınlar.
+        encoder.py modülü (streaming node'da) bu sinyali dinler.
+        Janitor fallback olarak çalışır — encoder.py zaten Redis'ten tetiklenir."""
         try:
             import aioredis
-            r      = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
-            active = await r.scard("active_streams")
-            if active and int(active) > 0:
-                await r.aclose()
-                logger.debug("Aktif yayın var, encode ertelendi.")
-                return
+            r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
             await r.publish("teqlif:agent:encode_trigger", "1")
             await r.aclose()
-            logger.info("Encode trigger yayınlandı.")
+            logger.info("Encode fallback trigger yayınlandı.")
         except Exception as exc:
             logger.debug("Encode trigger başarısız: %s", exc)
 
     async def _trigger_transfer_check(self) -> None:
-        """Encode tamamlanan kayıt varsa node2 transfer sinyali yayınlar."""
-        encoded_dir = "/var/recordings/encoded/"
-        if not os.path.isdir(encoded_dir):
-            return
-        files = [f for f in os.listdir(encoded_dir) if f.endswith(".mp4")]
-        if not files:
-            return
+        """status='encoded' kayıt varsa transfer sinyali yayınlar.
+        Transfer penceresi (02:00-08:00 UTC) ve disk guard kontrolü
+        encoder.py'nin transfer aşamasında yapılır."""
         try:
+            import asyncpg
+            dsn = os.environ.get("PG_DSN", "")
+            if not dsn:
+                return
+            conn  = await asyncpg.connect(dsn=dsn)
+            count = await conn.fetchval(
+                "SELECT COUNT(*) FROM stream_recordings WHERE status = 'encoded'"
+            )
+            await conn.close()
+            if not count:
+                return
             import aioredis
             r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
-            await r.publish("teqlif:agent:transfer_trigger", str(len(files)))
+            await r.publish("teqlif:agent:transfer_trigger", str(count))
             await r.aclose()
-            logger.info("Transfer trigger: %d dosya hazır.", len(files))
+            logger.info("Transfer trigger: %d kayıt hazır.", count)
         except Exception as exc:
             logger.debug("Transfer trigger başarısız: %s", exc)

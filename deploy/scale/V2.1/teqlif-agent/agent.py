@@ -1,6 +1,7 @@
 """teqlif-agent — Platform Kontrol Düzlemi.
 
 Her node'da çalışır. Gossip, lider seçimi, modüller.
+Servis keşfi: hangi systemd servisleri aktifse o modüller yüklenir.
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from modules.healer import SelfHealer
 from modules.certs import CertWatcher
 from modules.cleaner import ScheduledCleaner
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +29,30 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("teqlif-agent")
+
+# Servis adı → yüklenecek recording modülleri
+_RECORDING_SERVICES = [
+    "teqlif-livekit",
+    "teqlif-livekit-staging",
+]
+
+
+async def _active_recording_services() -> list[str]:
+    """Bu node'da aktif olan recording servislerini döner."""
+    found: list[str] = []
+    for svc in _RECORDING_SERVICES:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "systemctl", "is-active", "--quiet", svc,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+            if proc.returncode == 0:
+                found.append(svc)
+        except Exception:
+            pass
+    return found
 
 
 async def main() -> None:
@@ -51,6 +76,16 @@ async def main() -> None:
         SelfHealer(cfg, db),
         CertWatcher(cfg, db),
     ]
+
+    # Servis bazlı recording modülü keşfi
+    rec_services = await _active_recording_services()
+    if rec_services:
+        from modules.recorder import RecordingManager
+        from modules.encoder import EncoderManager
+        for svc in rec_services:
+            modules.append(RecordingManager(cfg, db, svc))
+            modules.append(EncoderManager(cfg, db, svc))
+            logger.info("Recording modülleri yüklendi: %s", svc)
 
     # Temiz kapanış
     loop = asyncio.get_running_loop()

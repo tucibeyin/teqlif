@@ -4,8 +4,21 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import yaml
+
+# cluster.yaml her cycle'da yeniden okunur — modül seviyesinde cache'lenmez.
+_CLUSTER_YAML_PATH = Path(__file__).parent.parent / "cluster.yaml"
+
+
+def load_cluster_config() -> dict[str, Any]:
+    """cluster.yaml'ı okur. Her çağrıda taze veri döner (hot-reload)."""
+    try:
+        with _CLUSTER_YAML_PATH.open() as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
 
 
 @dataclass
@@ -50,6 +63,24 @@ class AgentConfig:
     @property
     def higher_priority_peers(self) -> list[PeerConfig]:
         return [p for p in self.peers if p.priority < self.priority]
+
+    def recording_config_for(self, service_name: str) -> dict[str, Any] | None:
+        """Verilen servis adı için cluster.yaml'dan recording config döner."""
+        cluster = load_cluster_config()
+        return (
+            cluster
+            .get("recording", {})
+            .get("services", {})
+            .get(service_name)
+        )
+
+    @property
+    def cluster_recording(self) -> dict[str, Any]:
+        """cluster.yaml'daki recording bölümünü döner (servis config'leri hariç)."""
+        cluster = load_cluster_config()
+        rec = dict(cluster.get("recording", {}))
+        rec.pop("services", None)
+        return rec
 
 
 def load_config(path: str | None = None) -> AgentConfig:

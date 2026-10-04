@@ -24,6 +24,7 @@ from app.config import settings
 from app.core.logger import get_logger, capture_exception
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
 from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
+from app.tasks.stream_recording_tasks import expire_recordings_task, archive_recordings_task
 from app.services.feed.foryou_worker import populate_foryou_feed_task
 from app.services.edge_orchestrator import orchestrator, ServiceType
 logger = get_logger(__name__)
@@ -3779,6 +3780,8 @@ class WorkerSettings:
         notify_outbid_task,
         notify_auction_losers_task,
         populate_foryou_feed_task,
+        expire_recordings_task,
+        archive_recordings_task,
     ]
 
     cron_jobs = [
@@ -3800,6 +3803,9 @@ class WorkerSettings:
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         # Her 2 dakikada
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
+        # Her 30 dakikada — stream kayıt yaşam döngüsü
+        cron(expire_recordings_task,  minute={0, 30}),
+        cron(archive_recordings_task, minute={15}),
 
         # ── Batch görevler — schedule.yaml'dan okunur ─────────────────────────
         *build_cron_jobs(_SCHEDULE_FUNCTIONS),

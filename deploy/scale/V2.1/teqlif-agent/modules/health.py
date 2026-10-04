@@ -79,6 +79,12 @@ class HealthMonitor:
     async def run(self, is_leader: bool) -> None:
         metrics  = await _collect_hw_metrics()
         services = await _collect_services()
+
+        # Recording disk guard: /var/recordings/ varsa kontrol et
+        rec_disk = _recording_disk_status()
+        if rec_disk is not None:
+            metrics["rec_free_gb"] = rec_disk
+
         await self._db.upsert_node_state(
             node_id=self._cfg.node_id,
             metrics=metrics,
@@ -93,6 +99,7 @@ class HealthMonitor:
                 nid = state["node_id"]
                 await self._eval_hw(nid, state["metrics"])
                 await self._eval_services(nid, state["services"])
+                await self._eval_recording_disk(nid, state["metrics"])
 
     # ── Değerlendirme ─────────────────────────────────────────────────────────
 
@@ -119,6 +126,26 @@ class HealthMonitor:
             else:
                 suffix = f" (%{val:.0f})" if unit == "%" else f" ({val:.0f} {unit})"
                 await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} normale döndü{suffix}")
+
+    async def _eval_recording_disk(self, node_id: str, metrics: dict) -> None:
+        """Recording disk guard: free GB eşiklerine göre uyarı verir."""
+        free_gb = metrics.get("rec_free_gb")
+        if not isinstance(free_gb, (int, float)):
+            return
+        from config import load_cluster_config
+        rec_cfg      = load_cluster_config().get("recording", {})
+        warn_gb      = float(rec_cfg.get("disk_warn_gb", 15))
+        emergency_gb = float(rec_cfg.get("disk_emergency_gb", 10))
+        fkey = f"{node_id}:rec_disk"
+        if free_gb < emergency_gb:
+            await self._fire(fkey,
+                f"🚨 <b>{node_id}</b> — Recording disk kritik: {free_gb:.1f}GB boş (<{emergency_gb}GB) — acil transfer!")
+        elif free_gb < warn_gb:
+            await self._fire(fkey,
+                f"⚠️ <b>{node_id}</b> — Recording disk düşük: {free_gb:.1f}GB boş (<{warn_gb}GB) — erken transfer aktif")
+        else:
+            await self._recover(fkey,
+                f"✅ <b>{node_id}</b> — Recording disk normale döndü: {free_gb:.1f}GB boş")
 
     async def _eval_services(self, node_id: str, services: dict) -> None:
         svc_labels = {
@@ -320,6 +347,19 @@ async def _backup_ages() -> dict:
         except Exception:
             pass
     return result
+
+
+def _recording_disk_status() -> float | None:
+    """/var/recordings/ mount noktasının boş alanını GB cinsinden döner."""
+    rec_path = Path("/var/recordings")
+    if not rec_path.exists():
+        return None
+    try:
+        import shutil
+        usage = shutil.disk_usage(str(rec_path))
+        return round(usage.free / 1_073_741_824, 2)
+    except Exception:
+        return None
 
 
 def _fmt(mins: int) -> str:

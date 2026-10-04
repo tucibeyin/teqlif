@@ -15,7 +15,7 @@ class StartStreamCommand:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, user_id: int, title: str, category: str = None, subcategory: str = None, listing_id: int = None, thumbnail_url: str = None) -> dict:
+    async def execute(self, user_id: int, title: str, category: str = None, subcategory: str = None, listing_id: int = None, thumbnail_url: str = None, recording_enabled: bool = False) -> dict:
         import uuid
         from app.config import settings
         from app.use_cases.streams.stream_utils import make_livekit_token
@@ -72,6 +72,7 @@ class StartStreamCommand:
                 "subcategory": subcategory,
                 "thumbnail_url": thumbnail_url,
                 "livekit_url": node["livekit_url"],  # Edge node kalıcı olarak kayıt altına alınır
+                "recording_enabled": recording_enabled,
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
             token = make_livekit_token(room_name, user, can_publish=True)
