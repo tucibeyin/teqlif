@@ -29,10 +29,13 @@ import '../../core/logger_service.dart';
 import '../../core/app_exception.dart';
 import '../../services/localization_service.dart';
 import '../../utils/error_helper.dart';
+import '../../ui_library/components/buttons/teq_button.dart';
+import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../ui_library/components/live/commerce_activity_overlay.dart';
 import '../../ui_library/components/live/commerce_activity_toggle.dart';
+import '../../ui_library/foundation/teq_spacing.dart';
 import '../../providers/commerce_activity_provider.dart';
 import '../../services/client_logger.dart';
 
@@ -788,15 +791,16 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   // ── Sabitleme girişi ──────────────────────────────────────────────────────
 
   void _showPinInput() {
+    final loc = ref.read(localizationProvider);
     TeqBottomSheet.show<void>(
       context: context,
       isScrollControlled: true,
+      title: loc.t('btnPin'),
       child: _PinInputSheet(
         onPin: (content) {
           _chatKey.currentState?.sendHostPin(content);
           Navigator.of(context).pop();
         },
-        onCancel: () => Navigator.of(context).pop(),
       ),
     );
   }
@@ -2258,9 +2262,8 @@ class _ModBtn extends ConsumerWidget {
 // ── Pin giriş sheet'i — kendi state'inde ctrl tutar, parent rebuild'dan etkilenmez ──
 class _PinInputSheet extends ConsumerStatefulWidget {
   final void Function(String content) onPin;
-  final VoidCallback onCancel;
 
-  const _PinInputSheet({required this.onPin, required this.onCancel});
+  const _PinInputSheet({required this.onPin});
 
   @override
   ConsumerState<_PinInputSheet> createState() => _PinInputSheetState();
@@ -2268,6 +2271,8 @@ class _PinInputSheet extends ConsumerStatefulWidget {
 
 class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
   final _ctrl = TextEditingController();
+
+  bool get _canSubmit => _ctrl.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -2277,128 +2282,43 @@ class _PinInputSheetState extends ConsumerState<_PinInputSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+    final loc = ref.watch(localizationProvider);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TeqTextField(
+          controller: _ctrl,
+          hintText: loc.t('hostShowToAllViewersHint'),
+          maxLines: 3,
+          minLines: 2,
+          maxLength: 120,
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: (_) => setState(() {}),
         ),
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.push_pin_rounded,
-                    color: Colors.amber,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    ref.read(localizationProvider).t('btnPin'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+        const SizedBox(height: TeqSpacing.m),
+        Row(
+          children: [
+            Expanded(
+              child: TeqButton.outline(
+                text: loc.t('btnCancel'),
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _ctrl,
-                autofocus: true,
-                maxLines: 2,
-                minLines: 2,
-                maxLength: 120,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: ref
-                      .read(localizationProvider)
-                      .t('hostShowToAllViewersHint'),
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 12,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF0F0F1E),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Colors.white12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Colors.amber.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
-                  counterStyle: const TextStyle(
-                    color: Colors.white38,
-                    fontSize: 10,
-                  ),
-                ),
+            ),
+            const SizedBox(width: TeqSpacing.xs),
+            Expanded(
+              child: TeqButton(
+                text: loc.t('btnPin'),
+                icon: Icons.push_pin_rounded,
+                isDisabled: !_canSubmit,
+                onPressed: _canSubmit
+                    ? () => widget.onPin(_ctrl.text.trim())
+                    : null,
               ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: widget.onCancel,
-                    child: Text(
-                      ref.read(localizationProvider).t('btnCancel'),
-                      style: const TextStyle(color: Colors.white38),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () {
-                      final content = _ctrl.text.trim();
-                      if (content.isEmpty) return;
-                      widget.onPin(content);
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.push_pin_rounded, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          ref.read(localizationProvider).t('btnPin'),
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 }
