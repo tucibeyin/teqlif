@@ -31,8 +31,6 @@ class PublicProfileState {
   final String followStatus;
   final bool isPrivate;
   final bool isBlocked;
-  final bool canCall;
-  final String? canCallReason;
   final Map<String, dynamic>? ratingSummary;
   final ListingFilterState filter;
   final bool followLoading;
@@ -44,8 +42,6 @@ class PublicProfileState {
     this.followStatus = 'none',
     this.isPrivate = false,
     this.isBlocked = false,
-    this.canCall = false,
-    this.canCallReason,
     this.ratingSummary,
     this.filter = const ListingFilterState(),
     this.followLoading = false,
@@ -58,8 +54,6 @@ class PublicProfileState {
     String? followStatus,
     bool? isPrivate,
     bool? isBlocked,
-    bool? canCall,
-    String? canCallReason,
     Map<String, dynamic>? ratingSummary,
     ListingFilterState? filter,
     bool? followLoading,
@@ -71,8 +65,6 @@ class PublicProfileState {
       followStatus: followStatus ?? this.followStatus,
       isPrivate: isPrivate ?? this.isPrivate,
       isBlocked: isBlocked ?? this.isBlocked,
-      canCall: canCall ?? this.canCall,
-      canCallReason: canCallReason ?? this.canCallReason,
       ratingSummary: ratingSummary ?? this.ratingSummary,
       filter: filter ?? this.filter,
       followLoading: followLoading ?? this.followLoading,
@@ -99,8 +91,6 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
     String followStatus = 'none';
     bool isPrivate = false;
     bool isBlocked = false;
-    bool canCall = false;
-    String? canCallReason;
     Map<String, dynamic>? ratingSummary;
 
     if (data != null) {
@@ -119,8 +109,6 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
         followStatus = (data['follow_status'] as String?) ?? 'none';
         isPrivate = (data['is_private'] as bool?) ?? false;
         isBlocked = (data['is_blocked'] as bool?) ?? false;
-        canCall = (data['can_call'] as bool?) ?? false;
-        canCallReason = data['can_call_reason'] as String?;
       }
 
       try {
@@ -142,8 +130,6 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       followStatus: followStatus,
       isPrivate: isPrivate,
       isBlocked: isBlocked,
-      canCall: canCall,
-      canCallReason: canCallReason,
       ratingSummary: ratingSummary,
     );
   }

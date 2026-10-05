@@ -24,6 +24,7 @@ import '../models/listing_filter_state.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/public_profile_view_model.dart';
+import 'viewmodels/direct_chat_request_view_model.dart';
 import '../main.dart' show providerContainer;
 
 const _starColor = Color(0xFFF59E0B);
@@ -46,8 +47,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   bool _isPrivate = false;
   bool _followLoading = false;
   bool _isBlocked = false;
-  bool _canCall = false;
-  String? _canCallReason;
   Map<String, dynamic>? _ratingSummary;
 
   ListingFilterState _filter = const ListingFilterState();
@@ -145,8 +144,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         _followStatus = state.followStatus;
         _isPrivate = state.isPrivate;
         _isBlocked = state.isBlocked;
-        _canCall = state.canCall;
-        _canCallReason = state.canCallReason;
+
         _ratingSummary = state.ratingSummary;
         _filter = state.filter;
         _followLoading = state.followLoading;
@@ -175,20 +173,27 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 );
               },
             ),
-            IconButton(
-              icon: Icon(_canCall ? Icons.call : Icons.call_outlined),
-              color: _canCall ? null : Theme.of(context).disabledColor,
-              onPressed: _canCall
-                  ? () {
-                      if (ref.read(callServiceProvider).hasActiveCall) return;
-                      final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
-                      ref.read(callServiceProvider).startCall(
-                        calleeId: uid,
-                        calleeUsername: widget.username,
-                        calleeAvatar: _user?['profile_image_thumb_url'] as String?,
-                      );
-                    }
-                  : () => callPermissionToast(_canCallReason, ref.read(localizationProvider)),
+            Consumer(
+              builder: (context, ref, _) {
+                final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
+                final callState = ref.watch(directChatRequestProvider(uid)).valueOrNull;
+                final canCall = callState?.canCall ?? false;
+                final canCallReason = callState?.canCallReason;
+                return IconButton(
+                  icon: Icon(canCall ? Icons.call : Icons.call_outlined),
+                  color: canCall ? null : Theme.of(context).disabledColor,
+                  onPressed: canCall
+                      ? () {
+                          if (ref.read(callServiceProvider).hasActiveCall) return;
+                          ref.read(callServiceProvider).startCall(
+                            calleeId: uid,
+                            calleeUsername: widget.username,
+                            calleeAvatar: _user?['profile_image_thumb_url'] as String?,
+                          );
+                        }
+                      : () => callPermissionToast(canCallReason, ref.read(localizationProvider)),
+                );
+              },
             ),
           ],
           Builder(
