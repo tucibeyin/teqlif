@@ -6,8 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=stalwart
-Group=stalwart
+User=tucibeyin
+Group=tucibeyin
 
 EnvironmentFile=/project/mail/config/.env.mail
 ExecStart=/usr/local/bin/stalwart-mail --config /project/mail/config/config.toml
