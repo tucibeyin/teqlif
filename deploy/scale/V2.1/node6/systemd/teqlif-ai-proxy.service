@@ -1,5 +1,5 @@
 [Unit]
-Description=teqlif AI Proxy (node6 — DEVRE DIŞI, node5'e taşındı)
+Description=teqlif AI Proxy Primary (node6 — Virginia US, Gemini)
 After=network.target wg-quick@wg0.service
 
 [Service]

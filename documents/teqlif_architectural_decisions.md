@@ -1409,6 +1409,7 @@ DB_PASSWORD=<secret>  → /project/shared/config/uptime-kuma.env
 | Streaming | node3 nginx :443 | TCP |
 | Streaming | node4 nginx :443 | TCP |
 | Staging | api-staging.teqlif.com/health | HTTP |
+| AI Proxy | node6 AI Proxy :8001 | TCP |
 | AI Proxy | node5 AI Proxy :8001 | TCP |
 | Mail | mail.teqlif.com SMTP :25 | TCP |
 | Mail | mail.teqlif.com IMAP :993 | TCP |
@@ -1471,8 +1472,6 @@ generate_via_proxy()
 
 | Node | Rol | Öncelik | Durum |
 |------|-----|---------|-------|
-| node5 | AI Proxy Primary | 10 | Aktif |
-| node6 | — | — | `teqlif-ai-proxy` devre dışı |
-
-**Neden node5 primary?** node6 Zap-Hosting'de; panel erişimi 90 günde bir gerekiyor (bkz. §project_zap_vps). node5 kendi yönetilen altyapımızda, daha güvenilir operasyon.
+| node6 | AI Proxy Primary | 10 | Aktif (Virginia US, Gemini kısıtsız + Groq) |
+| node5 | AI Proxy Secondary | 20 | Aktif (EU, Groq + Gemini limitli) |
 
