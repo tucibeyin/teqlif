@@ -26,9 +26,6 @@ class Settings(BaseSettings):
 
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
-    ai_proxy_url: str = ""           # node6 primary (Virginia US, Gemini kısıtsız)
-    ai_proxy_fallback_url: str = ""  # node5 secondary (EU, Groq + Gemini limitli)
-
     @field_validator("edge_livekit_urls", "edge_minio_urls", mode="before")
     def parse_comma_separated_list(cls, v):
         if isinstance(v, str):

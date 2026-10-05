@@ -9,8 +9,8 @@ AlertManager servis/kaynak anormalliklerini tespit edince Telegram bildirim gön
 Gerekli ortam değişkenleri:
   CORE_REDIS_URL, EDGE_NODE_ID, EDGE_NODE_TYPE, NODE_SERVICES
   (Opsiyonel) EDGE_LIVEKIT_URL, EDGE_MINIO_URL, EDGE_AI_PROXY_URL,
-               LIVEKIT_API_KEY, LIVEKIT_API_SECRET, EDGE_NODE_REGION,
-               DISK_PATH, EDGE_METRICS_INTERVAL_SEC,
+               EDGE_AI_PROXY_PRIORITY, LIVEKIT_API_KEY, LIVEKIT_API_SECRET,
+               EDGE_NODE_REGION, DISK_PATH, EDGE_METRICS_INTERVAL_SEC,
                TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 """
 
@@ -330,10 +330,11 @@ def main() -> None:
     interval       = int(_env("EDGE_METRICS_INTERVAL_SEC", "5"))
     disk_path      = _env("DISK_PATH", "/")
 
-    livekit_url  = _env("EDGE_LIVEKIT_URL")
-    minio_url    = _env("EDGE_MINIO_URL")
-    ai_proxy_url = _env("EDGE_AI_PROXY_URL")
-    region       = _env("EDGE_NODE_REGION")
+    livekit_url      = _env("EDGE_LIVEKIT_URL")
+    minio_url        = _env("EDGE_MINIO_URL")
+    ai_proxy_url     = _env("EDGE_AI_PROXY_URL")
+    ai_proxy_priority = int(_env("EDGE_AI_PROXY_PRIORITY", "100"))
+    region           = _env("EDGE_NODE_REGION")
 
     svc_cfg = {
         "livekit_api_key":    _env("LIVEKIT_API_KEY"),
@@ -419,9 +420,10 @@ def main() -> None:
                 # Servisler
                 "services": svc_results,
                 # Routing URL'leri
-                "livekit_url":  livekit_url,
-                "minio_url":    minio_url,
-                "ai_proxy_url": ai_proxy_url,
+                "livekit_url":       livekit_url,
+                "minio_url":         minio_url,
+                "ai_proxy_url":      ai_proxy_url,
+                "ai_proxy_priority": ai_proxy_priority,
                 # Zaman damgası
                 "timestamp": int(time.time()),
             }

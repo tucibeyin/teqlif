@@ -1409,7 +1409,6 @@ DB_PASSWORD=<secret>  → /project/shared/config/uptime-kuma.env
 | Streaming | node3 nginx :443 | TCP |
 | Streaming | node4 nginx :443 | TCP |
 | Staging | api-staging.teqlif.com/health | HTTP |
-| AI Proxy | node6 AI Proxy :8001 | TCP |
 | AI Proxy | node5 AI Proxy :8001 | TCP |
 | Mail | mail.teqlif.com SMTP :25 | TCP |
 | Mail | mail.teqlif.com IMAP :993 | TCP |
@@ -1427,4 +1426,53 @@ DB_PASSWORD=<secret>  → /project/shared/config/uptime-kuma.env
 - Grafana Node Exporter Full dashboard'u **template variable'ları** (job, instance) ilk açılışta manuel seçilmeli; Grafana 11 URL state'i sonraki açılışlarda korur
 - Yeni node eklendiğinde: `prometheus.yml`'a scrape target ekle, node'a `node-exporter.service` kur, `ufw allow port 9100` ver
 
+
+---
+
+## 18. AI Proxy Mimarisi — Redis Keşfi
+
+### Karar: Statik URL yerine Redis tabanlı servis keşfi
+
+**Durum:** node6 AI Proxy birincil, node5 ikincil olarak `ai_proxy_url` / `ai_proxy_fallback_url` config alanlarıyla tanımlanıyordu. node6'dan AI işleri node5'e taşındı; gelecekte yeni AI node'ları eklenebilir.
+
+**Karar:** `ai_proxy_client.py` Core Redis'teki `edge:metrics:*` anahtarlarını okuyarak sağlıklı AI proxy node'larını keşfeder. Statik config alanları kaldırıldı.
+
+### Keşif Mantığı
+
+```
+Core Redis (node1:6379)
+  edge:metrics:node5  → { ai_proxy_url, ai_proxy_priority: 10, services.ai_proxy.healthy: true }
+  edge:metrics:nodeX  → { ai_proxy_url, ai_proxy_priority: 20, services.ai_proxy.healthy: true }
+
+ai_proxy_client._discover_ai_proxy_urls()
+  → healthy node'ları filtrele (services.ai_proxy.healthy == true)
+  → ai_proxy_priority ile sırala (küçük = önce)
+  → 30 saniyelik in-process cache (Redis yükü minimumda)
+
+generate_via_proxy()
+  → her sağlıklı node sırayla denenir
+  → tümü erişilemezse lokal llm_service.py'e fallback
+```
+
+### Yeni Node Ekleme (Plug & Play)
+
+1. Node'da `teqlif-ai-proxy` ve `teqlif-metrics-agent` servislerini kur
+2. `.env.metrics-agent` içinde `NODE_SERVICES=ai_proxy`, `EDGE_AI_PROXY_URL=http://<ip>:8001`, `EDGE_AI_PROXY_PRIORITY=<öncelik>` set et (küçük değer = önce denenir)
+3. Servis sağlıklı hale gelince Core Redis'e yazar; `ai_proxy_client` sonraki 30 saniye içinde onu keşfeder
+4. `config.py` veya `.env.production` değişikliği gerekmez
+
+### Config Değişiklikleri
+
+- **Kaldırıldı:** `ai_proxy_url`, `ai_proxy_fallback_url` (`config.py`)
+- **Korundu:** `ai_proxy_internal_token` (shared bearer token — tüm proxy node'larında aynı değer)
+- **Eklendi:** `EDGE_AI_PROXY_PRIORITY` env var (`edge_metrics_agent.py`, varsayılan: 100)
+
+### Mevcut Durum (2026-10-05)
+
+| Node | Rol | Öncelik | Durum |
+|------|-----|---------|-------|
+| node5 | AI Proxy Primary | 10 | Aktif |
+| node6 | — | — | `teqlif-ai-proxy` devre dışı |
+
+**Neden node5 primary?** node6 Zap-Hosting'de; panel erişimi 90 günde bir gerekiyor (bkz. §project_zap_vps). node5 kendi yönetilen altyapımızda, daha güvenilir operasyon.
 
