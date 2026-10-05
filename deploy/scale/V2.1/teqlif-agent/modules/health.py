@@ -330,9 +330,9 @@ async def _systemctl_error(svc: str) -> str:
 async def _backup_ages() -> dict:
     """node2'deki yedek dizinlerinin yaşını dakika cinsinden döner."""
     backup_dirs = {
-        "pg_backup":    "/var/backups/pg/",
-        "minio_backup": "/var/backups/minio/",
-        "redis_backup": "/var/backups/redis/",
+        "pg_backup":    "/project/teqlif/backups/pg_dump",
+        "minio_backup": "/project/teqlif/backups/minio",
+        "redis_backup": "/project/teqlif/backups/redis",
     }
     result = {}
     for key, path in backup_dirs.items():
