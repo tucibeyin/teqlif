@@ -13,7 +13,10 @@ final _log = LoggerService.instance;
 enum RefreshOutcome { succeeded, noToken, networkError, revoked }
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
+  // ref.read kullanılır — apiClientProvider'ın değişimlerine reaktif bağımlılık
+  // gerekmez; ayrıca apiClientProvider → authServiceProvider → apiClientProvider
+  // döngüsünü kırar.
+  final apiClient = ref.read(apiClientProvider);
   return AuthService(apiClient);
 });
 

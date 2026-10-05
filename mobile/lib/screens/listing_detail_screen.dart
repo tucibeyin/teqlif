@@ -2684,8 +2684,8 @@ class _SellerTrustRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final trust = user['trust_score'] as int?;
-    final rank = user['influence_rank'] as int?;
+    final trust = (user['trust_score'] as num?)?.toInt();
+    final rank = (user['influence_rank'] as num?)?.toInt();
     if (trust == null && rank == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 4),

@@ -73,14 +73,17 @@ void main() async {
       // Fresh install tespiti: SharedPreferences'ta flag yoksa → stale Keychain'i temizle.
       final prefs = await SharedPreferences.getInstance();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] SharedPreferences done | ${sw.elapsedMilliseconds}ms');
+
+      // Hive'ı fresh install kontrolünden ÖNCE başlat; StorageService.clear()
+      // içindeki _clearHiveBoxes() aksi takdirde HiveError üretir.
+      await CacheService.init();
+      await LocalizationService.initBox();
+      await CatalogService.initBox();
+
       if (prefs.getBool('app_installed') != true) {
         await StorageService.clear();
         await prefs.setBool('app_installed', true);
       }
-
-      await CacheService.init();
-      await LocalizationService.initBox();
-      await CatalogService.initBox();
       // Pre-load locale + translation pack before runApp so providers start
       // with correct values — eliminates the first-render flash of keys.
       final savedLang = prefs.getString('app_locale_language_code') ?? 'tr';
