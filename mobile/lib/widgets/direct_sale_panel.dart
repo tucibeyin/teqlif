@@ -14,7 +14,6 @@ import '../services/localization_service.dart';
 import '../utils/number_formatter.dart';
 import '../services/listing_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
-import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'fullscreen_image_viewer.dart';
 import 'proof_capture_sheet.dart';
@@ -557,23 +556,19 @@ class _QuickSaleSheetState extends ConsumerState<_QuickSaleSheet> {
             ],
           ),
           const SizedBox(height: 20),
-          // Fiyat
-          TeqTextField(
+          _panelField(
             controller: _priceCtrl,
+            hint: loc.t('directSaleFormPrice'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            labelText: loc.t('directSaleFormPrice'),
-            prefixIcon: Icon(Icons.sell_outlined,
-                size: 18, color: Colors.white38),
+            prefixIcon: const Icon(Icons.sell_outlined, size: 18),
             onChanged: (_) { if (_error != null) setState(() => _error = null); },
           ),
-          const SizedBox(height: 12),
-          // Stok
-          TeqTextField(
+          const SizedBox(height: 10),
+          _panelField(
             controller: _stockCtrl,
+            hint: loc.t('directSaleFormStock'),
             keyboardType: TextInputType.number,
-            labelText: loc.t('directSaleFormStock'),
-            prefixIcon: Icon(Icons.inventory_2_outlined,
-                size: 18, color: Colors.white38),
+            prefixIcon: const Icon(Icons.inventory_2_outlined, size: 18),
             onChanged: (_) { if (_error != null) setState(() => _error = null); },
           ),
           if (_error != null) ...[
@@ -610,6 +605,44 @@ class _QuickSaleSheetState extends ConsumerState<_QuickSaleSheet> {
             isExpanded: true,
           ),
         ],
+      ),
+    );
+  }
+
+  static Widget _panelField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    Widget? prefixIcon,
+    List<TextInputFormatter>? inputFormatters,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
+      style: const TextStyle(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13),
+        prefixIcon: prefixIcon,
+        prefixIconColor: const Color(0xFF475569),
+        filled: true,
+        fillColor: const Color(0xFF0F172A),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF334155)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF334155)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: kPrimary),
+        ),
       ),
     );
   }
@@ -2089,18 +2122,38 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
   }
 
   Widget _field(
-    String label,
+    String hint,
     TextEditingController ctrl, {
     TextInputType keyboardType = TextInputType.text,
     Widget? prefixIcon,
     List<TextInputFormatter>? inputFormatters,
   }) {
-    return TeqTextField(
+    return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
-      labelText: label,
-      prefixIcon: prefixIcon,
       inputFormatters: inputFormatters,
+      style: const TextStyle(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13),
+        prefixIcon: prefixIcon,
+        prefixIconColor: const Color(0xFF475569),
+        filled: true,
+        fillColor: const Color(0xFF0F172A),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF334155)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF334155)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: kPrimary),
+        ),
+      ),
     );
   }
 }
