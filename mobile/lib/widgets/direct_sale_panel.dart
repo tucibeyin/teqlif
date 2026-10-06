@@ -18,6 +18,7 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'fullscreen_image_viewer.dart';
 import 'proof_capture_sheet.dart';
+import 'shimmer_loading.dart';
 import 'swipe_paginated_list.dart';
 
 final _listingDetailProvider = FutureProvider.family.autoDispose<Map<String, dynamic>?, int>(
@@ -577,8 +578,29 @@ class _QuickSaleSheetState extends ConsumerState<_QuickSaleSheet> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!,
-                style: const TextStyle(color: Color(0xFFEF4444), fontSize: 13)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: Color(0xFFEF4444), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                          color: Color(0xFFEF4444), fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: 20),
           TeqButton(
@@ -1809,6 +1831,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
         style: const TextStyle(color: Colors.white, fontSize: 16),
       ),
       contentPadding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 0),
+      actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -1880,6 +1903,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                                     width: 38,
                                     height: 38,
                                     fit: BoxFit.cover,
+                                    placeholder: (_, _) => const ShimmerBox(width: 38, height: 38),
                                     errorWidget: (_, _, _) => const _ListingThumbPlaceholder(),
                                   )
                                 : const _ListingThumbPlaceholder(),
@@ -1933,7 +1957,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   loc.t('directSaleFormPrice'),
                   _priceCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  prefixText: '₺ ',
+                  prefixIcon: const Icon(Icons.sell_outlined, size: 18, color: Colors.white38),
                   inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
                 ),
                 const SizedBox(height: 8),
@@ -1941,6 +1965,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                   loc.t('directSaleFormStock'),
                   _stockCtrl,
                   keyboardType: TextInputType.number,
+                  prefixIcon: const Icon(Icons.inventory_2_outlined, size: 18, color: Colors.white38),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
               if (_selectedListing != null) ...[
@@ -1953,13 +1978,17 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
               ],
             ]
             else ...[
-              _field(loc.t('directSaleFormProductTitle'), _titleCtrl),
+              _field(
+                loc.t('directSaleFormProductTitle'),
+                _titleCtrl,
+                prefixIcon: const Icon(Icons.title_rounded, size: 18, color: Colors.white38),
+              ),
               const SizedBox(height: 8),
               _field(
                 loc.t('directSaleFormPrice'),
                 _priceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                prefixText: '₺ ',
+                prefixIcon: const Icon(Icons.sell_outlined, size: 18, color: Colors.white38),
                 inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
               ),
               const SizedBox(height: 8),
@@ -1967,6 +1996,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                 loc.t('directSaleFormStock'),
                 _stockCtrl,
                 keyboardType: TextInputType.number,
+                prefixIcon: const Icon(Icons.inventory_2_outlined, size: 18, color: Colors.white38),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
             ],
@@ -1981,28 +2011,56 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            loc.t('directSaleDialogCancel'),
-            style: const TextStyle(color: Colors.white54),
-          ),
-        ),
-        TextButton(
-          onPressed: _loading ? null : _submit,
-          child: _loading
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(
-                  loc.t('directSaleStartBtn'),
-                  style: const TextStyle(
-                    color: kPrimary,
-                    fontWeight: FontWeight.w700,
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _loading ? null : () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF334155)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
+                child: Text(
+                  loc.t('directSaleDialogCancel'),
+                  style: const TextStyle(color: Color(0xFF94A3B8)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _loading
+                      ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                      : const Color(0xFF10B981),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: _loading ? null : _submit,
+                child: _loading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        loc.t('directSaleStartBtn'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -2034,29 +2092,15 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
     String label,
     TextEditingController ctrl, {
     TextInputType keyboardType = TextInputType.text,
-    String? prefixText,
+    Widget? prefixIcon,
     List<TextInputFormatter>? inputFormatters,
   }) {
-    return TextField(
+    return TeqTextField(
       controller: ctrl,
       keyboardType: keyboardType,
+      labelText: label,
+      prefixIcon: prefixIcon,
       inputFormatters: inputFormatters,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixText: prefixText,
-        prefixStyle: const TextStyle(color: Colors.white),
-        labelStyle: const TextStyle(color: Colors.white54),
-        enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white24),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kPrimary),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        isDense: true,
-      ),
     );
   }
 }
