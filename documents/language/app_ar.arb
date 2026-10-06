@@ -4347,6 +4347,20 @@
   "directSaleStatusEnded": "ENDED",
   "directSaleStatusCancelled": "CANCELLED",
   "directSalePausedLabel": "Sale paused",
+  "directSaleResumedFeedback": "▶ Sale resumed",
+  "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} purchased",
+  "@directSalePurchaseHostMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" },
+      "qty": { "type": "String" }
+    }
+  },
+  "directSalePurchaseViewerMsg": "@{buyer} purchased",
+  "@directSalePurchaseViewerMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" }
+    }
+  },
   "directSaleSoldOutBanner": "Sold out 🎉",
   "directSaleEndedSoldOut": "Everything sold out! 🎉",
   "directSaleEndedByHost": "Sale ended.",

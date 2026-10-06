@@ -221,6 +221,9 @@ class ChatPanel extends ConsumerStatefulWidget {
   /// her zaman render edilir (ör. viewer kalp butonu).
   final Widget? trailingAction;
 
+  /// Pin state değişince çağrılır: true = aktif pin var, false = pin yok.
+  final void Function(bool hasPinned)? onPinChanged;
+
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -246,6 +249,7 @@ class ChatPanel extends ConsumerStatefulWidget {
     this.onGift,
     this.onHypeUpdate,
     this.onHypeAlert,
+    this.onPinChanged,
   });
 
   @override
@@ -519,7 +523,9 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
             final content = json['content'] as String? ?? '';
             if (mounted) {
               // Boş string = sabiti kaldır; dolu string = sabitle
-              setState(() => _pinnedMessage = content.isEmpty ? null : content);
+              final hasPinned = content.isNotEmpty;
+              setState(() => _pinnedMessage = hasPinned ? content : null);
+              widget.onPinChanged?.call(hasPinned);
             }
           } else if (json['type'] == 'stream_like') {
             final likeUserId = (json['user_id'] as num?)?.toInt() ?? 0;

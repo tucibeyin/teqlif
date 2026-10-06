@@ -4347,6 +4347,20 @@
   "directSaleStatusEnded": "BİTTİ",
   "directSaleStatusCancelled": "İPTAL",
   "directSalePausedLabel": "Satış duraklatıldı",
+  "directSaleResumedFeedback": "▶ Satış devam ediyor",
+  "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} satın aldı",
+  "@directSalePurchaseHostMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" },
+      "qty": { "type": "String" }
+    }
+  },
+  "directSalePurchaseViewerMsg": "@{buyer} satın aldı",
+  "@directSalePurchaseViewerMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" }
+    }
+  },
   "directSaleSoldOutBanner": "Stok tükendi 🎉",
   "directSaleEndedSoldOut": "Tüm ürünler satıldı! 🎉",
   "directSaleEndedByHost": "Satış sonlandırıldı.",

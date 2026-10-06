@@ -6,6 +6,7 @@ import '../models/direct_sale.dart';
 import '../services/direct_sale_service.dart';
 import '../services/listing_service.dart';
 import '../services/localization_service.dart';
+import '../core/error_mapper.dart';
 import '../utils/error_helper.dart';
 import 'stream_commerce_notifier.dart';
 
@@ -209,8 +210,10 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
       _dsLog('PURCHASE', 'OK | saleId=$saleId qty=$quantity');
     } catch (e) {
       _dsLog('PURCHASE', 'ERROR | saleId=$saleId $e');
-      handleError(e, loc);
-      state = state.copyWith(purchaseStatus: ViewerPurchaseStatus.idle);
+      state = state.copyWith(
+        purchaseStatus: ViewerPurchaseStatus.error,
+        purchaseErrorMessage: ErrorMapper.toMessage(e, loc),
+      );
     }
   }
 
@@ -219,22 +222,32 @@ class DirectSaleViewerNotifier extends StateNotifier<DirectSaleViewerState> {
   }
 }
 
-enum ViewerPurchaseStatus { idle, loading, success }
+enum ViewerPurchaseStatus { idle, loading, success, error }
 
 class DirectSaleViewerState {
   final ViewerPurchaseStatus purchaseStatus;
+  final String? purchaseErrorMessage;
 
   const DirectSaleViewerState({
     this.purchaseStatus = ViewerPurchaseStatus.idle,
+    this.purchaseErrorMessage,
   });
 
-  DirectSaleViewerState copyWith({ViewerPurchaseStatus? purchaseStatus}) =>
-      DirectSaleViewerState(
-        purchaseStatus: purchaseStatus ?? this.purchaseStatus,
-      );
+  DirectSaleViewerState copyWith({
+    ViewerPurchaseStatus? purchaseStatus,
+    String? purchaseErrorMessage,
+  }) {
+    final s = purchaseStatus ?? this.purchaseStatus;
+    return DirectSaleViewerState(
+      purchaseStatus: s,
+      purchaseErrorMessage: purchaseErrorMessage ??
+          (s == ViewerPurchaseStatus.error ? this.purchaseErrorMessage : null),
+    );
+  }
 
   bool get isLoading => purchaseStatus == ViewerPurchaseStatus.loading;
   bool get isPurchaseSuccess => purchaseStatus == ViewerPurchaseStatus.success;
+  bool get isPurchaseError => purchaseStatus == ViewerPurchaseStatus.error;
 }
 
 final directSaleViewerProvider = StateNotifierProvider.family

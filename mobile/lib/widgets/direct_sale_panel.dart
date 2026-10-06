@@ -1,4 +1,5 @@
 // ignore_for_file: use_build_context_synchronously
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,6 +55,27 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
   bool _impressionFired = false;
   int _quickCount = 0;
 
+  String? _msg;
+  bool _msgError = false;
+  Timer? _msgTimer;
+
+  void _setMsg(String msg, {bool error = false}) {
+    _msgTimer?.cancel();
+    setState(() {
+      _msg = msg;
+      _msgError = error;
+    });
+    _msgTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _msg = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _msgTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -86,7 +108,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
             ? loc.t('directSaleEndDialogBody', {'count': orderCount.toString()})
             : loc.t('directSaleEndDialogBodyNoOrders'),
         confirmLabel: loc.t('directSaleEndBtn'),
-        confirmColor: Colors.redAccent,
+        confirmColor: const Color(0xFFEF4444),
       ),
     );
     if (confirmed == true) {
@@ -142,6 +164,27 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
           next.title.isEmpty ? null : next.title,
         );
       }
+      // Satın alım bildirimi — panel içi inline mesaj
+      if (next.lastPurchaseBuyer != null &&
+          next.lastPurchaseBuyer != prev?.lastPurchaseBuyer) {
+        final buyer = next.lastPurchaseBuyer!;
+        final qty = next.lastPurchaseQty ?? 1;
+        final loc = ref.read(localizationProvider);
+        if (widget.isHost) {
+          _setMsg(loc.t('directSalePurchaseHostMsg', {'buyer': buyer, 'qty': qty.toString()}));
+        } else {
+          _setMsg(loc.t('directSalePurchaseViewerMsg', {'buyer': buyer}));
+        }
+      }
+      // Host: duraklatma / devam etme onayı
+      if (widget.isHost) {
+        final loc = ref.read(localizationProvider);
+        if (prev?.status == 'active' && next.status == 'paused') {
+          _setMsg(loc.t('directSalePausedLabel'));
+        } else if (prev?.status == 'paused' && next.status == 'active') {
+          _setMsg(loc.t('directSaleResumedFeedback'));
+        }
+      }
     });
 
     final dsState = ref.watch(directSaleHostProvider(widget.streamId));
@@ -160,20 +203,40 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
     }
 
     if (!dsState.isIdle) {
-      return _ActivePanel(
-        streamId: widget.streamId,
-        state: dsState,
-        isHost: widget.isHost,
-        onWin: widget.onWin,
-        onPause: () => ref
-            .read(directSaleHostProvider(widget.streamId).notifier)
-            .pause(ref.read(localizationProvider)),
-        onResume: () => ref
-            .read(directSaleHostProvider(widget.streamId).notifier)
-            .resume(ref.read(localizationProvider)),
-        onEnd: (ctx) => _confirmEnd(ctx),
-        onCancel: (ctx) => _confirmCancel(ctx),
-        onBuy: () => _showBuySheet(context, dsState),
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ActivePanel(
+            streamId: widget.streamId,
+            state: dsState,
+            isHost: widget.isHost,
+            onWin: widget.onWin,
+            onPause: () => ref
+                .read(directSaleHostProvider(widget.streamId).notifier)
+                .pause(ref.read(localizationProvider)),
+            onResume: () => ref
+                .read(directSaleHostProvider(widget.streamId).notifier)
+                .resume(ref.read(localizationProvider)),
+            onEnd: (ctx) => _confirmEnd(ctx),
+            onCancel: (ctx) => _confirmCancel(ctx),
+            onBuy: () => _showBuySheet(context, dsState),
+          ),
+          if (_msg != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 2),
+              child: Text(
+                _msg!,
+                style: TextStyle(
+                  color: _msgError
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF10B981),
+                  fontSize: 11,
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+                ),
+              ),
+            ),
+        ],
       );
     }
 
@@ -186,7 +249,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
       isScrollControlled: true,
       backgroundColor: const Color(0xFF1E293B),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _QuickSaleSheet(
         streamId: widget.streamId,
@@ -260,8 +323,9 @@ class _IdleHostPanel extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -276,6 +340,7 @@ class _IdleHostPanel extends ConsumerWidget {
           _pillIconBtn(
             icon: Icons.bolt_rounded,
             label: loc.t('quickAuctionBtn'),
+            color: const Color(0xFFF59E0B),
             onTap: onStartQuick,
           ),
           const SizedBox(width: 8),
@@ -292,32 +357,38 @@ class _IdleHostPanel extends ConsumerWidget {
   Widget _pillIconBtn({
     required IconData icon,
     String? label,
+    Color? color,
     VoidCallback? onTap,
   }) {
+    final hasLabel = label != null;
+    final bg = color ?? Colors.white.withValues(alpha: 0.15);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: label != null
+        padding: hasLabel
             ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
-            : const EdgeInsets.all(6),
+            : const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
+          color: hasLabel ? bg : Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(hasLabel ? 20 : 8),
+          border: hasLabel
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
-        child: label != null
+        child: hasLabel
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, color: Colors.white, size: 15),
+                  Icon(icon, color: Colors.white, size: 12),
                   const SizedBox(width: 4),
                   Text(label,
                       style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700)),
                 ],
               )
-            : Icon(icon, color: Colors.white70, size: 18),
+            : Icon(icon, color: Colors.white54, size: 16),
       ),
     );
   }
@@ -326,15 +397,15 @@ class _IdleHostPanel extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFF0D9488),
+          color: const Color(0xFF10B981),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label,
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: FontWeight.w700)),
       ),
     );
@@ -456,7 +527,7 @@ class _QuickSaleSheetState extends ConsumerState<_QuickSaleSheet> {
           ),
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, color: Color(0xFF0D9488), size: 20),
+              const Icon(Icons.bolt_rounded, color: Color(0xFF10B981), size: 20),
               const SizedBox(width: 8),
               Text(
                 loc.t('quickSaleSheetTitle'),
@@ -537,8 +608,9 @@ class _ActivePanel extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       padding: const EdgeInsets.all(10),
       child: Column(
@@ -611,13 +683,13 @@ class _ActivePanel extends ConsumerWidget {
           if (state.isSoldOut)
             _Banner(
               text: loc.t('directSaleSoldOutBanner'),
-              color: Colors.green,
+              color: const Color(0xFF10B981),
             ),
 
           if (state.isPaused)
             _Banner(
               text: loc.t('directSalePausedLabel'),
-              color: Colors.orange,
+              color: const Color(0xFFF59E0B),
             ),
 
           const SizedBox(height: 8),
@@ -628,49 +700,50 @@ class _ActivePanel extends ConsumerWidget {
                 if (state.isActive)
                   _HostBtn(
                     label: loc.t('directSalePauseBtn'),
-                    color: Colors.orange,
+                    color: const Color(0xFFF59E0B),
                     onTap: onPause,
                   ),
                 if (state.isPaused)
                   _HostBtn(
                     label: loc.t('directSaleResumeBtn'),
-                    color: Colors.green,
+                    color: const Color(0xFF10B981),
                     onTap: onResume,
                   ),
                 if (!state.isSoldOut) ...[
                   const SizedBox(width: 6),
                   _HostBtn(
                     label: loc.t('directSaleEndBtn'),
-                    color: Colors.redAccent,
+                    color: const Color(0xFFEF4444),
                     onTap: () => onEnd(context),
                   ),
                 ],
                 const SizedBox(width: 6),
                 _HostBtn(
                   label: loc.t('directSaleCancelBtn'),
-                  color: Colors.grey,
+                  color: Colors.white,
+                  isNeutral: true,
                   onTap: () => onCancel(context),
                 ),
               ],
             ),
           ] else if (state.canPurchase) ...[
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onBuy,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+            GestureDetector(
+              onTap: onBuy,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: kPrimary,
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   loc.t('directSaleBuyBtn'),
                   style: const TextStyle(
                     color: Colors.white,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
@@ -839,19 +912,17 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
             const SizedBox(height: 20),
 
             if (canBuy)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    widget.onBuy?.call();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onBuy?.call();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: kPrimary,
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     loc.t('directSaleBuyBtn'),
@@ -860,6 +931,7 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
@@ -869,7 +941,7 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
                 child: Text(
                   loc.t('directSaleSoldOutBanner'),
                   style: const TextStyle(
-                    color: Colors.greenAccent,
+                    color: Color(0xFF10B981),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1086,7 +1158,7 @@ class _Banner extends ConsumerWidget {
         child: Text(
           text,
           style: TextStyle(
-            color: color == Colors.green ? Colors.greenAccent : Colors.orange,
+            color: color,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -1117,8 +1189,9 @@ class _TerminalBanner extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Text(
         msg,
@@ -1140,10 +1213,10 @@ class _StatusBadge extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final (label, color) = switch (state.status) {
-      'active' => (loc.t('directSaleStatusActive'), Colors.green),
-      'paused' => (loc.t('directSaleStatusPaused'), Colors.orange),
-      'sold_out' => (loc.t('directSaleStatusSoldOut'), Colors.green),
-      _ => (loc.t('directSaleStatusEnded'), Colors.grey),
+      'active' => (loc.t('directSaleStatusActive'), const Color(0xFF10B981)),
+      'paused' => (loc.t('directSaleStatusPaused'), const Color(0xFFF59E0B)),
+      'sold_out' => (loc.t('directSaleStatusSoldOut'), const Color(0xFF10B981)),
+      _ => (loc.t('directSaleStatusEnded'), const Color(0xFF64748B)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1169,8 +1242,14 @@ class _HostBtn extends ConsumerWidget {
   final String label;
   final Color color;
   final VoidCallback? onTap;
+  final bool isNeutral;
 
-  const _HostBtn({required this.label, required this.color, required this.onTap});
+  const _HostBtn({
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.isNeutral = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1180,15 +1259,20 @@ class _HostBtn extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.8),
+            color: isNeutral
+                ? Colors.white.withValues(alpha: 0.12)
+                : color.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(8),
+            border: isNeutral
+                ? Border.all(color: Colors.white.withValues(alpha: 0.3))
+                : null,
           ),
           child: Text(
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1218,22 +1302,50 @@ class _ConfirmDialog extends ConsumerWidget {
     final loc = ref.watch(localizationProvider);
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(title, style: const TextStyle(color: Colors.white)),
       content: Text(body, style: const TextStyle(color: Colors.white70)),
+      actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(
-            loc.t('directSaleDialogCancel'),
-            style: const TextStyle(color: Colors.white54),
-          ),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(
-            confirmLabel,
-            style: TextStyle(color: confirmColor, fontWeight: FontWeight.w700),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context, false),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF334155)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: Text(
+                  loc.t('directSaleDialogCancel'),
+                  style: const TextStyle(color: Color(0xFF94A3B8)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: confirmColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  confirmLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1252,6 +1364,7 @@ class _CancelDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
         loc.t('directSaleCancelDialogTitle'),
         style: const TextStyle(color: Colors.white),
@@ -1322,9 +1435,11 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     final viewerState = ref.watch(directSaleViewerProvider(widget.streamId));
-    final liveStock = ref.watch(directSaleHostProvider(widget.streamId)).remainingStock;
+    final live = ref.watch(directSaleHostProvider(widget.streamId));
+    final liveStock = live.remainingStock;
     final maxQty = liveStock.clamp(1, 10);
     final total = double.parse((_qty * widget.state.price).toStringAsFixed(2));
+    final canBuyNow = live.canPurchase && !viewerState.isLoading;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1379,6 +1494,16 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               ),
             ],
           ),
+          // Satış duraklatılmış veya stok tükenmiş uyarısı
+          if (!live.canPurchase)
+            _Banner(
+              text: live.isPaused
+                  ? loc.t('directSalePausedLabel')
+                  : loc.t('directSaleSoldOutBanner'),
+              color: live.isPaused
+                  ? const Color(0xFFF59E0B)
+                  : const Color(0xFF10B981),
+            ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -1426,49 +1551,103 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               ),
             ],
           ),
+          // Satın alım hatası
+          if (viewerState.isPurchaseError)
+            Container(
+              margin: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: Color(0xFFEF4444), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      viewerState.purchaseErrorMessage ??
+                          loc.t('errorGenericRetry'),
+                      style: const TextStyle(
+                          color: Color(0xFFEF4444), fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => ref
+                        .read(directSaleViewerProvider(widget.streamId)
+                            .notifier)
+                        .resetPurchase(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        loc.tOr('retryBtn', 'Tekrar Dene'),
+                        style: const TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: viewerState.isLoading
-                  ? null
-                  : () async {
-                      await ref
-                          .read(directSaleViewerProvider(widget.streamId).notifier)
-                          .purchase(
-                            widget.state.saleId,
-                            _qty,
-                            ref.read(localizationProvider),
-                          );
-                      if (ref
-                          .read(directSaleViewerProvider(widget.streamId))
-                          .isPurchaseSuccess) {
-                        widget.onWin?.call();
-                        if (context.mounted) Navigator.pop(context);
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          GestureDetector(
+            onTap: canBuyNow
+                ? () async {
+                    await ref
+                        .read(directSaleViewerProvider(widget.streamId)
+                            .notifier)
+                        .purchase(
+                          widget.state.saleId,
+                          _qty,
+                          ref.read(localizationProvider),
+                        );
+                    if (ref
+                        .read(directSaleViewerProvider(widget.streamId))
+                        .isPurchaseSuccess) {
+                      widget.onWin?.call();
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  }
+                : null,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: canBuyNow ? kPrimary : kPrimary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: viewerState.isLoading
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                  ? const Center(
+                      child: SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       ),
                     )
                   : Text(
                       loc.t('directSaleBuySheetConfirm'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: canBuyNow
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.5),
                         fontWeight: FontWeight.w700,
                       ),
+                      textAlign: TextAlign.center,
                     ),
             ),
           ),

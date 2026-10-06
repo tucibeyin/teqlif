@@ -16,6 +16,7 @@ import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
 import '../services/storage_service.dart';
 import '../utils/number_formatter.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'proof_capture_sheet.dart';
 import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
@@ -294,6 +295,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           loc.t("auctionEndTitle"),
           style: const TextStyle(color: Colors.white),
@@ -302,26 +304,47 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           loc.t("auctionEndDesc"),
           style: const TextStyle(color: Color(0xFF94A3B8)),
         ),
+        actionsPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              loc.t("btnCancel"),
-              style: const TextStyle(color: Color(0xFF64748B)),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF334155)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    loc.t("btnCancel"),
+                    style: const TextStyle(color: Color(0xFF94A3B8)),
+                  ),
+                ),
               ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              loc.t("auctionEndBtn"),
-              style: const TextStyle(color: Colors.white),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(
+                    loc.t("auctionEndBtn"),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -437,8 +460,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: const Color(0xCC000000),
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.black.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Row(
               children: [
@@ -522,7 +546,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 _msg!,
                 style: TextStyle(
                   fontSize: 11,
-                  color: _msgError ? Colors.redAccent : Colors.greenAccent,
+                  color: _msgError ? const Color(0xFFEF4444) : const Color(0xFF10B981),
                   shadows: const [Shadow(blurRadius: 4, color: Colors.black)],
                 ),
               ),
@@ -716,35 +740,35 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final Color color;
     if (state.status == 'active') {
       label = loc.t("auctionStatusActive");
-      color = Colors.green;
+      color = const Color(0xFF10B981);
     } else if (state.status == 'buy_it_now_pending') {
       label = loc.t("auctionStatusPending");
-      color = Colors.orange;
+      color = const Color(0xFFF97316);
     } else if (state.status == 'paused') {
       label = loc.t("auctionStatusPaused");
-      color = Colors.amber;
+      color = const Color(0xFFF59E0B);
     } else if (state.status == 'ended' && state.isBoughtItNow) {
       label = loc.t("auctionStatusSold");
-      color = Colors.orange;
+      color = const Color(0xFFF97316);
     } else if (state.status == 'ended') {
       label = loc.t("auctionStatusEnded");
-      color = Colors.red;
+      color = const Color(0xFFEF4444);
     } else {
       label = loc.t("auctionStatusIdle");
-      color = const Color(0xFF475569);
+      color = const Color(0xFF94A3B8);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );
@@ -756,18 +780,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (state.isIdle && widget.onAuctionReset != null) ...[
+          if ((state.isIdle || state.isEnded) && widget.onAuctionReset != null) ...[
             _iconBtn(Icons.close_rounded, Colors.white54, widget.onAuctionReset!),
             const SizedBox(width: 6),
           ],
           _pillIconBtn(
             Icons.bolt_rounded,
             loc.t("quickAuctionBtn"),
-            _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange,
+            _quickAuctionLoading ? const Color(0xFFF59E0B).withValues(alpha: 0.4) : const Color(0xFFF59E0B),
             _quickAuctionLoading ? null : _startQuickAuction,
           ),
           const SizedBox(width: 6),
-          _pillBtn(loc.t("auctionStartBtn"), Colors.green, _showStartDialog),
+          _pillBtn(loc.t("auctionStartBtn"), const Color(0xFF10B981), _showStartDialog),
         ],
       );
     }
@@ -775,13 +799,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
+          _iconBtn(Icons.pause_rounded, const Color(0xFFF59E0B), _pauseAuction),
           if (state.currentBidder != null && state.bidCount > 0) ...[
             const SizedBox(width: 6),
             _acceptBtn(),
           ],
           const SizedBox(width: 6),
-          _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
+          _iconBtn(Icons.stop_rounded, const Color(0xFFEF4444), _endAuction),
         ],
       );
     }
@@ -789,13 +813,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
+          _iconBtn(Icons.play_arrow_rounded, const Color(0xFF10B981), _resumeAuction),
           if (state.currentBidder != null && state.bidCount > 0) ...[
             const SizedBox(width: 6),
             _acceptBtn(),
           ],
           const SizedBox(width: 6),
-          _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
+          _iconBtn(Icons.stop_rounded, const Color(0xFFEF4444), _endAuction),
         ],
       );
     }
@@ -803,9 +827,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _pillBtn(loc.t("auctionBuyNowRejectInline"), Colors.red, _buyItNowReject),
+          _pillBtn(loc.t("auctionBuyNowRejectInline"), const Color(0xFFEF4444), _buyItNowReject),
           const SizedBox(width: 6),
-          _pillBtn(loc.t("auctionBuyNowAcceptInline"), Colors.green, _buyItNowAccept),
+          _pillBtn(loc.t("auctionBuyNowAcceptInline"), const Color(0xFF10B981), _buyItNowAccept),
         ],
       );
     }
@@ -833,7 +857,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
             decoration: BoxDecoration(
               color: enabled
-                  ? const Color(0xFF16A34A)
+                  ? const Color(0xFF10B981)
                   : const Color(0xFF334155),
               borderRadius: BorderRadius.circular(20),
             ),
@@ -855,7 +879,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.orange.shade700,
+                color: const Color(0xFFF97316),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -1188,7 +1212,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       context: outerContext,
       backgroundColor: const Color(0xF01E293B),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       isScrollControlled: true,
       builder: (_) => _BidSheetContent(
@@ -1288,9 +1312,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         return GestureDetector(
           onTap: _acceptBid,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF059669),
+              color: const Color(0xFF10B981),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -1347,15 +1371,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       );
       if (mounted) {
         final loc = ref.watch(localizationProvider);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(loc.t("buyItNowAccepted"))));
+        TeqSnackBar.show(
+          message: loc.t("buyItNowAccepted"),
+          type: TeqSnackBarType.success,
+        );
       }
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        TeqSnackBar.show(message: e.message, type: TeqSnackBarType.error);
       }
     } catch (e, st) {
       LoggerService.instance.captureException(
@@ -1375,17 +1398,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     try {
       await ref.read(auctionServiceProvider).rejectBuyItNow(widget.streamId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(loc.t("auctionBuyNowRejected")),
-          ),
+        TeqSnackBar.show(
+          message: loc.t("auctionBuyNowRejected"),
+          type: TeqSnackBarType.info,
         );
       }
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        TeqSnackBar.show(message: e.message, type: TeqSnackBarType.error);
       }
     } catch (e, st) {
       LoggerService.instance.captureException(
@@ -1538,20 +1558,15 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     try {
       await ref.read(auctionServiceProvider).buyItNow(widget.streamId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              loc.t("auctionBuyNowRequestSent"),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
+        TeqSnackBar.show(
+          message: loc.t("auctionBuyNowRequestSent"),
+          type: TeqSnackBarType.info,
+          duration: const Duration(seconds: 4),
         );
       }
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-        );
+        TeqSnackBar.show(message: e.message, type: TeqSnackBarType.error);
       }
     } catch (e, st) {
       LoggerService.instance.captureException(
@@ -1875,12 +1890,12 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                     decoration: BoxDecoration(
                       color: _loading
                           ? const Color(0xFF1E293B)
-                          : Colors.orange.shade700,
+                          : const Color(0xFFF97316),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _loading
                             ? const Color(0xFF334155)
-                            : Colors.orange.shade500,
+                            : const Color(0xFFF97316).withValues(alpha: 0.6),
                         width: 1.5,
                       ),
                     ),
@@ -1975,7 +1990,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                           _placeBid(v);
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
+                    backgroundColor: const Color(0xFF10B981),
                     disabledBackgroundColor: const Color(0xFF1E293B),
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -2287,7 +2302,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
+            backgroundColor: const Color(0xFF10B981),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -2409,7 +2424,7 @@ class _AuctionStatusBadge extends ConsumerWidget {
     final (label, color, icon) = switch (state.status) {
       'active' => (
         loc.t("auctionStatusActive"),
-        const Color(0xFF16A34A),
+        const Color(0xFF10B981),
         Icons.circle,
       ),
       'paused' => (

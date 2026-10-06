@@ -14,7 +14,13 @@ class HostStreamViewModel {
   final ModerationService _moderation;
   final StreamService _stream;
 
+  final ValueNotifier<bool> hasPinned = ValueNotifier(false);
+
   HostStreamViewModel(this._analytics, this._auction, this._moderation, this._stream);
+
+  void setPinned(bool value) => hasPinned.value = value;
+
+  void dispose() => hasPinned.dispose();
 
   // Analytics
   Future<Map<String, dynamic>?> getAudienceSize(String title, String category) async {

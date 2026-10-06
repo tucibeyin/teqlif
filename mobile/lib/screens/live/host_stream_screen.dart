@@ -106,6 +106,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   final _hypeScore = ValueNotifier<int>(0);
+  late final HostStreamViewModel _vm;
 
   // Balina Radarı HUD
   OverlayEntry? _whaleHudEntry;
@@ -116,6 +117,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   @override
   void initState() {
     super.initState();
+    _vm = ref.read(hostStreamViewModelProvider);
     WidgetsBinding.instance.addObserver(this);
     StreamService.isHosting = true;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -1268,80 +1270,93 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                         onHypeAlert: _showHypeAlert,
                         pinAtBottom: true,
                         pinDismissible: true,
+                        onPinChanged: _vm.setPinned,
                       ),
                       // ── Pin butonları ─────────────────────────────────────
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 2,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Sabitle
-                            GestureDetector(
-                              onTap: _showPinInput,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x88000000),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.amber.withValues(alpha: 0.5),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _vm.hasPinned,
+                        builder: (context, hasPinned, _) => Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Sabitle
+                              GestureDetector(
+                                onTap: _showPinInput,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.push_pin_rounded,
-                                      size: 13,
-                                      color: Colors.amber,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0x88000000),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.amber.withValues(alpha: 0.5),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      ref
-                                          .read(localizationProvider)
-                                          .t('btnPin'),
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.push_pin_rounded,
+                                        size: 13,
+                                        color: Colors.amber,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            // Sabiti Kaldır
-                            GestureDetector(
-                              onTap: () =>
-                                  _chatKey.currentState?.sendHostPin(''),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x55000000),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.white24),
-                                ),
-                                child: Text(
-                                  loc.t('btnRemovePin'),
-                                  style: const TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        ref
+                                            .read(localizationProvider)
+                                            .t('btnPin'),
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              // Sabiti Kaldır — yalnızca aktif pin varken etkin görünür
+                              GestureDetector(
+                                onTap: hasPinned
+                                    ? () => _chatKey.currentState?.sendHostPin('')
+                                    : null,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: hasPinned
+                                        ? const Color(0x88000000)
+                                        : const Color(0x33000000),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: hasPinned
+                                          ? Colors.white54
+                                          : Colors.white24,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    loc.t('btnRemovePin'),
+                                    style: TextStyle(
+                                      color: hasPinned
+                                          ? Colors.white70
+                                          : Colors.white30,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       // ── Lead blast butonu ──────────────────────────────────

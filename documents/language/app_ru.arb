@@ -4347,6 +4347,20 @@
   "directSaleStatusEnded": "ЗАВЕРШЕНА",
   "directSaleStatusCancelled": "ОТМЕНЕНА",
   "directSalePausedLabel": "Продажа приостановлена",
+  "directSaleResumedFeedback": "▶ Продажа возобновлена",
+  "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} купил(а)",
+  "@directSalePurchaseHostMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" },
+      "qty": { "type": "String" }
+    }
+  },
+  "directSalePurchaseViewerMsg": "@{buyer} купил(а)",
+  "@directSalePurchaseViewerMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" }
+    }
+  },
   "directSaleSoldOutBanner": "Распродано 🎉",
   "directSaleEndedSoldOut": "Всё распродано! 🎉",
   "directSaleEndedByHost": "Продажа завершена.",

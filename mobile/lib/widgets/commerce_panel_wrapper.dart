@@ -65,6 +65,8 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
   // Provider state non-idle'a geçince bunlara bakılmaz (mode naturally güncellenir).
   bool _forceAuction = false;
   bool _forceDirectSale = false;
+  // Biten artırma panelini kullanıcı X ile kapattıysa true; idle'a dönünce sıfırlanır.
+  bool _dismissedEndedAuction = false;
 
   bool get _isHostLike => widget.isHost || widget.isCoHost;
 
@@ -78,8 +80,11 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
       if (_forceAuction && !next.isIdle && !next.isEnded) {
         setState(() => _forceAuction = false);
       }
-      // Artırma bitti → parent'ı bilgilendir (AuctionPanel artık render edilmeyeceği için
-      // kendi onAuctionReset callback'ini tetikleyemez)
+      // State idle'a döndü (yeni artırma veya reset) → dismiss flag'i temizle
+      if (next.isIdle && _dismissedEndedAuction) {
+        setState(() => _dismissedEndedAuction = false);
+      }
+      // Artırma bitti → parent'ı bilgilendir
       if (prev != null && next.isEnded && !(prev.isEnded)) {
         widget.onAuctionReset?.call();
       }
@@ -106,7 +111,10 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
           onBidAdded: widget.onBidAdded,
           onAuctionReset: () {
             widget.onAuctionReset?.call();
-            setState(() => _forceAuction = false);
+            setState(() {
+              _forceAuction = false;
+              if (auctionState.isEnded) _dismissedEndedAuction = true;
+            });
           },
           onWin: widget.onAuctionWin,
           captureProofImage: widget.captureProofImage,
@@ -134,10 +142,12 @@ class _CommercePanelWrapperState extends ConsumerState<CommercePanelWrapper> {
     if (_forceDirectSale) return _CommerceMode.directSale;
     if (_forceAuction) return _CommerceMode.auction;
 
-    // Biten (terminal/ended) state'ler idle chip'e dönüş sağlar;
-    // yalnızca gerçekten ÇALIŞAN durumlar kendi panellerini gösterir.
     if (!dsState.isIdle && !dsState.isTerminal) return _CommerceMode.directSale;
-    if (!auctionState.isIdle && !auctionState.isEnded) return _CommerceMode.auction;
+    // Biten artırma kullanıcı tarafından kapatılana kadar AuctionPanel'de kalır;
+    // böylece ended state'te X butonu görünür olur.
+    if (!auctionState.isIdle && !(auctionState.isEnded && _dismissedEndedAuction)) {
+      return _CommerceMode.auction;
+    }
     return _CommerceMode.idle;
   }
 }
