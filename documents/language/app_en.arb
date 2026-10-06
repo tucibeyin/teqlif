@@ -4377,6 +4377,7 @@
   "commerceSelectAuction": "Auction",
   "commerceSelectDirectSale": "Direct Sale",
   "directSaleIdleChip": "No active sale",
+  "directSaleStatusIdle": "DIRECT SALE",
   "directSaleStatusActive": "ACTIVE",
   "directSaleStatusPaused": "PAUSED",
   "directSaleStatusSoldOut": "SOLD OUT",

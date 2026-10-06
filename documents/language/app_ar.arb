@@ -4341,6 +4341,7 @@
   "commerceSelectAuction": "Auction",
   "commerceSelectDirectSale": "Direct Sale",
   "directSaleIdleChip": "No active sale",
+  "directSaleStatusIdle": "بيع مباشر",
   "directSaleStatusActive": "ACTIVE",
   "directSaleStatusPaused": "PAUSED",
   "directSaleStatusSoldOut": "SOLD OUT",

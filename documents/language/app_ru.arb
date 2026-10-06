@@ -4341,6 +4341,7 @@
   "commerceSelectAuction": "Аукцион",
   "commerceSelectDirectSale": "Прямая продажа",
   "directSaleIdleChip": "Нет активной продажи",
+  "directSaleStatusIdle": "ПРЯМАЯ ПРОДАЖА",
   "directSaleStatusActive": "АКТИВНА",
   "directSaleStatusPaused": "ПРИОСТАНОВЛЕНА",
   "directSaleStatusSoldOut": "РАСПРОДАНО",

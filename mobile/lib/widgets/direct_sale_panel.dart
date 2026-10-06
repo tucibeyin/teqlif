@@ -328,8 +328,24 @@ class _IdleHostPanel extends ConsumerWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Panel tipi badge — AuctionPanel'deki auctionStatusIdle ile aynı rol
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF94A3B8).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              loc.t('directSaleStatusIdle'),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF94A3B8),
+              ),
+            ),
+          ),
+          const Spacer(),
           // ✕ Ana panele dön
           _pillIconBtn(
             icon: Icons.close_rounded,

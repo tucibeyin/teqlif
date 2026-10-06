@@ -4341,6 +4341,7 @@
   "commerceSelectAuction": "Açık Artırma",
   "commerceSelectDirectSale": "Direkt Satış",
   "directSaleIdleChip": "Henüz satış yok",
+  "directSaleStatusIdle": "DİREKT SATIŞ",
   "directSaleStatusActive": "AKTİF",
   "directSaleStatusPaused": "DURAKLADI",
   "directSaleStatusSoldOut": "STOK TÜKENDİ",
