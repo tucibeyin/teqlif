@@ -100,8 +100,19 @@ class HealthMonitor:
                 await self._eval_hw(nid, state["metrics"])
                 await self._eval_services(nid, state["services"])
                 await self._eval_recording_disk(nid, state["metrics"])
+                await self._eval_ntp(nid, state["metrics"])
 
     # ── Değerlendirme ─────────────────────────────────────────────────────────
+
+    async def _eval_ntp(self, node_id: str, metrics: dict) -> None:
+        synced = metrics.get("ntp_synced")
+        if synced is None:
+            return
+        fkey = f"{node_id}:ntp"
+        if not synced:
+            await self._fire(fkey, f"🕐 <b>{node_id}</b> — NTP senkronizasyonu kesildi")
+        else:
+            await self._recover(fkey, f"✅ <b>{node_id}</b> — NTP senkronizasyonu normale döndü")
 
     async def _eval_hw(self, node_id: str, metrics: dict) -> None:
         labels = {
@@ -217,8 +228,22 @@ async def _collect_hw_metrics() -> dict:
         "cpu_percent":  await _cpu_percent(),
         "ram_percent":  _ram_percent(),
         "disk_percent": _disk_percent("/"),
+        "ntp_synced":   await _ntp_synced(),
         **_net_mbps(),
     }
+
+
+async def _ntp_synced() -> bool:
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "timedatectl", "show", "--property=NTPSynchronized",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        out, _ = await proc.communicate()
+        return b"NTPSynchronized=yes" in out
+    except Exception:
+        return True  # erişilemiyorsa alarm verme
 
 
 async def _cpu_percent() -> float:
