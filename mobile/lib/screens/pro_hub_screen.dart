@@ -20,14 +20,35 @@ import 'my_recordings_screen.dart';
 
 class ProHubScreen extends ConsumerStatefulWidget {
   final bool isPremium;
+  final bool scrollToLiveSection;
 
-  const ProHubScreen({super.key, required this.isPremium});
+  const ProHubScreen({super.key, required this.isPremium, this.scrollToLiveSection = false});
 
   @override
   ConsumerState<ProHubScreen> createState() => _ProHubScreenState();
 }
 
 class _ProHubScreenState extends ConsumerState<ProHubScreen> {
+  final _liveAccordionKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.scrollToLiveSection) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _liveAccordionKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+            alignment: 0.1,
+          );
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     // Only cleanup if we are sure it's okay to do so, AutoDispose will take care of the ViewModel.
@@ -176,10 +197,12 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
 
           // ── 3. Canlı Yayın & Kitle ─────────────────────────────────────────
           _buildAccordion(
+            widgetKey: _liveAccordionKey,
             context: context,
             title: loc.t('proHubTabAudience'),
             icon: Icons.stream,
             iconColor: const Color(0xFF14B8A6),
+            initiallyExpanded: widget.scrollToLiveSection,
             children: [
               _ToolCard(
                 icon: Icons.schedule_outlined,
@@ -255,6 +278,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
   }
 
   Widget _buildAccordion({
+    Key? widgetKey,
     required BuildContext context,
     required String title,
     required IconData icon,
@@ -263,6 +287,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
     bool initiallyExpanded = false,
   }) {
     return Container(
+      key: widgetKey,
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant(context),
         borderRadius: BorderRadius.circular(16),

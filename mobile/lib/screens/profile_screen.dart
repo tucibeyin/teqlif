@@ -1800,6 +1800,43 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const SalesScreen()),
                 ),
               ),
+              _SettingsTile(
+                icon: Icons.videocam_outlined,
+                label: loc.t('settingsMyRecordings'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        '👑 PRO',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+                  ],
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProHubScreen(
+                      isPremium: _isPremium,
+                      scrollToLiveSection: true,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
