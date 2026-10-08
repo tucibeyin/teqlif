@@ -6,7 +6,7 @@ from app.models.user import User
 from app.utils.auth import get_current_user
 from app.use_cases.streams.queries.get_my_recordings import GetMyRecordingsQuery
 
-router = APIRouter(prefix="/recordings", tags=["recordings"])
+router = APIRouter(prefix="/api/recordings", tags=["recordings"])
 
 
 @router.get("/my")
