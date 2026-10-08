@@ -3,7 +3,9 @@
     "allow": [
       "Bash(gh repo:*)",
       "Bash(brew --version)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(ssh * sudo systemctl restart teqlif-agent*)",
+      "Bash(ssh * sudo systemctl*)"
     ]
   },
   "customInstructions": "Bu proje 'Teqlif' adlı asenkron bir FastAPI ve Flutter platformudur. Geliştirme yaparken, mimari kararlar alırken veya refactoring yaparken HER ZAMAN ana dizindeki 'project.md' dosyasını nihai kural seti (source of truth) olarak kabul et. Yazdığın hiçbir kod 'project.md' içindeki kurallarla (tam asenkronluk, Sentry hata yönetimi, LiveKit ve Redis kullanımı vb.) çelişmemelidir. Yaptığın değişikliklere göre project.md yi güncellemeyi unutma.",

@@ -20,6 +20,7 @@ Distro     : Debian GNU/Linux 13 (trixie)
 Kernel     : 6.12.111+deb13-amd64
 VM Type    : NONE
 IPv4/IPv6  : ✔ Online ( 135.125.223.43 ) / ✔ Online
+Model      : Dedicated server - OVH KS-1-B
 
 IPv6 Network Information:
 ---------------------------------
