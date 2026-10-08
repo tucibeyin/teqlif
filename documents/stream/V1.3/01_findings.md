@@ -70,17 +70,19 @@ T+4g    MinIO lifecycle siler
 T+19g   janitor.py satırı sayar/loglar — silme implement edilmemiş (archived kalır)
 ```
 
-> **⚠ RPO Riski:** node2 minio_backup 04:00 UTC çalışır. 03:00–04:00 arasında MinIO'ya inen dosyalar aynı gün backup'a girer. 04:00–08:00 arasında girenler ise ancak **ertesi gün 04:00'da** backup'a girer — node1 disk arızasında RPO ~24 saate çıkar.
+> **⚠ RPO + Gündüz Yük Riski:** Mevcut transfer penceresi 08:00 UTC'de bitiyor = **11:00 TR**. Türkiye kullanıcıları 09:00 TR = 06:00 UTC'de aktif. Bu iki sorun yaratıyor:
+> 1. 04:00–08:00 UTC arası MinIO'ya giren dosyalar ertesi gün backup'a girer (RPO ~24h)
+> 2. 06:00–08:00 UTC arasında node3/4 transfer + kullanıcı trafiği çakışır; 08:30 UTC backup node1 MinIO I/O baskısını öğlene taşır
 >
-> Çözüm: minio_backup saatini **08:30 UTC'ye** taşımak — transfer penceresi (03:00–08:00) kapandıktan 30 dakika sonra, tüm dosyalar MinIO'da garantide. Bkz. §9 Yapılacaklar.
+> Çözüm: `transfer_window_end_utc` **8 → 5** (05:00 UTC = 08:00 TR), minio_backup **05:30 UTC** (08:30 TR). Sistem 06:00 UTC'de tamamen boşta, 09:00 TR kullanıcı girişinden 1 saat önce. Bkz. §9 Yapılacaklar.
 
-### Transfer Penceresi Kuralları (UTC)
+### Transfer Penceresi Kuralları (UTC / TR)
 
-| Disk Durumu | Transfer Penceresi |
-|-------------|-------------------|
-| ≥ 15 GB boş | 03:00 – 08:00 |
-| 10–15 GB boş | 02:00 – 08:00 (erken tetik) |
-| < 10 GB boş | Her an (acil mod) — ⚠ bant genişliği riski, bkz. §11 |
+| Disk Durumu | Mevcut Pencere | Hedef Pencere | TR karşılığı |
+|-------------|---------------|---------------|--------------|
+| ≥ 15 GB boş | 03:00 – 08:00 | **03:00 – 05:00** | 06:00 – 08:00 TR |
+| 10–15 GB boş | 02:00 – 08:00 | **02:00 – 05:00** | 05:00 – 08:00 TR |
+| < 10 GB boş | Her an (acil) | Her an (acil) — ⚠ bant genişliği riski, bkz. §11 |
 
 ---
 
@@ -274,7 +276,8 @@ if (error.contains('403')) {
 
 ### Altyapı — Güvenilirlik
 
-- [ ] **node2:** `minio_backup` timer'ı 04:00 → **08:30 UTC'ye** kaydırılır; transfer penceresi (03:00–08:00) tamamen kapandıktan sonra çalışır, RPO garantisi sağlanır
+- [ ] **cluster.yaml:** `transfer_window_end_utc: 8` → **`5`** — transfer penceresi 05:00 UTC (08:00 TR) kapanır, gündüz trafiğiyle çakışmaz
+- [ ] **node2:** `minio_backup` timer'ı 04:00 → **05:30 UTC'ye** kaydırılır; transfer penceresi kapandıktan 30 dk sonra, 06:00 UTC (09:00 TR) kullanıcı girişinden önce tamamlanır
 - [ ] **encoder.py:** acil mod transferinde (`free_gb < 10`) `mc cp` komutuna `--limit-upload 30M` eklenir; LiveKit bant genişliği korunur
 - [ ] **encoder.py:** `_MAX_PARALLEL` node başına 8+ çekirdek varsa 2'ye çıkarılabilir; önce CPU profil alınmalı (LiveKit + FFmpeg eş zamanlı yük testi)
 
@@ -360,7 +363,7 @@ Ek önlem: `duration_secs < 60` olan yayınlar encode adımında atlanabilir (te
 | Transfer retry | `mc cp` hatası → `encoded`'a geri döner + Telegram alert; bir sonraki transfer penceresi yeniden dener |
 | `duration_secs` NULL | encoder.py `ffprobe` çalıştırmıyor; alan her zaman NULL — `GET /recordings/my` önce bu alanı doldurmalı |
 | Satır silme yok | `archived` final durum; `deleted` geçişi implement edilmemiş (`cleanup_actions.sh` mevcut değil) |
-| RPO ~24 saat | 04:00–08:00 arası MinIO'ya giren dosyalar ertesi gün 04:00'da backup alır; node1 çökmesinde veri kaybı — çözüm: minio_backup 08:30'a taşınmalı |
+| RPO ~24 saat + gündüz yük | 04:00–08:00 UTC arası transferler ertesi gün backup; mevcut 08:00 UTC pencere sonu 11:00 TR'de biter — gündüz kullanıcı trafiğiyle çakışır. Çözüm: pencere sonu 05:00 UTC, backup 05:30 UTC |
 | Acil mod bant genişliği | disk < 10 GB'da `mc cp` limitsiz çalışır; node3/4 üzerindeki LiveKit stream'lerinin bant genişliğini tüketerek yayın donmasına yol açabilir |
 | Presigned TTL | URL 1 saat geçerli; oynatma sırasında süresi dolarsa mobil yeniden istemeli |
 | Staging | node5'te ayrı `teqlif-staging` bucket, aynı pipeline |
