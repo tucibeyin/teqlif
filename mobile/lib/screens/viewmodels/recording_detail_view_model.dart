@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_exception.dart';
+import '../../core/result.dart';
 import '../../models/recording.dart';
 import '../../services/localization_service.dart';
 import '../../services/recordings/recording_repository.dart';
