@@ -3945,52 +3945,168 @@ async def compute_analytics_cache_task(ctx: dict) -> None:
 
 async def precompute_premium_user_analytics_task(ctx: dict) -> None:
     """
-    Her gece 02:45 UTC'de çalışır.
-    Tüm premium kullanıcılar için ProInsightsUseCase'i çalıştırır,
-    sonuçları Redis'te 25 saat (90000s) TTL ile önbelleğe alır.
-    Bu sayede kullanıcı istekleri gün boyunca CH'a dokunmadan anlık döner.
+    Her gece 02:45 UTC'de çalışır.  T-1 analitik pipeline — node2 CH gecenin batch
+    window'unda sorgulanır, sonuçlar node1 Redis'e yazılır; gün boyunca CH'a dokunulmaz.
+
+    Her PRO kullanıcı için:
+      - cache:pro_insights:{uid}:{locale}::   (ProInsightsUseCase — CH + PG)
+      - cache:pro_metrics:{uid}              (ProMetricsUseCase  — CH + PG)
+      - cache:best_stream_time:{uid}:{locale} (PG only, 90 gün geçmiş)
+    Tüm keyler TTL=90000s (25 saat) → bir sonraki gece batch'e kadar geçerli.
+
+    Yaşam döngüsü / stale key cleanup:
+      Döngü sonunda artık PRO olmayan kullanıcıların key'leri Redis SCAN ile bulunur
+      ve silinir — hafıza kirliliği önlenir.
     """
     from app.database import AsyncSessionLocal
     from app.utils.redis_client import get_redis
     from app.utils.i18n import _get_t
     from app.models.user import User as _User
     from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
-    from sqlalchemy import select as _select
+    from app.use_cases.analytics.pro_metrics_use_case import ProMetricsUseCase
+    from sqlalchemy import select as _select, text as _sql_text
     import json as _json
 
     TTL = 90000
-    BATCH_SIZE = 20  # CH'a paralel baskı olmaması için sıralı
+    _LOCALES = ("tr", "en", "ru", "ar")
+    _DAYS_TR = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"]
 
     try:
         redis = await get_redis()
 
         async with AsyncSessionLocal() as db:
-            rows = (await db.execute(
+            premium_rows = (await db.execute(
                 _select(_User.id, _User.locale).where(_User.is_premium == True)  # noqa: E712
             )).all()
 
-        if not rows:
+        if not premium_rows:
             logger.info("[AnalyticsCache] premium kullanıcı yok, atlıyor")
+            await _agent_ok(ctx, "precompute_premium_user_analytics_task")
             return
 
-        cached_count = 0
-        for uid, user_locale in rows:
-            locale = user_locale if user_locale in ("tr", "en", "ru", "ar") else "tr"
-            cache_key = f"cache:pro_insights:{uid}:{locale}::"
+        premium_uids: set[int] = {uid for uid, _ in premium_rows}
+        insights_ok = 0
+        metrics_ok = 0
+        bst_ok = 0
+
+        for uid, user_locale in premium_rows:
+            locale = user_locale if user_locale in _LOCALES else "tr"
+
+            # ── pro_insights ──────────────────────────────────────────────────
             try:
                 async with AsyncSessionLocal() as db:
                     t = _get_t(locale)
                     data = await ProInsightsUseCase(db=db, uid=uid, t=t, sd=None, ed=None).execute()
-                await redis.setex(cache_key, TTL, _json.dumps(data))
-                cached_count += 1
+                await redis.setex(f"cache:pro_insights:{uid}:{locale}::", TTL, _json.dumps(data))
+                insights_ok += 1
             except Exception as e:
                 logger.warning("[AnalyticsCache] pro_insights uid=%d başarısız: %s", uid, e)
-                continue
+
+            # ── pro_metrics ───────────────────────────────────────────────────
+            try:
+                async with AsyncSessionLocal() as db:
+                    metrics = await ProMetricsUseCase(db=db, uid=uid).execute()
+                await redis.setex(f"cache:pro_metrics:{uid}", TTL, _json.dumps(metrics))
+                metrics_ok += 1
+            except Exception as e:
+                logger.warning("[AnalyticsCache] pro_metrics uid=%d başarısız: %s", uid, e)
+
+            # ── best_stream_time (PG only, tüm locale'ler) ────────────────────
+            for loc in _LOCALES:
+                try:
+                    t_bst = _get_t(loc)
+                    days_labels = [t_bst.get(f"day{i}", _DAYS_TR[i]) for i in range(7)]
+                    async with AsyncSessionLocal() as db:
+                        result = await db.execute(_sql_text("""
+                            WITH stream_auctions AS (
+                                SELECT
+                                    EXTRACT(DOW FROM ls.started_at AT TIME ZONE 'UTC')::int         AS utc_dow,
+                                    FLOOR(EXTRACT(HOUR FROM ls.started_at AT TIME ZONE 'UTC')/3)*3  AS utc_hour,
+                                    COUNT(a.id)                                                      AS total_auctions,
+                                    COUNT(a.winner_id)                                               AS won_auctions
+                                FROM live_streams ls
+                                LEFT JOIN auctions a ON a.stream_id = ls.id
+                                WHERE ls.host_id = :uid
+                                  AND ls.started_at >= NOW() - INTERVAL '90 days'
+                                  AND ls.ended_at IS NOT NULL
+                                GROUP BY ls.id, ls.started_at
+                            )
+                            SELECT utc_dow, utc_hour::int,
+                                   COUNT(*)                                                              AS stream_count,
+                                   COALESCE(SUM(won_auctions)::float/NULLIF(SUM(total_auctions),0), 0)  AS conv_rate,
+                                   SUM(won_auctions)                                                     AS total_wins
+                            FROM stream_auctions
+                            GROUP BY utc_dow, utc_hour
+                            HAVING COUNT(*) >= 2
+                            ORDER BY conv_rate DESC, total_wins DESC
+                            LIMIT 5
+                        """), {"uid": uid})
+                        rows_bst = result.fetchall()
+
+                    slots = []
+                    for r in rows_bst:
+                        utc_dow = int(r.utc_dow)
+                        utc_hour = int(r.utc_hour)
+                        tr_hour = (utc_hour + 3) % 24
+                        tr_dow = (utc_dow + 1) % 7 if utc_hour + 3 >= 24 else utc_dow
+                        slots.append({
+                            "day": days_labels[tr_dow],
+                            "hour_range": f"{tr_hour:02d}:00 - {tr_hour+3:02d}:00",
+                            "utc_day_of_week": utc_dow,
+                            "utc_hour_start": utc_hour,
+                            "stream_count": int(r.stream_count),
+                            "conversion_rate": round(float(r.conv_rate) * 100, 1),
+                            "total_wins": int(r.total_wins),
+                            "confidence": "high" if int(r.stream_count) >= 5 else ("medium" if int(r.stream_count) >= 3 else "low"),
+                        })
+
+                    if slots:
+                        best = slots[0]
+                        rec = t_bst.get(
+                            "proBestStreamRec",
+                            "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz.",
+                        ).replace("{day}", best["day"]).replace("{hours}", best["hour_range"]).replace("{rate}", f"{best['conversion_rate']:.1f}")
+                        bst_data = {"slots": slots, "recommendation": rec}
+                    else:
+                        bst_data = {"slots": [], "recommendation": t_bst.get("proNotEnoughStreamData", "")}
+
+                    await redis.setex(f"cache:best_stream_time:{uid}:{loc}", TTL, _json.dumps(bst_data))
+                    bst_ok += 1
+                except Exception as e:
+                    logger.warning("[AnalyticsCache] best_stream_time uid=%d locale=%s başarısız: %s", uid, loc, e)
 
         logger.info(
-            "[AnalyticsCache] precompute_premium_user_analytics tamamlandı | kullanıcı=%d önbellek=%d",
-            len(rows), cached_count,
+            "[AnalyticsCache] precompute tamamlandı | kullanıcı=%d insights=%d metrics=%d bst=%d",
+            len(premium_rows), insights_ok, metrics_ok, bst_ok,
         )
+
+        # ── Stale key cleanup — PRO olmayan kullanıcıların key'lerini sil ─────
+        # Pattern: cache:pro_insights:*, cache:pro_metrics:*, cache:best_stream_time:*
+        stale_deleted = 0
+        for pattern in ("cache:pro_insights:*", "cache:pro_metrics:*", "cache:best_stream_time:*"):
+            try:
+                cursor = 0
+                while True:
+                    cursor, keys = await redis.scan(cursor, match=pattern, count=100)
+                    for key in keys:
+                        # Key formatından uid çıkar: cache:pro_metrics:{uid}
+                        parts = key.split(":")
+                        try:
+                            uid_str = parts[2]
+                            key_uid = int(uid_str)
+                        except (IndexError, ValueError):
+                            continue
+                        if key_uid not in premium_uids:
+                            await redis.delete(key)
+                            stale_deleted += 1
+                    if cursor == 0:
+                        break
+            except Exception as e:
+                logger.warning("[AnalyticsCache] stale key cleanup pattern=%s başarısız: %s", pattern, e)
+
+        if stale_deleted:
+            logger.info("[AnalyticsCache] stale key temizlendi: %d adet", stale_deleted)
+
         await _agent_ok(ctx, "precompute_premium_user_analytics_task")
 
     except Exception as exc:

@@ -1098,10 +1098,22 @@ async def best_stream_time(
     """
     Satıcının geçmiş yayın verilerine göre en yüksek dönüşüm sağlayan gün/saat dilimlerini döner.
     Son 90 günlük yayın geçmişini 3'er saatlik bloklara bölerek kategori bazlı analiz eder.
+    Gece batch'te precompute edilir, node1 Redis'ten servis edilir (T-1).
     """
     uid = current_user.id
-    t = _get_t(get_locale(current_user, request))
-    
+    locale = get_locale(current_user, request)
+    t = _get_t(locale)
+    cache_key = f"cache:best_stream_time:{uid}:{locale}"
+
+    try:
+        _bst_redis = await get_redis()
+        _bst_cached = await _bst_redis.get(cache_key)
+        if _bst_cached:
+            import json as _bj
+            return _bj.loads(_bst_cached)
+    except Exception:
+        _bst_redis = None
+
     _DAYS = [
         t.get("day0", "Pazar"),
         t.get("day1", "Pazartesi"),
@@ -1163,16 +1175,24 @@ async def best_stream_time(
             "confidence": "high" if int(r.stream_count) >= 5 else ("medium" if int(r.stream_count) >= 3 else "low"),
         })
     if not slots:
-        return {"slots": [], "recommendation": t.get("proNotEnoughStreamData", "")}
+        response_bst = {"slots": [], "recommendation": t.get("proNotEnoughStreamData", "")}
+    else:
+        best = slots[0]
+        response_bst = {
+            "slots": slots,
+            "recommendation": t.get(
+                "proBestStreamRec",
+                "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz."
+            ).replace("{day}", best["day"]).replace("{hours}", best["hour_range"]).replace("{rate}", f"{best['conversion_rate']:.1f}"),
+        }
 
-    best = slots[0]
-    return {
-        "slots": slots,
-        "recommendation": t.get(
-            "proBestStreamRec", 
-            "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz."
-        ).replace("{day}", best['day']).replace("{hours}", best['hour_range']).replace("{rate}", f"{best['conversion_rate']:.1f}"),
-    }
+    try:
+        import json as _bj
+        await _bst_redis.setex(cache_key, 90000, _bj.dumps(response_bst))
+    except Exception:
+        pass
+
+    return response_bst
 
 
 @router.get("/pro/conversion-breakdown")
@@ -1938,159 +1958,34 @@ async def get_pro_metrics(
     current_user: User = Depends(get_current_user),
 ):
     """
-    PRO kullanıcılar için gelişmiş metrikler:
-    - avg_detail_dwell: ilan detay sayfasında ortalama geçirilen süre (saniye)
-    - search_visibility: kullanıcının ilanlarının arama sonuçlarında toplam görünüm sayısı (son 30 gün)
-    - best_posting_hour: kullanıcının en yüksek CTR'a sahip ilan paylaşım saati
-    - return_viewer_rate: en az 2 kez yayınını izleyen kullanıcı oranı
+    PRO kullanıcılar için gelişmiş metrikler (T-1).
+    Gece batch'te precompute edilir, node1 Redis'ten servis edilir — CH'a dokunmaz.
     """
     if not current_user.is_premium:
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
+    cache_key = f"cache:pro_metrics:{uid}"
 
-    # ── Cache Check ──────────────────────────────────────────────────────────
-    _pm_redis = None
-    _pm_cache_key = None
     try:
-        _pm_redis = await get_redis()
-        _pm_cache_key = f"cache:pro_metrics:{uid}"
-        _pm_cached = await _pm_redis.get(_pm_cache_key)
-        if _pm_cached:
-            import json as _pm_json
-            return _pm_json.loads(_pm_cached)
+        redis = await get_redis()
+        cached = await redis.get(cache_key)
+        if cached:
+            import json as _j
+            return _j.loads(cached)
     except Exception:
-        _pm_redis = None
-        _pm_cache_key = None
+        redis = None
 
-    # 0. Kullanıcının aktif ilanlarını ve saatlerini çek
-    listings_result = await db.execute(sql_text("""
-        SELECT id, category, EXTRACT(HOUR FROM created_at) AS hr 
-        FROM listings 
-        WHERE user_id = :uid AND status = 'active'
-    """), {"uid": uid})
-    active_listings = listings_result.fetchall()
-    
-    listing_ids = [str(r.id) for r in active_listings]
-    categories = list(set([r.category for r in active_listings if r.category]))
-    
-    avg_dwell = None
-    search_visibility = []
-    best_hour = None
+    from app.use_cases.analytics.pro_metrics_use_case import ProMetricsUseCase
+    result = await ProMetricsUseCase(db=db, uid=uid).execute()
 
-    if listing_ids:
-        ids_str = ",".join(listing_ids)
-        try:
-            from app.database_clickhouse import get_clickhouse_client
-            ch = await get_clickhouse_client()
+    try:
+        import json as _j
+        await redis.setex(cache_key, 90000, _j.dumps(result))
+    except Exception:
+        pass
 
-            # 1. Ortalama detay inceleme süresi (avg_detail_dwell)
-            dwell_ch = await ch.query(f"""
-                SELECT AVG(duration_seconds)
-                FROM user_events
-                WHERE item_type = 'listing'
-                  AND item_id IN ({ids_str})
-                  AND event_type = 'detail_dwell'
-                  AND timestamp >= now() - INTERVAL 30 DAY
-            """)
-            if dwell_ch.result_rows and dwell_ch.result_rows[0][0] is not None:
-                avg_dwell = round(float(dwell_ch.result_rows[0][0]), 1)
-
-            # 2. Arama görünürlüğü (search_visibility)
-            if categories:
-                cats_str = ",".join([f"'{c}'" for c in categories])
-                search_ch = await ch.query(f"""
-                    SELECT category, count(*) AS search_count
-                    FROM search_events
-                    WHERE category IN ({cats_str})
-                      AND timestamp >= now() - INTERVAL 30 DAY
-                    GROUP BY category
-                    ORDER BY search_count DESC
-                    LIMIT 5
-                """)
-                search_visibility = [{"category": r[0], "search_count": int(r[1])} for r in search_ch.result_rows]
-
-            # 3. En iyi paylaşım saati (best_posting_hour)
-            stats_ch = await ch.query(f"""
-                SELECT item_id, 
-                       countIf(event_type = 'view') AS views,
-                       countIf(event_type = 'click') AS clicks
-                FROM user_events
-                WHERE item_type = 'listing'
-                  AND item_id IN ({ids_str})
-                  AND timestamp >= now() - INTERVAL 90 DAY
-                GROUP BY item_id
-            """)
-            
-            hour_stats = {}
-            item_hour_map = {int(r.id): int(r.hr) for r in active_listings}
-            
-            for row in stats_ch.result_rows:
-                item_id = int(row[0])
-                views = int(row[1])
-                clicks = int(row[2])
-                hr = item_hour_map.get(item_id)
-                
-                if hr is not None:
-                    if hr not in hour_stats:
-                        hour_stats[hr] = {"views": 0, "clicks": 0}
-                    hour_stats[hr]["views"] += views
-                    hour_stats[hr]["clicks"] += clicks
-            
-            best_ctr = -1.0
-            for hr, stats in hour_stats.items():
-                if stats["views"] >= 10:
-                    ctr = stats["clicks"] / stats["views"]
-                    if ctr > best_ctr:
-                        best_ctr = ctr
-                        best_hour = hr
-                        
-        except Exception as exc:
-            logger.warning("[ProMetrics] ClickHouse analitiği başarısız: %s", exc)
-
-    # 4. Geri dönen izleyici oranı (yayın stream'lerinden)
-    return_viewer_rate = None
-    return_viewer_count = 0
-    total_viewer_count = 0
-    return_result = await db.execute(sql_text("""
-        WITH viewer_counts AS (
-            SELECT lsv.user_id, COUNT(DISTINCT ls.id) AS stream_count
-            FROM live_stream_viewers lsv
-            INNER JOIN live_streams ls ON ls.id = lsv.stream_id AND ls.host_id = :uid
-            WHERE lsv.user_id != :uid
-              AND lsv.joined_at >= NOW() - INTERVAL '180 days'
-            GROUP BY lsv.user_id
-        )
-        SELECT
-            COUNT(*) FILTER (WHERE stream_count >= 2)::float /
-            NULLIF(COUNT(*), 0) AS return_rate,
-            COUNT(*) AS total_viewers,
-            COUNT(*) FILTER (WHERE stream_count >= 2) AS return_viewers
-        FROM viewer_counts
-    """), {"uid": uid})
-    ret_row = return_result.fetchone()
-    if ret_row and ret_row[0] is not None:
-        return_viewer_rate = round(float(ret_row[0]) * 100, 1)
-        total_viewer_count = int(ret_row[1])
-        return_viewer_count = int(ret_row[2])
-
-    _pm_result = {
-        "avg_detail_dwell_seconds": avg_dwell,
-        "search_visibility": search_visibility,
-        "best_posting_hour": best_hour,
-        "return_viewer_rate_pct": return_viewer_rate,
-        "return_viewer_count": return_viewer_count,
-        "total_viewer_count": total_viewer_count,
-    }
-
-    if _pm_redis and _pm_cache_key:
-        try:
-            import json as _pm_json
-            await _pm_redis.setex(_pm_cache_key, 90000, _pm_json.dumps(_pm_result))
-        except Exception:
-            pass
-
-    return _pm_result
+    return result
 
 
 # ── Rakip Fiyat Radarı ───────────────────────────────────────────────────────

@@ -27,6 +27,11 @@ class AnalyticsService {
   static bool? _consentAccepted;
   static final Set<int> _impressedCampaigns = {};
 
+  // market-trends in-memory cache (global, 10 dk TTL — server 25h tutuyor)
+  static Map<String, dynamic>? _marketTrendsCache;
+  static DateTime? _marketTrendsCachedAt;
+  static const _marketTrendsTtl = Duration(minutes: 10);
+
   static String _generateUUID() {
     final random = Random();
     String hex(int count) {
@@ -221,7 +226,14 @@ class AnalyticsService {
       );
 
   /// Sektörel pazar trendleri → `GET /api/analytics/market-trends`
+  /// In-memory cache: 10 dakika TTL. Server 25 saat tutuyor (T-1 batch).
   Future<Map<String, dynamic>?> getMarketTrends() async {
+    final now = DateTime.now();
+    if (_marketTrendsCache != null &&
+        _marketTrendsCachedAt != null &&
+        now.difference(_marketTrendsCachedAt!) < _marketTrendsTtl) {
+      return _marketTrendsCache;
+    }
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
@@ -230,10 +242,13 @@ class AnalyticsService {
         headers: await _api.buildApiHeaders(token, json: true),
       );
       if (resp.statusCode == 200) {
-        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+        final data = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+        _marketTrendsCache = data;
+        _marketTrendsCachedAt = now;
+        return data;
       }
     } catch (_) {}
-    return null;
+    return _marketTrendsCache; // ağ hatasında eski cache'i döndür
   }
 
   /// Aylık blast kredi durumu → `GET /api/leads/blast-credits`
