@@ -533,8 +533,12 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
           defaultVideoPublishOptions: VideoPublishOptions(
             simulcast: true,
             backupVideoCodec: BackupVideoCodec(codec: 'vp9'),
+            videoSimulcastLayers: [
+              VideoParametersPresets.h360_169,
+              VideoParametersPresets.h540_169,
+            ],
             videoEncoding: VideoEncoding(
-              maxBitrate: 3500000, // 3.5 Mbps — 1080p@30fps tavanı
+              maxBitrate: 1700000,
               maxFramerate: 30,
             ),
           ),
@@ -596,7 +600,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         await room.localParticipant?.setCameraEnabled(
           true,
           cameraCaptureOptions: const CameraCaptureOptions(
-            params: VideoParametersPresets.h1080_169,
+            params: VideoParametersPresets.h720_169,
           ),
         );
         await room.localParticipant?.setMicrophoneEnabled(
