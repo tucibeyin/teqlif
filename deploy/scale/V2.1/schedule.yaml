@@ -281,6 +281,35 @@ batch:
     minute: 10
     watchdog_m: 43200
 
+# ── node2 Backup Script'leri (job_ok sinyali gönderirler, ARQ değil) ───────────
+# watchdog_m: timer periyodundan biraz fazla — gecikme toleransı
+# name: teqlif:agent:job_ok hash'indeki key ile örtüşmeli
+
+  - name: pg_dump
+    hour: 3
+    minute: 0
+    watchdog_m: 1500          # ~25 saat
+
+  - name: clickhouse_backup
+    hour: 3
+    minute: 20
+    watchdog_m: 1500
+
+  - name: redis_backup
+    hour: 3
+    minute: 40
+    watchdog_m: 1500
+
+  - name: mail_backup
+    hour: 3
+    minute: 45
+    watchdog_m: 1500
+
+  - name: minio_backup
+    hour: 4
+    minute: 0
+    watchdog_m: 1500
+
 # ── TTL değerleri ───────────────────────────────────────────────────────────────
 # Değişiklik sonrası sudo teqlif-restart gereklidir.
 ttl:

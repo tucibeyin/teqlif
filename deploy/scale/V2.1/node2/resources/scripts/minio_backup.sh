@@ -51,3 +51,4 @@ confirm_recordings
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: tamamlandı"
 logger "teqlif minio_backup: tamamlandı"
+redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok minio_backup "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true

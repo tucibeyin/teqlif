@@ -17,3 +17,4 @@ PGPASSWORD="${TEQLIF_DB_PASSWORD}" pg_dump \
 
 find "${BACKUP_DIR}" -name "teqlif_*.dump" -mtime +${RETENTION_DAYS} -delete
 logger "teqlif pg_dump: ${DEST} ($(du -sh ${DEST} | cut -f1))"
+redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok pg_dump "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true

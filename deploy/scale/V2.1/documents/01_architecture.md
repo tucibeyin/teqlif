@@ -1237,7 +1237,7 @@ node3/4 (6 core / 11GB / SSD)
 | `janitor.py` | Her 60 saniyede lider tarafından çalışır. TTL politikalarını değerlendirir. Kayıt pipeline encode + transfer trigger mekanizması mevcut. |
 | `healer.py` | Servis `failed` durumuna düşerse otomatik `reset-failed` + `start`. Batch penceresi boyunca servisleri çalışır halde tutar. |
 
-**Backup script'leri job_ok entegrasyonu:** `pg_dump`, `clickhouse_backup`, `redis_backup`, `mail_backup`, `minio_backup` script'leri `teqlif:agent:job_ok` sinyali göndermez; agent backup başarısını şu an takip etmez. Gelecekte her backup script'ine tamamlanma satırına Redis HSET eklenecek.
+**Backup script'leri job_ok entegrasyonu:** `pg_dump`, `clickhouse_backup`, `redis_backup`, `mail_backup`, `minio_backup` script'leri tamamlanınca `teqlif:agent:job_ok` Redis hash'ine UTC timestamp yazar. `schedule.yaml`'da `watchdog_m: 1500` ile izlenir — 25 saati aşan gecikme Telegram uyarısı tetikler.
 
 ### 12.10 Bilinen Durumlar
 

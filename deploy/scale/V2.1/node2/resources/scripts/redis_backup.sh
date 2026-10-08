@@ -24,3 +24,4 @@ gzip "${DEST}"
 find "${BACKUP_DIR}" -name 'redis-*.rdb.gz' -mtime +${RETENTION_DAYS} -delete
 logger "teqlif redis_backup: $(du -sh ${DEST}.gz | cut -f1) — tamamlandı"
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) redis_backup: OK ($(du -sh ${DEST}.gz | cut -f1))"
+redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok redis_backup "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true
