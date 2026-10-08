@@ -83,6 +83,32 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
           if (isPremium) _ProStatusCard(renewalDate: state.blastCredits?['renewal_date'] as String?, planType: state.planType) else _UpgradeBanner(),
+
+          if (!isPremium) ...[
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 2, bottom: 10),
+              child: Text(
+                loc.t('proBenefitsTitle'),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary(context),
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ),
+            _BenefitRow(icon: Icons.auto_graph_outlined,        text: loc.t('proBenefit1')),
+            _BenefitRow(icon: Icons.radar,                      text: loc.t('proBenefit2')),
+            _BenefitRow(icon: Icons.trending_up_outlined,       text: loc.t('proBenefit3')),
+            _BenefitRow(icon: Icons.mark_email_unread_outlined, text: loc.t('proBenefit4')),
+            _BenefitRow(icon: Icons.stream_outlined,            text: loc.t('proBenefit5')),
+            _BenefitRow(icon: Icons.video_library_outlined,     text: loc.t('proBenefit6')),
+            const SizedBox(height: 16),
+            const _ScrollHintWidget(),
+            const SizedBox(height: 8),
+          ],
+
           const SizedBox(height: 24),
           _CreditsSummaryCard(
             blastCredits: state.blastCredits,
@@ -252,25 +278,6 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
 
 
 
-          if (!isPremium) ...[
-            const SizedBox(height: 28),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(start: 2, bottom: 12),
-              child: Text(
-                loc.t('proBenefitsTitle'),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary(context),
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ),
-            _BenefitRow(icon: Icons.insights_outlined,      text: loc.t('proBenefit1')),
-            _BenefitRow(icon: Icons.bar_chart_outlined,     text: loc.t('proBenefit2')),
-            _BenefitRow(icon: Icons.schedule_outlined,      text: loc.t('proBenefit3')),
-            _BenefitRow(icon: Icons.search_outlined,        text: loc.t('proBenefit4')),
-          ],
         ],
         ),
       ),
@@ -616,6 +623,77 @@ class _BenefitRow extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Scroll Hint Animasyonu ──────────────────────────────────────────────────────
+
+class _ScrollHintWidget extends StatefulWidget {
+  const _ScrollHintWidget();
+
+  @override
+  State<_ScrollHintWidget> createState() => _ScrollHintWidgetState();
+}
+
+class _ScrollHintWidgetState extends State<_ScrollHintWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _offsetAnim;
+  late final Animation<double> _opacityAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1100),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _offsetAnim = Tween<double>(begin: 0, end: 7).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _opacityAnim = Tween<double>(begin: 0.45, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, __) => Opacity(
+        opacity: _opacityAnim.value,
+        child: Transform.translate(
+          offset: Offset(0, _offsetAnim.value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '10 araç keşfet',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary(context),
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 22,
+                color: AppColors.textSecondary(context),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
