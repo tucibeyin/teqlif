@@ -1,7 +1,7 @@
 # Stream Kayıt Sistemi — V1.3 Bulgular
 
 **Tarih:** 2026-10-08  
-**Kapsam:** Kayıt yaşam döngüsü, node dağılımı, erişim kuralları, eksik parçalar
+**Kapsam:** Kayıt yaşam döngüsü, node dağılımı, erişim kuralları, zorunlu kayıt mimarisi, eksik parçalar
 
 ---
 
@@ -31,7 +31,7 @@ recording → encoding → encoded → transferring → available → expired �
 
 | Durum | Aktör | Tetikleyici | Açıklama |
 |-------|-------|-------------|----------|
-| `recording` | teqlif-agent (recorder.py) | Stream `live` + `recording_enabled=True` | FFmpeg WHEP bağlantısı açık, MKV `/var/recordings/raw/` yazılıyor |
+| `recording` | teqlif-agent (recorder.py) | Stream `live` (her yayın — zorunlu) | FFmpeg WHEP bağlantısı açık, MKV `/var/recordings/raw/` yazılıyor |
 | `encoding` | teqlif-agent (recorder.py) | FFmpeg kapanır (stream biter) | Ham MKV → H.264/AAC 720p MP4, `crf=23 preset=veryfast` |
 | `encoded` | teqlif-agent (encoder.py) | Encode tamamlanır | Ham dosya silinir, transfer penceresi bekleniyor |
 | `transferring` | teqlif-agent (encoder.py) | Transfer penceresi açılır | `mc cp` ile node1 MinIO'ya yükleniyor |
@@ -144,12 +144,19 @@ PRO Araçları
 
 ## 8. Yapılacaklar
 
-### Backend
+### Backend — Zorunlu Kayıt Migrasyonu
+
+- [ ] Alembic: `live_streams.recording_enabled` kolonu kaldırılır
+- [ ] `StartStreamRequest` şemasından `recording_enabled` kaldırılır
+- [ ] `start_stream` use case'den `recording_enabled` parametresi kaldırılır
+- [ ] `RecordingManager._sync_recordings()`: `AND ls.recording_enabled = TRUE` filtresi kaldırılır
+- [ ] `GET /streams/{id}/recording`: `recording_enabled` kontrolü → PRO kontrolü ile değiştirilir
+
+### Backend — Yeni Özellikler
 
 - [ ] `GET /recordings/my` endpoint — host'un kayıtlarını listeler
   - Alanlar: `stream_id`, `status`, `duration_secs`, `encoded_size_bytes`, `available_at`, `expires_at`, `recording_started_at`
-- [ ] `GET /streams/{id}/recording` — PRO kontrolü eklenmeli
-- [ ] `GET /recordings/my` — `status IN ('recording','encoding','encoded','available','expired')` filtreli, son 30 gün
+  - Filtre: `status IN ('recording','encoding','encoded','available','expired')`, son 30 gün
 
 ### Mobile
 
@@ -160,7 +167,62 @@ PRO Araçları
 
 ---
 
-## 9. Bilinen Kısıtlar
+## 9. Zorunlu Kayıt Mimarisi (Mimari Karar)
+
+### Karar
+
+Canlı yayın kaydı **host tercihine bırakılmıyor**. Her yayın sistem tarafından otomatik kaydedilir. Bu bir hukuki ve operasyonel zorunluluktur:
+
+- Müzayede anlaşmazlıkları, fiyat itirazları
+- İçerik moderasyonu ve kullanıcı şikayetleri
+- Platform koruması, dolandırıcılık tespiti
+
+### Mevcut Tasarımın Sorunu
+
+Şu an kayıt yapılması ile kayda erişim izni tek bir boolean'a (`recording_enabled`) bağlanmış:
+
+```
+recording_enabled = True  →  HEM kayıt yap  HEM izlemeye izin ver   ← YANLIŞ
+recording_enabled = False →  NE kayıt yap   NE izlemeye izin ver    ← YANLIŞ
+```
+
+Bu iki bağımsız karar aynı alana sıkıştırılmış.
+
+### Doğru Ayrım
+
+| Karar | Kim verir | Kural |
+|-------|-----------|-------|
+| Kayıt yap | **Sistem** | Her yayın, her zaman |
+| İzleme izni | **PRO statüsü** | Sadece PRO host, 24h penceresi |
+
+### recording_enabled Kolonuna Etkisi
+
+`recording_enabled` kolonu dört yerde kullanılıyor; tamamı değişmeli:
+
+| Yer | Mevcut | Hedef |
+|-----|--------|-------|
+| `live_streams` DB kolonu | `default=False` | Kaldırılacak (alembic migration) |
+| `StartStreamRequest` şeması | İsteğe bağlı alan | Kaldırılacak |
+| `start_stream` use case | DB'ye yazıyor | Kaldırılacak |
+| `RecordingManager._sync_recordings()` | `AND ls.recording_enabled = TRUE` | Filtre kaldırılacak — tüm live stream'ler kaydedilir |
+| `GET /streams/{id}/recording` | `recording_enabled` kontrolü | PRO kontrolü ile değiştirilecek |
+
+### Depolama Etkisi
+
+Tüm yayınların kaydedilmesi depolama baskısı yaratmaz çünkü:
+- node3/4 lokal disk: encode biter bitmez MinIO'ya taşınıp silinir (geçici)
+- MinIO: 4 günlük lifecycle — otomatik silinme
+- node2 backup: 04:00 UTC mirror, 15 günlük DB retention
+
+Ek önlem: `duration_secs < 60` olan yayınlar encode adımında atlanabilir (terk edilmiş kısa yayınlar).
+
+### Mobile Etkisi
+
+`recording_enabled` mobil kodda kullanılmıyor (grep: sıfır sonuç). Mobil tarafında değişiklik gerekmez.
+
+---
+
+## 10. Bilinen Kısıtlar
 
 | Kısıt | Açıklama |
 |-------|----------|
