@@ -689,10 +689,13 @@ Script otomatik:
 | Senaryo | RTO | RPO |
 |---------|-----|-----|
 | node1 reboot | ~2 dk | 0 (WAL anlık) |
-| node1 disk hatası | ~30 dk (node2'den restore) | Son WAL segmenti |
+| node1 tek disk hatası | 0 (software RAID devam eder) | 0 |
+| node1 tam çöküş | ~30–60 dk (node2'den WAL+restore) | < 1 dk (WAL streaming) |
 | node1 Redis çöküşü | ~30 sn (3 başarısız check × 10 sn) | Son write (async replica gecikmesi) |
 | node3 veya node4 çöküşü | 0 (DNS TTL sonrası) | 0 |
 | node6 çöküşü | ~5 sn (app retry) | 0 |
+
+**Otomatik PG failover (Patroni):** Bilinçli olarak uygulanmadı. node2'de FastAPI stack çalışmayacağı için Patroni sadece PG'yi promote eder ama servisi ayağa kaldıramaz — eklediği karmaşıklık faydasını karşılamaz. node1 software RAID SSD tam disk arızası riskini zaten minimize ediyor. Manuel failover için bkz. §9.4 ve `runbook.sh` (bkz. §9.5).
 
 ### 9.3 Redis HA Mimarisi
 
@@ -725,39 +728,40 @@ AOF+RDB hybrid              save "" (no persistence)
 
 ### 9.4 PostgreSQL Manuel Failover Prosedürü
 
-> **Uyarı:** node2 HDD (~440 IOPS) ile node1 NVMe (~5000 IOPS) arasında ciddi performans farkı var. node2'ye failover, yoğun yazım altında yavaşlama yaratır. Patroni otomasyonu henüz devreye alınmadı (node2 SSD almadan anlamlı değil).
+> **Uyarı:** node2 HDD (~440 IOPS) ile node1 NVMe (~5000 IOPS) arasında ciddi performans farkı var. node2'ye failover sırasında yüksek yazma yükünden kaçın — ML batch job'ları ve analytics pipeline'ı kapalı tut. Patroni uygulanmayacak (bkz. §9.2).
 
 **Senaryo: node1 tamamen erişilemez, node2'de pg_receivewal güncel**
 
 ```bash
 # 1. node2'de WAL stream durumunu doğrula
 ssh node2
-ls -lth /var/backups/pg_wal/ | head -5
-# Son segment < 5 dk önce olmalı
+ls -lth /project/teqlif/backups/pg_wal/ | head -5
+# Son .partial segment < 2 dk önce olmalı
 
-# 2. pg_receivewal servisini durdur
-sudo teqlif-restart  # veya sadece pg servisini
-# NOT: pg_receivewal önce durmalı, aksi halde pg_wal dizini açık kalır
+# 2. pg_receivewal durdur (WAL dizini açık kalmasın)
+sudo systemctl stop teqlif-pg-receivewal
 
-# 3. WAL'ı PostgreSQL data dizinine uygula (recovery moduna geç)
-sudo -u postgres pg_ctl stop -D /var/lib/postgresql/17/main   # varsa
-# Data dizini boşsa pg_basebackup ile kurul (aşağıya bak)
+# 3. Son pg_dump'tan restore et
+DUMP=$(ls /project/teqlif/backups/pg_dump/teqlif_*.dump | tail -1)
+sudo -u postgres pg_restore -h 127.0.0.1 -d postgres -C "${DUMP}"
 
-# 4. Son pg_dump yedeğinden geri yükle (WAL mevcut değilse)
-ls /var/backups/pg_dump/ | tail -3
-sudo -u postgres psql -h 127.0.0.1 -c "CREATE DATABASE teqlif;" postgres
-sudo -u postgres pg_restore -h 127.0.0.1 -d teqlif /var/backups/pg_dump/<en_son>.dump
+# 4. WAL segmentlerini uygula (PITR — dump sonrası değişiklikleri geri al)
+# postgresql.conf: restore_command = 'cp /project/teqlif/backups/pg_wal/%f %p'
+# recovery.signal oluştur → pg_ctl start → promote
+sudo -u postgres touch /var/lib/postgresql/17/main/recovery.signal
+sudo systemctl start postgresql
 
-# 5. DNS/nginx'te bağlantı noktasını node2'ye yönlendir
-# node1'deki /project/teqlif/config/.env.production içinde DATABASE_URL güncelle
-# (node1 erişilemezse node2'den servis kaldır: teqlif-app.service başlat)
+# 5. Cloudflare DNS → node2 IP (135.125.223.43) — Cloudflare panelinden elle
+#    teqlif.com, api.teqlif.com, uploads.teqlif.com A kayıtları
 
-# 6. node1 kurtarıldıktan sonra geri dönüş
-# node2'den pg_dump al → node1'e restore → pg_receivewal yeniden başlat
-sudo teqlif-restart   # node1'de
+# 6. node2'de FastAPI başlat (runbook.sh — bkz. §9.5)
+
+# 7. node1 kurtarıldıktan sonra geri dönüş:
+#    node2'den pg_dump → node1'e restore → pg_receivewal yeniden başlat
+#    DNS node1'e geri al → node2 FastAPI durdur
 ```
 
-**RTO tahmini:** ~30–60 dk (pg_dump boyutuna bağlı) | **RPO:** Son WAL segmenti (genellikle < 1 dk)
+**RTO tahmini:** ~30–60 dk | **RPO:** Son WAL segmenti (< 1 dk, `teqlif-pg-receivewal` aktif)
 
 ---
 
