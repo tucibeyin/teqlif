@@ -105,7 +105,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
             _BenefitRow(icon: Icons.stream_outlined,            text: loc.t('proBenefit5')),
             _BenefitRow(icon: Icons.video_library_outlined,     text: loc.t('proBenefit6')),
             const SizedBox(height: 16),
-            const _ScrollHintWidget(),
+            _ScrollHintWidget(text: loc.t('proScrollHint')),
             const SizedBox(height: 8),
           ],
 
@@ -631,7 +631,8 @@ class _BenefitRow extends ConsumerWidget {
 // ── Scroll Hint Animasyonu ──────────────────────────────────────────────────────
 
 class _ScrollHintWidget extends StatefulWidget {
-  const _ScrollHintWidget();
+  final String text;
+  const _ScrollHintWidget({required this.text});
 
   @override
   State<_ScrollHintWidget> createState() => _ScrollHintWidgetState();
@@ -677,7 +678,7 @@ class _ScrollHintWidgetState extends State<_ScrollHintWidget>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '10 araç keşfet',
+                widget.text,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
