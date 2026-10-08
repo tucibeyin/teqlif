@@ -170,7 +170,8 @@ Her node'da `teqlif-metrics-agent.service` olarak çalışır (`backend/scripts/
 ### 3.6 Backup Veri Akışı
 
 ```
-node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/pg_wal/  [inactive ⚠️]
+node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /project/teqlif/backups/pg_wal/  [AKTİF ✓ RPO ~1dk]
+                                  slot: node2_receivewal | cleanup: günlük 05:30 UTC (7g retention)
 node1 PostgreSQL ──pg_dump─────→ node2 /project/teqlif/backups/pg_dump/     (günlük 03:00 UTC)
 node2 ClickHouse ──yerel dump──→ node2 /project/teqlif/backups/clickhouse/  (günlük 03:20 UTC)
 node2 Redis rep. ──BGSAVE──────→ node2 /project/teqlif/backups/redis/       (günlük 03:40 UTC)
@@ -1052,7 +1053,7 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 - mail backup (03:45) ile compute_analytics_cache (02:30) artık ayrı pencerelerde: **çakışma yok**.
 - minio backup (04:00–04:45) ağ bağlantılı (WireGuard) sequential write; bu pencerede CH okuma (compute_trending_listings 04:00) yapılıyor — minor overlap, ancak minio I/O network-bound olduğu için HDD head movement az.
 
-**Not — pg_receivewal durumu:** `teqlif-pg-receivewal.service` node2'de mevcut ancak **inactive**. Mevcut PG RPO = son pg_dump saati (01:00) → ~24 saat. Bilinçli tercih: WAL streaming node2 HDD'de sürekli I/O yaratır; pg_dump yeterli bulunmuştur.
+**pg_receivewal durumu:** `teqlif-pg-receivewal.service` node2'de **AKTİF**. RPO = ~1 dakika. Replication slot `node2_receivewal` node1'de aktif. WAL segmentleri `/project/teqlif/backups/pg_wal/`'a akar; `teqlif-pg-wal-cleanup.timer` günlük 05:30 UTC'de 7 günden eskilerini siler. node2 HDD etkisi: aktif saatlerde ~0.5–2 MB/s seri yazma (kapasitenin %1–3'ü).
 
 **Not — offsite sync:** `rclone config` boş, hedef yapılandırılmamış. Timer disable + inactive. Ofsite hedef belirlendikten sonra `offsite_sync.sh` güncellenerek devreye alınır.
 
@@ -1242,7 +1243,7 @@ node3/4 (6 core / 11GB / SSD)
 
 | # | Durum | Önem |
 |---|-------|------|
-| 1 | `teqlif-pg-receivewal.service` node2'de **inactive** | RPO = son pg_dump (01:00) = ~24 saat. Bilinçli tercih — node2 HDD sürekli WAL I/O'suna uygun değil. |
+| 1 | `teqlif-pg-receivewal.service` node2'de **AKTİF** ✓ | RPO ~1 dakika. Slot: `node2_receivewal`. WAL cleanup günlük 05:30 UTC. |
 | 2 | `teqlif-offsite-sync.timer` **disabled** | rclone hedef yapılandırılmamış. Timer ve script mevcut; hedef belirlendikten sonra aktive edilir. |
 | 3 | 04:00 minio_backup + CH okuma minor örtüşmesi | minio_backup (04:00–04:45) sequential write, network-bound; compute_trending_listings (04:00) CH read. Aynı HDD ama minio I/O WireGuard hızıyla sınırlı → minor. Kritik çakışmalar (CH backup+sync, mail+analytics) çözüldü. |
 | 4 | Pazar training CPU spike | 06:00–07:00 UTC = 09:00–10:00 TR; Pazar sabahı commute başlamadan biter; Prom p99 izlenir |
