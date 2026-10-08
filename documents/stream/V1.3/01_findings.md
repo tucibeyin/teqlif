@@ -123,26 +123,133 @@ GET /streams/{stream_id}/recording
 
 ## 7. PRO Araçları Entegrasyonu
 
-Bu özellik **PRO Araçları** ekranında "Yayın Tekrarları" bölümü olarak sunulacak.
+Bu özellik **PRO Araçları** ekranında "Canlı Yayın & Kitle" accordion'ı altında "Canlı Yayınlarım" kartı olarak sunulacak.
 
 ### Kapsam
 - Yalnızca PRO host'lar görür
 - Kendi yaptığı yayınların kayıtları listelenir
 - Kayıt `available` ise oynatılabilir; diğer durumlarda durum gösterimi
 
-### Mobil Ekran Gereksinimleri
+### PRO Hub Yerleşimi
+
+"Yayın & Kitle" accordion'ı (`proHubTabAudience`, renk `0xFF14B8A6`) içinde 4. kart:
+
+```dart
+_ToolCard(
+  icon: Icons.video_library_outlined,
+  iconColor: const Color(0xFFF97316),  // turuncu — mevcut teal/purple/blue'dan farklı
+  title: loc.t('proToolMyRecordingsTitle'),
+  description: loc.t('proToolMyRecordingsDesc'),
+  isPremium: isPremium,
+  onTap: isPremium
+      ? () => Navigator.push(...)
+      : () => _showUpgrade(context),
+)
+```
+
+Mevcut sıra: BestStreamTime → StreamAnalytics → Retargeting → **Canlı Yayınlarım**
+
+### Ekran Yapısı
 
 ```
-PRO Araçları
-└── Yayın Tekrarları
-    ├── [Hazırlanıyor]  status: recording / encoding / encoded
-    ├── [İzle]          status: available  (expires_at'a kadar geri sayım)
-    └── [Süresi Doldu]  status: expired / archived
+┌─────────────────────────────────┐
+│  ← Canlı Yayınlarım             │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │  "12 Ekim — Sabah"        │  │
+│  │  48:32  •  720p           │  │
+│  │  [● Hazırlanıyor...]      │  │  ← recording/encoding/encoded
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  "11 Ekim — Öğlen"        │  │
+│  │  1s 12dk  •  720p         │  │
+│  │  [▶ İzle]  Son: 3s 14dk  │  │  ← available + countdown
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  "10 Ekim — Akşam"        │  │
+│  │  22:10  •  720p           │  │
+│  │  Süresi Doldu             │  │  ← expired/archived, opacity 0.5
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘
 ```
+
+### Status Chip Tasarımı
+
+| `status` | Chip | Renk | Davranış |
+|----------|------|------|---------|
+| `recording / encoding / encoded` | `● Hazırlanıyor` | amber, pulse animasyonu | dokunulamaz |
+| `available` | `▶ İzle` | teal button | player'a git |
+| `available`, son 2 saat | `▶ İzle · 1s 45dk` | orange, countdown | player'a git |
+| `expired / archived` | `Süresi Doldu` | tertiary, opacity 0.5 | dokunulamaz |
+
+Countdown: `expires_at - DateTime.now()`, `Timer.periodic(1min)` ile UI güncellenir. Oynatma sırasında expire olursa card anında `expired` state'e geçer.
 
 ---
 
-## 8. Yapılacaklar
+## 8. Mobil Caching Stratejisi
+
+### Karar: Video Dosyasını Değil, Presigned URL'i Cache'le
+
+Video dosyasını indirip saklamak uygunsuz:
+- 720p 1 saatlik yayın ≈ 2–4 GB — telefon depolaması ve izin yönetimi gerektirir
+- Kayıt genellikle bir kez izleniyor; çevrimdışı kullanım senaryosu yok
+- `flutter_downloader` + dosya temizliği ek karmaşıklık
+
+**Doğru yaklaşım:** Presigned URL'i Hive'da cache'le; `expires_at` API hit öncesi guard görevi yapsın.
+
+### Cache Katmanları
+
+**Katman 1 — Liste cache** (`GET /recordings/my`)
+```
+CacheService.saveData('recordings:my', data, ttl: Duration(minutes: 3))
+```
+Mevcut `CacheService` (Hive + TTL zarfı) doğrudan kullanılabilir.
+
+**Katman 2 — Presigned URL cache** (oynatma isteği)
+```
+key:  'recording_url:{stream_id}'
+data: { url: "https://...", expires_at: <unix ms> }
+ttl:  55 dakika  (presigned URL 60dk — 5dk güvenlik payı)
+```
+
+**Katman 3 — `expires_at` guard** (API'ye gitmeden önce kontrol)
+```dart
+Future<String?> getPlayUrl(String streamId) async {
+  final cached = CacheService.getData('recording_url:$streamId');
+  if (cached != null) {
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(cached['expires_at']);
+    if (DateTime.now().isAfter(expiresAt)) {
+      await CacheService.clearData('recording_url:$streamId');
+      return null; // süresi doldu, API'ye bile gitme
+    }
+    return cached['url']; // cache hit — node1'e istek yok
+  }
+  // cache miss → API çağrısı + kaydet
+}
+```
+
+**Katman 4 — 403 recovery** (oynatma sırasında URL expire olursa)
+```dart
+// video_player error callback:
+if (error.contains('403')) {
+  await CacheService.clearData('recording_url:$streamId');
+  final freshUrl = await getPlayUrl(streamId);
+  controller.setDataSource(freshUrl);
+}
+```
+
+### Node1 Yük Azalması
+
+| Senaryo | Mevcut | Cache sonrası |
+|---------|--------|---------------|
+| Liste açılır | Her seferinde API | 3 dk içinde 0 istek |
+| Aynı video tekrar oynatılır | Her seferinde presigned URL isteği | 55 dk içinde 0 istek |
+| Süresi dolmuş video açılır | API isteği + 410 yanıtı | API'ye bile gitmez |
+| İlk kez oynatma | 1 API isteği | 1 API isteği (kaçınılmaz) |
+
+---
+
+## 9. Yapılacaklar
 
 ### Backend — Zorunlu Kayıt Migrasyonu
 
@@ -160,14 +267,15 @@ PRO Araçları
 
 ### Mobile
 
-- [ ] PRO Araçları ekranına "Yayın Tekrarları" bölümü
-- [ ] Kayıt durumu widget'ı (hazırlanıyor / izle / süresi doldu)
-- [ ] Video oynatıcı ekranı (presigned URL → in-app player)
-- [ ] ARB anahtarları (TR/EN/AR/RU)
+- [ ] `pro_hub_screen.dart`: "Yayın & Kitle" accordion'ına 4. `_ToolCard` eklenir (`video_library_outlined`, `0xFFF97316`)
+- [ ] `MyRecordingsScreen`: kayıt listesi + `RecordingCard` widget (status chip + countdown)
+- [ ] `RecordingsCacheService`: 4 katmanlı cache, mevcut `CacheService` üzerine
+- [ ] Video oynatıcı ekranı (presigned URL → `video_player` + `chewie`)
+- [ ] ARB anahtarları (TR/EN/AR/RU): `proToolMyRecordingsTitle`, `proToolMyRecordingsDesc`, `recordingStatusPreparing`, `recordingStatusWatch`, `recordingStatusExpired`, `recordingStatusExpiresIn`
 
 ---
 
-## 9. Zorunlu Kayıt Mimarisi (Mimari Karar)
+## 10. Zorunlu Kayıt Mimarisi (Mimari Karar)
 
 ### Karar
 
@@ -222,7 +330,7 @@ Ek önlem: `duration_secs < 60` olan yayınlar encode adımında atlanabilir (te
 
 ---
 
-## 10. Bilinen Kısıtlar
+## 11. Bilinen Kısıtlar
 
 | Kısıt | Açıklama |
 |-------|----------|
