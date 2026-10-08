@@ -4537,5 +4537,13 @@
   "recordingDetailGifts": "Подарки",
   "errorRecordingNotFound": "Запись не найдена.",
   "errorRecordingExpired": "Срок этой записи истёк.",
-  "errorRecordingNotAvailable": "Запись ещё не готова."
+  "errorRecordingNotAvailable": "Запись ещё не готова.",
+  "salesPaywallDesc": "Получите доступ к отчётам о продажах, аналитике доходов и лучшим возможностям с PRO.",
+  "conversionPaywallDesc": "Смотрите коэффициенты выигрыша на аукционах и средние цены продаж по категориям с PRO.",
+  "demandPaywallDesc": "Откройте растущие категории и ниши до конкурентов с PRO.",
+  "competitorPaywallDesc": "Узнайте, где ваши цены по сравнению с конкурентами, и найдите упущенные возможности с PRO.",
+  "bestTimePaywallDesc": "Найдите лучшие дни и время для трансляций с максимальной конверсией с PRO.",
+  "streamHistPaywallDesc": "Анализируйте историю трансляций и данные аудитории в глубину с PRO.",
+  "retargetPaywallDesc": "Отправляйте push-уведомления потенциальным покупателям напрямую с PRO.",
+  "recordingPaywallDesc": "Просматривайте прошлые трансляции и анализируйте детали продаж с PRO."
 }

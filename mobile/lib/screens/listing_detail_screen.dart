@@ -805,7 +805,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       ctx,
       MaterialPageRoute(
         builder: (_) =>
-            RetargetingScreen(initialIndex: 1, listingId: listingId),
+            RetargetingScreen(initialIndex: 1, isPremium: true, listingId: listingId),
       ),
     );
   }

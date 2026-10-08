@@ -9,9 +9,11 @@ import '../models/recording.dart';
 import '../services/localization_service.dart';
 import 'viewmodels/my_recordings_view_model.dart';
 import 'recording_detail_screen.dart';
+import '../widgets/pro_paywall_overlay.dart';
 
 class MyRecordingsScreen extends ConsumerStatefulWidget {
-  const MyRecordingsScreen({super.key});
+  final bool isPremium;
+  const MyRecordingsScreen({super.key, required this.isPremium});
 
   @override
   ConsumerState<MyRecordingsScreen> createState() => _MyRecordingsScreenState();
@@ -21,6 +23,26 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    if (!widget.isPremium) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('proToolMyRecordingsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.video_library_outlined,
+            gradientColors: const [Color(0xFFF97316), Color(0xFFEA580C)],
+            descKey: 'recordingPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final stateAsync = ref.watch(myRecordingsProvider);
 
     return Scaffold(

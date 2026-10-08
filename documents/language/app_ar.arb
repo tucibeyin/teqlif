@@ -4537,5 +4537,13 @@
   "recordingDetailGifts": "الهدايا",
   "errorRecordingNotFound": "لم يتم العثور على التسجيل.",
   "errorRecordingExpired": "انتهت صلاحية هذا التسجيل.",
-  "errorRecordingNotAvailable": "التسجيل غير جاهز بعد."
+  "errorRecordingNotAvailable": "التسجيل غير جاهز بعد.",
+  "salesPaywallDesc": "احصل على تقارير المبيعات وتحليلات الإيرادات وأفضل الفرص مع PRO.",
+  "conversionPaywallDesc": "شاهد معدلات الفوز في المزادات وأسعار البيع المتوسطة حسب الفئة مع PRO.",
+  "demandPaywallDesc": "اكتشف الفئات الصاعدة وفجوات العرض قبل المنافسين مع PRO.",
+  "competitorPaywallDesc": "اعرف أين تقف أسعارك مقارنةً بالمنافسين واكتشف الفرص الضائعة مع PRO.",
+  "bestTimePaywallDesc": "اكتشف أفضل الأيام والأوقات للبث المباشر لتحقيق أعلى تحويل مع PRO.",
+  "streamHistPaywallDesc": "حلّل تاريخ بثوثك وبيانات الجمهور بعمق مع PRO.",
+  "retargetPaywallDesc": "أرسل إشعارات فورية مباشرة للمشترين المحتملين لإعلاناتك مع PRO.",
+  "recordingPaywallDesc": "شاهد بثوثك السابقة وحلّل تفاصيل المبيعات مع PRO."
 }

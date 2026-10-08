@@ -4537,5 +4537,13 @@
   "recordingDetailGifts": "Hediyeler",
   "errorRecordingNotFound": "Kayıt bulunamadı.",
   "errorRecordingExpired": "Bu kaydın süresi dolmuş.",
-  "errorRecordingNotAvailable": "Kayıt henüz hazır değil."
+  "errorRecordingNotAvailable": "Kayıt henüz hazır değil.",
+  "salesPaywallDesc": "Satış raporlarına, gelir analizine ve sıcak fırsatlara ulaşmak için PRO'ya geçin.",
+  "conversionPaywallDesc": "Kategori bazlı dönüşüm oranlarını ve ortalama satış fiyatlarını görmek için PRO'ya geçin.",
+  "demandPaywallDesc": "Yükselen kategorileri ve arz açığı olan fırsatları keşfetmek için PRO'ya geçin.",
+  "competitorPaywallDesc": "Fiyatınızın rakiplere kıyasla nerede durduğunu görmek için PRO'ya geçin.",
+  "bestTimePaywallDesc": "Yayınlarınız için en verimli gün ve saatleri bulmak için PRO'ya geçin.",
+  "streamHistPaywallDesc": "Yayın geçmişinizi ve kitle verilerini derinlemesine analiz etmek için PRO'ya geçin.",
+  "retargetPaywallDesc": "Potansiyel alıcılara doğrudan push bildirim göndermek için PRO'ya geçin.",
+  "recordingPaywallDesc": "Geçmiş yayınlarınızı izlemek ve satış detaylarını analiz etmek için PRO'ya geçin."
 }

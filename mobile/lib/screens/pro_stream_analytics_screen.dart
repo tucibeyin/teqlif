@@ -5,12 +5,14 @@ import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'viewmodels/pro_stream_analytics_view_model.dart';
+import '../widgets/pro_paywall_overlay.dart';
 
 // ── En İyi Yayın Saati ────────────────────────────────────────────────────
 
 class BestStreamTimeScreen extends ConsumerStatefulWidget {
+  final bool isPremium;
   final bool isEmbedded;
-  const BestStreamTimeScreen({super.key, this.isEmbedded = false});
+  const BestStreamTimeScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   ConsumerState<BestStreamTimeScreen> createState() => _BestStreamTimeScreenState();
@@ -22,6 +24,26 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    if (!widget.isPremium && !widget.isEmbedded) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('proToolBestTimeTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.schedule_outlined,
+            gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+            descKey: 'bestTimePaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(bestStreamTimeProvider);
     final viewModel = ref.read(bestStreamTimeProvider.notifier);
 
@@ -212,8 +234,9 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
 // ── Dönüşüm Analizi ────────────────────────────────────────────────────────
 
 class ConversionBreakdownScreen extends ConsumerStatefulWidget {
+  final bool isPremium;
   final bool isEmbedded;
-  const ConversionBreakdownScreen({super.key, this.isEmbedded = false});
+  const ConversionBreakdownScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   ConsumerState<ConversionBreakdownScreen> createState() => _ConversionBreakdownScreenState();
@@ -225,6 +248,26 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    if (!widget.isPremium && !widget.isEmbedded) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('proToolConversionTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.pie_chart_outline,
+            gradientColors: const [Color(0xFFEC4899), Color(0xFFF43F5E)],
+            descKey: 'conversionPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(conversionBreakdownProvider);
     final viewModel = ref.read(conversionBreakdownProvider.notifier);
 

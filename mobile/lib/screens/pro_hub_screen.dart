@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
-import '../services/analytics_service.dart';
 import 'viewmodels/pro_hub_view_model.dart';
 import 'competitor_radar_screen.dart';
 import 'demand_trends_screen.dart';
@@ -146,9 +145,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolSalesTitle'),
                 description: loc.t('proToolSalesDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProInsightsScreen(isPremium: isPremium))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -157,9 +154,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolListingsTitle'),
                 description: loc.t('proToolListingsDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -168,9 +163,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolConversionTitle'),
                 description: loc.t('proToolConversionDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversionBreakdownScreen(isPremium: isPremium))),
               ),
             ],
           ),
@@ -202,9 +195,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolDemandTrendsTitle'),
                 description: loc.t('proToolDemandTrendsDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemandTrendsScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DemandTrendsScreen(isPremium: isPremium))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -213,9 +204,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolCompetitorRadarTitle'),
                 description: loc.t('proToolCompetitorRadarDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompetitorRadarScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CompetitorRadarScreen(isPremium: isPremium))),
               ),
             ],
           ),
@@ -236,9 +225,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolBestTimeTitle'),
                 description: loc.t('proToolBestTimeDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BestStreamTimeScreen(isPremium: isPremium))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -247,9 +234,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolStreamAnalyticsTitle'),
                 description: loc.t('proToolStreamAnalyticsDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamHistoryScreen(isPremium: isPremium))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -258,9 +243,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolRetargetingTitle'),
                 description: loc.t('proToolRetargetingDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RetargetingScreen(initialIndex: 0, isPremium: isPremium))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -269,9 +252,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 title: loc.t('proToolMyRecordingsTitle'),
                 description: loc.t('proToolMyRecordingsDesc'),
                 isPremium: isPremium,
-                onTap: isPremium
-                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRecordingsScreen()))
-                    : () => _showUpgrade(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MyRecordingsScreen(isPremium: isPremium))),
               ),
             ],
           ),
@@ -330,14 +311,6 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
     );
   }
 
-  void _showUpgrade(BuildContext context) {
-    ref.read(analyticsServiceProvider).trackEvent('pro_upgrade_intent', {});
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _UpgradeSheet(),
-    );
-  }
 }
 
 // ── Durum Kartları ─────────────────────────────────────────────────────────────

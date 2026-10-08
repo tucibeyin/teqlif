@@ -1,5 +1,6 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
+import '../widgets/pro_paywall_overlay.dart';
 import "../services/localization_service.dart";
 import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
@@ -10,8 +11,9 @@ import '../utils/number_formatter.dart';
 import 'viewmodels/pro_insights_view_model.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
+  final bool isPremium;
   final bool isEmbedded;
-  const ProInsightsScreen({super.key, this.isEmbedded = false});
+  const ProInsightsScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   ConsumerState<ProInsightsScreen> createState() => _ProInsightsScreenState();
@@ -23,6 +25,26 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    if (!widget.isPremium && !widget.isEmbedded) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('proToolSalesTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.auto_graph_outlined,
+            gradientColors: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            descKey: 'salesPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(proInsightsProvider);
     final viewModel = ref.read(proInsightsProvider.notifier);
 

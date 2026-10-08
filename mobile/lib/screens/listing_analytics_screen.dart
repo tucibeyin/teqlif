@@ -451,7 +451,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                       height: 64,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -486,7 +486,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                            colors: [Color(0xFF10B981), Color(0xFF059669)],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),

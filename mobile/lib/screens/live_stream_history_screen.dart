@@ -6,10 +6,12 @@ import '../services/localization_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/live_stream_history_view_model.dart';
 import 'live_stream_analytics_screen.dart';
+import '../widgets/pro_paywall_overlay.dart';
 
 class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
+  final bool isPremium;
   final bool isEmbedded;
-  const LiveStreamHistoryScreen({super.key, this.isEmbedded = false});
+  const LiveStreamHistoryScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   ConsumerState<LiveStreamHistoryScreen> createState() =>
@@ -41,6 +43,26 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    if (!widget.isPremium && !widget.isEmbedded) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('proToolStreamAnalyticsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.stream_outlined,
+            gradientColors: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
+            descKey: 'streamHistPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(liveStreamHistoryProvider);
     final viewModel = ref.read(liveStreamHistoryProvider.notifier);
 

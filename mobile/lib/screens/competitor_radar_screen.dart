@@ -10,14 +10,36 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/number_formatter.dart';
 import 'viewmodels/competitor_radar_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/pro_paywall_overlay.dart';
 
 class CompetitorRadarScreen extends ConsumerWidget {
+  final bool isPremium;
   final bool isEmbedded;
-  const CompetitorRadarScreen({super.key, this.isEmbedded = false});
+  const CompetitorRadarScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+
+    if (!isPremium && !isEmbedded) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('proToolCompetitorRadarTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.radar,
+            gradientColors: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            descKey: 'competitorPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(competitorRadarProvider);
     final viewModel = ref.read(competitorRadarProvider.notifier);
 

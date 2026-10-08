@@ -7,13 +7,35 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/demand_trends_view_model.dart';
+import '../widgets/pro_paywall_overlay.dart';
 
 class DemandTrendsScreen extends ConsumerWidget {
-  const DemandTrendsScreen({super.key});
+  final bool isPremium;
+  const DemandTrendsScreen({super.key, required this.isPremium});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
+
+    if (!isPremium) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('demandTrendsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.trending_up_outlined,
+            gradientColors: const [Color(0xFF10B981), Color(0xFF059669)],
+            descKey: 'demandPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(demandTrendsProvider);
     final viewModel = ref.read(demandTrendsProvider.notifier);
     

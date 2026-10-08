@@ -8,13 +8,15 @@ import '../config/app_colors.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'viewmodels/retargeting_view_model.dart';
+import '../widgets/pro_paywall_overlay.dart';
 
 class RetargetingScreen extends ConsumerStatefulWidget {
   final int initialIndex;
+  final bool isPremium;
   final bool isEmbedded;
   final int? listingId;
 
-  const RetargetingScreen({super.key, this.initialIndex = 0, this.isEmbedded = false, this.listingId});
+  const RetargetingScreen({super.key, this.initialIndex = 0, required this.isPremium, this.isEmbedded = false, this.listingId});
 
   @override
   ConsumerState<RetargetingScreen> createState() => _RetargetingScreenState();
@@ -24,9 +26,11 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(retargetingProvider.notifier).init(widget.listingId);
-    });
+    if (widget.isPremium) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(retargetingProvider.notifier).init(widget.listingId);
+      });
+    }
   }
 
   List<Map<String, dynamic>> _filteredReportListings(RetargetingState state) {
@@ -416,6 +420,26 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+
+    if (!widget.isPremium && !widget.isEmbedded) {
+      return Scaffold(
+        backgroundColor: AppColors.bg(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          title: Text(loc.t('centerNotificationAudience'), style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+        body: Stack(children: [
+          const ProLockedPlaceholder(),
+          ProPaywallOverlay(
+            icon: Icons.mark_email_unread_outlined,
+            gradientColors: const [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+            descKey: 'retargetPaywallDesc',
+          ),
+        ]),
+      );
+    }
+
     final state = ref.watch(retargetingProvider);
     final viewModel = ref.read(retargetingProvider.notifier);
 

@@ -4573,5 +4573,13 @@
   "recordingDetailGifts": "Gifts",
   "errorRecordingNotFound": "Recording not found.",
   "errorRecordingExpired": "This recording has expired.",
-  "errorRecordingNotAvailable": "Recording is not ready yet."
+  "errorRecordingNotAvailable": "Recording is not ready yet.",
+  "salesPaywallDesc": "Access your sales reports, revenue analytics, and hottest opportunities with PRO.",
+  "conversionPaywallDesc": "See category-level auction win rates and average sale prices with PRO.",
+  "demandPaywallDesc": "Discover rising categories and supply gaps before the competition with PRO.",
+  "competitorPaywallDesc": "See where your prices stand against competitors and spot lost revenue with PRO.",
+  "bestTimePaywallDesc": "Find the best days and times to go live for maximum conversions with PRO.",
+  "streamHistPaywallDesc": "Analyze your stream history and audience data in depth with PRO.",
+  "retargetPaywallDesc": "Send push notifications directly to potential buyers for your listings with PRO.",
+  "recordingPaywallDesc": "Watch your past streams and analyze sales details with PRO."
 }
