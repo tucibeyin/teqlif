@@ -36,5 +36,6 @@ recording:
   # Backup'tan sonra silinme süresi
   retention_days: 15
 
-  # MinIO bucket lifecycle (gün) — 24h kullanıcı + backup zamanı
-  minio_expiry_days: 4
+  # MinIO bucket lifecycle (gün) — 24h kullanıcı + 1 gün backup toleransı
+  # Prod node1 MinIO ILM bu değere göre ayarlanmıştır (setup_minio_ilm.sh)
+  minio_expiry_days: 2

@@ -35,28 +35,42 @@ async def expire_recordings_task(ctx: dict) -> None:
 async def archive_recordings_task(ctx: dict) -> None:
     """node2 onaylı ve MinIO ILM süresi geçmiş 'expired' kayıtları 'archived' yapar.
 
-    İki koşul birlikte sağlanmalı:
+    Prod: iki koşul birlikte sağlanmalı:
       1. node2_confirmed_at IS NOT NULL  — node2 backup script dosyayı gördüğünü onayladı
       2. transferred_at < NOW() - 2 days — ILM (2 gün expiry) büyük olasılıkla tetiklendi
 
-    node2 backup başarısız olursa node2_confirmed_at set edilmez → bu task bekler →
-    node1 MinIO'daki dosya silinmez → bir sonraki başarılı backup'ta onaylanır.
+    Staging (DEBUG=True): node2 backup pipeline yok, node2_confirmed_at hiç set edilmez.
+    Bu ortamda koşul 2 yeterli — kayıtlar yaşam döngüsünü tamamlayabilir.
     """
     try:
         from app.database import AsyncSessionLocal
+        from app.config import get_settings
         from sqlalchemy import text
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(text("""
+
+        is_staging = get_settings().debug
+
+        if is_staging:
+            query = text("""
+                UPDATE stream_recordings
+                SET status = 'archived', archived_at = NOW(), updated_at = NOW()
+                WHERE status = 'expired'
+                  AND transferred_at < NOW() - INTERVAL '2 days'
+            """)
+        else:
+            query = text("""
                 UPDATE stream_recordings
                 SET status = 'archived', archived_at = NOW(), updated_at = NOW()
                 WHERE status = 'expired'
                   AND node2_confirmed_at IS NOT NULL
                   AND transferred_at < NOW() - INTERVAL '2 days'
-            """))
+            """)
+
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(query)
             await session.commit()
             count = result.rowcount
         if count:
-            logger.info("archive_recordings_task: %d kayıt archived", count)
+            logger.info("archive_recordings_task: %d kayıt archived (staging=%s)", count, is_staging)
     except Exception as exc:
         capture_exception(exc)
         logger.error("archive_recordings_task hata: %s", exc)
