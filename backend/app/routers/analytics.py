@@ -1226,19 +1226,14 @@ async def conversion_breakdown(
 async def ingest_feed_events(
     batch: FeedEventBatch,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Video ilan akışındaki kullanıcı davranışlarını (skip/impression/click +
-    dwell_time_ms) tek bir batch insert ile feed_analytics tablosuna yazar.
-    Boş liste sessizce kabul edilir. ClickHouse kapalıysa graceful degradation.
+    dwell_time_ms) PG analytics_events buffer'ına yazar.
+    Gece sync_pg_to_clickhouse_task tarafından CH feed_analytics'e aktarılır.
     """
     if not batch.events:
-        return
-
-    try:
-        ch = await get_clickhouse_client()
-    except Exception as exc:
-        logger.warning("[feed-events] ClickHouse bağlantı hatası, olaylar atlandı: %s", exc)
         return
 
     from datetime import datetime, timezone
@@ -1246,22 +1241,29 @@ async def ingest_feed_events(
     now = datetime.now(timezone.utc)
     uid = current_user.id
 
-    rows = [
-        [now, uid, e.listing_id, e.event_type, e.dwell_time_ms,
-         e.content_type, e.slot_index, e.stream_category, e.listing_condition, e.listing_subcategory]
-        for e in batch.events
-    ]
-
-    try:
-        await ch.insert(
-            "feed_analytics",
-            rows,
-            column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
-                          "content_type", "slot_index", "stream_category", "listing_condition", "listing_subcategory"],
+    events = [
+        AnalyticsEvent(
+            session_id=f"feed_{uid}_{int(now.timestamp())}_{i}",
+            user_id=uid,
+            event_type=e.event_type,
+            event_metadata={
+                "listing_id": e.listing_id,
+                "dwell_time_ms": e.dwell_time_ms,
+                "content_type": e.content_type,
+                "slot_index": e.slot_index,
+                "stream_category": e.stream_category,
+                "listing_condition": e.listing_condition,
+                "listing_subcategory": e.listing_subcategory,
+            },
+            created_at=now,
         )
-        logger.debug("[feed-events] %d olay yazıldı | user_id=%s", len(rows), uid)
+        for i, e in enumerate(batch.events)
+    ]
+    try:
+        db.add_all(events)
+        await db.commit()
     except Exception as exc:
-        logger.error("[feed-events] ClickHouse insert hatası: %s", exc, exc_info=True)
+        logger.error("[feed-events] PG buffer insert hatası: %s", exc, exc_info=True)
 
 
 # ── SwipeLive Davranış Eventleri ─────────────────────────────────────────────
@@ -1292,17 +1294,16 @@ async def ingest_swipe_live_events(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    SwipeLive'daki yayın ve ilan davranışlarını (dwell/skip/listing_tap/listing_impression)
-    swipe_live_events ClickHouse tablosuna batch insert yapar.
-    Yayın sıralama ve ilan sayısı kararlarını besler.
+    SwipeLive'daki yayın ve ilan davranışlarını PG analytics_events buffer'ına yazar.
+    Gece sync_pg_to_clickhouse_task tarafından CH swipe_live_events'e aktarılır.
+    sync_swipelive_interests_task her 20 dk bu buffer'dan doğrudan okur (CH gerekmez).
     """
     if not batch.events:
         return
 
-    from app.database_clickhouse import batch_insert_swipe_live_events
     from app.models.listing import Listing
+    from datetime import datetime, timezone
 
-    # listing_condition'ı server-side resolve et (mobile her zaman bilmeyebilir)
     listing_ids = {e.listing_id for e in batch.events if e.listing_id and not e.listing_condition}
     condition_map: dict[int, str] = {}
     if listing_ids:
@@ -1311,33 +1312,35 @@ async def ingest_swipe_live_events(
         )
         condition_map = {r.id: (r.condition or "") for r in rows_cond}
 
-    events = [
-        {
-            "user_id": current_user.id,
-            "stream_id": e.stream_id,
-            "listing_id": e.listing_id,
-            "event_type": e.event_type,
-            "dwell_ms": e.dwell_ms,
-            "stream_category": e.stream_category,
-            "stream_subcategory": e.stream_subcategory,
-            "listing_category": e.listing_category,
-            "listing_subcategory": e.listing_subcategory,
-            "listing_condition": e.listing_condition or condition_map.get(e.listing_id, ""),
-            "listings_seen": e.listings_seen,
-            "slot_index": e.slot_index,
-            "session_id": e.session_id,
-        }
-        for e in batch.events
+    now = datetime.now(timezone.utc)
+    uid = current_user.id
+    pg_events = [
+        AnalyticsEvent(
+            session_id=e.session_id or f"swipe_{uid}_{int(now.timestamp())}_{i}",
+            user_id=uid,
+            event_type="swipelive_raw",
+            event_metadata={
+                "stream_id": e.stream_id,
+                "listing_id": e.listing_id,
+                "swipe_event_type": e.event_type,
+                "dwell_ms": e.dwell_ms,
+                "stream_category": e.stream_category,
+                "stream_subcategory": e.stream_subcategory,
+                "listing_category": e.listing_category,
+                "listing_subcategory": e.listing_subcategory,
+                "listing_condition": e.listing_condition or condition_map.get(e.listing_id, ""),
+                "listings_seen": e.listings_seen,
+                "slot_index": e.slot_index,
+            },
+            created_at=now,
+        )
+        for i, e in enumerate(batch.events)
     ]
-    async def _insert_safe(ev: list[dict]) -> None:
-        try:
-            await batch_insert_swipe_live_events(ev)
-        except Exception as exc:
-            logging.getLogger(__name__).error(
-                "[SwipeLive] ClickHouse insert başarısız: %s", exc, exc_info=True
-            )
-
-    asyncio.create_task(_insert_safe(events))
+    try:
+        db.add_all(pg_events)
+        await db.commit()
+    except Exception as exc:
+        logger.error("[swipe-live-events] PG buffer insert hatası: %s", exc, exc_info=True)
 
 
 # ── Feed Performans İstatistikleri (Pro) ──────────────────────────────────────

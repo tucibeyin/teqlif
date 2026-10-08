@@ -18,7 +18,14 @@
 
 batch:
 
-  # ── 02:30-02:55 — Analitik cache ön-hesaplama (node2 backup bittikten sonra) ─
+  # ── 01:50 — PG→CH sync (CH backup 01:30'da biter, cache batch'inden önce olmalı) ─
+
+  - name: sync_pg_to_clickhouse_task
+    hour: 1
+    minute: 50
+    watchdog_m: 1440
+
+  # ── 02:30-02:55 — Analitik cache ön-hesaplama (sync bittikten sonra, taze CH verisi) ─
 
   - name: compute_analytics_cache_task
     hour: 2

@@ -744,41 +744,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         # PG commit başarılı — artık Redis kuyruğundan o batch'i kaldırabiliriz.
         await redis.ltrim(QUEUE_KEY, BATCH_LIMIT, -1)
 
-        # ── ClickHouse bulk insert ─────────────────────────────────────────────
-        try:
-            from app.database_clickhouse import get_clickhouse_client
-            ch = await get_clickhouse_client()
-            ch_data = [
-                [
-                    r["user_id"],          # Nullable(UInt32)
-                    r["item_id"],          # UInt32
-                    r["item_type"],        # LowCardinality(String)
-                    r["interaction_type"], # event_type
-                    r["price_point"],      # Nullable(Float64)
-                    r["duration_seconds"], # Nullable(Float64)
-                    r["metadata"],         # String (JSON)
-                    r["subcategory"],      # LowCardinality(String)
-                    r["created_at"],       # DateTime
-                ]
-                for r in rows
-            ]
-            await ch.insert(
-                "user_events",
-                ch_data,
-                column_names=[
-                    "user_id", "item_id", "item_type",
-                    "event_type", "price_point",
-                    "duration_seconds", "metadata", "subcategory", "timestamp",
-                ],
-            )
-            logger.info(
-                "[Worker] ClickHouse user_events insert tamamlandı | kayıt=%d", len(ch_data)
-            )
-        except Exception as ch_exc:
-            # ClickHouse hatası PostgreSQL akışını engellememeli
-            logger.warning(
-                "[Worker] ClickHouse insert başarısız (PostgreSQL etkilenmedi) | %s", ch_exc
-            )
+        # CH insert kaldırıldı — gece sync_pg_to_clickhouse_task PG→CH aktarımını yapar.
 
         logger.info(
             "[Worker] flush_interactions_to_db tamamlandı | kayıt=%d", len(rows)
@@ -854,68 +820,77 @@ async def flush_interactions_to_db(ctx: dict) -> None:
 async def sync_swipelive_interests_task(ctx: dict) -> None:
     """
     Her 20 dakikada bir çalışır.
-    Son 22 dakikadaki swipe_live_events (ClickHouse) → analytics_events (PostgreSQL).
+    Son 22 dakikadaki swipe_live_events (PG analytics_events buffer) → swipelive_dwell aggregation.
 
+    ingest_swipe_live_events endpoint'i olayları PG analytics_events'e yazar (event_type='swipelive_raw').
+    Bu task PG'den okur — ClickHouse gerektirmez.
     listing_category önceliği; yoksa stream_category kullanılır.
     Yazılan event_type='swipelive_dwell', compute_user_interests_task bu sinyali işler.
-    ClickHouse erişilemezse sessizce geçer — kritik değil.
     """
     from datetime import datetime, timezone
     from app.database import AsyncSessionLocal
     from app.models.analytics import AnalyticsEvent
+    from sqlalchemy import text as _sql_text
+    import math
 
     try:
-        from app.database_clickhouse import get_clickhouse_client
-        ch = await get_clickhouse_client()
-        if ch is None:
-            return
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(_sql_text("""
+                SELECT
+                    user_id,
+                    CASE WHEN event_metadata->>'listing_category' != ''
+                         THEN event_metadata->>'listing_category'
+                         ELSE event_metadata->>'stream_category'
+                    END AS category,
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' = 'dwell')                         AS dwells,
+                    AVG((event_metadata->>'dwell_ms')::int)
+                        FILTER (WHERE event_metadata->>'swipe_event_type' = 'dwell')                              AS avg_dwell_ms,
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' = 'stream_heart')                  AS hearts,
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' IN ('stream_gift', 'stream_bid'))  AS strong_eng,
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' = 'listing_tap')                   AS listing_taps
+                FROM analytics_events
+                WHERE event_type = 'swipelive_raw'
+                  AND created_at >= NOW() - INTERVAL '22 minutes'
+                  AND user_id IS NOT NULL AND user_id > 0
+                  AND (
+                      event_metadata->>'listing_category' != ''
+                      OR event_metadata->>'stream_category' != ''
+                  )
+                GROUP BY user_id, category
+                HAVING (
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' = 'dwell') +
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' = 'stream_heart') +
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' IN ('stream_gift', 'stream_bid')) +
+                    COUNT(*) FILTER (WHERE event_metadata->>'swipe_event_type' = 'listing_tap')
+                ) > 0
+            """))
+            rows = result.all()
 
-        result = await ch.query("""
-            SELECT
-                user_id,
-                if(listing_category != '', listing_category, stream_category) AS category,
-                countIf(event_type = 'dwell')                                 AS dwells,
-                avgIf(dwell_ms, event_type = 'dwell')                         AS avg_dwell_ms,
-                countIf(event_type = 'stream_heart')                          AS hearts,
-                countIf(event_type IN ('stream_gift', 'stream_bid'))          AS strong_eng,
-                countIf(event_type = 'listing_tap')                           AS listing_taps
-            FROM swipe_live_events
-            WHERE timestamp >= now() - INTERVAL 22 MINUTE
-              AND user_id > 0
-              AND (listing_category != '' OR stream_category != '')
-            GROUP BY user_id, category
-            HAVING dwells + hearts + strong_eng + listing_taps > 0
-        """)
-
-        rows = result.result_rows
         if not rows:
             return
 
         now = datetime.now(timezone.utc)
         events = []
-        import math
         for row in rows:
-            uid, category, dwells, avg_dwell_ms, hearts, strong_eng, listing_taps = row
             try:
-                uid = int(uid)
+                uid = int(row.user_id)
+                category = row.category
                 if not category:
                     continue
-                
-                f_avg_dwell = float(avg_dwell_ms or 0)
+                f_avg_dwell = float(row.avg_dwell_ms or 0)
                 if math.isnan(f_avg_dwell):
                     f_avg_dwell = 0.0
-
                 events.append(AnalyticsEvent(
                     session_id=f"worker_{uid}_{int(now.timestamp())}",
                     user_id=uid,
                     event_type="swipelive_dwell",
                     event_metadata={
                         "category": str(category),
-                        "dwells": int(dwells or 0),
+                        "dwells": int(row.dwells or 0),
                         "avg_dwell_ms": f_avg_dwell,
-                        "hearts": int(hearts or 0),
-                        "strong_eng": int(strong_eng or 0),
-                        "listing_taps": int(listing_taps or 0),
+                        "hearts": int(row.hearts or 0),
+                        "strong_eng": int(row.strong_eng or 0),
+                        "listing_taps": int(row.listing_taps or 0),
                     },
                     created_at=now,
                 ))
@@ -1493,38 +1468,48 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
                 .limit(50)
             ))
 
-            # ── 2. ClickHouse implicit sinyaller (son 7 gün) ─────────────────
+            # ── 2. Feed implicit sinyaller — PG analytics_events buffer (son 7 gün) ──
             ch_signals: dict[int, float] = {}
             try:
-                from app.database_clickhouse import get_clickhouse_client
-                ch = await get_clickhouse_client()
-                if ch is not None:
-                    uid_str = str(user_id)
-                    ch_result = await ch.query(f"""
-                        SELECT
-                            listing_id,
-                            SUM(
-                                CASE
-                                    WHEN event_type = 'click' THEN 3.0
-                                    WHEN event_type = 'impression' AND dwell_time_ms > 8000 THEN 1.5
-                                    WHEN event_type = 'impression' AND dwell_time_ms > 3000 THEN 0.8
-                                    ELSE 0
-                                END
-                            ) AS signal
-                        FROM feed_analytics
-                        WHERE user_id = {uid}
-                          AND timestamp >= now() - INTERVAL 7 DAY
-                        GROUP BY listing_id
-                        HAVING signal > 0
-                        LIMIT 100
-                    """)
-                    for lid_str, signal in ch_result.result_rows:
-                        try:
-                            ch_signals[int(lid_str)] = float(signal)
-                        except (ValueError, TypeError):
-                            continue
-            except Exception as ch_exc:
-                logger.debug("[Worker] ClickHouse sinyal alınamadı, atlanıyor: %s", ch_exc)
+                from sqlalchemy import text as _sql_text
+                feed_result = await db.execute(_sql_text("""
+                    SELECT
+                        event_metadata->>'listing_id' AS listing_id,
+                        SUM(
+                            CASE
+                                WHEN event_type = 'feed_click' THEN 3.0
+                                WHEN event_type = 'feed_impression'
+                                     AND (event_metadata->>'dwell_time_ms')::int > 8000 THEN 1.5
+                                WHEN event_type = 'feed_impression'
+                                     AND (event_metadata->>'dwell_time_ms')::int > 3000 THEN 0.8
+                                ELSE 0
+                            END
+                        ) AS signal
+                    FROM analytics_events
+                    WHERE user_id = :uid
+                      AND event_type IN ('feed_impression', 'feed_click', 'feed_skip')
+                      AND created_at >= NOW() - INTERVAL '7 days'
+                      AND event_metadata->>'listing_id' IS NOT NULL
+                    GROUP BY event_metadata->>'listing_id'
+                    HAVING SUM(
+                        CASE
+                            WHEN event_type = 'feed_click' THEN 3.0
+                            WHEN event_type = 'feed_impression'
+                                 AND (event_metadata->>'dwell_time_ms')::int > 8000 THEN 1.5
+                            WHEN event_type = 'feed_impression'
+                                 AND (event_metadata->>'dwell_time_ms')::int > 3000 THEN 0.8
+                            ELSE 0
+                        END
+                    ) > 0
+                    LIMIT 100
+                """), {"uid": user_id})
+                for lid_str, signal in feed_result.all():
+                    try:
+                        ch_signals[int(lid_str)] = float(signal)
+                    except (ValueError, TypeError):
+                        continue
+            except Exception as feed_exc:
+                logger.debug("[Worker] feed sinyali PG'den alınamadı, atlanıyor: %s", feed_exc)
 
             # ── 3. Tüm listing ID'lerini topla ───────────────────────────────
             pg_item_ids = [i.item_id for i in interactions]
@@ -3663,6 +3648,177 @@ async def check_search_alerts_task(ctx: dict) -> None:
 
 # ── Task: Gece Analitik Cache Ön-Hesaplama ────────────────────────────────────
 
+async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
+    """
+    Her gece 01:50 UTC'de çalışır (node2 CH backup 01:30'da biter).
+    Son sync'ten bu yana PG'deki birikmiş veriyi CH'a toplu olarak yazar.
+
+    3 kaynak:
+      1. user_interactions → CH user_events
+      2. analytics_events (feed_impression/click/skip) → CH feed_analytics
+      3. analytics_events (swipelive_raw) → CH swipe_live_events
+
+    Son sync zamanı Redis ch:last_sync_at key'inde tutulur.
+    CH insert başarısız olursa key güncellenmez → bir sonraki gece yeniden denenir.
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.database import AsyncSessionLocal
+    from app.database_clickhouse import get_clickhouse_client
+    from app.utils.redis_client import get_redis
+    from sqlalchemy import text as _sql_text
+    import json as _json
+
+    try:
+        redis = await get_redis()
+        ch = await get_clickhouse_client()
+        if ch is None:
+            logger.warning("[SyncCH] ClickHouse bağlantısı yok, atlıyor")
+            return
+
+        # Son sync zamanını al — ilk çalışmada 25 saat öncesini al
+        last_sync_str = await redis.get("ch:last_sync_at")
+        if last_sync_str:
+            last_sync = datetime.fromisoformat(last_sync_str.decode() if isinstance(last_sync_str, bytes) else last_sync_str)
+        else:
+            last_sync = datetime.now(timezone.utc) - timedelta(hours=25)
+        now = datetime.now(timezone.utc)
+
+        total_inserted = 0
+
+        # ── 1. user_interactions → CH user_events ─────────────────────────────
+        async with AsyncSessionLocal() as db:
+            ui_result = await db.execute(_sql_text("""
+                SELECT user_id, item_id, item_type, interaction_type,
+                       price_point, duration_seconds, subcategory, created_at
+                FROM user_interactions
+                WHERE created_at > :last_sync AND created_at <= :now
+                ORDER BY created_at
+                LIMIT 200000
+            """), {"last_sync": last_sync, "now": now})
+            ui_rows = ui_result.all()
+
+        if ui_rows:
+            ch_data = [
+                [
+                    r.user_id,
+                    r.item_id,
+                    r.item_type,
+                    r.interaction_type,
+                    r.price_point,
+                    r.duration_seconds,
+                    "",  # metadata — interaction_queue'daki metadata PG'ye yazılmıyor
+                    r.subcategory or "",
+                    r.created_at.replace(tzinfo=None),
+                ]
+                for r in ui_rows
+            ]
+            await ch.insert(
+                "user_events",
+                ch_data,
+                column_names=["user_id", "item_id", "item_type", "event_type",
+                               "price_point", "duration_seconds", "metadata", "subcategory", "timestamp"],
+            )
+            total_inserted += len(ch_data)
+            logger.info("[SyncCH] user_events: %d kayıt CH'a yazıldı", len(ch_data))
+
+        # ── 2. analytics_events (feed + swipe) → CH ───────────────────────────
+        async with AsyncSessionLocal() as db:
+            ae_result = await db.execute(_sql_text("""
+                SELECT user_id, event_type, event_metadata, created_at
+                FROM analytics_events
+                WHERE event_type IN ('feed_impression', 'feed_click', 'feed_skip', 'swipelive_raw')
+                  AND created_at > :last_sync AND created_at <= :now
+                ORDER BY created_at
+                LIMIT 500000
+            """), {"last_sync": last_sync, "now": now})
+            ae_rows = ae_result.all()
+
+        feed_rows = []
+        swipe_rows = []
+        for row in ae_rows:
+            m = row.event_metadata or {}
+            if row.event_type in ('feed_impression', 'feed_click', 'feed_skip'):
+                feed_rows.append([
+                    row.created_at.replace(tzinfo=None),
+                    row.user_id or 0,
+                    str(m.get("listing_id", "")),
+                    row.event_type.replace("feed_", ""),  # 'impression', 'click', 'skip'
+                    int(m.get("dwell_time_ms") or 0),
+                    str(m.get("content_type") or ""),
+                    int(m.get("slot_index") or 0),
+                    str(m.get("stream_category") or ""),
+                    str(m.get("listing_condition") or ""),
+                    str(m.get("listing_subcategory") or ""),
+                ])
+            elif row.event_type == 'swipelive_raw':
+                swipe_rows.append([
+                    row.user_id or 0,
+                    int(m.get("stream_id") or 0),
+                    int(m.get("listing_id") or 0),
+                    str(m.get("swipe_event_type") or ""),
+                    int(m.get("dwell_ms") or 0),
+                    str(m.get("stream_category") or ""),
+                    str(m.get("listing_category") or ""),
+                    str(m.get("listing_condition") or ""),
+                    int(m.get("listings_seen") or 0),
+                    int(m.get("slot_index") or 0),
+                    str(m.get("session_id") or ""),
+                    str(m.get("stream_subcategory") or ""),
+                    str(m.get("listing_subcategory") or ""),
+                ])
+
+        if feed_rows:
+            await ch.insert(
+                "feed_analytics",
+                feed_rows,
+                column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
+                               "content_type", "slot_index", "stream_category", "listing_condition",
+                               "listing_subcategory"],
+            )
+            total_inserted += len(feed_rows)
+            logger.info("[SyncCH] feed_analytics: %d kayıt CH'a yazıldı", len(feed_rows))
+
+        if swipe_rows:
+            await ch.insert(
+                "swipe_live_events",
+                swipe_rows,
+                column_names=["user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
+                               "stream_category", "listing_category", "listing_condition",
+                               "listings_seen", "slot_index", "session_id",
+                               "stream_subcategory", "listing_subcategory"],
+            )
+            total_inserted += len(swipe_rows)
+            logger.info("[SyncCH] swipe_live_events: %d kayıt CH'a yazıldı", len(swipe_rows))
+
+        # Tüm insertler başarılı → sync zamanını güncelle
+        await redis.set("ch:last_sync_at", now.isoformat())
+
+        # ── Buffer cleanup — PG'nin şişmesini önle ────────────────────────────
+        # feed/swipe raw eventler CH'a gittikten sonra PG'de sadece 48 saat tutulur.
+        # 48h > 24h (sync penceresi) → yeterli güvenlik marjı.
+        async with AsyncSessionLocal() as db:
+            del_result = await db.execute(_sql_text("""
+                DELETE FROM analytics_events
+                WHERE event_type IN ('feed_impression', 'feed_click', 'feed_skip', 'swipelive_raw')
+                  AND created_at < NOW() - INTERVAL '48 hours'
+            """))
+            await db.commit()
+            logger.info("[SyncCH] buffer cleanup: %d eski raw event silindi", del_result.rowcount)
+
+        logger.info(
+            "[SyncCH] sync_pg_to_clickhouse tamamlandı | toplam=%d | pencere=%s→%s",
+            total_inserted,
+            last_sync.strftime("%H:%M"),
+            now.strftime("%H:%M"),
+        )
+        await _agent_ok(ctx, "sync_pg_to_clickhouse_task")
+
+    except Exception as exc:
+        logger.error("[SyncCH] sync_pg_to_clickhouse_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise  # ch:last_sync_at güncellenmez, yarın yeniden dener
+
+
 async def compute_analytics_cache_task(ctx: dict) -> None:
     """
     Her gece 02:30 UTC'de çalışır.
@@ -3855,6 +4011,7 @@ _SCHEDULE_FUNCTIONS = {
     "compute_user_interests_task":           compute_user_interests_task,
     "compute_trending_categories_task":      compute_trending_categories_task,
     "compute_user_condition_preferences_task": compute_user_condition_preferences_task,
+    "sync_pg_to_clickhouse_task":            sync_pg_to_clickhouse_task,
     "compute_analytics_cache_task":          compute_analytics_cache_task,
     "precompute_premium_user_analytics_task": precompute_premium_user_analytics_task,
     "populate_foryou_feed_task":             populate_foryou_feed_task,
@@ -3967,6 +4124,7 @@ class WorkerSettings:
         archive_recordings_task,
         compute_analytics_cache_task,
         precompute_premium_user_analytics_task,
+        sync_pg_to_clickhouse_task,
     ]
 
     cron_jobs = [
