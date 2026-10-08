@@ -65,11 +65,12 @@ T+27h   expires_at geçer → expired
         (ARQ expire_recordings_task, her 30 dk çalışır)
 
 T+4g    MinIO lifecycle siler
-        node2 günlük 04:00 backup'ı almış
         → archived  (ARQ archive_recordings_task, her saat :15)
 
 T+19g   janitor.py satırı sayar/loglar — silme implement edilmemiş (archived kalır)
 ```
+
+> **⚠ RPO Riski:** node2 minio_backup 04:00 UTC çalışır. 03:00–04:00 arasında MinIO'ya inen dosyalar aynı gün backup'a girer. 04:00–08:00 arasında girenler ise ancak **ertesi gün 04:00'da** backup'a girer — node1 disk arızasında RPO ~24 saate çıkar. Çözüm: minio_backup saatini 06:00 UTC'ye taşımak (transfer penceresinin arkasına almak). Bkz. §9 Yapılacaklar.
 
 ### Transfer Penceresi Kuralları (UTC)
 
@@ -77,7 +78,7 @@ T+19g   janitor.py satırı sayar/loglar — silme implement edilmemiş (archive
 |-------------|-------------------|
 | ≥ 15 GB boş | 03:00 – 08:00 |
 | 10–15 GB boş | 02:00 – 08:00 (erken tetik) |
-| < 10 GB boş | Her an (acil mod) |
+| < 10 GB boş | Her an (acil mod) — ⚠ bant genişliği riski, bkz. §11 |
 
 ---
 
@@ -269,6 +270,11 @@ if (error.contains('403')) {
 - [ ] `RecordingManager._sync_recordings()`: `AND ls.recording_enabled = TRUE` filtresi kaldırılır
 - [ ] `GET /streams/{id}/recording`: `recording_enabled` kontrolü → PRO kontrolü ile değiştirilir
 
+### Altyapı — Güvenilirlik
+
+- [ ] **node2:** `minio_backup` timer'ı 04:00 → **06:00 UTC'ye** kaydırılır; transfer penceresinin (03:00–08:00) arkasına alınır, RPO garantisi sağlanır
+- [ ] **encoder.py:** acil mod transferinde (`free_gb < 10`) `mc cp` komutuna `--limit-upload 30M` eklenir; LiveKit bant genişliği korunur
+
 ### Backend — Yeni Özellikler
 
 - [ ] `encoder.py`: encode sonrası `ffprobe` ile `duration_secs` hesaplanıp DB'ye yazılır (şu an daima NULL)
@@ -351,5 +357,7 @@ Ek önlem: `duration_secs < 60` olan yayınlar encode adımında atlanabilir (te
 | Transfer retry | `mc cp` hatası → `encoded`'a geri döner + Telegram alert; bir sonraki transfer penceresi yeniden dener |
 | `duration_secs` NULL | encoder.py `ffprobe` çalıştırmıyor; alan her zaman NULL — `GET /recordings/my` önce bu alanı doldurmalı |
 | Satır silme yok | `archived` final durum; `deleted` geçişi implement edilmemiş (`cleanup_actions.sh` mevcut değil) |
+| RPO ~24 saat | 04:00–08:00 arası MinIO'ya giren dosyalar ertesi gün 04:00'da backup alır; node1 çökmesinde veri kaybı |
+| Acil mod bant genişliği | disk < 10 GB'da `mc cp` limitsiz çalışır; node3/4 üzerindeki LiveKit stream'lerinin bant genişliğini tüketerek yayın donmasına yol açabilir |
 | Presigned TTL | URL 1 saat geçerli; oynatma sırasında süresi dolarsa mobil yeniden istemeli |
 | Staging | node5'te ayrı `teqlif-staging` bucket, aynı pipeline |
