@@ -12,7 +12,6 @@
 | node4 | 10.10.0.4 | 135.125.175.223 | KVM VPS | OVH Frankfurt DE | LiveKit Streaming #2 |
 | node5 | 10.10.0.5 | 45.146.252.165 | KVM VPS | ZAP Münster DE | Staging + AI Secondary |
 | node6 | 10.10.0.6 | 5.249.165.10 | KVM VPS | ZAP Virginia US | AI Primary (Gemini) |
-| node7 | 10.10.0.7 | — | KVM VPS | Netcup Nuremberg DE | **Hazırlanıyor** (rol TBD) |
 | nodeMonitor | 10.10.0.99 | 94.16.105.135 | KVM VPS | Netcup Karlsruhe DE | Merkezi İzleme (Prometheus + Loki + Grafana + Uptime Kuma) |
 | streaming-N | 10.10.0.20+ | - | KVM VPS | herhangi | LiveKit Streaming #N (plug-and-play) |
 
@@ -43,7 +42,7 @@
 - **Subnet:** 10.10.0.0/24
 - **Topoloji:** Full mesh — her node diğer tüm node'lara P2P tünel
 - **Şifreleme:** ChaCha20-Poly1305 (WireGuard yerleşik)
-- **Sabit node'lar:** 10.10.0.1–10.10.0.7 (node1–7), 10.10.0.99 (nodeMonitor)
+- **Sabit node'lar:** 10.10.0.1–10.10.0.6 (node1–6), 10.10.0.99 (nodeMonitor)
 - **Streaming pool:** 10.10.0.20–10.10.0.50 (plug-and-play)
 
 ```
@@ -113,7 +112,8 @@ Mobil/Web İstemci (Staging — node5)
 | FastAPI | AI Proxy | HTTP | AI özellik çağrıları |
 | FastAPI | LiveKit | LiveKit SDK | Room token üretimi |
 | ARQ Worker | Redis core | aioredis | Job queue |
-| ARQ Worker | ClickHouse | clickhouse-driver | Event log yazma |
+| ARQ Worker | PostgreSQL | asyncpg | analytics_events buffer yazma (aktif saatlerde) |
+| ARQ Worker | ClickHouse | clickhouse-driver | Gece batch sync (01:50 UTC, `sync_pg_to_clickhouse_task`) |
 | LiveKit (node3/4) | Redis core (node1) | TCP 6379 | Node koordinasyonu |
 | AI Proxy (node5/6) | Groq/Gemini API | HTTPS | LLM çağrıları |
 | Promtail (tüm node'lar) | Loki (nodeMonitor 10.10.0.99:3100) | HTTP Push | Log iletimi |
@@ -344,29 +344,7 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük
 
 ---
 
-### 4.6 node7 — Hazırlanıyor
-
-| Katman | Teknoloji | Versiyon |
-|--------|-----------|---------|
-| OS | Debian 13 Trixie | - |
-| CPU | 2 vCPU QEMU | 2294 MHz (KVM) |
-| RAM | 1.9 GiB | DDR4 |
-| Swap | 2 GiB | - |
-| Disk | 59 GB SSD | ~940 MB/s seq, ~1 GB/s 4k |
-| Ağ | ~1 Gbps | Netcup Nuremberg DE |
-| Public IP | — (henüz atanmadı) | - |
-| WG IP | 10.10.0.7 | (rezerve) |
-
-**Durum:** Sunucu temin edildi, YABS benchmark alındı (2026-09-16), rol henüz belirlenmedi.
-
-**Rol seçenekleri:**
-- LiveKit Streaming #3 (1.9 GB RAM sınırlı, hafif yükte çalışabilir)
-- AI Proxy #3 / Avrupa AI yedek (CPU/RAM AI proxy için yeterli)
-- Ek staging node veya spesifik servis izolasyonu
-
----
-
-### 4.7 nodeMonitor — Merkezi İzleme
+### 4.6 nodeMonitor — Merkezi İzleme
 
 | Katman | Teknoloji | Versiyon |
 |--------|-----------|---------|
@@ -389,7 +367,7 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük
 ```
 WireGuard mesh (10.10.0.0/24)
   │
-  ├── Prometheus :9090  ← scrape node-exporter :9100 (tüm node'lar: node1–7 + nodeMonitor)
+  ├── Prometheus :9090  ← scrape node-exporter :9100 (tüm node'lar: node1–6 + nodeMonitor)
   │     └── Alertmanager 127.0.0.1:9093 (Telegram alerts)
   │
   ├── Loki :3100         ← Promtail push (tüm node'lardan)
@@ -914,4 +892,104 @@ PTR   135.125.223.43      →  mail.teqlif.com     (OVH panelinden)
 | Timer | Saat | İçerik |
 |-------|------|--------|
 | `teqlif-mail-backup.timer` | 02:30 UTC | RocksDB + blobs + DKIM anahtarları, 7 gün |
+
+---
+
+## 11. Redis Cache Mimarisi ve Analytics
+
+### 11.1 Aktif Kullanıcı Saatlerinde node2 İzolasyonu
+
+node2 HDD disk ve backup rolü nedeniyle aktif kullanıcı isteklerinden izole edilmiştir. Temel strateji: **aktif saatlerde CH okuma/yazma sıfır**, tüm veri node1 Redis cache'inden servis edilir.
+
+```
+Aktif saatler (yaklaşık 04:00–01:00 UTC)
+  │
+  ├─ Analytics endpoint isteği
+  │       → Redis cache hit (TTL dolmamış)  ✅ node2'ye hiç gidilmez
+  │       → Redis cache miss (soğuk başlangıç veya ilk istek)
+  │              → CH sorgusu (node2)  ⚠️ yalnızca nadir durum
+  │
+  ├─ Feed event (impression / click / skip / swipe)
+  │       → PG analytics_events (node1 NVMe)  ✅ node2'ye hiç gidilmez
+  │
+  └─ user_interactions (flush)
+          → PG user_interactions (node1 NVMe)  ✅ node2'ye hiç gidilmez
+
+Gece penceresi (01:00–05:00 UTC)
+  ├─ 01:00  PG backup (pg_dump → node2)
+  ├─ 01:30  CH backup (node2 lokal)
+  ├─ 01:50  sync_pg_to_clickhouse_task   ← PG buffer → CH + 48h cleanup
+  ├─ 02:30  compute_analytics_cache_task ← CH → Redis (market_trends, demand_radar)
+  ├─ 02:45  precompute_premium_user_analytics_task ← CH → Redis (pro_insights)
+  └─ 03:00+ Batch işler (node1 lokal, node2'ye dokunmaz)
+```
+
+### 11.2 Redis Cache TTL Tablosu
+
+#### Aktif Saatler — Cache'den Servis Edilen Endpointler
+
+| Endpoint | Cache key deseni | TTL | Kaynak (cache miss) | Invalidasyon |
+|----------|-----------------|-----|---------------------|--------------|
+| `market_trends` | `cache:market_trends_global_{locale}` | **25 saat** (90000s) | CH sorgusu | 02:30 gece pre-compute |
+| `pro_insights` | `cache:pro_insights:{uid}:{locale}::` | **25 saat** (90000s) | CH sorgusu | Yayın bitişinde + 02:45 pre-compute |
+| `demand_radar` | `cache:demand_radar:{days}:{cat}:{sub}` | **25 saat** (90000s) | CH sorgusu | 02:30 gece pre-compute |
+| `pro_metrics` | `cache:pro_metrics:{uid}` | **25 saat** (90000s) | CH sorgusu | Yayın bitişinde sil |
+| `video_roi` | `cache:video_roi:{uid}:{start}:{end}:{cat}` | **4 saat** (14400s) | CH sorgusu | — |
+| `gallery_stats` | `cache:gallery_stats:{uid}:{...}` | **4 saat** (14400s) | CH sorgusu | — |
+| `video_performance` | `cache:video_perf:{uid}:{...}` | **4 saat** (14400s) | CH sorgusu | — |
+| `seller_report` (biten yayın) | `cache:seller_report:{stream_id}` | **7 gün** (604800s) | CH sorgusu | — (immutable) |
+| `seller_report` (canlı yayın) | `cache:seller_report:{stream_id}` | **2 dakika** (120s) | CH sorgusu | — |
+| `category_report` | `cache:category_report:{...}` | **30 dakika** (1800s) | PG sorgusu | — |
+| ForYou feed | Redis key per user | **24 saat** (86400s) | ML pipeline | 03:55 + 15:55 UTC yeniden hesap |
+| Embedding | `cache:embedding:{hash}` | **7 gün** (604800s) | ML pipeline | — |
+
+#### Gece Pre-Compute (node2 CH aktif olduğu pencere)
+
+| Task | Saat (UTC) | Yazdığı cache | TTL |
+|------|-----------|---------------|-----|
+| `sync_pg_to_clickhouse_task` | 01:50 | — (CH'a yazar, cache değil) | — |
+| `compute_analytics_cache_task` | 02:30 | `cache:market_trends_global_{tr/en/ru/ar}` × 4 locale | 25 saat |
+| `compute_analytics_cache_task` | 02:30 | `cache:demand_radar:{7,30,90}:*` | 25 saat |
+| `precompute_premium_user_analytics_task` | 02:45 | `cache:pro_insights:{uid}:{locale}::` (premium kullanıcılar) | 25 saat |
+
+### 11.3 PG Buffer Mimarisi (analytics_events)
+
+Aktif saatlerde feed/swipe event'leri doğrudan CH yerine PG `analytics_events` tablosuna yazılır. Gece 01:50'de bulk transfer yapılır.
+
+```
+İstek yolu (aktif saatler)
+  ingest_feed_events      → PG analytics_events  (event_type: feed_impression/click/skip)
+  ingest_swipe_live_events → PG analytics_events (event_type: swipelive_raw)
+  flush_interactions_to_db → PG user_interactions
+
+Gece penceresi
+  sync_pg_to_clickhouse_task (01:50 UTC)
+    ├─ PG user_interactions  → CH user_events       (son 24h, LIMIT 200K)
+    ├─ PG analytics_events   → CH feed_analytics    (feed_impression/click/skip)
+    ├─ PG analytics_events   → CH swipe_live_events (swipelive_raw)
+    └─ Cleanup: analytics_events WHERE created_at < NOW() - 48h  (PG bloat önlemi)
+```
+
+**PG analytics_events indeksleri:**
+
+| İndeks | Kolonlar | Amaç |
+|--------|---------|------|
+| `ix_analytics_events_user_created` | `(user_id, created_at)` | Kullanıcı bazlı sorgular |
+| `ix_analytics_events_type_created` | `(event_type, created_at)` | Toplu event_type taramaları (sync + swipelive) |
+| `ix_analytics_events_session_type` | `(session_id, event_type)` | Seans bazlı sorgular |
+
+**Beklenen tablo boyutu:** ~10K aktif kullanıcıda ~1-2M satır/gün; 48h cleanup ile maksimum ~4M satır sabit kalır.
+
+### 11.4 Stream Sonu Cache Invalidasyonu
+
+Yayın bittiğinde (`stream_finalizer.py`) yayıncıya ait analytics cache'i temizlenir:
+
+```python
+# pro_insights tüm locale varyantları silinir (pattern match)
+keys = await redis.keys(f"cache:pro_insights:{stream.host_id}:*")
+# pro_metrics da silinir
+await redis.delete(*keys, f"cache:pro_metrics:{stream.host_id}")
+```
+
+Bir sonraki istek fresh CH sorgusu tetikler ve cache 25 saatlik TTL ile yeniden dolar.
 
