@@ -176,6 +176,7 @@ node2 ClickHouse ──yerel dump──→ node2 /project/teqlif/backups/clickho
 node2 Redis rep. ──BGSAVE──────→ node2 /project/teqlif/backups/redis/       (günlük 03:40 UTC)
 node2 Stalwart   ──rsync────────→ node2 /project/mail/backups/               (günlük 03:45 UTC)
 node1 MinIO      ──mc mirror───→ node2 /project/teqlif/backups/minio/       (günlük 04:00 UTC)
+                                  └─ mirror sonrası PG stream_recordings.node2_confirmed_at setler
 ```
 
 ---
@@ -1027,10 +1028,10 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 | Her 15 dakika | `check_search_alerts_task` | PG |
 | Her 15 dakika | `invalidate_swipe_live_configs_task` | Redis |
 | Her 20 dakika | `sync_swipelive_interests_task` | PG (analytics_events) |
-| Her 30 dakika | `expire_recordings_task` | PG |
+| Her 30 dakika | `expire_recordings_task` | PG — `available` → `expired` (expires_at geçince) |
 | Her saat :00 | `cleanup_expired_stories_task` | PG |
 | Her saat :00 | `cleanup_hype_highlights_task` | PG |
-| Her saat :15 | `archive_recordings_task` | PG + MinIO |
+| Her 15 dakika | `archive_recordings_task` | PG — `expired` → `archived` (node2_confirmed_at IS NOT NULL + transferred_at < NOW()-2g) |
 | Her saat :45 | `backfill_listing_quality_scores_task` | PG |
 
 ### 12.2 node2 — Backup Timer'ları (MEVCUT, UTC)
@@ -1041,7 +1042,7 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 | **03:20** | `teqlif-clickhouse-backup.timer` | node2 CH → node2 HDD (yerel) | Seri yazma |
 | **03:40** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
 | **03:45** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
-| **04:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD | Seri yazma |
+| **04:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD; tamamlanınca PG `stream_recordings.node2_confirmed_at` setler | Seri yazma |
 | ~~05:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
 
 **Not — Backup penceresi tasarım ilkeleri:**
@@ -1245,4 +1246,79 @@ node3/4 (6 core / 11GB / SSD)
 | 2 | `teqlif-offsite-sync.timer` **disabled** | rclone hedef yapılandırılmamış. Timer ve script mevcut; hedef belirlendikten sonra aktive edilir. |
 | 3 | 04:00 minio_backup + CH okuma minor örtüşmesi | minio_backup (04:00–04:45) sequential write, network-bound; compute_trending_listings (04:00) CH read. Aynı HDD ama minio I/O WireGuard hızıyla sınırlı → minor. Kritik çakışmalar (CH backup+sync, mail+analytics) çözüldü. |
 | 4 | Pazar training CPU spike | 06:00–07:00 UTC = 09:00–10:00 TR; Pazar sabahı commute başlamadan biter; Prom p99 izlenir |
+
+---
+
+## 13. Veri Yaşam Döngüsü
+
+### 13.1 Stream Kayıt Yaşam Döngüsü
+
+#### Statüler ve Geçişler
+
+```
+recording → encoding → encoded → transferring → available → expired → archived → deleted
+```
+
+#### Zaman Damgaları
+
+| Damga | Kim set eder | Ne zaman |
+|-------|-------------|----------|
+| `recording_started_at` | `recorder.py` (stream node) | Kayıt başladığında |
+| `encoding_started_at` | `recorder.py` (stream node) | Encode başladığında |
+| `encoded_at` | `encoder.py` (stream node) | Encode tamamlandığında |
+| `transferred_at` | `encoder.py` (stream node) | node1 MinIO'ya transfer tamamlandığında |
+| `available_at` | `encoder.py` (stream node) | Kullanıcıya açıldığında |
+| `expires_at` | `encoder.py` (stream node) | `available_at + 24 saat` |
+| `node2_confirmed_at` | `minio_backup.sh` (node2) | node2 `mc mirror` başarıyla bitince |
+| `archived_at` | `archive_recordings_task` (node1 ARQ) | PG `archived` statüsüne geçince |
+
+#### Arşiv Güvenlik Garantisi
+
+`archive_recordings_task` iki koşul birlikte sağlanmadan geçiş yapmaz:
+1. `node2_confirmed_at IS NOT NULL` — node2 dosyayı gördüğünü onayladı
+2. `transferred_at < NOW() - INTERVAL '2 days'` — MinIO ILM (2 gün expiry) büyük olasılıkla tetiklendi
+
+**Başarısızlık modu:** node2 backup başarısız → `node2_confirmed_at` set edilmez → task bekler → node1 MinIO ILM tetiklenmez → dosya korunur → bir sonraki başarılı backup'ta onaylanır.
+
+#### MinIO ILM (node1)
+
+| Bucket | Prefix | Expiry | Kural ID |
+|--------|--------|--------|----------|
+| `teqlif` | `recordings/` | **2 gün** | `db3tiuskndq8as06c0e0` |
+
+Transfer penceresi: **03:00–08:00 UTC** (stream node'larında `encoder.py`, `free_gb` kontrollü).
+
+---
+
+### 13.2 DM Arşiv (A2 — Tiered Storage)
+
+#### Tasarım
+
+| Katman | Depolama | Süre | Format |
+|--------|----------|------|--------|
+| Hot | PostgreSQL `messages` tablosu | 1 yıl | Satır bazlı |
+| Cold | MinIO `teqlif-dm` bucket | Süresiz | `dm-archive/{küçük_id}_{büyük_id}/{yıl}.json.gz` |
+
+#### PG Schema
+
+```sql
+-- message_threads tablosuna eklendi:
+has_archive BOOLEAN NOT NULL DEFAULT FALSE
+-- True: bu konuşmanın MinIO'da arşiv dosyası var
+```
+
+#### ARQ İşi
+
+`archive_dm_messages_task` (günlük, gece penceresi):
+- 1 yıldan eski mesajları PG'den okur
+- MinIO'daki ilgili yıl dosyasına gzip JSON olarak ekler (varsa merge, yoksa yeni oluşturur)
+- PG'den siler, `message_threads.has_archive = TRUE` setler
+
+#### Flutter UI
+
+`DirectChatScreen(hasArchive: bool)`:
+- `has_archive = true` ise konuşma ekranının **üstünde** "Eski mesajları yükle" butonu gösterilir
+- Butona basınca `GET /messages/{id}/archive` çağrılır, arşiv mesajlar listenin başına eklenir
+- Yükleme sırasında buton yerine `CircularProgressIndicator` gösterilir
+- Arşiv bir kez yüklendikten sonra buton kaybolur (`_archiveLoaded = true`)
 
