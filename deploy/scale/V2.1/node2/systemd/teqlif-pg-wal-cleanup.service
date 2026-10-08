@@ -1,0 +1,9 @@
+[Unit]
+Description=teqlif PostgreSQL WAL Cleanup — 7 günden eski segmentleri sil
+
+[Service]
+Type=oneshot
+User=tucibeyin
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/pg_wal_cleanup.sh
+StandardOutput=journal
+StandardError=journal
