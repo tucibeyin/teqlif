@@ -143,7 +143,7 @@ Bu özellik **PRO Araçları** ekranında "Canlı Yayın & Kitle" accordion'ı a
 ### Kapsam
 - Yalnızca PRO host'lar görür
 - Kendi yaptığı yayınların kayıtları listelenir
-- Kayıt `available` ise oynatılabilir; diğer durumlarda durum gösterimi
+- Kayıt `available` ise oynatılabilir + ticaret aktivitesi gösterilir; diğer durumlarda durum gösterimi
 
 ### PRO Hub Yerleşimi
 
@@ -164,7 +164,7 @@ _ToolCard(
 
 Mevcut sıra: BestStreamTime → StreamAnalytics → Retargeting → **Canlı Yayınlarım**
 
-### Ekran Yapısı
+### Liste Ekranı (MyRecordingsScreen)
 
 ```
 ┌─────────────────────────────────┐
@@ -178,7 +178,7 @@ Mevcut sıra: BestStreamTime → StreamAnalytics → Retargeting → **Canlı Ya
 │  ┌───────────────────────────┐  │
 │  │  "11 Ekim — Öğlen"        │  │
 │  │  1s 12dk  •  720p         │  │
-│  │  [▶ İzle]  Son: 3s 14dk  │  │  ← available + countdown
+│  │  [▶ İzle]  Son: 3s 14dk  │  │  ← available + countdown (tıklanır)
 │  └───────────────────────────┘  │
 │  ┌───────────────────────────┐  │
 │  │  "10 Ekim — Akşam"        │  │
@@ -193,15 +193,182 @@ Mevcut sıra: BestStreamTime → StreamAnalytics → Retargeting → **Canlı Ya
 | `status` | Chip | Renk | Davranış |
 |----------|------|------|---------|
 | `recording / encoding / encoded` | `● Hazırlanıyor` | amber, pulse animasyonu | dokunulamaz |
-| `available` | `▶ İzle` | teal button | player'a git |
-| `available`, son 2 saat | `▶ İzle · 1s 45dk` | orange, countdown | player'a git |
+| `available` | `▶ İzle` | teal button | detay ekranına git |
+| `available`, son 2 saat | `▶ İzle · 1s 45dk` | orange, countdown | detay ekranına git |
 | `expired / archived` | `Süresi Doldu` | tertiary, opacity 0.5 | dokunulamaz |
 
 Countdown: `expires_at - DateTime.now()`, `Timer.periodic(1min)` ile UI güncellenir. Oynatma sırasında expire olursa card anında `expired` state'e geçer.
 
 ---
 
-## 8. Mobil Caching Stratejisi
+## 7b. Kayıt Detay Ekranı (RecordingDetailScreen)
+
+`available` kartına tıklandığında açılan tam ekran. Video oynatıcı üstte, ticaret aktivitesi aşağıda scrollable.
+
+### Ekran Yapısı
+
+```
+┌──────────────────────────────────────────────┐
+│  ← "12 Ekim — Sabah Müzayedesi"             │  AppBar
+├──────────────────────────────────────────────┤
+│                                              │
+│  ┌──────────────────────────────────────────┐│
+│  │         VIDEO PLAYER (16:9)              ││  chewie + video_player
+│  │         chewie kontrolleri               ││  presigned URL (55dk cache)
+│  └──────────────────────────────────────────┘│
+│                                              │
+│  1s 48dk  •  12 Eki  •  Pik: 234 izleyici  │  meta satırı
+│                                              │
+│  ── Yayın Özeti ───────────────────────────│
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐   │
+│  │ 4.250 TL │ │ 23 teklif│ │ 9 satış  │   │  seller-report'tan
+│  │  Gelir   │ │          │ │          │   │
+│  └──────────┘ └──────────┘ └──────────┘   │
+│                                              │
+│  ── Ticaret Etkinliği ─────────────────────│
+│  [🔨 Rolex Submariner     SATILDI 3.450 TL]│  ← Auction kart
+│  [🔨 Patek Philippe       KAZANANSIZ     ] │
+│  [🛍 iPhone 15 Pro        5/10 750 TL    ] │  ← DirectSale kart
+│  [🛍 AirPods Pro          10/10 1.500 TL ] │
+│  [🎁 Hediyeler            1.240 teqlik   ] │  ← Gift özet kart
+└──────────────────────────────────────────────┘
+```
+
+### Kart Tasarımları
+
+**Müzayede Kartı:**
+```
+┌──────────────────────────────────────────────┐
+│  🔨  "Rolex Submariner"        [SATILDI ✓]  │
+│  Başlangıç: 1.200 TL  →  Final: 3.450 TL   │
+│  23 teklif • 12 dk • Hemen Al: 5.000 TL    │
+│  🏆 @ertankolcu                          ›  │
+└──────────────────────────────────────────────┘
+```
+Satılmayanlar: `[KAZANANSIZ]` chip, muted ton.
+
+**Direkt Satış Kartı:**
+```
+┌──────────────────────────────────────────────┐
+│  🛍  "iPhone 15 Pro"     [5 / 10 SATILDI]   │
+│  150 TL × 5 adet = 750 TL toplam            │
+│  Stok: 5 kaldı                           ›  │
+└──────────────────────────────────────────────┘
+```
+
+**Hediyeler Özeti Kartı:**
+```
+┌──────────────────────────────────────────────┐
+│  🎁  Hediyeler                               │
+│  Toplam: 1.240 teqlik  •  8 gönderici    ›  │
+└──────────────────────────────────────────────┘
+```
+
+### Bottom Modal İçerikleri (Karta tıklandığında)
+
+**Müzayede Modalı:**
+- `proof_image_url` tam genişlik (varsa)
+- Başlangıç fiyatı, satış fiyatı, artış yüzdesi
+- Hemen al fiyatı (varsa, kullanıldı mı?)
+- Süre (dakika)
+- Kazanan: avatar + username → profil navigasyonu
+- Teklifler listesi: avatar + username + tutar + zaman → her satır profil navigasyonu
+
+**Direkt Satış Modalı:**
+- `product_image_url` tam genişlik (varsa)
+- Fiyat, stok (toplam / satılan)
+- Başlama ve bitiş zamanı
+- `viewer_count_at_start` (yayın başındaki izleyici)
+- Alıcılar listesi: avatar + username + adet + tutar + zaman → profil navigasyonu
+
+**Hediyeler Modalı:**
+- Toplam teqlik (alınan), host payı (`host_share`)
+- Gönderici listesi: avatar + username + hediye adı + tutar + zaman → profil navigasyonu
+
+---
+
+## 8. Ticaret Verisi Analizi (Detay Ekranı için)
+
+### Mevcut Endpointler ve Döndürdükleri
+
+| Endpoint | Veriler | Kullanım |
+|----------|---------|---------|
+| `GET /analytics/seller-report/{stream_id}` | stream meta, auction özeti, ClickHouse metrikleri | Özet chips + auction kartları |
+| `GET /streams/{stream_id}/commerce-activity` | Teklifler + direkt satış siparişleri, zaman sıralı | Kart altı detay listesi |
+| `GET /streams/{stream_id}/recording` | Presigned URL, expires_at | Video player |
+
+**seller-report tam döndürdükleri:**
+```
+stream_title, duration_minutes, peak_viewers,
+unique_viewers, avg_budget, hesitation_count (ClickHouse),
+swipe_impressions, swipe_reach, recommendation,
+auction_summary.items[]:
+  item_name, start_price, final_price, winner_username,
+  bid_count, is_bought_it_now, duration_minutes, sold
+```
+
+**commerce-activity tam döndürdükleri:**
+```
+event_type: "bid"         → actor(username), value(tutar), created_at
+event_type: "ds_purchase" → actor(username), value(birim), quantity, group_title, created_at
+```
+
+### DB'de Var, Endpointte Yansımayan Alanlar
+
+| Model | Alan | Eksikliğin Etkisi |
+|-------|------|------------------|
+| `Auction` | `proof_image_url` | Modal'da fotoğraf gösterilemiyor |
+| `Auction` | `buy_it_now_price` | Hemen al fiyatı gösterilemiyor |
+| `Auction` | `winner_id` | Kazanan profile navigate edilemiyor |
+| `Bid` | `bidder_id` | Teklif veren profile navigate edilemiyor |
+| `Bid` | `auction_id` (yok!) | Teklifler hangi müzayedeye ait bilinmiyor — gruplanamıyor |
+| `DirectSale` | `product_image_url` | Modal'da ürün fotoğrafı yok |
+| `DirectSale` | `total_stock`, `remaining_stock`, `viewer_count_at_start` | Stok ve izleyici bilgisi yok |
+| `DirectSaleOrder` | `buyer_id` | Alıcı profile navigate edilemiyor |
+| `GiftEvent` | Tümü | **Hiçbir endpointte yok** — hediye verisi tamamen eksik |
+
+> **Kritik:** `Bid` tablosunda `auction_id` kolonu yok. Teklifler sadece `stream_id`'ye bağlı — hangi müzayedenin teklifi olduğu DB'de ayrıştırılamıyor. Auction bazında teklif listesi göstermek için ya `auction_id` eklenmeli ya da zaman damgasıyla heuristic bağlantı kurulmalı.
+
+### Profil Navigasyonu — Zorunlu Gereksinim
+
+Modalda "@ertankolcu → Profil" navigasyonu için `user_id` şart. Mevcut endpointler yalnızca `username` döndürüyor. Bu endpointlerin hiçbirinde `actor_id` / `buyer_id` / `winner_id` / `sender_id` yok.
+
+### Önerilen Yeni Endpoint
+
+```
+GET /streams/{stream_id}/recording-summary
+```
+
+Tek istekle detay ekranını dolduracak birleşik yanıt:
+
+```json
+{
+  "stream":     { "title", "started_at", "ended_at", "peak_viewer_count", "thumbnail_url" },
+  "metrics":    { "unique_viewers", "total_revenue", "hesitation_count", "recommendation" },
+  "auctions": [{
+    "auction_id", "item_name", "proof_image_url",
+    "start_price", "final_price", "buy_it_now_price", "is_bought_it_now",
+    "bid_count", "duration_minutes", "sold",
+    "winner": { "user_id", "username", "avatar_url" },
+    "bids":   [{ "user_id", "username", "avatar_url", "amount", "created_at" }]
+  }],
+  "direct_sales": [{
+    "sale_id", "title", "product_image_url", "price",
+    "total_stock", "sold_count", "viewer_count_at_start",
+    "orders": [{ "user_id", "username", "avatar_url", "quantity", "unit_price", "created_at" }]
+  }],
+  "gifts": {
+    "total_teqlik", "total_host_share", "sender_count",
+    "events": [{ "user_id", "username", "avatar_url", "gift_name", "cost_teqlik", "sent_at" }]
+  }
+}
+```
+
+Bu endpoint mevcut iki endpoint'in yerini **almaz** — liste ekranı (`GET /recordings/my`) için seller-report hâlâ kullanılır. Sadece detay modalları için ek veri sağlar.
+
+---
+
+## 8b. Mobil Caching Stratejisi
 
 ### Karar: Video Dosyasını Değil, Presigned URL'i Cache'le
 
@@ -287,14 +454,24 @@ if (error.contains('403')) {
 - [ ] `GET /recordings/my` endpoint — host'un kayıtlarını listeler
   - Alanlar: `stream_id`, `status`, `duration_secs`, `encoded_size_bytes`, `available_at`, `expires_at`, `recording_started_at`
   - Filtre: `status IN ('recording','encoding','encoded','available','expired')`, son 30 gün
+- [ ] `GET /streams/{stream_id}/recording-summary` — detay ekranı için tek istek, birleşik yanıt
+  - `stream` meta + `metrics` (seller-report'tan) + `auctions[]` + `direct_sales[]` + `gifts{}`
+  - Her koleksiyon satırında `user_id` + `avatar_url` — profil navigasyonu için zorunlu
+  - `auctions[].bids[]` dahil — teklifler müzayede bazında gruplanmış
+  - `GiftEvent` tablosundan `gifts` bölümü — şu an hiçbir endpointte yok
+  - **Önemli:** `Bid` tablosunda `auction_id` yok; teklifleri müzayedeye bağlamak için ya migration gerekir ya zaman aralığı heuristiği kullanılır
 
 ### Mobile
 
 - [ ] `pro_hub_screen.dart`: "Yayın & Kitle" accordion'ına 4. `_ToolCard` eklenir (`video_library_outlined`, `0xFFF97316`)
 - [ ] `MyRecordingsScreen`: kayıt listesi + `RecordingCard` widget (status chip + countdown)
+- [ ] `RecordingDetailScreen`: video player (16:9) + özet chips + ticaret kart listesi
+  - Müzayede kartı: item_name, fiyatlar, teklif sayısı, kazanan + proof_image
+  - Direkt satış kartı: ürün adı, stok, toplam gelir + product_image
+  - Hediyeler özet kartı: toplam teqlik + gönderici sayısı
+- [ ] Bottom modal: her kart tıklandığında açılır; tam detay + alıcı/teklif listesi + profil navigasyonu
 - [ ] `RecordingsCacheService`: 4 katmanlı cache, mevcut `CacheService` üzerine
-- [ ] Video oynatıcı ekranı (presigned URL → `video_player` + `chewie`)
-- [ ] ARB anahtarları (TR/EN/AR/RU): `proToolMyRecordingsTitle`, `proToolMyRecordingsDesc`, `recordingStatusPreparing`, `recordingStatusWatch`, `recordingStatusExpired`, `recordingStatusExpiresIn`
+- [ ] ARB anahtarları (TR/EN/AR/RU): `proToolMyRecordingsTitle`, `proToolMyRecordingsDesc`, `recordingStatusPreparing`, `recordingStatusWatch`, `recordingStatusExpired`, `recordingStatusExpiresIn`, `recordingDetailAuctions`, `recordingDetailDirectSales`, `recordingDetailGifts`
 
 ---
 
