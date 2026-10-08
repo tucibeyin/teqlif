@@ -1,9 +1,9 @@
 [Unit]
-Description=teqlif Mail Backup — günlük 02:30 UTC
+Description=teqlif Mail Backup — günlük 03:45 UTC
 Requires=teqlif-mail-backup.service
 
 [Timer]
-OnCalendar=*-*-* 02:30:00 UTC
+OnCalendar=*-*-* 03:45:00 UTC
 Persistent=true
 
 [Install]

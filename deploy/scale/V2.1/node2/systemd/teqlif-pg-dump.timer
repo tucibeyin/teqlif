@@ -1,8 +1,8 @@
 [Unit]
-Description=teqlif PostgreSQL Dump — günlük 01:00 UTC
+Description=teqlif PostgreSQL Dump — günlük 03:00 UTC
 
 [Timer]
-OnCalendar=*-*-* 01:00:00
+OnCalendar=*-*-* 03:00:00
 AccuracySec=5m
 Persistent=true
 

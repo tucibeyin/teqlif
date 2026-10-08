@@ -1,8 +1,8 @@
 [Unit]
-Description=teqlif Redis Backup — günlük 02:00 UTC
+Description=teqlif Redis Backup — günlük 03:40 UTC
 
 [Timer]
-OnCalendar=*-*-* 02:00:00
+OnCalendar=*-*-* 03:40:00
 AccuracySec=5m
 Persistent=true
 

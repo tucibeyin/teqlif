@@ -171,11 +171,11 @@ Her node'da `teqlif-metrics-agent.service` olarak çalışır (`backend/scripts/
 
 ```
 node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/pg_wal/  [inactive ⚠️]
-node1 PostgreSQL ──pg_dump─────→ node2 /var/backups/pg_dump/  (günlük 01:00 UTC)
-node2 ClickHouse ──yerel dump──→ node2 /var/backups/clickhouse/ (günlük 01:30 UTC)
-node2 Redis rep. ──BGSAVE──────→ node2 /var/backups/redis/     (günlük 02:00 UTC)
-node2 Stalwart   ──rsync────────→ node2 /var/backups/mail/      (günlük 02:30 UTC)
-node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/      (günlük 03:00 UTC)
+node1 PostgreSQL ──pg_dump─────→ node2 /project/teqlif/backups/pg_dump/     (günlük 03:00 UTC)
+node2 ClickHouse ──yerel dump──→ node2 /project/teqlif/backups/clickhouse/  (günlük 03:20 UTC)
+node2 Redis rep. ──BGSAVE──────→ node2 /project/teqlif/backups/redis/       (günlük 03:40 UTC)
+node2 Stalwart   ──rsync────────→ node2 /project/mail/backups/               (günlük 03:45 UTC)
+node1 MinIO      ──mc mirror───→ node2 /project/teqlif/backups/minio/       (günlük 04:00 UTC)
 ```
 
 ---
@@ -894,7 +894,7 @@ PTR   135.125.223.43      →  mail.teqlif.com     (OVH panelinden)
 
 | Timer | Saat (UTC) | İçerik |
 |-------|-----------|--------|
-| `teqlif-mail-backup.timer` | **02:30** | RocksDB + blobs + DKIM anahtarları, 7 gün saklanır |
+| `teqlif-mail-backup.timer` | **03:45** | RocksDB + blobs + DKIM anahtarları, 7 gün saklanır |
 
 ---
 
@@ -919,14 +919,18 @@ Aktif saatler (yaklaşık 07:00–01:00 UTC)
           → PG user_interactions (node1 NVMe)  ✅ node2'ye hiç gidilmez
 
 Gece penceresi (01:00–07:00 UTC)
-  ├─ 01:00  PG backup     (pg_dump → node2 HDD)
-  ├─ 01:30  CH backup     (node2 lokal HDD)
+  ── Analytics pre-compute (node2 HDD boş, çakışma yok) ──────────────────
   ├─ 01:50  sync_pg_to_clickhouse_task   ← PG buffer → CH + 48h cleanup
-  ├─ 02:00  Redis backup  (node2 HDD)
   ├─ 02:30  compute_analytics_cache_task ← CH → Redis (market_trends, demand_radar)
-  ├─ 02:30  Mail backup   (node2 HDD)
   ├─ 02:45  precompute_premium_user_analytics_task ← CH → Redis (pro_insights)
-  ├─ 03:00  MinIO backup  (node2 HDD)  + cleanup/hesap batch'leri başlar (node1)
+  ── Backup penceresi — HDD seri yazma (03:00–04:45) ─────────────────────
+  ├─ 03:00  PG backup     (pg_dump → node2 HDD)
+  ├─ 03:20  CH backup     (node2 lokal HDD)
+  ├─ 03:40  Redis backup  (node2 HDD, hızlı ~5dk)
+  ├─ 03:45  Mail backup   (node2 HDD)
+  ├─ 04:00  MinIO backup  (node2 HDD, ~45dk)
+  ── ARQ batch (node1 NVMe, node2'ye az dokunur) ─────────────────────────
+  ├─ 03:00  Hafif cleanup batch'leri (node1 PG only)
   ├─ 03:40  CH bağımlı işler (user_interests, trending_categories)
   ├─ 04:00  CPU ağır işler (FAISS rebuild, churn, trending_listings)
   ├─ 05:00  Ağır backfill (nsfw, phash, embeddings) + haftalık temizlik
@@ -1033,14 +1037,19 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 
 | Saat | Timer | İçerik | I/O |
 |------|-------|--------|-----|
-| **01:00** | `teqlif-pg-dump.timer` | node1 PG → WireGuard → node2 HDD | Seri yazma |
-| **01:30** | `teqlif-clickhouse-backup.timer` | node2 CH → node2 HDD (yerel) | Seri yazma |
-| **02:00** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
-| **02:30** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
-| **03:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD | Seri yazma |
-| ~~04:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
+| **03:00** | `teqlif-pg-dump.timer` | node1 PG → WireGuard → node2 HDD | Seri yazma |
+| **03:20** | `teqlif-clickhouse-backup.timer` | node2 CH → node2 HDD (yerel) | Seri yazma |
+| **03:40** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
+| **03:45** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
+| **04:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD | Seri yazma |
+| ~~05:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
 
-**Not — HDD Sequential I/O:** node2 HDD kafası iki eşzamanlı yazma isteği alırsa random I/O nedeniyle hız 10-20 MB/s'ye düşer. Timer'ların sıralı dizilimi (01:00→01:30→02:00→02:30→03:00) HDD'nin sequential write kapasitesini (~150 MB/s) tam kullanır. Bu bir hardware-aware tasarım kararıdır.
+**Not — Backup penceresi tasarım ilkeleri:**
+- Backup timer'ları 03:00–04:45 UTC penceresine taşındı; analytics pre-compute (01:50–02:45) artık tamamen temiz bir pencerede çalışıyor.
+- node2 HDD kafası iki eşzamanlı yazma isteği alırsa random I/O = hız 10-20 MB/s'ye düşer. Timer'ların sıralı dizilimi HDD'nin sequential write kapasitesini (~150 MB/s) tam kullanır.
+- CH backup (03:20) ile sync_pg_to_clickhouse (01:50) artık ayrı pencerelerde: **çakışma yok**.
+- mail backup (03:45) ile compute_analytics_cache (02:30) artık ayrı pencerelerde: **çakışma yok**.
+- minio backup (04:00–04:45) ağ bağlantılı (WireGuard) sequential write; bu pencerede CH okuma (compute_trending_listings 04:00) yapılıyor — minor overlap, ancak minio I/O network-bound olduğu için HDD head movement az.
 
 **Not — pg_receivewal durumu:** `teqlif-pg-receivewal.service` node2'de mevcut ancak **inactive**. Mevcut PG RPO = son pg_dump saati (01:00) → ~24 saat. Bilinçli tercih: WAL streaming node2 HDD'de sürekli I/O yaratır; pg_dump yeterli bulunmuştur.
 
@@ -1138,26 +1147,31 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 ```
 SAAT    NODE     İŞ / OLAY                          KAYNAK
 ────────────────────────────────────────────────────────────────────
-01:00   node2    pg_dump BAŞLAR                      node1 PG → node2 HDD
-01:30   node2    clickhouse_backup BAŞLAR            node2 CH → node2 HDD
-01:50   node1    sync_pg_to_clickhouse_task          PG → CH (+ 48h cleanup)
-02:00   node2    redis_backup BAŞLAR                 BGSAVE → node2 HDD
-02:30   node1    compute_analytics_cache_task        CH → Redis
-02:30   node2    mail_backup BAŞLAR                  Stalwart → node2 HDD
-02:45   node1    precompute_premium_user_analytics   CH → Redis
-03:00   node2    minio_backup BAŞLAR                 node1 MinIO → node2 HDD
+── Analytics pre-compute — node2 HDD boş, CH writes/reads çakışmasız ──
+01:50   node1    sync_pg_to_clickhouse_task          PG → CH write (node2 HDD)
+02:30   node1    compute_analytics_cache_task        CH read → Redis
+02:45   node1    precompute_premium_user_analytics   CH read → Redis
+── Backup penceresi — node2 HDD seri yazma (03:00-04:45) ───────────
+03:00   node2    pg_dump BAŞLAR                      node1 PG → node2 HDD write
 03:00   node1    cleanup_old_notifications           PG (hafif)
 03:00   node1    cleanup_old_stream_likes            PG (hafif)
+03:20   node2    clickhouse_backup BAŞLAR            node2 CH → node2 HDD write
 03:20   node1    compute_seller_badges               PG
 03:20   node1    calculate_user_budgets              PG
 03:20   node1    compute_trust_scores                PG
-03:40   node1    compute_user_interests              CH + Redis
-03:40   node1    compute_trending_categories         CH + PG
+03:40   node2    clickhouse_backup BİTER (tahmini)
+03:40   node2    redis_backup BAŞLAR                 BGSAVE → node2 HDD write (~5dk)
+03:40   node1    compute_user_interests              CH read (node2 HDD)
+03:40   node1    compute_trending_categories         CH read + PG
 03:45   node2    minio_backup BİTER (tahmini)
+03:45   node2    redis_backup BİTER
+03:45   node2    mail_backup BAŞLAR                  Stalwart → node2 HDD write (~10dk)
 03:50   node1    compute_user_condition_preferences  PG + Redis
 03:55   node1    populate_foryou_feed (1. tur)       Redis only
-04:00   node1    compute_trending_listings           CH + PG
-04:00   node1    process_churn_and_airdrop           CH + PG + FCM
+03:55   node2    mail_backup BİTER (tahmini)
+04:00   node2    minio_backup BAŞLAR                 node1 MinIO → node2 HDD sequential write
+04:00   node1    compute_trending_listings           CH read (node2 HDD)
+04:00   node1    process_churn_and_airdrop           CH read + PG + FCM
 04:10   node1    optimize_notification_timing        CH + Redis
 04:15   node1    deactivate_expired_listings         PG
 04:20   node1    delete_expired_inactive_listings    PG + MinIO
@@ -1229,6 +1243,6 @@ node3/4 (6 core / 11GB / SSD)
 |---|-------|------|
 | 1 | `teqlif-pg-receivewal.service` node2'de **inactive** | RPO = son pg_dump (01:00) = ~24 saat. Bilinçli tercih — node2 HDD sürekli WAL I/O'suna uygun değil. |
 | 2 | `teqlif-offsite-sync.timer` **disabled** | rclone hedef yapılandırılmamış. Timer ve script mevcut; hedef belirlendikten sonra aktive edilir. |
-| 3 | Backup timer'ları ile analytics batch örtüşmesi | 02:30 mail_backup + compute_analytics_cache_task aynı anda — farklı kaynaklar, teknik sorun yok |
+| 3 | 04:00 minio_backup + CH okuma minor örtüşmesi | minio_backup (04:00–04:45) sequential write, network-bound; compute_trending_listings (04:00) CH read. Aynı HDD ama minio I/O WireGuard hızıyla sınırlı → minor. Kritik çakışmalar (CH backup+sync, mail+analytics) çözüldü. |
 | 4 | Pazar training CPU spike | 06:00–07:00 UTC = 09:00–10:00 TR; Pazar sabahı commute başlamadan biter; Prom p99 izlenir |
 
