@@ -1048,6 +1048,7 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 | **03:40** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
 | **03:45** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
 | **04:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD; tamamlanınca PG `stream_recordings.node2_confirmed_at` setler | Seri yazma |
+| **08:30** (Pazar) | `teqlif-pg-basebackup.timer` | node1 PG fiziksel kopya → node2 HDD (16MB DB, ~1 dk); WAL ile PITR sağlar | Seri yazma, ~1 dk |
 | ~~05:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
 
 **Not — Backup penceresi tasarım ilkeleri:**

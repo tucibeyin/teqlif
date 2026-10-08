@@ -310,6 +310,12 @@ batch:
     minute: 0
     watchdog_m: 1500
 
+  - name: pg_basebackup
+    weekday: 6        # Pazar
+    hour: 8
+    minute: 30
+    watchdog_m: 10080  # 7 gün
+
 # ── TTL değerleri ───────────────────────────────────────────────────────────────
 # Değişiklik sonrası sudo teqlif-restart gereklidir.
 ttl:
