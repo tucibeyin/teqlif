@@ -541,6 +541,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
               maxBitrate: 1700000,
               maxFramerate: 30,
             ),
+            // 720p için SDK varsayılanı 'balanced' (resolution + FPS birlikte düşer).
+            // Şebeke sıkıştığında yalnızca FPS düşsün, çözünürlük 720p'de kalsın.
+            degradationPreference: DegradationPreference.maintainResolution,
           ),
           defaultAudioPublishOptions: AudioPublishOptions(
             audioBitrate: 128000,
