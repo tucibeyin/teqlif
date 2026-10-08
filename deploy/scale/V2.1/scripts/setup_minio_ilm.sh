@@ -16,6 +16,14 @@ mc alias set "${ALIAS}" "${MINIO_URL}" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWO
 
 # recordings/ prefix: transferred_at'ten itibaren 4 gün sonra sil.
 # archive_recordings_task bu süreye güvenir (transferred_at + 4g → archived).
+# Mevcut kural varsa tekrar ekleme (idempotent)
+EXISTING=$(mc ilm ls "${ALIAS}/teqlif" 2>/dev/null | grep "recordings/" | grep -c "Enabled" || true)
+if [ "${EXISTING}" -gt 0 ]; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) MinIO ILM: recordings/ kuralı zaten mevcut, atlanıyor"
+    mc ilm ls "${ALIAS}/teqlif"
+    exit 0
+fi
+
 mc ilm add \
     --prefix "recordings/" \
     --expiry-days 4 \

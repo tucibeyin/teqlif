@@ -24,7 +24,7 @@ echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) loki_backup: start"
 rsync -az \
     --ignore-existing \
     --delete-after \
-    -e "ssh -i /home/tucibeyin/.ssh/nodeMonitor -o StrictHostKeyChecking=no" \
+    -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
     tucibeyin@10.10.0.99:"${NODEMONITOR_CHUNKS}" \
     "${BACKUP_DIR}/"
 

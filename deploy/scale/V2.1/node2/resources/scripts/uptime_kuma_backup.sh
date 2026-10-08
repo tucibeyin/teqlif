@@ -21,7 +21,7 @@ install -d "${BACKUP_DIR}"
 exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) uptime_kuma_backup: start"
 
-ssh -i /home/tucibeyin/.ssh/nodeMonitor \
+ssh -i /home/tucibeyin/.ssh/id_ed25519 \
     -o StrictHostKeyChecking=no \
     tucibeyin@10.10.0.99 \
     "mysqldump --defaults-file=/home/tucibeyin/.my-backup.cnf uptime_kuma 2>/dev/null" \

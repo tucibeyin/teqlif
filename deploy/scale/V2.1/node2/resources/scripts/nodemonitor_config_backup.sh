@@ -19,7 +19,7 @@ rsync_from_nodemonitor() {
     install -d "${dest}"
     rsync -az \
         --delete \
-        -e "ssh -i /home/tucibeyin/.ssh/nodeMonitor -o StrictHostKeyChecking=no" \
+        -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
         tucibeyin@10.10.0.99:"${src}" \
         "${dest}/"
 }
