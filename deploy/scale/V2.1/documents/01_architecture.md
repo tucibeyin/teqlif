@@ -775,6 +775,9 @@ sudo systemctl start postgresql
 4. Hard reboot: OVH Manager → Server → Reboot
 5. ~2 dk sonra `sudo teqlif-restart` otomatik çalışır (ExecStartPre → alembic + sync_main → uvicorn)
 6. Eğer disk hatası: RAID durumunu kontrol et: `cat /proc/mdstat`
+7. **node1 kurtarılamıyorsa:** `ssh node2` → `sudo bash /var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/runbook.sh`
+   - PITR modu (pg_basebackup + WAL): RPO ~1 dk
+   - Fallback (pg_dump): RPO ~24 saat
 
 #### Redis node1 Çökmesi
 
@@ -789,14 +792,19 @@ sudo systemctl start postgresql
 2. Aktif stream'ler kesilir → istemci otomatik yeniden bağlanma dener (30 sn timeout)
 3. Çöken node'u OVH'dan yeniden başlat: `sudo teqlif-restart`
 
-#### node1 Redis → WAL Gecikmesi
+#### pg_receivewal WAL Gecikmesi
 
 ```bash
-# node2'de WAL gecikmesini kontrol et
-sudo -u postgres psql -h 127.0.0.1 -c "SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag;" teqlif
-# > 5 dk ise pg_receivewal servisini yeniden başlat
+# node2'de WAL segment güncelliğini kontrol et
+ssh node2
+ls -lt /project/teqlif/backups/pg_wal/ | head -3
+# Son segment > 5 dk önce ise servisi yeniden başlat
+sudo systemctl restart teqlif-pg-receivewal
+sudo systemctl status teqlif-pg-receivewal
+
+# node1'de slot durumu
 ssh node1
-sudo systemctl status teqlif-pg-receivewal.service
+sudo -u postgres psql -At -c "SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) as lag FROM pg_replication_slots;"
 ```
 
 #### MinIO Erişim Sorunu (node1)
@@ -1048,7 +1056,8 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 | **03:40** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
 | **03:45** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
 | **04:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD; tamamlanınca PG `stream_recordings.node2_confirmed_at` setler | Seri yazma |
-| **08:30** (Pazar) | `teqlif-pg-basebackup.timer` | node1 PG fiziksel kopya → node2 HDD (16MB DB, ~1 dk); WAL ile PITR sağlar | Seri yazma, ~1 dk |
+| **05:30** | `teqlif-pg-wal-cleanup.timer` | `/project/teqlif/backups/pg_wal/` 7 günden eski WAL segmentleri siler | Disk silme |
+| **08:30** (Pazar) | `teqlif-pg-basebackup.timer` | node1 PG fiziksel kopya → node2 HDD; `pg_receivewal` WAL ile birlikte PITR (RPO ~1 dk) sağlar | Seri yazma |
 | ~~05:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
 
 **Not — Backup penceresi tasarım ilkeleri:**
