@@ -169,10 +169,12 @@ Her node'da `teqlif-metrics-agent.service` olarak çalışır (`backend/scripts/
 ### 3.6 Backup Veri Akışı
 
 ```
-node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/pg_wal/
-node1 PostgreSQL ──pg_dump─────→ node2 /var/backups/pg_dump/ (günlük 01:00)
-node1 Redis      ──RDB copy────→ node2 /var/backups/redis/ (günlük 02:00)
-node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/ (günlük 03:00)
+node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /var/backups/pg_wal/  [inactive ⚠️]
+node1 PostgreSQL ──pg_dump─────→ node2 /var/backups/pg_dump/  (günlük 01:00 UTC)
+node2 ClickHouse ──yerel dump──→ node2 /var/backups/clickhouse/ (günlük 01:30 UTC)
+node2 Redis rep. ──BGSAVE──────→ node2 /var/backups/redis/     (günlük 02:00 UTC)
+node2 Stalwart   ──rsync────────→ node2 /var/backups/mail/      (günlük 02:30 UTC)
+node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/      (günlük 03:00 UTC)
 ```
 
 ---
@@ -889,9 +891,9 @@ PTR   135.125.223.43      →  mail.teqlif.com     (OVH panelinden)
 
 ### 10.6 Backup Takvimi
 
-| Timer | Saat | İçerik |
-|-------|------|--------|
-| `teqlif-mail-backup.timer` | 02:30 UTC | RocksDB + blobs + DKIM anahtarları, 7 gün |
+| Timer | Saat (UTC) | İçerik |
+|-------|-----------|--------|
+| `teqlif-mail-backup.timer` | **02:30** | RocksDB + blobs + DKIM anahtarları, 7 gün saklanır |
 
 ---
 
@@ -902,7 +904,7 @@ PTR   135.125.223.43      →  mail.teqlif.com     (OVH panelinden)
 node2 HDD disk ve backup rolü nedeniyle aktif kullanıcı isteklerinden izole edilmiştir. Temel strateji: **aktif saatlerde CH okuma/yazma sıfır**, tüm veri node1 Redis cache'inden servis edilir.
 
 ```
-Aktif saatler (yaklaşık 04:00–01:00 UTC)
+Aktif saatler (yaklaşık 07:00–01:00 UTC)
   │
   ├─ Analytics endpoint isteği
   │       → Redis cache hit (TTL dolmamış)  ✅ node2'ye hiç gidilmez
@@ -915,14 +917,24 @@ Aktif saatler (yaklaşık 04:00–01:00 UTC)
   └─ user_interactions (flush)
           → PG user_interactions (node1 NVMe)  ✅ node2'ye hiç gidilmez
 
-Gece penceresi (01:00–05:00 UTC)
-  ├─ 01:00  PG backup (pg_dump → node2)
-  ├─ 01:30  CH backup (node2 lokal)
+Gece penceresi (01:00–07:00 UTC)
+  ├─ 01:00  PG backup     (pg_dump → node2 HDD)
+  ├─ 01:30  CH backup     (node2 lokal HDD)
   ├─ 01:50  sync_pg_to_clickhouse_task   ← PG buffer → CH + 48h cleanup
+  ├─ 02:00  Redis backup  (node2 HDD)
   ├─ 02:30  compute_analytics_cache_task ← CH → Redis (market_trends, demand_radar)
+  ├─ 02:30  Mail backup   (node2 HDD)
   ├─ 02:45  precompute_premium_user_analytics_task ← CH → Redis (pro_insights)
-  └─ 03:00+ Batch işler (node1 lokal, node2'ye dokunmaz)
+  ├─ 03:00  MinIO backup  (node2 HDD)  + cleanup/hesap batch'leri başlar (node1)
+  ├─ 03:40  CH bağımlı işler (user_interests, trending_categories)
+  ├─ 04:00  CPU ağır işler (FAISS rebuild, churn, trending_listings)
+  ├─ 05:00  Ağır backfill (nsfw, phash, embeddings) + haftalık temizlik
+  └─ 05:15  ML training (BPR/ALS/item2vec) — 06:30 UTC'de biter
+
+Kullanıcılar 08:00+ UTC = 11:00+ TR'de gelir — sistem taze, cache'ler dolu
 ```
+
+Tam zamanlama çizelgesi: bkz. §12.
 
 ### 11.2 Redis Cache TTL Tablosu
 
@@ -992,4 +1004,230 @@ await redis.delete(*keys, f"cache:pro_metrics:{stream.host_id}")
 ```
 
 Bir sonraki istek fresh CH sorgusu tetikler ve cache 25 saatlik TTL ile yeniden dolar.
+
+---
+
+## 12. Sistem Zamanlama Çizelgesi
+
+Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin tek zamanlama kaynağı olan bölümdür. `schedule.yaml` ve `worker.py` ile senkronize tutulur.
+
+### 12.1 Sürekli Çalışan ARQ İşler (node1 — programlamasız)
+
+| Sıklık | İş | Kaynak |
+|--------|----|--------|
+| Her 2 dakika | `cleanup_stale_streams_task` | PG |
+| Her 5 dakika | `flush_interactions_to_db` | Redis → PG |
+| Her 10 dakika | `sync_ad_campaigns_task` | PG |
+| Her 15 dakika | `cleanup_ghost_calls_task` | PG |
+| Her 15 dakika | `check_search_alerts_task` | PG |
+| Her 15 dakika | `invalidate_swipe_live_configs_task` | Redis |
+| Her 20 dakika | `sync_swipelive_interests_task` | PG (analytics_events) |
+| Her 30 dakika | `expire_recordings_task` | PG |
+| Her saat :00 | `cleanup_expired_stories_task` | PG |
+| Her saat :00 | `cleanup_hype_highlights_task` | PG |
+| Her saat :15 | `archive_recordings_task` | PG + MinIO |
+| Her saat :45 | `backfill_listing_quality_scores_task` | PG |
+
+### 12.2 node2 — Backup Timer'ları (MEVCUT, UTC)
+
+| Saat | Timer | İçerik | I/O |
+|------|-------|--------|-----|
+| **01:00** | `teqlif-pg-dump.timer` | node1 PG → WireGuard → node2 HDD | Seri yazma |
+| **01:30** | `teqlif-clickhouse-backup.timer` | node2 CH → node2 HDD (yerel) | Seri yazma |
+| **02:00** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
+| **02:30** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
+| **03:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD | Seri yazma |
+| ~~04:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
+
+**Not — HDD Sequential I/O:** node2 HDD kafası iki eşzamanlı yazma isteği alırsa random I/O nedeniyle hız 10-20 MB/s'ye düşer. Timer'ların sıralı dizilimi (01:00→01:30→02:00→02:30→03:00) HDD'nin sequential write kapasitesini (~150 MB/s) tam kullanır. Bu bir hardware-aware tasarım kararıdır.
+
+**Not — pg_receivewal durumu:** `teqlif-pg-receivewal.service` node2'de mevcut ancak **inactive**. Mevcut PG RPO = son pg_dump saati (01:00) → ~24 saat. Bilinçli tercih: WAL streaming node2 HDD'de sürekli I/O yaratır; pg_dump yeterli bulunmuştur.
+
+**Not — offsite sync:** `rclone config` boş, hedef yapılandırılmamış. Timer disable + inactive. Ofsite hedef belirlendikten sonra `offsite_sync.sh` güncellenerek devreye alınır.
+
+### 12.3 node1 — ARQ Günlük Batch İşler (UTC, schedule.yaml)
+
+#### Analytics Penceresi (01:50–02:45)
+
+| Saat | İş | Kaynak | Not |
+|------|-----|--------|-----|
+| **01:50** | `sync_pg_to_clickhouse_task` | PG → CH | PG buffer → CH + 48h cleanup |
+| **02:30** | `compute_analytics_cache_task` | CH → Redis | market_trends + demand_radar (4 locale) |
+| **02:45** | `precompute_premium_user_analytics_task` | CH → Redis | pro_insights premium kullanıcılar |
+
+#### Temizlik ve Hesap Penceresi (03:00–04:30)
+
+| Saat | İş | Kaynak | Ağırlık |
+|------|-----|--------|---------|
+| **03:00** | `cleanup_old_notifications_task` | PG | Hafif |
+| **03:00** | `cleanup_old_stream_likes_task` | PG | Hafif |
+| **03:20** | `compute_seller_badges_task` | PG | Orta |
+| **03:20** | `calculate_user_budgets_task` | PG | Orta |
+| **03:20** | `compute_trust_scores_task` | PG | Orta |
+| **03:40** | `compute_user_interests_task` | CH + Redis | Orta |
+| **03:40** | `compute_trending_categories_task` | CH + PG | Orta |
+| **03:50** | `compute_user_condition_preferences_task` | PG + Redis | Hafif |
+| **03:55** | `populate_foryou_feed_task` | Redis only | Hafif — **2× günlük** |
+| **04:00** | `compute_trending_listings_task` | CH + PG | Orta |
+| **04:00** | `process_churn_and_airdrop` | CH + PG + FCM | Orta |
+| **04:10** | `optimize_notification_timing_task` | CH + Redis | Orta |
+| **04:15** | `deactivate_expired_listings_task` | PG | Hafif |
+| **04:20** | `delete_expired_inactive_listings_task` | PG + MinIO | Orta |
+| **04:30** | `cleanup_old_impressions_task` | PG | Hafif |
+| **04:30** | `rebuild_faiss_index_task` | PG + bellek | **Ağır** (~20 dk) |
+
+#### Ağır Backfill Penceresi (05:00–05:10)
+
+| Saat | İş | Kaynak | Ağırlık |
+|------|-----|--------|---------|
+| **05:00** | `nsfw_backfill_task` | PG + AI-proxy | Ağır |
+| **05:00** | `backfill_phash_task` | PG + MinIO | Ağır |
+| **05:00** | `backfill_listing_embeddings_task` | PG + MinIO + GPU | **Çok Ağır** |
+| **05:00** | `hesitation_retarget_task` | CH + PG | Orta |
+| **05:10** | `cleanup_old_media_messages_task` | PG | Hafif |
+| **05:10** | `cleanup_hidden_messages_task` | PG | Hafif |
+
+### 12.4 node1 — ARQ Haftalık Batch İşler (UTC)
+
+| Gün | Saat | İş | Kaynak | Ağırlık |
+|-----|------|-----|--------|---------|
+| **Pazartesi** | 05:00 | `cleanup_old_analytics_task` | CH (büyük silme) | Ağır |
+| **Pazartesi** | 05:15 | `train_bpr_task` | PG + bellek | **Çok Ağır** (~45 dk) |
+| **Pazartesi** | 05:45 | `train_churn_model_task` | CH + PG + bellek | Ağır — CH delete bittikten sonra |
+| **Salı** | 05:00 | `cleanup_old_user_interactions_task` | PG | Hafif |
+| **Çarşamba** | 05:15 | `train_bpr_task` | PG + bellek | **Çok Ağır** |
+| **Çarşamba** | 05:45 | `train_kmeans_cold_start_task` | PG + bellek | Ağır |
+| **Perşembe** | 05:00 | `cleanup_old_stream_viewers_task` | PG | Hafif |
+| **Cuma** | 05:00 | `cleanup_old_calls_task` | PG | Hafif |
+| **Cuma** | 05:15 | `train_bpr_task` | PG + bellek | **Çok Ağır** |
+| **Cumartesi** | 05:00 | `cleanup_old_listing_offers_task` | PG | Hafif |
+| **Pazar** | 05:00 | `cleanup_empty_message_threads_task` | PG | Hafif |
+| **Pazar** | 05:15 | `cleanup_inactive_search_alerts_task` | PG | Hafif |
+| **Pazar** | 05:15 | `train_swipe_live_als_task` | PG + CH + bellek | **Çok Ağır** (~60 dk) |
+| **Pazar** | 05:30 | `train_item2vec_task` | PG + bellek | **Çok Ağır** (~30 dk) |
+| **Pazar** | 05:45 | `train_kmeans_cold_start_task` | PG + bellek | Ağır (~20 dk) |
+| **Pazar** | 06:00 | `train_feed_als_task` | PG + CH + bellek | **Çok Ağır** (~60 dk) |
+| **Pazar** | 06:30 | `train_listing_quality_model_task` | PG + CH + bellek | **Çok Ağır** (~30 dk) |
+| **Pazar** | 06:30 | `compute_influence_scores_task` | PG (PageRank) | Ağır (~20 dk) |
+
+**Pazar en ağır gün:** ~08:00 UTC'ye kadar sürer (TR: 11:00) — sabah commute başlamadan önce biter.
+
+**train_bpr weekday:** `{0,2,4}` = Pazartesi/Çarşamba/Cuma. Önceki hatalı değer `{0,2,5}` = Pzt/Çar/**Cumartesi** idi; Python `datetime.weekday()` 5=Cumartesi'dir.
+
+### 12.5 node1 — ARQ Aylık İşler
+
+| Koşul | Saat | İş | Kaynak |
+|-------|------|-----|--------|
+| Ayın 1'i | 05:00 | `cleanup_old_exchange_rates_task` | PG |
+| Ayın 1'i | 05:10 | `cleanup_old_streams_task` | PG + MinIO |
+
+### 12.6 ForYou Feed Zamanlama
+
+| Parametre | Değer | Kaynak |
+|-----------|-------|--------|
+| `_FORYOU_TTL` | **86400 s (24 saat)** | `schedule.yaml → ttl.foryou_feed_seconds` |
+| 1. çalışma | 03:55 UTC | user_interests hesaplandıktan hemen sonra |
+| 2. çalışma | **15:55 UTC** = **18:55 TR** | Prime time (20:00–23:00 TR) başlamadan ~1 saat önce |
+| Watchdog interval | 720 dk (12 saat) | 2× günlük, max boşluk ~12 saat |
+
+2. çalışma saat seçimi: sabah ilgi vektörleri + günün yeni ilanları prime time öncesi cache'e alınır. 15:55–03:55 arası en uzun açık ~12 saat (gece saatleri, düşük aktivite).
+
+### 12.7 Tam Günlük Çizelge Diyagramı (UTC)
+
+```
+SAAT    NODE     İŞ / OLAY                          KAYNAK
+────────────────────────────────────────────────────────────────────
+01:00   node2    pg_dump BAŞLAR                      node1 PG → node2 HDD
+01:30   node2    clickhouse_backup BAŞLAR            node2 CH → node2 HDD
+01:50   node1    sync_pg_to_clickhouse_task          PG → CH (+ 48h cleanup)
+02:00   node2    redis_backup BAŞLAR                 BGSAVE → node2 HDD
+02:30   node1    compute_analytics_cache_task        CH → Redis
+02:30   node2    mail_backup BAŞLAR                  Stalwart → node2 HDD
+02:45   node1    precompute_premium_user_analytics   CH → Redis
+03:00   node2    minio_backup BAŞLAR                 node1 MinIO → node2 HDD
+03:00   node1    cleanup_old_notifications           PG (hafif)
+03:00   node1    cleanup_old_stream_likes            PG (hafif)
+03:20   node1    compute_seller_badges               PG
+03:20   node1    calculate_user_budgets              PG
+03:20   node1    compute_trust_scores                PG
+03:40   node1    compute_user_interests              CH + Redis
+03:40   node1    compute_trending_categories         CH + PG
+03:45   node2    minio_backup BİTER (tahmini)
+03:50   node1    compute_user_condition_preferences  PG + Redis
+03:55   node1    populate_foryou_feed (1. tur)       Redis only
+04:00   node1    compute_trending_listings           CH + PG
+04:00   node1    process_churn_and_airdrop           CH + PG + FCM
+04:10   node1    optimize_notification_timing        CH + Redis
+04:15   node1    deactivate_expired_listings         PG
+04:20   node1    delete_expired_inactive_listings    PG + MinIO
+04:30   node1    cleanup_old_impressions             PG
+04:30   node1    rebuild_faiss_index                 PG + bellek (ağır)
+05:00   node1    nsfw_backfill                       PG + AI-proxy (ağır)
+05:00   node1    backfill_phash                      PG + MinIO (ağır)
+05:00   node1    backfill_listing_embeddings         PG + MinIO + GPU (çok ağır)
+05:00   node1    hesitation_retarget                 CH + PG
+05:00   node1    [Pzt] cleanup_old_analytics         CH (büyük silme)
+05:00   node1    [Sal] cleanup_old_user_interactions PG
+05:00   node1    [Per] cleanup_old_stream_viewers    PG
+05:00   node1    [Cum] cleanup_old_calls             PG
+05:00   node1    [Cmt] cleanup_old_listing_offers    PG
+05:00   node1    [Paz] cleanup_empty_message_threads PG
+05:10   node1    cleanup_old_media_messages          PG
+05:10   node1    cleanup_hidden_messages             PG
+05:15   node1    [Pzt/Çar/Cum] train_bpr             PG + bellek (çok ağır, ~45 dk)
+05:15   node1    [Paz] cleanup_inactive_search_alerts PG
+05:15   node1    [Paz] train_swipe_live_als           PG + CH + bellek (çok ağır)
+05:30   node1    [Paz] train_item2vec                PG + bellek
+05:45   node1    [Pzt] train_churn_model             CH + PG + bellek
+05:45   node1    [Çar/Paz] train_kmeans_cold_start   PG + bellek
+06:00   node1    [Paz] train_feed_als                PG + CH + bellek (çok ağır)
+06:30   node1    [Paz] train_listing_quality_model   PG + CH + bellek
+06:30   node1    [Paz] compute_influence_scores      PG (PageRank)
+── 07:00–08:00 TÜM İŞLER TAMAM (Pazar ~08:00) ──────────────────────
+08:00+ = 11:00+ TR   Kullanıcılar gelir — sistem taze, tüm cache'ler dolu
+────────────────────────────────────────────────────────────────────
+15:55   node1    populate_foryou_feed (2. tur)       Redis only — prime time hazırlığı
+────────────────────────────────────────────────────────────────────
+```
+
+### 12.8 Kaynak Modeli
+
+```
+node1 (12 core / 32GB / NVMe SSD)
+  ├── CPU  : ML training (ALS, BPR, item2vec, kmeans) → ağır, 05:15–07:00
+  ├── CPU  : backfill (nsfw, phash, embeddings) → ağır, 05:00–06:00
+  ├── RAM  : FAISS index rebuild → embedding boyutuna göre değişken
+  ├── PG   : pg_dump sırasında (01:00) hafif ek yük — PG eşzamanlılık sorun değil
+  └── Ağ   : MinIO backup WireGuard trafiği (03:00–03:45)
+
+node2 (8 core / 32GB / HDD RAID-1)
+  ├── HDD  : seri yazma (01:00→01:30→02:00→02:30→03:00) → sequential write
+  ├── CH   : sorgu yanıtları HDD nedeniyle SSD'den ~5× yavaş
+  └── Ağ   : node1'den WireGuard backup trafiği
+
+node3/4 (6 core / 11GB / SSD)
+  ├── Ağ   : LiveKit SFU — gün boyunca yayın trafiği
+  └── CPU  : ffmpeg encode (gündüz değil, gece boşta)
+```
+
+### 12.9 teqlif-agent Entegrasyonu
+
+`teqlif-agent` zamanlama sistemini şu modüllerle izler:
+
+| Modül | Katkı |
+|-------|-------|
+| `watchdog.py` | ARQ cron job'larının `teqlif:agent:job_ok` sinyallerini okur; beklenen interval'den %50 geç gelirse Telegram uyarısı. `schedule.yaml`'daki `watchdog_m` değerleri kullanılır. |
+| `janitor.py` | Her 60 saniyede lider tarafından çalışır. TTL politikalarını değerlendirir. Kayıt pipeline encode + transfer trigger mekanizması mevcut. |
+| `healer.py` | Servis `failed` durumuna düşerse otomatik `reset-failed` + `start`. Batch penceresi boyunca servisleri çalışır halde tutar. |
+
+**Backup script'leri job_ok entegrasyonu:** `pg_dump`, `clickhouse_backup`, `redis_backup`, `mail_backup`, `minio_backup` script'leri `teqlif:agent:job_ok` sinyali göndermez; agent backup başarısını şu an takip etmez. Gelecekte her backup script'ine tamamlanma satırına Redis HSET eklenecek.
+
+### 12.10 Bilinen Durumlar
+
+| # | Durum | Önem |
+|---|-------|------|
+| 1 | `teqlif-pg-receivewal.service` node2'de **inactive** | RPO = son pg_dump (01:00) = ~24 saat. Bilinçli tercih — node2 HDD sürekli WAL I/O'suna uygun değil. |
+| 2 | `teqlif-offsite-sync.timer` **disabled** | rclone hedef yapılandırılmamış. Timer ve script mevcut; hedef belirlendikten sonra aktive edilir. |
+| 3 | Backup timer'ları ile analytics batch örtüşmesi | 02:30 mail_backup + compute_analytics_cache_task aynı anda — farklı kaynaklar, teknik sorun yok |
+| 4 | Pazar training CPU spike | 06:00–07:00 UTC = 09:00–10:00 TR; Pazar sabahı commute başlamadan biter; Prom p99 izlenir |
 
