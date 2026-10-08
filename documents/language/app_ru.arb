@@ -893,7 +893,7 @@
   "validVerificationCode": "Введите код подтверждения.",
   "validAllFields": "Пожалуйста, заполните все поля.",
   "validTermsRequired": "Вы должны принять Условия обслуживания.",
-  "validAgeConfirm": "Мне 13 лет или больше.",
+  "validAgeConfirm": "Мне 18 лет или больше.",
   "validAgeRequired": "Необходимо подтвердить свой возраст для продолжения.",
   "usernameChecking": "Проверка имени пользователя...",
   "usernameCheckingWait": "Проверяем имя пользователя, подождите...",

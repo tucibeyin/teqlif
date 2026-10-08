@@ -150,7 +150,7 @@
   "validVerificationCode": "أدخل رمز التحقق.",
   "validAllFields": "املأ جميع الحقول.",
   "validTermsRequired": "يجب قبول شروط الاستخدام.",
-  "validAgeConfirm": "عمري 13 عامًا أو أكثر.",
+  "validAgeConfirm": "عمري 18 عامًا أو أكثر.",
   "validAgeRequired": "يجب تأكيد عمرك للمتابعة.",
   "usernameChecking": "جارٍ التحقق من اسم المستخدم...",
   "usernameCheckingWait": "جارٍ التحقق من اسم المستخدم، يرجى الانتظار...",
