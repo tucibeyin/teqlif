@@ -47,7 +47,7 @@ Son güncelleme: 2026-10-08
 | Story | 24 saat + MinIO silme | ARQ (saatlik cron) |
 | Canlı yayın (ended) | 10 yıl (PG) | ARQ + teqlif-agent (6ay) |
 | Kayıt (available) | 24 saat | ARQ |
-| Kayıt (MinIO dosyası) | transferred_at + 4 gün | MinIO ILM |
+| Kayıt (MinIO dosyası) | transferred_at + 2 gün | MinIO ILM (node2_confirmed_at ile güvenli) |
 | Kayıt (DB satırı) | archived_at + 15 gün | teqlif-agent |
 | Çağrı (ended/missed) | 2 yıl (ARQ) / 90 gün (agent) | ARQ + teqlif-agent |
 | Açık artırma | Kalıcı | — |
@@ -59,7 +59,7 @@ Son güncelleme: 2026-10-08
 | preference_embedding | Kullanıcıyla birlikte yaşar | ARQ (reaktif güncelleme) |
 | listing embedding | İlanla birlikte yaşar | ARQ (reaktif güncelleme) |
 | MinIO uploads/ | Kalıcı (ilan/DM ile birlikte silinir) | listing/message cleanup |
-| MinIO recordings/ | 4 gün (ILM) | MinIO ILM policy |
+| MinIO recordings/ | 2 gün (ILM) | MinIO ILM policy (node2_confirmed_at guard) |
 | Redis (genel) | 24h–30g key bazlı | TTL parametresi |
 | Loki log | 30 gün (yerel) / 90 gün (backup) | Loki retention + node2 |
 | Uptime Kuma DB | Silinmiyor | node2 backup 180g |
@@ -225,29 +225,50 @@ Uzun vadeli fraud/analitik için tutulur:
 ### stream_recordings — Yaşam Döngüsü
 
 ```
-[recording]
-    ↓ LiveKit egress tamamlanır
-[encoding]
-    ↓ transcode worker
-[encoded]
-    ↓ node2'ye aktarım başlar
+[recording]        recording_started_at=NOW()
+    ↓ FFmpeg WHEP biter (recorder.py)
+[encoding]         encoding_started_at=NOW()
+    ↓ FFmpeg H.264 encode (encoder.py) — raw sil
+[encoded]          encoded_at=NOW()
+    ↓ Transfer penceresi 03:00-08:00 UTC, mc cp → node1 MinIO
 [transferring]
-    ↓ aktarım tamamlanır → transferred_at set
-[available]  ←── 24 saat (expires_at = transferred_at + 24h)
-    ↓ expire_recordings_task (ARQ, saatlik)
+    ↓ mc cp tamamlanır → node1 MinIO'da mevcut
+[available]        transferred_at=NOW(), available_at=NOW(), expires_at=NOW()+24h
+    ↓ expire_recordings_task (ARQ, her 30 dk)
+    ↓ koşul: expires_at < NOW()
 [expired]
-    ↓ archive_recordings_task (ARQ, saatlik)
-    ↓ koşul: transferred_at < NOW() - 4 days
-    ↓ (MinIO ILM bu sürede dosyayı siler)
-[archived]   ←── archived_at set
-    ↓ ScheduledCleaner 03:00 UTC (teqlif-agent)
+    ↓ [node2 minio_backup.sh günlük mirror başarılı]
+    ↓ node2_confirmed_at=NOW() — node2'nin dosyayı aldığı onayı
+    ↓ archive_recordings_task (ARQ, her 15 dk)
+    ↓ koşul: node2_confirmed_at IS NOT NULL
+    ↓         AND transferred_at < NOW() - 2 days  (ILM guard)
+    ↓ (MinIO ILM transferred_at+2 gün'de dosyayı siler)
+[archived]         archived_at=NOW()
+    ↓ teqlif-agent janitor (stream_recordings_15d)
     ↓ koşul: archived_at < NOW() - 15 days
 [DB'den silindi]
 ```
 
+**Zaman damgaları özeti:**
+| Sütun | Ne zaman set edilir | Kim set eder |
+|-------|--------------------|-----------:|
+| `recording_started_at` | FFmpeg başladığında | recorder.py |
+| `encoding_started_at` | FFmpeg bitip encode başlarken | recorder.py |
+| `encoded_at` | Encode tamamlandığında | encoder.py |
+| `transferred_at` | mc cp node1 MinIO'ya tamamlandığında | encoder.py |
+| `available_at` | transferred_at ile aynı anda | encoder.py |
+| `expires_at` | transferred_at + 24 saat | encoder.py |
+| `node2_confirmed_at` | node2 mirror başarılı olduğunda | minio_backup.sh |
+| `archived_at` | archive_recordings_task çalıştığında | ARQ worker |
+
 **MinIO ILM Kuralı** (`teqlif` bucket, `recordings/` prefix):
 - Kural ID: `db0usckkndqcpvdusp30` (node1'de aktif)
-- Expiry: 4 gün
+- Expiry: **2 gün** (önceki: 4 gün — node2_confirmed_at ile kör bekleme kalktı)
+
+**Güvenlik garantisi:**
+- node2 backup başarısız → `node2_confirmed_at` set edilmez → `archive_recordings_task` bekler → node1 MinIO dosyası silinmez → ertesi gün backup tekrar dener
+- node2 backup başarılı ama PG güncellemesi başarısız → aynı sonuç: güvenli bekler
+- ILM guard (2 gün): node2 onaylanmış olsa bile MinIO ILM'nin çalışmasına izin verir
 
 ---
 
@@ -354,7 +375,7 @@ Bu tablolar hiçbir cleanup gorevi tarafından temizlenmez; veri yaşam döngüs
 | Bucket | İçerik | ILM | Silinme Mekanizması |
 |--------|--------|-----|---------------------|
 | `teqlif` | `uploads/` (ilan foto/video) | Yok | İlan silinince `listing_cleanup_resources` |
-| `teqlif` | `recordings/` (yayın kayıtları) | **4 gün expiry** (ID: `db0usckkndqcpvdusp30`) | MinIO ILM otomatik |
+| `teqlif` | `recordings/` (yayın kayıtları) | **2 gün expiry** (ID: `db0usckkndqcpvdusp30`) | MinIO ILM otomatik |
 | `teqlif-dm` | DM ekleri | Yok | Medya mesajı 7 günde silinince `cleanup_old_media_messages_task` |
 | `teqlif-staging` | Staging uploads/recordings | — | — |
 | `teqlif-dm-staging` | Staging DM ekleri | — | — |

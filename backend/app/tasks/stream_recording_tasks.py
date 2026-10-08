@@ -33,8 +33,14 @@ async def expire_recordings_task(ctx: dict) -> None:
 
 
 async def archive_recordings_task(ctx: dict) -> None:
-    """MinIO lifecycle süresini (4 gün) aşmış 'expired' kayıtları 'archived' yapar.
-    Bu, MinIO'nun dosyayı sildiğini ve node2'nin backup'ı aldığını kabul eder.
+    """node2 onaylı ve MinIO ILM süresi geçmiş 'expired' kayıtları 'archived' yapar.
+
+    İki koşul birlikte sağlanmalı:
+      1. node2_confirmed_at IS NOT NULL  — node2 backup script dosyayı gördüğünü onayladı
+      2. transferred_at < NOW() - 2 days — ILM (2 gün expiry) büyük olasılıkla tetiklendi
+
+    node2 backup başarısız olursa node2_confirmed_at set edilmez → bu task bekler →
+    node1 MinIO'daki dosya silinmez → bir sonraki başarılı backup'ta onaylanır.
     """
     try:
         from app.database import AsyncSessionLocal
@@ -44,7 +50,8 @@ async def archive_recordings_task(ctx: dict) -> None:
                 UPDATE stream_recordings
                 SET status = 'archived', archived_at = NOW(), updated_at = NOW()
                 WHERE status = 'expired'
-                  AND transferred_at < NOW() - INTERVAL '4 days'
+                  AND node2_confirmed_at IS NOT NULL
+                  AND transferred_at < NOW() - INTERVAL '2 days'
             """))
             await session.commit()
             count = result.rowcount
