@@ -838,7 +838,7 @@
     }
   },
   "proUnlockTitle": "PRO araçları kilidi aç",
-  "proUnlockDesc": "Verilerle sat, değil tahminle",
+  "proUnlockDesc": "Tahminle değil, verilerle sat",
   "proUnlockBtn": "PRO'ya Geç",
   "proUpgradeSheetDesc": "Bu aracı kullanmak için PRO'ya geçmeniz gerekiyor.",
   "proCreditsSummaryTitle": "Kalan Krediler",

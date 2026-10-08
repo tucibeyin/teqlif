@@ -451,7 +451,7 @@ class _UpgradeBanner extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF92400E), Color(0xFFB45309)],
+          colors: [Color(0xFF0B2535), Color(0xFF0D3D54)],
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
         ),
@@ -464,10 +464,10 @@ class _UpgradeBanner extends ConsumerWidget {
             height: 48,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.lock_outline, color: Color(0xFF06B6D4), size: 26),
+            child: const Icon(Icons.lock_outline, color: Color(0xFFFBBF24), size: 26),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -481,7 +481,7 @@ class _UpgradeBanner extends ConsumerWidget {
                 const SizedBox(height: 3),
                 Text(
                   loc.t('proUnlockDesc'),
-                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
                 ),
               ],
             ),
@@ -495,12 +495,14 @@ class _UpgradeBanner extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFF06B6D4),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 loc.t('proUnlockBtn'),
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
               ),
             ),
           ),
