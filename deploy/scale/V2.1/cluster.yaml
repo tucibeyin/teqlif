@@ -24,7 +24,7 @@ recording:
 
   # Transfer penceresi (UTC)
   transfer_window_start_utc: 2
-  transfer_window_end_utc:   8
+  transfer_window_end_utc:   5
 
   # Disk guard eşikleri (GB)
   disk_warn_gb:      15   # → transfer 02:00'e çekilir (erken tetik)

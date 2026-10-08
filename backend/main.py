@@ -18,6 +18,7 @@ from app.core.error_handlers import setup_exception_handlers
 from app.core.idempotency import _IdempotencyReplay
 from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding, direct_sale
 from app.routers import search_alerts
+from app.routers import recordings
 from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers.messages import dm_pubsub_listener
@@ -219,6 +220,7 @@ app.add_middleware(
 # Router'ları kaydet
 app.include_router(auth.router)
 app.include_router(streams.router)
+app.include_router(recordings.router)
 app.include_router(webhooks.router)
 app.include_router(auction.router)
 app.include_router(chat.router)

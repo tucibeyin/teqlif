@@ -238,7 +238,6 @@ async def start_stream(
         subcategory=data.subcategory,
         listing_id=getattr(data, "listing_id", None),
         thumbnail_url=getattr(data, "thumbnail_url", None),
-        recording_enabled=data.recording_enabled,
     )
 
 
@@ -319,8 +318,8 @@ async def get_stream_recording(
         raise HTTPException(status_code=404, detail={"error": {"code": "STREAM_NOT_FOUND"}})
     if stream.host_id != current_user.id:
         raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
-    if not stream.recording_enabled:
-        raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_ENABLED"}})
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail={"error": {"code": "PRO_REQUIRED"}})
 
     row = (await db.execute(text("""
         SELECT id, status, minio_key, available_at, expires_at
@@ -365,6 +364,26 @@ async def get_stream_recording(
         "available_at": row["available_at"],
         "expires_at": row["expires_at"],
     }
+
+
+@router.get("/{stream_id}/recording-summary")
+async def get_recording_summary(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Detay ekranı için birleşik özet: müzayedeler, direkt satışlar, hediyeler. Sadece host."""
+    from fastapi import HTTPException
+    from app.use_cases.streams.queries.get_recording_summary import GetRecordingSummaryQuery
+    from app.config import settings
+
+    stream = await db.get(LiveStream, stream_id)
+    if not stream:
+        raise HTTPException(status_code=404, detail={"error": {"code": "STREAM_NOT_FOUND"}})
+    if stream.host_id != current_user.id:
+        raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
+
+    return await GetRecordingSummaryQuery(db, uploads_host=settings.uploads_host).execute(stream_id)
 
 
 @router.get("/{stream_id}/viewers")

@@ -16,6 +16,7 @@ import 'pro_insights_screen.dart';
 import 'pro_stream_analytics_screen.dart';
 import 'retargeting_screen.dart';
 import 'live_stream_history_screen.dart';
+import 'my_recordings_screen.dart';
 
 class ProHubScreen extends ConsumerStatefulWidget {
   final bool isPremium;
@@ -210,6 +211,17 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 isPremium: isPremium,
                 onTap: isPremium
                     ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
+                    : () => _showUpgrade(context),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.video_library_outlined,
+                iconColor: const Color(0xFFF97316),
+                title: loc.t('proToolMyRecordingsTitle'),
+                description: loc.t('proToolMyRecordingsDesc'),
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRecordingsScreen()))
                     : () => _showUpgrade(context),
               ),
             ],

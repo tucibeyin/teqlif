@@ -104,6 +104,12 @@ class ErrorMapper {
         return loc.t('apiErrorAiServiceTimeout');
       case 'CALL_FORBIDDEN':
         return loc.t('callForbiddenNotFollowing');
+      case 'RECORDING_NOT_FOUND':
+        return loc.t('errorRecordingNotFound');
+      case 'RECORDING_EXPIRED':
+        return loc.t('errorRecordingExpired');
+      case 'RECORDING_NOT_AVAILABLE':
+        return loc.t('errorRecordingNotAvailable');
     }
 
     // HTTP status bazlı fallback

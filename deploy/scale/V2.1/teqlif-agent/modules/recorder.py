@@ -73,7 +73,7 @@ class RecordingManager:
             logger.error("Orphaned recovery hatası: %s", exc)
 
     async def _sync_recordings(self, dsn: str, svc_cfg: dict) -> None:
-        """Canlı ve recording_enabled=True olan, bu node'da kaydı olmayan stream'ler için kayıt başlatır."""
+        """Canlı, bu node'da kaydı olmayan stream'ler için kayıt başlatır. Tüm yayınlar kaydedilir."""
         try:
             import asyncpg
             conn = await asyncpg.connect(dsn=dsn)
@@ -81,7 +81,6 @@ class RecordingManager:
                 SELECT ls.id, ls.room_name, ls.host_id
                 FROM live_streams ls
                 WHERE ls.status = 'live'
-                  AND ls.recording_enabled = TRUE
                   AND NOT EXISTS (
                       SELECT 1 FROM stream_recordings sr
                       WHERE sr.stream_id = ls.id

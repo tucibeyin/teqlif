@@ -4554,5 +4554,17 @@
   "liveBothPermissionDesc": "We need camera and microphone permissions to start a live stream. Please allow from settings.",
   "liveCameraPermissionReq": "Camera Permission Required",
   "liveCameraPermissionDesc": "We need camera permission to start a live stream. Please allow from settings.",
-  "liveMicPermissionDesc": "We need microphone permission to start a live stream. Please allow from settings."
+  "liveMicPermissionDesc": "We need microphone permission to start a live stream. Please allow from settings.",
+  "proToolMyRecordingsTitle": "My Recordings",
+  "proToolMyRecordingsDesc": "Watch your streams and view sales details",
+  "recordingStatusPreparing": "Preparing...",
+  "recordingStatusWatch": "Watch",
+  "recordingStatusExpired": "Expired",
+  "recordingStatusExpiresIn": "Expires in: {duration}",
+  "recordingDetailAuctions": "Auctions",
+  "recordingDetailDirectSales": "Direct Sales",
+  "recordingDetailGifts": "Gifts",
+  "errorRecordingNotFound": "Recording not found.",
+  "errorRecordingExpired": "This recording has expired.",
+  "errorRecordingNotAvailable": "Recording is not ready yet."
 }

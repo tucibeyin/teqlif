@@ -4518,5 +4518,17 @@
   "liveBothPermissionDesc": "Нам нужны разрешения на камеру и микрофон для начала прямого эфира. Пожалуйста, разрешите в настройках.",
   "liveCameraPermissionReq": "Требуется разрешение на камеру",
   "liveCameraPermissionDesc": "Нам нужно разрешение на камеру для начала прямого эфира. Пожалуйста, разрешите в настройках.",
-  "liveMicPermissionDesc": "Нам нужно разрешение на микрофон для начала прямого эфира. Пожалуйста, разрешите в настройках."
+  "liveMicPermissionDesc": "Нам нужно разрешение на микрофон для начала прямого эфира. Пожалуйста, разрешите в настройках.",
+  "proToolMyRecordingsTitle": "Мои записи",
+  "proToolMyRecordingsDesc": "Смотрите свои трансляции и детали продаж",
+  "recordingStatusPreparing": "Подготовка...",
+  "recordingStatusWatch": "Смотреть",
+  "recordingStatusExpired": "Срок истёк",
+  "recordingStatusExpiresIn": "Истекает через: {duration}",
+  "recordingDetailAuctions": "Аукционы",
+  "recordingDetailDirectSales": "Прямые продажи",
+  "recordingDetailGifts": "Подарки",
+  "errorRecordingNotFound": "Запись не найдена.",
+  "errorRecordingExpired": "Срок этой записи истёк.",
+  "errorRecordingNotAvailable": "Запись ещё не готова."
 }

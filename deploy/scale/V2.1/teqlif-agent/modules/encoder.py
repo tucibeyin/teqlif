@@ -14,6 +14,7 @@ Transfer penceresi (UTC):
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import shutil
@@ -120,6 +121,7 @@ class EncoderManager:
                 return
 
             enc_size = enc_path.stat().st_size
+            duration_secs = await _probe_duration(enc_path)
 
             # Raw sil
             try:
@@ -130,9 +132,9 @@ class EncoderManager:
             await _pg_exec(dsn,
                 """UPDATE stream_recordings
                    SET status='encoded', encoded_path=$1, encoded_size_bytes=$2,
-                       raw_path=NULL, encoded_at=NOW(), updated_at=NOW()
-                   WHERE id=$3""",
-                str(enc_path), enc_size, rec_id)
+                       duration_secs=$3, raw_path=NULL, encoded_at=NOW(), updated_at=NOW()
+                   WHERE id=$4""",
+                str(enc_path), enc_size, duration_secs, rec_id)
             logger.info("Encode tamamlandı | rec_id=%d size=%.1fMB", rec_id, enc_size / 1_048_576)
 
         except Exception as exc:
@@ -195,8 +197,15 @@ class EncoderManager:
             await _pg_exec(dsn,
                 "UPDATE stream_recordings SET status='transferring', updated_at=NOW() WHERE id=$1", rec_id)
 
+            free_gb      = _free_gb(enc.parent)
+            emergency_gb = float(rec_cfg.get("disk_emergency_gb", 10))
+            mc_cmd = ["mc", "cp"]
+            if free_gb < emergency_gb:
+                mc_cmd += ["--limit-upload", "30M"]  # acil: LiveKit bant genişliğini koru
+            mc_cmd += [str(enc), minio_dest]
+
             proc = await asyncio.create_subprocess_exec(
-                "mc", "cp", str(enc), minio_dest,
+                *mc_cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -291,6 +300,27 @@ def _can_transfer_now(rec_cfg: dict, enc_dir: Path) -> bool:
     # disk warn: start_utc kullan; normal: start_utc + 1 saat
     effective_start = start_utc if free_gb < warn_gb else start_utc + 1
     return effective_start <= now_h < end_utc
+
+
+async def _probe_duration(path: Path) -> int | None:
+    """ffprobe ile video süresini saniye cinsinden döner; hata varsa None."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "quiet", "-print_format", "json",
+            "-show_format", str(path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout_b, _ = await proc.communicate()
+        if proc.returncode != 0 or not stdout_b:
+            return None
+        data = json.loads(stdout_b)
+        duration_str = data.get("format", {}).get("duration")
+        if duration_str:
+            return int(float(duration_str))
+    except Exception as exc:
+        logger.warning("ffprobe hata | path=%s | %s", path, exc)
+    return None
 
 
 async def _pg_exec(dsn: str, sql: str, *args) -> None:

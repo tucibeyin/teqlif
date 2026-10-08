@@ -27,7 +27,6 @@ class LiveStream(Base):
     peak_viewer_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(10), default=StreamStatus.PENDING, nullable=False, server_default="pending")
     livekit_url: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)  # Yayının açıldığı Edge node adresi (Orkestratör tarafından atanmış)
-    recording_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     host: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
     likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]

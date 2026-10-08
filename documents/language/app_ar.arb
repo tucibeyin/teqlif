@@ -4518,5 +4518,17 @@
   "liveBothPermissionDesc": "نحتاج إلى أذونات الكاميرا والميكروفون لبدء بث مباشر. يرجى السماح من الإعدادات.",
   "liveCameraPermissionReq": "إذن الكاميرا مطلوب",
   "liveCameraPermissionDesc": "نحتاج إلى إذن الكاميرا لبدء بث مباشر. يرجى السماح من الإعدادات.",
-  "liveMicPermissionDesc": "نحتاج إلى إذن الميكروفون لبدء بث مباشر. يرجى السماح من الإعدادات."
+  "liveMicPermissionDesc": "نحتاج إلى إذن الميكروفون لبدء بث مباشر. يرجى السماح من الإعدادات.",
+  "proToolMyRecordingsTitle": "تسجيلاتي",
+  "proToolMyRecordingsDesc": "شاهد بثوثك وعرض تفاصيل المبيعات",
+  "recordingStatusPreparing": "جارٍ التحضير...",
+  "recordingStatusWatch": "مشاهدة",
+  "recordingStatusExpired": "انتهت الصلاحية",
+  "recordingStatusExpiresIn": "ينتهي خلال: {duration}",
+  "recordingDetailAuctions": "المزادات",
+  "recordingDetailDirectSales": "المبيعات المباشرة",
+  "recordingDetailGifts": "الهدايا",
+  "errorRecordingNotFound": "لم يتم العثور على التسجيل.",
+  "errorRecordingExpired": "انتهت صلاحية هذا التسجيل.",
+  "errorRecordingNotAvailable": "التسجيل غير جاهز بعد."
 }

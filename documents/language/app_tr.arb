@@ -4518,5 +4518,17 @@
   "liveBothPermissionDesc": "Canlı yayın başlatabilmek için kamera ve mikrofon izinlerine ihtiyacımız var. Lütfen ayarlardan izin verin.",
   "liveCameraPermissionReq": "Kamera İzni Gerekli",
   "liveCameraPermissionDesc": "Canlı yayın başlatabilmek için kamera iznine ihtiyacımız var. Lütfen ayarlardan izin verin.",
-  "liveMicPermissionDesc": "Canlı yayın başlatabilmek için mikrofon iznine ihtiyacımız var. Lütfen ayarlardan izin verin."
+  "liveMicPermissionDesc": "Canlı yayın başlatabilmek için mikrofon iznine ihtiyacımız var. Lütfen ayarlardan izin verin.",
+  "proToolMyRecordingsTitle": "Canlı Yayınlarım",
+  "proToolMyRecordingsDesc": "Yayınlarını izle ve satış detaylarını gör",
+  "recordingStatusPreparing": "Hazırlanıyor...",
+  "recordingStatusWatch": "İzle",
+  "recordingStatusExpired": "Süresi Doldu",
+  "recordingStatusExpiresIn": "Son: {duration}",
+  "recordingDetailAuctions": "Müzayedeler",
+  "recordingDetailDirectSales": "Direkt Satışlar",
+  "recordingDetailGifts": "Hediyeler",
+  "errorRecordingNotFound": "Kayıt bulunamadı.",
+  "errorRecordingExpired": "Bu kaydın süresi dolmuş.",
+  "errorRecordingNotAvailable": "Kayıt henüz hazır değil."
 }
