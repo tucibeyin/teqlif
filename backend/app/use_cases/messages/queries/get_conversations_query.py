@@ -64,6 +64,7 @@ class GetConversationsQuery:
                 MessageThread.initiator_id,
                 MessageThread.deleted_at_a,
                 MessageThread.deleted_at_b,
+                MessageThread.has_archive,
             )
             .where(tuple_(MessageThread.user_a_id, MessageThread.user_b_id).in_(pairs))
         )
@@ -76,6 +77,10 @@ class GetConversationsQuery:
         }
         deleted_map = {
             (row.user_a_id, row.user_b_id): (row.deleted_at_a, row.deleted_at_b)
+            for row in thread_rows
+        }
+        archive_map = {
+            (row.user_a_id, row.user_b_id): row.has_archive
             for row in thread_rows
         }
         filtered = []
@@ -116,6 +121,7 @@ class GetConversationsQuery:
             other_user = users_map.get(other_id)
             if not other_user:
                 continue
+            pair = (min(uid, other_id), max(uid, other_id))
             conversations.append(
                 ConversationOut(
                     user_id=other_id,
@@ -125,6 +131,7 @@ class GetConversationsQuery:
                     last_message_type=msg.content_type,
                     last_at=msg.created_at,
                     unread_count=unread_map.get(other_id, 0),
+                    has_archive=archive_map.get(pair, False),
                 )
             )
 

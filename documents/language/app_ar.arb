@@ -237,6 +237,7 @@
   "msgDeclinedHint": "تم رفض طلب رسالتك. يمكنك المراسلة مرة أخرى عندما يتابعونك.",
   "msgWriteHint": "اكتب رسالة...",
   "msgNoChat": "لا توجد رسائل بعد.\nأرسل أول رسالة!",
+  "msgLoadOlderMessages": "تحميل الرسائل القديمة",
   "msgGoToListing": "📌 الانتقال إلى الإعلان",
   "msgGoToAuctionDetail": "📋 الانتقال إلى التفاصيل →",
   "msgTyping": "يكتب...",

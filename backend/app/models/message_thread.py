@@ -26,3 +26,5 @@ class MessageThread(Base):
     # Per-user soft delete timestamps — never cleared; conversation reappears only when new messages arrive
     deleted_at_a: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at_b: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # True: bu konuşmanın 1 yıldan eski arşivlenmiş mesajları MinIO'da mevcut
+    has_archive: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())

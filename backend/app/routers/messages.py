@@ -245,6 +245,55 @@ class _CallPermissionBody(BaseModel):
     call_allowed: bool
 
 
+@router.get("/{other_user_id}/archive", response_model=List[MessageOut])
+async def get_archived_messages(
+    other_user_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """1 yıldan eski arşivlenmiş metin mesajlarını MinIO'dan getirir."""
+    import gzip
+    from app.services import storage_service as storage
+    from app.schemas.message import MessageOut
+    from datetime import datetime, timezone
+
+    uid = current_user.id
+    user_a = min(uid, other_user_id)
+    user_b = max(uid, other_user_id)
+    prefix = f"dm-archive/{user_a}_{user_b}/"
+
+    try:
+        keys = await storage.list_object_keys(prefix)
+    except Exception:
+        return []
+
+    all_messages: list[MessageOut] = []
+    for key in sorted(keys):
+        try:
+            raw = await storage.get_object_bytes(key)
+            if not raw:
+                continue
+            msgs = json.loads(gzip.decompress(raw))
+            for m in msgs:
+                created_at = datetime.fromisoformat(m["created_at"])
+                if created_at.tzinfo is None:
+                    created_at = created_at.replace(tzinfo=timezone.utc)
+                all_messages.append(MessageOut(
+                    id=m["id"],
+                    sender_id=m["sender_id"],
+                    receiver_id=m["receiver_id"],
+                    sender_username="",
+                    content=m["content"],
+                    content_type="text",
+                    is_read=True,
+                    created_at=created_at,
+                ))
+        except Exception:
+            continue
+
+    all_messages.sort(key=lambda x: x.created_at)
+    return all_messages
+
+
 @router.patch("/thread/{other_user_id}/call-permission", status_code=200)
 async def update_call_permission(
     other_user_id: int,

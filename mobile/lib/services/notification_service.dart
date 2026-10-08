@@ -110,6 +110,13 @@ class NotificationService {
     );
   }
 
+  /// Arşivlenmiş eski mesajlar (1 yıldan eski, MinIO'dan).
+  Future<List<dynamic>> getArchivedMessages(int otherUserId) {
+    return _api.callList(
+      () async => http.get(Uri.parse('${_api.config.baseUrl}/messages/$otherUserId/archive'), headers: await _headers()),
+    );
+  }
+
   /// Kullanıcı bilgisi — ağ hatası durumunda null döner (graceful degrade).
   Future<Map<String, dynamic>?> getUserByUsername(String username) async {
     try {

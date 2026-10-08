@@ -29,6 +29,7 @@ class ConversationOut(BaseModel):
     last_message_type: str = "text"
     last_at: datetime
     unread_count: int
+    has_archive: bool = False
 
 
 class MessageRequestOut(ConversationOut):

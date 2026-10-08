@@ -204,6 +204,12 @@ batch:
     minute: 0
     watchdog_m: 10080
 
+  - name: archive_old_dm_task
+    weekday: 6                # Pazar
+    hour: 3
+    minute: 0
+    watchdog_m: 10080
+
   - name: cleanup_inactive_search_alerts_task
     weekday: 6                # Pazar
     hour: 5

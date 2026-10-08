@@ -126,6 +126,49 @@ async def delete_object(url_or_key: str) -> None:
         logger.error("[STORAGE] Silme hatası: %s", exc)
 
 
+async def list_object_keys(prefix: str) -> list[str]:
+    """Public bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner."""
+    try:
+        node = await orchestrator.allocate_node(ServiceType.STORAGE)
+        client = _get_client_for_internal_url(node["minio_url"])
+
+        def _list() -> list[str]:
+            return [
+                obj.object_name
+                for obj in client.list_objects(settings.minio_bucket, prefix=prefix, recursive=True)
+            ]
+
+        return await asyncio.to_thread(_list)
+    except Exception as exc:
+        logger.error("[STORAGE] list_object_keys hata: prefix=%s | %s", prefix, exc)
+        return []
+
+
+async def get_object_bytes(key: str) -> bytes | None:
+    """Public bucket'tan nesneyi bytes olarak indirir. Yoksa None döner."""
+    try:
+        node = await orchestrator.allocate_node(ServiceType.STORAGE)
+        client = _get_client_for_internal_url(node["minio_url"])
+
+        def _get() -> bytes:
+            resp = client.get_object(settings.minio_bucket, key)
+            try:
+                return resp.read()
+            finally:
+                resp.close()
+                resp.release_conn()
+
+        return await asyncio.to_thread(_get)
+    except S3Error as e:
+        if e.code == "NoSuchKey":
+            return None
+        logger.error("[STORAGE] get_object_bytes hata: key=%s | %s", key, e)
+        return None
+    except Exception as exc:
+        logger.error("[STORAGE] get_object_bytes hata: %s", exc)
+        return None
+
+
 def url_to_key(url: str) -> str:
     """http://minio1.teqlif.com:9010/teqlif/stories/foo.mp4  →  stories/foo.mp4"""
     parsed = urllib.parse.urlparse(url)

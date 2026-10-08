@@ -236,6 +236,7 @@
   "msgDeclinedHint": "Your message request was declined. You can message again once they follow you.",
   "msgWriteHint": "Write a message...",
   "msgNoChat": "No messages yet.\nSend the first message!",
+  "msgLoadOlderMessages": "Load older messages",
   "msgGoToListing": "📌 Go to Listing",
   "msgGoToAuctionDetail": "📋 Go to Details →",
   "msgTyping": "typing...",

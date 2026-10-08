@@ -417,6 +417,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab>
 
                 final otherAvatarUrl =
                     conv['profile_image_thumb_url'] as String?;
+                final hasArchive = (conv['has_archive'] as bool?) ?? false;
 
                 return ListTile(
                   leading: CircleAvatar(
@@ -503,6 +504,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab>
                           displayName: fullName,
                           otherHandle: username,
                           otherAvatarUrl: otherAvatarUrl,
+                          hasArchive: hasArchive,
                         ),
                       ),
                     ).then((_) {
@@ -673,6 +675,7 @@ class _RequestsListTab extends ConsumerWidget {
           final otherId = (conv['user_id'] as int?) ?? 0;
           final initial = (fullName.isNotEmpty ? fullName[0] : '?').toUpperCase();
           final otherAvatarUrl = conv['profile_image_thumb_url'] as String?;
+          final hasArchive = (conv['has_archive'] as bool?) ?? false;
 
           return ListTile(
             leading: CircleAvatar(
@@ -747,6 +750,7 @@ class _RequestsListTab extends ConsumerWidget {
                     otherHandle: username,
                     otherAvatarUrl: otherAvatarUrl,
                     isRequest: true,
+                    hasArchive: hasArchive,
                   ),
                 ),
               ).then((_) {
@@ -1185,6 +1189,7 @@ class DirectChatScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? contextSale;
   // Thread status from caller's perspective — true when opened from requests tab
   final bool isRequest;
+  final bool hasArchive;
 
   const DirectChatScreen({
     super.key,
@@ -1196,6 +1201,7 @@ class DirectChatScreen extends ConsumerStatefulWidget {
     this.contextPurchase,
     this.contextSale,
     this.isRequest = false,
+    this.hasArchive = false,
   });
 
   @override
@@ -1231,6 +1237,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   int _recordSecs = 0;
   Timer? _recordTimer;
   double _swipeDx = 0.0;
+
+  // Archive
+  bool _archiveLoaded = false;
+  bool _archiveLoading = false;
 
   // Audio playback
   final _audioPlayer = AudioPlayer();
@@ -1339,6 +1349,27 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           _error = true;
         });
       }
+    }
+  }
+
+  Future<void> _loadArchive() async {
+    if (_archiveLoaded || _archiveLoading) return;
+    setState(() => _archiveLoading = true);
+    try {
+      final archived = await ref
+          .read(notificationServiceProvider)
+          .getArchivedMessages(widget.otherUserId);
+      if (!mounted) return;
+      final archiveMaps = archived
+          .map((m) => Map<String, dynamic>.from(m as Map))
+          .toList();
+      setState(() {
+        _messages = [...archiveMaps, ..._messages];
+        _archiveLoaded = true;
+        _archiveLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _archiveLoading = false);
     }
   }
 
@@ -2591,8 +2622,48 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                   horizontal: 12,
                                   vertical: 12,
                                 ),
-                                itemCount: _messages.length,
+                                itemCount: _messages.length +
+                                    (widget.hasArchive && !_archiveLoaded ? 1 : 0),
                                 itemBuilder: (context, i) {
+                                  // Last item in reverse list = top of chat
+                                  // Show "load older" button at the very top
+                                  if (widget.hasArchive &&
+                                      !_archiveLoaded &&
+                                      i == _messages.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Center(
+                                        child: _archiveLoading
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: kPrimary,
+                                                ),
+                                              )
+                                            : TextButton.icon(
+                                                onPressed: _loadArchive,
+                                                icon: const Icon(
+                                                  Icons.history_rounded,
+                                                  size: 16,
+                                                ),
+                                                label: Text(
+                                                  loc.t('msgLoadOlderMessages'),
+                                                ),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: kPrimary,
+                                                  textStyle: const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                      ),
+                                    );
+                                  }
                                   final msg =
                                       _messages[_messages.length - 1 - i];
                                   final senderId = msg['sender_id'] as int?;

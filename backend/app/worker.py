@@ -25,6 +25,7 @@ from app.core.logger import get_logger, capture_exception
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
 from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
 from app.tasks.stream_recording_tasks import expire_recordings_task, archive_recordings_task
+from app.tasks.dm_archive_tasks import archive_old_dm_task
 from app.services.feed.foryou_worker import populate_foryou_feed_task
 from app.services.edge_orchestrator import orchestrator, ServiceType
 logger = get_logger(__name__)
@@ -4122,6 +4123,7 @@ class WorkerSettings:
         populate_foryou_feed_task,
         expire_recordings_task,
         archive_recordings_task,
+        archive_old_dm_task,
         compute_analytics_cache_task,
         precompute_premium_user_analytics_task,
         sync_pg_to_clickhouse_task,
