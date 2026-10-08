@@ -420,13 +420,13 @@ Backup sağlığı: `teqlif-agent health.py` her backup için 25h eşikli Telegr
 |-------|-----------|--------------|-------|
 | `notifications` | 30d (tümü) | 30d (is_read=true) | Komplementer |
 | `analytics_events` | 90d | 90d | ✅ Uyumlu |
-| `user_interactions` | 365d (created_at) | 90d (created_at) | ⚠️ Fark — bkz. A3 |
+| `user_interactions` | 90d (created_at) | 90d (created_at) | ✅ Düzeltildi (V1.1) |
 | `stream_likes` | 7d | — | ARQ tek yönetici |
 | `live_stream_viewers` | 10y | 10y | ✅ Düzeltildi (V1.1) |
 | `listing_offers` | 365d (created_at) | 60d (updated_at) | ⚠️ Farklı kolon + TTL |
 | `exchange_rates` | 10y | 365d | Agent daha agresif |
 | `live_streams` | 10y | 180d | Agent daha agresif |
-| `calls` | 2y (ended_at) | 90d (created_at) | ⚠️ Farklı kolon + TTL — bkz. A4 |
+| `calls` | 2y (ended_at) | — (kaldırıldı) | ✅ Düzeltildi (V1.1) — agent'tan silindi, ARQ tek yönetici |
 | `message_threads` | 30d (boş, created_at) | 180d (boş, updated_at) | Farklı kolon |
 | `search_alerts` | 180d (created_at) | 90d (last_match_at) | Komplementer |
 | `listing_impressions` | 30d (seen_at) | 30d (seen_at) | ✅ Düzeltildi (V1.1) |
@@ -463,7 +463,7 @@ agent: `created_at < 90 gün` → ARQ: `seen_at < 30 gün`. Hizalandı: `seen_at
 | # | Konu | Öncelik | Not |
 |---|------|---------|-----|
 | A1 | `teqlif-dm` bucket — kullanıcı thread silince orphan nesne riski | Düşük | Medya mesajı 7g'de silinince MinIO da siliniyor; thread silme ayrı mekanizma gerektirir |
-| A2 | `direct_messages` (okunmuş metin) silinmiyor | Orta | V1.0/S1; int4 PK + retention birlikte ele alınacak, V2.0 |
-| A3 | `user_interactions` ARQ/agent farkı (365d vs 90d) | Düşük | Hangisinin doğru olduğuna karar verilmeli |
-| A4 | `calls` ARQ/agent farkı (2y ended_at vs 90d created_at) | Düşük | Farklı kolon farklı anlam; netleştirilmeli |
+| A2 | `direct_messages` (okunmuş metin) silinmiyor | Orta | **V1.1 kapsamı:** (1) id int4 → BigInt, (2) hot tier: PG'de son 1 yıl, (3) cold tier: 1y+ mesajlar MinIO'ya gzip JSON arşiv, PG'den silinir, (4) UI "eski mesajları yükle" |
+| A3 | `user_interactions` ARQ/agent farkı (365d vs 90d) | Düşük | ✅ Düzeltildi: ARQ 365d → 90d (ClickHouse'da zaten 365d var, PG kopyasının uzun tutulması gereksiz) |
+| A4 | `calls` ARQ/agent farkı (2y ended_at vs 90d created_at) | Düşük | ✅ Düzeltildi: agent'tan kaldırıldı, ARQ (2y, ended_at) tek yönetici |
 | A5 | Stalwart mail backup yok | Düşük | Config backup var, mail kendisi yok |

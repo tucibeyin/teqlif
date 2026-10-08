@@ -44,10 +44,6 @@ _SCHEDULE: list[tuple[int, int, str, str, str]] = [
      "updated_at < NOW() - INTERVAL '60 days' AND status IN ('declined','expired')",
      "Listing offers 60d"),
 
-    (1,  5,  "calls",
-     "created_at < NOW() - INTERVAL '90 days'",
-     "Calls 90d"),
-
     (1, 10,  "live_stream_viewers",
      "left_at IS NOT NULL AND joined_at < NOW() - INTERVAL '3650 days'",
      "Stream viewers 10y"),

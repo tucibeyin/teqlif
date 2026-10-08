@@ -48,6 +48,7 @@ _BACKUP_MAX_MIN = {
     "loki_backup":                25 * 60,
     "uptime_kuma_backup":         25 * 60,
     "nodemonitor_config_backup":  25 * 60,
+    "mail_backup":                25 * 60,
 }
 
 # Servisler her node'un rolüne göre farklıdır; her node sadece kendi
@@ -203,6 +204,7 @@ class HealthMonitor:
                 "loki_backup":               "Loki log yedeği",
                 "uptime_kuma_backup":        "Uptime Kuma yedeği",
                 "nodemonitor_config_backup": "nodeMonitor config yedeği",
+                "mail_backup":               "Mail (Stalwart) yedeği",
             }.get(bkey, bkey)
             if isinstance(mins, int) and mins > max_min:
                 await self._fire(fkey, f"⚠️ <b>{node_id}</b> — {blabel} eski ({_fmt(mins)})")
@@ -373,6 +375,7 @@ async def _backup_ages() -> dict:
         "loki_backup":               "/project/teqlif/backups/loki/.last_backup_ok",
         "uptime_kuma_backup":        "/project/teqlif/backups/uptime_kuma",
         "nodemonitor_config_backup": "/project/teqlif/backups/nodemonitor_config",
+        "mail_backup":               "/project/teqlif/backups/stalwart/.last_mail_backup_ok",
     }
     result = {}
     for key, path in backup_dirs.items():
