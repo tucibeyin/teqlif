@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Loki Backup — günlük 06:00 UTC
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+AccuracySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -49,8 +49,8 @@ _SCHEDULE: list[tuple[int, int, str, str, str]] = [
      "Calls 90d"),
 
     (1, 10,  "live_stream_viewers",
-     "created_at < NOW() - INTERVAL '90 days'",
-     "Stream viewers 90d"),
+     "left_at IS NOT NULL AND joined_at < NOW() - INTERVAL '3650 days'",
+     "Stream viewers 10y"),
 
     (2,  0,  "exchange_rates",
      "fetched_at < NOW() - INTERVAL '365 days'",
@@ -69,8 +69,8 @@ _SCHEDULE: list[tuple[int, int, str, str, str]] = [
      "Boş mesaj thread'leri 6mo"),
 
     (2, 20,  "listing_impressions",
-     "created_at < NOW() - INTERVAL '90 days'",
-     "İlan gösterimleri 90d"),
+     "seen_at < NOW() - INTERVAL '30 days'",
+     "İlan gösterimleri 30d"),
 
     (3,  0,  "stream_recordings",
      "archived_at < NOW() - INTERVAL '15 days' AND status = 'archived'",

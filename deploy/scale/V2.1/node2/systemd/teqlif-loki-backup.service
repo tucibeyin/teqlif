@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Loki Chunk Backup (nodeMonitor → node2)
+After=network.target wg-quick@wg0.service
+
+[Service]
+Type=oneshot
+User=tucibeyin
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh
+StandardOutput=journal
+StandardError=journal

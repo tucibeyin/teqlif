@@ -42,9 +42,12 @@ _HW_THRESHOLDS = {
 }
 
 _BACKUP_MAX_MIN = {
-    "pg_backup":    25 * 60,
-    "minio_backup": 25 * 60,
-    "redis_backup": 25 * 60,
+    "pg_backup":                  25 * 60,
+    "minio_backup":               25 * 60,
+    "redis_backup":               25 * 60,
+    "loki_backup":                25 * 60,
+    "uptime_kuma_backup":         25 * 60,
+    "nodemonitor_config_backup":  25 * 60,
 }
 
 # Servisler her node'un rolüne göre farklıdır; her node sadece kendi
@@ -193,8 +196,14 @@ class HealthMonitor:
             bdata = services.get(bkey, {})
             mins  = bdata.get("age_min")
             fkey  = f"{node_id}:backup:{bkey}"
-            blabel = {"pg_backup": "PostgreSQL yedeği", "minio_backup": "MinIO yedeği",
-                      "redis_backup": "Redis yedeği"}.get(bkey, bkey)
+            blabel = {
+                "pg_backup":                 "PostgreSQL yedeği",
+                "minio_backup":              "MinIO yedeği",
+                "redis_backup":              "Redis yedeği",
+                "loki_backup":               "Loki log yedeği",
+                "uptime_kuma_backup":        "Uptime Kuma yedeği",
+                "nodemonitor_config_backup": "nodeMonitor config yedeği",
+            }.get(bkey, bkey)
             if isinstance(mins, int) and mins > max_min:
                 await self._fire(fkey, f"⚠️ <b>{node_id}</b> — {blabel} eski ({_fmt(mins)})")
             elif isinstance(mins, int):
@@ -359,6 +368,12 @@ async def _backup_ages() -> dict:
         "minio_backup": "/project/teqlif/backups/minio",
         "redis_backup": "/project/teqlif/backups/redis",
     }
+    # rsync tabanlı backup'lar .last_backup_ok sentinel dosyasına bakılır
+    sentinel_dirs = {
+        "loki_backup":               "/project/teqlif/backups/loki/.last_backup_ok",
+        "uptime_kuma_backup":        "/project/teqlif/backups/uptime_kuma",
+        "nodemonitor_config_backup": "/project/teqlif/backups/nodemonitor_config",
+    }
     result = {}
     for key, path in backup_dirs.items():
         p = Path(path)
@@ -371,6 +386,23 @@ async def _backup_ages() -> dict:
                 result[key] = {"age_min": int(age_sec / 60)}
         except Exception:
             pass
+    for key, path in sentinel_dirs.items():
+        p = Path(path)
+        # loki: sentinel dosyası; diğerleri: en yeni dosya
+        if p.is_file():
+            try:
+                age_sec = time.time() - p.stat().st_mtime
+                result[key] = {"age_min": int(age_sec / 60)}
+            except Exception:
+                pass
+        elif p.is_dir():
+            try:
+                files = sorted(p.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True)
+                if files:
+                    age_sec = time.time() - files[0].stat().st_mtime
+                    result[key] = {"age_min": int(age_sec / 60)}
+            except Exception:
+                pass
     return result
 
 

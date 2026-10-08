@@ -166,6 +166,7 @@ ENVEOF
     systemctl daemon-reload
     systemctl enable teqlif-minio
     log_ok "teqlif-minio enable edildi (secrets doldurulunca: systemctl start teqlif-minio)"
+    log_ok "MinIO ILM (recordings/ 4 gün): servis başladıktan sonra çalıştır → scripts/setup_minio_ilm.sh"
 }
 
 install_nginx() {
