@@ -27,6 +27,7 @@ class AnalyticsEvent(Base):
     __table_args__ = (
         Index("ix_analytics_events_session_type", "session_id", "event_type"),
         Index("ix_analytics_events_user_created", "user_id", "created_at"),
+        Index("ix_analytics_events_type_created", "event_type", "created_at"),
     )
 
 
