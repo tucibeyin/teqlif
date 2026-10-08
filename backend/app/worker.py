@@ -4268,8 +4268,8 @@ class WorkerSettings:
         # Her 30 dakikada — stream kayıt yaşam döngüsü
         cron(expire_recordings_task,        minute={0, 30}),
         cron(archive_recordings_task,       minute={15}),
-        # Transfer penceresi + sonrası (02:00–07:00 UTC) — her 30dk — kayıt hazır bildirim
-        cron(notify_new_recordings_task, hour={2, 3, 4, 5, 6, 7}, minute={0, 30}),
+        # Transfer penceresi biter (05:00 UTC = 08:00 TR) → bildirim gönder — 2 run/gün
+        cron(notify_new_recordings_task, hour={5, 6}, minute={0}),
 
         # ── Batch görevler — schedule.yaml'dan okunur ─────────────────────────
         *build_cron_jobs(_SCHEDULE_FUNCTIONS),
