@@ -2393,6 +2393,8 @@
     }
   },
   "notifAuctionCancelledBodyNoItem": "Ставка не принята",
+  "notifRecordingAvailableTitle": "Запись трансляции готова 🎬",
+  "notifRecordingAvailableBody": "Посмотрите запись и ознакомьтесь со статистикой продаж.",
   "notifStreamStarted": "@{username} начал(-а) прямой эфир",
   "@notifStreamStarted": {
     "placeholders": {

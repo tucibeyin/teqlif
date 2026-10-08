@@ -1,7 +1,8 @@
 """Stream kayıt yaşam döngüsü ARQ görevleri.
 
-expire_recordings_task  : available → expired  (expires_at geçince)
-archive_recordings_task : expired   → archived (MinIO lifecycle süresi + güvenli bekleme)
+expire_recordings_task      : available → expired      (expires_at geçince)
+archive_recordings_task     : expired   → archived     (MinIO lifecycle süresi + güvenli bekleme)
+notify_new_recordings_task  : available + host_notified_at IS NULL → host'a push bildirimi
 """
 from __future__ import annotations
 
@@ -29,6 +30,67 @@ async def expire_recordings_task(ctx: dict) -> None:
     except Exception as exc:
         capture_exception(exc)
         logger.error("expire_recordings_task hata: %s", exc)
+        raise
+
+
+async def notify_new_recordings_task(ctx: dict) -> None:
+    """Yeni available olan kayıtlar için host'a bir kez push bildirimi gönderir.
+
+    host_notified_at IS NULL → henüz bildirim gönderilmemiş.
+    Bildirim gönderildikten sonra host_notified_at = NOW() set edilir.
+    2 saatlik lookback: agent gecikmeli yazarsa da yakalanır.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.notification_service import push_notification
+        from sqlalchemy import text
+
+        async with AsyncSessionLocal() as session:
+            rows = (await session.execute(text("""
+                SELECT sr.id, sr.stream_id, ls.host_id
+                FROM stream_recordings sr
+                JOIN live_streams ls ON ls.id = sr.stream_id
+                WHERE sr.status = 'available'
+                  AND sr.host_notified_at IS NULL
+                  AND sr.available_at > NOW() - INTERVAL '6 hours'
+            """))).fetchall()
+
+        if not rows:
+            return
+
+        for rec_id, stream_id, host_id in rows:
+            try:
+                await push_notification(
+                    user_id=host_id,
+                    notif={
+                        "type": "recording_available",
+                        "i18n": {
+                            "title_key": "notifRecordingAvailableTitle",
+                            "body_key":  "notifRecordingAvailableBody",
+                        },
+                        "stream_id":    str(stream_id),
+                        "recording_id": str(rec_id),
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    "notify_new_recordings_task: bildirim hatası | rec_id=%d host_id=%d | %s",
+                    rec_id, host_id, exc,
+                )
+
+            # Başarılı veya başarısız — tekrar denememe (idempotent)
+            async with AsyncSessionLocal() as session:
+                await session.execute(text("""
+                    UPDATE stream_recordings
+                    SET host_notified_at = NOW(), updated_at = NOW()
+                    WHERE id = :id
+                """), {"id": rec_id})
+                await session.commit()
+
+        logger.info("notify_new_recordings_task: %d kayıt için bildirim işlendi", len(rows))
+    except Exception as exc:
+        capture_exception(exc)
+        logger.error("notify_new_recordings_task hata: %s", exc)
         raise
 
 

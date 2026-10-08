@@ -23,6 +23,7 @@ enum MainNavigationEvent {
   toFollowRequests,
   toLogin,
   toDirectSaleDetail,
+  toRecordingDetail,
 }
 
 class MainNavigationData {
@@ -209,6 +210,12 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
           _navigate(MainNavigationEvent.toDirectSaleDetail, id);
         }
         break;
+      case 'kayit':
+        final id = int.tryParse(param);
+        if (id != null) {
+          _navigate(MainNavigationEvent.toRecordingDetail, id);
+        }
+        break;
     }
   }
 
@@ -310,6 +317,15 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         final username = data['caller_username'] as String?;
         if (username != null && username.isNotEmpty) {
           _navigate(MainNavigationEvent.toProfile, username);
+        }
+        break;
+
+      case 'recording_available':
+        final sid = streamId();
+        if (sid != null) {
+          _navigate(MainNavigationEvent.toRecordingDetail, sid);
+        } else {
+          _navigate(MainNavigationEvent.toNotificationsTab, null);
         }
         break;
 

@@ -2373,6 +2373,8 @@
     }
   },
   "notifAuctionCancelledBodyNoItem": "لم يُقبل أي عرض",
+  "notifRecordingAvailableTitle": "تسجيل البث المباشر جاهز 🎬",
+  "notifRecordingAvailableBody": "شاهد التسجيل وراجع إحصاءات المبيعات.",
   "notifStreamStarted": "بدأ @{username} بثاً مباشراً",
   "@notifStreamStarted": {
     "placeholders": {

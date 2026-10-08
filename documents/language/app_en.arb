@@ -2390,6 +2390,8 @@
     }
   },
   "notifAuctionCancelledBodyNoItem": "No bid was accepted",
+  "notifRecordingAvailableTitle": "Your Live Stream Replay Is Ready 🎬",
+  "notifRecordingAvailableBody": "Watch your replay and review your sales stats.",
   "notifStreamStarted": "@{username} started a live stream",
   "@notifStreamStarted": {
     "placeholders": {

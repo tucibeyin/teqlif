@@ -2390,6 +2390,8 @@
     }
   },
   "notifAuctionCancelledBodyNoItem": "Teklif kabul edilmedi",
+  "notifRecordingAvailableTitle": "Canlı Yayın Tekrarın Hazır 🎬",
+  "notifRecordingAvailableBody": "Yayın tekrarını izle, satış ve izleyici istatistiklerini gör.",
   "notifStreamStarted": "@{username} canlı yayın açtı",
   "@notifStreamStarted": {
     "placeholders": {
