@@ -69,6 +69,7 @@ node1 ←───────────────────────�
 | LiveKit staging (node5) | 127.0.0.1 | 7890 | nginx proxy → live-staging.teqlif.com |
 | AI Proxy (node5/6) | 0.0.0.0 | 8001 | WG mesh |
 | ClickHouse (node2) | 127.0.0.1 + 10.10.0.2 | 8123/9000 | WG mesh |
+| ClickHouse (node5) | 127.0.0.1 | 8123/9000 | staging dahili — WG mesh'e kapalı |
 | Prometheus (nodeMonitor) | 10.10.0.99 | 9090 | WG mesh |
 | Grafana (nodeMonitor) | 10.10.0.99 | 3000 | WG mesh |
 | Loki (nodeMonitor) | 10.10.0.99 | 3100 | WG mesh (Promtail) |
@@ -189,15 +190,15 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/      (gü
 | CPU | Intel Xeon E-2236 | 6c/12t, 3.4/4.8GHz |
 | RAM | 32GB ECC DDR4 | 2666MHz |
 | Disk | 2×512GB NVMe RAID-1 | ~940MB/s 4k |
-| Web server | nginx | latest stable |
+| Web server | nginx | 1.26.3 |
 | App server | uvicorn (ASGI) | 0.x |
 | Framework | FastAPI | 0.x |
-| Runtime | Python | 3.12 |
+| Runtime | Python | 3.13 |
 | ORM | SQLAlchemy (async) | 2.x |
-| DB | PostgreSQL | 17 |
+| DB | PostgreSQL | 17.11 |
 | Connection pool | PgBouncer | latest |
 | Cache/Queue | Redis | 7.x |
-| Object storage | MinIO | RELEASE.2024-11-07... |
+| Object storage | MinIO | RELEASE.2025-09-07T16-13-09Z |
 | Task queue | ARQ | latest |
 | Process manager | systemd | - |
 
@@ -225,7 +226,7 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/      (gü
 | CPU | Intel Xeon D-2123IT | 4c/8t, 2.2/3.0GHz |
 | RAM | 32GB ECC DDR4 | 2400MHz |
 | Disk | 2×4TB HDD RAID-1 | ~70MB/s seq, ~440 IOPS (4k random) |
-| Analitik DB | ClickHouse | 24.x |
+| Analitik DB | ClickHouse | 26.9 |
 | Log shipper | Promtail | 3.x |
 | Mail server | Stalwart | latest |
 | Backup PG | pg_receivewal + pg_dump | PG17 tools |
@@ -260,8 +261,8 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/      (gü
 | OS | Debian 13 Trixie | 6.12 kernel |
 | CPU | 6 vCPU (KVM) | Intel Haswell |
 | RAM | 11.4GB | DDR4 |
-| Disk | 98GB SSD | ~1GB/s |
-| SFU | LiveKit Server | v1.7.2 |
+| Disk | 99GB SSD | ~1GB/s |
+| SFU | LiveKit Server | v1.13.7 |
 | Flutter SDK | livekit_client | v2.5.4 (pubspec: ^2.3.0) |
 | TURN proxy | nginx | UDP 443 |
 | Redis client | → node1:6379 | koordinasyon |
@@ -294,9 +295,9 @@ node1 MinIO      ──mc mirror───→ node2 /var/backups/minio/      (gü
 | OS | Debian 13 Trixie | 6.12 kernel |
 | CPU | 4 vCPU AMD EPYC 7763 | KVM |
 | RAM | 7.8GB | DDR4 |
-| Disk | 49GB SSD | - |
+| Disk | 50GB SSD | - |
 | nginx | Staging ingress | latest stable |
-| Staging stack | PG (5433) + Redis (6390) + MinIO (9100) + LiveKit (7890) | lokal, izole |
+| Staging stack | PG (5432) + Redis (6379) + MinIO (9100) + CH (8123) + LiveKit (7890) | lokal, izole |
 | AI Proxy | uvicorn + FastAPI | port 8001 |
 
 **Kritik OS ayarları:**
@@ -694,26 +695,26 @@ Script otomatik:
 ### 9.3 Redis HA Mimarisi
 
 ```
-node3/4: LiveKit  ──────────┐
-node1:   FastAPI/ARQ ───────┤
-                             ↓
-                   127.0.0.1:6379 (HAProxy)
-                   ┌────────────────────────┐
-                   │  balance first         │
-                   │  → node1:6379 (active) │
-                   │  → node2:6379 (backup) │
-                   └────────────────────────┘
-                             │
-               ┌─────────────┴─────────────┐
-               ↓                           ↓
-      node1: Redis core            node2: Redis replica
-      (10.10.0.1:6379)   ─async→  (10.10.0.2:6379)
-      4GB maxmemory                replicaof node1
-      AOF+RDB hybrid               save "" (no persistence)
+node3/4: LiveKit  ──→ HAProxy 127.0.0.1:6379 ──→ node1:6379 (veya node2:6379 failover)
+node1:   FastAPI/ARQ ──────────────────────────→ Redis 127.0.0.1:6379 (direkt, HAProxy yok)
+
+node3/4 — HAProxy (active):
+  ┌────────────────────────┐
+  │  balance first         │
+  │  → 10.10.0.1:6379 (✅)│
+  │  → 10.10.0.2:6379 (⏸) │
+  └────────────────────────┘
+               │
+ ┌─────────────┴─────────────┐
+ ↓                           ↓
+node1: Redis core          node2: Redis replica
+(10.10.0.1:6379)  ─async→ (10.10.0.2:6379)
+4GB maxmemory               replicaof node1
+AOF+RDB hybrid              save "" (no persistence)
 ```
 
 **Bileşenler:**
-- **HAProxy** (node3/4 + node1): `127.0.0.1:6379`'u dinler, `balance first` ile node1'i tercih eder; node1 3 kontrolde başarısız olursa node2'ye geçer
+- **HAProxy** (node3/4 — `haproxy.service` active): `127.0.0.1:6379`'u dinler, `balance first` ile node1'i tercih eder; node1 3 kontrolde başarısız olursa node2'ye geçer. **node1'de HAProxy çalışmaz** — FastAPI/ARQ kendi Redis'ine (`127.0.0.1:6379`) direkt bağlanır.
 - **Redis replica** (node2): `/etc/redis/redis-replica.conf`, `teqlif-redis-replica.service` ile yönetilir
 - **Auto-promote** (node2): `redis-failover.timer` her 10 saniyede çalışır; Redis + ICMP 3 kez başarısız olursa `REPLICAOF NO ONE` → master'a terfi + Telegram bildirimi
 - **Geri dönüş**: node1 kurtarıldıktan sonra manuel `REPLICAOF 10.10.0.1 6379` ile yeniden replica yapılır
