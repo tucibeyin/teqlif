@@ -70,7 +70,9 @@ T+4g    MinIO lifecycle siler
 T+19g   janitor.py satırı sayar/loglar — silme implement edilmemiş (archived kalır)
 ```
 
-> **⚠ RPO Riski:** node2 minio_backup 04:00 UTC çalışır. 03:00–04:00 arasında MinIO'ya inen dosyalar aynı gün backup'a girer. 04:00–08:00 arasında girenler ise ancak **ertesi gün 04:00'da** backup'a girer — node1 disk arızasında RPO ~24 saate çıkar. Çözüm: minio_backup saatini 06:00 UTC'ye taşımak (transfer penceresinin arkasına almak). Bkz. §9 Yapılacaklar.
+> **⚠ RPO Riski:** node2 minio_backup 04:00 UTC çalışır. 03:00–04:00 arasında MinIO'ya inen dosyalar aynı gün backup'a girer. 04:00–08:00 arasında girenler ise ancak **ertesi gün 04:00'da** backup'a girer — node1 disk arızasında RPO ~24 saate çıkar.
+>
+> Çözüm: minio_backup saatini **08:30 UTC'ye** taşımak — transfer penceresi (03:00–08:00) kapandıktan 30 dakika sonra, tüm dosyalar MinIO'da garantide. Bkz. §9 Yapılacaklar.
 
 ### Transfer Penceresi Kuralları (UTC)
 
@@ -272,8 +274,9 @@ if (error.contains('403')) {
 
 ### Altyapı — Güvenilirlik
 
-- [ ] **node2:** `minio_backup` timer'ı 04:00 → **06:00 UTC'ye** kaydırılır; transfer penceresinin (03:00–08:00) arkasına alınır, RPO garantisi sağlanır
+- [ ] **node2:** `minio_backup` timer'ı 04:00 → **08:30 UTC'ye** kaydırılır; transfer penceresi (03:00–08:00) tamamen kapandıktan sonra çalışır, RPO garantisi sağlanır
 - [ ] **encoder.py:** acil mod transferinde (`free_gb < 10`) `mc cp` komutuna `--limit-upload 30M` eklenir; LiveKit bant genişliği korunur
+- [ ] **encoder.py:** `_MAX_PARALLEL` node başına 8+ çekirdek varsa 2'ye çıkarılabilir; önce CPU profil alınmalı (LiveKit + FFmpeg eş zamanlı yük testi)
 
 ### Backend — Yeni Özellikler
 
@@ -352,12 +355,12 @@ Ek önlem: `duration_secs < 60` olan yayınlar encode adımında atlanabilir (te
 | Kısıt | Açıklama |
 |-------|----------|
 | Transfer gecikme | Yayın gece bitiyor ve disk ≥15 GB ise kayıt sabah 03:00'a kadar hazır değil |
-| Tek encode slot | `_MAX_PARALLEL = 1` — aynı anda birden fazla yayın biterse sıra oluşur |
+| Tek encode slot | `_MAX_PARALLEL = 1` (CPU koruma) — prime time'da aynı node'da birden fazla yayın biterse sıra oluşur; node3/4 yükü dağıtır ama garanti değil. 8+ çekirdekli node'larda 2'ye çıkarılabilir — CPU profil alınarak, LiveKit yük altındayken test edilmeli |
 | Agent restart | `recording` durumundaki kayıtlar `failed`'a çekilir; yeniden kayıt başlamaz |
 | Transfer retry | `mc cp` hatası → `encoded`'a geri döner + Telegram alert; bir sonraki transfer penceresi yeniden dener |
 | `duration_secs` NULL | encoder.py `ffprobe` çalıştırmıyor; alan her zaman NULL — `GET /recordings/my` önce bu alanı doldurmalı |
 | Satır silme yok | `archived` final durum; `deleted` geçişi implement edilmemiş (`cleanup_actions.sh` mevcut değil) |
-| RPO ~24 saat | 04:00–08:00 arası MinIO'ya giren dosyalar ertesi gün 04:00'da backup alır; node1 çökmesinde veri kaybı |
+| RPO ~24 saat | 04:00–08:00 arası MinIO'ya giren dosyalar ertesi gün 04:00'da backup alır; node1 çökmesinde veri kaybı — çözüm: minio_backup 08:30'a taşınmalı |
 | Acil mod bant genişliği | disk < 10 GB'da `mc cp` limitsiz çalışır; node3/4 üzerindeki LiveKit stream'lerinin bant genişliğini tüketerek yayın donmasına yol açabilir |
 | Presigned TTL | URL 1 saat geçerli; oynatma sırasında süresi dolarsa mobil yeniden istemeli |
 | Staging | node5'te ayrı `teqlif-staging` bucket, aynı pipeline |
