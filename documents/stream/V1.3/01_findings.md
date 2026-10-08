@@ -22,10 +22,15 @@ Her LiveKit node (3/4) kendi stream'lerini bağımsız kaydeder. `RecordingManag
 ## 2. Durum Makinesi
 
 ```
-recording → encoding → encoded → transferring → available → expired → archived
-                  ↘                       ↘
-                failed                  failed
+recording → encoding → encoded ⇄ transferring → available → expired → archived
+                  ↘         ↗          ↘ (dosya yok)
+                failed              failed
 ```
+
+- `encoding → failed`: FFmpeg encode hatası
+- `transferring → encoded`: `mc cp` hatası — bir sonraki pencerede yeniden denenir (retry döngüsü)
+- `transferring → failed`: sadece encoded dosya fiziksel olarak kaybolmuşsa (nadir)
+- `archived` son durum — satır silme (`deleted`) henüz implement edilmemiş (bkz. §2 DB'den Silinme)
 
 ### Durum Tanımları
 
@@ -34,14 +39,15 @@ recording → encoding → encoded → transferring → available → expired �
 | `recording` | teqlif-agent (recorder.py) | Stream `live` (her yayın — zorunlu) | FFmpeg WHEP bağlantısı açık, MKV `/var/recordings/raw/` yazılıyor |
 | `encoding` | teqlif-agent (recorder.py) | FFmpeg kapanır (stream biter) | Ham MKV → H.264/AAC 720p MP4, `crf=23 preset=veryfast` |
 | `encoded` | teqlif-agent (encoder.py) | Encode tamamlanır | Ham dosya silinir, transfer penceresi bekleniyor |
-| `transferring` | teqlif-agent (encoder.py) | Transfer penceresi açılır | `mc cp` ile node1 MinIO'ya yükleniyor |
+| `transferring` | teqlif-agent (encoder.py) | Transfer penceresi açılır | `mc cp` ile node1 MinIO'ya yükleniyor; hata → `encoded`'a geri döner |
 | `available` | teqlif-agent (encoder.py) | `mc cp` başarılı | `available_at=NOW()`, `expires_at=NOW()+24h`, lokal encoded silinir |
-| `expired` | ARQ (node1, her 30 dk) | `expires_at < NOW()` | API 410 döner, dosya MinIO'da hâlâ var |
+| `expired` | ARQ (node1, her 30 dk, :00 ve :30) | `expires_at < NOW()` | API 410 döner, dosya MinIO'da hâlâ var |
 | `archived` | ARQ (node1, her saat :15) | `transferred_at + 4 gün` geçince | MinIO lifecycle dosyayı silmiş, node2 backup'ı almış |
-| `failed` | teqlif-agent | Herhangi bir adımda hata | `error_message` dolu, `retry_count` artıyor |
+| `failed` | teqlif-agent | encoding hatası veya encoded dosya kaybolması | `error_message` dolu |
 
 ### DB'den Silinme
-`janitor.py` — `archived_at + 15 gün` sonra `stream_recordings` satırı silinir.
+
+`janitor.py` `stream_recordings_15d` policy'si `archived_at + 15 gün` geçen satırları **sayar ve loglar**, silmez. "Gerçek silme cleanup_actions.sh ile" notu var ama bu script mevcut değil. `deleted_at` kolonu DB şemasında tanımlı, `deleted` durumu janitor.py comment'inde belirtilmiş — ancak geçiş kodu henüz implement edilmemiş. Mevcut sistemde satırlar `archived` olarak kalır.
 
 ---
 
@@ -62,7 +68,7 @@ T+4g    MinIO lifecycle siler
         node2 günlük 04:00 backup'ı almış
         → archived  (ARQ archive_recordings_task, her saat :15)
 
-T+19g   janitor.py → DB satırı silinir
+T+19g   janitor.py satırı sayar/loglar — silme implement edilmemiş (archived kalır)
 ```
 
 ### Transfer Penceresi Kuralları (UTC)
@@ -78,11 +84,14 @@ T+19g   janitor.py → DB satırı silinir
 ## 4. Dosya Yolları
 
 ```
-Kayıt (ham)   : /var/recordings/raw/{stream_id}_{timestamp}.mkv    (node3/4)
-Encode        : /var/recordings/encoded/{stream_id}_{timestamp}.mp4 (node3/4)
-MinIO (prod)  : teqlif/recordings/{stream_id}/{filename}.mp4        (node1)
-Backup        : /project/teqlif/backups/minio/teqlif/recordings/…   (node2)
+Kayıt (ham)   : /var/recordings/raw/{stream_id}_{timestamp}.mkv         (node3/4)
+Encode        : /var/recordings/encoded/{stream_id}_{timestamp}.mp4      (node3/4)
+minio_key     : recordings/{stream_id}/{filename}.mp4                    (bucket-relative)
+MinIO (prod)  : bucket=teqlif  key=recordings/{stream_id}/{filename}.mp4 (node1)
+Backup        : /project/teqlif/backups/minio/teqlif/recordings/…        (node2)
 ```
+
+`minio_key` DB'de bucket adı **olmadan** saklanır (`recordings/…`). Bucket adı (`teqlif`) config'den (`minio_bucket`) ayrı gelir.
 
 ---
 
@@ -97,8 +106,9 @@ GET /streams/{stream_id}/recording
 - Sadece `host_id == current_user.id` kontrolü var
 - `status = 'available'` ise presigned URL döner (1 saat geçerli)
 - `status = 'expired' / 'archived'` → 410 RECORDING_EXPIRED
-- `recording_enabled = False` → 404
-- Kayıt henüz hazır değilse (`recording/encoding/encoded`) → 404 RECORDING_NOT_FOUND
+- `recording_enabled = False` → 404 RECORDING_NOT_ENABLED
+- Kayıt hazır değilse (`recording/encoding/encoded/transferring`) → 404 RECORDING_NOT_FOUND (sorgu sadece `available/expired/archived` döner)
+- Yanıt: `{ recording_id, url, available_at, expires_at }` — `duration_secs` dönmüyor
 
 ### Eksik Endpoint'ler
 
@@ -261,6 +271,7 @@ if (error.contains('403')) {
 
 ### Backend — Yeni Özellikler
 
+- [ ] `encoder.py`: encode sonrası `ffprobe` ile `duration_secs` hesaplanıp DB'ye yazılır (şu an daima NULL)
 - [ ] `GET /recordings/my` endpoint — host'un kayıtlarını listeler
   - Alanlar: `stream_id`, `status`, `duration_secs`, `encoded_size_bytes`, `available_at`, `expires_at`, `recording_started_at`
   - Filtre: `status IN ('recording','encoding','encoded','available','expired')`, son 30 gün
@@ -337,5 +348,8 @@ Ek önlem: `duration_secs < 60` olan yayınlar encode adımında atlanabilir (te
 | Transfer gecikme | Yayın gece bitiyor ve disk ≥15 GB ise kayıt sabah 03:00'a kadar hazır değil |
 | Tek encode slot | `_MAX_PARALLEL = 1` — aynı anda birden fazla yayın biterse sıra oluşur |
 | Agent restart | `recording` durumundaki kayıtlar `failed`'a çekilir; yeniden kayıt başlamaz |
+| Transfer retry | `mc cp` hatası → `encoded`'a geri döner + Telegram alert; bir sonraki transfer penceresi yeniden dener |
+| `duration_secs` NULL | encoder.py `ffprobe` çalıştırmıyor; alan her zaman NULL — `GET /recordings/my` önce bu alanı doldurmalı |
+| Satır silme yok | `archived` final durum; `deleted` geçişi implement edilmemiş (`cleanup_actions.sh` mevcut değil) |
 | Presigned TTL | URL 1 saat geçerli; oynatma sırasında süresi dolarsa mobil yeniden istemeli |
 | Staging | node5'te ayrı `teqlif-staging` bucket, aynı pipeline |
