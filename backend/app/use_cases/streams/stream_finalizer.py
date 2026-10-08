@@ -66,6 +66,15 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
     except Exception:
         logger.error("finalize_stream: Redis temizliği başarısız | stream_id=%s", stream.id, exc_info=True)
 
+    # pro_insights ve pro_metrics cache'i invalidate et (yayıncı raporunu güncel görsün)
+    try:
+        keys = await redis.keys(f"cache:pro_insights:{stream.host_id}:*")
+        to_delete = list(keys) + [f"cache:pro_metrics:{stream.host_id}"]
+        if to_delete:
+            await redis.delete(*to_delete)
+    except Exception:
+        pass
+
     # 6. WS bildirimi
     try:
         from app.use_cases.chat.chat_utils import publish_chat

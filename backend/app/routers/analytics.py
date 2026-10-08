@@ -265,6 +265,22 @@ async def get_seller_report(
       - stream_duration_minutes: yayın süresi
       - recommendation: kural tabanlı öneri metni
     """
+    # ── 0. Cache check ────────────────────────────────────────────────────────
+    _sr_redis = None
+    _sr_cache_key = f"cache:seller_report:{stream_id}"
+    try:
+        _sr_redis = await get_redis()
+        _sr_cached = await _sr_redis.get(_sr_cache_key)
+        if _sr_cached:
+            import json as _sr_json
+            data = _sr_json.loads(_sr_cached)
+            if data.get("host_id") == current_user.id:
+                data.pop("host_id", None)
+                return data
+            _sr_redis = None
+    except Exception:
+        _sr_redis = None
+
     # ── 1. Yayını getir ve host doğrula ──────────────────────────────────────
     stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
     if stream is None:
@@ -403,7 +419,7 @@ async def get_seller_report(
     t = _get_t(get_locale(current_user, request))
     recommendation = _build_recommendation(avg_budget, hesitation_count, unique_viewers, t)
 
-    return {
+    response = {
         "stream_id": stream_id,
         "stream_title": stream.title,
         "duration_minutes": duration_minutes,
@@ -416,6 +432,15 @@ async def get_seller_report(
         "recommendation": recommendation,
         "auction_summary": auction_summary,
     }
+    if _sr_redis:
+        try:
+            import json as _sr_json
+            ttl = 604800 if stream.ended_at else 120
+            cacheable = dict(response, host_id=current_user.id)
+            await _sr_redis.setex(_sr_cache_key, ttl, _sr_json.dumps(cacheable))
+        except Exception:
+            pass
+    return response
 
 
 @router.get("/ai-price-credits")
@@ -1001,7 +1026,7 @@ async def market_trends(
     if redis and cache_key:
         try:
             import json
-            await redis.setex(cache_key, 300, json.dumps(response_data))
+            await redis.setex(cache_key, 90000, json.dumps(response_data))
         except Exception as e:
             logger.warning("[MarketTrends] Redis cache set hatası: %s", e)
 
@@ -1057,7 +1082,7 @@ async def pro_insights(
     if redis and cache_key:
         try:
             import json as _json
-            await redis.setex(cache_key, 300, _json.dumps(response_data))
+            await redis.setex(cache_key, 90000, _json.dumps(response_data))
         except Exception as e:
             logger.warning("[ProInsights] Redis cache set hatası: %s", e)
 
@@ -1501,6 +1526,17 @@ async def video_roi(
     if not current_user.is_premium:
         raise ForbiddenException(code="PRO_REQUIRED")
 
+    _vroi_redis = None
+    _vroi_cache_key = f"cache:video_roi:{current_user.id}:{start_date or ''}:{end_date or ''}:{category or ''}"
+    try:
+        _vroi_redis = await get_redis()
+        _vroi_cached = await _vroi_redis.get(_vroi_cache_key)
+        if _vroi_cached:
+            import json as _vroi_json
+            return _vroi_json.loads(_vroi_cached)
+    except Exception:
+        _vroi_redis = None
+
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
     _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
     _ts_cond = (f"AND timestamp >= '{_sd.strftime('%Y-%m-%d %H:%M:%S')}' AND timestamp < '{_ed.strftime('%Y-%m-%d %H:%M:%S')}'"
@@ -1576,11 +1612,18 @@ async def video_roi(
         logger.error("[video-roi] ClickHouse sorgu hatası: %s", exc, exc_info=True)
         return {"video": {}, "photo": {}, "by_listing": []}
 
-    return {
+    result_vroi = {
         "video": segment.get("video", {"impressions": 0, "clicks": 0, "ctr": 0.0, "avg_dwell_ms": 0}),
         "photo": segment.get("photo", {"impressions": 0, "clicks": 0, "ctr": 0.0, "avg_dwell_ms": 0}),
         "by_listing": by_listing,
     }
+    if _vroi_redis:
+        try:
+            import json as _vroi_json
+            await _vroi_redis.setex(_vroi_cache_key, 14400, _vroi_json.dumps(result_vroi))
+        except Exception:
+            pass
+    return result_vroi
 
 
 # ── Galeri Analizi (fotoğraf swipe derinliği) ─────────────────────────────────
@@ -1601,6 +1644,17 @@ async def gallery_stats(
     """
     if not current_user.is_premium:
         raise ForbiddenException(code="PRO_REQUIRED")
+
+    _gs_redis = None
+    _gs_cache_key = f"cache:gallery_stats:{current_user.id}:{start_date or ''}:{end_date or ''}:{category or ''}"
+    try:
+        _gs_redis = await get_redis()
+        _gs_cached = await _gs_redis.get(_gs_cache_key)
+        if _gs_cached:
+            import json as _gs_json
+            return _gs_json.loads(_gs_cached)
+    except Exception:
+        _gs_redis = None
 
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
     _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
@@ -1663,7 +1717,14 @@ async def gallery_stats(
         logger.error("[gallery-stats] ClickHouse sorgu hatası: %s", exc, exc_info=True)
         return {"stats": []}
 
-    return {"stats": stats}
+    result_gs = {"stats": stats}
+    if _gs_redis:
+        try:
+            import json as _gs_json
+            await _gs_redis.setex(_gs_cache_key, 14400, _gs_json.dumps(result_gs))
+        except Exception:
+            pass
+    return result_gs
 
 
 # ── Video Performansı (tamamlanma oranı) ──────────────────────────────────────
@@ -1684,6 +1745,17 @@ async def video_performance(
     """
     if not current_user.is_premium:
         raise ForbiddenException(code="PRO_REQUIRED")
+
+    _vp_redis = None
+    _vp_cache_key = f"cache:video_perf:{current_user.id}:{start_date or ''}:{end_date or ''}:{category or ''}"
+    try:
+        _vp_redis = await get_redis()
+        _vp_cached = await _vp_redis.get(_vp_cache_key)
+        if _vp_cached:
+            import json as _vp_json
+            return _vp_json.loads(_vp_cached)
+    except Exception:
+        _vp_redis = None
 
     _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
     _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
@@ -1737,7 +1809,14 @@ async def video_performance(
         logger.error("[video-performance] ClickHouse sorgu hatası: %s", exc, exc_info=True)
         return {"stats": []}
 
-    return {"stats": stats}
+    result_vp = {"stats": stats}
+    if _vp_redis:
+        try:
+            import json as _vp_json
+            await _vp_redis.setex(_vp_cache_key, 14400, _vp_json.dumps(result_vp))
+        except Exception:
+            pass
+    return result_vp
 
 
 # ── Talep Radar (arama trendleri) ─────────────────────────────────────────────
@@ -1837,7 +1916,7 @@ async def demand_radar(
         if redis and cache_key:
             try:
                 import json
-                await redis.setex(cache_key, 300, json.dumps(response_data))
+                await redis.setex(cache_key, 90000, json.dumps(response_data))
             except Exception:
                 pass
 
@@ -2004,7 +2083,7 @@ async def get_pro_metrics(
     if _pm_redis and _pm_cache_key:
         try:
             import json as _pm_json
-            await _pm_redis.setex(_pm_cache_key, 600, _pm_json.dumps(_pm_result))  # 10 dk
+            await _pm_redis.setex(_pm_cache_key, 90000, _pm_json.dumps(_pm_result))
         except Exception:
             pass
 

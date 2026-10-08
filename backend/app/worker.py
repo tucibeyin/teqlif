@@ -3661,6 +3661,187 @@ async def check_search_alerts_task(ctx: dict) -> None:
         await _agent_ok(ctx, "check_search_alerts_task")
 
 
+# ── Task: Gece Analitik Cache Ön-Hesaplama ────────────────────────────────────
+
+async def compute_analytics_cache_task(ctx: dict) -> None:
+    """
+    Her gece 02:30 UTC'de çalışır.
+    market_trends ve demand_radar global sorgularını CH/PG'den hesaplar,
+    sonuçları Redis'te 25 saat (90000s) TTL ile önbelleğe alır.
+    Bu sayede gün boyunca kullanıcı istekleri doğrudan Redis'ten döner,
+    CH sorgularına yük bindirmez.
+    """
+    from app.database import AsyncSessionLocal
+    from app.database_clickhouse import get_clickhouse_client
+    from app.utils.redis_client import get_redis
+    from app.utils.i18n import _get_t
+    from sqlalchemy import text as _sql_text
+    import json as _json
+
+    _SUPPORTED_LOCALES = ["tr", "en", "ru", "ar"]
+    _DEMAND_PERIODS = [7, 30, 90]
+    TTL = 90000
+
+    try:
+        redis = await get_redis()
+        ch = await get_clickhouse_client()
+
+        # ── market_trends ─────────────────────────────────────────────────────
+        peak_hours: list[dict] = []
+        trending_categories: list[dict] = []
+        avg_spend_growth = None
+        try:
+            if ch:
+                ch_result = await ch.query("""
+                    SELECT toHour(toTimeZone(timestamp, 'Europe/Istanbul')) AS hr, COUNT(*) AS cnt
+                    FROM user_events
+                    WHERE timestamp >= now() - INTERVAL 30 DAY
+                    GROUP BY hr ORDER BY cnt DESC LIMIT 3
+                """)
+                for row in ch_result.result_rows:
+                    hr = int(row[0])
+                    peak_hours.append({"hour": hr, "label": f"{hr:02d}:00–{hr:02d}:59", "count": int(row[1])})
+        except Exception as e:
+            logger.warning("[AnalyticsCache] market_trends peak_hours CH hatası: %s", e)
+
+        try:
+            async with AsyncSessionLocal() as db:
+                cat_q = _sql_text("""
+                    WITH recent AS (
+                        SELECT l.category, COUNT(*) AS cnt
+                        FROM listing_offers lo JOIN listings l ON l.id = lo.listing_id
+                        WHERE lo.created_at >= NOW() - INTERVAL '30 days' AND l.category IS NOT NULL
+                        GROUP BY l.category
+                    ), prev AS (
+                        SELECT l.category, COUNT(*) AS cnt
+                        FROM listing_offers lo JOIN listings l ON l.id = lo.listing_id
+                        WHERE lo.created_at >= NOW() - INTERVAL '60 days'
+                          AND lo.created_at <  NOW() - INTERVAL '30 days' AND l.category IS NOT NULL
+                        GROUP BY l.category
+                    )
+                    SELECT r.category, r.cnt AS recent_cnt,
+                           COALESCE(p.cnt, 0) AS prev_cnt,
+                           CASE WHEN COALESCE(p.cnt, 0) > 0
+                                THEN round((r.cnt - p.cnt)::numeric / p.cnt * 100, 1)
+                                ELSE 100.0 END AS growth_pct
+                    FROM recent r LEFT JOIN prev p ON p.category = r.category
+                    WHERE r.cnt >= 3
+                    ORDER BY growth_pct DESC LIMIT 3
+                """)
+                rows = (await db.execute(cat_q)).all()
+                for row in rows:
+                    trending_categories.append({
+                        "category": row.category,
+                        "recent_count": row.recent_cnt,
+                        "growth_pct": float(row.growth_pct),
+                    })
+                spend_q = _sql_text("""
+                    SELECT
+                        AVG(price) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS recent_avg,
+                        AVG(price) FILTER (WHERE created_at >= NOW() - INTERVAL '60 days'
+                                           AND  created_at <  NOW() - INTERVAL '30 days') AS prev_avg
+                    FROM purchases
+                """)
+                spend_row = (await db.execute(spend_q)).one_or_none()
+                if spend_row and spend_row.recent_avg and spend_row.prev_avg and spend_row.prev_avg > 0:
+                    avg_spend_growth = round((spend_row.recent_avg - spend_row.prev_avg) / spend_row.prev_avg * 100, 1)
+                elif spend_row and spend_row.recent_avg:
+                    avg_spend_growth = 0.0
+        except Exception as e:
+            logger.warning("[AnalyticsCache] market_trends PG hatası: %s", e)
+
+        market_data = {
+            "peak_hours": peak_hours,
+            "trending_categories": trending_categories,
+            "average_spend_growth": avg_spend_growth,
+        }
+        pipe = redis.pipeline()
+        for locale in _SUPPORTED_LOCALES:
+            pipe.setex(f"cache:market_trends_global_{locale}", TTL, _json.dumps(market_data))
+        await pipe.execute()
+        logger.info("[AnalyticsCache] market_trends önbelleğe alındı (%d locale)", len(_SUPPORTED_LOCALES))
+
+        # ── demand_radar ──────────────────────────────────────────────────────
+        if ch:
+            for days in _DEMAND_PERIODS:
+                try:
+                    tq_result = await ch.query(f"""
+                        SELECT query_text, COUNT(*) AS cnt
+                        FROM search_events
+                        WHERE timestamp >= now() - INTERVAL {days} DAY AND query_text != ''
+                        GROUP BY query_text ORDER BY cnt DESC LIMIT 20
+                    """)
+                    top_queries = [{"query": row[0], "count": int(row[1])} for row in tq_result.result_rows]
+                    demand_data = {"top_queries": top_queries, "by_category": [], "daily_volume": []}
+                    await redis.setex(f"cache:demand_radar:{days}:", TTL, _json.dumps(demand_data))
+                except Exception as e:
+                    logger.warning("[AnalyticsCache] demand_radar days=%d CH hatası: %s", days, e)
+            logger.info("[AnalyticsCache] demand_radar önbelleğe alındı (%d periyot)", len(_DEMAND_PERIODS))
+
+        await _agent_ok(ctx, "compute_analytics_cache_task")
+
+    except Exception as exc:
+        logger.error("[AnalyticsCache] compute_analytics_cache_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+async def precompute_premium_user_analytics_task(ctx: dict) -> None:
+    """
+    Her gece 02:45 UTC'de çalışır.
+    Tüm premium kullanıcılar için ProInsightsUseCase'i çalıştırır,
+    sonuçları Redis'te 25 saat (90000s) TTL ile önbelleğe alır.
+    Bu sayede kullanıcı istekleri gün boyunca CH'a dokunmadan anlık döner.
+    """
+    from app.database import AsyncSessionLocal
+    from app.utils.redis_client import get_redis
+    from app.utils.i18n import _get_t
+    from app.models.user import User as _User
+    from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
+    from sqlalchemy import select as _select
+    import json as _json
+
+    TTL = 90000
+    BATCH_SIZE = 20  # CH'a paralel baskı olmaması için sıralı
+
+    try:
+        redis = await get_redis()
+
+        async with AsyncSessionLocal() as db:
+            rows = (await db.execute(
+                _select(_User.id, _User.locale).where(_User.is_premium == True)  # noqa: E712
+            )).all()
+
+        if not rows:
+            logger.info("[AnalyticsCache] premium kullanıcı yok, atlıyor")
+            return
+
+        cached_count = 0
+        for uid, user_locale in rows:
+            locale = user_locale if user_locale in ("tr", "en", "ru", "ar") else "tr"
+            cache_key = f"cache:pro_insights:{uid}:{locale}::"
+            try:
+                async with AsyncSessionLocal() as db:
+                    t = _get_t(locale)
+                    data = await ProInsightsUseCase(db=db, uid=uid, t=t, sd=None, ed=None).execute()
+                await redis.setex(cache_key, TTL, _json.dumps(data))
+                cached_count += 1
+            except Exception as e:
+                logger.warning("[AnalyticsCache] pro_insights uid=%d başarısız: %s", uid, e)
+                continue
+
+        logger.info(
+            "[AnalyticsCache] precompute_premium_user_analytics tamamlandı | kullanıcı=%d önbellek=%d",
+            len(rows), cached_count,
+        )
+        await _agent_ok(ctx, "precompute_premium_user_analytics_task")
+
+    except Exception as exc:
+        logger.error("[AnalyticsCache] precompute_premium_user_analytics başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 # schedule.yaml'daki batch job isimleri → fonksiyon eşlemesi
@@ -3674,6 +3855,8 @@ _SCHEDULE_FUNCTIONS = {
     "compute_user_interests_task":           compute_user_interests_task,
     "compute_trending_categories_task":      compute_trending_categories_task,
     "compute_user_condition_preferences_task": compute_user_condition_preferences_task,
+    "compute_analytics_cache_task":          compute_analytics_cache_task,
+    "precompute_premium_user_analytics_task": precompute_premium_user_analytics_task,
     "populate_foryou_feed_task":             populate_foryou_feed_task,
     "compute_trending_listings_task":        compute_trending_listings_task,
     "process_churn_and_airdrop":             process_churn_and_airdrop,
@@ -3782,6 +3965,8 @@ class WorkerSettings:
         populate_foryou_feed_task,
         expire_recordings_task,
         archive_recordings_task,
+        compute_analytics_cache_task,
+        precompute_premium_user_analytics_task,
     ]
 
     cron_jobs = [

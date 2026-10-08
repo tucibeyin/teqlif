@@ -18,6 +18,18 @@
 
 batch:
 
+  # ── 02:30-02:55 — Analitik cache ön-hesaplama (node2 backup bittikten sonra) ─
+
+  - name: compute_analytics_cache_task
+    hour: 2
+    minute: 30
+    watchdog_m: 1440
+
+  - name: precompute_premium_user_analytics_task
+    hour: 2
+    minute: 45
+    watchdog_m: 1440
+
   # ── 03:00 — Temizlik penceresi açılır ──────────────────────────────────────
 
   - name: cleanup_old_notifications_task
