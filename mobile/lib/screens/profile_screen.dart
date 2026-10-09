@@ -1419,10 +1419,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             Row(
               children: [
                 Expanded(
+                  flex: 2,
                   child: TeqButton.outline(
                     text: loc.t('btnCancel'),
                     onPressed: loading ? null : () => Navigator.pop(ctx),
@@ -1430,6 +1432,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
+                  flex: 3,
                   child: TeqButton(
                     text: codeSent ? loc.t('btnChangePassword') : loc.t('btnSendCode'),
                     isLoading: loading,
