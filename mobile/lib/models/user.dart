@@ -50,9 +50,9 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as int,
-      email: json['email'] as String,
-      username: json['username'] as String,
-      fullName: json['full_name'] as String,
+      email: json['email'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      fullName: json['full_name'] as String? ?? '',
       isVerified: json['is_verified'] as bool? ?? false,
       locale: json['locale'] as String?,
       localeUpdatedAt: json['locale_updated_at'] as String?,
