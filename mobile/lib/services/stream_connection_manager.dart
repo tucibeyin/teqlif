@@ -228,7 +228,21 @@ class StreamConnectionManager with WidgetsBindingObserver {
     try {
       final token = await providerContainer.read(streamServiceProvider).joinStream(session.streamId);
       final room = Room(
-        roomOptions: const RoomOptions(adaptiveStream: true),
+        roomOptions: RoomOptions(
+          adaptiveStream: true,
+          defaultVideoPublishOptions: VideoPublishOptions(
+            simulcast: true,
+            videoSimulcastLayers: [
+              VideoParametersPresets.h360_169,
+              VideoParametersPresets.h540_169,
+            ],
+            videoEncoding: const VideoEncoding(
+              maxBitrate: 1700000,
+              maxFramerate: 30,
+            ),
+            degradationPreference: DegradationPreference.maintainResolution,
+          ),
+        ),
       );
       session.listener = room.createListener();
       
