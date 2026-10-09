@@ -59,12 +59,24 @@ echo "    Config kuruldu: $CFG_DIR/config.yaml"
 if [ ! -f "$CFG_DIR/env" ]; then
     cat > "$CFG_DIR/env" << 'ENV'
 # teqlif-agent ortam değişkenleri
-# Bu dosyayı doldur: AGENT_CONFIG, PG_DSN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# Bu dosyayı doldur: PG_DSN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# Staging/ek servisler için cluster.yaml pg_dsn_env değerleri otomatik eklenir.
 AGENT_CONFIG=/etc/teqlif-agent/config.yaml
 PG_DSN=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 ENV
+
+    # cluster.yaml'daki pg_dsn_env değerlerini tarayıp placeholder olarak ekle
+    CLUSTER_YAML="$(dirname "$REPO_AGENT_DIR")/cluster.yaml"
+    if [ -f "$CLUSTER_YAML" ]; then
+        while IFS= read -r envvar; do
+            [ "$envvar" = "PG_DSN" ] && continue   # zaten yukarıda var
+            echo "# cluster.yaml servis DSN override" >> "$CFG_DIR/env"
+            echo "${envvar}=" >> "$CFG_DIR/env"
+        done < <(grep 'pg_dsn_env:' "$CLUSTER_YAML" | awk '{print $2}' | sort -u)
+    fi
+
     chmod 640 "$CFG_DIR/env"
     chown "$AGENT_USER:$AGENT_USER" "$CFG_DIR/env"
     echo "    env şablonu oluşturuldu: $CFG_DIR/env — lütfen doldur!"

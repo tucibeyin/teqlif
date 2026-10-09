@@ -67,6 +67,8 @@ main() {
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
         "Staging PG user + db: createuser teqlif && createdb teqlif_staging" \
         "alembic upgrade head (staging env ile)" \
+        "teqlif-agent staging DB erişimi (alembic'ten sonra): pg_hba.conf'a teqlif_agent satırı ekle + sudo -u postgres psql -d teqlif_staging -c 'GRANT SELECT ON users, stream_recordings TO teqlif_agent'" \
+        "PG_DSN_STAGING=/etc/teqlif-agent/env dosyasına ekle (aynı credentials, host=127.0.0.1, db=teqlif_staging)" \
         "MinIO staging bucket oluştur: teqlif-staging, teqlif-dm-staging" \
         "certbot certonly --nginx -d staging.uploads.teqlif.com (LE cert)" \
         "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
