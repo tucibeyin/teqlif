@@ -46,8 +46,10 @@ class EncoderManager:
         if not svc_cfg:
             return
 
-        dsn = os.environ.get("PG_DSN", "")
+        dsn_env = svc_cfg.get("pg_dsn_env", "PG_DSN")
+        dsn = os.environ.get(dsn_env, "")
         if not dsn:
+            logger.warning("DSN env var tanımsız: %s", dsn_env)
             return
 
         rec_cfg = self._cfg.cluster_recording
