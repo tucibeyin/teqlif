@@ -21,6 +21,7 @@ recording:
       minio_alias:  teqlif-staging
       raw_dir:      /var/recordings/raw
       encoded_dir:  /var/recordings/encoded
+      pg_dsn_env:   PG_DSN_STAGING
 
   # Transfer penceresi (UTC)
   transfer_window_start_utc: 2
