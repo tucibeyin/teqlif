@@ -61,8 +61,8 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
       return Center(
         child: Text(
           isReceived
-              ? 'Henüz değerlendirme almadınız.'
-              : 'Henüz değerlendirme yapmadınız.',
+              ? ref.read(localizationProvider).t('myRatingsNoReceived')
+              : ref.read(localizationProvider).t('myRatingsNoGiven'),
           style: TextStyle(color: AppColors.textSecondary(context)),
         ),
       );

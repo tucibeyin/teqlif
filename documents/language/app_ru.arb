@@ -2937,6 +2937,8 @@
   "settingsMyRatings": "Мои отзывы",
   "tabRatingsReceived": "Полученные отзывы",
   "tabRatingsGiven": "Оставленные отзывы",
+  "myRatingsNoReceived": "Вы ещё не получали отзывов.",
+  "myRatingsNoGiven": "Вы ещё не оставляли отзывов.",
   "tabFollowRequestsReceived": "Полученные запросы",
   "tabFollowRequestsSent": "Отправленные запросы",
   "withdrawRequest": "Отменить",

@@ -2934,6 +2934,8 @@
   "settingsMyRatings": "Değerlendirmelerim",
   "tabRatingsReceived": "Bana Verilenler",
   "tabRatingsGiven": "Benim Verdiklerim",
+  "myRatingsNoReceived": "Henüz değerlendirme almadınız.",
+  "myRatingsNoGiven": "Henüz değerlendirme yapmadınız.",
   "tabFollowRequestsReceived": "Gelen İstekler",
   "tabFollowRequestsSent": "Gönderdiklerim",
   "withdrawRequest": "Geri Al",

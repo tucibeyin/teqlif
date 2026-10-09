@@ -2970,6 +2970,8 @@
   "settingsMyRatings": "My Ratings",
   "tabRatingsReceived": "Received Ratings",
   "tabRatingsGiven": "Given Ratings",
+  "myRatingsNoReceived": "You haven't received any reviews yet.",
+  "myRatingsNoGiven": "You haven't given any reviews yet.",
   "tabFollowRequestsReceived": "Received Requests",
   "tabFollowRequestsSent": "Sent Requests",
   "withdrawRequest": "Withdraw",

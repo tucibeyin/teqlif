@@ -2937,6 +2937,8 @@
   "settingsMyRatings": "تقييماتي",
   "tabRatingsReceived": "التقييمات المستلمة",
   "tabRatingsGiven": "التقييمات المقدمة",
+  "myRatingsNoReceived": "لم تتلقَّ أي تقييمات بعد.",
+  "myRatingsNoGiven": "لم تقدّم أي تقييمات بعد.",
   "tabFollowRequestsReceived": "الطلبات المستلمة",
   "tabFollowRequestsSent": "الطلبات المرسلة",
   "withdrawRequest": "سحب",
