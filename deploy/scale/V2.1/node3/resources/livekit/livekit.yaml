@@ -25,6 +25,10 @@ redis:
 keys:
   <livekit_api_key>: <livekit_api_secret>
 
+room:
+  empty_timeout: 300
+  departure_timeout: 20
+
 logging:
   level: info
   json: true

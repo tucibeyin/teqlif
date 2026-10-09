@@ -546,7 +546,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             degradationPreference: DegradationPreference.maintainResolution,
           ),
           defaultAudioPublishOptions: AudioPublishOptions(
-            audioBitrate: 128000,
+            audioBitrate: 64000,
           ),
         ),
       );

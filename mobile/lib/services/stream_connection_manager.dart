@@ -227,7 +227,9 @@ class StreamConnectionManager with WidgetsBindingObserver {
 
     try {
       final token = await providerContainer.read(streamServiceProvider).joinStream(session.streamId);
-      final room = Room();
+      final room = Room(
+        roomOptions: const RoomOptions(adaptiveStream: true),
+      );
       session.listener = room.createListener();
       
       _setupListeners(session);

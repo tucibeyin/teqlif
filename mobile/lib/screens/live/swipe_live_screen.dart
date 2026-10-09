@@ -1295,7 +1295,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       VideoTrackRenderer(
                         _localVideoTrack!,
                         key: ValueKey(_localVideoTrack.hashCode),
-                        fit: VideoViewFit.contain,
+                        fit: VideoViewFit.cover,
                       ),
                       Positioned(
                         bottom: 0,
@@ -1353,7 +1353,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                   ),
                   child: VideoTrackRenderer(
                     widget.session.coHostVideoTrack!,
-                    fit: VideoViewFit.contain,
+                    fit: VideoViewFit.cover,
                     mirrorMode: VideoViewMirrorMode.mirror,
                   ),
                 ),
@@ -1725,7 +1725,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         key: const ValueKey('live_video'),
         child: VideoTrackRenderer(
           widget.session.hostVideoTrack!,
-          fit: VideoViewFit.contain,
+          fit: VideoViewFit.cover,
           mirrorMode: VideoViewMirrorMode.mirror,
         ),
       );
