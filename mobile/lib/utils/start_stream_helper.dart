@@ -343,6 +343,8 @@ Future<void> showStartStreamDialog(
   if (!context.mounted) return;
 
   try {
+    final userInfo = await StorageService.getUserInfo();
+    final hostUsername = userInfo?['username'] as String? ?? '';
     final streamToken = await providerContainer.read(streamServiceProvider).startStream(
       title,
       category,
@@ -358,6 +360,7 @@ Future<void> showStartStreamDialog(
         builder: (_) => HostStreamScreen(
           streamToken: streamToken,
           title: title,
+          hostUsername: hostUsername,
           blastApproved: blastApproved,
           blastCost: blastCost.toDouble(),
         ),

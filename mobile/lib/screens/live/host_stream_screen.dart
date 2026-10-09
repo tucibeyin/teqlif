@@ -51,6 +51,7 @@ const _kTrackPollMaxAttempts = 50; // max kontrol sayısı (= 5 saniye)
 class HostStreamScreen extends ConsumerStatefulWidget {
   final StreamTokenOut streamToken;
   final String title;
+  final String hostUsername;
 
   /// Kullanıcı blast özelliğini onayladı ama henüz gönderilmedi.
   /// LiveKit bağlantısı kurulunca confirmLive'dan sonra blast gönderilir.
@@ -61,6 +62,7 @@ class HostStreamScreen extends ConsumerStatefulWidget {
     super.key,
     required this.streamToken,
     required this.title,
+    required this.hostUsername,
     this.blastApproved = false,
     this.blastCost = 0,
   });
@@ -830,6 +832,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   void _showModSheet(String username) {
+    if (username == widget.hostUsername) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
