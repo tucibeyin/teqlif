@@ -66,3 +66,4 @@ class User(Base):
     cross_border_consent_revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     cross_border_consent_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True, default=None)
     cross_border_consent_locale: Mapped[Optional[str]] = mapped_column(String(5), nullable=True, default=None)
+    token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")

@@ -254,6 +254,18 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    try {
+      final rt = await StorageService.getRefreshToken();
+      if (rt != null) {
+        await http.post(
+          Uri.parse('${_api.config.baseUrl}/auth/logout'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'refresh_token': rt}),
+        ).timeout(const Duration(seconds: 5));
+      }
+    } catch (_) {
+      // Best-effort: network hatası olsa da local temizlik yapılır
+    }
     await StorageService.clear();
   }
 

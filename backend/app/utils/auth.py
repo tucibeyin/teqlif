@@ -62,9 +62,13 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: int, token_version: int = 0) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
-    return jwt.encode({"sub": str(user_id), "exp": expire}, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(
+        {"sub": str(user_id), "tv": token_version, "exp": expire},
+        settings.secret_key,
+        algorithm=settings.algorithm,
+    )
 
 
 def create_refresh_token() -> str:
@@ -78,6 +82,15 @@ def decode_token(token: str) -> Optional[int]:
         return int(payload["sub"])
     except (JWTError, KeyError, ValueError):
         return None
+
+
+def _decode_token_version(token: str) -> int:
+    """JWT'den tv (token_version) claim'ini okur. Eksikse 0 döner (geriye uyumluluk)."""
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        return int(payload.get("tv", 0))
+    except (JWTError, KeyError, ValueError):
+        return 0
 
 
 _USER_SESSION_TTL = 900  # 15 dakika
@@ -173,6 +186,9 @@ async def get_current_user(
     if not user or user.status != UserStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı")
 
+    if _decode_token_version(raw_token) != user.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Oturum sonlandırıldı")
+
     # Hata handler'larının kullanıcıya erişebilmesi için state'e yaz
     request.state.user = user
     return user
@@ -193,4 +209,8 @@ async def get_current_user_optional(
         return None
 
     user = await _fetch_and_cache_user(db, user_id)
-    return user if user and (user.status == UserStatus.ACTIVE) else None
+    if not user or user.status != UserStatus.ACTIVE:
+        return None
+    if _decode_token_version(raw_token) != user.token_version:
+        return None
+    return user

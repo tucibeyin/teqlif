@@ -180,7 +180,7 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     except Exception as exc:
         logger.error("[Verify] Telegram bildirimi kuyruğa eklenemedi: %s", exc)
 
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, user.token_version)
     refresh = create_refresh_token()
     await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
     set_auth_cookies(response, token, refresh)
@@ -222,7 +222,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
             await invalidate_user_session_cache(user.id)
 
     redis = await get_redis()
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, user.token_version)
     refresh = create_refresh_token()
     await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
     set_auth_cookies(response, token, refresh)
@@ -295,9 +295,13 @@ async def reset_password(request: Request, data: ResetPassword, db: AsyncSession
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCodeInvalidOrExpired", "Geçersiz veya süresi dolmuş kod"))
         
     user.hashed_password = hash_password(data.new_password)
+    await db.execute(
+        sa_update(User).where(User.id == user.id).values(token_version=User.token_version + 1)
+    )
     await db.commit()
+    await invalidate_user_session_cache(user.id)
     await redis.delete(key)
-    
+
     return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgPasswordReset", "Şifreniz başarıyla sıfırlandı")}
 
 
@@ -1000,7 +1004,7 @@ async def refresh_token(
     if not user or user.status != UserStatus.ACTIVE:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUserNotFound", "Kullanıcı bulunamadı"))
 
-    new_access = create_access_token(user.id)
+    new_access = create_access_token(user.id, user.token_version)
     new_refresh = create_refresh_token()
     await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, str(user.id))
     set_auth_cookies(response, new_access, new_refresh)
@@ -1009,10 +1013,28 @@ async def refresh_token(
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    """Cookie'leri temizler. Mobile token'ları frontend tarafından silinir."""
+async def logout(
+    response: Response,
+    payload: dict = {},
+    cookie_refresh: Optional[str] = Cookie(default=None, alias=REFRESH_COOKIE),
+    db: AsyncSession = Depends(get_db),
+):
+    """Refresh token'ı iptal eder, token_version'ı artırır, cookie'leri temizler.
+    Web: refresh_token cookie'den okunur. Mobile: body'de {'refresh_token': '...'} gönderilir.
+    """
+    refresh = cookie_refresh or (payload or {}).get("refresh_token", "")
+    if refresh:
+        redis = await get_redis()
+        user_id_str = await redis.getdel(f"refresh:{refresh}")
+        if user_id_str:
+            user_id = int(user_id_str)
+            await db.execute(
+                sa_update(User).where(User.id == user_id).values(token_version=User.token_version + 1)
+            )
+            await db.commit()
+            await invalidate_user_session_cache(user_id)
     clear_auth_cookies(response)
-    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgLogout", "Çıkış yapıldı")}
+    return {"message": "Çıkış yapıldı"}
 
 
 @router.get("/me/consent", response_model=ConsentOut)
@@ -1089,6 +1111,9 @@ async def change_password_confirm(
     if not stored_code or stored_code != data.code:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrVerifyCodeInvalid", "Doğrulama kodu hatalı veya süresi dolmuş"))
     current_user.hashed_password = hash_password(data.new_password)
+    await db.execute(
+        sa_update(User).where(User.id == current_user.id).values(token_version=User.token_version + 1)
+    )
     await db.commit()
     await invalidate_user_session_cache(current_user.id)
     await redis.delete(f"chpwd:{current_user.id}")
