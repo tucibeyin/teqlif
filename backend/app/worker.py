@@ -3815,7 +3815,7 @@ async def compute_analytics_cache_task(ctx: dict) -> None:
     from sqlalchemy import text as _sql_text
     import json as _json
 
-    _SUPPORTED_LOCALES = ["tr", "en", "ru", "ar"]
+    _SUPPORTED_LOCALES = ["tr", "en", "ru", "ar", "de"]
     _DEMAND_PERIODS = [7, 30, 90]
     TTL = 90000
 
@@ -3948,7 +3948,7 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
     import json as _json
 
     TTL = 90000
-    _LOCALES = ("tr", "en", "ru", "ar")
+    _LOCALES = ("tr", "en", "ru", "ar", "de")
     _DAYS_TR = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"]
 
     try:

@@ -37,6 +37,7 @@ import '../utils/error_helper.dart';
 import 'my_ratings_screen.dart';
 import '../utils/start_stream_helper.dart';
 import '../widgets/language_switch_overlay.dart';
+import '../ui_library/components/inputs/teq_language_selector.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
@@ -2121,32 +2122,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     color: AppColors.textPrimary(context),
                   ),
                 ),
-                trailing: SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(
-                      value: 'tr',
-                      label: Text(ref.read(localizationProvider).t('langTR')),
-                    ),
-                    ButtonSegment(
-                      value: 'en',
-                      label: Text(ref.read(localizationProvider).t('langEN')),
-                    ),
-                    ButtonSegment(
-                      value: 'ru',
-                      label: Text(ref.read(localizationProvider).t('langRU')),
-                    ),
-                    ButtonSegment(
-                      value: 'ar',
-                      label: Text(ref.read(localizationProvider).t('langAR')),
-                    ),
-                  ],
-                  selected: {_displayedLang},
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  onSelectionChanged: (selection) => _onLangChange(selection.first),
+                trailing: TeqLanguageSelector(
+                  selectedLang: _displayedLang,
+                  sheetTitle: loc.t('settingsLanguage'),
+                  onChanged: _onLangChange,
                 ),
               ),
             ],

@@ -32,7 +32,7 @@ _VERIFY_CODE_MIN = 100_000     # 6 haneli kod alt sınırı
 _VERIFY_CODE_RANGE = 900_000   # üretilecek kod aralığı (100000–999999)
 _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,50}$")
 _PHONE_VERIFY_TOKEN_TTL = 1800  # 30 dakika
-_SUPPORTED_LANGS = {"tr", "en", "ar"}
+_SUPPORTED_LANGS = {"tr", "en", "ar", "ru", "de"}
 
 
 

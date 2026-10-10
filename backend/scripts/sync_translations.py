@@ -32,7 +32,7 @@ from sqlalchemy import ARRAY, Text, bindparam
 from app.database import AsyncSessionLocal
 from app.utils.redis_client import get_redis
 
-_LANGS = ["tr", "en", "ar", "ru"]
+_LANGS = ["tr", "en", "ar", "ru", "de"]
 _ARB_DIR = os.path.join(backend_dir, "..", "documents", "language")
 
 

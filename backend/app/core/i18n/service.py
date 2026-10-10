@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 
 _LOCALES_DIR = Path(__file__).parent / "locales"
-_SUPPORTED: frozenset[str] = frozenset({"tr", "en", "ar", "ru"})
+_SUPPORTED: frozenset[str] = frozenset({"tr", "en", "ar", "ru", "de"})
 _DEFAULT = "tr"
 
 
@@ -91,6 +91,10 @@ class I18nService:
             if minutes > 0:
                 return f"{minutes} мин. {secs} сек." if secs else f"{minutes} мин."
             return f"{secs} сек."
+        if lang == "de":
+            if minutes > 0:
+                return f"{minutes} Min. {secs} Sek." if secs else f"{minutes} Min."
+            return f"{secs} Sek."
         # en + default
         if minutes > 0:
             return f"{minutes} min {secs} sec" if secs else f"{minutes} min"

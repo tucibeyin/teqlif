@@ -11,6 +11,7 @@ import 'register_screen.dart';
 import 'verify_screen.dart';
 import 'forgot_password_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
+import '../../ui_library/components/inputs/teq_language_selector.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../widgets/language_switch_overlay.dart';
@@ -265,43 +266,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.language_outlined,
-                        size: 14,
-                        color: AppColors.textSecondary(context),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        loc.t('settingsLanguage'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(value: 'tr', label: Text(loc.t('langTR'))),
-                      ButtonSegment(value: 'en', label: Text(loc.t('langEN'))),
-                      ButtonSegment(value: 'ru', label: Text(loc.t('langRU'))),
-                      ButtonSegment(value: 'ar', label: Text(loc.t('langAR'))),
-                    ],
-                    selected: {_displayedLang},
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onSelectionChanged: (selection) => _onLangChange(selection.first),
-                  ),
-                ],
+              child: Center(
+                child: TeqLanguageSelector(
+                  selectedLang: _displayedLang,
+                  sheetTitle: loc.t('settingsLanguage'),
+                  onChanged: _onLangChange,
+                ),
               ),
             ),
           ],

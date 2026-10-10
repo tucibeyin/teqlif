@@ -240,7 +240,8 @@ class StreamConnectionManager with WidgetsBindingObserver {
               maxBitrate: 1700000,
               maxFramerate: 30,
             ),
-            degradationPreference: DegradationPreference.maintainResolution,
+            // flutter_webrtc Android toUpperCase() Türkçe locale bug: i→İ. balanced güvenli.
+            degradationPreference: DegradationPreference.balanced,
           ),
         ),
       );

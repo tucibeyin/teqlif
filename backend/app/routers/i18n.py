@@ -11,7 +11,7 @@ from app.utils.redis_client import get_redis
 
 router = APIRouter(prefix="/api/i18n", tags=["i18n"])
 
-_SUPPORTED_LANGS = {"tr", "en", "ar", "ru"}
+_SUPPORTED_LANGS = {"tr", "en", "ar", "ru", "de"}
 _CACHE_TTL = 3600  # 1 hour
 
 

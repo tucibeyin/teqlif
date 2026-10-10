@@ -1,0 +1,4588 @@
+{
+  "@@locale": "de",
+  "budgetHigh": "Hohes Budget (1000₺+)",
+  "budgetMedium": "Mittleres Budget (250-999₺)",
+  "budgetLow": "Niedriges Budget (<250₺)",
+  "micPermissionRequiredTitle": "Mikrofonberechtigung erforderlich",
+  "micPermissionRequiredBody": "Du musst die Mikrofonberechtigung in den Geräteeinstellungen erteilen, um Anrufe anzunehmen.",
+  "appName": "teqlif",
+  "pro": "PRO",
+  "navLive": "Live",
+  "navListings": "Anzeigen",
+  "navSearch": "Suche",
+  "navMessages": "Nachrichten",
+  "navProfile": "Profil",
+  "navSettings": "Einstellungen",
+  "loginWelcome": "Willkommen zurück",
+  "loginSubtitle": "Melde dich in deinem Konto an",
+  "loginNoAccount": "Hast du kein Konto? ",
+  "loginRegisterLink": "Registrieren",
+  "loginFaceId": "🔒 Mit Face ID anmelden",
+  "loginFaceIdDesc": "Du kannst dich bei der nächsten Anmeldung schnell mit Face ID anmelden, ohne dein Passwort einzugeben.",
+  "registerTitle": "Registrieren",
+  "registerSubtitle": "Konto erstellen",
+  "registerJoin": "Werde Teil von teqlif",
+  "registerHaveAccount": "Hast du bereits ein Konto? ",
+  "registerLoginLink": "Anmelden",
+  "fieldEmail": "E-Mail",
+  "fieldEmailHint": "E-Mail-Adresse eingeben",
+  "fieldLoginIdentifier": "E-Mail oder Benutzername",
+  "fieldLoginIdentifierHint": "E-Mail oder Benutzernamen eingeben",
+  "fieldPassword": "Passwort",
+  "fieldPasswordConfirm": "Passwort bestätigen",
+  "fieldPasswordConfirmHint": "Passwort zur Bestätigung eingeben",
+  "validPasswordMismatch": "Die Passwörter stimmen nicht überein",
+  "fieldPasswordHint": "Passwort eingeben",
+  "fieldFullName": "Vollständiger Name",
+  "fieldFullNameHint": "Vollständigen Namen eingeben",
+  "fieldUsername": "Benutzername",
+  "fieldUsernameHint": "Benutzernamen eingeben",
+  "fieldUsernameSubtitle": "Nur englische Buchstaben (a-z), Zahlen und _",
+  "fieldCurrentPassword": "Aktuelles Passwort",
+  "fieldNewPassword": "Neues Passwort",
+  "fieldNewPasswordConfirm": "Neues Passwort (bestätigen)",
+  "fieldEmailCode": "E-Mail-Bestätigungscode",
+  "fieldListingTitle": "Anzeigentitel",
+  "fieldListingTitleHint": "Titel eingeben",
+  "fieldCategory": "Kategorie",
+  "fieldCategoryHint": "Kategorie auswählen",
+  "fieldPrice": "Preis",
+  "fieldPriceHint": "Preis eingeben",
+  "fieldLocation": "Standort",
+  "fieldLocationHint": "Stadt auswählen",
+  "fieldDescription": "Beschreibung",
+  "fieldDescriptionHint": "Beschreibung eingeben",
+  "fieldCity": "Stadt",
+  "fieldPhone": "Telefonnummer (Optional)",
+  "fieldPhoneHint": "0### ### ## ##",
+  "btnLogin": "Anmelden",
+  "btnNotNow": "Nicht jetzt",
+  "btnEnable": "Aktivieren",
+  "btnSave": "Speichern",
+  "btnCancel": "Abbrechen",
+  "btnDelete": "Löschen",
+  "btnDismiss": "Schließen",
+  "btnRetry": "Erneut versuchen",
+  "btnLogout": "Abmelden",
+  "btnEditProfile": "Profil bearbeiten",
+  "btnCreateListing": "Anzeige aufgeben",
+  "btnPublishListing": "Anzeige veröffentlichen",
+  "btnSendCode": "Code senden",
+  "btnChangePassword": "Mein Passwort ändern",
+  "btnDeleteAccount": "Konto löschen",
+  "btnAdd": "Hinzufügen",
+  "btnAddPhoto": "Foto hinzufügen",
+  "btnPickGallery": "Aus Galerie wählen",
+  "btnPickCamera": "Foto aufnehmen",
+  "btnCamera": "Kamera",
+  "btnClearFilters": "Filter löschen",
+  "btnDeactivate": "Deaktivieren",
+  "btnActivate": "Aktivieren",
+  "btnAddFavorite": "Zu Favoriten hinzufügen",
+  "btnRemoveFavorite": "Aus Favoriten entfernen",
+  "homeRecentListings": "Neueste Anzeigen",
+  "searchHint": "In Titel oder Beschreibung suchen...",
+  "citySelectTitle": "Stadt auswählen",
+  "cityAll": "Alle Städte",
+  "catElectronics": "Elektronik",
+  "catVehicles": "Fahrzeuge",
+  "catRealEstate": "Immobilien",
+  "catClothing": "Kleidung",
+  "catSports": "Sport",
+  "catBooks": "Bücher",
+  "catHomeLife": "Haus & Wohnen",
+  "catOther": "Andere",
+  "profileUsername": "Benutzer",
+  "profileListingCount": "Anzeige",
+  "profileFollowers": "Follower",
+  "profileFollowing": "Folgt",
+  "profileFollowersList": "Follower",
+  "profileFollowingList": "Folgt",
+  "profileFirstListing": "Erstelle deine erste Anzeige!",
+  "profileMyListings": "Mein Schaufenster",
+  "profileActiveListings": "Meine aktiven Anzeigen",
+  "profilePassiveListings": "Meine inaktiven Anzeigen",
+  "profileFavorites": "Meine Favoriten",
+  "profileAccountSection": "Konto",
+  "profileActivitySection": "Interaktionen & Aktivität",
+  "profilePrivacySection": "Datenschutz",
+  "profileNotificationSettings": "Benachrichtigungseinstellungen",
+  "profileBlockedUsers": "Blockierte Benutzer",
+  "profileFaceId": "Mit Face ID anmelden",
+  "profileDarkMode": "Dunkelmodus",
+  "profileSupportSection": "Support",
+  "profileSupportCenter": "Support-Center",
+  "profileTerms": "Nutzungsbedingungen & EULA",
+  "profilePrivacy": "Datenschutzrichtlinie",
+  "profileChangePassword": "Passwort ändern",
+  "profileDeleteAccount": "Konto dauerhaft löschen",
+  "profileDeleteAccountDesc": "Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Daten werden innerhalb von 30 Tagen dauerhaft gelöscht.",
+  "sectionPhotos": "Fotos",
+  "photoCover": "Titelbild",
+  "listingMaxPhotos": "Du kannst bis zu 10 Fotos hinzufügen",
+  "statusOn": "Ein",
+  "statusOff": "Aus",
+  "notifSettingsTitle": "Benachrichtigungseinstellungen",
+  "notifMessagesTitle": "Nachrichten",
+  "notifMessagesDesc": "Wenn eine neue Direktnachricht eingeht",
+  "notifNewFollowerTitle": "Neuer Follower",
+  "notifNewFollowerDesc": "Wenn dir jemand folgt",
+  "notifAuctionWonTitle": "Auktion gewonnen",
+  "notifAuctionWonDesc": "Wenn dein Gebot akzeptiert wird",
+  "notifLiveStreamTitle": "Live-Stream",
+  "notifLiveStreamDesc": "Wenn jemand, dem du folgst, live geht",
+  "notifNewListingTitle": "Neue Anzeige",
+  "notifNewListingDesc": "Wenn jemand, dem du folgst, eine Anzeige aufgibt",
+  "notifNewBidTitle": "Neues Gebot",
+  "notifNewBidDesc": "Wenn deine Anzeige ein Gebot erhält",
+  "notifBidOutbidTitle": "Gebot überboten",
+  "notifBidOutbidDesc": "Wenn dein Gebot in einer Auktion überboten wird",
+  "validFullNameMin": "Der vollständige Name muss mindestens 2 Zeichen lang sein",
+  "validFullNameMax": "Der vollständige Name darf höchstens 100 Zeichen lang sein",
+  "validUsernameMin": "Muss mindestens 3 Zeichen lang sein",
+  "validUsernameMax": "Muss höchstens 50 Zeichen lang sein",
+  "validUsernameChars": "Nur englische Buchstaben (a-z), Zahlen und _ sind erlaubt.",
+  "validUsernameTaken": "Dieser Benutzername ist bereits vergeben",
+  "validUsernameInvalid": "Ungültiger Benutzername. Nur Kleinbuchstaben, Zahlen und _ sind erlaubt.",
+  "validEmailMax": "E-Mail darf höchstens 255 Zeichen lang sein",
+  "validEmailInvalid": "Gib eine gültige E-Mail-Adresse ein",
+  "validPasswordMin": "Muss mindestens 8 Zeichen lang sein",
+  "validNewPasswordMin": "Das neue Passwort muss mindestens 8 Zeichen lang sein.",
+  "validPasswordsMatch": "Die neuen Passwörter stimmen nicht überein.",
+  "validVerificationCode": "Gib den Bestätigungscode ein.",
+  "validAllFields": "Bitte fülle alle Felder aus.",
+  "validTermsRequired": "Du musst die Nutzungsbedingungen akzeptieren.",
+  "validAgeConfirm": "Ich bin 18 Jahre alt oder älter.",
+  "validAgeRequired": "Du musst dein Alter bestätigen, um fortzufahren.",
+  "usernameChecking": "Benutzername wird überprüft...",
+  "usernameCheckingWait": "Benutzername wird überprüft, bitte warten...",
+  "emptyListings": "Noch keine Anzeigen",
+  "emptyFilteredListings": "Keine Anzeigen mit diesem Filter gefunden",
+  "emptyActiveListings": "Keine aktiven Anzeigen",
+  "emptyPassiveListings": "Keine inaktiven Anzeigen",
+  "emptyFavorites": "Noch keine favorisierten Anzeigen",
+  "errorConnection": "Verbindungsfehler",
+  "errorNetworkTitle": "Keine Verbindung",
+  "errorNetworkMessage": "Überprüfe deine Internetverbindung und versuche es erneut.",
+  "errorListingsLoad": "Anzeigen konnten nicht geladen werden",
+  "errorOperationFailed": "Die Aktion konnte nicht abgeschlossen werden.",
+  "errorCoHostDuringCall": "@{hostUsername} hat dich auf die Bühne eingeladen, aber dies wurde abgelehnt, da du dich in einem Anruf befindest.",
+  "@errorCoHostDuringCall": {
+    "placeholders": {
+      "hostUsername": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCallHistoryLoad": "Der Anrufverlauf konnte nicht geladen werden. Bitte versuche es erneut.",
+  "errorVideoProcessing": "Das Video konnte nicht verarbeitet werden. Bitte versuche es erneut.",
+  "giftSheetTitle": "🎁 Geschenk senden",
+  "giftNameFire": "Feuer",
+  "giftNameDiamond": "Diamant",
+  "giftNameCrown": "Königskrone",
+  "giftSentHud": "🎉 {sender} hat ein Geschenk gesendet!",
+  "@giftSentHud": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      }
+    }
+  },
+  "giftErrorGeneric": "Ein Fehler ist aufgetreten.",
+  "giftInsufficientBalance": "Unzureichendes Guthaben. Kaufe teqlik, um ein Geschenk zu senden.",
+  "giftLoadBalanceButton": "Guthaben aufladen",
+  "purchaseLoadError": "Beim Laden deiner Käufe ist ein Fehler aufgetreten. Bitte überprüfe deine Internetverbindung und versuche es erneut.",
+  "purchaseEmptyState": "Du hast noch keine Käufe getätigt.",
+  "purchaseUnknownItem": "Unbekannter Artikel",
+  "purchaseUnknownSeller": "Unbekannter Verkäufer",
+  "purchaseListingNotFound": "Anzeige nicht gefunden.",
+  "saleLoadError": "Beim Laden deiner Verkäufe ist ein Fehler aufgetreten. Bitte überprüfe deine Internetverbindung und versuche es erneut.",
+  "saleEmptyState": "Du hast noch keine Verkäufe getätigt.",
+  "saleUnknownBuyer": "Unbekannter Käufer",
+  "errorCaptchaFailed": "Sicherheitsüberprüfung fehlgeschlagen. Bitte versuche es erneut.",
+  "errorTooFast": "Du handelst zu schnell. Bitte warte einen Moment.",
+  "errorContentPolicy": "Dein Anzeigentitel oder deine Beschreibung enthält Inhalte, die gegen unsere Community-Richtlinien verstoßen.",
+  "similarListings": "Anzeigen, die dir gefallen könnten",
+  "suggestedSellers": "Vorgeschlagene Verkäufer",
+  "msgPasswordChanged": "Dein Passwort wurde erfolgreich geändert.",
+  "msgListingPublished": "Anzeige veröffentlicht!",
+  "dialogDeleteListingTitle": "Anzeige löschen",
+  "dialogDeleteListingDesc": "Bist du sicher, dass du diese Anzeige dauerhaft löschen möchtest?",
+  "dialogFaceIdActivateTitle": "Verifizieren, um Face ID zu aktivieren",
+  "settingsLanguage": "Sprache",
+  "homeAppBarTitle": "Anzeigen",
+  "homeSearchingHeader": "Suchen...",
+  "homeResultsCount": "{count} Anzeigen gefunden",
+  "@homeResultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchUserHint": "Benutzer suchen...",
+  "searchNoUser": "Keine Benutzer gefunden",
+  "searchLiveStreams": "Live-Streams",
+  "searchNoContent": "Noch keine Inhalte",
+  "msgTabMessages": "Nachrichten",
+  "msgTabInbox": "Posteingang",
+  "msgTabNotifications": "Benachrichtigungen",
+  "msgNoMessages": "Noch keine Nachrichten",
+  "msgNoMessagesDesc": "Wenn du Interesse an einer Anzeige zeigst,\nwird diese hier angezeigt",
+  "msgNoRequests": "Keine Nachrichtenanfragen",
+  "msgNoRequestsDesc": "Nachrichten von Personen, die dir nicht folgen,\nwerden hier angezeigt",
+  "msgTabRequests": "Nachrichtenanfragen",
+  "msgSendFailed": "Nachricht konnte nicht gesendet werden",
+  "msgDeclinedHint": "Deine Nachrichtenanfrage wurde abgelehnt. Du kannst erneut eine Nachricht senden, sobald sie dir folgen.",
+  "msgWriteHint": "Schreibe eine Nachricht...",
+  "msgNoChat": "Noch keine Nachrichten.\nSende die erste Nachricht!",
+  "msgLoadOlderMessages": "Ältere Nachrichten laden",
+  "msgGoToListing": "📌 Zur Anzeige gehen",
+  "msgGoToAuctionDetail": "📋 Zu den Details →",
+  "msgTyping": "schreibt...",
+  "msgUserFallback": "Benutzer",
+  "msgItemFallback": "Produkt",
+  "msgContextPurchase": "Kauf",
+  "msgContextSale": "Verkauf",
+  "kbdTypingHint": "Schreibt...",
+  "kbdDismiss": "Fertig",
+  "kbdConfirm": "Bestätigen",
+  "kbdAmountHint": "Betrag eingeben",
+  "voiceSwipeToCancel": "Zum Abbrechen schieben",
+  "voicePermissionDenied": "Mikrofonzugriff verweigert. Erlaube ihn in den Einstellungen.",
+  "voiceRecordFailed": "Aufnahme konnte nicht gestartet werden",
+  "voiceMaxDuration": "Maximal 10 Sekunden",
+  "voiceSendFailed": "Sprachnachricht konnte nicht gesendet werden",
+  "voicePlayFailed": "Audio konnte nicht abgespielt werden",
+  "attachPickGallery": "Galerie",
+  "attachPickCamera": "Foto aufnehmen",
+  "attachPickVideo": "Video auswählen",
+  "attachRecordVideo": "Video aufnehmen",
+  "attachPickFile": "Datei",
+  "msgLastPhoto": "📷 Foto",
+  "msgLastVideo": "🎥 Video",
+  "msgLastVoice": "🎙 Sprachnachricht",
+  "msgLastFile": "📎 Datei",
+  "attachFileTooLarge": "Die Datei darf 5 MB nicht überschreiten",
+  "attachVideoTooLargeAfterCompress": "Das Video überschreitet 30 MB nach der Komprimierung. Versuche einen kürzeren Clip.",
+  "attachVoiceTooLarge": "Die Sprachaufnahme darf 2 MB nicht überschreiten",
+  "attachLimitImage": "Max 5 MB",
+  "attachLimitVideo": "Max 90 s · 30 MB",
+  "attachLimitFile": "PDF, DOCX, XLSX, TXT · Max 50 MB",
+  "attachLimitVoice": "Max 10 Min.",
+  "attachTypeNotSupported": "Dateityp wird nicht unterstützt",
+  "attachSendFailed": "Fehler beim Senden. Zum Wiederholen tippen.",
+  "attachOpenFailed": "Datei konnte nicht geöffnet werden",
+  "attachCameraPermission": "Kamerazugriff verweigert. Erlaube ihn in den Einstellungen.",
+  "attachGalleryPermission": "Galeriezugriff verweigert. Erlaube ihn in den Einstellungen.",
+  "attachUploading": "Hochladen...",
+  "attachImageProcessing": "Bild wird vorbereitet...",
+  "errUnsupportedType": "Nicht unterstützter Dateityp",
+  "errNetworkRetry": "Verbindungsfehler. Versuche es erneut.",
+  "errDmVideoTooLarge": "Das Video darf 20 MB nicht überschreiten",
+  "liveStickerPicker": "Sticker",
+  "attachVideoTooLong": "Das Video darf 90 Sekunden nicht überschreiten",
+  "attachVideoProcessing": "Video wird verarbeitet...",
+  "msgDeleteMessage": "Nachricht löschen",
+  "msgDeleteMessageConfirm": "Bist du sicher, dass du diese Nachricht löschen möchtest?",
+  "msgDeleteMessageSuccess": "Nachricht gelöscht",
+  "msgDeleteMessageFailed": "Nachricht konnte nicht gelöscht werden",
+  "msgDeleteConversation": "Unterhaltung löschen",
+  "msgDeleteConversationConfirm": "Bist du sicher, dass du diese Unterhaltung löschen möchtest? Alle Nachrichten werden entfernt.",
+  "msgDeleteConversationSuccess": "Unterhaltung gelöscht",
+  "msgDeleteConversationFailed": "Unterhaltung konnte nicht gelöscht werden",
+  "msgDeleteForMe": "Für mich löschen",
+  "msgDeleteForEveryone": "Für alle löschen",
+  "msgDeletedMessage": "Diese Nachricht wurde gelöscht",
+  "notifNone": "Keine Benachrichtigungen",
+  "notifNoneDesc": "Neue Benachrichtigungen werden hier angezeigt",
+  "notificationsTitle": "Benachrichtigungen",
+  "notificationsMarkAllRead": "Alle als gelesen markieren",
+  "blockedUsersTitle": "Blockierte Benutzer",
+  "blockedNone": "Keine blockierten Benutzer",
+  "blockedUnblock": "Entblocken",
+  "blockedActionFailed": "Aktion konnte nicht abgeschlossen werden",
+  "followNoFollowers": "Noch keine Follower",
+  "followNoFollowing": "Folgt noch niemandem",
+  "followBtnFollowing": "Folge ich",
+  "followBtnFollow": "Folgen",
+  "pubProfileUserNotFound": "Benutzer nicht gefunden",
+  "pubProfileListingsCount": "Anzeigen ({count})",
+  "@pubProfileListingsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pubProfileStatListings": "Anzeigen",
+  "pubProfileStatFollowers": "Follower",
+  "pubProfileStatFollowing": "Folgt",
+  "pubProfileEditComingSoon": "Profilbearbeitung in Kürze verfügbar",
+  "pubProfileFollowingLabel": "Folge ich",
+  "pubProfileFollowLabel": "Folgen",
+  "pubProfileSendMessage": "Nachricht senden",
+  "pubProfileUpdateRating": "Bewertung aktualisieren",
+  "pubProfileGiveRating": "Bewertung abgeben",
+  "pubProfileBlock": "Blockieren",
+  "pubProfileUnblock": "Entblocken",
+  "pubProfileActionFailed": "Aktion konnte nicht abgeschlossen werden",
+  "pubProfileNoReview": "Noch keine Bewertungen",
+  "ratingVeryBad": "Sehr schlecht",
+  "ratingBad": "Schlecht",
+  "ratingMedium": "Durchschnittlich",
+  "ratingGood": "Gut",
+  "ratingExcellent": "Ausgezeichnet",
+  "ratingSelectStar": "Wähle einen Stern",
+  "ratingCommentHint": "Warum diese Bewertung? (optional)",
+  "ratingSaveFailed": "Bewertung konnte nicht gespeichert werden",
+  "ratingReviews": "Bewertungen",
+  "ratingCount": "{count} Bewertungen",
+  "@ratingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingStarCount": "({count} Bewertungen)",
+  "@ratingStarCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "createListingPhotoCount": "Fotos ({count}/{max})",
+  "@createListingPhotoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "createListingSelectOption": "-- Auswählen --",
+  "createListingPhotoUploadFailed": "Foto konnte nicht hochgeladen werden: {error}",
+  "@createListingPhotoUploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "createListingConnError": "Verbindungsfehler. Bitte versuche es erneut.",
+  "notifSettingsMessagesTitle": "Nachrichten",
+  "notifSettingsMessagesDesc": "Wenn eine neue Direktnachricht eingeht",
+  "notifSettingsFollowsTitle": "Neuer Follower",
+  "notifSettingsFollowsDesc": "Wenn dir jemand folgt",
+  "notifSettingsAuctionWonTitle": "Auktion gewonnen",
+  "notifSettingsAuctionWonDesc": "Wenn dein Gebot akzeptiert wird",
+  "notifSettingsStreamStartedTitle": "Live-Stream",
+  "notifSettingsStreamStartedDesc": "Wenn jemand, dem du folgst, live geht",
+  "notifSettingsNewListingTitle": "Neue Anzeige",
+  "notifSettingsNewListingDesc": "Wenn jemand, dem du folgst, eine Anzeige aufgibt",
+  "notifSettingsNewBidTitle": "Neues Gebot",
+  "notifSettingsNewBidDesc": "Wenn deine Anzeige ein Gebot erhält",
+  "notifSettingsOutbidTitle": "Gebot überboten",
+  "notifSettingsOutbidDesc": "Wenn dein Gebot in einer Auktion überboten wird",
+  "btnOk": "OK",
+  "btnGoBack": "Zurückgehen",
+  "errorGeneric": "Ein Fehler ist aufgetreten",
+  "listingPriceNotSet": "Preis nicht festgelegt",
+  "listingMsgLoginRequired": "Du musst dich anmelden, um eine Nachricht zu senden",
+  "listingMsgOwnListing": "Du kannst keine Nachricht an deine eigene Anzeige senden",
+  "listingActivated": "Anzeige aktiviert",
+  "listingDeactivated": "Anzeige deaktiviert",
+  "listingDeleteConfirmContent": "Bist du sicher, dass du diese Anzeige löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "listingDeleteConfirmYes": "Ja, löschen",
+  "listingInfo": "Anzeigendetails",
+  "seeAll": "Alle ansehen",
+  "subcategoryLabel": "Unterkategorie",
+  "listingStatusLabel": "Status",
+  "listingStatusActive": "Aktiv",
+  "listingStatusPassive": "Inaktiv",
+  "listingLocationLabel": "Standort",
+  "listingSendMessage": "Verkäufer kontaktieren",
+  "listingReportTooltip": "Melden",
+  "listingDeleteTooltip": "Anzeige löschen",
+  "listingReportTitle": "🚩 Anzeige melden",
+  "listingReportSelectHint": "Grund auswählen",
+  "listingReportMisleading": "Irreführende Anzeige",
+  "listingReportIllegal": "Illegales Produkt",
+  "listingReportSpam": "Spam / doppelte Anzeige",
+  "listingReportInappropriate": "Unangemessener Inhalt",
+  "listingReportFraud": "Verdacht auf Betrug",
+  "listingReportNoteHint": "Zusätzliche Notizen (optional)",
+  "listingReportSubmitBtn": "Meldung einreichen",
+  "listingReportSelectRequired": "Bitte wähle einen Grund aus",
+  "listingReportSuccess": "Deine Meldung wurde empfangen. Vielen Dank.",
+  "listingDescriptionLabel": "Beschreibung",
+  "liveStreamsTitle": "Live-Streams",
+  "liveStartStream": "Live gehen",
+  "liveAllCategory": "Alle",
+  "liveNoStreams": "Derzeit keine aktiven Streams",
+  "liveBeFirst": "Sei der Erste, der live geht!",
+  "livePullToRefresh": "Zum Aktualisieren nach unten ziehen",
+  "liveStreamsLoadError": "Streams konnten nicht geladen werden",
+  "liveStartStreamDialogTitle": "Stream starten",
+  "liveStreamTitleHint": "Stream-Titel",
+  "liveStreamTitleLabel": "Titel *",
+  "liveCategoryLabel": "Kategorie *",
+  "liveCategoryHint": "Kategorie auswählen",
+  "liveStartBtn": "Start",
+  "liveStreamTitleRequired": "Ein Stream-Titel ist erforderlich",
+  "liveStreamTitleMin": "Der Stream-Titel muss länger als 3 Zeichen sein.",
+  "liveCategoryRequired": "Eine Kategorieauswahl ist erforderlich",
+  "liveLoginRequired": "Du musst dich anmelden, um einen Stream zu starten",
+  "liveBadgeLabel": "LIVE",
+  "liveEndedBadge": "BEENDET",
+  "liveConnecting": "Stream wird gestartet...",
+  "liveConnectingViewer": "Verbindung zum Stream wird hergestellt...",
+  "livePermissionRequired": "Kamera- und Mikrofonberechtigung erforderlich",
+  "liveViewersTitle": "👁 Zuschauer ({count})",
+  "@liveViewersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveNoViewers": "Noch keine Zuschauer",
+  "streamViewerMuted": "Stummgeschaltet",
+  "liveEndStreamTitle": "Stream beenden",
+  "liveEndStreamConfirm": "Bist du sicher, dass du den Stream beenden möchtest?",
+  "liveEndStreamBtn": "Beenden",
+  "liveGoBack": "Zurückgehen",
+  "liveEnded": "Stream beendet",
+  "liveStreamEndedTitle": "Stream beendet",
+  "liveStreamEndedDesc": "Dieser Stream wurde vom Sender beendet.",
+  "liveStreamEndedOverlay": "Stream beendet",
+  "liveDiscoverStreams": "Wische, um weitere Streams zu entdecken",
+  "liveLeaveBtn": "Verlassen",
+  "liveNextStream": "Nächster Stream",
+  "liveCameraClosed": "Kamera aus",
+  "liveWaitingVideo": "Warten auf Video...",
+  "liveModDemotedSelf": "Deine Moderatorrolle wurde von @{username} entfernt.",
+  "@liveModDemotedSelf": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "liveModPromotedSelf": "⭐ @{username} hat dich zum Moderator gemacht! Du kannst jetzt die Zuschauer verwalten.",
+  "@liveModPromotedSelf": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "modTitle": "🛡 Moderation",
+  "modMute": "Stummschalten",
+  "modUnmute": "Stummschaltung aufheben",
+  "modPromote": "Zum Moderator machen",
+  "modDemote": "Moderator entfernen",
+  "modKick": "Aus Stream entfernen",
+  "modMutedMsg": "@{username} wurde stummgeschaltet",
+  "@modMutedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "modUnmutedMsg": "Stummschaltung aufgehoben",
+  "modPromotedMsg": "@{username} wurde zum Moderator gemacht",
+  "@modPromotedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "modDemotedMsg": "@{username} wurde als Moderator entfernt",
+  "@modDemotedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "modKickedMsg": "@{username} wurde aus dem Stream entfernt",
+  "@modKickedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "modPromotedSnack": "⭐ @{username} ist jetzt ein Moderator!",
+  "@modPromotedSnack": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "modDemotedSnack": "✖ @{username} wurde als Moderator entfernt",
+  "@modDemotedSnack": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageHint": "Schreibe eine Nachricht...",
+  "chatMutedHint": "🔇 Du bist stummgeschaltet",
+  "chatHistoryTitle": "Chat-Verlauf",
+  "chatHistoryCount": "Letzte {count} Nachrichten",
+  "@chatHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auctionTitle": "Auktion",
+  "auctionBidsHeader": "GEBOTE",
+  "auctionAcceptBidTitle": "✅ Gebot akzeptieren",
+  "auctionItem": "Artikel",
+  "auctionWinnerPrice": "Gewinnerpreis",
+  "auctionBidder": "Bieter",
+  "auctionAcceptConfirm": "Sobald akzeptiert, wird die Auktion geschlossen und eine Zusammenfassung automatisch in den Chat gesendet.",
+  "auctionCancelBtn": "Abbrechen",
+  "auctionContinueBtn": "Weiter",
+  "auctionAccepted": "Gebot akzeptiert! Zusammenfassung in den Chat gesendet.",
+  "buyItNowAccepted": "Sofort-Kauf-Anfrage genehmigt!",
+  "errorPhotoUpload": "Foto konnte nicht hochgeladen werden. Bitte versuche es erneut.",
+  "errorInsufficientBalance": "Unzureichendes Guthaben. Bitte lade dein Guthaben auf.",
+  "errorPhotoCapture": "Foto konnte nicht aufgenommen werden.",
+  "auctionEndTitle": "Auktion beenden",
+  "auctionEndDesc": "Das Ergebnis wird gespeichert und die Auktion wird geschlossen.",
+  "auctionEndBtn": "Beenden",
+  "auctionStatusActive": "AKTIV",
+  "auctionStatusPending": "AUSSTEHEND ⚡",
+  "auctionStatusPaused": "PAUSIERT",
+  "auctionStatusSold": "VERKAUFT 🛒",
+  "auctionStatusEnded": "BEENDET",
+  "auctionStatusIdle": "AUKTION",
+  "auctionBuyNowRequestSent": "Anfrage an den Verkäufer gesendet, warte auf Genehmigung...",
+  "auctionBuyNowOtherUser": "⏳ Ein anderer Benutzer bearbeitet gerade einen Sofort-Kauf.",
+  "auctionBuyNowAcceptInline": "Genehmigen",
+  "auctionBuyNowRejectInline": "Ablehnen",
+  "auctionStartBtn": "▶ Start",
+  "auctionBidBtn": "Gebot abgeben",
+  "auctionSwipeToBid": "Wische, um {price} zu bieten",
+  "@auctionSwipeToBid": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionSwipeToBidNoPrice": "Wische zum Bieten",
+  "auctionBidReceived": "Gebot von ₺{amount} erhalten!",
+  "@auctionBidReceived": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chatJoinedStream": "ist dem Stream beigetreten",
+  "auctionMutedBtn": "🔇 Du bist stummgeschaltet",
+  "auctionBuyNowTitle": "⚡ Sofort-Kauf",
+  "auctionBuyNowPrice": "Sofort-Kauf-Preis",
+  "auctionBuyNowConfirm": "Möchtest du diesen Artikel zu diesem Preis kaufen? Die Auktion wird beendet.",
+  "auctionBuyNowRequest": "⚡ Sofort-Kauf-Anfrage",
+  "auctionBuyNowRequester": "Angefragt von",
+  "auctionBuyNowRequestConfirm": "Möchtest du die Sofort-Kauf-Anfrage dieser Person genehmigen?",
+  "auctionBuyNowReject": "Ablehnen",
+  "auctionBuyNowApprove": "Genehmigen",
+  "auctionWaitingHost": "Warten auf Antwort des Gastgebers",
+  "auctionWaitingHostDesc": "Der Kauf wird abgeschlossen, sobald der Gastgeber zustimmt.",
+  "auctionApprovalWaiting": "⚡ Warten auf Genehmigung",
+  "auctionApprovalWaitingDesc": "Deine Sofort-Kauf-Anfrage wurde an den Gastgeber gesendet.",
+  "auctionInProgress": "⏳ Transaktion in Bearbeitung",
+  "auctionInProgressDesc": "Sofort-Kauf-Transaktion mit @{username} in Bearbeitung.",
+  "@auctionInProgressDesc": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionInProgressNoBid": "Du kannst nicht bieten, bis dies geklärt ist.",
+  "auctionSold": "🛒 VERKAUFT!",
+  "auctionBoughtBy": "Sofort gekauft von @{username}",
+  "@auctionBoughtBy": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionBuyNowCongrats": "🎉 Herzlichen Glückwunsch! Kauf abgeschlossen.",
+  "auctionBuyNowSoldOther": "🛒 Artikel per Sofort-Kauf verkauft! Gekauft von @{buyer}.",
+  "@auctionBuyNowSoldOther": {
+    "placeholders": {
+      "buyer": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionBinRejected": "Deine Sofort-Kauf-Anfrage wurde abgelehnt. Die Auktion geht weiter.",
+  "auctionBinRejectedOther": "Sofort-Kauf-Transaktion abgeschlossen. Die Auktion geht weiter.",
+  "auctionBuyNowBtn": "⚡ Sofort-Kauf — ",
+  "auctionBuyNowBuyBtn": "Kaufen",
+  "auctionAcceptBtn": "✅ Akzeptieren",
+  "auctionValidAmount": "Gib einen gültigen Betrag ein",
+  "auctionCustomAmountHint": "Eigener Betrag (₺)",
+  "auctionFirstBid": "Gib das erste Gebot ab!",
+  "auctionHighestBidder": "@{username} ist der Höchstbietende",
+  "@auctionHighestBidder": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionBidCount": "{count} Gebote",
+  "@auctionBidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auctionManualEntry": "Manuell eingeben",
+  "auctionFromListings": "Aus meinen Anzeigen",
+  "auctionNoActiveListings": "Keine aktiven Anzeigen.",
+  "auctionStartTitle": "Auktion starten",
+  "auctionItemName": "Artikelname",
+  "auctionStartPrice": "Startpreis (₺)",
+  "auctionBuyNowPriceHint": "Sofort-Kauf-Preis (₺, optional)",
+  "auctionBuyNowCompleted": "🛒 Sofort-Kauf abgeschlossen! @{buyer} — ₺{price}",
+  "@auctionBuyNowCompleted": {
+    "placeholders": {
+      "buyer": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "offerHistory": "Angebotsverlauf",
+  "offerAmountHint": "Angebotsbetrag (₺)",
+  "offerBtn": "Angebot machen",
+  "offerSuccess": "Dein Angebot wurde abgegeben!",
+  "offerError": "Angebot konnte nicht gesendet werden.",
+  "offerInvalidAmount": "Bitte gib einen gültigen Betrag ein.",
+  "offerEmpty": "Noch keine Angebote.",
+  "offerLoginRequired": "Melde dich an, um ein Angebot zu machen.",
+  "storyTrayTitle": "Folge ich",
+  "storyTrayEmpty": "Niemand, dem du folgst, ist gerade live.",
+  "storyTrayError": "Konnte nicht geladen werden",
+  "storyMyStory": "Deine Story",
+  "storyProcessing": "Video wird verarbeitet...",
+  "storyTooLong": "Das Video ist zu lang (max. 15 Sekunden)",
+  "storyUploadFailed": "Story konnte nicht hochgeladen werden",
+  "storyUploadSuccess": "Deine Story wurde geteilt!",
+  "storyLiveNow": "Jetzt live!",
+  "storyJoinLive": "Live beitreten",
+  "storyJoinLiveFailed": "Konnte dem Live-Stream nicht beitreten",
+  "storyWhoViewed": "Wer hat es gesehen?",
+  "storyViewersLoadFailed": "Zuschauer konnten nicht geladen werden",
+  "storyNoViewersYet": "Noch niemand hat dies gesehen",
+  "storyDelete": "Story löschen",
+  "storyDeleteConfirm": "Bist du sicher, dass du diese Story löschen möchtest?",
+  "storyDeleteFailed": "Story konnte nicht gelöscht werden",
+  "offlineBannerMessage": "Keine Internetverbindung, du bist im Offline-Modus.",
+  "editProfileBio": "Über mich",
+  "editProfileBioHint": "Schreibe eine kurze Biografie über dich...",
+  "editProfileBioHelper": "Max. 60 Zeichen",
+  "editProfileLink": "Link",
+  "editProfileLinkHint": "https://...",
+  "editProfileLinkHelper": "Muss mit https:// beginnen",
+  "editProfileLinkError": "Link muss mit http:// oder https:// beginnen",
+  "editProfileSocialTitle": "Soziale Medien",
+  "editProfileSocialUsernameHint": "Benutzername",
+  "tooltipActions": "Aktionen",
+  "tooltipDeactivate": "Deaktivieren",
+  "tooltipActivate": "Aktivieren",
+  "tooltipDelete": "Löschen",
+  "settingsProTools": "📈 PRO-Tools",
+  "settingsProActive": "AKTIV",
+  "walletTitle": "Mein teqlik-Wallet",
+  "walletBalance": "Aktuelles Guthaben",
+  "walletRecentTxns": "Letzte Transaktionen",
+  "walletSpendingSummary": "Ausgabenzusammenfassung",
+  "walletTxnHistory": "Transaktionsverlauf",
+  "walletNoTxns": "Noch keine Transaktionen.",
+  "walletTxnAirdrop": "Willkommensgeschenk",
+  "walletTxnReceiveGift": "Geschenk erhalten",
+  "walletTxnSpendLeadGen": "Massenbenachrichtigung",
+  "walletTxnSpendAdCampaign": "Werbekampagne",
+  "walletTxnSpendAi": "KI-Preisgestaltung",
+  "walletTxnSpendAiDesc": "KI-Anzeigenbeschreibung generiert",
+  "walletTxnWebTopup": "Web-Aufladung",
+  "walletTxnSendGift": "Live-Geschenk gesendet",
+  "walletTxnReferralBonus": "Empfehlungsbonus",
+  "walletTxnWelcomeBonus": "Willkommensbonus",
+  "walletTxnSpendRetargeting": "Re-Engagement-Benachrichtigung",
+  "walletTxnSpendBoost": "Anzeigen-Boost",
+  "walletTxnSpendBoostPaid": "Bezahlter Anzeigen-Boost",
+  "walletTxnSpendReactivation": "Anzeigen-Reaktivierung",
+  "walletSeeAllTxns": "Alle {n} Transaktionen ansehen",
+  "@walletSeeAllTxns": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "walletAllTxnsTitle": "Alle Transaktionen",
+  "walletDetailTitle": "Transaktionsdetails",
+  "walletDetailDate": "Datum",
+  "walletDetailType": "Transaktionstyp",
+  "walletDetailAmount": "Betrag",
+  "walletDetailListing": "Anzeige",
+  "walletDetailStream": "Live-Stream",
+  "walletDetailListingInactive": "Inaktive Anzeige",
+  "walletDetailLoadingError": "Details konnten nicht geladen werden.",
+  "walletDetailGoListing": "Zur Anzeige gehen",
+  "walletDetailGoOwner": "Profil des Anzeigenbesitzers",
+  "walletDetailGoStream": "Zu Stream-Analysen gehen",
+  "walletDetailGoStreamHost": "Profil des Stream-Gastgebers",
+  "walletDetailGiftName": "Geschenk",
+  "walletDetailGiftSender": "Absender",
+  "walletDetailGiftReceiver": "Empfänger",
+  "walletDetailGiftStream": "Stream",
+  "walletDetailGiftHostShare": "Empfänger hat erhalten",
+  "walletDetailGoGiftSender": "Absender-Profil",
+  "walletDetailGoGiftReceiver": "Empfänger-Profil",
+  "walletDetailGoGiftStream": "Zu Stream-Analysen gehen",
+  "walletComingSoonLabel": "teqlik-Kauf bald verfügbar!",
+  "walletComingSoonDesc": "Unsere Zahlungsinfrastruktur wird vorbereitet. Alle Benutzer starten derzeit mit 100 teqlik Guthaben.",
+  "walletBuyBtn": "teqlik-Kauf bald verfügbar",
+  "reportLoading": "Stream-Analyse wird vorbereitet...",
+  "reportLoadFailed": "Bericht konnte nicht geladen werden.",
+  "reportRetry": "Erneut versuchen",
+  "reportGoHome": "Zur Startseite",
+  "reportBadge": "STREAM-ANALYSE",
+  "reportStreamEndedDesc": "Stream beendet. Deine Zuschaueranalyse findest du unten.",
+  "reportMetricPeakViewers": "Höchstwert\nZuschauer",
+  "reportMetricEngagedViewers": "Interagierende\nZuschauer",
+  "reportMetricAvgBudget": "Durchschnittliches\nZuschauer-Budget",
+  "reportMetricDuration": "Stream-\nDauer",
+  "reportSectionSwipeFeed": "SWIPE-FEED REICHWEITE",
+  "reportMetricSwipeImpressions": "Swipe-Feed\nImpressionen",
+  "reportMetricSwipeReach": "Swipe-Feed\nEinzigartige Reichweite",
+  "reportSectionAuction": "AUKTIONSZUSAMMENFASSUNG",
+  "reportMetricTotalAuctions": "Gesamte\nAuktionen",
+  "reportMetricSoldItems": "Verkaufte\nArtikel",
+  "reportMetricTotalBids": "Gesamte\nGebote",
+  "reportMetricRevenue": "Gesamter\nUmsatz",
+  "reportItemSold": "✅ Verkauft",
+  "reportItemBuyNow": "⚡ Sofort-Kauf",
+  "reportItemNotSold": "❌ Nicht verkauft",
+  "reportChipStart": "Start",
+  "reportChipSale": "Verkauf",
+  "reportChipBids": "Gebote",
+  "reportHesitation": "{count} zögerliche(s) Gebot(e) — diese Zuschauer waren nah am Preis, haben aber nicht gekauft.",
+  "@reportHesitation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportSmartInsight": "Smarter Einblick",
+  "reportDurationMin": "Min.",
+  "reportDurationHour": "Std.",
+  "reportDurationLess": "< 1 Min.",
+  "proLoadFailed": "Daten konnten nicht geladen werden.",
+  "proUpgradeTitle": "PRO-Funktion",
+  "proUpgradeBtn": "👑 PRO werden",
+  "proHubTitle": "PRO-Tools",
+  "proHubTabSales": "Verkäufe & Leistung",
+  "proHubTabMarket": "Markt & Konkurrenz",
+  "proHubTabAudience": "Stream & Zuschauer",
+  "proToolSalesTitle": "Verkaufs- & Zuschauerbericht",
+  "proToolSalesDesc": "Umsatz, Konversionsraten und heiße Anzeigen",
+  "proToolListingsTitle": "Anzeigenanalysen",
+  "proToolListingsDesc": "Wie viele Personen jede Anzeige erreicht und angeklickt haben",
+  "proToolMarketTitle": "Marktintelligenz",
+  "proToolMarketDesc": "Was Käufer suchen und wann sie einkaufen",
+  "proBenefitsTitle": "Was du mit PRO bekommst",
+  "proScrollHint": "Entdecke PRO-Tools & Credits",
+  "proBenefit1": "Verfolge Verkäufe und sieh genau, welche Anzeige was einbringt",
+  "proBenefit2": "Sieh, wo dein Preis im Vergleich zur Konkurrenz steht — entdecke entgangene Umsätze",
+  "proBenefit3": "Finde aufsteigende Kategorien und verkaufe vor der Masse",
+  "proBenefit4": "Sende Push-Benachrichtigungen direkt an potenzielle Käufer",
+  "proBenefit5": "Geh an den profitabelsten Tagen und Zeiten live",
+  "proBenefit6": "Spiele vergangene Streams ab und analysiere deine Verkäufe im Detail",
+  "proStatusTitle": "👑 PRO-Benutzer",
+  "planMonthly": "Monatlich",
+  "planYearly": "Jährlich",
+  "planLifetime": "Lebenslang",
+  "proStatusDesc": "Alle Analysetools sind aktiv",
+  "proRenewalDate": "Erneuert sich am: {date}",
+  "@proRenewalDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "proUnlockTitle": "PRO-Tools freischalten",
+  "proUnlockDesc": "Verkaufe mit Daten, nicht mit Raten",
+  "proUnlockBtn": "PRO werden",
+  "proUpgradeSheetDesc": "Du musst auf PRO upgraden, um dieses Tool zu nutzen.",
+  "proCreditsSummaryTitle": "Verbleibende Credits",
+  "proCreditsBlastName": "Massen-Zuschauerbenachrichtigung",
+  "proCreditsBoostName": "Beworbene Anzeige",
+  "proCreditsAiName": "KI-Preisberater",
+  "proCreditsReactivationName": "Reaktivierung",
+  "proCreditsBlastDesc": "Benachrichtigt potenzielle Käufer per Push-Benachrichtigung über deine Anzeige und beschleunigt den Verkauf.",
+  "proCreditsBoostDesc": "Verschiebt deine Anzeige an die Spitze der Suchergebnisse, um mehr Aufrufe zu erhalten.",
+  "proCreditsAiDesc": "Analysiert den Markt mithilfe von KI, um den genauesten Preis für deine Anzeige zu empfehlen.",
+  "proCreditsAiDescName": "KI-Beschreibungsautor",
+  "proCreditsAiDescDesc": "Generiert automatisch eine Anzeigenbeschreibung aus Titel, Kategorie und Zustand.",
+  "proCreditsReactivationDesc": "Ermöglicht es dir, abgelaufene oder gesperrte Anzeigen kostenlos neu zu veröffentlichen.",
+  "proReactivationWindowHint": "{count} Anzeige(n) innerhalb des 30-Tage-Fensters",
+  "@proReactivationWindowHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proCreditsUsedFormat": "{used} verwendet, {remaining} verbleibend",
+  "@proCreditsUsedFormat": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "proCreditsLimitFormat": "{remaining} / {limit}",
+  "@proCreditsLimitFormat": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "blastConfirmCostFreeLabel": "Kosten",
+  "blastConfirmCostPaidLabel": "teqlik Kosten",
+  "blastSubtitleFree": "Push-Benachrichtigung bei Stream-Start • Kostenlos",
+  "blastSubtitlePaid": "Push-Benachrichtigung bei Stream-Start • {cost} teqlik",
+  "@blastSubtitlePaid": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "blastConfirmCostFree": "Von deinem kostenlosen Kontingent abgezogen",
+  "blastInviteDialogTitle": "🎯 Lade deine Zuschauer ein",
+  "blastTargetAudience": "Zielgruppe",
+  "blastNotificationLabel": "Benachrichtigung",
+  "blastNotificationValue": "Push + Stream-Link",
+  "audienceReadyBuyersBanner": "Benachrichtige {count} bereite Käufer!",
+  "@audienceReadyBuyersBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blastBtnFree": "{count} bereite Käufer — Benachrichtigung senden (Kostenlos)",
+  "@blastBtnFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blastBtnPaid": "{count} bereite Käufer — Benachrichtigung senden ({cost} teqlik)",
+  "@blastBtnPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "blastConfirmBodyFree": "{count} bereite Käufer werden benachrichtigt.\n\nDies verbraucht eine deiner kostenlosen Broadcast-Benachrichtigungen.",
+  "@blastConfirmBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blastConfirmBodyPaid": "{count} bereite Käufer werden benachrichtigt.\n\nGesamtkosten: {cost} teqlik",
+  "@blastConfirmBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "proAnalyticsTitle": "PRO-Analysen",
+  "proSectionOverview": "Meine Verkaufszusammenfassung",
+  "proSectionFunnel": "Wie viele Personen haben ein Gebot abgegeben?",
+  "proSectionTips": "🤖 Smarte Vorschläge",
+  "proSectionHotLeads": "Verpasse den Verkauf nicht",
+  "proHotLeadsDesc": "Diese Käufer haben deine Anzeige angesehen, aber nicht geboten — senke deinen Preis oder bewerbe sie",
+  "proSectionPriceIntel": "Wo steht dein Preis?",
+  "proPriceIntelDesc": "Finde den richtigen Preis, indem du mit ähnlichen Anzeigen vergleichst",
+  "proSectionStreamPerf": "Wie laufen meine Streams?",
+  "proSectionPeakHours": "Wann ist die Plattform am aktivsten?",
+  "proSectionAIMetrics": "KI-Metriken",
+  "proPeakHoursDesc": "Geh zu diesen Zeiten live, um mehr Zuschauer zu erreichen",
+  "proKpiRevenue30d": "Umsatz der letzten 30 Tage",
+  "proKpiLast30d": "letzte 30 Tage",
+  "proKpiSales": "Gesamte Verkäufe",
+  "proKpiBids": "Erhaltene Gebote",
+  "proKpiActiveListings": "Aktive Anzeigen",
+  "proKpiItemUnit": "Artikel",
+  "proKpiBidUnit": "Gebote",
+  "proKpiListingUnit": "Anzeigen",
+  "proKpiTotalUnit": "Gesamt",
+  "proFunnelViews": "Gesamte Aufrufe",
+  "proFunnelDwells": "Detailansichten",
+  "proFunnelHesitation": "Gesamtes Zögern",
+  "proFunnelBid": "Gesamte Gebote",
+  "proFunnelSale": "Gesamte Verkäufe",
+  "proFunnelViewToBid": "Von den Zuschauern, wie viele haben geboten",
+  "proFunnelBidToSale": "Von den Geboten, wie viele wurden zu Verkäufen",
+  "priceSignalExpensive": "⬆ Teuer",
+  "priceSignalCheap": "⬇ Billig",
+  "priceSignalFair": "✓ Fair",
+  "priceYours": "Dein Preis",
+  "priceMarketAvg": "Marktdurchschnitt",
+  "priceDiff": "Diff.",
+  "proNoStreams": "Noch keine Live-Streams.",
+  "proStreamTotal": "Gesamte Streams",
+  "proStreamThisMonth": "Diesen Monat",
+  "proStreamAvgViewers": "Durchschn. Zuschauer",
+  "proStreamPeak": "Höchstwert",
+  "proStreamAvgDuration": "Durchschn. Stream-Dauer: {dur} Min.",
+  "@proStreamAvgDuration": {
+    "placeholders": {
+      "dur": {
+        "type": "String"
+      }
+    }
+  },
+  "proEngagements": "Interakt.",
+  "proShowAll": "Weitere {count} ansehen",
+  "@proShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proShowLess": "Weniger anzeigen",
+  "proStreamRowStats": "{viewers} Zuschauer · {bids} Gebote · {dur} Min.",
+  "@proStreamRowStats": {
+    "placeholders": {
+      "viewers": {
+        "type": "int"
+      },
+      "bids": {
+        "type": "int"
+      },
+      "dur": {
+        "type": "int"
+      }
+    }
+  },
+  "proLoadError": "Daten konnten nicht geladen werden. Bitte versuche es erneut.",
+  "hotLeadViewed": "{count} Mal angesehen",
+  "@hotLeadViewed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hotLeadHesitated": "{count} Personen haben gezögert",
+  "@hotLeadHesitated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hotLeadBoosted": "Hervorgehoben",
+  "@hotLeadBoosted": {},
+  "listingCtrExplain": "{ctr} Klicks pro 100 Aufrufe",
+  "@listingCtrExplain": {
+    "placeholders": {
+      "ctr": {
+        "type": "String"
+      }
+    }
+  },
+  "marketSearchTitle": "Danach suchen die Leute",
+  "marketDayFilter": "{days} Tage",
+  "@marketDayFilter": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "marketNoSearchData": "Noch keine Suchdaten. Wird angezeigt, sobald Benutzer suchen.",
+  "marketCategoryTitle": "In welchen Kategorien sie suchen",
+  "marketPeakHoursTitle": "Einkaufen erreicht zu diesen Zeiten seinen Höhepunkt",
+  "marketPeakHoursDesc": "Veröffentliche deine Anzeigen zu diesen Zeiten, um mehr Menschen zu erreichen.",
+  "marketNoActivityData": "Noch nicht genug Aktivitätsdaten.",
+  "marketTrendingTitle": "Diese Kategorien liegen im Trend",
+  "marketTrendingDesc": "Anzeigen in diesen Kategorien können deine Verkaufschancen erhöhen.",
+  "marketGrowthPos": "Plattform-Gesamtwachstum: +{pct}%",
+  "@marketGrowthPos": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "marketGrowthNeg": "Plattform-Gesamtrückgang: {pct}%",
+  "@marketGrowthNeg": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "marketGrowthSub": "Durchschnittlicher Kaufbetrag im Vergleich zu den letzten 30 Tagen",
+  "marketPaywallDesc": "Sieh, was Käufer suchen, wann sie einkaufen und welche Kategorien im Trend liegen.",
+  "listingPerfTitle": "Die PRO-Leistung deiner Anzeigen",
+  "listingNoDataTitle": "Noch keine Daten",
+  "listingNoDataDesc": "Daten werden angezeigt, sobald deine Anzeigen im Feed erscheinen.",
+  "listingTotalViews": "Gesamtaufrufe",
+  "listingAvgCtr": "Durchschn. Klickrate",
+  "listingVideoBeatsPhoto": "🎬 Video-Anzeigen erhalten {x}× mehr Klicks als Foto-Anzeigen.",
+  "@listingVideoBeatsPhoto": {
+    "placeholders": {
+      "x": {
+        "type": "String"
+      }
+    }
+  },
+  "listingPhotoBeatsVideo": "📸 Foto-Anzeigen erhalten {x}× mehr Klicks als Video-Anzeigen.",
+  "@listingPhotoBeatsVideo": {
+    "placeholders": {
+      "x": {
+        "type": "String"
+      }
+    }
+  },
+  "listingMediaEqual": "Video- und Foto-Anzeigen erhalten ähnliche Aufmerksamkeit.",
+  "listingVideoLabel": "Video",
+  "listingPhotoLabel": "Foto",
+  "listingWatchRateLabel": "Sehquote",
+  "listingWatchedPct": "{pct}% angesehen",
+  "@listingWatchedPct": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "listingGalleryLabel": "Galerie-Interesse",
+  "listingGalleryDeep": "Bis zum Foto {n} gescrollt",
+  "@listingGalleryDeep": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "listingGalleryShallow": "Nur das erste Foto angesehen",
+  "metricViewed": "Impressionen",
+  "metricClicked": "geklickt",
+  "listingReach": "{count} Personen haben dies gesehen",
+  "@listingReach": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listingPaywallDesc": "Verfolge, wie viele Personen jede Anzeige gesehen haben, wie viele geklickt haben und wie viel Interesse sie erhalten hat.",
+  "onboardingTitle": "Wofür interessierst du dich?",
+  "onboardingSubtitle": "Lass uns dir personalisierte Anzeigen und Streams zeigen",
+  "onboardingMinHint": "Wähle mindestens 3 Kategorien",
+  "onboardingContinue": "Weiter",
+  "onboardingSkip": "Fürs Erste überspringen",
+  "onboardingBannerTitle": "Lass uns deinen Feed personalisieren",
+  "onboardingBannerSubtitle": "Wähle deine Interessen und sieh dir speziell für dich erstellte Anzeigen an.",
+  "onboardingBannerCta": "Wählen",
+  "updateRequiredTitle": "Update erforderlich",
+  "updateRequiredDesc": "Bitte aktualisiere die App auf die neueste Version, um die beste Erfahrung zu machen.",
+  "updateRequiredBtn": "Jetzt aktualisieren",
+  "chatRateLimited": "Mach mal etwas langsamer 🐢",
+  "fraudInvalidBid": "Ungültige Aktion",
+  "fraudShieldTitle": "Sicherheitsüberprüfung erforderlich",
+  "fraudShieldDesc": "Um ein solch hohes Gebot abzugeben, müssen wir überprüfen, ob dein Konto einer echten Person gehört. Dies dauert nur 1 Minute.",
+  "fraudShieldVerifyBtn": "Meine Telefonnummer überprüfen",
+  "fraudShieldDismiss": "Nicht jetzt",
+  "tabListings": "Anzeigen",
+  "tabPurchases": "Käufe",
+  "purchasesEmpty": "Noch keine Käufe",
+  "purchasesEmptyHint": "Nimm an Live-Auktionen teil, um Artikel zu kaufen",
+  "badgeTrustedSeller": "✅ Vertrauenswürdig",
+  "badgeActiveSeller": "⭐ Aktiv",
+  "badgeTrending": "🔥 Im Trend",
+  "searchAlertTitle": "Suchalarm",
+  "searchAlertBody": "Lass dich benachrichtigen, wenn eine neue Anzeige zu \"{query}\" passt.",
+  "@searchAlertBody": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchAlertCreate": "Alarm erstellen",
+  "searchAlertCreated": "Suchalarm erstellt ✓",
+  "searchAlertFailed": "Alarm konnte nicht erstellt werden, versuche es erneut",
+  "searchAlertTooltip": "Suchalarm erstellen",
+  "audienceInsightsTitle": "Zuschauer-Budget-Analyse",
+  "audienceInsightsViewers": "{count} Zuschauer",
+  "@audienceInsightsViewers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "audienceAvgBudget": "Durchschnittliches Budget",
+  "audienceProViewers": "PRO-Zuschauer",
+  "audienceHighBudget": "Hohes Budget (1000₺+)",
+  "audienceMedBudget": "Mittleres Budget (250-999₺)",
+  "audienceLowBudget": "Niedriges Budget (<250₺)",
+  "proToolCompetitorRadarTitle": "Konkurrenzpreis-Radar",
+  "proToolCompetitorRadarDesc": "Sieh, wo dein Preis im Vergleich zur Konkurrenz steht und wie viel Umsatz du liegen lässt.",
+  "proToolRetargetingTitle": "Benachrichtigungszentrale",
+  "proToolRetargetingDesc": "Sende Push-Benachrichtigungen an potenzielle Käufer für deine Anzeigen und Live-Streams und analysiere Berichte.",
+  "proToolBestTimeTitle": "Beste Stream-Zeit",
+  "proToolBestTimeDesc": "Sieh dir die Tage und Stunden mit der höchsten Konversionsrate basierend auf deinen vergangenen Streams an.",
+  "proToolConversionTitle": "Konversionsanalyse",
+  "proToolConversionDesc": "Überprüfe deine Auktionsgewinnraten und durchschnittlichen Verkaufspreise nach Kategorie.",
+  "bestTimeNoData": "Noch nicht genug Stream-Daten",
+  "bestTimeNoDataHint": "Die Analyse ist nach mindestens 1 Stream verfügbar",
+  "bestTimeSlotsHeader": "Beste Zeitfenster",
+  "bestTimeSlotStats": "{wins} Verkäufe / {count} Streams",
+  "@bestTimeSlotStats": {
+    "placeholders": {
+      "wins": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversionNoData": "Noch keine Verkaufsdaten",
+  "conversionNoDataHint": "Nachdem du Live-Auktionen durchgeführt hast, werden deine Verkäufe nach Kategorie hier angezeigt",
+  "conversionSectionHeader": "Welche Kategorie verkauft sich am besten? (Letzte 90 Tage)",
+  "conversionCategoryCount": "Insgesamt {count} Kategorien",
+  "@conversionCategoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversionCategorySales": "{won}/{total} Verkäufe",
+  "@conversionCategorySales": {
+    "placeholders": {
+      "won": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "conversionAvgPrice": "Durchschn. {price} ₺",
+  "@conversionAvgPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "accountInfoTitle": "Meine Informationen",
+  "accountInfoBasicSection": "Grundlegende Informationen",
+  "accountInfoSecuritySection": "Kontosicherheit",
+  "accountInfoFullName": "Vollständiger Name",
+  "accountInfoUsername": "Benutzername",
+  "accountInfoBio": "Bio",
+  "accountInfoWebsite": "Webseite",
+  "accountInfoEmail": "E-Mail",
+  "accountInfoPhone": "Telefon",
+  "accountInfoPhoneEmpty": "Nicht hinzugefügt",
+  "accountInfoVerified": "Verifiziert",
+  "accountInfoUnverified": "Nicht verifiziert",
+  "accountInfoSave": "Speichern",
+  "accountInfoUsernameTaken": "Dieser Benutzername ist vergeben",
+  "accountInfoSaved": "Informationen aktualisiert",
+  "accountInfoEmailChangeTitle": "E-Mail ändern",
+  "accountInfoEmailCurrent": "Aktuell: {email}",
+  "@accountInfoEmailCurrent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "accountInfoNewEmail": "Neue E-Mail-Adresse",
+  "accountInfoVerifyCode": "Bestätigungscode",
+  "accountInfoSendCode": "Code senden",
+  "accountInfoVerifyCodeBtn": "Code verifizieren",
+  "accountInfoCodeSent": "Bestätigungscode gesendet",
+  "accountInfoEmailUpdated": "Deine E-Mail-Adresse wurde aktualisiert",
+  "accountInfoDifferentEmail": "Andere E-Mail verwenden",
+  "accountInfoPhoneAddTitle": "Telefon hinzufügen",
+  "accountInfoPhoneChangeTitle": "Telefon ändern",
+  "accountInfoPhoneCurrent": "Aktuell: {phone}",
+  "@accountInfoPhoneCurrent": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "accountInfoPhoneSendVerify": "Bestätigungs-E-Mail senden",
+  "accountInfoEmailSent": "E-Mail gesendet",
+  "accountInfoEmailSentDesc": "Wir haben einen Bestätigungslink an deine registrierte E-Mail gesendet. Klicke auf den Link, um deine Telefonnummer zu verifizieren.",
+  "accountInfoCancel": "Abbrechen",
+  "accountInfoOk": "OK",
+  "accountInfoConnectError": "Verbindung zum Server fehlgeschlagen",
+  "accountInfoMenuLabel": "Meine Informationen",
+  "phoneInfoTitle": "Warum Telefonnummer?",
+  "phoneInfoBody": "Deine Telefonnummer hilft uns, dein Konto bei hohen Geboten zu schützen. Wir müssen sie verifizieren, um gefälschte Gebote zu verhindern und dich zu erreichen, wenn du gewinnst. Deine Nummer wird niemals an Dritte weitergegeben.",
+  "phoneInfoGotIt": "Verstanden",
+  "boostOnlyPro": "⭐ Das Bewerben einer Anzeige ist exklusiv für Pro-Mitglieder.",
+  "boostLimitExhausted": "Du hast alle {limit} Boost-Credits in diesem Monat aufgebraucht. Setzt sich zu Beginn des nächsten Monats zurück.",
+  "@boostLimitExhausted": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "boostDialogTitle": "Anzeige bewerben",
+  "boostDialogPlanLabel": "Kampagnenplan:",
+  "boostDialogTotalBudget": "Gesamtbudget",
+  "boostDialogTotalBudgetValue": "50 teqlik",
+  "boostDialogCpc": "Kosten pro Klick",
+  "boostDialogCpcValue": "1 teqlik",
+  "boostDialogEstClicks": "Geschätzte Klicks",
+  "boostDialogEstClicksValue": "~50 Klicks",
+  "boostDialogFeedHint": "Deine Anzeige wird im \"Für dich\"-Feed hervorgehoben.",
+  "boostDialogCredits": "⭐ Verbleibende Boosts: {remaining} / {limit}",
+  "@boostDialogCredits": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "boostDialogStart": "Start",
+  "boostDialogPaidTitle": "Bezahlte Werbung",
+  "boostDialogPaidBadge": "Du hast alle {limit} kostenlosen Boosts in diesem Monat aufgebraucht",
+  "@boostDialogPaidBadge": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "boostDialogPaidDesc": "Deine Anzeige wird weiterhin im \"Für dich\"-Feed hervorgehoben.",
+  "boostDialogPaidCost": "Kosten",
+  "boostDialogPaidCostValue": "50 teqlik",
+  "boostDialogPaidBalance": "Dein aktuelles Guthaben",
+  "boostDialogPaidConfirm": "50 teqlik zahlen & Starten",
+  "boostSuccessFree": "🔥 Deine Anzeige wird nun kostenlos hervorgehoben!",
+  "boostSuccessPaid": "🔥 Deine Anzeige wird nun hervorgehoben! (50 teqlik ausgegeben)",
+  "boostSuccess": "🔥 Deine Anzeige wird nun hervorgehoben!",
+  "boostErrorDefault": "Kampagne konnte nicht gestartet werden.",
+  "boostErrorConnection": "Verbindungsfehler. Bitte versuche es erneut.",
+  "boostErrorInsufficientTeqlik": "Unzureichendes teqlik-Guthaben. 50 teqlik sind für einen bezahlten Boost erforderlich.",
+  "boostBtnStart": "Anzeige bewerben",
+  "boostBtnReport": "Anzeigenleistung ansehen",
+  "adReportTitle": "ANZEIGENBERICHT",
+  "adReportSubtitle": "Echtzeit-Leistung deiner Kampagne",
+  "adReportLoading": "Anzeigenanalyse wird vorbereitet...",
+  "adReportLoadError": "Bericht konnte nicht geladen werden.",
+  "adReportStatusActive": "Aktiv",
+  "adReportStatusCompleted": "Abgeschlossen",
+  "adReportStatusPaused": "Pausiert",
+  "adReportStatusCancelled": "Storniert",
+  "adReportMetricImpressions": "Aufrufe",
+  "adReportMetricClicks": "Klicks",
+  "adReportMetricClickRate": "Klicks pro\n100 Aufrufe",
+  "adReportMetricClickRateHint": "{clicks} Klicks / {impressions} Aufrufe",
+  "@adReportMetricClickRateHint": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "adReportMetricActiveDays": "Aktive\nDauer",
+  "adReportMetricActiveDaysLessThan1": "<1 Tag",
+  "adReportMetricActiveDaysValue": "{days} Tage",
+  "@adReportMetricActiveDaysValue": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "adReportSmartAnalysis": "Smarte Analyse",
+  "adReportInsightNoImpressions": "Noch niemand hat deine Anzeige gesehen. Dies wird aktualisiert, sobald die Anzeige im Feed erscheint.",
+  "adReportInsightGreat": "Großartig! Ungefähr {clicks} von 100 Personen, die deine Anzeige gesehen haben, haben darauf geklickt — das ist eine hervorragende Interaktionsrate. Dein Titel und Foto ziehen Käufer an.",
+  "@adReportInsightGreat": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      }
+    }
+  },
+  "adReportInsightGood": "Läuft gut. {impressions} Personen haben deine Anzeige gesehen und {clicks} haben sie angeklickt. Die Verbesserung deiner Fotos oder deines Titels kann noch mehr Interesse wecken.",
+  "@adReportInsightGood": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "adReportInsightLow": "{impressions} Personen haben deine Anzeige gesehen, aber nur {clicks} haben geklickt. Dein Titelbild oder Preis ist für Käufer möglicherweise nicht attraktiv genug.",
+  "@adReportInsightLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "adReportInsightVeryLow": "{impressions} Personen haben deine Anzeige gesehen und sie hat {clicks} Klicks erhalten. Wir empfehlen, deinen Titel, deine Fotos und deine Preisgestaltung zu überprüfen.",
+  "@adReportInsightVeryLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "notInterested": "Nicht interessiert",
+  "notInterestedConfirmed": "Du wirst diese Anzeige nicht mehr sehen.",
+  "proMetricAvgDwell": "Durchschn. Verweildauer",
+  "proMetricSearchVisibility": "Suchvolumen in deinen Kategorien",
+  "proMetricBestHour": "Beste Veröffentlichungszeit",
+  "proMetricReturnViewers": "Wiederkehrende Zuschauer",
+  "adMetricDailyTrend": "Täglicher Klickraten-Trend",
+  "adMetricBestHour": "Beste Stunde",
+  "adMetricCategoryAvgCtr": "Interesse an ähnlichen Anzeigen",
+  "adMetricBurnRate": "Verbleibende Zeit",
+  "softUpdateTitle": "Neue Version verfügbar",
+  "softUpdateMessage": "Eine neue Version der App ist verfügbar. Bitte aktualisiere für ein besseres Erlebnis.",
+  "softUpdateUpdateNow": "Jetzt aktualisieren",
+  "softUpdateLater": "Später",
+  "forgotPassword": "Passwort vergessen?",
+  "resetPasswordDescription": "Bitte gib die E-Mail-Adresse ein, die mit deinem Konto verknüpft ist.",
+  "sendResetCode": "Code senden",
+  "enterResetCode": "Gib den 6-stelligen Code ein, der an deine E-Mail gesendet wurde",
+  "newPassword": "Neues Passwort",
+  "newPasswordConfirm": "Neues Passwort bestätigen",
+  "passwordResetSuccess": "Dein Passwort wurde erfolgreich zurückgesetzt. Du kannst dich jetzt anmelden.",
+  "settingsMyPurchases": "Meine Käufe",
+  "noListingPhoto": "Kein Anzeigenfoto",
+  "purchaseDetailTitle": "Kaufdetail",
+  "purchaseSeller": "Verkäufer",
+  "purchaseProofImage": "Verkaufsbeweis-Bild",
+  "purchaseViewListing": "Anzeige ansehen",
+  "purchaseViewSeller": "Zum Verkäuferprofil",
+  "settingsMySales": "Meine Verkäufe",
+  "settingsMyRecordings": "Meine Live-Streams",
+  "saleDetailTitle": "Verkaufsdetail",
+  "saleBuyerLabel": "Käufer",
+  "saleMessageBuyer": "Nachricht an Käufer",
+  "hostAcceptSaleDialogTitle": "Verkauf bestätigen",
+  "hostAcceptSaleDialogBody": "Bitte zeige den Artikel in die Kamera und mache ein Beweisfoto.",
+  "hostAcceptSaleBtnCapture": "Aufnehmen & Bestätigen",
+  "hostAcceptSaleBtnSkip": "Ohne Foto bestätigen",
+  "radarSuggestedCopied": "{price} ₺ in die Zwischenablage kopiert",
+  "@radarSuggestedCopied": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "radarCopyBtn": "Vorgeschlagenen Preis kopieren: {price} ₺",
+  "@radarCopyBtn": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "retargetingBlastSent": "Benachrichtigung an {count} Personen gesendet!",
+  "@retargetingBlastSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifSettingsBlastTitle": "Massen-Zuschauerbenachrichtigungen",
+  "notifSettingsBlastDesc": "Wenn deaktiviert, wird Push unterdrückt; Benachrichtigung erscheint weiterhin in deiner Liste.",
+  "retargetingCooldownLabel": "Nächster Blast in:",
+  "retargetingBlastCooldown": "Du kannst die nächste Übertragung für diese Anzeige in 24 Stunden senden.",
+  "retargetingDialogTitle": "Benachrichtigung senden?",
+  "retargetingDialogBodyFree": "Eine \"Noch interessiert?\"-Benachrichtigung wird an {count} Personen gesendet. Du hast {credits} Benachrichtigungs-Credits, wird kostenlos gesendet.",
+  "@retargetingDialogBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingDialogBodyPaid": "Eine \"Noch interessiert?\"-Benachrichtigung wird an {count} Personen gesendet. {cost} teqlik werden von deinem Wallet abgezogen.",
+  "@retargetingDialogBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingDialogBodyKarma": "Eine Benachrichtigung wird an {count} Personen gesendet.\n\n{free} Credit(s) werden verwendet + {cost} teqlik werden berechnet.",
+  "@retargetingDialogBodyKarma": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "free": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingDialogBodyInsufficient": "Unzureichendes teqlik-Guthaben.\nErforderlich: {cost} teqlik | Verfügbar: {balance} teqlik",
+  "@retargetingDialogBodyInsufficient": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingCostFree": "Kostenlos",
+  "retargetingCreditsLeft": "{count} Credits verbleibend",
+  "@retargetingCreditsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingFreeSubtitle": "{count} Personen — 1 Übertragungs-Credit verwendet",
+  "@retargetingFreeSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingPaidSubtitle": "{count} Personen × 10 teqlik",
+  "@retargetingPaidSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingEstimatedCost": "Geschätzte Kosten",
+  "retargetingSending": "Senden...",
+  "retargetingSendBtnLabel": "Benachrichtigung an {count} Personen senden",
+  "@retargetingSendBtnLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingCreditsBadge": "{count} Credits verbleibend · kostenlos gesendet",
+  "@retargetingCreditsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingCostBadge": "{cost} teqlik werden ausgegeben",
+  "@retargetingCostBadge": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "retargetingFootnote": "Benutzer erhalten eine \"Noch interessiert?\"-Benachrichtigung. Wird nur an Nicht-Käufer gesendet.",
+  "retargetingInfoText": "Sendet eine Erinnerungsbenachrichtigung an Personen, die deine Anzeige angesehen, aber nicht gekauft haben. Kostenlos, wenn du monatliche Übertragungs-Credits hast, andernfalls 10 teqlik pro Person.",
+  "retargetingLast30Days": "Letzte 30 Tage",
+  "retargetingViewerLabel": "angesehen",
+  "retargetingBoughtLabel": "gekauft",
+  "retargetingReachableLabel": "erreichbar",
+  "retargetingNoAudience": "Im Moment ist niemand erreichbar.",
+  "retargetingNoAudienceDesc": "Dein Publikum wächst, wenn mehr Personen deine Anzeige ansehen.",
+  "retargetingNoListings": "Keine aktiven Anzeigen gefunden.",
+  "retargetingNoListingsDesc": "Du benötigst mindestens 1 aktive Anzeige, um erneut Kontakt aufzunehmen.",
+  "errorGenericRetry": "Ein Fehler ist aufgetreten. Bitte versuche es später noch einmal.",
+  "errorFollowRequestsLoad": "Anfragen konnten nicht geladen werden",
+  "verifyEmailTitle": "E-Mail-Verifizierung",
+  "btnVerify": "Verifizieren",
+  "btnResetPassword": "Passwort zurücksetzen",
+  "radarScreenTitle": "Konkurrenz-Radar & Verkaufsgeschwindigkeit",
+  "priceMinLabel": "{price} ₺ (min)",
+  "@priceMinLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "priceMaxLabel": "{price} ₺ (max)",
+  "@priceMaxLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "forYouLabel": "Für dich",
+  "messagesUpdateFailed": "Aktualisierung fehlgeschlagen",
+  "staleDataBannerMessage": "Daten sind möglicherweise veraltet",
+  "btnRefresh": "Aktualisieren",
+  "messagesLoadFailed": "Nachrichten konnten nicht geladen werden",
+  "btnSend": "Senden",
+  "btnAcceptInvite": "Akzeptieren",
+  "btnPin": "Anpinnen",
+  "retargetingBlastSuccess": "Benachrichtigungen erfolgreich gesendet!",
+  "hostNotifDialogTitle": "Benachrichtigung senden",
+  "hostStreamDataError": "Daten konnten nicht geladen werden",
+  "hostInviteError": "Einladung konnte nicht gesendet werden: {error}",
+  "@hostInviteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hostModRemoved": "✖ @{username} als Moderator entfernt",
+  "@hostModRemoved": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "genericErrorDetail": "Fehler: {error}",
+  "@genericErrorDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhotoUploadError": "Foto konnte nicht hochgeladen werden. Versuche es erneut.",
+  "profileInviteCodeError": "Einladungscode konnte nicht abgerufen werden, versuche es erneut.",
+  "profileInviteTitle": "Lade Freunde ein, verdiene teqlik!",
+  "profileInviteSubtitle": "+50 teqlik pro Einladung, dein Freund erhält +10 teqlik",
+  "profileInviteShareText": "Werde Teil von Teqlif! Das Zuhause von Live-Auktionen und Second-Hand-Shopping 🎁\n\nGib diesen Einladungscode bei der Anmeldung ein und erhalte sofort Bonus-teqlik:\n\n🔑 Code: {code}\n⏳ Läuft ab in: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
+  "@profileInviteShareText": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "profileInviteExpiryDays": "{days} Tage",
+  "@profileInviteExpiryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "profileInviteExpiryHours": "{hours} Stunden",
+  "@profileInviteExpiryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "profileInviteExpirySoon": "kurze Zeit",
+  "profileInviteCodeCopied": "Code kopiert!",
+  "profileInviteModalExpiry": "⏳ Läuft ab in: {expiry}",
+  "@profileInviteModalExpiry": {
+    "placeholders": {
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "profileInviteShareBtn": "Einladungslink teilen",
+  "profilePickGallery": "Aus Galerie wählen",
+  "profilePickCamera": "Ein Foto machen",
+  "listingDeleteDialogTitle": "Anzeige löschen",
+  "shareLinkCopied": "Link kopiert",
+  "listingDeleteDialogBody": "Bist du sicher, dass du diese Anzeige dauerhaft löschen möchtest?",
+  "btnDeleteConfirm": "Löschen",
+  "favoritesEmpty": "Noch keine Favoriten",
+  "createNeedTitle": "Bitte gib zuerst den Anzeigentitel ein.",
+  "aiPriceError": "Preisschätzung konnte nicht abgerufen werden. Bitte versuche es erneut.",
+  "teqlikSpent": "{count} teqlik ausgegeben.",
+  "@teqlikSpent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoTooLong": "Video darf {max} Sekunden nicht überschreiten ({actual}s).",
+  "@videoTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
+  "createPickCamera": "Mit Kamera aufnehmen (max. {sec}s)",
+  "@createPickCamera": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
+  "videoUploading": "Video wird noch hochgeladen, bitte warten.",
+  "videoLabel": "Video (max. {sec}s)",
+  "@videoLabel": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
+  "forYouStreams": "Streams für dich",
+  "searchNoResults": "Keine Ergebnisse gefunden",
+  "searchNoSupplyHint": "Sehr wenige Anzeigen passen zu dieser Suche. Richte einen Alarm ein, um benachrichtigt zu werden, wenn neue hinzukommen.",
+  "searchCreateAlertBtn": "Alarm erstellen",
+  "proSearchCount": "{count} Suchen",
+  "@proSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listingDeactivateTitle": "Anzeige deaktivieren",
+  "listingDeactivateWarning": "Wenn du deaktivierst, werden aktive Schaufenster/Werbeaktionen entfernt.",
+  "listingDeactivateCostHint": "Warnung: Dein 30-tägiges kostenloses Fenster ist abgelaufen. Die Reaktivierung kostet {cost} teqlik von deinem Guthaben.",
+  "@listingDeactivateCostHint": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "listingDeactivateFreeCreditHint": "Warnung: Dein 30-tägiges kostenloses Fenster ist abgelaufen. Für die Reaktivierung wird 1 kostenloser PRO-Credit verwendet.",
+  "listingDeactivateConfirm": "Ich verstehe, Deaktivieren",
+  "listingReactivateTitle": "Anzeige reaktivieren",
+  "listingReactivateFreeCredit": "Du hast {remaining} kostenlose Credits. 1 wird verwendet.",
+  "@listingReactivateFreeCredit": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "listingReactivatePaidPro": "Monatliche Credits aufgebraucht. {cost} teqlik werden berechnet.",
+  "@listingReactivatePaidPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "listingReactivatePaidNormal": "{cost} teqlik werden berechnet. Guthaben: {balance} teqlik.",
+  "@listingReactivatePaidNormal": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "listingReactivateProUpsell": "Werde PRO, um 5 kostenlose Reaktivierungen pro Monat zu erhalten.",
+  "listingReactivateInsufficientBalance": "Unzureichendes Guthaben. Lade teqlik auf, um fortzufahren.",
+  "listingReactivateConfirm": "Aktivieren",
+  "proReactivationSection": "Anzeigen-Reaktivierungs-Credits",
+  "suggestedStreamers": "Vorgeschlagene Sender",
+  "latestLiveStreams": "Neueste Live-Streams",
+  "categoryStreams": "{category}-Streams",
+  "@categoryStreams": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "listingsSelectedForYou": "Für dich ausgewählte Anzeigen",
+  "profileFaq": "Häufig gestellte Fragen",
+  "faqCatAccount": "Konto, Profil und Support",
+  "faqQAccountSignup": "Wie kann ich mich registrieren und bei teqlif anmelden?",
+  "faqAAccountSignup": "Du kannst dein Konto in Sekundenschnelle mit deiner E-Mail-Adresse erstellen, indem du auf der Startseite auf \"Anmelden / Registrieren\" klickst, oder dich sicher in dein bestehendes Konto einloggen.",
+  "faqQAccountEmail": "Warum muss ich meine E-Mail-Adresse verifizieren?",
+  "faqAAccountEmail": "Die E-Mail-Verifizierung ist zwingend erforderlich, um die Sicherheit deines Kontos zu gewährleisten und wichtige Vorgänge wie das Zurücksetzen des Passworts durchzuführen. Verifizierte E-Mails sind auch der erste Schritt für den Prozess \"Verifiziertes Konto\" ([ICON_VERIFIED]) (Blauer Haken ([ICON_VERIFIED])).",
+  "faqQAccountProfile": "Wie kann ich mein Profil bearbeiten (Name, Foto, Bio)?",
+  "faqAAccountProfile": "Du kannst auf die Schaltfläche \"Profil bearbeiten\" klicken, indem du in der App zum Reiter \"Mein Profil\" gehst. Du kannst deinen Avatar ändern, deinen Namen aktualisieren und eine Bio schreiben, um dich potenziellen Käufern besser vorzustellen.",
+  "faqQAccountPassword": "Ich habe mein Passwort vergessen, was soll ich tun?",
+  "faqAAccountPassword": "Durch Klicken auf den Link \"Passwort vergessen\" auf dem Anmeldebildschirm kannst du einen Zurücksetzungslink an deine E-Mail anfordern und ein neues Passwort festlegen.",
+  "faqQAccountDelete": "Wie kann ich mein Konto löschen?",
+  "faqAAccountDelete": "Du kannst dein Konto dauerhaft löschen, indem du zu Einstellungen > Konto löschen gehst. Dieser Vorgang kann nicht rückgängig gemacht werden; alle deine Daten und Anzeigen werden dauerhaft entfernt.",
+  "faqCatExplore": "Entdecken, Vorschläge und Menüs",
+  "faqQExploreSellers": "Wer wird im Bereich \"Vorgeschlagene Verkäufer\" vorgestellt?",
+  "faqAExploreSellers": "Diese Liste wird automatisch durch unseren KI-Algorithmus ermittelt. Benutzer mit hohen Bewertungen, häufig besuchten Anzeigen, schnellen Antwortraten und in der Regel einem PRO-Abonnement oder dem Abzeichen \"Vertrauenswürdiger Verkäufer\" werden hier vorgestellt.",
+  "faqQExploreStreamers": "Wie funktioniert der Bereich \"Vorgeschlagene Sender\"?",
+  "faqAExploreStreamers": "Sender, die regelmäßig auf SwipeLive streamen, hohe \"Hype\"-Punkte erzielen und ein aktives Publikum haben, werden automatisch an die Spitze der Entdecken-Seite verschoben.",
+  "faqQExploreListings": "Was ist der Unterschied zwischen den Seiten \"Anzeigen\" und \"Entdecken\"?",
+  "faqAExploreListings": "Die Seite \"Anzeigen\" ist ein vertikaler Feed von neu hinzugefügten Anzeigen, die von der KI speziell für deine Interessen ausgewählt wurden. Die Seite \"Entdecken\" ist der Hauptsuch-Hub, auf dem du detaillierte Kategoriensuchen durchführen und beliebte Verkäufer entdecken kannst.",
+  "faqQExploreLiveMessages": "Wofür sind die Menüs \"Live\" und \"Nachrichten\"?",
+  "faqAExploreLiveMessages": "Live: Bringt dich zum SwipeLive-Feed, wo Verkäufer Produkte live präsentieren. Nachrichten: Du kannst direkt mit Verkäufern chatten und sicher über Preise verhandeln (Gebote).",
+  "faqCatBadges": "Abzeichen, Tags und teqlik ([ICON_TEQLIK]) Credits",
+  "faqQBadgesVerified": "Was ist der blaue Haken ([ICON_VERIFIED]) (Verifiziertes Konto ([ICON_VERIFIED]))?",
+  "faqABadgesVerified": "Der blaue Haken zeigt an, dass der Verkäufer seine E-Mail-Adresse und Telefonnummer erfolgreich verifiziert hat und damit beweist, dass er eine zuverlässige echte Person ist.",
+  "faqQBadgesPro": "Was bedeutet das \"👑 (Krone)\"-Abzeichen?",
+  "faqABadgesPro": "Dieses Abzeichen zeigt an, dass der Verkäufer ein teqlif PRO ([ICON_PRO])-Mitglied ist. PRO-Verkäufer sind Profis, die algorithmisch stärker von der Plattform gefördert werden.",
+  "faqQBadgesTrusted": "Was bedeuten die Abzeichen \"✅ Vertrauenswürdig\" und \"⭐ Aktiver Verkäufer\"?",
+  "faqABadgesTrusted": "✅ Vertrauenswürdiger Verkäufer: Wird an erfahrene Verkäufer vergeben, die ihre Identitätsdaten verifiziert und Vertrauen aufgebaut haben. ⭐ Aktiver Verkäufer: Steht für dynamische Verkäufer, die die Plattform häufig nutzen und schnell antworten.",
+  "faqQBadgesSponsored": "Was bedeuten die Tags \"Gesponsert\", \"Im Trend\" und \"LIVE\"?",
+  "faqABadgesSponsored": "Gesponsert: Beworbene Anzeige mit teqlik ([ICON_TEQLIK])-Credits. Im Trend (Feuer): Die Anzeige wurde in letzter Zeit häufig angesehen oder favorisiert. LIVE (Blinkend): Der Verkäufer streamt gerade live für dieses Produkt.",
+  "faqQBadgesTeqlik": "Was ist teqlik ([ICON_TEQLIK]) und wo wird es verwendet?",
+  "faqABadgesTeqlik": "teqlik ([ICON_TEQLIK]) ist unsere virtuelle Kreditwährung. Es wird verwendet, um Anzeigen zu bewerben, Geschenke in Live-Streams zu senden, KI-Preisanalysen zu erhalten und Käufer über die Lead-Gen-Funktion direkt zu erreichen.",
+  "faqCatLive": "Live-Streams (SwipeLive) und Auktionen",
+  "faqQLiveHost": "Was kann ich auf dem Host (Streamer)-Bildschirm tun?",
+  "faqALiveHost": "Du kannst den Chat verwalten, eine Auktion für dein Produkt starten, eingehende Gebote sofort anzeigen und das höchste Gebot annehmen, um den Verkauf in Sekunden zu bestätigen.",
+  "faqQLiveViewer": "Was sind die Funktionen des Zuschauer-Bildschirms?",
+  "faqALiveViewer": "Du kannst Streams nahtlos ansehen, indem du vertikal wischst. Du kannst dem Chat beitreten, Geschenke senden und Live-Gebote bei Auktionen abgeben.",
+  "faqQLiveHype": "Was ist das Hype-Level?",
+  "faqALiveHype": "Während die Zuschauer chatten und Geschenke senden, steigt der Hype-Wert des Raums. Wenn er ein Limit überschreitet, zeichnet das System diesen aufregenden Moment als \"Highlight-Video\" auf.",
+  "faqCatAI": "PRO-Tools und Künstliche Intelligenz",
+  "faqQAIInsights": "Was ist der Conversion-Funnel (Pro-Insights)?",
+  "faqAAIInsights": "Ein exklusives Tool für PRO-Verkäufer, das Aufrufzahlen, Verweildauer und Zögerungsraten meldet, um deine Verkaufsstrategie zu optimieren.",
+  "faqQAIPrice": "Wie funktioniert die KI-Preisanalyse?",
+  "faqAAIPrice": "Unsere KI analysiert Millionen von Datenzeilen, um basierend auf dem Titel und der Kategorie deines Produkts den optimalen Verkaufspreis vorzuschlagen.",
+  "faqQAILead": "Was ist die Funktion \"Massen-Zuschauerbenachrichtigung ([ICON_HOTDEMAND])\"?",
+  "faqAAILead": "Ein System, das deine Anzeige mithilfe von KI mit den am besten geeigneten potenziellen Käufern abgleicht und ihnen eine direkte \"Vorgeschlagene Anzeige\"-Benachrichtigung sendet.",
+  "faqQAIRadar": "Konkurrenzanalyse und beste Streaming-Zeit",
+  "faqAAIRadar": "Die Konkurrenzanalyse vergleicht deinen Preis und deine Klickrate mit denen der Konkurrenz. Das Modul \"Beste Streaming-Zeit\" meldet, wann deine Follower am aktivsten sind.",
+  "editListingTitle": "Anzeige bearbeiten",
+  "btnUpdate": "Aktualisieren",
+  "btnUpdateListing": "Anzeige aktualisieren",
+  "faqCatIcons": "Glossar der System-Icons",
+  "faqIconVerified": "Verifiziertes Konto ([ICON_VERIFIED]): Zeigt, dass der Benutzer seine Identität oder Telefonnummer verifiziert hat.",
+  "faqIconPro": "teqlif PRO ([ICON_PRO]): Zeigt ein von der Plattform gefördertes PRO-Mitglied an.",
+  "faqIconTeqlik": "teqlik ([ICON_TEQLIK]): Die virtuelle Währung für Ausgaben in der App.",
+  "faqIconBlast": "Massen-Zuschauerbenachrichtigung ([ICON_BLAST]): Sendet deine Anzeige/deinen Stream als sofortige Push-Benachrichtigung an potenzielle Käufer.",
+  "faqIconAutoBid": "Auto-Gebot ([ICON_AUTOBID]): Das System bietet in deinem Namen bis zu deinem Limit.",
+  "faqIconSales": "Verkaufseinblicke: Zeigt dein Verkaufsvolumen und deine Rentabilität.",
+  "faqIconListings": "Anzeigenanalysen: Sieh dir Kennzahlen und Favoriten deiner Anzeigen an.",
+  "faqIconMarket": "Marktintelligenz: Kategoriebasierte Marktpreise und Trends.",
+  "faqIconTime": "Beste Stream-Zeit: Optimale Stream-Zeit basierend auf historischen Daten.",
+  "faqIconConversion": "Konversionsanalyse: Gebote und Verkaufstrichter pro Aufruf.",
+  "faqIconRadar": "Konkurrenz-Radar: Preis- und Verkaufsgeschwindigkeitsanalyse ähnlicher Verkäufer.",
+  "faqIconRetargeting": "Re-Engagement: Sende Erinnerungen oder Rabattnachrichten direkt an interessierte Käufer.",
+  "proToolHotDemandTitle": "Massen-Zuschauerbenachrichtigung",
+  "proToolHotDemandDesc": "Erreiche potenzielle Käufer, die sich für deine Anzeige interessieren, direkt.",
+  "proToolAiPriceTitle": "KI-Preisanalyse",
+  "proToolAiPriceDesc": "Ermittle den Marktwert deines Produkts in Sekunden mit KI.",
+  "proToolStreamAnalyticsTitle": "Stream-Analysen",
+  "proToolStreamAnalyticsDesc": "Analysiere deine Live-Stream-Zuschauer- und Geschenkdaten im Detail.",
+  "faqIconNameVerified": "Verifiziertes Konto ([ICON_VERIFIED])",
+  "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
+  "faqIconNameTeqlik": "teqlik ([ICON_TEQLIK])",
+  "faqIconNameBlast": "Massen-Zuschauerbenachrichtigung ([ICON_BLAST])",
+  "faqIconNameAutoBid": "Auto-Gebot ([ICON_AUTOBID])",
+  "faqIconNameSales": "Verkaufseinblicke",
+  "faqIconNameListings": "Anzeigenanalysen",
+  "faqIconNameMarket": "Marktintelligenz",
+  "faqIconNameTime": "Beste Stream-Zeit",
+  "faqIconNameConversion": "Konversionsanalyse",
+  "faqIconNameRadar": "Konkurrenz-Radar",
+  "faqIconNameRetargeting": "Re-Engagement",
+  "listingBlastEstimateLoading": "Publikum wird geschätzt...",
+  "listingBlastDialogTitle": "Massen-Zuschauerbenachrichtigung",
+  "listingBlastDialogBody": "{count} potenzielle Käufer gefunden, die sich für deine Anzeige interessieren könnten. Möchtest du ihnen eine sofortige Benachrichtigung senden?",
+  "@listingBlastDialogBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listingBlastCost": "Kosten: {cost} teqlik",
+  "@listingBlastCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "reportMassNotificationTitle": "Massenbenachrichtigungsbericht",
+  "reportMassNotificationDesc": "Dieser Bildschirm zeigt die Konversionsstatistiken der in Live-Streams und Anzeigendetails gesendeten Massen-Zuschauerbenachrichtigungen.",
+  "reportLoadError": "Bericht konnte nicht geladen werden: ",
+  "reportNoNotificationYet": "Du hast noch keine Massenbenachrichtigungen gesendet.",
+  "centerNotificationAudience": "Benachrichtigungs- & Publikumszentrum",
+  "reportTotalSpent": "Insgesamt ausgegeben:",
+  "reportCostPerClick": "Kosten pro Klick:",
+  "reportConversionFunnel": "Zustellungszusammenfassung",
+  "reportAll": "Alle",
+  "reportFreeCreditsUsed": "Kostenlose Credits verwendet:",
+  "reportTargetAudience": "Zielgruppe",
+  "reportSuccessfullyDelivered": "Erfolgreich zugestellt",
+  "reportClickOpen": "Klick (Öffnen)",
+  "reportROI": "Return on Investment (ROI)",
+  "actionConfirmAndStart": "Bestätigen und Starten",
+  "auctionBuyNowRejected": "Sofort-Kauf-Anfrage abgelehnt.",
+  "massAudienceNotification": "Massen-Zuschauerbenachrichtigung",
+  "actionSendMessageToSeller": "Nachricht an Verkäufer senden",
+  "badgeVerified": "Verifiziert",
+  "titleActions": "Aktionen",
+  "langTR": "TR",
+  "langEN": "ENG",
+  "langAR": "عربي",
+  "langRU": "РУС",
+  "langDE": "Deutsch",
+  "kickedFromStream": "🚫 Du wurdest aus diesem Stream entfernt",
+  "actionLeaveLiveStream": "Live-Stream verlassen",
+  "hostCameraDisabledBackground": "App ist im Hintergrund — deine Kamera wurde ausgeschaltet",
+  "streamConfirmFailed": "Stream konnte nicht gestartet werden, bitte versuche es erneut",
+  "streamEndedByHost": "Der Gastgeber hat den Stream beendet",
+  "streamDisconnectedByServer": "Stream-Verbindung verloren",
+  "streamNotificationAutoSent": "Benachrichtigung wird automatisch gesendet, wenn der Stream startet.",
+  "proToolStreamHistoryTitle": "Vergangene Streams",
+  "proToolStreamHistoryEmpty": "Du hast noch keine abgeschlossenen Streams.",
+  "analyticsRevenue": "Gesamter Umsatz",
+  "analyticsUniqueViewers": "Einzigartige Zuschauer",
+  "analyticsAvgBudget": "Durchschn. Budget",
+  "analyticsPeakViewers": "Spitzen-Zuschauerzahl",
+  "analyticsHesitation": "Zögern",
+  "analyticsFeedImpressions": "Feed-Impressionen",
+  "analyticsFeedReach": "Feed-Reichweite",
+  "analyticsAiRecommendation": "KI-Empfehlung",
+  "analyticsNoAuctions": "In diesem Stream wurden keine Auktionen erstellt.",
+  "analyticsItemsSold": "Verkaufte Artikel",
+  "analyticsDuration": "{minutes} Min.",
+  "@analyticsDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "proToolStreamHistoryDesc": "Analysiere die Verkaufs- und Zuschauerstatistiken deiner vergangenen Live-Streams im Detail.",
+  "proTabSales": "Leistung",
+  "proTabMarket": "Markt",
+  "proTabAudience": "Zuschauer",
+  "listingVideoComplete": "Video abgeschlossen",
+  "audienceTotalViewers": "Gesamte Zuschauer",
+  "searchHintTextListing": "In Titel oder Beschreibung suchen...",
+  "filterTitle": "Filter",
+  "categoryLabel": "Kategorie",
+  "cityLabel": "Stadt",
+  "clearFilters": "Löschen",
+  "applyFilters": "Anwenden",
+  "selectCity": "Stadt auswählen",
+  "allCategories": "Alle Kategorien",
+  "filterAll": "Alle",
+  "filterSelectDate": "Datumsbereich auswählen",
+  "hintExampleEmail": "beispiel@email.com",
+  "competitorRadarTitle": "Konkurrenzpreis-Radar",
+  "competitorRadarYourPrice": "Dein Preis",
+  "competitorRadarAvg": "Konkurrenz-Durchschnitt",
+  "competitorRadarSuggested": "Vorgeschlagen",
+  "competitorRadarPercentile": "Perzentil",
+  "competitorRadarDifference": "Differenz",
+  "competitorRadarCompetitor": "Konkurrent",
+  "competitorRadarSalesSpeed": "Verkaufsgeschwindigkeit",
+  "competitorRadarSold": "Verkauft",
+  "competitorRadarActive": "Aktiver Konkurrent",
+  "competitorRadarSalePrice": "Verkaufspreis",
+  "listingSuggestedStart": "Vorgeschlagener Start",
+  "listingExpectedClose": "Erwarteter Abschluss",
+  "listingLowest": "Niedrigster",
+  "listingAverage": "Durchschnitt",
+  "listingHighest": "Höchster",
+  "audienceCalculating": "Zuschauer werden berechnet...",
+  "audienceCalcError": "Bei der Berechnung der Zuschauer ist ein Fehler aufgetreten.",
+  "audienceNoPotentialFound": "Im Moment wurden keine neuen potenziellen Käufer für diese Anzeige gefunden.",
+  "audienceMassSendSuccess": "Massen-Zuschauerbenachrichtigung erfolgreich gesendet! 🚀",
+  "audienceMassSendError": "Ein Fehler ist während des Sendens aufgetreten.",
+  "audienceSendToX": "An eine bestimmte Anzahl von Personen senden",
+  "audiencePersonCountHint": "Anzahl der Personen",
+  "audienceNotificationWillGoTo": "Benachrichtigung geht an:",
+  "audienceMonthlyFreeRights": "Monatliche kostenlose Rechte:",
+  "audienceTotalCost": "Gesamtkosten:",
+  "audienceInsufficientTeqlik": "⚠️ Unzureichendes teqlik-Guthaben, bitte aufladen.",
+  "hostInvitedToStage": "wurde auf die Bühne eingeladen",
+  "hostModeration": "Moderation",
+  "hostMute": "Stummschalten",
+  "hostUnmute": "Stummschaltung aufheben",
+  "hostMakeModerator": "Zum Moderator machen",
+  "hostMadeModeratorMsg": "wurde zum Moderator gemacht!",
+  "hostRemoveModerator": "Moderator entfernen",
+  "hostInviteToStage": "Auf die Bühne einladen",
+  "hostRemoveFromStage": "Von der Bühne entfernen",
+  "hostKickFromStream": "Aus Stream entfernen",
+  "hostShowToAllViewersHint": "Wird allen Zuschauern gezeigt...",
+  "swipeMutedInStream": "Du wurdest in diesem Stream stummgeschaltet",
+  "swipeMadeModeratorBy": "hat dich zum Moderator gemacht! Du kannst jetzt die Zuschauer verwalten.",
+  "liveStageInviteTitle": "Du wurdest auf die Bühne eingeladen!",
+  "liveStageInviteBody": "@{hostUsername} hat dich auf die Bühne eingeladen.\nDeine Kamera wird eingeschaltet — nimmst du an?",
+  "swipeRemovedFromStage": "Du wurdest von der Bühne entfernt",
+  "swipeGiftSent": "gesendet! 🎉",
+  "notificationStart": "Start",
+  "notificationEnd": "Ende",
+  "proHubGotIt": "Verstanden",
+  "profileSearchListingHint": "Anzeigentitel suchen...",
+  "profileFilterAll": "Alle",
+  "profileInviteAndEarn": "Einladen & Verdienen",
+  "publicProfileFollowers": "Follower",
+  "publicProfileFollowing": "Folgt",
+  "publicProfileEditProfile": "Profil bearbeiten",
+  "saleDetailGoToBuyer": "Zum Käuferprofil",
+  "searchAiHint": "Mit KI suchen (z. B. Eine Vintage-Uhr)",
+  "searchFilterUsers": "Benutzer",
+  "searchFilterListings": "Anzeigen",
+  "searchFilterStreams": "Live-Streams",
+  "auctionSendVerificationEmail": "Bestätigungs-E-Mail senden",
+  "storyTrayRecordVideo": "Video aufnehmen",
+  "storyTrayGalleryVideo": "Video aus Galerie",
+  "storyTrayTakePhoto": "Foto aufnehmen",
+  "storyTrayGalleryPhoto": "Foto aus Galerie",
+  "phoneInputHint": "Telefonnummer",
+  "swipeListNoData": "Keine Daten gefunden.",
+  "shareTitle": "Teilen",
+  "shareInstagramLabel": "Instagram-Story",
+  "shareInstagramSubtitle": "Visuell zu deiner Story hinzufügen",
+  "shareWhatsAppLabel": "WhatsApp",
+  "shareWhatsAppSubtitle": "Direkt über WhatsApp senden",
+  "shareCopyLabel": "Link kopieren",
+  "shareOtherLabel": "Andere...",
+  "shareOtherSubtitle": "Alle Anwendungen anzeigen",
+  "emailWelcomeSub": "Willkommen bei Teqlif!",
+  "emailPhoneVerifySub": "teqlif - Verifiziere deine Telefonnummer",
+  "emailVerifySub": "teqlif - E-Mail-Bestätigungscode",
+  "emailResetSub": "teqlif - Passwort-Zurücksetzungscode",
+  "emailPhoneVerifyTitle": "Telefonnummern-Verifizierung",
+  "emailHello": "Hallo",
+  "emailPhoneAdded": "Die Nummer <strong style='font-size:18px;letter-spacing:1px'>{phone}</strong> wurde deinem Konto hinzugefügt. Ist das deine Nummer?",
+  "emailYesMine": "✓ Ja, das ist meine",
+  "emailNoNotMine": "✗ Nein, ist sie nicht",
+  "emailLinkValid30m": "Dieser Link ist <strong>30 Minuten</strong> lang gültig. Du kannst dies ignorieren, wenn du es nicht angefordert hast.",
+  "emailSupport": "Bei Fragen:",
+  "emailVerifyBody": "Verwende den folgenden Code, um dein teqlif-Konto zu verifizieren:",
+  "emailCodeValid10m": "Dieser Code ist <strong>10 Minuten</strong> lang gültig.",
+  "emailPhoneNote": "📱 Du hast bei der Registrierung eine Telefonnummer eingegeben. Du kannst dein Telefon nach der Anmeldung unter <strong style='color:#f1f5f9'>Profil → Meine Infos</strong> verifizieren.",
+  "emailResetBody": "Es wurde eine Anfrage zum Zurücksetzen deines Kontopassworts gestellt. Verwende den folgenden Code, um den Vorgang abzuschließen:",
+  "emailIgnoreIfNotYou": "Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail sicher ignorieren.",
+  "@emailPhoneAdded": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "emailWelcomeHeroTitle": "Willkommen, {first_name}! 🎉",
+  "emailWelcomeHeroSub": "Du hast gerade die Welt der Live-Auktionen betreten.<br>Fantastische Angebote warten auf dich.",
+  "emailWelcomeIntro": "Hallo <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
+  "emailWelcomeIntroBody": "Wir freuen uns, dich bei teqlif zu haben. Du kannst jetzt an Live-Auktions-Streams teilnehmen, deinen Lieblingsgastgebern folgen und auf einzigartige Artikel bieten.",
+  "emailWelcomeF1Title": "Live-Streams",
+  "emailWelcomeF1Sub": "Entdecke Gastgeber und nimm an Echtzeit-Auktionen teil",
+  "emailWelcomeF2Title": "Sofortige Gebote",
+  "emailWelcomeF2Sub": "Gib in Sekundenschnelle ein Gebot ab und gewinne den Wettbewerb",
+  "emailWelcomeF3Title": "Favoriten & Folgen",
+  "emailWelcomeF3Sub": "Folge den Gastgebern, die du liebst, und werde benachrichtigt",
+  "emailWelcomePhoneTitle": "Telefon-Verifizierung",
+  "emailWelcomePhoneNoBody": "Um hochwertige Gebote sicher abzugeben, empfehlen wir die Verifizierung deiner Telefonnummer. Du kannst sie jederzeit in der App unter <strong style=\"color:#e2e8f0\">Profil → Meine Informationen</strong> hinzufügen.",
+  "emailWelcomePhoneYesBody": "Du hast bei der Anmeldung eine Telefonnummer hinzugefügt. Schließe die Verifizierung unter <strong style=\"color:#e2e8f0\">Profil → Meine Informationen</strong> ab, um sicher zu bieten.",
+  "emailWelcomeFooter": "Wir sind immer hier, wenn du uns brauchst.<br>Kontaktiere uns: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">Das teqlif-Team</strong>",
+  "emailWelcomeCopyright": "© 2025 teqlif · Du kannst deine Benachrichtigungseinstellungen in den Kontoeinstellungen aktualisieren.",
+  "emailResetGreeting": "Hallo <strong>{full_name}</strong>,",
+  "emailResetFooter": "Fragen? Kontaktiere uns: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
+  "@emailWelcomeHeroTitle": {
+    "placeholders": {
+      "first_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailWelcomeIntro": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailResetGreeting": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  },
+  "fieldVerifyCode": "Bestätigungscode",
+  "authVerifyCodeSentMsg": "Ein neuer Bestätigungscode wurde an {email} gesendet.",
+  "authVerifyCodeSentDesc": "Wir haben einen 6-stelligen Bestätigungscode an {email} gesendet.",
+  "authEnterCodeTitle": "Gib deinen Code ein",
+  "authVerifyCodeResent": "Neuer Bestätigungscode gesendet.",
+  "@authVerifyCodeSentMsg": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "@authVerifyCodeSentDesc": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendCode": "Code erneut senden",
+  "authResendCodeIn": "Neuer Code in:",
+  "validPasswordEmpty": "Das Passwort darf nicht leer sein",
+  "validPasswordConfirmEmpty": "Die Passwortbestätigung darf nicht leer sein",
+  "apiErrEmailFailed": "E-Mail konnte nicht gesendet werden",
+  "apiErrEmailTaken": "Diese E-Mail-Adresse wird bereits verwendet",
+  "apiErrUsernameTaken": "Dieser Benutzername ist bereits vergeben",
+  "apiErrPhoneTaken": "Diese Telefonnummer ist bereits registriert",
+  "apiMsgRegisterSuccess": "Registrierung erfolgreich. Wir haben einen Bestätigungscode an deine E-Mail gesendet.",
+  "apiErrCodeInvalid": "Code ist falsch oder abgelaufen",
+  "apiErrUserNotFound": "Benutzer nicht gefunden",
+  "apiErrInvalidCredentials": "Ungültige E-Mail oder ungültiges Passwort",
+  "errorInvalidPassword": "Falsches Passwort",
+  "apiErrAccountDisabled": "Dein Konto ist deaktiviert",
+  "apiErrInvalidRequest": "Ungültige Anfrage",
+  "apiMsgCodeResent": "Code erneut gesendet",
+  "apiMsgResetEmailSent": "E-Mail zum Zurücksetzen des Passworts gesendet",
+  "apiErrEmailFailedLater": "E-Mail konnte nicht gesendet werden, bitte versuche es später noch einmal.",
+  "apiErrCodeInvalidOrExpired": "Ungültiger oder abgelaufener Code",
+  "apiMsgPasswordReset": "Dein Passwort wurde erfolgreich zurückgesetzt",
+  "apiErrNameShort": "Der vollständige Name muss mindestens 2 Zeichen lang sein",
+  "apiErrUsernameFormat": "Der Benutzername muss 3-50 Zeichen lang sein, nur Kleinbuchstaben/Zahlen/Unterstrich",
+  "apiErrBioLong": "Die Bio darf maximal 60 Zeichen lang sein",
+  "apiErrLinkFormat": "Link muss mit http:// oder https:// beginnen",
+  "apiErrAuctionNotFound": "Auktion nicht gefunden oder Zugriff verweigert",
+  "apiErrTokenRequired": "refresh_token erforderlich",
+  "apiErrTokenInvalid": "Ungültiges oder abgelaufenes Refresh-Token",
+  "apiMsgLogout": "Erfolgreich abgemeldet",
+  "apiMsgVerifyEmailSent": "Bestätigungscode an deine E-Mail-Adresse gesendet",
+  "apiErrCurrentPasswordInvalid": "Aktuelles Passwort falsch",
+  "apiErrVerifyCodeInvalid": "Bestätigungscode falsch oder abgelaufen",
+  "apiMsgPasswordChanged": "Passwort erfolgreich geändert",
+  "apiErrEmailInvalid": "Ungültige E-Mail-Adresse",
+  "apiErrEmailSame": "Dies ist bereits deine aktuelle E-Mail-Adresse",
+  "apiErrEmailRetry": "E-Mail konnte nicht gesendet werden, bitte versuche es erneut",
+  "apiMsgCodeSent": "Bestätigungscode gesendet",
+  "apiErrVerifyCodeNotFound": "Bestätigungscode nicht gefunden oder abgelaufen",
+  "apiErrVerifyCodeWrong": "Bestätigungscode falsch",
+  "apiErrEmailMismatch": "E-Mail-Adresse stimmt nicht überein",
+  "apiErrEmailUsed": "Diese E-Mail-Adresse wird in einem anderen Konto verwendet",
+  "apiMsgEmailUpdated": "Deine E-Mail-Adresse wurde erfolgreich aktualisiert",
+  "apiErrPhoneFormat": "Ungültiges Telefonnummernformat",
+  "apiErrPhoneUsed": "Diese Telefonnummer ist in einem anderen Konto registriert",
+  "apiMsgVerifyEmailSent2": "Bestätigungs-E-Mail gesendet",
+  "errSomethingWentWrong": "Etwas ist schiefgelaufen",
+  "errAuthFailed": "Autorisierungsfehler",
+  "errStoryLoadFailed": "Story konnte nicht geladen werden",
+  "errThumbnailLoadFailed": "Miniaturansicht konnte nicht geladen werden",
+  "btnAddListing": "Anzeige hinzufügen",
+  "lblTeqlikWallet": "teqlik Wallet",
+  "btnGoPro": "PRO holen",
+  "lblProNotificationSettings": "PRO-Benachrichtigungseinstellungen",
+  "lblStatusOff": "Aus",
+  "lblLoading": "Lädt...",
+  "lblVideoReady": "Video bereit",
+  "lblListingUpper": "ANZEIGE",
+  "btnGoToListing": "Zur Anzeige gehen",
+  "lblBidsUpper": "GEBOTE",
+  "lblCommerceActivity": "AKTIVITÄT",
+  "lblCommerceGroupAuction": "AUKTION",
+  "lblCommerceGroupDs": "DIREKTVERKAUF",
+  "btnShareProfile": "Profil teilen",
+  "lblNoListingsYet": "Noch keine Anzeigen",
+  "timeJustNow": "Gerade eben",
+  "timeNow": "jetzt",
+  "timeMinAgo": "vor {n} Min.",
+  "@timeMinAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "vor {n} Std.",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "vor {n} Tg.",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "radarExpensive": "Teuer",
+  "radarAffordable": "Erschwinglich",
+  "radarExpensivePrice": "Teurer Preis",
+  "radarExpensiveThanCompetitor": "teurer als der Konkurrent",
+  "radarCloseCompetitors": "Enge Konkurrenten",
+  "radarIn90Days": "in 90 Tagen",
+  "radarRightNow": "genau jetzt",
+  "btnStartNormal": "Normal starten",
+  "lblOther": "andere",
+  "btnViewNotificationReport": "Benachrichtigungsbericht ansehen",
+  "btnSendMassNotification": "Massenbenachrichtigung senden",
+  "massNotifCooldownHours": "Verfügbar in {hours}h {min}m",
+  "@massNotifCooldownHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "massNotifCooldownMinutes": "Verfügbar in {min}m",
+  "@massNotifCooldownMinutes": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "massNotifCooldownSeconds": "Verfügbar in {sec}s",
+  "@massNotifCooldownSeconds": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
+  "massNotifPerListingInfo": "Eine Massenbenachrichtigung kann einmal alle 24 Stunden pro Anzeige gesendet werden.",
+  "massNotifUnavailableListingNotActive": "Diese Funktion ist nicht verfügbar, da die Anzeige inaktiv ist.",
+  "btnShare": "Teilen",
+  "shareListingText": "{title} — schau es dir auf teqlif an",
+  "shareLiveText": "{title} — live auf teqlif ansehen",
+  "apiErrReferralUsed": "Du hast bereits einen Einladungscode verwendet. Jedes Konto kann nur einen verwenden.",
+  "apiErrReferralSelf": "Du kannst deinen eigenen Einladungscode nicht verwenden.",
+  "apiErrReferralInvalid": "Ungültiger Einladungscode. Bitte überprüfe ihn und versuche es erneut.",
+  "apiErrReferralExpired": "Dieser Einladungscode ist abgelaufen (die 3-tägige Gültigkeit ist beendet).",
+  "apiMsgReferralSavedVerify": "Einladungscode gespeichert! Bitte schließe deine E-Mail- und Telefonverifizierung ab, um deine Belohnung einzufordern.",
+  "notifReferralTitle": "Einladungsbelohnung!",
+  "notifReferralBody": "Dein Freund ({username}) hat deinen Code verwendet und die Verifizierung abgeschlossen! Du hast {bonus} teqlik verdient.",
+  "@notifReferralBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "apiMsgReferralSuccess": "Verifizierungen abgeschlossen! {referrer_username} hat dich eingeladen. {your_bonus} teqlik wurden deinem Konto gutgeschrieben.",
+  "@apiMsgReferralSuccess": {
+    "placeholders": {
+      "referrer_username": {
+        "type": "String"
+      },
+      "your_bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "proTipPriceDownTitle": "Tipp zur Preisanpassung",
+  "proTipPriceDownBody": "\"{title}\" liegt {diff}% über dem Marktdurchschnitt. Eine Preissenkung auf etwa {avg} ₺ kann den Verkauf beschleunigen.",
+  "proTipPriceUpTitle": "Chance auf Preiserhöhung",
+  "proTipPriceUpBody": "\"{title}\" liegt {diff}% unter ähnlichen Anzeigen. Der Marktpreis beträgt {avg} ₺ — es gibt eine Möglichkeit, ihn zu erhöhen.",
+  "proTipLeadTitle": "Heißer Interessent verfügbar",
+  "proTipLeadBody": "{count} Personen haben \"{title}\" in den letzten 30 Tagen angesehen, aber nicht geboten. Senke den Preis leicht oder verbessere die Beschreibung.",
+  "proTipStreamTitle": "Beste Stream-Zeit",
+  "proTipStreamBody": "Die Spitzenzeit auf der Plattform ist {hour}. Wenn du zu dieser Zeit einen Live-Stream startest, erreichst du mehr Zuschauer.",
+  "proTipQualityTitle": "Optik & Beschreibung verbessern",
+  "proTipQualityBody": "Dein Aufruf-zu-Gebot-Verhältnis beträgt {pct}%. Bessere Fotos und eine detaillierte Beschreibung könnten dies um das 3- bis 5-fache steigern.",
+  "proTipAllGoodTitle": "Alles ist gut",
+  "proTipAllGoodBody": "Deine Anzeigen- und Verkaufsdaten sehen gesund aus. Benutzerdefinierte Tipps werden hier angezeigt, sobald mehr Daten gesammelt wurden.",
+  "notifNewBid": "@{username} hat ein Gebot abgegeben",
+  "@notifNewBid": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifNewBidBody": "{item} — {price}",
+  "@notifNewBidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifNewBidBodyNoItem": "{price}",
+  "@notifNewBidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifOutbid": "Du wurdest überboten!",
+  "notifOutbidBody": "{item} — neues Gebot: {price}",
+  "@notifOutbidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifOutbidBodyNoItem": "Neues Gebot: {price}",
+  "@notifOutbidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifAuctionWon": "🏆 Dein Gebot wurde akzeptiert!",
+  "notifAuctionWonBody": "{item} — {price}",
+  "@notifAuctionWonBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifBuyItNow": "🛒 Sofort-Kauf abgeschlossen!",
+  "notifBuyItNowBody": "{item} — {price}",
+  "@notifBuyItNowBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifAuctionEnded": "Auktion beendet",
+  "notifAuctionEndedBody": "{item} — Gewinnerpreis: {price}",
+  "@notifAuctionEndedBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifAuctionEndedBodyNoItem": "Gewinnerpreis: {price}",
+  "@notifAuctionEndedBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifAuctionCancelled": "Auktion abgebrochen",
+  "notifAuctionCancelledBody": "{item} — kein Gebot wurde akzeptiert",
+  "@notifAuctionCancelledBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "notifAuctionCancelledBodyNoItem": "Kein Gebot wurde akzeptiert",
+  "notifRecordingAvailableTitle": "Dein Live-Stream-Replay ist bereit 🎬",
+  "notifRecordingAvailableBody": "Sieh dir dein Replay an und überprüfe deine Verkaufsstatistiken.",
+  "notifStreamStarted": "@{username} hat einen Live-Stream gestartet",
+  "@notifStreamStarted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifFollow": "@{username} folgt dir jetzt",
+  "@notifFollow": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifMessage": "@{username} hat dir eine Nachricht gesendet",
+  "@notifMessage": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifMsgRequestAccepted": "@{username} hat deine Nachrichtenanfrage akzeptiert",
+  "@notifMsgRequestAccepted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "msgReqBannerReceiver": "{username} hat dir eine Nachrichtenanfrage gesendet.",
+  "@msgReqBannerReceiver": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "msgReqBannerInitiator": "Deine Nachrichtenanfrage wurde gesendet und wartet auf eine Antwort.",
+  "msgReqBannerAccept": "Akzeptieren",
+  "msgReqBannerDecline": "Ablehnen",
+  "notifMessageVoice": "🎵 Sprachnachricht",
+  "notifMessageImage": "📷 Foto",
+  "notifMessageVideo": "🎬 Video",
+  "notifMessageFile": "📎 Datei",
+  "notifNewListing": "@{username} hat eine neue Anzeige hinzugefügt",
+  "@notifNewListing": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifListingDeactivated": "Deine Anzeige wurde deaktiviert",
+  "notifListingDeactivatedBodySingle": "Deine Anzeige \"{title}\" hat ihren 30-tägigen kostenlosen Zeitraum erreicht und wurde deaktiviert.",
+  "@notifListingDeactivatedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notifListingDeactivatedBodyMultiple": "{count} deiner Anzeigen haben ihren 30-tägigen kostenlosen Zeitraum erreicht und wurden deaktiviert.",
+  "@notifListingDeactivatedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifListingDeleted": "Deine Anzeige wurde gelöscht",
+  "notifListingDeletedBodySingle": "Deine Anzeige \"{title}\" wurde entfernt. Du kannst eine neue Anzeige erstellen, um sie erneut zu veröffentlichen.",
+  "@notifListingDeletedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notifListingDeletedBodyMultiple": "{count} deiner Anzeigen wurden entfernt. Du kannst neue Anzeigen erstellen, um sie erneut zu veröffentlichen.",
+  "@notifListingDeletedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifListingRemoved": "Deine Anzeige wurde entfernt",
+  "notifListingRemovedBody": "Deine Anzeige wurde entfernt, da sie Inhalte enthielt, die gegen unsere Community-Richtlinien verstoßen.",
+  "notifSearchAlert": "Suchalarm: neue Anzeige",
+  "notifSearchAlertBody": "Neuer Artikel in {category} hinzugefügt",
+  "@notifSearchAlertBody": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "notifSmartAuctionAlert": "Ein Stream nur für dich hat begonnen! 🎯",
+  "notifPriceDrop": "Preis gesenkt! 🔥",
+  "notifPriceDropBody": "{item} — jetzt {price}",
+  "@notifPriceDropBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifBudgetMatch": "Neue Anzeige in deinem Budget! 💡",
+  "notifBudgetMatchBody": "{item} — {price}",
+  "@notifBudgetMatchBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "notifRetargetTitle": "Eine Anzeige für dich",
+  "notifChurnAirdropSeller": "Deine Anzeigen warten auf dich! 🛍️",
+  "notifChurnBodySeller": "Wir haben {amount} teqlik zu deinem Konto hinzugefügt. Erstelle eine neue Anzeige und verbinde dich mit Käufern!",
+  "@notifChurnBodySeller": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "notifChurnAirdropBuyer": "Wir haben dich vermisst! 🎁",
+  "notifChurnBodyBuyer": "Wir haben {amount} teqlik zu deinem Konto hinzugefügt. Durchstöbere Live-Streams und gib sie aus!",
+  "@notifChurnBodyBuyer": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "cat_electronics": "Elektronik",
+  "cat_fashion": "Kleidung & Mode",
+  "cat_home": "Haus & Wohnen",
+  "cat_vehicles": "Fahrzeuge",
+  "cat_sports": "Sport & Hobbys",
+  "cat_books": "Bücher & Kultur",
+  "cat_real_estate": "Immobilien",
+  "cat_other": "Andere",
+  "cat_chat": "Chat",
+  "day0": "Sonntag",
+  "day1": "Montag",
+  "day2": "Dienstag",
+  "day3": "Mittwoch",
+  "day4": "Donnerstag",
+  "day5": "Freitag",
+  "day6": "Samstag",
+  "recNoBudgetHighHesitation": "Heute waren {count} Zuschauer daran interessiert, zu bieten, haben aber gezögert. Du kannst dieses Interesse in Verkäufe umwandeln, indem du im nächsten Stream mit einem niedrigeren Preis beginnst.",
+  "recNoBudgetDefault": "Noch nicht genug Budgetdaten. Halte deine Streams regelmäßig ab, um ein Publikumsprofil aufzubauen und mit Preisspannen zu experimentieren.",
+  "recHighHesitation": "Das durchschnittliche Budget deines Publikums beträgt {budget} ₺. Heute wollten {count} Personen bieten, haben aber aufgegeben — versuche beim nächsten Mal mit einem niedrigeren Preis wie {low} ₺ zu beginnen, um dieses zögerliche Publikum zu konvertieren.",
+  "recMedHesitation": "Das durchschnittliche Budget deines Publikums beträgt {budget} ₺. {count} Zuschauer haben auf ein Gebot verzichtet — kläre deine Produktbeschreibungen und Preisschritte, um deine Konversionsrate zu steigern.",
+  "recHighReach": "Das durchschnittliche Budget deines Publikums beträgt {budget} ₺. Dein Publikumsprofil sieht stark aus. Du kannst den Umsatz steigern, indem du in deinem nächsten Stream Premiumprodukte bis zu {high} ₺ anbietest.",
+  "recDefault": "Das durchschnittliche Budget deines Publikums beträgt {budget} ₺. Du kannst deine Verkäufe steigern, indem du Produkte in dieser Preisklasse anbietest.",
+  "radarCheap": "Billiger als %{pct_rank} der Konkurrenten — erwäge eine Preiserhöhung",
+  "@radarCheap": {
+    "description": "Analytics missing key: radarCheap"
+  },
+  "radarFair": "Nahe am Marktdurchschnitt bepreist",
+  "@radarFair": {
+    "description": "Analytics missing key: radarFair"
+  },
+  "errStreamNotFound": "Stream nicht gefunden",
+  "@errStreamNotFound": {
+    "description": "Analytics missing key: errStreamNotFound"
+  },
+  "errAccessDenied": "Du hast keine Berechtigung, auf diesen Bericht zuzugreifen",
+  "@errAccessDenied": {
+    "description": "Analytics missing key: errAccessDenied"
+  },
+  "errListingNotFound": "Anzeige nicht gefunden",
+  "@errListingNotFound": {
+    "description": "Analytics missing key: errListingNotFound"
+  },
+  "errProRequired": "Diese Funktion ist exklusiv für Pro-Benutzer",
+  "@errProRequired": {
+    "description": "Analytics missing key: errProRequired"
+  },
+  "radarCheapLabel": "Billig",
+  "@radarCheapLabel": {
+    "description": "Analytics missing key: radarCheapLabel"
+  },
+  "radarFairLabel": "Fair",
+  "@radarFairLabel": {
+    "description": "Analytics missing key: radarFairLabel"
+  },
+  "proSalesSpeedTip": "Anzeigen unter dem Marktdurchschnitt verkaufen sich {ratio}× schneller",
+  "@proSalesSpeedTip": {
+    "description": "Analytics missing key: proSalesSpeedTip"
+  },
+  "proBestStreamRec": "Du erzielst die besten Ergebnisse am {day} um {hours} mit einer Konversionsrate von {rate}%.",
+  "@proBestStreamRec": {
+    "description": "Analytics missing key: proBestStreamRec"
+  },
+  "tabReports": "Berichte",
+  "@tabReports": {
+    "description": "Analytics missing key: tabReports"
+  },
+  "badgeSponsored": "Gesponsert",
+  "@badgeSponsored": {
+    "description": "Badge label for sponsored listing"
+  },
+  "aiPriceTitle": "KI-Preisschätzung",
+  "aiPriceSimilar": "{count} ähnliche Produkte analysiert",
+  "@aiPriceSimilar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confidenceHigh": "● Hohes Vertrauen",
+  "confidenceMedium": "● Mittleres Vertrauen",
+  "confidenceLow": "● Geringes Vertrauen",
+  "aiPriceApply": "Vorgeschlagenen Preis anwenden",
+  "aiPriceAnalyzing": "Analysiere...",
+  "aiPriceButton": "Preis mit KI festlegen",
+  "aiCreditsLeftSuffix": "Credits verbleibend",
+  "editProfileFullName": "Vollständiger Name",
+  "editProfileUsername": "Benutzername",
+  "editProfileFillAll": "Bitte fülle alle Felder aus",
+  "aiAdviceSimilarCount": "{count} ähnliche Produkte analysiert",
+  "@aiAdviceSimilarCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiAdviceSameCategory": "{count} in derselben Kategorie",
+  "@aiAdviceSameCategory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiAdviceCityBased": "stadtbasiert",
+  "aiAdviceMarketClose": "Durchschnittlicher Marktabschluss: {price} ₺.",
+  "@aiAdviceMarketClose": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAdviceBimodal": "Zwei unterschiedliche Marktpreisniveaus (bimodal) in dieser Produktgruppe festgestellt. Der Preis kann je nach Produktvariante oder Garantie variieren.",
+  "aiAdviceNoData": "Noch nicht genügend ähnliche Produktdaten gefunden. Schätzungen werden besser, wenn mehr Anzeigen zur Plattform hinzugefügt werden. Erforsche den Markt, um deinen Preis festzulegen.",
+  "proToolDemandTrendsTitle": "Kategorie-Nachfragetrends",
+  "proToolDemandTrendsDesc": "Welche Kategorien steigen auf? Entdecke Chancen durch Angebotslücken.",
+  "demandTrendsTitle": "Kategorie-Nachfragetrends",
+  "demandTrendsSubtitle": "Suchdaten der letzten 8 Wochen",
+  "demandTrendsUpLabel": "Steigend",
+  "demandTrendsDownLabel": "Fallend",
+  "demandTrendsStableLabel": "Stabil",
+  "demandTrendsSupplyGapLabel": "Angebotslücke",
+  "demandTrendsSupplyGapHint": "Benutzer suchen, aber Anzeigen sind rar",
+  "demandTrendsChangeLabel": "{pct}% Veränderung (8 Wochen)",
+  "@demandTrendsChangeLabel": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "demandTrendsEmptyLabel": "Noch nicht genug Suchdaten.",
+  "trustScoreLabel": "Vertrauenswert",
+  "trustScoreHint": "Ein Glaubwürdigkeitswert von 0–100. Berechnet aus Auktionsabschlussrate, Gewinnhistorie, Anzeigenqualität, Kontoalter und Gebotskonsistenz. Wird nächtlich aktualisiert.",
+  "trustScoreLow": "Neues Mitglied",
+  "trustScoreMedium": "Vertrauenswürdig",
+  "trustScoreHigh": "Sehr vertrauenswürdig",
+  "influenceRankLabel": "Influencer-Score",
+  "influenceRankHint": "Influencer-Score basierend auf dem Follower-Netzwerk. Je höher der Score, desto größer deine Reichweite. Wird wöchentlich aktualisiert.",
+  "influenceRankValue": "Rang #{rank}",
+  "@influenceRankValue": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "radarNoActiveListing": "Keine aktiven Anzeigen gefunden.",
+  "radarNeedActiveListing": "Mindestens 1 aktive Anzeige ist für das Konkurrenz-Radar erforderlich.",
+  "radarNoPriceSet": "Für diese Anzeige ist kein Preis festgelegt.",
+  "radarNoCompetitorData": "Nicht genug Konkurrenzdaten für diese Kategorie.",
+  "radarNo90DayData": "Keine Verkaufsdaten für diese Kategorie in den letzten 90 Tagen.",
+  "radarVsAvgPrice": "vs. durchschn. Preis",
+  "radarActiveListings": "aktive Anzeigen",
+  "radarDaysAvg": "Tage (Durchschn.)",
+  "radarDayRange": "Bereich: {min} – {max} Tage",
+  "@radarDayRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "radarAverage": "Durchschnitt",
+  "radarSweetSpotLabel": "Beste Verkaufsspanne",
+  "radarPriceSensitivity": "Preissensibilität",
+  "radarDaySaleStat": "{days} Tage ({count} Verkäufe)",
+  "@radarDaySaleStat": {
+    "placeholders": {
+      "days": {},
+      "count": {}
+    }
+  },
+  "proNotEnoughStreamData": "Noch nicht genug Stream-Daten (mind. 2 Streams erforderlich).",
+  "saleTypeBuyNow": "Sofort-Kauf",
+  "saleTypeBid": "Gebot",
+  "saleTypeAuction": "Auktion",
+  "saleStartPrice": "Startpreis",
+  "saleType": "Verkaufstyp",
+  "saleBidCount": "Anzahl der Gebote",
+  "notifProUpgradeTitle": "👑 PRO-Benachrichtigungseinstellungen",
+  "notifProUpgradeDesc": "Gebotsschwellen- und Ruhezeit-Einstellungen sind exklusiv für PRO-Benutzer.\nWerde PRO, um irrelevante Benachrichtigungen zu stoppen.",
+  "notifBidThresholdTitle": "Gebotsschwelle",
+  "notifBidThresholdDesc": "Nur über Gebote über einem bestimmten Betrag benachrichtigen",
+  "notifQuietHoursTitle": "Ruhezeiten",
+  "notifQuietHoursDesc": "Benachrichtigungen zu diesen Zeiten verzögern, morgens anzeigen",
+  "quickAuctionBtn": "Schnell",
+  "quickAuctionItem": "Artikel {count}",
+  "@quickAuctionItem": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quickAuctionStarted": "Auktion gestartet",
+  "quickSaleSheetTitle": "Schneller Direktverkauf",
+  "quickSaleStarted": "Verkauf gestartet",
+  "phoneVerifyInvalidPhone": "Gib eine gültige Telefonnummer ein",
+  "phoneVerifyError": "Ein Fehler ist aufgetreten",
+  "phoneVerifyConnectionError": "Konnte keine Verbindung zum Server herstellen",
+  "phoneVerifyEmailSentTitle": "E-Mail gesendet",
+  "phoneVerifyEmailSentDesc": "Wir haben einen Bestätigungslink an deine registrierte E-Mail-Adresse gesendet. Bitte überprüfe deinen Posteingang.",
+  "phoneVerifyTitle": "Telefon-Verifizierung",
+  "phoneVerifyDesc": "Für hochwertige Gebote ist eine Telefonverifizierung erforderlich. Gib deine Nummer ein und verifiziere sie per E-Mail.",
+  "bidBlockedTitle": "Gebot nicht erlaubt",
+  "bidBlockedMuteBody": "Du darfst in diesem Stream momentan keine Gebote abgeben. Kontaktiere unser Support-Team, wenn du glaubst, dass dies ein Fehler ist.",
+  "bidBlockedVerifyBody": "Um diesen Betrag zu bieten, muss deine Telefonnummer verifiziert sein. Du wirst zu deinem Profil weitergeleitet.",
+  "bidBlockedNoPhoneBody": "Um diesen Betrag zu bieten, musst du eine Telefonnummer in deinem Profil hinzufügen und verifizieren.",
+  "bidBlockedPhoneUnverifiedBody": "Um diesen Betrag zu bieten, musst du deine Telefonnummer verifizieren.",
+  "bidBlockedVerifyAction": "Konto verifizieren",
+  "bidBlockedDismiss": "Verstanden",
+  "bidBlockedSuspiciousBody": "Dein Gebotszugang wurde in diesem Stream gesperrt. Eine Verifizierung deines Kontos wird dies in zukünftigen Streams verhindern.",
+  "errBidHostCannot": "Du kannst in deinem eigenen Stream nicht bieten.",
+  "errBidNotActive": "Die Auktion ist derzeit nicht aktiv.",
+  "errBidTooLow": "Dein Gebot liegt unter der Mindesterhöhung.",
+  "errBidOutbid": "Ein anderes Gebot ging kurz vor deinem ein. Überprüfe den aktuellen Preis.",
+  "btnRemovePin": "✕ Entfernen",
+  "blastSent": "🎯 Benachrichtigung an {count} Personen gesendet!",
+  "@blastSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blastStarted": "🎯 Benachrichtigungskampagne gestartet!",
+  "blastError": "Benachrichtigung konnte nicht gesendet werden.",
+  "blastSending": "Senden...",
+  "hostRemoveFromStageBtn": "✕ Von der Bühne entfernen",
+  "hostViewersTitle": "👁 Zuschauer ({count})",
+  "@hostViewersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auctionGroupFallback": "Auktion",
+  "hostMuteSuccess": "@{username} stummgeschaltet",
+  "@hostMuteSuccess": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "hostUnmuteSuccess": "Stummschaltung aufgehoben",
+  "hostPromoteSuccess": "@{username} zum Moderator gemacht",
+  "@hostPromoteSuccess": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "hostDemoteSuccess": "@{username} als Moderator entfernt",
+  "@hostDemoteSuccess": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "hostKickSuccess": "@{username} aus dem Stream entfernt",
+  "@hostKickSuccess": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "whaleInRoom": "{tier}-Käufer im Raum",
+  "@whaleInRoom": {
+    "placeholders": {
+      "tier": {
+        "type": "String"
+      }
+    }
+  },
+  "whaleShowBestItems": "Zeit, deine besten Artikel zu zeigen!",
+  "badgePassive": "Inaktiv",
+  "hesitatedSectionTitle": "Rückblick",
+  "hesitatedSectionSubtitle": "Du warst kurz davor zu bieten",
+  "hesitatedPriceDrop": "Im Preis gesenkt",
+  "hesitatedPriceNearOffer": "In der Nähe deines Angebots",
+  "hesitatedOffers": "Angebote",
+  "hesitatedDismissed": "Von deiner Liste entfernt",
+  "searchSmartResultsLabel": "Smarte Ergebnisse",
+  "searchShowAllAccounts": "Alle Konten ansehen ({count})",
+  "@searchShowAllAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "explorePersonalizedHint": "Durchstöbere einige Anzeigen,\nPersonalisierte Inhalte werden vorbereitet!",
+  "personalizedGridExhausted": "Alle Empfehlungen angesehen · Zum Aktualisieren nach unten ziehen",
+  "joinLiveStreamBanner": "Live-Stream beitreten →",
+  "audienceCountPeople": "{count} Personen",
+  "@audienceCountPeople": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "audienceFreeSlots": "-{count} Personen",
+  "@audienceFreeSlots": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultUserFallback": "Benutzer",
+  "noResultsFound": "Keine Ergebnisse gefunden",
+  "removeFromFavoritesTooltip": "Aus Favoriten entfernen",
+  "callForbiddenNotFollowing": "Ihr müsst einander folgen, um einen Anruf zu machen",
+  "callForbiddenToast": "Du kannst diesen Benutzer derzeit nicht anrufen",
+  "callReasonNoFollow": "Folgt einander oder sendet eine Nachrichtenanfrage.",
+  "callReasonCallDisabled": "Die andere Person hat Anrufe für dich deaktiviert.",
+  "callReasonPending": "Sobald die Anfrage akzeptiert ist, kann die andere Person Anrufe aktivieren.",
+  "callReasonBusy": "Die andere Person befindet sich derzeit in einem Anruf.",
+  "callReasonBlocked": "Du kannst nicht mit diesem Benutzer kommunizieren.",
+  "callReasonDeclined": "Du kannst diesen Benutzer derzeit nicht anrufen.",
+  "msgBlockedHint": "Du kannst nicht mit diesem Benutzer kommunizieren.",
+  "callPermissionBarText": "Erlaube der anderen Person, dich anzurufen",
+  "callVoiceCall": "Sprachanruf",
+  "callCalling": "Anrufen...",
+  "callConnecting": "Verbinden...",
+  "callConnected": "Verbunden",
+  "callEnded": "Anruf beendet",
+  "callRejected": "Anruf abgelehnt",
+  "callBusy": "Benutzer ist beschäftigt",
+  "callReconnecting": "Neu verbinden...",
+  "poorConnection": "Schlechte Verbindung",
+  "callMissed": "Verpasster Anruf",
+  "callUnreachable": "Benutzer nicht erreichbar",
+  "callNoAnswer": "Keine Antwort",
+  "callAccept": "Annehmen",
+  "callDecline": "Ablehnen",
+  "callMute": "Stummschalten",
+  "callUnmute": "Stummschaltung aufheben",
+  "callSpeaker": "Lautsprecher",
+  "callIncomingTitle": "Eingehender Anruf",
+  "callIncomingBody": "@{username} ruft an",
+  "@callIncomingBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "callReturnToActive": "Tippen, um zum Anruf zurückzukehren",
+  "callNotifAccept": "Antworten",
+  "callNotifDecline": "Ablehnen",
+  "callPermissionDenied": "Mikrofonberechtigung erforderlich",
+  "callVideo": "Video",
+  "callChat": "Chat",
+  "callAddPerson": "Hinzufügen",
+  "notifCallMissed": "Verpasster Anruf: @{username}",
+  "@notifCallMissed": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCallMissedBody": "Hat versucht, dich zu erreichen.",
+  "callNotifTitle": "@{username} ruft dich an",
+  "@callNotifTitle": {
+    "description": "Incoming call push notification title",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "callNotifBody": "Eingehender Sprachanruf",
+  "@callNotifBody": {
+    "description": "Incoming call push notification body"
+  },
+  "privateAccount": "Privates Konto",
+  "privateAccountDesc": "Wenn dein Konto privat ist, können dir nur Personen folgen, die du genehmigst.",
+  "followRequests": "Follow-Anfragen",
+  "noFollowRequests": "Keine ausstehenden Follow-Anfragen.",
+  "requested": "Angefragt",
+  "acceptRequest": "Akzeptieren",
+  "rejectRequest": "Löschen",
+  "thisAccountIsPrivate": "Dieses Konto ist privat",
+  "thisAccountIsPrivateDesc": "Folge diesem Konto, um seine Anzeigen zu sehen.",
+  "notifFollowRequestTitle": "@{username} möchte dir folgen",
+  "@notifFollowRequestTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifFollowAcceptedTitle": "@{username} hat deine Follow-Anfrage akzeptiert",
+  "@notifFollowAcceptedTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "errFollowSelf": "Du kannst dir nicht selbst folgen",
+  "errUserNotFound": "Benutzer nicht gefunden",
+  "errAlreadyFollowing": "Folgt bereits oder Anfrage gesendet",
+  "errFollowRecordNotFound": "Follow-Datensatz nicht gefunden",
+  "errFollowRequestNotFound": "Follow-Anfrage nicht gefunden",
+  "errFollowListPrivate": "Die Liste dieses Kontos ist privat",
+  "errOfferForbidden": "Du kannst diesem Benutzer kein Angebot machen",
+  "errMessagingForbidden": "Du kannst diesem Benutzer keine Nachricht senden",
+  "errFileTooLarge": "Datei darf 5 MB nicht überschreiten",
+  "errAudioTooLarge": "Audiodatei darf 512 KB nicht überschreiten",
+  "errUnsupportedAudioFormat": "Nicht unterstütztes Audioformat (AAC, OGG, M4A, MP3)",
+  "errInvalidImageFormat": "Ungültiges Bildformat (JPEG, PNG, WebP)",
+  "errInvalidVideoFormat": "Ungültiges Videoformat (MP4, MOV)",
+  "errVideoTooLong": "Das Video darf höchstens 15 Sekunden lang sein",
+  "errUnsupportedFileType": "Nicht unterstützter Dateityp (PDF, DOCX, XLSX, TXT)",
+  "errMediaEmpty": "Datei darf nicht leer sein",
+  "msgRequestsTitle": "Nachrichtenanfragen",
+  "msgRequestAccept": "Akzeptieren",
+  "msgRequestDecline": "Ablehnen",
+  "badgeVerifiedHint": "Die E-Mail-Adresse und Telefonnummer dieses Benutzers sind verifiziert.",
+  "badgeProHintPrefix": "Dieser Benutzer ist ein exklusives ",
+  "badgeProHintSuffix": "-Mitglied.",
+  "settingsMyRatings": "Meine Bewertungen",
+  "tabRatingsReceived": "Erhaltene Bewertungen",
+  "tabRatingsGiven": "Abgegebene Bewertungen",
+  "myRatingsNoReceived": "Du hast noch keine Bewertungen erhalten.",
+  "myRatingsNoGiven": "Du hast noch keine Bewertungen abgegeben.",
+  "tabFollowRequestsReceived": "Erhaltene Anfragen",
+  "tabFollowRequestsSent": "Gesendete Anfragen",
+  "withdrawRequest": "Zurückziehen",
+  "callE2eeEncrypted": "Verschlüsselter Anruf",
+  "callE2eeEncryptedShort": "Verschlüsselt",
+  "callBatteryOptTitle": "Akku-Optimierung",
+  "callBatteryOptBody": "Deaktiviere die Akku-Optimierung für Teqlif, um sicherzustellen, dass Anrufe ordnungsgemäß funktionieren.",
+  "callBatteryOptAction": "Einstellungen öffnen",
+  "callBatteryOptSkip": "Nicht jetzt",
+  "callAudioQualityPoor": "Schlechte Verbindungsqualität",
+  "callAudioQualityLost": "Verbindung unterbrochen",
+  "callActiveNow": "Anruf läuft",
+  "callHistoryTitle": "Kürzliche Anrufe",
+  "callHistoryAll": "Alle",
+  "callHistoryMissed": "Verpasst",
+  "callHistoryIncoming": "Eingehend",
+  "callHistoryOutgoing": "Ausgehend",
+  "callHistoryEmpty": "Noch keine Anrufe",
+  "callHistoryDurationShort": "{mm}:{ss}",
+  "@callHistoryDurationShort": {
+    "placeholders": {
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
+    }
+  },
+  "callCameraSwitch": "Kamera wechseln",
+  "callCameraOn": "Kamera an",
+  "callCameraOff": "Kamera aus",
+  "callVideoStarted": "{name} hat die Kamera eingeschaltet",
+  "@callVideoStarted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callVideoStopped": "{name} hat die Kamera ausgeschaltet",
+  "@callVideoStopped": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callInviteTitle": "Zum Anruf einladen",
+  "callInviteButton": "Einladung senden",
+  "callSearchFollowing": "Suche nach Personen, denen du folgst...",
+  "callAlreadyInCall": "Bereits in einem Anruf",
+  "callInvitePending": "Einladung gesendet",
+  "callInviteSent": "Einladung an {name} gesendet",
+  "@callInviteSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callInviteRejected": "{name} hat die Einladung abgelehnt",
+  "@callInviteRejected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callInviteTimeout": "{name} hat nicht geantwortet",
+  "@callInviteTimeout": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callParticipantJoined": "{name} ist dem Anruf beigetreten",
+  "@callParticipantJoined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callParticipantLeft": "{name} hat den Anruf verlassen",
+  "@callParticipantLeft": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callParticipantRemovedSelf": "Du wurdest aus dem Anruf entfernt",
+  "callParticipantRemovedOther": "{name} wurde aus dem Anruf entfernt",
+  "@callParticipantRemovedOther": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callGroupInviteTitle": "Aktive Anrufeinladung",
+  "callGroupInviteFrom": "{inviter} lädt dich zu einem Anruf ein",
+  "@callGroupInviteFrom": {
+    "placeholders": {
+      "inviter": {
+        "type": "String"
+      }
+    }
+  },
+  "callJoinButton": "Beitreten",
+  "callDeclineInviteButton": "Ablehnen",
+  "callParticipantCount": "{count} Teilnehmer",
+  "@callParticipantCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "callMaxParticipantsReached": "Anruf ist voll (max. {max})",
+  "@callMaxParticipantsReached": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "callRemoveParticipantTitle": "Aus Anruf entfernen",
+  "callRemoveParticipantConfirm": "{name} aus dem Anruf entfernen?",
+  "@callRemoveParticipantConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callRemoveParticipantButton": "Entfernen",
+  "callCurrentParticipants": "Derzeit im Anruf",
+  "callHistoryToday": "Heute",
+  "callHistoryYesterday": "Gestern",
+  "callHistoryRetry": "Wiederholen",
+  "callHistoryUnknown": "Unbekannt",
+  "callHistoryStatusMissed": "Verpasst",
+  "callHistoryStatusDeclined": "Abgelehnt",
+  "callHistoryStatusYouDeclined": "Du hast abgelehnt",
+  "callHistoryStatusNoAnswer": "Keine Antwort",
+  "callHistoryStatusNotAnswered": "Nicht beantwortet",
+  "callHistoryStatusCancelled": "Abgebrochen",
+  "walletTxnChurnAirdrop": "Willkommens-zurück-Airdrop",
+  "aiDescButton": "Beschreibung mit Künstlicher Intelligenz schreiben",
+  "aiDescGenerating": "KI schreibt deine Beschreibung...",
+  "aiDescFallbackNotice": "Primäre KI ist beschäftigt, Backup-Modell wird verwendet.",
+  "@aiDescFallbackNotice": {},
+  "aiDescError": "Beschreibung konnte nicht generiert werden. Bitte versuche es erneut.",
+  "aiDescUnavailable": "Der Beschreibungsdienst der Künstlichen Intelligenz ist derzeit nicht verfügbar.",
+  "fieldCondition": "Artikelzustand",
+  "fieldConditionHint": "Artikelzustand auswählen",
+  "conditionNew": "Neu",
+  "conditionLikeNew": "Wie neu",
+  "conditionUsed": "Gebraucht",
+  "conditionDamaged": "Beschädigt",
+  "aiDescStreamError": "Verbindung unterbrochen, bitte versuche es erneut.",
+  "validRequiredLocation": "Bitte wähle einen Ort",
+  "validRequiredPrice": "Bitte gib einen Preis ein",
+  "validRequiredCondition": "Bitte wähle den Zustand",
+  "createNeedAllFields": "Bitte fülle alle erforderlichen Felder für die KI-Schätzung aus.",
+  "uploadErrorTooLarge": "Datei ist zu groß. Überprüfe das Größenlimit.",
+  "uploadErrorServerBusy": "Server ist derzeit beschäftigt, bitte versuche es später erneut.",
+  "uploadErrorAuthExpired": "Deine Sitzung ist abgelaufen, bitte melde dich erneut an.",
+  "uploadErrorGeneric": "Medien konnten nicht hochgeladen werden, bitte versuche es erneut.",
+  "apiErrorInsufficientFundsPro": "Du hast dein kostenloses KI-Limit für diesen Monat erreicht. Du benötigst mindestens {cost} teqlik auf deinem Konto, um fortzufahren.",
+  "@apiErrorInsufficientFundsPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorInsufficientFundsStd": "Unzureichendes teqlik-Guthaben. Du benötigst mindestens {cost} teqlik auf deinem Konto für diese Aktion.",
+  "@apiErrorInsufficientFundsStd": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorAiServiceBusy": "KI-Dienst ist derzeit beschäftigt. Bitte versuche es erneut.",
+  "apiErrorAiServiceTimeout": "Zeitüberschreitung des KI-Dienstes.",
+  "errorServerBusy": "Server ist beschäftigt, bitte versuche es später erneut.",
+  "errorSessionExpired": "Deine Sitzung ist abgelaufen, bitte melde dich erneut an.",
+  "conditionRefurbished": "Generalüberholt",
+  "fieldSubcategory": "Unterkategorie",
+  "fieldSubcategoryHint": "Unterkategorie auswählen",
+  "fieldProvince": "Provinz",
+  "fieldProvinceHint": "Provinz auswählen",
+  "fieldDistrict": "Bezirk",
+  "fieldDistrictHint": "Bezirk eingeben",
+  "sectionListingDetails": "Anzeigen-Info",
+  "extraFieldOptional": "(Optional)",
+  "validRequiredSubcategory": "Bitte wähle eine Unterkategorie",
+  "validRequiredProvince": "Bitte wähle eine Provinz",
+  "validRequiredDistrict": "Bitte gib einen Bezirk ein",
+  "validInvalidPrice": "Bitte gib einen gültigen Preis ein",
+  "errProvinceRequired": "Provinz ist erforderlich.",
+  "errInvalidCondition": "Ungültiger Artikelzustand ausgewählt.",
+  "errInvalidPrice": "Bitte gib einen gültigen Preis ein.",
+  "createNeedAllFieldsNew": "Bitte fülle die Felder Titel, Provinz und Zustand aus.",
+  "extraField_brand": "Marke",
+  "extraField_model": "Modell",
+  "extraField_year": "Jahr",
+  "extraField_mileage": "Kilometerstand",
+  "extraField_color": "Farbe",
+  "extraField_fuel_type": "Kraftstoffart",
+  "extraField_transmission": "Getriebe",
+  "extraField_body_type": "Karosserieform",
+  "extraField_damage_status": "Schadensstatus",
+  "extraField_type": "Typ",
+  "extraField_engine_cc": "Motorgröße",
+  "extraField_range": "Reichweite",
+  "extraField_storage": "Speicherplatz",
+  "extraField_ram": "RAM",
+  "extraField_processor": "Prozessor",
+  "extraField_screen_size": "Bildschirmgröße",
+  "extraField_room_count": "Zimmeranzahl",
+  "extraField_gross_sqm": "Brutto-m²",
+  "extraField_net_sqm": "Netto-m²",
+  "extraField_land_sqm": "Grundstücks-m²",
+  "extraField_sqm": "Fläche (m²)",
+  "extraField_building_age": "Gebäudealter",
+  "extraField_floor": "Etage",
+  "extraField_floor_count": "Anzahl der Etagen",
+  "extraField_unit_count": "Anzahl der Einheiten",
+  "extraField_heating": "Heizung",
+  "extraField_furnishing": "Möblierung",
+  "extraField_elevator": "Aufzug",
+  "extraField_parking": "Parkplatz",
+  "extraField_title_deed": "Grundbuch",
+  "extraField_land_use": "Nutzungsstatus",
+  "extraField_size": "Größe",
+  "extraField_shoe_size": "Schuhgröße",
+  "extraField_gender": "Geschlecht",
+  "extraField_material": "Material",
+  "extraField_gold_carat": "Goldkarat",
+  "extraField_silver_purity": "Silbergehalt",
+  "extraField_wheel_size": "Felgengröße",
+  "extraField_sport_type": "Sportart",
+  "extraField_book_title": "Buchtitel",
+  "extraField_author": "Autor",
+  "extraField_publisher": "Verlag",
+  "extraField_length": "Länge",
+  "extraField_working_hours": "Arbeitsstunden",
+  "extraField_compatible_model": "Kompatibles Modell",
+  "extraField_part_type": "Teileart",
+  "extraField_breed": "Rasse / Typ",
+  "subcat_automobile": "Automobil",
+  "subcat_motorcycle": "Motorrad",
+  "subcat_electric_vehicle": "Elektrofahrzeug",
+  "subcat_van_minibus": "Van & Minibus",
+  "subcat_truck": "LKW",
+  "subcat_tractor": "Traktor",
+  "subcat_boat": "Boot & Wasserfahrzeug",
+  "subcat_caravan": "Wohnwagen",
+  "subcat_spare_parts": "Ersatzteile",
+  "subcat_mobile_phone": "Mobiltelefon",
+  "subcat_laptop": "Laptop & Computer",
+  "subcat_tablet": "Tablet",
+  "subcat_tv_monitor": "TV & Monitor",
+  "subcat_camera": "Kamera",
+  "subcat_audio_system": "Audiosystem",
+  "subcat_smartwatch": "Smartwatch & Band",
+  "subcat_gaming_console": "Spielekonsole",
+  "subcat_other_electronics": "Sonstige Elektronik",
+  "subcat_apartment": "Wohnung",
+  "subcat_house_villa": "Haus & Villa",
+  "subcat_land": "Grundstück",
+  "subcat_field_garden": "Feld & Garten",
+  "subcat_office": "Büro & Arbeitsplatz",
+  "subcat_warehouse": "Lager & Fabrik",
+  "subcat_building": "Gebäude",
+  "subcat_womens_clothing": "Damenbekleidung",
+  "subcat_mens_clothing": "Herrenbekleidung",
+  "subcat_kids_clothing": "Kinderbekleidung",
+  "subcat_shoes": "Schuhe",
+  "subcat_bag": "Tasche",
+  "subcat_jewelry": "Schmuck",
+  "subcat_watch": "Uhr",
+  "subcat_accessories": "Zubehör",
+  "subcat_furniture": "Möbel",
+  "subcat_kitchen_equipment": "Küchenausstattung",
+  "subcat_cleaning_equipment": "Reinigungsgeräte",
+  "subcat_home_textile": "Heimtextilien",
+  "subcat_lighting": "Beleuchtung",
+  "subcat_garden_outdoor": "Garten & Outdoor",
+  "subcat_antique": "Antiquitäten & Sammlerstücke",
+  "subcat_bicycle": "Fahrrad",
+  "subcat_fitness_equipment": "Fitnessgeräte",
+  "subcat_outdoor_camping": "Outdoor & Camping",
+  "subcat_team_sports": "Mannschaftssport",
+  "subcat_outdoor_sports": "Outdoor-Sport",
+  "subcat_other_sports": "Weitere Sportarten",
+  "subcat_fiction": "Fiktion",
+  "subcat_sci_fi": "Sci-Fi & Fantasy",
+  "subcat_self_development": "Selbstentwicklung",
+  "subcat_kids_books": "Kinderbücher",
+  "subcat_school_books": "Schulbücher",
+  "subcat_arts_books": "Kunst- & Musikbücher",
+  "subcat_magazine": "Zeitschriften & Sammlerstücke",
+  "subcat_pet": "Haustier",
+  "subcat_baby_toys": "Baby & Spielzeug",
+  "subcat_musical_instrument": "Musikinstrument",
+  "subcat_photo_video": "Foto & Video",
+  "subcat_food_agriculture": "Lebensmittel & Landwirtschaft",
+  "subcat_misc": "Andere",
+  "langSwitching": "Sprache laden...",
+  "langSwitchSuccess": "Sprache geändert",
+  "langSwitchFailed": "Sprache konnte nicht geändert werden. Überprüfe deine Verbindung.",
+  "filterApply": "Anwenden",
+  "filterClear": "Löschen",
+  "filterCategory": "Kategorie",
+  "filterSubcategory": "Unterkategorie",
+  "filterExtraFields": "Spezifikationen",
+  "filterCitySection": "Stadt",
+  "filterConditionSection": "Zustand",
+  "filterSortSection": "Sortieren nach",
+  "filterPriceRange": "Preisspanne",
+  "filterPriceMin": "Mindestpreis",
+  "filterPriceMax": "Höchstpreis",
+  "filterButton": "Filter",
+  "citySearchHint": "Stadt suchen...",
+  "sortNewest": "Neueste",
+  "sortOldest": "Älteste",
+  "sortPriceAsc": "Preis (aufsteigend)",
+  "sortPriceDesc": "Preis (absteigend)",
+  "opt_white": "Weiß",
+  "opt_beyaz": "Weiß",
+  "opt_gray": "Grau",
+  "opt_gri": "Grau",
+  "opt_black": "Schwarz",
+  "opt_siyah": "Schwarz",
+  "opt_blue": "Blau",
+  "opt_mavi": "Blau",
+  "opt_red": "Rot",
+  "opt_kirmizi": "Rot",
+  "opt_green": "Grün",
+  "opt_yesil": "Grün",
+  "opt_yellow": "Gelb",
+  "opt_sari": "Gelb",
+  "opt_orange": "Orange",
+  "opt_turuncu": "Orange",
+  "opt_purple": "Lila",
+  "opt_mor": "Lila",
+  "opt_pink": "Rosa",
+  "opt_pembe": "Rosa",
+  "opt_brown": "Braun",
+  "opt_kahverengi": "Braun",
+  "opt_beige": "Beige",
+  "opt_bej": "Beige",
+  "opt_gold": "Gold",
+  "opt_altin": "Gold",
+  "opt_silver": "Silber",
+  "opt_gumus": "Silber",
+  "opt_other": "Andere",
+  "opt_diger": "Andere",
+  "opt_yes": "Ja",
+  "opt_var": "Ja",
+  "opt_no": "Nein",
+  "opt_yok": "Nein",
+  "opt_none": "Nein",
+  "opt_gasoline": "Benzin",
+  "opt_benzin": "Benzin",
+  "opt_diesel": "Diesel",
+  "opt_dizel": "Diesel",
+  "opt_lpg": "LPG",
+  "opt_hybrid": "Hybrid",
+  "opt_hibrit": "Hybrid",
+  "opt_electric": "Elektro",
+  "opt_elektrik": "Elektro",
+  "opt_sail": "Segel",
+  "opt_yelken": "Segel",
+  "opt_manual": "Manuell",
+  "opt_manuel": "Manuell",
+  "opt_automatic": "Automatik",
+  "opt_otomatik": "Automatik",
+  "opt_semi_automatic": "Halbautomatik",
+  "opt_yari_otomatik": "Halbautomatik",
+  "opt_cvt": "CVT",
+  "opt_sedan": "Limousine",
+  "opt_hatchback": "Fließheck",
+  "opt_suv": "SUV",
+  "opt_station_wagon": "Kombi",
+  "opt_coupe": "Coupé",
+  "opt_cabriolet": "Cabriolet",
+  "opt_pickup": "Pickup",
+  "opt_van": "Van",
+  "opt_minibus": "Minibus",
+  "opt_naked": "Naked",
+  "opt_sport": "Sport",
+  "opt_touring": "Touring",
+  "opt_enduro": "Enduro",
+  "opt_scooter": "Roller",
+  "opt_chopper": "Chopper",
+  "opt_adventure": "Adventure",
+  "opt_painted": "Lackiert",
+  "opt_boyali": "Lackiert",
+  "opt_accident": "Unfall",
+  "opt_kazali": "Unfall",
+  "opt_damage_record": "Schadensprotokoll",
+  "opt_hasar_kayitli": "Schadensprotokoll",
+  "opt_heavy_damage_record": "Schweres Schadensprotokoll",
+  "opt_agir_hasar_kayitli": "Schweres Schadensprotokoll",
+  "opt_flawless": "Makellos",
+  "opt_hatasiz": "Makellos",
+  "opt_hasarsiz": "Kein Schaden",
+  "opt_hasarli": "Beschädigt",
+  "opt_degisen": "Ausgetauscht",
+  "opt_motorboat": "Motorboot",
+  "opt_motor_tekne": "Motorboot",
+  "opt_sailboat": "Segelboot",
+  "opt_yelkenli": "Segelboot",
+  "opt_speedboat": "Schnellboot",
+  "opt_surat_teknesi": "Schnellboot",
+  "opt_cutter": "Kutter",
+  "opt_kotra": "Kutter",
+  "opt_kayak": "Kajak",
+  "opt_kanotaj": "Kajak",
+  "opt_jet_ski": "Jet-Ski",
+  "opt_dslr": "DSLR",
+  "opt_mirrorless": "Spiegellos",
+  "opt_compact": "Kompakt",
+  "opt_kompakt": "Kompakt",
+  "opt_action": "Action-Kamera",
+  "opt_video": "Videokamera",
+  "opt_camera": "Kamera",
+  "opt_kamera": "Kamera",
+  "opt_lens": "Objektiv",
+  "opt_tripod": "Stativ",
+  "opt_drone": "Drohne",
+  "opt_flash": "Blitz / Licht",
+  "opt_flas": "Blitz / Licht",
+  "opt_1+0": "1+0 Studio",
+  "opt_1+1": "1+1",
+  "opt_2+1": "2+1",
+  "opt_3+1": "3+1",
+  "opt_4+1": "4+1",
+  "opt_5+1": "5+1",
+  "opt_6+1": "6+1 und mehr",
+  "opt_new_build": "Neu (0)",
+  "opt_sifir": "Neu (0)",
+  "opt_1_5": "1–5 Jahre",
+  "opt_6_10": "6–10 Jahre",
+  "opt_11_15": "11–15 Jahre",
+  "opt_16_20": "16–20 Jahre",
+  "opt_21_plus": "21 Jahre und älter",
+  "opt_combi_boiler": "Boiler / Kombi",
+  "opt_kombi": "Boiler / Kombi",
+  "opt_central_gas": "Erdgas (Zentral)",
+  "opt_dogalgaz": "Erdgas (Zentral)",
+  "opt_stove": "Ofen",
+  "opt_soba": "Ofen",
+  "opt_air_conditioning": "Klimaanlage",
+  "opt_klima": "Klimaanlage",
+  "opt_underfloor_heating": "Fußbodenheizung",
+  "opt_yerden_isitma": "Fußbodenheizung",
+  "opt_furnished": "Möbliert",
+  "opt_esyali": "Möbliert",
+  "opt_semi_furnished": "Teilmöbliert",
+  "opt_yari_esyali": "Teilmöbliert",
+  "opt_empty": "Leerstehend",
+  "opt_bos": "Leerstehend",
+  "opt_condominium": "Eigentumswohnung",
+  "opt_kat_mulkiyeti": "Eigentumswohnung",
+  "opt_floor_easement": "Bau-Dienstbarkeit",
+  "opt_kat_irtifaki": "Bau-Dienstbarkeit",
+  "opt_shared_ownership": "Geteilte Urkunde",
+  "opt_hisseli": "Geteilte Urkunde",
+  "opt_land_title": "Grundbuchurkunde",
+  "opt_arsa": "Grundbuchurkunde",
+  "opt_residential": "Wohngebiet",
+  "opt_konut": "Wohngebiet",
+  "opt_commercial": "Gewerbegebiet",
+  "opt_ticari": "Gewerbegebiet",
+  "opt_agricultural": "Landwirtschaftlich",
+  "opt_tarimsal": "Landwirtschaftlich",
+  "opt_industrial": "Industriell",
+  "opt_sanayi": "Industriell",
+  "opt_sneaker": "Sport / Sneaker",
+  "opt_spor": "Sport / Sneaker",
+  "opt_formal": "Klassisch",
+  "opt_klasik": "Klassisch",
+  "opt_boot": "Stiefel",
+  "opt_bot": "Stiefel",
+  "opt_sandal": "Sandalen",
+  "opt_sandalet": "Sandalen",
+  "opt_slipper": "Hausschuhe",
+  "opt_terlik": "Hausschuhe",
+  "opt_heeled": "Absätze",
+  "opt_topuklu": "Absätze",
+  "opt_leather": "Leder",
+  "opt_deri": "Leder",
+  "opt_faux_leather": "Kunstleder",
+  "opt_suni_deri": "Kunstleder",
+  "opt_fabric": "Stoff",
+  "opt_kumas": "Stoff",
+  "opt_canvas": "Leinwand",
+  "opt_kanvas": "Leinwand",
+  "opt_platinum": "Platin",
+  "opt_platin": "Platin",
+  "opt_diamond": "Diamant",
+  "opt_elmas": "Diamant",
+  "opt_natural_stone": "Naturstein",
+  "opt_dogal_tas": "Naturstein",
+  "opt_8": "8 Karat",
+  "opt_14": "14 Karat",
+  "opt_18": "18 Karat",
+  "opt_22": "22 Karat",
+  "opt_24": "24 Karat",
+  "opt_925": "925er Sterlingsilber",
+  "opt_800": "800er Reinheit",
+  "opt_male": "Herren",
+  "opt_erkek": "Herren",
+  "opt_female": "Damen",
+  "opt_kadin": "Damen",
+  "opt_unisex": "Unisex",
+  "opt_0_3m": "0–3 Monate",
+  "opt_0_3ay": "0–3 Monate",
+  "opt_3_6m": "3–6 Monate",
+  "opt_3_6ay": "3–6 Monate",
+  "opt_6_12m": "6–12 Monate",
+  "opt_6_12ay": "6–12 Monate",
+  "opt_1_2y": "1–2 Jahre",
+  "opt_1_2yas": "1–2 Jahre",
+  "opt_3_4y": "3–4 Jahre",
+  "opt_3_4yas": "3–4 Jahre",
+  "opt_5_6y": "5–6 Jahre",
+  "opt_5_6yas": "5–6 Jahre",
+  "opt_7_8y": "7–8 Jahre",
+  "opt_7_8yas": "7–8 Jahre",
+  "opt_9_10y": "9–10 Jahre",
+  "opt_9_10yas": "9–10 Jahre",
+  "opt_11_12y": "11–12 Jahre",
+  "opt_11_12yas": "11–12 Jahre",
+  "opt_13_14y": "13–14 Jahre",
+  "opt_13_14yas": "13–14 Jahre",
+  "opt_sofa": "Sofa / Couch",
+  "opt_koltuk": "Sofa / Couch",
+  "opt_bed": "Bett",
+  "opt_yatak": "Bett",
+  "opt_table": "Tisch",
+  "opt_masa": "Tisch",
+  "opt_chair": "Stuhl",
+  "opt_sandalye": "Stuhl",
+  "opt_wardrobe": "Kleiderschrank",
+  "opt_dolap": "Kleiderschrank",
+  "opt_shelf": "Regal / Bücherregal",
+  "opt_raf": "Regal / Bücherregal",
+  "opt_coffee_table": "Couchtisch",
+  "opt_sehpa": "Couchtisch",
+  "opt_wood": "Holz",
+  "opt_ahsap": "Holz",
+  "opt_metal": "Metall",
+  "opt_plastic": "Plastik",
+  "opt_plastik": "Plastik",
+  "opt_glass": "Glas",
+  "opt_cam": "Glas",
+  "opt_bedding_set": "Bettwäsche",
+  "opt_nevresim": "Bettwäsche",
+  "opt_quilt": "Bettdecke / Decke",
+  "opt_yorgan": "Bettdecke / Decke",
+  "opt_pillow": "Kissen",
+  "opt_yastik": "Kissen",
+  "opt_towel": "Handtuch",
+  "opt_havlu": "Handtuch",
+  "opt_curtain": "Vorhang / Gardine",
+  "opt_perde": "Vorhang / Gardine",
+  "opt_rug": "Teppich",
+  "opt_hali": "Teppich",
+  "opt_chandelier": "Kronleuchter",
+  "opt_avize": "Kronleuchter",
+  "opt_lampshade": "Lampenschirm",
+  "opt_abajur": "Lampenschirm",
+  "opt_desk_lamp": "Schreibtischlampe",
+  "opt_masa_lambasi": "Schreibtischlampe",
+  "opt_wall_lamp": "Wandlampe",
+  "opt_aplik": "Wandlampe",
+  "opt_floor_lamp": "Stehlampe",
+  "opt_ayak_lambasi": "Stehlampe",
+  "opt_mountain": "Mountainbike",
+  "opt_dag": "Mountainbike",
+  "opt_road": "Rennrad",
+  "opt_yol": "Rennrad",
+  "opt_city": "Citybike",
+  "opt_sehir": "Citybike",
+  "opt_bmx": "BMX",
+  "opt_electric_bike": "E-Bike",
+  "opt_elektrikli": "E-Bike",
+  "opt_folding": "Klapprad",
+  "opt_katlanan": "Klapprad",
+  "opt_football": "Fußball",
+  "opt_futbol": "Fußball",
+  "opt_basketball": "Basketball",
+  "opt_basketbol": "Basketball",
+  "opt_volleyball": "Volleyball",
+  "opt_voleybol": "Volleyball",
+  "opt_tennis": "Tennis",
+  "opt_tenis": "Tennis",
+  "opt_swimming": "Schwimmen",
+  "opt_yuzme": "Schwimmen",
+  "opt_running": "Laufen",
+  "opt_kosu": "Laufen",
+  "opt_boxing": "Boxen / Muay Thai",
+  "opt_boks": "Boxen / Muay Thai",
+  "opt_yoga": "Yoga / Pilates",
+  "opt_outdoor": "Outdoor-Sport",
+  "opt_doga_sporlari": "Outdoor-Sport",
+  "opt_dog": "Hund",
+  "opt_kopek": "Hund",
+  "opt_cat": "Katze",
+  "opt_kedi": "Katze",
+  "opt_bird": "Vogel",
+  "opt_kus": "Vogel",
+  "opt_fish": "Fisch",
+  "opt_balik": "Fisch",
+  "opt_hamster": "Hamster",
+  "opt_rabbit": "Kaninchen",
+  "opt_tavsan": "Kaninchen",
+  "opt_guitar": "Gitarre",
+  "opt_gitar": "Gitarre",
+  "opt_piano": "Klavier / Keyboard",
+  "opt_piyano": "Klavier / Keyboard",
+  "opt_drums": "Schlagzeug / Percussion",
+  "opt_davul": "Schlagzeug / Percussion",
+  "opt_violin": "Geige",
+  "opt_keman": "Geige",
+  "opt_saz": "Saz / Baglama",
+  "opt_flute": "Flöte",
+  "opt_flut": "Flöte",
+  "opt_16gb": "16 GB",
+  "opt_32gb": "32 GB",
+  "opt_64gb": "64 GB",
+  "opt_128gb": "128 GB",
+  "opt_256gb": "256 GB",
+  "opt_512gb": "512 GB",
+  "opt_1tb": "1 TB",
+  "opt_2tb": "2 TB",
+  "opt_2gb": "2 GB",
+  "opt_3gb": "3 GB",
+  "opt_4gb": "4 GB",
+  "opt_6gb": "6 GB",
+  "opt_8gb": "8 GB",
+  "opt_12gb": "12 GB",
+  "opt_11": "11",
+  "opt_13": "13",
+  "opt_15": "15",
+  "opt_16": "16",
+  "opt_17": "17",
+  "opt_27": "27",
+  "opt_32": "32",
+  "opt_35": "35",
+  "opt_36": "36",
+  "opt_37": "37",
+  "opt_38": "38",
+  "opt_39": "39",
+  "opt_40": "40",
+  "opt_41": "41",
+  "opt_42": "42",
+  "opt_43": "43",
+  "opt_44": "44",
+  "opt_45": "45",
+  "opt_46": "46",
+  "opt_47": "47",
+  "opt_xxs": "XXS",
+  "opt_xs": "XS",
+  "opt_s": "S",
+  "opt_m": "M",
+  "opt_l": "L",
+  "opt_xl": "XL",
+  "opt_xxl": "XXL",
+  "opt_xxxl": "XXXL",
+  "opt_4xl": "4XL",
+  "opt_100hp": "100 PS",
+  "opt_11_pro_plus": "11 Pro+",
+  "opt_12_pro_plus": "12 Pro+",
+  "opt_14t_pro": "14T Pro",
+  "opt_156": "156",
+  "opt_1_series": "1er-Reihe",
+  "opt_1_serisi": "1er-Reihe",
+  "opt_20": "20",
+  "opt_2008": "2008",
+  "opt_200_vario": "200 Vario",
+  "opt_208": "208",
+  "opt_26": "26",
+  "opt_27.5": "27.5",
+  "opt_28": "28",
+  "opt_29": "29",
+  "opt_3008": "3008",
+  "opt_300_vario": "300 Vario",
+  "opt_308": "308",
+  "opt_3_series": "3er-Reihe",
+  "opt_3_serisi": "3er-Reihe",
+  "opt_500": "500",
+  "opt_500_vario": "500 Vario",
+  "opt_5075e": "5075E",
+  "opt_508": "508",
+  "opt_5090r": "5090R",
+  "opt_5_etech": "5 E-Tech",
+  "opt_5_series": "5er-Reihe",
+  "opt_5_serisi": "5er-Reihe",
+  "opt_5_sports": "5 Sports",
+  "opt_60hp": "60 PS",
+  "opt_6110r": "6110R",
+  "opt_6130r": "6130R",
+  "opt_700_vario": "700 Vario",
+  "opt_70hp": "70 PS",
+  "opt_7r": "7R",
+  "opt_80hp": "80 PS",
+  "opt_900_vario": "900 Vario",
+  "opt_90hp": "90 PS",
+  "opt_911": "911",
+  "opt_a3": "A3",
+  "opt_a4": "A4",
+  "opt_a6": "A6",
+  "opt_a6_etron": "A6 e-tron",
+  "opt_a78": "A78",
+  "opt_a_series": "A-Klasse",
+  "opt_a_serisi": "A-Klasse",
+  "opt_accord": "Accord",
+  "opt_acer": "Acer",
+  "opt_adventure_890": "Adventure 890",
+  "opt_africa_twin": "Africa Twin",
+  "opt_alfa_romeo": "Alfa Romeo",
+  "opt_allez": "Allez",
+  "opt_alpinist": "Alpinist",
+  "opt_amd_r5": "AMD Ryzen 5",
+  "opt_amd_r7": "AMD Ryzen 7",
+  "opt_amd_r9": "AMD Ryzen 9",
+  "opt_anthem": "Anthem",
+  "opt_apple": "Apple",
+  "opt_apple_m1": "Apple M1",
+  "opt_apple_m2": "Apple M2",
+  "opt_apple_m3": "Apple M3",
+  "opt_apple_m4": "Apple M4",
+  "opt_aprilia": "Aprilia",
+  "opt_aqua_terra": "Aqua Terra",
+  "opt_aquaracer": "Aquaracer",
+  "opt_ariya": "Ariya",
+  "opt_arona": "Arona",
+  "opt_aspect": "Aspect",
+  "opt_aspire_5": "Aspire 5",
+  "opt_astra": "Astra",
+  "opt_astron": "Astron",
+  "opt_asus": "Asus",
+  "opt_asx": "ASX",
+  "opt_ateca": "Ateca",
+  "opt_audi": "Audi",
+  "opt_b_series": "B-Klasse",
+  "opt_b_serisi": "B-Klasse",
+  "opt_baby_g": "Baby-G",
+  "opt_berlingo": "Berlingo",
+  "opt_bianchi": "Bianchi",
+  "opt_big_bold": "Big Bold",
+  "opt_big_nine": "Big Nine",
+  "opt_bmw": "BMW",
+  "opt_bonneville_t120": "Bonneville T120",
+  "opt_boxer": "Boxer",
+  "opt_burgman_400": "Burgman 400",
+  "opt_c3": "C3",
+  "opt_c32": "C32",
+  "opt_c3_aircross": "C3 Aircross",
+  "opt_c4": "C4",
+  "opt_c5_aircross": "C5 Aircross",
+  "opt_c67": "C67",
+  "opt_c_hr": "C-HR",
+  "opt_c_series": "C-Klasse",
+  "opt_c_serisi": "C-Klasse",
+  "opt_c_sport": "C-Sport",
+  "opt_caddy": "Caddy",
+  "opt_california": "California",
+  "opt_cannondale": "Cannondale",
+  "opt_canon": "Canon",
+  "opt_captiva": "Captiva",
+  "opt_carlyle": "Carlyle",
+  "opt_carrera": "Carrera",
+  "opt_case": "Case",
+  "opt_casio": "Casio",
+  "opt_cayenne": "Cayenne",
+  "opt_cayenne_e_hybrid": "Cayenne E-Hybrid",
+  "opt_cb125r": "CB125R",
+  "opt_cb500f": "CB500F",
+  "opt_cb650r": "CB650R",
+  "opt_cbr600rr": "CBR600RR",
+  "opt_ceed": "Ceed",
+  "opt_cf": "CF",
+  "opt_checkpoint": "Checkpoint",
+  "opt_chemin_tourelles": "Chemin des Tourelles",
+  "opt_cherokee": "Cherokee",
+  "opt_chevrolet": "Chevrolet",
+  "opt_citan": "Citan",
+  "opt_citroen": "Citroën",
+  "opt_civic": "Civic",
+  "opt_classic_350": "Classic 350",
+  "opt_clio": "Clio",
+  "opt_combo": "Combo",
+  "opt_compass": "Compass",
+  "opt_constellation": "Constellation",
+  "opt_contend": "Contend",
+  "opt_contessa": "Contessa",
+  "opt_corolla": "Corolla",
+  "opt_corsa": "Corsa",
+  "opt_cr_v": "CR-V",
+  "opt_crafter": "Crafter",
+  "opt_creator_m16": "Creator M16",
+  "opt_crossland": "Crossland",
+  "opt_crossland_cargo": "Crossland Cargo",
+  "opt_cruze": "Cruze",
+  "opt_cx_30": "CX-30",
+  "opt_cx_5": "CX-5",
+  "opt_cybertruck": "Cybertruck",
+  "opt_d_max": "D-Max",
+  "opt_dacia": "Dacia",
+  "opt_daf": "DAF",
+  "opt_daily": "Daily",
+  "opt_datejust": "Datejust",
+  "opt_day_date": "Day-Date",
+  "opt_daytona": "Daytona",
+  "opt_de_ville": "De Ville",
+  "opt_defender": "Defender",
+  "opt_defy": "Defy",
+  "opt_dell": "Dell",
+  "opt_discovery": "Discovery",
+  "opt_discovery_sport": "Discovery Sport",
+  "opt_diverge": "Diverge",
+  "opt_doblo": "Doblò",
+  "opt_domane": "Domane",
+  "opt_dorsoduro_900": "Dorsoduro 900",
+  "opt_ducati": "Ducati",
+  "opt_ducato": "Ducato",
+  "opt_duke_390": "Duke 390",
+  "opt_duke_790": "Duke 790",
+  "opt_duster": "Duster",
+  "opt_dynabook_cs50": "Dynabook CS50",
+  "opt_dynabook_e10": "Dynabook E10",
+  "opt_e2008": "e-2008",
+  "opt_e208": "e-208",
+  "opt_e3008": "e-3008",
+  "opt_e308": "e-308",
+  "opt_e_expert": "e-Expert",
+  "opt_e_series": "E-Klasse",
+  "opt_e_serisi": "E-Klasse",
+  "opt_eclipse_cross": "Eclipse Cross",
+  "opt_edge_40": "Edge 40",
+  "opt_edge_50_pro": "Edge 50 Pro",
+  "opt_edifice": "Edifice",
+  "opt_egea": "Egea",
+  "opt_elf": "Elf",
+  "opt_elitebook_840": "EliteBook 840",
+  "opt_emonda": "Émonda",
+  "opt_eqa": "EQA",
+  "opt_eqb": "EQB",
+  "opt_eqc": "EQC",
+  "opt_eqe": "EQE",
+  "opt_eqs": "EQS",
+  "opt_etron_gt": "e-tron GT",
+  "opt_eurocargo": "Eurocargo",
+  "opt_ev3": "EV3",
+  "opt_ev6": "EV6",
+  "opt_ev9": "EV9",
+  "opt_expert": "Expert",
+  "opt_express": "Express",
+  "opt_f800gs": "F 800 GS",
+  "opt_f_series": "F-Series",
+  "opt_fabia": "Fabia",
+  "opt_farmall_a": "Farmall A",
+  "opt_farmall_c": "Farmall C",
+  "opt_fat_boy": "Fat Boy",
+  "opt_fe": "FE",
+  "opt_fendt": "Fendt",
+  "opt_fenmore": "Fenmore",
+  "opt_fh": "FH",
+  "opt_fiat": "Fiat",
+  "opt_fiesta": "Fiesta",
+  "opt_find_x6": "Find X6",
+  "opt_find_x7": "Find X7",
+  "opt_fiorino": "Fiorino",
+  "opt_fl": "FL",
+  "opt_fm": "FM",
+  "opt_fmx": "FMX",
+  "opt_focus": "Focus",
+  "opt_ford": "Ford",
+  "opt_forester": "Forester",
+  "opt_formula_1": "Formula 1",
+  "opt_fossil": "Fossil",
+  "opt_fujifilm": "Fujifilm",
+  "opt_fx": "FX",
+  "opt_g15_gaming": "G15 Gaming",
+  "opt_g21": "G21",
+  "opt_g42": "G42",
+  "opt_g60": "G60",
+  "opt_g_series": "G-Klasse",
+  "opt_g_serisi": "G-Klasse",
+  "opt_g_shock": "G-Shock",
+  "opt_galaxy_a35": "Galaxy A35",
+  "opt_galaxy_a54": "Galaxy A54",
+  "opt_galaxy_book2_pro": "Galaxy Book2 Pro",
+  "opt_galaxy_book3": "Galaxy Book3",
+  "opt_galaxy_book3_360": "Galaxy Book3 360",
+  "opt_galaxy_book3_pro": "Galaxy Book3 Pro",
+  "opt_galaxy_book3_ultra": "Galaxy Book3 Ultra",
+  "opt_galaxy_s23": "Galaxy S23",
+  "opt_galaxy_s24": "Galaxy S24",
+  "opt_galaxy_s24_ultra": "Galaxy S24 Ultra",
+  "opt_gen_6": "Gen 6",
+  "opt_gent": "Gent",
+  "opt_gf63_thin": "GF63 Thin",
+  "opt_giant": "Giant",
+  "opt_giulia": "Giulia",
+  "opt_giulietta": "Giulietta",
+  "opt_glc": "GLC",
+  "opt_gle": "GLE",
+  "opt_gmt_master_ii": "GMT-Master II",
+  "opt_golf": "Golf",
+  "opt_google": "Google",
+  "opt_gopro": "GoPro",
+  "opt_grand_cherokee": "Grand Cherokee",
+  "opt_grandland": "Grandland",
+  "opt_gsx_r750": "GSX-R750",
+  "opt_gsx_s750": "GSX-S750",
+  "opt_gt_5": "GT 5",
+  "opt_gt_neo_5": "GT Neo 5",
+  "opt_harley": "Harley-Davidson",
+  "opt_hi_way": "Hi-Way",
+  "opt_himalayan": "Himalayan",
+  "opt_honda": "Honda",
+  "opt_hp": "HP",
+  "opt_hr_v": "HR-V",
+  "opt_huawei": "Huawei",
+  "opt_hunter_350": "Hunter 350",
+  "opt_hyundai": "Hyundai",
+  "opt_i20": "i20",
+  "opt_i3": "i3",
+  "opt_i30": "i30",
+  "opt_i4": "i4",
+  "opt_i5": "i5",
+  "opt_ibiza": "Ibiza",
+  "opt_id3": "ID.3",
+  "opt_id4": "ID.4",
+  "opt_id5": "ID.5",
+  "opt_id7": "ID.7",
+  "opt_id_buzz": "ID. Buzz",
+  "opt_ideapad_5": "IdeaPad 5",
+  "opt_impreza": "Impreza",
+  "opt_impulso": "Impulso",
+  "opt_infinito": "Infinito",
+  "opt_inspiron_15": "Inspiron 15",
+  "opt_intel_i3": "Intel Core i3",
+  "opt_intel_i5": "Intel Core i5",
+  "opt_intel_i7": "Intel Core i7",
+  "opt_intel_i9": "Intel Core i9",
+  "opt_interceptor_650": "Interceptor 650",
+  "opt_ioniq5": "IONIQ 5",
+  "opt_ioniq6": "IONIQ 6",
+  "opt_ipad_10": "iPad 10. Generation",
+  "opt_ipad_air_m1": "iPad Air M1",
+  "opt_ipad_mini_6": "iPad Mini 6",
+  "opt_ipad_pro_11_m4": "iPad Pro 11",
+  "opt_ipad_pro_13_m4": "iPad Pro 13",
+  "opt_iphone_13": "iPhone 13",
+  "opt_iphone_14": "iPhone 14",
+  "opt_iphone_15": "iPhone 15",
+  "opt_iphone_15_pro": "iPhone 15 Pro",
+  "opt_iphone_16": "iPhone 16",
+  "opt_iron_883": "Iron 883",
+  "opt_irony": "Irony",
+  "opt_isuzu": "Isuzu",
+  "opt_iveco": "Iveco",
+  "opt_ix": "iX",
+  "opt_ix1": "iX1",
+  "opt_jazz": "Jazz",
+  "opt_jeep": "Jeep",
+  "opt_jogger": "Jogger",
+  "opt_john_deere": "John Deere",
+  "opt_juke": "Juke",
+  "opt_kadjar": "Kadjar",
+  "opt_kangoo": "Kangoo",
+  "opt_karoq": "Karoq",
+  "opt_katana_15": "Katana 15",
+  "opt_kawasaki": "Kawasaki",
+  "opt_kia": "Kia",
+  "opt_kodiaq": "Kodiaq",
+  "opt_kona": "Kona",
+  "opt_kona_electric": "Kona Electric",
+  "opt_ktm": "KTM",
+  "opt_kubota": "Kubota",
+  "opt_kuga": "Kuga",
+  "opt_l200": "L200",
+  "opt_l_series": "L Series",
+  "opt_l_serisi": "L Series",
+  "opt_land_rover": "Land Rover",
+  "opt_latitude_5440": "Latitude 5440",
+  "opt_le_locle": "Le Locle",
+  "opt_leaf": "Leaf",
+  "opt_leaf_eplus": "Leaf e+",
+  "opt_legacy": "Legacy",
+  "opt_legion_5": "Legion 5",
+  "opt_lenovo": "Lenovo",
+  "opt_leon": "Leon",
+  "opt_lf": "LF",
+  "opt_link": "Link",
+  "opt_logan": "Logan",
+  "opt_m_series": "M-Klasse",
+  "opt_m_serisi": "M-Klasse",
+  "opt_macan": "Macan",
+  "opt_macbook_air_15_m2": "MacBook Air 15",
+  "opt_macbook_air_m2": "MacBook Air M2",
+  "opt_macbook_air_m3": "MacBook Air M3",
+  "opt_macbook_pro_14_m3": "MacBook Pro 14",
+  "opt_macbook_pro_16_m3": "MacBook Pro 16",
+  "opt_malibu": "Malibu",
+  "opt_man": "MAN",
+  "opt_marlin": "Marlin",
+  "opt_massey_ferguson": "Massey Ferguson",
+  "opt_master": "Master",
+  "opt_mate_60_pro": "Mate 60 Pro",
+  "opt_matebook_14": "MateBook 14",
+  "opt_matebook_d14": "MateBook D14",
+  "opt_matebook_d15": "MateBook D15",
+  "opt_matebook_e": "MateBook E",
+  "opt_matebook_x_pro": "MateBook X Pro",
+  "opt_matepad_10_4": "MatePad 10.4",
+  "opt_matepad_11": "MatePad 11",
+  "opt_matepad_pro_13": "MatePad Pro 13.2",
+  "opt_matepad_se": "MatePad SE",
+  "opt_matepad_t10s": "MatePad T10s",
+  "opt_maxxum": "Maxxum",
+  "opt_mazda": "Mazda",
+  "opt_mazda3": "Mazda3",
+  "opt_mazda6": "Mazda6",
+  "opt_megane": "Megane",
+  "opt_megane_etech": "Megane E-Tech",
+  "opt_mercedes": "Mercedes-Benz",
+  "opt_merida": "Merida",
+  "opt_meteor_350": "Meteor 350",
+  "opt_mf4700": "4700 Series",
+  "opt_mf5700": "5700 Series",
+  "opt_mf6700": "6700 Series",
+  "opt_mf7700": "7700 Series",
+  "opt_mf8700": "8700 Series",
+  "opt_micra": "Micra",
+  "opt_minimalist": "Minimalist",
+  "opt_mitsubishi": "Mitsubishi",
+  "opt_model_3": "Model 3",
+  "opt_model_s": "Model S",
+  "opt_model_x": "Model X",
+  "opt_model_y": "Model Y",
+  "opt_mokka": "Mokka",
+  "opt_monaco": "Monaco",
+  "opt_monster": "Monster",
+  "opt_moto_g54": "Moto G54",
+  "opt_moto_g84": "Moto G84",
+  "opt_motorola": "Motorola",
+  "opt_movano": "Movano",
+  "opt_msi": "MSI",
+  "opt_mt_07": "MT-07",
+  "opt_mt_09": "MT-09",
+  "opt_mu_x": "MU-X",
+  "opt_multistrada_v4": "Multistrada V4",
+  "opt_multivan": "Multivan",
+  "opt_mx_5": "MX-5",
+  "opt_mx_series": "MX Series",
+  "opt_mx_serisi": "MX Series",
+  "opt_n_series": "N-Series",
+  "opt_neutra": "Neutra",
+  "opt_new_holland": "New Holland",
+  "opt_nikon": "Nikon",
+  "opt_ninja_400": "Ninja 400",
+  "opt_ninja_zx10r": "Ninja ZX-10R",
+  "opt_nintendo": "Nintendo",
+  "opt_nintendo_switch": "Nintendo Switch",
+  "opt_nintendo_switch_lite": "Nintendo Switch Lite",
+  "opt_niro_ev": "Niro EV",
+  "opt_nissan": "Nissan",
+  "opt_nitro_5": "Nitro 5",
+  "opt_nokia": "Nokia",
+  "opt_nord_3": "Nord 3",
+  "opt_nord_ce3": "Nord CE 3",
+  "opt_nova_11": "Nova 11",
+  "opt_octavia": "Octavia",
+  "opt_oltre_xr4": "Oltre XR4",
+  "opt_olympus": "Olympus",
+  "opt_omega": "Omega",
+  "opt_omen_16": "Omen 16",
+  "opt_one_twenty": "One-Twenty",
+  "opt_oneplus": "OnePlus",
+  "opt_oneplus_11": "OnePlus 11",
+  "opt_oneplus_12": "OnePlus 12",
+  "opt_oneplus_12r": "OnePlus 12R",
+  "opt_opel": "Opel",
+  "opt_oppo": "Oppo",
+  "opt_optum": "Optum",
+  "opt_orlando": "Orlando",
+  "opt_outback": "Outback",
+  "opt_outlander": "Outlander",
+  "opt_p40_lite": "P40 Lite",
+  "opt_p50": "P50",
+  "opt_p60_pro": "P60 Pro",
+  "opt_p_series": "P Series",
+  "opt_p_serisi": "P Series",
+  "opt_pad": "OnePlus Pad",
+  "opt_pad_2": "OnePlus Pad 2",
+  "opt_pad_5": "Pad 5",
+  "opt_pad_6": "Pad 6",
+  "opt_pad_6_pro": "Pad 6 Pro",
+  "opt_pad_go": "OnePlus Pad Go",
+  "opt_pad_pro": "OnePlus Pad Pro",
+  "opt_pajero": "Pajero",
+  "opt_pan_america": "Pan America 1250",
+  "opt_panamera": "Panamera",
+  "opt_panamera_e_hybrid": "Panamera E-Hybrid",
+  "opt_panasonic": "Panasonic",
+  "opt_panda": "Panda",
+  "opt_panigale_v4": "Panigale V4",
+  "opt_partner": "Partner",
+  "opt_passat": "Passat",
+  "opt_pavilion_15": "Pavilion 15",
+  "opt_peugeot": "Peugeot",
+  "opt_pixel_7a": "Pixel 7a",
+  "opt_pixel_8": "Pixel 8",
+  "opt_pixel_8_pro": "Pixel 8 Pro",
+  "opt_pixel_9": "Pixel 9",
+  "opt_pixel_9_pro": "Pixel 9 Pro",
+  "opt_playstation": "PlayStation",
+  "opt_poco_m6_pro": "Poco M6 Pro",
+  "opt_poco_x6_pro": "Poco X6 Pro",
+  "opt_polo": "Polo",
+  "opt_porsche": "Porsche",
+  "opt_portege_x30": "Portégé X30",
+  "opt_predator_helios": "Predator Helios 300",
+  "opt_presage": "Presage",
+  "opt_pro_trek": "Pro Trek",
+  "opt_proart_studiobook": "ProArt Studiobook",
+  "opt_probook_450": "ProBook 450",
+  "opt_prospex": "Prospex",
+  "opt_prx": "PRX",
+  "opt_ps4": "PlayStation 4",
+  "opt_ps4_pro": "PlayStation 4 Pro",
+  "opt_ps5": "PlayStation 5",
+  "opt_puma": "Puma",
+  "opt_q3": "Q3",
+  "opt_q4_etron": "Q4 e-tron",
+  "opt_q5": "Q5",
+  "opt_q6_etron": "Q6 e-tron",
+  "opt_q8_etron": "Q8 e-tron",
+  "opt_qashqai": "Qashqai",
+  "opt_qashqai_epower": "Qashqai e-POWER",
+  "opt_quick": "Quick",
+  "opt_r1250gs": "R 1250 GS",
+  "opt_r_ninet": "R nineT",
+  "opt_r_series": "R Series",
+  "opt_r_serisi": "R Series",
+  "opt_range_rover": "Range Rover",
+  "opt_range_rover_sport": "Range Rover Sport",
+  "opt_rapid": "Rapid",
+  "opt_rav4": "RAV4",
+  "opt_razr_40": "Razr 40",
+  "opt_rc_390": "RC 390",
+  "opt_reacto": "Reacto",
+  "opt_realme": "Realme",
+  "opt_redmi_12": "Redmi 12",
+  "opt_redmi_note_13": "Redmi Note 13",
+  "opt_redmi_pad_2": "Redmi Pad 2",
+  "opt_redmi_pad_se": "Redmi Pad SE",
+  "opt_renault": "Renault",
+  "opt_renegade": "Renegade",
+  "opt_reno_10_pro": "Reno 10 Pro",
+  "opt_reno_11": "Reno 11",
+  "opt_rio": "Rio",
+  "opt_road_king": "Road King",
+  "opt_rockhopper": "Rockhopper",
+  "opt_rog_strix_g15": "ROG Strix G15",
+  "opt_rolex": "Rolex",
+  "opt_roubaix": "Roubaix",
+  "opt_royal_enfield": "Royal Enfield",
+  "opt_rs_660": "RS 660",
+  "opt_rsv4": "RSV4",
+  "opt_s1000rr": "S 1000 RR",
+  "opt_s1000xr": "S 1000 XR",
+  "opt_s60": "S60",
+  "opt_s_series": "S Series",
+  "opt_s_serisi": "S Series",
+  "opt_s_way": "S-Way",
+  "opt_samsung": "Samsung",
+  "opt_sandero": "Sandero",
+  "opt_santa_fe": "Santa Fe",
+  "opt_santa_fe_phev": "Santa Fe PHEV",
+  "opt_satellite_pro": "Satellite Pro",
+  "opt_scale": "Scale",
+  "opt_scania": "Scania",
+  "opt_scenic_etech": "Scenic E-Tech",
+  "opt_scott": "Scott",
+  "opt_scudo": "Scudo",
+  "opt_scultura": "Scultura",
+  "opt_seamaster": "Seamaster",
+  "opt_seastar": "Seastar",
+  "opt_seat": "SEAT",
+  "opt_seiko": "Seiko",
+  "opt_sistem51": "Sistem51",
+  "opt_skin": "Skin",
+  "opt_skoda": "Skoda",
+  "opt_sony": "Sony",
+  "opt_sorento": "Sorento",
+  "opt_spark": "Spark",
+  "opt_specialized": "Specialized",
+  "opt_speeder": "Speeder",
+  "opt_speedmaster": "Speedmaster",
+  "opt_speedster": "Speedster",
+  "opt_sportage": "Sportage",
+  "opt_sportage_phev": "Sportage PHEV",
+  "opt_sportster_s": "Sportster S",
+  "opt_spring": "Spring",
+  "opt_sprint": "Sprint",
+  "opt_sprinter": "Sprinter",
+  "opt_sr_gt": "SR GT",
+  "opt_st_series": "ST Series",
+  "opt_st_serisi": "ST Series",
+  "opt_stealth_15": "Stealth 15",
+  "opt_stealth_16": "Stealth 16",
+  "opt_stelvio": "Stelvio",
+  "opt_stonic": "Stonic",
+  "opt_stralis": "Stralis",
+  "opt_street_twin": "Street Twin",
+  "opt_streetfighter_v4": "Streetfighter V4",
+  "opt_stumpjumper": "Stumpjumper",
+  "opt_sub_cross": "Sub Cross",
+  "opt_subaru": "Subaru",
+  "opt_submariner": "Submariner",
+  "opt_super_duke_r": "1290 Super Duke R",
+  "opt_superb": "Superb",
+  "opt_supersix_evo": "SuperSix EVO",
+  "opt_supersport_950": "SuperSport 950",
+  "opt_suzuki": "Suzuki",
+  "opt_sv650": "SV650",
+  "opt_swatch": "Swatch",
+  "opt_swift_3": "Swift 3",
+  "opt_swift_x": "Swift X",
+  "opt_symbol": "Symbol",
+  "opt_synapse": "Synapse",
+  "opt_t10f": "T10F",
+  "opt_t10x": "T10X",
+  "opt_t5": "T5",
+  "opt_t6": "T6",
+  "opt_t7": "T7",
+  "opt_t_race": "T-Race",
+  "opt_t_roc": "T-Roc",
+  "opt_tab_a8": "Galaxy Tab A8",
+  "opt_tab_a9_plus": "Galaxy Tab A9+",
+  "opt_tab_r16": "Tab R16",
+  "opt_tab_s8_plus": "Galaxy Tab S8+",
+  "opt_tab_s9": "Galaxy Tab S9",
+  "opt_tab_s9_fe": "Galaxy Tab S9 FE",
+  "opt_tag_heuer": "TAG Heuer",
+  "opt_talento": "Talento",
+  "opt_tarraco": "Tarraco",
+  "opt_taycan": "Taycan",
+  "opt_taycan_ct": "Taycan Cross Turismo",
+  "opt_taycan_st": "Taycan Sport Turismo",
+  "opt_tcx": "TCX",
+  "opt_td5": "TD5",
+  "opt_tecra_a50": "Tecra A50",
+  "opt_tesla": "Tesla",
+  "opt_tge": "TGE",
+  "opt_tgl": "TGL",
+  "opt_tgm": "TGM",
+  "opt_tgs": "TGS",
+  "opt_tgx": "TGX",
+  "opt_thinkpad_e15": "ThinkPad E15",
+  "opt_thinkpad_x1_carbon": "ThinkPad X1 Carbon",
+  "opt_tiger_1200": "Tiger 1200",
+  "opt_tiger_900": "Tiger 900",
+  "opt_tiguan": "Tiguan",
+  "opt_tipo": "Tipo",
+  "opt_tissot": "Tissot",
+  "opt_tk4": "TK4",
+  "opt_togg": "TOGG",
+  "opt_tonale": "Tonale",
+  "opt_topstone": "Topstone",
+  "opt_toshiba": "Toshiba",
+  "opt_tourneo": "Tourneo",
+  "opt_townstar_ev": "Townstar EV",
+  "opt_toyota": "Toyota",
+  "opt_tracer_9": "Tracer 9",
+  "opt_trafic": "Trafic",
+  "opt_trail": "Trail",
+  "opt_trance": "Trance",
+  "opt_transit": "Transit",
+  "opt_transit_connect": "Transit Connect",
+  "opt_transit_courier": "Transit Courier",
+  "opt_transit_custom": "Transit Custom",
+  "opt_transporter": "Transporter",
+  "opt_traveller": "Traveller",
+  "opt_trek": "Trek",
+  "opt_trident_660": "Trident 660",
+  "opt_triumph": "Triumph",
+  "opt_tucson": "Tucson",
+  "opt_tucson_phev": "Tucson PHEV",
+  "opt_tuf_gaming_a15": "TUF Gaming A15",
+  "opt_tumosan": "Tümosan",
+  "opt_tuono_660": "Tuono 660",
+  "opt_twingo_electric": "Twingo Electric",
+  "opt_v60": "V60",
+  "opt_v_klasse": "V-Klasse",
+  "opt_versys_650": "Versys 650",
+  "opt_viano": "Viano",
+  "opt_victus_16": "Victus 16",
+  "opt_vito": "Vito",
+  "opt_vivaro": "Vivaro",
+  "opt_vivobook_15": "VivoBook 15",
+  "opt_volkswagen": "Volkswagen",
+  "opt_volvo": "Volvo",
+  "opt_vstrom_650": "V-Strom 650",
+  "opt_wave_ceptor": "Wave Ceptor",
+  "opt_wrangler": "Wrangler",
+  "opt_x3": "X3",
+  "opt_x5": "X5",
+  "opt_x_trail": "X-Trail",
+  "opt_xbox": "Xbox",
+  "opt_xbox_one": "Xbox One",
+  "opt_xbox_series_s": "Xbox Series S",
+  "opt_xbox_series_x": "Xbox Series X",
+  "opt_xc40": "XC40",
+  "opt_xc60": "XC60",
+  "opt_xc90": "XC90",
+  "opt_xf": "XF",
+  "opt_xg": "XG",
+  "opt_xg_plus": "XG+",
+  "opt_xiaomi": "Xiaomi",
+  "opt_xps_13": "XPS 13",
+  "opt_xps_15": "XPS 15",
+  "opt_xr21": "XR21",
+  "opt_xv": "XV",
+  "opt_yamaha": "Yamaha",
+  "opt_yaris": "Yaris",
+  "opt_yaris_cross": "Yaris Cross",
+  "opt_yoga_9i": "Yoga 9i",
+  "opt_yzf_r1": "YZF-R1",
+  "opt_yzf_r3": "YZF-R3",
+  "opt_z650": "Z650",
+  "opt_z900": "Z900",
+  "opt_zafira_life": "Zafira Life",
+  "opt_zenbook_14": "ZenBook 14 OLED",
+  "opt_zoe": "Zoe",
+  "opt_repainted": "Ausgetauscht",
+  "opt_replaced": "Ausgetauscht",
+  "opt_damaged_old": "Beschädigt",
+  "opt_damaged": "Beschädigt",
+  "opt_no_damage": "Kein Schaden",
+  "opt_accidented": "Unfall",
+  "opt_zero": "Neu (0)",
+  "opt_new_0": "Neu (0)",
+  "filterSelectDateRange": "Datumsbereich auswählen",
+  "filterAdd": "+ Filter hinzufügen",
+  "filterClearAll": "Löschen",
+  "filterCategoryAll": "Alle Kategorien",
+  "filterSubcategoryAll": "Alle",
+  "filterCityAll": "Alle Städte",
+  "conditionGood": "Gut",
+  "conditionFair": "Mittelmäßig",
+  "conditionNeedsRepair": "Reparaturbedürftig",
+  "liveSubcategoryLabel": "Unterkategorie",
+  "liveSubcategoryHint": "Wähle eine Unterkategorie",
+  "liveSubcategoryRequired": "Bitte wähle eine Unterkategorie",
+  "permCameraRequired": "Kamera- und Mikrofonberechtigung erforderlich, um auf die Bühne zu gehen",
+  "permCameraRevoked": "Kameraberechtigung entzogen",
+  "permMicRevoked": "Mikrofonberechtigung entzogen",
+  "permPermanentlyDenied": "Berechtigung für diese Funktion erforderlich. Aktiviere sie in den Einstellungen.",
+  "permOpenSettings": "Einstellungen öffnen",
+  "micToggleFailed": "Mikrofon konnte nicht umgeschaltet werden",
+  "cameraToggleFailed": "Kamera konnte nicht umgeschaltet werden",
+  "notifRatingUpdatedTitle": "@{username} hat seine Bewertung aktualisiert",
+  "@notifRatingUpdatedTitle": {
+    "description": "Push notification title when a rating is updated",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifRatingReplyTitle": "@{username} hat auf deine Bewertung geantwortet",
+  "@notifRatingReplyTitle": {
+    "description": "Push notification title when a rating reply is posted",
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifSettingsRatingsTitle": "Bewertungsbenachrichtigungen",
+  "notifSettingsRatingsDesc": "Wenn eine Bewertung aktualisiert oder beantwortet wird",
+  "extraField_listing_type": "Anzeigenstatus",
+  "opt_for_sale": "Zu verkaufen",
+  "opt_for_rent": "Zu vermieten",
+  "opt_transfer_sale": "Verkauf durch Übertragung",
+  "opt_transfer_rent": "Miete durch Übertragung",
+  "opt_in_exchange": "Im Austausch für eine Wohnung",
+  "extraField_bathroom_count": "Badezimmer",
+  "extraField_balcony": "Balkon",
+  "extraField_eligible_for_credit": "Kreditfähig",
+  "extraField_ada_no": "Block-Nr.",
+  "extraField_parcel_no": "Parzellen-Nr.",
+  "extraField_dues": "Nebenkosten (Monatlich)",
+  "opt_1": "1",
+  "opt_2": "2",
+  "opt_3": "3",
+  "opt_4_plus": "4+",
+  "commerceSelectTitle": "Verkaufstyp auswählen",
+  "commerceSelectAuction": "Auktion",
+  "commerceSelectDirectSale": "Direktverkauf",
+  "directSaleIdleChip": "Kein aktiver Verkauf",
+  "directSaleStatusIdle": "DIREKTVERKAUF",
+  "directSaleStatusActive": "AKTIV",
+  "directSaleStatusPaused": "PAUSIERT",
+  "directSaleStatusSoldOut": "AUSVERKAUFT",
+  "directSaleStatusEnded": "BEENDET",
+  "directSaleStatusCancelled": "ABGEBROCHEN",
+  "directSalePausedLabel": "Verkauf pausiert",
+  "directSaleResumedFeedback": "▶ Verkauf fortgesetzt",
+  "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} gekauft",
+  "@directSalePurchaseHostMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" },
+      "qty": { "type": "String" }
+    }
+  },
+  "directSalePurchaseViewerMsg": "@{buyer} hat gekauft",
+  "@directSalePurchaseViewerMsg": {
+    "placeholders": {
+      "buyer": { "type": "String" }
+    }
+  },
+  "directSaleSoldOutBanner": "Ausverkauft 🎉",
+  "directSaleEndedSoldOut": "Alles ausverkauft! 🎉",
+  "directSaleEndedByHost": "Verkauf beendet.",
+  "directSaleEndedStreamClosed": "Stream beendet.",
+  "directSaleCancelledNeutral": "Verkauf abgebrochen.",
+  "directSaleCancelledOrderKept": "Verkauf abgebrochen, deine Bestellung ist gültig.",
+  "directSaleCancelledOrderVoided": "Verkauf abgebrochen, deine Bestellung wurde storniert.",
+  "directSaleStockUrgency": "Nur noch {count} übrig!",
+  "@directSaleStockUrgency": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "directSaleFormTitle": "Verkauf starten",
+  "directSaleFormProductTitle": "Produktname",
+  "directSaleFormPrice": "Preis (₺)",
+  "directSaleFormStock": "Lagermenge",
+  "directSaleFormSelectListing": "Anzeige auswählen",
+  "directSaleFormManual": "Manuelle Eingabe",
+  "directSaleFormNoListing": "Keine Anzeige verlinkt",
+  "directSaleFormValidationError": "Bitte fülle alle Pflichtfelder aus.",
+  "directSaleDialogCancel": "Abbrechen",
+  "directSaleStartBtn": "▶ Starten",
+  "directSalePauseBtn": "Pausieren",
+  "directSaleResumeBtn": "Fortsetzen",
+  "directSaleEndBtn": "Verkauf beenden",
+  "directSaleCancelBtn": "Verkauf abbrechen",
+  "directSaleStockLabel": "Verbleibender Bestand",
+  "directSaleSoldLabel": "Verkauft",
+  "directSaleRevenueLabel": "Gesamtumsatz",
+  "directSaleEndDialogTitle": "Verkauf beenden",
+  "directSaleEndDialogBody": "{count} Bestellungen aufgegeben. Diese Bestellungen bleiben gültig.",
+  "@directSaleEndDialogBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "directSaleEndDialogBodyNoOrders": "Bist du sicher, dass du den Verkauf beenden möchtest?",
+  "directSaleCancelDialogTitle": "Verkauf abbrechen",
+  "directSaleCancelDialogBody": "Bisher {count} Bestellungen aufgegeben. Was soll mit ihnen geschehen?",
+  "@directSaleCancelDialogBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "directSaleCancelDialogBodyNoOrders": "Bist du sicher, dass du den Verkauf abbrechen möchtest?",
+  "directSaleCancelVoidOrders": "Bestellungen stornieren",
+  "directSaleCancelKeepOrders": "Bestellungen behalten",
+  "directSaleSummaryTitle": "Verkauf abgeschlossen",
+  "directSaleSummarySold": "{count} verkauft",
+  "@directSaleSummarySold": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "directSaleSummaryRevenue": "Gesamt: {amount}",
+  "@directSaleSummaryRevenue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "directSaleNewSaleBtn": "Neuen Verkauf starten",
+  "directSaleBuyBtn": "Sofort-Kauf",
+  "directSaleBuySheetTitle": "Kauf",
+  "directSaleBuySheetQuantity": "Menge",
+  "directSaleBuySheetTotal": "Gesamt",
+  "directSaleBuySheetPreviousBadge": "✓ Du hast {count} gekauft",
+  "@directSaleBuySheetPreviousBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "directSaleBuySheetConfirm": "Kaufen",
+  "directSaleProofDialogTitle": "Start deines Verkaufs",
+  "directSaleProofDialogBody": "Zeige das Produkt vor Beginn des Verkaufs in die Kamera und mache ein Beweisfoto.",
+  "directSaleNotActive": "Verkauf ist nicht mehr aktiv.",
+  "directSaleSoldOutError": "Leider ausverkauft.",
+  "directSaleInsufficientStock": "Unzureichender Bestand.",
+  "directSaleAlreadyActive": "Ein Verkauf ist bereits aktiv.",
+  "saleTypeDirect": "Direktverkauf",
+  "directSaleOrdersTitle": "Käufer",
+  "directSaleOrderCancelled": "Abgebrochen",
+  "directSaleOrderQuantity": "{count} Stk.",
+  "directSaleBuyerCount": "{count} Käufer",
+  "@directSaleBuyerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@directSaleOrderQuantity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "directSaleSaleStatusLabel": "Verkaufsstatus",
+  "directSaleOrderCompleted": "Abgeschlossen",
+  "directSaleQuantityLabel": "Menge",
+  "directSaleUnitPriceLabel": "Stückpreis",
+  "directSaleTotalLabel": "Gesamt",
+  "directSaleOrderStatusLabel": "Bestellstatus",
+  "directSaleViewBuyersBtn": "Käufer ansehen",
+  "directSaleSuggestionPrice": "Vorgeschlagener Preis: {price} ₺",
+  "directSaleSuggestionStock": "Geschätzte Nachfrage: {stock} Einheiten",
+  "directSaleSuggestionApply": "Anwenden",
+  "notifDirectSalePurchased": "Kauf abgeschlossen",
+  "notifDirectSalePurchasedBody": "Zahlung von {price} für {item} erhalten.",
+  "announcementAuctionWinner": "{winner} hat mit {price} gewonnen",
+  "announcementAuctionWinnerBids": "{bidCount} Gebote · {startPrice}→{price} · {winner} hat gewonnen",
+  "announcementBinAccepted": "{buyer} hat sofort gekauft · {price}",
+  "announcementBinAcceptedBids": "{buyer} hat es sich während des Bietens geschnappt · {price} ({bidCount} Gebote)",
+  "announcementDsPurchase": "{buyer} hat gekauft",
+  "announcementDsPurchaseMany": "{buyer} hat {quantity} Einheiten gekauft",
+  "announcementDsFirstBuyer": "🥇 Erster Käufer {buyer}",
+  "announcementDsPurchaseBatch": "{buyers} und {count} weitere haben gekauft",
+  "announcementDsRemaining": "Verbleibend: {remaining}",
+  "announcementDsSoldOut": "Ausverkauft!",
+  "announcementStockWarning": "⚠️ Nur noch {remaining} übrig!",
+  "consentCrossBorderTitle": "Ich habe die KVKK-Datenschutzhinweise gelesen; ich verstehe, dass meine personenbezogenen Daten auf Servern in der Europäischen Union (EU) verarbeitet werden, um den Service bereitzustellen.",
+  "consentCrossBorderRequired": "Du musst die Datenschutzhinweise zur Kenntnis nehmen, um fortzufahren.",
+  "consentCrossBorderRiskNote": "Deine personenbezogenen Daten werden ausschließlich in der Europäischen Union unter DSGVO-Schutz gespeichert. teqlif gibt deine Daten nicht an Dritte weiter.",
+  "consentPrivacyNoticeLinkLabel": "Erfahre, wie deine personenbezogenen Daten verarbeitet werden",
+  "consentPrivacyNoticeTitle": "KVKK-Datenschutzhinweise",
+  "consentPrivacyNoticeBody": "Datenverantwortlicher: teqlif (Firmenname und Adresse werden noch hinzugefügt)\n\nZweck der Verarbeitung: Kontoerstellung, Bereitstellung von Plattformdiensten, Sicherheit und Identitätsprüfung.\n\nInternationale Übertragung:\n• Personenbezogene Daten (Benutzerkonto, Anzeigen, Nachrichten): Europäische Union — geschützt durch DSGVO\n\nDeine Rechte (KVKK Artikel 11): Du hast das Recht zu erfahren, ob deine personenbezogenen Daten verarbeitet werden, Auskunft zu verlangen, eine Berichtigung zu verlangen, eine Löschung zu verlangen und bei unrechtmäßiger Verarbeitung Schadensersatz zu fordern.\n\nKontakt: destek@teqlif.com",
+  "consentRevokeTitle": "Meine Zustimmung widerrufen",
+  "consentRevokeConfirm": "Nach dem Widerruf deiner Zustimmung werden deine Daten aus technischen Gründen weiterhin auf unseren EU-Servern zur Leistungserbringung gespeichert. Um die Löschung deiner Daten zu beantragen, musst du dein Konto schließen. Möchtest du fortfahren?",
+  "consentStatusActive": "Zustimmung erteilt — {date}",
+  "consentStatusNone": "Keine Zustimmung erteilt",
+  "consentGivenOn": "Zur Kenntnis genommen am {date} in {locale}",
+  "consentGivenOnDateOnly": "Zur Kenntnis genommen am {date}",
+  "consentSettingsDeleteHint": "Du kannst dein Konto schließen, um deine Daten löschen zu lassen.",
+  "analyticsOptOutTitle": "Personalisierungsdaten deaktivieren",
+  "analyticsOptOutDesc": "Verhindere, dass deine Such- und Interaktionsdaten für die Personalisierung des Feeds verwendet werden.",
+  "lblPrivacySettings": "Datenschutz",
+  "privacyBannerTitle": "Dein Profil ist öffentlich",
+  "privacyBannerDesc": "Mache dein Profil privat, damit es nur deine Follower sehen können.",
+  "privacyBannerAction": "Zu den Einstellungen gehen",
+  "saleProofImageTitle": "Verkaufsbestätigungsbild",
+  "liveBothPermissionDesc": "Wir benötigen Kamera- und Mikrofonberechtigungen, um einen Live-Stream zu starten. Bitte erlaube dies in den Einstellungen.",
+  "liveCameraPermissionReq": "Kameraberechtigung erforderlich",
+  "liveCameraPermissionDesc": "Wir benötigen die Kameraberechtigung, um einen Live-Stream zu starten. Bitte erlaube dies in den Einstellungen.",
+  "liveMicPermissionDesc": "Wir benötigen die Mikrofonberechtigung, um einen Live-Stream zu starten. Bitte erlaube dies in den Einstellungen.",
+  "proToolMyRecordingsTitle": "Meine Aufnahmen",
+  "proToolMyRecordingsDesc": "Sieh dir deine Streams und Verkaufsdetails an",
+  "recordingStatusPreparing": "Vorbereitung...",
+  "recordingStatusWatch": "Ansehen",
+  "recordingStatusExpired": "Abgelaufen",
+  "recordingStatusExpiresIn": "Läuft ab in: {duration}",
+  "recordingDetailAuctions": "Auktionen",
+  "recordingDetailDirectSales": "Direktverkäufe",
+  "recordingDetailGifts": "Geschenke",
+  "errorRecordingNotFound": "Aufnahme nicht gefunden.",
+  "errorRecordingExpired": "Diese Aufnahme ist abgelaufen.",
+  "errorRecordingNotAvailable": "Aufnahme ist noch nicht bereit.",
+  "salesPaywallDesc": "Erhalte mit PRO Zugriff auf deine Verkaufsberichte, Umsatzanalysen und die besten Angebote.",
+  "conversionPaywallDesc": "Sieh dir mit PRO die Gewinnraten von Auktionen auf Kategorieebene und die durchschnittlichen Verkaufspreise an.",
+  "demandPaywallDesc": "Entdecke mit PRO aufstrebende Kategorien und Angebotslücken vor der Konkurrenz.",
+  "competitorPaywallDesc": "Finde mit PRO heraus, wo deine Preise im Vergleich zur Konkurrenz stehen, und erkenne entgangene Umsätze.",
+  "bestTimePaywallDesc": "Finde mit PRO die besten Tage und Zeiten, um für maximale Konversionen live zu gehen.",
+  "streamHistPaywallDesc": "Analysiere mit PRO deinen Stream-Verlauf und deine Zuschauerdaten im Detail.",
+  "retargetPaywallDesc": "Sende mit PRO Push-Benachrichtigungen für deine Anzeigen direkt an potenzielle Käufer.",
+  "recordingPaywallDesc": "Sieh dir mit PRO deine vergangenen Streams an und analysiere die Verkaufsdetails."
+}

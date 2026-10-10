@@ -543,9 +543,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
               maxBitrate: 1700000,
               maxFramerate: 30,
             ),
-            // 720p için SDK varsayılanı 'balanced' (resolution + FPS birlikte düşer).
-            // Şebeke sıkıştığında yalnızca FPS düşsün, çözünürlük 720p'de kalsın.
-            degradationPreference: DegradationPreference.maintainResolution,
+            // flutter_webrtc Android'de maintainResolution → toUpperCase() → MAİNTAİN_RESOLUTİON
+            // (Türkçe locale i→İ bug). balanced'da 'i' yok, güvenli.
+            degradationPreference: DegradationPreference.balanced,
           ),
           defaultAudioPublishOptions: AudioPublishOptions(
             audioBitrate: 64000,
