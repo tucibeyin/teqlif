@@ -529,7 +529,6 @@ class PriceEstimateRequest(BaseModel):
     city: str = Field(default="")
     condition: str = Field(default="")
     image_url: str = Field(default="")
-    image_phash: str | None = Field(default=None)
     exclude_listing_id: int = Field(default=0)
     extra_fields: dict = Field(default_factory=dict)
 
@@ -598,10 +597,7 @@ async def price_estimate(
         emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
         await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache
 
-    # 2. Opsiyonel: yüklenmiş görselin pHash'i (Ağ gecikmesi önlendi)
-    body_phash: str | None = body.image_phash
-
-    # 3. NER Extraction
+    # 2. NER Extraction
     ner_data = extract_ner(body.title, body.description, body.category)
     t_brand = ner_data.get("brand") or ""
     t_model = ner_data.get("model_name") or ""
@@ -619,7 +615,7 @@ async def price_estimate(
             l.category,
             l.subcategory,
             l.location,
-            l.image_phash,
+
             l.created_at,
             l.last_start_price AS start_price,
             l.last_sold_price AS final_price,
@@ -692,14 +688,6 @@ async def price_estimate(
                 created = created.replace(tzinfo=_tz2.utc)
             age_days = max(0, (now - created).days)
         recency = math.exp(-age_days / 180.0)
-        phash_mult = 1.0
-        if body_phash and row.image_phash:
-            try:
-                hamming = bin(int(body_phash, 16) ^ int(row.image_phash, 16)).count("1")
-                phash_mult = 1.5 if hamming <= 8 else (1.2 if hamming <= 16 else 1.0)
-            except Exception:
-                pass
-                
         # Subcategory eşleşme çarpanı
         subcat_mult = 1.0
         if body.subcategory and row.subcategory:
@@ -741,7 +729,7 @@ async def price_estimate(
             if b_fuel == ef["fuel_type"]: ner_mult *= 1.3
             else: ner_mult *= 0.5
 
-        composite = sem_sim * cat_mult * city_mult * recency * phash_mult * ner_mult * subcat_mult
+        composite = sem_sim * cat_mult * city_mult * recency * ner_mult * subcat_mult
         scored.append((composite, row, adj_final_price))
 
     scored.sort(key=lambda x: x[0], reverse=True)

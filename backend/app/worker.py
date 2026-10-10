@@ -3051,26 +3051,6 @@ async def optimize_notification_timing_task(ctx: dict) -> None:
 
 
 
-async def compute_listing_phash_task(ctx: dict, listing_id: int, image_url: str) -> None:
-    """İlan primary görselinden pHash hesapla, DB'ye yaz, kopya varsa logla."""
-    try:
-        from app.services.ml.image_mod_service import store_listing_phash
-        await store_listing_phash(listing_id, image_url)
-    except Exception as exc:
-        logger.error("[Worker] compute_listing_phash_task başarısız | listing_id=%s | %s", listing_id, exc, exc_info=True)
-        capture_exception(exc)
-
-
-async def backfill_phash_task(ctx: dict) -> None:
-    """image_phash NULL olan ilanlar için toplu pHash hesaplama (50 ilan/çalıştırma)."""
-    try:
-        from app.services.ml.image_mod_service import backfill_phash
-        count = await backfill_phash(batch_size=50)
-        logger.info("[Worker] backfill_phash_task tamamlandı | işlenen=%d", count)
-    except Exception as exc:
-        logger.error("[Worker] backfill_phash_task başarısız | %s", exc, exc_info=True)
-        capture_exception(exc)
-
 
 async def nsfw_check_task(ctx: dict, listing_id: int) -> None:
     """Tek ilanın tüm görsellerini NSFW için kontrol et."""
@@ -4140,7 +4120,7 @@ _SCHEDULE_FUNCTIONS = {
     "cleanup_old_impressions_task":          cleanup_old_impressions_task,
     "rebuild_faiss_index_task":              rebuild_faiss_index_task,
     "nsfw_backfill_task":                    nsfw_backfill_task,
-    "backfill_phash_task":                   backfill_phash_task,
+
     "backfill_listing_embeddings_task":      backfill_listing_embeddings_task,
     "hesitation_retarget_task":              hesitation_retarget_task,
     "cleanup_old_media_messages_task":       cleanup_old_media_messages_task,
@@ -4216,8 +4196,7 @@ class WorkerSettings:
         backfill_listing_quality_scores_task,
         train_listing_quality_model_task,
         optimize_notification_timing_task,
-        compute_listing_phash_task,
-        backfill_phash_task,
+
         nsfw_check_task,
         nsfw_backfill_task,
         rebuild_faiss_index_task,
