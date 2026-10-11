@@ -83,7 +83,11 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
   int _reconnectAttempts = 0;
   Timer? _reconnectTimer;
-  static const int _maxReconnectAttempts = 3;
+  // ~120s toplam: 2+4+8+16+30+30+30 saniye
+  static const int _maxReconnectAttempts = 7;
+
+  // Arka plana geçiş yaşandıysa true — resume'da kamera track'ini yenile
+  bool _wasBackgrounded = false;
 
   ConnectionQuality? _connectionQuality;
 
@@ -154,12 +158,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _handleHostBackground() async {
+    _wasBackgrounded = true;
     if (!_cameraEnabled) return;
     try {
       await _room?.localParticipant?.setCameraEnabled(false);
     } catch (_) {}
     if (mounted) {
-      setState(() => _cameraEnabled = false);
+      // Track'i temizle: donmuş frame yerine "kamera kapalı" göster
+      setState(() {
+        _cameraEnabled = false;
+        _localVideoTrack = null;
+      });
       TeqToast.warning(
         ref.read(localizationProvider).tOr(
           'hostCameraDisabledBackground',
@@ -170,6 +179,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<void> _recheckPermissionsAfterResume() async {
+    final wasBackgrounded = _wasBackgrounded;
+    _wasBackgrounded = false;
+
     final camStatus = await Permission.camera.status;
     final micStatus = await Permission.microphone.status;
     if (!mounted) return;
@@ -177,11 +189,15 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     final loc = ref.read(localizationProvider);
 
     if (!camStatus.isGranted && _cameraEnabled) {
-      setState(() => _cameraEnabled = false);
+      setState(() {
+        _cameraEnabled = false;
+        _localVideoTrack = null;
+      });
       try {
         await _room?.localParticipant?.setCameraEnabled(false);
       } catch (_) {}
       TeqToast.warning(loc.tOr('permCameraRevoked', 'Kamera izni kaldırıldı'));
+      return;
     }
     if (!micStatus.isGranted && _micEnabled) {
       setState(() => _micEnabled = false);
@@ -189,6 +205,38 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         await _room?.localParticipant?.setMicrophoneEnabled(false);
       } catch (_) {}
       TeqToast.warning(loc.tOr('permMicRevoked', 'Mikrofon izni kaldırıldı'));
+    }
+
+    // iOS'ta kamera track'i sistem kesintisinden (arama/SMS) sonra donabiliyor.
+    // Arka plana geçildiyse ve kamera açıksa track'i yeniden başlat.
+    if (wasBackgrounded && _cameraEnabled && camStatus.isGranted) {
+      await _restartCameraTrack();
+    }
+  }
+
+  /// iOS kamera track donmasını çözmek için disable→enable cycle uygular.
+  Future<void> _restartCameraTrack() async {
+    if (_room == null) return;
+    try {
+      await _room!.localParticipant?.setCameraEnabled(false);
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await _room!.localParticipant?.setCameraEnabled(
+        true,
+        cameraCaptureOptions: const CameraCaptureOptions(
+          params: VideoParametersPresets.h720_169,
+        ),
+      );
+      if (!mounted) return;
+      LocalVideoTrack? fresh;
+      for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
+        if (pub.track != null) {
+          fresh = pub.track as LocalVideoTrack;
+          break;
+        }
+      }
+      setState(() => _localVideoTrack = fresh);
+    } catch (e) {
+      _log.captureException(e, tag: 'HostStream.restartCamera');
     }
   }
 
@@ -740,8 +788,32 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   Future<void> _toggleCamera() async {
     final target = !_cameraEnabled;
     try {
-      await _room?.localParticipant?.setCameraEnabled(target);
-      if (mounted) setState(() => _cameraEnabled = target);
+      await _room?.localParticipant?.setCameraEnabled(
+        target,
+        cameraCaptureOptions: target
+            ? const CameraCaptureOptions(params: VideoParametersPresets.h720_169)
+            : null,
+      );
+      if (!mounted) return;
+      if (target) {
+        // Re-enable: LiveKit yeni track oluşturabilir — referansı güncelle
+        LocalVideoTrack? fresh;
+        for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
+          if (pub.track != null) {
+            fresh = pub.track as LocalVideoTrack;
+            break;
+          }
+        }
+        setState(() {
+          _cameraEnabled = true;
+          _localVideoTrack = fresh;
+        });
+      } else {
+        setState(() {
+          _cameraEnabled = false;
+          _localVideoTrack = null;
+        });
+      }
     } catch (e) {
       _log.captureException(e, tag: 'HostStream.toggleCamera');
       if (mounted) {
@@ -876,7 +948,9 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       }
       return;
     }
-    final delay = Duration(seconds: 2 << _reconnectAttempts); // 2s, 4s, 8s
+    // Üstel backoff, 30s'de tavan: 2,4,8,16,30,30,30 → toplam ~120s
+    final raw = 2 << _reconnectAttempts;
+    final delay = Duration(seconds: raw.clamp(2, 30));
     _reconnectAttempts++;
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, _reconnect);
