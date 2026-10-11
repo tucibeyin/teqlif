@@ -156,7 +156,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
       if (widget.isHost &&
           widget.onPurchaseAdded != null &&
           next.lastPurchaseBuyer != null &&
-          next.lastPurchaseBuyer != prev?.lastPurchaseBuyer) {
+          next.purchaseCount != (prev?.purchaseCount ?? 0)) {
         widget.onPurchaseAdded!(
           next.lastPurchaseBuyer!,
           next.price,
@@ -166,7 +166,7 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
       }
       // Satın alım bildirimi — panel içi inline mesaj
       if (next.lastPurchaseBuyer != null &&
-          next.lastPurchaseBuyer != prev?.lastPurchaseBuyer) {
+          next.purchaseCount != (prev?.purchaseCount ?? 0)) {
         final buyer = next.lastPurchaseBuyer!;
         final qty = next.lastPurchaseQty ?? 1;
         final loc = ref.read(localizationProvider);

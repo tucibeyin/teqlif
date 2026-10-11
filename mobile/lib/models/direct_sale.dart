@@ -13,6 +13,9 @@ class DirectSaleState {
   // Populated on each direct_sale_purchased WS event for onPurchaseAdded callback
   final String? lastPurchaseBuyer;
   final int? lastPurchaseQty;
+  // Increments on every purchase — use this for ref.listen change detection.
+  // lastPurchaseBuyer alone doesn't trigger when the same buyer buys repeatedly.
+  final int purchaseCount;
 
   const DirectSaleState({
     required this.status,
@@ -27,6 +30,7 @@ class DirectSaleState {
     this.listingId,
     this.lastPurchaseBuyer,
     this.lastPurchaseQty,
+    this.purchaseCount = 0,
   });
 
   factory DirectSaleState.idle() => const DirectSaleState(
@@ -36,6 +40,7 @@ class DirectSaleState {
         price: 0,
         totalStock: 0,
         remainingStock: 0,
+        purchaseCount: 0,
       );
 
   factory DirectSaleState.fromJson(Map<String, dynamic> j) => DirectSaleState(
@@ -64,6 +69,7 @@ class DirectSaleState {
     int? listingId,
     String? lastPurchaseBuyer,
     int? lastPurchaseQty,
+    int? purchaseCount,
   }) =>
       DirectSaleState(
         status: status ?? this.status,
@@ -78,6 +84,7 @@ class DirectSaleState {
         listingId: listingId ?? this.listingId,
         lastPurchaseBuyer: lastPurchaseBuyer ?? this.lastPurchaseBuyer,
         lastPurchaseQty: lastPurchaseQty ?? this.lastPurchaseQty,
+        purchaseCount: purchaseCount ?? this.purchaseCount,
       );
 
   bool get isIdle => status == 'idle';
