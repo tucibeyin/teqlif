@@ -106,10 +106,10 @@ async def archive_recordings_task(ctx: dict) -> None:
     """
     try:
         from app.database import AsyncSessionLocal
-        from app.config import get_settings
+        from app.config import settings
         from sqlalchemy import text
 
-        is_staging = get_settings().debug
+        is_staging = settings.debug
 
         if is_staging:
             query = text("""

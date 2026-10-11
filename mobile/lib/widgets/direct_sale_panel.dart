@@ -274,10 +274,8 @@ class _DirectSalePanelState extends ConsumerState<DirectSalePanel> {
         captureProofImage: widget.captureProofImage,
       ),
     );
-    if (!mounted) return;
-    // Dialog iptal edildi ve satış başlamadıysa commerce panele geri dön.
-    final dsState = ref.read(directSaleHostProvider(widget.streamId));
-    if (dsState.isIdle) widget.onExit?.call();
+    // Dialog kapandıktan sonra (ister İptal ister satış başladı) _IdleHostPanel'de kal.
+    // Kullanıcı ana panele dönmek için ✕ butonunu kullanır.
   }
 
   void _showBuySheet(BuildContext context, DirectSaleState state) {
