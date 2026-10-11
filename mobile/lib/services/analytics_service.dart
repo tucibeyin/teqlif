@@ -410,12 +410,10 @@ class AnalyticsService {
         'metadata': {'section': section},
         'user_id': ?myUserId,
       }).toList();
-      for (final body in events) {
-        http
-            .post(Uri.parse('${_api.config.baseUrl}/analytics/interaction'),
-                headers: headers, body: jsonEncode(body))
-            .catchError((_) => http.Response('', 500));
-      }
+      http
+          .post(Uri.parse('${_api.config.baseUrl}/analytics/interactions/batch'),
+              headers: headers, body: jsonEncode({'events': events}))
+          .catchError((_) => http.Response('', 500));
     } catch (_) {}
   }
 

@@ -120,6 +120,60 @@ async def track_event(
     return {"status": "queued"}
 
 
+class InteractionBatchPayload(BaseModel):
+    events: List[InteractionPayload] = Field(max_length=50)
+
+
+@router.post("/interactions/batch", status_code=202)
+async def track_interactions_batch(
+    batch: InteractionBatchPayload,
+    request: Request,
+):
+    """Toplu impression/sinyal — tek HTTP isteğiyle N event gönderir (max 50).
+
+    Yalnızca Redis kuyruğuna push eder; cold-start / spike tetikleyicileri atlanır
+    (bunlar pasif impression sinyalleri için gereksiz).
+    """
+    if not batch.events:
+        return {"status": "queued", "count": 0}
+
+    user_id = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            user_id = decode_token(auth_header.split(" ")[1])
+        except Exception:
+            pass
+
+    if await _is_analytics_opted_out(user_id):
+        return {"status": "opted_out"}
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    records = [
+        json.dumps({
+            "user_id": user_id,
+            "item_id": e.item_id,
+            "item_type": e.item_type,
+            "interaction_type": e.interaction_type,
+            "duration_seconds": e.duration_seconds,
+            "price_point": e.price_point,
+            "metadata": e.metadata,
+            "subcategory": getattr(e, "subcategory", "") or "",
+            "timestamp": now,
+        })
+        for e in batch.events
+    ]
+
+    try:
+        redis = await get_redis()
+        await redis.rpush(INTERACTION_QUEUE, *records)
+    except Exception as exc:
+        logger.error("[ANALYTICS] Batch rpush başarısız: %s", exc)
+
+    return {"status": "queued", "count": len(records)}
+
+
 @router.post("/interaction", status_code=202)
 async def track_interaction(
     payload: InteractionPayload,
