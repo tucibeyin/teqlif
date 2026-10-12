@@ -298,7 +298,7 @@ class RecordingManager:
                 import asyncpg
                 conn = await asyncpg.connect(dsn=dsn)
                 if proc.returncode == 0:
-                    sub_log = (stderr_b or b"").decode(errors="replace")[-600:].strip()
+                    sub_log = (stderr_b or b"").decode(errors="replace")[-4000:].strip()
                     if sub_log:
                         logger.debug("Subscriber log | rec_id=%d | %s", rec_id, sub_log)
                     row = await conn.fetchrow(

@@ -186,6 +186,20 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                         join.server_version,
                         len(join.other_participants),
                     )
+                    # Simulcast SSRC switching sorunundan kaçınmak için tüm
+                    # video track'leri LOW kalite katmanına sabitle (tek SSRC).
+                    video_sids = [
+                        t.sid
+                        for p in join.other_participants
+                        for t in p.tracks
+                        if t.type == lk_models.TrackType.Value("VIDEO")
+                    ]
+                    if video_sids:
+                        ts_req = lk_rtc.SignalRequest()
+                        ts_req.track_setting.track_sids.extend(video_sids)
+                        ts_req.track_setting.quality = lk_models.VideoQuality.Value("LOW")
+                        await ws.send_bytes(ts_req.SerializeToString())
+                        logger.info("Video kalite LOW sabitlendi | tracks=%s", video_sids)
 
                 elif kind == "offer":
                     # Sunucunun subscriber SDP offer'ı
@@ -222,13 +236,23 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                                 pending_ice.append(cand)
 
                 elif kind == "update":
-                    # Katılımcı DISCONNECTED oldu mu?
+                    new_video_sids = []
                     for p in resp.update.participants:
                         if p.state == lk_models.ParticipantInfo.State.Value("DISCONNECTED"):
                             if p.tracks:  # publisher idi
                                 logger.info("Yayıncı (%s) odadan ayrıldı", p.identity)
                                 stop_evt.set()
                                 break
+                        else:
+                            for t in p.tracks:
+                                if t.type == lk_models.TrackType.Value("VIDEO"):
+                                    new_video_sids.append(t.sid)
+                    if new_video_sids and not stop_evt.is_set():
+                        ts_req = lk_rtc.SignalRequest()
+                        ts_req.track_setting.track_sids.extend(new_video_sids)
+                        ts_req.track_setting.quality = lk_models.VideoQuality.Value("LOW")
+                        await ws.send_bytes(ts_req.SerializeToString())
+                        logger.info("Güncelleme: video LOW sabitlendi | tracks=%s", new_video_sids)
 
                 elif kind == "leave":
                     logger.info("Sunucu leave mesajı gönderdi")
