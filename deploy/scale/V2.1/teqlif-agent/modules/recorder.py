@@ -105,7 +105,7 @@ class RecordingManager:
         while True:
             r: _redis.Redis | None = None
             try:
-                r = _redis.from_url(redis_url, decode_responses=True)
+                r = _redis.from_url(redis_url, decode_responses=True, protocol=2)
                 pubsub = r.pubsub()
                 await pubsub.subscribe(_PUBSUB_CHANNEL)
                 logger.info(
