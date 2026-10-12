@@ -123,6 +123,27 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
     subscribed_sids: set[str] = set()  # subscribe edilmiş track SID'leri
     video_sids: set[str]       = set()  # video track SID'leri (HIGH quality kilidi)
 
+    # ── Bağlantı durumu izleme ─────────────────────────────────────────────────
+    @pc.on("connectionstatechange")
+    async def on_conn_state() -> None:
+        logger.info("PC connectionState → %s", pc.connectionState)
+
+    @pc.on("iceconnectionstatechange")
+    async def on_ice_conn_state() -> None:
+        logger.info("ICE connectionState → %s | PC=%s", pc.iceConnectionState, pc.connectionState)
+
+    async def _conn_monitor() -> None:
+        for _ in range(720):
+            await asyncio.sleep(10)
+            if stop_evt.is_set():
+                break
+            logger.info(
+                "MONITOR | conn=%s ice=%s output_exists=%s",
+                pc.connectionState, pc.iceConnectionState, output.exists(),
+            )
+
+    asyncio.create_task(_conn_monitor())
+
     # ── PC ICE → server ───────────────────────────────────────────────────────
     async def _send_ice(ws: aiohttp.ClientWebSocketResponse, cand: RTCIceCandidate) -> None:
         if cand is None:
@@ -234,6 +255,8 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
 
                     answer = await pc.createAnswer()
                     await pc.setLocalDescription(answer)
+                    setup_lines = [l.strip() for l in answer.sdp.split("\n") if "setup" in l]
+                    logger.info("SDP answer a=setup: %s", setup_lines)
 
                     req         = lk_rtc.SignalRequest()
                     req.answer.type = answer.type
@@ -243,7 +266,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                     if not recording_started:
                         recording_started = True
                     await recorder.start()
-                    logger.info("recorder.start() çağrıldı → %s", output.name)
+                    logger.info("recorder.start() çağrıldı → %s | conn=%s", output.name, pc.connectionState)
 
                     # VP8 simulcast SSRC switching önleme: subscription kurulduktan
                     # SONRA HIGH quality talep edilir. LiveKit LOW→HIGH geçişi yaparken
@@ -366,6 +389,10 @@ def main() -> None:
         "%(asctime)s [livekit-subscriber] %(levelname)s %(message)s"
     ))
     logging.getLogger().addHandler(fh)
+    # DTLS teşhis için debug log — sadece dosyaya (stdout spamlenmez)
+    fh.setLevel(logging.DEBUG)
+    logging.getLogger("aiortc.dtls").setLevel(logging.DEBUG)
+    logging.getLogger("aiortc.rtcdtlstransport").setLevel(logging.DEBUG)
 
     loop = asyncio.new_event_loop()
 
