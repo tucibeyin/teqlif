@@ -100,7 +100,7 @@ class RecordingManager:
 
     async def _pubsub_loop(self, redis_url: str) -> None:
         """Redis pub/sub kanalını dinler, gelen olayları kuyruğa ekler."""
-        import redis.asyncio as aioredis
+        import aioredis
 
         while True:
             r: aioredis.Redis | None = None
