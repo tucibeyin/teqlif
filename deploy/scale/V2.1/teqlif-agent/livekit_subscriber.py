@@ -109,7 +109,9 @@ class MKVWriter:
         ctx.height   = h
         ctx.pix_fmt  = "yuv420p"
         ctx.bit_rate = 2_000_000  # 2 Mbps — yasal kanıt kalitesi
-        ctx.options  = {"deadline": "realtime", "cpu-used": "4"}
+        ctx.options["deadline"]  = "realtime"
+        ctx.options["cpu-used"]  = "4"
+        ctx.options["lag-in-frames"] = "0"
         self._vstr = vs
         logger.info("Video stream: %dx%d @ 2 Mbps VP8", w, h)
 
@@ -126,13 +128,16 @@ class MKVWriter:
 
         logger.info("MKV container açıldı: %s", self._path.name)
 
-    def write_video(self, av_frame: av.VideoFrame) -> None:
+    def write_video(self, av_frame: av.VideoFrame) -> int:
         if self._vstr is None:
-            return
+            return 0
         av_frame.pts = self._vpts
         self._vpts  += 1
+        count = 0
         for pkt in self._vstr.encode(av_frame):
             self._container.mux(pkt)
+            count += 1
+        return count
 
     def write_audio(self, av_frame: av.AudioFrame) -> None:
         if self._astr is None or self._afifo is None:
@@ -176,35 +181,51 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
 
     # ── Video kaydedici ────────────────────────────────────────────────────
     async def _record_video(track: rtc.RemoteVideoTrack) -> None:
-        vs = rtc.VideoStream(track, format=rtc.VideoBufferType.I420)
-        async for event in vs:
-            lk = event.frame
-            writer.hint_video(lk.width, lk.height)
-            await open_evt.wait()  # container hazır olana kadar bekle
-            y  = lk.width * lk.height
-            uv = (lk.width // 2) * (lk.height // 2)
-            raw = bytes(lk.data)
-            frame = av.VideoFrame(lk.width, lk.height, "yuv420p")
-            frame.planes[0].update(raw[:y])
-            frame.planes[1].update(raw[y : y + uv])
-            frame.planes[2].update(raw[y + uv :])
-            writer.write_video(frame)
+        import numpy as np
+        try:
+            # BGRA: padding yok, stride = width*4 — I420'nin stride sorununu önler
+            vs = rtc.VideoStream(track, format=rtc.VideoBufferType.BGRA)
+            vframe_count = 0
+            async for event in vs:
+                lk = event.frame
+                vframe_count += 1
+                if vframe_count <= 3:
+                    logger.info("VIDEO frame #%d: %dx%d", vframe_count, lk.width, lk.height)
+                writer.hint_video(lk.width, lk.height)
+                await open_evt.wait()
+                # BGRA numpy dizisi → av.VideoFrame → yuv420p
+                arr = np.frombuffer(bytes(lk.data), dtype=np.uint8).reshape(lk.height, lk.width, 4)
+                frame = av.VideoFrame.from_ndarray(arr, format="bgra")
+                frame = frame.reformat(format="yuv420p")
+                pkts = writer.write_video(frame)
+                if vframe_count <= 3:
+                    logger.info("VIDEO encode → %d paket (frame=%d)", pkts, vframe_count)
+        except Exception as exc:
+            logger.error("_record_video hata: %s", exc, exc_info=True)
 
     # ── Ses kaydedici ──────────────────────────────────────────────────────
     async def _record_audio(track: rtc.RemoteAudioTrack) -> None:
-        ast = rtc.AudioStream(track)
-        async for event in ast:
-            lk = event.frame
-            writer.hint_audio(lk.sample_rate, lk.num_channels)
-            await open_evt.wait()
-            frame = av.AudioFrame(
-                format="s16",
-                layout="stereo" if lk.num_channels >= 2 else "mono",
-                samples=lk.samples_per_channel,
-            )
-            frame.sample_rate = lk.sample_rate
-            frame.planes[0].update(bytes(lk.data))
-            writer.write_audio(frame)
+        try:
+            ast = rtc.AudioStream(track)
+            aframe_count = 0
+            async for event in ast:
+                lk = event.frame
+                aframe_count += 1
+                if aframe_count <= 3:
+                    logger.info("AUDIO frame #%d: %dHz %dch %d samples",
+                                aframe_count, lk.sample_rate, lk.num_channels, lk.samples_per_channel)
+                writer.hint_audio(lk.sample_rate, lk.num_channels)
+                await open_evt.wait()
+                frame = av.AudioFrame(
+                    format="s16",
+                    layout="stereo" if lk.num_channels >= 2 else "mono",
+                    samples=lk.samples_per_channel,
+                )
+                frame.sample_rate = lk.sample_rate
+                frame.planes[0].update(bytes(lk.data))
+                writer.write_audio(frame)
+        except Exception as exc:
+            logger.error("_record_audio hata: %s", exc, exc_info=True)
 
     # ── Container koordinatörü ─────────────────────────────────────────────
     async def _open_when_ready() -> None:
