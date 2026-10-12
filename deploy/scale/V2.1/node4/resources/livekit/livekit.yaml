@@ -29,6 +29,11 @@ room:
   empty_timeout: 300
   departure_timeout: 20
 
+webhook:
+  urls:
+    - https://www.teqlif.com/api/webhooks/livekit
+  api_key: <livekit_api_key>
+
 logging:
   level: info
   json: true

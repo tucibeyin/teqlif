@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
-from app.models.stream import LiveStream
+from app.models.stream import LiveStream, StreamStatus
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -13,7 +13,10 @@ async def force_close_stream(db: AsyncSession, room_name: str) -> None:
     result = await db.execute(
         select(LiveStream).where(
             LiveStream.room_name == room_name,
-            LiveStream.is_live == True,
+            or_(
+                LiveStream.is_live == True,  # noqa: E712
+                LiveStream.status == StreamStatus.LIVE,
+            ),
         )
     )
     stream = result.scalar_one_or_none()

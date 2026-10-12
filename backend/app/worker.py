@@ -1986,19 +1986,23 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
     try:
         import aiohttp
         from datetime import datetime, timezone, timedelta
-        from sqlalchemy import select
+        from sqlalchemy import select, or_, and_
         from app.database import AsyncSessionLocal
-        from app.models.stream import LiveStream
+        from app.models.stream import LiveStream, StreamStatus
         from app.config import settings
         from livekit.api.room_service import RoomService, ListRoomsRequest, ListParticipantsRequest
 
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=3)
 
         async with AsyncSessionLocal() as db:
+            # is_live=True normal durum; status='live' AND is_live=False webhook eksikliği nedeniyle oluşabilir
             streams = (await db.execute(
                 select(LiveStream).where(
-                    LiveStream.is_live == True,  # noqa: E712
                     LiveStream.started_at <= cutoff,
+                    or_(
+                        LiveStream.is_live == True,  # noqa: E712
+                        LiveStream.status == StreamStatus.LIVE,
+                    ),
                 )
             )).scalars().all()
 
