@@ -121,6 +121,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
     pending_ice: list[RTCIceCandidate] = []
     recording_started = False
     subscribed_sids: set[str] = set()  # subscribe edilmiş track SID'leri
+    video_sids: set[str]       = set()  # video track SID'leri (HIGH quality kilidi)
 
     # ── PC ICE → server ───────────────────────────────────────────────────────
     async def _send_ice(ws: aiohttp.ClientWebSocketResponse, cand: RTCIceCandidate) -> None:
@@ -200,6 +201,8 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                             if t.sid not in subscribed_sids:
                                 new_sids.append(t.sid)
                                 pt_map.setdefault(p.sid, []).append(t.sid)
+                                if t.type == lk_models.TrackType.Value("VIDEO"):
+                                    video_sids.add(t.sid)
                     if new_sids:
                         sub_req = lk_rtc.SignalRequest()
                         sub_req.subscription.track_sids.extend(new_sids)
@@ -242,6 +245,26 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                     await recorder.start()
                     logger.info("recorder.start() çağrıldı → %s", output.name)
 
+                    # VP8 simulcast SSRC switching önleme: subscription kurulduktan
+                    # SONRA HIGH quality talep edilir. LiveKit LOW→HIGH geçişi yaparken
+                    # SSRC değiştirir; aiortc yeni SSRC için keyframe bekler ve
+                    # track.recv() bloklanır. UpdateTrackSettings(HIGH) ile LiveKit'e
+                    # yalnızca HIGH SSRC'yi forward etmesi söylenir — geçiş penceresi
+                    # ortadan kalkar.
+                    if video_sids:
+                        uts = lk_rtc.UpdateTrackSettings()
+                        uts.track_sids.extend(video_sids)
+                        uts.quality = lk_models.VideoQuality.Value("HIGH")
+                        uts.width   = 1280
+                        uts.height  = 720
+                        q_req = lk_rtc.SignalRequest()
+                        q_req.track_setting.CopyFrom(uts)
+                        await ws.send_bytes(q_req.SerializeToString())
+                        logger.info(
+                            "UpdateTrackSettings(HIGH) gönderildi | %d video track: %s",
+                            len(video_sids), list(video_sids),
+                        )
+
                 elif kind == "trickle":
                     trickle = resp.trickle
                     # Subscriber PC için adayları uygula
@@ -255,6 +278,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
 
                 elif kind == "update":
                     new_pt_map: dict[str, list[str]] = {}
+                    new_video_sids_upd: list[str] = []
                     for p in resp.update.participants:
                         if p.state == lk_models.ParticipantInfo.State.Value("DISCONNECTED"):
                             if p.tracks:  # publisher idi
@@ -265,6 +289,8 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                             for t in p.tracks:
                                 if t.sid not in subscribed_sids:
                                     new_pt_map.setdefault(p.sid, []).append(t.sid)
+                                    if t.type == lk_models.TrackType.Value("VIDEO"):
+                                        new_video_sids_upd.append(t.sid)
                     if not stop_evt.is_set() and new_pt_map:
                         new_sids_upd = [s for sids in new_pt_map.values() for s in sids]
                         sub_req = lk_rtc.SignalRequest()
@@ -280,6 +306,20 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                             "Güncelleme: yeni tracklere abone olundu | %d track",
                             len(new_sids_upd),
                         )
+                        if new_video_sids_upd:
+                            video_sids.update(new_video_sids_upd)
+                            uts = lk_rtc.UpdateTrackSettings()
+                            uts.track_sids.extend(new_video_sids_upd)
+                            uts.quality = lk_models.VideoQuality.Value("HIGH")
+                            uts.width   = 1280
+                            uts.height  = 720
+                            q_req = lk_rtc.SignalRequest()
+                            q_req.track_setting.CopyFrom(uts)
+                            await ws.send_bytes(q_req.SerializeToString())
+                            logger.info(
+                                "UpdateTrackSettings(HIGH) gönderildi | %d yeni video track",
+                                len(new_video_sids_upd),
+                            )
 
                 elif kind == "leave":
                     logger.info("Sunucu leave mesajı gönderdi")
