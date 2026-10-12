@@ -118,7 +118,7 @@ class MKVWriter:
             as_ = self._container.add_stream("libopus")
             ctx  = as_.codec_context
             ctx.sample_rate = sr
-            ctx.channels    = ch
+            ctx.layout      = "stereo" if ch >= 2 else "mono"
             ctx.format      = "s16"
             self._astr  = as_
             self._afifo = av.AudioFifo()
@@ -230,6 +230,8 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
             track.kind, participant.identity,
         )
         if isinstance(track, rtc.RemoteVideoTrack):
+            # Simulcast HIGH layer iste
+            publication.set_video_quality(rtc.VideoQuality.VIDEO_QUALITY_HIGH)
             record_tasks.append(asyncio.ensure_future(_record_video(track)))
         elif isinstance(track, rtc.RemoteAudioTrack):
             record_tasks.append(asyncio.ensure_future(_record_audio(track)))
