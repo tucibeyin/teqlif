@@ -33,8 +33,19 @@ _DISCOVERY_CACHE_AT: float = 0.0
 _DISCOVERY_TTL = 30.0  # saniye — Redis'ten bu aralıkta taze liste alınır
 
 
+def _static_urls() -> list[str]:
+    """Statik config URL'leri (staging / manuel kurulum için)."""
+    urls = []
+    if settings.ai_proxy_url:
+        urls.append(settings.ai_proxy_url)
+    if settings.ai_proxy_fallback_url:
+        urls.append(settings.ai_proxy_fallback_url)
+    return urls
+
+
 async def _discover_ai_proxy_urls() -> list[str]:
-    """Redis edge:metrics:* anahtarlarından sağlıklı AI proxy URL'lerini keşfeder."""
+    """Redis edge:metrics:* anahtarlarından sağlıklı AI proxy URL'lerini keşfeder.
+    Sonuç boşsa statik config URL'lerine düşer."""
     global _DISCOVERY_CACHE, _DISCOVERY_CACHE_AT
     if time.monotonic() - _DISCOVERY_CACHE_AT < _DISCOVERY_TTL and _DISCOVERY_CACHE:
         return _DISCOVERY_CACHE
@@ -64,10 +75,14 @@ async def _discover_ai_proxy_urls() -> list[str]:
         if urls:
             _DISCOVERY_CACHE = urls
             _DISCOVERY_CACHE_AT = time.monotonic()
-        return urls
+            return urls
     except Exception as exc:
         logger.warning("[AI-PROXY] Redis keşfi başarısız: %s", exc)
-        return _DISCOVERY_CACHE  # stale cache — Redis geçici olarak erişilemez
+        if _DISCOVERY_CACHE:
+            return _DISCOVERY_CACHE  # stale cache — Redis geçici erişilemez
+
+    # Redis discovery boş veya başarısız → statik config URL'leri
+    return _static_urls()
 
 
 async def _call_proxy(url: str, params: dict) -> tuple[str, str] | None:
