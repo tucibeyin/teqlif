@@ -274,7 +274,7 @@ async def get_user_profile(
     current_user: Optional[User] = Depends(_optional_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    _cache_params = {"username": username}
+    _cache_params = {"username": username, "viewer_id": current_user.id if current_user else 0}
     cached = await cache_get("user_profile", _cache_params)
     if cached is not None:
         return cached

@@ -16,6 +16,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.use_cases.follows.queries.get_followers_query import GetFollowersQuery
 from app.use_cases.follows.queries.get_following_query import GetFollowingQuery
 from app.services.relationship_service import RelationshipStateService
+from app.core.read_cache import invalidate_cache
 
 router = APIRouter(prefix="/api/follows", tags=["follows"])
 
@@ -107,6 +108,9 @@ async def follow_user(
     db.add(follow)
     await db.commit()
 
+    # Her follow state değişikliğinde profil cache'ini temizle (viewer-specific key içeriyor)
+    asyncio.create_task(invalidate_cache("user_profile"))
+
     # Public hesap: follow anında "accepted" — relationship state değişti
     if status == "accepted":
         state = await RelationshipStateService.recompute_and_cache(current_user.id, user_id, db)
@@ -163,6 +167,7 @@ async def unfollow_user(
 
     state = await RelationshipStateService.recompute_and_cache(current_user.id, user_id, db)
     RelationshipStateService.broadcast(state)
+    asyncio.create_task(invalidate_cache("user_profile"))
 
     return {"ok": True}
 
@@ -222,6 +227,7 @@ async def accept_follow_request(
 
     state = await RelationshipStateService.recompute_and_cache(follower_id, current_user.id, db)
     RelationshipStateService.broadcast(state)
+    asyncio.create_task(invalidate_cache("user_profile"))
 
     from app.routers.notifications import push_notification
     asyncio.create_task(push_notification(
@@ -263,5 +269,6 @@ async def reject_follow_request(
 
     state = await RelationshipStateService.recompute_and_cache(follower_id, current_user.id, db)
     RelationshipStateService.broadcast(state)
+    asyncio.create_task(invalidate_cache("user_profile"))
 
     return {"ok": True}

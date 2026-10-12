@@ -113,10 +113,14 @@ class GetUserProfileQuery:
         from app.models.follow import Follow
 
         follower_count = await self.uow.session.scalar(
-            select(func.count(Follow.follower_id)).where(Follow.followed_id == target.id)
+            select(func.count(Follow.follower_id)).where(
+                Follow.followed_id == target.id, Follow.status == "accepted"
+            )
         )
         following_count = await self.uow.session.scalar(
-            select(func.count(Follow.followed_id)).where(Follow.follower_id == target.id)
+            select(func.count(Follow.followed_id)).where(
+                Follow.follower_id == target.id, Follow.status == "accepted"
+            )
         )
         profile_data["follower_count"] = follower_count or 0
         profile_data["following_count"] = following_count or 0
