@@ -1193,6 +1193,8 @@
   "auctionEndTitle": "Завершить аукцион",
   "auctionEndDesc": "Результат будет сохранен и аукцион закроется.",
   "auctionEndBtn": "Конец",
+  "auctionPauseBtn": "Пауза",
+  "auctionResumeBtn": "Продолжить",
   "auctionStatusActive": "АКТИВНЫЙ",
   "auctionStatusPending": "В ОЖИДАНИИ ⚡",
   "auctionStatusPaused": "ПРИОСТАНОВЛЕНО",

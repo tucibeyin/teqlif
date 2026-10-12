@@ -457,87 +457,103 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            ),
-            child: Row(
-              children: [
-                // Status badge
-                _statusBadge(state),
-                const SizedBox(width: 8),
-                // Ürün + fiyat
-                Expanded(
-                  child: GestureDetector(
-                    onTap: (!_isHostLike && state.listingId != null)
-                        ? () => _showListingPopup(context, state.listingId!)
-                        : null,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (state.itemName != null)
-                                Text(
-                                  state.itemName!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
+          // Host + active/paused/pending → full card layout
+          if (_isHostLike && (state.isActive || state.isPaused || state.isPending))
+            _AuctionHostActiveCard(
+              state: state,
+              fmt: _fmt,
+              onPause: _pauseAuction,
+              onResume: _resumeAuction,
+              onAcceptBid: _acceptBid,
+              onEnd: _endAuction,
+              onAcceptBuyItNow: _buyItNowAccept,
+              onRejectBuyItNow: _buyItNowReject,
+              onShowListing: state.listingId != null
+                  ? () => _showListingPopup(context, state.listingId!)
+                  : null,
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                children: [
+                  // Status badge
+                  _statusBadge(state),
+                  const SizedBox(width: 8),
+                  // Ürün + fiyat
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: (!_isHostLike && state.listingId != null)
+                          ? () => _showListingPopup(context, state.listingId!)
+                          : null,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (state.itemName != null)
+                                  Text(
+                                    state.itemName!,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              if (state.currentBid != null ||
-                                  state.startPrice != null)
-                                Text(
-                                  '₺${_fmt(state.currentBid ?? state.startPrice)}'
-                                  '${state.currentBidder != null ? ' · @${state.currentBidder}' : ''}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF4ADE80),
-                                    fontSize: 11,
+                                if (state.currentBid != null ||
+                                    state.startPrice != null)
+                                  Text(
+                                    '₺${_fmt(state.currentBid ?? state.startPrice)}'
+                                    '${state.currentBidder != null ? ' · @${state.currentBidder}' : ''}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF4ADE80),
+                                      fontSize: 11,
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        // Pure viewer: pinlenmiş ilan varsa ikon göster
-                        if (!_isHostLike && state.listingId != null)
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(start: 4),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: Colors.amber.withValues(alpha: 0.6),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.open_in_new,
-                                color: Colors.amber,
-                                size: 12,
-                              ),
+                              ],
                             ),
                           ),
-                      ],
+                          // Pure viewer: pinlenmiş ilan varsa ikon göster
+                          if (!_isHostLike && state.listingId != null)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(start: 4),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: Colors.amber.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.open_in_new,
+                                  color: Colors.amber,
+                                  size: 12,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // Host / Co-Host inline kontroller
-                if (_isHostLike) _hostInlineControls(state),
-                // Pure viewer: teklif butonu (co-host teklif vermez, yönetir)
-                if (!_isHostLike && state.isActive)
-                  _viewerBidButton(context, state),
-              ],
+                  const SizedBox(width: 8),
+                  // Host / Co-Host inline kontroller
+                  if (_isHostLike) _hostInlineControls(state),
+                  // Pure viewer: teklif butonu (co-host teklif vermez, yönetir)
+                  if (!_isHostLike && state.isActive)
+                    _viewerBidButton(context, state),
+                ],
+              ),
             ),
-          ),
           // Mesaj/hata çıktısı
           if (_msg != null)
             Padding(
@@ -2406,6 +2422,262 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: kPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Host Açık Artırma Aktif/Duraklatıldı/Onay Bekliyor Kartı ──────────────
+
+class _AuctionHostActiveCard extends ConsumerWidget {
+  final AuctionState state;
+  final String Function(double?) fmt;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final VoidCallback onAcceptBid;
+  final VoidCallback onEnd;
+  final VoidCallback onAcceptBuyItNow;
+  final VoidCallback onRejectBuyItNow;
+  final VoidCallback? onShowListing;
+
+  const _AuctionHostActiveCard({
+    required this.state,
+    required this.fmt,
+    required this.onPause,
+    required this.onResume,
+    required this.onAcceptBid,
+    required this.onEnd,
+    required this.onAcceptBuyItNow,
+    required this.onRejectBuyItNow,
+    this.onShowListing,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final hasBid = state.currentBidder != null && state.bidCount > 0;
+    final price = state.currentBid ?? state.startPrice;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Ürün satırı ───────────────────────────────────────────────────
+          GestureDetector(
+            onTap: onShowListing,
+            child: Row(
+              children: [
+                // Çekiç ikonu (ürün görseli yerine placeholder)
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  ),
+                  child: const Icon(
+                    Icons.gavel_rounded,
+                    color: Colors.white38,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Sol: ürün adı + fiyat
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (state.itemName != null)
+                        Text(
+                          state.itemName!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      const SizedBox(height: 2),
+                      if (price != null)
+                        Text(
+                          '₺ ${fmt(price)}',
+                          style: TextStyle(
+                            color: hasBid
+                                ? const Color(0xFF4ADE80)
+                                : Colors.white54,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      if (hasBid && state.currentBidder != null)
+                        Text(
+                          '@${state.currentBidder}',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Sağ: durum rozeti + teklif sayısı
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _AuctionStatusBadge(state: state),
+                    const SizedBox(height: 4),
+                    Text(
+                      loc.t('auctionBidCount', {'count': state.bidCount.toString()}),
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+                if (onShowListing != null) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.expand_more, color: Colors.white38, size: 16),
+                ],
+              ],
+            ),
+          ),
+
+          // ── Durum banner'ları ─────────────────────────────────────────────
+          if (state.isPaused)
+            _AuctionBanner(
+              text: loc.t('auctionStatusPaused'),
+              color: const Color(0xFFF59E0B),
+            ),
+          if (state.isPending)
+            _AuctionBanner(
+              text: '⚡ ${loc.t('auctionStatusPending')}',
+              color: const Color(0xFFF97316),
+            ),
+
+          const SizedBox(height: 8),
+
+          // ── Aksiyon butonları ─────────────────────────────────────────────
+          Row(
+            children: [
+              if (state.isPending) ...[
+                _AuctionHostBtn(
+                  label: loc.t('auctionBuyNowRejectInline'),
+                  color: const Color(0xFFEF4444),
+                  onTap: onRejectBuyItNow,
+                ),
+                const SizedBox(width: 6),
+                _AuctionHostBtn(
+                  label: loc.t('auctionBuyNowAcceptInline'),
+                  color: const Color(0xFF10B981),
+                  onTap: onAcceptBuyItNow,
+                ),
+              ] else ...[
+                if (state.isActive)
+                  _AuctionHostBtn(
+                    label: loc.t('auctionPauseBtn'),
+                    color: const Color(0xFFF59E0B),
+                    onTap: onPause,
+                  ),
+                if (state.isPaused)
+                  _AuctionHostBtn(
+                    label: loc.t('auctionResumeBtn'),
+                    color: const Color(0xFF10B981),
+                    onTap: onResume,
+                  ),
+                if (hasBid) ...[
+                  const SizedBox(width: 6),
+                  _AuctionHostBtn(
+                    label: loc.t('auctionAcceptBtn'),
+                    color: const Color(0xFF10B981),
+                    onTap: onAcceptBid,
+                  ),
+                ],
+                const SizedBox(width: 6),
+                _AuctionHostBtn(
+                  label: loc.t('auctionEndBtn'),
+                  color: const Color(0xFFEF4444),
+                  onTap: onEnd,
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Host Aksiyon Butonu ────────────────────────────────────────────────────
+
+class _AuctionHostBtn extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AuctionHostBtn({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Açık Artırma Banner ────────────────────────────────────────────────────
+
+class _AuctionBanner extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _AuctionBanner({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

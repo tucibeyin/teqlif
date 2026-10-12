@@ -567,6 +567,8 @@
   "auctionEndTitle": "إنهاء المزاد",
   "auctionEndDesc": "سيُحفظ النتيجة وسيُغلق المزاد.",
   "auctionEndBtn": "إنهاء",
+  "auctionPauseBtn": "إيقاف مؤقت",
+  "auctionResumeBtn": "استئناف",
   "auctionStatusActive": "نشط",
   "auctionStatusPending": "في انتظار الموافقة ⚡",
   "auctionStatusPaused": "متوقف",

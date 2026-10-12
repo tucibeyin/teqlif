@@ -564,6 +564,8 @@
   "auctionEndTitle": "End Auction",
   "auctionEndDesc": "The result will be saved and the auction will close.",
   "auctionEndBtn": "End",
+  "auctionPauseBtn": "Pause",
+  "auctionResumeBtn": "Resume",
   "auctionStatusActive": "ACTIVE",
   "auctionStatusPending": "PENDING ⚡",
   "auctionStatusPaused": "PAUSED",

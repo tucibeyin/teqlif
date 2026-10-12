@@ -563,6 +563,8 @@
   "auctionEndTitle": "Açık Artırmayı Bitir",
   "auctionEndDesc": "Sonuç kaydedilecek ve artırma kapanacak.",
   "auctionEndBtn": "Bitir",
+  "auctionPauseBtn": "Duraklat",
+  "auctionResumeBtn": "Devam Et",
   "auctionStatusActive": "AKTİF",
   "auctionStatusPending": "ONAY BEKLİYOR ⚡",
   "auctionStatusPaused": "DURAKLADI",
