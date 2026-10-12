@@ -34,7 +34,7 @@ if [ ! -f "$AGENT_DIR/venv/bin/python" ]; then
 fi
 "$AGENT_DIR/venv/bin/pip" install --quiet --upgrade pip
 "$AGENT_DIR/venv/bin/pip" install --quiet \
-    aiohttp aiosqlite pyyaml asyncpg aioredis
+    aiohttp aiosqlite pyyaml asyncpg aioredis "redis>=4.2.0"
 
 echo "    Python bağımlılıkları kuruldu."
 
