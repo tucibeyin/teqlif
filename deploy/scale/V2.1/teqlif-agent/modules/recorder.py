@@ -114,7 +114,10 @@ class RecordingManager:
             logger.warning("LiveKit token üretilemiyor — kayıt başlatılamıyor: stream_id=%d", stream_id)
             return
 
-        whep_url = f"http://127.0.0.1:{_LIVEKIT_PORT}/rooms/{room_name}/whep"
+        # livekit_whep_base varsa kullan (staging: cloud LiveKit),
+        # yoksa local LiveKit'e fallback (prod: 127.0.0.1:7880)
+        livekit_base = svc_cfg.get("livekit_whep_base") or f"http://127.0.0.1:{_LIVEKIT_PORT}"
+        whep_url = f"{livekit_base}/rooms/{room_name}/whep"
         cmd = [
             "ffmpeg", "-hide_banner", "-loglevel", "warning",
             "-headers", f"Authorization: Bearer {token}",
