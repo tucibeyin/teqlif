@@ -10,6 +10,9 @@ Keşif: Core Redis'teki edge:metrics:* anahtarları okunur.
   Her node services.ai_proxy.healthy=true ve ai_proxy_url set etmişse
   listeye alınır; ai_proxy_priority (küçük = önce) ile sıralanır.
 
+  Staging: teqlif-metrics-agent-staging servisi edge:metrics:node5 anahtarını
+  staging Redis'e (127.0.0.1:6379/0) yazar; staging backend bunu okur.
+
 Timeout stratejisi:
   - connect=5s  → kapalı node'u 5 saniyede tespit et, hemen fallback'e geç
   - read=45s    → proxy bağlandıysa LLM yanıtını 45 saniyeye kadar bekle
@@ -33,19 +36,8 @@ _DISCOVERY_CACHE_AT: float = 0.0
 _DISCOVERY_TTL = 30.0  # saniye — Redis'ten bu aralıkta taze liste alınır
 
 
-def _static_urls() -> list[str]:
-    """Statik config URL'leri (staging / manuel kurulum için)."""
-    urls = []
-    if settings.ai_proxy_url:
-        urls.append(settings.ai_proxy_url)
-    if settings.ai_proxy_fallback_url:
-        urls.append(settings.ai_proxy_fallback_url)
-    return urls
-
-
 async def _discover_ai_proxy_urls() -> list[str]:
-    """Redis edge:metrics:* anahtarlarından sağlıklı AI proxy URL'lerini keşfeder.
-    Sonuç boşsa statik config URL'lerine düşer."""
+    """Redis edge:metrics:* anahtarlarından sağlıklı AI proxy URL'lerini keşfeder."""
     global _DISCOVERY_CACHE, _DISCOVERY_CACHE_AT
     if time.monotonic() - _DISCOVERY_CACHE_AT < _DISCOVERY_TTL and _DISCOVERY_CACHE:
         return _DISCOVERY_CACHE
@@ -81,8 +73,7 @@ async def _discover_ai_proxy_urls() -> list[str]:
         if _DISCOVERY_CACHE:
             return _DISCOVERY_CACHE  # stale cache — Redis geçici erişilemez
 
-    # Redis discovery boş veya başarısız → statik config URL'leri
-    return _static_urls()
+    return []
 
 
 async def _call_proxy(url: str, params: dict) -> tuple[str, str] | None:

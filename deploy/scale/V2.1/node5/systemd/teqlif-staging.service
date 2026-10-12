@@ -1,6 +1,7 @@
 [Unit]
 Description=teqlif FastAPI Staging
 After=network.target
+Wants=teqlif-metrics-agent-staging.service
 
 [Service]
 Type=simple

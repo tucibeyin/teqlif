@@ -46,8 +46,6 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     gemini_api_key: str = ""
     ai_proxy_internal_token: str = ""   # Shared bearer token — node1, node5, node6 aynı değeri kullanır
-    ai_proxy_url: str = ""             # Statik AI proxy URL (staging / basit kurulum). Boşsa Redis discovery kullanılır.
-    ai_proxy_fallback_url: str = ""    # İkincil statik URL (isteğe bağlı)
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     
