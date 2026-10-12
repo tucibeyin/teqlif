@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Recording redesign (aiortc) + Staging Metrics Agent eklendi
+**Son güncelleme:** Ekim 2026 — HostStream MVVM tam ayrımı + ICE retry (bc6998ff)
 
 ---
 
@@ -22,6 +22,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 13. [Bir İş Nasıl Yapılır (Development Workflow)](#13-bir-i̇ş-nasıl-yapılır-development-workflow)
 18. [AI Proxy Mimarisi — Redis Keşfi](#18-ai-proxy-mimarisi--redis-keşfi)
 19. [Stream Recording — aiortc Gizli Abone](#19-stream-recording--aiortc-gizli-abone)
+20. [HostStream MVVM Refactor + ICE Retry](#20-hoststream-mvvm-refactor--ice-retry)
 
 ---
 
@@ -905,6 +906,13 @@ Flutter tarafında yeni geliştirilen veya refactor edilen karmaşık ekranlarda
   - `ref.watch(myViewModelProvider)` kullanarak ViewModel'deki duruma (state) göre ekranda ne gösterileceğine (loading spinner, list, error vs.) karar verir.
   - `setState` kullanımından olabildiğince kaçınılmalıdır. Tüm işlevler (butona basılması, pull-to-refresh vb.) doğrudan ViewModel üzerindeki metodlara yönlendirilir (Örn: `ref.read(myViewModelProvider.notifier).fetchData()`).
 
+**`ChangeNotifier` + Navigation Callback Pattern (bc6998ff):**  
+`BuildContext` tutamayan ViewModel'lerin navigasyon tetiklemesi gerektiğinde:
+1. ViewModel'de `VoidCallback? onNavigateHome` gibi opsiyonel callback field'ları tanımlanır.
+2. View `initState`'te bu callback'leri set eder (`_vm.onNavigateToReport = (id, title) { ... }`).
+3. ViewModel callback'leri `null` guard ile çağırır; View navigate eder.
+4. `ChangeNotifierProvider.autoDispose` ile ViewModel, ekran pop edilince otomatik dispose olur.
+
 **Neden MVVM?**
 `messages_screen.dart` ve `profile_screen.dart` gibi karmaşık sayfalardaki iş mantığı Widget'lardan soyutlandığında; kod temizleşir, sayfalar hafifler, test edilebilirlik artar ve aynı state başka widget'lar tarafından da kolaylıkla tüketilebilir hale gelir.
 
@@ -1575,4 +1583,48 @@ Yüzlerce viewer'dan bağımsız: recorder tek sabit subscriber.
 |--------|------|--------|
 | `teqlif-livekit` | node3, node4 | `ws://127.0.0.1:7880` |
 | `teqlif-livekit-staging` | node5 | `ws://127.0.0.1:7890` |
+
+---
+
+## 20. HostStream MVVM Refactor + ICE Retry
+
+**Commit:** `bc6998ff` — Ekim 2026
+
+### Problem
+
+`host_stream_screen.dart` "Fat View" anti-pattern'ına düşmüştü:  
+- 12+ field (`Room`, `LocalVideoTrack`, `ConnectionQuality`, hata state'i, mic/kamera durumu) doğrudan View'da tutuluyordu.  
+- Tek bir transient ICE timeout (örn. stream 417), `cancelStream()` → `delete_livekit_room` → "Yayına bağlanılamadı" zincirini tetikliyordu.  
+- `_connect()`, `_reconnect()`, `_scheduleReconnect()`, `_handleHostBackground()` gibi iş mantığı metodları View'da yaşıyordu.
+
+### Karar
+
+`HostStreamViewModel extends ChangeNotifier` oluşturuldu (`ChangeNotifierProvider.autoDispose`).  
+View'da yalnızca gerçek UI state kaldı: `_wasBackgrounded`, thumbnail timer, zoom.
+
+**Navigation callback pattern:** ViewModel `BuildContext` tutmaz; View `initState`'te  
+`_vm.onNavigateToReport` / `_vm.onNavigateHome` set eder (bkz. §8).
+
+**3-retry ICE connect:** `connect()` içinde `_kMaxInitialConnectAttempts = 3` döngüsü;  
+- Attempt 1: anında  
+- Attempt 2: 1s gecikme  
+- Attempt 3: 2s gecikme  
+- `_ConfirmLiveFailure` sentinel: `confirmLive()` başarısızlığını ICE hatasından ayırır, retry yapılmaz.  
+- Tüm denemeler başarısızsa → `cancelStream()` + `loc.tOr('streamConnectFailed', ...)` error state.
+
+**Exponential backoff reconnect:** 2,4,8,16,30,30,30s (~120s toplam), tamamen ViewModel'de.
+
+### Kural
+
+- Yeni canlı yayın özellikleri `HostStreamViewModel`'e eklenir; View sadece `ref.watch` ile tüketir.  
+- `_attemptConnect()` her başarısızlıkta Room'u temizler (disconnect) ve tekrar throw eder — bağlantı state'i tutarsız kalmaz.  
+- `ChangeNotifierProvider.autoDispose` sayesinde ekran pop edilince Room ve listener otomatik dispose olur.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `mobile/lib/screens/live/host_stream_screen.dart` | 12 field → ViewModel; `_connect`, `_reconnect`, `_scheduleReconnect`, `_waitForTrack` silindi |
+| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | `ChangeNotifier` tam yeniden yazım; 3-retry + exponential backoff |
+| `mobile/lib/widgets/direct_sale_panel.dart` | 2-adım satın alma onayı ("Onayla" dialog) + analytics event |
 
