@@ -1109,7 +1109,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   Future<void> _leave({bool fromOverlay = false}) async {
-    widget.onStreamEnded?.call();
+    // onStreamEnded çağrılmaz — izleyici ayrılması yayının bitmesi değildir.
+    // Yayın bitti flag'i sadece gerçek stream_ended/roomDeleted event'lerinde set edilmeli.
 
     // Navigasyondan ÖNCE kaynakları proaktif olarak serbest bırak.
     // dispose() zinciri navigasyon animasyonu bitene kadar (~300ms) çalışmaz;

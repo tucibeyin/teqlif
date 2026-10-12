@@ -351,10 +351,16 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.state = SessionState.none;
       session.update();
       if (session.isDisposed) return;
-      if (e.reason == DisconnectReason.roomDeleted ||
-          e.reason == DisconnectReason.clientInitiated) {
+      if (e.reason == DisconnectReason.roomDeleted) {
+        // Sunucu odayı sildi → yayın gerçekten bitti.
+        // clientInitiated buraya dahil değil: izleyici "Ayrıl" ile çıkınca
+        // clientInitiated gelir ama yayın bitmemiştir, tekrar girebilmeli.
         session.streamEnded = true;
         session.update();
+        return;
+      }
+      if (e.reason == DisconnectReason.clientInitiated) {
+        // İzleyici/cohost kendi isteğiyle ayrıldı — yayın bitmedi, reconnect gerekmez.
         return;
       }
       _scheduleViewerReconnect(session);
@@ -382,15 +388,23 @@ class StreamConnectionManager with WidgetsBindingObserver {
     final wantVideo = (!_isBackground) && (session.state == SessionState.prefetched || session.state == SessionState.active);
     final wantAudio = session.state == SessionState.active && !_isCallActive;
     
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _applyTrackSubscriptions for stream: ${session.streamId} | wantVideo: $wantVideo | wantAudio: $wantAudio | isCallActive: $_isCallActive');
-    
-    for (final p in session.room!.remoteParticipants.values) {
+    final participants = session.room!.remoteParticipants;
+    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _applyTrackSubscriptions for stream: ${session.streamId} | wantVideo: $wantVideo | wantAudio: $wantAudio | isCallActive: $_isCallActive | participants: ${participants.length}');
+
+    for (final p in participants.values) {
+      debugPrint('[LIVE_SCREEN_CALL] participant=${p.identity} videos=${p.videoTrackPublications.length} audios=${p.audioTrackPublications.length}');
       for (final pub in p.videoTrackPublications) {
-        if (wantVideo && !pub.subscribed) pub.subscribe();
+        if (wantVideo && !pub.subscribed) {
+          debugPrint('[LIVE_SCREEN_CALL] subscribing video sid=${pub.sid}');
+          pub.subscribe();
+        }
         if (!wantVideo && pub.subscribed) pub.unsubscribe();
       }
       for (final pub in p.audioTrackPublications) {
-        if (wantAudio && !pub.subscribed) pub.subscribe();
+        if (wantAudio && !pub.subscribed) {
+          debugPrint('[LIVE_SCREEN_CALL] subscribing audio sid=${pub.sid}');
+          pub.subscribe();
+        }
         if (!wantAudio && pub.subscribed) pub.unsubscribe();
       }
     }
