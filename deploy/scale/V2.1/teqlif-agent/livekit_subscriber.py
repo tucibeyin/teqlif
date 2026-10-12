@@ -122,11 +122,18 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
     recording_started = False
     subscribed_sids: set[str] = set()  # subscribe edilmiş track SID'leri
     video_sids: set[str]       = set()  # video track SID'leri (HIGH quality kilidi)
+    # PC "connected" olana kadar bekleyen subscription istekleri.
+    # UpdateSubscription DTLS bitmeden gönderilirse LiveKit downtrack'i kuruyor
+    # ama SRTP henüz hazır olmadığından RTP hiç başlamıyor.
+    pending_subs: list[tuple[list[str], dict[str, list[str]]]] = []
+    pc_connected_evt = asyncio.Event()
 
     # ── Bağlantı durumu izleme ─────────────────────────────────────────────────
     @pc.on("connectionstatechange")
     async def on_conn_state() -> None:
         logger.info("PC connectionState → %s", pc.connectionState)
+        if pc.connectionState == "connected":
+            pc_connected_evt.set()
 
     @pc.on("iceconnectionstatechange")
     async def on_ice_conn_state() -> None:
@@ -189,6 +196,30 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                 if cand:
                     asyncio.ensure_future(_send_ice(ws, cand))
 
+            async def _flush_pending_subs() -> None:
+                """PC 'connected' olunca bekleyen UpdateSubscription'ları gönder."""
+                await pc_connected_evt.wait()
+                if not pending_subs:
+                    return
+                all_sids: list[str] = []
+                for sids, pmap in pending_subs:
+                    sub_req = lk_rtc.SignalRequest()
+                    sub_req.subscription.track_sids.extend(sids)
+                    sub_req.subscription.subscribe = True
+                    for p_sid, t_sids in pmap.items():
+                        pt = sub_req.subscription.participant_tracks.add()
+                        pt.participant_sid = p_sid
+                        pt.track_sids.extend(t_sids)
+                    await ws.send_bytes(sub_req.SerializeToString())
+                    all_sids.extend(sids)
+                pending_subs.clear()
+                logger.info(
+                    "Pending subscription'lar gönderildi (conn=connected) | %d track",
+                    len(all_sids),
+                )
+
+            asyncio.create_task(_flush_pending_subs())
+
             async for msg in ws:
                 if stop_evt.is_set():
                     break
@@ -209,12 +240,9 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                         join.server_version,
                         len(join.other_participants),
                     )
-                    # auto_subscribe=0: subscription timing kontrolü.
-                    # LiveKit, recorder=true token ile bağlanan subscriber'a
-                    # zaten en yüksek kaliteyi forward eder; kalite kısıtlaması
-                    # koymak gerekmez ve hukuki kayıt için tam kalite şarttır.
-                    # Not: participant_tracks (participant SID) de gönderilmeli —
-                    # LiveKit UpdateSubscription için track_sids tek başına yetmez.
+                    # UpdateSubscription, PC "connected" (DTLS hazır) olana kadar
+                    # bekletilir. Erken gönderilirse LiveKit downtrack kurar ama
+                    # SRTP hazır olmadığından RTP hiç başlamaz.
                     new_sids = []
                     pt_map: dict[str, list[str]] = {}  # participant_sid → [track_sid]
                     for p in join.other_participants:
@@ -225,18 +253,11 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                                 if t.type == lk_models.TrackType.Value("VIDEO"):
                                     video_sids.add(t.sid)
                     if new_sids:
-                        sub_req = lk_rtc.SignalRequest()
-                        sub_req.subscription.track_sids.extend(new_sids)
-                        sub_req.subscription.subscribe = True
-                        for p_sid, t_sids in pt_map.items():
-                            pt = sub_req.subscription.participant_tracks.add()
-                            pt.participant_sid = p_sid
-                            pt.track_sids.extend(t_sids)
-                        await ws.send_bytes(sub_req.SerializeToString())
                         subscribed_sids.update(new_sids)
+                        pending_subs.append((new_sids, pt_map))
                         logger.info(
-                            "Tracklere abone olundu | %d track, %d katılımcı",
-                            len(new_sids), len(pt_map),
+                            "Subscription bekletiliyor (conn=%s) | %d track, %d katılımcı",
+                            pc.connectionState, len(new_sids), len(pt_map),
                         )
 
                 elif kind == "offer":
@@ -268,13 +289,9 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                     await recorder.start()
                     logger.info("recorder.start() çağrıldı → %s | conn=%s", output.name, pc.connectionState)
 
-                    # VP8 simulcast SSRC switching önleme: subscription kurulduktan
-                    # SONRA HIGH quality talep edilir. LiveKit LOW→HIGH geçişi yaparken
-                    # SSRC değiştirir; aiortc yeni SSRC için keyframe bekler ve
-                    # track.recv() bloklanır. UpdateTrackSettings(HIGH) ile LiveKit'e
-                    # yalnızca HIGH SSRC'yi forward etmesi söylenir — geçiş penceresi
-                    # ortadan kalkar.
-                    if video_sids:
+                    # VP8 simulcast: ikinci offer (media track'ler mevcut) alındığında
+                    # HIGH quality iste. DTLS bu noktada zaten bağlı, downtrack hazır.
+                    if video_sids and pc.connectionState == "connected":
                         uts = lk_rtc.UpdateTrackSettings()
                         uts.track_sids.extend(video_sids)
                         uts.quality = lk_models.VideoQuality.Value("HIGH")
