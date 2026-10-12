@@ -216,8 +216,12 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                         )
 
                 elif kind == "offer":
-                    # Sunucunun subscriber SDP offer'ı
+                    # Sunucunun subscriber SDP offer'ı.
+                    # LiveKit auto_subscribe=0 modunda audio/video için ayrı
+                    # offer gönderebilir; recorder.start() her offer'da çağrılır
+                    # (idempotent: sadece context.task is None olan track'leri başlatır).
                     sdp = resp.offer
+                    logger.info("SDP offer alındı:\n%s", sdp.sdp[:3000])
                     await pc.setRemoteDescription(
                         RTCSessionDescription(type=sdp.type, sdp=sdp.sdp)
                     )
@@ -235,8 +239,8 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
 
                     if not recording_started:
                         recording_started = True
-                        await recorder.start()
-                        logger.info("Kayıt başladı → %s", output.name)
+                    await recorder.start()
+                    logger.info("recorder.start() çağrıldı → %s", output.name)
 
                 elif kind == "trickle":
                     trickle = resp.trickle
