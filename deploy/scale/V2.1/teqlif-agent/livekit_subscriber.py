@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
 """LiveKit room subscriber — ses/görüntüyü MKV dosyasına kaydeder.
 
-LiveKit WebSocket signaling protokolü (protocol=15) üzerinden odaya
-hidden subscriber olarak bağlanır; aiortc ile WebRTC track'lerini alır
-ve PyAV (MediaRecorder) ile lokal MKV dosyasına yazar.
-
-Bant genişliği: bağlantı 127.0.0.1 üzerinden kurulur — dış trafik yok.
+livekit-rtc (Rust tabanlı resmi SDK) kullanır. Her stream için
+teqlif-agent tarafından subprocess olarak başlatılır.
 
 Kullanım:
-  python livekit_subscriber.py \\
-      --room      <room_name> \\
-      --ws-url    ws://127.0.0.1:7880 \\
-      --api-key   <key> \\
-      --api-secret <secret> \\
+  python livekit_subscriber.py \
+      --room      <room_name> \
+      --ws-url    ws://127.0.0.1:7880 \
+      --api-key   <key> \
+      --api-secret <secret> \
       --output    /var/recordings/raw/123_20261012.mkv
-
-Çıkış kodları:
-  0 → kayıt tamamlandı (yayıncı ayrıldı)
-  1 → bağlantı / signaling hatası
 """
 from __future__ import annotations
 
@@ -33,11 +26,8 @@ import sys
 import time
 from pathlib import Path
 
-import aiohttp
-from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaRecorder
-from livekit.protocol import rtc as lk_rtc
-from livekit.protocol import models as lk_models
+import av
+from livekit import rtc
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,317 +59,238 @@ def _make_token(room: str, api_key: str, api_secret: str) -> str:
             "canSubscribe": True,
         },
     }, separators=(",", ":")).encode())
-
     signing = f"{header}.{payload}"
-    sig     = b64url(hmac.new(api_secret.encode(), signing.encode(), hashlib.sha256).digest())
+    sig = b64url(hmac.new(api_secret.encode(), signing.encode(), hashlib.sha256).digest())
     return f"{signing}.{sig}"
 
 
-# ── ICE candidate parse ───────────────────────────────────────────────────────
+# ── MKV writer ────────────────────────────────────────────────────────────────
 
-def _parse_ice(candidate_init: str) -> RTCIceCandidate | None:
-    try:
-        data = json.loads(candidate_init)
-        raw  = data.get("candidate", "")
-        if not raw or raw == "":
-            return None
-        # "candidate:foundation component protocol priority ip port typ type ..."
-        parts = raw.split()
-        if len(parts) < 8:
-            return None
-        return RTCIceCandidate(
-            component    = int(parts[1]),
-            foundation   = parts[0].split(":", 1)[1] if ":" in parts[0] else parts[0],
-            ip           = parts[4],
-            port         = int(parts[5]),
-            priority     = int(parts[3]),
-            protocol     = parts[2].lower(),
-            type         = parts[7],
-            sdpMid        = data.get("sdpMid"),
-            sdpMLineIndex = data.get("sdpMLineIndex"),
-        )
-    except Exception as exc:
-        logger.debug("ICE parse atlandı: %s", exc)
-        return None
+class MKVWriter:
+    """VP8 + Opus MKV kaydedici.
 
+    hint_video / hint_audio ile boyut/rate bilgisi alır,
+    open_container() çağrıldığında tüm stream'lerle container açar.
+    """
 
-# ── Signaling loop ────────────────────────────────────────────────────────────
+    def __init__(self, path: Path) -> None:
+        self._path    = path
+        self._container: av.container.OutputContainer | None = None
+        self._vstr: av.VideoStream | None = None
+        self._astr: av.AudioStream | None = None
+        self._afifo: av.AudioFifo | None  = None
+        self._vinfo: tuple[int, int] | None = None   # (width, height)
+        self._ainfo: tuple[int, int] | None = None   # (sample_rate, channels)
+        self._vpts = 0
+        self._apts = 0
 
-async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Path) -> None:
-    token = _make_token(room, api_key, api_secret)
-    url   = (
-        f"{ws_url}/rtc"
-        f"?access_token={token}"
-        f"&protocol=7"
-        f"&auto_subscribe=0"
-        f"&sdk=py&version=0.1.0"
-    )
+    def hint_video(self, width: int, height: int) -> None:
+        if self._vinfo is None:
+            self._vinfo = (width, height)
 
-    recorder         = MediaRecorder(str(output))
-    pc               = RTCPeerConnection()
-    stop_evt         = asyncio.Event()
-    pending_ice: list[RTCIceCandidate] = []
-    recording_started = False
-    subscribed_sids: set[str] = set()  # subscribe edilmiş track SID'leri
-    video_sids: set[str]       = set()  # video track SID'leri (HIGH quality kilidi)
-    # PC "connected" olana kadar bekleyen subscription istekleri.
-    # UpdateSubscription DTLS bitmeden gönderilirse LiveKit downtrack'i kuruyor
-    # ama SRTP henüz hazır olmadığından RTP hiç başlamıyor.
-    pending_subs: list[tuple[list[str], dict[str, list[str]]]] = []
-    pc_connected_evt = asyncio.Event()
+    def hint_audio(self, sample_rate: int, channels: int) -> None:
+        if self._ainfo is None:
+            self._ainfo = (sample_rate, channels)
 
-    # ── Bağlantı durumu izleme ─────────────────────────────────────────────────
-    @pc.on("connectionstatechange")
-    async def on_conn_state() -> None:
-        logger.info("PC connectionState → %s", pc.connectionState)
-        if pc.connectionState == "connected":
-            pc_connected_evt.set()
+    @property
+    def has_video_hint(self) -> bool:
+        return self._vinfo is not None
 
-    @pc.on("iceconnectionstatechange")
-    async def on_ice_conn_state() -> None:
-        logger.info("ICE connectionState → %s | PC=%s", pc.iceConnectionState, pc.connectionState)
-
-    async def _conn_monitor() -> None:
-        for _ in range(720):
-            await asyncio.sleep(10)
-            if stop_evt.is_set():
-                break
-            logger.info(
-                "MONITOR | conn=%s ice=%s output_exists=%s",
-                pc.connectionState, pc.iceConnectionState, output.exists(),
-            )
-
-    asyncio.create_task(_conn_monitor())
-
-    # ── PC ICE → server ───────────────────────────────────────────────────────
-    async def _send_ice(ws: aiohttp.ClientWebSocketResponse, cand: RTCIceCandidate) -> None:
-        if cand is None:
+    def open_container(self) -> None:
+        if self._container is not None or self._vinfo is None:
             return
-        req             = lk_rtc.SignalRequest()
-        req.trickle.candidateInit = json.dumps({
-            "candidate": (
-                f"candidate:{cand.foundation} {cand.component} "
-                f"{cand.protocol.upper()} {cand.priority} "
-                f"{cand.ip} {cand.port} typ {cand.type}"
-            ),
-            "sdpMid":        cand.sdpMid or "0",
-            "sdpMLineIndex": cand.sdpMLineIndex or 0,
-        })
-        req.trickle.target = lk_rtc.SignalTarget.Value("SUBSCRIBER")
-        await ws.send_bytes(req.SerializeToString())
 
-    # ── Tracks → recorder ────────────────────────────────────────────────────
-    @pc.on("track")
-    def on_track(track) -> None:
-        recorder.addTrack(track)
-        logger.info("Track alındı: %s", track.kind)
+        self._container = av.open(str(self._path), mode="w", format="matroska")
 
-    # ── Timeout guard ─────────────────────────────────────────────────────────
-    async def _timeout_guard() -> None:
-        await asyncio.sleep(_MAX_DURATION_S)
-        logger.warning("Maksimum kayıt süresi aşıldı (%ds), durduruluyor", _MAX_DURATION_S)
+        w, h = self._vinfo
+        vs = self._container.add_stream("libvpx", rate=30)
+        ctx = vs.codec_context
+        ctx.width    = w
+        ctx.height   = h
+        ctx.pix_fmt  = "yuv420p"
+        ctx.bit_rate = 2_000_000  # 2 Mbps — yasal kanıt kalitesi
+        ctx.options  = {"deadline": "realtime", "cpu-used": "4"}
+        self._vstr = vs
+        logger.info("Video stream: %dx%d @ 2 Mbps VP8", w, h)
+
+        if self._ainfo is not None:
+            sr, ch = self._ainfo
+            as_ = self._container.add_stream("libopus")
+            ctx  = as_.codec_context
+            ctx.sample_rate = sr
+            ctx.channels    = ch
+            ctx.format      = "s16"
+            self._astr  = as_
+            self._afifo = av.AudioFifo()
+            logger.info("Audio stream: %d Hz %d ch Opus", sr, ch)
+
+        logger.info("MKV container açıldı: %s", self._path.name)
+
+    def write_video(self, av_frame: av.VideoFrame) -> None:
+        if self._vstr is None:
+            return
+        av_frame.pts = self._vpts
+        self._vpts  += 1
+        for pkt in self._vstr.encode(av_frame):
+            self._container.mux(pkt)
+
+    def write_audio(self, av_frame: av.AudioFrame) -> None:
+        if self._astr is None or self._afifo is None:
+            return
+        self._afifo.write(av_frame)
+        frame_size = self._astr.codec_context.frame_size or 960
+        while self._afifo.samples >= frame_size:
+            chunk = self._afifo.read(frame_size)
+            if chunk is None:
+                break
+            chunk.pts = self._apts
+            self._apts += frame_size
+            for pkt in self._astr.encode(chunk):
+                self._container.mux(pkt)
+
+    def close(self) -> None:
+        if self._container is None:
+            return
+        try:
+            if self._vstr:
+                for pkt in self._vstr.encode(None):
+                    self._container.mux(pkt)
+            if self._astr:
+                for pkt in self._astr.encode(None):
+                    self._container.mux(pkt)
+            self._container.close()
+            logger.info("MKV container kapatıldı")
+        except Exception as exc:
+            logger.warning("Container kapatma hatası: %s", exc)
+
+
+# ── Ana kayıt döngüsü ─────────────────────────────────────────────────────────
+
+async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, output: Path) -> None:
+    token  = _make_token(room_name, api_key, api_secret)
+    writer = MKVWriter(output)
+    room   = rtc.Room()
+    stop_evt     = asyncio.Event()
+    open_evt     = asyncio.Event()   # container açıldıktan sonra set
+    record_tasks: list[asyncio.Task] = []
+
+    # ── Video kaydedici ────────────────────────────────────────────────────
+    async def _record_video(track: rtc.RemoteVideoTrack) -> None:
+        vs = rtc.VideoStream(track, format=rtc.VideoBufferType.I420)
+        async for event in vs:
+            lk = event.frame
+            writer.hint_video(lk.width, lk.height)
+            await open_evt.wait()  # container hazır olana kadar bekle
+            y  = lk.width * lk.height
+            uv = (lk.width // 2) * (lk.height // 2)
+            raw = bytes(lk.data)
+            frame = av.VideoFrame(lk.width, lk.height, "yuv420p")
+            frame.planes[0].update(raw[:y])
+            frame.planes[1].update(raw[y : y + uv])
+            frame.planes[2].update(raw[y + uv :])
+            writer.write_video(frame)
+
+    # ── Ses kaydedici ──────────────────────────────────────────────────────
+    async def _record_audio(track: rtc.RemoteAudioTrack) -> None:
+        ast = rtc.AudioStream(track)
+        async for event in ast:
+            lk = event.frame
+            writer.hint_audio(lk.sample_rate, lk.num_channels)
+            await open_evt.wait()
+            frame = av.AudioFrame(
+                format="s16",
+                layout="stereo" if lk.num_channels >= 2 else "mono",
+                samples=lk.samples_per_channel,
+            )
+            frame.sample_rate = lk.sample_rate
+            frame.planes[0].update(bytes(lk.data))
+            writer.write_audio(frame)
+
+    # ── Container koordinatörü ─────────────────────────────────────────────
+    async def _open_when_ready() -> None:
+        """Video hint gelince 150 ms bekle (audio da gelsin), sonra aç."""
+        for _ in range(50):
+            if writer.has_video_hint:
+                break
+            await asyncio.sleep(0.05)
+        else:
+            logger.error("Video track bilgisi alınamadı, container açılmıyor")
+            stop_evt.set()
+            return
+
+        await asyncio.sleep(0.15)   # audio hint için kısa pencere
+        writer.open_container()
+        open_evt.set()
+
+    # ── Oda olayları ───────────────────────────────────────────────────────
+    @room.on("track_subscribed")
+    def on_track_subscribed(track, publication, participant):
+        logger.info(
+            "Track abone oldu: kind=%s participant=%s",
+            track.kind, participant.identity,
+        )
+        if isinstance(track, rtc.RemoteVideoTrack):
+            record_tasks.append(asyncio.ensure_future(_record_video(track)))
+        elif isinstance(track, rtc.RemoteAudioTrack):
+            record_tasks.append(asyncio.ensure_future(_record_audio(track)))
+
+    @room.on("participant_disconnected")
+    def on_participant_disconnected(participant):
+        logger.info("Katılımcı ayrıldı: %s", participant.identity)
+        if not room.remote_participants:
+            logger.info("Oda boşaldı, kayıt durduruluyor")
+            stop_evt.set()
+
+    @room.on("disconnected")
+    def on_disconnected(reason):
+        logger.info("Bağlantı kesildi: %s", reason)
         stop_evt.set()
 
-    asyncio.create_task(_timeout_guard())
+    # ── Bağlan ────────────────────────────────────────────────────────────
+    logger.info("Bağlanılıyor | room=%s ws=%s", room_name, ws_url)
+    await room.connect(
+        ws_url, token,
+        options=rtc.RoomOptions(auto_subscribe=True),
+    )
+    logger.info("Bağlandı | katılımcılar=%d", len(room.remote_participants))
 
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(
-            url,
-            heartbeat=20,
-            max_msg_size=4 * 1024 * 1024,
-        ) as ws:
-            logger.info("LiveKit sinyal bağlantısı kuruldu | room=%s ws=%s", room, ws_url)
+    asyncio.ensure_future(_open_when_ready())
 
-            # ICE gönderici closure
-            @pc.on("icecandidate")
-            def on_ice(cand) -> None:
-                if cand:
-                    asyncio.ensure_future(_send_ice(ws, cand))
+    # ── İzleme ────────────────────────────────────────────────────────────
+    async def _monitor() -> None:
+        elapsed = 0
+        while not stop_evt.is_set():
+            await asyncio.sleep(10)
+            elapsed += 10
+            size_mb = output.stat().st_size / 1_048_576 if output.exists() else 0
+            logger.info(
+                "MONITOR | t=%ds participants=%d output=%.1f MB",
+                elapsed, len(room.remote_participants), size_mb,
+            )
 
-            async def _flush_pending_subs() -> None:
-                """PC 'connected' olunca bekleyen UpdateSubscription'ları gönder."""
-                await pc_connected_evt.wait()
-                if not pending_subs:
-                    return
-                all_sids: list[str] = []
-                for sids, pmap in pending_subs:
-                    sub_req = lk_rtc.SignalRequest()
-                    sub_req.subscription.track_sids.extend(sids)
-                    sub_req.subscription.subscribe = True
-                    for p_sid, t_sids in pmap.items():
-                        pt = sub_req.subscription.participant_tracks.add()
-                        pt.participant_sid = p_sid
-                        pt.track_sids.extend(t_sids)
-                    await ws.send_bytes(sub_req.SerializeToString())
-                    all_sids.extend(sids)
-                pending_subs.clear()
-                logger.info(
-                    "Pending subscription'lar gönderildi (conn=connected) | %d track",
-                    len(all_sids),
-                )
+    async def _timeout() -> None:
+        await asyncio.sleep(_MAX_DURATION_S)
+        logger.warning("Maksimum süre aşıldı (%ds), durduruluyor", _MAX_DURATION_S)
+        stop_evt.set()
 
-            asyncio.create_task(_flush_pending_subs())
+    asyncio.ensure_future(_monitor())
+    asyncio.ensure_future(_timeout())
 
-            async for msg in ws:
-                if stop_evt.is_set():
-                    break
-                if msg.type != aiohttp.WSMsgType.BINARY:
-                    if msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                        logger.info("WS bağlantısı kapandı: %s", msg.type)
-                        break
-                    continue
+    await stop_evt.wait()
 
-                resp = lk_rtc.SignalResponse()
-                resp.ParseFromString(msg.data)
-                kind = resp.WhichOneof("message")
+    # ── Temizlik ──────────────────────────────────────────────────────────
+    for task in record_tasks:
+        task.cancel()
+    await asyncio.gather(*record_tasks, return_exceptions=True)
 
-                if kind == "join":
-                    join = resp.join
-                    logger.info(
-                        "Odaya katıldı | server=%s katılımcılar=%d",
-                        join.server_version,
-                        len(join.other_participants),
-                    )
-                    # UpdateSubscription, PC "connected" (DTLS hazır) olana kadar
-                    # bekletilir. Erken gönderilirse LiveKit downtrack kurar ama
-                    # SRTP hazır olmadığından RTP hiç başlamaz.
-                    new_sids = []
-                    pt_map: dict[str, list[str]] = {}  # participant_sid → [track_sid]
-                    for p in join.other_participants:
-                        for t in p.tracks:
-                            if t.sid not in subscribed_sids:
-                                new_sids.append(t.sid)
-                                pt_map.setdefault(p.sid, []).append(t.sid)
-                                if t.type == lk_models.TrackType.Value("VIDEO"):
-                                    video_sids.add(t.sid)
-                    if new_sids:
-                        subscribed_sids.update(new_sids)
-                        pending_subs.append((new_sids, pt_map))
-                        logger.info(
-                            "Subscription bekletiliyor (conn=%s) | %d track, %d katılımcı",
-                            pc.connectionState, len(new_sids), len(pt_map),
-                        )
-
-                elif kind == "offer":
-                    # Sunucunun subscriber SDP offer'ı.
-                    # LiveKit auto_subscribe=0 modunda audio/video için ayrı
-                    # offer gönderebilir; recorder.start() her offer'da çağrılır
-                    # (idempotent: sadece context.task is None olan track'leri başlatır).
-                    sdp = resp.offer
-                    logger.info("SDP offer alındı:\n%s", sdp.sdp[:3000])
-                    await pc.setRemoteDescription(
-                        RTCSessionDescription(type=sdp.type, sdp=sdp.sdp)
-                    )
-                    for c in pending_ice:
-                        await pc.addIceCandidate(c)
-                    pending_ice.clear()
-
-                    answer = await pc.createAnswer()
-                    await pc.setLocalDescription(answer)
-                    setup_lines = [l.strip() for l in answer.sdp.split("\n") if "setup" in l]
-                    logger.info("SDP answer a=setup: %s", setup_lines)
-
-                    req         = lk_rtc.SignalRequest()
-                    req.answer.type = answer.type
-                    req.answer.sdp  = answer.sdp
-                    await ws.send_bytes(req.SerializeToString())
-
-                    if not recording_started:
-                        recording_started = True
-                    await recorder.start()
-                    logger.info("recorder.start() çağrıldı → %s | conn=%s", output.name, pc.connectionState)
-
-                    # VP8 simulcast: ikinci offer (media track'ler mevcut) alındığında
-                    # HIGH quality iste. DTLS bu noktada zaten bağlı, downtrack hazır.
-                    if video_sids and pc.connectionState == "connected":
-                        uts = lk_rtc.UpdateTrackSettings()
-                        uts.track_sids.extend(video_sids)
-                        uts.quality = lk_models.VideoQuality.Value("HIGH")
-                        uts.width   = 1280
-                        uts.height  = 720
-                        q_req = lk_rtc.SignalRequest()
-                        q_req.track_setting.CopyFrom(uts)
-                        await ws.send_bytes(q_req.SerializeToString())
-                        logger.info(
-                            "UpdateTrackSettings(HIGH) gönderildi | %d video track: %s",
-                            len(video_sids), list(video_sids),
-                        )
-
-                elif kind == "trickle":
-                    trickle = resp.trickle
-                    # Subscriber PC için adayları uygula
-                    if trickle.target == lk_rtc.SignalTarget.Value("SUBSCRIBER"):
-                        cand = _parse_ice(trickle.candidateInit)
-                        if cand:
-                            if pc.remoteDescription:
-                                await pc.addIceCandidate(cand)
-                            else:
-                                pending_ice.append(cand)
-
-                elif kind == "update":
-                    new_pt_map: dict[str, list[str]] = {}
-                    new_video_sids_upd: list[str] = []
-                    for p in resp.update.participants:
-                        if p.state == lk_models.ParticipantInfo.State.Value("DISCONNECTED"):
-                            if p.tracks:  # publisher idi
-                                logger.info("Yayıncı (%s) odadan ayrıldı", p.identity)
-                                stop_evt.set()
-                                break
-                        else:
-                            for t in p.tracks:
-                                if t.sid not in subscribed_sids:
-                                    new_pt_map.setdefault(p.sid, []).append(t.sid)
-                                    if t.type == lk_models.TrackType.Value("VIDEO"):
-                                        new_video_sids_upd.append(t.sid)
-                    if not stop_evt.is_set() and new_pt_map:
-                        new_sids_upd = [s for sids in new_pt_map.values() for s in sids]
-                        sub_req = lk_rtc.SignalRequest()
-                        sub_req.subscription.track_sids.extend(new_sids_upd)
-                        sub_req.subscription.subscribe = True
-                        for p_sid, t_sids in new_pt_map.items():
-                            pt = sub_req.subscription.participant_tracks.add()
-                            pt.participant_sid = p_sid
-                            pt.track_sids.extend(t_sids)
-                        await ws.send_bytes(sub_req.SerializeToString())
-                        subscribed_sids.update(new_sids_upd)
-                        logger.info(
-                            "Güncelleme: yeni tracklere abone olundu | %d track",
-                            len(new_sids_upd),
-                        )
-                        if new_video_sids_upd:
-                            video_sids.update(new_video_sids_upd)
-                            uts = lk_rtc.UpdateTrackSettings()
-                            uts.track_sids.extend(new_video_sids_upd)
-                            uts.quality = lk_models.VideoQuality.Value("HIGH")
-                            uts.width   = 1280
-                            uts.height  = 720
-                            q_req = lk_rtc.SignalRequest()
-                            q_req.track_setting.CopyFrom(uts)
-                            await ws.send_bytes(q_req.SerializeToString())
-                            logger.info(
-                                "UpdateTrackSettings(HIGH) gönderildi | %d yeni video track",
-                                len(new_video_sids_upd),
-                            )
-
-                elif kind == "leave":
-                    logger.info("Sunucu leave mesajı gönderdi")
-                    stop_evt.set()
-
-                else:
-                    logger.debug("Sinyal mesajı: kind=%s", kind)
-
-    # ── Temizlik ──────────────────────────────────────────────────────────────
-    try:
-        if recording_started:
-            await recorder.stop()
-    except Exception as exc:
-        logger.warning("recorder.stop hatası: %s", exc)
-
-    await pc.close()
+    writer.close()
+    await room.disconnect()
 
     if output.exists():
-        size_mb = output.stat().st_size / 1_048_576
-        logger.info("Kayıt tamamlandı | %s (%.1f MB)", output.name, size_mb)
+        logger.info(
+            "Kayıt tamamlandı | %s (%.1f MB)",
+            output.name, output.stat().st_size / 1_048_576,
+        )
     else:
         logger.warning("Çıktı dosyası oluşturulmadı: %s", output)
 
@@ -387,7 +298,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="LiveKit room kaydedici")
+    parser = argparse.ArgumentParser(description="LiveKit room kaydedici (livekit-rtc)")
     parser.add_argument("--room",       required=True)
     parser.add_argument("--ws-url",     required=True)
     parser.add_argument("--api-key",    required=True)
@@ -398,24 +309,18 @@ def main() -> None:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    # MKV ile aynı dizinde .log dosyası — PIPE buffer sorununu önler,
-    # çalışırken `tail -f` ile gerçek zamanlı izlenebilir.
     log_path = output.with_suffix(".log")
     fh = logging.FileHandler(str(log_path))
     fh.setFormatter(logging.Formatter(
         "%(asctime)s [livekit-subscriber] %(levelname)s %(message)s"
     ))
-    logging.getLogger().addHandler(fh)
-    # DTLS teşhis için debug log — sadece dosyaya (stdout spamlenmez)
     fh.setLevel(logging.DEBUG)
-    logging.getLogger("aiortc.dtls").setLevel(logging.DEBUG)
-    logging.getLogger("aiortc.rtcdtlstransport").setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(fh)
 
     loop = asyncio.new_event_loop()
 
     def _on_signal(*_):
-        logger.info("SIGTERM alındı, kayıt durduruluyor")
-        # stop_evt'i dışarıdan set edemeyiz; loop'u durduruyoruz
+        logger.info("Sinyal alındı, durduruluyor")
         loop.stop()
 
     signal.signal(signal.SIGTERM, _on_signal)
@@ -423,7 +328,7 @@ def main() -> None:
 
     try:
         loop.run_until_complete(_run(
-            room       = args.room,
+            room_name  = args.room,
             ws_url     = args.ws_url,
             api_key    = args.api_key,
             api_secret = args.api_secret,
