@@ -298,6 +298,9 @@ class RecordingManager:
                 import asyncpg
                 conn = await asyncpg.connect(dsn=dsn)
                 if proc.returncode == 0:
+                    sub_log = (stderr_b or b"").decode(errors="replace")[-600:].strip()
+                    if sub_log:
+                        logger.debug("Subscriber log | rec_id=%d | %s", rec_id, sub_log)
                     row = await conn.fetchrow(
                         "SELECT raw_path FROM stream_recordings WHERE id = $1", rec_id
                     )

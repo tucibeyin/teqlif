@@ -110,7 +110,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
     url   = (
         f"{ws_url}/rtc"
         f"?access_token={token}"
-        f"&protocol=15"
+        f"&protocol=7"
         f"&auto_subscribe=1"
         f"&sdk=py&version=0.1.0"
     )
@@ -233,6 +233,9 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                 elif kind == "leave":
                     logger.info("Sunucu leave mesajı gönderdi")
                     stop_evt.set()
+
+                else:
+                    logger.debug("Sinyal mesajı: kind=%s", kind)
 
     # ── Temizlik ──────────────────────────────────────────────────────────────
     try:
