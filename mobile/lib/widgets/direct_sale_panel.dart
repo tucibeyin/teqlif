@@ -559,6 +559,7 @@ class _QuickSaleSheetState extends ConsumerState<_QuickSaleSheet> {
             hint: loc.t('directSaleFormPrice'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             prefixIcon: const Icon(Icons.sell_outlined, size: 18),
+            inputFormatters: [const TeqNumericInputFormatter(fieldKey: 'price', allowDecimal: true)],
             onChanged: (_) { if (_error != null) setState(() => _error = null); },
           ),
           const SizedBox(height: 10),
