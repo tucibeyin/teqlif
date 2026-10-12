@@ -191,7 +191,10 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
                 vframe_count += 1
                 if vframe_count <= 3:
                     logger.info("VIDEO frame #%d: %dx%d", vframe_count, lk.width, lk.height)
-                writer.hint_video(lk.width, lk.height)
+                # İlk 30 frame (~1s) atla — dynacast HIGH layer geç başlar;
+                # ilk frame'de dimension kilitlenirse LOW (360p) kalır.
+                if vframe_count > 30:
+                    writer.hint_video(lk.width, lk.height)
                 await open_evt.wait()
                 # BGRA numpy dizisi → av.VideoFrame → yuv420p
                 arr = np.frombuffer(bytes(lk.data), dtype=np.uint8).reshape(lk.height, lk.width, 4)
