@@ -16,6 +16,7 @@ recording:
       minio_alias:      teqlif-prod
       raw_dir:          /var/recordings/raw
       encoded_dir:      /var/recordings/encoded
+      redis_url_env:    CORE_REDIS_URL
 
     teqlif-livekit-staging:
       livekit_ws_url:   ws://127.0.0.1:7890
