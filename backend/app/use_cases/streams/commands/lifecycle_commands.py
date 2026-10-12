@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import select
 from fastapi import BackgroundTasks
 from app.core.uow import AbstractUnitOfWork
@@ -8,6 +10,20 @@ from app.models.user import User
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
+
+_RECORDING_CHANNEL = "teqlif:recording:stream_started"
+
+
+async def _publish_recording_event(stream_id: int, room_name: str, host_id: int) -> None:
+    """Agent'a kayıt başlat sinyali gönderir (fire-and-forget)."""
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        payload = json.dumps({"stream_id": stream_id, "room_name": room_name, "host_id": host_id})
+        await redis.publish(_RECORDING_CHANNEL, payload)
+        logger.info("[STREAMS] Recording eventi yayınlandı | stream_id=%d", stream_id)
+    except Exception as exc:
+        logger.warning("[STREAMS] Recording eventi yayınlanamadı | stream_id=%d | %s", stream_id, exc)
 
 class ConfirmLiveCommand:
     def __init__(self, uow: AbstractUnitOfWork):
@@ -44,6 +60,10 @@ class ConfirmLiveCommand:
         background_tasks.add_task(
             notify_followers_task,
             user.id, user.username, stream.title, stream.id
+        )
+        background_tasks.add_task(
+            _publish_recording_event,
+            stream.id, stream.room_name, stream.host_id,
         )
         logger.info("[STREAMS] Yayın yayına alındı ve bildirimler tetiklendi | stream_id=%s", stream_id)
         return {"message": "Yayın canlıya alındı"}

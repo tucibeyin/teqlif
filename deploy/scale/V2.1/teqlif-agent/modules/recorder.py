@@ -5,12 +5,16 @@ otomatik yüklenir. Her aktif stream için livekit_subscriber.py'yi
 subprocess olarak başlatır; WebRTC ile odaya gizli abone olarak girerek
 ses/görüntüyü lokal MKV dosyasına kaydeder.
 
+Tetikleme: Redis pub/sub (teqlif:recording:stream_started) → anında başlatma.
+Fallback: 60 saniyelik döngü poll'u — event kaçırıldıysa yakalama garantisi.
+
 Bant genişliği: subscriber 127.0.0.1 üzerinden bağlanır — dış trafik yok.
 Encoder/transfer: MKV dosyası hazır olunca EncoderManager devralır.
 """
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -25,6 +29,7 @@ logger = logging.getLogger("teqlif-agent.recorder")
 # livekit_subscriber.py agent dizininin bir üst klasöründe (prod: /opt/teqlif-agent/)
 _SUBSCRIBER_SCRIPT = Path(__file__).parent.parent / "livekit_subscriber.py"
 _PYTHON            = sys.executable
+_PUBSUB_CHANNEL    = "teqlif:recording:stream_started"
 
 
 class RecordingManager:
@@ -34,7 +39,9 @@ class RecordingManager:
         self._svc  = service_name
         # rec_id → asyncio Process
         self._procs: dict[int, asyncio.subprocess.Process] = {}
-        self._initialized = False
+        self._initialized    = False
+        self._event_queue:   asyncio.Queue[dict] = asyncio.Queue()
+        self._listener_task: asyncio.Task | None = None
 
     async def run(self, is_leader: bool) -> None:
         svc_cfg = self._cfg.recording_config_for(self._svc)
@@ -50,9 +57,130 @@ class RecordingManager:
         if not self._initialized:
             await self._recover_orphaned(dsn)
             self._initialized = True
+            redis_url = self._event_redis_url(svc_cfg)
+            self._listener_task = asyncio.create_task(
+                self._pubsub_loop(redis_url),
+                name=f"recorder-pubsub-{self._svc}",
+            )
 
+        # Listener task çöktüyse yeniden başlat
+        if self._listener_task and self._listener_task.done():
+            exc = self._listener_task.exception() if not self._listener_task.cancelled() else None
+            logger.warning("Pub/sub listener durdu (%s), yeniden başlatılıyor", exc)
+            redis_url = self._event_redis_url(svc_cfg)
+            self._listener_task = asyncio.create_task(
+                self._pubsub_loop(redis_url),
+                name=f"recorder-pubsub-{self._svc}",
+            )
+
+        # Pub/sub'dan gelen olayları anında işle
+        await self._drain_event_queue(dsn, svc_cfg)
+
+        # 60s fallback poll — event kaçırma güvencesi
         await self._sync_recordings(dsn, svc_cfg)
         await self._reap_finished(dsn)
+
+    # ── Redis URL seçimi ──────────────────────────────────────────────────────
+
+    def _event_redis_url(self, svc_cfg: dict) -> str:
+        """Pub/sub için doğru Redis URL'sini döner.
+
+        Staging servisi için cluster.yaml'daki redis_url_env env var'ını okur.
+        Prod servisi için cfg.redis_url (Core Redis) kullanılır.
+        """
+        env_key = svc_cfg.get("redis_url_env")
+        if env_key:
+            url = os.environ.get(env_key, "")
+            if url:
+                return url
+            logger.warning("redis_url_env '%s' boş — cfg.redis_url kullanılıyor", env_key)
+        return self._cfg.redis_url
+
+    # ── Redis pub/sub dinleyici ───────────────────────────────────────────────
+
+    async def _pubsub_loop(self, redis_url: str) -> None:
+        """Redis pub/sub kanalını dinler, gelen olayları kuyruğa ekler."""
+        import redis.asyncio as aioredis
+
+        while True:
+            r: aioredis.Redis | None = None
+            try:
+                r = aioredis.from_url(redis_url, decode_responses=True)
+                pubsub = r.pubsub()
+                await pubsub.subscribe(_PUBSUB_CHANNEL)
+                logger.info(
+                    "Pub/sub dinleniyor | kanal=%s url=%s",
+                    _PUBSUB_CHANNEL,
+                    redis_url.split("@")[-1] if "@" in redis_url else redis_url,
+                )
+                async for message in pubsub.listen():
+                    if message["type"] != "message":
+                        continue
+                    try:
+                        data = json.loads(message["data"])
+                        await self._event_queue.put(data)
+                        logger.info(
+                            "Kayıt eventi alındı | stream_id=%s room=%s",
+                            data.get("stream_id"), data.get("room_name"),
+                        )
+                    except Exception as exc:
+                        logger.warning("Pub/sub mesaj parse hatası: %s", exc)
+            except asyncio.CancelledError:
+                return
+            except Exception as exc:
+                logger.warning("Pub/sub bağlantı hatası, 5s sonra yeniden: %s", exc)
+                await asyncio.sleep(5)
+            finally:
+                if r is not None:
+                    try:
+                        await r.aclose()
+                    except Exception:
+                        pass
+
+    # ── Pub/sub kuyruğunu boşalt ──────────────────────────────────────────────
+
+    async def _drain_event_queue(self, dsn: str, svc_cfg: dict) -> None:
+        """Kuyruktaki olayları işler — her stream için anında kayıt başlatır."""
+        while not self._event_queue.empty():
+            try:
+                data = self._event_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+            stream_id = data.get("stream_id")
+            room_name = data.get("room_name")
+            host_id   = data.get("host_id")
+
+            if not all([stream_id, room_name, host_id]):
+                logger.warning("Geçersiz kayıt eventi atlandı: %s", data)
+                continue
+
+            # Zaten kayıt varsa atla
+            try:
+                import asyncpg
+                conn = await asyncpg.connect(dsn=dsn)
+                exists = await conn.fetchval(
+                    """SELECT 1 FROM stream_recordings
+                       WHERE stream_id = $1
+                         AND recording_node = $2
+                         AND status IN ('recording','encoding','encoded','transferring','available')
+                    """,
+                    stream_id, self._cfg.node_id,
+                )
+                await conn.close()
+            except Exception as exc:
+                logger.error("Event queue DB kontrol hatası: %s", exc)
+                continue
+
+            if exists:
+                logger.debug("Kayıt zaten mevcut, atlanıyor | stream_id=%d", stream_id)
+                continue
+
+            logger.info(
+                "Pub/sub → kayıt başlatılıyor | stream_id=%d room=%s",
+                stream_id, room_name,
+            )
+            await self._start_recording(dsn, svc_cfg, stream_id, room_name, host_id)
 
     # ── Agent restart: orphan kurtarma ───────────────────────────────────────
 
@@ -78,7 +206,10 @@ class RecordingManager:
     # ── Yeni kayıt başlatma ───────────────────────────────────────────────────
 
     async def _sync_recordings(self, dsn: str, svc_cfg: dict) -> None:
-        """Canlı, bu node'da kaydı olmayan stream'ler için subscriber başlatır."""
+        """Canlı, bu node'da kaydı olmayan stream'ler için subscriber başlatır.
+
+        Pub/sub event'i kaçırıldıysa bu poll yakalama garantisi sağlar.
+        """
         try:
             import asyncpg
             conn = await asyncpg.connect(dsn=dsn)
@@ -189,7 +320,6 @@ class RecordingManager:
                     )
                 else:
                     err = (stderr_b or b"").decode(errors="replace")[-400:].strip()
-                    # Sadece son satırları al (log satırları çok uzun olabilir)
                     err_short = "\n".join(err.splitlines()[-3:])[:200]
                     await conn.execute(
                         "UPDATE stream_recordings SET status='failed', error_message=$1, updated_at=NOW() WHERE id=$2",

@@ -67,7 +67,7 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 ENV
 
-    # cluster.yaml'daki pg_dsn_env değerlerini tarayıp placeholder olarak ekle
+    # cluster.yaml'daki pg_dsn_env ve redis_url_env değerlerini tarayıp placeholder olarak ekle
     CLUSTER_YAML="$(dirname "$REPO_AGENT_DIR")/cluster.yaml"
     if [ -f "$CLUSTER_YAML" ]; then
         while IFS= read -r envvar; do
@@ -75,6 +75,10 @@ ENV
             echo "# cluster.yaml servis DSN override" >> "$CFG_DIR/env"
             echo "${envvar}=" >> "$CFG_DIR/env"
         done < <(grep 'pg_dsn_env:' "$CLUSTER_YAML" | awk '{print $2}' | sort -u)
+        while IFS= read -r envvar; do
+            echo "# cluster.yaml servis Redis URL override" >> "$CFG_DIR/env"
+            echo "${envvar}=" >> "$CFG_DIR/env"
+        done < <(grep 'redis_url_env:' "$CLUSTER_YAML" | awk '{print $2}' | sort -u)
     fi
 
     chmod 640 "$CFG_DIR/env"
