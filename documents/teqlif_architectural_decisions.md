@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Development Workflow eklendi
+**Son güncelleme:** Ekim 2026 — Recording redesign (aiortc) + Staging Metrics Agent eklendi
 
 ---
 
@@ -20,6 +20,8 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 8. [Kategori `is_listable` Flag](#8-kategori-is_listable-flag)
 9. [Cache Taksonomisi ve Schema-Versioned İnvalidasyon](#9-cache-taksonomisi-ve-schema-versioned-i̇nvalidasyon)
 13. [Bir İş Nasıl Yapılır (Development Workflow)](#13-bir-i̇ş-nasıl-yapılır-development-workflow)
+18. [AI Proxy Mimarisi — Redis Keşfi](#18-ai-proxy-mimarisi--redis-keşfi)
+19. [Stream Recording — aiortc Gizli Abone](#19-stream-recording--aiortc-gizli-abone)
 
 ---
 
@@ -1468,10 +1470,85 @@ generate_via_proxy()
 - **Korundu:** `ai_proxy_internal_token` (shared bearer token — tüm proxy node'larında aynı değer)
 - **Eklendi:** `EDGE_AI_PROXY_PRIORITY` env var (`edge_metrics_agent.py`, varsayılan: 100)
 
-### Mevcut Durum (2026-10-05)
+### Staging'de AI Proxy Keşfi
+
+Staging backend `CORE_REDIS_URL=redis://…@127.0.0.1:6379/0` (staging Redis) okur.  
+Ana `teqlif-metrics-agent` ise `10.10.0.1:6379` (prod Redis) yazar → staging backend'de keşif yoktu.
+
+**Çözüm (51df667e):** node5'te ayrı `teqlif-metrics-agent-staging.service` eklendi.  
+Config: `deploy/scale/V2.1/node5/resources/.env.metrics-agent-staging.template`  
+`CORE_REDIS_URL` olarak staging Redis URL'i kullanır; servis `PartOf=teqlif-staging.service`.
+
+### Mevcut Durum (2026-10-12)
 
 | Node | Rol | Öncelik | Durum |
 |------|-----|---------|-------|
 | node6 | AI Proxy Primary | 10 | Aktif (Virginia US, Gemini kısıtsız + Groq) |
 | node5 | AI Proxy Secondary | 20 | Aktif (EU, Groq + Gemini limitli) |
+
+---
+
+## 19. Stream Recording — aiortc Gizli Abone
+
+**Commit:** `51df667e`
+
+### Problem
+
+FFmpeg'in `whep://` demuxer'ı Debian paketinde yok; LiveKit `/rooms/{room}/whep` endpoint'i de mevcut değil.  
+livekit-egress Docker tabanlı — kabul edilmedi.  
+LiveKit DTLS/SRTP şifreli WebRTC kullandığından ağ tapı mümkün değil; yalnızca odaya WebRTC katılımcısı olarak girmek kayıt için çalışır.
+
+### Karar: aiortc ile gizli WebRTC abone
+
+Her canlı yayın başladığında `teqlif-agent`, `livekit_subscriber.py`'yi subprocess olarak başlatır.  
+Script LiveKit WebSocket signaling protokolü (protocol=15) ile odaya `hidden=True, recorder=True` JWT'siyle girer, aiortc MediaRecorder ile MKV dosyasına kaydeder.
+
+### Akış
+
+```
+RecordingManager._sync_recordings()        (her 60s)
+  → live_streams.status = 'live' AND stream_recordings yok
+  → asyncio.create_subprocess_exec(livekit_subscriber.py ...)
+
+livekit_subscriber.py
+  → aiohttp WS → ws://127.0.0.1:7880/rtc?access_token=<jwt>&protocol=15&auto_subscribe=1
+  → SignalResponse.join → log
+  → SignalResponse.offer → pc.setRemoteDescription() → createAnswer() → SignalRequest.answer
+  → ICE trickle (SUBSCRIBER target)
+  → @pc.on("track") → recorder.addTrack(track) → recorder.start()
+  → SignalResponse.update (publisher DISCONNECTED) | leave → stop_evt.set()
+  → recorder.stop() → çıkış kodu 0
+
+RecordingManager._reap_finished()
+  → returncode == 0 → status = 'encoding'
+  → returncode != 0 → status = 'failed'
+
+EncoderManager
+  → MKV → MP4 (FFmpeg encode) → MinIO transfer
+```
+
+### Bant Genişliği
+
+Subscriber `ws://127.0.0.1:7880` (loopback) üzerinden bağlanır.  
+ICE de loopback adayları tercih eder — dış trafik sıfır.  
+Yüzlerce viewer'dan bağımsız: recorder tek sabit subscriber.
+
+### Dosyalar
+
+| Dosya | Açıklama |
+|-------|----------|
+| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | WebRTC signaling + aiortc kayıt (standalone script) |
+| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | Subprocess yönetimi, DB tracking |
+| `deploy/scale/V2.1/cluster.yaml` | `livekit_ws_url`, MinIO staging port düzeltmesi (9000→9100) |
+| `backend/alembic/versions/zzzzzn_recording_egress.py` | `egress_id TEXT` kolonu (ileride kullanım için) |
+| `deploy/scale/V2.1/node5/setup/setup_recorder.sh` | aiortc + livekit-api kurulum scripti |
+
+### Çalıştığı Node'lar
+
+`cluster.yaml`'da `recording.services` altında tanımlı servis adı ile çalışan agent node'ları:
+
+| Servis | Node | WS URL |
+|--------|------|--------|
+| `teqlif-livekit` | node3, node4 | `ws://127.0.0.1:7880` |
+| `teqlif-livekit-staging` | node5 | `ws://127.0.0.1:7890` |
 
