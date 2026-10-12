@@ -1503,12 +1503,25 @@ LiveKit DTLS/SRTP şifreli WebRTC kullandığından ağ tapı mümkün değil; y
 Her canlı yayın başladığında `teqlif-agent`, `livekit_subscriber.py`'yi subprocess olarak başlatır.  
 Script LiveKit WebSocket signaling protokolü (protocol=15) ile odaya `hidden=True, recorder=True` JWT'siyle girer, aiortc MediaRecorder ile MKV dosyasına kaydeder.
 
-### Akış
+### Tetikleme: Event-Driven + Fallback Poll
 
 ```
-RecordingManager._sync_recordings()        (her 60s)
-  → live_streams.status = 'live' AND stream_recordings yok
-  → asyncio.create_subprocess_exec(livekit_subscriber.py ...)
+ConfirmLiveCommand.execute()               (yayın canlıya alınınca — anında)
+  → stream.status = LIVE → commit
+  → background: redis.publish("teqlif:recording:stream_started",
+                               {stream_id, room_name, host_id})
+
+RecordingManager._pubsub_loop()            (arka planda sürekli çalışır)
+  → Redis SUBSCRIBE teqlif:recording:stream_started
+  → mesaj gelince → _event_queue.put(data)
+
+RecordingManager.run() — her 60s cycle
+  → _drain_event_queue()                   (pub/sub eventi varsa anında işle)
+      → DB'de kayıt yok mu? → _start_recording()
+  → _sync_recordings()                     (fallback poll — event kaçırma güvencesi)
+      → live_streams.status = 'live' AND stream_recordings yok
+      → asyncio.create_subprocess_exec(livekit_subscriber.py ...)
+  → _reap_finished()
 
 livekit_subscriber.py
   → aiohttp WS → ws://127.0.0.1:7880/rtc?access_token=<jwt>&protocol=15&auto_subscribe=1
@@ -1526,6 +1539,17 @@ RecordingManager._reap_finished()
 EncoderManager
   → MKV → MP4 (FFmpeg encode) → MinIO transfer
 ```
+
+### Redis Topolojisi
+
+**Prod (node3/4):** Backend (node1) → Core Redis (`127.0.0.1:6379`) `PUBLISH`.  
+Agent (node3/4) → Core Redis (`10.10.0.1:6379`) `SUBSCRIBE`. Aynı instance — sorunsuz.
+
+**Staging (node5):** Staging backend → Staging Redis (`127.0.0.1:6379`) `PUBLISH`.  
+Agent → Staging Redis (`127.0.0.1:6379`) `SUBSCRIBE` — `redis_url_env: STAGING_REDIS_URL`.
+
+`cluster.yaml`'daki `redis_url_env` pattern'i `pg_dsn_env` ile aynı: `/etc/teqlif-agent/env` dosyasına  
+`STAGING_REDIS_URL=redis://:<pass>@127.0.0.1:6379/0` eklenir. `setup_node.sh` bu değeri otomatik tarar.
 
 ### Bant Genişliği
 
