@@ -111,7 +111,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
         f"{ws_url}/rtc"
         f"?access_token={token}"
         f"&protocol=7"
-        f"&auto_subscribe=1"
+        f"&auto_subscribe=0"
         f"&sdk=py&version=0.1.0"
     )
 
@@ -120,6 +120,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
     stop_evt         = asyncio.Event()
     pending_ice: list[RTCIceCandidate] = []
     recording_started = False
+    subscribed_sids: set[str] = set()  # subscribe edilmiş track SID'leri
 
     # ── PC ICE → server ───────────────────────────────────────────────────────
     async def _send_ice(ws: aiohttp.ClientWebSocketResponse, cand: RTCIceCandidate) -> None:
@@ -186,20 +187,23 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                         join.server_version,
                         len(join.other_participants),
                     )
-                    # Simulcast SSRC switching sorunundan kaçınmak için tüm
-                    # video track'leri LOW kalite katmanına sabitle (tek SSRC).
-                    video_sids = [
+                    # auto_subscribe=0: subscription timing kontrolü.
+                    # LiveKit, recorder=true token ile bağlanan subscriber'a
+                    # zaten en yüksek kaliteyi forward eder; kalite kısıtlaması
+                    # koymak gerekmez ve hukuki kayıt için tam kalite şarttır.
+                    all_sids = [
                         t.sid
                         for p in join.other_participants
                         for t in p.tracks
-                        if t.type == lk_models.TrackType.Value("VIDEO")
+                        if t.sid not in subscribed_sids
                     ]
-                    if video_sids:
-                        ts_req = lk_rtc.SignalRequest()
-                        ts_req.track_setting.track_sids.extend(video_sids)
-                        ts_req.track_setting.quality = lk_models.VideoQuality.Value("LOW")
-                        await ws.send_bytes(ts_req.SerializeToString())
-                        logger.info("Video kalite LOW sabitlendi | tracks=%s", video_sids)
+                    if all_sids:
+                        sub_req = lk_rtc.SignalRequest()
+                        sub_req.subscription.track_sids.extend(all_sids)
+                        sub_req.subscription.subscribe = True
+                        await ws.send_bytes(sub_req.SerializeToString())
+                        subscribed_sids.update(all_sids)
+                        logger.info("Tracklere abone olundu | %d track", len(all_sids))
 
                 elif kind == "offer":
                     # Sunucunun subscriber SDP offer'ı
@@ -236,7 +240,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                                 pending_ice.append(cand)
 
                 elif kind == "update":
-                    new_video_sids = []
+                    new_all_sids = []
                     for p in resp.update.participants:
                         if p.state == lk_models.ParticipantInfo.State.Value("DISCONNECTED"):
                             if p.tracks:  # publisher idi
@@ -245,14 +249,15 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                                 break
                         else:
                             for t in p.tracks:
-                                if t.type == lk_models.TrackType.Value("VIDEO"):
-                                    new_video_sids.append(t.sid)
-                    if new_video_sids and not stop_evt.is_set():
-                        ts_req = lk_rtc.SignalRequest()
-                        ts_req.track_setting.track_sids.extend(new_video_sids)
-                        ts_req.track_setting.quality = lk_models.VideoQuality.Value("LOW")
-                        await ws.send_bytes(ts_req.SerializeToString())
-                        logger.info("Güncelleme: video LOW sabitlendi | tracks=%s", new_video_sids)
+                                if t.sid not in subscribed_sids:
+                                    new_all_sids.append(t.sid)
+                    if not stop_evt.is_set() and new_all_sids:
+                        sub_req = lk_rtc.SignalRequest()
+                        sub_req.subscription.track_sids.extend(new_all_sids)
+                        sub_req.subscription.subscribe = True
+                        await ws.send_bytes(sub_req.SerializeToString())
+                        subscribed_sids.update(new_all_sids)
+                        logger.info("Güncelleme: yeni tracklere abone olundu | %d track", len(new_all_sids))
 
                 elif kind == "leave":
                     logger.info("Sunucu leave mesajı gönderdi")
