@@ -26,6 +26,8 @@ import sys
 import time
 from pathlib import Path
 
+import time
+
 import av
 from livekit import rtc
 
@@ -35,7 +37,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("livekit-subscriber")
 
-_MAX_DURATION_S = 7200  # 2 saat güvenlik sınırı
+_MAX_DURATION_S    = 7200  # 2 saat güvenlik sınırı
+_QUALITY_STABLE_S  = 0.5   # resolution bu kadar süre değişmezse stabilize sayılır
+_QUALITY_TIMEOUT_S = 3.0   # HIGH layer bu kadar içinde gelmezse mevcut kaliteyle aç
 
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
@@ -80,13 +84,19 @@ class MKVWriter:
         self._astr: av.AudioStream | None = None
         self._afifo: av.AudioFifo | None  = None
         self._vinfo: tuple[int, int] | None = None   # (width, height)
+        self._vinfo_at: float | None = None           # monotonic — son resolution değişimi
         self._ainfo: tuple[int, int] | None = None   # (sample_rate, channels)
         self._vpts = 0
         self._apts = 0
 
     def hint_video(self, width: int, height: int) -> None:
-        if self._vinfo is None:
+        if self._container is not None:
+            return  # container açıkken resolution değişemez
+        new_px = width * height
+        cur_px = self._vinfo[0] * self._vinfo[1] if self._vinfo else 0
+        if new_px >= cur_px and self._vinfo != (width, height):
             self._vinfo = (width, height)
+            self._vinfo_at = time.monotonic()
 
     def hint_audio(self, sample_rate: int, channels: int) -> None:
         if self._ainfo is None:
@@ -95,6 +105,15 @@ class MKVWriter:
     @property
     def has_video_hint(self) -> bool:
         return self._vinfo is not None
+
+    @property
+    def vinfo_stable_for(self) -> float:
+        """Son resolution değişiminden bu yana geçen süre (saniye)."""
+        return time.monotonic() - self._vinfo_at if self._vinfo_at else 0.0
+
+    def frame_fits(self, width: int, height: int) -> bool:
+        """Gelen frame boyutu açık encoder ile uyuşuyor mu?"""
+        return self._vinfo == (width, height)
 
     def open_container(self) -> None:
         if self._container is not None or self._vinfo is None:
@@ -191,11 +210,10 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
                 vframe_count += 1
                 if vframe_count <= 3:
                     logger.info("VIDEO frame #%d: %dx%d", vframe_count, lk.width, lk.height)
-                # İlk 30 frame (~1s) atla — dynacast HIGH layer geç başlar;
-                # ilk frame'de dimension kilitlenirse LOW (360p) kalır.
-                if vframe_count > 30:
-                    writer.hint_video(lk.width, lk.height)
+                writer.hint_video(lk.width, lk.height)
                 await open_evt.wait()
+                if not writer.frame_fits(lk.width, lk.height):
+                    continue  # kalite geçiş anında gelen yanlış boyutlu frame
                 # BGRA numpy dizisi → av.VideoFrame → yuv420p
                 arr = np.frombuffer(bytes(lk.data), dtype=np.uint8).reshape(lk.height, lk.width, 4)
                 frame = av.VideoFrame.from_ndarray(arr, format="bgra")
@@ -232,8 +250,15 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
 
     # ── Container koordinatörü ─────────────────────────────────────────────
     async def _open_when_ready() -> None:
-        """Video hint gelince 150 ms bekle (audio da gelsin), sonra aç."""
-        for _ in range(50):
+        """Video kalitesi stabilize olunca container açar.
+
+        dynacast nedeniyle HIGH simulcast layer subscription'dan ~500ms-2s
+        sonra başlar. İlk frame gelince resolution izlemeye başlar;
+        _QUALITY_STABLE_S boyunca değişmezse (ya da _QUALITY_TIMEOUT_S
+        geçerse) mevcut kaliteyle container açar.
+        """
+        # 1. İlk video hint gelene kadar bekle
+        for _ in range(70):   # max 3.5s
             if writer.has_video_hint:
                 break
             await asyncio.sleep(0.05)
@@ -242,7 +267,15 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
             stop_evt.set()
             return
 
-        await asyncio.sleep(0.15)   # audio hint için kısa pencere
+        # 2. Resolution _QUALITY_STABLE_S boyunca sabit kalana kadar bekle
+        for _ in range(int(_QUALITY_TIMEOUT_S / 0.05)):
+            if writer.vinfo_stable_for >= _QUALITY_STABLE_S:
+                break
+            await asyncio.sleep(0.05)
+
+        w, h = writer._vinfo
+        logger.info("Video kalitesi sabitlendi: %dx%d (%.1fs sabit)", w, h, writer.vinfo_stable_for)
+        await asyncio.sleep(0.15)   # audio hint penceresi
         writer.open_container()
         open_evt.set()
 
