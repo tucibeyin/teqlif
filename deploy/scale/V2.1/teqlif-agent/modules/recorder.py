@@ -298,9 +298,7 @@ class RecordingManager:
                 import asyncpg
                 conn = await asyncpg.connect(dsn=dsn)
                 if proc.returncode == 0:
-                    sub_log = (stderr_b or b"").decode(errors="replace")[-4000:].strip()
-                    if sub_log:
-                        logger.info("Subscriber log | rec_id=%d |\n%s", rec_id, sub_log)
+                    sub_log = (stderr_b or b"").decode(errors="replace")[-2000:].strip()
                     row = await conn.fetchrow(
                         "SELECT raw_path FROM stream_recordings WHERE id = $1", rec_id
                     )
@@ -310,6 +308,16 @@ class RecordingManager:
                             raw_size = Path(row["raw_path"]).stat().st_size
                         except Exception:
                             pass
+                        # .log dosyasından subscriber çıktısını oku
+                        if not sub_log:
+                            try:
+                                log_path = Path(row["raw_path"]).with_suffix(".log")
+                                if log_path.exists():
+                                    sub_log = log_path.read_text(errors="replace")[-4000:].strip()
+                            except Exception:
+                                pass
+                    if sub_log:
+                        logger.info("Subscriber log | rec_id=%d |\n%s", rec_id, sub_log)
                     await conn.execute(
                         """UPDATE stream_recordings
                            SET status='encoding', raw_size_bytes=$1,

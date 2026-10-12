@@ -358,6 +358,15 @@ def main() -> None:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
+    # MKV ile aynı dizinde .log dosyası — PIPE buffer sorununu önler,
+    # çalışırken `tail -f` ile gerçek zamanlı izlenebilir.
+    log_path = output.with_suffix(".log")
+    fh = logging.FileHandler(str(log_path))
+    fh.setFormatter(logging.Formatter(
+        "%(asctime)s [livekit-subscriber] %(levelname)s %(message)s"
+    ))
+    logging.getLogger().addHandler(fh)
+
     loop = asyncio.new_event_loop()
 
     def _on_signal(*_):
