@@ -191,19 +191,29 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                     # LiveKit, recorder=true token ile bağlanan subscriber'a
                     # zaten en yüksek kaliteyi forward eder; kalite kısıtlaması
                     # koymak gerekmez ve hukuki kayıt için tam kalite şarttır.
-                    all_sids = [
-                        t.sid
-                        for p in join.other_participants
-                        for t in p.tracks
-                        if t.sid not in subscribed_sids
-                    ]
-                    if all_sids:
+                    # Not: participant_tracks (participant SID) de gönderilmeli —
+                    # LiveKit UpdateSubscription için track_sids tek başına yetmez.
+                    new_sids = []
+                    pt_map: dict[str, list[str]] = {}  # participant_sid → [track_sid]
+                    for p in join.other_participants:
+                        for t in p.tracks:
+                            if t.sid not in subscribed_sids:
+                                new_sids.append(t.sid)
+                                pt_map.setdefault(p.sid, []).append(t.sid)
+                    if new_sids:
                         sub_req = lk_rtc.SignalRequest()
-                        sub_req.subscription.track_sids.extend(all_sids)
+                        sub_req.subscription.track_sids.extend(new_sids)
                         sub_req.subscription.subscribe = True
+                        for p_sid, t_sids in pt_map.items():
+                            pt = sub_req.subscription.participant_tracks.add()
+                            pt.participant_sid = p_sid
+                            pt.track_sids.extend(t_sids)
                         await ws.send_bytes(sub_req.SerializeToString())
-                        subscribed_sids.update(all_sids)
-                        logger.info("Tracklere abone olundu | %d track", len(all_sids))
+                        subscribed_sids.update(new_sids)
+                        logger.info(
+                            "Tracklere abone olundu | %d track, %d katılımcı",
+                            len(new_sids), len(pt_map),
+                        )
 
                 elif kind == "offer":
                     # Sunucunun subscriber SDP offer'ı
@@ -240,7 +250,7 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                                 pending_ice.append(cand)
 
                 elif kind == "update":
-                    new_all_sids = []
+                    new_pt_map: dict[str, list[str]] = {}
                     for p in resp.update.participants:
                         if p.state == lk_models.ParticipantInfo.State.Value("DISCONNECTED"):
                             if p.tracks:  # publisher idi
@@ -250,14 +260,22 @@ async def _run(room: str, ws_url: str, api_key: str, api_secret: str, output: Pa
                         else:
                             for t in p.tracks:
                                 if t.sid not in subscribed_sids:
-                                    new_all_sids.append(t.sid)
-                    if not stop_evt.is_set() and new_all_sids:
+                                    new_pt_map.setdefault(p.sid, []).append(t.sid)
+                    if not stop_evt.is_set() and new_pt_map:
+                        new_sids_upd = [s for sids in new_pt_map.values() for s in sids]
                         sub_req = lk_rtc.SignalRequest()
-                        sub_req.subscription.track_sids.extend(new_all_sids)
+                        sub_req.subscription.track_sids.extend(new_sids_upd)
                         sub_req.subscription.subscribe = True
+                        for p_sid, t_sids in new_pt_map.items():
+                            pt = sub_req.subscription.participant_tracks.add()
+                            pt.participant_sid = p_sid
+                            pt.track_sids.extend(t_sids)
                         await ws.send_bytes(sub_req.SerializeToString())
-                        subscribed_sids.update(new_all_sids)
-                        logger.info("Güncelleme: yeni tracklere abone olundu | %d track", len(new_all_sids))
+                        subscribed_sids.update(new_sids_upd)
+                        logger.info(
+                            "Güncelleme: yeni tracklere abone olundu | %d track",
+                            len(new_sids_upd),
+                        )
 
                 elif kind == "leave":
                     logger.info("Sunucu leave mesajı gönderdi")

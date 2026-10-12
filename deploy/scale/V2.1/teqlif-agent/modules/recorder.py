@@ -300,7 +300,7 @@ class RecordingManager:
                 if proc.returncode == 0:
                     sub_log = (stderr_b or b"").decode(errors="replace")[-4000:].strip()
                     if sub_log:
-                        logger.debug("Subscriber log | rec_id=%d | %s", rec_id, sub_log)
+                        logger.info("Subscriber log | rec_id=%d |\n%s", rec_id, sub_log)
                     row = await conn.fetchrow(
                         "SELECT raw_path FROM stream_recordings WHERE id = $1", rec_id
                     )
