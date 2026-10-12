@@ -3,13 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart' show Helper;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
-import '../../services/analytics_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/stream_service.dart';
 import 'viewmodels/host_stream_view_model.dart';
@@ -37,7 +35,6 @@ import '../../ui_library/components/live/commerce_activity_overlay.dart';
 import '../../ui_library/components/live/commerce_activity_toggle.dart';
 import '../../ui_library/foundation/teq_spacing.dart';
 import '../../providers/commerce_activity_provider.dart';
-import '../../services/client_logger.dart';
 
 final _log = LoggerService.instance;
 
@@ -45,8 +42,6 @@ final _log = LoggerService.instance;
 const _kThumbnailInitialDelaySeconds =
     5; // yayın başlayınca ilk thumbnail gecikmesi
 const _kThumbnailRefreshSeconds = 60; // thumbnail yenileme aralığı
-const _kTrackPollIntervalMs = 100; // video track kontrol aralığı (ms)
-const _kTrackPollMaxAttempts = 50; // max kontrol sayısı (= 5 saniye)
 
 class HostStreamScreen extends ConsumerStatefulWidget {
   final StreamTokenOut streamToken;
@@ -73,23 +68,10 @@ class HostStreamScreen extends ConsumerStatefulWidget {
 
 class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     with WidgetsBindingObserver {
-  Room? _room;
-  EventsListener<RoomEvent>? _listener;
-  LocalVideoTrack? _localVideoTrack;
-  bool _micEnabled = true;
-  bool _cameraEnabled = true;
-  bool _isFrontCamera = true;
-  String? _error;
-
-  int _reconnectAttempts = 0;
-  Timer? _reconnectTimer;
-  // ~120s toplam: 2+4+8+16+30+30+30 saniye
-  static const int _maxReconnectAttempts = 7;
+  // Bağlantı state'i HostStreamViewModel'de; burada yalnızca View state'i kalır.
 
   // Arka plana geçiş yaşandıysa true — resume'da kamera track'ini yenile
   bool _wasBackgrounded = false;
-
-  ConnectionQuality? _connectionQuality;
 
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
@@ -101,7 +83,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   double _currentZoom = 1.0;
   static const double _maxZoom = 8.0;
   final Set<String> _modUsers = {};
-  VideoTrack? _coHostTrack;
   String? _coHostUsername;
   double? _pipTop;
   double? _pipLeft;
@@ -124,12 +105,45 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   void initState() {
     super.initState();
     _vm = ref.read(hostStreamViewModelProvider);
+
+    // Navigasyon callback'lerini ViewModel'e bağla
+    _vm.onNavigateToReport = (id, title) {
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SellerReportScreen(streamId: id, streamTitle: title),
+        ),
+        (route) => route.isFirst,
+      );
+    };
+    _vm.onNavigateHome = () {
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+    };
+
     WidgetsBinding.instance.addObserver(this);
     StreamService.isHosting = true;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     WakelockPlus.enable();
-    _connect();
+
+    _vm.connect(
+      widget.streamToken,
+      title: widget.title,
+      category: widget.streamToken.category,
+      loc: ref.read(localizationProvider),
+      blastApproved: widget.blastApproved,
+      blastCost: widget.blastCost,
+      onConnected: () {
+        if (!mounted) return;
+        _thumbTimer = Timer(
+          const Duration(seconds: _kThumbnailInitialDelaySeconds),
+          _autoCaptureThumbnail,
+        );
+      },
+    );
+
     if (widget.streamToken.category != 'chat') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
@@ -146,97 +160,17 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   // Kullanıcı yayındayken sistem ayarlarından izni kaldırıp geri dönebilir.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_room == null || _error != null) return;
+    if (_vm.room == null || _vm.error != null) return;
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _handleHostBackground();
+      _wasBackgrounded = true;
+      _vm.handleBackground(ref.read(localizationProvider));
       return;
     }
     if (state == AppLifecycleState.resumed) {
-      _recheckPermissionsAfterResume();
-    }
-  }
-
-  Future<void> _handleHostBackground() async {
-    _wasBackgrounded = true;
-    if (!_cameraEnabled) return;
-    try {
-      await _room?.localParticipant?.setCameraEnabled(false);
-    } catch (_) {}
-    if (mounted) {
-      // Track'i temizle: donmuş frame yerine "kamera kapalı" göster
-      setState(() {
-        _cameraEnabled = false;
-        _localVideoTrack = null;
-      });
-      TeqToast.warning(
-        ref.read(localizationProvider).tOr(
-          'hostCameraDisabledBackground',
-          'Uygulama arka plana geçti — kamera duraklatıldı',
-        ),
-      );
-    }
-  }
-
-  Future<void> _recheckPermissionsAfterResume() async {
-    final wasBackgrounded = _wasBackgrounded;
-    _wasBackgrounded = false;
-
-    final camStatus = await Permission.camera.status;
-    final micStatus = await Permission.microphone.status;
-    if (!mounted) return;
-
-    final loc = ref.read(localizationProvider);
-
-    if (!camStatus.isGranted && _cameraEnabled) {
-      setState(() {
-        _cameraEnabled = false;
-        _localVideoTrack = null;
-      });
-      try {
-        await _room?.localParticipant?.setCameraEnabled(false);
-      } catch (_) {}
-      TeqToast.warning(loc.tOr('permCameraRevoked', 'Kamera izni kaldırıldı'));
-      return;
-    }
-    if (!micStatus.isGranted && _micEnabled) {
-      setState(() => _micEnabled = false);
-      try {
-        await _room?.localParticipant?.setMicrophoneEnabled(false);
-      } catch (_) {}
-      TeqToast.warning(loc.tOr('permMicRevoked', 'Mikrofon izni kaldırıldı'));
-    }
-
-    // iOS'ta kamera track'i sistem kesintisinden (arama/SMS) sonra donabiliyor.
-    // Arka plana geçildiyse ve kamera açıksa track'i yeniden başlat.
-    if (wasBackgrounded && _cameraEnabled && camStatus.isGranted) {
-      await _restartCameraTrack();
-    }
-  }
-
-  /// iOS kamera track donmasını çözmek için disable→enable cycle uygular.
-  Future<void> _restartCameraTrack() async {
-    if (_room == null) return;
-    try {
-      await _room!.localParticipant?.setCameraEnabled(false);
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      await _room!.localParticipant?.setCameraEnabled(
-        true,
-        cameraCaptureOptions: const CameraCaptureOptions(
-          params: VideoParametersPresets.h720_169,
-        ),
-      );
-      if (!mounted) return;
-      LocalVideoTrack? fresh;
-      for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
-        if (pub.track != null) {
-          fresh = pub.track as LocalVideoTrack;
-          break;
-        }
-      }
-      setState(() => _localVideoTrack = fresh);
-    } catch (e) {
-      _log.captureException(e, tag: 'HostStream.restartCamera');
+      final wasBackgrounded = _wasBackgrounded;
+      _wasBackgrounded = false;
+      _vm.recheckPermissionsAfterResume(wasBackgrounded, ref.read(localizationProvider));
     }
   }
 
@@ -533,7 +467,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     StreamService.isHosting = false;
-    _reconnectTimer?.cancel();
     _thumbTimer?.cancel();
     _whaleHudTimer?.cancel();
     _whaleHudEntry?.remove();
@@ -544,295 +477,14 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-    _listener?.dispose();
-    // _endStream() çağrıldıysa _room zaten null — double disconnect olmaz.
-    // Kullanıcı geri tuşuyla çıktıysa (_endStream() atlandıysa) burada temizlenir.
-    _room?.disconnect();
+    // Room disconnect ve listener temizliği HostStreamViewModel.dispose()'da yapılır.
+    // ChangeNotifierProvider.autoDispose, screen dispose edilince VM'i otomatik dispose eder.
     super.dispose();
   }
 
-  Future<void> _connect() async {
-    final camStatus = await Permission.camera.request();
-    final micStatus = await Permission.microphone.request();
-
-    // T-HC-01: isDenied vs isPermanentlyDenied ayrımı
-    final anyDenied = !camStatus.isGranted || !micStatus.isGranted;
-    if (anyDenied) {
-      final permanent =
-          camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
-      ref.read(streamServiceProvider).cancelStream(widget.streamToken.streamId).ignore();
-      if (mounted) {
-        final loc = ref.read(localizationProvider);
-        setState(() {
-          _error = permanent
-              ? loc.tOr(
-                  'permPermanentlyDenied',
-                  'Bu özellik için izin gerekli. Ayarlardan etkinleştir.',
-                )
-              : loc.t('livePermissionRequired');
-        });
-      }
-      return;
-    }
-
-    try {
-      final room = Room(
-        roomOptions: const RoomOptions(
-          adaptiveStream: true,
-          dynacast: true,
-          defaultVideoPublishOptions: VideoPublishOptions(
-            simulcast: true,
-            backupVideoCodec: BackupVideoCodec(codec: 'vp9'),
-            videoSimulcastLayers: [
-              VideoParametersPresets.h360_169,
-              VideoParametersPresets.h540_169,
-            ],
-            videoEncoding: VideoEncoding(
-              maxBitrate: 1700000,
-              maxFramerate: 30,
-            ),
-            // flutter_webrtc Android'de maintainResolution → toUpperCase() → MAİNTAİN_RESOLUTİON
-            // (Türkçe locale i→İ bug). balanced'da 'i' yok, güvenli.
-            degradationPreference: DegradationPreference.balanced,
-          ),
-          defaultAudioPublishOptions: AudioPublishOptions(
-            audioBitrate: 64000,
-          ),
-        ),
-      );
-      _listener = room.createListener();
-
-      _listener!.on<LocalTrackPublishedEvent>((event) {
-        // setState burada kasıtlı olarak yok: _localVideoTrack yalnızca
-        // _room ile birlikte tek setState'te set edilir (aşağıda).
-        // Erken setState → VideoTrackRenderer ilk build'i başlatır →
-        // confirmLive'dan gelen ikinci setState tetiklendiğinde
-        // RTCVideoRenderer.initialize() henüz bitmemiş olabilir → srcObject kaybolur.
-      });
-
-      // Sahneye çıkan izleyicinin video track'ini PiP'e bağla
-      _listener!.on<TrackSubscribedEvent>((event) {
-        if (event.track is VideoTrack && mounted) {
-          setState(() => _coHostTrack = event.track as VideoTrack);
-        }
-      });
-      _listener!.on<TrackUnsubscribedEvent>((event) {
-        if (event.track is VideoTrack &&
-            event.track == _coHostTrack &&
-            mounted) {
-          setState(() => _coHostTrack = null);
-        }
-      });
-
-      _listener!.on<ParticipantConnectionQualityUpdatedEvent>((event) {
-        if (!mounted) return;
-        if (event.participant is LocalParticipant) {
-          setState(() => _connectionQuality = event.connectionQuality);
-        }
-      });
-
-      _listener!.on<RoomDisconnectedEvent>((event) {
-        if (!mounted) return;
-        final reason = event.reason;
-        // clientInitiated: _endStream() zaten listener'ı dispose eder, buraya gelmemeli.
-        if (reason == DisconnectReason.clientInitiated) return;
-        if (reason == DisconnectReason.roomDeleted) {
-          _onRoomTerminatedByServer();
-          return;
-        }
-        _scheduleReconnect();
-      });
-
-      await room.connect(
-        widget.streamToken.livekitUrl,
-        widget.streamToken.token,
-      );
-
-      // T-HC-05: Bağlantı başarılı ama kamera/mikrofon başlatma ayrı hata verebilir
-      try {
-        await room.localParticipant?.setCameraEnabled(
-          true,
-          cameraCaptureOptions: const CameraCaptureOptions(
-            params: VideoParametersPresets.h720_169,
-          ),
-        );
-        await room.localParticipant?.setMicrophoneEnabled(
-          true,
-          audioCaptureOptions: const AudioCaptureOptions(
-            noiseSuppression: true,
-            echoCancellation: true,
-            autoGainControl: true,
-          ),
-        );
-      } catch (e) {
-        // TrackCreateException: simülatörde kamera/mikrofon donanımı yok — beklenen, Sentry'e gönderme
-        if (e is! TrackCreateException) {
-          _log.captureException(e, tag: 'HostConnect.trackEnable');
-        }
-        if (mounted) {
-          TeqToast.warning(
-            ref
-                .read(localizationProvider)
-                .tOr(
-                  'cameraToggleFailed',
-                  'Kamera başlatılamadı, yayın devam ediyor',
-                ),
-          );
-        }
-      }
-
-      // Track zaten publish edilmişse hemen al
-      LocalVideoTrack? foundTrack;
-      for (final pub in room.localParticipant!.videoTrackPublications) {
-        if (pub.track != null) {
-          foundTrack = pub.track as LocalVideoTrack;
-          break;
-        }
-      }
-
-      // LiveKit bağlantısı başarılı — yayını canlıya al ve bildirimleri gönder
-      try {
-        await ref.read(streamServiceProvider).confirmLive(widget.streamToken.streamId);
-      } catch (e) {
-        ref.read(streamServiceProvider).cancelStream(widget.streamToken.streamId).ignore();
-        if (mounted) {
-          setState(() => _error = ref.read(localizationProvider).tOr(
-                'streamConfirmFailed',
-                'Yayın başlatılamadı',
-              ));
-        }
-        return;
-      }
-
-      // Blast onaylandıysa şimdi gönder (LiveKit bağlantısı kesinleşti)
-      if (widget.blastApproved) {
-        ref.read(analyticsServiceProvider).sendLeadBlast(
-          title: widget.title,
-          category: widget.streamToken.category,
-          estimatedCost: widget.blastCost.toInt(),
-          streamId: widget.streamToken.streamId,
-        ).ignore();
-      }
-
-      // _room set edilince live = true → UI hemen görünür.
-      // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
-      // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
-      setState(() {
-        _room = room;
-        _localVideoTrack = foundTrack;
-      });
-
-      // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
-      if (foundTrack == null) _waitForTrack();
-      // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
-      _thumbTimer = Timer(
-        const Duration(seconds: _kThumbnailInitialDelaySeconds),
-        _autoCaptureThumbnail,
-      );
-    } catch (e, st) {
-      // Bağlantı başarısız — pending kaydı temizle
-      ref.read(streamServiceProvider).cancelStream(widget.streamToken.streamId).ignore();
-      ClientLogger.report(
-        tag: 'HostConnect',
-        message: 'LiveKit bağlantısı kurulamadı',
-        error: e,
-        stackTrace: st,
-        details: {
-          'livekit_url': widget.streamToken.livekitUrl,
-          'stream_id': widget.streamToken.streamId,
-        },
-      );
-      if (mounted) {
-        setState(() {
-          _error = 'Yayına bağlanılamadı. Lütfen tekrar deneyin.';
-        });
-      }
-    }
-  }
-
-  /// LocalTrackPublishedEvent bazen geç gelir; bu metod event gelene kadar
-  /// kısa aralıklarla yayınlamaları kontrol eder, max [_kTrackPollMaxAttempts]×[_kTrackPollIntervalMs]ms bekler.
-  Future<void> _waitForTrack() async {
-    for (int attempt = 0; attempt < _kTrackPollMaxAttempts; attempt++) {
-      await Future.delayed(const Duration(milliseconds: _kTrackPollIntervalMs));
-      if (!mounted || _localVideoTrack != null) return;
-      for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
-        if (pub.track != null) {
-          if (mounted) {
-            setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
-          }
-          return;
-        }
-      }
-    }
-  }
-
-  // T-HC-03: State flip'i başarılı await sonrasına taşındı — hata olursa UI önceki durumda kalır
-  Future<void> _toggleMic() async {
-    final target = !_micEnabled;
-    try {
-      await _room?.localParticipant?.setMicrophoneEnabled(target);
-      if (mounted) setState(() => _micEnabled = target);
-    } catch (e) {
-      _log.captureException(e, tag: 'HostStream.toggleMic');
-      if (mounted) {
-        TeqToast.error(
-          ref
-              .read(localizationProvider)
-              .tOr('micToggleFailed', 'Mikrofon değiştirilemedi'),
-        );
-      }
-    }
-  }
-
-  Future<void> _toggleCamera() async {
-    final target = !_cameraEnabled;
-    try {
-      await _room?.localParticipant?.setCameraEnabled(
-        target,
-        cameraCaptureOptions: target
-            ? const CameraCaptureOptions(params: VideoParametersPresets.h720_169)
-            : null,
-      );
-      if (!mounted) return;
-      if (target) {
-        // Re-enable: LiveKit yeni track oluşturabilir — referansı güncelle
-        LocalVideoTrack? fresh;
-        for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
-          if (pub.track != null) {
-            fresh = pub.track as LocalVideoTrack;
-            break;
-          }
-        }
-        setState(() {
-          _cameraEnabled = true;
-          _localVideoTrack = fresh;
-        });
-      } else {
-        setState(() {
-          _cameraEnabled = false;
-          _localVideoTrack = null;
-        });
-      }
-    } catch (e) {
-      _log.captureException(e, tag: 'HostStream.toggleCamera');
-      if (mounted) {
-        TeqToast.error(
-          ref
-              .read(localizationProvider)
-              .tOr('cameraToggleFailed', 'Kamera değiştirilemedi'),
-        );
-      }
-    }
-  }
-
   Future<void> _switchCamera() async {
-    if (_localVideoTrack == null) return;
-    await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
-    setState(() {
-      _isFrontCamera = !_isFrontCamera;
-      _currentZoom = 1.0;
-    });
+    await _vm.switchCamera();
+    if (mounted) setState(() => _currentZoom = 1.0);
   }
 
   void _onBidAdded(String bidder, double amount, String? itemName) {
@@ -940,76 +592,6 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
     );
   }
 
-  void _scheduleReconnect() {
-    if (!mounted) return;
-    if (_reconnectAttempts >= _maxReconnectAttempts) {
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
-      }
-      return;
-    }
-    // Üstel backoff, 30s'de tavan: 2,4,8,16,30,30,30 → toplam ~120s
-    final raw = 2 << _reconnectAttempts;
-    final delay = Duration(seconds: raw.clamp(2, 30));
-    _reconnectAttempts++;
-    _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(delay, _reconnect);
-  }
-
-  Future<void> _reconnect() async {
-    if (!mounted || _room == null) return;
-    try {
-      final freshToken =
-          await ref.read(streamServiceProvider).refreshStreamToken(widget.streamToken.streamId);
-      await _room!.connect(freshToken.livekitUrl, freshToken.token);
-      _reconnectAttempts = 0;
-    } on AppException catch (e) {
-      if (e.code == 'STREAM_ENDED') {
-        if (mounted) _showStreamEndedAndExit();
-        return;
-      }
-      _scheduleReconnect();
-    } catch (_) {
-      _scheduleReconnect();
-    }
-  }
-
-  Future<void> _onRoomTerminatedByServer() async {
-    _listener?.dispose();
-    _listener = null;
-    try {
-      await ref.read(hostStreamViewModelProvider).endStream(widget.streamToken.streamId);
-    } catch (_) {}
-    try {
-      await _room?.localParticipant?.setCameraEnabled(false);
-      await _room?.localParticipant?.setMicrophoneEnabled(false);
-    } catch (_) {}
-    await _room?.disconnect();
-    _room = null;
-    _localVideoTrack = null;
-    if (mounted) {
-      TeqToast.warning(
-        ref.read(localizationProvider).tOr('streamDisconnectedByServer', 'Yayın bağlantısı kesildi'),
-      );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SellerReportScreen(
-            streamId: widget.streamToken.streamId,
-            streamTitle: widget.title,
-          ),
-        ),
-        (route) => route.isFirst,
-      );
-    }
-  }
-
-  void _showStreamEndedAndExit() {
-    final loc = ref.read(localizationProvider);
-    TeqToast.warning(loc.tOr('streamEndedByHost', 'Yayın sona erdi'));
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
-  }
-
   Future<void> _endStream() async {
     final loc = ref.read(localizationProvider);
     final confirm = await showDialog<bool>(
@@ -1048,61 +630,16 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
         ],
       ),
     );
-
     if (confirm != true) return;
-
-    try {
-      await ref
-          .read(hostStreamViewModelProvider)
-          .endStream(widget.streamToken.streamId);
-    } catch (e, st) {
-      // Ağ hatası olsa bile yayın ekranından çıkmaya devam et
-      _log.captureException(e, stackTrace: st, tag: 'HostStream.endStream');
-    }
-
-    // Odayı bilerek kapattığımız için otomatik kapanma dinleyicisini kaldırıyoruz
-    // Böylece RoomDisconnectedEvent tetiklenip bizi /home sayfasına yönlendirmeyecek
-    _listener?.dispose();
-    _listener = null;
-
-    // Endüstri standardı sırası: önce kamera/mikrofonu kapat (LED hemen söner),
-    // sonra room disconnect. Ters sırada disconnect müzakeresi boyunca kamera LED'i
-    // açık kalır ve kullanıcıya hâlâ yayında olduğu hissini verir.
-    try {
-      await _room?.localParticipant?.setCameraEnabled(false);
-      await _room?.localParticipant?.setMicrophoneEnabled(false);
-    } catch (_) {}
-    await _room?.disconnect();
-    _room = null;          // dispose()'daki çift disconnect çağrısını engeller
-    _localVideoTrack = null;
-    if (mounted) {
-      // Yayın analiz ekranına yönlendir; geri tuşu ana sayfaya döner
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SellerReportScreen(
-            streamId: widget.streamToken.streamId,
-            streamTitle: widget.title,
-          ),
-        ),
-        (route) => route.isFirst,
-      );
-    }
+    // ViewModel listener'ı önce dispose eder (disconnect sonrası reconnect döngüsünü
+    // engeller), ardından API çağrısı, kamera/mic kapatma, room disconnect ve navigasyon.
+    await _vm.closeRoomAndNavigate(widget.streamToken.streamId, widget.title);
   }
 
   Future<void> _autoCaptureThumbnail() async {
     if (!mounted) return;
     try {
-      // Track henüz set edilmemişse publication'dan al (race condition recovery)
-      if (_localVideoTrack == null) {
-        for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
-          if (pub.track is LocalVideoTrack) {
-            setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
-            break;
-          }
-        }
-      }
-      if (_localVideoTrack == null) return; // try içinde: finally reschedule yapar
+      if (_vm.localVideoTrack == null) return; // try içinde: finally reschedule yapar
       final boundary =
           _videoKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary?;
@@ -1135,7 +672,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
   }
 
   Future<String?> _captureProofImageHelper() async {
-    if (!mounted || _localVideoTrack == null) return null;
+    if (!mounted || _vm.localVideoTrack == null) return null;
     try {
       final boundary =
           _videoKey.currentContext?.findRenderObject()
@@ -1163,6 +700,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
 
   @override
   Widget build(BuildContext context) {
+    final vm = ref.watch(hostStreamViewModelProvider);
     final loc = ref.watch(localizationProvider);
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
@@ -1178,7 +716,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
       });
     });
     // Oda bağlıysa UI her zaman gösterilir — _connecting flag'ine bağımlı değil
-    final live = _room != null && _error == null;
+    final live = vm.room != null && vm.error == null;
 
     return PopScope(
       canPop: false,
@@ -1193,10 +731,10 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                 child: Transform.scale(
                   scale: _currentZoom,
                   child: LiveVideoPlayer(
-                    track: _localVideoTrack,
-                    cameraEnabled: _cameraEnabled,
+                    track: vm.localVideoTrack,
+                    cameraEnabled: vm.cameraEnabled,
                     repaintKey: _videoKey,
-                    isFrontCamera: _isFrontCamera,
+                    isFrontCamera: vm.isFrontCamera,
                   ),
                 ),
               ),
@@ -1206,7 +744,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
             FloatingHearts(key: _heartsKey),
 
             // ── Bağlanıyor — sadece oda henüz bağlı değilken ───────────────
-            if (_room == null && _error == null)
+            if (vm.room == null && vm.error == null)
               Positioned.fill(
                 child: ColoredBox(
                   color: Colors.black,
@@ -1230,7 +768,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
               ),
 
             // ── Hata ────────────────────────────────────────────────────────
-            if (_error != null)
+            if (vm.error != null)
               Positioned.fill(
                 child: ColoredBox(
                   color: Colors.black,
@@ -1247,7 +785,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            _error!,
+                            vm.error!,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
@@ -1294,12 +832,12 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                   topPad: topPad,
                   viewerCount: _viewerCount,
                   title: widget.title,
-                  micEnabled: _micEnabled,
-                  cameraEnabled: _cameraEnabled,
-                  connectionQuality: _connectionQuality,
+                  micEnabled: vm.micEnabled,
+                  cameraEnabled: vm.cameraEnabled,
+                  connectionQuality: vm.connectionQuality,
                   onViewersTap: _showViewers,
-                  onToggleMic: _toggleMic,
-                  onToggleCamera: _toggleCamera,
+                  onToggleMic: () => _vm.toggleMic(ref.read(localizationProvider)),
+                  onToggleCamera: () => _vm.toggleCamera(ref.read(localizationProvider)),
                   onSwitchCamera: _switchCamera,
                   onEndStream: _endStream,
                 ),
@@ -1633,7 +1171,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
               ),
 
             // ── Co-Host PiP kutusu — sürüklenebilir ─────────────────────────
-            if (live && _coHostTrack != null)
+            if (live && vm.coHostTrack != null)
               Positioned(
                 top: _pipTop ?? (topPad + 70),
                 left:
@@ -1663,7 +1201,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                       child: Stack(
                         children: [
                           VideoTrackRenderer(
-                            _coHostTrack!,
+                            vm.coHostTrack!,
                             fit: VideoViewFit.contain,
                           ),
                           Positioned(
