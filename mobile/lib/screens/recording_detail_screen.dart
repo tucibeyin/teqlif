@@ -123,9 +123,11 @@ class _RecordingDetailScreenState
             ),
           ),
 
-          // 403 recovery banner
+          // 403 recovery banner — yalnızca geçici URL hataları için
           if (s.urlError != null &&
               s.urlError != 'RECORDING_EXPIRED' &&
+              s.urlError != 'RECORDING_NOT_AVAILABLE' &&
+              s.urlError != 'RECORDING_NOT_FOUND' &&
               s.urlData == null)
             _RecoveryBanner(
               streamId: widget.streamId,
