@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-10-13
 **Kapsam:** Flutter mobile uygulaması client-side cache stratejisi, TTL yönetimi, veri yaşam döngüsü
-**Revizyon:** V1.4 — P0-P2 tam uygulama tamamlandı (commit `f371c67b`)
+**Revizyon:** V1.5 — P3 §11.13-§11.15 tam uygulama tamamlandı
 
 ---
 
@@ -865,8 +865,8 @@ P2  §11.10 ref.keepAlive+Timer     story + live stream provider   ✅ f371c67b
 P2  §11.11 CategoryService refresh main_screen.dart               ✅ f371c67b
 P2  §11.12 resume debounce         account_info_screen.dart       ✅ f371c67b
 
-P3  §11.13 CacheService DIP        cache_service.dart + tüm çağrılar  ⏳ beklemede
-P3  §11.14 Repository pattern      home_view_model + yeni repo         ⏳ beklemede
-P3  §11.15 DRY                     storage_service + cache_service     ⏳ beklemede
-P3  §11.16 ETag                    api_client + backend koordinasyonu  ⏳ beklemede
+P3  §11.13 CacheService DIP        20 dosya                           ✅ 2a5dc9cd
+P3  §11.14 Repository pattern      home_repository.dart (yeni)         ✅ ccbcf109
+P3  §11.15 DRY                     storage_service + messages VM       ✅ ccbcf109
+P3  §11.16 ETag                    api_client + backend koordinasyonu  ⏳ backend hazır olmadan uygulanamaz
 ```
