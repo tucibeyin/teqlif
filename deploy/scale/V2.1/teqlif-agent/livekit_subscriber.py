@@ -208,9 +208,9 @@ async def _run(
     # ── Video kaydedici ────────────────────────────────────────────────────
     async def _record_video(track: rtc.RemoteVideoTrack) -> None:
         import numpy as np
+        vs = rtc.VideoStream(track, format=rtc.VideoBufferType.BGRA)
         try:
             # BGRA: padding yok, stride = width*4 — I420'nin stride sorununu önler
-            vs = rtc.VideoStream(track, format=rtc.VideoBufferType.BGRA)
             vframe_count = 0
             async for event in vs:
                 lk = event.frame
@@ -231,13 +231,17 @@ async def _run(
                 pkts = writer.write_video(frame)
                 if vframe_count <= 3:
                     logger.info("VIDEO encode → %d paket (frame=%d)", pkts, vframe_count)
+        except asyncio.CancelledError:
+            pass
         except Exception as exc:
             logger.error("_record_video hata: %s", exc, exc_info=True)
+        finally:
+            await vs.aclose()
 
     # ── Ses kaydedici ──────────────────────────────────────────────────────
     async def _record_audio(track: rtc.RemoteAudioTrack) -> None:
+        ast = rtc.AudioStream(track)
         try:
-            ast = rtc.AudioStream(track)
             aframe_count = 0
             async for event in ast:
                 lk = event.frame
@@ -255,8 +259,12 @@ async def _run(
                 frame.sample_rate = lk.sample_rate
                 frame.planes[0].update(bytes(lk.data))
                 writer.write_audio(frame)
+        except asyncio.CancelledError:
+            pass
         except Exception as exc:
             logger.error("_record_audio hata: %s", exc, exc_info=True)
+        finally:
+            await ast.aclose()
 
     # ── Container koordinatörü ─────────────────────────────────────────────
     async def _open_when_ready() -> None:
