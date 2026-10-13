@@ -329,6 +329,9 @@ class RecordingManager:
                         "Kayıt encoding'e geçti | rec_id=%d raw_size=%.1fMB",
                         rec_id, raw_size / 1_048_576,
                     )
+                    await self._db.mark_ok(
+                        f"recorder.{self._cfg.node_id}", expected_every_m=10080
+                    )
                 else:
                     err = (stderr_b or b"").decode(errors="replace")[-400:].strip()
                     err_short = "\n".join(err.splitlines()[-3:])[:200]
@@ -337,6 +340,9 @@ class RecordingManager:
                         err_short or f"returncode={proc.returncode}", rec_id,
                     )
                     logger.error("Subscriber hata | rec_id=%d | %s", rec_id, err_short)
+                    await self._db.mark_fail(
+                        f"recorder.{self._cfg.node_id}", expected_every_m=10080
+                    )
                 await conn.close()
             except Exception as exc:
                 logger.error("_reap_finished DB hatası | rec_id=%d | %s", rec_id, exc)
