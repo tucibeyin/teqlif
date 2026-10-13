@@ -4609,5 +4609,9 @@
   "viewerSectionTitle": "Aktive Zuschauer",
   "viewerSortByValue": "Wert ↓",
   "viewerSortByBids": "Gebote ↓",
-  "viewerSortByGifts": "Geschenke ↓"
+  "viewerSortByGifts": "Geschenke ↓",
+  "giftSenderCount": "{count} Absender",
+  "detailBidsSectionTitle": "Gebote",
+  "detailPurchasesSectionTitle": "Käufe",
+  "detailUserSearchHint": "Benutzer suchen..."
 }

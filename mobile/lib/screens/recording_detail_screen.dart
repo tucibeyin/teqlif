@@ -290,10 +290,11 @@ class _SummarySection extends StatefulWidget {
 }
 
 class _SummarySectionState extends State<_SummarySection> {
-  _AuctionSort _auctionSort = _AuctionSort.newest;
-  _SaleSort    _saleSort    = _SaleSort.newest;
-  _GiftSort    _giftSort    = _GiftSort.mostTeqlik;
-  _ViewerSort  _viewerSort  = _ViewerSort.byValue;
+  _AuctionSort _auctionSort   = _AuctionSort.newest;
+  _SaleSort    _saleSort      = _SaleSort.newest;
+  _GiftSort    _giftSort      = _GiftSort.mostTeqlik;
+  _ViewerSort  _viewerSort    = _ViewerSort.byValue;
+  String       _usernameQuery = '';
 
   List<RecordingAuction> get _sortedAuctions {
     final list = [...widget.detail.auctions];
@@ -348,6 +349,47 @@ class _SummarySectionState extends State<_SummarySection> {
     return list;
   }
 
+  // ── Username filter ───────────────────────────────────────────────────────
+
+  bool _matchesQuery(String username) =>
+      _usernameQuery.isEmpty ||
+      username.toLowerCase().contains(_usernameQuery.toLowerCase());
+
+  List<RecordingAuction> get _filteredAuctions {
+    if (_usernameQuery.isEmpty) return _sortedAuctions;
+    return _sortedAuctions
+        .where((a) =>
+            a.bids.any((b) => _matchesQuery(b.username)) ||
+            (a.winner != null && _matchesQuery(a.winner!.username)))
+        .toList();
+  }
+
+  List<RecordingDirectSale> get _filteredSales {
+    if (_usernameQuery.isEmpty) return _sortedSales;
+    return _sortedSales
+        .where((ds) => ds.orders.any((o) => _matchesQuery(o.username)))
+        .toList();
+  }
+
+  RecordingGifts get _filteredGifts {
+    final events = _sortedGiftEvents
+        .where((e) => _usernameQuery.isEmpty || _matchesQuery(e.username))
+        .toList();
+    return RecordingGifts(
+      totalTeqlik: events.fold(0, (s, e) => s + e.costTeqlik),
+      totalHostShare: _usernameQuery.isEmpty
+          ? widget.detail.gifts.totalHostShare
+          : 0,
+      senderCount: events.map((e) => e.userId).toSet().length,
+      events: events,
+    );
+  }
+
+  List<_ViewerActivity> get _filteredViewers {
+    if (_usernameQuery.isEmpty) return _sortedViewers;
+    return _sortedViewers.where((v) => _matchesQuery(v.username)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final m = widget.detail.metrics;
@@ -358,14 +400,54 @@ class _SummarySectionState extends State<_SummarySection> {
         ? CategoryService.localizedLabelFor(loc, s.category!)
         : null;
 
-    final viewers = _sortedViewers;
+    final filteredAuctions = _filteredAuctions;
+    final filteredSales    = _filteredSales;
+    final filteredGifts    = _filteredGifts;
+    final filteredViewers  = _filteredViewers;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Stream category/subcategory header
+          // ── Stream başlığı ve meta ────────────────────────────────────
+          Text(
+            s.title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              if (s.startedAt != null) ...[
+                Icon(Icons.calendar_today_outlined,
+                    size: 13, color: AppColors.textTertiary(context)),
+                const SizedBox(width: 4),
+                Text(
+                  _formatStreamDate(s.startedAt!),
+                  style: TextStyle(
+                      fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
+              ],
+              if (s.startedAt != null && s.endedAt != null) ...[
+                const SizedBox(width: 12),
+                Icon(Icons.timer_outlined,
+                    size: 13, color: AppColors.textTertiary(context)),
+                const SizedBox(width: 4),
+                Text(
+                  _formatStreamDuration(s.startedAt!, s.endedAt!),
+                  style: TextStyle(
+                      fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // ── Kategori badge'leri ───────────────────────────────────────
           if (categoryLabel != null) ...[
             Wrap(
               spacing: 6,
@@ -378,7 +460,7 @@ class _SummarySectionState extends State<_SummarySection> {
             const SizedBox(height: 12),
           ],
 
-          // Metrics row
+          // ── Metrik kartlar ────────────────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -403,10 +485,33 @@ class _SummarySectionState extends State<_SummarySection> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+
+          // ── Kullanıcı arama ───────────────────────────────────────────
+          TextField(
+            onChanged: (text) =>
+                setState(() => _usernameQuery = text.trim()),
+            style: TextStyle(
+                fontSize: 13, color: AppColors.textPrimary(context)),
+            decoration: InputDecoration(
+              hintText: loc.t('detailUserSearchHint'),
+              hintStyle: TextStyle(
+                  color: AppColors.textTertiary(context), fontSize: 13),
+              prefixIcon: Icon(Icons.person_search_outlined,
+                  size: 18, color: AppColors.textTertiary(context)),
+              filled: true,
+              fillColor: AppColors.card(context),
+              contentPadding: const EdgeInsets.symmetric(vertical: 6),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
 
-          // Auctions
-          if (widget.detail.auctions.isNotEmpty) ...[
+          // ── Açık Arttırmalar ──────────────────────────────────────────
+          if (filteredAuctions.isNotEmpty) ...[
             _SectionHeaderWithSort<_AuctionSort>(
               title: loc.t('recordingDetailAuctions'),
               current: _auctionSort,
@@ -419,12 +524,12 @@ class _SummarySectionState extends State<_SummarySection> {
               onChanged: (v) => setState(() => _auctionSort = v),
             ),
             const SizedBox(height: 8),
-            ..._sortedAuctions.map((a) => _AuctionCard(auction: a, loc: loc)),
+            ...filteredAuctions.map((a) => _AuctionCard(auction: a, loc: loc)),
             const SizedBox(height: 16),
           ],
 
-          // Direct Sales
-          if (widget.detail.directSales.isNotEmpty) ...[
+          // ── Direkt Satışlar ───────────────────────────────────────────
+          if (filteredSales.isNotEmpty) ...[
             _SectionHeaderWithSort<_SaleSort>(
               title: loc.t('recordingDetailDirectSales'),
               current: _saleSort,
@@ -435,12 +540,12 @@ class _SummarySectionState extends State<_SummarySection> {
               onChanged: (v) => setState(() => _saleSort = v),
             ),
             const SizedBox(height: 8),
-            ..._sortedSales.map((ds) => _DirectSaleCard(sale: ds, loc: loc)),
+            ...filteredSales.map((ds) => _DirectSaleCard(sale: ds, loc: loc)),
             const SizedBox(height: 16),
           ],
 
-          // Gifts
-          if (widget.detail.gifts.totalTeqlik > 0) ...[
+          // ── Hediyeler ─────────────────────────────────────────────────
+          if (filteredGifts.totalTeqlik > 0) ...[
             _SectionHeaderWithSort<_GiftSort>(
               title: loc.t('recordingDetailGifts'),
               current: _giftSort,
@@ -451,22 +556,14 @@ class _SummarySectionState extends State<_SummarySection> {
               onChanged: (v) => setState(() => _giftSort = v),
             ),
             const SizedBox(height: 8),
-            _GiftsCard(
-              gifts: RecordingGifts(
-                totalTeqlik:    widget.detail.gifts.totalTeqlik,
-                totalHostShare: widget.detail.gifts.totalHostShare,
-                senderCount:    widget.detail.gifts.senderCount,
-                events:         _sortedGiftEvents,
-              ),
-              loc: loc,
-            ),
+            _GiftsCard(gifts: filteredGifts, loc: loc),
           ],
 
-          // Active Viewers
-          if (viewers.isNotEmpty) ...[
+          // ── Aktif İzleyiciler ─────────────────────────────────────────
+          if (filteredViewers.isNotEmpty) ...[
             const SizedBox(height: 8),
             _SectionHeaderWithSort<_ViewerSort>(
-              title: '${loc.t("viewerSectionTitle")} (${viewers.length})',
+              title: '${loc.t("viewerSectionTitle")} (${filteredViewers.length})',
               current: _viewerSort,
               options: [
                 (_ViewerSort.byValue, loc.t('viewerSortByValue')),
@@ -476,12 +573,25 @@ class _SummarySectionState extends State<_SummarySection> {
               onChanged: (v) => setState(() => _viewerSort = v),
             ),
             const SizedBox(height: 8),
-            ...viewers.map((v) => _ViewerCard(viewer: v)),
+            ...filteredViewers.map((v) => _ViewerCard(viewer: v, loc: loc)),
           ],
         ],
       ),
     );
   }
+}
+
+String _formatStreamDate(DateTime dt) {
+  final d = dt.day.toString().padLeft(2, '0');
+  final mo = dt.month.toString().padLeft(2, '0');
+  return '$d.$mo.${dt.year}';
+}
+
+String _formatStreamDuration(DateTime start, DateTime end) {
+  final diff = end.difference(start);
+  final h = diff.inHours;
+  final m = diff.inMinutes % 60;
+  return h > 0 ? '${h}s ${m}dk' : '${m}dk';
 }
 
 class _MetricTile extends StatelessWidget {
@@ -634,7 +744,7 @@ class _AuctionCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) =>
+                  errorWidget: (context, url, err) =>
                       const Icon(Icons.gavel, size: 30),
                 ),
               )
@@ -665,13 +775,7 @@ class _AuctionCard extends StatelessWidget {
                   Row(
                     children: [
                       if (auction.sold && auction.finalPrice != null)
-                        Text(
-                          '₺${auction.finalPrice!.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              color: Color(0xFF16A34A),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13),
-                        )
+                        _AuctionPriceLabel(auction: auction, context: context)
                       else
                         Text(
                           loc.t('auctionNotSold'),
@@ -681,11 +785,20 @@ class _AuctionCard extends StatelessWidget {
                         ),
                       const SizedBox(width: 8),
                       Text(
-                        '${auction.bidCount} teklif',
+                        loc.t('auctionBidCount').replaceAll('{count}', '${auction.bidCount}'),
                         style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiary(context)),
                       ),
+                      if (auction.durationMinutes != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '${auction.durationMinutes}dk',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textTertiary(context)),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -703,8 +816,54 @@ class _AuctionCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AuctionModal(auction: auction),
+      builder: (_) => _AuctionModal(auction: auction, loc: loc),
     );
+  }
+}
+
+class _AuctionPriceLabel extends StatelessWidget {
+  final RecordingAuction auction;
+  final BuildContext context;
+
+  const _AuctionPriceLabel({required this.auction, required this.context});
+
+  @override
+  Widget build(BuildContext ctx) {
+    const green = Color(0xFF16A34A);
+    final finalStr = '₺${auction.finalPrice!.toStringAsFixed(2)}';
+
+    if (auction.isBoughtItNow) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.flash_on, size: 13, color: green),
+        const SizedBox(width: 2),
+        Text(finalStr,
+            style: const TextStyle(
+                color: green, fontWeight: FontWeight.bold, fontSize: 13)),
+      ]);
+    }
+
+    if (auction.startPrice != null &&
+        auction.startPrice! < auction.finalPrice!) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(
+          '₺${auction.startPrice!.toStringAsFixed(0)}',
+          style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textTertiary(ctx),
+              decoration: TextDecoration.lineThrough),
+        ),
+        const SizedBox(width: 4),
+        const Icon(Icons.arrow_forward, size: 11, color: green),
+        const SizedBox(width: 3),
+        Text(finalStr,
+            style: const TextStyle(
+                color: green, fontWeight: FontWeight.bold, fontSize: 13)),
+      ]);
+    }
+
+    return Text(finalStr,
+        style: const TextStyle(
+            color: green, fontWeight: FontWeight.bold, fontSize: 13));
   }
 }
 
@@ -738,7 +897,7 @@ class _DirectSaleCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) =>
+                  errorWidget: (context, url, err) =>
                       const Icon(Icons.shopping_bag, size: 30),
                 ),
               )
@@ -786,6 +945,20 @@ class _DirectSaleCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (sale.totalStock != null && sale.totalStock! > 0) ...[
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: (sale.soldCount / sale.totalStock!)
+                            .clamp(0.0, 1.0),
+                        minHeight: 3,
+                        backgroundColor: AppColors.border(context),
+                        valueColor: const AlwaysStoppedAnimation(
+                            Color(0xFF6366F1)),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -821,7 +994,7 @@ class _GiftsCard extends StatelessWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => _GiftsModal(gifts: gifts),
+        builder: (_) => _GiftsModal(gifts: gifts, loc: loc),
       ),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -854,7 +1027,7 @@ class _GiftsCard extends StatelessWidget {
                         color: AppColors.textPrimary(context)),
                   ),
                   Text(
-                    '${gifts.senderCount} gönderici',
+                    loc.t('giftSenderCount').replaceAll('{count}', '${gifts.senderCount}'),
                     style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(context)),
@@ -874,7 +1047,8 @@ class _GiftsCard extends StatelessWidget {
 
 class _ViewerCard extends StatefulWidget {
   final _ViewerActivity viewer;
-  const _ViewerCard({required this.viewer});
+  final TranslationPack loc;
+  const _ViewerCard({required this.viewer, required this.loc});
 
   @override
   State<_ViewerCard> createState() => _ViewerCardState();
@@ -902,25 +1076,43 @@ class _ViewerCardState extends State<_ViewerCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundImage: v.avatarUrl != null
-                      ? CachedNetworkImageProvider(v.avatarUrl!)
-                      : null,
-                  child: v.avatarUrl == null
-                      ? const Icon(Icons.person, size: 18)
-                      : null,
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PublicProfileScreen(username: v.username),
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundImage: v.avatarUrl != null
+                        ? CachedNetworkImageProvider(v.avatarUrl!)
+                        : null,
+                    child: v.avatarUrl == null
+                        ? const Icon(Icons.person, size: 18)
+                        : null,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '@${v.username}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PublicProfileScreen(username: v.username),
+                          ),
+                        ),
+                        child: Text(
+                          '@${v.username}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary(context),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -963,7 +1155,9 @@ class _ViewerCardState extends State<_ViewerCard> {
               Divider(height: 1, color: AppColors.border(context)),
               const SizedBox(height: 8),
               if (v.bids.isNotEmpty) ...[
-                _ActionGroupLabel(icon: Icons.gavel, label: 'Teklifler'),
+                _ActionGroupLabel(
+                    icon: Icons.gavel,
+                    label: widget.loc.t('detailBidsSectionTitle')),
                 ...v.bids.map((b) => _ActionDetailRow(
                       label: b.auctionName,
                       value: '₺${b.amount.toStringAsFixed(2)}',
@@ -972,7 +1166,9 @@ class _ViewerCardState extends State<_ViewerCard> {
                 const SizedBox(height: 6),
               ],
               if (v.orders.isNotEmpty) ...[
-                _ActionGroupLabel(icon: Icons.shopping_bag_outlined, label: 'Satın Almalar'),
+                _ActionGroupLabel(
+                    icon: Icons.shopping_bag_outlined,
+                    label: widget.loc.t('detailPurchasesSectionTitle')),
                 ...v.orders.map((o) => _ActionDetailRow(
                       label: o.itemName,
                       value: '×${o.quantity} · ₺${o.unitPrice.toStringAsFixed(2)}',
@@ -981,7 +1177,9 @@ class _ViewerCardState extends State<_ViewerCard> {
                 const SizedBox(height: 6),
               ],
               if (v.gifts.isNotEmpty) ...[
-                _ActionGroupLabel(icon: Icons.card_giftcard_outlined, label: 'Hediyeler'),
+                _ActionGroupLabel(
+                    icon: Icons.card_giftcard_outlined,
+                    label: widget.loc.t('recordingDetailGifts')),
                 ...v.gifts.map((g) => _ActionDetailRow(
                       label: g.giftName,
                       value: '${g.costTeqlik}⚡',
@@ -1129,8 +1327,9 @@ class _ModalSheet extends StatelessWidget {
 
 class _AuctionModal extends StatelessWidget {
   final RecordingAuction auction;
+  final TranslationPack loc;
 
-  const _AuctionModal({required this.auction});
+  const _AuctionModal({required this.auction, required this.loc});
 
   @override
   Widget build(BuildContext context) {
@@ -1142,11 +1341,13 @@ class _AuctionModal extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         if (auction.bids.isNotEmpty) ...[
-          Text('Teklifler',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary(context))),
+          Text(
+            loc.t('detailBidsSectionTitle'),
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary(context)),
+          ),
           const SizedBox(height: 8),
           ...auction.bids.map((b) => _BidRow(bid: b)),
         ],
@@ -1173,13 +1374,14 @@ class _DirectSaleModal extends StatelessWidget {
 
 class _GiftsModal extends StatelessWidget {
   final RecordingGifts gifts;
+  final TranslationPack loc;
 
-  const _GiftsModal({required this.gifts});
+  const _GiftsModal({required this.gifts, required this.loc});
 
   @override
   Widget build(BuildContext context) {
     return _ModalSheet(
-      title: 'Hediyeler',
+      title: loc.t('recordingDetailGifts'),
       children: gifts.events
           .map((e) => _GiftEventRow(event: e))
           .toList(),

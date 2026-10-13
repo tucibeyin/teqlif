@@ -224,13 +224,11 @@ class _RecordingCard extends StatelessWidget {
   }
 
   String _formatDate(DateTime dt) {
-    const months = [
-      'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
-      'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara',
-    ];
+    final d = dt.day.toString().padLeft(2, '0');
+    final mo = dt.month.toString().padLeft(2, '0');
     final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '${dt.day} ${months[dt.month - 1]}, $h:$m';
+    final mi = dt.minute.toString().padLeft(2, '0');
+    return '$d.$mo.${dt.year}, $h:$mi';
   }
 }
 

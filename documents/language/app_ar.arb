@@ -4573,5 +4573,9 @@
   "viewerSectionTitle": "المشاهدون النشطون",
   "viewerSortByValue": "القيمة ↓",
   "viewerSortByBids": "العروض ↓",
-  "viewerSortByGifts": "الهدايا ↓"
+  "viewerSortByGifts": "الهدايا ↓",
+  "giftSenderCount": "{count} مرسل",
+  "detailBidsSectionTitle": "العروض",
+  "detailPurchasesSectionTitle": "المشتريات",
+  "detailUserSearchHint": "بحث عن مستخدم..."
 }

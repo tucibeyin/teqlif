@@ -4573,5 +4573,9 @@
   "viewerSectionTitle": "Aktif İzleyiciler",
   "viewerSortByValue": "Değer ↓",
   "viewerSortByBids": "Teklif ↓",
-  "viewerSortByGifts": "Hediye ↓"
+  "viewerSortByGifts": "Hediye ↓",
+  "giftSenderCount": "{count} gönderici",
+  "detailBidsSectionTitle": "Teklifler",
+  "detailPurchasesSectionTitle": "Satın Almalar",
+  "detailUserSearchHint": "Kullanıcı ara..."
 }

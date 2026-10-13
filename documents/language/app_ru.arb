@@ -4573,5 +4573,9 @@
   "viewerSectionTitle": "Активные зрители",
   "viewerSortByValue": "Ценность ↓",
   "viewerSortByBids": "Ставки ↓",
-  "viewerSortByGifts": "Подарки ↓"
+  "viewerSortByGifts": "Подарки ↓",
+  "giftSenderCount": "{count} отправителей",
+  "detailBidsSectionTitle": "Ставки",
+  "detailPurchasesSectionTitle": "Покупки",
+  "detailUserSearchHint": "Поиск пользователя..."
 }

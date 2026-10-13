@@ -4609,5 +4609,9 @@
   "viewerSectionTitle": "Active Viewers",
   "viewerSortByValue": "Value ↓",
   "viewerSortByBids": "Bids ↓",
-  "viewerSortByGifts": "Gifts ↓"
+  "viewerSortByGifts": "Gifts ↓",
+  "giftSenderCount": "{count} senders",
+  "detailBidsSectionTitle": "Bids",
+  "detailPurchasesSectionTitle": "Purchases",
+  "detailUserSearchHint": "Search user..."
 }
