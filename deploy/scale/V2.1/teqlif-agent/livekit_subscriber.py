@@ -192,13 +192,15 @@ class MKVWriter:
 
 # ── Ana kayıt döngüsü ─────────────────────────────────────────────────────────
 
-async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, output: Path) -> None:
-    token  = _make_token(room_name, api_key, api_secret)
-    writer = MKVWriter(output)
-    room   = rtc.Room()
-    stop_evt     = asyncio.Event()
-    open_evt     = asyncio.Event()   # container açıldıktan sonra set
-    record_tasks: list[asyncio.Task] = []
+async def _run(
+    room_name: str, ws_url: str, api_key: str, api_secret: str,
+    output: Path, stop_evt: asyncio.Event,
+) -> None:
+    token    = _make_token(room_name, api_key, api_secret)
+    writer   = MKVWriter(output)
+    room     = rtc.Room()
+    open_evt = asyncio.Event()   # container açıldıktan sonra set
+    all_tasks: list[asyncio.Task] = []
 
     # ── Video kaydedici ────────────────────────────────────────────────────
     async def _record_video(track: rtc.RemoteVideoTrack) -> None:
@@ -294,9 +296,9 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
         if isinstance(track, rtc.RemoteVideoTrack):
             # Simulcast HIGH layer iste
             publication.set_video_quality(rtc.VideoQuality.VIDEO_QUALITY_HIGH)
-            record_tasks.append(asyncio.ensure_future(_record_video(track)))
+            all_tasks.append(asyncio.ensure_future(_record_video(track)))
         elif isinstance(track, rtc.RemoteAudioTrack):
-            record_tasks.append(asyncio.ensure_future(_record_audio(track)))
+            all_tasks.append(asyncio.ensure_future(_record_audio(track)))
 
     @room.on("participant_disconnected")
     def on_participant_disconnected(participant):
@@ -318,7 +320,7 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
     )
     logger.info("Bağlandı | katılımcılar=%d", len(room.remote_participants))
 
-    asyncio.ensure_future(_open_when_ready())
+    all_tasks.append(asyncio.ensure_future(_open_when_ready()))
 
     # ── İzleme ────────────────────────────────────────────────────────────
     async def _monitor() -> None:
@@ -337,15 +339,15 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
         logger.warning("Maksimum süre aşıldı (%ds), durduruluyor", _MAX_DURATION_S)
         stop_evt.set()
 
-    asyncio.ensure_future(_monitor())
-    asyncio.ensure_future(_timeout())
+    all_tasks.append(asyncio.ensure_future(_monitor()))
+    all_tasks.append(asyncio.ensure_future(_timeout()))
 
     await stop_evt.wait()
 
     # ── Temizlik ──────────────────────────────────────────────────────────
-    for task in record_tasks:
+    for task in all_tasks:
         task.cancel()
-    await asyncio.gather(*record_tasks, return_exceptions=True)
+    await asyncio.gather(*all_tasks, return_exceptions=True)
 
     writer.close()
     await room.disconnect()
@@ -381,11 +383,12 @@ def main() -> None:
     fh.setLevel(logging.DEBUG)
     logging.getLogger().addHandler(fh)
 
-    loop = asyncio.new_event_loop()
+    loop     = asyncio.new_event_loop()
+    stop_evt = asyncio.Event()
 
     def _on_signal(*_):
         logger.info("Sinyal alındı, durduruluyor")
-        loop.stop()
+        loop.call_soon_threadsafe(stop_evt.set)
 
     signal.signal(signal.SIGTERM, _on_signal)
     signal.signal(signal.SIGINT,  _on_signal)
@@ -397,6 +400,7 @@ def main() -> None:
             api_key    = args.api_key,
             api_secret = args.api_secret,
             output     = output,
+            stop_evt   = stop_evt,
         ))
     except Exception as exc:
         logger.error("Hata: %s", exc)
