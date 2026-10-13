@@ -351,6 +351,7 @@ async def _run(
 
     writer.close()
     await room.disconnect()
+    await asyncio.sleep(0.1)  # livekit-rtc Rust thread'lerinin kapanmasını bekle
 
     if output.exists():
         logger.info(
