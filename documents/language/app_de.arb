@@ -4591,5 +4591,19 @@
   "recordingLoading": "Laden...",
   "recordingUrlExpiredRetry": "Link abgelaufen. Tippen zum Aktualisieren.",
   "retry": "Erneut versuchen",
-  "recordingMetricRevenue": "Einnahmen"
+  "recordingMetricRevenue": "Einnahmen",
+  "recordingMetricViewers": "Spitzenzuschauer",
+  "recordingFilterAll": "Alle",
+  "recordingFilterAvailable": "Ansehbar",
+  "recordingFilterPreparing": "Wird vorbereitet",
+  "recordingFilterExpired": "Abgelaufen",
+  "recordingSearchHint": "Streams suchen...",
+  "recordingEmptyState": "Noch keine Aufnahmen",
+  "auctionNotSold": "Nicht verkauft",
+  "recordingSortNewest": "Neueste",
+  "recordingSortHighLow": "Preis ↓",
+  "recordingSortLowHigh": "Preis ↑",
+  "recordingSortMostBids": "Gebote ↓",
+  "recordingSortMostSold": "Verkäufe ↓",
+  "recordingSortMostGifts": "Teqlik ↓"
 }

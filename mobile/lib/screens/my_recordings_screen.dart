@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/recording.dart';
+import '../services/category_service.dart';
 import '../services/localization_service.dart';
 import 'viewmodels/my_recordings_view_model.dart';
 import 'recording_detail_screen.dart';
@@ -44,6 +45,7 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
     }
 
     final stateAsync = ref.watch(myRecordingsProvider);
+    final filter    = ref.watch(recordingFilterProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bg(context),
@@ -56,40 +58,53 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: stateAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text(
-            e.toString(),
-            style: TextStyle(color: AppColors.textSecondary(context)),
-          ),
-        ),
-        data: (items) => items.isEmpty
-            ? Center(
+      body: Column(
+        children: [
+          _RecordingFilterBar(loc: loc),
+          Expanded(
+            child: stateAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
                 child: Text(
-                  loc.tOr('recordingEmptyState', 'Henüz kayıt yok'),
+                  e.toString(),
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
-              )
-            : RefreshIndicator(
-                onRefresh: () => ref.read(myRecordingsProvider.notifier).reload(),
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _RecordingCard(
-                    item: items[index],
-                    loc: loc,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            RecordingDetailScreen(streamId: items[index].streamId),
+              ),
+              data: (allItems) {
+                final items = filter.apply(allItems);
+                if (items.isEmpty) {
+                  return Center(
+                    child: Text(
+                      loc.tOr('recordingEmptyState', 'Henüz kayıt yok'),
+                      style: TextStyle(color: AppColors.textSecondary(context)),
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(myRecordingsProvider.notifier).reload(),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) => _RecordingCard(
+                      item: items[index],
+                      loc: loc,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RecordingDetailScreen(
+                              streamId: items[index].streamId),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -149,6 +164,10 @@ class _RecordingCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (item.category != null) ...[
+                        const SizedBox(width: 6),
+                        _CategoryChip(category: item.category!, loc: loc),
+                      ],
                     ],
                   ),
                   if (item.expiresAt != null && item.status.canWatch) ...[
@@ -174,6 +193,166 @@ class _RecordingCard extends StatelessWidget {
       return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     }
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+// ── Filter bar ────────────────────────────────────────────────────────────────
+
+class _RecordingFilterBar extends ConsumerStatefulWidget {
+  final TranslationPack loc;
+  const _RecordingFilterBar({required this.loc});
+
+  @override
+  ConsumerState<_RecordingFilterBar> createState() => _RecordingFilterBarState();
+}
+
+class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
+  late TextEditingController _searchCtrl;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String text) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      final current = ref.read(recordingFilterProvider);
+      ref.read(recordingFilterProvider.notifier).state = current.copyWith(
+        searchQuery: text.trim().isEmpty ? null : text.trim(),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Reaktif — filter değişince chip seçimi güncellenir
+    final filter = ref.watch(recordingFilterProvider);
+    final loc = widget.loc;
+
+    // Search text controller'ı dış reset ile senkronize et
+    final externalQuery = filter.searchQuery ?? '';
+    if (_searchCtrl.text != externalQuery && externalQuery.isEmpty) {
+      _searchCtrl.clear();
+    }
+
+    final chips = [
+      (RecordingFilterStatus.all,       loc.tOr('recordingFilterAll',       'Tümü')),
+      (RecordingFilterStatus.available,  loc.tOr('recordingFilterAvailable', 'İzlenebilir')),
+      (RecordingFilterStatus.preparing,  loc.tOr('recordingFilterPreparing', 'Hazırlanıyor')),
+      (RecordingFilterStatus.expired,    loc.tOr('recordingFilterExpired',   'Süresi Doldu')),
+    ];
+
+    return Container(
+      color: AppColors.surface(context),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _onSearch,
+              style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                hintText: loc.tOr('recordingSearchHint', 'Yayın ara...'),
+                hintStyle: TextStyle(color: AppColors.textTertiary(context), fontSize: 14),
+                prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textTertiary(context)),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear, size: 18, color: AppColors.textTertiary(context)),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          _onSearch('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.card(context),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: chips.map((chip) {
+                final (status, label) = chip;
+                final selected = filter.statusFilter == status;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(label, style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (_) {
+                      ref.read(recordingFilterProvider.notifier).state =
+                          filter.copyWith(statusFilter: status);
+                    },
+                    selectedColor: kPrimary,
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : AppColors.textSecondary(context),
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    backgroundColor: AppColors.card(context),
+                    side: BorderSide(color: AppColors.border(context)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Divider(height: 1, color: AppColors.border(context)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Category chip ─────────────────────────────────────────────────────────────
+
+class _CategoryChip extends StatelessWidget {
+  final String category;
+  final TranslationPack loc;
+  const _CategoryChip({required this.category, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = CategoryService.localizedLabelFor(loc, category);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.textTertiary(context).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: AppColors.textTertiary(context),
+        ),
+      ),
+    );
   }
 }
 

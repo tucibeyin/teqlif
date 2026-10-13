@@ -4555,5 +4555,19 @@
   "recordingLoading": "Загрузка...",
   "recordingUrlExpiredRetry": "Ссылка истекла. Нажмите для обновления.",
   "retry": "Повторить",
-  "recordingMetricRevenue": "Доход"
+  "recordingMetricRevenue": "Доход",
+  "recordingMetricViewers": "Макс. зрителей",
+  "recordingFilterAll": "Все",
+  "recordingFilterAvailable": "Доступно",
+  "recordingFilterPreparing": "Готовится",
+  "recordingFilterExpired": "Истёк срок",
+  "recordingSearchHint": "Поиск трансляций...",
+  "recordingEmptyState": "Записей пока нет",
+  "auctionNotSold": "Не продано",
+  "recordingSortNewest": "Сначала новые",
+  "recordingSortHighLow": "Цена ↓",
+  "recordingSortLowHigh": "Цена ↑",
+  "recordingSortMostBids": "Ставки ↓",
+  "recordingSortMostSold": "Продажи ↓",
+  "recordingSortMostGifts": "Тeклик ↓"
 }

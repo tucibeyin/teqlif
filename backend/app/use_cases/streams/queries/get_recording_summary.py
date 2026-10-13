@@ -40,7 +40,8 @@ class GetRecordingSummaryQuery:
 
     async def _fetch_stream(self, stream_id: int) -> dict | None:
         row = (await self._db.execute(text("""
-            SELECT id, title, started_at, ended_at, peak_viewer_count, thumbnail_url
+            SELECT id, title, category, subcategory,
+                   started_at, ended_at, peak_viewer_count, thumbnail_url
             FROM live_streams
             WHERE id = :stream_id
         """), {"stream_id": stream_id})).mappings().first()

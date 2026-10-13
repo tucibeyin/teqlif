@@ -79,10 +79,14 @@ async def notify_new_recordings_task(ctx: dict) -> None:
                 )
 
             # Başarılı veya başarısız — tekrar denememe (idempotent)
+            # expires_at bildirim anından 24 saat sonraya çekilir:
+            # transfer geceyarısı olsa bile kullanıcı tam 24 saat alır.
             async with AsyncSessionLocal() as session:
                 await session.execute(text("""
                     UPDATE stream_recordings
-                    SET host_notified_at = NOW(), updated_at = NOW()
+                    SET host_notified_at = NOW(),
+                        expires_at       = NOW() + INTERVAL '24 hours',
+                        updated_at       = NOW()
                     WHERE id = :id
                 """), {"id": rec_id})
                 await session.commit()

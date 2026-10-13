@@ -7,6 +7,7 @@ import '../../services/localization_service.dart';
 import '../../services/recordings/recording_repository.dart';
 import '../../utils/error_helper.dart';
 
+/// Ham kayıt listesini tutar. Filtreleme View katmanında yapılır.
 class MyRecordingsNotifier extends AutoDisposeAsyncNotifier<List<RecordingItem>> {
   @override
   FutureOr<List<RecordingItem>> build() => _load();
@@ -34,4 +35,10 @@ class MyRecordingsNotifier extends AutoDisposeAsyncNotifier<List<RecordingItem>>
 final myRecordingsProvider =
     AsyncNotifierProvider.autoDispose<MyRecordingsNotifier, List<RecordingItem>>(
   MyRecordingsNotifier.new,
+);
+
+/// Filter state ayrı StateProvider'da — View ve FilterBar her ikisi de izler.
+final recordingFilterProvider =
+    StateProvider.autoDispose<RecordingFilterState>(
+  (_) => const RecordingFilterState(),
 );

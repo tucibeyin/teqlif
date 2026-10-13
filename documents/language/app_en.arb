@@ -4591,5 +4591,19 @@
   "recordingLoading": "Loading...",
   "recordingUrlExpiredRetry": "Link expired. Tap to refresh.",
   "retry": "Retry",
-  "recordingMetricRevenue": "Revenue"
+  "recordingMetricRevenue": "Revenue",
+  "recordingMetricViewers": "Peak Viewers",
+  "recordingFilterAll": "All",
+  "recordingFilterAvailable": "Watchable",
+  "recordingFilterPreparing": "Preparing",
+  "recordingFilterExpired": "Expired",
+  "recordingSearchHint": "Search streams...",
+  "recordingEmptyState": "No recordings yet",
+  "auctionNotSold": "Not sold",
+  "recordingSortNewest": "Newest",
+  "recordingSortHighLow": "Price ↓",
+  "recordingSortLowHigh": "Price ↑",
+  "recordingSortMostBids": "Bids ↓",
+  "recordingSortMostSold": "Sales ↓",
+  "recordingSortMostGifts": "Teqlik ↓"
 }

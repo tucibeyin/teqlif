@@ -8,6 +8,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/error_mapper.dart';
 import '../models/recording.dart';
+import '../services/category_service.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
 import 'viewmodels/recording_detail_view_model.dart';
@@ -212,20 +213,93 @@ class _RecoveryBanner extends ConsumerWidget {
 
 // ── Summary section ───────────────────────────────────────────────────────────
 
-class _SummarySection extends StatelessWidget {
+enum _AuctionSort { newest, highPrice, lowPrice, mostBids }
+enum _SaleSort    { newest, mostSold }
+enum _GiftSort    { mostTeqlik, newest }
+
+class _SummarySection extends StatefulWidget {
   final RecordingDetail detail;
   final TranslationPack loc;
 
   const _SummarySection({required this.detail, required this.loc});
 
   @override
+  State<_SummarySection> createState() => _SummarySectionState();
+}
+
+class _SummarySectionState extends State<_SummarySection> {
+  _AuctionSort _auctionSort = _AuctionSort.newest;
+  _SaleSort    _saleSort    = _SaleSort.newest;
+  _GiftSort    _giftSort    = _GiftSort.mostTeqlik;
+
+  List<RecordingAuction> get _sortedAuctions {
+    final list = [...widget.detail.auctions];
+    switch (_auctionSort) {
+      case _AuctionSort.highPrice:
+        list.sort((a, b) => (b.finalPrice ?? 0).compareTo(a.finalPrice ?? 0));
+      case _AuctionSort.lowPrice:
+        list.sort((a, b) => (a.finalPrice ?? 0).compareTo(b.finalPrice ?? 0));
+      case _AuctionSort.mostBids:
+        list.sort((a, b) => b.bidCount.compareTo(a.bidCount));
+      case _AuctionSort.newest:
+        break;
+    }
+    return list;
+  }
+
+  List<RecordingDirectSale> get _sortedSales {
+    final list = [...widget.detail.directSales];
+    switch (_saleSort) {
+      case _SaleSort.mostSold:
+        list.sort((a, b) => b.soldCount.compareTo(a.soldCount));
+      case _SaleSort.newest:
+        break;
+    }
+    return list;
+  }
+
+  List<RecordingGiftEvent> get _sortedGiftEvents {
+    final list = [...widget.detail.gifts.events];
+    switch (_giftSort) {
+      case _GiftSort.mostTeqlik:
+        list.sort((a, b) => b.costTeqlik.compareTo(a.costTeqlik));
+      case _GiftSort.newest:
+        list.sort((a, b) {
+          if (a.sentAt == null || b.sentAt == null) return 0;
+          return b.sentAt!.compareTo(a.sentAt!);
+        });
+    }
+    return list;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final m = detail.metrics;
+    final m = widget.detail.metrics;
+    final s = widget.detail.stream;
+    final loc = widget.loc;
+
+    final categoryLabel = s.category != null
+        ? CategoryService.localizedLabelFor(loc, s.category!)
+        : null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Stream category/subcategory header
+          if (categoryLabel != null) ...[
+            Wrap(
+              spacing: 6,
+              children: [
+                _CategoryBadge(label: categoryLabel),
+                if (s.subcategory != null)
+                  _CategoryBadge(label: s.subcategory!, secondary: true),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Metrics row
           Row(
             children: [
@@ -235,39 +309,78 @@ class _SummarySection extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _MetricTile(
+                label: loc.tOr('recordingMetricViewers', 'İzleyici'),
+                value: s.peakViewerCount != null ? '${s.peakViewerCount}' : '—',
+              ),
+              const SizedBox(width: 8),
+              _MetricTile(
                 label: loc.t('recordingDetailAuctions'),
-                value: '${detail.auctions.length}',
+                value: '${widget.detail.auctions.length}',
               ),
               const SizedBox(width: 8),
               _MetricTile(
                 label: loc.t('recordingDetailDirectSales'),
-                value: '${detail.directSales.length}',
+                value: '${widget.detail.directSales.length}',
               ),
             ],
           ),
           const SizedBox(height: 16),
 
           // Auctions
-          if (detail.auctions.isNotEmpty) ...[
-            _SectionHeader(title: loc.t('recordingDetailAuctions')),
+          if (widget.detail.auctions.isNotEmpty) ...[
+            _SectionHeaderWithSort<_AuctionSort>(
+              title: loc.t('recordingDetailAuctions'),
+              current: _auctionSort,
+              options: [
+                (_AuctionSort.newest,    loc.tOr('recordingSortNewest',   'En Yeni')),
+                (_AuctionSort.highPrice, loc.tOr('recordingSortHighLow',  'Fiyat ↓')),
+                (_AuctionSort.lowPrice,  loc.tOr('recordingSortLowHigh',  'Fiyat ↑')),
+                (_AuctionSort.mostBids,  loc.tOr('recordingSortMostBids', 'Teklif ↓')),
+              ],
+              onChanged: (v) => setState(() => _auctionSort = v),
+            ),
             const SizedBox(height: 8),
-            ...detail.auctions.map((a) => _AuctionCard(auction: a, loc: loc)),
+            ..._sortedAuctions.map((a) => _AuctionCard(auction: a, loc: loc)),
             const SizedBox(height: 16),
           ],
 
           // Direct Sales
-          if (detail.directSales.isNotEmpty) ...[
-            _SectionHeader(title: loc.t('recordingDetailDirectSales')),
+          if (widget.detail.directSales.isNotEmpty) ...[
+            _SectionHeaderWithSort<_SaleSort>(
+              title: loc.t('recordingDetailDirectSales'),
+              current: _saleSort,
+              options: [
+                (_SaleSort.newest,   loc.tOr('recordingSortNewest',   'En Yeni')),
+                (_SaleSort.mostSold, loc.tOr('recordingSortMostSold', 'Satış ↓')),
+              ],
+              onChanged: (v) => setState(() => _saleSort = v),
+            ),
             const SizedBox(height: 8),
-            ...detail.directSales.map((ds) => _DirectSaleCard(sale: ds, loc: loc)),
+            ..._sortedSales.map((ds) => _DirectSaleCard(sale: ds, loc: loc)),
             const SizedBox(height: 16),
           ],
 
           // Gifts
-          if (detail.gifts.totalTeqlik > 0) ...[
-            _SectionHeader(title: loc.t('recordingDetailGifts')),
+          if (widget.detail.gifts.totalTeqlik > 0) ...[
+            _SectionHeaderWithSort<_GiftSort>(
+              title: loc.t('recordingDetailGifts'),
+              current: _giftSort,
+              options: [
+                (_GiftSort.mostTeqlik, loc.tOr('recordingSortMostGifts', 'Teqlik ↓')),
+                (_GiftSort.newest,     loc.tOr('recordingSortNewest',    'En Yeni')),
+              ],
+              onChanged: (v) => setState(() => _giftSort = v),
+            ),
             const SizedBox(height: 8),
-            _GiftsCard(gifts: detail.gifts, loc: loc),
+            _GiftsCard(
+              gifts: RecordingGifts(
+                totalTeqlik:    widget.detail.gifts.totalTeqlik,
+                totalHostShare: widget.detail.gifts.totalHostShare,
+                senderCount:    widget.detail.gifts.senderCount,
+                events:         _sortedGiftEvents,
+              ),
+              loc: loc,
+            ),
           ],
         ],
       ),
@@ -315,19 +428,79 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
+class _SectionHeaderWithSort<T> extends StatelessWidget {
   final String title;
+  final T current;
+  final List<(T, String)> options;
+  final ValueChanged<T> onChanged;
 
-  const _SectionHeader({required this.title});
+  const _SectionHeaderWithSort({
+    required this.title,
+    required this.current,
+    required this.options,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textPrimary(context),
+    return Row(
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        const Spacer(),
+        if (options.length > 1)
+          PopupMenuButton<T>(
+            initialValue: current,
+            onSelected: onChanged,
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  options.firstWhere((o) => o.$1 == current).$2,
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.sort, size: 16, color: AppColors.textTertiary(context)),
+              ],
+            ),
+            itemBuilder: (_) => options
+                .map((o) => PopupMenuItem(value: o.$1, child: Text(o.$2)))
+                .toList(),
+          ),
+      ],
+    );
+  }
+}
+
+class _CategoryBadge extends StatelessWidget {
+  final String label;
+  final bool secondary;
+
+  const _CategoryBadge({required this.label, this.secondary = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = secondary ? AppColors.textTertiary(context) : kPrimary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: secondary ? FontWeight.normal : FontWeight.w600,
+        ),
       ),
     );
   }

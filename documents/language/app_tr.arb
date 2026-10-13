@@ -4555,5 +4555,19 @@
   "recordingLoading": "Yükleniyor...",
   "recordingUrlExpiredRetry": "Bağlantı süresi doldu. Yenilemek için dokun.",
   "retry": "Yenile",
-  "recordingMetricRevenue": "Gelir"
+  "recordingMetricRevenue": "Gelir",
+  "recordingMetricViewers": "Pik İzleyici",
+  "recordingFilterAll": "Tümü",
+  "recordingFilterAvailable": "İzlenebilir",
+  "recordingFilterPreparing": "Hazırlanıyor",
+  "recordingFilterExpired": "Süresi Doldu",
+  "recordingSearchHint": "Yayın ara...",
+  "recordingEmptyState": "Henüz kayıt yok",
+  "auctionNotSold": "Satılmadı",
+  "recordingSortNewest": "En Yeni",
+  "recordingSortHighLow": "Fiyat ↓",
+  "recordingSortLowHigh": "Fiyat ↑",
+  "recordingSortMostBids": "Teklif ↓",
+  "recordingSortMostSold": "Satış ↓",
+  "recordingSortMostGifts": "Teqlik ↓"
 }

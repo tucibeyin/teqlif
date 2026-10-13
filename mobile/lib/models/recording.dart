@@ -29,6 +29,9 @@ class RecordingItem {
   final int recordingId;
   final int streamId;
   final String streamTitle;
+  final String? category;
+  final String? subcategory;
+  final int? peakViewerCount;
   final RecordingStatus status;
   final int? durationSecs;
   final int? encodedSizeBytes;
@@ -40,6 +43,9 @@ class RecordingItem {
     required this.recordingId,
     required this.streamId,
     required this.streamTitle,
+    this.category,
+    this.subcategory,
+    this.peakViewerCount,
     required this.status,
     this.durationSecs,
     this.encodedSizeBytes,
@@ -52,6 +58,9 @@ class RecordingItem {
         recordingId: j['recording_id'] as int,
         streamId: j['stream_id'] as int,
         streamTitle: j['stream_title'] as String? ?? '',
+        category: j['category'] as String?,
+        subcategory: j['subcategory'] as String?,
+        peakViewerCount: j['peak_viewer_count'] as int?,
         status: RecordingStatus.fromString(j['status'] as String? ?? 'failed'),
         durationSecs: j['duration_secs'] as int?,
         encodedSizeBytes: j['encoded_size_bytes'] as int?,
@@ -64,6 +73,9 @@ class RecordingItem {
         'recording_id': recordingId,
         'stream_id': streamId,
         'stream_title': streamTitle,
+        'category': category,
+        'subcategory': subcategory,
+        'peak_viewer_count': peakViewerCount,
         'status': status.name,
         'duration_secs': durationSecs,
         'encoded_size_bytes': encodedSizeBytes,
@@ -146,6 +158,8 @@ class RecordingDetail {
 class RecordingStreamMeta {
   final int id;
   final String title;
+  final String? category;
+  final String? subcategory;
   final DateTime? startedAt;
   final DateTime? endedAt;
   final int? peakViewerCount;
@@ -154,6 +168,8 @@ class RecordingStreamMeta {
   const RecordingStreamMeta({
     required this.id,
     required this.title,
+    this.category,
+    this.subcategory,
     this.startedAt,
     this.endedAt,
     this.peakViewerCount,
@@ -164,6 +180,8 @@ class RecordingStreamMeta {
       RecordingStreamMeta(
         id: j['id'] as int,
         title: j['title'] as String? ?? '',
+        category: j['category'] as String?,
+        subcategory: j['subcategory'] as String?,
         startedAt: _dt(j['started_at']),
         endedAt: _dt(j['ended_at']),
         peakViewerCount: j['peak_viewer_count'] as int?,
@@ -173,6 +191,8 @@ class RecordingStreamMeta {
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
+        'category': category,
+        'subcategory': subcategory,
         'started_at': startedAt?.toIso8601String(),
         'ended_at': endedAt?.toIso8601String(),
         'peak_viewer_count': peakViewerCount,
@@ -485,6 +505,56 @@ class RecordingGifts {
         'events': events.map((e) => e.toJson()).toList(),
       };
 }
+
+// ── Filter state ─────────────────────────────────────────────────────────────
+
+enum RecordingFilterStatus { all, available, preparing, expired }
+
+class RecordingFilterState {
+  final RecordingFilterStatus statusFilter;
+  final String? searchQuery;
+
+  const RecordingFilterState({
+    this.statusFilter = RecordingFilterStatus.all,
+    this.searchQuery,
+  });
+
+  bool get isEmpty => statusFilter == RecordingFilterStatus.all && (searchQuery == null || searchQuery!.isEmpty);
+
+  RecordingFilterState copyWith({
+    RecordingFilterStatus? statusFilter,
+    Object? searchQuery = _sentinel,
+  }) =>
+      RecordingFilterState(
+        statusFilter: statusFilter ?? this.statusFilter,
+        searchQuery: searchQuery == _sentinel ? this.searchQuery : searchQuery as String?,
+      );
+
+  List<RecordingItem> apply(List<RecordingItem> items) {
+    var result = items;
+    if (statusFilter != RecordingFilterStatus.all) {
+      result = result.where((i) {
+        switch (statusFilter) {
+          case RecordingFilterStatus.available:
+            return i.status.canWatch;
+          case RecordingFilterStatus.preparing:
+            return i.status.isProcessing;
+          case RecordingFilterStatus.expired:
+            return i.status.isOver;
+          case RecordingFilterStatus.all:
+            return true;
+        }
+      }).toList();
+    }
+    final q = searchQuery?.trim().toLowerCase();
+    if (q != null && q.isNotEmpty) {
+      result = result.where((i) => i.streamTitle.toLowerCase().contains(q)).toList();
+    }
+    return result;
+  }
+}
+
+const _sentinel = Object();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

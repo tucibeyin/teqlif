@@ -4555,5 +4555,19 @@
   "recordingLoading": "جارٍ التحميل...",
   "recordingUrlExpiredRetry": "انتهت صلاحية الرابط. انقر للتحديث.",
   "retry": "إعادة المحاولة",
-  "recordingMetricRevenue": "الإيراد"
+  "recordingMetricRevenue": "الإيراد",
+  "recordingMetricViewers": "ذروة المشاهدين",
+  "recordingFilterAll": "الكل",
+  "recordingFilterAvailable": "متاح",
+  "recordingFilterPreparing": "جارٍ التحضير",
+  "recordingFilterExpired": "منتهية الصلاحية",
+  "recordingSearchHint": "ابحث عن البث...",
+  "recordingEmptyState": "لا توجد تسجيلات بعد",
+  "auctionNotSold": "لم يُباع",
+  "recordingSortNewest": "الأحدث",
+  "recordingSortHighLow": "السعر ↓",
+  "recordingSortLowHigh": "السعر ↑",
+  "recordingSortMostBids": "العروض ↓",
+  "recordingSortMostSold": "المبيعات ↓",
+  "recordingSortMostGifts": "تيكليك ↓"
 }
