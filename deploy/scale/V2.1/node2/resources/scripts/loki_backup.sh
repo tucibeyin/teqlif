@@ -13,7 +13,7 @@ set -euo pipefail
 BACKUP_DIR=/project/teqlif/backups/loki/chunks
 RETENTION_DAYS=90
 LOGFILE=/project/teqlif/logs/loki_backup.log
-NODEMONITOR_CHUNKS="nodemonitor:/opt/monitor/teqlif/loki/data/chunks/"
+NODEMONITOR_CHUNKS="/opt/monitor/teqlif/loki/data/chunks/"
 
 install -d "${BACKUP_DIR}"
 exec >> "${LOGFILE}" 2>&1
