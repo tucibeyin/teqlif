@@ -17,7 +17,9 @@ from app.utils.redis_client import get_redis
 logger = get_logger(__name__)
 
 _CHAT_CHANNEL = "chat_broadcast"
-_MAX_HISTORY = 50
+_WS_HISTORY_LIMIT    = 50    # canlı yayına yeni bağlanan izleyiciye gönderilir — değişmez
+_REPLAY_PERSIST_LIMIT = 2000  # Redis LTRIM tavanı; yalnızca replay dump için kullanılır
+_MAX_HISTORY = _WS_HISTORY_LIMIT  # geriye dönük uyumluluk
 
 
 def chat_key(stream_id: int) -> str:
@@ -46,7 +48,7 @@ async def chat_announcement(
     if persist:
         redis = await get_redis()
         await redis.rpush(chat_key(stream_id), json.dumps(msg))
-        await redis.ltrim(chat_key(stream_id), -50, -1)
+        await redis.ltrim(chat_key(stream_id), -_REPLAY_PERSIST_LIMIT, -1)
         await redis.expire(chat_key(stream_id), 24 * 3600)
     await publish_chat(stream_id, msg)
 

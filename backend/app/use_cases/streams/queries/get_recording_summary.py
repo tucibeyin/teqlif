@@ -23,9 +23,11 @@ class GetRecordingSummaryQuery:
         if not stream:
             return {}
 
-        auctions     = await self._fetch_auctions(stream_id)
-        direct_sales = await self._fetch_direct_sales(stream_id)
-        gifts        = await self._fetch_gifts(stream_id)
+        recording_started_at = stream.get("recording_started_at")
+        auctions     = await self._fetch_auctions(stream_id, recording_started_at)
+        direct_sales = await self._fetch_direct_sales(stream_id, recording_started_at)
+        gifts        = await self._fetch_gifts(stream_id, recording_started_at)
+        chat_messages = await self._fetch_chat_messages(stream_id, recording_started_at)
         metrics      = self._compute_metrics(auctions, direct_sales, gifts)
 
         return {
@@ -35,6 +37,7 @@ class GetRecordingSummaryQuery:
             "auctions":             auctions,
             "direct_sales":         direct_sales,
             "gifts":                gifts,
+            "chat_messages":        chat_messages,
         }
 
     # ── Stream meta ──────────────────────────────────────────────────────────
@@ -47,7 +50,12 @@ class GetRecordingSummaryQuery:
                        SELECT expires_at FROM stream_recordings
                        WHERE stream_id = :stream_id AND status = 'available'
                        ORDER BY created_at DESC LIMIT 1
-                   ) AS recording_expires_at
+                   ) AS recording_expires_at,
+                   (
+                       SELECT recording_started_at FROM stream_recordings
+                       WHERE stream_id = :stream_id AND status = 'available'
+                       ORDER BY created_at DESC LIMIT 1
+                   ) AS recording_started_at
             FROM live_streams
             WHERE id = :stream_id
         """), {"stream_id": stream_id})).mappings().first()
@@ -55,7 +63,7 @@ class GetRecordingSummaryQuery:
 
     # ── Müzayedeler ──────────────────────────────────────────────────────────
 
-    async def _fetch_auctions(self, stream_id: int) -> list[dict]:
+    async def _fetch_auctions(self, stream_id: int, recording_started_at) -> list[dict]:
         auction_rows = (await self._db.execute(text("""
             SELECT
                 a.id              AS auction_id,
@@ -84,7 +92,7 @@ class GetRecordingSummaryQuery:
             if a["started_at"] and a["ended_at"]:
                 duration_minutes = int((a["ended_at"] - a["started_at"]).total_seconds() / 60)
 
-            bids = await self._fetch_bids_for_auction(a["auction_id"])
+            bids = await self._fetch_bids_for_auction(a["auction_id"], recording_started_at)
 
             winner = None
             if a["winner_id"]:
@@ -110,33 +118,38 @@ class GetRecordingSummaryQuery:
             })
         return result
 
-    async def _fetch_bids_for_auction(self, auction_id: int) -> list[dict]:
+    async def _fetch_bids_for_auction(self, auction_id: int, recording_started_at) -> list[dict]:
         rows = (await self._db.execute(text("""
             SELECT
                 b.id, b.bidder_id AS user_id, b.bidder_username AS username,
                 u.profile_image_thumb_url AS avatar_url,
-                b.amount, b.created_at
+                b.amount, b.created_at,
+                CASE
+                    WHEN :rec_start IS NOT NULL
+                    THEN EXTRACT(EPOCH FROM (b.created_at - :rec_start))
+                    ELSE NULL
+                END AS offset_secs
             FROM bids b
             LEFT JOIN users u ON u.id = b.bidder_id
             WHERE b.auction_id = :auction_id
-            ORDER BY b.created_at DESC
-            LIMIT 50
-        """), {"auction_id": auction_id})).mappings().all()
+            ORDER BY b.created_at ASC
+        """), {"auction_id": auction_id, "rec_start": recording_started_at})).mappings().all()
 
         return [
             {
-                "user_id":    r["user_id"],
-                "username":   r["username"],
-                "avatar_url": self._full_url(r["avatar_url"]),
-                "amount":     float(r["amount"]),
-                "created_at": r["created_at"],
+                "user_id":     r["user_id"],
+                "username":    r["username"],
+                "avatar_url":  self._full_url(r["avatar_url"]),
+                "amount":      float(r["amount"]),
+                "created_at":  r["created_at"],
+                "offset_secs": float(r["offset_secs"]) if r["offset_secs"] is not None else None,
             }
             for r in rows
         ]
 
     # ── Direkt Satışlar ───────────────────────────────────────────────────────
 
-    async def _fetch_direct_sales(self, stream_id: int) -> list[dict]:
+    async def _fetch_direct_sales(self, stream_id: int, recording_started_at) -> list[dict]:
         sale_rows = (await self._db.execute(text("""
             SELECT
                 ds.id AS sale_id, ds.title, ds.product_image_url,
@@ -149,7 +162,7 @@ class GetRecordingSummaryQuery:
 
         result = []
         for ds in sale_rows:
-            orders = await self._fetch_orders_for_sale(ds["sale_id"])
+            orders = await self._fetch_orders_for_sale(ds["sale_id"], recording_started_at)
             sold_count = sum(o["quantity"] for o in orders)
 
             result.append({
@@ -166,60 +179,72 @@ class GetRecordingSummaryQuery:
             })
         return result
 
-    async def _fetch_orders_for_sale(self, sale_id: int) -> list[dict]:
+    async def _fetch_orders_for_sale(self, sale_id: int, recording_started_at) -> list[dict]:
         rows = (await self._db.execute(text("""
             SELECT
                 dso.id, dso.buyer_id AS user_id, u.username,
                 u.profile_image_thumb_url AS avatar_url,
-                dso.quantity, dso.unit_price, dso.created_at
+                dso.quantity, dso.unit_price, dso.created_at,
+                CASE
+                    WHEN :rec_start IS NOT NULL
+                    THEN EXTRACT(EPOCH FROM (dso.created_at - :rec_start))
+                    ELSE NULL
+                END AS offset_secs
             FROM direct_sale_orders dso
             LEFT JOIN users u ON u.id = dso.buyer_id
             WHERE dso.sale_id = :sale_id
               AND dso.status = 'completed'
             ORDER BY dso.created_at ASC
-        """), {"sale_id": sale_id})).mappings().all()
+        """), {"sale_id": sale_id, "rec_start": recording_started_at})).mappings().all()
 
         return [
             {
-                "user_id":    r["user_id"],
-                "username":   r["username"],
-                "avatar_url": self._full_url(r["avatar_url"]),
-                "quantity":   r["quantity"],
-                "unit_price": float(r["unit_price"]),
-                "created_at": r["created_at"],
+                "user_id":     r["user_id"],
+                "username":    r["username"],
+                "avatar_url":  self._full_url(r["avatar_url"]),
+                "quantity":    r["quantity"],
+                "unit_price":  float(r["unit_price"]),
+                "created_at":  r["created_at"],
+                "offset_secs": float(r["offset_secs"]) if r["offset_secs"] is not None else None,
             }
             for r in rows
         ]
 
     # ── Hediyeler ─────────────────────────────────────────────────────────────
 
-    async def _fetch_gifts(self, stream_id: int) -> dict:
+    async def _fetch_gifts(self, stream_id: int, recording_started_at) -> dict:
         rows = (await self._db.execute(text("""
             SELECT
                 ge.sender_id AS user_id, u.username,
                 u.profile_image_thumb_url AS avatar_url,
-                ge.gift_name, ge.cost_teqlik, ge.host_share, ge.sent_at
+                ge.gift_name, ge.cost_teqlik, ge.host_share, ge.sent_at,
+                CASE
+                    WHEN :rec_start IS NOT NULL
+                    THEN EXTRACT(EPOCH FROM (ge.sent_at - :rec_start))
+                    ELSE NULL
+                END AS offset_secs
             FROM gift_events ge
             LEFT JOIN users u ON u.id = ge.sender_id
             WHERE ge.stream_id = :stream_id
             ORDER BY ge.sent_at ASC
-        """), {"stream_id": stream_id})).mappings().all()
+        """), {"stream_id": stream_id, "rec_start": recording_started_at})).mappings().all()
 
         if not rows:
             return {"total_teqlik": 0, "total_host_share": 0, "sender_count": 0, "events": []}
 
-        total_teqlik    = sum(r["cost_teqlik"] for r in rows)
+        total_teqlik     = sum(r["cost_teqlik"] for r in rows)
         total_host_share = sum(r["host_share"] for r in rows)
-        sender_ids      = {r["user_id"] for r in rows}
+        sender_ids       = {r["user_id"] for r in rows}
 
         events = [
             {
-                "user_id":    r["user_id"],
-                "username":   r["username"],
-                "avatar_url": self._full_url(r["avatar_url"]),
-                "gift_name":  r["gift_name"],
+                "user_id":     r["user_id"],
+                "username":    r["username"],
+                "avatar_url":  self._full_url(r["avatar_url"]),
+                "gift_name":   r["gift_name"],
                 "cost_teqlik": r["cost_teqlik"],
-                "sent_at":    r["sent_at"],
+                "sent_at":     r["sent_at"],
+                "offset_secs": float(r["offset_secs"]) if r["offset_secs"] is not None else None,
             }
             for r in rows
         ]
@@ -230,6 +255,35 @@ class GetRecordingSummaryQuery:
             "sender_count":     len(sender_ids),
             "events":           events,
         }
+
+    async def _fetch_chat_messages(self, stream_id: int, recording_started_at) -> list[dict]:
+        rows = (await self._db.execute(text("""
+            SELECT user_id, username, avatar_url, content, is_host, is_mod,
+                   created_at,
+                   CASE
+                       WHEN :rec_start IS NOT NULL
+                       THEN EXTRACT(EPOCH FROM (created_at - :rec_start))
+                       ELSE NULL
+                   END AS offset_secs
+            FROM stream_chat_messages
+            WHERE stream_id = :stream_id
+              AND is_hidden = FALSE
+            ORDER BY created_at ASC
+        """), {"stream_id": stream_id, "rec_start": recording_started_at})).mappings().all()
+
+        return [
+            {
+                "user_id":     r["user_id"],
+                "username":    r["username"],
+                "avatar_url":  self._full_url(r["avatar_url"]),
+                "content":     r["content"],
+                "is_host":     r["is_host"],
+                "is_mod":      r["is_mod"],
+                "created_at":  r["created_at"],
+                "offset_secs": float(r["offset_secs"]) if r["offset_secs"] is not None else None,
+            }
+            for r in rows
+        ]
 
     # ── Metrikler ─────────────────────────────────────────────────────────────
 

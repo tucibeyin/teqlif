@@ -488,6 +488,45 @@ async def cleanup_old_exchange_rates_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Eski Chat Mesajlarını Temizle ──────────────────────────────────────
+
+async def cleanup_old_stream_chat_messages_task(ctx: dict) -> None:
+    """
+    Her gün 04:30 UTC'de çalışır; kayıt available olmayan stream'lerin chat satırlarını siler.
+
+    Video olmadan replay açılamaz; dolayısıyla stream_recordings.status != 'available'
+    olan stream'lerin chat mesajlarının DB'de kalmasının işlevsel karşılığı yoktur.
+    1 günlük tampon: yayın biter bitmez çalışan janitor'ın kayıt işlemi devam eden
+    stream'lerin chat'ini yanlışlıkla silmesini önler.
+    """
+    try:
+        from app.database import AsyncSessionLocal, engine
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text("""
+                DELETE FROM stream_chat_messages
+                WHERE stream_id IN (
+                    SELECT ls.id FROM live_streams ls
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM stream_recordings sr
+                        WHERE sr.stream_id = ls.id
+                          AND sr.status = 'available'
+                    )
+                    AND ls.ended_at < NOW() - INTERVAL '1 day'
+                )
+            """))
+            await db.commit()
+            logger.info("[Worker] Chat cleanup tamamlandı | silinen=%d", result.rowcount)
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE stream_chat_messages"))
+        await _agent_ok(ctx, "cleanup_old_stream_chat_messages_task")
+    except Exception as exc:
+        logger.error("[Worker] Chat cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: GC5 — Eski Live Streams Temizle ────────────────────────────────────
 
 async def cleanup_old_streams_task(ctx: dict) -> None:
@@ -4253,6 +4292,8 @@ class WorkerSettings:
         cron(archive_recordings_task,       minute={15}),
         # Transfer penceresi biter (05:00 UTC = 08:00 TR) → bildirim gönder — 2 run/gün
         cron(notify_new_recordings_task, hour={5, 6}, minute={0}),
+        # Her gün 04:30 UTC — replay olmayan stream'lerin chat satırlarını temizle
+        cron(cleanup_old_stream_chat_messages_task, hour=4, minute=30),
 
         # ── Batch görevler — schedule.yaml'dan okunur ─────────────────────────
         *build_cron_jobs(_SCHEDULE_FUNCTIONS),

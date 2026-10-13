@@ -38,7 +38,9 @@ from app.utils.redis_client import get_redis
 logger = get_logger(__name__)
 
 _CHAT_CHANNEL = "chat_broadcast"
-_MAX_HISTORY = 50
+_WS_HISTORY_LIMIT    = 50    # canlı yayına yeni bağlanan izleyiciye gönderilir — değişmez
+_REPLAY_PERSIST_LIMIT = 2000  # Redis LTRIM tavanı; yalnızca replay dump için kullanılır
+_MAX_HISTORY = _WS_HISTORY_LIMIT  # geriye dönük uyumluluk
 
 
 # ── Redis key ────────────────────────────────────────────────────────────────
@@ -125,9 +127,9 @@ class ChatCommands:
 
     # ── Bağlantı Başlangıcı ──────────────────────────────────────────────────
     async def load_history(self, stream_id: int) -> list:
-        """Son _MAX_HISTORY mesajı Redis'ten okur."""
+        """Son _WS_HISTORY_LIMIT mesajı Redis'ten okur."""
         redis = await get_redis()
-        history_raw = await redis.lrange(chat_key(stream_id), -_MAX_HISTORY, -1)
+        history_raw = await redis.lrange(chat_key(stream_id), -_WS_HISTORY_LIMIT, -1)
         return [json.loads(m) for m in history_raw] if history_raw else []
 
     async def get_viewer_count(self, stream_id: int) -> int:
@@ -228,7 +230,7 @@ class ChatCommands:
         """Mesajı Redis'e kaydeder; gizli değilse Pub/Sub ile yayınlar."""
         key = chat_key(stream_id)
         await redis.rpush(key, json.dumps(chat_msg))
-        await redis.ltrim(key, -_MAX_HISTORY, -1)
+        await redis.ltrim(key, -_REPLAY_PERSIST_LIMIT, -1)
         await redis.expire(key, 24 * 3600)
 
         if not chat_msg["is_hidden"]:
