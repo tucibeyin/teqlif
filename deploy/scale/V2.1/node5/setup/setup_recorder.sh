@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# node5 — Recording için Python paket kurulumu
+# Tüm recording node'ları (node3/node4/node5) — Python paket kurulumu
 # Çalıştır: sudo bash deploy/scale/V2.1/node5/setup/setup_recorder.sh
 set -euo pipefail
 
 VENV="/opt/teqlif-agent/venv/bin/pip"
 
 echo "=== Agent venv'e kayıt paketleri kuruluyor ==="
-$VENV install --quiet "aiortc>=1.9.0" "livekit-api>=1.2.0"
+$VENV install --quiet "livekit==1.1.20" "livekit-api>=1.2.0" "av>=17.0.0" "numpy>=2.0"
 
 echo "Kurulu versiyonlar:"
-/opt/teqlif-agent/venv/bin/pip show aiortc livekit-api 2>/dev/null | grep -E 'Name|Version'
+/opt/teqlif-agent/venv/bin/pip show livekit livekit-api av numpy 2>/dev/null | grep -E 'Name|Version'
 
 echo ""
 echo "=== Sonraki adımlar ==="
