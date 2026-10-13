@@ -75,7 +75,7 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
                 if (items.isEmpty) {
                   return Center(
                     child: Text(
-                      loc.tOr('recordingEmptyState', 'Henüz kayıt yok'),
+                      loc.t('recordingEmptyState'),
                       style: TextStyle(color: AppColors.textSecondary(context)),
                     ),
                   );
@@ -247,10 +247,10 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
     }
 
     final chips = [
-      (RecordingFilterStatus.all,       loc.tOr('recordingFilterAll',       'Tümü')),
-      (RecordingFilterStatus.available,  loc.tOr('recordingFilterAvailable', 'İzlenebilir')),
-      (RecordingFilterStatus.preparing,  loc.tOr('recordingFilterPreparing', 'Hazırlanıyor')),
-      (RecordingFilterStatus.expired,    loc.tOr('recordingFilterExpired',   'Süresi Doldu')),
+      (RecordingFilterStatus.all,       loc.t('recordingFilterAll')),
+      (RecordingFilterStatus.available,  loc.t('recordingFilterAvailable')),
+      (RecordingFilterStatus.preparing,  loc.t('recordingFilterPreparing')),
+      (RecordingFilterStatus.expired,    loc.t('recordingFilterExpired')),
     ];
 
     return Container(
@@ -265,7 +265,7 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
               onChanged: _onSearch,
               style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
               decoration: InputDecoration(
-                hintText: loc.tOr('recordingSearchHint', 'Yayın ara...'),
+                hintText: loc.t('recordingSearchHint'),
                 hintStyle: TextStyle(color: AppColors.textTertiary(context), fontSize: 14),
                 prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textTertiary(context)),
                 suffixIcon: _searchCtrl.text.isNotEmpty

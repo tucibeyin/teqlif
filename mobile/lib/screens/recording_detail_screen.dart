@@ -79,7 +79,7 @@ class _RecordingDetailScreenState
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         title: Text(
-          loc.tOr('recordingDetailTitle', 'Kayıt Detayı'),
+          loc.t('recordingDetailTitle'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -161,7 +161,7 @@ class _RecordingDetailScreenState
 
   Widget _playerError(String? code, TranslationPack loc) {
     final msg = code == null
-        ? loc.tOr('recordingLoading', 'Yükleniyor...')
+        ? loc.t('recordingLoading')
         : loc.t('errorRecordingNotAvailable');
     return Center(
       child: Text(msg,
@@ -194,7 +194,7 @@ class _RecoveryBanner extends ConsumerWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              loc.tOr('recordingUrlExpiredRetry', 'Bağlantı süresi doldu. Yenilemek için dokun.'),
+              loc.t('recordingUrlExpiredRetry'),
               style: const TextStyle(color: Colors.orange, fontSize: 13),
             ),
           ),
@@ -202,7 +202,7 @@ class _RecoveryBanner extends ConsumerWidget {
             onPressed: () => ref
                 .read(recordingDetailProvider(streamId).notifier)
                 .recoverUrl(),
-            child: Text(loc.tOr('retry', 'Yenile'),
+            child: Text(loc.t('retry'),
                 style: const TextStyle(color: Colors.orange)),
           ),
         ],
@@ -382,12 +382,12 @@ class _SummarySectionState extends State<_SummarySection> {
           Row(
             children: [
               _MetricTile(
-                label: loc.tOr('recordingMetricRevenue', 'Gelir'),
+                label: loc.t('recordingMetricRevenue'),
                 value: '₺${m.totalRevenue.toStringAsFixed(2)}',
               ),
               const SizedBox(width: 8),
               _MetricTile(
-                label: loc.tOr('recordingMetricViewers', 'İzleyici'),
+                label: loc.t('recordingMetricViewers'),
                 value: s.peakViewerCount != null ? '${s.peakViewerCount}' : '—',
               ),
               const SizedBox(width: 8),
@@ -410,10 +410,10 @@ class _SummarySectionState extends State<_SummarySection> {
               title: loc.t('recordingDetailAuctions'),
               current: _auctionSort,
               options: [
-                (_AuctionSort.newest,    loc.tOr('recordingSortNewest',   'En Yeni')),
-                (_AuctionSort.highPrice, loc.tOr('recordingSortHighLow',  'Fiyat ↓')),
-                (_AuctionSort.lowPrice,  loc.tOr('recordingSortLowHigh',  'Fiyat ↑')),
-                (_AuctionSort.mostBids,  loc.tOr('recordingSortMostBids', 'Teklif ↓')),
+                (_AuctionSort.newest,    loc.t('recordingSortNewest')),
+                (_AuctionSort.highPrice, loc.t('recordingSortHighLow')),
+                (_AuctionSort.lowPrice,  loc.t('recordingSortLowHigh')),
+                (_AuctionSort.mostBids,  loc.t('recordingSortMostBids')),
               ],
               onChanged: (v) => setState(() => _auctionSort = v),
             ),
@@ -428,8 +428,8 @@ class _SummarySectionState extends State<_SummarySection> {
               title: loc.t('recordingDetailDirectSales'),
               current: _saleSort,
               options: [
-                (_SaleSort.newest,   loc.tOr('recordingSortNewest',   'En Yeni')),
-                (_SaleSort.mostSold, loc.tOr('recordingSortMostSold', 'Satış ↓')),
+                (_SaleSort.newest,   loc.t('recordingSortNewest')),
+                (_SaleSort.mostSold, loc.t('recordingSortMostSold')),
               ],
               onChanged: (v) => setState(() => _saleSort = v),
             ),
@@ -444,8 +444,8 @@ class _SummarySectionState extends State<_SummarySection> {
               title: loc.t('recordingDetailGifts'),
               current: _giftSort,
               options: [
-                (_GiftSort.mostTeqlik, loc.tOr('recordingSortMostGifts', 'Teqlik ↓')),
-                (_GiftSort.newest,     loc.tOr('recordingSortNewest',    'En Yeni')),
+                (_GiftSort.mostTeqlik, loc.t('recordingSortMostGifts')),
+                (_GiftSort.newest,     loc.t('recordingSortNewest')),
               ],
               onChanged: (v) => setState(() => _giftSort = v),
             ),
@@ -465,12 +465,12 @@ class _SummarySectionState extends State<_SummarySection> {
           if (viewers.isNotEmpty) ...[
             const SizedBox(height: 8),
             _SectionHeaderWithSort<_ViewerSort>(
-              title: '${loc.tOr("viewerSectionTitle", "Aktif İzleyiciler")} (${viewers.length})',
+              title: '${loc.t("viewerSectionTitle")} (${viewers.length})',
               current: _viewerSort,
               options: [
-                (_ViewerSort.byValue, loc.tOr('viewerSortByValue', 'Değer ↓')),
-                (_ViewerSort.byBids,  loc.tOr('viewerSortByBids',  'Teklif ↓')),
-                (_ViewerSort.byGifts, loc.tOr('viewerSortByGifts', 'Hediye ↓')),
+                (_ViewerSort.byValue, loc.t('viewerSortByValue')),
+                (_ViewerSort.byBids,  loc.t('viewerSortByBids')),
+                (_ViewerSort.byGifts, loc.t('viewerSortByGifts')),
               ],
               onChanged: (v) => setState(() => _viewerSort = v),
             ),
@@ -671,7 +671,7 @@ class _AuctionCard extends StatelessWidget {
                         )
                       else
                         Text(
-                          loc.tOr('auctionNotSold', 'Satılmadı'),
+                          loc.t('auctionNotSold'),
                           style: TextStyle(
                               color: AppColors.textSecondary(context),
                               fontSize: 13),
