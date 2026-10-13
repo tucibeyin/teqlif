@@ -343,9 +343,9 @@ async def get_stream_recording(
         raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_AVAILABLE"}})
 
     try:
-        from app.services.storage_service import _get_client_for_internal_url
+        from app.services.storage_service import _get_presign_client
         from app.config import settings
-        client = _get_client_for_internal_url(settings.minio_endpoint)
+        client = _get_presign_client()
         loop = __import__("asyncio").get_event_loop()
         presigned_url = await loop.run_in_executor(
             None,
