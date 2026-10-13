@@ -29,6 +29,7 @@ from pathlib import Path
 import time
 
 import av
+from fractions import Fraction
 from livekit import rtc
 
 logging.basicConfig(
@@ -87,6 +88,7 @@ class MKVWriter:
         self._vinfo_at: float | None = None           # monotonic — son resolution değişimi
         self._ainfo: tuple[int, int] | None = None   # (sample_rate, channels)
         self._vpts = 0
+        self._vstart_us: int | None = None  # first frame µs timestamp
         self._apts = 0
 
     def hint_video(self, width: int, height: int) -> None:
@@ -126,12 +128,13 @@ class MKVWriter:
         w, h = self._vinfo
         vs = self._container.add_stream("libvpx", rate=30)
         ctx = vs.codec_context
-        ctx.width    = w
-        ctx.height   = h
-        ctx.pix_fmt  = "yuv420p"
-        ctx.bit_rate = 2_000_000  # 2 Mbps — yasal kanıt kalitesi
-        ctx.options["deadline"]  = "realtime"
-        ctx.options["cpu-used"]  = "4"
+        ctx.width     = w
+        ctx.height    = h
+        ctx.pix_fmt   = "yuv420p"
+        ctx.bit_rate  = 2_000_000  # 2 Mbps — yasal kanıt kalitesi
+        ctx.time_base = Fraction(1, 1000)   # ms precision — frame-counter PTS'ten kaçın
+        ctx.options["deadline"]      = "realtime"
+        ctx.options["cpu-used"]      = "4"
         ctx.options["lag-in-frames"] = "0"
         self._vstr = vs
         logger.info("Video stream: %dx%d @ 2 Mbps VP8", w, h)
@@ -149,11 +152,15 @@ class MKVWriter:
 
         logger.info("MKV container açıldı: %s", self._path.name)
 
-    def write_video(self, av_frame: av.VideoFrame) -> int:
+    def write_video(self, av_frame: av.VideoFrame, timestamp_us: int) -> int:
+        """timestamp_us: monotonic veya livekit event.timestamp_us (mikrosaniye)."""
         if self._vstr is None:
             return 0
-        av_frame.pts = self._vpts
-        self._vpts  += 1
+        if self._vstart_us is None:
+            self._vstart_us = timestamp_us
+        pts = (timestamp_us - self._vstart_us) // 1000  # µs → ms (time_base=1/1000)
+        av_frame.pts = max(int(pts), self._vpts)
+        self._vpts    = av_frame.pts + 1
         count = 0
         for pkt in self._vstr.encode(av_frame):
             self._container.mux(pkt)
@@ -215,20 +222,37 @@ async def _run(
             async for event in vs:
                 lk = event.frame
                 vframe_count += 1
+
+                # Rotasyon — WebRTC CVO: telefon kamerası landscape pixel gönderir,
+                # rotation=90/270 ise display boyutları W/H yer değiştirir.
+                rot = int(getattr(event, 'rotation', 0))
+                dw, dh = (lk.height, lk.width) if rot in (90, 270) else (lk.width, lk.height)
+
                 if vframe_count <= 3:
-                    logger.info("VIDEO frame #%d: %dx%d", vframe_count, lk.width, lk.height)
-                writer.hint_video(lk.width, lk.height)
+                    logger.info("VIDEO frame #%d: pixel=%dx%d rot=%d° display=%dx%d",
+                                vframe_count, lk.width, lk.height, rot, dw, dh)
+                writer.hint_video(dw, dh)
                 await open_evt.wait()
-                # BGRA numpy dizisi → av.VideoFrame → yuv420p
+
+                # BGRA numpy dizisi + rotasyon uygula
                 arr = np.frombuffer(bytes(lk.data), dtype=np.uint8).reshape(lk.height, lk.width, 4)
+                if rot == 90:
+                    arr = np.rot90(arr, k=1)   # 90° CCW: kameranın 90° CW sapmasını düzelt
+                elif rot == 180:
+                    arr = np.rot90(arr, k=2)
+                elif rot == 270:
+                    arr = np.rot90(arr, k=3)   # 90° CW: kameranın 270° CW sapmasını düzelt
+
                 frame = av.VideoFrame.from_ndarray(arr, format="bgra")
                 enc_w, enc_h = writer.vinfo
-                if lk.width != enc_w or lk.height != enc_h:
+                if frame.width != enc_w or frame.height != enc_h:
                     # dynacast kalite geçişi — encoder boyutuna ölçekle
                     frame = frame.reformat(width=enc_w, height=enc_h, format="yuv420p")
                 else:
                     frame = frame.reformat(format="yuv420p")
-                pkts = writer.write_video(frame)
+
+                ts_us = getattr(event, 'timestamp_us', int(time.monotonic() * 1_000_000))
+                pkts = writer.write_video(frame, ts_us)
                 if vframe_count <= 3:
                     logger.info("VIDEO encode → %d paket (frame=%d)", pkts, vframe_count)
         except asyncio.CancelledError:
