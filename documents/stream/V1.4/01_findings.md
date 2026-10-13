@@ -110,9 +110,9 @@ Video player: `VideoPlayerController` + `ChewieController` mevcut. `position` li
 | Kod karmaşıklığı | `_MAX_HISTORY` büyütme + finalize dump | `_persist_and_publish` + DB insert |
 | `_MAX_HISTORY` sorunu | **Zorunlu olarak büyütülmeli** | Gerek yok |
 
-**Karar: Yol A** — `_MAX_HISTORY` 2000'e çıkarılır + `finalize_stream` dump.
+**Karar: Yol A** — `_REPLAY_PERSIST_LIMIT = 2000` Redis buffer + `finalize_stream` dump.
 
-Gerekçe: Replay yalnızca yayın bittikten sonra erişilebilir; canlı yayın sırasında DB write baskısı gereksiz. `_MAX_HISTORY = 2000` × ~250 byte = ~500 KB/stream Redis RAM (node1: 11 GB, node5: 7.8 GB — ihmal edilebilir).
+Gerekçe: Replay yalnızca yayın bittikten sonra erişilebilir; canlı yayın sırasında DB write baskısı gereksiz. `_REPLAY_PERSIST_LIMIT = 2000` × ~250 byte = ~500 KB/stream Redis RAM (node1: 11 GB, node5: 7.8 GB — ihmal edilebilir). Canlı izleyici WS history (`_WS_HISTORY_LIMIT = 50`) değişmez.
 
 ---
 
@@ -144,17 +144,26 @@ CREATE INDEX ix_stream_chat_messages_stream_id_created_at
 
 **asyncpg kuralı:** Her `op.execute()` ayrı satır — tek multi-statement string yasak.
 
-**Yaşam döngüsü kuralı:** `stream_chat_messages` satırları video kaydıyla birlikte silinir. ARQ `janitor` görevi şu koşulda temizler:
+**Yaşam döngüsü kuralı:** `stream_chat_messages` satırları, karşılıklı video kaydıyla birlikte silinir. Video olmadan replay açılamaz (`replayEnabled = false`), dolayısıyla kayıt `available` olmaktan çıktıktan sonra chat satırlarının DB'de kalmasının işlevsel karşılığı yoktur.
+
+ARQ `janitor` görevi şu koşulda temizler:
 
 ```sql
 DELETE FROM stream_chat_messages
 WHERE stream_id IN (
     SELECT ls.id FROM live_streams ls
-    WHERE ls.ended_at < NOW() - INTERVAL '30 days'
+    WHERE NOT EXISTS (
+        SELECT 1 FROM stream_recordings sr
+        WHERE sr.stream_id = ls.id
+          AND sr.status = 'available'
+    )
+    AND ls.ended_at < NOW() - INTERVAL '1 day'
 );
 ```
 
-`ON DELETE CASCADE` ile `live_streams` silindiğinde otomatik temizlenir; ARQ görevi erken temizlik için ek güvencedir. Video `archived` olunca (transferred_at + 2 gün MinIO ILM, archived_at + 15 gün DB) replay zaten çalışmaz — chat satırlarının daha uzun yaşamasının işlevsel karşılığı yoktur.
+`ended_at < NOW() - 1 day` tamponu: yayın biter bitmez çalışan janitor'ın kayıt işlemi devam eden stream'lerin chat'ini silmesini önler.
+
+`ON DELETE CASCADE` ile `live_streams` silindiğinde otomatik temizlenir; ARQ görevi video archival öncesi erken temizlik için ek güvencedir (transferred_at + 2 gün MinIO ILM, archived_at + 15 gün DB — toplam ~17–19 gün).
 
 #### 4.2 Chat persistence: buffer ayrımı + finalize dump
 
@@ -171,6 +180,25 @@ _REPLAY_PERSIST_LIMIT = 2000  # Redis LTRIM tavanı; yalnızca replay dump için
 
 `_REPLAY_PERSIST_LIMIT = 2000` yalnızca `redis.ltrim(key, -_REPLAY_PERSIST_LIMIT, -1)` ve `_dump_chat_to_db` için kullanılır.
 
+**`models/stream_chat_message.py` — ORM modeli (yeni dosya):**
+```python
+class StreamChatMessage(Base):
+    __tablename__ = "stream_chat_messages"
+
+    id         = Column(BigInteger, primary_key=True)
+    stream_id  = Column(Integer, ForeignKey("live_streams.id", ondelete="CASCADE"), nullable=False)
+    user_id    = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    username   = Column(String(100), nullable=False)
+    avatar_url = Column(Text, nullable=True)
+    content    = Column(Text, nullable=False)
+    is_host    = Column(Boolean, nullable=False, default=False)
+    is_mod     = Column(Boolean, nullable=False, default=False)
+    is_hidden  = Column(Boolean, nullable=False, default=False)
+    created_at = Column(TIMESTAMPTZ, nullable=False, server_default=func.now())
+```
+
+Use-Case katmanı ham SQL bilmez — ham `text("INSERT INTO...")` yasaktır. ORM modeli üzerinden `insert(StreamChatMessage).values(rows)` kullanılır.
+
 **`stream_finalizer.py` — `_dump_chat_to_db` helper:**
 ```python
 async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
@@ -179,9 +207,14 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
     if not raw_messages:
         return
 
-    messages = [json.loads(m) for m in raw_messages]
-    rows = [
-        {
+    rows = []
+    for raw in raw_messages:
+        try:
+            msg = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            logger.warning("stream %s: bozuk chat JSON atlandı", stream.id)
+            continue
+        rows.append({
             "stream_id":  stream.id,
             "user_id":    msg.get("user_id"),
             "username":   msg.get("username", ""),
@@ -191,21 +224,14 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
             "is_mod":     msg.get("is_mod", False),
             "is_hidden":  msg.get("is_hidden", False),
             "created_at": msg.get("created_at"),
-        }
-        for msg in messages
-    ]
+        })
+
+    if not rows:
+        return
+
     # Tek multi-row INSERT — N ayrı roundtrip değil, tek statement
     await db.execute(
-        text("""
-            INSERT INTO stream_chat_messages
-                (stream_id, user_id, username, avatar_url, content,
-                 is_host, is_mod, is_hidden, created_at)
-            VALUES
-                (:stream_id, :user_id, :username, :avatar_url, :content,
-                 :is_host, :is_mod, :is_hidden, :created_at)
-            ON CONFLICT DO NOTHING
-        """),
-        rows,
+        insert(StreamChatMessage).values(rows).on_conflict_do_nothing()
     )
     await db.commit()
 ```
@@ -404,6 +430,10 @@ List<_ReplayEvent> get _visibleEvents =>
 
 ### ARB Anahtarları (5 dil: TR/EN/AR/DE/RU)
 
+**Dosya yolu:** `documents/language/app_*.arb` — `mobile/lib/l10n/` değil.
+
+Feed satırlarındaki dinamik içerik (`username`, `amount`, `giftName` vb.) parametreli ARB anahtarı gerektirir; aksi hâlde geliştirici hardcoded string interpolasyonuna mecbur kalır.
+
 | Key | TR | EN |
 |-----|----|----|
 | `replayFeedTitle` | Anlık Akış | Live Feed |
@@ -412,28 +442,32 @@ List<_ReplayEvent> get _visibleEvents =>
 | `replayEventPurchase` | Satın Alma | Purchase |
 | `replayEventChat` | Chat | Chat |
 | `replayNoEventsYet` | Henüz etkinlik yok | No events yet |
+| `replayBidRow` | `{username} ₺{amount} teklif verdi` | `{username} bid ₺{amount}` |
+| `replayGiftRow` | `{username} {giftName} × {count}` | `{username} sent {count}× {giftName}` |
+| `replayPurchaseRow` | `{username} {itemTitle} × {quantity}` | `{username} purchased {quantity}× {itemTitle}` |
 
 ---
 
 ## 5. Uygulama Sırası
 
 ```
-1.  Backend — Alembic migration: zzzzzo_stream_chat_messages (tablo + index + yaşam döngüsü kuralı)
-2.  Backend — Sabit ayrımı: _WS_HISTORY_LIMIT=50 (değişmez) + _REPLAY_PERSIST_LIMIT=2000 (dump için)
-3.  Backend — stream_finalizer.py: _dump_chat_to_db (bulk insert) + Redis delete
-4.  Backend — cleanup_stale_streams_task (ARQ): _dump_chat_to_db hook'u eklenir
-5.  Backend — force_close_stream.py: _dump_chat_to_db hook'u eklenir
-6.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages (ORDER BY ASC, LIMIT yok)
-7.  git push → node1 + node5: git pull + sudo teqlif-restart
+1.  Backend — models/stream_chat_message.py: StreamChatMessage ORM modeli
+2.  Backend — Alembic migration: zzzzzo_stream_chat_messages (tablo + index + yaşam döngüsü kuralı)
+3.  Backend — Sabit ayrımı: _WS_HISTORY_LIMIT=50 (değişmez) + _REPLAY_PERSIST_LIMIT=2000 (dump için)
+4.  Backend — stream_finalizer.py: _dump_chat_to_db (ORM bulk insert + json.loads try-except) + Redis delete
+5.  Backend — cleanup_stale_streams_task (ARQ): _dump_chat_to_db hook'u eklenir
+6.  Backend — force_close_stream.py: _dump_chat_to_db hook'u eklenir
+7.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages (ORDER BY ASC, LIMIT yok)
+8.  git push → node1 + node5: git pull + sudo teqlif-restart
     (node3/node4: LiveKit + agent — Python backend çalışmaz, restart gerekmez)
-8.  Flutter — app_colors.dart: replayBid / replayGift / replayPurchase token'ları
-9.  Flutter — recording.dart: model güncellemeleri
-10. Flutter — recording_detail_view_model.dart: replayEnabled state + _masterTimeline / _buildTimeline
-11. Flutter — recording_detail_screen.dart: pozisyon listener + _visibleEvents (binary search) + _ReplayFeed
-12. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
-13. ARB dosyaları: 6 yeni key × 5 dil
-14. flutter analyze
-15. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
+9.  Flutter — app_colors.dart: replayBid / replayGift / replayPurchase token'ları
+10. Flutter — recording.dart: model güncellemeleri
+11. Flutter — recording_detail_view_model.dart: replayEnabled state + _masterTimeline / _buildTimeline
+12. Flutter — recording_detail_screen.dart: pozisyon listener + _visibleEvents (binary search) + _ReplayFeed
+13. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
+14. ARB dosyaları (documents/language/app_*.arb): 9 yeni key × 5 dil
+15. flutter analyze
+16. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
 ```
 
 ---
