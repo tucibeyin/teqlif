@@ -182,22 +182,31 @@ _REPLAY_PERSIST_LIMIT = 2000  # Redis LTRIM tavanı; yalnızca replay dump için
 
 **`models/stream_chat_message.py` — ORM modeli (yeni dosya):**
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
+
 class StreamChatMessage(Base):
     __tablename__ = "stream_chat_messages"
 
-    id         = Column(BigInteger, primary_key=True)
-    stream_id  = Column(Integer, ForeignKey("live_streams.id", ondelete="CASCADE"), nullable=False)
-    user_id    = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    username   = Column(String(100), nullable=False)
-    avatar_url = Column(Text, nullable=True)
-    content    = Column(Text, nullable=False)
-    is_host    = Column(Boolean, nullable=False, default=False)
-    is_mod     = Column(Boolean, nullable=False, default=False)
-    is_hidden  = Column(Boolean, nullable=False, default=False)
-    created_at = Column(TIMESTAMPTZ, nullable=False, server_default=func.now())
+    id:         Mapped[int]           = mapped_column(BigInteger, primary_key=True)
+    stream_id:  Mapped[int]           = mapped_column(ForeignKey("live_streams.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id:    Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    username:   Mapped[str]           = mapped_column(String(100), nullable=False)
+    avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    content:    Mapped[str]           = mapped_column(Text, nullable=False)
+    is_host:    Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
+    is_mod:     Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
+    is_hidden:  Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime]      = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ```
 
-Use-Case katmanı ham SQL bilmez — ham `text("INSERT INTO...")` yasaktır. ORM modeli üzerinden `insert(StreamChatMessage).values(rows)` kullanılır.
+SQLAlchemy 2.0 `Mapped`/`mapped_column` standardı (proje tüm modellerde bu stili kullanır — `Column()` eski stil yasaktır).
+
+Use-Case katmanı ham SQL bilmez — ham `text("INSERT INTO...")` yasaktır. ORM modeli üzerinden `pg_insert` kullanılır. Yeni model `backend/app/models/__init__.py`'a import edilir.
+
+**`stream_finalizer.py`'da import:**
+```python
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+```
 
 **`stream_finalizer.py` — `_dump_chat_to_db` helper:**
 ```python
@@ -230,8 +239,10 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
         return
 
     # Tek multi-row INSERT — N ayrı roundtrip değil, tek statement
+    # pg_insert: .on_conflict_do_nothing() PostgreSQL dialect'a özgüdür;
+    # standart sqlalchemy.insert'te bu metot yoktur (AttributeError)
     await db.execute(
-        insert(StreamChatMessage).values(rows).on_conflict_do_nothing()
+        pg_insert(StreamChatMessage).values(rows).on_conflict_do_nothing()
     )
     await db.commit()
 ```
@@ -273,6 +284,16 @@ FROM stream_chat_messages
 WHERE stream_id = :stream_id
   AND is_hidden = FALSE
 ORDER BY created_at ASC
+```
+
+**`recording_started_at` parametre akışı:** `execute()` metodu `_fetch_stream(stream_id)` ile `recording_started_at` değerini alır, ardından tüm alt sorgulara iletir:
+
+```python
+recording_started_at = stream_row["recording_started_at"]
+bids    = await self._fetch_bids_for_auction(auction_id, recording_started_at)
+orders  = await self._fetch_orders_for_sale(sale_id, recording_started_at)
+gifts   = await self._fetch_gifts(stream_id, recording_started_at)
+chat    = await self._fetch_chat_messages(stream_id, recording_started_at)
 ```
 
 **Response değişiklikleri:**
@@ -360,43 +381,59 @@ void dispose() {
 
 **Birleşik event listesi — ViewModel'de hesaplanır (ADR §8):**
 
-`_masterTimeline` yük anında ViewModel'de bir kez oluşturulur ve offsetSecs'e göre sıralanır. View sadece ikili arama ile dilim alır — her saniyede O(N log N) sort yoktur.
+`timeline` yük anında ViewModel'de bir kez oluşturulur, offsetSecs'e göre sıralanır ve `RecordingDetailState`'e immutable alan olarak yazılır. View sadece ikili arama ile dilim alır — her saniyede O(N log N) sort yoktur.
+
+Dart'ta `_` öneki library-private (dosya-gizli) anlamına gelir. `_ReplayEvent` veya `_masterTimeline` ViewModel dosyasında tanımlanıp View dosyasından erişilirse `Getter not found` derleme hatası oluşur. Tüm paylaşımlı tipler public tanımlanır.
 
 ```dart
-// ViewModel (loadSummary sonrası, bir kez):
-List<_ReplayEvent> _masterTimeline = [];
-
-void _buildTimeline(RecordingDetail detail) {
-  _masterTimeline = [
-    for (final a in detail.auctions)
-      for (final b in a.bids)
-        if (b.offsetSecs != null && b.offsetSecs! >= 0)
-          _ReplayEvent.bid(b, a.itemName),
-    for (final ds in detail.directSales)
-      for (final o in ds.orders)
-        if (o.offsetSecs != null && o.offsetSecs! >= 0)
-          _ReplayEvent.order(o, ds.title),
-    for (final ge in detail.gifts.events)
-      if (ge.offsetSecs != null && ge.offsetSecs! >= 0)
-        _ReplayEvent.gift(ge),
-    for (final cm in detail.chatMessages)
-      if (cm.offsetSecs != null && cm.offsetSecs! >= 0)
-        _ReplayEvent.chat(cm),
-  ]..sort((a, b) => a.offsetSecs.compareTo(b.offsetSecs));
+// replay_event.dart — public model (ayrı dosya):
+class ReplayEvent {
+  final double offsetSecs;
+  final ReplayEventType type;
+  final String username;
+  final String? avatarUrl;
+  final String label;    // loc.t(...) ile hazırlanmış render metni
+  // ...
 }
 
+// RecordingDetailState (recording_detail_view_model.dart):
+class RecordingDetailState {
+  final List<ReplayEvent> timeline; // ViewModel yüklenince bir kez hesaplanır
+  final bool replayEnabled;
+  // ...
+}
+
+// ViewModel — loadSummary sonrası state güncellemesi:
+List<ReplayEvent> _buildTimeline(RecordingDetail detail) => [
+  for (final a in detail.auctions)
+    for (final b in a.bids)
+      if (b.offsetSecs != null && b.offsetSecs! >= 0)
+        ReplayEvent.bid(b, a.itemName),
+  for (final ds in detail.directSales)
+    for (final o in ds.orders)
+      if (o.offsetSecs != null && o.offsetSecs! >= 0)
+        ReplayEvent.order(o, ds.title),
+  for (final ge in detail.gifts.events)
+    if (ge.offsetSecs != null && ge.offsetSecs! >= 0)
+      ReplayEvent.gift(ge),
+  for (final cm in detail.chatMessages)
+    if (cm.offsetSecs != null && cm.offsetSecs! >= 0)
+      ReplayEvent.chat(cm),
+]..sort((a, b) => a.offsetSecs.compareTo(b.offsetSecs));
+
 // View (her saniyede, O(log N)):
-int _upperBound(double pos) {
-  int lo = 0, hi = _masterTimeline.length;
+int _upperBound(List<ReplayEvent> timeline, double pos) {
+  int lo = 0, hi = timeline.length;
   while (lo < hi) {
     final mid = (lo + hi) ~/ 2;
-    _masterTimeline[mid].offsetSecs <= pos ? lo = mid + 1 : hi = mid;
+    timeline[mid].offsetSecs <= pos ? lo = mid + 1 : hi = mid;
   }
   return lo;
 }
 
-List<_ReplayEvent> get _visibleEvents =>
-    _masterTimeline.sublist(0, _upperBound(_replayPosSecs));
+// View içinde:
+final timeline = ref.watch(recDetailProvider).timeline;
+final visible = timeline.sublist(0, _upperBound(timeline, _replayPosSecs));
 ```
 
 `offsetSecs >= 0` koruması: kayıt başlamadan önceki eventlerin `offset_secs` değeri negatiftir. Filtre edilmezlerse tamamı `_replayPosSecs = 0` anında birden görünür (T=0 patlaması).
@@ -421,12 +458,12 @@ List<_ReplayEvent> get _visibleEvents =>
 
 | Event tipi | İkon | Renk |
 |-----------|------|------|
-| Chat | `Icons.chat_bubble_outline` | `AppColors.textSecondary` |
-| Teklif | `Icons.gavel` | `AppColors.replayBid` |
-| Hediye | `Icons.card_giftcard` | `AppColors.replayGift` |
-| Satın alma | `Icons.shopping_bag_outlined` | `AppColors.replayPurchase` |
+| Chat | `Icons.chat_bubble_outline` | `AppColors.textSecondary(context)` |
+| Teklif | `Icons.gavel` | `AppColors.replayBid(context)` |
+| Hediye | `Icons.card_giftcard` | `AppColors.replayGift(context)` |
+| Satın alma | `Icons.shopping_bag_outlined` | `AppColors.replayPurchase(context)` |
 
-`AppColors.replayBid`, `AppColors.replayGift`, `AppColors.replayPurchase` token'ları `app_colors.dart`'a eklenir. Hardcoded hex/material sabitleri doküman ve kod içinde yasaktır — tema değişikliklerinde tek yerden güncellenir.
+`AppColors.replayBid/Gift/Purchase` token'ları `app_colors.dart`'a eklenir. Tüm AppColors metodları `static Color fn(BuildContext context)` imzasına sahiptir — `context` parametresiz kullanım Dart analyzer tipi hatası verir. Hardcoded hex/material sabitleri yasaktır.
 
 ### ARB Anahtarları (5 dil: TR/EN/AR/DE/RU)
 
@@ -434,40 +471,45 @@ List<_ReplayEvent> get _visibleEvents =>
 
 Feed satırlarındaki dinamik içerik (`username`, `amount`, `giftName` vb.) parametreli ARB anahtarı gerektirir; aksi hâlde geliştirici hardcoded string interpolasyonuna mecbur kalır.
 
-| Key | TR | EN |
-|-----|----|----|
-| `replayFeedTitle` | Anlık Akış | Live Feed |
-| `replayEventBid` | Teklif | Bid |
-| `replayEventGift` | Hediye | Gift |
-| `replayEventPurchase` | Satın Alma | Purchase |
-| `replayEventChat` | Chat | Chat |
-| `replayNoEventsYet` | Henüz etkinlik yok | No events yet |
-| `replayBidRow` | `{username} ₺{amount} teklif verdi` | `{username} bid ₺{amount}` |
-| `replayGiftRow` | `{username} {giftName} × {count}` | `{username} sent {count}× {giftName}` |
-| `replayPurchaseRow` | `{username} {itemTitle} × {quantity}` | `{username} purchased {quantity}× {itemTitle}` |
+| Key | TR | EN | AR | DE | RU |
+|-----|----|----|----|----|-----|
+| `replayFeedTitle` | Anlık Akış | Live Feed | البث المباشر | Live-Feed | Прямой эфир |
+| `replayEventBid` | Teklif | Bid | مزايدة | Gebot | Ставка |
+| `replayEventGift` | Hediye | Gift | هدية | Geschenk | Подарок |
+| `replayEventPurchase` | Satın Alma | Purchase | شراء | Kauf | Покупка |
+| `replayEventChat` | Chat | Chat | دردشة | Chat | Чат |
+| `replayNoEventsYet` | Henüz etkinlik yok | No events yet | لا أحداث حتى الآن | Noch keine Ereignisse | Событий пока нет |
+| `replayBidRow` | `{username} ₺{amount} teklif verdi` | `{username} bid ₺{amount}` | `{username} عرض ₺{amount}` | `{username} bot ₺{amount}` | `{username} ставка ₺{amount}` |
+| `replayGiftRow` | `{username} {giftName} gönderdi` | `{username} sent {giftName}` | `{username} أرسل {giftName}` | `{username} hat {giftName} gesendet` | `{username} отправил {giftName}` |
+| `replayPurchaseRow` | `{username} {itemTitle} × {quantity}` | `{username} purchased {quantity}× {itemTitle}` | `{username} اشترى {itemTitle} × {quantity}` | `{username} kaufte {quantity}× {itemTitle}` | `{username} купил {quantity}× {itemTitle}` |
+
+`replayGiftRow`'dan `{count}` kaldırıldı: `gift_events` tablosunda her satır tekil bir hediye gönderimidir, `count` kolonu yoktur. Flutter istemcisi `{count}` değerini dolduramaz.
 
 ---
 
 ## 5. Uygulama Sırası
 
 ```
-1.  Backend — models/stream_chat_message.py: StreamChatMessage ORM modeli
-2.  Backend — Alembic migration: zzzzzo_stream_chat_messages (tablo + index + yaşam döngüsü kuralı)
-3.  Backend — Sabit ayrımı: _WS_HISTORY_LIMIT=50 (değişmez) + _REPLAY_PERSIST_LIMIT=2000 (dump için)
-4.  Backend — stream_finalizer.py: _dump_chat_to_db (ORM bulk insert + json.loads try-except) + Redis delete
-5.  Backend — cleanup_stale_streams_task (ARQ): _dump_chat_to_db hook'u eklenir
-6.  Backend — force_close_stream.py: _dump_chat_to_db hook'u eklenir
-7.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages (ORDER BY ASC, LIMIT yok)
-8.  git push → node1 + node5: git pull + sudo teqlif-restart
+1.  Backend — models/stream_chat_message.py: StreamChatMessage ORM modeli (Mapped/mapped_column stili)
+2.  Backend — models/__init__.py: StreamChatMessage import edilir
+3.  Backend — Alembic migration: zzzzzo_stream_chat_messages (tablo + index)
+4.  Backend — worker.py: cleanup_old_stream_chat_messages_task eklenir, günlük 04:30 UTC ARQ cron takvimine kaydedilir
+5.  Backend — Sabit ayrımı: _WS_HISTORY_LIMIT=50 (değişmez) + _REPLAY_PERSIST_LIMIT=2000 (dump için)
+6.  Backend — stream_finalizer.py: _dump_chat_to_db (pg_insert bulk insert + json.loads try-except) + Redis delete
+7.  Backend — cleanup_stale_streams_task (ARQ): _dump_chat_to_db hook'u eklenir
+8.  Backend — force_close_stream.py: _dump_chat_to_db hook'u eklenir
+9.  Backend — get_recording_summary.py: recording_started_at + parametre akışı + offset_secs + chat_messages (ORDER BY ASC, LIMIT yok)
+10. git push → node1 + node5: git pull + sudo teqlif-restart
     (node3/node4: LiveKit + agent — Python backend çalışmaz, restart gerekmez)
-9.  Flutter — app_colors.dart: replayBid / replayGift / replayPurchase token'ları
-10. Flutter — recording.dart: model güncellemeleri
-11. Flutter — recording_detail_view_model.dart: replayEnabled state + _masterTimeline / _buildTimeline
-12. Flutter — recording_detail_screen.dart: pozisyon listener + _visibleEvents (binary search) + _ReplayFeed
-13. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
-14. ARB dosyaları (documents/language/app_*.arb): 9 yeni key × 5 dil
-15. flutter analyze
-16. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
+11. Flutter — replay_event.dart: ReplayEvent public modeli (ayrı dosya)
+12. Flutter — app_colors.dart: replayBid / replayGift / replayPurchase token'ları
+13. Flutter — recording.dart: model güncellemeleri
+14. Flutter — recording_detail_view_model.dart: RecordingDetailState.timeline + _buildTimeline
+15. Flutter — recording_detail_screen.dart: pozisyon listener + binary search + _ReplayFeed
+16. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
+17. ARB dosyaları (documents/language/app_*.arb): 9 yeni key × 5 dil
+18. flutter analyze
+19. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
 ```
 
 ---
