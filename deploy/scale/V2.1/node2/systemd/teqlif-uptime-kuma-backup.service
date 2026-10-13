@@ -1,5 +1,5 @@
 [Unit]
-Description=teqlif Uptime Kuma MariaDB Backup (nodeMonitor → node2)
+Description=teqlif Uptime Kuma SQLite Backup (nodeMonitor → node2)
 After=network.target wg-quick@wg0.service
 OnFailure=teqlif-backup-failed@%n.service
 
