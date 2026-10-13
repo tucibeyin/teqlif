@@ -144,6 +144,12 @@ CREATE INDEX ix_stream_chat_messages_stream_id_created_at
 
 **asyncpg kuralı:** Her `op.execute()` ayrı satır — tek multi-statement string yasak.
 
+**`downgrade()` fonksiyonu:**
+```python
+def downgrade() -> None:
+    op.execute("DROP TABLE IF EXISTS stream_chat_messages CASCADE")
+```
+
 **Yaşam döngüsü kuralı:** `stream_chat_messages` satırları, karşılıklı video kaydıyla birlikte silinir. Video olmadan replay açılamaz (`replayEnabled = false`), dolayısıyla kayıt `available` olmaktan çıktıktan sonra chat satırlarının DB'de kalmasının işlevsel karşılığı yoktur.
 
 ARQ `janitor` görevi şu koşulda temizler:
@@ -438,7 +444,7 @@ final visible = timeline.sublist(0, _upperBound(timeline, _replayPosSecs));
 
 `offsetSecs >= 0` koruması: kayıt başlamadan önceki eventlerin `offset_secs` değeri negatiftir. Filtre edilmezlerse tamamı `_replayPosSecs = 0` anında birden görünür (T=0 patlaması).
 
-**`_ReplayFeed` widget** — `ScrollController` + auto-scroll to bottom:
+**`_ReplayFeed` widget** — `ScrollController` + koşullu auto-scroll:
 
 ```
 ┌──────────────────────────────────────┐
@@ -464,6 +470,25 @@ final visible = timeline.sublist(0, _upperBound(timeline, _replayPosSecs));
 | Satın alma | `Icons.shopping_bag_outlined` | `AppColors.replayPurchase(context)` |
 
 `AppColors.replayBid/Gift/Purchase` token'ları `app_colors.dart`'a eklenir. Tüm AppColors metodları `static Color fn(BuildContext context)` imzasına sahiptir — `context` parametresiz kullanım Dart analyzer tipi hatası verir. Hardcoded hex/material sabitleri yasaktır.
+
+`_ReplayFeed` auto-scroll yalnızca kullanıcı zaten en alttaysa çalışır; aksi hâlde kullanıcı eski mesajları okurken ekran zorla aşağı itilir:
+
+```dart
+void _scrollToBottomIfNeeded() {
+  if (!_scrollCtrl.hasClients) return;
+  final isAtBottom =
+      _scrollCtrl.offset >= _scrollCtrl.position.maxScrollExtent - 40;
+  if (isAtBottom) {
+    _scrollCtrl.animateTo(
+      _scrollCtrl.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+}
+```
+
+Provider çağrısı: `ref.watch(recordingDetailProvider(widget.streamId))` — `recDetailProvider` döküman içindeki kısa gösterimdir, canlı kodda `streamId` parametresi gerekir.
 
 ### ARB Anahtarları (5 dil: TR/EN/AR/DE/RU)
 
