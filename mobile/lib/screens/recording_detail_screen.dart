@@ -380,6 +380,7 @@ class _SummarySectionState extends State<_SummarySection> {
 
           // Metrics row
           Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _MetricTile(
                 label: loc.t('recordingMetricRevenue'),
@@ -500,6 +501,7 @@ class _MetricTile extends StatelessWidget {
           border: Border.all(color: AppColors.border(context)),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               value,
@@ -515,6 +517,7 @@ class _MetricTile extends StatelessWidget {
               style: TextStyle(
                   fontSize: 11, color: AppColors.textSecondary(context)),
               textAlign: TextAlign.center,
+              maxLines: 2,
             ),
           ],
         ),
