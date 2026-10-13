@@ -156,12 +156,20 @@ WHERE stream_id IN (
 
 `ON DELETE CASCADE` ile `live_streams` silindiğinde otomatik temizlenir; ARQ görevi erken temizlik için ek güvencedir. Video `archived` olunca (transferred_at + 2 gün MinIO ILM, archived_at + 15 gün DB) replay zaten çalışmaz — chat satırlarının daha uzun yaşamasının işlevsel karşılığı yoktur.
 
-#### 4.2 Chat persistence: `_MAX_HISTORY` + finalize dump
+#### 4.2 Chat persistence: buffer ayrımı + finalize dump
 
 **`chat_commands.py` + `chat_utils.py`:**
+
+İki sabit birbirinden ayrılır:
+
 ```python
-_MAX_HISTORY = 2000   # 50'den 2000'e
+_WS_HISTORY_LIMIT    = 50    # canlı yayına bağlanan izleyiciye WebSocket ile gönderilecek son mesaj sayısı — değişmez
+_REPLAY_PERSIST_LIMIT = 2000  # Redis LTRIM tavanı; yalnızca replay dump için kullanılır
 ```
+
+`_WS_HISTORY_LIMIT = 50` sabit kalır: yayına yeni bağlanan her izleyiciye `load_history()` üzerinden 50 mesaj gönderilir. 2000 yapılırsa yüzlerce izleyici aynı anda bağlandığında her birine 2000 JSON mesajı tek seferde iletilir — bant genişliği çöker, mobil cihazlarda UI thread kilitlenir.
+
+`_REPLAY_PERSIST_LIMIT = 2000` yalnızca `redis.ltrim(key, -_REPLAY_PERSIST_LIMIT, -1)` ve `_dump_chat_to_db` için kullanılır.
 
 **`stream_finalizer.py` — `_dump_chat_to_db` helper:**
 ```python
@@ -213,12 +221,14 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
  ORDER BY created_at DESC LIMIT 1) AS recording_started_at
 ```
 
-**`_fetch_bids_for_auction`** — `offset_secs` ekle:
+**`_fetch_bids_for_auction`** — `offset_secs` ekle, sıralama ve limit düzelt:
 ```sql
 EXTRACT(EPOCH FROM (b.created_at - :recording_started_at)) AS offset_secs
+-- ORDER BY b.created_at ASC  (replay kronolojik sıra ister; DESC değil)
+-- LIMIT 50 KALDIRILDI: replay, açık artırmanın tüm tekliflerine ihtiyaç duyar
 ```
 
-**`_fetch_orders_for_sale`** — `offset_secs` ekle:
+**`_fetch_orders_for_sale`** — `offset_secs` ekle, sıralama ASC:
 ```sql
 EXTRACT(EPOCH FROM (dso.created_at - :recording_started_at)) AS offset_secs
 ```
@@ -243,6 +253,8 @@ ORDER BY created_at ASC
 - `stream.recording_started_at` eklendi
 - Her event'e `offset_secs: float | null` eklendi
 - `chat_messages: list` eklendi
+
+**SRP notu:** 2000 chat mesajı summary endpoint'ine dahil edilirse tek response ~2 MB olabilir. Kısa vadede kabul edilebilir (replay isteği az), uzun vadede `GET /recordings/{id}/chat` ayrı endpoint'e taşınmalıdır.
 
 **Cache TTL:** Yayın bittikten sonra bu veri değişmez. `RecordingsCacheService.saveSummary` TTL'i 10 dk yerine `recording_expires_at - now()` (max 24 saat) olarak hesaplanır. `recording_expires_at` null ise 24 saat sabit kullanılır.
 
@@ -320,30 +332,48 @@ void dispose() {
 
 `>= 1.0` kontrolü: her frame'de `setState` çağrısını engeller — yalnızca saniye değiştiğinde rebuild.
 
-**Birleşik event listesi** — video altına yerleştirilir:
+**Birleşik event listesi — ViewModel'de hesaplanır (ADR §8):**
+
+`_masterTimeline` yük anında ViewModel'de bir kez oluşturulur ve offsetSecs'e göre sıralanır. View sadece ikili arama ile dilim alır — her saniyede O(N log N) sort yoktur.
 
 ```dart
-// Tüm event tiplerini tek listeye flatten et, offsetSecs'e göre sırala
-List<_ReplayEvent> get _visibleEvents {
-  final all = <_ReplayEvent>[
+// ViewModel (loadSummary sonrası, bir kez):
+List<_ReplayEvent> _masterTimeline = [];
+
+void _buildTimeline(RecordingDetail detail) {
+  _masterTimeline = [
     for (final a in detail.auctions)
       for (final b in a.bids)
-        if (b.offsetSecs != null && b.offsetSecs! <= _replayPosSecs)
+        if (b.offsetSecs != null && b.offsetSecs! >= 0)
           _ReplayEvent.bid(b, a.itemName),
     for (final ds in detail.directSales)
       for (final o in ds.orders)
-        if (o.offsetSecs != null && o.offsetSecs! <= _replayPosSecs)
+        if (o.offsetSecs != null && o.offsetSecs! >= 0)
           _ReplayEvent.order(o, ds.title),
     for (final ge in detail.gifts.events)
-      if (ge.offsetSecs != null && ge.offsetSecs! <= _replayPosSecs)
+      if (ge.offsetSecs != null && ge.offsetSecs! >= 0)
         _ReplayEvent.gift(ge),
     for (final cm in detail.chatMessages)
-      if (cm.offsetSecs != null && cm.offsetSecs! <= _replayPosSecs)
+      if (cm.offsetSecs != null && cm.offsetSecs! >= 0)
         _ReplayEvent.chat(cm),
   ]..sort((a, b) => a.offsetSecs.compareTo(b.offsetSecs));
-  return all;
 }
+
+// View (her saniyede, O(log N)):
+int _upperBound(double pos) {
+  int lo = 0, hi = _masterTimeline.length;
+  while (lo < hi) {
+    final mid = (lo + hi) ~/ 2;
+    _masterTimeline[mid].offsetSecs <= pos ? lo = mid + 1 : hi = mid;
+  }
+  return lo;
+}
+
+List<_ReplayEvent> get _visibleEvents =>
+    _masterTimeline.sublist(0, _upperBound(_replayPosSecs));
 ```
+
+`offsetSecs >= 0` koruması: kayıt başlamadan önceki eventlerin `offset_secs` değeri negatiftir. Filtre edilmezlerse tamamı `_replayPosSecs = 0` anında birden görünür (T=0 patlaması).
 
 **`_ReplayFeed` widget** — `ScrollController` + auto-scroll to bottom:
 
@@ -366,9 +396,11 @@ List<_ReplayEvent> get _visibleEvents {
 | Event tipi | İkon | Renk |
 |-----------|------|------|
 | Chat | `Icons.chat_bubble_outline` | `AppColors.textSecondary` |
-| Teklif | `Icons.gavel` | `Colors.amber[700]` |
-| Hediye | `Icons.card_giftcard` | `Color(0xFFEC4899)` |
-| Satın alma | `Icons.shopping_bag_outlined` | `Color(0xFF6366F1)` |
+| Teklif | `Icons.gavel` | `AppColors.replayBid` |
+| Hediye | `Icons.card_giftcard` | `AppColors.replayGift` |
+| Satın alma | `Icons.shopping_bag_outlined` | `AppColors.replayPurchase` |
+
+`AppColors.replayBid`, `AppColors.replayGift`, `AppColors.replayPurchase` token'ları `app_colors.dart`'a eklenir. Hardcoded hex/material sabitleri doküman ve kod içinde yasaktır — tema değişikliklerinde tek yerden güncellenir.
 
 ### ARB Anahtarları (5 dil: TR/EN/AR/DE/RU)
 
@@ -387,19 +419,21 @@ List<_ReplayEvent> get _visibleEvents {
 
 ```
 1.  Backend — Alembic migration: zzzzzo_stream_chat_messages (tablo + index + yaşam döngüsü kuralı)
-2.  Backend — _MAX_HISTORY: chat_commands.py + chat_utils.py  50 → 2000
+2.  Backend — Sabit ayrımı: _WS_HISTORY_LIMIT=50 (değişmez) + _REPLAY_PERSIST_LIMIT=2000 (dump için)
 3.  Backend — stream_finalizer.py: _dump_chat_to_db (bulk insert) + Redis delete
 4.  Backend — cleanup_stale_streams_task (ARQ): _dump_chat_to_db hook'u eklenir
 5.  Backend — force_close_stream.py: _dump_chat_to_db hook'u eklenir
-6.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages
+6.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages (ORDER BY ASC, LIMIT yok)
 7.  git push → node1 + node5: git pull + sudo teqlif-restart
-8.  Flutter — recording.dart: model güncellemeleri
-9.  Flutter — recording_detail_view_model.dart: replayEnabled state
-10. Flutter — recording_detail_screen.dart: pozisyon listener + _ReplayFeed
-11. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
-12. ARB dosyaları: 6 yeni key × 5 dil
-13. flutter analyze
-14. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
+    (node3/node4: LiveKit + agent — Python backend çalışmaz, restart gerekmez)
+8.  Flutter — app_colors.dart: replayBid / replayGift / replayPurchase token'ları
+9.  Flutter — recording.dart: model güncellemeleri
+10. Flutter — recording_detail_view_model.dart: replayEnabled state + _masterTimeline / _buildTimeline
+11. Flutter — recording_detail_screen.dart: pozisyon listener + _visibleEvents (binary search) + _ReplayFeed
+12. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
+13. ARB dosyaları: 6 yeni key × 5 dil
+14. flutter analyze
+15. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
 ```
 
 ---
@@ -410,10 +444,10 @@ List<_ReplayEvent> get _visibleEvents {
 |------|-------|
 | Stream crash → `finalize_stream` çağrılmaz → chat kaybolur | `_dump_chat_to_db` üç noktadan çağrılır: `finalize_stream`, `force_close_stream`, `cleanup_stale_streams_task` (ARQ 2 dk cron). Zombie yayın 2 dk içinde yakalanır ve dump tetiklenir. |
 | `recording_started_at` NULL (encoding tamamlanmamış) | `replayEnabled = false`; feed gizlenir. `recordingStartedAt == null` kontrolü ile guard. |
-| `offset_secs` negatif (mesaj recording başlamadan atıldı) | `max(0.0, offsetSecs)` — sıfırdan itibaren gösterilir. |
+| `offset_secs` negatif (mesaj recording başlamadan atıldı) | `_buildTimeline` sırasında `offsetSecs >= 0` korumasıyla filtrelenir. `max(0, ...)` ile sıfıra kliplemek yasaktır: tüm negatif eventler aynı anda T=0'da görünür (patlama). |
 | `_MAX_HISTORY = 2000` yetmezse (çok aktif yayın) | Yol B'ye geçiş kolay: `_persist_and_publish` içine tek satır `asyncio.create_task(db_insert(msg))` eklenir. |
 | `_vpCtrl` listener her frame tetiklenir | `>= 1.0` saniye farkı kontrolü ile setState frekansı sınırlandı. |
-| Yüzlerce event varsa `_visibleEvents` O(N) | Yayın süresi max 24 saat, event sayısı pratikte < 5000. Kabul edilebilir. |
+| Yüzlerce event varsa performans | `_masterTimeline` yük anında ViewModel'de bir kez oluşturulur (O(N log N)); View her saniyede yalnızca `_upperBound` ikili araması yapar (O(log N)). |
 
 ---
 
