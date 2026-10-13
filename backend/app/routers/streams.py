@@ -347,12 +347,21 @@ async def get_stream_recording(
         from app.config import settings
         client = _get_presign_client()
         loop = __import__("asyncio").get_event_loop()
+        if row["expires_at"]:
+            remaining = row["expires_at"] - datetime.now(timezone.utc)
+            presign_ttl = max(
+                timedelta(minutes=1),
+                min(remaining - timedelta(minutes=5), timedelta(hours=25)),
+            )
+        else:
+            presign_ttl = timedelta(hours=1)
+
         presigned_url = await loop.run_in_executor(
             None,
             lambda: client.presigned_get_object(
                 settings.minio_bucket,
                 row["minio_key"],
-                expires=timedelta(hours=1),
+                expires=presign_ttl,
             ),
         )
     except Exception as exc:

@@ -7,11 +7,20 @@ class RecordingsCacheService {
   static const _keyMyRecordings = 'recordings:my';
   static const _ttlMyRecordings = Duration(minutes: 3);
 
-  static const _ttlRecordingUrl = Duration(minutes: 55);
-  static const _ttlRecordingSummary = Duration(minutes: 10);
+  static const _ttlRecordingUrlFallback     = Duration(minutes: 55);
+  static const _ttlRecordingSummaryFallback = Duration(minutes: 10);
+  static const _ttlSafetyMargin             = Duration(minutes: 5);
 
   String _keyUrl(int streamId) => 'recording_url:$streamId';
   String _keySummary(int streamId) => 'recording_summary:$streamId';
+
+  /// `expiresAt` verilmişse o ana kadar minus güvenlik marjını TTL olarak kullan.
+  /// Kalan süre marjdan küçükse fallback TTL döner.
+  Duration _ttlUntil(DateTime? expiresAt, Duration fallback) {
+    if (expiresAt == null) return fallback;
+    final remaining = expiresAt.difference(DateTime.now()) - _ttlSafetyMargin;
+    return remaining > fallback ? remaining : fallback;
+  }
 
   // ── My Recordings (LIFECYCLE, 3 min) ──────────────────────────────────────
 
@@ -54,7 +63,7 @@ class RecordingsCacheService {
     await CacheService.saveData(
       _keyUrl(streamId),
       data.toJson(),
-      ttl: _ttlRecordingUrl,
+      ttl: _ttlUntil(data.expiresAt, _ttlRecordingUrlFallback),
     );
   }
 
@@ -77,7 +86,7 @@ class RecordingsCacheService {
     await CacheService.saveData(
       _keySummary(streamId),
       detail.toJson(),
-      ttl: _ttlRecordingSummary,
+      ttl: _ttlUntil(detail.recordingExpiresAt, _ttlRecordingSummaryFallback),
     );
   }
 

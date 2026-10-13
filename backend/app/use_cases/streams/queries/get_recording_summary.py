@@ -29,11 +29,12 @@ class GetRecordingSummaryQuery:
         metrics      = self._compute_metrics(auctions, direct_sales, gifts)
 
         return {
-            "stream":       stream,
-            "metrics":      metrics,
-            "auctions":     auctions,
-            "direct_sales": direct_sales,
-            "gifts":        gifts,
+            "recording_expires_at": stream.pop("recording_expires_at", None),
+            "stream":               stream,
+            "metrics":              metrics,
+            "auctions":             auctions,
+            "direct_sales":         direct_sales,
+            "gifts":                gifts,
         }
 
     # ── Stream meta ──────────────────────────────────────────────────────────
@@ -41,7 +42,12 @@ class GetRecordingSummaryQuery:
     async def _fetch_stream(self, stream_id: int) -> dict | None:
         row = (await self._db.execute(text("""
             SELECT id, title, category, subcategory,
-                   started_at, ended_at, peak_viewer_count, thumbnail_url
+                   started_at, ended_at, peak_viewer_count, thumbnail_url,
+                   (
+                       SELECT expires_at FROM stream_recordings
+                       WHERE stream_id = :stream_id AND status = 'available'
+                       ORDER BY created_at DESC LIMIT 1
+                   ) AS recording_expires_at
             FROM live_streams
             WHERE id = :stream_id
         """), {"stream_id": stream_id})).mappings().first()

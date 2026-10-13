@@ -123,6 +123,7 @@ class RecordingDetail {
   final List<RecordingAuction> auctions;
   final List<RecordingDirectSale> directSales;
   final RecordingGifts gifts;
+  final DateTime? recordingExpiresAt;
 
   const RecordingDetail({
     required this.stream,
@@ -130,6 +131,7 @@ class RecordingDetail {
     required this.auctions,
     required this.directSales,
     required this.gifts,
+    this.recordingExpiresAt,
   });
 
   factory RecordingDetail.fromJson(Map<String, dynamic> j) => RecordingDetail(
@@ -144,6 +146,7 @@ class RecordingDetail {
             .map(RecordingDirectSale.fromJson)
             .toList(),
         gifts: RecordingGifts.fromJson(j['gifts'] as Map<String, dynamic>? ?? {}),
+        recordingExpiresAt: _dt(j['recording_expires_at']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -152,6 +155,7 @@ class RecordingDetail {
         'auctions': auctions.map((e) => e.toJson()).toList(),
         'direct_sales': directSales.map((e) => e.toJson()).toList(),
         'gifts': gifts.toJson(),
+        'recording_expires_at': recordingExpiresAt?.toIso8601String(),
       };
 }
 
