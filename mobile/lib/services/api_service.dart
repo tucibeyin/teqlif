@@ -86,14 +86,39 @@ class ApiService {
       final headers = await _headers(auth: auth);
       if (extraHeaders != null) headers.addAll(extraHeaders);
 
+      // ETag varsa If-None-Match ekle — sunucu "değişmedi" ise 304 döner
+      if (cacheKey != null) {
+        final storedEtag = _cache.getEtag(cacheKey);
+        if (storedEtag != null) headers['If-None-Match'] = storedEtag;
+      }
+
       final resp = await http
           .get(Uri.parse(url), headers: headers)
           .timeout(timeout);
 
+      if (resp.statusCode == 304 && cacheKey != null) {
+        // Sunucu içeriğin değişmediğini onayladı — TTL'i tazele, yeniden emit etme
+        final existing = _cache.getWithStaleness(cacheKey);
+        if (existing != null) {
+          await _cache.saveData(
+            cacheKey,
+            existing.data,
+            ttl: cacheTtl,
+            etag: _cache.getEtag(cacheKey),
+          );
+        }
+        return;
+      }
+
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         if (cacheKey != null) {
-          await _cache.saveData(cacheKey, data, ttl: cacheTtl);
+          await _cache.saveData(
+            cacheKey,
+            data,
+            ttl: cacheTtl,
+            etag: resp.headers['etag'],
+          );
         }
         yield fromJson(data);
       } else if (!cacheYielded) {

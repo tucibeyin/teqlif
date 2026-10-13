@@ -73,18 +73,36 @@ class CacheService {
     }
   }
 
+  /// [key] için kaydedilmiş ETag değerini senkron olarak döner.
+  ///
+  /// Cache kaydı yoksa veya ETag saklanmamışsa `null` döner.
+  String? getEtag(String key) {
+    final raw = _box.get(key);
+    if (raw == null) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return decoded['_e'] as String?;
+    } catch (_) {}
+    return null;
+  }
+
   /// [data] (List veya Map) değerini [ttl] süreli TTL zarfıyla saklar.
+  ///
+  /// [etag] verilirse zarfa `_e` alanı olarak eklenir; sonraki isteklerde
+  /// If-None-Match header'ı için [getEtag] ile okunur.
   Future<void> saveData(
     String key,
     dynamic data, {
     Duration ttl = const Duration(minutes: 5),
+    String? etag,
   }) async {
-    final wrapper = jsonEncode({
+    final wrapper = <String, dynamic>{
       '_d': data,
       '_t': DateTime.now().millisecondsSinceEpoch,
       '_x': ttl.inMilliseconds,
-    });
-    await _box.put(key, wrapper);
+    };
+    if (etag != null) wrapper['_e'] = etag;
+    await _box.put(key, jsonEncode(wrapper));
   }
 
   /// Belirli bir [key] silerek ya da [key] verilmezse tüm kutuyu temizler.

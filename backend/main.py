@@ -26,6 +26,7 @@ from app.use_cases.direct_sales.direct_sale_scheduler import direct_sale_schedul
 from app.routers import notifications, messages, users, listings, follows, categories, upload, states, reports, favorites, search, ratings, analytics, leads, wallet
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
+from app.security.etag_middleware import ETagMiddleware
 from app.security.middleware_context import LogContextMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.defender import AntiBotMiddleware
@@ -161,6 +162,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
+app.add_middleware(ETagMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Prometheus metrics — sadece localhost / iç ağ erişimine izin verilir
@@ -211,8 +213,8 @@ app.add_middleware(
     allow_origin_regex=None,  # WebSocket desteği
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "If-None-Match"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "ETag"],
 )
 
 

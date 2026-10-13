@@ -868,5 +868,5 @@ P2  §11.12 resume debounce         account_info_screen.dart       ✅ f371c67b
 P3  §11.13 CacheService DIP        20 dosya                           ✅ 2a5dc9cd
 P3  §11.14 Repository pattern      home_repository.dart (yeni)         ✅ ccbcf109
 P3  §11.15 DRY                     storage_service + messages VM       ✅ ccbcf109
-P3  §11.16 ETag                    api_client + backend koordinasyonu  ⏳ backend hazır olmadan uygulanamaz
+P3  §11.16 ETag                    etag_middleware.py + cache_service + api_service  ✅ TBD
 ```
