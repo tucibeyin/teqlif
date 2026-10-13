@@ -1496,9 +1496,9 @@ Config: `deploy/scale/V2.1/node5/resources/.env.metrics-agent-staging.template`
 
 ---
 
-## 19. Stream Recording — aiortc Gizli Abone
+## 19. Stream Recording — livekit-rtc Gizli Abone
 
-**Commit:** `51df667e`
+**Commit:** `51df667e` (ilk tasarım) → `c92afc02` (livekit-rtc migration, Ekim 2026)
 
 ### Problem
 
@@ -1506,10 +1506,12 @@ FFmpeg'in `whep://` demuxer'ı Debian paketinde yok; LiveKit `/rooms/{room}/whep
 livekit-egress Docker tabanlı — kabul edilmedi.  
 LiveKit DTLS/SRTP şifreli WebRTC kullandığından ağ tapı mümkün değil; yalnızca odaya WebRTC katılımcısı olarak girmek kayıt için çalışır.
 
-### Karar: aiortc ile gizli WebRTC abone
+**livekit-rtc migration (Ekim 2026):** aiortc, yayın süresiyle doğrusal büyüyen bellek sızıntısı sergiledi (~167 MB/dak). Resmi LiveKit Python SDK (`livekit` paketi, Rust tabanlı) ile değiştirildi: RSS ~98 MB sabit, sızıntı yok.
+
+### Karar: livekit-rtc ile gizli WebRTC abone
 
 Her canlı yayın başladığında `teqlif-agent`, `livekit_subscriber.py`'yi subprocess olarak başlatır.  
-Script LiveKit WebSocket signaling protokolü (protocol=15) ile odaya `hidden=True, recorder=True` JWT'siyle girer, aiortc MediaRecorder ile MKV dosyasına kaydeder.
+Script resmi `livekit.rtc` SDK'sı ile odaya `hidden=True, recorder=True` JWT'siyle girer, VP8 + Opus MKV dosyasına kaydeder.
 
 ### Tetikleme: Event-Driven + Fallback Poll
 
@@ -1530,23 +1532,43 @@ RecordingManager.run() — her 60s cycle
       → live_streams.status = 'live' AND stream_recordings yok
       → asyncio.create_subprocess_exec(livekit_subscriber.py ...)
   → _reap_finished()
+      → returncode == 0 → status='encoding' + db.mark_ok("recorder.<node_id>")
+      → returncode != 0 → status='failed'  + db.mark_fail("recorder.<node_id>")
 
 livekit_subscriber.py
-  → aiohttp WS → ws://127.0.0.1:7880/rtc?access_token=<jwt>&protocol=15&auto_subscribe=1
-  → SignalResponse.join → log
-  → SignalResponse.offer → pc.setRemoteDescription() → createAnswer() → SignalRequest.answer
-  → ICE trickle (SUBSCRIBER target)
-  → @pc.on("track") → recorder.addTrack(track) → recorder.start()
-  → SignalResponse.update (publisher DISCONNECTED) | leave → stop_evt.set()
-  → recorder.stop() → çıkış kodu 0
-
-RecordingManager._reap_finished()
-  → returncode == 0 → status = 'encoding'
-  → returncode != 0 → status = 'failed'
+  → rtc.Room.connect(ws_url, token)
+  → on_track_subscribed: publication.set_video_quality(HIGH)   ← dynacast HIGH layer iste
+  → _open_when_ready(): çözünürlük 500ms sabit kalınca container aç (max 3s timeout)
+  → _record_video: VideoStream(BGRA) → numpy → av.VideoFrame → VP8 encode → MKV
+  → _record_audio: AudioStream → av.AudioFrame → Opus encode → MKV
+  → stop_evt (room disconnect | SIGTERM) → tüm task'ler cancel → vs.aclose()/ast.aclose()
+  → writer.close() → room.disconnect() → çıkış kodu 0
 
 EncoderManager
   → MKV → MP4 (FFmpeg encode) → MinIO transfer
 ```
+
+### Simulcast ve Kayıt Kalitesi
+
+Yayıncı telefon `dynacast: true` ile yayın yapar — SFU yalnızca aktif izlenen katmanları iletir.  
+Recorder bağlandığında `set_video_quality(HIGH)` ile HIGH katmanı talep eder (~500ms–2s içinde gelir).  
+`_open_when_ready()` ilk frame'den itibaren çözünürlüğün 500ms sabit kalmasını bekler; bu sayede  
+container LOW (~360p) yerine doğru kalitede (yayıncı desteklediği max) açılır.
+
+Yayın sırasında izleyici katılımıyla çözünürlük yükselebilir (dynacast); bu durumda  
+frame encoder boyutuna `reformat()` ile ölçeklenir — container yeniden açılmaz.
+
+### Sağlık İzleme
+
+`RecordingManager._reap_finished()`, her kayıt bitişinde `AgentDB.mark_ok` / `mark_fail` çağırır:
+
+| Durum | Çağrı | Etki |
+|-------|-------|------|
+| Başarılı (exit 0) | `mark_ok("recorder.<node_id>", expected_every_m=10080)` | fail_count sıfırlanır |
+| Hatalı (exit ≠ 0) | `mark_fail("recorder.<node_id>", expected_every_m=10080)` | fail_count artar |
+
+`job_health` tablosu gossip ile tüm node'lara replike olur; Grafana'dan sorgulanabilir.  
+`expected_every_m=10080` (1 hafta) — kayıtsız dönemlerde false stale alert engellenmiş olur.
 
 ### Redis Topolojisi
 
@@ -1565,15 +1587,27 @@ Subscriber `ws://127.0.0.1:7880` (loopback) üzerinden bağlanır.
 ICE de loopback adayları tercih eder — dış trafik sıfır.  
 Yüzlerce viewer'dan bağımsız: recorder tek sabit subscriber.
 
+### Python Paket Gereksinimleri
+
+```
+livekit==1.1.20     # rtc SDK (Rust tabanlı, livekit.rtc modülü)
+livekit-api>=1.2.0  # JWT token üretimi
+av>=17.0.0          # VP8/Opus encode (PyAV)
+numpy>=2.0          # BGRA frame buffer işleme
+```
+
+Kurulum: `sudo bash deploy/scale/V2.1/node5/setup/setup_recorder.sh`  
+(Script tüm recording node'ları için geçerlidir: node3, node4, node5)
+
 ### Dosyalar
 
 | Dosya | Açıklama |
 |-------|----------|
-| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | WebRTC signaling + aiortc kayıt (standalone script) |
-| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | Subprocess yönetimi, DB tracking |
+| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | livekit-rtc kayıt script (VP8+Opus MKV) |
+| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | Subprocess yönetimi, DB tracking, job_health |
 | `deploy/scale/V2.1/cluster.yaml` | `livekit_ws_url`, MinIO staging port düzeltmesi (9000→9100) |
 | `backend/alembic/versions/zzzzzn_recording_egress.py` | `egress_id TEXT` kolonu (ileride kullanım için) |
-| `deploy/scale/V2.1/node5/setup/setup_recorder.sh` | aiortc + livekit-api kurulum scripti |
+| `deploy/scale/V2.1/node5/setup/setup_recorder.sh` | livekit + numpy + av kurulum scripti (tüm node'lar) |
 
 ### Çalıştığı Node'lar
 
